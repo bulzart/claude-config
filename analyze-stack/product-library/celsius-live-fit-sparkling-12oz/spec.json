@@ -1,0 +1,975 @@
+{
+ "schema": "analyze-stack.product-spec/1",
+ "slug": "celsius-live-fit-sparkling-12oz",
+ "run_id": "20260921-192043-monsters-celsius",
+ "identified": "2026-09-21T19:58:00+02:00",
+ "mode": "identify",
+ "status": "pending",
+ "source": "samples (owner lineup + owner spec sheet) + owner notes; web confirm (brand page: carbonated, zero sugar; third-party sites: can size class)",
+ "product_family": true,
+ "replaces_entities": [
+  "e1",
+  "e2",
+  "e3",
+  "e4",
+  "e5",
+  "e6"
+ ],
+ "identity": {
+  "brand": {
+   "value": "CELSIUS",
+   "evidence": "observed: celsius-6pack-lineup.png; stated"
+  },
+  "product_name": {
+   "value": "CELSIUS Live Fit Sparkling",
+   "evidence": "observed: 'CELSIUS' + 'LIVE FIT' + 'SPARKLING' on every can; stated"
+  },
+  "variant": {
+   "value": "six flavours: Orange, Kiwi Guava, Wild Berry, Watermelon, Grape Rush, Cola",
+   "evidence": "observed (top band + flavour line); stated"
+  },
+  "size": {
+   "value": "12 FL.OZ (355 mL) slim can",
+   "evidence": "observed: '12 FL.OZ (355mL)' on all six cans; stated"
+  },
+  "ids": {
+   "value": "none found",
+   "evidence": "no legible barcode; owner gave none"
+  },
+  "label_text_front_shared": [
+   "<FLAVOUR> (top band, flavour colour)",
+   "small ring icon left of the logo",
+   "gradient C logo",
+   "CELSIUS + small registered-mark dot",
+   "LIVE FIT (flavour colour)",
+   "fruit artwork with rising bubbles",
+   "SPARKLING",
+   "<FLAVOUR> (flavour colour)",
+   "NATURAL FLAVOR WITH OTHER NATURAL FLAVORS",
+   "ESSENTIAL ENERGY",
+   "ACCELERATES METABOLISM (footnote mark, glyph unreadable)",
+   "BURNS BODY FAT (footnote mark, glyph unreadable)",
+   "0 SUGAR (roundel)",
+   "three activity icons: runner, cyclist, seated yoga figure",
+   "12 FL.OZ (355mL)"
+  ],
+  "label_text_back": [
+   "NUTRITION FACTS (orange header, top band)",
+   "Nutrition Facts",
+   "Calories 0",
+   "(serving lines, ingredients, barcode unreadable)"
+  ],
+  "logo_placement": "gradient C mark centred in the upper third (~14-33% of height, ~40% of width, opens to the right), small ring icon at its upper left; CELSIUS wordmark centred below (~37-41%), ~70% of width; LIVE FIT right-aligned under the wordmark",
+  "category": "beverage - sparkling energy drink, zero sugar",
+  "product_page_url": "https://www.celsius.com/products/celsius/sparkling-orange/"
+ },
+ "variants": [
+  {
+   "n": 1,
+   "flavour": "Orange",
+   "label_text": "ORANGE",
+   "text_colour": "orange",
+   "text_hex": [
+    "#d68647",
+    "#efb988"
+   ],
+   "band": "orange",
+   "band_hex": "#e2a06e",
+   "c_gradient": [
+    "#d98d15",
+    "#da8321",
+    "#d7d7d7",
+    "#8f8f8f"
+   ],
+   "c_gradient_words": "orange -> orange -> silver-grey",
+   "art": "one orange wedge (half-slice), pith-white rim, three rising bubbles",
+   "crop": "front-orange.png"
+  },
+  {
+   "n": 2,
+   "flavour": "Kiwi Guava",
+   "label_text": "KIWI GUAVA",
+   "text_colour": "pink-red",
+   "text_hex": [
+    "#cf4251",
+    "#ea8691"
+   ],
+   "band": "coral pink",
+   "band_hex": "#dd6e79",
+   "c_gradient": [
+    "#bf7980",
+    "#71b03e",
+    "#d8d8d8",
+    "#8e8e8e"
+   ],
+   "c_gradient_words": "pink-red -> lime green -> silver-grey",
+   "art": "pink-fleshed guava half (left) + green kiwi half (right), bubbles",
+   "crop": "front-kiwi-guava.png"
+  },
+  {
+   "n": 3,
+   "flavour": "Wild Berry",
+   "label_text": "WILD BERRY",
+   "text_colour": "plum / berry magenta",
+   "text_hex": [
+    "#964365",
+    "#c4869f"
+   ],
+   "band": "plum-magenta",
+   "band_hex": "#b07089",
+   "c_gradient": [
+    "#a91d47",
+    "#9c2551",
+    "#d8d8d8",
+    "#8e8e8e"
+   ],
+   "c_gradient_words": "crimson-magenta -> berry -> silver-grey",
+   "art": "red raspberry with blueberries and blackberries clustered around it, bubbles",
+   "crop": "front-wild-berry.png"
+  },
+  {
+   "n": 4,
+   "flavour": "Watermelon",
+   "label_text": "WATERMELON",
+   "text_colour": "red-pink",
+   "text_hex": [
+    "#cc4248",
+    "#e87a80"
+   ],
+   "band": "watermelon red",
+   "band_hex": "#da696e",
+   "c_gradient": [
+    "#cd404d",
+    "#d0313b",
+    "#d7d7d7",
+    "#868686"
+   ],
+   "c_gradient_words": "red -> red -> silver-grey",
+   "art": "one watermelon wedge, red flesh with black seeds, green rind, bubbles",
+   "crop": "front-watermelon.png"
+  },
+  {
+   "n": 5,
+   "flavour": "Grape Rush",
+   "label_text": "GRAPE RUSH",
+   "text_colour": "purple",
+   "text_hex": [
+    "#644269",
+    "#9b7c9f"
+   ],
+   "band": "purple",
+   "band_hex": "#87688b",
+   "c_gradient": [
+    "#8c2143",
+    "#642052",
+    "#d7d7d7",
+    "#868686"
+   ],
+   "c_gradient_words": "wine-magenta -> deep purple -> silver-grey",
+   "art": "bunch of red-purple grapes with a green leaf, bubbles",
+   "crop": "front-grape-rush.png"
+  },
+  {
+   "n": 6,
+   "flavour": "Cola",
+   "label_text": "COLA",
+   "text_colour": "brown",
+   "text_hex": [
+    "#80463d",
+    "#c4a199"
+   ],
+   "band": "cola brown",
+   "band_hex": "#9c6b61",
+   "c_gradient": [
+    "#9b5413",
+    "#823916",
+    "#dfdedd",
+    "#868686"
+   ],
+   "c_gradient_words": "caramel-orange-brown -> dark brown -> silver-grey",
+   "art": "no fruit: a spray of small orange / red / brown dots (fizz burst), bubbles",
+   "crop": "front-cola.png"
+  }
+ ],
+ "physical": {
+  "form_factor": {
+   "value": "tall slim (sleek) aluminium can, straight body, slight neck taper; observed h:w ~2.97:1",
+   "evidence": "observed"
+  },
+  "dimensions": {
+   "value": "355 mL sleek-can class; ~58 mm dia x ~157 mm (industry format) - ESTIMATE; third-party sites claim 6.25 x 2.6 in (unverified)",
+   "evidence": "web + estimate"
+  },
+  "packaging_colours": {
+   "value": "black lid #2a2a2a, silver top rim #e7e6e5, white body, black claims band #1e1e1e-#252525 (70-79% of height) with a flavour-coloured strip on its LEFT edge only, brushed grey metallic band #5d5d5d-#6b6a6a (79-98%), silver bottom rim #979797",
+   "evidence": "observed, sampled"
+  },
+  "content_colours": {
+   "value": "unknown (sealed; not visible for any flavour)",
+   "evidence": "unknown"
+  },
+  "transparency": {
+   "value": "opaque metal can; no fill level visible",
+   "evidence": "observed"
+  },
+  "viscosity_state": {
+   "value": "thin carbonated liquid",
+   "evidence": "label 'Sparkling' + web (brand page: carbonated)"
+  },
+  "carbonation": {
+   "value": "carbonated; short hiss on opening; fine fizz + thin short-lived foam ring on pour (product-type inference)",
+   "evidence": "label + web; behaviour inferred"
+  },
+  "finish": {
+   "value": "satin/semi-gloss printed aluminium body (soft wide vertical highlight); brushed-metal grey band with a horizontal highlight; matte-black lid with a bright polished rim; dark pull tab",
+   "evidence": "observed"
+  },
+  "material": {
+   "value": "aluminium, stay-on-tab end",
+   "evidence": "observed"
+  },
+  "top_bottom": {
+   "value": "top: black lid ring, silver dome, standard stay-on pull tab (dark); bottom: silver rim, recessed base not visible",
+   "evidence": "observed (top-down + lying tiles)"
+  },
+  "weight_class": {
+   "value": "~370-380 g full - ESTIMATE; one-handed, fingers wrap 3/4 of the circumference",
+   "evidence": "estimate"
+  },
+  "reflectivity": {
+   "value": "soft vertical highlight on the white body, faint gloss streak on the black band, bright specular stripe on the grey band, brightest point on the lid rim",
+   "evidence": "observed"
+  },
+  "label_wrap": {
+   "value": "front artwork wraps the cylinder; side tile shows artwork at both silhouettes; back tile shows the Nutrition Facts panel; exact wrap layout ambiguous - ESTIMATE",
+   "evidence": "observed (low-res)"
+  }
+ },
+ "behaviours": {
+  "static_packshot": {
+   "words": "can stands upright on its base, label centred to camera, no rotation; soft contact shadow; no condensation",
+   "sound": "none (music only)"
+  },
+  "opening": {
+   "words": "thumb lifts the stay-on tab; short sharp pressure release; tab folds back",
+   "sound": "<sharp psst hiss, metal click>"
+  },
+  "pouring": {
+   "words": "thin liquid streams cleanly; fine fizz, thin foam ring settles in ~2 s; liquid colour unknown - do not describe it",
+   "sound": "<fizzing pour>"
+  },
+  "condensation": {
+   "words": "only if shown cold: fine even beads on the body and grey band; none in the samples",
+   "sound": "-"
+  },
+  "dropping": {
+   "words": "light aluminium: hollow metallic clink, may dent, rolls on its side",
+   "sound": "<hollow metal clink>"
+  }
+ },
+ "images_library": [
+  {
+   "index": 1,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/front-orange.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    10,
+    28,
+    210,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 2,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/front-kiwi-guava.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    214,
+    28,
+    414,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 3,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/front-wild-berry.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    419,
+    28,
+    619,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 4,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/front-watermelon.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    623,
+    28,
+    823,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 5,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/front-grape-rush.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    828,
+    28,
+    1028,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 6,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/front-cola.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    1032,
+    28,
+    1232,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 7,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-front-orange.png",
+   "view": "front",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    13,
+    34,
+    104,
+    285
+   ],
+   "size_px": [
+    91,
+    251
+   ],
+   "note": "low-res tile (91x251)",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 8,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-three-quarter-orange.png",
+   "view": "three-quarter",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    140,
+    34,
+    231,
+    285
+   ],
+   "size_px": [
+    91,
+    251
+   ],
+   "note": "low-res tile",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 9,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-side-orange.png",
+   "view": "side",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    269,
+    34,
+    360,
+    285
+   ],
+   "size_px": [
+    91,
+    251
+   ],
+   "note": "low-res tile; label wrap visible at both edges",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 10,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-back-orange.png",
+   "view": "back (Nutrition Facts panel)",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    396,
+    34,
+    486,
+    285
+   ],
+   "size_px": [
+    90,
+    251
+   ],
+   "note": "low-res tile; panel text unreadable",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 11,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-top-down-orange.png",
+   "view": "top-down (lid + pull tab)",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    7,
+    398,
+    112,
+    510
+   ],
+   "size_px": [
+    105,
+    112
+   ],
+   "note": "low-res tile",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 12,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-closeup-upper-orange.png",
+   "view": "close-up: top band, C logo, wordmark",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    121,
+    318,
+    249,
+    572
+   ],
+   "size_px": [
+    128,
+    254
+   ],
+   "note": "low-res, light-grey background",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 13,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-closeup-middle-orange.png",
+   "view": "close-up: wordmark, fruit art, SPARKLING, claims band",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    249,
+    318,
+    377,
+    572
+   ],
+   "size_px": [
+    128,
+    254
+   ],
+   "note": "low-res, light-grey background",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 14,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-closeup-lower-orange.png",
+   "view": "close-up: fruit art, claims band, roundel row, size line",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    377,
+    318,
+    497,
+    572
+   ],
+   "size_px": [
+    120,
+    254
+   ],
+   "note": "low-res, light-grey background",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 15,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-lying-side-orange.png",
+   "view": "lying on its side, lid to the right",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    198,
+    702,
+    370,
+    788
+   ],
+   "size_px": [
+    172,
+    86
+   ],
+   "note": "low-res tile",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 16,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-front-orange-b.png",
+   "view": "front (second tile)",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    398,
+    626,
+    483,
+    856
+   ],
+   "size_px": [
+    85,
+    230
+   ],
+   "note": "low-res tile",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 17,
+   "file": "product-library/celsius-live-fit-sparkling-12oz/images/spec-front-pair-orange-kiwi.png",
+   "view": "front, TWO cans (Orange + Kiwi Guava)",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    14,
+    626,
+    178,
+    853
+   ],
+   "size_px": [
+    164,
+    227
+   ],
+   "note": "two cans in one image - do not use as a single-can reference",
+   "single_can": false,
+   "contains_hand_or_face": false
+  }
+ ],
+ "images_run": [
+  {
+   "index": 1,
+   "file": "00-input/product-images/crops/front-orange.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    10,
+    28,
+    210,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 2,
+   "file": "00-input/product-images/crops/front-kiwi-guava.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    214,
+    28,
+    414,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 3,
+   "file": "00-input/product-images/crops/front-wild-berry.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    419,
+    28,
+    619,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 4,
+   "file": "00-input/product-images/crops/front-watermelon.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    623,
+    28,
+    823,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 5,
+   "file": "00-input/product-images/crops/front-grape-rush.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    828,
+    28,
+    1028,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 6,
+   "file": "00-input/product-images/crops/front-cola.png",
+   "view": "front (single can, from lineup)",
+   "source": "celsius-6pack-lineup.png",
+   "box_xyxy": [
+    1032,
+    28,
+    1232,
+    620
+   ],
+   "size_px": [
+    200,
+    592
+   ],
+   "note": "includes the packshot's soft floor shadow; side margins carry the lineup's light-grey inter-can shading",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 7,
+   "file": "00-input/product-images/crops/spec-front-orange.png",
+   "view": "front",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    13,
+    34,
+    104,
+    285
+   ],
+   "size_px": [
+    91,
+    251
+   ],
+   "note": "low-res tile (91x251)",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 8,
+   "file": "00-input/product-images/crops/spec-three-quarter-orange.png",
+   "view": "three-quarter",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    140,
+    34,
+    231,
+    285
+   ],
+   "size_px": [
+    91,
+    251
+   ],
+   "note": "low-res tile",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 9,
+   "file": "00-input/product-images/crops/spec-side-orange.png",
+   "view": "side",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    269,
+    34,
+    360,
+    285
+   ],
+   "size_px": [
+    91,
+    251
+   ],
+   "note": "low-res tile; label wrap visible at both edges",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 10,
+   "file": "00-input/product-images/crops/spec-back-orange.png",
+   "view": "back (Nutrition Facts panel)",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    396,
+    34,
+    486,
+    285
+   ],
+   "size_px": [
+    90,
+    251
+   ],
+   "note": "low-res tile; panel text unreadable",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 11,
+   "file": "00-input/product-images/crops/spec-top-down-orange.png",
+   "view": "top-down (lid + pull tab)",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    7,
+    398,
+    112,
+    510
+   ],
+   "size_px": [
+    105,
+    112
+   ],
+   "note": "low-res tile",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 12,
+   "file": "00-input/product-images/crops/spec-closeup-upper-orange.png",
+   "view": "close-up: top band, C logo, wordmark",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    121,
+    318,
+    249,
+    572
+   ],
+   "size_px": [
+    128,
+    254
+   ],
+   "note": "low-res, light-grey background",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 13,
+   "file": "00-input/product-images/crops/spec-closeup-middle-orange.png",
+   "view": "close-up: wordmark, fruit art, SPARKLING, claims band",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    249,
+    318,
+    377,
+    572
+   ],
+   "size_px": [
+    128,
+    254
+   ],
+   "note": "low-res, light-grey background",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 14,
+   "file": "00-input/product-images/crops/spec-closeup-lower-orange.png",
+   "view": "close-up: fruit art, claims band, roundel row, size line",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    377,
+    318,
+    497,
+    572
+   ],
+   "size_px": [
+    120,
+    254
+   ],
+   "note": "low-res, light-grey background",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 15,
+   "file": "00-input/product-images/crops/spec-lying-side-orange.png",
+   "view": "lying on its side, lid to the right",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    198,
+    702,
+    370,
+    788
+   ],
+   "size_px": [
+    172,
+    86
+   ],
+   "note": "low-res tile",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 16,
+   "file": "00-input/product-images/crops/spec-front-orange-b.png",
+   "view": "front (second tile)",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    398,
+    626,
+    483,
+    856
+   ],
+   "size_px": [
+    85,
+    230
+   ],
+   "note": "low-res tile",
+   "single_can": true,
+   "contains_hand_or_face": false
+  },
+  {
+   "index": 17,
+   "file": "00-input/product-images/crops/spec-front-pair-orange-kiwi.png",
+   "view": "front, TWO cans (Orange + Kiwi Guava)",
+   "source": "celsius-orange-can-spec-sheet.png",
+   "box_xyxy": [
+    14,
+    626,
+    178,
+    853
+   ],
+   "size_px": [
+    164,
+    227
+   ],
+   "note": "two cans in one image - do not use as a single-can reference",
+   "single_can": false,
+   "contains_hand_or_face": false
+  }
+ ],
+ "differences_vs_original": [
+  {
+   "aspect": "size/format",
+   "original": "tall slim 500 mL / 16 fl oz class (estimate), ~2.7:1",
+   "ours": "355 mL sleek can, ~2.97:1 observed",
+   "consequence": "same on-screen box (x~240-480, y~45-680 of 720); ~10% slimmer proportions; nobody holds it"
+  },
+  {
+   "aspect": "body colour per slide",
+   "original": "six strongly different colourways (colour-flicker mechanic)",
+   "ours": "six white-bodied cans; variant signal = flavour text colour, C gradient, fruit art, band strip",
+   "consequence": "flicker reads as one white can at 720 px - swap planner decision"
+  },
+  {
+   "aspect": "brand marks",
+   "original": "claw M, MONSTER, ENERGY, ULTRA/JUICE, flavour names, overlay 'Who likes Monster?'",
+   "ours": "CELSIUS, LIVE FIT, SPARKLING <flavour>, claims band",
+   "consequence": "all Monster marks removed; hook card re-authored in the edit only"
+  },
+  {
+   "aspect": "content",
+   "original": "opaque, sealed",
+   "ours": "opaque, sealed, liquid colour unknown",
+   "consequence": "no pour beat in the video"
+  },
+  {
+   "aspect": "pose",
+   "original": "upright cut-out on white, no shadow",
+   "ours": "crops carry a soft floor shadow",
+   "consequence": "state shadow/no-shadow consistently across the six slides"
+  },
+  {
+   "aspect": "count",
+   "original": "one can per slide x 6 slides",
+   "ours": "six variants, owner: chosen randomly",
+   "consequence": "random draw rule = needs-owner-decision N1"
+  }
+ ],
+ "gaps": [
+  "GAP-1 resolution: lineup crops 200x592 px, spec-sheet tiles <=128 px wide (below the >=720 px guidance); hi-res originals would improve label fidelity",
+  "GAP-2 can dimensions/weight are estimates (355 mL sleek-can class); no brand source",
+  "GAP-3 liquid colour per flavour unknown (sealed)",
+  "GAP-4 no UPC/SKU; back-panel text unreadable except 'Nutrition Facts' / 'Calories 0'",
+  "GAP-5 spec-sheet back/side tiles look like a rendered mock (blurred nutrition text, ambiguous wrap); only the front artwork is authoritative"
+ ],
+ "needs_owner_decision": [
+  {
+   "id": "PID-1",
+   "question": "Reference images are low-resolution (200x592 px per can; spec tiles <=128 px). Supply higher-resolution originals (one PNG per flavour >=1000 px tall and the spec sheet at source size), or proceed with the current crops?"
+  },
+  {
+   "id": "N1",
+   "question": "Random draw rule for the six slides: which flavours, in which order, repeats allowed or not? (carried from report section 11)"
+  }
+ ]
+}

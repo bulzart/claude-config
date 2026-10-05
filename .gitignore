@@ -1,0 +1,39 @@
+# ~/.claude is versioned for YOUR customizations only.
+# Allow-list: everything is ignored unless re-included below, so Claude Code's own runtime data,
+# caches, sessions, transcripts, credentials, plugins, updates and installs never get committed.
+# To track a new folder of yours, add a line  !/<folder>/  in the "your customizations" block.
+/*
+
+# ---- your customizations ---------------------------------------------------------------
+!/.gitignore
+!/VERSIONING.md
+!/CLAUDE.md
+!/settings.json
+!/keybindings.json
+!/commands/
+!/skills/
+!/agents/
+!/hooks/
+!/output-styles/
+!/workflows/
+!/scripts/
+!/analyze-then-pick/
+!/analyze-stack/
+
+# memories only (never the session transcripts next to them)
+!/projects/
+/projects/*/*
+!/projects/*/memory/
+
+# ---- never, even inside the folders above ------------------------------------------------
+/.credentials.json
+/skills/synced/
+/skills/.trash/
+node_modules/
+__pycache__/
+*.pyc
+.transcript-cache/
+/analyze-then-pick/runs/
+/analyze-then-pick/_backups/
+/analyze-stack/runs/
+/analyze-stack/samples/

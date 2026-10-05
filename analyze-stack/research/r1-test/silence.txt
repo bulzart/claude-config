@@ -1,0 +1,50 @@
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\Users\Glaresquare1\.claude\analyze-stack\samples\sample-27s-roofingpov.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    aigc_info       : {"aigc_label_type":0}
+    comment         : vid:v12044gd0000d9467pvog65li8m208f0
+    vid_md5         : e1f8c9cdf45366d4e78b004ebbaaaa64
+    encoder         : Lavf58.76.100
+  Duration: 00:00:27.27, start: 0.000000, bitrate: 2187 kb/s
+  Stream #0:0[0x1](und): Audio: aac (HE-AACv2) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 64 kb/s (default)
+    Metadata:
+      handler_name    : SoundHandler
+  Stream #0:1[0x2](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 720x1280 [SAR 1:1 DAR 9:16], 2115 kb/s, 30 fps, 30 tbr, 15360 tbn (default)
+    Metadata:
+      handler_name    : VideoHandler
+Stream mapping:
+  Stream #0:0 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, null, to 'pipe:':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    aigc_info       : {"aigc_label_type":0}
+    comment         : vid:v12044gd0000d9467pvog65li8m208f0
+    vid_md5         : e1f8c9cdf45366d4e78b004ebbaaaa64
+    encoder         : Lavf63.1.101
+  Stream #0:0(und): Audio: pcm_s16le, 44100 Hz, stereo, s16, 1411 kb/s (default)
+    Metadata:
+      encoder         : Lavc63.1.101 pcm_s16le
+      handler_name    : SoundHandler
+[Parsed_silencedetect_0 @ 000001a340882480] silence_start: 2.684195
+[Parsed_silencedetect_0 @ 000001a340882480] silence_end: 3.357732 | silence_duration: 0.673537
+[Parsed_silencedetect_0 @ 000001a340882480] silence_start: 3.839229
+[Parsed_silencedetect_0 @ 000001a340882480] silence_end: 7.023741 | silence_duration: 3.184512
+[Parsed_silencedetect_0 @ 000001a340882480] silence_start: 7.447868
+[Parsed_silencedetect_0 @ 000001a340882480] silence_end: 8.717415 | silence_duration: 1.269546
+[Parsed_silencedetect_0 @ 000001a340882480] silence_start: 9.338753
+[Parsed_silencedetect_0 @ 000001a340882480] silence_end: 14.010499 | silence_duration: 4.671746
+[Parsed_silencedetect_0 @ 000001a340882480] silence_start: 14.010522
+[Parsed_silencedetect_0 @ 000001a340882480] silence_end: 19.953061 | silence_duration: 5.94254
+[Parsed_silencedetect_0 @ 000001a340882480] silence_start: 20.336961
+[Parsed_silencedetect_0 @ 000001a340882480] silence_end: 21.011088 | silence_duration: 0.674127
+[Parsed_silencedetect_0 @ 000001a340882480] silence_start: 22.395986
+[Parsed_silencedetect_0 @ 000001a340882480] silence_end: 24.118345 | silence_duration: 1.722358
+[Parsed_silencedetect_0 @ 000001a340882480] silence_start: 24.823356
+[Parsed_silencedetect_0 @ 000001a340882480] silence_end: 25.378844 | silence_duration: 0.555488
+[out#0/null @ 000001a3407ef500] video:0KiB audio:4692KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown
+size=N/A time=00:00:27.23 bitrate=N/A speed= 457x elapsed=0:00:00.05    

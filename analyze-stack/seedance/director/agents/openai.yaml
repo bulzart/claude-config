@@ -1,0 +1,3 @@
+interface:
+  display_name: "Seedance 2.5 Director"
+  short_description: "Conversation-aware prompts with continuity checks."

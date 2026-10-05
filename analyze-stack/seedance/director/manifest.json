@@ -1,0 +1,30 @@
+{
+  "format_version": 1,
+  "skill_name": "seedance-2-5-director",
+  "package_revision": "2.1.0",
+  "files": {
+    "CHANGELOG.md": "5273d8546cd20b80cb6b71be13923a2b0a0b3b3a8bac16f6ba968dec95f9cdd4",
+    "README.md": "d308af90dff1dc677a55ff9dc1c6be5b0763cec4e7983dd5461dcb5c606a884b",
+    "SKILL.md": "70dc2bdfb7fa24daafdce5b6700e51418bfb2a3e45383bd87a9041f2fa433a6b",
+    "VALIDATION.md": "e04da14038bf43fafa5567bbce7690f8357c9b7aa7cc50d7713d81ec61f05d8a",
+    "agents/openai.yaml": "87940908ed1e9a4d03ce075bbf099888a9034adade7d7bce4c2c4e45f961803c",
+    "assets/context-handoff.md": "bd73036e2a5a9296ad63106fca879fd11626747f942366e44fba1a0eaf8ce729",
+    "assets/continuity-ledger.md": "af75d8e704f096a79e0f7f5676e97be4d4b7403c9af7587f5c5fd1a17fa11a10",
+    "assets/job-template.md": "a284e0fbc5c47b32f6a4fe7fd851cefe8da28672aac14908405a0f34f894c809",
+    "assets/prompt-template.md": "2acad2904c15c862f702d9a7d5a25216c5373497bb23871e55f5365dc0888359",
+    "assets/review-record.md": "ccd2d494f7bf0e618a3081461bc678058275aaab37d16cf4b741f91ac3f67fc4",
+    "docs/seedance-2-5-agent-guide.md": "c30a9c4d35695dcac299b40e020191a0c3800df4b0b2cb784e50119ca265e5c5",
+    "evals/README.md": "569bc4656722bd413bf65b07c99b89d578075375eab8e8a63aa4320aad8ee4c7",
+    "evals/evals.json": "f9b42420b296361993f7b9772bce614d75a179f9f2690e8b00580e3a9f478b05",
+    "evals/test_validate_bundle.py": "b33228fd4147f869347bd332fb41a7d2c425dc3df0f6c2b9cc04bca670cf9b4e",
+    "references/behavioral-tests.md": "78b42b7dcd06a46631d7e505e6c238842030726d78bad087eaf06083b5dc93e9",
+    "references/continuity-and-causality.md": "cad5d819c75dffe8b4c1d50d4e13bbbf9528e71da89fd71f4ca5acda2b1a83e4",
+    "references/examples.md": "5e4cd034667b4eca43c3769eed72c04a15d62ccdcf9d9ef1085590636fe00cf1",
+    "references/model-logic.md": "137cd35a1aa2e4a365d7bea36269d201edcecb5d76935974328ac14a512fa248",
+    "references/prompt-playbook.md": "ad64ce27cf15b5d05b002e97351b3690a376924e11228e0c622b30fea8e68fd8",
+    "references/provider-checks.md": "926dcf56d110eb65f0e121dc0e63c7081df2ce5e16fc54b4c216e5f145a8cb52",
+    "references/quality-and-iteration.md": "30435530c5dc4e76d7807d210ce8c576c1a98c35b21212358e85ec03b8471650",
+    "references/sources.md": "cfd4160907996753b4403b8806da23c7a41ac79960e8105110ad0d230c0ed203",
+    "scripts/validate_bundle.py": "f8c713f786315ac14fe46b334835026663aebcd74f9909367d7522e89256bb12"
+  }
+}

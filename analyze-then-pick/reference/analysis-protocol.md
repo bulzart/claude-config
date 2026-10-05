@@ -1,0 +1,300 @@
+# Analyze Mode — analysis protocol
+
+This file covers how to turn a folder of references into:
+- a project profile;
+- per-video cards;
+- dynamic content families;
+- the content directions offered to the user;
+- when the user supplies examples of their own videos, their house approach (§9).
+
+The command, and any analysis agent, follows it exactly.
+
+## 0. Provenance labels (use everywhere)
+- **[E]** direct evidence (a frame, a transcript line, OCR, a measured number, document text)
+- **[I]** analytical inference
+- **[U]** user instruction
+- **[A]** client asset
+- **[M]** model knowledge
+- **[G]** generation instruction
+
+Never present an inference as evidence. Measurements come from the tool output (cuts, timings,
+loudness); opinions come from viewing.
+
+## 1. Inputs per video (produced by `atp.py prep-all`)
+
+| file | what it gives |
+|---|---|
+| `10-media/<V>/video.md` | Specs, sampling summary, shot table, transcript, OCR spans, sheet list |
+| `10-media/<V>/timeline.md` | One row per second: shot, cuts, motion peaks, static stretches, words spoken, loudness, on-screen text |
+| `10-media/<V>/sheets/storyboard-NN.jpg` | The video at **~5 frames per second**, in order. White labels are the baseline; cyan `+` labels are densified frames (cut boundaries, motion peaks, first second); a red bar marks the first frame after a cut; grey cells mark thinned static stretches (≥ 1 fps kept) |
+| `frames.json`, `cuts.json`, `activity.json`, `audio.json`, `transcript.json`, `ocr.json` | Machine data for exact look-ups |
+
+**Densify on demand** where the default rate is not enough: fast actions, object interactions, hand
+contact, gestures, product appearances, swaps, text appearances, transitions.
+```
+python atp.py frames "<video>" --out "<run>/10-media/<V>/detail" --range 3.2-4.4 --fps 15 --sheet --label grip
+```
+Read a single full-resolution frame (`--at 3.6 --max-side 1280`) for small details (labels, UI, hands).
+
+## 2. Reading a video as one continuous sequence
+
+Read the storyboard sheets **in order with `timeline.md` open beside them**: every row of the timeline
+is one second of the sheets. Do not describe isolated frames. Answer:
+
+1. **Sequence:** what happens from the first frame to the last, and how earlier actions set up later
+   ones (cause → effect).
+2. **Subject:** who or what the video is about; which entities matter and what each represents
+   (person, character, product, service, interface, topic, brand, place, prop).
+3. **Message:** what is communicated and how the viewer is addressed (direct to camera, voice-over,
+   POV, silent demonstration, text-led, dialogue between characters).
+4. **Speech:** what is said (transcript, verified against the lips and timing), the delivery (pace,
+   tone), and where the words land relative to the visual beats.
+5. **Evolution:** scene changes, state changes of objects, reveals, transformations.
+6. **Camera and edit:** shot sizes, movement, handheld or locked-off, cut rhythm (median shot length
+   from `video.md`), why each cut happens, transitions and their motivation, speed changes.
+7. **Payoff:** what it is and when it lands (seconds), and whether the ending loops back to the start
+   (`loop_similarity`, plus the first and last frames).
+8. **Continuity:** entity states over time (the start of an entity ledger); any source flaws
+   (continuity errors, dead space) that must **not** be copied.
+9. **Client-entity fit:** what is the most suitable way for the client's placeable entity (the
+   registry, command A2b) to be part of this video, given what it is, its size and how it is used
+   (`generation-system.md` §4b.0)?
+   - **Swap:** the video shows its analog in the same form (another can for a can, another gum
+     pack for a gum, another car for a car), so it is replaced.
+   - **Contents:** the video shows the product's category in another form or vessel, whatever its
+     role in the story (a glass of water on the subject's café table, a drink in a cup that gets
+     poisoned and drunk, gum pellets shaken into a palm).
+     - What is inside becomes the client's product, and its opened package is placed nearby.
+     - Note the vessel or form, the amount over time, where the package could stand, and anything
+       that would make the switch illogical (the joke is about that exact drink, a hot drink for a
+       cold product, a background stranger's glass).
+   - **Placement:** nothing analogous. Examples: a funny story with nothing to drink or chew in
+     it, a man crossing a street with free hands, a sidewalk interview with no car in shot. Record
+     the placement opportunities:
+     - when the hands are free or busy, per beat (handheld products);
+     - the surfaces near the subject, and which shots show them;
+     - where a large product would naturally stand (the curb, a driveway, a corner of the room);
+     - the light falling on those spots.
+   - A source object that is **not** analogous (a phone for a drink client, a bicycle for a car
+     client) stays a reference element. It is never forced into a swap.
+10. **Inserts:** footage that interrupts the reference's own scene, such as a meme clip, a film or
+    TV snippet, or a reaction image, usually with its own sound. For each one record:
+    - the exact in and out on the cut frames (`cuts.json`);
+    - what it is;
+    - whether it is video or a still;
+    - its sound;
+    - any overlays the reference added on top of it.
+    Inserts are cut from the reference later, never generated (`generation-system.md` §3c).
+11. **Overlay text:** every text event's wording, role, centre position (`x_rel`, `y_rel` from
+    `ocr.json` and the sheets), in and out times, and style. The new video is generated clean, and
+    the text is re-placed as CapCut layers (`text-and-format.md` §3).
+
+## 3. Per-video card — `20-analysis/cards/<V>.md`
+
+```
+# <V> — <file name> (<duration> s, <aspect>, <fps>) [E]
+Format (dynamic label): <e.g. "POV hands-only demo with text hook" — invent the label from the material>
+Subject & entities: <entity — what it represents — screen time — role>              [E/I]
+Beat map:
+| t | beat | what happens | camera | audio/speech | text role |                        [E]
+Hook (0–1 s, 0–3 s): <visual, audio, text role, curiosity gap>                          [E/I]
+Payoff: <what, at t=…>; loop: <yes/no, why>; depends on its own object's geometry? <e.g. its logo lands between two caption words → the new video gives that landing a visible cause and the text follows the product (generation-system.md §5b)> [E/I]
+Camera & editing: <shot sizes, moves, median shot …s, cut logic, transitions + motivation> [E/I]
+Audio & address: <speech / VO / music / SFX; how the viewer is addressed>                 [E/I]
+Overlay text: <per event: wording, role (hook / "POV:" line / running caption / label / meme line / none), centre x_rel,y_rel, in–out s, style (colour, size, outline/box, case, line breaks)> — re-placed in CapCut over the clean video; wording kept only for a generic meme line (text-and-format.md §1) [E/I]
+Inserts: <per insert: t_in–t_out (cut frames), what it is (name the meme if recognisable), video or still, its sound, the reference's own overlays on it> — cut from this video, never generated (generation-system.md §3c) [E]
+Sound design (Create; audio-profile.json): <music bed yes/no/unknown, ~BPM, beat strength, energy arc, hits (t, on cut?), speech share, reusable whole?> → role [I]: <dramatic / comic / suspense / hype / SFX-driven / voice-only>; lyrics in the transcript may identify the song [E/I]
+Engagement mechanisms: <mechanism — evidence (t=…) — why it works>                         [I]
+Interactions & physics: <grips, pours, handling, weight — anything a generation must reproduce> [E]
+Continuity & flaws: <source errors and dead space not to copy>                             [E/I]
+Entities → preserve / replace / adapt / ignore: <per entity, with reason>                  [I/U]
+Client-entity fit: <swap: <source entity> at t=… → client <entity> | contents: <vessel or form> holds the product, package nearby | placement: nothing analogous> [E/I]
+Placement opportunities (contents / placement): <hands free/busy per beat; surfaces near the subject + side + depth plane + shots that show them; where a large product would stand; light on each spot; best anchor> [E/I]
+Must not survive (generation-system.md §9b): <the person being replaced, the product being swapped, competitor products, overlay text, usernames, platform logos and watermarks, featured third-party branding, flaggable content>; incidental decor and clothing logos are fine and are not listed [E]
+Confidence: <high/medium/low> — <what was hard to see or hear>
+```
+
+## 4. Effectiveness lenses (apply those the material supports; add new ones when needed)
+
+| lens | guiding question |
+|---|---|
+| Hook / first second | What stops the scroll at 0.0–1.0 s (motion onset, face, question, conflict, oddity, text line, sound)? |
+| Curiosity | What question opens, and when does it close? |
+| Relatability / POV | Does the viewer see themselves (POV, everyday problem, shared frustration)? |
+| Humour / surprise | Where is the turn, and how is it timed? |
+| Demonstration / proof | What is shown working, and how legibly? |
+| Storytelling | Setup → escalation → payoff structure; stakes |
+| Educational value | What is learned, and how fast? |
+| Spectacle / satisfaction | Visual pleasure, ASMR-like processes, transformations |
+| Transformation | A before/after state change, and its visibility |
+| Visual interruption | Pattern breaks, sudden cuts, zooms, object entries — and whether they are motivated |
+| Rhythm and pacing | Shot length distribution, beat alignment with speech or music, information density per second |
+| Camera behaviour | Proximity, POV vs. observer, motion energy, stability |
+| Composition | Subject placement in 9:16, readability, UI-safe areas |
+| Viewer interaction | Direct address, questions, calls to comment or share, challenges |
+| Emotional response | The intended feeling at the hook, the middle and the payoff |
+| Loopability / retention | Seamless loop, end-state echo, payoff near the end, retention risks (dead space, slow middle) |
+| Comment / share potential | Controversy, identity, utility, "send this to…" |
+| Audience targeting | Who it speaks to, and the cues that reveal it |
+| Structure | The reusable template of beats |
+
+## 5. Cross-video synthesis
+
+1. **Compare cards** and list the recurring mechanisms, with the videos that show each.
+2. **Cluster dynamically** into content families by *execution style × what the video is doing or
+   communicating*. Never use a fixed taxonomy; name each family from the material (e.g. "locked-off
+   tabletop reveal with dry humour", "creator-to-camera myth-busting with cutaways").
+3. **Profile each family** from measured data:
+
+| family | members | typical length | median shot | first cut | speech onset | hook mechanism | payoff time | camera style | editing logic | text role | audio | structure template |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+
+4. **Directions** are meaningful combinations of subject × structure × execution style that fit the
+   client.
+   - **Create** presents them as numbered **style groups**, `<content type> × <style> × <subject>`
+     grouped by content type (e.g. "G1 Organic × POV skit × gym", "G3 Anime × reaction ×
+     school"). The user picks one or a mix.
+   - **Recreate** also ranks every analysed reference by **recreate fit**:
+     - the product's integration form (swap / contents / placement);
+     - the number of people against the supplied characters;
+     - the own-content length after inserts, against the locked model's edit range;
+     - the text and overlay load;
+     - the motion complexity for the model's edit kind;
+     - the strength of its mechanism.
+     Write the ranking to `20-analysis/recreate-ranking.md`.
+
+   Each direction names:
+   - its source family;
+   - its mechanism;
+   - what the client's entities would do;
+   - **how the client's product appears:**
+     - a swap of a named source entity;
+     - contents ("the cup holds the product; the open can stands beside it", "the gum piece comes
+       from the open pack on the table");
+     - or a natural placement with its likely anchor ("in hand while walking", "on the desk beside
+       the laptop", "parked at the curb behind them").
+     A family whose references have nothing analogous is still a valid direction;
+   - the assets it would need;
+   - a typical length. When that is over 30 s, or over the locked model's maximum per generation,
+     mark it "needs ≥2 generations". Such a video asks the user's permission before it is
+     generated (command A7b).
+   Write them to `20-analysis/directions.md`; they are what the user chooses from.
+
+## 6. Project inference — `20-analysis/project-profile.md`
+
+Everything is inferred from the folder, never assumed:
+- **Domain and objective:** what kind of project this is (physical product, digital product, app,
+  service, personality or character, education, finance, entertainment, memes, brand, other) and the
+  likely content goal. Label [E] with the evidence files, or [I].
+- **Authoritative requirements [E]:** quote every instruction found in documents, scripts, briefs,
+  PDFs and spreadsheets, with the file id. These override inferences. Conflicts between documents go
+  to the user.
+- **Entities:** the client entities (what to put in, taken **only** from the user-supplied asset
+  registry), the source entities (what the references show, possibly many different products or
+  executions), and the mapping options:
+  - preserve (the mechanism, the action, the camera logic);
+  - replace (people → approved characters; a source product → the client product; an interface →
+    the client interface; a brand → the client brand; other analogous substitutions);
+  - adapt (an environment matched to the client);
+  - **contents / place** (no source entity of the same form: the vessel's contents become the
+    product with its package beside it, or the product is placed naturally in the scene,
+    `generation-system.md` §4b). List which references are swap, contents and placement;
+  - ignore (irrelevant extras).
+- **Asset fit:** map the entity roles each direction needs onto the **user-supplied** asset registry
+  (`assets-and-substitution.md` §2–§3), and flag roles no supplied asset can fill. Never look for
+  client assets in the references folder: products, people or brands seen there belong to the
+  references.
+- **Audience and platform cues** [I].
+
+## 7. Scale and delegation (≤ 2 analysis agents, no Workflow)
+
+- **≤ 6 videos** (or ≤ ~3 min total): the main session analyses everything itself.
+- **More:** spawn **1** analysis agent, or **2** when there are over ~15 videos, each with a
+  **disjoint** list of video ids. Two analysis agents is the ceiling; production agents (one per
+  video, `production-agents.md`) come later and are separate.
+- Agents only read this protocol plus their videos' prepared files, write the cards, and never ask
+  questions.
+- The main session always writes the synthesis (§5–§6) itself.
+
+Agent prompt (fill in the placeholders; use the Agent tool with `subagent_type: general-purpose`):
+
+```
+You analyse reference videos for a /analyze-then-pick run. Follow
+C:/Users/Glaresquare1/.claude/analyze-then-pick/reference/analysis-protocol.md §0–§4 exactly.
+Run dir: <RUN>. Your videos: <V01, V04, …> (prepared under <RUN>/10-media/<V>/).
+For each video: read video.md and timeline.md, view every storyboard sheet in order, densify with
+`python <ATP>/scripts/atp.py frames …` where §1 says so, then write <RUN>/20-analysis/cards/<V>.md
+using the §3 template with provenance labels. Project context so far: <2–4 lines>.
+Client's placeable entities (for the "Client-entity fit" line only): <type, category, real size —
+e.g. "slim 355 ml aluminium drink can", "palm-sized pack of 10 gum pellets", "compact five-door
+hatchback, about 4 m long">.
+Your examples (if any): <E01, …> (prepared under <RUN>/10-media/<E>/): the user's own finished
+videos. For each, write <RUN>/20-analysis/examples/<E>.md with the §9.2 template (§9.1 says what to read).
+Rules: do not call Higgsfield tools, do not spawn agents, do not use the Workflow tool, do not ask
+questions, write only your card files. Every product, person or brand you see in these videos
+belongs to the references; client assets come only from the user's supplied asset registry, which you
+do not need. Final message: one line per video (format label, hook, mechanism,
+swap/contents/placement, inserts, overlay text yes/no, confidence).
+```
+
+## 8. Presenting results to the user
+
+Keep the chat summary short:
+- project profile (5 lines);
+- families table;
+- numbered directions.
+
+The full files stay in `20-analysis/`. Ask for the number of videos, then the directions (§ command
+flow).
+
+## 9. Examples: the user's own videos → the house approach
+
+The optional examples folder holds the user's own finished, AI-edited videos: how **they** place, use,
+continue and blend their products. Study them to learn that approach, never to copy their content.
+They are prepared like references (`10-media/<E>/`, command A1) and are never generation inputs.
+
+### 9.1 What to read in each example
+- **Product integration:**
+  - the form (swap / contents / placement) and the anchor (hand, surface, environment, where a
+    large product stands, a screen), and which hand;
+  - the size in frame, the label or badge angle, and how long it is visible;
+  - how often it is used, and on which beat (hook, middle, payoff, ending);
+  - whether it ever gets a hero moment.
+- **Continuation:** how multi-clip videos are joined (hard cuts on beats, continuous seams), the clip
+  lengths, and how the product's state and position carry across the joins.
+- **Blend:** light and grade match, realism level, camera style and movement, and how the product
+  sits in the scene's light.
+- **Characters:** who appears, how many people, and how faces and outfits stay consistent.
+- **Text:** roles, wording style, positions, timing and density. Font, size and preset are fixed by
+  the house text style (command item 6) and are not learned.
+- **Structure and pacing:** length, hook type and timing, beats, inserts or memes, endings or calls to
+  action.
+- **Sound:** speech, music bed, sound effects and their levels.
+- **What they avoid:** anything the examples consistently leave out.
+- **Flaws:** physics cheats, leftovers or glitches. Note them so they are never copied.
+
+### 9.2 Example card — `20-analysis/examples/<E>.md`
+```
+# <E> — <file name> (<duration> s) [E]
+Product(s) shown: <which, as seen> [E]
+Integration: <form; anchor; hand; size in frame; label/badge angle; visible ~<x> % of the runtime; used: <how, when>; hero moment: <no | when>> [E/I]
+Continuation: <single take | clips joined at <t>, seam type; state carried: …> [E/I]
+Blend: <light and grade match; realism; camera> [E/I]
+Characters: <…> [E]
+Text: <roles, positions, timing, density> [E]
+Structure: <length; hook at t=…; beats; inserts; ending / call to action> [E/I]
+Sound: <speech / bed / SFX, levels> [E/I]
+Avoids: <…> [I]
+Flaws not to copy: <… | none seen> [E]
+```
+
+### 9.3 The house approach — `20-analysis/house-approach.md`
+The main session writes it from all the example cards:
+- **One rule per line,** each with its evidence and the default it replaces. Example: "The product is
+  held in the right hand at chest height, label toward the camera, visible ~70 % of the runtime (5 of
+  6 examples) → replaces the 'noticed, not featured' prominence (`generation-system.md` §4b.2)."
+- **Consistent** rules (most examples agree) are followed. Rules that vary are listed as options only,
+  and a single example is a weak signal.
+- It never holds a rule that breaks the hard rules (command item 18): physical and logical
+  correctness, the §9b list, the permission rule and the house text style.
+- No examples, or an empty folder → no file; the defaults apply.

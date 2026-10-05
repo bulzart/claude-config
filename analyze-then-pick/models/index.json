@@ -1,0 +1,1165 @@
+{
+  "_schema": {
+    "purpose": "Lightweight model-to-guide index for /analyze-then-pick. The command reads ONLY this file to build the model menu, then loads ONLY the selected model's guide.",
+    "fields": {
+      "name": "display name",
+      "provider": "lab / vendor",
+      "guide": "path relative to the library root (analyze-then-pick/)",
+      "status": "active | limited (works with caveats) | legacy (superseded; may be served by another backend) | retired (not in live catalog)",
+      "modes": "analyze = can create new videos; edit = can transform a supplied video (edit_kind says how)",
+      "edit_kind": "pixel-preserving edit | recreate-from-video-reference | motion-transfer | none",
+      "operations": "t2v, start_frame, end_frame, image_refs, video_refs, audio_refs, elements, video_edit, video_extension, object_replace, motion_transfer, multi_shot, native_audio",
+      "duration_s": "allowed durations (range string or list); edit ids follow the source",
+      "text_rendering": "how far in-frame text can be trusted (see guide 3.11); default policy = clean plate + deterministic captions",
+      "output_9x16_720p": "params that give vertical 9:16 at 720p on this id, the expected pixels, and the post step (atp.py conform) or input requirement",
+      "best_for / avoid_for": "one-line routing hints for the model menu",
+      "continuation": "how a video longer than one generation is built (generation-system.md §3b): max_s = longest single generation on Higgsfield; continuous = ranked methods for a seam inside one continuous take (extension | video_continuation | keyframe_ladder | last_frame | cut_only | segments); note = model-specific facts. Seams on the reference's own cuts are always preferred, whatever the model"
+    },
+    "add_a_model": "Copy an entry, point 'guide' at a new file made from models/_TEMPLATE.md. The command needs no change."
+  },
+  "updated": "2026-09-30",
+  "catalog_snapshot": "higgsfield/catalog-snapshot-2026-09-30.json",
+  "higgsfield_guide": "higgsfield/higgsfield-mcp.md",
+  "fallback_guide": "models/_generic-fallback.md",
+  "fixed_output": {
+    "aspect_ratio": "9:16",
+    "resolution": "720p",
+    "size": "720x1280"
+  },
+  "menu": {
+    "pinned": [
+      "seedance_2_5",
+      "wan3_0_prime"
+    ],
+    "order": [
+      "seedance_2_5",
+      "wan3_0_prime",
+      "kling3_0",
+      "veo3_1",
+      "seedance_2_0",
+      "wan3_0",
+      "cinematic_studio_3_0",
+      "minimax_h3",
+      "gemini_omni_flash_1_1",
+      "flux_3_video",
+      "kling3_0_turbo",
+      "veo3_1_lite",
+      "wan2_7",
+      "wan2_6",
+      "minimax_h3_max",
+      "minimax_hailuo",
+      "grok_video_v15",
+      "happy_horse_video",
+      "seedance1_5",
+      "kling2_6",
+      "cinematic_studio_video_v2",
+      "cinematic_studio_video",
+      "marketing_studio_video",
+      "veo3",
+      "gemini_omni",
+      "grok_video",
+      "kling_video_edit",
+      "ad_multiplier",
+      "hf_mult_replace_object",
+      "hf_mult_motion_control",
+      "flux_3_video_edit"
+    ],
+    "note": "The model menu always lists EVERY available video model in this order (pinned first); live models missing from the index are appended with a fallback note. Edit the order here — the command needs no change."
+  },
+  "models": {
+    "seedance_2_5": {
+      "name": "Seedance 2.5",
+      "provider": "ByteDance",
+      "guide": "models/seedance-2-5.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "pixel-preserving edit (mode video_edit) + video_extension",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "image_refs",
+        "video_refs",
+        "audio_refs",
+        "video_edit",
+        "video_extension",
+        "native_audio",
+        "multi_shot"
+      ],
+      "duration_s": "4-30 (edit: follows source, billed by source length)",
+      "text_rendering": "subtitle notation exists (【】); treat exact text as unreliable -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280",
+        "post": "verify; frames: exactly 9:16 images with aspect_ratio auto; edit/extension: source reframed to 9:16 first"
+      },
+      "best_for": "Default general model: multi-reference (up to 50 refs), long clips up to 30 s, reference video as motion/camera driver, precise edits, extensions",
+      "avoid_for": "Nothing specific; draft mode finalizes at 1080p only",
+      "continuation": {
+        "max_s": 30,
+        "continuous": "extension > last_frame",
+        "note": "mode video_extension + extension_mode forward; @Video1 = the accepted clip by job id (input 2-30 s); duration = the new part; ByteDance's example returns ONLY the new part and its first frame repeats the input's last (concat continuous seam drops it) - ffprobe the first result to confirm on Higgsfield; <=2 extension hops per take; start_image cannot mix with image references upstream: in omni mode write 'Use @ImageN as the first frame.'"
+      }
+    },
+    "ad_multiplier": {
+      "name": "Ad Multiplier (Seedance 2.5 engine)",
+      "provider": "Higgsfield / ByteDance",
+      "guide": "models/seedance-2-5.md",
+      "status": "active",
+      "modes": [
+        "edit"
+      ],
+      "edit_kind": "pixel-preserving edit (Higgsfield's contract: mode video_edit, generate_audio false, duration ceil(source))",
+      "operations": [
+        "video_edit",
+        "image_refs",
+        "native_audio"
+      ],
+      "duration_s": "source 4-30",
+      "text_rendering": "as Seedance 2.5; our policy removes source text (do not use the first-party preserve-captions block)",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "auto",
+          "resolution": "720p",
+          "mode": "video_edit"
+        },
+        "expected": "720x1280 when the source is 720x1280",
+        "post": "source reframed to 9:16 first; restore-audio; conform; qc"
+      },
+      "best_for": "Edit Mode swaps of people/products/objects in a 4-30 s clip following Higgsfield's first-party edit contract",
+      "avoid_for": "New generations (use seedance_2_5)",
+      "continuation": {
+        "max_s": 30,
+        "continuous": "extension > last_frame",
+        "note": "same surface as seedance_2_5; Higgsfield's edit-variant wrapper - prefer seedance_2_5 for new clips"
+      }
+    },
+    "seedance_2_0": {
+      "name": "Seedance 2.0",
+      "provider": "ByteDance",
+      "guide": "models/seedance-2-0.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "recreate-from-video-reference",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "image_refs",
+        "video_refs",
+        "audio_refs",
+        "elements",
+        "native_audio"
+      ],
+      "duration_s": "4-15",
+      "text_rendering": "unreliable for exact text -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p",
+          "mode": "std"
+        },
+        "expected": "720x1280 (verified in stored params)",
+        "post": "verify; frames exactly 9:16"
+      },
+      "best_for": "Reference-driven identity and multi-product fidelity, Elements, audio references, 4-15 s",
+      "avoid_for": "Clips over 15 s; pixel-preserving edits",
+      "notes": "Upstream reference limits: at most 9 images, 3 videos, 3 audio (Higgsfield page: 12 assets total). No edit mode on Higgsfield.",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "no extension mode on Higgsfield; ByteDance: a jumpy join -> 'trim 6 frames from the end of the previous video segment' and '1 frame from the beginning of the following'; repeated continuations compound degradation (mottled faces); never intercut with 2.5 output"
+      }
+    },
+    "seedance1_5": {
+      "name": "Seedance 1.5 Pro",
+      "provider": "ByteDance",
+      "guide": "models/seedance-1-5-pro.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "native_audio"
+      ],
+      "duration_s": [
+        4,
+        8,
+        12
+      ],
+      "text_rendering": "unreliable -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280",
+        "post": "verify; frames exactly 9:16"
+      },
+      "best_for": "Reliable motion from a strong 9:16 start frame, budget-friendly",
+      "avoid_for": "Multi-reference identity/product work (no reference roles)",
+      "notes": "BytePlus lists Seedance 1.5 Pro as retired upstream; Higgsfield still lists it (2026-09-30).",
+      "continuation": {
+        "max_s": 12,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "start/end frames only; identity rides on the frame and the verbatim description"
+      }
+    },
+    "kling3_0": {
+      "name": "Kling 3.0",
+      "provider": "Kuaishou",
+      "guide": "models/kling-3-0.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none (motion transfer via legacy motion_control tool; prefer hf_mult_motion_control)",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "elements",
+        "native_audio"
+      ],
+      "duration_s": "3-15",
+      "text_rendering": "see guide 3.11; default clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "mode": "std"
+        },
+        "expected": "720x1280 (std = 720p tier, inferred)",
+        "post": "verify; conform if different; frames exactly 9:16"
+      },
+      "best_for": "Multi-shot storytelling, native audio/dialogue, Elements for consistent characters and products",
+      "avoid_for": "Direct image/video reference roles (use Elements or start frames)",
+      "notes": "Kling's multi-shot switch is not exposed via MCP; the model defaults to a single shot. Prompt-level 'Shot N' labels are unverified - generate separate clips for scripted multi-shot.",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "Higgsfield: 'Use the final frame of one scene as the start frame of the next to chain shots seamlessly'; same Elements, mode and sound setting every clip; Kling's own Extend is not on the MCP"
+      }
+    },
+    "kling3_0_turbo": {
+      "name": "Kling 3.0 Turbo",
+      "provider": "Kuaishou",
+      "guide": "models/kling-3-0.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame"
+      ],
+      "duration_s": "3-15",
+      "text_rendering": "unreliable -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280 (inferred)",
+        "post": "verify; conform if different"
+      },
+      "best_for": "Fast, budget start-frame animation and drafts",
+      "avoid_for": "Reference-heavy or audio-critical work",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "last_frame",
+        "note": "start_image only; no audio switch"
+      }
+    },
+    "kling_video_edit": {
+      "name": "Kling 3.0 Omni Edit",
+      "provider": "Kuaishou",
+      "guide": "models/kling-3-0-omni-edit.md",
+      "status": "active",
+      "modes": [
+        "edit"
+      ],
+      "edit_kind": "pixel-preserving edit (text instruction + optional image references)",
+      "operations": [
+        "video_edit",
+        "image_refs"
+      ],
+      "duration_s": "source 3-10 s; at most 4 reference images",
+      "text_rendering": "see guide 3.11 for removal wording",
+      "output_9x16_720p": {
+        "params": {
+          "mode": "std"
+        },
+        "expected": "follows source -> 720x1280 for a 720x1280 source (inferred)",
+        "post": "source reframed to 9:16 first; conform; restore-audio if needed"
+      },
+      "best_for": "Instruction-based edits of short clips: swaps, restyles, removals with reference images",
+      "avoid_for": "Long sources; structural re-timing",
+      "notes": "Two-pass pattern recommended when source text must go: remove text first, then the substantive edit (see guide).",
+      "continuation": {
+        "max_s": 10,
+        "continuous": "segments",
+        "note": "edit id: split the source at its cuts; identical wording per segment"
+      }
+    },
+    "kling2_6": {
+      "name": "Kling 2.6",
+      "provider": "Kuaishou",
+      "guide": "models/kling-2-6.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "native_audio"
+      ],
+      "duration_s": [
+        5,
+        10
+      ],
+      "text_rendering": "unreliable -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16"
+        },
+        "expected": "likely 1080x1920 with sound on (no resolution parameter)",
+        "post": "always conform to 720x1280; frames exactly 9:16"
+      },
+      "best_for": "Cinematic motion and physics from a start frame, native audio",
+      "avoid_for": "Precise duration control or references",
+      "continuation": {
+        "max_s": 10,
+        "continuous": "last_frame",
+        "note": "start_image only"
+      }
+    },
+    "veo3_1": {
+      "name": "Google Veo 3.1",
+      "provider": "Google",
+      "guide": "models/veo-3-1.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "native_audio"
+      ],
+      "duration_s": [
+        4,
+        6,
+        8
+      ],
+      "text_rendering": "see guide 3.11; colon-form dialogue avoids auto-subtitles; default clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "quality": "basic"
+        },
+        "expected": "720x1280 expected (inferred)",
+        "post": "ffprobe first output; conform if larger"
+      },
+      "best_for": "Top-tier realism, dialogue with lip sync, cinematic single shots up to 8 s",
+      "avoid_for": "Reference images or end frames (not exposed); clips over 8 s",
+      "continuation": {
+        "max_s": 8,
+        "continuous": "last_frame",
+        "note": "scene extension exists upstream, not on Higgsfield; copy the character and voice description unchanged into every clip"
+      }
+    },
+    "veo3_1_lite": {
+      "name": "Google Veo 3.1 Lite",
+      "provider": "Google",
+      "guide": "models/veo-3-1.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "native_audio"
+      ],
+      "duration_s": [
+        4,
+        6,
+        8
+      ],
+      "text_rendering": "as Veo 3.1",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "generate_audio": true
+        },
+        "expected": "720x1280 expected",
+        "post": "ffprobe; conform if different; never aspect_ratio auto"
+      },
+      "best_for": "Budget Veo with first+last frame control",
+      "avoid_for": "Premium hero shots",
+      "continuation": {
+        "max_s": 8,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "start + end image; scene extension not on Higgsfield"
+      }
+    },
+    "veo3": {
+      "name": "Google Veo 3",
+      "provider": "Google",
+      "guide": "models/veo-3.md",
+      "status": "legacy",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "native_audio"
+      ],
+      "duration_s": "fixed by model (~8 s)",
+      "text_rendering": "as Veo 3.1",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16"
+        },
+        "expected": "720x1280 expected (portrait is 720p)",
+        "post": "ffprobe; conform if different"
+      },
+      "best_for": "Legacy choice only; prefer veo3_1",
+      "avoid_for": "New work (Google retired Veo 3.0 endpoints 2026-06-30; backend may differ)",
+      "continuation": {
+        "max_s": 8,
+        "continuous": "last_frame",
+        "note": "start_image only; do not intercut with veo3_1 without a look check"
+      }
+    },
+    "gemini_omni": {
+      "name": "Gemini Omni Flash",
+      "provider": "Google",
+      "guide": "models/gemini-omni-flash.md",
+      "status": "legacy",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "recreate-from-video-reference / edit with a video reference",
+      "operations": [
+        "t2v",
+        "image_refs",
+        "video_refs",
+        "native_audio"
+      ],
+      "duration_s": "4-10",
+      "text_rendering": "see guide 3.11",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280 expected",
+        "post": "verify; sources reframed to 9:16 first"
+      },
+      "best_for": "Reference-driven clips with native audio",
+      "avoid_for": "New work (upstream preview endpoint deprecated 2026-09-30; prefer gemini_omni_flash_1_1)",
+      "continuation": {
+        "max_s": 10,
+        "continuous": "cut_only",
+        "note": "no start_image role: seams on cuts only"
+      }
+    },
+    "gemini_omni_flash_1_1": {
+      "name": "Gemini Omni Flash 1.1",
+      "provider": "Google",
+      "guide": "models/gemini-omni-flash.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "pixel-preserving edit (mode edit; upstream caps sources at 10 s)",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "image_refs",
+        "video_refs",
+        "video_edit",
+        "native_audio"
+      ],
+      "duration_s": "3-10 (edit: source, capped 30 s on Higgsfield / 10 s upstream)",
+      "text_rendering": "see guide 3.11",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p",
+          "mode": "<text-to-video|image-to-video|reference-to-video|edit>"
+        },
+        "expected": "720x1280 expected",
+        "post": "verify; frames/sources 9:16 first"
+      },
+      "best_for": "Short multimodal generation and concise edits with native audio",
+      "avoid_for": "Clips over 10 s",
+      "continuation": {
+        "max_s": 10,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "mode image-to-video for frame anchors; add 'One continuous shot, no jump cuts.'; Google's extension is not exposed"
+      }
+    },
+    "grok_video_v15": {
+      "name": "Grok Video 1.5",
+      "provider": "xAI",
+      "guide": "models/grok-video.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "image_refs",
+        "audio_refs",
+        "native_audio"
+      ],
+      "duration_s": "2-15",
+      "text_rendering": "unreliable -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "resolution": "720p"
+        },
+        "expected": "follows the 9:16 start frame -> 720x1280",
+        "post": "MANDATORY 9:16 start_image (no aspect parameter); conform if different"
+      },
+      "best_for": "Expressive motion with audio references from a 9:16 start frame",
+      "avoid_for": "Reference-mode clips that cannot carry a start frame",
+      "notes": "Higgsfield REST docs: a first frame and references cannot be combined; references cap output at 720p; one audio input.",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "last_frame",
+        "note": "start_image cannot combine with image_references on Higgsfield; xAI extension not exposed"
+      }
+    },
+    "grok_video": {
+      "name": "Grok Video",
+      "provider": "xAI",
+      "guide": "models/grok-video.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "native_audio"
+      ],
+      "duration_s": "1-15",
+      "text_rendering": "unreliable -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16"
+        },
+        "expected": "unknown (480p or 720p)",
+        "post": "conform; prefer grok_video_v15 when quality matters"
+      },
+      "best_for": "Quick, versatile clips",
+      "avoid_for": "Quality-critical deliverables",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "last_frame",
+        "note": "start_image only"
+      }
+    },
+    "flux_3_video": {
+      "name": "FLUX 3 Video",
+      "provider": "Black Forest Labs",
+      "guide": "models/flux-3-video.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "video continuation / recreate (role semantics need a probe, see guide)",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "image_refs",
+        "video_refs",
+        "native_audio"
+      ],
+      "duration_s": "5-20",
+      "text_rendering": "see guide 3.11",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "704x1280",
+        "post": "REQUIRED conform to 720x1280 (~2% crop)"
+      },
+      "best_for": "Keyframe/storyboard control (pixel-exact keyframes), up to 20 s with audio",
+      "avoid_for": "Untested reference-role behaviour without a probe",
+      "continuation": {
+        "max_s": 20,
+        "continuous": "video_continuation > keyframe_ladder > last_frame",
+        "note": "Higgsfield: video continuation 'extends an existing clip forward from its final seconds of picture and sound'; BFL: duration = the new segment (<=15 s), a continuation call takes one media field only; whether Higgsfield maps video_references to continuation or to reference_video is unverified - check the first result's opening frame and length"
+      }
+    },
+    "flux_3_video_edit": {
+      "name": "FLUX 3 Video Edit",
+      "provider": "Black Forest Labs",
+      "guide": "models/flux-3-video-edit.md",
+      "status": "active",
+      "modes": [
+        "edit"
+      ],
+      "edit_kind": "pixel-preserving text-instructed edit (no image input)",
+      "operations": [
+        "video_edit"
+      ],
+      "duration_s": "source, first 15 s processed",
+      "text_rendering": "untargeted captions persist; removal must be an explicit instruction",
+      "output_9x16_720p": {
+        "params": {},
+        "expected": "follows source at <=720p, 24 fps (704-wide variants possible)",
+        "post": "source reframed to 9:16 first; conform; restore-audio if needed"
+      },
+      "best_for": "Cheap text-only edits (restyle, remove, relight) of <=15 s clips",
+      "avoid_for": "Swaps that must match an approved person/product (no image input)",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "segments",
+        "note": "edit id; 'extending a clip [is] not supported'"
+      }
+    },
+    "wan3_0": {
+      "name": "Wan 3.0",
+      "provider": "Alibaba (Tongyi Wanxiang)",
+      "guide": "models/wan-3-0.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "recreate-from-video-reference (source <= 15 s; text removal wording inferred)",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "image_refs",
+        "video_refs",
+        "audio_refs",
+        "native_audio",
+        "multi_shot"
+      ],
+      "duration_s": "2-30 or -1 (model chooses; billed 10 s)",
+      "text_rendering": "see guide 3.11",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280 expected",
+        "post": "verify; frames exactly 9:16 (frames and references cannot be combined)"
+      },
+      "best_for": "Long multi-shot reference-to-video with native audio; enable_thinking for complex prompts",
+      "avoid_for": "Mixing start/end frames with references in one call",
+      "continuation": {
+        "max_s": 30,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "Alibaba: 'Setting the last frame of one clip as the first frame of the next creates seamless transitions'; frame mode takes no references; upstream extension (output includes the source) has no Higgsfield mode; carry the voice with an audio_references slice cut from clip A"
+      }
+    },
+    "wan3_0_prime": {
+      "name": "Wan 3.0 Prime",
+      "provider": "Alibaba (Tongyi Wanxiang)",
+      "guide": "models/wan-3-0.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "recreate-from-video-reference (source <= 15 s; text removal wording inferred)",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "image_refs",
+        "video_refs",
+        "audio_refs",
+        "native_audio",
+        "multi_shot"
+      ],
+      "duration_s": "2-30 or -1",
+      "text_rendering": "see guide 3.11",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280 expected",
+        "post": "verify"
+      },
+      "best_for": "Higher-tier Wan 3.0 for hero outputs",
+      "avoid_for": "Same limits as wan3_0",
+      "continuation": {
+        "max_s": 30,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "as wan3_0"
+      }
+    },
+    "wan2_7": {
+      "name": "Wan 2.7",
+      "provider": "Alibaba (Tongyi Wanxiang)",
+      "guide": "models/wan-2-7.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "audio_refs",
+        "native_audio"
+      ],
+      "duration_s": "2-15",
+      "text_rendering": "unreliable; official exclusion phrasing 'Do not add text.' -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280",
+        "post": "start frame must be exactly 9:16 (ratio follows the frame)"
+      },
+      "best_for": "Character-consistent clips with synchronized audio / driving audio",
+      "avoid_for": "Image/video reference roles",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "upstream continuation is not on Higgsfield; audio_references slice keeps the voice"
+      }
+    },
+    "wan2_6": {
+      "name": "Wan 2.6",
+      "provider": "Alibaba (Tongyi Wanxiang)",
+      "guide": "models/wan-2-6.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "image_refs",
+        "video_refs",
+        "audio_refs",
+        "native_audio",
+        "multi_shot"
+      ],
+      "duration_s": [
+        5,
+        10,
+        15
+      ],
+      "text_rendering": "see guide 3.11",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "quality": "720p"
+        },
+        "expected": "720x1280",
+        "post": "verify"
+      },
+      "best_for": "Stylized/creative reference-to-video with character tags; prompt <= 1,500 chars",
+      "avoid_for": "Exact first frames (no start_image role)",
+      "notes": "Video references define characters, not a clip to rebuild - not an Edit Mode route.",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "cut_only",
+        "note": "no start_image role: seams on cuts only; video_references carry look and voice"
+      }
+    },
+    "minimax_h3": {
+      "name": "MiniMax H3",
+      "provider": "MiniMax",
+      "guide": "models/minimax-h3.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "recreate-from-video-reference",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "image_refs",
+        "video_refs",
+        "audio_refs",
+        "native_audio",
+        "multi_shot"
+      ],
+      "duration_s": "4-15",
+      "text_rendering": "most reliable in-frame text of this set (vendor claims): quote a string to render it, omit quotes to suppress; still verify with qc",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "2K"
+        },
+        "expected": "2K portrait (~0.571 ratio)",
+        "post": "ALWAYS conform down to 720x1280 (keep key content off the extreme edges)"
+      },
+      "best_for": "2K keyframes or mixed image/video/audio references, timed shot scripts",
+      "avoid_for": "Mixing frames with references in one call",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "official '[video continuation]' task with <Video N> as the starting point is untested on Higgsfield; MiniMax says image- and reference-to-video are exclusive while Higgsfield claims they combine - preflight first; never mix H3 and H3 Max in one take"
+      }
+    },
+    "minimax_h3_max": {
+      "name": "MiniMax H3 Max",
+      "provider": "MiniMax",
+      "guide": "models/minimax-h3.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "recreate-from-video-reference",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "image_refs",
+        "video_refs",
+        "audio_refs",
+        "native_audio"
+      ],
+      "duration_s": "5-15",
+      "text_rendering": "most reliable in-frame text of this set (vendor claims): quote a string to render it, omit quotes to suppress; still verify with qc",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "768p"
+        },
+        "expected": "~768x1344",
+        "post": "ALWAYS conform to 720x1280; never 480p for deliverables"
+      },
+      "best_for": "Faster/cheaper H3 variant",
+      "avoid_for": "480p deliverables",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "as minimax_h3"
+      }
+    },
+    "minimax_hailuo": {
+      "name": "MiniMax Hailuo (02 / 2.3)",
+      "provider": "MiniMax",
+      "guide": "models/minimax-hailuo.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "start_frame",
+        "end_frame"
+      ],
+      "duration_s": [
+        6,
+        10
+      ],
+      "text_rendering": "unreliable -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "variant": "minimax-2.3",
+          "resolution": "768"
+        },
+        "expected": "follows the 9:16 start frame, ~768x1366",
+        "post": "MANDATORY 9:16 start_image (text-to-video is 16:9 only); conform down to 720x1280; output is silent"
+      },
+      "best_for": "Natural physics and facial emotion from a 9:16 start frame",
+      "avoid_for": "Text-to-video in 9:16; audio",
+      "continuation": {
+        "max_s": 10,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "start and end frames of identical size; keep one variant for the whole take"
+      }
+    },
+    "happy_horse_video": {
+      "name": "HappyHorse",
+      "provider": "Alibaba (ATH)",
+      "guide": "models/happy-horse.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "native_audio"
+      ],
+      "duration_s": "3-15",
+      "text_rendering": "unreliable; upstream watermark defaults on - if qc finds a watermark, reject and switch model (never crop it out)",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280 expected",
+        "post": "verify; qc for watermark"
+      },
+      "best_for": "Short prompt-driven clips; thinly documented",
+      "avoid_for": "Reference-heavy or fidelity-critical work",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "last_frame",
+        "note": "start_image only; check every join for the corner watermark"
+      }
+    },
+    "cinematic_studio_3_0": {
+      "name": "Cinema Studio Video 3.0",
+      "provider": "Higgsfield",
+      "guide": "models/higgsfield-cinema-studio-3-0.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "elements",
+        "native_audio"
+      ],
+      "duration_s": "4-15",
+      "text_rendering": "unknown -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p",
+          "generate_audio": true
+        },
+        "expected": "720x1280 expected",
+        "post": "verify; generate_audio defaults to false; speedramp not supported over MCP"
+      },
+      "best_for": "Premium cinematic shots with physics-aware motion and genre look; Elements",
+      "avoid_for": "Reference video driving; prompts over ~500 characters",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "same Elements, genre and mode every clip; extension exists only in the web app's Cinema Studio 4.0 (= Seedance 2.5)"
+      }
+    },
+    "cinematic_studio_video_v2": {
+      "name": "Cinema Studio Video 2",
+      "provider": "Higgsfield",
+      "guide": "models/higgsfield-cinema-studio-video-2.md",
+      "status": "active",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "elements",
+        "multi_shot",
+        "native_audio"
+      ],
+      "duration_s": "3-12",
+      "text_rendering": "unknown -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "mode": "std",
+          "speedramp": "linear"
+        },
+        "expected": "unknown pixels",
+        "post": "ALWAYS conform + qc; multi_prompt unsupported over MCP (use multi_shot_mode auto)"
+      },
+      "best_for": "Cheap hero-frame animation with genre and optional auto multi-shot",
+      "avoid_for": "Scripted per-shot control",
+      "continuation": {
+        "max_s": 12,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "multi_shots packs more story into one generation"
+      }
+    },
+    "cinematic_studio_video": {
+      "name": "Cinema Studio Video (v1)",
+      "provider": "Higgsfield",
+      "guide": "models/higgsfield-cinema-studio-video.md",
+      "status": "legacy",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "native_audio"
+      ],
+      "duration_s": [
+        5,
+        10
+      ],
+      "text_rendering": "unknown -> clean plate + post captions",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "slow_motion": false
+        },
+        "expected": "unknown pixels (no resolution control)",
+        "post": "ALWAYS conform + qc"
+      },
+      "best_for": "Simple dramatic single shots",
+      "avoid_for": "Anything needing control",
+      "continuation": {
+        "max_s": 10,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "legacy"
+      }
+    },
+    "marketing_studio_video": {
+      "name": "Marketing Studio",
+      "provider": "Higgsfield",
+      "guide": "models/higgsfield-marketing-studio.md",
+      "status": "limited",
+      "modes": [
+        "analyze"
+      ],
+      "edit_kind": "none",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "native_audio"
+      ],
+      "duration_s": "12-15",
+      "text_rendering": "formats may add their own text -> qc",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280",
+        "post": "never rely on the landscape default; preset/avatar/product ids must come from the web app"
+      },
+      "best_for": "Templated product ads when the user supplies Marketing Studio ids",
+      "avoid_for": "Controlled recreation of analyzed references; approved characters",
+      "continuation": {
+        "max_s": 15,
+        "continuous": "cut_only",
+        "note": "self-contained 12-15 s units joined on cuts; never split a voiceover"
+      }
+    },
+    "hf_mult_replace_object": {
+      "name": "Genjutsu Object Swap",
+      "provider": "Higgsfield",
+      "guide": "models/higgsfield-genjutsu.md",
+      "status": "active",
+      "modes": [
+        "edit"
+      ],
+      "edit_kind": "pixel-preserving object/character/product/garment/location replacement",
+      "operations": [
+        "object_replace",
+        "image_refs"
+      ],
+      "duration_s": "source 4-30",
+      "text_rendering": "preserves untargeted text -> remove source text locally or via explicit clause; verify",
+      "output_9x16_720p": {
+        "params": {
+          "resolution": "720p"
+        },
+        "expected": "follows source",
+        "post": "source reframed to 9:16 first; audio check / restore-audio; conform; qc"
+      },
+      "best_for": "One clearly defined swap with similar size and handling, keeping the performance",
+      "avoid_for": "Replacements with very different geometry, new contact interactions, many simultaneous changes",
+      "continuation": {
+        "max_s": 30,
+        "continuous": "segments",
+        "note": "source-driven: split the source at its cuts into 4-30 s segments with identical references and wording (Higgsfield's own recipe refuses rather than splits)"
+      }
+    },
+    "hf_mult_motion_control": {
+      "name": "Genjutsu Motion Transfer",
+      "provider": "Higgsfield",
+      "guide": "models/higgsfield-genjutsu.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "motion-transfer",
+      "operations": [
+        "motion_transfer",
+        "image_refs",
+        "video_refs"
+      ],
+      "duration_s": "driving video 4-30",
+      "text_rendering": "rebuilds the scene from references; qc for text",
+      "output_9x16_720p": {
+        "params": {
+          "resolution": "720p"
+        },
+        "expected": "follows the driving video",
+        "post": "driving video reframed to 9:16 first; conform; qc"
+      },
+      "best_for": "Transferring a reference's choreography, gestures and camera move onto approved characters",
+      "avoid_for": "Changing the action itself",
+      "continuation": {
+        "max_s": 30,
+        "continuous": "segments",
+        "note": "driver-driven: split the driving video at its cuts; same character and scene images every segment"
+      }
+    }
+  },
+  "not_selectable": {
+    "higgsfield_preset": "legacy preset-id image-to-video path (no prompt engineering)",
+    "utility": [
+      "video_background_remover",
+      "sync_so",
+      "topaz_hyperion_2_5",
+      "topaz_video",
+      "bytedance_video_upscale",
+      "video_upscale",
+      "video_deflicker",
+      "clipify",
+      "depth_anything_video",
+      "sam_3_video",
+      "fps_boost"
+    ]
+  }
+}

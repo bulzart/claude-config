@@ -1,0 +1,55 @@
+﻿{
+ "schema": "analyze-stack.product-library/1",
+ "updated": "2026-09-21T19:58:00+02:00",
+ "products": [
+  {
+   "slug": "celsius-live-fit-sparkling-12oz",
+   "brand": "CELSIUS",
+   "name": "CELSIUS Live Fit Sparkling",
+   "variant": "six flavours: Orange, Kiwi Guava, Wild Berry, Watermelon, Grape Rush, Cola",
+   "size": "12 fl oz (355 mL)",
+   "ids": {},
+   "category": "beverage - sparkling energy drink, zero sugar",
+   "product_family": true,
+   "label_text": [
+    "CELSIUS",
+    "LIVE FIT",
+    "SPARKLING",
+    "ORANGE",
+    "KIWI GUAVA",
+    "WILD BERRY",
+    "WATERMELON",
+    "GRAPE RUSH",
+    "COLA",
+    "NATURAL FLAVOR WITH OTHER NATURAL FLAVORS",
+    "ESSENTIAL ENERGY",
+    "ACCELERATES METABOLISM",
+    "BURNS BODY FAT",
+    "0 SUGAR",
+    "12 FL.OZ (355mL)"
+   ],
+   "images": [
+    "images/front-orange.png",
+    "images/front-kiwi-guava.png",
+    "images/front-wild-berry.png",
+    "images/front-watermelon.png",
+    "images/front-grape-rush.png",
+    "images/front-cola.png",
+    "images/spec-front-orange.png",
+    "images/spec-three-quarter-orange.png",
+    "images/spec-side-orange.png",
+    "images/spec-back-orange.png",
+    "images/spec-top-down-orange.png",
+    "images/spec-closeup-upper-orange.png",
+    "images/spec-closeup-middle-orange.png",
+    "images/spec-closeup-lower-orange.png",
+    "images/spec-lying-side-orange.png",
+    "images/spec-front-orange-b.png",
+    "images/spec-front-pair-orange-kiwi.png"
+   ],
+   "confirmed": true,
+   "last_used_run": "20260921-192043-monsters-celsius",
+   "last_refreshed": "2026-09-21"
+  }
+ ]
+}

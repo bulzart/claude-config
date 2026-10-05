@@ -1,0 +1,522 @@
+---
+guide: wan-3-0
+title: Alibaba Wan 3.0 / Wan 3.0 Prime
+provider: Alibaba Cloud (Wan / Tongyi Wanxiang team; API via Alibaba Cloud Model Studio, DashScope)
+higgsfield_model_ids: [wan3_0, wan3_0_prime]
+guide_version: 1.1
+last_verified: 2026-09-30
+catalog_snapshot: higgsfield/catalog-snapshot-2026-09-30.json
+documentation_depth: high
+---
+
+# Alibaba Wan 3.0 / Wan 3.0 Prime — model engineering guide
+
+> Scope: Wan 3.0 is Alibaba's "All-in-One" video model: one model id covers text-to-video, first-frame and
+> first+last-frame image-to-video, multimodal reference-to-video (image/video/audio), and — upstream — video
+> editing and extension, routed automatically from the attached media and the prompt's intent. This file
+> covers Higgsfield ids `wan3_0` (standard) and `wan3_0_prime` (speed-optimized). Output format is fixed at 9:16,
+> 720p (§2.6). The live `models_explore` catalog always wins over the parameter tables in this file.
+>
+> Evidence tags: **[OFFICIAL]** provider docs, paper, model card, API reference, first-party prompt
+> guide or first-party examples · **[HF]** Higgsfield catalog, MCP tool contract or first-party
+> Higgsfield docs · **[SECONDARY]** reputable third-party testing or articles · **[INFERRED]**
+> engineering inference that must be verified in use.
+
+## 1. At a glance
+
+- **Positioning.** "An All-in-One reference-based video generation model that supports Text-to-Video,
+  Image-to-Video (first frame/first-last frame), and Reference-based Video Generation. It can generate videos up
+  to 30 seconds long at 30fps." [OFFICIAL] Up to 20 reference materials per request upstream, native
+  dialogue/BGM/SFX, editing and extension [OFFICIAL]. `wan3.0-video-prime` is the "high-speed version with
+  capabilities aligned to the standard version" [OFFICIAL]. GA announced Aug 24, 2026; the API page still says
+  "preview" [OFFICIAL].
+- **Best for:** 10–30 s single-pass stories; timed multi-shot sequences; locking several people/props/scenes from
+  references; voice timbre from audio; motion/camera transfer; regenerating a supplied clip (edit, ≤15 s source);
+  "lifelike, diverse human faces" [OFFICIAL]. Artificial Analysis (2026-09-30): #1 text-to-video (Elo 1157), #5
+  image-to-video with audio (Elo 1164) [SECONDARY].
+- **Weaker at:** on-screen text and audio texture ("improving but not yet where we want them") [OFFICIAL]; exact
+  lip sync; long choreography; orbits >45° [OFFICIAL]. Frame modes cannot take references or audio [OFFICIAL].
+- **Choose Wan 3.0 when** you need >15 s, multi-reference casting, reference audio, a silent switch, motion
+  transfer or a clean re-render of a supplied clip. **Choose another model when** exact in-frame text is required
+  (add it in post), or a strict first frame *and* reference images are needed in one call (impossible here).
+
+| operation | how to invoke on Higgsfield | notes |
+|---|---|---|
+| Text-to-video | `prompt` only | 2–30 s or smart duration; multi-shot by prompt [OFFICIAL] |
+| First frame → video | one `start_image` | "pixel-level reproduction" of the frame [OFFICIAL] |
+| First + last frame → video | `start_image` + `end_image` | `end_image` alone is not a documented combination [OFFICIAL] |
+| Reference-to-video | `image_references` (≤10), `video_references` (≤5, ≤15 s total), `audio_references` (≤5, ≤15 s total) | cite as Image N / Video N / Audio N [OFFICIAL] |
+| Audio-driven (lip/beat) | `image_references` + `audio_references` | not with `start_image` [OFFICIAL] |
+| Motion / camera / VFX transfer | `video_references` (+ `image_references`) | upstream-documented; Higgsfield routing [INFERRED] |
+| Video edit / extension (Edit Mode) | one `video_references` + edit/extend-intent prompt | upstream-documented; not advertised in the Higgsfield catalog description → verify [INFERRED] |
+| Document / web-page input | — | N/A on Higgsfield (no `file`/`link` role) [HF] |
+
+## 2. Higgsfield parameter surface
+
+### 2.1 Parameters per model id
+Both ids expose an identical surface [HF].
+
+| id | parameter | values | default | effect / notes |
+|---|---|---|---|---|
+| `wan3_0`, `wan3_0_prime` | `duration` | number, min -1, max 30 | 5 | "Duration in seconds (2-30), or -1 to let the model choose the length from the prompt and media. Smart duration is billed as 10 seconds." [HF] |
+| both | `resolution` | `480p`, `720p`, `1080p` | `720p` | always `720p` under the fixed format (§2.6); upstream default 1080P [OFFICIAL] |
+| both | `generate_audio` | bool | `true` | "Generate a native audio track" [HF]; maps to upstream `audio` [INFERRED]; toggling "does not affect pricing" upstream [OFFICIAL] |
+| both | `enable_thinking` | bool | `false` | "Let the model reason about the prompt before generating (slower, better prompt adherence)" [HF] |
+| both | `aspect_ratio` | `auto`, `16:9`, `9:16`, `1:1`, `4:3`, `3:4` | — | always `9:16` (§2.6); `auto` ≈ upstream `adaptive` [INFERRED] |
+| both | negative_prompt, seed, prompt_extend, watermark | — | — | not exposed on Higgsfield [HF]; see §2.5, §3.10, §3.11 |
+
+### 2.2 Media roles
+| role | what it controls | limits / count | notes |
+|---|---|---|---|
+| `start_image` | exact first frame (upstream `first_frame`) | 1 | exclusive with all `*_references` [OFFICIAL] |
+| `end_image` | exact last frame (upstream `last_frame`) | 1, only with `start_image` | [OFFICIAL] |
+| `image_references` | people, props, scenes, style, storyboard/keyframes | ≤10; JPEG/PNG/BMP/WEBP, 240–8000 px, ≤20 MB, aspect ≤8:1 [OFFICIAL] | "Image N" = N-th image reference [OFFICIAL] |
+| `video_references` | motion, camera, VFX, identity+voice, or the source clip for edit/extension | ≤5 clips, 1–15 s each, ≤15 s total, ≥16 fps, ≤100 MB, mp4/mov [OFFICIAL] | "Video N"; input + output ≤30 s [OFFICIAL] |
+| `audio_references` | voice timbre, music, beat, dialogue source | ≤5 clips, 1–15 s each, ≤15 s total, wav/mp3, ≤15 MB [OFFICIAL] | "Audio N" |
+
+`medias[].value` is always a Higgsfield media UUID or a completed job ID, never a URL [HF].
+
+### 2.3 Duration, resolution, aspect ratio, audio
+- **Duration:** integers 2–30, or `-1` smart duration ("the model automatically recommends a suitable duration
+  based on the input prompt, content, and rich media" [OFFICIAL]; billed as 10 s on Higgsfield [HF]). Values 0/1
+  are outside the upstream range; the server snaps/clamps unsupported values [HF contract].
+- **Frame rate** 30 fps [OFFICIAL]. **Resolution/aspect:** fixed 720p, 9:16 — see §2.6. Upstream price scales with
+  resolution per second [OFFICIAL]; use `get_cost: true` for Higgsfield credits.
+- **Audio:** on by default; dialogue, SFX and BGM are generated jointly [OFFICIAL]. `generate_audio:false` yields no
+  audio track [OFFICIAL/HF].
+
+### 2.4 Call recipes
+Text-to-video:
+```json
+{"model":"wan3_0","prompt":"<PROMPT>","duration":10,"aspect_ratio":"9:16","resolution":"720p","generate_audio":true,"enable_thinking":false}
+```
+First frame → video (start image already 9:16):
+```json
+{"model":"wan3_0","prompt":"<MOTION_PROMPT>","medias":[{"value":"<IMAGE_MEDIA_ID>","role":"start_image"}],"duration":8,"aspect_ratio":"9:16","resolution":"720p","generate_audio":true}
+```
+First + last frame → video (both frames 9:16, identical size):
+```json
+{"model":"wan3_0","prompt":"<PATH_PROMPT>","medias":[{"value":"<IMAGE_MEDIA_ID_FIRST>","role":"start_image"},{"value":"<IMAGE_MEDIA_ID_LAST>","role":"end_image"}],"duration":6,"aspect_ratio":"9:16","resolution":"720p","generate_audio":true}
+```
+Reference-to-video (order inside each role = its number):
+```json
+{"model":"wan3_0","prompt":"<PROMPT citing Image 1, Image 2, Video 1, Audio 1>","medias":[{"value":"<IMAGE_MEDIA_ID_1>","role":"image_references"},{"value":"<IMAGE_MEDIA_ID_2>","role":"image_references"},{"value":"<VIDEO_MEDIA_ID>","role":"video_references"},{"value":"<AUDIO_MEDIA_ID>","role":"audio_references"}],"duration":12,"aspect_ratio":"9:16","resolution":"720p","generate_audio":true,"enable_thinking":true}
+```
+Edit Mode — regenerate a supplied clip (source 9:16, ≤15 s; verify routing first) — a `<JOB_ID>` also works as value [HF]:
+```json
+{"model":"wan3_0","prompt":"Edit the video: <ONE CHANGE>; the rest of the frame stays unchanged.","medias":[{"value":"<VIDEO_MEDIA_ID or JOB_ID>","role":"video_references"}],"duration":-1,"aspect_ratio":"9:16","resolution":"720p","generate_audio":true}
+```
+Speed variant: replace `"wan3_0"` with `"wan3_0_prime"` [HF]. Preflight any call with `get_cost: true` [HF].
+
+### 2.5 Parameter gotchas
+1. **Mode exclusivity.** `start_image`/`end_image` cannot be combined with any `*_references` ("The two modes are
+   mutually exclusive") [OFFICIAL]. For a strict first frame *and* a character, pre-compose a start frame that
+   already contains the approved character, or use references and describe the opening [INFERRED].
+2. **No audio in frame modes:** "Wan3.0's first frame/first-last frame mode does not [accept driving audio]… use
+   the all-modal reference mode (reference_image + reference_audio)" [OFFICIAL].
+3. **Smart duration is billed as 10 s** [HF], presumably whatever length the model picks [INFERRED].
+4. **Video input counts:** input + output ≤30 s; upstream bills input + output seconds [OFFICIAL]; Higgsfield basis
+   undocumented → `get_cost`.
+5. **Hidden upstream defaults.** `prompt_extend` (LLM rewriting) defaults to `true` upstream and is not exposed
+   [OFFICIAL/HF] — write complete prompts so the rewriter has nothing important to invent [INFERRED].
+6. **`enable_thinking`** is absent from Alibaba's API reference (checked 2026-09-30) [OFFICIAL silence]; third-party
+   schemas call it "deep thinking mode… required to process file/link inputs and to parse complex image content"
+   [SECONDARY]. Slower; credit impact unknown.
+7. **Numbering follows `medias` order within each role** [INFERRED from the upstream rule "the 1st reference_image
+   in the array corresponds to Image 1" [OFFICIAL]].
+8. **Never send `auto`** under the fixed format: text-only lets the model choose; references may pull it landscape
+   [INFERRED from OFFICIAL "adaptive" behaviour].
+
+### 2.6 9:16 / 720p mapping (fixed output format of /analyze-then-pick)
+| mode | params | expected output | action |
+|---|---|---|---|
+| T2V, references | `"aspect_ratio":"9:16","resolution":"720p"` (same for `wan3_0_prime`) | 720×1280 at 30 fps expected: Wan 3.0 publishes no pixel table, Wan 2.7/2.6 720P 9:16 is 720×1280 [OFFICIAL] → [INFERRED] | verify |
+| First / first+last frame | same params + 9:16 frames of identical size | frame mode "auto-matches first frame aspect ratio" [OFFICIAL] | verify |
+| Edit / extension | same params; the source must already be 9:16 | adaptive keeps the source ratio [OFFICIAL]; 9:16 on a non-9:16 source is untested | reframe the source to 9:16 before upload |
+
+Always finish with `atp.py conform --video "<in>" --out "<out>"` (scale-to-cover + focus crop to exactly 720×1280,
+never stretched; a no-op copy when already exact). Expected loss here is ~0%; `conform` refuses losses above 12% —
+treat that as a wrong-ratio generation and regenerate from 9:16 inputs rather than forcing the crop [INFERRED].
+Never use 480p for deliverables (it would need upscaling).
+
+## 3. How the model reads a prompt
+
+### 3.1 Recommended prompt structure
+Official full-modality formula [OFFICIAL]:
+
+`Prompt = [Overall description] + [Reference citation: Image N / Video N / Audio N] + [Shot N (start–end s): Subject + Scene + Motion + Aesthetic control] + [Dialogue: xx says: "…"] + [Sound effect / BGM] + [Style / Mood] + [Negative prompt list]`
+
+"Write down whatever you want to control, and simply skip any section you do not need." [OFFICIAL] Weak prompts
+"cover entity and motion but skip aesthetic control and stylization — producing a static camera in an undefined
+void" [OFFICIAL]. Alibaba's prompt-organizing skill (wan3-pe) uses five sections — [Core Task], [Plot Summary],
+[Audio Style], [Camera & Core Constraints], [Negative Prompts] — and keeps ratio, duration and resolution out of the
+prompt ("set via the page or API") [OFFICIAL]. Length: "A single sentence is enough… but the more complete and
+precise the description, the closer the result" [OFFICIAL]; limit 20,000 characters [OFFICIAL]; practical 60–150
+words per 5–8 s shot, 200–500 words for 15–30 s [INFERRED]. Chinese or English prompts; dialogue in other
+languages appears in first-party examples [OFFICIAL]. Worked patterns: §4.0.
+
+### 3.2 Subject and identity
+Describe the subject with adjectives and short phrases (age, hair, clothing, distinguishing features) [OFFICIAL].
+When a subject comes from a reference, bind it once and describe only what the reference cannot show (action,
+emotion, position). "When the user only says 'character' or 'subject', keep that neutral term" [OFFICIAL wan3-pe].
+
+### 3.3 Action, motion and physical interaction
+State amplitude, speed and effect ("swaying violently", "moving slowly") [OFFICIAL]. A "30-second choreographed
+sequence" and "high-frequency actions the model cannot control" are on the what-not-to-prompt lists [OFFICIAL].
+First-party examples spell out visible physics ("hems swaying with motion… wall plaster flaking") [OFFICIAL].
+Contact, grip and state phrasing: §3.14.
+
+### 3.4 Environment, lighting and style
+Scene = background + foreground [OFFICIAL]. Official lighting terms: daylight, firelight, overcast, clear-sky
+light; soft, hard, side, rim, backlight; contrast, warm/cool tones, saturation [OFFICIAL]. Style block = art style +
+color tone + mood, at the start or end [OFFICIAL]. Light matching for inserted assets: §3.14.
+
+### 3.5 Chronology, timing and multi-shot structure
+- `Overall description + Shot number + Timestamp + Shot content` [OFFICIAL]; shots "connect end-to-end with no gaps
+  or overlaps, 2–5 seconds per segment" (prompt guide) vs "4~6 seconds per shot" (user guide) [OFFICIAL,
+  inconsistent] → use contiguous 3–5 s shots.
+- `Shot 1 [0-3s]`, `Shot 1 (00:00-00:03):` and `[00:00-00:03]` are interchangeable; pick one [OFFICIAL].
+- Transitions: "hard cut" or "dissolve" at the end of a segment, or "seamlessly continue from the last frame of the
+  previous segment" [OFFICIAL].
+- Single take: "Generate single shot." / "One continuous shot" on the first line [OFFICIAL]; without it a four-word
+  prompt came back as five shots in five seconds in one test [SECONDARY].
+- Timestamps structure shots; they don't steer free physical motion. Never schedule when a moving object must face
+  the camera or reach a mark. Wan fakes it with single-frame snaps or a pause-and-resume: seen on a spinning can,
+  2026-10-01 (`generation-system.md` §5b) [INFERRED].
+
+### 3.6 Camera language and dedicated camera / motion controls
+Camera is prompt-only on Higgsfield [HF]. Official vocabulary: push in, pull out, orbit, handheld follow, "Fixed
+shot, camera static, position unchanged"; "85mm telephoto, shallow depth of field / 24mm wide-angle, deep focus";
+"High-speed photography (1000fps slow motion)" [OFFICIAL]. Intent: push-in = intimacy/tension, pull-out =
+scale/isolation, tracking = alongside, orbit = importance, fixed = stillness; keep orbits under 45° [OFFICIAL].
+Line-guided paths drawn in red on a reference image are official; their prompt opens "The final footage completely
+removes all red lines, numeric markers, arrows, and auxiliary marks; no text or watermarks appear in the frame."
+[OFFICIAL]
+
+### 3.7 References (image / video / audio)
+- **Syntax:** "Image 1", "Video 1", "Audio 1" — capital letter, space before the number; numbered per modality by
+  upload order; one reference may be called "reference image" [OFFICIAL].
+- **Bind by purpose, one subject per binding:** "Character A corresponds to Image 1, adopting facial features,
+  hairstyle, and clothing. Prop A corresponds to Image 3, adopting structure, material, and color. Scene A
+  references Image 4, adopting spatial layout, architecture, and lighting; the person in the image is ignored."
+  [OFFICIAL wan3-pe]; "Clearly separate the purpose of each material… to prevent features from bleeding across
+  subjects" [OFFICIAL].
+- **Several images of one subject:** state what each adds "and declare that they jointly define the same entity and
+  generate only one instance" [OFFICIAL].
+- **Partial borrowing** (take X, leave Y) and **storyboards** ("Use the storyboard only as shot guidance; do not
+  generate video from the storyboard as a single image") [OFFICIAL] — examples in §4.0.
+- **Audio:** "Voice timbre references Audio 1" (applies to all of that character's lines) or beat-driving
+  ("following the beat of the fixed audio") [OFFICIAL].
+- In Analyze Mode never inherit a reference's wording, usernames or watermarks (§3.11).
+
+### 3.8 Start and end frames
+Frame mode reproduces the image at t=0 (and at the end) [OFFICIAL]. "The image already establishes the subject,
+scene, and style, so the prompt should focus on describing the motion, plot, dialogue, and camera movement"
+[OFFICIAL]. For first+last frames describe the path; keep lighting, framing and subject count compatible
+[INFERRED]. Both frames 9:16, identical size (§2.6).
+
+### 3.9 Audio, dialogue and sound
+- Dialogue: "character + speaking verb + colon + quoted content"; multi-person: `Image 1 says: "…"; Image 2 replies:
+  "…"` [OFFICIAL]. Voice formula: lines + emotion + tone + speed + timbre + accent; append "Lip sync" when needed
+  [OFFICIAL]; exact-word lip sync is listed as unreliable in the general Wan guide [OFFICIAL].
+- "No dialogue." — "otherwise the model decides on its own whether to include dialogue"; "No background music." or
+  "No BGM, generate only ambient and action sounds" [OFFICIAL]. SFX auto-match described actions and may carry
+  timestamps [OFFICIAL].
+- Multi-character: unique labels, action before speech, distinct voice labels, linking words ("Immediately,")
+  [OFFICIAL].
+
+### 3.10 Negative constraints
+No `negative_prompt` field on Higgsfield [HF] (upstream: ≤500 chars [OFFICIAL]). Wan 3.0's formula ends with an
+in-prompt **Negative prompt list**: "Write only what you do not want to appear; leave it empty if there is none. Do
+not pad the list or repeat content already stated in the positive prompt." [OFFICIAL] Official categories: faces
+("No face distortion, No face swapping, No extra fingers"), text ("No subtitles, No watermark, No complex text, No
+extra brand names"), camera ("No large camera movements, No frequent shot cuts"), space ("No axis errors") and
+consistency ("No character position changes, No costume changes, No scale drift") [OFFICIAL]. One line, last,
+5–12 items [INFERRED].
+
+### 3.11 Visible text
+**(a) Reliability.** Alibaba lists "on-screen text rendering accuracy" as still "improving but not yet where we want
+them" [OFFICIAL]; the general guide says "Text renders approximately — specific words will not be precise"
+[OFFICIAL]. First-party examples still request short titles, chart labels and packaging copy [OFFICIAL] — so the
+model attempts text, but exact wording is not reliable.
+
+**(b) Clean plate — default in Analyze Mode.** Generate without on-screen text and add hooks, captions and labels
+in post (`atp.py captions`, libass). Use Alibaba's own phrasings as the closing line: "Do not show any text, subtitles, numbers,
+interface elements, or watermarks on screen." or the negative-list form "No subtitles, No watermark, No complex
+text, No extra brand names"; an official re-render example even excludes "text, Chinese characters, English
+letters, numbers, labels, subtitles, watermarks, logos or platform corner bugs" [OFFICIAL]. Pair it with positive
+text-free surfaces ("plain unmarked packaging", "the screen shows soft abstract color") [INFERRED]. Never describe
+signs, captions or screens with words, and never quote non-dialogue strings — the official dictionary shows that
+described subtitles ('White English subtitles "My little Max…" appear at the bottom of the screen') are requested
+content [OFFICIAL example]. Keep the no-subtitles item whenever there is dialogue [INFERRED]. With reference media
+add: "do not reproduce any text, captions, usernames or watermarks from Video 1" [INFERRED from the official "do not
+inherit" pattern].
+
+**(c) Intentional in-frame text.** Only when it belongs to the scene (a sign, packaging, a screen UI), is 1–3 short
+words, large, frontal and mostly static; state it once, bound to its surface, and QC every frame [INFERRED]. Anything
+longer, or any caption/subtitle/hook, goes to post. Approved real product text comes from the reference image:
+"keep the printed label exactly as in Image 2; add no other text" [INFERRED]. The official packaging example asks for
+text "sharp and legible… without deformation" [OFFICIAL]; verify with `atp.py qc --mode analyze --allowed-text
+"<text>"`.
+
+**(d) Edit operations — removing source text (Edit Mode).** Wan 3.0 can take the supplied clip as `video_references`
+and regenerate it with an edit instruction [OFFICIAL capability]; text removal itself is not documented [INFERRED].
+Small static overlays (handles, corner bugs, watermarks) can first be removed locally with `atp.py clean --delogo`;
+captions over the subject belong to the model. Following the official edit pattern ("Edit the video: remove … in video
+1…; the … rest of the frame stay unchanged") and "modifying one item at a time is the most stable" [OFFICIAL], run
+text removal as its own first pass:
+"Edit the video: remove every caption, subtitle, username, watermark, sticker, timestamp, meme text, UI overlay and
+overlay logo from Video 1 and reconstruct the scene behind them; the people's movement, the camera, lighting, sound
+and timing stay unchanged. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen."
+Keep a specific source text only if the user asked, naming it ("keep only the lettering on the mug"). Limits: source
+≤15 s (reference-video cap); `duration:-1` keeps the source length [OFFICIAL]. Verify with `atp.py qc --mode edit`
+for residual or ghosted letters.
+
+**(e) Watermark risk.** Upstream `watermark` defaults to `false` (when true: "AI Generated", lower-right) and is not
+exposed [OFFICIAL/HF]. The practical risk is model-invented corner marks or "platform corner bugs" copied from
+references [INFERRED]; `atp.py qc` OCR catches them — regenerate with the clean-plate line and cleaner references.
+
+### 3.12 Character / identity consistency
+Wan 3.0 claims fine-grained consistency of "facial features, hairstyle and hair color, body shape, clothing, and
+accessories" in reference mode [OFFICIAL]. One person per reference image ("a single-person setting image
+corresponds to exactly one character") [OFFICIAL]; clean, well-lit front or three-quarter views; bind with "adopting
+facial features, hairstyle, and clothing". To replace a source performer: "Replace the <person> in Video 1 with the
+<person> in Image 1, keeping only the motion, trajectory and camera of Video 1; do not inherit Video 1's
+appearance" [composite of OFFICIAL patterns]. Labels "unique and consistent — no pronouns or synonyms" [OFFICIAL].
+
+### 3.13 Product and object fidelity
+Official claim: "multi-angle appearance, hardware structure, logos, and material details remain stable shot to
+shot" [OFFICIAL]. Attach 1–3 clean single-object product images (no grids), bind "Prop A corresponds to Image 2,
+adopting structure, material, and color" [OFFICIAL] and lock geometry: "keep the exact silhouette, proportions,
+part count and construction of Image 2 without deformation; no scale drift" [OFFICIAL phrasing]. For a first frame
+that must match an approved packshot, use frame mode ("pixel-level reproduction") [OFFICIAL].
+
+### 3.14 Integration and continuity
+**Across clips.** "Setting the last frame of one clip as the first frame of the next creates seamless transitions"
+[OFFICIAL]; extract it with `atp.py last-frame` (exact, lossless), then `media_upload` → PUT → `media_confirm` [HF contract]. Frame mode takes no references or driving audio [OFFICIAL]; carry the voice in reference mode with an `audio_references` slice cut from clip A. Upstream extension exists (its output includes the source; input + output ≤ 30 s), but Higgsfield exposes no extension mode for this id [OFFICIAL; HF]. Extensions
+restate "the character traits, clothing, and scene to avoid continuity glitches" [OFFICIAL]. Reuse identical
+references and binding sentences across a project [INFERRED].
+
+**Inserted or replaced assets.** Official phrasings to reuse: "have the woman in video 1 put on the hat from image
+1, naturally fitting her head shape"; "The position, orientation, size ratio, quantity and mutual occlusion of every
+object in the scene are copied exactly; no additions, no deletions, no moves"; "the character and scene edges blend
+naturally with no cutout artifacts" [OFFICIAL]. Build the asset sentence as: size relative to a body part or known
+object → orientation (which face toward camera) → contact and grip (which hand, which fingers, where) → occlusion
+("her fingers overlap the front edge") → end position [INFERRED structure].
+
+**Scene light on the asset.** Official examples name the source, angle, softness and color: "warm sunlight slants
+from the upper-left-back at about forty-five degrees, shadow edges slightly soft, direction uniform"; "real contact
+shadows"; "The figure's face naturally receives mixed lighting from warm indoor light and cool neon light outside
+the window" [OFFICIAL]. Add reflections on glossy surfaces and a contact shadow under placed objects [INFERRED].
+
+**Persistent states.** Official: "After the handover is complete, the bouquet is only in that character's hands";
+"There is always only one orb, stable in size, not duplicated, not vanished, not deformed"; "Do not change the
+positions of pine trees and rocks" [OFFICIAL]. Write end states for placed objects, open/closed containers, liquid
+levels and which hand holds what ("the cup stays in her left hand, half full, lid on") [INFERRED].
+
+**Known failures.** Alibaba's own exclusion categories name them: face distortion/swapping, extra fingers, twisted
+limbs, "clipping artifacts", "cutout traces", "characters running illogically", "No scale drift (common in editing
+/ reference scenarios)" [OFFICIAL]; plus text, audio texture and wide orbits (above). Slop prevention: §5.
+
+## 4. Prompt construction
+
+### 4.0 Official prompt examples and the patterns they teach
+Verbatim first-party examples (trimmed with […]):
+
+1. Full-modality prompt — wan3.0 Prompt Guide, https://www.alibabacloud.com/help/en/model-studio/wan3-video-generation-prompt-guide
+   > "Eastern epic xianxia, majestic and imposing. A general in heavy armor holds a long spear, riding alone on a
+   > golden qilin […] 15 seconds, pacing shifts from steady restraint to explosive release. The general's appearance
+   > references Image 1, facial expression references Image 2, mount references Image 3, voice timbre references
+   > Audio 1. Shot 1 (00:00-00:03): Extreme wide establishing shot, 24mm wide-angle, extreme low angle, camera
+   > static. […] Shot 2 (00:03-00:06): Close-up, 85mm telephoto, shallow depth of field. […] The general speaks low:
+   > "This pass, I have guarded for ten years." […] Negative prompt list: No modern elements, no subtitles or
+   > watermarks, no extra characters, avoid facial distortion and continuity errors, avoid blur and low resolution."
+2. Timed shots — same page
+   > "This story is told from a third-person perspective, a short drama about letting go and rediscovering hope.
+   > Shot 1 [0-3s] A boy sits alone in a corner of the playground, looking down at the letter in his hand, then sighs
+   > softly, eyes lost. Shot 2 [4-6s] Hard cut, fixed camera, focused on the boy's eyes, tears glistening, filled
+   > with loss and helplessness. […]"
+3. Reference writing — same page
+   > "The child in Image 1 stands in the entryway of the modern apartment in Image 2" · "Replace the skateboarding
+   > man in Video 1 with the woman in Image 1, keeping the skateboarding action, trajectory, and scene unchanged" ·
+   > "Style references Image 2; Only reference the color tone and lighting of Image 2, not the characters"
+4. Motion-only reference — same page
+   > "Reference the character from Image 1; use Video 1 only as a motion reference. Generate a one-take,
+   > real-phone-shot-quality dance video in a pure-white shadowless studio: bright even soft light, clean
+   > background, the camera essentially fixed, with no transitions and no cuts. […] The reference video is used only
+   > for motion control; do not inherit its character appearance. […] with no subtitles and no watermarks."
+5. Edit — same page
+   > "Edit the video: remove the woman's sunglasses in video 1, revealing natural eye makeup and gaze; the woman's
+   > movement and the rest of the frame stay unchanged."
+6. Organized request with state persistence — wan3-pe skill, https://g-adoc.alcasset.com/media/maas_docs/sfm/common/files/6a4b3c2d1e0f9cef.zip
+   > "2. The character in Image 1 receives the handed-over bouquet with both hands, brings it to his chest, smiles,
+   > and nods in thanks to the other person, using Audio 3's timbre to say: "Thank you very much." 3. After the
+   > handover is complete, the bouquet is only in that character's hands."
+7. Clean-plate line — same prompt guide (creative example)
+   > "Do not show any text, subtitles, numbers, interface elements, or watermarks on screen."
+
+Patterns they teach:
+- **Order:** overall description (genre, length, pacing) → reference bindings → timed shots → dialogue → sound →
+  style/mood → one exclusion line (1).
+- **Camera first, then subject:** each shot opens with shot size + lens + angle + camera state, then the subject's
+  action (1, 2) — camera motion and subject motion are separate clauses.
+- **Temporal markers:** `Shot N (00:00-00:03):` or `Shot N [0-3s]`, one style per prompt; transitions named ("Hard
+  cut, fixed camera") (1, 2).
+- **Sentence style:** short declarative present tense; concrete physical detail instead of adjectives of quality
+  (1, 2).
+- **Reference syntax:** "<role> references Image N", "the <noun> in Image N"; partial borrowing says what to take
+  and what to leave ("not the characters", "do not inherit its character appearance") (3, 4).
+- **Exclusions:** a single "Negative prompt list:" line, or one closing "no …" sentence (1, 4, 7).
+- **Dialogue/audio:** speaker + verb + colon + quoted line; timbre "using Audio N's timbre to say:" (1, 6).
+- **Edits:** "Edit the video: <one change> in video 1; <everything else> stay unchanged." (5).
+- **States:** end states are written explicitly (6). **Length:** ~60 words for a 10 s drama (2) to 200+ for 15 s
+  multi-reference (1).
+
+### 4.1 Text-to-video
+Follows patterns: order, camera-first shots, timecodes, one exclusion line.
+```text
+<Generate single shot.>  (omit for multi-shot)
+<Genre/format + one-sentence overall description, pacing, real-time speed>.
+Shot 1 [0-4s] <shot size, lens, angle, camera move>. <Subject with 3–6 visual descriptors> <action with speed/amplitude> in <scene: foreground/background>, <light source, direction, color temperature>.
+Shot 2 [4-8s] <hard cut | seamlessly continue…>, <camera>. <Subject action and end state>.
+<Label> says: "<line>" <tone, pace>. | No dialogue.
+Sound: <SFX>; <BGM style | No background music.>
+Style and mood: <art style>, <color tone>, <mood>.
+Negative prompt list: No subtitles, no on-screen text, no watermark, no slow motion, no costume changes, <task items>.
+```
+Worked example (8 s, 9:16, 720p): "Generate single shot. A calm demo moment in a small home workspace, steady real-time
+pacing. Medium close-up, 50mm, eye level, the camera pushes in very slowly. A young woman with shoulder-length dark
+hair and a grey knit sweater lifts a matte white handheld speaker from a wooden desk with her right hand, turns it
+slowly to show its rounded side, then sets it back down exactly where it was; its soft shadow returns under it.
+Soft window light from the left, warm tones. No dialogue. Sound: the soft tap of the speaker on wood, quiet room
+tone. No background music. Style and mood: natural photographic realism, calm. Negative prompt list: No subtitles,
+no on-screen text, no logos, no watermark, no extra objects on the desk, no slow motion."
+
+### 4.2 Start frame (and end frame) to video
+Follows patterns: motion + camera only (the frame defines subject and style), explicit end state, one exclusion line.
+```text
+<Generate single shot.>
+Continue from the first frame: <what moves first, speed>, <then>, <end state>. <Camera: fixed | slow push in | …>.
+(FLF) End exactly on the final frame: <pose/position/composition to land on>.
+<Sound / dialogue | No dialogue. No background music.>
+Keep <subject>'s appearance, clothing and the scene layout unchanged.
+Negative prompt list: No subtitles, no on-screen text, no watermark, no extra people, no costume changes.
+```
+Worked example (6 s, 9:16 frames: a dog sitting on a porch → the same dog lying down): "Generate single shot. The dog
+looks toward the street, ears lifting, then slowly lowers itself onto its front paws and settles into the lying
+position of the final frame. Fixed camera at eye level. Soft afternoon light unchanged. Sound: a faint breeze and
+one quiet sigh from the dog. No dialogue. No background music. Negative prompt list: No subtitles, no on-screen
+text, no second dog, no change of fur color."
+
+### 4.3 Reference-to-video
+Follows patterns: wan3-pe sections, "<role> corresponds to Image N, adopting …", timed beats, explicit end states.
+```text
+[Core Task] Generate a <format> of <overview>. <Label A> corresponds to Image 1, adopting facial features, hairstyle, and clothing. <Prop B> corresponds to Image 2, adopting structure, material, and color; keep its exact silhouette and proportions without deformation. <Scene C> references Image 3, adopting spatial layout and lighting; the person in the image is ignored. <Voice of Label A references Audio 1.> The whole film adopts <style>.
+[Plot Summary]
+1. Shot 1 [0-4s]: <camera>. <beat, grip, contact>.
+2. Shot 2 [4-8s]: <camera>. <beat>; <Label A> says: "<line>". <End state of props>.
+[Audio Style] <SFX, voice texture, BGM | No background music.>
+[Camera & Core Constraints] <camera style>; real-time speed; <continuity constraints>.
+[Negative Prompts] no subtitles, no on-screen text, no watermark, no identity drift, no scale drift, <items>
+```
+Worked example (10 s, 9:16): Image 1 = approved person, Image 2 = a handheld camera, Image 3 = a rooftop at dusk.
+"[Core Task] Generate a short lifestyle clip. The man corresponds to Image 1, adopting facial features, hairstyle,
+and clothing. The camera body corresponds to Image 2, adopting structure, material, and color; keep its exact
+shape and proportions. The rooftop references Image 3, adopting layout and lighting. [Plot Summary] 1. Shot 1
+[0-5s]: wide shot, slow tracking. The man walks to the rooftop edge holding the camera from Image 2 in both hands,
+low warm sun from his left. 2. Shot 2 [5-10s]: hard cut, medium close-up, fixed camera. He raises the camera to eye
+level and takes one photo; the camera stays in his hands throughout. [Audio Style] Wind, distant traffic, one
+shutter click. No dialogue. No background music. [Negative Prompts] no subtitles, no on-screen text, no watermark,
+no identity drift, no extra people."
+
+### 4.4 Video edit / extension / motion transfer
+Upstream-documented; Higgsfield routing unverified [INFERRED]. Follows patterns 3–5: one change per pass, explicit
+"stay unchanged" list, take/leave statements.
+```text
+Clean regeneration (Edit Mode, pass 1): Edit the video: remove every caption, subtitle, username, watermark, sticker, timestamp, meme text, UI overlay and overlay logo from Video 1 and reconstruct the scene behind them; the people's movement, the camera, lighting, sound and timing stay unchanged. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen.
+Edit (pass 2+):  Edit the video: change <target> in Video 1 to <result>; <asset size, grip, light>; the rest of the frame stays unchanged.
+Extension:       Extend Video 1: continue after its last frame — <new action>. <Restate subject traits, clothing, scene.>
+Transfer:        Reference only the <camera movement | motion | choreography> of Video 1. The performer is <label> in Image 1, adopting facial features, hairstyle and clothing; do not inherit the appearance, text or graphics of Video 1.
+```
+Extension needs "extend/continue" and restated traits; duration -1 or source + extension [OFFICIAL]; first-party
+examples use "forward/backward" inconsistently [OFFICIAL], so write the direction literally [INFERRED].
+Worked example (motion transfer, 8 s, 9:16): "Reference only the walking path and camera movement of Video 1. The
+performer is the woman in Image 1, adopting facial features, hairstyle and clothing; do not inherit the
+appearance, text or graphics of Video 1. She walks the same path along a quiet park lane at the same real-time
+pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no face swapping."
+
+## 5. Strengths, weaknesses and failure modes
+
+| failure mode | typical trigger | mitigation |
+|---|---|---|
+| Gibberish text, subtitles, corner marks | described signage/screens; dialogue without a no-subtitles item; text in references | §3.11 |
+| Features bleed between people/props | vague bindings | one subject per image, unique labels, adoption scope [OFFICIAL] |
+| Product silhouette/proportion drift | grid references, heavy motion, editing | clean single-object refs, geometry sentence, "No scale drift" [OFFICIAL] |
+| Spatial distortion | orbit >45° [OFFICIAL] | smaller arcs, slower moves |
+| Object snaps, or pauses on a pose then resumes | free physical motion (a spin, toss or roll, or a vehicle's move) given exact times or a required end state | describe the physics only; give the end state a visible cause (a hand stops it, a driver brakes); time product-pun text to the real moment (`generation-system.md` §5b) [INFERRED] |
+| Actions compressed or skipped | too many beats per shot | ≤2 actions per 3–5 s shot [INFERRED] |
+| Lip sync off | exact-word expectations [OFFICIAL] | short lines, "Lip sync", audio timbre reference |
+| Request rejected | frames + references, or frames + audio [OFFICIAL] | one mode per call (§2.5) |
+| Storyboard grid rendered as a frame | undeclared multi-grid reference | "use the storyboard only as shot guidance" [OFFICIAL] |
+| Unwanted music/voices | nothing said about sound [OFFICIAL] | "No dialogue." "No background music." |
+
+**AI-slop tendencies and prevention.** `atp.py qc` flags black and frozen spans; `atp.py trim` removes dead head/tail frames deterministically.
+
+| slop tendency | prevention (prompt / params) |
+|---|---|
+| Dead space, padded length | size `duration` to the beats, or use smart duration, built so "a simple product beat doesn't get padded to 30 seconds" [OFFICIAL]; a visible change every 2–3 s [INFERRED] |
+| Arbitrary slow motion | "No slow motion", "no heroic slow-motion posing entrance" [OFFICIAL]; say "real-time speed" [INFERRED] |
+| Sudden speed changes | state pacing in the overall description [OFFICIAL]; "no speed ramps" [INFERRED] |
+| Unmotivated cuts / transitions | "Generate single shot."; "no flickering, shaking, frame-skipping or self-inserted cut points"; "No frequent shot cuts" [OFFICIAL] |
+| Morphing | "no transformation collapsing into a blurry light blob" [OFFICIAL]; "objects keep their shape" [INFERRED] |
+| Identity drift | "no distorted or drifting faces", "No face swapping" [OFFICIAL]; restate traits per shot |
+| Duplicated / vanishing objects | "not duplicated, not vanished, not deformed" [OFFICIAL] |
+| Clothing changes | "No costume changes" [OFFICIAL] |
+
+## 6. Model-specific features and controls
+- **Smart duration** (`-1`, billed as 10 s), **thinking mode** (use for dense multi-reference/multi-shot prompts or
+  after an adherence miss [INFERRED]) and **Prime** (same capabilities, faster [OFFICIAL]).
+- **All-in-one routing** by media type and intent words ("edit video", "remove", "replace", "extend", "continue")
+  [OFFICIAL] — avoid those verbs in normal generation prompts [INFERRED]. Official prompt skill `wan3-pe` [OFFICIAL].
+
+## 7. Model-specific pre-generation checklist
+- [ ] Mode chosen (never frames + references; never frames + audio); Analyze vs Edit Mode known.
+- [ ] `aspect_ratio:"9:16"`, `resolution:"720p"`; frames/sources already 9:16; `atp.py conform` afterwards (§2.6).
+- [ ] Reference limits (≤10 images, ≤5 videos ≤15 s, ≤5 audio ≤15 s); input + output ≤30 s.
+- [ ] References cited as "Image N / Video N / Audio N" in attach order, each with an adoption scope.
+- [ ] "Generate single shot." or contiguous 3–5 s timed shots; camera clause before subject clause.
+- [ ] Dialogue quoted with speaker or "No dialogue."; BGM specified or "No background music."
+- [ ] Clean-plate line (§3.11b); in-frame text only if short and scene-bound; Edit Mode: removal pass first.
+- [ ] Asset size/grip/occlusion, light direction and end states written (§3.14); slop exclusions included (§5).
+- [ ] `duration`, `generate_audio`, `enable_thinking` set deliberately; `get_cost: true`.
+- [ ] QC with `atp.py qc --mode analyze|edit`: size, freezes, pseudo-text, corner marks, identity, product geometry.
+
+## 8. Sources
+- [OFFICIAL] Wan3.0 – Video Generation API Reference — https://www.alibabacloud.com/help/en/model-studio/wan3-video-generation-api-reference (accessed 2026-09-30)
+- [OFFICIAL] Wan3.0 Video Generation (user guide) — https://www.alibabacloud.com/help/en/model-studio/wan3-video-generation-guide (accessed 2026-09-30)
+- [OFFICIAL] wan3.0 Video Generation Prompt Guide — https://www.alibabacloud.com/help/en/model-studio/wan3-video-generation-prompt-guide (accessed 2026-09-30)
+- [OFFICIAL] wan3-pe prompt optimization Skill (SKILL.md v0.2.0), linked from the prompt guide — https://g-adoc.alcasset.com/media/maas_docs/sfm/common/files/6a4b3c2d1e0f9cef.zip (accessed 2026-09-30)
+- [OFFICIAL] Video generation prompt guide (Wan formulas, dictionary, what not to prompt) — https://www.alibabacloud.com/help/en/model-studio/text-to-video-prompt (accessed 2026-09-30)
+- [OFFICIAL] Video generation and editing (model list) — https://www.alibabacloud.com/help/en/model-studio/use-video-generation (accessed 2026-09-30)
+- [OFFICIAL] Wan2.7 text-to-video API reference (720P 9:16 = 720×1280 table) — https://www.alibabacloud.com/help/en/model-studio/text-to-video-api-reference (accessed 2026-09-30)
+- [OFFICIAL] Wan3.0: 30-Second AI Video Generation from Any Input (blog, 2026-08-13) — https://www.alibabacloud.com/blog/wan3-0-30-second-ai-video-generation-from-any-input_603452 (accessed 2026-09-30)
+- [OFFICIAL] Wan3.0 at General Availability (blog, 2026-08-27) — https://www.alibabacloud.com/blog/wan3-0-at-general-availability-capabilities-benchmarks-pricing-and-the-workflows-it-changes_603505 (accessed 2026-09-30)
+- [OFFICIAL] Wan2.7 vs. Wan3.0: What Actually Changed? (blog, 2026-08-27) — https://www.alibabacloud.com/blog/wan2-7-vs--wan3-0-what-actually-changed_603504 (accessed 2026-09-30)
+- [HF] Higgsfield catalog snapshot — higgsfield/catalog-snapshot-2026-09-30.json (captured 2026-09-30); Higgsfield MCP tool contract facts supplied with this task
+- [SECONDARY] Third-party API schemas describing `enable_thinking`: fal.ai — https://fal.ai/models/alibaba/wan-3.0/reference-to-video/llms.txt ; Picsart — https://picsart.com/api-platform/models/wan-3.0-video/advanced ; Oxen.ai — https://docs.oxen.ai/inference-api/reference/models/wan-v3-0-video.md (accessed 2026-09-30)
+- [SECONDARY] Segmind, "Wan 3 Prompt Guide: Alibaba's Official Formulas, Tested" — https://blog.segmind.com/wan-3-prompt-guide-alibabas-official-formulas-tested/ (accessed 2026-09-30)
+- [SECONDARY] Artificial Analysis text-to-video / image-to-video leaderboards — https://artificialanalysis.ai/video/leaderboard/text-to-video ; https://artificialanalysis.ai/video/leaderboard/image-to-video (accessed 2026-09-30)
+
+## 9. Open questions / unverified behaviour
+- Exact 720p 9:16 pixel dimensions for Wan 3.0 (no official table). Data point [VERIFIED 2026-09-30, account
+  history]: a `wan3_0_prime` job at 9:16 / 480p delivered **480×854 at 30 fps**, although its stored params said
+  768×1344. That supports 720×1280 at 720p; measure the first output anyway. The behaviour of `aspect_ratio:"9:16"`
+  with a non-9:16 start frame or edit source is still unverified.
+- Whether Higgsfield routes edit/extension intents, and whether a text-removal edit reconstructs the scene cleanly
+  (not documented upstream either).
+- What `enable_thinking` does server-side and whether it changes cost.
+- Whether Higgsfield leaves upstream `prompt_extend` on and `watermark` off.
+- Whether `medias` order is preserved into Image N / Video N / Audio N numbering.
+- How Higgsfield bills video references (upstream bills input + output seconds).
+- Per-shot length guidance conflicts (2–5 s vs 4–6 s); inconsistent "forward/backward" extension wording.
+- Quality parity of Prime vs standard beyond "aligned capabilities"; API page "preview" vs GA blog.

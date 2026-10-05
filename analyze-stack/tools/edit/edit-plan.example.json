@@ -1,0 +1,76 @@
+{
+  "schema": "analyze-stack.edit-plan/2",
+  "project": {
+    "name": "20260916-101500-snowscents",
+    "run_dir": "C:/Users/Glaresquare1/.claude/analyze-stack/runs/20260916-101500-snowscents",
+    "fps": 30,
+    "width": 1080,
+    "height": 1920,
+    "platform": "tiktok",
+    "safe_zones": {"x_min": 65, "x_max": 915, "y_min": 270, "y_max": 1248}
+  },
+  "clips": [
+    {"id": "c01", "path": "80-generated/clip-01.mp4", "prompt_no": 1, "in": 0.0, "out": 4.8, "order": 1,
+     "speed": 1.0, "speed_ramps": [],
+     "transform": {"fit": "cover", "scale": 1.0, "x": 0, "y": 0, "punch_in": {"to": 1.08, "frames": 9}},
+     "volume": 1.0, "notes": "S0 clean - hook shot, first cut at 4.8 s (original first cut 1.4 s + hold)"},
+    {"id": "c02", "path": "80-generated/clip-02.mp4", "prompt_no": 2, "in": 1.2, "out": 6.0, "order": 2,
+     "speed": 1.0, "speed_ramps": [],
+     "transform": {"fit": "cover", "scale": 1.0, "x": 0, "y": 0},
+     "volume": 1.0, "notes": "S2 A04 hand at 0.0-1.2 s trimmed away (qa.json windows)"},
+    {"id": "c03", "path": "80-generated/clip-03.mp4", "prompt_no": 3, "in": 0.0, "out": 6.0, "order": 3,
+     "speed": 1.0, "speed_ramps": [{"from": 3.0, "to": 6.0, "speed": 1.5}],
+     "transform": {"fit": "cover", "scale": 1.0, "x": 0, "y": 0},
+     "volume": 1.0, "notes": "montage B-roll: ramp 1.0 -> 1.5x on the pour (playbook 4.6)"},
+    {"id": "c05", "path": "80-generated/clip-05.mp4", "prompt_no": 5, "in": 0.5, "out": 5.5, "order": 4,
+     "speed": 1.0, "speed_ramps": [],
+     "transform": {"fit": "cover", "scale": 1.0, "x": 0, "y": 0, "punch_in": {"to": 1.06, "frames": 10}},
+     "volume": 1.0, "notes": "clip 04 dropped (S3 A05 label drift); ending matches the hook framing for the loop"}
+  ],
+  "transitions": [
+    {"between": ["c01", "c02"], "type": "cut"},
+    {"between": ["c02", "c03"], "type": "whip", "duration": 0.2},
+    {"between": ["c03", "c05"], "type": "xfade", "duration": 0.4, "xfade": "fade"}
+  ],
+  "text_overlays": [
+    {"id": "hook", "type": "hook_text", "text": "This jar sold out twice", "t_start": 0.0, "t_end": 1.8,
+     "position": {"anchor": "top"}, "style": "hook-v1", "highlight_words": ["twice"], "highlight_colour": "#FFE600"},
+    {"id": "callout-1", "type": "callout", "text": "no synthetic fragrance", "t_start": 6.2, "t_end": 8.4,
+     "position": {"anchor": "bottom"}, "style": "callout-v1"},
+    {"id": "sticker-1", "type": "sticker", "image": "90-postgen/project/stickers/arrow.png", "width_px": 260,
+     "t_start": 6.2, "t_end": 8.4, "position": {"x_px": 700, "y_px": 980}},
+    {"id": "endcard", "type": "end_card", "text": "SNOW SCENTS\nLink in bio", "t_start": 16.5, "t_end": 18.4,
+     "position": {"anchor": "middle"}, "style": "endcard-v1"}
+  ],
+  "audio": {
+    "original_gain": 1.0,
+    "music": {"path": "90-postgen/project/music/bed.wav", "gain_db": -18, "start": 0.0,
+              "ducking": {"enabled": true, "threshold": 0.05, "ratio": 6, "attack": 20, "release": 300},
+              "license": "owned", "trending_sound_id": null, "attach_in_app": false},
+    "sfx": [
+      {"path": "90-postgen/project/sfx/whoosh-01.wav", "at": 9.6, "gain_db": -14, "label": "whip into c03"},
+      {"path": "90-postgen/project/sfx/thud-01.wav", "at": 13.4, "gain_db": -12, "label": "product lands"}
+    ],
+    "loudness_target": {"i": -14, "tp": -1.0, "lra": 11}
+  },
+  "colour": {"preset": "realism-v1", "grain": 7, "filters": null, "lut": null},
+  "export": {"codec": "libx264", "profile": "high", "level": "4.1", "preset": "medium", "crf": 18,
+             "tune": null, "audio_bitrate": "192k", "faststart": true, "name": "final-A-tiktok.mp4"},
+  "meta": {
+    "run_id": "20260916-101500-snowscents",
+    "source": "editor",
+    "clip_qa": "90-postgen/qa.json",
+    "trend_brief": "90-postgen/trend-brief.json",
+    "manifest": "80-generated/manifest.json",
+    "decisions": [
+      "clip 04 dropped: S3 A05 (label drift) - shorter and clean beats longer",
+      "clip 02 trimmed to 1.2-6.0: A04 hand error in the first 1.2 s",
+      "hook text from trend-brief hook_candidates[0]; whip (tb-e2) into the reveal only",
+      "no speech captions (owner rule) - the owner captions afterwards"
+    ],
+    "variants": [{"name": "B", "changes": {"text_overlays[hook].text": "POV: your kitchen smells like pine"}}],
+    "projects": {"capcut_draft": null, "otio": null, "descript": null},
+    "updated": "2026-09-16T13:05:00-05:00",
+    "history": []
+  }
+}

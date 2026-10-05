@@ -1,0 +1,14 @@
+.DS_Store
+.env
+.env.*
+__pycache__/
+outputs/
+campaigns/
+breakdown/
+brand/
+production/
+run-state.md
+*.mp4
+*.mov
+*.wav
+*.mp3

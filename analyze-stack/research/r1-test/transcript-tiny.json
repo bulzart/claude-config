@@ -1,0 +1,9 @@
+{
+ "model": "tiny",
+ "language": "cy",
+ "language_probability": 0.245,
+ "duration": 27.2384375,
+ "segments": [],
+ "model_load_s": 84.99,
+ "elapsed_total_s": 87.01
+}

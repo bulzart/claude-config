@@ -1,0 +1,50 @@
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\Users\Glaresquare1\.claude\analyze-stack\samples\sample-27s-roofingpov.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    aigc_info       : {"aigc_label_type":0}
+    comment         : vid:v12044gd0000d9467pvog65li8m208f0
+    vid_md5         : e1f8c9cdf45366d4e78b004ebbaaaa64
+    encoder         : Lavf58.76.100
+  Duration: 00:00:27.27, start: 0.000000, bitrate: 2187 kb/s
+  Stream #0:0[0x1](und): Audio: aac (HE-AACv2) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 64 kb/s (default)
+    Metadata:
+      handler_name    : SoundHandler
+  Stream #0:1[0x2](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 720x1280 [SAR 1:1 DAR 9:16], 2115 kb/s, 30 fps, 30 tbr, 15360 tbn (default)
+    Metadata:
+      handler_name    : VideoHandler
+Stream mapping:
+  Stream #0:1 -> #0:0 (h264 (native) -> wrapped_avframe (native))
+Press [q] to stop, [?] for help
+[Parsed_showinfo_1 @ 00000263e4799740] config in time_base: 1/15360, frame_rate: 30/1
+[Parsed_showinfo_1 @ 00000263e4799740] config out time_base: 0/0, frame_rate: 0/0
+[Parsed_showinfo_1 @ 00000263e4799740] n:   0 pts:  15360 pts_time:1       duration:    512 duration_time:0.0333333 fmt:yuv420p cl:left sar:1/1 s:720x1280 i:P iskey:1 type:I checksum:705DA017 plane_checksum:[5D702967 54C7D00E 6050A693] mean:[125 123 140] stdev:[61.9 9.2 20.5]
+[Parsed_showinfo_1 @ 00000263e4799740] color_range:tv color_space:bt709 color_primaries:bt709 color_trc:bt709
+Output #0, null, to 'pipe:':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    aigc_info       : {"aigc_label_type":0}
+    comment         : vid:v12044gd0000d9467pvog65li8m208f0
+    vid_md5         : e1f8c9cdf45366d4e78b004ebbaaaa64
+    encoder         : Lavf63.1.101
+  Stream #0:0(und): Video: wrapped_avframe, yuv420p(tv, bt709, progressive), 720x1280 [SAR 1:1 DAR 9:16], q=2-31, 200 kb/s, 30 fps, 30 tbn (default)
+    Metadata:
+      encoder         : Lavc63.1.101 wrapped_avframe
+      handler_name    : VideoHandler
+[Parsed_showinfo_1 @ 00000263e4799740] n:   1 pts:  52224 pts_time:3.4     duration:    512 duration_time:0.0333333 fmt:yuv420p cl:left sar:1/1 s:720x1280 i:P iskey:1 type:I checksum:4A90A632 plane_checksum:[D3C56152 5DE75949 64BDEB88] mean:[131 123 137] stdev:[58.7 9.3 16.4]
+[Parsed_showinfo_1 @ 00000263e4799740] color_range:tv color_space:bt709 color_primaries:bt709 color_trc:bt709
+[Parsed_showinfo_1 @ 00000263e4799740] n:   2 pts:  68096 pts_time:4.433333 duration:    512 duration_time:0.0333333 fmt:yuv420p cl:left sar:1/1 s:720x1280 i:P iskey:0 type:P checksum:4D2A9D0C plane_checksum:[0049EEC4 C335D67B 6876D7AF] mean:[128 124 138] stdev:[55.3 10.7 21.5]
+[Parsed_showinfo_1 @ 00000263e4799740] color_range:tv color_space:bt709 color_primaries:bt709 color_trc:bt709
+[Parsed_showinfo_1 @ 00000263e4799740] n:   3 pts: 107520 pts_time:7       duration:    512 duration_time:0.0333333 fmt:yuv420p cl:left sar:1/1 s:720x1280 i:P iskey:1 type:I checksum:9B645657 plane_checksum:[499FD8D9 A9127A53 8498031C] mean:[135 120 142] stdev:[56.4 11.9 21.8]
+[Parsed_showinfo_1 @ 00000263e4799740] color_range:tv color_space:bt709 color_primaries:bt709 color_trc:bt709
+[Parsed_showinfo_1 @ 00000263e4799740] n:   4 pts: 115200 pts_time:7.5     duration:    512 duration_time:0.0333333 fmt:yuv420p cl:left sar:1/1 s:720x1280 i:P iskey:0 type:I checksum:E4148E98 plane_checksum:[6FFA9F14 06065445 4F8E9B30] mean:[139 122 138] stdev:[54.0 13.0 19.6]
+[Parsed_showinfo_1 @ 00000263e4799740] color_range:tv color_space:bt709 color_primaries:bt709 color_trc:bt709
+[Parsed_showinfo_1 @ 00000263e4799740] n:   5 pts: 153600 pts_time:10      duration:    512 duration_time:0.0333333 fmt:yuv420p cl:left sar:1/1 s:720x1280 i:P iskey:0 type:B checksum:B65BE465 plane_checksum:[F28456C6 1D00AA50 5D70E340] mean:[132 120 142] stdev:[58.6 11.2 21.2]
+[Parsed_showinfo_1 @ 00000263e4799740] color_range:tv color_space:bt709 color_primaries:bt709 color_trc:bt709
+[Parsed_showinfo_1 @ 00000263e4799740] n:   6 pts: 284672 pts_time:18.533333 duration:    512 duration_time:0.0333333 fmt:yuv420p cl:left sar:1/1 s:720x1280 i:P iskey:1 type:I checksum:F6CF2E20 plane_checksum:[141C7DEC B3BD681E FF3D4807] mean:[130 122 139] stdev:[60.4 9.2 19.7]
+[Parsed_showinfo_1 @ 00000263e4799740] color_range:tv color_space:bt709 color_primaries:bt709 color_trc:bt709
+frame=    7 fps=0.0 q=-0.0 size=N/A time=00:00:18.56 bitrate=N/A speed=35.8x elapsed=0:00:00.51    [out#0/null @ 00000263e47b20c0] video:3KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown
+frame=    7 fps=0.0 q=-0.0 Lsize=N/A time=00:00:18.56 bitrate=N/A speed=29.9x elapsed=0:00:00.62    
