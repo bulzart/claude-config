@@ -17,5 +17,29 @@
   "theme": "dark",
   "editorMode": "vim",
   "autoCompactEnabled": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Glaresquare1/.claude/hooks/autocommit.py Stop",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Glaresquare1/.claude/hooks/autocommit.py SessionStart",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
 }
