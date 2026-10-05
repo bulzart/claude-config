@@ -91,9 +91,12 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 7. **Leftovers per `generation-system.md` §9b.** Only the must-not-survive list counts.
    Posters, toys, ornaments, signs, and clothing or footwear logos are never reported and never
    cost a retry.
-8. **Recreate: action sync** (command item 19, X8 step 5). The reference's own audio comes back,
-   so run `T sync-check` after the merge. Fix a steady offset in post; spend the one diagnosed
-   regeneration on drift or a moved action. Record the verdict in `result.json` (`sync`).
+8. **Recreate: source fidelity** (command item 19). The first request already carries the fidelity
+   lock: the source action script, the most preserving input and mode, the scoped change, the
+   keep-list and the exclusions (`generation-system.md` §5c), checked at X4. The reference's own
+   audio comes back, so run `T sync-check` after the merge. Fix a steady offset in post; spend the
+   one diagnosed regeneration on drift or a moved action. Record the verdict in `result.json`
+   (`sync`).
 9. **No questions.** On any blocker, write `result.json` with `"status":"blocked"` and `"blocker"`
    set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `other`, plus one
    line of detail. Then stop.

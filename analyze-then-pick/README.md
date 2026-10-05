@@ -19,7 +19,7 @@ analyze-then-pick/
 │   └── first-party/                verbatim Higgsfield recipes (ad-multiplier edit contract, media pipeline, Genjutsu)
 ├── reference/
 │   ├── analysis-protocol.md        Analyze Mode: reading 5 fps storyboards + timelines, cards, lenses, families, directions, delegation; the user's examples → house approach (§9)
-│   ├── generation-system.md        dependency chain, work-backward plan, state ledger, multi-generation videos (§3b), reference inserts (§3c), integration analysis, swap / contents / natural placement (§4b), anti-slop gate, physics (§5b), audio-locked timing (§5c), model translation, pre/post QC, brief
+│   ├── generation-system.md        dependency chain, work-backward plan, state ledger, multi-generation videos (§3b), reference inserts (§3c), integration analysis, swap / contents / natural placement (§4b), anti-slop gate, physics (§5b), source fidelity and audio-locked timing (§5c), model translation, pre/post QC, brief
 │   ├── text-and-format.md          mode-dependent text policy (Analyze: clean plate + CapCut text layers), text removal, fixed 9:16 / 720p rules
 │   ├── capcut-assembly.md          Analyze Mode's editable master: one CapCut project per video (DD_Mon_YYYY_vNN) with the inserts and text layers (house text style: System, size 10, the user's locked preset); save, repair, preview
 │   ├── production-agents.md        Analyze Mode (Recreate / Create): one background agent per video (max 5 at once), its prompt, contract and result.json

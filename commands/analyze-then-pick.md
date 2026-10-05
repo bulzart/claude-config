@@ -227,22 +227,31 @@ You are running the **/analyze-then-pick** command.
       (item 15) and the house text style (item 6).
     - Examples are **study material only**: never uploaded, recreated, cut into a new video, or used
       as client assets. Their own flaws (a physics cheat, a leftover watermark) are never copied.
-19. **Action timing is locked to the original audio (Edit Mode and Analyze Mode Recreate).** Whenever
-    the original audio goes back under a generated picture (X8), every action in the output happens
-    at the same moment, at the same speed and in the same order as in the source, because the merged
-    sound expects it: mouth movements on their words, contact on its impacts, steps on their
-    footfalls, a pickup, sip or door on its sound. Plan, prompt, generate and check for it
-    (`reference/generation-system.md` §5c):
-    - the card lists the **sync anchors**: every sound in the original audio that belongs to a
-      visible action, with its time;
-    - the source drives the motion whenever the model can take it (true edit, motion transfer or
-      video reference), and the request's duration equals the source segment's;
-    - the prompt keeps every action's timing and pace, and adds, skips, repeats, reorders, speeds up
-      or slows down nothing. The timing comes from the source video, never from timestamps in the
-      prompt;
-    - after the merge, `T sync-check` measures it (X8 step 5). A steady offset is fixed in post;
-      drift or a moved action is a regenerate reason (Recreate) or the first QC note (Edit Mode).
-    Create is not affected: its sound is built in CapCut on the new video's own beats.
+19. **Source fidelity is pushed from the first attempt (Edit Mode and Analyze Mode Recreate).** The
+    output is the source with only the planned operations changed: every other movement, action and
+    detail stays exactly as it is. The original audio also goes back under the generated picture
+    (X8), so every action happens at the same moment, at the same speed and in the same order as in
+    the source: mouth movements on their words, contact on its impacts, steps on their footfalls, a
+    pickup, sip or door on its sound. The **first** request is built for this, and QC only confirms
+    it (`reference/generation-system.md` §5c):
+    - the card holds the **source action script**: every beat in order, with who moves what and how
+      (body, hands, head, gaze, face, mouth), the props and their contacts, the camera, the
+      background action and the small details, each marked keep or change. Its **sync anchors** are
+      the beats whose sound is in the original audio (§5c.1);
+    - the request uses the most preserving input and parameters the locked model offers: the source
+      as the edit input, then as the motion input, then as the video reference, then its own first
+      and last frames. The guide's preserving mode is used, and the duration equals the source
+      segment's (§5c.2);
+    - the prompt carries the **fidelity lock** in the guide's wording: the change scoped with
+      "only", the full keep-list, and exclusions against any added, skipped or reordered action.
+      For models that rebuild the action (≈, ✗), the action script is also written out in order.
+      The timing comes from the source video, never from timestamps in the prompt (§5c.3);
+    - X4 checks the request against the action script before any credit is spent (§5c.4);
+    - after the merge, `T sync-check` measures the timing (X8 step 5). A steady offset is fixed in
+      post. Drift or a moved action is a regenerate reason in Recreate, or the first QC note in
+      Edit Mode.
+    Create is not affected: it makes new scenes, and its sound is built in CapCut on their own
+    beats.
 
 ## 1. Paths and tools
 
@@ -523,10 +532,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     picture (X8 step 1); the inserts keep their own sound.
     - With inserts: `T restore-audio --generated <edit> --source <own.mp4>`.
     - Without: `--audio` from `files_audio`.
-  - **Action timing (item 19):** the restored audio fixes when everything happens, so the edit keeps
-    the reference's timing. Add the pick's **sync anchors** to its card (`generation-system.md` §5c:
-    words with their mouth movements, impacts, steps, pickups, sips, from the transcript, the
-    storyboards and the audio profile's hits); the plan and the request keep them.
+  - **Source fidelity (item 19):** the edit keeps the reference's movements, actions, details and
+    timing, and only the operations above change. Add the pick's **source action script** with its
+    keep / change marks and **sync anchors** to its card (`generation-system.md` §5c.1); the plan
+    and the first request carry them.
 - **Prepare each pick's source** as in Edit Mode E5, from its own content:
   - **With inserts:**
     `T strip-inserts --video "<original reference>" --inserts "<in-out,…>" --out <RUN>/10-media/<V>/own`
@@ -679,10 +688,13 @@ See §6.
   - actions, subjects and objects in the video (numbered, so E3 can point at them);
   - camera and staging;
   - continuity states;
-  - the **sync anchors** (item 19, `generation-system.md` §5c): every moment where a sound in the
-    original audio belongs to a visible action (each spoken line and whose mouth says it, impacts,
-    steps, pickups, sips, opens), with its time, from the transcript, the storyboards and, when it
-    helps, `T audio-profile` hits;
+  - the **source action script** (item 19, `generation-system.md` §5c.1): every beat in order, with
+    who moves what and how (body, hands, head, gaze, face, mouth), the props and their contacts, the
+    camera, the background action and the small details. Each beat gets its time range, and is
+    marked keep or change once E3 has the operations;
+  - its **sync anchors**: the beats whose sound is in the original audio (each spoken line and
+    whose mouth says it, impacts, steps, pickups, sips, opens), with their times, from the
+    transcript, the storyboards and, when it helps, `T audio-profile` hits;
   - the **source-text inventory** (`text-and-format.md` §2.1).
 - Show the user a 4–6 line understanding of the video.
 
@@ -729,10 +741,12 @@ See §6.
     reference, applying the operations.
   - **✗ frames only:** recreate from clean 9:16 frames of the source, with the operations applied to
     those frames through the supplied files, plus a prompt that rebuilds the source's action.
-- **Timing (item 19).** The original audio comes back, so the approach must keep the source's
-  timing. ✓ and ↔ keep it by construction. ≈ keeps it only with the source as the video reference
-  and the same duration. ✗ cannot guarantee it: rebuild the actions in the source's order and pace
-  from the sync anchors, and say in the brief that sync is at risk.
+- **Fidelity (item 19).** Take the most preserving way the locked model can perform this edit,
+  with the guide's preserving mode and settings (`generation-system.md` §5c.2). ✓ and ↔ keep the
+  source's movements and timing by construction. ≈ keeps them only with the source as the video
+  reference, the same duration and the action script written out. ✗ cannot guarantee them: use
+  the source's own first frame, and its last frame when the model takes one, with the operations
+  applied; write the action script out; and say in the brief that fidelity and sync are at risk.
 - State the approach in the brief (one line). Never switch models.
 
 ### E5. Prepare the source (local, deterministic)
@@ -793,6 +807,9 @@ files as video K".
     - the per-second time budget from the family profile;
     - roles and assets;
     - the scene;
+    - Edit Mode and Recreate: the **source action script** with its keep / change marks and sync
+      anchors (item 19, `generation-system.md` §5c.1), taken from the card and densified around
+      fast moments and contacts;
     - the **entity state ledger**;
     - the **integration analysis** for every substitution or insertion;
     - for a **contents** or **placement** video, the **integration plan** (`generation-system.md`
@@ -854,13 +871,21 @@ files as video K".
       product's own label, logo or badge.
     - With inserts, the prompt covers only the generated content, and puts a natural beat boundary
       at each split point.
-    - **Timing lock** (item 19; Edit Mode and Recreate, whenever the original audio comes back): in
-      the model's own wording, keep the exact timing, speed and order of every action and mouth
-      movement of the source (e.g. "same timing as @Video1 …; add, skip, repeat or reorder
-      nothing"). A swapped person keeps the source person's mouth movements, expressions and
-      gestures on the same frames; a swapped product moves exactly as the original item did. The
-      timing comes from the source video, never from timestamps in the prompt
-      (`generation-system.md` §5c), and the duration parameter matches the source segment (E5).
+    - **Fidelity lock** (item 19; Edit Mode and Recreate), in the **first** request and every
+      re-edit, in the model's own structure and wording (`generation-system.md` §5c.3):
+      - the change scoped with "only", then the full keep-list: the performers, their motion,
+        gestures, expressions and mouth movements, the props and how they are handled, the camera
+        path and framing, the light, the background and the timing. A swapped item follows the
+        original's exact position, path, tilt and grip in every frame. A swapped person keeps the
+        source person's movements, expressions and mouth movements on the same frames;
+      - ✓ and ↔: no scene re-description, because the source carries the action and the guides
+        warn that re-describing invites a regeneration. ≈ and ✗: the source action script is also
+        written out in order as plain sentences (who does what, with which hand, how fast, where
+        they look, where they pause), sync-anchor beats first when the guide limits length;
+      - exclusions: nothing added, skipped, repeated or reordered, no new gesture or camera move,
+        no re-staging, no new background action, no change of pace;
+      - the guide's most preserving mode and settings (§5c.2) and the source segment's duration
+        (E5). The timing comes from the source video, never from timestamps in the prompt.
   - Assemble the params from the guide's §2.4 recipe and the index's `output_9x16_720p`, then save
     `50-requests/video-NN-request.json`.
   - Multi-clip: one request per clip, `50-requests/video-NN-cK-request.json`. A continuation clip
@@ -881,6 +906,9 @@ files as video K".
       and pass it as `start_image`;
     - native extension: the accepted clip itself as `@Video1`. Pass its job id directly; if the
       server refuses that for a video role, or the clip was trimmed, upload the file.
+  - **Edit Mode and Recreate with a frames-only model (item 19):** the start frame is the source's
+    own first frame with the operations applied, and the end frame, when the model takes one, is
+    its last frame with the same operations. The model then interpolates the source's own action.
   - Create Elements when the model supports them and assets recur.
   - **Contents form:** upload the variant's contents sample with the product views, and bind it to
     the vessel's contents in the prompt ("the drink in the cup has the colour, clarity and bubbles
@@ -893,6 +921,11 @@ files as video K".
     then `jobs_wait`.
 - **X4 — Pre-generation QC.**
   - Run the mental render of `generation-system.md` §8 from the first frame to the last.
+  - **Fidelity check** (item 19; Edit Mode and Recreate; `generation-system.md` §5c.4): walk the
+    source action script beat by beat. Every keep beat is carried by the source input or named in
+    the prompt. Nothing in the prompt invites new motion. The duration matches the source segment.
+    No change operation forces a motion change: a bigger product gets a planned grip that keeps the
+    same hand path.
   - Fix any conflict in the plan and the request before continuing.
 - **X5 — Preflight.**
   - `generate_video {params:{…, get_cost:true}}` → cost and `adjustments`. **One** preflight per
@@ -904,7 +937,8 @@ files as video K".
 - **X6 — Brief.**
   - Print the short brief (`generation-system.md` §10): concept, reference pattern,
     characters/assets, substitutions, main action and states, style/camera, text plan, model /
-    operation / duration / 9:16 720p, cost, adaptation logic.
+    operation / duration / 9:16 720p, cost, adaptation logic. In Edit Mode and Recreate it also names
+    the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
   - Analyze Mode: no gate; the brief is information (item 15). Edit Mode: the E6 gate.
 - **X7 — Submit and wait (ledger-guarded; no spam, no glitches).**
   1. `T ledger begin --run RUN --video NN --attempt K --request 50-requests/video-NN[-aK]-request.json`
@@ -1038,7 +1072,7 @@ files as video K".
      (the same prepared 9:16 source, already uploaded; its media id is reused), never from the
      previous output. It uses the same per-edit files plus any new ones: re-run `inventory` for scope
      `video-NN` with the full path list.
-     - Fold the feedback into the plan and the request, and save them as
+     - Fold the feedback into the plan and the request (the item 19 fidelity lock stays), and save them as
        `50-requests/video-NN-aK-request.json`.
      - The brief shows what changed versus the previous attempt, plus the preflight cost.
      - Then X5 → X7 → X8 → X9 → X9-R again.
@@ -1140,6 +1174,9 @@ video).
   (or its prepared derivative).
 - Never deliver an Edit Mode result with generated audio. It always carries the original audio from
   `files_audio`, or no audio if the original had none.
+- Never send an Edit Mode or Recreate request, the first one included, without the fidelity lock
+  (item 19): the change scoped with "only", the full keep-list, the exclusions and, for models that
+  rebuild the action, the source action script written out in order.
 - Never deliver a video that carries the original audio without its sync check (X8 step 5), and
   never leave drift or a moved action unreported. Never fix sync by stretching or looping the
   original audio.

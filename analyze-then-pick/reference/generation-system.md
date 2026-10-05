@@ -575,51 +575,112 @@ appears with a toss that must land face-up, or a car that must stop on an exact 
   is timed and placed in CapCut on the moment the product really shows it in the clean video,
   measured at the full frame rate, never on the plan's timestamp.
 - **A corrected regeneration removes timing constraints from free motion. It never adds them.**
-  The §5c timing lock is not such a constraint: it comes from the source video, not from
+  The §5c fidelity lock is not such a constraint: it comes from the source video, not from
   timestamps in the prompt.
 
-### 5c. Audio-locked timing: when the original audio comes back
-In Edit Mode and in Analyze Mode Recreate, the final carries the source's own audio
-(`restore-audio`). That audio is fixed, so the picture has to follow it: every action happens at the
-same moment, at the same speed and in the same order as in the source. Words need their mouth
-movements, impacts their contact, steps their footfalls, a can its opening, a door its slam. A late
-hand or an early sip reads as a dubbing error, even when every frame looks right. Create is not
-affected: its sound is built in CapCut on the new video's own beats.
+### 5c. Source fidelity: the original's movements, actions, details and timing
+In Edit Mode and in Analyze Mode Recreate, the output is the source with only the planned
+operations changed. Everything else keeps the source's movements, actions and details exactly:
+who moves, how and in what order, gestures, expressions, gaze, mouth movements, how props are
+handled, the camera path and framing, the light and the background action. The final also carries
+the source's own audio (`restore-audio`). That audio is fixed, so every action must happen at the
+same moment and speed as in the source: words need their mouth movements, impacts their contact,
+steps their footfalls, a can its opening, a door its slam. A late hand or an early sip reads as a
+dubbing error, even when every frame looks right.
 
-- **Sync anchors (in the card).** List every moment where a sound in the original audio belongs to a
-  visible action, with its time and the action it belongs to:
-  - each spoken line and whose mouth says it (transcript);
-  - impacts and hits (`audio-profile` hits, densified frames);
-  - footsteps, pickups, set-downs, sips, opens and closes.
-  These are what the output must hit.
-- **Let the source drive the timing.** Prefer the approach where the source video is the motion
-  input: a true edit, then motion transfer, then the source as a video reference. These keep the
-  source's timing by construction. A frames-only model rebuilds the action and cannot guarantee it;
-  say so in the brief.
-- **Same duration.** Request the source segment's exact duration, or the nearest allowed duration
-  above it and trim the extra afterwards. A shorter or longer generation squeezes or stretches the
-  actions against the sound.
-- **Say it in the prompt, in the model's wording.** Keep the exact timing, speed and order of every
-  action and mouth movement of the source. Add, skip, repeat, reorder, speed up or slow down
-  nothing. A swapped person keeps the source person's mouth movements, expressions and gestures on
-  the same frames. A swapped product moves exactly as the original item did.
-- **Not a schedule.** The timing comes from the source video, never from a list of timestamps in the
-  prompt. With a frames-only model, describe the actions in the source's order and pace (quick,
-  slow, a pause before a line), anchored to the spoken lines. Free physical motion still follows
-  §5b. What must hit the sound is when a motion starts and lands, and the source already shows it.
-- **Measure it after the merge.** `atp.py sync-check --source <source> --output <final>` compares
-  the output's motion with the source's at 30 fps. It reports the offset, any drift and the
-  duration difference, and writes a side-by-side sheet (source | output at the same timestamps) at
-  the strongest moments. Also view the sync anchors densified.
-  - **in_sync**, within ±0.1 s everywhere: accept.
-  - **constant_offset**, the same offset everywhere (e.g. a generated dead head): post-fix. Trim the
-    picture's head when the output is late, or start the audio later (`restore-audio --start`)
-    when it is early. Then merge and check again.
-  - **drift** (the output runs faster or slower) or **out_of_sync** (an action added, skipped or
-    moved): no post-fix can repair it. It is a **regenerate** reason, and the corrected request
-    names what went wrong (duration, speed, the action that moved).
-  - **inconclusive**, when the motion is too different to measure (e.g. a heavy restyle): judge it
-    on the sheet and the densified anchors.
+Fidelity is built into the **first** request. QC (§5c.5) confirms it; it is not where it is
+achieved. Create is not affected: it makes new scenes, and its sound is built in CapCut on their
+own beats.
+
+#### 5c.1 The source action script (card, then plan)
+Write the source as numbered beats, in order, from the storyboards, densified at 15–30 fps around
+fast moments and contacts:
+- the time range, for planning and QC only; it never goes into a prompt as a schedule;
+- each person: body and weight, hands (which hand, what it holds, how), head and gaze, facial
+  expression, mouth (the line they speak, or silent);
+- each prop: who handles it, its path, grip and contacts, and where it ends;
+- the camera: framing, angle, moves, shake, cuts;
+- the environment: background people and action, light changes;
+- the small details that make it this video: a hair touch, a nod, a pause before a line, the
+  rhythm of quick and slow moves.
+
+Mark each beat **keep** (unchanged) or **change** (an operation changes it). A change of identity
+keeps the motion: a swapped person keeps the source person's movements, and a swapped product keeps
+the original item's path, grip and contacts. Mark the **sync anchors**, the beats whose sound is in
+the original audio:
+- each spoken line and whose mouth says it (transcript);
+- impacts and hits (`audio-profile` hits, densified frames);
+- footsteps, pickups, set-downs, sips, opens and closes.
+
+#### 5c.2 The most preserving input and parameters
+Use the strongest preservation the locked model offers, in this order:
+1. **The source video as the edit input** (✓, a pixel-preserving edit): the model changes only the
+   targets and keeps the rest of the picture's motion and timing.
+2. **The source video as the motion input** (↔, motion transfer).
+3. **The source video as the video reference** (≈): the model regenerates the clip and follows the
+   source's motion, camera and timing as far as its reference allows.
+4. **The source's own frames** (✗, frames only): its first frame with the operations applied as
+   the start frame, and its last frame with the same operations as the end frame when the model
+   takes one. Say in the brief that fidelity and sync are at risk.
+
+Take the guide's preserving mode and settings, for example Seedance 2.5's `video_edit` mode with the
+duration rounded up from the source. Where the guide offers a choice, never take a creative or
+loose setting. A parameter the guide marks as not exposed on Higgsfield is not a lever.
+
+**Same duration.** Request the source segment's exact duration, or the nearest allowed duration
+above it and trim the extra afterwards. A shorter or longer generation squeezes or stretches the
+actions against the sound.
+
+#### 5c.3 The fidelity lock in the prompt
+Write it in the model's own structure and wording (its §4.0 examples and keep-lists). The edit kind
+decides how much is described:
+- **Always:**
+  - the change, scoped with "only" ("Replace only the white mug in his right hand …");
+  - the full keep-list in the guide's words: the performers, their motion, gestures, expressions
+    and mouth movements, the props and how they are handled, the camera path and framing, the
+    light, the background and the timing ("Keep the man, his motion, the camera path and the timing
+    of @Video1 unchanged");
+  - for a swapped item: it follows the original's exact position, path, tilt and grip in every
+    frame;
+  - for a swapped person: they keep the source person's movements, expressions and mouth movements
+    on the same frames.
+- **✓ and ↔, where the source carries the action:** no re-description of the scene. The guides warn
+  that re-describing invites the model to regenerate instead of edit; the keep-list does the work.
+- **≈ and ✗, where the model rebuilds the action:** also write the action script out in order as
+  plain sentences: who does what, with which hand, how fast, where they look, where they pause
+  ("she lifts the can with her right hand to chest height, glances down at it, looks up into the
+  lens and speaks, then lowers it"). When the guide limits length, the sync-anchor beats and the
+  most visible actions come first.
+- **Exclusions:** no added, skipped, repeated or reordered action; no new gesture; no extra camera
+  move; no re-staging; no new people or background action; no change of pace.
+- **Not a schedule.** The timing comes from the source video, never from timestamps in the prompt.
+  Free physical motion still follows §5b. What must match is when a motion starts and lands, and
+  the source already shows it.
+
+#### 5c.4 Check before spending (X4)
+Walk the action script beat by beat against the request:
+- every keep beat is carried by the source input or named in the prompt;
+- nothing in the prompt invites new motion ("dynamic", "cinematic camera move", a gesture the
+  source does not have);
+- the duration matches the source segment;
+- no change operation forces a motion change. A bigger or differently shaped product gets a
+  planned grip that keeps the same hand path.
+Fix the request before the preflight.
+
+#### 5c.5 Measure it after the merge
+`atp.py sync-check --source <source> --output <final>` compares the output's motion with the
+source's at 30 fps. It reports the offset, any drift and the duration difference, and writes a
+side-by-side sheet (source | output at the same timestamps) at the strongest moments. Also view the
+sync anchors densified, and compare the keep beats on the sheet.
+- **in_sync**, within ±0.1 s everywhere: accept.
+- **constant_offset**, the same offset everywhere (e.g. a generated dead head): post-fix. Trim the
+  picture's head when the output is late, or start the audio later (`restore-audio --start`) when
+  it is early. Then merge and check again.
+- **drift** (the output runs faster or slower) or **out_of_sync** (an action added, skipped or
+  moved): no post-fix can repair it. It is a **regenerate** reason, and the corrected request names
+  what went wrong (duration, speed, the action that moved) and tightens the fidelity lock.
+- **inconclusive**, when the motion is too different to measure (e.g. a heavy restyle): judge it on
+  the sheet and the densified anchors.
 
 ## 6. Conflict resolution (resolve before sending)
 
