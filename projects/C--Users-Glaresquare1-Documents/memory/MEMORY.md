@@ -2,3 +2,4 @@
 - [~/.claude git versioning](claude-folder-git-versioning.md) — local repo + auto-commit hooks; allow-list .gitignore; add new user folders to it
 - [Neurogum package forms](neurogum-package-forms.md) — updated official samples; closed cartons/pouch, never big box or opened carton with blister; vary forms; rotate 5 flavours
 - [Celsius: no Orange flavour](celsius-no-orange-flavor.md) — rotate Cherry Cola, Peach Vibe, Watermelon; Orange already overused
+- [ATP anomaly catalog](atp-anomaly-catalog.md) — reference/anomaly-catalog.md: counts, openings/use, permanence; wired into ledger, prompts, QC (qc --dense); new reported anomalies go there
