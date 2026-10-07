@@ -43,7 +43,12 @@ syntax, length) to `<run>/50-requests/<model>-pattern.md`. Label anything uncert
 - Exclusions in one short sentence ("No on-screen text, captions or watermarks.").
 - Physical and continuity anchors from `reference/generation-system.md` §3–§4 (states, contact,
   scale, light inheritance).
+- Counts, openings and permanence from `reference/anomaly-catalog.md` §3: every multiple with its
+  number per stage, every use as initial state → operation on the named part → result with the
+  contact point, counts and states restated after exits and cuts, one exclusion per product for its
+  own wrong use.
 
 ## 4. Extra QC
 - Treat the first output as a probe: use a short duration first when cost matters.
-- View the full storyboard (`atp.py qc`) before continuing the set.
+- View the full storyboard (`atp.py qc`, with `--dense` on the plan's checkpoints,
+  `reference/anomaly-catalog.md` §4) before continuing the set.

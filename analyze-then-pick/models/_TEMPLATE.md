@@ -64,7 +64,9 @@ user keeps specific text; Analyze Mode may add intentional NEW text, by default 
 ### 3.12 Character / identity consistency
 ### 3.13 Product and object fidelity (geometry, proportions, labels, scale, handling)
 ### 3.14 Integration and continuity (scale, orientation, contact, grip, occlusion, scene-light
-inheritance, reflections, shadows, persistent object states across the timeline)
+inheritance, reflections, shadows, persistent object states across the timeline; how this model
+phrases counts of multiples, the part and contact point of every use, and restatements after
+exits, occlusions and cuts — `reference/anomaly-catalog.md` §3)
 
 ## 4. Prompt construction
 ### 4.0 Official prompt examples and the patterns they teach
@@ -83,13 +85,18 @@ Each template uses `<placeholders>` and is followed by one short generic worked 
 | failure mode | typical trigger | mitigation |
 Include the model's AI-slop tendencies (dead space, arbitrary slow motion, sudden speed changes,
 unmotivated cuts/transitions, morphing, identity drift, duplicated objects, clothing changes) and how
-the prompt or parameters prevent each.
+the prompt or parameters prevent each. Also the count and affordance breaks of
+`reference/anomaly-catalog.md` (a count that changes after an exit or cut, a product used through a
+part with no opening, a later state leaking from a reference) and how this model's wording prevents
+them.
 
 ## 6. Model-specific features and controls
 (multi-shot, genre, speed ramp, draft/finalize, thinking mode, cfg scale, Elements support, variants …)
 
 ## 7. Model-specific pre-generation checklist
 - [ ] …
+- [ ] Counts with numbers, the part and contact point of every use, restatements after exits and
+      cuts, one exclusion per product for its own wrong use (`reference/anomaly-catalog.md` §3).
 
 ## 8. Sources
 - [OFFICIAL] <title> — <url> (accessed <date>)

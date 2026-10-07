@@ -38,7 +38,8 @@ Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md,
 Follow, for this video only:
 - C:/Users/Glaresquare1/.claude/commands/analyze-then-pick.md §5, steps X3 to X10;
 - <ATP>/reference/production-agents.md §3 (your contract);
-- <ATP>/reference/generation-system.md §3b (clips), §3c (inserts), §4b (product integration), §5b (motion that has to land), §8–§9 (QC);
+- <ATP>/reference/generation-system.md §3b (clips), §3c (inserts), §4b (product integration), §5b (motion that has to land), §5d (counts, openings, permanence), §8–§9 (QC);
+- <ATP>/reference/anomaly-catalog.md §3 (the prompting stack) and §4 (the QC stack);
 - <ATP>/reference/capcut-assembly.md, <ATP>/reference/text-and-format.md §3, and the model guide;
 - <RUN>/20-analysis/house-approach.md, when it exists (the user's house approach; your plan says
   which of its rules this video applies).
@@ -55,6 +56,10 @@ Hard rules:
   `capcut-text-style --learn` / `--replace`.
 - Every glass, cup or vessel of the product's category shows the product's contents
   (generation-system.md §4b.0, §9). A glass of water beside the can is a regenerate reason, not a note.
+- Counts and use (anomaly-catalog.md): every multiple keeps its number except through a visible cause;
+  every use goes through the product's real opening after its preparation step, with the contact
+  point. Render the plan's QC checkpoints with `T qc --dense` and count at each. A count or state
+  that changes without a cause, or a use through the wrong or a closed part, is a regenerate reason.
 - Examples (<RUN>/10-media/E…) are study material: never upload them or cut them into the video.
 Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 ```
@@ -91,16 +96,20 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 7. **Leftovers per `generation-system.md` §9b.** Only the must-not-survive list counts.
    Posters, toys, ornaments, signs, and clothing or footwear logos are never reported and never
    cost a retry.
-8. **Recreate: source fidelity** (command item 19). The first request already carries the fidelity
+8. **Counts, openings and permanence** (`anomaly-catalog.md` §4). X9 renders every checkpoint of the
+   plan with `T qc --dense`; the agent views every dense sheet, writes the counts and the use
+   verdicts into `result.json` (`continuity`), and regenerates once on a break. The only post-fixes
+   are the catalog's.
+9. **Recreate: source fidelity** (command item 19). The first request already carries the fidelity
    lock: the source action script, the most preserving input and mode, the scoped change, the
    keep-list and the exclusions (`generation-system.md` §5c), checked at X4. The reference's own
    audio comes back, so run `T sync-check` after the merge. Fix a steady offset in post; spend the
    one diagnosed regeneration on drift or a moved action. Record the verdict in `result.json`
    (`sync`).
-9. **No questions.** On any blocker, write `result.json` with `"status":"blocked"` and `"blocker"`
+10. **No questions.** On any blocker, write `result.json` with `"status":"blocked"` and `"blocker"`
    set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `other`, plus one
    line of detail. Then stop.
-10. **Final message:** the content of `result.json`, as one JSON line.
+11. **Final message:** the content of `result.json`, as one JSON line.
 
 ## 4. `60-outputs/video-NN/result.json`
 ```json
@@ -110,6 +119,7 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
  "preview": "<RUN>/60-outputs/video-NN/capcut-preview.mp4",
  "jobs": [{"clip": "c1", "job_id": "…", "credits": 35, "attempts": 1}], "credits": 35,
  "qc": "accepted | regenerated once: <why> | failed: <why>",
+ "continuity": "counts: <item N/N/N …> | use: <part, contact, verdict> | permanence: <checkpoints ok | …>",
  "sync": "in_sync | fixed offset <s> | regenerated once: <why> | off: <why> | n/a (create)",
  "blocker": null, "notes": "…"}
 ```

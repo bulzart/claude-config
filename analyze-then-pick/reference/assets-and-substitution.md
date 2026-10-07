@@ -28,7 +28,7 @@ What a well-prepared asset set looks like (share this only if the user asks):
 
 | asset type | ideal files |
 |---|---|
-| Physical product or object | A **canonical template** (clean views: front, back, side, top; real dimensions if known) plus **variants** (colours, flavours, label designs), ideally one folder per product |
+| Physical product or object | A **canonical template** (clean views: front, back, side, top; real dimensions if known) plus **variants** (colours, flavours, label designs), ideally one folder per product. When the product is handled on screen, also a view of it **ready for use** (the cap flipped open, the tab up, the pack opened), used only for a scene that starts in that state: a view that shows a later state than the scene's t=0 leaks it into the first frame (`anomaly-catalog.md` §2.3) |
 | Contents samples | For products that are poured, eaten or applied (a drink, a gum, a food, a cream): one photo per variant of the **contents themselves** (the drink in a clear glass, a gum piece, the cream on a finger: colour, clarity, bubbles, texture, shape), named or placed with its variant. Used by the "contents" form (`generation-system.md` §4b.0). They are often among the supplied files without a label: look for them (a pour, a glass of the drink, a texture swatch, a lifestyle shot that shows the contents) |
 | Person / character / mascot | Face close-up + full body + outfit(s), one folder per character. Note any props in the photos (a glass, a cup, a snack): the plan turns each into the product's contents or excludes it (`generation-system.md` §4b.5) |
 | Software / app / website | Real screenshots or screen recordings of the exact screens |
@@ -57,6 +57,11 @@ Steps:
      the folder, the name and what the photo shows. It is the authority for that variant's contents
      (colour, clarity, bubbles, texture).
    - Never treat a contents sample as a separate product.
+   - Write the product's **affordance sheet** (`anomaly-catalog.md` §1): parts, openings, the
+     opening sequence, how it is used and held, the contact point, what it holds and how many, its
+     states, real size, the orientation of its mark, and what it cannot do. Take it from the images
+     and specs; where an image does not show a part (the spout side of a lid), say so and keep the
+     use to what is known.
 4. **For each character:** the best face and full-body views, plus the outfits present.
 5. **Everything else:** logos, palettes, UI screenshots, environments, audio (voice, music). Fonts
    are listed only: overlay text always uses the house text style (`capcut-assembly.md` §3).
@@ -67,8 +72,8 @@ Steps:
 
 One row per asset:
 
-| id | type | role | files (local) | canonical? | variant_of | views | real size / materials / notes | media_ids (+url) | element_id | uses |
-|---|---|---|---|---|---|---|---|---|---|---|
+| id | type | role | files (local) | canonical? | variant_of | views | real size / materials / notes | affordances (parts · openings · sequence · use + contact · contents/count · states · mark · impossible) | media_ids (+url) | element_id | uses |
+|---|---|---|---|---|---|---|---|---|---|---|---|
 
 - **Canonical templates** are authoritative for size, proportions, shape, curves, silhouette,
   construction and packaging structure.
@@ -158,3 +163,6 @@ Useful image utilities for references (all cost credits; preflight when possible
 - When fidelity matters more than motion complexity, prefer a start frame or reference with the exact
   asset and simpler motion (one grip, one move) over an ambitious action that risks deformation.
 - Record in the brief which asset file is the authority for each entity.
+- A product is used only through its real opening or control, after its preparation step, with the
+  contact point of its affordance sheet; a swapped product with a different opening gets a planned
+  grip that keeps the source hand path (`anomaly-catalog.md` §2.2, `generation-system.md` §5c.4).

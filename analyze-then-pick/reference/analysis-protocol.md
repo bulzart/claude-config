@@ -54,8 +54,12 @@ is one second of the sheets. Do not describe isolated frames. Answer:
    from `video.md`), why each cut happens, transitions and their motivation, speed changes.
 7. **Payoff:** what it is and when it lands (seconds), and whether the ending loops back to the start
    (`loop_similarity`, plus the first and last frames).
-8. **Continuity:** entity states over time (the start of an entity ledger); any source flaws
-   (continuity errors, dead space) that must **not** be copied.
+8. **Continuity:** entity states over time (the start of an entity ledger); the count of every
+   multiple over time; for every handled object, how it is used (the part: spout, opened top,
+   nozzle, torn end; the preparation step; the contact point; the hand; the head angle), because a
+   Recreate keeps it and a Create reuses the mechanism (`generation-system.md` §5d,
+   `anomaly-catalog.md` §2); any source flaws (continuity errors, dead space, a count or
+   affordance break of the source's own) that must **not** be copied.
 9. **Client-entity fit:** what is the most suitable way for the client's placeable entity (the
    registry, command A2b) to be part of this video, given what it is, its size and how it is used
    (`generation-system.md` §4b.0)?
@@ -105,7 +109,7 @@ Overlay text: <per event: wording, role (hook / "POV:" line / running caption / 
 Inserts: <per insert: t_in–t_out (cut frames), what it is (name the meme if recognisable), video or still, its sound, the reference's own overlays on it> — cut from this video, never generated (generation-system.md §3c) [E]
 Sound design (Create; audio-profile.json): <music bed yes/no/unknown, ~BPM, beat strength, energy arc, hits (t, on cut?), speech share, reusable whole?> → role [I]: <dramatic / comic / suspense / hype / SFX-driven / voice-only>; lyrics in the transcript may identify the song [E/I]
 Engagement mechanisms: <mechanism — evidence (t=…) — why it works>                         [I]
-Interactions & physics: <grips, pours, handling, weight — anything a generation must reproduce> [E]
+Interactions & physics: <grips, pours, handling, weight; per handled object: the part used, the preparation step, the contact point, the hand, the head angle; counts of multiples over time — anything a generation must reproduce (anomaly-catalog.md §2)> [E]
 Continuity & flaws: <source errors and dead space not to copy>                             [E/I]
 Entities → preserve / replace / adapt / ignore: <per entity, with reason>                  [I/U]
 Client-entity fit: <swap: <source entity> at t=… → client <entity> | contents: <vessel or form> holds the product, package nearby | placement: nothing analogous> [E/I]

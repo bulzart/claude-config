@@ -19,13 +19,14 @@ analyze-then-pick/
 │   └── first-party/                verbatim Higgsfield recipes (ad-multiplier edit contract, media pipeline, Genjutsu)
 ├── reference/
 │   ├── analysis-protocol.md        Analyze Mode: reading 5 fps storyboards + timelines, cards, lenses, families, directions, delegation; the user's examples → house approach (§9)
-│   ├── generation-system.md        dependency chain, work-backward plan, state ledger, multi-generation videos (§3b), reference inserts (§3c), integration analysis, swap / contents / natural placement (§4b), anti-slop gate, physics (§5b), source fidelity and audio-locked timing (§5c), model translation, pre/post QC, brief
+│   ├── generation-system.md        dependency chain, work-backward plan, state ledger, multi-generation videos (§3b), reference inserts (§3c), integration analysis, swap / contents / natural placement (§4b), anti-slop gate, physics (§5b), source fidelity and audio-locked timing (§5c), counts / openings / permanence (§5d), model translation, pre/post QC, brief
+│   ├── anomaly-catalog.md          logical and physical anomaly classes (counts, openings and use, preparation, persistent states, object permanence, liquids, scale, body mechanics, labels, hand-offs, environment, timing, stylised rendering): the affordance sheet per product, ledger entries, prompt lines, QC checkpoints and verdicts
 │   ├── text-and-format.md          mode-dependent text policy (Analyze: clean plate + CapCut text layers), text removal, fixed 9:16 / 720p rules
 │   ├── capcut-assembly.md          Analyze Mode's editable master: one CapCut project per video (DD_Mon_YYYY_vNN) with the inserts and text layers (house text style: System, size 10, the user's locked preset); save, repair, preview
 │   ├── production-agents.md        Analyze Mode (Recreate / Create): one background agent per video (max 5 at once), its prompt, contract and result.json
 │   └── assets-and-substitution.md  user-supplied assets only (analyze: dropped once; edit: per operation), contents samples, understanding + registry, substitution map, reference strategy per model
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
-├── scripts/atp.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc, sync-check, locked ledger/state, CapCut name/prep/repair, transfers)
+├── scripts/atp.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, sync-check, locked ledger/state, CapCut name/prep/repair, transfers)
 └── runs/<stamp>-<slug>/            one folder per run (state.json makes runs resumable: /analyze-then-pick resume <run-dir>)
 ```
 

@@ -90,7 +90,7 @@ atp.py capcut-text-style --draft "<store>/<name>" [--check | --learn [--text N] 
 atp.py strip-inserts --video "<reference>" --inserts 13.0-15.0 --out "<dir>"  → own.mp4, own-silent.mp4, map.json (split points)
 atp.py captions --video "<in>" --out "<out>" --spec captions.json | --from-speech [--script "…"]   (fallback only)
 atp.py clean --video "<in>" --out "<out>" --delogo "x,y,w,h@t0-t1" [--crop "x,y,w,h"]
-atp.py qc --video "<final>" --out "<dir>" --mode analyze|edit [--allowed-text "a|b"] [--expect-duration s]
+atp.py qc --video "<final>" --out "<dir>" --mode analyze|edit [--allowed-text "a|b"] [--expect-duration s] [--dense "label:a-b" …] [--dense-fps 30]
 atp.py model-menu --mode analyze|edit --live-ids "<ids from models_explore>"   (every model, pinned first)
 atp.py ledger begin --run "<run>" --video NN --attempt K --request "<request.json>"   (exit 3 = do not submit)
 atp.py ledger set --run "<run>" --fingerprint F --job J --status submitted|unknown|completed|failed|accepted|rejected

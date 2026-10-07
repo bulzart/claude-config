@@ -2226,6 +2226,29 @@ def cmd_qc(a):
     dur = info.get("duration_s") or 0
     base, eff, _ = extract_baseline(v, a.fps, od / "frames", dur, max_side=720)
     sheets = build_storyboard(base, od / "qc-storyboard", f"QC {Path(v).name}", info.get("orientation", "portrait"))
+    # QC checkpoints at the full frame rate (reference/anomaly-catalog.md §4): use beats, exits and
+    # re-entries, occlusions, cuts, hand-offs, pours, seams. One sheet per checkpoint under <out>/dense/.
+    dense = []
+    shutil.rmtree(od / "dense", ignore_errors=True)
+    tmax = max(0.0, dur - 1.5 / (info.get("fps") or 24))
+    for i, spec in enumerate(a.dense or [], 1):
+        m = re.match(r"^\s*(?:(.*?)\s*:)?\s*([0-9.]+)\s*-\s*([0-9.]+)\s*$", spec)
+        if not m:
+            fail(f"bad --dense {spec!r}; use label:start-end in seconds (e.g. sip:3.5-5.6)", 2)
+        label = slugify(m.group(1) or f"cp{i}", 24) or f"cp{i}"
+        st, en = sorted((float(m.group(2)), float(m.group(3))))
+        ts, k = [], 0
+        while st + k / a.dense_fps <= en + 1e-6:
+            ts.append(round(min(tmax, max(0.0, st + k / a.dense_fps)), 3))
+            k += 1
+        ts = sorted(set(ts))
+        pre = f"{i:02d}-{label}"
+        res = extract_many(v, [(t, od / "dense" / f"{pre}-{ts_name(t)}.jpg", {"kind": "extra"}) for t in ts], 1280)
+        dsheets = build_storyboard(res, od / "dense" / f"sheet-{pre}",
+                                   f"QC checkpoint {label} {st:.2f}-{en:.2f}s @{a.dense_fps:g} fps",
+                                   info.get("orientation", "portrait"), dense=len(res) > 12)
+        dense.append({"label": label, "start": st, "end": en, "fps": a.dense_fps, "frames": len(res),
+                      "ok": all(r["ok"] for r in res), "sheets": dsheets})
     ff = find_tool("ffmpeg")
     cp = run([ff, "-hide_banner", "-nostdin", "-i", v, "-map", "0:v:0", "-vf",
               "blackdetect=d=0.2:pix_th=0.10,freezedetect=n=-60dB:d=0.6", "-an", "-f", "null", "-"], timeout=1800)
@@ -2271,9 +2294,11 @@ def cmd_qc(a):
     if a.expect_duration and abs(checks["duration_delta_s"]) > max(0.25, 0.05 * a.expect_duration):
         problems.append(f"duration off by {checks['duration_delta_s']} s")
     checks["problems"] = problems
-    write_json(od / "qc.json", {"info": info, "checks": checks, "ocr": text, "sheets": sheets})
+    checks["dense_checkpoints"] = [{"label": d["label"], "start": d["start"], "end": d["end"], "frames": d["frames"]}
+                                   for d in dense]
+    write_json(od / "qc.json", {"info": info, "checks": checks, "ocr": text, "sheets": sheets, "dense": dense})
     out({"ok": True, "passed_automatic_checks": not problems, "qc_json": str(od / "qc.json"),
-         "sheets": sheets, "checks": checks})
+         "sheets": sheets, "dense": dense, "checks": checks})
 
 
 # --------------------------------------------------------------------------- output format: 9:16 720p
@@ -3385,6 +3410,10 @@ def main():
     p.add_argument("--expect-size", default=cfg_get("output.size", "720x1280"))
     p.add_argument("--mode", choices=["analyze", "edit"], default="analyze")
     p.add_argument("--allowed-text", help="planned/kept text, '|' separated (captions you burned in, real label text)")
+    p.add_argument("--dense", action="append", metavar="LABEL:START-END",
+                   help="QC checkpoint rendered at the full frame rate (seconds), e.g. sip:3.5-5.6 — a use beat, "
+                        "exit/re-entry, occlusion, cut, hand-off, pour or seam (anomaly-catalog.md §4); repeatable")
+    p.add_argument("--dense-fps", type=float, default=30.0, help="rate for --dense sheets (default 30)")
     p.add_argument("--no-ocr", action="store_true"); p.set_defaults(fn=cmd_qc)
 
     p = sp.add_parser("conform"); p.add_argument("--video", required=True); p.add_argument("--out", required=True)

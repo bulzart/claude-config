@@ -5,6 +5,11 @@ analysis, assets, model knowledge and Higgsfield capabilities into one coherent 
 Nothing important is decided in isolation. Every item below must describe **the same intended
 video**.
 
+Its companion `anomaly-catalog.md` holds the logical and physical anomaly classes (counts, openings
+and use, preparation, persistent states, object permanence, liquids, scale, body mechanics, labels,
+hand-offs, environment, timing, stylised rendering), each with its ledger entry, prompt lines and QC
+checkpoint. Load it with this file; §3, §5d, §8 and §9 below point into it.
+
 ## 1. The dependency chain
 
 ```
@@ -92,11 +97,12 @@ Rules:
 Track every important character, product, object, container, liquid, interface, garment and prop from
 the first frame to the last. Earlier states constrain later ones.
 
-| entity | t=0 state | event (visible cause) | new state | … | final state |
-|---|---|---|---|---|---|
-| e.g. bottle | on counter, right of glass, cap on, label to camera | 1.2 s right hand lifts it | in right hand, cap on | … | back on counter, cap off, ⅓ empty |
-| e.g. can (placed, §4b) | on desk, right of laptop, open, label ~30° to camera | 6.0 s left hand lifts it, one sip | in left hand | 7.5 s set down on the same spot | on desk, right of laptop, open |
-| e.g. car (placed, §4b) | parked at the curb behind the bench, lights off, wheels straight, badge ~30° to camera | 8.5 s owner walks to it, gets in | engine on, lights on | 9.5 s pulls away slowly, wheels turning | leaving frame left |
+| entity | count | t=0 state (spot · opening/lid · level · holder + hand · mark · in frame?) | event (visible cause · hand · contact point) | new state | … | final state |
+|---|---|---|---|---|---|---|
+| e.g. bottle | 1 | on counter, right of glass, cap on, full, label to camera | 1.2 s right hand lifts it | in right hand, cap on | 2.0 s left hand unscrews the cap and sets it on the counter; 2.5–4.0 s lips on the bottle's mouth, head tilted back: ⅓ drunk | back on counter, cap off beside it, ⅔ full |
+| e.g. can (placed, §4b) | 1 | on desk, right of laptop, open (tab up), label ~30° to camera | 6.0 s left hand lifts it; lips on the opening beside the tab, one sip, head tilted back a little | in left hand | 7.5 s set down on the same spot | on desk, right of laptop, open |
+| e.g. capsules | 3 | on the desk, right of the lamp, in a row | 4.0–7.5 s he walks past behind the desk and out of frame: untouched | 3 on the desk | 7.5 s right hand takes two, into the mouth, swallows | 1 on the desk, 2 swallowed |
+| e.g. car (placed, §4b) | 1 | parked at the curb behind the bench, lights off, wheels straight, badge ~30° to camera | 8.5 s owner walks to it, opens the driver's door, gets in | engine on, lights on | 9.5 s pulls away slowly, wheels turning | leaving frame left |
 
 Invariants to check against the ledger:
 - **Placement persists:** an object stays where it was put until a visible action moves it.
@@ -112,6 +118,15 @@ Invariants to check against the ledger:
   re-randomises.
 - **Wardrobe, hair, makeup and accessories** are constant unless a visible change happens.
 - **Multi-clip videos:** each clip's end state is the next clip's start state, word for word.
+- **Counts persist:** every multiple is counted at t=0 and changes only through a visible cause, by
+  the amount it explains; what was taken exists somewhere (`anomaly-catalog.md` §2.1).
+- **Use goes through the opening:** an object is used through the part built for it (the spout, the
+  opened top, the nozzle, the torn notch, the handle, the screen), after the step that readies it,
+  with the contact point named; nothing reacts before its cause (§2.2, §2.3, §2.8).
+- **Object permanence:** what leaves the frame, passes behind a hand or sits across a cut comes
+  back with the same count, spot, state and size (§2.5).
+- **Parts and marks belong to the body:** a cap, strap, straw or label moves with the object, never
+  on its own, never mirrored, never duplicated; the variant stays the same (§2.9).
 
 ## 3b. Videos longer than one generation
 
@@ -432,6 +447,9 @@ of context, or somewhere it could not really be.
   - if it is ever used, it is ready for that use from the start or made ready on screen: a can
     that is drunk from is open from the start or opened on screen, and a car that drives off has
     its driver get in first;
+  - it is used through its own opening or control, with the contact point of its affordance sheet
+    (`anomaly-catalog.md` §1, §2.2): a straw bottle through its spout with the cap flipped open, a
+    can from the opening beside its lifted tab, a pack from its opened end;
   - a state that changes, stays changed:
     - an opened can stays open;
     - a pack missing a piece stays missing it;
@@ -520,12 +538,17 @@ Evaluate before writing the prompt, and again in the pre-generation QC pass (§8
 | transitions | Every cut, zoom, reframe, speed ramp or scene change has a reason (the action, the family's editing style, the narrative). None are added "for cinematic feel" |
 | identity | No drift in face, hair, body or wardrobe; no duplicated people or objects |
 | placement (§4b) | The placed client entity is present and recognisable, on one anchor that persists through every shot. It moves only by a visible action, matches the plate, and is noticed but not featured |
+| counts | Every multiple keeps its number except through a visible cause; nothing appears, vanishes or doubles across exits, occlusions and cuts (`anomaly-catalog.md` §2.1, §2.5) |
+| affordance | Every use goes through the object's real opening or control, after its preparation step, with a real contact point and the body mechanics of that use (§2.2, §2.3, §2.8) |
 
 The AI-slop blacklist must never appear in a plan or a prompt:
 - unexplained dead space, filler or pauses, and unnecessary static stretches;
 - arbitrary slow motion, abrupt fast-forwarding and sudden speed changes;
 - out-of-nowhere transitions, unjustified cuts and random scene changes;
 - teleporting, disappearing or duplicated objects;
+- a count that changes without a cause (three capsules that are one after a walk-past);
+- a product used through a part that has no opening or through a closed one (a straw bottle drunk
+  from the side without the spout, a sealed can sipped), or used before it was made ready;
 - a placed product that changes spot between shots, enters or leaves without a cause, or looks
   pasted in (its own light, a halo, mismatched sharpness, no contact shadow, a packshot pose);
 - identity drift, clothing changes and asset deformation;
@@ -682,6 +705,27 @@ sync anchors densified, and compare the keep beats on the sheet.
 - **inconclusive**, when the motion is too different to measure (e.g. a heavy restyle): judge it on
   the sheet and the densified anchors.
 
+### 5d. Counts, openings and object permanence
+Two anomalies from anime Create videos (2026-10) define this rule set: three capsules on a desk
+became one after the character walked past them and came back, and a boy drank from the side of a
+flip-top straw bottle that has no opening there, after his mother had filled it with milk. A ledger
+that tracks only "where the product is" lets both through. `anomaly-catalog.md` is the full
+catalog; what every plan, prompt and QC pass must do:
+- **The affordance sheet first** (`anomaly-catalog.md` §1): parts, openings, the opening sequence,
+  how the product is used and held, the contact point, what it holds and how many, its states, its
+  real size, the orientation of its mark, and what it cannot do, written into the registry before
+  the plan.
+- **The ledger counts and names the part** (§3 above): a count per multiple, the opening or lid
+  state, the level, the holder and hand, the contact point, and whether the anchor is in frame.
+- **The prompt** writes every use beat as initial state → operation on the named part → observable
+  result with the contact point, carries every count with its number, restates counts and states
+  after each exit, occlusion, cut, hand-off and seam, and adds one targeted exclusion per product
+  for its own wrong use (`anomaly-catalog.md` §3).
+- **QC** renders the plan's checkpoints dense (`atp.py qc --dense`), counts at each, checks the part
+  and the contact on every use beat, and compares count, spot, state and size across every exit,
+  occlusion, cut and seam (`anomaly-catalog.md` §4). A count or state that changes without a cause,
+  a use through the wrong or a closed part, and an effect before its cause are regenerate reasons.
+
 ## 6. Conflict resolution (resolve before sending)
 
 | conflict | resolution |
@@ -731,7 +775,10 @@ sync anchors densified, and compare the keep beats on the sheet.
    - the documented syntax for references and frames.
    Include the ledger's state anchors (start state, key state changes, end state) and the
    integration facts from §4 in the model's own phrasing. Express a natural placement as §4b.5
-   says. Do not dump the analysis into the prompt.
+   says. Write every use beat as initial state → operation on the named part → observable result
+   with its contact point, carry every count with its number and restate it after exits,
+   occlusions, cuts and hand-offs, and add one targeted exclusion per product for its own wrong use
+   (`anomaly-catalog.md` §3). Do not dump the analysis into the prompt.
 4. Check the prompt against the pattern card and the model guide's §7 checklist, then save it to
    `<run>/50-requests/video-NN-request.json`: model, params, medias with their role and meaning, the
    prompt, the post-processing plan, and the preflight cost.
@@ -757,6 +804,15 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       the plan says why not. Every vessel's contents are stated in the prompt.
 - [ ] Props in the asset photos (a glass, a cup, a snack) are planned as contents or excluded in the
       prompt.
+- [ ] Counts: every multiple has its number at t=0, at every event and at the end, and nothing
+      appears, vanishes or doubles without a cause (`anomaly-catalog.md` §2.1, §2.5).
+- [ ] Openings and use: every use beat goes through the product's real opening or control after its
+      preparation step, with the contact point, orientation and body mechanics of its affordance
+      sheet; no effect precedes its cause; no reference image shows a later state than t=0
+      (§2.2, §2.3, §2.8).
+- [ ] Permanence and parts: the count and state of every tracked item are restated after each exit,
+      occlusion, cut, hand-off and seam; caps, straps, straws and labels stay with their body
+      (§2.4, §2.5, §2.9). The plan lists its QC checkpoints (`anomaly-catalog.md` §3 step 8).
 - [ ] Motion is natural in speed and weight, with no unmotivated speed changes.
 - [ ] Every object state matches the ledger at every checkpoint.
 - [ ] Pacing matches the family profile: no dead space, every second has a job.
@@ -777,8 +833,10 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
 
 ## 9. Post-generation QC (after download)
 
-1. `atp.py qc --video <final> --out <dir> --mode <analyze|edit> --allowed-text "<planned text>"`,
-   then **view the 5 fps storyboard** sheets in order.
+1. `atp.py qc --video <final> --out <dir> --mode <analyze|edit> --allowed-text "<planned text>"
+   --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan (`anomaly-catalog.md` §3
+   step 8), then **view the 5 fps storyboard** sheets in order and every dense sheet under
+   `<dir>/dense/`.
 2. Check against the plan: identity, asset geometry (compare with the canonical template), the ledger
    states, interactions (densify contact moments with `atp.py frames --range a-b --fps 15 --sheet`),
    lighting, text (unexpected text or pseudo-text = fail), pacing (dead head/tail → `atp.py trim`),
@@ -805,6 +863,14 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      a steady offset is a post-fix.
    - **Leftovers:** check against §9b. Only its **must-not-survive** list counts as a finding.
      Everything on its **fine** list is ignored: not reported, not asked about, not regenerated.
+   - **Counts, openings and permanence** (`anomaly-catalog.md` §4): count every multiple at every
+     checkpoint and write the numbers in the verdict; on every use beat check the preparation step,
+     the part used and the contact point on the 30 fps sheet; before and after every exit,
+     occlusion, cut and seam compare count, spot, state, size and label orientation. A count or
+     state that changes without a cause, a use through a part with no opening or a closed one, and
+     an effect before its cause are **regenerate** reasons. The catalog names the only post-fixes:
+     a pixel hold on an untouched static anchor in a locked shot, a one-frame trim, a recolour or a
+     punch-in in a locked shot.
 3. **Verdict** (record it in the run log with the reason):
    - **accept**;
    - **post-fix**: trim, conform, restore-audio or a sync offset (text and inserts are fixed in the
@@ -856,6 +922,7 @@ Characters/assets: <approved assets used; element/media ids not shown>
 House approach: <the rules applied from 20-analysis/house-approach.md | none (no examples)>
 Substitutions: <source entity → client entity, per entity> | Placement: <client entity → anchor, e.g. "can on desk right of laptop; one sip at ~6 s, set back", "car parked at the curb behind the bench; stays parked">
 Main action & states: <start → key change → end>
+Counts & use: <every multiple with its number over time; each use beat's part and contact ("spout, cap flipped open, head level"); the QC checkpoints>
 Style & camera: <look, lighting, camera behaviour>
 Text: <none | CapCut text layers in the house style: "…" (where, when) | real label, logo or badge text on the product>
 Inserts: <none | "<meme>" cut from <V> at <t_in–t_out>, placed at <split> s>

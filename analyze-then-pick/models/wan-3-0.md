@@ -314,6 +314,15 @@ the window" [OFFICIAL]. Add reflections on glossy surfaces and a contact shadow 
 positions of pine trees and rocks" [OFFICIAL]. Write end states for placed objects, open/closed containers, liquid
 levels and which hand holds what ("the cup stays in her left hand, half full, lid on") [INFERRED].
 
+**Counts and use** (`reference/anomaly-catalog.md`). Count multiples in the official "always only one orb" form
+("There are always exactly three capsules on the desk right of the lamp, not duplicated, not vanished, also while
+he walks past and after he comes back"); write each use as the part, the preparation step and the contact point
+inside the shot's action clause ("he flips the spout cap open with his thumb, puts his lips on the spout and drinks
+through it with his head level, both hands around the bottle"); restate counts and states in the opening words of
+every shot after a cut or an exit; put one item per product in the "Negative prompt list:" for its own wrong use
+and count ("no drinking from any side of the bottle other than the spout", "no capsule appears or disappears")
+[INFERRED; observed 2026-10].
+
 **Known failures.** Alibaba's own exclusion categories name them: face distortion/swapping, extra fingers, twisted
 limbs, "clipping artifacts", "cutout traces", "characters running illogically", "No scale drift (common in editing
 / reference scenarios)" [OFFICIAL]; plus text, audio texture and wide orbits (above). Slop prevention: §5.
@@ -455,6 +464,9 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 | Spatial distortion | orbit >45° [OFFICIAL] | smaller arcs, slower moves |
 | Object snaps, or pauses on a pose then resumes | free physical motion (a spin, toss or roll, or a vehicle's move) given exact times or a required end state | describe the physics only; give the end state a visible cause (a hand stops it, a driver brakes); time product-pun text to the real moment (`generation-system.md` §5b) [INFERRED] |
 | Actions compressed or skipped | too many beats per shot | ≤2 actions per 3–5 s shot [INFERRED] |
+| Count of multiples changes after an exit, occlusion or cut (three capsules become one after a walk-past) | items not counted per shot; no restatement after the exit or cut | "always exactly N …, not duplicated, not vanished" per shot and after re-entry (`reference/anomaly-catalog.md` §2.1, §2.5) [INFERRED; observed 2026-10] |
+| Product used through the wrong part (a straw bottle drunk from the side without the spout; a sealed can sipped) | the use written as a result only ("drinks"), without the part or the preparation step | the part, the preparation step and the contact point in the action clause; one "Negative prompt list:" item naming the wrong use (`reference/anomaly-catalog.md` §2.2, §2.3) [INFERRED; observed 2026-10] |
+| A later state leaks into frame 0 (a raised tab on a can cracked later) | a reference image that shows the later state | attach only the t=0 state and state it in the shot's opening clause (`reference/anomaly-catalog.md` §2.3) [observed 2026-10] |
 | Lip sync off | exact-word expectations [OFFICIAL] | short lines, "Lip sync", audio timbre reference |
 | Request rejected | frames + references, or frames + audio [OFFICIAL] | one mode per call (§2.5) |
 | Storyboard grid rendered as a frame | undeclared multi-grid reference | "use the storyboard only as shot guidance" [OFFICIAL] |
@@ -488,8 +500,9 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 - [ ] Dialogue quoted with speaker or "No dialogue."; BGM specified or "No background music."
 - [ ] Clean-plate line (§3.11b); in-frame text only if short and scene-bound; Edit Mode: removal pass first.
 - [ ] Asset size/grip/occlusion, light direction and end states written (§3.14); slop exclusions included (§5).
+- [ ] Counts with numbers per shot; every use beat names the part, the preparation step and the contact point; one "Negative prompt list:" item per product for its own wrong use and count; no reference shows a later state than t=0 (`reference/anomaly-catalog.md` §3).
 - [ ] `duration`, `generate_audio`, `enable_thinking` set deliberately; `get_cost: true`.
-- [ ] QC with `atp.py qc --mode analyze|edit`: size, freezes, pseudo-text, corner marks, identity, product geometry.
+- [ ] QC with `atp.py qc --mode analyze|edit`: size, freezes, pseudo-text, corner marks, identity, product geometry; `--dense` on the plan's checkpoints: counts, the part and contact of every use, permanence across exits and cuts (`reference/anomaly-catalog.md` §4).
 
 ## 8. Sources
 - [OFFICIAL] Wan3.0 – Video Generation API Reference — https://www.alibabacloud.com/help/en/model-studio/wan3-video-generation-api-reference (accessed 2026-09-30)

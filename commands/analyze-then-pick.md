@@ -180,8 +180,10 @@ You are running the **/analyze-then-pick** command.
       chewed, applied, driven) only when the action has room for it; the story never changes to
       fit the product.
     - **Physically and logically correct for that object.** Its size, weight, states and motion
-      follow its own physics (`generation-system.md` §3, §4, §5b). These rules are general; the
-      examples only illustrate them.
+      follow its own physics (`generation-system.md` §3, §4, §5b, §5d;
+      `reference/anomaly-catalog.md`): its counts persist, it is used through its real opening
+      after the step that readies it, and it is still there, unchanged, after every exit,
+      occlusion and cut. These rules are general; the examples only illustrate them.
 15. **Analyze Mode asks for permission in exactly one case:** a video **over 30 s that needs 2 or
     more generations** (A7b).
     - Everything else runs without confirmation: no "Go" question, no cost pauses, no QC questions.
@@ -262,7 +264,7 @@ You are running the **/analyze-then-pick** command.
 | `T` | `"$PY" "$ATP/scripts/atp.py"`. Every call prints one JSON object on its last line; run through Bash |
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` |
-| References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
+| References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
 | Run folder | created by `T new-run` under `ATP/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
 
@@ -411,6 +413,10 @@ You are running the **/analyze-then-pick** command.
     dimensions from any supplied spec. Find and link each **contents sample** to its variant: a
     liquid or texture photo, a pour, a glass of the drink, or a lifestyle shot that shows it. They
     are often among the supplied files without a label. A sample is never a separate product.
+  - **Affordance sheet, per product or object** (`ATP/reference/anomaly-catalog.md` §1): its parts,
+    openings, opening sequence, how it is used and held, the contact point, what it holds and how
+    many, its states, real size, the orientation of its mark, and what it cannot do. Every plan,
+    prompt and QC pass quotes it.
   - **Characters:** one entry per distinct person, mascot or character, with its best face and full
     views.
   - **Other assets:** logos, palettes, UI screenshots, environments, audio. Supplied fonts are
@@ -431,6 +437,9 @@ You are running the **/analyze-then-pick** command.
       - **placement**: nothing analogous.
       For contents and placement, also record the placement opportunities: free or busy hands,
       nearby surfaces, and the light on them.
+    - its **object use and counts** (protocol §2.8; `anomaly-catalog.md` §2): for every handled
+      object, the part used, the preparation step, the contact point, the hand and the head angle;
+      the count of every multiple over time;
     - its **inserts**: memes or other clips that interrupt the reference, with their exact in and
       out on cut frames, video or still, and their sound;
     - its **overlay text**: wording, role, centre position, in and out times, and style;
@@ -610,8 +619,9 @@ generated without the user's permission. Nothing else in Analyze Mode asks for p
 ### A8. Load the locked model's documentation
 The model was picked at the start (§2.4) and does not change.
 1. Read **only** `ATP/<guide>` for that model (from `index.json`), `ATP/higgsfield/higgsfield-mcp.md`,
-   `ATP/reference/generation-system.md`, `ATP/reference/text-and-format.md`,
-   `ATP/reference/capcut-assembly.md` and `ATP/reference/production-agents.md`.
+   `ATP/reference/generation-system.md`, `ATP/reference/anomaly-catalog.md`,
+   `ATP/reference/text-and-format.md`, `ATP/reference/capcut-assembly.md` and
+   `ATP/reference/production-agents.md`.
    - For a model with no guide, read `ATP/models/_generic-fallback.md`.
 2. `models_explore {action:"get", model_id}` once. If the live parameters differ from the guide, the
    live ones win; note the drift.
@@ -725,14 +735,16 @@ See §6.
      authoritative. If files arrive ungrouped, sort them by what they show (a person vs. an object).
      Ask only if that is still ambiguous.
    - Within each product, pick the canonical template and mark the other views and variants.
+   - Write the replacement product's affordance sheet (`anomaly-catalog.md` §1) whenever the edit
+     has it handled or used on screen (drunk, opened, applied, carried).
    - "Same files as video K" reuses that scope explicitly. Nothing else carries over.
 4. Remind the user once that all source text (captions, usernames, watermarks, stickers, overlays…)
    is removed unless they name text to keep.
 
 ### E4. Locked model — how it performs this edit
 - The model was picked at the start (§2.4) and does not change. Before the first edit, read **only**
-  its guide + `higgsfield-mcp.md` + `generation-system.md` + `text-and-format.md`, and call
-  `models_explore get` once.
+  its guide + `higgsfield-mcp.md` + `generation-system.md` + `anomaly-catalog.md` +
+  `text-and-format.md`, and call `models_explore get` once.
 - Map the chosen operations onto the model's edit capability (`index.json → edit_kind`):
   - **✓ edits video** (`video_edit`, `object_replace`): a true edit of the 9:16 source.
   - **↔ motion transfer:** the source drives motion; the supplied files define the subjects and
@@ -810,7 +822,9 @@ files as video K".
     - Edit Mode and Recreate: the **source action script** with its keep / change marks and sync
       anchors (item 19, `generation-system.md` §5c.1), taken from the card and densified around
       fast moments and contacts;
-    - the **entity state ledger**;
+    - the **entity state ledger**, with a count for every multiple and, per row, the opening or lid
+      state, the level, the holder and hand, the contact point and whether the anchor is in frame
+      (`generation-system.md` §3, §5d; `anomaly-catalog.md` §2);
     - the **integration analysis** for every substitution or insertion;
     - for a **contents** or **placement** video, the **integration plan** (`generation-system.md`
       §4b):
@@ -847,6 +861,9 @@ files as video K".
       - the hand-off state of each seam;
       - the clip durations;
     - the logic and anti-slop gate;
+    - the **QC checkpoints** (`anomaly-catalog.md` §3 step 8): every use beat, exit and re-entry,
+      occlusion, cut, hand-off, pour and seam, plus the first and last second, each with its time
+      range and the counts and states expected there. X9 renders them with `T qc --dense`;
     - conflict resolution.
   - Use the provenance labels.
   - Analyze Mode: rotate approved characters across videos when no assignment is given.
@@ -867,6 +884,14 @@ files as video K".
       as a hand stopping the product label-forward or a driver braking into the spot
       (`generation-system.md` §5b). A corrected retry removes timing constraints from free motion;
       it never adds them.
+    - Every **use beat** is written as initial state → operation on the named part → observable
+      result, with the contact point, orientation and body mechanics of the product's affordance
+      sheet ("he flips the cap open with his thumb, puts his lips on the spout and drinks through
+      it with his head level"). Every **multiple** carries its number at t=0, at each event and at
+      the end, restated after exits, occlusions, cuts, hand-offs and seams. Each product gets **one
+      targeted exclusion** for its own wrong use and count ("only through the spout; no other
+      opening", "exactly three capsules; none appears or disappears"). No reference image shows a
+      later state than t=0 (`anomaly-catalog.md` §3).
     - Analyze Mode prompts are always **clean plates**: no overlay text. The only lettering is the
       product's own label, logo or badge.
     - With inserts, the prompt covers only the generated content, and puts a natural beat boundary
@@ -926,6 +951,10 @@ files as video K".
     the prompt. Nothing in the prompt invites new motion. The duration matches the source segment.
     No change operation forces a motion change: a bigger product gets a planned grip that keeps the
     same hand path.
+  - **Counts, openings and permanence** (`anomaly-catalog.md` §3): walk every use beat (the
+    preparation step, the part, the contact point, the head and hands), every multiple's number at
+    every event, every effect's cause, and every restatement after an exit, occlusion, cut,
+    hand-off or seam.
   - Fix any conflict in the plan and the request before continuing.
 - **X5 — Preflight.**
   - `generate_video {params:{…, get_cost:true}}` → cost and `adjustments`. **One** preflight per
@@ -1005,7 +1034,8 @@ files as video K".
      If CapCut is running, keep going and assemble all pending projects at the wrap-up.
 - **X9 — QC.**
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
-    every visible client asset>"`, then view the storyboard sheets.
+    every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan,
+    then view the storyboard sheets and every dense sheet under `<dir>/dense/`.
   - Check identity, asset geometry against the canonical template, the ledger states, interactions
     (densify contact moments), lighting and reflections, text, pacing and dead space, and the format.
   - **Motion beats at 30 fps** (`generation-system.md` §5b): every motion beat (spins, tosses,
@@ -1013,6 +1043,14 @@ files as video K".
     across the beat. A snap, a pause-and-resume without a cause, a reversal, a slide without a
     cause, or a morphing label, badge or body is a regenerate reason. Product-pun text is timed to
     the measured moment.
+  - **Counts, openings and permanence** (`anomaly-catalog.md` §4): count every multiple at every
+    checkpoint and write the numbers in the verdict; on every use beat check, at 30 fps, the
+    preparation step, the part used (spout, opened top, nozzle, torn end) and the contact point;
+    before and after every exit, occlusion, cut and seam compare count, spot, state, size and label
+    orientation. A count or state that changes without a cause, a use through a part with no
+    opening or a closed one, and an effect before its cause are regenerate reasons. The only
+    post-fixes are the catalog's: a pixel hold on an untouched static anchor in a locked shot, a
+    one-frame trim, a recolour or punch-in in a locked shot.
   - **Action sync** (item 19; Edit Mode and Recreate): the X8 sync verdict and sheet. Every sync
     anchor lands within ±0.1 s of its sound: words on mouth movements, impacts on contact, steps on
     footfalls. Drift, or an action added, skipped or moved, is a regenerate reason; a steady offset
@@ -1168,6 +1206,14 @@ video).
   beside the can) when the product's contents fit, and never let a prop from an asset photo carry
   over unplanned.
 - Never sacrifice temporal or physical continuity to imitate an individual source frame.
+- Never let a multiple change its number without a visible cause: three capsules on a desk are
+  still three after the character walks past and comes back, unless they are seen being taken
+  (`anomaly-catalog.md` §2.1, §2.5).
+- Never let a product be used through a part that has no opening, through a closed one, or before
+  the step that readies it: a straw bottle is drunk through its spout with the cap flipped open, a
+  can from its opened top after the tab is lifted (§2.2, §2.3).
+- Never plan a product that is handled on screen without its affordance sheet in the registry
+  (§1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).
 - Never stretch to reach 9:16, never ask for aspect ratio or resolution, and never deliver anything
   other than 720×1280.
 - Never upload an original video with its audio to Higgsfield: use the `videos_without_audio` copy
