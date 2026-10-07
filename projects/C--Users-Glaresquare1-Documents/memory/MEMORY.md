@@ -3,3 +3,4 @@
 - [Neurogum package forms](neurogum-package-forms.md) — updated official samples; closed cartons/pouch, never big box or opened carton with blister; vary forms; rotate 5 flavours
 - [Celsius: no Orange flavour](celsius-no-orange-flavor.md) — rotate Cherry Cola, Peach Vibe, Watermelon; Orange already overused
 - [ATP anomaly catalog](atp-anomaly-catalog.md) — reference/anomaly-catalog.md: counts, openings/use, permanence; wired into ledger, prompts, QC (qc --dense); new reported anomalies go there
+- [ATP build prompt sync](atp-build-prompt-sync.md) — Documents/prompts/analyze-then-pick.txt is the pipeline's build prompt; update it after every pipeline change; it specifies skills-based packaging (target, not current)
