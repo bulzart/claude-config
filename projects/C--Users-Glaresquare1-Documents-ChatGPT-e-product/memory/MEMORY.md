@@ -1,6 +1,6 @@
 - [Browser tooling preference](browser-tooling-preference.md) — do Google/browser work via Claude-in-Chrome, signed in as bulzarti@gmail.com
 - [Apps Script editor paste technique](apps-script-editor-paste-technique.md) — Monaco edits don't save; clipboard paste; stale editor tabs; hidden-tab runs; collaborator-name masking
-- [Money OS release state](money-os-release-state.md) — v1.2.0 (CPA/EA-standard review 2026-10-05: other-income input D-77, D-78…D-81) retested on Sheets /copy, Excel Windows, Excel web; gates: signed CPA, sharing, store, licence, videos
+- [Money OS release state](money-os-release-state.md) — v1.2.1 (2026-10-08: state planning-rate table D-82 on top of the v1.2.0 review release) rebuilt local + cloud; setup video re-record pending the owner's tab move; gates: signed CPA, sharing, store, licence
 - [Excel COM testing technique](excel-com-testing-technique.md) — Excel parity via COM recalc; bake/scrub; Protected View; DV ignore-blank trap; merged-cell clipping
 - [Screen-recorded tutorial technique](screen-recorded-tutorial-technique.md) — record a Chrome MCP session (own window, PrintWindow, click log), ElevenLabs narration, render pipeline
 - [Excel-web Chrome testing technique](excel-web-chrome-testing-technique.md) — Name Box navigation, list cells, dialogs, stuck tabs, evidence copies

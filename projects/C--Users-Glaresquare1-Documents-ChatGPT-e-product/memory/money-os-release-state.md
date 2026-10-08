@@ -1,6 +1,6 @@
 ---
 name: money-os-release-state
-description: "Freelancer Money OS status as of 2026-10-05 11:00 — v1.2.0 (CPA/EA-standard review: other-household-income input D-77, wording D-78/D-79) built and retested on Sheets /copy, Excel Windows and Excel web; gates still open; nothing live"
+description: "Freelancer Money OS status as of 2026-10-08 — v1.2.1 (suggested state planning-rate table D-82 in tutorial Appendix A + Access Guide p3, on top of the v1.2.0 review release) rebuilt local + cloud; setup video re-record in progress; gates still open; nothing live"
 metadata:
   node_type: memory
   type: project
@@ -55,3 +55,16 @@ docs/2026-10-05_independent-cpa-standard-review-and-update.md (+ 9-page PDF); te
 4 forms) trashed 10:52–10:56; OneDrive `CPAreview_*` uploads left. Gates still open: signed CPA review (unsigned
 CPA/EA-standard review only), sharing + second-account /copy test, store/checkout/support, licence/refund wording,
 videos (v1.0.0), screenshots (v1.1).
+
+**2026-10-08 v1.2.1 (D-82, owner request after the review):** `source/tools/state_rates_2026.py` → JSON + Markdown table of
+suggested state planning rates (flat rate / 0 / effective rate at $60k single taxable income rounded up; 2nd column $120k;
+Tax Foundation 2026 table + SC DOR + TF errata for GA; research note `source/notes/research/state-planning-rates-2026.md`,
+yearly refresh with the January constants). Lives in tutorial Appendix A (PDF 23 pages) and Access Guide page 3 (3 pages);
+Settings note + FAQ entry point to it; VERSION 1.2.1, MOS_VERSION 1.2.1. Rebuilt: Excel (bake OK), ZIPs, bundles; Google six
+files in place 03:26–03:43 via `tests/audit/2026-10-08_v121/Ops5.gs` after "BACKUP 2026-10-08 v1.2.0 — …" copies (ids in the
+ledger); bound Pro scripts (master 143DFGDF…, release 10n7Qgo0…, demo 1-doxjfVC…) pasted 1.2.1 — dismiss the "signed in as"
+notice first; QA copies 113/113 (Pro 32,679 / Base 32,227 values). Headless **Edge stopped writing PDFs/screenshots** (hands off
+to its startup-boost process even with --user-data-dir) → both PDF builders use headless Chrome now. Video v1.2.1: narration
+(14 clips, ElevenLabs flow 1IQg75FE5WkEWHQdubaH, Alex hLygPNd2gK6Azddorc5W) generated and processed in
+`assets/video/setup-tutorial-v1.2/_raw/vo`; recording copy 1CuSr_JilmORa7R0I7NU1v0iAHUi-NA-fv_187mrrUOk; recording waits for the
+owner to move that tab to its own Chrome window (+ one permission click for the Pro menu).
