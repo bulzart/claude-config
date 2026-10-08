@@ -92,6 +92,11 @@ is one second of the sheets. Do not describe isolated frames. Answer:
 11. **Overlay text:** every text event's wording, role, centre position (`x_rel`, `y_rel` from
     `ocr.json` and the sheets), in and out times, and style. The new video is generated clean, and
     the text is re-placed as CapCut layers (`text-and-format.md` §3).
+12. **Trend elements and cognitive triggers** (`creative-direction.md` §3–§4): the format's name
+    and caption grammar; the structural mechanism that would outlive the trend; the surface
+    elements (a meme, a sound, a catchphrase, an effect) with their freshness; the emotion arc at
+    the hook, the middle and the payoff; the laugh mechanism (incongruity, escalation, callback,
+    timing, deadpan, reversal); the share line a viewer would type when sending it.
 
 ## 3. Per-video card — `20-analysis/cards/<V>.md`
 
@@ -109,6 +114,7 @@ Overlay text: <per event: wording, role (hook / "POV:" line / running caption / 
 Inserts: <per insert: t_in–t_out (cut frames), what it is (name the meme if recognisable), video or still, its sound, the reference's own overlays on it> — cut from this video, never generated (generation-system.md §3c) [E]
 Sound design (Create; audio-profile.json): <music bed yes/no/unknown, ~BPM, beat strength, energy arc, hits (t, on cut?), speech share, reusable whole?> → role [I]: <dramatic / comic / suspense / hype / SFX-driven / voice-only>; lyrics in the transcript may identify the song [E/I]
 Engagement mechanisms: <mechanism — evidence (t=…) — why it works>                         [I]
+Trend & cognition: <format name + caption grammar; structural mechanism; surface elements (current / fading / dated); emotion arc hook→middle→payoff; laugh mechanism; share line> (creative-direction.md §3–§4) [E/I]
 Interactions & physics: <grips, pours, handling, weight; per handled object: the part used, the preparation step, the contact point, the hand, the head angle; counts of multiples over time — anything a generation must reproduce (anomaly-catalog.md §2)> [E]
 Continuity & flaws: <source errors and dead space not to copy>                             [E/I]
 Entities → preserve / replace / adapt / ignore: <per entity, with reason>                  [I/U]
@@ -140,6 +146,10 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
 | Loopability / retention | Seamless loop, end-state echo, payoff near the end, retention risks (dead space, slow middle) |
 | Comment / share potential | Controversy, identity, utility, "send this to…" |
 | Audience targeting | Who it speaks to, and the cues that reveal it |
+| Cognitive ease | Is the situation one the audience has lived, understood in a fraction of a second? |
+| Trend element | Which format, meme, sound or caption grammar it uses; structural or surface; current, fading or dated |
+| Share trigger | What a viewer would say by sending it ("this is you", "this is us") |
+| Product memory | At which moments of attention a product could be seen and remembered without being featured |
 | Structure | The reusable template of beats |
 
 ## 5. Cross-video synthesis
@@ -164,12 +174,15 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
      - the own-content length after inserts, against the locked model's edit range;
      - the text and overlay load;
      - the motion complexity for the model's edit kind;
-     - the strength of its mechanism.
+     - the strength of its mechanism;
+   - its creative potential (`creative-direction.md` §5.2).
      Write the ranking to `20-analysis/recreate-ranking.md`.
 
    Each direction names:
    - its source family;
    - its mechanism;
+   - why it will work for the goal and the audience, and the concept seeds it suggests
+     (`creative-direction.md` §5);
    - what the client's entities would do;
    - **how the client's product appears:**
      - a swap of a named source entity;
@@ -209,6 +222,10 @@ Everything is inferred from the folder, never assumed:
   client assets in the references folder: products, people or brands seen there belong to the
   references.
 - **Audience and platform cues** [I].
+- **Goal** [E/I], **audience model** [I] and **trend read** [E/I] (`creative-direction.md` §2–§4):
+  the goal in one line and each video's job; who the references speak to and what they recognise
+  instantly; the format names, the structural mechanisms, the surface elements with their
+  freshness, and any bounded trend check with its date.
 
 ## 7. Scale and delegation (≤ 2 analysis agents, no Workflow)
 

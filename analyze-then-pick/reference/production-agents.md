@@ -39,7 +39,8 @@ Follow, for this video only:
 - C:/Users/Glaresquare1/.claude/commands/analyze-then-pick.md §5, steps X3 to X10;
 - <ATP>/reference/production-agents.md §3 (your contract);
 - <ATP>/reference/generation-system.md §3b (clips), §3c (inserts), §4b (product integration), §5b (motion that has to land), §5d (counts, openings, permanence), §8–§9 (QC);
-- <ATP>/reference/anomaly-catalog.md §3 (the prompting stack) and §4 (the QC stack);
+- <ATP>/reference/anomaly-catalog.md §3 (the prompting stack) and §4 (the QC stack), incl. §2.14 (solidity);
+- <ATP>/reference/creative-direction.md §8 (the creative check, as notes);
 - <ATP>/reference/capcut-assembly.md, <ATP>/reference/text-and-format.md §3, and the model guide;
 - <RUN>/20-analysis/house-approach.md, when it exists (the user's house approach; your plan says
   which of its rules this video applies).

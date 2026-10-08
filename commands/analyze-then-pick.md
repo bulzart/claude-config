@@ -255,6 +255,15 @@ You are running the **/analyze-then-pick** command.
     Create is not affected: it makes new scenes, and its sound is built in CapCut on their own
     beats.
 
+20. **The pipeline is also the creative team** (`reference/creative-direction.md`): a social-media
+    and product-growth creative specialist, a mass-cognition engineer, a trend analyst, a creative
+    director and a performance editor at once. Every run writes its goal, its audience model and
+    its trend read; every Create video comes from at least five scored concept seeds and passes
+    the sharpness gate; every Recreate pick is ranked for its creative potential; every brief says
+    why the video will work; and QC judges the hook, the payoff and the share line as notes. The
+    creative layer never overrides the hard rules (items 6, 14, 15, 18, 19 and the anomaly
+    catalog); it decides which references, mechanisms and concepts win inside them.
+
 ## 1. Paths and tools
 
 | name | value |
@@ -264,7 +273,7 @@ You are running the **/analyze-then-pick** command.
 | `T` | `"$PY" "$ATP/scripts/atp.py"`. Every call prints one JSON object on its last line; run through Bash |
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` |
-| References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
+| References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
 | Run folder | created by `T new-run` under `ATP/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
 
@@ -439,7 +448,11 @@ You are running the **/analyze-then-pick** command.
       nearby surfaces, and the light on them.
     - its **object use and counts** (protocol §2.8; `anomaly-catalog.md` §2): for every handled
       object, the part used, the preparation step, the contact point, the hand and the head angle;
-      the count of every multiple over time;
+      the count of every multiple over time; the path of every thrown, dropped or passing thing
+      relative to the objects it passes (§2.14);
+    - its **trend elements and cognitive triggers** (protocol §2.12; `creative-direction.md` §3–§4):
+      the format name and caption grammar, the structural mechanism, the surface elements with
+      their freshness, the emotion arc, the laugh mechanism, the share line;
     - its **inserts**: memes or other clips that interrupt the reference, with their exact in and
       out on cut frames, video or still, and their sound;
     - its **overlay text**: wording, role, centre position, in and out times, and style;
@@ -462,11 +475,14 @@ You are running the **/analyze-then-pick** command.
 ### A4. Synthesis
 Write, following the protocol §5–§6:
 - `20-analysis/families.md`: dynamic content families with measured profiles;
+- in `20-analysis/project-profile.md`, the **goal**, the **audience model** and the **trend read**
+  (`creative-direction.md` §2–§4; protocol §6);
 - `20-analysis/project-profile.md`: domain, objective, authoritative requirements, entities,
   preserve / replace / adapt / **contents / place** / ignore, which references are swap, contents or
   placement, and the fit of the **supplied** assets (registry) to them;
 - `20-analysis/directions.md`: numbered directions (subject × structure × execution style). Each
-  lists **which supplied assets it would use** (registry entities) and **how the product appears**:
+  says **why it will work** for the goal and the audience (`creative-direction.md` §5), lists
+  **which supplied assets it would use** (registry entities) and **how the product appears**:
   swap of a named source entity, contents in a named vessel, or placement with its likely anchor.
   - A direction that needs an asset type the user did not supply is either adapted to what exists
     or marked "needs <type> — not supplied".
@@ -506,6 +522,13 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   allocation in one line and store it in `directions`.
 - **The N videos are varieties.** Each is its own new concept: a different scenario, hook, setting
   or character beat.
+  - **Ideation, scored** (`creative-direction.md` §5.1): for every video slot write at least five
+    concept seeds (situation + turn + where the product lives), score each on stop power,
+    relatability, sharpness, product nativeness, trend fit and freshness, feasibility for the
+    locked model, and brand safety; take the best, keep the runner-up as the fallback, write the
+    winner's share line and job, and run the sharpness gate (§6). Save them to
+    `20-analysis/concepts.md` and show one line per video (seed, score, the reason it won). The
+    user may swap a pick by replying; nothing is asked.
   - Each one exploits the patterns that made the references go viral: hook type and timing,
     structure, pacing, content type, camera, humour, and payoff.
   - The client's product is blended into the concept (its most suitable use, `generation-system.md`
@@ -524,7 +547,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   - the own-content length after stripping inserts, against the locked model's edit range. A longer
     one is split, which may need the A7b permission;
   - the load of text and overlays;
-  - the motion complexity for the model's `edit_kind`.
+  - the motion complexity for the model's `edit_kind`;
+  - its creative potential (`creative-direction.md` §5.2): mechanism strength, fit to the goal and
+    the audience, how natural the product's integration can be, the freshness of its surface
+    elements, and the risk of reading as a copy.
 - **Take the top N.** Show one line per pick plus two runners-up, then proceed; the user may swap
   picks by replying. Store `recreate_picks`.
 - **Decide each pick's operations autonomously**, with no E3 questions:
@@ -620,8 +646,8 @@ generated without the user's permission. Nothing else in Analyze Mode asks for p
 The model was picked at the start (§2.4) and does not change.
 1. Read **only** `ATP/<guide>` for that model (from `index.json`), `ATP/higgsfield/higgsfield-mcp.md`,
    `ATP/reference/generation-system.md`, `ATP/reference/anomaly-catalog.md`,
-   `ATP/reference/text-and-format.md`, `ATP/reference/capcut-assembly.md` and
-   `ATP/reference/production-agents.md`.
+   `ATP/reference/creative-direction.md`, `ATP/reference/text-and-format.md`,
+   `ATP/reference/capcut-assembly.md` and `ATP/reference/production-agents.md`.
    - For a model with no guide, read `ATP/models/_generic-fallback.md`.
 2. `models_explore {action:"get", model_id}` once. If the live parameters differ from the guide, the
    live ones win; note the drift.
@@ -815,7 +841,8 @@ files as video K".
 
 - **X1 — Plan (work backward).**
   - Write `40-briefs/video-NN-plan.md` with `generation-system.md` §2–§6:
-    - intent;
+    - intent (`generation-system.md` §2.1): the goal and the video's job, the audience, the one
+      sharp idea, the emotion arc or laugh mechanism, the share line (`creative-direction.md` §2–§6);
     - the per-second time budget from the family profile;
     - roles and assets;
     - the scene;
@@ -824,7 +851,10 @@ files as video K".
       fast moments and contacts;
     - the **entity state ledger**, with a count for every multiple and, per row, the opening or lid
       state, the level, the holder and hand, the contact point and whether the anchor is in frame
-      (`generation-system.md` §3, §5d; `anomaly-catalog.md` §2);
+      (`generation-system.md` §3, §5d; `anomaly-catalog.md` §2), plus a path row for every thrown,
+      dropped, swung or passing thing (where it passes the product, or what it hits and the
+      consequence) and an occlusion note for every moment something passes in front of or behind
+      a tracked object (`anomaly-catalog.md` §2.14);
     - the **integration analysis** for every substitution or insertion;
     - for a **contents** or **placement** video, the **integration plan** (`generation-system.md`
       §4b):
@@ -891,7 +921,10 @@ files as video K".
       the end, restated after exits, occlusions, cuts, hand-offs and seams. Each product gets **one
       targeted exclusion** for its own wrong use and count ("only through the spout; no other
       opening", "exactly three capsules; none appears or disappears"). No reference image shows a
-      later state than t=0 (`anomaly-catalog.md` §3).
+      later state than t=0 (`anomaly-catalog.md` §3). Every thrown, dropped, swung or passing thing
+      has its path written relative to the product, past it on a named side or onto it with the
+      consequence, plus the solidity exclusion ("nothing passes through the bottle";
+      `anomaly-catalog.md` §2.14).
     - Analyze Mode prompts are always **clean plates**: no overlay text. The only lettering is the
       product's own label, logo or badge.
     - With inserts, the prompt covers only the generated content, and puts a natural beat boundary
@@ -953,8 +986,8 @@ files as video K".
     same hand path.
   - **Counts, openings and permanence** (`anomaly-catalog.md` §3): walk every use beat (the
     preparation step, the part, the contact point, the head and hands), every multiple's number at
-    every event, every effect's cause, and every restatement after an exit, occlusion, cut,
-    hand-off or seam.
+    every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
+    seam, and the path of every thrown, dropped or passing thing relative to the product (§2.14).
   - Fix any conflict in the plan and the request before continuing.
 - **X5 — Preflight.**
   - `generate_video {params:{…, get_cost:true}}` → cost and `adjustments`. **One** preflight per
@@ -964,7 +997,7 @@ files as video K".
   - Project folder: create it once per run (`list_workspaces` → `create_project`, keyed by the run
     id) and pass `folder_id`.
 - **X6 — Brief.**
-  - Print the short brief (`generation-system.md` §10): concept, reference pattern,
+  - Print the short brief (`generation-system.md` §10): concept, why it works, reference pattern,
     characters/assets, substitutions, main action and states, style/camera, text plan, model /
     operation / duration / 9:16 720p, cost, adaptation logic. In Edit Mode and Recreate it also names
     the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
@@ -1051,6 +1084,13 @@ files as video K".
     opening or a closed one, and an effect before its cause are regenerate reasons. The only
     post-fixes are the catalog's: a pixel hold on an untouched static anchor in a locked shot, a
     one-frame trim, a recolour or punch-in in a locked shot.
+  - **Solidity** (`anomaly-catalog.md` §2.14): at 30 fps wherever anything passes near, in front
+    of or behind the product, lands on it or hits it. A pass-through, a sinking, a see-through, a
+    wrong occlusion order or a hit without a consequence is a regenerate reason with no post-fix.
+  - **Creative check** (`creative-direction.md` §8), as notes: the hook within the first second,
+    the payoff where planned, the product recognisable at the moments of attention without reading
+    as an ad, the planned emotion arc, the loop. A missing hook or payoff that the plan required is
+    a narrative-gate failure and a regenerate reason; everything else is a note, never a question.
   - **Action sync** (item 19; Edit Mode and Recreate): the X8 sync verdict and sheet. Every sync
     anchor lands within ±0.1 s of its sound: words on mouth movements, impacts on contact, steps on
     footfalls. Drift, or an action added, skipped or moved, is a regenerate reason; a steady offset
@@ -1206,6 +1246,12 @@ video).
   beside the can) when the product's contents fit, and never let a prop from an asset photo carry
   over unplanned.
 - Never sacrifice temporal or physical continuity to imitate an individual source frame.
+- Never let anything pass through the product or any other solid thing, sink into a surface or a
+  hand, show through an opaque body, or hit something without a consequence
+  (`anomaly-catalog.md` §2.14).
+- Never plan a Create video from a single unscored idea, a generic "person enjoys product" beat,
+  an explained joke or a dated surface element; never let two videos of a run share a situation or
+  a joke; never let the creative layer override a hard rule (`creative-direction.md`).
 - Never let a multiple change its number without a visible cause: three capsules on a desk are
   still three after the character walks past and comes back, unless they are seen being taken
   (`anomaly-catalog.md` §2.1, §2.5).

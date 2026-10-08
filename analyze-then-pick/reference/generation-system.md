@@ -48,6 +48,11 @@ Write this plan to `<run>/40-briefs/video-NN-plan.md` **before** any prompt. Kee
 - **Why keep watching:** the curiosity / payoff contract set up in the first second.
 - **Mechanism kept from the references [E/I]:** hook type, reveal logic, rhythm, interaction pattern
   and payoff timing, from the selected content family.
+- **Goal and job [I/U]:** the run's goal (`creative-direction.md` §2) and what this video makes the
+  viewer do at the end, and what they keep of the product.
+- **Audience and the one sharp idea [I]:** who it is for, the situation they have lived, the one
+  idea in one sentence, the emotion arc or laugh mechanism, and the share line
+  (`creative-direction.md` §3, §6).
 - **Adapted:** which identity-specific elements become the client's [A/U]; what is dropped (source
   branding, usernames, watermarks, source wording).
 
@@ -127,6 +132,10 @@ Invariants to check against the ledger:
   back with the same count, spot, state and size (§2.5).
 - **Parts and marks belong to the body:** a cap, strap, straw or label moves with the object, never
   on its own, never mirrored, never duplicated; the variant stays the same (§2.9).
+- **Solids exclude each other:** nothing passes through the product or any other solid thing;
+  nothing sinks into a surface or a hand; opaque bodies hide what is behind them in depth order; a
+  moving thing that meets a solid stops, deflects, bounces or lands, and what it hits reacts
+  (§2.14).
 
 ## 3b. Videos longer than one generation
 
@@ -540,6 +549,8 @@ Evaluate before writing the prompt, and again in the pre-generation QC pass (§8
 | placement (§4b) | The placed client entity is present and recognisable, on one anchor that persists through every shot. It moves only by a visible action, matches the plate, and is noticed but not featured |
 | counts | Every multiple keeps its number except through a visible cause; nothing appears, vanishes or doubles across exits, occlusions and cuts (`anomaly-catalog.md` §2.1, §2.5) |
 | affordance | Every use goes through the object's real opening or control, after its preparation step, with a real contact point and the body mechanics of that use (§2.2, §2.3, §2.8) |
+| solidity | Nothing passes through, sinks into or shows through a solid; occlusion follows depth; every contact has its consequence (§2.14) |
+| sharpness | One clear idea, a hook in the first second, a real turn, a payoff on the family's beat, a share line, and the product native to the scene (`creative-direction.md` §6) |
 
 The AI-slop blacklist must never appear in a plan or a prompt:
 - unexplained dead space, filler or pauses, and unnecessary static stretches;
@@ -549,6 +560,11 @@ The AI-slop blacklist must never appear in a plan or a prompt:
 - a count that changes without a cause (three capsules that are one after a walk-past);
 - a product used through a part that has no opening or through a closed one (a straw bottle drunk
   from the side without the spout, a sealed can sipped), or used before it was made ready;
+- anything passing through the product or another solid (a tossed paper through a plastic bottle),
+  sinking into a surface, showing through an opaque body, or hitting something without a
+  consequence;
+- a generic concept: a "person enjoys product" beat, an explained joke, a stock situation nobody
+  lives in, a dated meme;
 - a placed product that changes spot between shots, enters or leaves without a cause, or looks
   pasted in (its own light, a halo, mismatched sharpness, no contact shadow, a packshot pose);
 - identity drift, clothing changes and asset deformation;
@@ -813,6 +829,11 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
 - [ ] Permanence and parts: the count and state of every tracked item are restated after each exit,
       occlusion, cut, hand-off and seam; caps, straps, straws and labels stay with their body
       (§2.4, §2.5, §2.9). The plan lists its QC checkpoints (`anomaly-catalog.md` §3 step 8).
+- [ ] Solidity: every thrown, dropped, swung or passing thing has its path written relative to the
+      product (past it on a named side, or onto it with the consequence), the solidity exclusion
+      is in the prompt, and no placed object sinks into its surface or a hand (§2.14).
+- [ ] Sharpness: the plan's intent names the goal, the job, the one idea, the emotion arc or laugh
+      mechanism and the share line, and the concept passed the gate (`creative-direction.md` §6).
 - [ ] Motion is natural in speed and weight, with no unmotivated speed changes.
 - [ ] Every object state matches the ledger at every checkpoint.
 - [ ] Pacing matches the family profile: no dead space, every second has a job.
@@ -917,6 +938,7 @@ Keep it short: 8–12 lines.
 ```
 Video N of M — <direction / content family>
 Concept: <one line>
+Why it works: <goal and job; the one idea; the emotion arc or laugh mechanism; the share line> (creative-direction.md)
 Reference pattern: <which analyzed videos/mechanism, e.g. "V03/V07 hook-then-demo, payoff at ~5 s">
 Characters/assets: <approved assets used; element/media ids not shown>
 House approach: <the rules applied from 20-analysis/house-approach.md | none (no examples)>

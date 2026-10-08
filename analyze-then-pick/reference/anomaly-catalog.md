@@ -11,6 +11,8 @@ It generalises two failures seen in anime Create videos (2026-10):
 - **Openings.** The mother filled the boy's bottle with milk. The bottle has a flip-top straw spout
   on one side of its lid; the boy drank from the other side of the lid, where the bottle has no
   opening.
+- **Solidity.** A character tossed a crumpled paper and it travelled straight through the client's
+  product, a plastic object, as if it were not there.
 
 A ledger that tracks only where the product is ("bottle: on the table → in hand → on the table")
 lets both through: it carries neither the **count** of the capsules nor the bottle's **openings and
@@ -18,7 +20,7 @@ use**, and a QC pass that looks for the product's presence and spot never counts
 checks where the mouth met the bottle. The rules below close that gap for every product. The
 examples illustrate the rules; they never limit them.
 
-## 0. Three questions behind every anomaly
+## 0. Four questions behind every anomaly
 
 1. **How many?** Every multiple is counted at t=0, and the count changes only through a visible
    cause, by exactly the amount the cause explains (§2.1).
@@ -27,6 +29,8 @@ examples illustrate the rules; they never limit them.
    and the contact point is named (§2.2, §2.3).
 3. **Still there, still so?** Whatever leaves the frame, passes behind a hand or sits across a cut
    comes back with the same count, spot, state and size (§2.4, §2.5).
+4. **Still solid?** Nothing passes through the product or through anything else that is solid; a
+   moving thing stops, deflects, bounces or lands at a solid, and whatever it hits reacts (§2.14).
 
 ## 1. The affordance sheet (asset registry, one per product or object)
 
@@ -77,6 +81,7 @@ front).
 | car, bike | parked indoors; entered through the wrong door; moves without a driver; wheels off the ground; doors that swing on the wrong edge | where it stands; the driver's door; wheels on the ground; driven only by a driver (`generation-system.md` §5b) |
 | worn items (bag, watch, cap) | the strap changes shoulder; the watch changes wrist; a cap on, off, on | worn where worn; stays worn until taken off |
 | appliance, furniture | the fridge door on the wrong hinge; a chair sat on backwards; an open door closed by nobody | hinge side; used from the front; a door keeps its state |
+| any product near a moving thing | a tossed paper, a ball, keys, a hand, a sleeve, hair, a bag strap, a door or a passing person goes through it; a thing that hits it leaves it untouched; it sinks into the table or a hand | it is solid and opaque; every path near it is written as past it or onto it, with the consequence; it occludes and is occluded by depth order (§2.14) |
 
 ## 2. Anomaly classes
 
@@ -421,6 +426,52 @@ frame say what stays identical ("the three capsules stay drawn in the same spots
 **QC.** The same checkpoints, with extra attention to held frames (compare the first and last frame
 of each hold), to the count of small items, and to the mouth's position on the object.
 
+### 2.14 Solidity, collision and occlusion
+
+**Rule.** Solid things exclude each other. A moving thing that meets a solid stops, deflects,
+bounces, slides along it or lands on or against it, and the thing it meets reacts according to its
+weight: a crumpled paper hitting a bottle leaves it standing or rocks it, a hand knocks a can over,
+keys dropped on a pack push it a little. Opaque bodies hide what is behind them, and whatever is
+nearer the camera hides what is farther, in that order and in that order only. Nothing sinks into a
+surface, a hand or a body, and nothing is seen through something that is opaque.
+
+**Breaks.** A tossed crumpled paper flies straight through the client's bottle (the case). A ball
+passes through a can. Keys dropped on the pack land inside it. A hand or a finger goes through the
+product or the product through the hand. A sleeve, a strap, hair or a scarf passes through the
+bottle. A door closes through a person; a person walks through a chair or a table edge. The
+product sinks into the table, the sofa arm or a palm. A sticker, a label or a shadow is seen
+through the body. The product shows through the arm that should hide it, or stays fully visible
+while a hand passes in front of it. A thrown thing hits the product and the product does not move,
+or the product moves before the thing arrives. Two objects occupy the same spot after a cut. A
+glass of drink sits half inside the can beside it. A phone slides into a laptop. Rain or a spill
+goes through a closed lid. A car's wheel passes through the kerb; a bike leans through the wall.
+
+**Ledger.** Every thrown, dropped, swung, rolled or carried thing that passes near the product (or
+near any other tracked object) gets a **path row**: where it starts, the side it passes on or the
+point where it lands, what it touches, and what reacts; and every tracked object gets an
+**occlusion note** at the moments something passes in front of or behind it.
+
+**Prompt.** Write every path relative to the solid things it passes (positive first, then the one
+exclusion): "He tosses the crumpled paper; it arcs past the bottle on its far side and lands behind
+it on the desk; the bottle is not touched and does not move." Or, with contact: "The paper hits the
+can, bounces off it and drops to the desk; the can rocks once and settles upright on the same spot."
+Occlusion: "His arm passes in front of the bottle and hides it for a moment; the bottle is seen
+again behind the arm, unchanged." Contact with a surface: "the can stands on the desk with its
+whole base on the wood". In the model's exclusion syntax: "nothing passes through the bottle; the
+bottle is solid and opaque". For a stylised video, the same lines; a drawing is still solid.
+
+**QC.** Densify at 30 fps every moment a thing passes near, in front of or behind the product, and
+every landing or hit: check that the moving thing's silhouette and the product's never overlap in a
+way that only a transparent body would allow, that the occlusion order matches the depth, that the
+contact has its consequence (a rock, a knock, a bounce, a stop) and that nothing reacts before the
+contact. Check the base of every placed object against its surface and every grip for
+interpenetration on at least two sheets.
+- **Regenerate** on any pass-through, sinking, see-through, wrong occlusion order, or a hit
+  without a consequence. There is no post-fix: the motion is the error.
+- **Retry:** write the path relative to the product with the side and the landing spot, name the
+  contact and its consequence, add the solidity exclusion, and move the product's anchor out of
+  the throw's or the hand's natural path when the story does not need the contact.
+
 ## 3. The prompting stack (in order, per video)
 
 1. **Affordance sheet** (§1) for every product and object in the registry, before any plan.
@@ -428,7 +479,9 @@ of each hold), to the count of small items, and to the mouth's position on the o
    and hand, contact point, in-frame?; one row per event, each with its visible cause.
 3. **Use beats** written as initial state → operation on the named part → observable result, with
    the contact point (§2.2, §2.3), the product's real size by comparison (§2.7) and the body
-   mechanics of that use (§2.8), in the locked model's phrasing (its guide §3.14).
+   mechanics of that use (§2.8), in the locked model's phrasing (its guide §3.14). Every thrown,
+   dropped, swung or passing thing gets its path relative to the product: past it on a named side,
+   or onto it with the consequence, plus the solidity exclusion (§2.14).
 4. **Restatements**: the count and state of every tracked item right after each exit, re-entry,
    occlusion, cut, hand-off and seam (§2.1, §2.4, §2.5), and in every multi-clip hand-off state.
 5. **Contents** bound to the sample and to the liquid only, with levels and conservation (§2.6).
@@ -455,10 +508,13 @@ of each hold), to the count of small items, and to the mouth's position on the o
    causes, contents right.
 5. **Permanence** before and after every exit, occlusion, cut and seam: count, spot, state, size,
    label orientation; reflections and shadows.
+5b. **Solidity** at 30 fps wherever anything passes near, in front of or behind the product, lands
+   on it or hits it: no pass-through, no sinking, no see-through, the right occlusion order, and a
+   consequence for every contact (§2.14).
 6. **Scale**: the product against a hand or face on two or three sheets.
 7. **Ownership** after every hand-off; who uses what.
-8. **Verdict** (`generation-system.md` §9): **regenerate** on any break in §2.1–§2.5, §2.8–§2.10 and
-   on physics breaks in §2.6, §2.11, §2.12; **post-fix** only in the cases each class names (an
+8. **Verdict** (`generation-system.md` §9): **regenerate** on any break in §2.1–§2.5, §2.8–§2.10,
+   §2.14 and on physics breaks in §2.6, §2.11, §2.12; **post-fix** only in the cases each class names (an
    untouched static anchor's pixel hold, a one-frame trim, a recolour in a locked shot, a punch-in);
    **accept with a note** only for the cases named as tolerable (a small constant oversize, a soft
    label while gripped).
@@ -493,3 +549,4 @@ scale: pack 155 px = 12 % of frame height vs ~10 % target, constant → accept w
 | giver still holds it after the hand-off; two items | holder per row | "after that, only the boy holds it; her hands are empty" | hand-off at 30 fps; count after | regenerate |
 | floats, sinks, wrong shadow, decor moves, wrong user | environment row; roles | contact shadow; "stays on the table"; who uses what | every sheet; cuts | regenerate (constant colour drift: post-fix) |
 | process impossibly fast, frozen or repeated | time budget | "real-time speed"; one process per stage | dense sheet of the process; `T qc` freezes | regenerate (dead tail: trim) |
+| a thrown, dropped or passing thing goes through the product; the product sinks or shows through; a hit without a consequence; wrong occlusion order | path row; occlusion note | "it arcs past the bottle on its far side and lands behind it; the bottle is not touched"; "hits the can, bounces off; the can rocks and settles"; "nothing passes through the bottle" | every pass-near, landing and hit at 30 fps; silhouettes, depth order, consequence | regenerate (no post-fix) |
