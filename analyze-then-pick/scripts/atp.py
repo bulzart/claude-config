@@ -2623,6 +2623,99 @@ def _count_frames(path) -> tuple[int, float]:
     return int(s.get("nb_read_frames", 0) or 0), fps
 
 
+CAUGHT_ERRORS = ATP_HOME / "caught_errors.md"
+CE_CAUSES = ["prompt", "reference", "parameter", "plan", "qc-miss", "model-limit", "unknown"]
+CE_STATUS = ["open", "fixed", "promoted"]
+
+
+def _ce_parse(text: str) -> list:
+    """Entries of caught_errors.md: '## CE-nnn · date · title' headings with '- **field:** value' lines."""
+    entries, cur, last = [], None, None
+    for line in text.splitlines():
+        m = re.match(r"^## (CE-\d{3,}) · (\S+) · (.*)$", line)
+        if m:
+            cur = {"id": m.group(1), "date": m.group(2), "title": m.group(3).strip()}
+            entries.append(cur); last = None
+            continue
+        if cur is None:
+            continue
+        m = re.match(r"^- \*\*([a-z][a-z ]*):\*\* ?(.*)$", line)
+        if m:
+            last = m.group(1).strip().replace(" ", "_")
+            cur[last] = m.group(2).strip()
+            continue
+        if last and line.startswith("  ") and line.strip():
+            cur[last] = (cur[last] + " " + line.strip()).strip()
+    return entries
+
+
+def cmd_caught_error(a):
+    """The feedback ledger (caught_errors.md at the library root): add an entry for a video the user
+    was not satisfied with, list the entries that apply to a run, or set an entry's status."""
+    if not CAUGHT_ERRORS.exists():
+        CAUGHT_ERRORS.write_text("# Caught errors: the feedback ledger\n", encoding="utf-8")
+    if a.action == "list":
+        entries = _ce_parse(CAUGHT_ERRORS.read_text(encoding="utf-8"))
+        def keep(e):
+            if a.mode and a.mode.lower() not in (e.get("mode", "") + " any all").lower(): return False
+            if a.model and a.model.lower() not in (e.get("model", "") + " any all unknown").lower(): return False
+            if a.cls and a.cls.lower() not in e.get("class", "").lower(): return False
+            if a.status and e.get("status", "").lower() != a.status.lower(): return False
+            if a.grep and a.grep.lower() not in json.dumps(e, ensure_ascii=False).lower(): return False
+            return True
+        sel = [e for e in entries if keep(e)]
+        if a.rules:
+            sel = [{"id": e["id"], "title": e["title"], "class": e.get("class", ""), "status": e.get("status", ""),
+                    "rule": e.get("rule", "")} for e in sel]
+        out({"ok": True, "file": str(CAUGHT_ERRORS), "total": len(entries), "count": len(sel), "entries": sel})
+    if a.action == "set":
+        if not a.id:
+            fail("--id CE-nnn is required", 2)
+        with FileLock(CAUGHT_ERRORS.with_suffix(".lock")):
+            text = CAUGHT_ERRORS.read_text(encoding="utf-8")
+            m = re.search(rf"^## {re.escape(a.id)} · .*$", text, re.M)
+            if not m:
+                fail(f"{a.id} not found", 1)
+            nxt = re.search(r"^## CE-", text[m.end():], re.M)
+            s, e = m.start(), (m.end() + nxt.start()) if nxt else len(text)
+            block = text[s:e]
+            for key, val in (("status", a.status), ("promoted to", a.promoted_to), ("fix", a.fix)):
+                if val:
+                    block, n = re.subn(rf"^- \*\*{key}:\*\* .*$", f"- **{key}:** {val}", block, count=1, flags=re.M)
+                    if not n:
+                        block = block.rstrip("\n") + f"\n- **{key}:** {val}\n"
+            text = text[:s] + block + text[e:]
+            CAUGHT_ERRORS.write_text(text, encoding="utf-8")
+        out({"ok": True, "id": a.id, "status": a.status, "promoted_to": a.promoted_to, "file": str(CAUGHT_ERRORS)})
+    # add
+    missing = [k for k in ("title", "user", "wrong", "rule") if not getattr(a, k)]
+    if missing:
+        fail("missing " + ", ".join("--" + k for k in missing) + " (the user's words, the diagnosis and the rule are required)", 2)
+    with FileLock(CAUGHT_ERRORS.with_suffix(".lock")):
+        text = CAUGHT_ERRORS.read_text(encoding="utf-8")
+        ids = [int(x) for x in re.findall(r"^## CE-(\d{3,}) · ", text, re.M)]
+        cid = f"CE-{(max(ids) + 1) if ids else 1:03d}"
+        date = a.date or dt.date.today().isoformat()
+        user = a.user.strip().strip('"')
+        block = (f"\n## {cid} · {date} · {a.title.strip()}\n"
+                 f"- **video:** {a.video or 'unknown'}\n"
+                 f"- **run:** {a.run or 'unknown'}\n"
+                 f"- **mode:** {a.mode or 'unknown'}\n"
+                 f"- **model:** {a.model or 'unknown'}\n"
+                 f"- **product:** {a.product or 'unknown'}\n"
+                 f"- **user said:** \"{user}\"\n"
+                 f"- **what was wrong:** {a.wrong.strip()}\n"
+                 f"- **class:** {a.cls or 'new'}\n"
+                 f"- **cause:** {a.cause}\n"
+                 f"- **fix:** {a.fix or 'none yet'}\n"
+                 f"- **rule:** {a.rule.strip()}\n"
+                 f"- **status:** {a.status or 'open'}\n"
+                 f"- **promoted to:** {a.promoted_to or '—'}\n")
+        CAUGHT_ERRORS.write_text(text.rstrip("\n") + "\n" + block, encoding="utf-8")
+    out({"ok": True, "id": cid, "date": date, "title": a.title.strip(), "file": str(CAUGHT_ERRORS),
+         "note": "promote the rule into its reference when it is general or recurs, then `caught-error set --status promoted --promoted-to …`"})
+
+
 def _px_span(spec: str, what: str) -> float:
     """'y0-y1' (pixel rows) or a plain pixel height."""
     s = (spec or "").strip()
@@ -3559,6 +3652,24 @@ def main():
     p.add_argument("--ok-pct", type=float, default=15.0); p.add_argument("--note-pct", type=float, default=25.0)
     p.add_argument("--out", help="write the result as JSON")
     p.set_defaults(fn=cmd_scale)
+
+    p = sp.add_parser("caught-error", help="the feedback ledger caught_errors.md: add | list | set")
+    p.add_argument("action", choices=["add", "list", "set"])
+    p.add_argument("--id", help="set: the entry id (CE-nnn)")
+    p.add_argument("--title", help="add: a short title"); p.add_argument("--date", help="add: YYYY-MM-DD (default today)")
+    p.add_argument("--video", help="video number or CapCut project name"); p.add_argument("--run", help="run id")
+    p.add_argument("--mode", help="analyze-recreate | analyze-create | edit (list: filter)")
+    p.add_argument("--model", help="model id (list: filter)"); p.add_argument("--product", help="client product")
+    p.add_argument("--user", help="add: the user's words, verbatim")
+    p.add_argument("--wrong", help="add: what was wrong, diagnosed in pipeline terms")
+    p.add_argument("--class", dest="cls", help="reference and section, e.g. 'anomaly-catalog.md §2.7' (list: filter)")
+    p.add_argument("--cause", choices=CE_CAUSES, default="unknown")
+    p.add_argument("--fix", help="what was done (regenerate with …, post-fix, none)")
+    p.add_argument("--rule", help="add: the general rule, as a kind not an instance")
+    p.add_argument("--status", choices=CE_STATUS, help="add: initial status (open); set: new status; list: filter")
+    p.add_argument("--promoted-to", help="set: the reference and section the rule was promoted into")
+    p.add_argument("--grep", help="list: substring over the whole entry"); p.add_argument("--rules", action="store_true", help="list: ids and rules only")
+    p.set_defaults(fn=cmd_caught_error)
 
     p = sp.add_parser("capcut-name"); p.add_argument("--video", required=True, help="the run's video number")
     p.add_argument("--date", help="YYYY-MM-DD (default: today)"); p.add_argument("--store", help="CapCut drafts dir")

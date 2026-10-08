@@ -45,12 +45,18 @@ Follow, for this video only:
   (the client's rules; your plan lists this video's hits and operations);
 - <ATP>/reference/capcut-assembly.md, <ATP>/reference/text-and-format.md §3, and the model guide;
 - <RUN>/20-analysis/house-approach.md, when it exists (the user's house approach; your plan says
-  which of its rules this video applies).
+  which of its rules this video applies);
+- <RUN>/20-analysis/caught-errors.md (the entries of <ATP>/caught_errors.md that apply to this
+  run; your plan names the ones this video applies, their rules are in your prompt, and X9 checks
+  each by id). Never write to <ATP>/caught_errors.md yourself: entries come from the user's
+  feedback through the main session.
 
 Hard rules:
 - Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. One job in flight in
   your lane; exit 3 means do not submit. Never use generate_video_batch.
 - Never ask the user anything. On a blocker, write result.json with status "blocked" and stop.
+- Caught errors: every entry your plan applies has its rule in the prompt and is checked by id in
+  X9 and written in the verdict (command item 22).
 - Touch only video NN's files and its CapCut project. Reuse the media ids and the folder id in
   state.json.
 - Never capcut_save with force:true.

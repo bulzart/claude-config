@@ -92,6 +92,7 @@ atp.py captions --video "<in>" --out "<out>" --spec captions.json | --from-speec
 atp.py clean --video "<in>" --out "<out>" --delogo "x,y,w,h@t0-t1" [--crop "x,y,w,h"]
 atp.py qc --video "<final>" --out "<dir>" --mode analyze|edit [--allowed-text "a|b"] [--expect-duration s] [--dense "label:a-b" …] [--dense-fps 30]
 atp.py scale --product-cm H [--distance d --lens f] [--frame img.png --product-px y0-y1 --ref-cm h --ref-px y0-y1 [--depth-ratio r]] [--out scale.json]   # size reckoning: expected size per shot; observed vs expected on a frame
+atp.py caught-error add --title "…" --video … --run … --mode … --model … --product … --user "<verbatim>" --wrong "…" --class "…" --cause … --fix "…" --rule "…"   # the feedback ledger (caught_errors.md); list [--mode --model --class --status --grep --rules]; set --id CE-nnn --status … --promoted-to …
 atp.py model-menu --mode analyze|edit --live-ids "<ids from models_explore>"   (every model, pinned first)
 atp.py ledger begin --run "<run>" --video NN --attempt K --request "<request.json>"   (exit 3 = do not submit)
 atp.py ledger set --run "<run>" --fingerprint F --job J --status submitted|unknown|completed|failed|accepted|rejected

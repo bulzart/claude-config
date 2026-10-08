@@ -286,6 +286,17 @@ You are running the **/analyze-then-pick** command.
     floor (`generation-system.md` §9b rows 1–6) and the generation service's blocks apply;
     alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
     them, and nothing is blurred, softened or removed for taste.
+22. **Caught errors: the pipeline learns from every video the user was not satisfied with**
+    (`ATP/caught_errors.md`, written only with `T caught-error`). Whenever the user says a
+    delivered video is wrong, in the run or in a later session, an entry is written first, with
+    their words verbatim, the diagnosis in pipeline terms, the class (reference and section), the
+    cause (prompt, reference, parameter, plan, qc-miss, model-limit), the fix and a general rule;
+    Edit Mode's "Needs changes" always writes one. Every run reads the ledger at the start (A1,
+    E1) and writes the entries that apply (same mode, model, product family or class) to
+    `20-analysis/caught-errors.md`; every plan names the entries it applies, every prompt carries
+    their rules in the model's phrasing, and X9 checks each applied entry by id in the verdict.
+    An entry whose rule is general, or that recurs, is promoted into the reference it belongs to
+    and marked `promoted` with the pointer; the entry stays as the record.
 
 ## 1. Paths and tools
 
@@ -296,6 +307,7 @@ You are running the **/analyze-then-pick** command.
 | `T` | `"$PY" "$ATP/scripts/atp.py"`. Every call prints one JSON object on its last line; run through Bash |
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` |
+| Caught errors | `ATP/caught_errors.md` (item 22): `T caught-error add | list | set`; read at A1 / E1, applied in X1, X2, X9 |
 | References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
 | Run folder | created by `T new-run` under `ATP/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
@@ -320,6 +332,11 @@ You are running the **/analyze-then-pick** command.
    - **Edit Mode**: "Edit supplied videos one by one: replace, remove, insert, alter, restyle or
      recreate elements."
 
+   **Feedback first.** If `$ARGUMENTS` or the opening message reports a delivered video as wrong
+   (it names a video, a CapCut project or a run and says what was not right), record it before
+   anything else: `T caught-error add` with the user's words verbatim, the diagnosis, the class,
+   the cause, the fix if known and the rule (item 22). Then offer the fix (a re-edit or a
+   regeneration of that video in its mode) in one line, and continue only if the user wants it.
    **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate` or `create`, use it. Otherwise ask
    with AskUserQuestion (header "Analyze as"):
    - **Recreate**: "Analyze the references, then recreate N of them with your product and
@@ -385,6 +402,11 @@ You are running the **/analyze-then-pick** command.
 ## 3. Analyze Mode
 
 ### A1. Inventory and preprocessing (deterministic, local)
+- **Caught errors first** (item 22): `T caught-error list` and read every entry. Write
+  `20-analysis/caught-errors.md`: the entries that apply to this run (same mode, the locked model,
+  the client's product family, or a class any video may hit) with their rules, one line each, and
+  which step applies each (plan, prompt, QC, ideation). Promoted entries are listed by their
+  pointer; open ones in full.
 - `T inventory "<references folder>" --run RUN --as references`: everything in it is **reference
   material only**.
 - `T inventory "<asset path>" "<asset path>" … --run RUN --as assets` (scope `project`), then
@@ -769,6 +791,9 @@ See §6.
 ## 4. Edit Mode
 
 ### E1. Intake
+- **Caught errors first** (item 22): `T caught-error list --mode edit` plus the class entries;
+  write `20-analysis/caught-errors.md` with the entries that apply to this model and the edit
+  kinds, and apply them in X1, X2 and X9 like any plan rule.
 - `T inventory "<video path>" … --run RUN --as sources`: only videos are processed. Any other file
   there is ignored and never used as an asset.
 - `T split-audio "<video path>" … --run RUN`. For every original video, **inside the given path**
@@ -923,6 +948,9 @@ files as video K".
       sharp idea, the emotion arc or laugh mechanism, the share line (`creative-direction.md` §2–§6);
       Create: the craft carried from the family and the subject the concept brings, with the copy
       test passed (`creative-direction.md` §5.0);
+    - the **caught errors applied** (item 22): the ids from `20-analysis/caught-errors.md` that
+      apply to this video and what each adds to the plan, the ledger, the prompt and the QC
+      checkpoints; an entry about creative quality goes into the ideation and the sharpness gate;
     - the **guardrail hits** of the source (Recreate, Edit Mode) with their operations and times,
       or the guardrail invariants of the concept (Create): the count limit in the ledger, no
       competitor objects, supplied characters only, the wording rules in the text plan
@@ -1030,6 +1058,8 @@ files as video K".
       has its path written relative to the product, past it on a named side or onto it with the
       consequence, plus the solidity exclusion ("nothing passes through the bottle";
       `anomaly-catalog.md` §2.14).
+    - Every **applied caught-error rule** (item 22) is in the prompt in the model's phrasing: a
+      positive line plus the model's exclusion syntax, like an anomaly-catalog prompt line.
     - **Guardrail operations** in the model's own edit syntax (`brand-guardrails.md` §4): "Remove
       only the third can at the left end of the desk and reconstruct the desk and wall behind it;
       keep the two other cans exactly as they are"; "Remove only the brand name and logo from the
@@ -1228,6 +1258,10 @@ files as video K".
     is a post-fix.
   - **Leftovers** (`generation-system.md` §9b): only the must-not-survive list counts, and it is
     fixed autonomously.
+  - **Caught errors** (item 22): each applied entry checked by id and written in the verdict
+    ("CE-004: paste test 0 signs"; "CE-005: can at 1.05× expected vs the bottle"); a failed check
+    is a regenerate reason when the entry's class says so. A new failure the user later reports
+    becomes a new entry, never a silent fix.
   - **Guardrails** (`brand-guardrails.md` §5): the count limit at every checkpoint; `T qc` OCR
     with no competitor name and a full-resolution look at every de-branded object (no logo,
     claw, crest or livery, no blur, no patch); the identity check over every shot, reflection and
@@ -1285,6 +1319,10 @@ files as video K".
      - **"Looks good — next video"** → `T ledger set --job J --status accepted`, then X10, which
        places the approved video in the `final` folder.
      - **"Needs changes"** → ask in plain chat what to change, and let them add or replace files.
+       Record it before re-editing: `T caught-error add --mode edit --video <N> --run <RUN>
+       --model <id> --user "<their words>" --wrong "<diagnosis>" --class "<reference §>"
+       --cause <…> --rule "<general rule>"` (item 22); the fix is set on the entry once the next
+       attempt is approved (`T caught-error set --id CE-nnn --status fixed --fix "<what changed>"`).
      - **"Stop here"** → keep the files, go to the wrap-up.
      "Other" lets the user type the changes directly.
   3. **Re-edit from the original.** A new attempt always starts from the **original source video**
@@ -1340,7 +1378,9 @@ Then give:
 - any open issues.
 
 Offer, in one line, the next useful step (more videos, a different direction, regenerate a flagged
-video).
+video). Add: "If any video is not right, tell me which and what is wrong; it goes into the caught
+errors ledger and the next runs learn from it." Any such reply, now or in a later session, is
+recorded with `T caught-error add` before the fix is offered (item 22).
 
 ## 7. Never
 
@@ -1401,6 +1441,10 @@ video).
 - Never plan a Create video from a single unscored idea, a generic "person enjoys product" beat,
   an explained joke or a dated surface element; never let two videos of a run share a situation or
   a joke; never let the creative layer override a hard rule (`creative-direction.md`).
+- Never start a run without reading `ATP/caught_errors.md` (A1 / E1), never leave a video the
+  user reported as wrong unrecorded, never write an entry by hand or without the user's words
+  verbatim and a general rule, and never silently fix a reported problem without its entry
+  (item 22).
 - Never blur, soften, crop out, remove or avoid content that no client guardrail and no copyright
   floor names (meme faces, alcohol, weapons, fake blood, profanity, cameos, …); the floor (the
   replaced person, the swapped or competitor product, overlay text and handles, platform logos

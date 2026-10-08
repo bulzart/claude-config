@@ -6,3 +6,4 @@
 - [ATP build prompt sync](atp-build-prompt-sync.md) — Documents/prompts/analyze-then-pick.txt is the pipeline's build prompt; update it after every pipeline change; it specifies skills-based packaging (target, not current)
 - [ATP creative direction](atp-creative-direction.md) — reference/creative-direction.md: roles, goal/audience/trend read, craft sheet + copy test (Create takes craft, never subject), scored concept seeds, sharpness gate; catalog §2.14 solidity added same day
 - [ATP brand guardrails](atp-brand-guardrails.md) — reference/brand-guardrails.md: client rules from assets docs → per-reference audit; core hit dismisses, peripheral hit is edited (counts, de-brand never blur, face swap, captions)
+- [ATP caught errors](atp-caught-errors.md) — ATP/caught_errors.md feedback ledger: record every reported bad video via `atp.py caught-error add` (verbatim) before fixing; read at every run start; promote general rules into references

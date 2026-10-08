@@ -7,6 +7,7 @@ it uses at most 2 analysis agents plus, in Analyze Mode, one production agent pe
 
 ```
 analyze-then-pick/
+├── caught_errors.md                the feedback ledger: one entry per video the user was not satisfied with (their words verbatim, the diagnosis, class, cause, fix, rule, status); read at every run start, applied in plans, prompts and QC, promoted into the references when general (`atp.py caught-error add | list | set`)
 ├── config.json                     paths (python, runs), fixed output (9:16, 720p), analysis defaults, Edit Mode cost gate, CapCut store + template
 ├── models/
 │   ├── index.json                  model id → guide, capabilities, 9:16/720p parameter mapping, continuation (max per generation + how clips join); the only file read to build the menu
@@ -28,7 +29,7 @@ analyze-then-pick/
 │   ├── production-agents.md        Analyze Mode (Recreate / Create): one background agent per video (max 5 at once), its prompt, contract and result.json
 │   └── assets-and-substitution.md  user-supplied assets only (analyze: dropped once; edit: per operation), contents samples, understanding + registry, substitution map, reference strategy per model
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
-├── scripts/atp.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), sync-check, locked ledger/state, CapCut name/prep/repair, transfers)
+├── scripts/atp.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), caught-error (the feedback ledger), sync-check, locked ledger/state, CapCut name/prep/repair, transfers)
 └── runs/<stamp>-<slug>/            one folder per run (state.json makes runs resumable: /analyze-then-pick resume <run-dir>)
 ```
 

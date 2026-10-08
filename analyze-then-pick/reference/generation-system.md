@@ -866,6 +866,9 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       reference's (`creative-direction.md` §5.0).
 - [ ] Motion is natural in speed and weight, with no unmotivated speed changes.
 - [ ] Every object state matches the ledger at every checkpoint.
+- [ ] Caught errors: every entry of `20-analysis/caught-errors.md` that applies to this video is
+      named in the plan, its rule is in the prompt, and its check is a QC checkpoint
+      (`ATP/caught_errors.md`, command item 22).
 - [ ] Pacing matches the family profile: no dead space, every second has a job.
 - [ ] Transitions are all motivated, and multi-clip hand-offs are identical.
 - [ ] No free physical motion is pinned to exact timestamps; a required end state has a visible
@@ -923,6 +926,9 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      the expected size goes in the verdict. Over 25 %, a size that changes between shots, or a
      product larger than the hand that holds it is a **regenerate** reason with no post-fix;
      15–25 % is a note only for a static product with a readable label.
+   - **Caught errors** (`ATP/caught_errors.md`, command item 22): each entry the plan applies is
+     checked by id and written in the verdict; a failed check is a regenerate reason when the
+     entry's class says so.
    - **Counts, openings and permanence** (`anomaly-catalog.md` §4): count every multiple at every
      checkpoint and write the numbers in the verdict; on every use beat check the preparation step,
      the part used and the contact point on the 30 fps sheet; before and after every exit,
@@ -1000,6 +1006,7 @@ Main action & states: <start → key change → end>
 Counts & use: <every multiple with its number over time; each use beat's part and contact ("spout, cap flipped open, head level"); the QC checkpoints>
 Size: <per product and shot: real H cm; depth d m; lens f mm → ~N % of frame height (~px); neighbour and ratio ("2/3 of the bottle beside it"); size ladder across products; constancy> (anomaly-catalog.md §2.7)
 Guardrails: <none supplied | G<n> (rule) → operation and time, per hit, e.g. "G2 (two cans max) → third can removed, count 2 at every checkpoint; G3 (no competitors) → Monster can de-branded on the shelf; G4 (ambassador) → face swapped, voice remains in the original audio" | Create: the invariants applied> (brand-guardrails.md)
+Caught errors applied: <none apply | CE-004 (blend: reference scoped, room light stated, paste test in QC); CE-005 (size: reckoning in the prompt, T scale in QC); …> (ATP/caught_errors.md)
 Style & camera: <look, lighting, camera behaviour>
 Text: <none | CapCut text layers in the house style: "…" (where, when) | real label, logo or badge text on the product>
 Inserts: <none | "<meme>" cut from <V> at <t_in–t_out>, placed at <split> s>

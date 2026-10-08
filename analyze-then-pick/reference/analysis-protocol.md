@@ -227,6 +227,10 @@ Everything is inferred from the folder, never assumed:
 - **Authoritative requirements [E]:** quote every instruction found in documents, scripts, briefs,
   PDFs and spreadsheets, with the file id. These override inferences. Conflicts between documents go
   to the user.
+- **Caught errors that apply [E]:** the ids from `20-analysis/caught-errors.md` (command A1,
+  item 22) relevant to this project's product family, mode and model, with the step each one
+  changes (ideation, plan, prompt, QC). An entry about creative quality shapes the directions and
+  the concept seeds; an entry about a product family shapes its affordance sheet and ledger.
 - **Entities:** the client entities (what to put in, taken **only** from the user-supplied asset
   registry), the source entities (what the references show, possibly many different products or
   executions), and the mapping options:
