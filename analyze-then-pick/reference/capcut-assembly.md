@@ -67,9 +67,12 @@ Inputs:
      that no track is muted (`capcut_read_timeline` → `muted`; fix with `capcut_set_track_mute`).
 2. **Text layers.** One `capcut_add_text` per text event, all on the text track:
    - `text`, and `atSec` / `durSec` on the **final** timeline, after the inserts;
-   - **position** from the reference: `posX = 2·x_rel − 1`, `posY = 1 − 2·y_rel`. `x_rel` / `y_rel`
-     are the text centre in the reference, 0–1 from left / top. CapCut's transform uses
-     half-canvas units with +y up [INFERRED from the draft format; check on the preview];
+   - **position: always horizontally centred** (the user, 2026-10-09, caught error CE-010):
+     `posX = 0` with centre alignment on every text layer, whatever the reference's `x_rel`. Only
+     the height comes from the reference: `posY = 1 − 2·y_rel` (`y_rel` = the text centre in the
+     reference, 0 = top, 1 = bottom; CapCut's transform uses half-canvas units with +y up). When
+     centred text would cover the product, a face or an insert's picture, move it **up or down**
+     (top, middle or bottom band), never sideways;
    - text that plays on the product (a logo pun such as "All I C is u") goes on the frame where
      the logo really faces the camera in the clean video, measured at 30 fps
      (`generation-system.md` §5b);

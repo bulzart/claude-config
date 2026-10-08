@@ -24,8 +24,9 @@ it for fidelity.
 Text may be created when it improves the concept or matches the analyzed structure: opening hooks,
 "POV: …" and "when …" lines, captions, labels, meme text, annotations and callouts.
 - **Wording.**
-  - Keep the reference text's **role, format, position and timing**. Its look is always the house
-    text style (§3, step 5), never the reference's.
+  - Keep the reference text's **role, format, height and timing**. Its look is always the house
+    text style (§3, step 5), never the reference's, and it is always **horizontally centred**
+    (§3, step 4).
   - **Recreate** (the same video, edited): the reference's overlay text is removed in the edit and
     re-placed in CapCut **word for word**, except a line that breaks a client guardrail (a banned
     claim or word, an excluded person's name): that line is rewritten minimally in the same role,
@@ -107,15 +108,19 @@ means the check fails: pick the next method in §2.2.
    - text that plays on the product (a logo pun, a reveal) is timed to the moment the product
      really shows it in the clean video, measured at 30 fps, never to the plan
      (`generation-system.md` §5b).
-4. **Place it where the reference had it**, inside the 9:16 safe area:
-   - top margin ≥ 10 %;
-   - keep the bottom ~22–26 % and the right ~12 % clear of platform UI;
-   - never over the key action, the face or the product.
-   In CapCut: `posX = 2·x_rel − 1`, `posY = 1 − 2·y_rel`.
+4. **Place it at the reference's height, always horizontally centred**, inside the 9:16 safe area
+   (the user, 2026-10-09: "make the text be in the center, whether up, down or in the middle";
+   caught error CE-010):
+   - every text layer is centred left to right: CapCut `posX = 0`, centre alignment; the
+     reference's horizontal offset is never copied;
+   - the height follows the reference: `posY = 1 − 2·y_rel`;
+   - top margin ≥ 10 %; keep the bottom ~22–26 % clear of platform UI;
+   - never over the key action, the face or the product: when the centred text would cover one,
+     move it up or down to the nearest clear band (top, middle or bottom), never sideways.
 5. **Style: the house text style, always** (`capcut-assembly.md` §3): font System, size 10, and the
    user's chosen preset, locked in `config.json → capcut.text_style.learned` (white text, black
    outline), on every text of every video.
-   - The reference decides only the wording, its case convention and its position, never the font,
+   - The reference decides only the wording, its case convention and its height, never the font,
      size, colour or preset.
    - Supplied brand fonts and colours are not used for overlay text unless the user asks for them
      in the run.

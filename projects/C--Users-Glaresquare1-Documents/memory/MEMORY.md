@@ -1,4 +1,4 @@
-- [CapCut text preset locked](capcut-text-preset-locked.md) — /analyze-then-pick always uses the user's chosen preset (from 03_Oct_2026_v09); never replace unasked
+- [CapCut text preset locked](capcut-text-preset-locked.md) — /analyze-then-pick always uses the user's chosen preset (from 03_Oct_2026_v09); text always horizontally centred; never replace unasked
 - [~/.claude git versioning](claude-folder-git-versioning.md) — local repo + auto-commit hooks; allow-list .gitignore; add new user folders to it
 - [Neurogum package forms](neurogum-package-forms.md) — updated official samples; closed cartons/pouch, never big box or opened carton with blister; vary forms; rotate 5 flavours
 - [Celsius: no Orange flavour](celsius-no-orange-flavor.md) — rotate Cherry Cola, Peach Vibe, Watermelon; Orange already overused

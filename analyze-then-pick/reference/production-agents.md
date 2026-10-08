@@ -63,6 +63,9 @@ Hard rules:
 - Text layers: fontSize 10, no colour; capcut-repair applies the house text style (the user's locked
   preset in config capcut.text_style.learned). Never restyle text, and never run
   `capcut-text-style --learn` / `--replace`.
+- Text layers are always horizontally centred: posX 0 on every layer; only posY follows the
+  reference. If centred text would cover the product, a face or an insert, move it up or down,
+  never sideways (caught error CE-010).
 - Every glass, cup or vessel of the product's category shows the product's contents
   (generation-system.md §4b.0, §9). A glass of water beside the can is a regenerate reason, not a note.
 - Counts and use (anomaly-catalog.md): every multiple keeps its number except through a visible cause;

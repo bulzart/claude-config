@@ -93,8 +93,10 @@ You are running the **/analyze-then-pick** command.
 6. **Text policy depends on the mode** (`reference/text-and-format.md`):
    - Edit Mode removes all source text unless the user keeps specific text.
    - **Analyze Mode generates every video clean.** It places all overlay text ("POV: …", "when …",
-     hooks, captions) afterwards as **CapCut text layers** at the reference text's position and
-     timing (`reference/capcut-assembly.md`).
+     hooks, captions) afterwards as **CapCut text layers** at the reference text's height and
+     timing, always **horizontally centred** (posX 0; when centred text would cover the product, a
+     face or an insert, it moves up or down, never sideways; caught error CE-010)
+     (`reference/capcut-assembly.md`).
      - The wording keeps the reference's role and format.
      - A generic meme line may stay as written; source-specific wording is rewritten.
      - Usernames, handles, watermarks and source brands are never copied.
@@ -1420,7 +1422,8 @@ recorded with `T caught-error add` before the fix is offered (item 22).
 - Never give a CapCut text layer another font, size, colour or preset than the house text style
   (font System, size 10, the user's locked preset in `capcut.text_style.learned`), unless the user
   asks for it in the run. Never re-learn or replace that preset (`--learn --replace`) unless the
-  user explicitly asks for a new one.
+  user explicitly asks for a new one. Never place a text layer off-centre horizontally (posX ≠ 0):
+  only its height follows the reference.
 - Never generate a reference insert (meme, film snippet, reaction image). Cut it from the reference
   with its sound, and never reduce a video meme to a screenshot.
 - Never `capcut_save` with `force:true` or run capcut-cli with `--force-write` on the live CapCut
