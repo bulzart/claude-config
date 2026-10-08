@@ -905,6 +905,11 @@ files as video K".
     - A placed product (or a contents vessel with its package beside it) is described as part of
       the scene from the first frame, at its anchor. Use no edit verbs and no ad vocabulary
       (`generation-system.md` §4b.5).
+    - The product reference is scoped to shape, proportions, colours and label ("do not use its
+      lighting, exposure, background or camera angle"), and the prompt states the room's light on
+      the product, its size against a named neighbour, its mark angle, its contact shadow like the
+      neighbour's and the scene's camera angle; the anchor touches or is partly occluded by
+      something rather than standing alone on an empty edge (`anomaly-catalog.md` §2.15).
     - Every vessel's contents are stated from the contents sample ("the glass holds …"); an
       unstated glass comes back as water. A character photo's role is limited to the person ("only
       his face, hair, build and clothing; not the glass, table or background of Image 4") unless
@@ -1084,6 +1089,12 @@ files as video K".
     opening or a closed one, and an effect before its cause are regenerate reasons. The only
     post-fixes are the catalog's: a pixel hold on an untouched static anchor in a locked shot, a
     one-frame trim, a recolour or punch-in in a locked shot.
+  - **Blend** (`anomaly-catalog.md` §2.15): on one full-resolution frame at rest and one in use,
+    the eleven-sign paste test against the nearest neighbour at the same depth (whites against the
+    nearest white object, light direction, contact shadow, sharpness and grain, packshot pose,
+    perspective, scale, edges, footprint, depth of field, prominence), written in the verdict. Any
+    sign is the "looks pasted in" regenerate reason; the retry fixes the named cause. A local
+    regrade is the only post-fix, for a static untouched product failing on exposure alone.
   - **Solidity** (`anomaly-catalog.md` §2.14): at 30 fps wherever anything passes near, in front
     of or behind the product, lands on it or hits it. A pass-through, a sinking, a see-through, a
     wrong occlusion order or a hit without a consequence is a regenerate reason with no post-fix.
@@ -1246,6 +1257,11 @@ video).
   beside the can) when the product's contents fit, and never let a prop from an asset photo carry
   over unplanned.
 - Never sacrifice temporal or physical continuity to imitate an individual source frame.
+- Never accept a product that fails the paste test: brighter, cooler, sharper or cleaner than its
+  neighbours, lit from the front in a room lit from elsewhere, without a contact shadow, squared to
+  the lens, at the wrong size or perspective, or alone on an empty edge (`anomaly-catalog.md`
+  §2.15). Never bind a product reference without scoping out its lighting, exposure, background
+  and camera angle.
 - Never let anything pass through the product or any other solid thing, sink into a surface or a
   hand, show through an opaque body, or hit something without a consequence
   (`anomaly-catalog.md` §2.14).

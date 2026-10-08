@@ -132,6 +132,9 @@ Invariants to check against the ledger:
   back with the same count, spot, state and size (§2.5).
 - **Parts and marks belong to the body:** a cap, strap, straw or label moves with the object, never
   on its own, never mirrored, never duplicated; the variant stays the same (§2.9).
+- **Rendered, not pasted:** the product shares the neighbours' light, exposure, focus, grain,
+  camera angle, scale and shadow direction, and stands inside its surface among the things around
+  it (`anomaly-catalog.md` §2.15, the eleven-sign paste test).
 - **Solids exclude each other:** nothing passes through the product or any other solid thing;
   nothing sinks into a surface or a hand; opaque bodies hide what is behind them in depth order; a
   moving thing that meets a solid stops, deflects, bounces or lands, and what it hits reacts
@@ -492,6 +495,12 @@ of context, or somewhere it could not really be.
   - never a pristine product-shot pose.
 - **No sticker or edit artifacts:** no flat look, no halo or cut-out edges, no sharpness or colour
   mismatch.
+- **The paste test** (`anomaly-catalog.md` §2.15) names the eleven signs of an edit and their
+  causes, and the prompt scopes the product reference to shape, colours and label only ("do not
+  use its lighting, exposure, background or camera angle") while describing the room's light on
+  the product, its size against a neighbour, its mark angle and its contact shadow like the
+  neighbour's. Prefer an anchor that forces integration: touching or partly behind another object,
+  inside the lamp's falloff, never alone on an empty edge.
 
 ### 4b.5 Expressing it to the model (with §7)
 - Describe the item as **part of the scene from the first frame**, inside the environment
@@ -829,6 +838,10 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
 - [ ] Permanence and parts: the count and state of every tracked item are restated after each exit,
       occlusion, cut, hand-off and seam; caps, straps, straws and labels stay with their body
       (§2.4, §2.5, §2.9). The plan lists its QC checkpoints (`anomaly-catalog.md` §3 step 8).
+- [ ] Blend: the product reference is scoped to shape, colours and label; the prompt states the
+      room's light on the product, its size against a neighbour, its mark angle, its contact shadow
+      and its camera angle; the anchor touches or is partly occluded by something; a start frame
+      passed the paste test (`anomaly-catalog.md` §2.15).
 - [ ] Solidity: every thrown, dropped, swung or passing thing has its path written relative to the
       product (past it on a named side, or onto it with the consequence), the solidity exclusion
       is in the prompt, and no placed object sinks into its surface or a hand (§2.14).
@@ -865,7 +878,10 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
    - **Placement (§4b):** compare the item's spot and state across the sheets, and densify around
      cuts, pickups, set-downs and any move (a car driven in or away).
    - These count as a **regenerate** reason: the item missing, unrecognisable, duplicated, changing
-     spot without a visible action, featured like an ad, or looking pasted in.
+     spot without a visible action, featured like an ad, or looking pasted in. "Pasted in" is
+     measured, not felt: the eleven-sign paste test on one full-resolution frame at rest and one in
+     use, against the nearest neighbour at the same depth (`anomaly-catalog.md` §2.15), with the
+     result written in the verdict.
    - **Contents (§4b.0):** every vessel of the product's category in the subject's scene shows the
      product's contents (colour, clarity, bubbles, garnish), whether it was planned or came from an
      asset photo. A glass of water beside the can, or any other consumable of the category that is

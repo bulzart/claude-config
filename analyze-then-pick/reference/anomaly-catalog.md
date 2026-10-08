@@ -13,6 +13,10 @@ It generalises two failures seen in anime Create videos (2026-10):
   opening.
 - **Solidity.** A character tossed a crumpled paper and it travelled straight through the client's
   product, a plastic object, as if it were not there.
+- **Blend.** A can stood on a bedroom dresser two to three times its real size, squared to the lens
+  like a packshot, lit flat and cool while the room was warm and dim, sharper than the plate, with
+  no contact shadow, and drawn straight-on while the camera looked up at the dresser: a paste, not
+  a render.
 
 A ledger that tracks only where the product is ("bottle: on the table → in hand → on the table")
 lets both through: it carries neither the **count** of the capsules nor the bottle's **openings and
@@ -31,6 +35,8 @@ examples illustrate the rules; they never limit them.
    comes back with the same count, spot, state and size (§2.4, §2.5).
 4. **Still solid?** Nothing passes through the product or through anything else that is solid; a
    moving thing stops, deflects, bounces or lands at a solid, and whatever it hits reacts (§2.14).
+5. **Rendered or pasted?** The product is lit, exposed, focused, grained, scaled, angled and
+   shadowed exactly like the objects beside it, from the same camera (§2.15).
 
 ## 1. The affordance sheet (asset registry, one per product or object)
 
@@ -472,6 +478,85 @@ interpenetration on at least two sheets.
   contact and its consequence, add the solidity exclusion, and move the product's anchor out of
   the throw's or the hand's natural path when the story does not need the contact.
 
+### 2.15 Blend: a render, not a paste
+
+**Rule.** A placed or swapped product is part of the same photograph as everything around it: the
+same key light and colour temperature, the same exposure, the same focus and grain, the same
+camera height and lens, at its real size against its neighbours, standing a little inside the
+surface with a contact shadow that falls the way the neighbours' shadows fall, turned a little like
+a thing someone put down, and occluded by whatever stands in front of it
+(`generation-system.md` §4b.2, §4b.4).
+
+**The paste test (what a paste looks like).** Any one of these, and the product reads as an edit:
+1. **Exposure and white balance:** its whites are brighter or cooler than the nearest white
+   object (a door, a box, a wall), its colours more saturated than anything in the room.
+2. **Light direction:** it is lit evenly from the front while the room's light comes from a lamp,
+   a window or the ceiling and shades every other object.
+3. **No contact shadow,** or a shadow that falls another way than the neighbours' shadows.
+4. **Sharpness and grain:** it is crisper and cleaner than objects at the same depth.
+5. **Packshot pose:** squared to the lens, perfectly upright, label centred, as in its reference
+   image.
+6. **Perspective:** its top and base ellipses do not match the camera height (a can drawn
+   straight-on in a room seen from below or above); its verticals do not follow the room's.
+7. **Scale:** larger or smaller than its real size against the objects beside it (the affordance
+   sheet's size by comparison).
+8. **Edges:** a hard, haloed or cut-out outline; no reflection or colour spill from the
+   surroundings on glossy or metallic parts.
+9. **Footprint:** it stands on the very edge of the surface, overlaps a neighbour's footprint, or
+   floats a little above the surface.
+10. **Depth of field:** sharp while its plane is soft, or soft while its plane is sharp.
+11. **Prominence:** it is the brightest, most saturated or most centred thing in the frame.
+
+**Breaks.** The dresser can (the case). A pouch brighter than the laptop it stands beside. A car
+with studio reflections on a cloudy street. A phone whose screen glows in a sunlit room. A gum
+carton crisp on a soft-focus table. A bottle whose label faces the lens while the character sees
+its side. A can standing on the back edge of a shelf with half its base in the air. A product with
+the reference photo's white background shadow under it. A can rendered at the reference's
+exposure in a night scene, glowing on its own.
+
+**Causes, by what leaked.** The product reference's **studio lighting, exposure and background**
+inherited into the scene; the reference's **camera angle** inherited instead of the scene's; a
+**tight product crop** pulling the product to the foreground and up in size; the **anchor** chosen
+on an empty, unoccluded, edge-of-surface spot where nothing in the scene touches or shades it; the
+prompt describing the product's look but not the room's light on it; a start frame checked for
+geometry but not for blend.
+
+**Ledger.** The anchor row carries the blend facts: the key light on that spot (direction, colour,
+dimness), the neighbour it is scaled against, the neighbour whose shadow it copies, what partly
+occludes it, and the angle of its mark.
+
+**Prompt.** Scope the reference and describe the room's light on the product, never the product's
+own light:
+- "@Image2 defines only the can's shape, proportions, colours and printed label; do not use its
+  lighting, exposure, background, shadow or camera angle."
+- "The can stands on the dresser a little inside its front edge, to the left of the bottle and
+  slightly behind it, about a third shorter than the bottle, its label turned about thirty degrees
+  away from the camera. It is lit by the same warm, dim ceiling light as the dresser and the
+  bottle: a soft highlight on its upper left, its right side in shadow, its colours as muted as the
+  room's, a soft contact shadow under it falling to the right like the bottle's. It is seen from
+  the same low angle as the dresser, with the same grain and focus as the bottle."
+- For a model that composites easily, choose an anchor that forces integration: partly behind a
+  neighbour, touching another object, inside the lamp's falloff, never alone on an empty edge.
+- The exclusion in the model's syntax: "no studio lighting on the can, no cut-out edges, no glow;
+  the can is not brighter than the room".
+- Start-frame models: the frame is checked with the paste test before it is animated. Reference
+  models: pad tight product crops; if a photo of the product in a real room with directional
+  light exists, bind it for lighting only ("use the light of @Image3, not its room").
+
+**QC.** On one full-resolution frame at rest and one during any interaction, compare the product
+with its nearest neighbour at the same depth, point by point through the eleven signs above:
+brightness and warmth of its whites against the nearest white object, shadow direction against
+the neighbour's, sharpness and grain, label angle, ellipse geometry against the camera height,
+height against the neighbour per the affordance sheet, edge quality, footprint. Write the result
+in the verdict ("whites +1.5 stops over the door, no contact shadow, 2.4× the bottle: paste").
+- **Regenerate** on any sign of a paste; it is the §4b "looks pasted in" reason. The retry fixes the
+  named cause: scope the reference's lighting, write the room's light on the product, give the
+  size against a neighbour, angle the mark, move the anchor into contact or partial occlusion,
+  pad the crop, rebuild the start frame.
+- **Post-fix** only for a static, untouched product in a locked shot whose only failing sign is
+  exposure or warmth: a local regrade of the product's pixels to match the neighbour. Never a
+  post-fix for size, angle, perspective, shadow or edges.
+
 ## 3. The prompting stack (in order, per video)
 
 1. **Affordance sheet** (§1) for every product and object in the registry, before any plan.
@@ -511,10 +596,12 @@ interpenetration on at least two sheets.
 5b. **Solidity** at 30 fps wherever anything passes near, in front of or behind the product, lands
    on it or hits it: no pass-through, no sinking, no see-through, the right occlusion order, and a
    consequence for every contact (§2.14).
+5c. **Blend** on one full-resolution frame at rest and one during any interaction: the eleven-sign
+   paste test against the nearest neighbour at the same depth (§2.15).
 6. **Scale**: the product against a hand or face on two or three sheets.
 7. **Ownership** after every hand-off; who uses what.
 8. **Verdict** (`generation-system.md` §9): **regenerate** on any break in §2.1–§2.5, §2.8–§2.10,
-   §2.14 and on physics breaks in §2.6, §2.11, §2.12; **post-fix** only in the cases each class names (an
+   §2.14, §2.15 and on physics breaks in §2.6, §2.11, §2.12; **post-fix** only in the cases each class names (an
    untouched static anchor's pixel hold, a one-frame trim, a recolour in a locked shot, a punch-in);
    **accept with a note** only for the cases named as tolerable (a small constant oversize, a soft
    label while gripped).
@@ -550,3 +637,4 @@ scale: pack 155 px = 12 % of frame height vs ~10 % target, constant → accept w
 | floats, sinks, wrong shadow, decor moves, wrong user | environment row; roles | contact shadow; "stays on the table"; who uses what | every sheet; cuts | regenerate (constant colour drift: post-fix) |
 | process impossibly fast, frozen or repeated | time budget | "real-time speed"; one process per stage | dense sheet of the process; `T qc` freezes | regenerate (dead tail: trim) |
 | a thrown, dropped or passing thing goes through the product; the product sinks or shows through; a hit without a consequence; wrong occlusion order | path row; occlusion note | "it arcs past the bottle on its far side and lands behind it; the bottle is not touched"; "hits the can, bounces off; the can rocks and settles"; "nothing passes through the bottle" | every pass-near, landing and hit at 30 fps; silhouettes, depth order, consequence | regenerate (no post-fix) |
+| the product reads as a paste: brighter or cooler than the room, flat front light, no contact shadow, crisper than the plate, packshot pose, wrong perspective, wrong size, hard edges, on an empty edge | anchor row with the light on the spot, the neighbour for scale and shadow, the occluder, the mark angle | "@ImageN defines only shape, proportions, colours and label; not its lighting, exposure, background or camera angle"; "lit by the same warm, dim ceiling light as the bottle beside it, a third shorter than it, label about 30° away, soft contact shadow to the right like the bottle's, seen from the same low angle" | one full-res frame at rest and one in use: the eleven-sign paste test against the nearest neighbour | regenerate (local regrade only for a static untouched product failing on exposure alone) |
