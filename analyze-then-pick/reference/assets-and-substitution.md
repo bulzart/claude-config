@@ -41,7 +41,9 @@ Inputs:
 - `30-assets/<scope>/asset-inventory.md`: ids, sub-folder groups, filename hints;
 - `asset-previews.md`;
 - `assets-sheet-*.jpg`: every supplied image, labelled with id and path;
-- `docs/`: extracted text of supplied documents.
+- `docs/`: extracted text of supplied documents. Rules found in them (brand books, dos and don'ts,
+  legal and claims notes, ambassador lists) are extracted into `30-assets/guardrails.md` and drive
+  which references may be picked and what must be edited in them (`brand-guardrails.md`).
 
 Steps:
 1. **Look at the contact sheet** (and full previews where detail matters). Filename hints are only

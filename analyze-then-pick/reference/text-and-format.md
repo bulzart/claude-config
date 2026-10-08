@@ -27,7 +27,11 @@ Text may be created when it improves the concept or matches the analyzed structu
   - Keep the reference text's **role, format, position and timing**. Its look is always the house
     text style (§3, step 5), never the reference's.
   - **Recreate** (the same video, edited): the reference's overlay text is removed in the edit and
-    re-placed in CapCut **word for word**.
+    re-placed in CapCut **word for word**, except a line that breaks a client guardrail (a banned
+    claim or word, an excluded person's name): that line is rewritten minimally in the same role,
+    position and timing, and a required disclaimer is added as a layer in the house style
+    (`brand-guardrails.md` §2). A caption that *is* the banned point makes the reference a
+    dismiss, not a rewrite.
   - **Create** (new videos): a generic meme caption line that carries the joke and names no brand,
     person, handle or source-specific detail may keep its wording (e.g. "first day as an
     assassin"). Anything source-specific is rewritten for the client and concept.

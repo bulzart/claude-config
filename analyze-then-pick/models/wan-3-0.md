@@ -306,7 +306,12 @@ object → orientation (which face toward camera) → contact and grip (which ha
 size reckoning (`reference/anomaly-catalog.md` §2.7): the ratio to the named neighbour at the same depth, the depth
 in the shot line ("on the dresser behind him, about 2.5 m from the lens"), "a small object in the background" where
 it is one, and "No scale drift" in the consistency line; pad the product reference and build any first frame at the
-reckoned pixel height, measured with `atp.py scale` before animating [INFERRED].
+reckoned pixel height, measured with `atp.py scale` before animating [INFERRED]. Guardrail edits
+(`reference/brand-guardrails.md` §4) use the same edit grammar: "remove only the brand name, logo and markings from
+the green can on the shelf in video 1; keep its shape, size, position, lighting and shadow; it becomes a plain
+unbranded can of the same colour" (never "blur" or "pixelate"), and "remove only the third can at the left end of
+the desk in video 1 and reconstruct the desk and wall behind it; keep the two other cans exactly as they are",
+with the consistency line listing what stays [INFERRED].
 
 **Scene light on the asset.** Official examples name the source, angle, softness and color: "warm sunlight slants
 from the upper-left-back at about forty-five degrees, shadow edges slightly soft, direction uniform"; "real contact

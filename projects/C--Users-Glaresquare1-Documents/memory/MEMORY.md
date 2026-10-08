@@ -5,3 +5,4 @@
 - [ATP anomaly catalog](atp-anomaly-catalog.md) — reference/anomaly-catalog.md: counts, openings/use, permanence, solidity, blend/paste test, size reckoning (atp.py scale); wired into ledger, prompts, QC (qc --dense); new reported anomalies go there
 - [ATP build prompt sync](atp-build-prompt-sync.md) — Documents/prompts/analyze-then-pick.txt is the pipeline's build prompt; update it after every pipeline change; it specifies skills-based packaging (target, not current)
 - [ATP creative direction](atp-creative-direction.md) — reference/creative-direction.md: roles, goal/audience/trend read, craft sheet + copy test (Create takes craft, never subject), scored concept seeds, sharpness gate; catalog §2.14 solidity added same day
+- [ATP brand guardrails](atp-brand-guardrails.md) — reference/brand-guardrails.md: client rules from assets docs → per-reference audit; core hit dismisses, peripheral hit is edited (counts, de-brand never blur, face swap, captions)

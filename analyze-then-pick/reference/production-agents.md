@@ -41,6 +41,8 @@ Follow, for this video only:
 - <ATP>/reference/generation-system.md §3b (clips), §3c (inserts), §4b (product integration), §5b (motion that has to land), §5d (counts, openings, permanence), §8–§9 (QC);
 - <ATP>/reference/anomaly-catalog.md §3 (the prompting stack) and §4 (the QC stack), incl. §2.14 (solidity);
 - <ATP>/reference/creative-direction.md §8 (the creative check, as notes);
+- <ATP>/reference/brand-guardrails.md §4–§5 and <RUN>/30-assets/guardrails.md, when it exists
+  (the client's rules; your plan lists this video's hits and operations);
 - <ATP>/reference/capcut-assembly.md, <ATP>/reference/text-and-format.md §3, and the model guide;
 - <RUN>/20-analysis/house-approach.md, when it exists (the user's house approach; your plan says
   which of its rules this video applies).
@@ -99,7 +101,10 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
      an unknown license.
 7. **Leftovers per `generation-system.md` §9b.** Only the must-not-survive list counts.
    Posters, toys, ornaments, signs, and clothing or footwear logos are never reported and never
-   cost a retry.
+   cost a retry. The client's guardrails extend the list (`brand-guardrails.md` §5): the plan's
+   guardrail operations are carried out and verified (the count at the limit at every checkpoint,
+   competitor marks removed and never blurred, the excluded face absent from every shot,
+   reflection and placed-back insert, the text lines rewritten and the disclaimers placed).
 8. **Counts, openings and permanence** (`anomaly-catalog.md` §4). X9 renders every checkpoint of the
    plan with `T qc --dense`; the agent views every dense sheet, writes the counts and the use
    verdicts into `result.json` (`continuity`), and regenerates once on a break. The only post-fixes

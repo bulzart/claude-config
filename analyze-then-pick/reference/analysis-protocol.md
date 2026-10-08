@@ -97,6 +97,11 @@ is one second of the sheets. Do not describe isolated frames. Answer:
     elements (a meme, a sound, a catchphrase, an effect) with their freshness; the emotion arc at
     the hook, the middle and the payoff; the laugh mechanism (incongruity, escalation, callback,
     timing, deadpan, reversal); the share line a viewer would type when sending it.
+13. **Guardrail audit** (`brand-guardrails.md` §3), when `30-assets/guardrails.md` exists: every
+    hit against the client's rules with its time, element, prominence and place (picture, caption,
+    speech, insert, reflection); core or peripheral by the meaning test (would a viewer who never
+    saw the source describe the edited video the same way, and does the sync hold?); the verdict
+    (pick-clean, pick-and-edit with the operations, dismiss with the rule).
 
 ## 3. Per-video card — `20-analysis/cards/<V>.md`
 
@@ -122,6 +127,7 @@ Entities → preserve / replace / adapt / ignore: <per entity, with reason>     
 Client-entity fit: <swap: <source entity> at t=… → client <entity> | contents: <vessel or form> holds the product, package nearby | placement: nothing analogous> [E/I]
 Placement opportunities (contents / placement): <hands free/busy per beat; surfaces near the subject + side + depth plane + shots that show them; where a large product would stand; light on each spot; best anchor> [E/I]
 Must not survive (generation-system.md §9b): <the person being replaced, the product being swapped, competitor products, overlay text, usernames, platform logos and watermarks, featured third-party branding, flaggable content>; incidental decor and clothing logos are fine and are not listed [E]
+Guardrail audit (brand-guardrails.md §3): <none supplied | per hit: G<n> · t=… · element · subject/featured/peripheral · picture/caption/speech/insert/reflection · core/peripheral (why) · operation> → verdict: pick-clean | pick-and-edit: <operations> | dismiss: <rule, why core> [E/I]
 Confidence: <high/medium/low> — <what was hard to see or hear>
 ```
 
@@ -178,7 +184,9 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
      school"). The user picks one or a mix. The `<subject>` of a group is a *field* for new
      situations (a gym, an office, a school), never a reference's own scene; the group carries the
      family's craft, and each video in it gets its own subject (`creative-direction.md` §5.0).
-   - **Recreate** also ranks every analysed reference by **recreate fit**:
+   - **Recreate** also ranks every analysed reference by **recreate fit**, after the **guardrail
+     audit** has filtered it (`brand-guardrails.md` §4: a dismissed reference is listed under the
+     ranking with its rule; a pick-and-edit reference carries its operations into the edit load):
      - the product's integration form (swap / contents / placement);
      - the number of people against the supplied characters;
      - the own-content length after inserts, against the locked model's edit range;
@@ -213,6 +221,9 @@ Everything is inferred from the folder, never assumed:
 - **Domain and objective:** what kind of project this is (physical product, digital product, app,
   service, personality or character, education, finance, entertainment, memes, brand, other) and the
   likely content goal. Label [E] with the evidence files, or [I].
+- **Brand guardrails [E]:** the client's rules from the supplied documents, extracted to
+  `30-assets/guardrails.md` with the competitor, people, limit, wording and presentation lists they
+  imply (`brand-guardrails.md` §1). They drive the guardrail audit of every reference (§2.13).
 - **Authoritative requirements [E]:** quote every instruction found in documents, scripts, briefs,
   PDFs and spreadsheets, with the file id. These override inferences. Conflicts between documents go
   to the user.

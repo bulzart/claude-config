@@ -265,6 +265,23 @@ You are running the **/analyze-then-pick** command.
     why the video will work; and QC judges the hook, the payoff and the share line as notes. The
     creative layer never overrides the hard rules (items 6, 14, 15, 18, 19 and the anomaly
     catalog); it decides which references, mechanisms and concepts win inside them.
+21. **Brand guardrails decide what may be picked and what must be edited**
+    (`reference/brand-guardrails.md`). Documents among the supplied assets (and in the references
+    folder) that state the client's rules (no gore, two cans per day max, no competitor brands on
+    screen, no ambassador likeness, no health claims, required disclaimers, …) are extracted into
+    `30-assets/guardrails.md`, one quoted rule per line with its kind and default operation, plus
+    the competitor, people, limit, wording and presentation lists they imply. Every reference gets
+    a **guardrail audit** on its card: each hit located and classified **core** (the hook, turn,
+    payoff, subject or premise depends on it; it is spoken in audio that returns; a hand or the
+    action touches it; the edit would change what the video is about) or **peripheral** (set
+    dressing, an untouched unit beyond the limit, a brand mark on an object that stays, a person
+    who is swapped anyway, a caption line). Verdict: pick-clean, pick-and-edit (count reduced to
+    the limit, competitor marks **removed, never blurred**, ambassador faces swapped without
+    exception, captions rewritten, props removed) or dismiss (any core hit, with the rule). In
+    Recreate the audit is the first filter of the ranking; in Create the rules are plan
+    invariants; in Edit Mode the hits and the operations they require are shown and the user
+    decides. The user's run instructions outrank the guardrails; the guardrails outrank the house
+    approach and the defaults; they never relax a hard rule; none is invented.
 
 ## 1. Paths and tools
 
@@ -275,7 +292,7 @@ You are running the **/analyze-then-pick** command.
 | `T` | `"$PY" "$ATP/scripts/atp.py"`. Every call prints one JSON object on its last line; run through Bash |
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` |
-| References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
+| References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
 | Run folder | created by `T new-run` under `ATP/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
 
@@ -410,6 +427,12 @@ You are running the **/analyze-then-pick** command.
 - The same goes for documents among the supplied assets (`30-assets/project/docs/`), e.g. dimensions,
   brand rules and usage notes.
 - Quote the requirements they define. They override inferences.
+- **Brand guardrails** (item 21; `ATP/reference/brand-guardrails.md` §1): extract every rule
+  into `30-assets/guardrails.md` (`G<n> · quote [E] · source · kind · what it hits · default
+  operation`), then the lists they imply: competitors (named, plus every brand in the client's
+  category), excluded people, limits, wording and disclaimers, presentation rules. Conflicts
+  between documents or with the user's instructions go to the user once, with both quotes.
+  Without a guardrail document, write "none supplied" and apply `generation-system.md` §9b alone.
 
 ### A2b. Understand the supplied assets (autonomous — no questions by default)
 - Load `ATP/reference/assets-and-substitution.md`.
@@ -463,6 +486,10 @@ You are running the **/analyze-then-pick** command.
       instances: style, properties, approach, crafting and why it works, kept apart from the
       subject lines (premise, setting, characters, actions, joke, lines, props, ending) that a
       Create video must not reuse;
+    - its **guardrail audit** (protocol §2.13; `brand-guardrails.md` §3): every hit against
+      `30-assets/guardrails.md` with its time, element, prominence and place (picture, caption,
+      speech, insert, reflection), classified core or peripheral by the meaning test, and the
+      verdict: pick-clean, pick-and-edit with the operations, or dismiss with the rule;
     - its **inserts**: memes or other clips that interrupt the reference, with their exact in and
       out on cut frames, video or still, and their sound;
     - its **overlay text**: wording, role, centre position, in and out times, and style;
@@ -504,7 +531,9 @@ Write, following the protocol §5–§6:
     unless it states the adaptation.
   - **Create** presents them as style groups (A6).
 - **Recreate:** `20-analysis/recreate-ranking.md`, every reference ranked by recreate fit (protocol
-  §5).
+  §5). The guardrail audit is its first filter: dismissed references are out of the ranking and
+  listed under it with their rule; pick-and-edit references rank with their guardrail operations
+  counted in the edit load (`brand-guardrails.md` §4).
 - **With examples:** `20-analysis/house-approach.md` (protocol §9.3): the user's consistent approach,
   one rule per line with its evidence and the default it replaces. Directions, picks and plans
   follow it (contract item 18).
@@ -555,6 +584,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     §4b.0), the way the house approach does it when examples exist.
   - No two videos repeat the same concept, and none repeats a reference's subject: the copy test
     runs against the family's references and the run's other winners.
+  - **Guardrails as invariants** (`brand-guardrails.md` §4): the count limit is a ledger
+    invariant, competitor objects never appear, only supplied characters appear, the wording
+    rules shape the text plan, the presentation rules shape the anchor and the use beats, and a
+    seed that a content or context rule hits scores 0 on brand safety.
 - **Create never uses a reference as input.**
   - No reference video, frame or clip is uploaded, edited or passed to a generation.
   - The analysis informs only the concept, structure, pacing, camera, product use and text role.
@@ -571,9 +604,13 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   - the motion complexity for the model's `edit_kind`;
   - its creative potential (`creative-direction.md` §5.2): mechanism strength, fit to the goal and
     the audience, how natural the product's integration can be, the freshness of its surface
-    elements, and the risk of reading as a copy.
+    elements, and the risk of reading as a copy;
+  - and, before all of these, the **guardrail audit** (item 21; `brand-guardrails.md` §3–§4): a
+    reference with a core hit is dismissed and never picked; a pick-and-edit reference carries
+    its guardrail operations into the edit load.
 - **Take the top N.** Show one line per pick plus two runners-up, then proceed; the user may swap
-  picks by replying. Store `recreate_picks`.
+  picks by replying. Store `recreate_picks`. Name the dismissed references with their rule in one
+  line each.
 - **Decide each pick's operations autonomously**, with no E3 questions:
   - **Person → character:** each person becomes a supplied character. Rotate characters across
     videos, one per person, using the guide's person-replacement contract.
@@ -584,6 +621,16 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     back as CapCut layers, word for word. Usernames, handles, watermarks and source brands do not
     come back.
   - **Inserts** (memes) stay the reference's own: stripped before the edit, placed back in CapCut.
+    An insert that shows an excluded person or a competitor's mark is cut and not placed back.
+  - **Guardrail edits** (`brand-guardrails.md` §2, §4), as change marks in the source action
+    script and as operations in the first request: an untouched unit beyond the count limit is
+    removed and the ledger holds the limit at every checkpoint; a competitor's name, logo and
+    identifying mark are removed from its object, which stays as a plain unbranded one of the
+    same shape, size, spot and light (never blurred, pixelated or covered); an excluded person is
+    swapped completely (face, hair, marks, reflections), their name dropped from the text and
+    their voice named in the brief; a caption that breaks a wording rule is rewritten minimally
+    in CapCut, and a required disclaimer is added as a text layer in the house style; a peripheral
+    banned prop is removed with its surface reconstructed.
   - **Audio:** the reference's original audio for its own content is restored onto the edited
     picture (X8 step 1); the inserts keep their own sound.
     - With inserts: `T restore-audio --generated <edit> --source <own.mp4>`.
@@ -752,8 +799,14 @@ See §6.
   - its **sync anchors**: the beats whose sound is in the original audio (each spoken line and
     whose mouth says it, impacts, steps, pickups, sips, opens), with their times, from the
     transcript, the storyboards and, when it helps, `T audio-profile` hits;
-  - the **source-text inventory** (`text-and-format.md` §2.1).
-- Show the user a 4–6 line understanding of the video.
+  - the **source-text inventory** (`text-and-format.md` §2.1);
+  - when guardrails were supplied with the assets (`30-assets/guardrails.md`), the **guardrail
+    audit** (`brand-guardrails.md` §3): every hit, core or peripheral, and the operation the rule
+    requires.
+- Show the user a 4–6 line understanding of the video. With guardrails, add one line per hit:
+  the required operation ("G4 requires a face swap for the man on the left"), or, for a core hit,
+  that editing it would change the video ("this video's point is the taste test, which G3 bans").
+  The user decides the operations in E3.
 
 ### E3. Choose the operations, then drop the files for each
 1. **Operations.** Ask with AskUserQuestion (header "Edit", `multiSelect: true`), "What should happen
@@ -866,6 +919,10 @@ files as video K".
       sharp idea, the emotion arc or laugh mechanism, the share line (`creative-direction.md` §2–§6);
       Create: the craft carried from the family and the subject the concept brings, with the copy
       test passed (`creative-direction.md` §5.0);
+    - the **guardrail hits** of the source (Recreate, Edit Mode) with their operations and times,
+      or the guardrail invariants of the concept (Create): the count limit in the ledger, no
+      competitor objects, supplied characters only, the wording rules in the text plan
+      (`brand-guardrails.md` §4);
     - the **size reckoning** for every product in every shot (`anomaly-catalog.md` §2.7): its real
       dimensions from the registry, its distance from the camera (from the shot size and the
       blocking: a product on a dresser behind the subject is farther than the subject), the lens
@@ -969,6 +1026,12 @@ files as video K".
       has its path written relative to the product, past it on a named side or onto it with the
       consequence, plus the solidity exclusion ("nothing passes through the bottle";
       `anomaly-catalog.md` §2.14).
+    - **Guardrail operations** in the model's own edit syntax (`brand-guardrails.md` §4): "Remove
+      only the third can at the left end of the desk and reconstruct the desk and wall behind it;
+      keep the two other cans exactly as they are"; "Remove only the brand name and logo from the
+      green can on the shelf; keep its shape, size, position and lighting; it becomes a plain
+      unbranded can of the same colour"; the person-replacement contract for an excluded person.
+      Never "blur", "pixelate" or "cover".
     - Analyze Mode prompts are always **clean plates**: no overlay text. The only lettering is the
       product's own label, logo or badge.
     - With inserts, the prompt covers only the generated content, and puts a natural beat boundary
@@ -1161,6 +1224,13 @@ files as video K".
     is a post-fix.
   - **Leftovers** (`generation-system.md` §9b): only the must-not-survive list counts, and it is
     fixed autonomously.
+  - **Guardrails** (`brand-guardrails.md` §5): the count limit at every checkpoint; `T qc` OCR
+    with no competitor name and a full-resolution look at every de-branded object (no logo,
+    claw, crest or livery, no blur, no patch); the identity check over every shot, reflection and
+    placed-back insert; the rewritten lines and disclaimers on the CapCut preview. A leftover hit
+    in the picture is a regenerate reason with the operation named; in a text layer, a CapCut
+    fix. A removed element that turns out to have been handled is reported and the pick is
+    replaced by the next runner-up when the run allows it.
   - **House approach** (when examples exist): the video follows the rules its plan applied.
   - **Contents** (`generation-system.md` §9): every vessel of the product's category shows the
     product's contents. A glass of water beside the can is a regenerate reason, never a note.
@@ -1254,6 +1324,9 @@ Then give:
 - the total credits used (`transactions` / `balance`);
 - the run folder (keep it: the CapCut projects use its files);
 - the examples used ("6 examples → house approach applied") or "no examples";
+- the guardrails applied ("G1–G5 from brand-rules.pdf; 2 references dismissed: V04 (G1, the gore
+  is the prank), V09 (G3, a taste test); 3 picks edited: counts, de-branding, face swaps") or
+  "no guardrails supplied";
 - only if `config.json → capcut.text_style.learned` is ever empty (it holds the user's locked
   preset): "To copy CapCut's exact text preset, add a text in any CapCut project, pick the preset,
   close CapCut, and run `T capcut-text-style --learn --draft "<store>/<that project>"`";
@@ -1321,6 +1394,11 @@ video).
 - Never plan a Create video from a single unscored idea, a generic "person enjoys product" beat,
   an explained joke or a dated surface element; never let two videos of a run share a situation or
   a joke; never let the creative layer override a hard rule (`creative-direction.md`).
+- Never pick a reference whose core a guardrail bans, and never dismiss one for a peripheral hit
+  that an edit removes without changing what the video is about; never blur, pixelate or cover a
+  competitor's mark (remove it and keep the object); never leave an excluded person's face in any
+  shot, reflection or placed-back insert; never leave more units than the limit in any frame;
+  never invent a guardrail, and never let one relax a hard rule (`brand-guardrails.md`).
 - Never restage a reference in Create: its premise, setting, characters, action order, joke,
   lines, caption wording, props, first frame, ending or product beat. Create collects a
   reference's style, properties, approach, crafting and hook logic, and makes another video with a

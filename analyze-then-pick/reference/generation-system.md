@@ -568,6 +568,7 @@ Evaluate before writing the prompt, and again in the pre-generation QC pass (§8
 | solidity | Nothing passes through, sinks into or shows through a solid; occlusion follows depth; every contact has its consequence (§2.14) |
 | sharpness | One clear idea, a hook in the first second, a real turn, a payoff on the family's beat, a share line, and the product native to the scene (`creative-direction.md` §6) |
 | size | Every product's size in every shot is reckoned from its real dimensions, its distance, the lens and a named neighbour, written into the prompt and the start frame, and kept across motion and cuts (§2.7) |
+| guardrails | Every hit of the client's rules is edited as planned (count at the limit, competitor marks removed, excluded faces swapped, captions rewritten, props removed) and nothing the rules ban is in the concept (`brand-guardrails.md`) |
 | transfer (Create) | The video carries the references' craft (style, properties, approach, crafting) and none of their subject: the copy test passes against every reference of the family and the run's other videos (`creative-direction.md` §5.0) |
 
 The AI-slop blacklist must never appear in a plan or a prompt:
@@ -962,6 +963,12 @@ a reference's room is normal, and so is a sign across the street. Only what make
 | **A copyrighted character as the subject** (a costume, a toy presented to camera) and studio / film / character names in prompts. Higgsfield blocks those as "ip_detected" | |
 | **Flaggable content the concept doesn't need:** weapons implying violence (knives, guns), drugs or paraphernalia, alcohol, tobacco or vapes, gambling, nudity, gore or self-harm, hate symbols, dangerous stunts shown as imitable. A comic prop the plan chose on purpose stays (the "assassin" powder gag) | |
 
+**The client's guardrails extend this table** (`brand-guardrails.md`): the competitor list they
+name or imply, the people whose likeness is excluded, the count limits, the banned wording and the
+required disclaimers. A competitor's mark is **de-branded**, never blurred: the name, the logo and
+the identifying trade dress are removed and the object stays as a plain one of the same shape, size,
+spot and light. Without a guardrail document, this table alone applies.
+
 **Fixes are autonomous and cost-aware:**
 - **Small static leftovers** (a watermark, a corner logo, a sticker remnant): fix them locally and
   for free with `atp.py clean --delogo` on the clean video before CapCut. A Recreate / Edit source
@@ -985,6 +992,7 @@ Substitutions: <source entity → client entity, per entity> | Placement: <clien
 Main action & states: <start → key change → end>
 Counts & use: <every multiple with its number over time; each use beat's part and contact ("spout, cap flipped open, head level"); the QC checkpoints>
 Size: <per product and shot: real H cm; depth d m; lens f mm → ~N % of frame height (~px); neighbour and ratio ("2/3 of the bottle beside it"); size ladder across products; constancy> (anomaly-catalog.md §2.7)
+Guardrails: <none supplied | G<n> (rule) → operation and time, per hit, e.g. "G2 (two cans max) → third can removed, count 2 at every checkpoint; G3 (no competitors) → Monster can de-branded on the shelf; G4 (ambassador) → face swapped, voice remains in the original audio" | Create: the invariants applied> (brand-guardrails.md)
 Style & camera: <look, lighting, camera behaviour>
 Text: <none | CapCut text layers in the house style: "…" (where, when) | real label, logo or badge text on the product>
 Inserts: <none | "<meme>" cut from <V> at <t_in–t_out>, placed at <split> s>

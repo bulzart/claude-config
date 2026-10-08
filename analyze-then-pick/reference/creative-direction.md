@@ -178,7 +178,10 @@ For every video slot in a chosen style group:
      seed that fails the copy test (§5.0) scores 0 here and is rewritten or dropped;
    - **feasibility** — few movers, one camera behaviour per shot, physics-safe for the locked
      model, within one generation or the permitted clips (`generation-system.md` §6);
-   - **brand safety** — nothing on the must-not-survive list, nothing the client would not post.
+   - **brand safety** — nothing on the must-not-survive list, nothing the client would not post,
+     and nothing the client's guardrails ban (`brand-guardrails.md` §4: a content or context hit
+     scores 0 here and the seed is dropped; limits, competitor and wording rules are invariants
+     the plan obeys).
 3. **Select** the highest total, with sharpness and stop power as tie-breakers; keep the runner-up
    in the plan as the fallback if the first cannot be rendered. Write the winner's **share line**
    (what a viewer types when sending it) and its **job** (§2).
