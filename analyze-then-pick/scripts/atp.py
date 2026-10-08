@@ -2653,9 +2653,9 @@ def cmd_caught_error(a):
     """The feedback ledger (caught_errors.md at the library root): add an entry for a video the user
     was not satisfied with, list the entries that apply to a run, or set an entry's status."""
     if not CAUGHT_ERRORS.exists():
-        CAUGHT_ERRORS.write_text("# Caught errors: the feedback ledger\n", encoding="utf-8")
+        CAUGHT_ERRORS.write_bytes(b"# Caught errors: the feedback ledger\n")
     if a.action == "list":
-        entries = _ce_parse(CAUGHT_ERRORS.read_text(encoding="utf-8"))
+        entries = _ce_parse(CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n"))
         def keep(e):
             if a.mode and a.mode.lower() not in (e.get("mode", "") + " any all").lower(): return False
             if a.model and a.model.lower() not in (e.get("model", "") + " any all unknown").lower(): return False
@@ -2672,7 +2672,7 @@ def cmd_caught_error(a):
         if not a.id:
             fail("--id CE-nnn is required", 2)
         with FileLock(CAUGHT_ERRORS.with_suffix(".lock")):
-            text = CAUGHT_ERRORS.read_text(encoding="utf-8")
+            text = CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n")
             m = re.search(rf"^## {re.escape(a.id)} · .*$", text, re.M)
             if not m:
                 fail(f"{a.id} not found", 1)
@@ -2685,14 +2685,14 @@ def cmd_caught_error(a):
                     if not n:
                         block = block.rstrip("\n") + f"\n- **{key}:** {val}\n"
             text = text[:s] + block + text[e:]
-            CAUGHT_ERRORS.write_text(text, encoding="utf-8")
+            CAUGHT_ERRORS.write_bytes(text.encode("utf-8"))
         out({"ok": True, "id": a.id, "status": a.status, "promoted_to": a.promoted_to, "file": str(CAUGHT_ERRORS)})
     # add
     missing = [k for k in ("title", "user", "wrong", "rule") if not getattr(a, k)]
     if missing:
         fail("missing " + ", ".join("--" + k for k in missing) + " (the user's words, the diagnosis and the rule are required)", 2)
     with FileLock(CAUGHT_ERRORS.with_suffix(".lock")):
-        text = CAUGHT_ERRORS.read_text(encoding="utf-8")
+        text = CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n")
         ids = [int(x) for x in re.findall(r"^## CE-(\d{3,}) · ", text, re.M)]
         cid = f"CE-{(max(ids) + 1) if ids else 1:03d}"
         date = a.date or dt.date.today().isoformat()
@@ -2711,7 +2711,7 @@ def cmd_caught_error(a):
                  f"- **rule:** {a.rule.strip()}\n"
                  f"- **status:** {a.status or 'open'}\n"
                  f"- **promoted to:** {a.promoted_to or '—'}\n")
-        CAUGHT_ERRORS.write_text(text.rstrip("\n") + "\n" + block, encoding="utf-8")
+        CAUGHT_ERRORS.write_bytes((text.rstrip("\n") + "\n" + block).encode("utf-8"))
     out({"ok": True, "id": cid, "date": date, "title": a.title.strip(), "file": str(CAUGHT_ERRORS),
          "note": "promote the rule into its reference when it is general or recurs, then `caught-error set --status promoted --promoted-to …`"})
 

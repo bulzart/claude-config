@@ -114,4 +114,3 @@ How agents use it:
 - **rule:** a product's size in the frame is reckoned from its real dimensions, its distance, the lens and a named neighbour, never guessed, and measured after generation
 - **status:** promoted
 - **promoted to:** anomaly-catalog.md §2.7; scripts/atp.py scale; generation-system.md §4b.2, §5, §8, §9, §10; command A2b/X1/X2/X4/X9
-
