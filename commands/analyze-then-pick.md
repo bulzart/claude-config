@@ -259,7 +259,9 @@ You are running the **/analyze-then-pick** command.
     and product-growth creative specialist, a mass-cognition engineer, a trend analyst, a creative
     director and a performance editor at once. Every run writes its goal, its audience model and
     its trend read; every Create video comes from at least five scored concept seeds and passes
-    the sharpness gate; every Recreate pick is ranked for its creative potential; every brief says
+    the sharpness gate and the copy test (a Create video takes a reference's style, properties,
+    approach, crafting and hook logic, never its subject, scene, joke, lines or ending:
+    `creative-direction.md` §5.0); every Recreate pick is ranked for its creative potential; every brief says
     why the video will work; and QC judges the hook, the payoff and the share line as notes. The
     creative layer never overrides the hard rules (items 6, 14, 15, 18, 19 and the anomaly
     catalog); it decides which references, mechanisms and concepts win inside them.
@@ -453,6 +455,10 @@ You are running the **/analyze-then-pick** command.
     - its **trend elements and cognitive triggers** (protocol §2.12; `creative-direction.md` §3–§4):
       the format name and caption grammar, the structural mechanism, the surface elements with
       their freshness, the emotion arc, the laugh mechanism, the share line;
+    - its **transferable craft** (protocol §3; `creative-direction.md` §5.0), as kinds, not
+      instances: style, properties, approach, crafting and why it works, kept apart from the
+      subject lines (premise, setting, characters, actions, joke, lines, props, ending) that a
+      Create video must not reuse;
     - its **inserts**: memes or other clips that interrupt the reference, with their exact in and
       out on cut frames, video or still, and their sound;
     - its **overlay text**: wording, role, centre position, in and out times, and style;
@@ -475,6 +481,9 @@ You are running the **/analyze-then-pick** command.
 ### A4. Synthesis
 Write, following the protocol §5–§6:
 - `20-analysis/families.md`: dynamic content families with measured profiles;
+- **Create:** `20-analysis/craft-sheet.md` (protocol §5 step 3b): per family, what is
+  **collected** (style, properties, approach, crafting, why it works) and what is **left behind**
+  (the subject). Ideation reads only the collected column;
 - in `20-analysis/project-profile.md`, the **goal**, the **audience model** and the **trend read**
   (`creative-direction.md` §2–§4; protocol §6);
 - `20-analysis/project-profile.md`: domain, objective, authoritative requirements, entities,
@@ -522,6 +531,13 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   allocation in one line and store it in `directions`.
 - **The N videos are varieties.** Each is its own new concept: a different scenario, hook, setting
   or character beat.
+  - **Transfer, not repetition** (`creative-direction.md` §5.0): every concept takes from the
+    references only their craft (the style, the properties, the approach, the crafting, the hook
+    type, why it works) from `20-analysis/craft-sheet.md`, and brings its own subject from the
+    audience model and the product's natural use. A seed that restages a reference's premise,
+    setting, characters, action order, joke, lines, first frame, ending or product beat fails the
+    **copy test** and is rewritten with a new subject or dropped. That is Recreate's job, not
+    Create's.
   - **Ideation, scored** (`creative-direction.md` §5.1): for every video slot write at least five
     concept seeds (situation + turn + where the product lives), score each on stop power,
     relatability, sharpness, product nativeness, trend fit and freshness, feasibility for the
@@ -533,7 +549,8 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     structure, pacing, content type, camera, humour, and payoff.
   - The client's product is blended into the concept (its most suitable use, `generation-system.md`
     §4b.0), the way the house approach does it when examples exist.
-  - No two videos repeat the same concept.
+  - No two videos repeat the same concept, and none repeats a reference's subject: the copy test
+    runs against the family's references and the run's other winners.
 - **Create never uses a reference as input.**
   - No reference video, frame or clip is uploaded, edited or passed to a generation.
   - The analysis informs only the concept, structure, pacing, camera, product use and text role.
@@ -843,6 +860,8 @@ files as video K".
   - Write `40-briefs/video-NN-plan.md` with `generation-system.md` §2–§6:
     - intent (`generation-system.md` §2.1): the goal and the video's job, the audience, the one
       sharp idea, the emotion arc or laugh mechanism, the share line (`creative-direction.md` §2–§6);
+      Create: the craft carried from the family and the subject the concept brings, with the copy
+      test passed (`creative-direction.md` §5.0);
     - the per-second time budget from the family profile;
     - roles and assets;
     - the scene;
@@ -1100,8 +1119,10 @@ files as video K".
     wrong occlusion order or a hit without a consequence is a regenerate reason with no post-fix.
   - **Creative check** (`creative-direction.md` §8), as notes: the hook within the first second,
     the payoff where planned, the product recognisable at the moments of attention without reading
-    as an ad, the planned emotion arc, the loop. A missing hook or payoff that the plan required is
-    a narrative-gate failure and a regenerate reason; everything else is a note, never a question.
+    as an ad, the planned emotion arc, the loop; Create: the copy test against the family's
+    references and the run's other videos (craft shared, subject not). A missing hook or payoff that
+    the plan required is a narrative-gate failure and a regenerate reason; everything else is a
+    note, never a question.
   - **Action sync** (item 19; Edit Mode and Recreate): the X8 sync verdict and sheet. Every sync
     anchor lands within ±0.1 s of its sound: words on mouth movements, impacts on contact, steps on
     footfalls. Drift, or an action added, skipped or moved, is a regenerate reason; a steady offset
@@ -1268,6 +1289,11 @@ video).
 - Never plan a Create video from a single unscored idea, a generic "person enjoys product" beat,
   an explained joke or a dated surface element; never let two videos of a run share a situation or
   a joke; never let the creative layer override a hard rule (`creative-direction.md`).
+- Never restage a reference in Create: its premise, setting, characters, action order, joke,
+  lines, caption wording, props, first frame, ending or product beat. Create collects a
+  reference's style, properties, approach, crafting and hook logic, and makes another video with a
+  new subject and a new idea; a seed that fails the copy test is rewritten or dropped
+  (`creative-direction.md` §5.0).
 - Never let a multiple change its number without a visible cause: three capsules on a desk are
   still three after the character walks past and comes back, unless they are seen being taken
   (`anomaly-catalog.md` §2.1, §2.5).

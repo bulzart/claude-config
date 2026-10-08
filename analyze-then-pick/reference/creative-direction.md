@@ -16,7 +16,7 @@ The pipeline acts, at once, as:
 | **Social-media and product-growth creative specialist** | Knows what stops a scroll, keeps a viewer, earns a share or a comment, and makes a product remembered without being sold. Thinks in platform mechanics: the first second, the retention curve, the loop, the comment bait, the native look | the goal model (§2), the directions, every brief |
 | **Mass-cognition engineer** | Models how a broad audience perceives in the first second and feels across the clip: instant recognition, cognitive ease, the curiosity gap, the pattern interrupt, relatability and identity, the emotion arc, the mechanics of a laugh, the "send this to…" reflex | the audience model (§3), the hook and payoff craft (§7), the sharpness gate (§6) |
 | **Trend analyst** | Reads the references as a trend corpus: formats, caption grammar, sounds, inserts, pacing; tells structural mechanisms (they outlive the trend) from surface elements (the meme of the week); judges freshness; checks a trend only when the decision depends on it | the trend read (§4) |
-| **Creative director** | Generates many ideas, scores them, picks the sharpest, kills the bland, keeps every video distinct, and chooses the best approach for the goal | ideation and selection (§5), the best approach (§5.2) |
+| **Creative director** | Generates many ideas, scores them, picks the sharpest, kills the bland, keeps every video distinct, and chooses the best approach for the goal. Takes from a reference *how* it was made, never *what* it shows: a Create video is a new subject and a new idea built with the collected craft | the craft sheet and the copy test (§5.0), ideation and selection (§5.1), the best approach (§5.2) |
 | **Performance editor** | Lands the hook in the first second, the payoff on the family's beat, the loop at the end, the text as a hook, the sound as a lift | the time budget (`generation-system.md` §2.2), the text and sound plans, the creative QC (§8) |
 
 ## 2. The goal model (written into `20-analysis/project-profile.md`)
@@ -94,7 +94,8 @@ The references are the trend corpus. For each family and for the folder as a who
   never generated, `generation-system.md` §3c); never build a video on a dated surface element.
 - **Adapt, never copy:** a Create video uses the mechanism in a new situation; it never remakes a
   reference's scene with the product swapped in (that is Recreate). Two videos in the run never
-  share a situation or a joke.
+  share a situation or a joke. What may be taken from a reference and what may not is fixed by the
+  craft sheet and the copy test (§5.0).
 - **Optional trend check (bounded):** when a decision depends on whether a specific format, meme,
   sound or caption convention is still current, or on its exact conventions, run at most two
   WebSearch queries per run to confirm, record the finding with its date in the trend read, and
@@ -102,6 +103,58 @@ The references are the trend corpus. For each family and for the folder as a who
   reference, and never slows the run beyond that.
 
 ## 5. Ideation and selection (Create), and the best approach
+
+### 5.0 Transfer, not repetition: the craft sheet and the copy test (Create)
+
+The analysis tells how the references work. Create uses that knowledge to make **another video**:
+a new subject, a new situation, a new idea, built with the style, the properties, the approach,
+the craft and the hook logic that the references proved. It never restages what a reference
+shows. Restaging a reference's scene with the client's product is Recreate's job and is a
+different sub-mode; in Create it is a failure, even when every frame is new.
+
+**Two layers in every reference.** The analysis card separates them (protocol §3, "Transferable
+craft" vs "Subject & entities"), and the synthesis writes them into `20-analysis/craft-sheet.md`,
+one block per family and per reference that matters:
+
+| layer | what it holds | Create |
+|---|---|---|
+| **Craft (how)** | **style:** look, palette and grade, lens and framing habits, light, era, performance register (deadpan, over-acted, silent), stylised or real; **properties:** length, pacing curve, cut rhythm, first-cut and speech-onset timing, caption grammar and text role, sound role, camera behaviour, aspect and shot sizes; **approach:** format name, hook *type* (not the hook), structure shape, escalation and reveal logic, payoff timing, interaction pattern, laugh mechanism, emotion arc, loop logic, how the viewer is addressed; **crafting:** one take or cuts, POV or observed, where text sits and when, when and how the product reads (swap, contents, placement; in hand, on a surface, the mark's moments), how the ending is built; **why it works:** the cognitive trigger behind the hook, the turn and the share | collected and reused freely |
+| **Subject (what)** | the premise and the situation, the setting and the location, the characters and their look, the specific action sequence, the joke's content and the punchline, the lines, the caption wording (except a generic meme line, `text-and-format.md` §1), the prop set and its arrangement, the first-frame composition, the ending image, the source product's own beat, the sound or track (a meme insert is the only exception, `generation-system.md` §3c) | left behind; the concept brings its own |
+
+**The transfer rule.** A concept seed takes its **mechanism, style and properties from the craft
+sheet** and its **subject from the audience model** (§3: the places, moments and situations the
+audience lives in) and from the product's own natural use (`generation-system.md` §4b.0). It never
+takes a subject line from a card. Minimum distance from every reference: a different premise,
+a different setting, different characters in different roles, a turn with different content, a
+different product beat and a different ending image. What may coincide: the family's mechanism,
+length, pacing, caption grammar, camera behaviour and look, and a generic meme line.
+
+**The copy test** (at ideation on every seed, in the sharpness gate, and in the creative QC).
+Someone who has seen the reference watches the new clip. Would they say any of these?
+1. Same premise or situation ("the night-shift car scene again").
+2. Same setting or the same kind of location dressed the same way.
+3. The same character type doing the same action in the same order.
+4. The same turn: the joke's content, the reveal, the punchline.
+5. The same line, caption wording or sound (beyond a generic meme line or a cut insert).
+6. The same first-frame composition or prop arrangement.
+7. The same ending image.
+8. The product doing exactly what the source product did at the same beat.
+One yes makes the seed a remake: it is rewritten with a new subject or dropped, and scores 0 on
+trend fit and freshness (§5.1). The test is run against every reference of the family, not only
+the nearest one, and across the run's own videos (§5.1 step 4).
+
+**What "collect details" means.** Details are taken as *kinds*, not as *instances*: "the hook is a
+face reacting before the viewer knows to what" is collected; "a man in a grey hoodie reacts to a
+dog in a kitchen" is not. "The caption is a two-word POV line in the upper third" is collected;
+its wording is not. "The product reads in the hand during the turn, label toward the lens" is
+collected; the source's desk, mug and window are not. When a reference's strength is its subject
+alone (a situation nobody else has used), the collected detail is the *kind* of situation
+(a lived micro-moment with an unexpected consequence), and the seed invents another of that kind.
+
+**Honest exceptions.** A format whose identity *is* its fixed frame (a running meme template, a
+duet grid, a "caption over a still" format) keeps that frame as a property; its content still
+changes. A trend check (§4) may confirm that a format's fixed frame is still current; it never
+licenses the content.
 
 ### 5.1 Concept seeds, scored (Create, A6)
 
@@ -111,7 +164,9 @@ For every video slot in a chosen style group:
    product lives`. Example: "night shift ends, parked car, slumps, lifts the sealed can from the cup
    holder, cracks it, first sip, melts — the can is the only light in the car." Draw situations from
    the audience model (places and moments they live in), turns from the family's mechanism, and
-   the product's spot from its most natural use (`generation-system.md` §4b.0).
+   the product's spot from its most natural use (`generation-system.md` §4b.0). Never draw a
+   situation, a setting, a joke or a line from a reference's card: the craft sheet gives the how,
+   the seed invents the what (§5.0). Run the copy test on every seed before scoring it.
 2. **Score** each seed 1–5 on:
    - **stop power** — what the first second shows, and whether it stops a thumb;
    - **relatability** — the "that's me" test, with a specific audience in mind;
@@ -119,7 +174,8 @@ For every video slot in a chosen style group:
      or emotion arc it uses (§3);
    - **product nativeness** — the product's presence is explainable in one clause and uses the
      product the way it is really used (or simply sits where it would);
-   - **trend fit and freshness** — uses the mechanism, not a copy; no dated surface element;
+   - **trend fit and freshness** — uses the mechanism, not a copy; no dated surface element; a
+     seed that fails the copy test (§5.0) scores 0 here and is rewritten or dropped;
    - **feasibility** — few movers, one camera behaviour per shot, physics-safe for the locked
      model, within one generation or the permitted clips (`generation-system.md` §6);
    - **brand safety** — nothing on the must-not-survive list, nothing the client would not post.
@@ -127,7 +183,8 @@ For every video slot in a chosen style group:
    in the plan as the fallback if the first cannot be rendered. Write the winner's **share line**
    (what a viewer types when sending it) and its **job** (§2).
 4. **Distinctness.** Across the run, no two winners share a situation, a turn or a product beat;
-   rotate settings, times of day, characters and the product's form of use.
+   rotate settings, times of day, characters and the product's form of use. The copy test (§5.0)
+   is also run between the run's own winners, so the run itself does not repeat.
 5. **Show** one line per video: the winning seed, its score and the one reason it won. The user
    can swap it by replying; nothing is asked.
 
@@ -161,6 +218,9 @@ A concept passes only if every answer is yes:
 - Does the clip loop or end on its strongest frame?
 - Is anything in it generic (a "person enjoys product" beat, an explained joke, a staged product
   moment, a stock situation nobody lives in)? If yes, rewrite or drop.
+- Does it pass the copy test (§5.0): a new premise, setting, characters, turn, lines, first frame,
+  ending and product beat, with only the craft carried over? If not, it is a remake: rewrite with
+  a new subject or drop.
 
 ## 7. Hook, payoff, loop, text and sound (the craft)
 
@@ -184,7 +244,9 @@ After the physics and continuity checks, judge the clean video as a viewer:
 - the payoff lands where planned and reads without explanation;
 - the product is recognisable at the moments of attention and nothing reads as an ad;
 - the emotion arc and the laugh mechanism of the plan are present;
-- the clip loops or ends strong.
+- the clip loops or ends strong;
+- (Create) the copy test (§5.0) against the family's references and the run's other videos: the
+  clip shares craft with them, not subject.
 A missing hook or payoff that the plan required is a **narrative** failure
 (`generation-system.md` §5 gate) and a regenerate reason like any other gate failure; everything
 else here is a **note** in the verdict ("hook lands at 0.4 s; payoff reads; share line holds"),

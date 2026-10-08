@@ -1,6 +1,6 @@
 ---
 name: atp-creative-direction
-description: "/analyze-then-pick has reference/creative-direction.md (growth creative, mass-cognition engineer, trend analyst, creative director roles; goal/audience/trend read; scored concept seeds; sharpness gate) wired into analysis, Create ideation, Recreate ranking, plans, briefs, QC notes"
+description: "/analyze-then-pick has reference/creative-direction.md (growth creative, mass-cognition engineer, trend analyst, creative director roles; goal/audience/trend read; craft sheet + copy test so Create takes a reference's craft never its subject; scored concept seeds; sharpness gate) wired into analysis, Create ideation, Recreate ranking, plans, briefs, QC notes"
 metadata:
   node_type: memory
   type: project
@@ -19,7 +19,14 @@ read in project-profile; "why it will work" in directions), A6 ideation, A6r ran
 X6 brief ("Why it works"), X9 creative check, Never rules; analysis-protocol §2.12, §4 lenses, §5,
 §6; generation-system §2.1, §5 gate "sharpness" row, §8, §10. Same day, anomaly-catalog gained
 §2.14 "Solidity, collision and occlusion" after a tossed paper flew through the client's plastic
-bottle (path rows, occlusion notes, solidity exclusion, no post-fix).
+bottle (path rows, occlusion notes, solidity exclusion, no post-fix). Later that day the user asked
+that Create never repeat what a reference shows: creative-direction §5.0 "Transfer, not
+repetition" (craft layer collected as kinds: style, properties, approach, crafting, why it works;
+subject layer left behind: premise, setting, characters, actions, joke, lines, props, first frame,
+ending, product beat, sound; `20-analysis/craft-sheet.md`; the eight-question copy test on every
+seed, in the sharpness gate and the creative QC, against the family's references and the run's
+own videos). Card line "Transferable craft", protocol §5 step 3b, generation-system §2.1/§5
+"transfer" gate/§8/§10 "Taken / left", command A3/A4/A6/X1/X9/Never, build prompt.
 
 **Why:** the pipeline was deep on mechanics and physics but had no creative-strategist layer; the
 user wants sharp, trend-aware, goal-driven concepts in every mode.

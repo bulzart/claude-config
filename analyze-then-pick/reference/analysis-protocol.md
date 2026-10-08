@@ -115,6 +115,7 @@ Inserts: <per insert: t_in–t_out (cut frames), what it is (name the meme if re
 Sound design (Create; audio-profile.json): <music bed yes/no/unknown, ~BPM, beat strength, energy arc, hits (t, on cut?), speech share, reusable whole?> → role [I]: <dramatic / comic / suspense / hype / SFX-driven / voice-only>; lyrics in the transcript may identify the song [E/I]
 Engagement mechanisms: <mechanism — evidence (t=…) — why it works>                         [I]
 Trend & cognition: <format name + caption grammar; structural mechanism; surface elements (current / fading / dated); emotion arc hook→middle→payoff; laugh mechanism; share line> (creative-direction.md §3–§4) [E/I]
+Transferable craft (how, as kinds not instances): <style: look, grade, lens, light, performance register | properties: length, pacing curve, cut rhythm, caption grammar, sound role, camera behaviour | approach: hook type, structure shape, reveal logic, payoff timing, laugh mechanism, loop | crafting: one take or cuts, POV or observed, where text sits, when and how the product reads | why it works> — what a Create video may take; everything under "Subject & entities" and the beat map is what it may not (creative-direction.md §5.0) [I]
 Interactions & physics: <grips, pours, handling, weight; per handled object: the part used, the preparation step, the contact point, the hand, the head angle; counts of multiples over time — anything a generation must reproduce (anomaly-catalog.md §2)> [E]
 Continuity & flaws: <source errors and dead space not to copy>                             [E/I]
 Entities → preserve / replace / adapt / ignore: <per entity, with reason>                  [I/U]
@@ -163,11 +164,20 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
 | family | members | typical length | median shot | first cut | speech onset | hook mechanism | payoff time | camera style | editing logic | text role | audio | structure template |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 
+3b. **Craft sheet** (Create): write `20-analysis/craft-sheet.md`, one block per family (and per
+   reference whose craft stands out), with two columns from the cards: **collected** (the
+   transferable craft: style, properties, approach, crafting, why it works) and **left behind**
+   (the subject: premise, setting, characters, action sequence, joke content, lines, caption
+   wording, props, first frame, ending image, the source product's beat, the sound). Create
+   ideation reads only the first column for the how and invents the what
+   (`creative-direction.md` §5.0).
 4. **Directions** are meaningful combinations of subject × structure × execution style that fit the
    client.
    - **Create** presents them as numbered **style groups**, `<content type> × <style> × <subject>`
      grouped by content type (e.g. "G1 Organic × POV skit × gym", "G3 Anime × reaction ×
-     school"). The user picks one or a mix.
+     school"). The user picks one or a mix. The `<subject>` of a group is a *field* for new
+     situations (a gym, an office, a school), never a reference's own scene; the group carries the
+     family's craft, and each video in it gets its own subject (`creative-direction.md` §5.0).
    - **Recreate** also ranks every analysed reference by **recreate fit**:
      - the product's integration form (swap / contents / placement);
      - the number of people against the supplied characters;

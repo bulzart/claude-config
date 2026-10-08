@@ -48,6 +48,10 @@ Write this plan to `<run>/40-briefs/video-NN-plan.md` **before** any prompt. Kee
 - **Why keep watching:** the curiosity / payoff contract set up in the first second.
 - **Mechanism kept from the references [E/I]:** hook type, reveal logic, rhythm, interaction pattern
   and payoff timing, from the selected content family.
+- **Subject of its own (Create) [I]:** the premise, setting, characters, action sequence, turn,
+  lines, first frame, ending image and product beat are the concept's, none of them a reference's;
+  the plan names the family's craft it carries and states that the copy test passed
+  (`creative-direction.md` §5.0).
 - **Goal and job [I/U]:** the run's goal (`creative-direction.md` §2) and what this video makes the
   viewer do at the end, and what they keep of the product.
 - **Audience and the one sharp idea [I]:** who it is for, the situation they have lived, the one
@@ -560,6 +564,7 @@ Evaluate before writing the prompt, and again in the pre-generation QC pass (§8
 | affordance | Every use goes through the object's real opening or control, after its preparation step, with a real contact point and the body mechanics of that use (§2.2, §2.3, §2.8) |
 | solidity | Nothing passes through, sinks into or shows through a solid; occlusion follows depth; every contact has its consequence (§2.14) |
 | sharpness | One clear idea, a hook in the first second, a real turn, a payoff on the family's beat, a share line, and the product native to the scene (`creative-direction.md` §6) |
+| transfer (Create) | The video carries the references' craft (style, properties, approach, crafting) and none of their subject: the copy test passes against every reference of the family and the run's other videos (`creative-direction.md` §5.0) |
 
 The AI-slop blacklist must never appear in a plan or a prompt:
 - unexplained dead space, filler or pauses, and unnecessary static stretches;
@@ -847,6 +852,9 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       is in the prompt, and no placed object sinks into its surface or a hand (§2.14).
 - [ ] Sharpness: the plan's intent names the goal, the job, the one idea, the emotion arc or laugh
       mechanism and the share line, and the concept passed the gate (`creative-direction.md` §6).
+- [ ] Transfer (Create): the plan takes only craft from the references and the copy test passed;
+      no premise, setting, character, turn, line, first frame, ending or product beat is a
+      reference's (`creative-direction.md` §5.0).
 - [ ] Motion is natural in speed and weight, with no unmotivated speed changes.
 - [ ] Every object state matches the ledger at every checkpoint.
 - [ ] Pacing matches the family profile: no dead space, every second has a job.
@@ -956,6 +964,7 @@ Video N of M — <direction / content family>
 Concept: <one line>
 Why it works: <goal and job; the one idea; the emotion arc or laugh mechanism; the share line> (creative-direction.md)
 Reference pattern: <which analyzed videos/mechanism, e.g. "V03/V07 hook-then-demo, payoff at ~5 s">
+Taken / left (Create): <craft carried: style, pacing, hook type, payoff timing, text role, product read | subject invented: premise, setting, characters, turn, ending; copy test passed against V…> (creative-direction.md §5.0)
 Characters/assets: <approved assets used; element/media ids not shown>
 House approach: <the rules applied from 20-analysis/house-approach.md | none (no examples)>
 Substitutions: <source entity → client entity, per entity> | Placement: <client entity → anchor, e.g. "can on desk right of laptop; one sip at ~6 s, set back", "car parked at the curb behind the bench; stays parked">
