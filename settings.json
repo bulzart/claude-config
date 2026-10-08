@@ -26,7 +26,7 @@
   },
   "modelSettings": {
     "claude-fable-5-1": {
-      "effortLevel": "xhigh"
+      "effortLevel": "high"
     },
     "claude-opus-5-5": {
       "effortLevel": "high"
@@ -41,7 +41,6 @@
   "theme": "dark",
   "editorMode": "vim",
   "autoCompactEnabled": true,
-  "voiceEnabled": true,
   "autoMode": {
     "environment": [
       "### Org-wide",
@@ -69,5 +68,6 @@
       "**Trusted repo**: the git repository at C:\\Users\\Glaresquare1\\Documents (its working directory) — no remotes are configured, so this repo only; visibility assumed private per default",
       "**Org-specific CLIs**: None configured"
     ]
-  }
+  },
+  "voiceEnabled": true
 }
