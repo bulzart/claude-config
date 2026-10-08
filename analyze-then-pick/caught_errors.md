@@ -1,7 +1,15 @@
 # Caught errors: the feedback ledger
 
 One entry per video the user was not satisfied with, in the user's own words plus the diagnosis,
-the cause, the fix and the rule the pipeline learns from it. The file is **read at the start of
+the cause, the fix and the rule the pipeline learns from it.
+
+**Only the user's feedback after delivery fills this file.** The videos are generated, edited in
+CapCut and delivered; the user watches them; whatever they then say is wrong, disliked, illogical
+or unsatisfying becomes an entry, with the video's details. The agents never write here: an error
+an agent catches during the run (QC, the pre-generation check, the sync check) is fixed in place,
+as it always was, and stays in the run's own verdicts and logs. In Edit Mode the per-attempt
+review before a video is approved is part of making it, not delivery; an entry is written only
+when the user reports a problem with a video already approved or delivered. The file is **read at the start of
 every run** (command A1 / E1): the entries that apply to the run (same mode, model, product family
 or anomaly class) go into `<RUN>/20-analysis/caught-errors.md`, every plan names the entries it
 applies, every prompt carries their rules in the model's phrasing, and QC checks each applied
@@ -18,7 +26,9 @@ T caught-error list [--mode …] [--model …] [--class …] [--status open|fixe
 T caught-error set --id CE-003 --status promoted --promoted-to "anomaly-catalog.md §2.14"
 ```
 
-Fields: **video** (number or CapCut project name), **run**, **mode**, **model**, **product**,
+Fields: **video** (number or CapCut project name), **run**, **delivered** (the CapCut project,
+the final file, the credits and the run's QC verdict, read from the video's `result.json`),
+**mode**, **model**, **product**,
 **user said** (verbatim; the user's words are the evidence), **what was wrong** (the diagnosis
 in pipeline terms: which checkpoint, frame or beat, what the ledger or the plan said), **class**
 (the reference and section it belongs to, or `new`), **cause** (prompt, reference, parameter,
@@ -48,9 +58,11 @@ How agents use it:
 - **QC:** each applied entry is checked by id and written in the verdict ("CE-004: paste test
   passed, 0 signs"; "CE-005: can at 1.05× expected size vs the bottle"). A failed check is a
   regenerate reason when the entry's class says so.
-- **Recording:** whenever the user says a delivered video is wrong, in the run or in a later
-  session, the entry is written first, with their words verbatim, before any fix is offered.
-  Edit Mode's "Needs changes" always writes one. Nothing the user reports goes unrecorded.
+- **Recording:** whenever the user, having watched the delivered videos, says one is wrong, at the
+  end of the run or in a later session, the entry is written first, with their words verbatim and
+  the video's details (CapCut project, final file, brief, prompt, the run's QC verdict), before
+  any fix is offered. One entry per distinct problem; a message about three videos writes three.
+  Nothing the user reports goes unrecorded, and nothing the agents caught themselves goes in.
 
 ## CE-001 · 2026-10-08 · Three capsules became one after a walk-past
 - **video:** anime Create video (earlier run)
