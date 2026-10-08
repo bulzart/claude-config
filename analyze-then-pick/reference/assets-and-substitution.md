@@ -52,7 +52,10 @@ Steps:
    - two photos of the same item in different folders are one entity.
 3. **For each product or object:** choose the canonical template: the view that best shows the true
    geometry, or the file the user named template/canonical. List the other views; mark variants
-   (appearance-only differences); take real dimensions and materials from supplied specs.
+   (appearance-only differences); take real dimensions and materials from supplied specs: height,
+   width or diameter, depth, in cm, and the volume. When no spec gives them, use the category's
+   standard size from `anomaly-catalog.md` §2.7 and mark it [I]; never read a size off the
+   product's own photo. Every plan reckons the product's size in every shot from these numbers.
    - Link each **contents sample** (a liquid or texture photo) to the variant it belongs to, using
      the folder, the name and what the photo shows. It is the authority for that variant's contents
      (colour, clarity, bubbles, texture).

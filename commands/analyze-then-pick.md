@@ -428,6 +428,10 @@ You are running the **/analyze-then-pick** command.
     openings, opening sequence, how it is used and held, the contact point, what it holds and how
     many, its states, real size, the orientation of its mark, and what it cannot do. Every plan,
     prompt and QC pass quotes it.
+  - **Real dimensions, per product:** height, width or diameter and depth in cm, and the volume,
+    from the supplied specs; when none exist, the category's standard size from the catalog's
+    §2.7 table, marked [I]. Never read a size off the product's own photo. These numbers feed
+    the size reckoning of every shot (X1).
   - **Characters:** one entry per distinct person, mascot or character, with its best face and full
     views.
   - **Other assets:** logos, palettes, UI screenshots, environments, audio. Supplied fonts are
@@ -862,6 +866,13 @@ files as video K".
       sharp idea, the emotion arc or laugh mechanism, the share line (`creative-direction.md` §2–§6);
       Create: the craft carried from the family and the subject the concept brings, with the copy
       test passed (`creative-direction.md` §5.0);
+    - the **size reckoning** for every product in every shot (`anomaly-catalog.md` §2.7): its real
+      dimensions from the registry, its distance from the camera (from the shot size and the
+      blocking: a product on a dresser behind the subject is farther than the subject), the lens
+      the look implies, the expected fraction of the frame height (`T scale --product-cm H
+      --distance d --lens f` prints it and a table over the usual shot distances), the one named
+      neighbour at the same depth with the ratio in words, the size ladder when several products
+      show, and the size it keeps across motion, exits and cuts;
     - the per-second time budget from the family profile;
     - roles and assets;
     - the scene;
@@ -929,6 +940,15 @@ files as video K".
       the product, its size against a named neighbour, its mark angle, its contact shadow like the
       neighbour's and the scene's camera angle; the anchor touches or is partly occluded by
       something rather than standing alone on an empty edge (`anomaly-catalog.md` §2.15).
+    - The **size** comes from the plan's size reckoning (`anomaly-catalog.md` §2.7), in the model's
+      own phrasing (its guide §3.14): the ratio to the named neighbour at the same depth in words
+      ("two thirds the height of the water bottle beside it"), the depth ("on the dresser about
+      two and a half metres from the camera, behind him"), the fraction of the frame when the
+      model takes it ("a small object in the background, about one twentieth of the frame
+      height"), the size ladder when several products show, and the constancy line. The
+      reference image is padded so the product does not fill it, and a start frame is built at
+      the reckoned pixel height and measured with `T scale --frame … --product-px … --ref-cm …
+      --ref-px …` before it is animated.
     - Every vessel's contents are stated from the contents sample ("the glass holds …"); an
       unstated glass comes back as water. A character photo's role is limited to the person ("only
       his face, hair, build and clothing; not the glass, table or background of Image 4") unless
@@ -1012,6 +1032,10 @@ files as video K".
     preparation step, the part, the contact point, the head and hands), every multiple's number at
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
     seam, and the path of every thrown, dropped or passing thing relative to the product (§2.14).
+  - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning is in the plan and in the
+    prompt for every shot; a start frame passed `T scale`; the size ladder holds between products;
+    nothing in the prompt or the references invites a bigger product (a tight crop, "hero",
+    "prominent", a packshot pose).
   - Fix any conflict in the plan and the request before continuing.
 - **X5 — Preflight.**
   - `generate_video {params:{…, get_cost:true}}` → cost and `adjustments`. **One** preflight per
@@ -1108,6 +1132,14 @@ files as video K".
     opening or a closed one, and an effect before its cause are regenerate reasons. The only
     post-fixes are the catalog's: a pixel hold on an untouched static anchor in a locked shot, a
     one-frame trim, a recolour or punch-in in a locked shot.
+  - **Size** (`anomaly-catalog.md` §2.7): on a full-resolution frame at rest, one in use and the
+    last, measure the product's pixel height and the named neighbour's and run
+    `T scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1> [--depth-ratio r]
+    [--distance d --lens f]`; write the observed multiple of the expected size in the verdict and
+    compare across cuts. Over 25 %, a size that changes between shots, or a product larger than
+    the hand that holds it is a regenerate reason with no post-fix; 15–25 % is a note only for a
+    static product with a readable label. The retry names the neighbour and the ratio, the depth
+    and the fraction of the frame, pads the reference and rebuilds any start frame.
   - **Blend** (`anomaly-catalog.md` §2.15): on one full-resolution frame at rest and one in use,
     the eleven-sign paste test against the nearest neighbour at the same depth (whites against the
     nearest white object, light direction, contact shadow, sharpness and grain, packshot pose,
@@ -1300,6 +1332,10 @@ video).
 - Never let a product be used through a part that has no opening, through a closed one, or before
   the step that readies it: a straw bottle is drunk through its spout with the cap flipped open, a
   can from its opened top after the tab is lifted (§2.2, §2.3).
+- Never render a product without its size reckoning (real dimensions, depth, lens, a named
+  neighbour's ratio, the size ladder) in the plan and the prompt; never read a product's size off
+  its own photo; never accept a product over a quarter larger or smaller than reckoned, one that
+  changes size across a cut, or one larger than the hand that holds it (`anomaly-catalog.md` §2.7).
 - Never plan a product that is handled on screen without its affordance sheet in the registry
   (§1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).
 - Never stretch to reach 9:16, never ask for aspect ratio or resolution, and never deliver anything

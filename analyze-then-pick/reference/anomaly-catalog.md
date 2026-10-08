@@ -37,6 +37,9 @@ examples illustrate the rules; they never limit them.
    moving thing stops, deflects, bounces or lands at a solid, and whatever it hits reacts (§2.14).
 5. **Rendered or pasted?** The product is lit, exposed, focused, grained, scaled, angled and
    shadowed exactly like the objects beside it, from the same camera (§2.15).
+6. **How big, from here?** The product's size in the frame follows from its real dimensions, its
+   distance from the camera, the lens and the known size of its neighbours; it keeps that size as
+   things move and across cuts (§2.7).
 
 ## 1. The affordance sheet (asset registry, one per product or object)
 
@@ -55,7 +58,7 @@ does not show a part (the spout side of a lid), say so and keep the use to what 
 | contact point | which part touches what | lips on the spout; hand(s) around the body; the strap hangs from the lid loop | lips on the rim at the opening; the thumb under the tab when opening |
 | contents, amount, visibility | what it holds and whether that shows | a liquid: level and colour visible through the frosted body; the straw shows inside | opaque: the level never shows; a sip shows only on the face and throat |
 | states | every state it can be in; which are irreversible | lid on / off; cap closed / open; level full → empty; strap on the wrist / hanging | sealed → opened (irreversible); full → empty (invisible) |
-| real size | from the spec, or by comparison | ~24 cm tall, ~7 cm wide, 1 l; an adult's hand spans the body, a child needs two hands | 355 ml slim can, 15.5 cm tall, 5.8 cm wide; one hand's width |
+| real size | height × width or diameter × depth in cm and the volume, from the spec; else the category's standard size marked [I] (§2.7 table); plus one comparison | ~24 cm tall, ~7 cm wide, 1 l; an adult's hand spans the body, a child needs two hands | 355 ml slim can, 15.7 cm tall, 5.8 cm wide; shorter than a hand is long |
 | mark orientation | where the label or wordmark is and how it reads when the object stands | markers run down the front, "REFILL" at the bottom; upright when standing | wordmark vertical on the front; upright when standing; tilts with the can |
 | impossible | what this object cannot do (the exclusion is picked from here) | drinking from the lid's closed side or through the body; the strap on the base; two spouts; a level that rises without a pour | drinking from the side or the bottom; a sip through a sealed top; the tab sealing itself; a visible level |
 
@@ -279,28 +282,101 @@ at 30 fps; check that the surface stays horizontal when the vessel tilts.
   physics break in a pour. A slight colour drift between shots can be a **post-fix** (a recolour in
   a locked shot) when nothing else is wrong.
 
-### 2.7 Scale and proportion
+### 2.7 Scale and proportion (the size reckoning)
 
 **Rule.** The product keeps its real size relative to hands, faces, furniture and the other
-products, at every depth and in every shot.
+products, at every depth and in every shot. Its size in the frame is **reckoned, not guessed**:
+from its real dimensions in the registry, its distance from the camera, the lens, and the known
+sizes of what stands beside it. A product that reads too big reads as a paste (§2.15), as an ad
+(`generation-system.md` §4b.2) and as a wrong world, however well it is drawn.
 
 **Breaks.** A gum pack at 23 % of the frame height (2026-10). A sachet two to three times its real
 size. A can taller than a forearm. A child's bottle adult-sized in his hands and tiny on the table.
 A phone that grows when lifted. A car shorter than the person beside it. A product that changes size
 across cuts. A glass larger than the can that filled it.
 
-**Ledger.** The registry's real size and a comparison ("a hand's length").
+**Ledger: the size reckoning,** one line per product per shot, written in the plan from these
+inputs:
+1. **Real dimensions** from the registry's affordance sheet (height × width or diameter × depth,
+   and volume as a check). The registry takes them from the supplied specs; when none are
+   supplied, from the category's standard size, marked [I] (table below), never from how large the
+   product looks in its own photo (a packshot fills its frame).
+2. **Depth**: the product's distance from the camera in metres, from the shot size and the
+   blocking (extreme close-up ≈ 0.4 m, close-up ≈ 0.7, medium close-up ≈ 1.0, medium ≈ 1.5,
+   medium-wide ≈ 2.5, wide ≈ 4; a product on a dresser behind a boy in a medium shot is at ≈ 2.5 m,
+   not at his 1.5 m).
+3. **Lens**: the 35 mm-equivalent focal length the look implies (a phone's main lens ≈ 24–26 mm,
+   a "cinematic" look 35–50 mm, a long portrait look 85 mm).
+4. **Expected size in the frame**: in a 9:16 frame, the frame height covers about `36 · d / f`
+   metres at distance `d` for focal length `f`, so a product `H` metres tall fills `H · f / (36 · d)`
+   of the frame height. A 15.7 cm slim can at 1.5 m through a 26 mm lens fills ≈ 7.6 % of the
+   frame height (≈ 97 px of 1280); at 2.5 m ≈ 4.5 % (≈ 58 px); only at 0.5 m does it reach 23 %.
+   `atp.py scale --product-cm 15.7 --distance 1.5 --lens 26` computes it and prints the table over
+   the usual shot distances.
+5. **Neighbours**: for every object of known size that stands near the product, the expected
+   ratio (`H_product / H_neighbour`), corrected by the depth ratio when they are not at the same
+   depth (an object twice as far looks half as big). Name the one neighbour the prompt will use.
+6. **The size ladder** when a run places several products: their real sizes relative to each
+   other, in one line ("bottle 22 cm : can 15.7 cm : gum carton 7 cm ≈ 3 : 2 : 1"), kept in every
+   shot that shows two of them.
+7. **Constancy**: the size the product must keep while it, the camera or the subject moves, and
+   the size it must have again after every exit, occlusion and cut (§2.5).
 
-**Prompt.** Give the size by comparison ("about the length of an adult hand", "a child needs both
-hands around it") and say it keeps that size; for a start-frame model, build the frame at the right
-ratio; keep tight product crops padded small in the references (a tight crop pulls the product into
-the foreground).
+Standard sizes for the reckoning (use the registry's spec when it exists; these are [I] fallbacks
+and comparators):
 
-**QC.** Measure the product's height in pixels against a face or hand in the same depth plane on
-two or three sheets, including the first and last frames; compare across shots.
-- **Regenerate** when the ratio is off by more than roughly a quarter or changes between shots. A
-  small, constant oversize that keeps the label readable may be **accepted with a note** (the sachet
-  case).
+| thing | about |
+|---|---|
+| adult hand, wrist to fingertip · palm width | 18–19 cm · 8–9 cm |
+| child's hand (6–8 y) | 13–14 cm |
+| adult face, chin to hairline · whole head | 19–20 cm · 23 cm |
+| forearm · shoulder width | 25–27 cm · 40–45 cm |
+| standing adult · child (6 y) · seated adult (seat to crown) | 165–180 cm · 115 cm · 85–90 cm |
+| slim 250 ml can · slim 355 ml can · standard 330 ml can · 500 ml can | 13.4 × 5.3 · 15.7 × 5.8 · 11.5 × 6.6 · 16.8 × 6.6 cm |
+| 500 ml PET bottle · 1 l sports bottle · wine bottle · mug | 22 × 6.5 · 24–26 × 7–8 · 30 × 7.5 · 9.5 × 8 cm |
+| phone · earbud case · laptop (13–15") · keyboard | 15 × 7 · 5 × 6 · 30–36 wide, under 2 thick · 44 cm |
+| gum carton or stick pack · blister card · capsule bottle | 7–8 × 2–3 · 8 × 5 · 10 × 5 cm |
+| desk or table top · chair seat · sofa seat · sofa arm | 72–76 · 45 · 42 · 60 cm high |
+| bed top · dresser top · kitchen counter · window sill | 50–60 · 75–90 · 90 · 90 cm high |
+| door · door handle height · fridge · dinner plate | 200 × 80 · 100 · 170–180 · 27 cm |
+| compact car · bicycle wheel | 4.2–4.6 m long, 1.45 m high · 70 cm |
+
+**Breaks, named by the reckoning.** The can on the dresser: a 15.7 cm can at ≈ 2.5 m should fill
+about 4–5 % of the frame height and stand two thirds the height of the 22 cm bottle beside it; it
+filled over 12 % and stood taller than the bottle, which puts it either at 0.9 m from the camera
+(in front of the boy, where it is not) or at 40 cm tall. Either reading is a wrong world.
+
+**Prompt.** Put the reckoning into the model's own structure (its guide §3.14):
+- the size **against the named neighbour at the same depth** with the ratio in words ("two thirds
+  the height of the water bottle beside it", "shorter than his hand is long");
+- the **depth** ("on the dresser about two and a half metres from the camera, behind the boy");
+- the **fraction of the frame** when the model takes it ("it fills about one twentieth of the
+  frame height, a small object in the background");
+- the size ladder when more than one product shows;
+- **constancy** ("it keeps this size as he turns", the model's "no scale drift" line);
+- the reference scoped to shape, proportions, colours and label only (§2.15), **padded** so the
+  product does not fill its reference image (a tight crop pulls the product forward and up in
+  size), and never a reference image that shows the product larger than a hand that holds it;
+- for a start-frame model, **build the start frame at the reckoned pixel height** and check it
+  with `atp.py scale --frame <start.png> --product-px <y0-y1> --ref-cm … --ref-px …` before
+  animating; a wrong start frame is animated faithfully wrong.
+- A stylised video keeps the same ratios: an anime can is still one hand tall; a stylised frame
+  may simplify, never resize.
+
+**QC.** On one full-resolution frame at rest, one in use and the last frame, measure the product's
+pixel height and the pixel height of the named neighbour (or a hand or face) at the same depth, and
+run `atp.py scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1>
+[--depth-ratio r] [--distance d --lens f]`; write the observed multiple of the expected size in the
+verdict ("renders at 2.6× its expected size vs the bottle"). Compare across shots and after every
+cut for constancy. The same measurement is the "scale" sign of the paste test (§2.15).
+- **Accept** within 15 %. **Note** between 15 and 25 % when the product is static, the label stays
+  readable and nothing else fails (the sachet case).
+- **Regenerate** over 25 %, or when the size changes between shots or across a cut, or when a
+  product is larger than a hand that holds it when it should not be. There is **no post-fix**: a
+  punch-in cannot shrink a product in its scene.
+- **Retry:** name the neighbour and the ratio, the depth, the fraction of the frame, pad the
+  reference, add the constancy line, and for a start-frame model rebuild the start frame at the
+  reckoned height.
 
 ### 2.8 Body mechanics at the product
 
@@ -563,8 +639,10 @@ in the verdict ("whites +1.5 stops over the door, no contact shadow, 2.4× the b
 2. **Ledger** (`generation-system.md` §3) with the columns count, opening/lid state, level, holder
    and hand, contact point, in-frame?; one row per event, each with its visible cause.
 3. **Use beats** written as initial state → operation on the named part → observable result, with
-   the contact point (§2.2, §2.3), the product's real size by comparison (§2.7) and the body
-   mechanics of that use (§2.8), in the locked model's phrasing (its guide §3.14). Every thrown,
+   the contact point (§2.2, §2.3), the product's size from its **size reckoning** (§2.7: against a
+   named neighbour at the same depth, its depth, its fraction of the frame, the size ladder,
+   constancy) and the body mechanics of that use (§2.8), in the locked model's phrasing (its
+   guide §3.14). Every thrown,
    dropped, swung or passing thing gets its path relative to the product: past it on a named side,
    or onto it with the consequence, plus the solidity exclusion (§2.14).
 4. **Restatements**: the count and state of every tracked item right after each exit, re-entry,
@@ -596,6 +674,9 @@ in the verdict ("whites +1.5 stops over the door, no contact shadow, 2.4× the b
 5b. **Solidity** at 30 fps wherever anything passes near, in front of or behind the product, lands
    on it or hits it: no pass-through, no sinking, no see-through, the right occlusion order, and a
    consequence for every contact (§2.14).
+5d. **Size** with `atp.py scale` on a full-resolution frame at rest, one in use and the last:
+   the product's pixel height against the named neighbour's (and against distance + lens), the
+   observed multiple of the expected size written in the verdict, constancy across cuts (§2.7).
 5c. **Blend** on one full-resolution frame at rest and one during any interaction: the eleven-sign
    paste test against the nearest neighbour at the same depth (§2.15).
 6. **Scale**: the product against a hand or face on two or three sheets.
@@ -630,7 +711,7 @@ scale: pack 155 px = 12 % of frame height vs ~10 % target, constant → accept w
 | used before being made ready | event with cause | "lifts the tab; it stays up; then drinks from the opening" | state-change beat at 30 fps; cause before effect | regenerate; drop the leaking reference |
 | opened, torn or poured state reverses | states copied forward | "continuing with the pouch torn open …" | every cut and re-entry; last frame | regenerate (trim a one-frame flicker) |
 | level rises or falls without cause; wrong contents | level; sample binding | "half full … the can then nearly empty"; contents = the liquid of @ImageN | pours and sips at 30 fps; levels at checkpoints | regenerate |
-| product too big, or its size changes | real size by comparison | "about the length of a hand; it keeps this size" | ratio vs face or hand on 3 sheets | regenerate (> ~25 % or changing); a note if small and constant |
+| product too big, or its size changes | the size reckoning per shot: real dimensions, depth, lens, expected fraction of the frame, ratio to a named neighbour, the size ladder, constancy | "two thirds the height of the bottle beside it, on the dresser about 2.5 m from the camera, a small object in the background; it keeps this size" | `T scale` on a frame at rest, one in use and the last: observed vs expected (neighbour ratio, distance + lens); constancy across cuts | regenerate (> 25 %, changing, or larger than the hand that holds it; no post-fix); a note at 15–25 % when static and readable |
 | head tilted on a straw; fingers through; a second copy in the other hand | holder and hand; mouth | "drinks through the straw with his head level"; "both hands around the bottle" | use beat at 30 fps | regenerate |
 | label mirrored, rotated or migrated; flavour changes; a part moves | mark orientation | "label upright, faces the camera, tilts with the bottle; same flavour throughout; strap on the lid" | first and last frame; rests; a full-resolution frame | regenerate (soft label while gripped: a note or a punch-in) |
 | giver still holds it after the hand-off; two items | holder per row | "after that, only the boy holds it; her hands are empty" | hand-off at 30 fps; count after | regenerate |

@@ -302,7 +302,11 @@ references and binding sentences across a project [INFERRED].
 object in the scene are copied exactly; no additions, no deletions, no moves"; "the character and scene edges blend
 naturally with no cutout artifacts" [OFFICIAL]. Build the asset sentence as: size relative to a body part or known
 object → orientation (which face toward camera) → contact and grip (which hand, which fingers, where) → occlusion
-("her fingers overlap the front edge") → end position [INFERRED structure].
+("her fingers overlap the front edge") → end position [INFERRED structure]. The size relation comes from the plan's
+size reckoning (`reference/anomaly-catalog.md` §2.7): the ratio to the named neighbour at the same depth, the depth
+in the shot line ("on the dresser behind him, about 2.5 m from the lens"), "a small object in the background" where
+it is one, and "No scale drift" in the consistency line; pad the product reference and build any first frame at the
+reckoned pixel height, measured with `atp.py scale` before animating [INFERRED].
 
 **Scene light on the asset.** Official examples name the source, angle, softness and color: "warm sunlight slants
 from the upper-left-back at about forty-five degrees, shadow edges slightly soft, direction uniform"; "real contact
@@ -502,6 +506,7 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 - [ ] Dialogue quoted with speaker or "No dialogue."; BGM specified or "No background music."
 - [ ] Clean-plate line (§3.11b); in-frame text only if short and scene-bound; Edit Mode: removal pass first.
 - [ ] Asset size/grip/occlusion, light direction and end states written (§3.14); slop exclusions included (§5).
+- [ ] Size from the reckoning: neighbour ratio, depth, fraction of the frame, "No scale drift"; reference padded; first frame measured with `atp.py scale` (`reference/anomaly-catalog.md` §2.7).
 - [ ] Counts with numbers per shot; every use beat names the part, the preparation step and the contact point; one "Negative prompt list:" item per product for its own wrong use and count; no reference shows a later state than t=0 (`reference/anomaly-catalog.md` §3).
 - [ ] `duration`, `generate_audio`, `enable_thinking` set deliberately; `get_cost: true`.
 - [ ] QC with `atp.py qc --mode analyze|edit`: size, freezes, pseudo-text, corner marks, identity, product geometry; `--dense` on the plan's checkpoints: counts, the part and contact of every use, permanence across exits and cuts (`reference/anomaly-catalog.md` §4).

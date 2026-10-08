@@ -427,7 +427,10 @@ write "placement weak: …" in the brief and use the least forced option. Never 
 of context, or somewhere it could not really be.
 
 ### 4b.2 Prominence: noticed, not featured
-- **Scale:** real scale at its depth. Never enlarged so it gets seen.
+- **Scale:** real scale at its depth, from the plan's **size reckoning** (`anomaly-catalog.md`
+  §2.7: real dimensions, distance, lens, the expected fraction of the frame, the ratio to a named
+  neighbour, the size ladder across products, constancy). Never enlarged so it gets seen: a
+  background product is a small object, and the prompt says so.
 - **Position:** off-centre (a side third), in the mid-ground near the subject. A large product sits
   in the mid-ground or background where it naturally stands. It never blocks the subject or the
   action, and never takes the foreground closest to the lens unless the reference's scene puts such
@@ -564,6 +567,7 @@ Evaluate before writing the prompt, and again in the pre-generation QC pass (§8
 | affordance | Every use goes through the object's real opening or control, after its preparation step, with a real contact point and the body mechanics of that use (§2.2, §2.3, §2.8) |
 | solidity | Nothing passes through, sinks into or shows through a solid; occlusion follows depth; every contact has its consequence (§2.14) |
 | sharpness | One clear idea, a hook in the first second, a real turn, a payoff on the family's beat, a share line, and the product native to the scene (`creative-direction.md` §6) |
+| size | Every product's size in every shot is reckoned from its real dimensions, its distance, the lens and a named neighbour, written into the prompt and the start frame, and kept across motion and cuts (§2.7) |
 | transfer (Create) | The video carries the references' craft (style, properties, approach, crafting) and none of their subject: the copy test passes against every reference of the family and the run's other videos (`creative-direction.md` §5.0) |
 
 The AI-slop blacklist must never appear in a plan or a prompt:
@@ -821,6 +825,10 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       person is excluded.
 - [ ] Client asset fidelity: canonical geometry, materials, labels and interface; correct scale
       relative to hands and body.
+- [ ] Size reckoning: for every product in every shot, the real dimensions, the depth, the lens,
+      the expected fraction of the frame and the ratio to a named neighbour are in the plan and in
+      the prompt; a start frame was measured with `atp.py scale` before animating; the size ladder
+      holds when several products show (`anomaly-catalog.md` §2.7).
 - [ ] Scene layout, perspective and camera logic are consistent across every beat and cut.
 - [ ] Placement, contact, grip and occlusion are physically possible at every step.
 - [ ] Surroundings are consistent (surfaces, props, background people) with nothing morphing.
@@ -908,6 +916,12 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      a steady offset is a post-fix.
    - **Leftovers:** check against §9b. Only its **must-not-survive** list counts as a finding.
      Everything on its **fine** list is ignored: not reported, not asked about, not regenerated.
+   - **Size** (`anomaly-catalog.md` §2.7): on a full-resolution frame at rest, one in use and the
+     last, `atp.py scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1>`
+     against the named neighbour (and `--distance --lens` for the shot); the observed multiple of
+     the expected size goes in the verdict. Over 25 %, a size that changes between shots, or a
+     product larger than the hand that holds it is a **regenerate** reason with no post-fix;
+     15–25 % is a note only for a static product with a readable label.
    - **Counts, openings and permanence** (`anomaly-catalog.md` §4): count every multiple at every
      checkpoint and write the numbers in the verdict; on every use beat check the preparation step,
      the part used and the contact point on the 30 fps sheet; before and after every exit,
@@ -970,6 +984,7 @@ House approach: <the rules applied from 20-analysis/house-approach.md | none (no
 Substitutions: <source entity → client entity, per entity> | Placement: <client entity → anchor, e.g. "can on desk right of laptop; one sip at ~6 s, set back", "car parked at the curb behind the bench; stays parked">
 Main action & states: <start → key change → end>
 Counts & use: <every multiple with its number over time; each use beat's part and contact ("spout, cap flipped open, head level"); the QC checkpoints>
+Size: <per product and shot: real H cm; depth d m; lens f mm → ~N % of frame height (~px); neighbour and ratio ("2/3 of the bottle beside it"); size ladder across products; constancy> (anomaly-catalog.md §2.7)
 Style & camera: <look, lighting, camera behaviour>
 Text: <none | CapCut text layers in the house style: "…" (where, when) | real label, logo or badge text on the product>
 Inserts: <none | "<meme>" cut from <V> at <t_in–t_out>, placed at <split> s>

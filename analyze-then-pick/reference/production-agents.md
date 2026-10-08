@@ -59,7 +59,10 @@ Hard rules:
   (generation-system.md §4b.0, §9). A glass of water beside the can is a regenerate reason, not a note.
 - Counts and use (anomaly-catalog.md): every multiple keeps its number except through a visible cause;
   every use goes through the product's real opening after its preparation step, with the contact
-  point. Render the plan's QC checkpoints with `T qc --dense` and count at each. A count or state
+  point. Measure the product's size with `T scale` against the plan's named neighbour on a frame
+  at rest, one in use and the last (over 25 % off, changing across a cut, or larger than the hand
+  that holds it: regenerate, no post-fix). Render the plan's QC checkpoints with `T qc --dense`
+  and count at each. A count or state
   that changes without a cause, or a use through the wrong or a closed part, is a regenerate reason.
 - Examples (<RUN>/10-media/E…) are study material: never upload them or cut them into the video.
 Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.

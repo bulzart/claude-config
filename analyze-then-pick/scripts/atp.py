@@ -2623,6 +2623,102 @@ def _count_frames(path) -> tuple[int, float]:
     return int(s.get("nb_read_frames", 0) or 0), fps
 
 
+def _px_span(spec: str, what: str) -> float:
+    """'y0-y1' (pixel rows) or a plain pixel height."""
+    s = (spec or "").strip()
+    m = re.match(r"^\s*([0-9.]+)\s*-\s*([0-9.]+)\s*$", s)
+    if m:
+        a, b = float(m.group(1)), float(m.group(2))
+        return abs(b - a)
+    try:
+        return float(s)
+    except ValueError:
+        fail(f"bad {what} {spec!r}: give pixel rows 'y0-y1' or a pixel height", 2)
+
+
+def cmd_scale(a):
+    """Size reckoning for a product in a frame (anomaly-catalog.md §2.7).
+
+    Before generation (plan): `scale --product-cm 15.7 --distance 1.5 --lens 26` gives the fraction
+    of the frame height and the pixel height the product should have at that depth, plus a table
+    over the usual shot distances, so the prompt and a start frame can be built at the right size.
+    After generation (QC): add `--product-px <y0-y1 | px>` measured on a full-resolution frame, and
+    a neighbour of known size at (about) the same depth: `--ref-cm 22 --ref-px <y0-y1 | px>`
+    (`--depth-ratio` = product distance / neighbour distance when they differ). The verdict compares
+    the observed size with the expected one: within 15 % ok, 15-25 % a note, over 25 % regenerate.
+
+    Geometry (approximate, 9:16 portrait, 35 mm-equivalent focal length f): the frame height covers
+    36·d/f metres at distance d, so a product of height H fills H·f/(36·d) of the frame height."""
+    if a.product_cm is None or a.product_cm <= 0:
+        fail("--product-cm (the product's real height in cm, from the registry) is required", 2)
+    H = a.product_cm / 100.0
+    f = a.lens
+    frame_h = a.frame_h
+    if a.frame:
+        im = media_summary(Path(a.frame))
+        if im.get("display_height"):
+            frame_h = int(im["display_height"])
+    res = {"ok": True, "product_cm": a.product_cm, "lens_mm_eq": f, "frame_h_px": frame_h,
+           "label": a.label or "product", "notes": []}
+    # 1. expected size from distance + lens
+    if a.distance:
+        frac = H * f / (36.0 * a.distance)
+        res["distance_m"] = a.distance
+        res["expected_fraction_of_frame_height"] = round(frac, 4)
+        res["expected_px"] = round(frac * frame_h, 1)
+    shots = [("extreme close-up", 0.4), ("close-up", 0.7), ("medium close-up", 1.0), ("medium", 1.5),
+             ("medium-wide", 2.5), ("wide", 4.0)]
+    res["table"] = [{"shot": s, "distance_m": d, "fraction": round(H * f / (36.0 * d), 4),
+                     "px": round(H * f / (36.0 * d) * frame_h, 1)} for s, d in shots]
+    # 2. expected ratio to a neighbour of known size
+    if a.ref_cm:
+        ratio = (a.product_cm / a.ref_cm) / max(1e-6, a.depth_ratio)
+        res["neighbour_cm"] = a.ref_cm
+        res["depth_ratio"] = a.depth_ratio
+        res["expected_ratio_to_neighbour"] = round(ratio, 3)
+    # 3. observed
+    verdicts = []
+    if a.product_px:
+        ppx = _px_span(a.product_px, "--product-px")
+        res["observed_px"] = round(ppx, 1)
+        res["observed_fraction_of_frame_height"] = round(ppx / frame_h, 4)
+        if a.ref_cm and a.ref_px:
+            rpx = _px_span(a.ref_px, "--ref-px")
+            obs_ratio = ppx / max(1e-6, rpx)
+            res["neighbour_px"] = round(rpx, 1)
+            res["observed_ratio_to_neighbour"] = round(obs_ratio, 3)
+            dev = obs_ratio / res["expected_ratio_to_neighbour"] - 1.0
+            res["size_vs_neighbour"] = round(1.0 + dev, 3)
+            verdicts.append(("vs neighbour", dev))
+        if a.distance:
+            dev = (ppx / frame_h) / res["expected_fraction_of_frame_height"] - 1.0
+            res["size_vs_distance"] = round(1.0 + dev, 3)
+            verdicts.append(("vs distance+lens", dev))
+        if not verdicts:
+            res["notes"].append("observed size given, but nothing to compare it with: add --ref-cm/--ref-px or --distance")
+    if verdicts:
+        worst = max(verdicts, key=lambda v: abs(v[1]))
+        dev = worst[1]
+        pct = abs(dev) * 100.0
+        if pct <= a.ok_pct:
+            verdict = "ok"
+        elif pct <= a.note_pct:
+            verdict = "note"
+        else:
+            verdict = "regenerate"
+        res["deviation_pct"] = round(dev * 100.0, 1)
+        res["deviation_basis"] = worst[0]
+        res["verdict"] = verdict
+        res["reading"] = (f"{res['label']} renders at {1 + dev:.2f}x its expected size "
+                          f"({'too big' if dev > 0 else 'too small'} by {pct:.0f} %, {worst[0]})")
+        if verdict == "regenerate":
+            res["notes"].append("size is a regenerate reason; no post-fix can resize a product in the scene")
+    if a.out:
+        write_json(Path(a.out), res)
+        res["file"] = a.out
+    out(res)
+
+
 def cmd_last_frame(a):
     """Hand-off frame for chaining clips: the exact LAST decoded frame of a clip (or the frame --back
     seconds earlier, when the final frames freeze, fade or morph) as a lossless PNG at native size.
@@ -3448,6 +3544,21 @@ def main():
     p.add_argument("--back", type=float, default=0.0,
                    help="seconds before the end (use when the final frames freeze, fade or morph)")
     p.set_defaults(fn=cmd_last_frame)
+
+    p = sp.add_parser("scale", help="size reckoning: expected vs observed product size (anomaly-catalog §2.7)")
+    p.add_argument("--product-cm", type=float, required=True, help="the product's real height in cm (registry)")
+    p.add_argument("--label", help="product name for the verdict")
+    p.add_argument("--distance", type=float, help="camera-to-product distance in metres (from the shot size)")
+    p.add_argument("--lens", type=float, default=26.0, help="35 mm-equivalent focal length (phone main lens ≈ 26)")
+    p.add_argument("--frame-h", type=int, default=1280, help="frame height in px (default 1280 for 720×1280)")
+    p.add_argument("--frame", help="a full-resolution frame; its height overrides --frame-h")
+    p.add_argument("--product-px", help="observed product height on the frame: 'y0-y1' rows or a pixel height")
+    p.add_argument("--ref-cm", type=float, help="a neighbour's real height in cm (hand, bottle, phone, mug …)")
+    p.add_argument("--ref-px", help="the neighbour's observed height on the same frame: 'y0-y1' or px")
+    p.add_argument("--depth-ratio", type=float, default=1.0, help="product distance / neighbour distance (1 = same depth)")
+    p.add_argument("--ok-pct", type=float, default=15.0); p.add_argument("--note-pct", type=float, default=25.0)
+    p.add_argument("--out", help="write the result as JSON")
+    p.set_defaults(fn=cmd_scale)
 
     p = sp.add_parser("capcut-name"); p.add_argument("--video", required=True, help="the run's video number")
     p.add_argument("--date", help="YYYY-MM-DD (default: today)"); p.add_argument("--store", help="CapCut drafts dir")
