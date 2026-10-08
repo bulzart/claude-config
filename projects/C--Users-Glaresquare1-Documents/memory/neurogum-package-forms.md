@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: fa5bf234-ecf9-446e-a53f-9818d56c6f19
-  modified: 2026-10-07T19:59:44.756Z
+  modified: 2026-10-08T16:56:14.300Z
 ---
 
 For Neuro / Neurogum videos, the product must match the **updated official samples** in
@@ -34,5 +34,6 @@ The older product sheet design (light-blue pouch, dark-blue caffeine band on eve
 - Rotate Peppermint, Spearmint, Wintergreen, Watermelon and Cinnamon across a batch.
   - The pouch exists only in Peppermint and Spearmint.
 - Re-check that folder for new designs before each Neurogum batch; the user adds designs there.
+- **Dimensions authority (added by the user 2026-10-08):** `product_samples_and_designs/product_properties.txt`. Read it before writing any Neurogum prompt. Key values: 9- and 6-piece cartons share one die, ~7.5 × 7.5 × 1.6 cm matte paperboard (nearly square, slightly taller than wide, ~25 g); Extra Strength pouch 17.9 × 10.2 × 4.6 cm with a zipper below the top seal, tear notches, gusseted bottom; gum piece ~15–16 mm round tablet, 7–8 mm thick, white with coloured flecks (green Spearmint/Wintergreen, blue Peppermint, red Cinnamon), embossed wave N. Wan 3.0 Prime once rendered a 6-piece carton at half-torso size: always state the real size against a scene object (e.g. "a third of the water bottle's height, smaller than his hand"), and treat an oversized carton as a regenerate reason.
 
 Related: [[capcut-text-preset-locked]], [[celsius-no-orange-flavor]].
