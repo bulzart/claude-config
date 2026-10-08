@@ -2645,8 +2645,72 @@ def _ce_parse(text: str) -> list:
             cur[last] = m.group(2).strip()
             continue
         if last and line.startswith("  ") and line.strip():
-            cur[last] = (cur[last] + " " + line.strip()).strip()
+            body = line[2:]
+            if last in ("brief", "prompt", "qc"):
+                if body.strip().startswith("```"):
+                    continue
+                cur[last] = (cur[last] + "\n" + body).strip("\n")
+            else:
+                cur[last] = (cur[last] + " " + line.strip()).strip()
     return entries
+
+
+def _ce_text_or_file(v):
+    """A literal text, or a file path: a .md/.txt file is read whole; a request .json gives its prompt."""
+    if not v:
+        return ""
+    p = Path(str(v))
+    try:
+        if p.is_file():
+            raw = p.read_bytes().decode("utf-8", "replace").replace("\r\n", "\n")
+            if p.suffix.lower() == ".json":
+                try:
+                    j = json.loads(raw)
+                    if isinstance(j, dict):
+                        if isinstance(j.get("prompt"), str):
+                            return j["prompt"].strip()
+                        if isinstance(j.get("params"), dict) and isinstance(j["params"].get("prompt"), str):
+                            return j["params"]["prompt"].strip()
+                except ValueError:
+                    pass
+            return raw.strip("\n")
+    except OSError:
+        pass
+    return str(v)
+
+
+def _ce_autofind(run, video) -> dict:
+    """The run's own files for a video: 40-briefs/video-NN-brief.md, the newest request json, the plan."""
+    found = {}
+    if not run or not video:
+        return found
+    rd = Path(str(run))
+    if not rd.exists():
+        rd = ATP_HOME / "runs" / str(run)
+    if not rd.exists():
+        return found
+    v = str(video).strip()
+    m = re.search(r"(\d{1,3})", v)
+    nn = m.group(1).zfill(2) if m else v
+    b = rd / "40-briefs" / f"video-{nn}-brief.md"
+    if b.is_file():
+        found["brief"] = b
+    plan = rd / "40-briefs" / f"video-{nn}-plan.md"
+    if plan.is_file():
+        found["plan"] = plan
+    reqs = [p for p in (rd / "50-requests").glob(f"video-{nn}*-request.json")] if (rd / "50-requests").is_dir() else []
+    if reqs:
+        found["prompt"] = max(reqs, key=lambda p: p.stat().st_mtime)
+    return found
+
+
+def _ce_block_field(name: str, text: str) -> str:
+    """A multi-line field as an indented fenced block (the parser joins the lines back)."""
+    text = (text or "").strip("\n")
+    if not text:
+        return f"- **{name}:** not recorded\n"
+    lines = "\n".join("  " + l for l in text.splitlines())
+    return f"- **{name}:**\n  ```text\n{lines}\n  ```\n"
 
 
 def cmd_caught_error(a):
@@ -2697,6 +2761,16 @@ def cmd_caught_error(a):
         cid = f"CE-{(max(ids) + 1) if ids else 1:03d}"
         date = a.date or dt.date.today().isoformat()
         user = a.user.strip().strip('"')
+        auto = _ce_autofind(a.run, a.video)
+        brief = _ce_text_or_file(a.brief) or (_ce_text_or_file(auto["brief"]) if "brief" in auto else "")
+        prompt = _ce_text_or_file(a.prompt) or (_ce_text_or_file(auto["prompt"]) if "prompt" in auto else "")
+        qc = _ce_text_or_file(a.qc)
+        plan = a.plan or (str(auto["plan"]) if "plan" in auto else "")
+        attached = [k for k, v in (("brief", brief), ("prompt", prompt), ("qc", qc), ("plan", plan)) if v]
+        ctx = (_ce_block_field("brief", brief)
+               + _ce_block_field("prompt", prompt)
+               + _ce_block_field("qc", qc)
+               + f"- **plan:** {plan or 'not recorded'}\n")
         block = (f"\n## {cid} · {date} · {a.title.strip()}\n"
                  f"- **video:** {a.video or 'unknown'}\n"
                  f"- **run:** {a.run or 'unknown'}\n"
@@ -2705,6 +2779,7 @@ def cmd_caught_error(a):
                  f"- **product:** {a.product or 'unknown'}\n"
                  f"- **user said:** \"{user}\"\n"
                  f"- **what was wrong:** {a.wrong.strip()}\n"
+                 + ctx +
                  f"- **class:** {a.cls or 'new'}\n"
                  f"- **cause:** {a.cause}\n"
                  f"- **fix:** {a.fix or 'none yet'}\n"
@@ -2712,8 +2787,11 @@ def cmd_caught_error(a):
                  f"- **status:** {a.status or 'open'}\n"
                  f"- **promoted to:** {a.promoted_to or '—'}\n")
         CAUGHT_ERRORS.write_bytes((text.rstrip("\n") + "\n" + block).encode("utf-8"))
+    missing_ctx = [k for k in ("brief", "prompt") if k not in attached]
     out({"ok": True, "id": cid, "date": date, "title": a.title.strip(), "file": str(CAUGHT_ERRORS),
-         "note": "promote the rule into its reference when it is general or recurs, then `caught-error set --status promoted --promoted-to …`"})
+         "attached": attached, "missing": missing_ctx,
+         "note": ("attach the brief and the final prompt (--brief/--prompt, text or file; or --run + --video to find them) so the cause can be read; " if missing_ctx else "")
+                 + "promote the rule into its reference when it is general or recurs, then `caught-error set --status promoted --promoted-to …`"})
 
 
 def _px_span(spec: str, what: str) -> float:
@@ -3668,6 +3746,10 @@ def main():
     p.add_argument("--rule", help="add: the general rule, as a kind not an instance")
     p.add_argument("--status", choices=CE_STATUS, help="add: initial status (open); set: new status; list: filter")
     p.add_argument("--promoted-to", help="set: the reference and section the rule was promoted into")
+    p.add_argument("--brief", help="add: the video's brief, as text or a file (default: <run>/40-briefs/video-NN-brief.md when --run and --video are given)")
+    p.add_argument("--prompt", help="add: the final prompt sent, as text or a request .json (default: the newest <run>/50-requests/video-NN*-request.json)")
+    p.add_argument("--qc", help="add: the QC verdict and its reasons, as text or a file")
+    p.add_argument("--plan", help="add: the plan file path (default: <run>/40-briefs/video-NN-plan.md)")
     p.add_argument("--grep", help="list: substring over the whole entry"); p.add_argument("--rules", action="store_true", help="list: ids and rules only")
     p.set_defaults(fn=cmd_caught_error)
 

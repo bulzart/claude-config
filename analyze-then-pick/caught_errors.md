@@ -13,7 +13,7 @@ record. The build prompt is updated after a promotion.
 Write entries with the toolkit, never by hand, so the ids and the format stay parseable:
 
 ```
-T caught-error add --title "<short title>" --video "<video or CapCut project>" --run "<run id>" --mode <analyze-recreate|analyze-create|edit> --model <model id> --product "<client product>" --user "<the user's words, verbatim>" --wrong "<what was wrong, diagnosed>" --class "<reference and section>" --cause <prompt|reference|parameter|plan|qc-miss|model-limit|unknown> --fix "<what was done>" --rule "<the general rule, as a kind not an instance>"
+T caught-error add --title "<short title>" --video "<video or CapCut project>" --run "<run id>" --mode <analyze-recreate|analyze-create|edit> --model <model id> --product "<client product>" --user "<the user's words, verbatim>" --wrong "<what was wrong, diagnosed>" --class "<reference and section>" --cause <prompt|reference|parameter|plan|qc-miss|model-limit|unknown> --fix "<what was done>" --rule "<the general rule, as a kind not an instance>" [--brief <text|file>] [--prompt <text|request.json>] [--qc <text|file>] [--plan <file>]
 T caught-error list [--mode …] [--model …] [--class …] [--status open|fixed|promoted] [--grep …] [--rules]
 T caught-error set --id CE-003 --status promoted --promoted-to "anomaly-catalog.md §2.14"
 ```
@@ -25,6 +25,18 @@ in pipeline terms: which checkpoint, frame or beat, what the ledger or the plan 
 plan, qc-miss, model-limit, unknown), **fix** (regenerate with what change, post-fix, none),
 **rule** (one line, general, the kind of error and the check that catches it), **status**
 (open, fixed, promoted), **promoted to**.
+
+**The video's brief travels with the error.** Every entry carries the context that explains the
+cause: the **brief** of that video (the X6 brief, saved as `<run>/40-briefs/video-NN-brief.md`:
+concept, why it works, reference pattern, assets, substitutions and placement, main action and
+states, counts and use, size, style and camera, text, inserts, sound, model and operation,
+adaptation logic, guardrails, caught errors applied), the final **prompt** sent (from the newest
+`<run>/50-requests/video-NN*-request.json`), the **qc** verdict with its reasons, and the **plan**
+path. With `--run` and `--video` the command finds the brief, the prompt and the plan itself;
+`--brief`, `--prompt` and `--qc` take a text or a file when the run is not at hand (a video
+delivered in an earlier session, a brief the user pastes). An entry without its brief says "not
+recorded" and the command names what is missing. Reading an entry, the diagnosis is checked
+against the brief and the prompt: what the plan intended, what the prompt said, what came out.
 
 How agents use it:
 - **Analysis and planning:** an entry about a product family, a model or a mode applies to every
@@ -48,6 +60,10 @@ How agents use it:
 - **product:** energy capsules
 - **user said:** "in the beginning there were 3 capsules in the desk, the kid in the video continues walking past them and then when it gets back there are only one capsule left (things should be persistent throughout the vide, except in logical reasons such as the guy eats 2 of them energy capsules"
 - **what was wrong:** the count of a multiple changed with no visible cause across an occlusion and a return; the ledger tracked only where the product was, not how many
+- **brief:** not recorded (reported from an earlier run; briefs were not saved then)
+- **prompt:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
 - **class:** anomaly-catalog.md §2.1 (counts and conservation), §2.5 (object permanence)
 - **cause:** plan
 - **fix:** the ledger carries counts per event; the prompt restates the number at t=0, each event and the end with a targeted exclusion; QC counts at every checkpoint on 30 fps sheets
@@ -63,6 +79,10 @@ How agents use it:
 - **product:** flip-top straw bottle
 - **user said:** "the mom fills his kid bottle with the milk and the kid in the video starts drinking from it … instead of drinking from its outing pipe it start drinking from the other way where the pipe is not present at all (the pipe stands on the left and it drinks from the right where there is not hole at all)"
 - **what was wrong:** a use beat went through a part with no opening; the product had no affordance sheet, so the prompt never named the spout, the flip-open step or the contact point
+- **brief:** not recorded (reported from an earlier run; briefs were not saved then)
+- **prompt:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
 - **class:** anomaly-catalog.md §2.2 (openings and use), §2.3 (preparation)
 - **cause:** plan
 - **fix:** affordance sheet per product in the registry; use beats written as initial state → operation on the named part → result with the contact point and one targeted exclusion; QC densifies every use beat
@@ -78,6 +98,10 @@ How agents use it:
 - **product:** plastic bottle
 - **user said:** "the character tosses a paper and it goes just through our product, even though the product is a plastic object and the paper should not be able to travel through it"
 - **what was wrong:** a moving thing passed through the product; the plan had no path row for the toss relative to the product and the prompt no solidity exclusion
+- **brief:** not recorded (reported from an earlier run; briefs were not saved then)
+- **prompt:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
 - **class:** anomaly-catalog.md §2.14 (solidity, collision, occlusion)
 - **cause:** prompt
 - **fix:** path rows and occlusion notes in the ledger; every path written relative to the product (past it on a named side, or onto it with the consequence) plus the solidity exclusion; 30 fps QC at every pass-near, landing and hit; no post-fix
@@ -93,6 +117,10 @@ How agents use it:
 - **product:** Celsius Peach Vibe can
 - **user said:** "the can doesnt blend with the room environment, lights and props and even looks like a edit placement in photoshop and not a real product render"
 - **what was wrong:** the can carried its reference photo's lighting, exposure, sharpness, pose and camera angle into a warm dim room: brighter and cooler than the nearest white object, flat front light, no contact shadow, packshot pose squared to the lens, drawn straight-on while the camera looked up, crisper than the plate, alone on the dresser's edge
+- **brief:** not recorded (reported from a screenshot of an earlier run; the frame showed a POV caption, a boy in the foreground and the can on a dresser about 2.5 m back beside a water bottle)
+- **prompt:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
 - **class:** anomaly-catalog.md §2.15 (blend)
 - **cause:** reference
 - **fix:** the reference scoped to shape, proportions, colours and label with "do not use its lighting, exposure, background, shadow or camera angle"; the prompt states the room's light on the product, its contact shadow like the neighbour's and the scene's camera angle; the anchor touches or is partly occluded by something; the eleven-sign paste test in QC
@@ -108,6 +136,10 @@ How agents use it:
 - **product:** Celsius Peach Vibe can
 - **user said:** "the can's size proportions are way off (it is so big) if they get calculated in comparison with the distance and the size,width and other details of the can"
 - **what was wrong:** a 15.7 cm can about 2.5 m from the camera filled over an eighth of the frame height and stood taller than the 22 cm bottle beside it, about 2.75× its expected size; the plan had no size reckoning (dimensions, depth, lens, neighbour)
+- **brief:** not recorded (same frame as CE-004)
+- **prompt:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
 - **class:** anomaly-catalog.md §2.7 (scale and proportion)
 - **cause:** plan
 - **fix:** real dimensions in the registry; a size reckoning per product per shot (depth, lens, expected fraction of the frame, ratio to a named neighbour, size ladder, constancy) in the plan and the prompt; `T scale` on a frame at rest, one in use and the last; over 25 % regenerates with no post-fix

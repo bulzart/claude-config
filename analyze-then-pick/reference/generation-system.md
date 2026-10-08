@@ -1019,6 +1019,10 @@ Adaptation logic: <what was changed from the reference and why (geometry, grip, 
 For a multi-clip video, add one line: `Clips: K — <seam times and methods (cut / extension /
 last-frame chain)>`.
 
+The brief is also saved as `40-briefs/video-NN-brief.md` (command X6): a caught-error entry
+(`ATP/caught_errors.md`, item 22) carries it with the final prompt and the QC verdict, so a
+reported problem can be read against what was planned and what was asked.
+
 In Analyze Mode, proceed after showing the brief. The only pause is the permission for a video over
 30 s that needs 2+ generations (command A7b). Uncertainties are resolved by the plan's own rules and
 stated in the brief's adaptation line, not asked. In Edit Mode, the gates of command E6 and X9-R

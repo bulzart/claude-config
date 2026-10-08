@@ -290,8 +290,12 @@ You are running the **/analyze-then-pick** command.
     (`ATP/caught_errors.md`, written only with `T caught-error`). Whenever the user says a
     delivered video is wrong, in the run or in a later session, an entry is written first, with
     their words verbatim, the diagnosis in pipeline terms, the class (reference and section), the
-    cause (prompt, reference, parameter, plan, qc-miss, model-limit), the fix and a general rule;
-    Edit Mode's "Needs changes" always writes one. Every run reads the ledger at the start (A1,
+    cause (prompt, reference, parameter, plan, qc-miss, model-limit), the fix and a general rule,
+    **and the video's brief, the final prompt and the QC verdict** so the cause can be read
+    against what was planned and asked (with `--run` and `--video` the command attaches the saved
+    brief, the newest request's prompt and the plan path itself; `--brief`, `--prompt`, `--qc`
+    take text or a file for a video from an earlier session); Edit Mode's "Needs changes" always
+    writes one. Every run reads the ledger at the start (A1,
     E1) and writes the entries that apply (same mode, model, product family or class) to
     `20-analysis/caught-errors.md`; every plan names the entries it applies, every prompt carries
     their rules in the model's phrasing, and X9 checks each applied entry by id in the verdict.
@@ -335,8 +339,12 @@ You are running the **/analyze-then-pick** command.
    **Feedback first.** If `$ARGUMENTS` or the opening message reports a delivered video as wrong
    (it names a video, a CapCut project or a run and says what was not right), record it before
    anything else: `T caught-error add` with the user's words verbatim, the diagnosis, the class,
-   the cause, the fix if known and the rule (item 22). Then offer the fix (a re-edit or a
-   regeneration of that video in its mode) in one line, and continue only if the user wants it.
+   the cause, the fix if known and the rule, plus the video's brief and prompt (item 22): find
+   the run under `ATP/runs/` by the video's CapCut project name or date and pass `--run` and
+   `--video` so they attach themselves; when the run cannot be found, ask the user once for the
+   brief or the prompt they used, or record it with "not recorded" and say so. Then offer the fix
+   (a re-edit or a regeneration of that video in its mode) in one line, and continue only if the
+   user wants it.
    **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate` or `create`, use it. Otherwise ask
    with AskUserQuestion (header "Analyze as"):
    - **Recreate**: "Analyze the references, then recreate N of them with your product and
@@ -1146,6 +1154,9 @@ files as video K".
     characters/assets, substitutions, main action and states, style/camera, text plan, model /
     operation / duration / 9:16 720p, cost, adaptation logic. In Edit Mode and Recreate it also names
     the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
+  - Save it as `40-briefs/video-NN-brief.md` (an attempt or clip appends its own block under the
+    first), so a later caught-error entry can carry it (item 22): `T caught-error add --run RUN
+    --video NN` attaches the brief, the newest request's prompt and the plan path by itself.
   - Analyze Mode: no gate; the brief is information (item 15). Edit Mode: the E6 gate.
 - **X7 — Submit and wait (ledger-guarded; no spam, no glitches).**
   1. `T ledger begin --run RUN --video NN --attempt K --request 50-requests/video-NN[-aK]-request.json`
@@ -1321,8 +1332,10 @@ files as video K".
      - **"Needs changes"** → ask in plain chat what to change, and let them add or replace files.
        Record it before re-editing: `T caught-error add --mode edit --video <N> --run <RUN>
        --model <id> --user "<their words>" --wrong "<diagnosis>" --class "<reference §>"
-       --cause <…> --rule "<general rule>"` (item 22); the fix is set on the entry once the next
-       attempt is approved (`T caught-error set --id CE-nnn --status fixed --fix "<what changed>"`).
+       --cause <…> --rule "<general rule>" --qc "<the X9 verdict and its reasons>"` (item 22;
+       the brief, the attempt's prompt and the plan attach themselves from the run); the fix is
+       set on the entry once the next attempt is approved (`T caught-error set --id CE-nnn
+       --status fixed --fix "<what changed>"`).
      - **"Stop here"** → keep the files, go to the wrap-up.
      "Other" lets the user type the changes directly.
   3. **Re-edit from the original.** A new attempt always starts from the **original source video**

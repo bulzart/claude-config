@@ -22,7 +22,11 @@ promoted.
 rule the next runs apply, not a one-off fix.
 
 **How to apply:** when the user reports a bad video, run `atp.py caught-error add` FIRST (their
-words verbatim, diagnosis, class, cause, fix, general rule), then offer the fix. When a rule is
+words verbatim, diagnosis, class, cause, fix, general rule) WITH the video's brief, final prompt
+and QC verdict (user, 2026-10-08: "video brief should come along with the error"): pass `--run`
+and `--video` so the saved brief (`40-briefs/video-NN-brief.md`, saved at X6), the newest request
+prompt and the plan attach themselves, or `--brief/--prompt/--qc` as text or files; then offer
+the fix. When a rule is
 general or recurs, promote it into the right reference, `caught-error set --status promoted
 --promoted-to …`, and update the build prompt ([[atp-build-prompt-sync]]). Never edit the ledger
 by hand. Related: [[atp-anomaly-catalog]], [[atp-brand-guardrails]], [[atp-creative-direction]].
