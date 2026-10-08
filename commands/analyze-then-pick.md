@@ -281,7 +281,11 @@ You are running the **/analyze-then-pick** command.
     Recreate the audit is the first filter of the ranking; in Create the rules are plan
     invariants; in Edit Mode the hits and the operations they require are shown and the user
     decides. The user's run instructions outrank the guardrails; the guardrails outrank the house
-    approach and the defaults; they never relax a hard rule; none is invented.
+    approach and the defaults; they never relax a hard rule; none is invented. **The pipeline has
+    no content rules of its own:** without a guardrail document only the copyright and ownership
+    floor (`generation-system.md` §9b rows 1–6) and the generation service's blocks apply;
+    alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
+    them, and nothing is blurred, softened or removed for taste.
 
 ## 1. Paths and tools
 
@@ -1234,10 +1238,13 @@ files as video K".
   - **House approach** (when examples exist): the video follows the rules its plan applied.
   - **Contents** (`generation-system.md` §9): every vessel of the product's category shows the
     product's contents. A glass of water beside the can is a regenerate reason, never a note.
-    - Must not survive: the replaced person, the swapped or competitor product, overlay text,
-      handles, platform logos and watermarks, featured third-party branding, flaggable content.
-    - Background decor and clothing logos are fine. They are not reported, not asked about, and
-      never cost a retry. In Analyze Mode no QC question ever goes to the user.
+    - Must not survive: the copyright and ownership floor only (the replaced person, the swapped
+      or competitor product, overlay text, handles, platform logos and watermarks, featured
+      third-party branding, a copyrighted character as the subject), what the generation service
+      refuses, and the hits a client guardrail names.
+    - Background decor, clothing logos, meme faces and all brand-dependent content that no
+      guardrail names are fine. They are not reported, not asked about, never softened and never
+      cost a retry. In Analyze Mode no QC question ever goes to the user.
   - For a placement, also check the product's spot across the sheets, densified around cuts and
     pickups. These are regenerate reasons:
     - it is missing or unrecognisable;
@@ -1394,6 +1401,12 @@ video).
 - Never plan a Create video from a single unscored idea, a generic "person enjoys product" beat,
   an explained joke or a dated surface element; never let two videos of a run share a situation or
   a joke; never let the creative layer override a hard rule (`creative-direction.md`).
+- Never blur, soften, crop out, remove or avoid content that no client guardrail and no copyright
+  floor names (meme faces, alcohol, weapons, fake blood, profanity, cameos, …); the floor (the
+  replaced person, the swapped or competitor product, overlay text and handles, platform logos
+  and watermarks, featured third-party branding, copyrighted characters as the subject) and the
+  generation service's blocks always stand, and a brand rule never removes them
+  (`generation-system.md` §9b).
 - Never pick a reference whose core a guardrail bans, and never dismiss one for a peripheral hit
   that an edit removes without changing what the video is about; never blur, pixelate or cover a
   competitor's mark (remove it and keep the object); never leave an excluded person's face in any

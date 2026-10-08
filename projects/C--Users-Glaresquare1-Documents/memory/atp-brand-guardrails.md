@@ -24,7 +24,12 @@ production-agents; Seedance/Wan de-brand phrasing; README; build prompt.
 edit logic; the user wants references kept whenever an edit fixes the hit without changing the
 video's meaning, and dropped only when the rule hits the video's core.
 
-**How to apply:** precedence is user instructions > guardrails > house approach > defaults;
+**How to apply:** the pipeline has NO content rules of its own (user, 2026-10-08): by default only
+the copyright/ownership floor (replaced person, swapped or competitor product, overlay text and
+handles, platform logos and watermarks, featured third-party branding, copyrighted character as
+subject) and what Higgsfield refuses to render apply; alcohol, weapons, gore, profanity, meme
+faces, cameos stay as the reference shows them unless a client guardrail names them; never blur
+or soften anything for taste. Precedence is user instructions > guardrails > house approach > defaults;
 guardrails never relax hard rules; never invent a rule; competitor = named or same category as
 the client's product. New rule kinds or cases go into `brand-guardrails.md` §2–§3, then the build
 prompt. Related: [[atp-anomaly-catalog]], [[atp-creative-direction]], [[atp-build-prompt-sync]].

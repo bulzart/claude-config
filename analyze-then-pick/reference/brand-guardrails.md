@@ -25,7 +25,14 @@ The guardrails are the client's **authoritative requirements** (`analysis-protoc
 user's instructions for the run outrank them, they outrank the house approach and the pipeline's
 defaults, and they never relax a hard rule (physics and continuity, the must-not-survive list, the
 permission rule, the house text style, the model lock). Nothing is dismissed without a quoted rule,
-and no rule is invented: without a guardrail document, `generation-system.md` §9b alone applies.
+and no rule is invented. **The pipeline has no content rules of its own.** Without a guardrail
+document, only the copyright and ownership floor of `generation-system.md` §9b (the replaced
+person, the swapped or competitor product, overlay text and handles, platform logos and
+watermarks, featured third-party branding, a copyrighted character as the subject) and the
+generation service's own blocks apply; alcohol, weapons, gore, profanity, meme faces, cameos and
+everything else stay exactly as the reference shows them, and nothing is blurred, pixelated,
+softened or removed for taste. A brand rule can add a content rule; it can never remove the floor
+or enable what the service refuses.
 
 ## 1. Finding and reading the guardrails (A2)
 
@@ -55,7 +62,7 @@ and no rule is invented: without a guardrail document, `generation-system.md` §
 
 | kind | examples | how it shows in a reference | editable when | operation when editable |
 |---|---|---|---|---|
-| **Content ban** | blood, gore, nudity, sexual content, drugs, alcohol, tobacco, vapes, weapons, dangerous stunts, hate symbols, profanity, minors consuming | the scene, a prop, a poster, a word in the caption, a word in the speech | the element is set dressing or one caption word, and nothing in the action touches it | remove the prop or poster ("Remove only …, reconstruct the wall"); rewrite the caption word; a spoken word cannot be edited (the original audio returns) |
+| **Content ban** (exists only when a client rule names it; the pipeline bans nothing by itself) | blood, gore, drugs, alcohol, tobacco, vapes, weapons, dangerous stunts, profanity, political or religious content, minors consuming, meme faces or cameos | the scene, a prop, a poster, a word in the caption, a word in the speech, an insert | the element is set dressing or one caption word, and nothing in the action touches it | remove the prop or poster ("Remove only …, reconstruct the wall"); rewrite the caption word; cut the insert; a spoken word cannot be edited (the original audio returns) |
 | **Quantity and consumption limit** | "two cans per day max", "one serving per video", no chugging, no mixing with alcohol, not as a pre-workout before X | the number of units in frame, how many are opened or drunk, what sits beside the product | the extra units are not handled and the count is not the joke | set the ledger count to the limit; "Remove only the third can …" with the surface reconstructed; the two that remain keep their spots and states |
 | **Competitor exclusion** | "no competitor brands on screen", no rival logos, no comparison | a rival can, bottle, pack, shell, bag, app or sign; a comparison; a brand name in speech or text | the rival object is not the subject and the video is not a comparison | **de-brand:** remove the name, the logo and any mark that identifies the brand from the object; keep the object, its shape, size, spot and light; when the trade dress alone names the brand (a green claw, a blue-and-silver livery), neutralise it to a plain colour. Never blur, pixelate or paint a block over it. The one analogous product is swapped for the client's product (`generation-system.md` §4); other rival units are de-branded or, when nothing touches them, removed. Non-competing brands stay unless §9b or another rule hits them |
 | **Likeness exclusion** | no ambassador likeness, no celebrities, no real people without a release, no minors | the person on screen; a reflection; an insert or meme that shows them; their name in text or speech; their voice | the person is a performer who is swapped (Recreate swaps every person) and the video is not about who they are | mandatory, complete face swap to a supplied character (face, hair, distinctive marks, reflections and mirrors); an insert that shows them is cut and not placed back; their name in text is dropped; the voice stays in the original audio and is named in the brief, unless the rule names the voice too, in which case a speaking appearance dismisses the reference |
