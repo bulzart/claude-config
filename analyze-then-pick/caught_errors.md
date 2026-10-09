@@ -274,7 +274,6 @@ How agents use it:
 - **status:** fixed
 - **promoted to:** —
 
-## CE-009 · 2026-10-08 · Neurogum carton rendered about 1.5x its real size
 - **video:** 16
 - **run:** 20261006-002423-05
 - **mode:** analyze-recreate
