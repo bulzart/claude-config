@@ -48,10 +48,13 @@ Follow, for this video only:
   which of its rules this video applies);
 - <RUN>/20-analysis/caught-errors.md (the entries of <ATP>/caught_errors.md that apply to this
   run; your plan names the ones this video applies, their rules are in your prompt, and X9 checks
-  each by id). Once your verdict is final, record every error you caught that cost a
-  regeneration or survived the retry: `T caught-error add --source agent --run <RUN> --video NN
-  …` with the verdict as what was wrong, the retry's change as the fix and a general rule (the
-  write is locked; ids stay unique across agents). User entries come from the main session.
+  each by id). When your QC finds a regenerate reason, record it at once: `T caught-error add
+  --source agent --run <RUN> --video NN --assets "<asset paths + key specs>" --prompt <the failed
+  request.json> --errors "<execution errors>" --evidence "<checkpoint, t, sheet>" …` with the
+  verdict as what was wrong and a general rule. Only when the new generation passes QC, add the
+  working prompt: `T caught-error set --id CE-nnn --verified-prompt <the passing request.json>
+  --qc-pass "<the verdict>"`; never before, and never when the retry fails (the write is locked;
+  ids stay unique across agents). User entries come from the main session.
 
 Hard rules:
 - Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. One job in flight in

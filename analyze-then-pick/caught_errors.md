@@ -28,7 +28,11 @@ T caught-error list [--mode …] [--model …] [--class …] [--status open|fixe
 T caught-error set --id CE-003 --status promoted --promoted-to "anomaly-catalog.md §2.14"
 ```
 
-Fields: **source** (user or agent), **video** (number or CapCut project name), **run**, **delivered** (the CapCut project,
+Fields: **source** (user or agent), **assets** (product and asset paths with key specs),
+**params** (model, mode, duration, format, media roles of the failed request), **errors**
+(execution errors), **evidence** (checkpoint, time range, sheet path), **verified prompt**,
+**prompt change** and **verified** (filled only after a passing regeneration),
+**video** (number or CapCut project name), **run**, **delivered** (the CapCut project,
 the final file, the credits and the run's QC verdict, read from the video's `result.json`),
 **mode**, **model**, **product**,
 **user said** (verbatim; the user's words are the evidence; "—" on an agent entry), **what was wrong** (the diagnosis
@@ -60,9 +64,25 @@ How agents use it:
 - **QC:** each applied entry is checked by id and written in the verdict ("CE-004: paste test
   passed, 0 signs"; "CE-005: can at 1.05× expected size vs the bottle"). A failed check is a
   regenerate reason when the entry's class says so.
-- **Recording, agent:** once a video's verdict is final, every error that cost a regeneration or
-  survived the retry is recorded with `--source agent` (production agents write it themselves; the
-  write is locked and the ids stay unique). A check that passed first time is not an entry.
+- **Recording, agent:** when QC catches an error that costs a regeneration, the agent records it at
+  once with `--source agent` and the data the next run needs, compact rather than long: the
+  product and asset paths with their key specs (`--assets`), the failed attempt's request
+  (`--prompt <request.json>`, from which the params are read), the execution errors
+  (`--errors`: Higgsfield errors, preflight adjustments, moderation, failed jobs), where it shows
+  (`--evidence`: checkpoint, time range, sheet path), the verdict as what was wrong, the class,
+  the cause and a general rule. Production agents write it themselves; the write is locked and the
+  ids stay unique. A check that passed first time is not an entry.
+- **The fix is inserted only when it is proven.** The entry's verified prompt stays "pending"
+  until the new generation comes back and passes QC; only then does the agent run
+  `T caught-error set --id CE-nnn --verified-prompt <the passing request.json> --qc-pass "<the
+  passing verdict>"`, which stores the working prompt, the sentence-level change from the failed
+  one and the params, and marks the entry fixed. If the retry fails too, the entry stays open with
+  no fix, and the second failure is noted in its errors. `--status fixed` is refused without a
+  passing verdict.
+- **Feeding the next run:** `T caught-error list --digest` gives the incoming agents a compact
+  view (product, assets, model and params, class, evidence, what was wrong, errors, rule, and for
+  verified entries the prompt change that worked). Plans reuse a verified prompt change in the
+  locked model's phrasing; an unverified entry tells only what to avoid.
 - **Recording, user:** after everything is delivered, the wrap-up asks the user for feedback.
   Whatever they say is wrong, then or in a later session, is recorded first, with their words
   verbatim and the video's details (CapCut project, final file, brief, prompt, the run's QC

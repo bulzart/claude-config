@@ -417,7 +417,10 @@ You are running the **/analyze-then-pick** command.
 ## 3. Analyze Mode
 
 ### A1. Inventory and preprocessing (deterministic, local)
-- **Caught errors first** (item 22): `T caught-error list` and read every entry. Write
+- **Caught errors first** (item 22): `T caught-error list --digest` and read every entry (the
+  compact view: product and assets, model and params, class, evidence, errors, rule, and the
+  verified prompt change where one exists). A verified prompt change is reused in the locked
+  model's phrasing; an unverified entry tells only what to avoid. Write
   `20-analysis/caught-errors.md`: the entries that apply to this run (same mode, the locked model,
   the client's product family, or a class any video may hit) with their rules, one line each, and
   which step applies each (plan, prompt, QC, ideation). Promoted entries are listed by their
@@ -1278,12 +1281,16 @@ files as video K".
     fixed autonomously.
   - **Caught errors** (item 22): each applied entry checked by id and written in the verdict
     ("CE-004: paste test 0 signs"; "CE-005: can at 1.05× expected vs the bottle"); a failed check
-    is a regenerate reason when the entry's class says so. Once the verdict is final, every
-    regenerate reason found here, and every failure that survived the retry, is recorded:
-    `T caught-error add --source agent --run RUN --video NN --mode … --model … --title "…"
-    --wrong "<the verdict>" --class "<reference §>" --cause <…> --fix "<the retry's change>"
-    --rule "<general rule>"`. A new failure the user later reports becomes a user entry, never a
-    silent fix.
+    is a regenerate reason when the entry's class says so. Every regenerate reason found here is
+    recorded at once, compact and complete for the next run's agents: `T caught-error add
+    --source agent --run RUN --video NN --mode … --model … --product "…" --assets "<asset paths +
+    key specs>" --prompt <the failed request.json> --errors "<execution errors, adjustments,
+    moderation>" --evidence "<checkpoint, t range, sheet path>" --title "…" --wrong "<the
+    verdict>" --class "<reference §>" --cause <…> --rule "<general rule>"`. The working prompt is
+    inserted **only after the new generation passes QC**: `T caught-error set --id CE-nnn
+    --verified-prompt <the passing request.json> --qc-pass "<the passing verdict>"` (the tool
+    refuses a fix without a passing verdict). If the retry fails too, the entry stays open with no
+    fix. A new failure the user later reports becomes a user entry, never a silent fix.
   - **Guardrails** (`brand-guardrails.md` §5): the count limit at every checkpoint; `T qc` OCR
     with no competitor name and a full-resolution look at every de-branded object (no logo,
     claw, crest or livery, no blur, no patch); the identity check over every shot, reflection and

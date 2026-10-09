@@ -2646,7 +2646,7 @@ def _ce_parse(text: str) -> list:
             continue
         if last and line.startswith("  ") and line.strip():
             body = line[2:]
-            if last in ("brief", "prompt", "qc"):
+            if last in ("brief", "prompt", "qc", "verified_prompt", "prompt_change", "errors"):
                 if body.strip().startswith("```"):
                     continue
                 cur[last] = (cur[last] + "\n" + body).strip("\n")
@@ -2717,6 +2717,50 @@ def _ce_autofind(run, video) -> dict:
     return found
 
 
+def _ce_params(src) -> str:
+    """Compact generation parameters from a request .json: model, mode, duration, format, media roles."""
+    if not src:
+        return ""
+    p = Path(str(src))
+    if not (p.is_file() and p.suffix.lower() == ".json"):
+        return ""
+    try:
+        j = json.loads(p.read_bytes().decode("utf-8"))
+    except (ValueError, OSError):
+        return ""
+    prm = j.get("params") if isinstance(j.get("params"), dict) else j
+    bits = []
+    for k in ("model", "mode", "duration", "duration_policy", "aspect_ratio", "resolution", "generate_audio", "enable_thinking"):
+        if k in prm:
+            bits.append(f"{k}={prm[k]}")
+    roles = {}
+    for m in prm.get("medias") or []:
+        if isinstance(m, dict):
+            r = m.get("role", "?")
+            roles[r] = roles.get(r, 0) + 1
+    if roles:
+        bits.append("medias=" + ", ".join(f"{r}×{n}" if n > 1 else r for r, n in roles.items()))
+    bits.append(f"request={p.name}")
+    return " · ".join(bits)
+
+
+def _ce_sentence_diff(old: str, new: str, cap: int = 14) -> str:
+    """What changed between the failed and the verified prompt, sentence by sentence (- removed, + added)."""
+    import difflib
+    def sp(t):
+        return [s.strip() for s in re.split(r"(?<=[.;!?])\s+|\n+", t or "") if s.strip()]
+    a_, b_ = sp(old), sp(new)
+    lines = []
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a_, b_, autojunk=False).get_opcodes():
+        if op in ("replace", "delete"):
+            lines += ["- " + s[:300] for s in a_[i1:i2]]
+        if op in ("replace", "insert"):
+            lines += ["+ " + s[:300] for s in b_[j1:j2]]
+    if len(lines) > cap:
+        lines = lines[:cap] + [f"… {len(lines) - cap} more changed sentences"]
+    return "\n".join(lines)
+
+
 def _ce_block_field(name: str, text: str) -> str:
     """A multi-line field as an indented fenced block (the parser joins the lines back)."""
     text = (text or "").strip("\n")
@@ -2741,7 +2785,20 @@ def cmd_caught_error(a):
             if a.grep and a.grep.lower() not in json.dumps(e, ensure_ascii=False).lower(): return False
             return True
         sel = [e for e in entries if keep(e)]
-        if a.rules:
+        if a.digest:
+            def short(s, n=240):
+                s = re.sub(r"\s+", " ", s or "").strip()
+                return s if len(s) <= n else s[:n - 1] + "…"
+            skip = ("", "not recorded", "none", "unknown", "—")
+            sel = [{k: v for k, v in {
+                "id": e["id"], "title": e["title"], "source": e.get("source", "user"), "status": e.get("status", ""),
+                "mode": e.get("mode", ""), "model": e.get("model", ""), "product": e.get("product", ""),
+                "assets": e.get("assets", ""), "class": e.get("class", ""), "evidence": e.get("evidence", ""),
+                "wrong": short(e.get("what_was_wrong", "")), "params": e.get("params", ""),
+                "errors": short(e.get("errors", ""), 300), "rule": e.get("rule", ""),
+                "verified": e.get("verified", ""), "prompt_change": e.get("prompt_change", ""),
+            }.items() if v not in skip} for e in sel]
+        elif a.rules:
             sel = [{"id": e["id"], "title": e["title"], "class": e.get("class", ""), "status": e.get("status", ""),
                     "rule": e.get("rule", "")} for e in sel]
         out({"ok": True, "file": str(CAUGHT_ERRORS), "total": len(entries), "count": len(sel), "entries": sel})
@@ -2756,6 +2813,31 @@ def cmd_caught_error(a):
             nxt = re.search(r"^## CE-", text[m.end():], re.M)
             s, e = m.start(), (m.end() + nxt.start()) if nxt else len(text)
             block = text[s:e]
+            if a.status == "fixed" and not a.qc_pass:
+                fail("--status fixed needs --qc-pass: the verdict of the regenerated (or re-edited) video that passed QC "
+                     "or that the user approved; a fix is recorded only once it is verified", 2)
+            if a.verified_prompt:
+                if not a.qc_pass:
+                    fail("--verified-prompt needs --qc-pass: insert the working prompt only after the new generation "
+                         "came back correct and passed QC", 2)
+                vp = _ce_text_or_file(a.verified_prompt)
+                pm = re.search(r"^- \*\*prompt:\*\*\n  ```text\n(.*?)\n  ```", block, re.S | re.M)
+                old_prompt = "\n".join(l[2:] for l in pm.group(1).splitlines()) if pm else ""
+                change = _ce_sentence_diff(old_prompt, vp) if old_prompt else ""
+                vparams = _ce_params(a.verified_prompt)
+                new_fields = (_ce_block_field("verified prompt", vp)
+                              + _ce_block_field("prompt change", change or "not computed (the entry has no failed prompt)")
+                              + (f"- **verified params:** {vparams}\n" if vparams else ""))
+                block, n = re.subn(r"^- \*\*verified prompt:\*\* pending.*\n", lambda m: new_fields, block, count=1, flags=re.M)
+                if not n:
+                    block = block.rstrip("\n") + "\n" + new_fields + ("\n" if nxt else "")
+                a.status = a.status or "fixed"
+                a.fix = a.fix or "regenerated with the verified prompt; see prompt change"
+            if a.qc_pass:
+                vline = f"- **verified:** {a.qc_pass.strip()} ({dt.date.today().isoformat()})\n"
+                block, n = re.subn(r"^- \*\*verified:\*\* .*\n", lambda m: vline, block, count=1, flags=re.M)
+                if not n:
+                    block = block.rstrip("\n") + "\n" + vline + ("\n" if nxt else "")
             for key, val in (("status", a.status), ("promoted to", a.promoted_to), ("fix", a.fix)):
                 if val:
                     block, n = re.subn(rf"^- \*\*{key}:\*\* .*$", f"- **{key}:** {val}", block, count=1, flags=re.M)
@@ -2784,9 +2866,15 @@ def cmd_caught_error(a):
         qc = _ce_text_or_file(a.qc) or auto.get("qc", "")
         delivered = a.delivered or auto.get("delivered", "")
         plan = a.plan or (str(auto["plan"]) if "plan" in auto else "")
+        req_src = a.prompt if (a.prompt and str(a.prompt).lower().endswith(".json")) else (None if a.prompt else auto.get("prompt"))
+        params = a.params or _ce_params(req_src)
+        errors = _ce_text_or_file(a.errors)
         attached = [k for k, v in (("brief", brief), ("prompt", prompt), ("qc", qc), ("plan", plan)) if v]
         ctx = (_ce_block_field("brief", brief)
                + _ce_block_field("prompt", prompt)
+               + f"- **params:** {params or 'not recorded'}\n"
+               + (_ce_block_field("errors", errors) if errors else "- **errors:** none\n")
+               + f"- **evidence:** {a.evidence or 'not recorded'}\n"
                + _ce_block_field("qc", qc)
                + f"- **plan:** {plan or 'not recorded'}\n")
         block = (f"\n## {cid} · {date} · {a.title.strip()}\n"
@@ -2797,12 +2885,14 @@ def cmd_caught_error(a):
                  f"- **mode:** {a.mode or 'unknown'}\n"
                  f"- **model:** {a.model or 'unknown'}\n"
                  f"- **product:** {a.product or 'unknown'}\n"
+                 f"- **assets:** {a.assets or 'not recorded'}\n"
                  f"- **user said:** {said}\n"
                  f"- **what was wrong:** {a.wrong.strip()}\n"
                  + ctx +
                  f"- **class:** {a.cls or 'new'}\n"
                  f"- **cause:** {a.cause}\n"
                  f"- **fix:** {a.fix or 'none yet'}\n"
+                 f"- **verified prompt:** pending (inserted only after a new generation passes QC)\n"
                  f"- **rule:** {a.rule.strip()}\n"
                  f"- **status:** {a.status or 'open'}\n"
                  f"- **promoted to:** {a.promoted_to or '—'}\n")
@@ -3773,6 +3863,13 @@ def main():
     p.add_argument("--source", choices=["user", "agent"], default="user",
                    help="add: user = the user's feedback (--user required); agent = an error an agent caught during the run")
     p.add_argument("--delivered", help="add: what was delivered (CapCut project, final file); default from <run>/60-outputs/video-NN/result.json")
+    p.add_argument("--assets", help="add: product/asset files used + key specs, e.g. '<path> (9-piece carton 7.5×7.5×1.6 cm)'")
+    p.add_argument("--params", help="add: generation params (default: read from the failed request .json)")
+    p.add_argument("--errors", help="add: execution errors (Higgsfield errors, preflight adjustments, moderation, failed jobs), text or file")
+    p.add_argument("--evidence", help="add: where it shows: checkpoint, time range, sheet or frame path")
+    p.add_argument("--verified-prompt", help="set: the prompt (text or request .json) of the regeneration that PASSED QC; needs --qc-pass")
+    p.add_argument("--qc-pass", help="set: the passing verdict of the new generation (or the user's approval); required for --status fixed")
+    p.add_argument("--digest", action="store_true", help="list: compact context for the next run's agents (no briefs or full prompts)")
     p.add_argument("--grep", help="list: substring over the whole entry"); p.add_argument("--rules", action="store_true", help="list: ids and rules only")
     p.set_defaults(fn=cmd_caught_error)
 

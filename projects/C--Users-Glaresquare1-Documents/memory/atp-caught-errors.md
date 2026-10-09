@@ -26,6 +26,12 @@ rule the next runs apply, not a one-off fix.
 wrap-up asks the user for feedback once everything is delivered (AskUserQuestion "Feedback";
 each named problem → `--source user`, verbatim, with delivered details from result.json).
 
+**Agent entries carry compact, useful data (user, 2026-10-09):** `--assets` (paths + key specs),
+`--prompt <failed request.json>` (params auto-read), `--errors` (execution errors), `--evidence`
+(checkpoint, t, sheet). The working prompt is inserted ONLY after the new generation passes QC
+(`set --verified-prompt <passing request.json> --qc-pass "<verdict>"`; the tool refuses
+`--status fixed` without a passing verdict) — never on assumption. Runs read `list --digest`.
+
 **How to apply:** when the user reports a bad video, run `atp.py caught-error add` FIRST (their
 words verbatim, diagnosis, class, cause, fix, general rule) WITH the video's brief, final prompt
 and QC verdict (user, 2026-10-08: "video brief should come along with the error"): pass `--run`
