@@ -297,7 +297,12 @@ You are running the **/analyze-then-pick** command.
     against what was planned and asked (with `--run` and `--video` the command attaches the saved
     brief, the newest request's prompt and the plan path itself; `--brief`, `--prompt`, `--qc`
     take text or a file for a video from an earlier session); Edit Mode's "Needs changes" always
-    writes one. Every run reads the ledger at the start (A1,
+    writes one. **Two sources feed it:** the agents record, with `--source agent`, every error
+    they caught that cost a regeneration or survived the retry (after fixing it, as always); and
+    once every video is delivered, the wrap-up **asks the user for feedback**, and each problem
+    they name is recorded with `--source user` and the video's details (CapCut project, final
+    file, credits and the run's QC verdict, read from `result.json`). A user entry outranks an
+    agent entry on the same point. Every run reads the ledger at the start (A1,
     E1) and writes the entries that apply (same mode, model, product family or class) to
     `20-analysis/caught-errors.md`; every plan names the entries it applies, every prompt carries
     their rules in the model's phrasing, and X9 checks each applied entry by id in the verdict.
@@ -1273,8 +1278,12 @@ files as video K".
     fixed autonomously.
   - **Caught errors** (item 22): each applied entry checked by id and written in the verdict
     ("CE-004: paste test 0 signs"; "CE-005: can at 1.05× expected vs the bottle"); a failed check
-    is a regenerate reason when the entry's class says so. A new failure the user later reports
-    becomes a new entry, never a silent fix.
+    is a regenerate reason when the entry's class says so. Once the verdict is final, every
+    regenerate reason found here, and every failure that survived the retry, is recorded:
+    `T caught-error add --source agent --run RUN --video NN --mode … --model … --title "…"
+    --wrong "<the verdict>" --class "<reference §>" --cause <…> --fix "<the retry's change>"
+    --rule "<general rule>"`. A new failure the user later reports becomes a user entry, never a
+    silent fix.
   - **Guardrails** (`brand-guardrails.md` §5): the count limit at every checkpoint; `T qc` OCR
     with no competitor name and a full-resolution look at every de-branded object (no logo,
     claw, crest or livery, no blur, no patch); the identity check over every shot, reflection and
@@ -1393,9 +1402,13 @@ Then give:
 - any open issues.
 
 Offer, in one line, the next useful step (more videos, a different direction, regenerate a flagged
-video). Add: "If any video is not right, tell me which and what is wrong; it goes into the caught
-errors ledger and the next runs learn from it." Any such reply, now or in a later session, is
-recorded with `T caught-error add` before the fix is offered (item 22).
+video). Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header
+"Feedback"), "Watch the videos: is any of them not right?": **"All good"**; **"I'll watch them
+later"** (any later message about them is still recorded); **"Some need fixes"** → ask in plain
+chat which video and what is wrong, disliked or illogical. "Other" lets the user type it
+directly. Each problem named, now or in a later session, is recorded with `T caught-error add
+--source user --run RUN --video NN --user "<their words>" …` (one entry per problem, the brief,
+prompt and delivered details attach themselves) before the fix is offered (item 22).
 
 ## 7. Never
 

@@ -2698,6 +2698,19 @@ def _ce_autofind(run, video) -> dict:
     plan = rd / "40-briefs" / f"video-{nn}-plan.md"
     if plan.is_file():
         found["plan"] = plan
+    res = rd / "60-outputs" / f"video-{nn}" / "result.json"
+    if res.is_file():
+        try:
+            r = json.loads(res.read_bytes().decode("utf-8"))
+            bits = [f"CapCut project {r['capcut_project']}" if r.get("capcut_project") else "",
+                    f"clean {r['clean']}" if r.get("clean") else "",
+                    f"credits {r['credits']}" if r.get("credits") is not None else "",
+                    f"run QC: {r['qc']}" if r.get("qc") else ""]
+            found["delivered"] = " · ".join(b for b in bits if b)
+            if r.get("qc"):
+                found["qc"] = str(r["qc"])
+        except (ValueError, OSError):
+            pass
     reqs = [p for p in (rd / "50-requests").glob(f"video-{nn}*-request.json")] if (rd / "50-requests").is_dir() else []
     if reqs:
         found["prompt"] = max(reqs, key=lambda p: p.stat().st_mtime)
@@ -2752,19 +2765,24 @@ def cmd_caught_error(a):
             CAUGHT_ERRORS.write_bytes(text.encode("utf-8"))
         out({"ok": True, "id": a.id, "status": a.status, "promoted_to": a.promoted_to, "file": str(CAUGHT_ERRORS)})
     # add
-    missing = [k for k in ("title", "user", "wrong", "rule") if not getattr(a, k)]
+    need = ("title", "wrong", "rule") if a.source == "agent" else ("title", "user", "wrong", "rule")
+    missing = [k for k in need if not getattr(a, k)]
     if missing:
-        fail("missing " + ", ".join("--" + k for k in missing) + " (the user's words, the diagnosis and the rule are required)", 2)
+        fail("missing " + ", ".join("--" + k for k in missing)
+             + (" (an agent entry needs the diagnosis and the rule)" if a.source == "agent"
+                else " (the user's words, the diagnosis and the rule are required)"), 2)
     with FileLock(CAUGHT_ERRORS.with_suffix(".lock")):
         text = CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n")
         ids = [int(x) for x in re.findall(r"^## CE-(\d{3,}) · ", text, re.M)]
         cid = f"CE-{(max(ids) + 1) if ids else 1:03d}"
         date = a.date or dt.date.today().isoformat()
-        user = a.user.strip().strip('"')
+        user = (a.user or "").strip().strip('"')
+        said = f"\"{user}\"" if user else "— (caught by the agent during the run)"
         auto = _ce_autofind(a.run, a.video)
         brief = _ce_text_or_file(a.brief) or (_ce_text_or_file(auto["brief"]) if "brief" in auto else "")
         prompt = _ce_text_or_file(a.prompt) or (_ce_text_or_file(auto["prompt"]) if "prompt" in auto else "")
-        qc = _ce_text_or_file(a.qc)
+        qc = _ce_text_or_file(a.qc) or auto.get("qc", "")
+        delivered = a.delivered or auto.get("delivered", "")
         plan = a.plan or (str(auto["plan"]) if "plan" in auto else "")
         attached = [k for k, v in (("brief", brief), ("prompt", prompt), ("qc", qc), ("plan", plan)) if v]
         ctx = (_ce_block_field("brief", brief)
@@ -2772,12 +2790,14 @@ def cmd_caught_error(a):
                + _ce_block_field("qc", qc)
                + f"- **plan:** {plan or 'not recorded'}\n")
         block = (f"\n## {cid} · {date} · {a.title.strip()}\n"
+                 f"- **source:** {a.source}\n"
                  f"- **video:** {a.video or 'unknown'}\n"
                  f"- **run:** {a.run or 'unknown'}\n"
+                 f"- **delivered:** {delivered or 'not recorded'}\n"
                  f"- **mode:** {a.mode or 'unknown'}\n"
                  f"- **model:** {a.model or 'unknown'}\n"
                  f"- **product:** {a.product or 'unknown'}\n"
-                 f"- **user said:** \"{user}\"\n"
+                 f"- **user said:** {said}\n"
                  f"- **what was wrong:** {a.wrong.strip()}\n"
                  + ctx +
                  f"- **class:** {a.cls or 'new'}\n"
@@ -3750,6 +3770,9 @@ def main():
     p.add_argument("--prompt", help="add: the final prompt sent, as text or a request .json (default: the newest <run>/50-requests/video-NN*-request.json)")
     p.add_argument("--qc", help="add: the QC verdict and its reasons, as text or a file")
     p.add_argument("--plan", help="add: the plan file path (default: <run>/40-briefs/video-NN-plan.md)")
+    p.add_argument("--source", choices=["user", "agent"], default="user",
+                   help="add: user = the user's feedback (--user required); agent = an error an agent caught during the run")
+    p.add_argument("--delivered", help="add: what was delivered (CapCut project, final file); default from <run>/60-outputs/video-NN/result.json")
     p.add_argument("--grep", help="list: substring over the whole entry"); p.add_argument("--rules", action="store_true", help="list: ids and rules only")
     p.set_defaults(fn=cmd_caught_error)
 

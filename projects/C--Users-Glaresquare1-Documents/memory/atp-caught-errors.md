@@ -21,6 +21,11 @@ promoted.
 **Why:** the user wants every dissatisfaction recorded in their own words and turned into a
 rule the next runs apply, not a one-off fix.
 
+**Sources (user, 2026-10-09):** agents ALSO feed the ledger (`--source agent`: errors caught in QC
+/ pre-gen / sync that cost a regeneration or survived the retry, recorded after the fix), AND the
+wrap-up asks the user for feedback once everything is delivered (AskUserQuestion "Feedback";
+each named problem → `--source user`, verbatim, with delivered details from result.json).
+
 **How to apply:** when the user reports a bad video, run `atp.py caught-error add` FIRST (their
 words verbatim, diagnosis, class, cause, fix, general rule) WITH the video's brief, final prompt
 and QC verdict (user, 2026-10-08: "video brief should come along with the error"): pass `--run`
