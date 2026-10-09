@@ -426,3 +426,123 @@ How agents use it:
 - **rule:** For a small flat pack (carton) wan3_0_prime ignores size wording and p40 padding when the pack sits next to a larger neighbour (1.7x); words cannot fix it. Use a smaller-pad reference (p25 or lower), a pre-built start/last frame at the reckoned pixel size, or the single sachet form, instead of another wording retry.
 - **status:** open
 - **promoted to:** —
+
+## CE-012 · 2026-10-09 · Sachet stands upright against the writer's forearm; forced placement
+- **source:** user
+- **video:** 14
+- **run:** C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261008-235833-08
+- **delivered:** CapCut project 09_Oct_2026_v14 · clean C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261008-235833-08/60-outputs/video-14/clean.mp4 · credits 117 · run QC: RESIDUAL FAILURE: size. a1 carton 1.50x, a2 carton 1.50x (tighter wording + refs padded to 18%), a3 sachet fallback ~1.3-1.5x vs distance reckoning (width about palm-wide); delivered a3 flagged, no more spend. CE-006/003/001/002/004/008/010 pass.
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Neuro Energy & Focus Peppermint single sachet (fallback for the XE carton)
+- **assets:** not recorded
+- **user said:** "it seems like forced, no one leaves a gum sachet standing at his harm while he writes though"
+- **what was wrong:** The delivered product (fallback a3, a flat foil sachet) is rendered standing upright on its edge against the writer's forearm on the exam table. A flat sachet cannot stand by itself, and nobody sets a pack right against the arm of someone writing an exam. The plan anchored the product at the writer's elbow/forearm zone of a close, locked shot and QC checked only size, count, closed state and paper overlap, never the physical posture of the object or whether a person would really leave it there. The sachet fallback kept the carton's 'stands upright' anchor wording.
+- **brief:**
+  ```text
+  Video 14 of 18 - Recreate of V05: Neuro XE Peppermint carton, placement on the marble table
+  Concept: the reference recreated as itself (same scenario, action, camera and timing), faces swapped to the supplied character(s), the product integrated (placement on the marble table).
+  Why it works: Communicates: "what teachers think would happen if they let us listen to music in an exam" - the VO reads answers like a track; deadpan. Why Neuro: students under sustained mental load (A456 sec 4), calm and wry (G24), the product 'just happens to be there' (G23). Kept [E]: the take, the VO, writing, the page flip. Goal/job [I]: awareness; the carton on the marble, noticed; share line "this is why we can't have music". Adapted: man -> K3; the caption box and shirt print removed from the plate; the package is Extra Strength Peppermint, closed (hero per G18, form per G27).
+  Reference pattern: V05 (see 20-analysis/cards/V05.md and families.md)
+  Characters/assets: see the plan sec 2.3; Higgsfield media ids in 30-assets/uploads.json and the request file.
+  Substitutions: Placement; the closed hardcover notebook (a solid, not a sheet hands move: CE-006) is the smallest native element that lets a 1.6 cm-thick carton stand readable; hands busy: no use beat (G19/G27 satisfied: no piece is taken).
+  Counts & use: | entity | count | state |
+  |---|---|---|
+  | carton | 1 | upright on its long edge, propped against a closed hardcover notebook on the bare marble, lower right, ~0.6 m, closed, label 30 deg; never moved |
+  | sheets | 1-2 | flipped at 9.2-10.4 over the left edge, away from the carton |
+  Size: Carton 7.5 cm at ~0.6 m, 26 mm eq -> ~9.0% (~116 px) (T scale --product-cm 7.5 --distance 0.6 --lens 26); neighbour: the exam sheet (29.7 cm) -> ~0.25 of its length; his palm is ~8.5 cm wide, the carton 7.2 cm wide -> slightly narrower than his palm. Oversize check: a carton taller than ~0.4 of the sheet is a regenerate reason.
+  Guardrails: G16 (the client's real renders are the only product references; no AI-invented packaging: QC compares the label geometry and any morphed text is a regenerate reason), G17/G18 (Extra Strength, Peppermint or Spearmint, 9-piece carton, closed; the 6-pack box never appears), G19/G27 (closed package, nobody takes a piece, no blister shown), G23/G24 (the product just happens to be there; calm, wry register), G25 [U] (no sleeping/drained scene), G11/G21 (no numbers or claims in any text layer; the carton's own 100MG band is the only number), G12 (no competitor shown or replaced), G13/G14 (an adult supplied character, no ambassador likeness), G22 (phone-shot, everything in focus).
+  Caught errors applied: CE-006 (a product is never placed on or overlapping paper: bare surface or a solid prop; sheets stay flat; QC densifies the contact region for the whole shot), CE-007 (small closed carton by default in casual scenes; the pouch only where a large pack fits; a placed product never takes over the source's pick-up beat: the object picked up is named and the product stays), CE-008 (adult framing in captions and casting), CE-010 (text centred), CE-001 (the package count stays 1; nothing taken), CE-002
+  Text: CapCut layer as in the scene.
+  Inserts: none.
+  Sound: Original VO audio restored.
+  Fidelity approach: the silent own-content source as video_references (the most preserving input Wan 3.0 Prime offers: recreate-from-video-reference), exact duration rounded up, fidelity lock + the action script written out in the prompt; risks to fidelity or sync: lip-sync and exact timing are not guaranteed by this model; sync-check after the merge.
+  Model & operation: video-14-request.json: wan3_0_prime reference-to-video, 13 s, 9:16 720p, generate_audio false, 4 media - est. 39 credits (3 credits/s, preflight read: no adjustments)
+  Adaptation logic: One generation of 13 s (own 12.07 s). Credits 39. No inserts.
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Generate single shot. The man corresponds to Image 1, adopting only his facial features and hairstyle and light stubble; man replaces only the person in Video 1 and keeps the plain white t-shirt without lettering and the white over-ear headphones; do not use the background, props or clothing of Image 1.  Use Video 1 for his movements, expressions, gaze, the camera framing, the room, the exam sheets and the timing; do not reproduce any text, captions, white caption boxes, usernames or watermarks from Video 1. The sachet corresponds to Image 2 and generates only one instance, adopting only its structure, material, colours and printed label (a small flat closed sky-blue foil flow-wrap sachet about 5 cm wide, 7 cm tall and 1 cm thick with crimped seals at the top and bottom, the dark-blue Neuro wordmark top-left, a mint GUM badge top-right, a Peppermint pill tag, 'Energy & Focus' in large blue type and '1 Piece | Dietary Supplement' below it); do not use the lighting, exposure, background, shadow or camera angle of Image 2.
+  [Plot Summary] Locked phone camera at eye level, medium shot, a white marble table filling the lower third, a bright room corner with a white door and warm lamp light from the upper left. He sits turned about forty degrees toward the left of the frame with his head tilted left, listening to his headphones, a blue pen in his right hand resting on an exam sheet and his left hand flat on the table; he turns his head down to the sheet and squares his torso; he writes with small right-hand strokes, glancing up and to the left once, and keeps writing; then both hands lift the right edge of the sheet and flip it over to the left, his left hand smoothing it down, and it lands on the same spot; he writes again with a glance to the right of the frame. A single closed sealed Neuro Energy & Focus Peppermint sachet stands upright with its bottom edge on the bare marble at the lower right of the frame, leaning back against the side of a closed black hardcover notebook that lies flat beside it (the sachet never sits on top of the notebook), to the right of his writing forearm and the exam sheets, clear of every sheet, about sixty centimetres from the lens in the same plane as the exam sheet, the blue pen and his left palm, a tiny object only about one fifth as tall as the exam sheet is long, clearly shorter than the blue pen, narrower than his open palm and no taller than his palm is wide, filling only about one thirteenth of the frame height, its label turned about thirty degrees away from the lens, lit by the same warm lamp light with a soft highlight on its upper left and a soft contact shadow on the marble falling to the right like the sheets' shadows; it stays on that spot for the whole clip, he never touches it, the exam sheets lie flat and keep their shape except when he flips the top one, and the flipped sheet stays on the left and never reaches the sachet. Phone-shot look with everything in focus and no shallow depth of field. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze and mouth movement of the person in Video 1 on the same frames, the props and how they are handled, the camera framing and handheld feel, the light, the room and the timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture, no extra camera move, no re-staging, no new people, no change of pace. There is exactly one sachet, tiny, smaller than his hand and never growing, sealed and never opened, not duplicated, not vanished, not deformed, no scale drift; nothing passes through it. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen; the only lettering is the printed label on the Neuro sachet, exactly as in Image 2; do not reproduce any text, captions, usernames or watermarks from Video 1.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no cut-out edges, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no oversized or giant package, no six-pack box, no blister card, no opened sachet, no torn foil, no loose gum pieces, no gum in anyone's mouth, no chewing, no second package, no studio lighting on the package, no glow, no shallow depth of field, no white caption box, no text on the shirt, no phone
+  ```
+- **params:** model=wan3_0_prime · duration=13 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=video_references, image_references×2 · request=video-14-a3-request.json
+- **errors:** none
+- **evidence:** deliverables/previews/video-14.mp4 at about 5 s (sachet upright against the right forearm, beside the notebook)
+- **qc:**
+  ```text
+  RESIDUAL FAILURE: size. a1 carton 1.50x, a2 carton 1.50x (tighter wording + refs padded to 18%), a3 sachet fallback ~1.3-1.5x vs distance reckoning (width about palm-wide); delivered a3 flagged, no more spend. CE-006/003/001/002/004/008/010 pass.
+  ```
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261008-235833-08\40-briefs\video-14-plan.md
+- **class:** generation-system.md §4b.1 (anchor logic), anomaly-catalog.md §2.14 (solidity) and §2.15 (placed, not pasted)
+- **cause:** plan
+- **fix:** none yet (not regenerated)
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** A placed product takes a posture its own shape allows (a flat sachet or pouch lies flat; a carton stands on its base or leans on a solid object that is visible in the shot) and sits where a person would really leave it, away from a working hand or arm, on bare surface at the table's far side or edge, never touching the person; QC checks posture, support and the story reason for the spot as its own line, not only size and count.
+- **status:** open
+- **promoted to:** —
+
+## CE-013 · 2026-10-09 · Carton leans on nothing; the planned support never rendered
+- **source:** user
+- **video:** 15
+- **run:** C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261008-235833-08
+- **delivered:** CapCut project 09_Oct_2026_v15 · clean C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261008-235833-08/60-outputs/video-15/clean.mp4 · credits 45 · run QC: RESIDUAL FAILURE: carton renders 1.99x its expected size vs her head (a1 2.24x; a2 1.99x with tightened wording and 16% padded refs; a3 sachet fallback 1.83x, no better and non-hero form); constant across cuts; all other checks passed (count 1, closed, never touched, sheet flat, no blister/open/6-pack, OCR clean, small label line garbled)
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Neuro XE Spearmint 9pc carton
+- **assets:** not recorded
+- **user said:** "it is not correct too because the gum pack seems like it is leaning into something meanwhile there's nothing behind the package that it might've use to be leaning to"
+- **what was wrong:** The plan propped the carton at about 60 degrees against a closed hardcover notebook behind and left of the sheet. The model rendered the carton tilted back on the bare desk with only a sliver of a notebook at the far left edge of the frame, so it appears to lean on thin air. QC counted one carton and measured its size, but did not check that every leaning or standing object has a visible, solid support in the same frame, and the contract's 'deliver flagged' path shipped it anyway.
+- **brief:**
+  ```text
+  Video 15 of 18 - Recreate of V06: Neuro XE Spearmint carton, placement on the desk
+  Concept: the reference recreated as itself (same scenario, action, camera and timing), faces swapped to the supplied character(s), the product integrated (placement on the desk).
+  Why it works: Communicates: "pov: how it feels when your brain gives you a quick peek of the notes with the answer" - recall flash, a streamer meme voices the blank. Why Neuro: exam focus, deadpan (G24), product just there (G23). Kept [E]: POV caption + silent acting + a still flash + a speaking meme insert. Adapted: man -> K22 (woman; G28 balance for Neuro); caption rewritten minimally for G11: "0.1 second" (a number on screen) -> "a quick" (same role, position, timing); shirt lettering removed.
+  Reference pattern: V06 (see 20-analysis/cards/V06.md and families.md)
+  Characters/assets: see the plan sec 2.3; Higgsfield media ids in 30-assets/uploads.json and the request file.
+  Substitutions: Placement; hands busy: no use beat.
+  Counts & use: | entity | count | state |
+  |---|---|---|
+  | carton | 1 | upright on its long edge propped against a closed hardcover notebook, desk left behind-left of the sheet, on bare desk, ~0.7 m, closed, label 30 deg; unchanged across both cuts |
+  Path: the raised left hand passes behind and above the carton.
+  Size: Carton 7.5 cm at ~0.7 m, 26 mm eq -> ~7.7% (~99 px); neighbour: the sheet (29.7 cm) -> ~0.25 of its length; palm 8.5 cm vs carton 7.2 cm wide. Constant across cuts.
+  Guardrails: G16 (the client's real renders are the only product references; no AI-invented packaging: QC compares the label geometry and any morphed text is a regenerate reason), G17/G18 (Extra Strength, Peppermint or Spearmint, 9-piece carton, closed; the 6-pack box never appears), G19/G27 (closed package, nobody takes a piece, no blister shown), G23/G24 (the product just happens to be there; calm, wry register), G25 [U] (no sleeping/drained scene), G11/G21 (no numbers or claims in any text layer; the carton's own 100MG band is the only number), G12 (no competitor shown or replaced), G13/G14 (an adult supplied character, no ambassador likeness), G22 (phone-shot, everything in focus).
+  Caught errors applied: CE-006 (a product is never placed on or overlapping paper: bare surface or a solid prop; sheets stay flat; QC densifies the contact region for the whole shot), CE-007 (small closed carton by default in casual scenes; the pouch only where a large pack fits; a placed product never takes over the source's pick-up beat: the object picked up is named and the product stays), CE-008 (adult framing in captions and casting), CE-010 (text centred), CE-001 (the package count stays 1; nothing taken), CE-002
+  Text: CapCut layer: the rewritten caption (no number), y_rel 0.66.
+  Inserts: Still insert 0.87-1.03 (notes page) and video insert 2.67-7.03 (streamer, with speech) cut from Video-58078.mp4; split points 0.87 and 2.51.
+  Sound: Own audio restored per segment; inserts keep their sound.
+  Fidelity approach: the silent own-content source as video_references (the most preserving input Wan 3.0 Prime offers: recreate-from-video-reference), exact duration rounded up, fidelity lock + the action script written out in the prompt; risks to fidelity or sync: lip-sync and exact timing are not guaranteed by this model; sync-check after the merge.
+  Model & operation: video-15-request.json: wan3_0_prime reference-to-video, 6 s, 9:16 720p, generate_audio false, 4 media - est. 18 credits (3 credits/s, preflight read: no adjustments)
+  Adaptation logic: One generation of 6 s (own 5.17 s; hard cuts in own.mp4 at 0.87 and 2.51). Inserts: still 0.87-1.03 and the streamer clip 2.67-7.03 (cut from the reference, with sound). Credits 18.
+  
+  ## Attempts (production agent)
+  - Source re-cut reused from video 07 (media c2e0856f, 5 s, 4.47 s kept); inserts V06-i1-final plus an insert 2 built from V06-i2-final with this videos generated frames fading to/from white.
+  - a1 (job e4d19b65, 15 cr): carton refs padded 22
+  ## Attempts (production agent)
+  - Source re-cut reused from video 07 (media c2e0856f, 5 s, 4.47 s kept); inserts V06-i1-final plus an insert 2 built from V06-i2-final with this video's generated frames fading to/from white.
+  - a1 (job e4d19b65, 15 cr): carton refs padded to 22%, 2.24x vs head, rejected. a2 (job 63c67af9, 15 cr): refs padded to 16%, deck-of-cards / one third of her head / under a tenth of the frame wording, 1.99x, still over. a3 (job d870c652, 15 cr): single Energy and Focus Spearmint sachet (A546) fallback, 1.83x, no better and not the hero Extra Strength form (G18). Delivered a2 flagged RESIDUAL FAILURE; a3 kept as alternate.
+  - Caption posY -0.24 (y_rel 0.62) so the 3-line block stays above the carton (top at y 0.70).
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Generate single shot. The woman corresponds to Image 1, adopting only her facial features and hairstyle; woman replaces only the person in Video 1 and keeps the backwards cream baseball cap and a plain black t-shirt without any lettering; do not use the background, props or clothing of Image 1.  Use Video 1 for her movements, expressions, gaze, the camera framing, the room and the timing; do not reproduce any text, captions, usernames or watermarks from Video 1; the picture is a front-camera mirror image and stays as seen. The carton corresponds to Image 2 and Image 3, which jointly define the same carton and generate only one instance at the small real size it has in those images (it occupies only about a sixth of each picture's width), adopting only its structure, material, colours and printed label (a small flat closed sky-blue paperboard carton 7.2 cm wide, 7.5 cm tall and 1.6 cm thick, the dark-blue Neuro wordmark top-left, an EXTRA STRENGTH GUM badge top-right, a Spearmint pill tag, 'Energy & Focus' in large blue type and a navy band at the bottom reading 100MG OF NATURAL CAFFEINE); do not use the lighting, exposure, background, shadow or camera angle of Image 2 or Image 3.
+  [Plot Summary] Locked phone camera at desk height about a metre away, a dark wood desk, a beige wall and a door behind her, warm room light from the upper right. Video 1 has two hard cuts, at about 0.9 s and 2.2 s of its length, each with the same framing; keep them at the same moments, hard cuts with no fade, flash or dissolve. She sits at the desk writing on a white sheet with a yellow highlighter in her right hand, head down. Cut. She lifts her head, her eyes go up and to the left and the highlighter stops. Then both hands rise to shoulder height, palms out, fingers spread, the highlighter still in her right hand, her mouth opens slightly and she shakes her head a little. Cut. Her left hand is already at the side of her head scratching it, her right hand up with the highlighter, her eyes up; both hands then gesture outward in a shrug, her head tilting; then her hands return to the sheet and she writes again. A small closed Neuro Energy & Focus Extra Strength Spearmint carton stands upright on its long edge on the bare dark wood desk at the left, propped at about sixty degrees against a closed hardcover notebook, behind and to the left of the white sheet, clear of the sheet and never on paper, in the same plane and at the same distance as the sheet. It is very small, like a deck of playing cards stood on its edge: its height is only about one third of the height of her head with the cap, slightly less than the width of her open palm, clearly shorter than the yellow highlighter and about a quarter of the long edge of the white sheet, all in the same plane; in the picture it is less than one tenth of the frame height and her hand is bigger than the carton. Its label is turned about thirty degrees away from the lens, lit by the same warm light with a highlight on its upper right and a soft contact shadow on the wood; it stays on that spot for the whole clip; her raised left hand passes well behind and above it and never touches it. Phone-shot look with everything in focus and no shallow depth of field. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze and mouth movement of the person in Video 1 on the same frames, the props and how they are handled, the camera framing and handheld feel, the light, the room and the timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture, no extra camera move, no re-staging, no new people, no change of pace. There is exactly one carton, closed and never opened, not duplicated, not vanished, not deformed, no scale drift; nothing passes through it. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen; the only lettering is the printed label on the Neuro package, exactly as in Image 2; do not reproduce any text, captions, usernames or watermarks from Video 1.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no cut-out edges, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no six-pack box, no blister card, no opened carton, no loose gum pieces, no gum in anyone's mouth, no chewing, no second package, no oversized carton, no giant or enlarged package, no large box, no studio lighting on the package, no glow, no shallow depth of field, no text on the shirt, no laptop
+  ```
+- **params:** model=wan3_0_prime · duration=5 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=video_references, image_references×3 · request=video-15-request.json
+- **errors:** none
+- **evidence:** deliverables/previews/video-15.mp4 at 0.5 s (carton tilted, no support behind it)
+- **qc:**
+  ```text
+  RESIDUAL FAILURE: carton renders 1.99x its expected size vs her head (a1 2.24x; a2 1.99x with tightened wording and 16% padded refs; a3 sachet fallback 1.83x, no better and non-hero form); constant across cuts; all other checks passed (count 1, closed, never touched, sheet flat, no blister/open/6-pack, OCR clean, small label line garbled)
+  ```
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261008-235833-08\40-briefs\video-15-plan.md
+- **class:** anomaly-catalog.md §2.14 (solidity, support) and §2.15; generation-system.md §4b.1
+- **cause:** qc-miss
+- **fix:** none yet (not regenerated)
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** Never plan a lean against a prop the model must also invent; a placed pack either stands flat on its base or lies flat on bare surface, or leans on a large solid object that is already in the source frame. QC adds a support check: every tilted or standing object must show its contact with a visible solid support at 30 fps, or it is a regenerate reason.
+- **status:** open
+- **promoted to:** —
