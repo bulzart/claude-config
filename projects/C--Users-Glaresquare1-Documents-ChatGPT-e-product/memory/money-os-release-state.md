@@ -1,6 +1,6 @@
 ---
 name: money-os-release-state
-description: "Freelancer Money OS status as of 2026-10-08 — v1.2.1 (suggested state planning-rate table D-82 in tutorial Appendix A + Access Guide p3, on top of the v1.2.0 review release) rebuilt local + cloud; setup video re-record in progress; gates still open; nothing live"
+description: "Freelancer Money OS status as of 2026-10-09 — v1.2.1 (state planning-rate table D-82) rebuilt local + cloud; setup video re-recorded on v1.2.1 (D-83, 3 min 51 s) awaiting owner approval; Google builder number-format fix (D-84) with in-place cloud rebuild 2026-10-09; gates still open; nothing live"
 metadata:
   node_type: memory
   type: project
@@ -64,7 +64,17 @@ Settings note + FAQ entry point to it; VERSION 1.2.1, MOS_VERSION 1.2.1. Rebuilt
 files in place 03:26–03:43 via `tests/audit/2026-10-08_v121/Ops5.gs` after "BACKUP 2026-10-08 v1.2.0 — …" copies (ids in the
 ledger); bound Pro scripts (master 143DFGDF…, release 10n7Qgo0…, demo 1-doxjfVC…) pasted 1.2.1 — dismiss the "signed in as"
 notice first; QA copies 113/113 (Pro 32,679 / Base 32,227 values). Headless **Edge stopped writing PDFs/screenshots** (hands off
-to its startup-boost process even with --user-data-dir) → both PDF builders use headless Chrome now. Video v1.2.1: narration
-(14 clips, ElevenLabs flow 1IQg75FE5WkEWHQdubaH, Alex hLygPNd2gK6Azddorc5W) generated and processed in
-`assets/video/setup-tutorial-v1.2/_raw/vo`; recording copy 1CuSr_JilmORa7R0I7NU1v0iAHUi-NA-fv_187mrrUOk; recording waits for the
-owner to move that tab to its own Chrome window (+ one permission click for the Pro menu).
+to its startup-boost process even with --user-data-dir) → both PDF builders use headless Chrome now. Video v1.2.1 (D-83, done 2026-10-09): narration 14 clips (ElevenLabs flow 1IQg75FE5WkEWHQdubaH, Alex), recorded 05:48–06:44
+on the disposable copy 1CuSr_JilmORa7R0I7NU1v0iAHUi-NA-fv_187mrrUOk (+2 form copies; Trash after the owner approves), edit
+`assets/video/setup-tutorial-v1.2/tools/edit_spec.py` + render.py → `assets/video/Setup_tutorial_Pro.mp4` 3 min 51 s, −16.6 LUFS,
+stereo; v1.0.0 video archived in `assets/video/archive/v1.0.0/`; permission screens reused from the 2026-10-03 capture (account
+already authorised); phone-form taps placed by hand; docs/checksums/inventory updated by `source/tools/finalize_video_v121.py`.
+Tour_60s / Setup_walkthrough_Base are still v1.0.0. Owner gates for the video: approve it, ElevenLabs commercial plan.
+
+**2026-10-09 number-format defect (D-84):** the v1.2.0 in-place rebuild left old number formats on Settings cells whose row
+moved (B67 showed "1400.00%"; B57/B73) — `Sheet.clear()` keeps number formats. Fix in `source/build/emit_gs.py`
+(`resetSheet_`: clearFormat + setNumberFormat('General'); `buildFormatting` starts from 'General'); bundles rebuilt, SHA256SUMS
+via `source/tools/write_sums.py`; cloud: Dev Tools Code.gs = new Dev.gs, `tests/audit/2026-10-09_v121-formats/Ops6.gs` over
+Audit.gs (runner `ops5Run`, keys rebuildOps_v121f / rebuildDrive_v121f; backups "BACKUP 2026-10-09 v1.2.1 — …" ids in the
+ledger; a page-resident setInterval autoclicker presses Run until OPS6 ALL DONE; `opFormats6` scans every block cell's number
+format against the spec). Results in `tests/audit/2026-10-09_v121-formats/notes.md` and test-log §G4.
