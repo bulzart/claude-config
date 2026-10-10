@@ -710,6 +710,25 @@ is near, and the story reason written as its own line of the verdict.
   the source shows, or in hand) and drop any prop the model has to invent or that moves; the sizing words
   are not the lever (§2.7).
 
+### 2.17 Identity: the swapped face matches the kept body (skin tone, build, age)
+
+**Rule.** When the source video rides as the video reference, the model keeps the source performer's
+body, hands, forearms, neck and posture and replaces only what the identity image names. The identity
+image is therefore chosen to fit the kept body: the same skin tone and undertone, apparent age and
+build. A lighter face on a darker body (or the reverse) is a regenerate reason (CE-029).
+
+**Plan.** Pick the character from the supplied set by comparing it with the source performer's skin
+tone, hair and build, and state the pick and the match in the plan; never take the next unused
+character without that comparison.
+
+**Prompt.** One sentence in the Core Task: his face, neck, hands and forearms share the same skin tone
+as the hands and body of the man (woman) in Video 1, one consistent skin tone from face to fingertips,
+plus an exclusion against a face lighter or darker than the hands.
+
+**QC.** On a full-resolution frame with the face and a hand or forearm together, compare their tone and
+write the observation and the frame path in the verdict (agents record "skin tone face vs hands: match,
+frame <path>"); an unchecked item counts as failed. **Regenerate** on a visible mismatch; no post-fix.
+
 ## 3. The prompting stack (in order, per video)
 
 1. **Affordance sheet** (§1) for every product and object in the registry, before any plan.
@@ -758,6 +777,8 @@ is near, and the story reason written as its own line of the verdict.
    frame (B, `--distance-basis`), the two multiples agreeing before an oversize verdict, the observed
    multiple of the expected size and the method written in the verdict, constancy across cuts; a
    verdict from one assumed number is provisional and is viewed on the frame first (§2.7).
+5e. **Identity match** on a full-resolution frame with the face and a hand or forearm: same skin tone, age
+   and build as the kept body, with the frame path in the verdict (§2.17; CE-029).
 5c. **Blend** on one full-resolution frame at rest and one during any interaction: the eleven-sign
    paste test against the nearest neighbour at the same depth (§2.15).
 5e. **Posture, support and place** at 30 fps across every rest and every pass of a hand or sheet: the
