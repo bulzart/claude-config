@@ -1188,3 +1188,49 @@ How agents use it:
 - **rule:** When a reference's only text is a short keyword or tag that defines its niche, ask whether it is the hook before dropping it as a handle: if the user keeps it, re-place it word for word as a CapCut text layer at the same height; the user's instruction outranks the 'never copy handles' default.
 - **status:** open
 - **promoted to:** —
+
+## CE-028 · 2026-10-10 · False oversize flag: size computed from a wrong assumed distance
+- **source:** user
+- **video:** 06
+- **run:** 20261010-020703-09
+- **delivered:** CapCut project 10_Oct_2026_v06 · clean 60-outputs/video-06/clean.mp4 · credits 60 · run QC: RESIDUAL FAILURE size: can 2.79x expected at rest, 3.51x at last frame (a1 2.98x); count 1 ok, cut/fidelity ok, no stray text, CE-001..013 checked
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Celsius Watermelon can (V09 recreate, lecture hall)
+- **assets:** not recorded
+- **user said:** "it looks accurate though, more of a 1.07x and not 2.8x"
+- **what was wrong:** The QC measured the can against an expected 7.6% of frame height, computed from an ASSUMED distance of about 1.5 m. In the shot the can stands on the near fold-out desk well under a metre from the lens (expected about 16%, observed 21%, about 1.3x by that reckoning, 1.07x by the user's eye). The agent delivered it flagged as a 2.8x residual failure, the main session repeated the number, and a size summary built on it was wrong. Other flags (04, 08, 11, 01) used different neighbours and distances and may be overstated too.
+- **brief:**
+  ```text
+  # Video 06 brief: V09 alone in finance investment class (placement, Watermelon can on the tablet-arm desk)
+  Concept: recreate V09 with Celsius Watermelon (placement); no person swap. Why it works: the reference's own mechanism, product native to the scene, noticed not featured.
+  Model/operation: wan3_0_prime, video_references + image_references, 10 s, 9:16 720p, generate_audio false. Cost: preflight in request file (3 credits per second expected).
+  Fidelity: source silent video as video reference, same duration, action script written out, fidelity lock; risk: Wan rebuilds the action (approx. recreate); sync-check after the merge.
+  Text: "Alone girl in my Finance investment class" y_rel 0.81 (posY -0.62, posX 0) 0-9.2
+  Guardrails: none (crowd is background; no swap). Verdict pick-clean.
+  
+  ## Attempt 2 (size regeneration)
+  a1 (job ee3c477c, 30 cr) passed fidelity (one can, cut at about 6.1, original action kept) but the can measured 288 px of 1280 = 22.5% of frame height vs 7.5% expected (about 3x, also wider than the desk reads). Diagnosed regeneration: p20 padded refs (can one fifth of the image), desk-width neighbour (60 cm desk top), "tiny, 90 px" wording, extra no-giant exclusions. Request: 50-requests/video-06-a2-request.json (same params, 30 credits).
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Recreate Video 1 as it is: a handheld phone video across a university lecture hall.  Use Video 1 for every movement, expression, gaze, the framing and camera, the room and the timing; do not reproduce any text, captions, usernames or watermarks from Video 1. The can corresponds to Image 1 and Image 2, which jointly define the same can and generate only one instance, adopting only its structure, material, colours and printed label (a white slim 355 ml aluminium can, a red-and-grey C-swoosh above the black CELSIUS wordmark with LIVE FIT, a watermelon-slice illustration, SPARKLING WATERMELON in red, a black band with three bullets and a silver-grey lower band); in Image 1 and Image 2 the can is deliberately tiny in the frame, one fifth of the image height, and keeps that tiny scale; do not use the framing, lighting, exposure, background, shadow or camera angle of Image 1 or Image 2.
+  [Plot Summary] Shot: handheld phone video, portrait, one hard cut at about 6.1 s of Video 1; keep the camera path, every person, every movement, the room and the timing exactly as in Video 1, including the students seated in the middle and the laptop screen that drifts into the lower right of the frame at the camera's drift (the screen shows only a soft, out-of-focus spreadsheet with no readable text). The only change: a closed Celsius Watermelon can stands upright on the white fold-out tablet-arm desk of the empty swivel seat in the foreground at the lower left of the frame (the desk seen at the lower left in the first and last parts), its base on the desk with a contact shadow, label turned about thirty degrees toward the lens; it is part of this scene although Video 1 has none, it stays on that desk the whole clip, nobody touches it; when the camera drifts away to the laptop it is out of frame and it is back on the same desk after the cut. The can is a very small object, 15.7 cm tall and 5.5 cm across, standing on a desk top that is about 60 cm wide and 40 cm deep, about 1.5 metres from the lens: the can is only one tenth of the desk top's width across and well under half of its depth tall, about the length of the seat's armrest post, a third of the seat's backrest height, and clearly smaller than the head of a seated student; it fills only about one fourteenth of the frame height (about 90 pixels of 1280), a tiny can far from the lens, not a close-up product, with its watermelon label just readable. Cool window light from the left and ceiling light from above; the can takes the same light with a soft contact shadow. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze and mouth movement of the people in Video 1 on the same frames, the props and how they are handled, the camera framing and handheld feel, the light, the room and the timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture, no extra camera move, no re-staging, no new people, no change of pace. There is exactly one can on the tablet-arm desk when that desk is in frame; every other element of Video 1 unchanged, small and constant in size, not duplicated, not vanished, not deformed, no scale drift; the can stays where it is and fingers or objects never pass through it. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen; the only lettering is the printed label on the Celsius Watermelon can, exactly as in Image 1; do not reproduce any text, captions, usernames or watermarks from Video 1.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no cut-out edges, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no second can, no oversized can, no can taller than the seat's backrest is tall, no can larger than a head, no giant can, no can wider than a tenth of the desk top, no close-up of the can, no hero shot, no open tab, no drinking from the can, no studio lighting on the can, no glow, no clipping
+  ```
+- **params:** model=wan3_0_prime · duration=10 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=video_references, image_references×2 · request=video-06-a2-request.json
+- **errors:** none
+- **evidence:** not recorded
+- **qc:**
+  ```text
+  RESIDUAL FAILURE size: can 2.79x expected at rest, 3.51x at last frame (a1 2.98x); count 1 ok, cut/fidelity ok, no stray text, CE-001..013 checked
+  ```
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261010-020703-09\40-briefs\video-06-plan.md
+- **class:** anomaly-catalog.md 2.7 (size reckoning) and 4 (QC); production-agents.md 3 (contract)
+- **cause:** qc-miss
+- **fix:** none yet
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** Never take the distance from an assumption: derive it from a same-plane neighbour of known size or from the surface the product stands on in the frame, with two independent estimates (neighbour ratio and frame fraction) that must agree before an oversize verdict; a verdict from one assumed number is provisional and must be viewed on a frame before it is reported or repeated; when the user's eye disagrees the verdict is re-measured, not defended.
+- **status:** open
+- **promoted to:** —
