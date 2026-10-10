@@ -1472,7 +1472,7 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   writes `<name>_1.5x.mp4` beside each source and `-Yes` skips its cost prompt):
   ```powershell
   cd "$env:USERPROFILE\Scripts"
-  Get-ChildItem -Path "<folder>" -Filter *.mp4 | Where-Object { $_.Name -notmatch '_[\d.]+x\.mp4$' } | ForEach-Object { .	opaz-upscale.ps1 -InputFile $_.FullName -Scale 1.5 -Yes }
+  Get-ChildItem -Path "<folder>" -Filter *.mp4 | Where-Object { $_.Name -notmatch '_[\d.]+x\.mp4$' } | ForEach-Object { .\topaz-upscale.ps1 -InputFile $_.FullName -Scale 1.5 -Yes }
   ```
   The script needs `ffprobe` on PATH and `TOPAZ_API_KEY` set; if it stops on either, report the
   real error and the fix (`winget install Gyan.FFmpeg`; `setx TOPAZ_API_KEY "<key>"`, then a new
