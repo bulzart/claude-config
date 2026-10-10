@@ -1,5 +1,5 @@
 {
-  "model": "sonnet",
+  "model": "fable",
   "hooks": {
     "Stop": [
       {
@@ -30,6 +30,9 @@
     },
     "claude-opus-5-5": {
       "effortLevel": "high"
+    },
+    "claude-sonnet-5-5": {
+      "effortLevel": "xhigh"
     }
   },
   "autoUpdatesChannel": "latest",

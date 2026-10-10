@@ -19,8 +19,10 @@ the user saw after delivery. This command turns that record into better first at
 1. It learns how the whole pipeline works.
 2. It reads the ledger and finds the patterns.
 3. It works out why each pattern happened.
-4. It rewrites the pipeline's prompting logic, use cases, examples, craft guidance, dismissal rules,
-   instructions and QC.
+4. It checks whether the pipeline already covers each pattern. Where it does not, it rewrites the
+   pipeline's prompting logic, use cases, examples, craft guidance, dismissal rules, instructions
+   and QC. Where it does, it says "looks good", and suggests any optional improvement without
+   applying it.
 
 The aim is that the next run gets the video right the first time, and QC finds nothing.
 
@@ -248,6 +250,30 @@ Answer these, citing ids:
 A lesson learned from one model applies to that model's guide only. It moves into the
 model-agnostic references only when two or more models show the same thing.
 
+### 3.4 Coverage check: is anything actually missing?
+
+Before writing a single change, hold each lesson against the rules in force (§1.3). A lesson is
+**covered** when the pipeline already has all three of these, in the owning section:
+- a first-try rule that prevents it, in the model's phrasing where it is model-specific;
+- an error definition with a threshold that names it;
+- a QC check that measures it, at the stage that can catch it.
+
+Grade the coverage of each lesson:
+- **covered**: all three exist and the entries behind the lesson date from before the rule was
+  written (the rule has not had a run to prove itself yet). Nothing to change.
+- **covered but unproven**: all three exist, but no run has tested them since. Nothing to change;
+  name the test the next run should make.
+- **gap**: one of the three is missing, vague or unmeasured, or the lesson recurred after the
+  rule was written. This is what §4 is for.
+- **optional**: the pipeline handles it, but an example, a sharper threshold or a clearer line
+  would help. Suggest it; do not apply it unless the user asks.
+
+**If there are no gaps, the pass ends here.** Say "Looks good": the pipeline already covers every
+case the ledger describes. List what is covered but unproven, and the optional suggestions, if
+any. Do not edit a file to show work, do not re-promote entries that are already promoted, and
+do not touch the build prompt. Still write the learning-log section (§6), since "checked, nothing
+missing" is also a result the next pass needs.
+
 ## 4. Build the change set
 
 For every lesson, write one change row:
@@ -288,8 +314,8 @@ Then review the set as a whole:
 - Every QC row has a threshold, and every prompting row is in the model's phrasing.
 - Every change traces to entries, and no change rests only on an unverified guess.
 
-**`dry-run`:** print the pipeline model's key findings, the patterns (§3) and the change set as a
-table, then stop.
+**`dry-run`:** print the pipeline model's key findings, the patterns (§3), the coverage check
+(§3.4) and the change set as a table, then stop.
 
 ## 5. Apply
 
@@ -325,17 +351,20 @@ Append one compact section per pass:
 ## <date> · CE-001..CE-015 · <n> patterns · commit <hash>
 - **Patterns:** P1 <one line> (CE-005, CE-011, CE-014, CE-015; repeated; model limit on wan3_0_prime) …
 - **Root causes:** P1 <the lever, and what the earlier rule wrongly assumed> …
-- **Changes:** <file §>: <one line> (P1) …
+- **Coverage:** P1 gap · P2 covered (anomaly-catalog §2.7) · P3 covered, unproven · P4 optional
+- **Changes:** <file §>: <one line> (P1) …   (or "none: looks good")
 - **Promoted:** CE-… → <pointer>; **left open:** CE-… (<why>)
+- **Suggested, not applied:** <the optional lines> …
 - **To test:** <hypothesis> → measure <what> on the next run of <model/class>; proven when <criterion>
 ```
 
-The next pass reads this file in §1.2. A pattern that recurs after a logged change means that
-change failed: revise it, do not repeat it.
+A "looks good" pass writes the same section with "Changes: none" and no commit hash. The next
+pass reads this file in §1.2. A pattern that recurs after a logged change means that change
+failed: revise it, do not repeat it.
 
 ## 7. Report
 
-Give a short table: pattern → entries → root cause → grade → what changed (file §).
+Give a short table: pattern → entries → root cause → coverage → what changed (file §).
 
 Then list:
 - the entries promoted, and the ones left open with the reason;
@@ -347,6 +376,14 @@ End with one line:
 - in a dry-run, offer to apply;
 - otherwise, offer to run the pipeline on a small batch that exercises the changed rules.
 
+**When there were no gaps (§3.4),** the report is short: "Looks good. The pipeline already covers
+every case in CE-a..CE-b." Then, only if there are any:
+- **Suggested updates** (optional grade): each as `file §: one line`, with the entries behind
+  it. Offer to apply them in one line; do nothing until the user says so.
+- **Covered but unproven:** the rules that still need a run to prove them, and what that run
+  should measure.
+No files are changed, nothing is committed, and the learning log gets its "none" section.
+
 ## 8. Never
 
 **Order and scope**
@@ -354,6 +391,9 @@ End with one line:
 - Never read the ledger's entries before the pipeline is read and modelled.
 - Never generate, preflight or spend credits.
 - Never use a Claude Code Workflow.
+- Never change a file when the coverage check found no gap. "Looks good" is a complete result;
+  a pass is not measured by how much it edits.
+- Never apply an optional suggestion without the user's yes.
 
 **The ledger and evidence**
 - Never delete or rewrite a ledger entry's content. Set its status and pointer through its tool

@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 2adb81e3-0d33-4268-9b11-ed9262381e95
-  modified: 2026-10-10T01:30:30.274Z
+  modified: 2026-10-10T01:39:39.551Z
 ---
 
 `~/.claude/commands/update-from-errors.md` (created 2026-10-10) takes a required command name
@@ -26,6 +26,9 @@ ledger is meant to make that context accurate over time.
 
 **How to apply:**
 - Keep the order: pipeline first, then errors.
+- A coverage check (§3.4) comes before any edit: when the pipeline already covers every case,
+  the command changes nothing, says "looks good", and only suggests optional updates (user
+  asked for this explicitly, 2026-10-10).
 - Only a prompt that passed QC may be a "good" example.
 - A rule that recurs after promotion is replaced, not repeated.
 - When the ATP pipeline changes shape, update the command's ATP target map.
