@@ -210,8 +210,9 @@ For `analyze-then-pick`, the map is known. Confirm each location exists before r
 
 ## 2. Then read the caught errors and check them against their evidence
 
-1. **Read the ledger:** its header (fields, sources, statuses, tool), if it has one, then
-   **all** of its entries or records.
+1. **Read the whole record set from the scan (§1.1):** the ledger's header (fields, sources,
+   statuses, tool), if it has one, then **all** of its entries, then every chained and sibling
+   record, then the run-level records gathered without a ledger entry.
 2. **Build a row for each entry in scope**, with these fields:
    - id, source, status;
    - mode, model, product;

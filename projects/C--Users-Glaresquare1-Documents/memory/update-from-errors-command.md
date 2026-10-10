@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 2adb81e3-0d33-4268-9b11-ed9262381e95
-  modified: 2026-10-10T01:39:39.551Z
+  modified: 2026-10-10T01:49:17.912Z
 ---
 
 `~/.claude/commands/update-from-errors.md` (created 2026-10-10) takes a required command name
@@ -14,7 +14,10 @@ metadata:
 The order is fixed by the user:
 1. Read and model the FULL pipeline: the command, its references, the guides of the models in the
    ledger, the toolkit, the memory, and `learning-log.md`.
-2. Then read `caught_errors.md`.
+2. Then scan the error record set on EVERY pass: `caught_errors.md` is the entry point of a
+   chain (files its entries point to, files that point back at it, siblings under other names
+   such as generation errors caught / listed errors / error log, and run-level records that
+   never reached the ledger). Not one file. (User clarification, 2026-10-10.)
 3. Then cluster the entries, reverse-engineer them, grade the evidence and rewrite the owning
    sections: prompting, use cases, dismissal, craft, examples, error definitions and QC.
 
