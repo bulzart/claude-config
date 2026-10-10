@@ -1,5 +1,9 @@
 {
   "model": "sonnet",
+  "statusLine": {
+    "type": "command",
+    "command": "bash C:/Users/Glaresquare1/.claude/scripts/statusline.sh"
+  },
   "hooks": {
     "Stop": [
       {

@@ -160,24 +160,66 @@ duet grid, a "caption over a still" format) keeps that frame as a property; its 
 changes. A trend check (§4) may confirm that a format's fixed frame is still current; it never
 licenses the content.
 
+### 5.0b Blend, not mimic: reference craft × product truth (Create)
+
+Create is not "the references again with the product swapped in", and it is not bound to the
+references' formats. It designs the most engaging video for *this* product from two inputs of equal
+weight: the **references, understood** (why they work: hook logic, structure, proof, emotion, the
+audience's situations, what is current; the craft sheet and the trend read) and the **product,
+understood** (what it is, who wants it, what it can honestly show, what reads on camera, its
+product truths; the insight sheet `30-assets/product-insights.md`, written from the supplied assets,
+`assets-and-substitution.md` §2 step 3b). The references supply proven ingredients; the product
+supplies the truth that makes the idea its own.
+
+1. **Families are evidence and ingredients, never a menu or a template.** Style groups (command A6)
+   are suggestions. The agents may also propose **hybrid groups** that mix mechanisms from several
+   families, or a format the references never showed, when the mechanisms and the product's strengths
+   support it (a skit's reveal driven by a sound the product makes; a tutorial's demonstration played
+   as a deadpan one-take). A seed need not belong to any reference group.
+2. **Every seed names its blend** in one line: the reference mechanism it borrows (craft-sheet id),
+   the product truth it uses (insight-sheet line), the audience situation, and how the mechanism is
+   re-expressed through what the product uniquely can do or show.
+3. **The blend test** (with the copy test, on every seed): remove the product and the idea turns
+   generic; remove the mechanism and it is only an ad. Both removals must break it. A seed made only
+   of the references (the product pasted in) or only of the product (a packshot with a caption) is
+   rewritten.
+4. **The template-lock test** (the ninth question of the copy test): is it one reference's or one
+   family's structure, beat order and tone with the product swapped in? Then it is a remake in
+   disguise: rewrite it with another structure or another mix of mechanisms.
+5. **Choose for engagement, not conformity.** The seed with the highest engagement potential for the
+   goal and the audience wins, even if it looks unlike any reference, provided the hard rules and the
+   sharpness gate hold; the trend read decides what is still current.
+6. **The product is a source of ideas, not only an object to place.** Its sensory and functional
+   strengths (a sound, a colour change, a texture, a satisfying motion, a one-hand use, a reveal) are
+   the first place to look for a hook, a turn or a payoff, inside its affordance sheet and size
+   reckoning; a concept that needs the product to do what it cannot is rejected.
+7. **Precedence stays:** the blend never overrides the hard rules (command items 6, 14, 15, 18, 19),
+   the anomaly catalog, the guardrails, the house approach or the user's instructions.
+
 ### 5.1 Concept seeds, scored (Create, A6)
 
-For every video slot in a chosen style group:
+For every video slot in a chosen style group (or a hybrid group, §5.0b):
 
 1. **Diverge.** Write at least **five concept seeds**, one line each: `situation + turn + where the
-   product lives`. Example: "night shift ends, parked car, slumps, lifts the sealed can from the cup
+   product lives`, plus its blend line (§5.0b: the borrowed mechanism, the product truth, the audience
+   situation). Example: "night shift ends, parked car, slumps, lifts the sealed can from the cup
    holder, cracks it, first sip, melts — the can is the only light in the car." Draw situations from
-   the audience model (places and moments they live in), turns from the family's mechanism, and
-   the product's spot from its most natural use (`generation-system.md` §4b.0). Never draw a
-   situation, a setting, a joke or a line from a reference's card: the craft sheet gives the how,
-   the seed invents the what (§5.0). Run the copy test on every seed before scoring it.
+   the audience model (places and moments they live in), hooks and turns from the **mechanisms of the
+   craft sheet, from any family and in any mix**, the idea itself from the **product truths of the
+   insight sheet**, and the product's spot from its most natural use (`generation-system.md` §4b.0).
+   Never draw a situation, a setting, a joke or a line from a reference's card: the craft sheet gives
+   the how, the insight sheet gives what the product brings, the seed invents the rest (§5.0). Run
+   the copy test and the blend test on every seed before scoring it.
 2. **Score** each seed 1–5 on:
    - **stop power** — what the first second shows, and whether it stops a thumb;
    - **relatability** — the "that's me" test, with a specific audience in mind;
    - **sharpness** — one clear idea, a real turn, sayable in one sentence; which laugh mechanism
      or emotion arc it uses (§3);
    - **product nativeness** — the product's presence is explainable in one clause and uses the
-     product the way it is really used (or simply sits where it would);
+     product the way it is really used (or simply sits where it would), and a real strength from
+     the insight sheet is part of the idea;
+   - **blend** — the idea needs both a reference mechanism and a product truth (§5.0b rule 3); a
+     seed that fails the blend test or the template-lock test scores 0 here and is rewritten;
    - **trend fit and freshness** — uses the mechanism, not a copy; no dated surface element; a
      seed that fails the copy test (§5.0) scores 0 here and is rewritten or dropped;
    - **feasibility** — few movers, one camera behaviour per shot, physics-safe for the locked
@@ -202,7 +244,9 @@ Seeds and scores go to `20-analysis/concepts.md`; the winner goes into the plan'
 
 Choose, and say in one line in the brief why this is the best approach for the goal:
 - **Recreate vs Create** is the user's choice; within it, the pick (Recreate) or the style group
-  and concept (Create) is chosen for the goal and the audience, not for convenience.
+  and concept (Create) is chosen for the goal and the audience, not for convenience. A Create
+  concept is a **blend** of the references' mechanisms and the product's own truths (§5.0b), chosen
+  for engagement, not for resemblance to a reference.
 - **Recreate ranking** (`analysis-protocol.md` §5) adds the creative potential of each reference:
   mechanism strength, fit to the goal and the audience, how natural the product's integration can
   be (swap > contents > placement in hand > placement on a surface), the freshness of its surface
@@ -226,6 +270,9 @@ A concept passes only if every answer is yes:
 - Does the clip loop or end on its strongest frame?
 - Is anything in it generic (a "person enjoys product" beat, an explained joke, a staged product
   moment, a stock situation nobody lives in)? If yes, rewrite or drop.
+- Does it pass the blend test and the template-lock test (§5.0b): the idea needs both a reference
+  mechanism and a product truth, and it is not one family's template with the product swapped in?
+  If not, rewrite or drop.
 - Does it pass the copy test (§5.0): a new premise, setting, characters, turn, lines, first frame,
   ending and product beat, with only the craft carried over? If not, it is a remake: rewrite with
   a new subject or drop.
@@ -254,7 +301,9 @@ After the physics and continuity checks, judge the clean video as a viewer:
 - the emotion arc and the laugh mechanism of the plan are present;
 - the clip loops or ends strong;
 - (Create) the copy test (§5.0) against the family's references and the run's other videos: the
-  clip shares craft with them, not subject.
+  clip shares craft with them, not subject;
+- (Create) the blend (§5.0b): the product truth named in the plan is visible on screen, and the clip
+  reads as its own idea, not a reference template with the product swapped in.
 A missing hook or payoff that the plan required is a **narrative** failure
 (`generation-system.md` §5 gate) and a regenerate reason like any other gate failure; everything
 else here is a **note** in the verdict ("hook lands at 0.4 s; payoff reads; share line holds"),

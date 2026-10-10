@@ -39,7 +39,7 @@ analyze-then-generate/
 ```
 
 ## How a run uses the documentation
-1. Right after the mode (Analyze / Edit), the command prints the model menu with
+1. Right after the mode (Analyze / Edit; not in Viral-Browser, which generates nothing and asks for no model), the command prints the model menu with
    `atg.py model-menu`. The menu lists **every** available model: `models/index.json` merged with the
    live `models_explore` catalog. Pinned models come first (`menu.pinned`: Seedance 2.5, Wan 3.0
    Prime), then `menu.order`. Change the pins or the order there; the command needs no change.

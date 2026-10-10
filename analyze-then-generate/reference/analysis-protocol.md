@@ -186,7 +186,11 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
      grouped by content type (e.g. "G1 Organic × POV skit × gym", "G3 Anime × reaction ×
      school"). The user picks one or a mix. The `<subject>` of a group is a *field* for new
      situations (a gym, an office, a school), never a reference's own scene; the group carries the
-     family's craft, and each video in it gets its own subject (`creative-direction.md` §5.0).
+     family's craft, and each video in it gets its own subject (`creative-direction.md` §5.0). The
+     groups are **suggestions, not a menu**: the agents also propose **hybrid groups** that blend
+     mechanisms from several families with the product's own strengths (the insight sheet,
+     `assets-and-substitution.md` §2 step 3b), and a concept need not belong to any group of the
+     references (`creative-direction.md` §5.0b).
    - **Recreate** also ranks every analysed reference by **recreate fit**, after the **guardrail
      audit** has filtered it (`brand-guardrails.md` §4: a dismissed reference is listed under the
      ranking with its rule; a pick-and-edit reference carries its operations into the edit load):

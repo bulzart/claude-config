@@ -67,6 +67,30 @@ Steps:
      states, real size, the orientation of its mark, and what it cannot do. Take it from the images
      and specs; where an image does not show a part (the spout side of a lid), say so and keep the
      use to what is known.
+3b. **Product insights (Create; useful in Recreate too).** Write, per product, the block that lets
+   ideation start from what is genuinely engaging about *this* product instead of from the
+   references' scenes: `30-assets/product-insights.md` (`creative-direction.md` §5.0b). Use the
+   supplied images, specs and documents only, tagged [A] / [E] / [I]; a gap is written "not
+   supplied" and is never filled from the references or invented:
+   - **What it is and what it does for someone:** the need, desire or small pleasure it serves, in
+     one line a user would say.
+   - **Who and when:** the people it is for, the situations and moments it belongs to, the
+     audience cues in the documents.
+   - **What reads on camera:** its visual, sensory and audible strengths (colour, texture, shine,
+     motion, the sound it makes, the reveal when it opens, pours, unfolds or lights up): what a
+     stranger would stop for.
+   - **What it can honestly show, and how fast:** the demonstrations that are true to the
+     affordance sheet, with the seconds each needs.
+   - **Proof and claims** the documents allow, and those they ban (with the guardrail id).
+   - **Identity and emotion it carries** (energy, focus, calm, indulgence, belonging, status,
+     humour), as the documents or the packaging suggest.
+   - **Objections and limits:** what it cannot do, what viewers may doubt, what must not be
+     implied.
+   - **Occasions and pairings:** seasons, places, the other things it naturally sits beside.
+   - **Product truths:** three to six one-sentence facts a concept can be built on ("it opens
+     with a loud crack", "it changes the colour of the water it dissolves in", "it fits one hand
+     and one pocket"). They are the product's ingredients for ideation, the way the craft sheet
+     holds the references' ingredients.
 4. **For each character:** the best face and full-body views, plus the outfits present.
 5. **Everything else:** logos, palettes, UI screenshots, environments, audio (voice, music). Fonts
    are listed only: overlay text always uses the house text style (`capcut-assembly.md` §3).

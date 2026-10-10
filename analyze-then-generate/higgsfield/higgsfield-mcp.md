@@ -68,7 +68,7 @@ before submitting the next.
    Call `models_explore {action:"get", model_id}` once per run. If the live parameters, roles or ranges
    differ from the guide, the live catalog wins; note the drift in the run log.
 2. **Project folder, once per run.** `list_workspaces` → the `is_selected` workspace. Then
-   `create_project {name:"atp <run-id>", workspace_id, idempotency_key:"<run-id>"}` and store
+   `create_project {name:"atg <run-id>", workspace_id, idempotency_key:"<run-id>"}` and store
    `project_id` and `default_folder_id` in `state.json`. Retry an uncertain create only with the same
    idempotency key.
 3. **Inputs.** Upload each needed file once per run (§4) and store `{local path, sha1 → media_id, url}`

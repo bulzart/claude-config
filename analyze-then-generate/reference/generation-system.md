@@ -52,6 +52,11 @@ Write this plan to `<run>/40-briefs/video-NN-plan.md` **before** any prompt. Kee
   lines, first frame, ending image and product beat are the concept's, none of them a reference's;
   the plan names the family's craft it carries and states that the copy test passed
   (`creative-direction.md` §5.0).
+- **The blend (Create) [I]:** the idea is a blend of a reference mechanism and a **product truth**
+  from `30-assets/product-insights.md`, not a reference format with the product swapped in: the plan
+  names the borrowed mechanism (craft-sheet id), the product truth it uses and how the mechanism is
+  re-expressed through it, and states that the blend and template-lock tests passed
+  (`creative-direction.md` §5.0b).
 - **Goal and job [I/U]:** the run's goal (`creative-direction.md` §2) and what this video makes the
   viewer do at the end, and what they keep of the product.
 - **Audience and the one sharp idea [I]:** who it is for, the situation they have lived, the one
@@ -618,6 +623,7 @@ Evaluate before writing the prompt, and again in the pre-generation QC pass (§8
 | affordance | Every use goes through the object's real opening or control, after its preparation step, with a real contact point and the body mechanics of that use (§2.2, §2.3, §2.8) |
 | solidity | Nothing passes through, sinks into or shows through a solid; occlusion follows depth; every contact has its consequence (§2.14) |
 | sharpness | One clear idea, a hook in the first second, a real turn, a payoff on the family's beat, a share line, and the product native to the scene (`creative-direction.md` §6) |
+| blend (Create) | The idea needs both a reference mechanism and a product truth, and is not one family's template with the product swapped in (`creative-direction.md` §5.0b) |
 | size | Every product's size in every shot is reckoned from its real dimensions, its distance, the lens and a named neighbour, written into the prompt and the start frame, and kept across motion and cuts (§2.7) |
 | guardrails | Every hit of the client's rules is edited as planned (count at the limit, competitor marks removed, excluded faces swapped, captions rewritten, props removed) and nothing the rules ban is in the concept (`brand-guardrails.md`) |
 | transfer (Create) | The video carries the references' craft (style, properties, approach, crafting) and none of their subject: the copy test passes against every reference of the family and the run's other videos (`creative-direction.md` §5.0) |
@@ -1088,6 +1094,7 @@ Concept: <one line>
 Why it works: <goal and job; the one idea; the emotion arc or laugh mechanism; the share line> (creative-direction.md)
 Reference pattern: <which analyzed videos/mechanism, e.g. "V03/V07 hook-then-demo, payoff at ~5 s">
 Taken / left (Create): <craft carried: style, pacing, hook type, payoff timing, text role, product read | subject invented: premise, setting, characters, turn, ending; copy test passed against V…> (creative-direction.md §5.0)
+Blend (Create): <the reference mechanism borrowed (craft-sheet id) × the product truth used (product-insights line) × the audience situation; blend and template-lock tests passed> (creative-direction.md §5.0b)
 Characters/assets: <approved assets used; element/media ids not shown>
 House approach: <the rules applied from 20-analysis/house-approach.md | none (no examples)>
 Substitutions: <source entity → client entity, per entity> | Placement: <client entity → anchor, e.g. "can on desk right of laptop; one sip at ~6 s, set back", "car parked at the curb behind the bench; stays parked">

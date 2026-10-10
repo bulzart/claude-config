@@ -56,12 +56,15 @@ The pipeline acts, at once, as everything below, and says so to every agent it b
 | selling model | `AskUserQuestion`: owned inventory (bulk order, own warehouse) / dropshipping / print-on-demand / digital | asked | MOQ and capital at risk, lead time, returns, differentiation options |
 | research tools | `AskUserQuestion`: web search and fetch only / web plus the user's Chrome (read-only pages) | web only | whether dynamic pages (trend charts, marketplace pages, ad libraries) can be read live |
 | exclusions and constraints | plain chat, optional | none | gate G3 (categories to avoid, regulated goods, size or weight limits, battery-free, and so on) |
+| how you sell | plain chat, optional: sales channel(s) (own store, TikTok Shop, Amazon, …), ad platform(s), the country of the selling company (the importer of record), the capital you can put into a first order | own store with paid social; importer = the seller's company; capital unknown | the platform fees and the restricted lists to screen against, the VAT and duty regime, the EU authorised-representative duty when the seller is outside the EU, and the MOQ sized against the capital limit (`T econ --capital-limit`) |
 | baseline folder | optional | none | the contrast set (§3.4) |
-| metrics or links file | optional, in or beside the references | none | engagement ratios, the platform, the date |
+| metrics or links file | optional, in or beside the references | none | engagement ratios, the platform, the date; with links and Chrome allowed, the reference-page pass (§3.6) |
 | depth | `$ARGUMENTS` `quick` / `standard` / `deep` | `standard` | how many candidates and how many web calls (§7.2) |
 
 Derived and written to `20-analysis/brief.md` at V1:
-- **Currency and tax convention.** US prices exclude sales tax; EU consumer prices include VAT. `T econ --vat-pct` removes it, so a margin computed on a VAT-inclusive price is never overstated.
+- **Currency and tax convention.** US prices exclude sales tax; EU consumer prices include VAT. `T econ --vat-pct` removes it, so a margin computed on a VAT-inclusive price is never overstated. Card and platform fees are charged on the amount paid (`--fees-on gross`, the default), and an ad platform reports return on ad spend on the amount paid unless its pixel is set otherwise, so read the break-even ROAS on that basis (`break_even_roas_gross`).
+- **Returns.** The returns assumption is stated, never zero. In the EU a statutory withdrawal right applies to distance sales: check the rules of the lead countries and set the assumption from them and from the category's return-reason themes; run `T econ --stress` (retail -20 %, returns x2, landed +15 %) on every candidate that reaches the gates.
+- **A Global market** has no single VAT or duty: run `T econ` once per market the user names (US with `--vat-pct 0`, each EU lead country with its rate) and let gate G1 use the **lowest** contribution of them.
 - **Countries and language.** US: one regime, English. EU: 27 national markets with different languages and VAT rates; choose one to three lead countries by evidence (demand, language reach, logistics) and say why; "pan-EU" is a rollout order, not a market. Global: the **strictest** compliance of the markets named (at least US and EU) applies, the weakest-evidenced region sets the confidence, and each pick says which parts hold where.
 - **Landed-cost ceiling** = net price ÷ markup (default 3, a rule of thumb for paid-social selling, not a law), from the band's lower and upper price.
 - **Calendar.** Today's date, the next 120 days of selling windows that matter in the market (gifting seasons, sales events, holidays, religious and cultural calendars, weather), and the production plus shipping plus customs plus receiving lead time of the selling model. A product whose lead time misses its window is flagged in `timing`.
@@ -82,7 +85,7 @@ A card that mixes the two cannot support §5. "Pet gloves go viral" is a product
 
 ```
 # <V> — <file name> (<duration> s, <aspect>, <fps>) [E]
-Facts: {"category":"…","product_form":"…","price_tier":"…","format":"…","creator_style":"…","creator_group":"g1","hook_type":"…","demo_type":"…","cta":"none|soft|hard","commerce_signal":"none|weak|strong","attention_only":true,"dependence_on_product":"low|medium|high","driver_primary":"craft|product|creator|trend|paid|bait|timing|unknown","claims_risk":"none|low|high","awareness_stage":"unaware|problem|solution|product|most","platform":"…"}
+Facts: {"category":"<one department>","product_form":"…","price_tier":"…","format":"…","creator_style":"…","creator_group":"g1","hook_type":"…","demo_type":"…","cta":"none|soft|hard","commerce_signal":"none|weak|strong","attention_only":true,"dependence_on_product":"low|medium|high","driver_primary":"craft|product|creator|trend|paid|bait|timing|unknown","claims_risk":"none|low|high","awareness_stage":"unaware|problem|solution|product|most","platform":"…"}
 Format & style: <dynamic label from the material> · <organic UGC | produced | animation | screen recording | …> · <hands-only | talking head | voice-over | POV | observed | text-led> · language <…> [E/I]
 Subject: <what the video is about, one sentence> [E]
 Product layer: <what is sold or shown: category, form, size, material, price shown or implied, branded or unbranded, where it appears and for how long> [E/I]
@@ -109,7 +112,7 @@ Flags: <health or income claims, brands or IP visible, safety issues, minors, a 
 Confidence: <high | medium | low> — <what was hard to see or hear>
 ```
 
-- **The `Facts:` line is JSON on one line, starting at the beginning of the line** (`T viral-stats` reads it). Labels are free text invented from the material, but **one meaning gets one label across all cards**: after the first pass the main session merges synonyms (`pet`, `pets`, `dog care` → one label) in `20-analysis/labels.md` and rewrites the Facts lines. `category` is the broad product niche; `product_form` the physical or digital form; `creator_group` an anonymous id (`g1`, `g2`…) shared by videos of one creator, taken from file names or the metrics file, so creator concentration shows without handles. Leave a key out when the video does not show it.
+- **The `Facts:` line is JSON on one line, starting at the beginning of the line** (`T viral-stats` reads it). **`category` is one department from the closed list in `config.json → viral_browser.departments`** (pets, kitchen-dining, home-organization, beauty-skincare, fitness-sports, consumer-electronics-gadgets, … plus `non-product` for a video that shows no product category and `other` as a last resort). The list is closed **on purpose and only here**: the niche-bias controls (§5) compare departments, so free-text labels (`Pet tools`, `pets`, `dog care`) would let one niche hide as several. `T viral-stats` and `T candidates` resolve a label to its department (a qualifier department such as pets, kitchen or auto outranks a product-type word such as tools, toys or gadgets: "pet tools" and "dog toys" are pets), and report any label they cannot place; fix those on the cards. Every other label (`format`, `hook_type`, `demo_type`, the mechanisms) stays free text invented from the material, and **one meaning gets one label**: after the first pass the main session merges synonyms in `20-analysis/labels.md` and rewrites the Facts lines. `product_form` is the physical or digital form; `creator_group` an anonymous id (`g1`, `g2`…) shared by videos of one creator, taken from file names or the metrics file, so creator concentration shows without handles. Leave a key out when the video does not show it.
 - **Drivers of spread**, ranked, from this set (add others when the material shows them): the **craft** (hook and format), the **product** (novelty, need, wow), the **creator or account** (an existing audience), the **trend or sound** it rides, **paid amplification**, **controversy or engagement bait** ("is this real?"), **timing** (a season, an event) and luck. A driver that is not the product cannot be credited to a product later.
 - **Attention versus commerce.** Entertainment can spread without anyone buying. `commerce_signal` is `strong` only with evidence of buying intent (a shop tag, a cart, "where do I buy" comments, a price and a link, a sold counter); `attention_only: true` marks a video that spread without such evidence. Attention-only videos still teach mechanisms; they never count as proof that a product sells.
 - **Numbers.** When a metrics file exists, its figures go into `20-analysis/metrics.md` (one row per video: views, likes, comments, shares, saves, followers, post date, link, source) and the card cites them; ratios (shares per view, saves per view, comments per view) are computed, not eyeballed. A counter visible on screen is [E] with its frame time. Without numbers, write "not provided"; never estimate views from the look of the video.
@@ -126,12 +129,16 @@ A baseline video is a comparable video that did **not** spread (same niche, same
 
 As the protocol's §7: up to six videos (or about three minutes) the main session reads everything; more, one analysis agent, two when there are over about fifteen, each with a disjoint list of ids (baseline cards included in the lists). The main session always writes the synthesis (§4). The agent prompt is §13.1.
 
+### 3.6 Reference pages (optional, read-only)
+
+A video file carries none of what happened around it. **When the user supplied a links file and chose "web plus my Chrome"**, the main session (never an agent) opens each reference's post page in the browser, up to `reference_pages_max[depth]` pages (quick 0, standard 10, deep 30), only to read: the visible counters (views, likes, comments, shares, saves), the caption and hashtags, the creator's follower count, the date, and the **top comments in aggregate** (counts of "where do I buy / link / price", "need this", objections, doubts, the words viewers use; no handles, no quotes beyond a few short anonymous phrases). The findings go into `20-analysis/metrics.md` and the cards' Commerce signals, Audience and Mentality lines, and mark a video `commerce_signal: strong` only on evidence of buying intent. This is the best evidence the run can get for engagement, the audience's mentality and "where do I buy"; without links or without Chrome it is skipped and the cards say "not provided".
+
 ## 4. Cross-video synthesis (V3)
 
 ### 4.1 Measure first
 
 1. Merge the card labels (`labels.md`) and fix the Facts lines.
-2. `T viral-stats --run RUN` (with a baseline, `--set both`) writes `20-analysis/corpus-stats.json` and `.md`: the length, pacing, first-cut, speech-onset, text-in-the-first-second, music, loop and loudness distributions, the shares, and the **concentration** of category, product form, creator group, format and hook type (top-1 share, top-2 share, HHI, the effective number of categories, and a **dominant** flag when one label reaches `niche_dominance_threshold`). Below ten videos it prints a small-sample note: read every share as an indication, not a rate.
+2. `T viral-stats --run RUN` (with a baseline, `--set both`) writes `20-analysis/corpus-stats.json` and `.md`: the length, pacing, first-cut, speech-onset, text-in-the-first-second, music, loop and loudness distributions, the shares, and the **concentration** of department (the cards' `category`), product form, creator group, format and hook type (top-1 share, top-2 share, HHI, the effective number of departments, and a **dominant** flag when one label reaches `niche_dominance_threshold`); a `category` label it cannot place in a department is listed in the notes and counted as `unmapped:<label>`, which understates the concentration until the card is fixed. Below ten videos it prints a small-sample note: read every share as an indication, not a rate.
 
 ### 4.2 Mechanism map — `20-analysis/mechanism-map.md`
 
@@ -153,7 +160,7 @@ From `corpus-stats` and the cards: the hook types that occur, the first-cut and 
 
 ### 4.4 Engagement style — the approach
 
-The composite template, as kinds: the format, the structure shape (hook → proof → payoff → loop), the camera and edit behaviour, the text grammar, the sound role, the call-to-action kind, the way the viewer is addressed. It is written without any product, so it applies to any product that fits.
+One template **per content family** (the families of `families.md`, §4.10) plus the composite across them, as kinds: the format, the structure shape (hook → proof → payoff → loop), the camera and edit behaviour, the text grammar, the sound role, the call-to-action kind, the way the viewer is addressed. A corpus is rarely one form, so the approach is not one template: each blueprint (§9) **chooses** the family template that fits its product's demonstration and says why, or a blend of two. Templates are written without any product, so they apply to any product that fits.
 
 ### 4.5 Audience and mentality
 
@@ -195,16 +202,17 @@ References usually come from one corner of the market. Left alone, three biases 
 
 1. **Layer separation (§3).** The mechanism is collected; the product is not. Candidates come from the mechanism's *transplant needs*, never from "more of what the videos show".
 2. **Mechanism-first generation (§6).** The long list is built from mechanisms, problem scans and market feeds across many categories. The references' own products enter as **one source among five**, tagged `origin: reference`.
-3. **Pool balance.** `T candidates pool` must pass before research: at least `min_categories_in_pool` (6) categories, none above `max_pool_share_per_category` (40 %) of the pool, and no more than half of the pool from the references' own products. A failing pool is repaired by adding candidates from other categories, not by dropping the dominant one.
-4. **Origin-blind evidence and scoring.** The ledger knows each candidate's origin; **research dossiers and scoring never mention it**. Research agents are not told which candidates came from the references. Scoring reads `T candidates show --blind` and the evidence rows, not the cards.
-5. **Independent-evidence cap.** The references prove nothing about the market. A criterion in `independent_criteria` (demand, commercial, competition, economics, compliance) without at least one grade A or B evidence row (grade C for economics) flagged `independent` (not derived from the references) is **capped at 2**. `T candidates rank` applies the cap and shows raw against capped scores.
-6. **Gates (§8).** A candidate with fewer than two independent grade A or B rows in the demand, commercial and competition lanes, or none in the commercial lane, cannot be a pick.
-7. **Per-category and per-type caps.** At most `max_picks_per_category` (2) picks share one category, and no two picks share a product type. A third pick from the same category goes to the next-best candidate of another category and appears among the runner-ups with the reason "category cap".
-8. **The defence note.** Every pick from the dominant niche carries a written defence: its independent evidence side by side with the best outside-niche alternative (independent score, evidence rows, contribution margin, saturation), and why it still wins. `T candidates set --defence`. `rank` warns until it exists.
-9. **Reference-gravity test (ablation).** `rank` reports whether the picks change when the cap is removed (`ablation_changed`). If they do, the cap is what separated a product that only looks proven in the references from one the market confirms; say so in the bias log.
-10. **Transparency.** `30-research/bias-log.md` records, as the run goes: the niche-concentration line, the pool repairs, the caps applied, the ablation result and the defence notes. The report prints it.
+3. **Departments, not free text.** The controls compare **departments** (the closed list in `config.json → viral_browser.departments`), on the cards' `category` and on every candidate. `T candidates add` rejects a category it cannot place or that is ambiguous, so "Pet tools", "pets" and "dog care" are one niche and cannot be counted as three.
+4. **Pool balance, enforced.** The long list is checked with `T candidates pool` (at least `min_categories_in_pool`, 6, departments; none above `max_pool_share_per_category`, 40 %, of the pool; at most half from the references' own products), and **the shortlist that is actually researched is checked again, by the only command that can start research**: `T candidates shortlist --ids …` refuses a shortlist that fails the balance (a shortlist of 6 needs at least 3 departments, of 9 at least 5, of 12 at least 6), and `T evidence add` refuses evidence for a candidate that is not shortlisted. A failing set is repaired by adding candidates from other departments, never by dropping the dominant one; passing `--force` needs a stated `--reason`, which goes in the bias log.
+5. **Origin-blind evidence and scoring, by a fresh agent.** The ledger knows each candidate's origin; **dossiers and scoring never mention it**. Research agents are not told where a candidate came from. The main session built the pool and read the cards, so **it does not score**: a **fresh scoring agent** (§13.4) receives only `T candidates show --blind`, the evidence, the dossiers, the brief and the essence and fit profile (for `fit` only), and writes the scores. Reference-derived rows appear to it as "not independent: not counted".
+6. **Independent, directional evidence.** The references prove nothing about the market. Evidence rows carry a **signal** (positive, negative, mixed: which way the fact points for selling the product in that lane) and an independence flag; an independent grade A or B row needs a URL. A criterion in `independent_criteria` (demand, commercial, competition, economics, compliance) with **no positive independent** grade A or B row (grade C for economics) is **capped at 2**; one whose negative rows match or outnumber the positive ones is capped at 3 when scored 4 or 5. `T candidates rank` applies both and prints raw against capped scores.
+7. **Gates and floors (§8).** To be a pick a candidate needs positive independent grade A or B evidence from at least two distinct sources across the demand, commercial and competition lanes (one of them commercial), a supported compliance status, an economics row, and a floor of 3 on demand, commercial, economics, compliance and fit **after the cap**. A product whose rows say demand fell, nothing sells and the price war has begun cannot be carried by high scores elsewhere.
+8. **Per-department and per-type caps.** At most `max_picks_per_category` (2) picks share one department, and no two picks share a product type (types that overlap by half their words count as one). A third pick from the same department goes to the next-best candidate of another and appears among the runner-ups as "category cap". These caps are a deliberate diversification safeguard on the three-place table, not an exclusion of any niche (see below); the user can relax them in the config.
+9. **The defence note and the red team come before the verdict.** Every pick from the dominant niche carries a written defence, its independent evidence side by side with the best outside-niche alternative (independent score, evidence rows, contribution margin, saturation) and why it still wins (`T candidates set --defence`); every pick carries a red-team verdict (`--redteam`). **`T candidates rank --apply` refuses until both exist** (`--force --reason` overrides, and the reason is printed in the bias log), so a defence can still demote a pick.
+10. **Reference-gravity tests (ablations).** `rank` reports whether the picks change (a) when reference-derived evidence is allowed to count (`ablation_reference_evidence_changed`: the independence rules, not the references, decided) and (b) when the `fit` criterion, which is derived from the references, is removed (`ablation_no_fit_changed`). If either changes the picks, say so in the bias log and the report.
+11. **Transparency.** `30-research/bias-log.md` records, as the run goes: the niche-concentration line, the pool and shortlist checks and repairs (and any forced override with its reason), the caps applied, the ablation results and the defence notes. The report prints it.
 
-**What bias control does not do:** it does not exclude the dominant niche. A pet, kitchen or any other product from the references' own niche that the market data backs stays eligible, may win, and may take two of the three places. The controls demand *independent proof*, not a quota.
+**What bias control does not do:** it does not exclude the dominant niche. A pet, kitchen or any other product from the references' own niche that the market data backs stays eligible, may win, and may take two of the three places. The evidence rules demand *independent proof*, not a quota. The pool and pick limits (40 % of a pool, two picks per department) are the only quota-like parts: they keep the long list broad and the three-place answer diversified, they never stop a data-backed product from competing, and the user can relax them (`max_pool_share_per_category`, `max_picks_per_category`) if they want the data alone to decide.
 
 **Worked example (illustrative only; the labels come from the material, never from this file).** Seven of ten references show pet tools: a hair-removal glove, a bowl insert, a nail grinder. Read at the product layer, the corpus says "pet tools sell". Read at the mechanism layer it says: **M1** "a mess disappears on camera in under three seconds, hands only, no voice" (6 of 10 videos, niche independence high) and **M2** "a hated chore becomes satisfying" (4 of 10, high); transplant needs: a visible before and after within three seconds, silent-friendly, an impulse price, a one-location demonstration. Candidates are then drawn by those needs across the market: a lint remover, a stain-lifting stick, a window-track cleaner, a drain-hair catcher, a grout pen, and, from the references, the hair-removal glove and the nail grinder. The glove now competes with the others on *independent* demand, commercial, competition and economics evidence. It wins only if that evidence, not its presence in the references, beats theirs; if it wins it is a data-backed pet product and stays, with its defence note. If the lint remover wins instead, the answer was found by the mechanism, in a niche the videos never showed.
 
@@ -212,7 +220,7 @@ References usually come from one corner of the market. Left alone, three biases 
 
 **Goal:** twelve to twenty specific candidates (`viral_browser.long_list`), then a researched shortlist (`researched_candidates[depth]`: 6 / 9 / 12).
 
-**A candidate is a product, not a category.** It is specific enough that a supplier search or a marketplace search returns it: a name, the defining features, size or material, the use, the variants, and two or three example listings. "Pet products" is a category; "quiet ceramic-filter pet water fountain, 2 L" is a candidate. `T candidates add` takes name, definition, category (the broad niche label; **where the niche appears in the references it must use the same label as `labels.md`**, because the dominant-niche check compares labels), type (the product type, for the one-per-type rule) and origin. `--from-json <file>` takes a list of objects with those fields plus `origin_note`, `mechanisms` (a list of ids such as `["M1","M3"]`) and `note`; it adds them all in one locked write. **The name and the definition never mention the references or a video id** (they are read by the research agents and by the scorer; the origin lives only in `origin` and `origin_note`, which `--blind` hides).
+**A candidate is a product, not a category.** It is specific enough that a supplier search or a marketplace search returns it: a name, the defining features, size or material, the use, the variants, and two or three example listings. "Pet products" is a category; "quiet ceramic-filter pet water fountain, 2 L" is a candidate. `T candidates add` requires a name, a definition, a **category (a department** of the closed list, §5.3; a label it cannot place or finds ambiguous is rejected with the list), a **type** (the product type, for the one-per-type rule) and an **origin**; nothing defaults. `--from-json <file>` takes a list of objects with those fields plus `origin_note`, `mechanisms` (a list of ids such as `["M1","M3"]`) and `note`; it validates every entry first and adds them all in one locked write or none. **The name and the definition never mention the references or a video id** (they are read by the research agents and by the scorer; the origin lives only in `origin` and `origin_note`, which `--blind` hides).
 
 **Five sources, all used** (`origin`):
 
@@ -226,15 +234,18 @@ References usually come from one corner of the market. Left alone, three biases 
 
 **Screens before research** (a cheap pass with `candidates set --status eliminated --by "<gate>"` for each removal): the price band is feasible (a plausible retail price inside the band, a plausible landed cost under the ceiling, a variant or bundle that fits counts); no obvious market blocker (a regulated category the user cannot sell in that market, a shipping prohibition); not in the user's exclusions; the mechanism test (it can be demonstrated, honestly, in the time the corpus shows). A screen removes a candidate only with a stated reason.
 
-Then `T candidates pool`, repair it (§5.3), and mark the shortlist `researching`. Show the user one table: candidate, category, origin, and the one-line reason it is in the pool; the origin is shown to the user and hidden from the research (§5.4).
+Then `T candidates pool` on the long list (§5.4) and repair it, choose the shortlist, and start research with **`T candidates shortlist --run RUN --ids C01,C02,…`**, which re-checks the balance on exactly those candidates, refuses a failing set (`--force --reason "<why>"` overrides and is logged) and marks them `researching`. Show the user one table: candidate, department, origin, and the one-line reason it is in the pool; the origin is shown to the user and hidden from the research (§5.5).
 
 ## 7. Research protocol (V5)
 
 ### 7.1 Who does what
 
-- **Research agents** (up to `max_research_agents`, 3; `subagent_type: general-purpose`, `run_in_background: true`): each takes a **disjoint** list of shortlisted candidates and researches every lane (§7.3) for each, within the budget (§7.2). They use `WebSearch` and `WebFetch` only, register evidence rows with `T evidence add`, write one **origin-blind dossier** per candidate (§7.7), and queue the pages they could not read (§7.5). They **do not score, rank or recommend**, are not told where a candidate came from, and never cite the references.
-- **The main session** processes the browser queue when the user allowed their Chrome (§7.5), then scores (§8). It does not edit the dossiers.
-- **One red-team agent** attacks the provisional top five (§7.6).
+- **Research agents** (up to `max_research_agents`, 3; `subagent_type: general-purpose`, `run_in_background: true`): each takes a **disjoint** list of shortlisted candidates (`researching`) and researches every lane (§7.3) for each, within the budget (§7.2). They use `WebSearch` and `WebFetch` only, register evidence rows with `T evidence add`, run `T econ … --cand C## --run RUN` for the economics, write one **origin-blind dossier** per candidate (§7.7), and queue the pages they could not read in their own file (§7.5). They **do not score, rank, eliminate or recommend** (a lane that settles a gate is reported in their final line; the main session eliminates), are not told where a candidate came from, and never cite the references.
+- **The main session** processes the browser queue when the user allowed their Chrome (§7.5). It does not edit the dossiers and **does not score** (§8.2).
+- **One scoring agent** scores the researched candidates blind (§8.2, prompt §13.4), and a fresh one revisits the criteria the red team names.
+- **One red-team agent** attacks the red-team targets (§7.6).
+- **Fallback when an agent lacks a tool.** If a background agent reports that it was denied `WebSearch`, `WebFetch` or `Bash`, do not retry it: research that candidate in the main session within the same budget, or report the lane "unreachable".
+- **Backfill wave.** If fewer than `picks` candidates pass the gates, run **one** more research wave before reporting a shortfall: shortlist the next best `backfill_researched[depth]` candidates from the long list (the pool check applies), research them the same way, score them blind and re-rank. Only then report fewer than three (§8.6).
 - No agent calls Higgsfield or CapCut, spawns agents, uses the Workflow tool, asks a question, logs in anywhere, buys anything or contacts anyone. They report blockers (a tool failure, rate limits) and stop.
 
 ### 7.2 Depth
@@ -243,12 +254,15 @@ Then `T candidates pool`, repair it (§5.3), and mark the shortlist `researching
 |---|---|---|---|
 | candidates researched | 6 | 9 | 12 |
 | web calls per candidate (a `WebSearch` or a `WebFetch` each) | 8 | 16 | 30 |
-| trend checks (§4.8) | 3 | 6 | 12 |
-| browser pages (§7.5, only when allowed) | 6 | 14 | 30 |
-| red-team calls per candidate (top five) | 8 | 8 | 8 |
+| trend checks on the references' formats (§4.8) | 3 | 6 | 12 |
+| browser pages per candidate (§7.5, only when allowed; EU and global evidence mostly needs them) | 2 | 3 | 5 |
+| reference pages (§3.6, only with a links file and Chrome) | 0 | 10 | 30 |
+| backfill candidates (§7.1, one wave) | 3 | 5 | 6 |
+| red-team calls per candidate (red-team targets) | 8 | 8 | 8 |
+| trend checks per pick, for the blueprint (§9 item 7) | 2 | 4 | 8 |
 | verification re-fetches (§10.4) | 12 | 12 | 12 |
 
-A lane that settles a gate early (a prohibited product, a margin that cannot work) ends the candidate's research: record it, mark the candidate `eliminated --by <gate>`, and spend the rest of its budget nowhere. `WebSearch` modes: `standard` for lookups; `extended` only when a standard result is thin or stale, or for fresh prices and availability and for niche facts.
+A lane that settles a gate early (a prohibited product, a margin that cannot work) ends the candidate's research: the agent reports it, the main session marks the candidate `eliminated --by <gate>`, and the rest of the budget is spent nowhere. `WebSearch` modes: `standard` for lookups; `extended` only when a standard result is thin or stale, or for fresh prices and availability and for niche facts.
 
 ### 7.3 The lanes
 
@@ -266,12 +280,14 @@ Every lane yields three to eight evidence rows, a verdict (green / amber / red /
 | **content** (`fit`, `producibility`) | can the benefit be shown honestly, in seconds, in one place? | comparable demonstrations (what they show, how long, how they hook), the fit profile (§4.6) | demonstration time, the visible change, silent-friendliness, filming set-up, comparable videos and their reach | the benefit cannot be seen; needs a long explanation; physics-heavy (liquids, counts, many hands) |
 | **timing** (`timing`) | does the window fit the lead time? | the calendar in `brief.md`, supplier lead times, shipping and customs time, factory-holiday dates, seasonal sales curves | the window, the lead time, the gap | the window closes before arrival; a supply shutdown in the lead time; a product that peaks and falls within weeks |
 
-Unit economics inputs (the `economics` lane): the retail price inside the band (what comparable products actually charge in the market, with VAT as the market shows it), the landed cost per unit at the quantity the selling model implies (product price tier + freight + duty + any non-recoverable import tax), fulfilment per order, the platform and payment fees from their own schedules, the return rate as a **stated assumption** with its source or "assumption", and the MOQ. Then `T econ --retail … --vat-pct … --landed … --fulfil … --platform-fee-pct … --payment-fee-pct … --payment-fixed … --returns-pct … --return-cost … --moq … --currency … --market …`, and `T candidates set --id C## --contribution-pct <result> --price-fit yes|variant|no`.
+Unit economics inputs (the `economics` lane): the retail price inside the band (what comparable products actually charge in the market, with VAT as the market shows it), the landed cost per unit at the quantity the selling model implies (product price tier + freight + duty + any non-recoverable import tax), fulfilment per order, the platform and payment fees from the schedules of the user's sales channel and processor (`brief.md`), the return rate as a **stated assumption** with its source or "assumption" (never zero; the EU withdrawal right, §2), and the MOQ against the user's capital limit. Then `T econ --retail … --vat-pct … --landed … --fulfil … --platform-fee-pct … --payment-fee-pct … --payment-fixed … --returns-pct … --return-cost … --moq … --capital-limit … --stress --currency … --market … --cand C## --run RUN`: with `--cand` it writes the contribution into the candidate **and registers the grade C economics row itself**, so the typed number can never stand without its evidence. For a Global market run it once per market named and keep the lowest contribution. The scoring agent sets `--price-fit yes|variant|no`.
 
 ### 7.4 Rules of evidence
 
 - One claim per row; the number itself in `--value` with its `--unit`; `--source` is the URL (or the method for a grade C row); `--retrieved` today; `--market` the market the figure is from.
-- **`--independent yes` always**: research agents never see or cite the references. A row derived from the reference videos is registered only by the main session, with `--independent no`.
+- **`--signal positive|negative|mixed` is required**: which way the fact points for selling *this product* in that lane (rising demand, a buying signal, room to differentiate, a margin that works, a clean compliance route = positive; falling interest, no sales, a price war, a blocker = negative). Negative rows are as valuable as positive ones: they are what the scorer and the red team need, and `rank` counts both.
+- **`--independent yes|no` is required, and research agents always pass `yes`**: they never see or cite the references. A row derived from the reference videos is registered only by the main session, with `no` (it is shown, never counted). **An independent grade A or B row needs a URL** as its source; a figure you cannot link is grade C with its method, or grade D.
+- **Distinct sources.** Gate G4 counts distinct source domains: two rows from one page are one source.
 - A figure that conflicts with another source is registered twice and flagged in the dossier; the lower-quality one is not silently dropped.
 - Grade D rows are kept to show what was heard and not verified.
 - Stale evidence: a readable date older than twelve months on a fast-moving measure (interest, ads, prices, fees) is graded one step down.
@@ -279,11 +295,11 @@ Unit economics inputs (the `economics` lane): the retail price inside the band (
 
 ### 7.5 The browser queue
 
-Dynamic pages (trend charts, marketplace pages, ad libraries, shop pages) often cannot be read by `WebFetch`. Agents list what they could not read in `30-research/browser-queue.md`, one line each: `- <C> | <lane> | <URL> | <what to read>`. **Only when the user chose "web plus my Chrome"**, the main session loads the browser tools (`ToolSearch`), calls `tabs_context_mcp` first, opens a new tab per page, reads it (`get_page_text` or `read_page`; filters and a region selector may be set; nothing is submitted, no login, no purchase, no dialog-triggering control), registers the evidence rows, and stops at `browser_pages_max[depth]`. Pages beyond the cap, or with Chrome off, stay "unreachable" in the dossier and cap that lane's confidence.
+Dynamic pages (trend charts, marketplace pages, ad libraries, shop pages) often cannot be read by `WebFetch`. Each agent lists what it could not read in **its own file per candidate**, `30-research/queue-<C>.md` (several agents write at once, so one shared file would lose lines), one line each: `- <lane> | <URL> | <what to read>`. **Only when the user chose "web plus my Chrome"**, the main session loads the browser tools (`ToolSearch`), calls `tabs_context_mcp` first, opens a new tab per page, reads it (`get_page_text` or `read_page`; filters and a region selector may be set; nothing is submitted, no login, no purchase, no dialog-triggering control), registers the evidence rows (`--independent yes`), and stops at `browser_pages_per_candidate[depth]` pages per candidate (EU and global evidence depends on these pages, since `WebSearch` is US-only). Pages beyond the cap, or with Chrome off, stay "unreachable" in the dossier and cap that lane's confidence.
 
 ### 7.6 The red-team pass
 
-After a provisional ranking (§8.4), one red-team agent takes the top five. For each: "assume this product fails within ninety days; what is the most likely cause?" It looks for the strongest evidence of: saturation or price collapse, margin collapse (a cost it missed, a fee, a return rate), a compliance or platform block, a fad already peaking, a defect pattern in reviews, an IP conflict. Findings are registered as evidence rows (`--independent yes`) and summarised in `30-research/redteam.md`: per candidate, the attacks tried, the strongest counter-evidence, the residual risk, and a verdict (**survives**, **weakened**, **fails**) naming the criteria whose scores to revisit. A candidate that fails is eliminated with the red team's evidence ids as the reason.
+After the scoring (§8.4) `T candidates rank --provisional` prints the **red-team targets**: the gated, capped selection (the candidates that would be picks) **plus the next two**, so the final picks are the ones attacked, not a pre-gate top five. One red-team agent takes them. For each: "assume this product fails within ninety days; what is the most likely cause?" It looks for the strongest evidence of: saturation or price collapse, margin collapse (a cost it missed, a fee, a return rate), a compliance or platform block, a fad already peaking, a defect pattern in reviews, an IP conflict. Findings are registered as evidence rows (`--signal negative`, `--independent yes`) and summarised in `30-research/redteam.md`: per candidate, the attacks tried, the strongest counter-evidence, the residual risk, and a verdict (**survives**, **weakened**, **fails**) naming the criteria whose scores to revisit. The main session records the verdict (`T candidates set --redteam …`), and a candidate that **fails** is eliminated with the red team's evidence ids as the reason. After the rescoring and the elimination, run `--provisional` again: **any new entrant to the targets is red-teamed too** (repeat until no target lacks a verdict; at most two rounds). `rank --apply` refuses a pick without a verdict.
 
 ### 7.7 The dossier — `30-research/<C>.md` (origin-blind)
 
@@ -329,55 +345,55 @@ The anchors are guides, not formulas; the evidence decides. The economics percen
 
 ### 8.2 Scoring procedure
 
-1. Read `T candidates show --run RUN --id C## --blind` and the evidence rows. **Do not open the cards, `mechanism-map.md` or the origin while scoring a criterion other than `fit`;** `fit` is scored against `viral-essence.md` only.
-2. `T candidates score --run RUN --id C## --scores demand=4,commercial=3,fit=5,… --refs "demand=EV004+EV005 commercial=EV009" --confidence high|medium|low --note "<one line>"`. Every score names the evidence rows behind it.
-3. Set the gate fields: `T candidates set --id C## --price-fit yes|variant|no --contribution-pct <from econ> --compliance clear|resolved|open|unknown --excluded yes|no`.
+1. **A fresh scoring agent scores, not the main session** (§5.5; prompt §13.4). The main session built the pool, saw the origins and wrote the mechanism map, so it is the one reader that cannot be blind. The scoring agent receives `T candidates show --run RUN --id C## --blind`, the candidate's evidence (`T evidence list`), its dossier, `20-analysis/brief.md` (market, price band, exclusions) and `viral-essence.md` (for `fit` only). It never opens the cards, the mechanism map or the origin.
+2. `T candidates score --run RUN --id C## --scores demand=4,commercial=3,fit=5,… --refs "demand=EV004+EV005 commercial=EV009" --confidence high|medium|low --note "<one line>"`. Every score names the evidence rows behind it (ids that do not exist for the candidate are rejected); the command prints the criteria that still have no positive independent row, which `rank` will cap.
+3. Set the gate fields from the evidence: `T candidates set --id C## --price-fit yes|variant|no --compliance clear|resolved|open|unknown --excluded yes|no`. The contribution is not typed: it comes from `T econ … --cand C##` (§7.3). **`clear` or `resolved` needs a positive independent grade A or B compliance row behind it**, and a `clear` status that sits beside negative compliance rows is rejected by the gate: use `resolved` with the route, or `open`.
 4. **Confidence:** high = two or more independent grade A rows in each of demand and commercial and a region match; medium = grade A or B rows in most lanes, a gap noted; low = thin or conflicting evidence, unreachable key sources, or a market gap.
 
 ### 8.3 The gates
 
-A candidate is **eligible to be a pick** only if it passes all six; a failed gate is printed with its reason by `T candidates rank`.
+A candidate is **eligible to be a pick** only if it passes all six; a failed gate is printed with its reason by `T candidates rank`. The red team's `fails` verdict also removes a candidate.
 
 | gate | rule |
 |---|---|
-| **G1** price and economics | a retail price (or a variant or bundle) inside the user's band, and `contribution_pct` at or above `min_contribution_pct` (25) at that price |
-| **G2** compliance | no open blocker in the market (status `clear` or `resolved`; `unknown` fails) |
+| **G1** price and economics | a retail price (or a variant or bundle) inside the user's band, a contribution at or above `min_contribution_pct` (25 % of net revenue) that **came from `T econ --cand`**, and an independent economics evidence row behind it |
+| **G2** compliance | status `clear` or `resolved` (`open` and `unknown` fail), **and** at least one positive independent grade A or B compliance row; `clear` beside negative compliance rows fails |
 | **G3** exclusions | not in the user's exclusions |
-| **G4** independent evidence | at least `min_independent_evidence` (2) independent grade A or B rows across the demand, commercial and competition lanes, and at least one in the commercial lane |
-| **G5** fit | `fit` at least `min_fit` (3) |
+| **G4** independent evidence | positive independent grade A or B rows across the demand, commercial and competition lanes from at least `min_independent_evidence` (2) **distinct sources**, one of them in the commercial lane |
+| **G5** floors | after the evidence cap, `demand`, `commercial`, `economics`, `compliance` and `fit` each at least 3 (`gates.min_scores`): high scores elsewhere never carry a candidate whose evidence says the opposite |
 | **G6** confidence | at least `min_confidence_for_pick` (medium) |
 
 ### 8.4 Procedure
 
-1. Score every researched candidate (§8.2).
-2. `T candidates rank --run RUN --provisional`: the top five by capped score, with their gate failures.
-3. The red team (§7.6) attacks those five; revisit the scores its findings change.
-4. `T candidates rank --run RUN --apply`: the gated, capped, category-limited selection; writes `30-research/ranking.md` and `.json` and marks `picked` / `runner-up`.
-5. Write the **defence note** for every pick in the dominant niche (`T candidates set --id C## --defence "…"`), and `bias-log.md` (§5.10).
+1. The scoring agent scores every researched candidate (§8.2).
+2. `T candidates rank --run RUN --provisional`: the **red-team targets**, the gated, capped, department-limited selection plus the next two, with the gate failures of the rest.
+3. The red team (§7.6) attacks the targets; record each verdict (`T candidates set --id C## --redteam survives|weakened|fails`), eliminate the ones that fail, and have a fresh scoring agent revisit only the criteria the red team names. Run `--provisional` again until every target has a verdict (at most two rounds).
+4. `T candidates rank --run RUN`: read the picks, the blockers and the two ablation results; write the **defence note** for every pick in the dominant niche (`T candidates set --id C## --defence "…"`; if no honest defence exists, demote the pick by eliminating it with the reason, and rank again); complete `bias-log.md` (§5.11).
+5. `T candidates rank --run RUN --apply`: it **refuses** while a pick lacks a red-team verdict or a dominant-niche pick lacks its defence (`--force --reason` overrides and is printed); on success it writes `30-research/ranking.md` and `.json` and marks `picked` / `runner-up`.
 6. Show the user the ranking table.
 
 ### 8.5 Selection rules
 
 - Order by the **capped** score; ties go to more independent rows, then higher contribution.
-- At most `max_picks_per_category` (2) per category and one per product type; runner-ups (three) show their reason (`category cap`, or a lower independent score).
+- At most `max_picks_per_category` (2) per department and one per product type (types that share half their words count as one); runner-ups (three) show their reason (`category cap`, or a lower independent score).
 - After the picks are fixed, give each a **role** from the data, never forced: *safest* (highest confidence and margin), *highest upside* (strongest demand slope with a manageable gap) or *fastest to test* (lowest capital at risk and shortest lead time).
 - A role never changes a pick.
 
 ### 8.6 Fewer than three
 
-If fewer than three pass, deliver those that pass and say which gate removed each of the others and what the user could relax. A near miss may be listed as **watch** with the one thing that would qualify it. Never lower a gate to fill the table.
+If fewer than three pass, first run the **backfill wave** (§7.1: one more wave from the long list, with the pool check). If it still falls short, deliver those that pass and say which gate removed each of the others and what the user could relax (the price band, the market, the exclusions, the capital limit). A near miss may be listed as **watch** with the one thing that would qualify it. Never lower a gate to fill the table. For a Global market the gates use the weakest market named: G1 the lowest contribution, G2 the strictest compliance, G4 evidence from each region that is claimed.
 
 ## 9. The viral blueprint (V7), per pick
 
 The blueprint is **the approach**: the corpus's engagement style, fitted to this product, combined with what is trending now. It is a plan to produce and test content, not a script to shoot. Every pick gets all of:
 
-1. **Source mechanisms and why they transfer.** Which mechanisms (M#) and which clauses of the essence this product satisfies, and what changes for it (the demonstration, the proof, the price perception).
+1. **Source mechanisms and why they transfer.** Which mechanisms (M#) and which clauses of the essence this product satisfies, which family template of §4.4 it follows (or which two it blends, and why), and what changes for it (the demonstration, the proof, the price perception).
 2. **Audience and promise.** Who, in which situation, at which awareness stage; the one-sentence promise; the objections and the honest answer to each.
 3. **Five hooks.** One line each: the first-second visual, the on-screen line (a kind of line, not final copy), the sound idea, the hook type (from the corpus). No claim the evidence or the law does not allow.
 4. **Structure and timing.** Length target and range, hook within `<s>`, time to wow `<s>`, payoff at `<s>`, the loop, from the corpus's measured profile; the beat template.
 5. **Demonstration and proof.** What to show, from how many set-ups, what to prove (a visible change, a measurement, a comparison), what the samples and props are.
 6. **Engagement plan.** The share line a viewer would type, the save or utility trigger, an honest comment prompt, the call-to-action kind and where it sits for the chosen platform.
-7. **Trend layer.** The formats, caption grammar and sounds that are current (dated, from §4.8), the licensed-sound options for a business account in the market, and the dated elements to avoid.
+7. **Trend layer, researched per pick.** The references' trend read (§4.8) says what was current in the corpus; it does not say what is current in *this product's* niche and market today. For each pick run a bounded **trend pass** (up to `pick_trend_checks[depth]` searches or browser pages, dated): the formats, hooks, caption grammar and sounds now used in videos for products of this kind in the market, which are rising and which are worn out; plus, once, `tiktok_music_trending` for the market's country code when a TikTok account is connected. The blueprint then names the current formats and hooks to use, the licensed-sound options for a business account in the market, and the dated elements to avoid.
 8. **Offer and price framing** inside the user's band: price anchoring, a bundle, a guarantee, shipping message, the perceived-value argument, and the claims wording the market allows.
 9. **Test plan** (suggestions, not benchmarks): a matrix of angles and hooks; what to watch (three-second view rate, hold, shares and saves per view, click-through, cost per order against the break-even CPA from `econ`); a decision rule with honest sample sizes; what would make you stop.
 10. **Production route and producibility.** Real filming with the samples, or AI video through Create (then the anomaly catalog applies: counts, openings, size reckoning, liquids, solidity) and the assets to obtain before Create can run.
@@ -392,18 +408,18 @@ The blueprint is **the approach**: the corpus's engagement style, fitted to this
 |---|---|
 | `viral-browser-report.md` | the whole result (§10.2) |
 | `product-01.md`, `product-02.md`, `product-03.md` | the pick's full dossier (the economics table, the lane findings, the red-team findings) and its blueprint (§9) |
-| `evidence.md` | the evidence ledger rendered (`T evidence list --md`): claim, value, grade, independence, market, date, source |
+| `evidence.md` | the evidence ledger rendered with `T evidence list --run RUN --out <RUN>/deliverables/evidence.md`: claim, value, grade, signal, independence, market, date, source |
 | `create-handoff.md` | for each pick: the definition, audience model, goal line, trend read, the fit profile, the assets Create needs (samples, a contents shot, real dimensions) and the anomaly-catalog risks of its affordances; the command to continue (§11.4) |
 | `README.md` | the index of the files and the run folder |
 
 ### 10.2 The report
 
-1. **Summary table**: the three picks (product, category, role, price band, contribution %, break-even CPA, confidence), the runner-ups, the date and the market.
+1. **Summary table**: the three picks (product, department, role, price band, contribution %, break-even CPA and ROAS on the amount paid, the stress case, confidence), the runner-ups, the date and the market.
 2. **The essence and the fit profile** (from `viral-essence.md`).
 3. **Each pick**: definition; why it fits (mechanisms); demand; commercial proof; economics (the `econ` table); competition and angle; compliance and logistics; red-team result; confidence and what would change it; the blueprint's headlines; next steps.
 4. **Runner-ups** and why they are not picks.
 5. **Eliminated** candidates with the gate or reason, including dominant-niche candidates that did not survive.
-6. **Method and bias-control log**: the niche-concentration line, the pool repairs, the caps applied, the ablation result, the defence notes.
+6. **Method and bias-control log**: the niche-concentration line, the pool and shortlist checks and repairs (and any forced override with its reason), the caps applied, both ablation results, the defence notes, the red-team verdicts.
 7. **Unknowns and unreachable sources**, and what each would change.
 8. **Sources**: the evidence table.
 
@@ -421,7 +437,7 @@ Before the summary is shown:
 5. One currency and one tax convention throughout; EU or global claims rest on market-region evidence, or carry the "market gap" flag.
 6. Spot-check up to `verification_budget` (12) key claims of the picks (a price, a sold count, a fee, a compliance statement) by fetching the source again; correct what differs.
 7. No hook or claim in the blueprint is unsupported, and no deceptive tactic is recommended (§0 rule 7).
-8. Each error a research agent made that reached this step (a wrong figure, a dead link, an invented source) is recorded as an agent entry: `T caught-error add --source agent --mode analyze-viral-browser --run RUN --video "<C##>" --wrong "<what>" --class "viral-browser.md §7.4" --cause evidence --fix "<the correction>" --rule "<the general rule, as a kind>"`.
+8. Each error a research agent made that reached this step (a wrong figure, a dead link, an invented source) is recorded as an agent entry: `T caught-error add --source agent --title "<short title>" --mode analyze-viral-browser --run RUN --video "<C##>" --wrong "<what>" --class "viral-browser.md §7.4" --cause evidence --fix "<the correction>" --rule "<the general rule, as a kind>"`.
 
 ## 11. Wrap-up, feedback and continuation (V9)
 
@@ -429,16 +445,20 @@ Before the summary is shown:
 Show the summary (§10.3), the open questions, and the deliverables path. Reconcile the ledger (§10.4 item 8) before the question.
 
 ### 11.2 Feedback
-Ask with AskUserQuestion (header "Picks"): **"All good"**, **"I'll review later"** (any later message about the picks is still recorded), **"Adjust"**. Each problem the user names, now or later, is recorded before the fix: `T caught-error add --source user --mode analyze-viral-browser --run RUN --video "P<n> <product>" --user "<their words, verbatim>" --wrong "<diagnosis in pipeline terms: the lane, the score, the gate or the control that failed>" --class "viral-browser.md §<n>" --cause <research|scoring|bias|evidence|plan|reference|unknown> --fix "<…>" --rule "<the general rule, as a kind>"`. A rule that recurs or is general is promoted into this file (§7.4, §8, §12) and `caught-error set --status promoted`.
+Ask with AskUserQuestion (header "Picks"): **"All good"**, **"I'll review later"** (any later message about the picks is still recorded), **"Adjust"**. Each problem the user names, now or later, is recorded before the fix: `T caught-error add --source user --title "<short title>" --mode analyze-viral-browser --run RUN --video "P<n> <product>" --user "<their words, verbatim>" --wrong "<diagnosis in pipeline terms: the lane, the score, the gate or the control that failed>" --class "viral-browser.md §<n>" --cause <research|scoring|bias|evidence|plan|reference|unknown> --fix "<…>" --rule "<the general rule, as a kind>"`. A rule that recurs or is general is promoted into this file (§7.4, §8, §12) and `caught-error set --status promoted`.
 
 ### 11.3 Adjust
 A changed brief (market, price band, exclusions, selling model) or a request ("more candidates", "go deeper on C07", "replace pick 2 because …") re-runs only what it touches: re-screen the pool (V4), research the new candidates (V5), re-rank (V6, cheap), regenerate the blueprints of the new picks (V7) and re-run V8. The evidence of unchanged candidates is reused if its date is still fresh (§7.4). State what was reused.
 
 ### 11.4 Continue to Create
-After the picks are delivered the user may continue in the same run: "make videos for pick N". The run does **not** start generating by itself. On a yes:
-1. `T state --run RUN set analyze_submode=create viral_browser_done=true chosen_product=<C##>`; the command continues from Start step 3 (Higgsfield tools, the model menu, the model lock), then step 5 (the product's **assets**: samples, a contents sample, real dimensions; characters if needed; an examples folder), then A2b (the asset registry and the affordance sheet of the new product).
-2. **A3 is not re-run.** The viral cards already hold the Create fields (§3.2) and the standard `families.md`, `craft-sheet.md` and `project-profile.md` exist (§4.10). Add each card's client-entity fit, and its guardrail audit when guardrail documents were supplied, from the cards, viewing frames only where a card is silent.
-3. Re-run A4 for the chosen product (directions, the goal and audience model with the pick's blueprint as the starting point) and continue with A5 onward exactly as Create.
+After the picks are delivered the user may continue in the same run: "make videos for pick N". The run does **not** start generating by itself. On a yes it becomes a Create run and enters the Create flow at its start, for the new inputs only:
+1. `T state --run RUN set analyze_submode=create viral_browser_done=true chosen_product=<C##>`.
+2. **Start steps 3–4:** load the Higgsfield tools, then pick and lock the model (`T model-menu --mode analyze`).
+3. **Start step 5, new inputs only:** the product's assets (samples, a contents sample, real dimensions, characters if needed) and an optional examples folder; record the asset paths in `state.json` (`T state --run RUN set assets_paths='[…]'`) and note the credits (`balance`, `credits_start`).
+4. **A1, for what is new only:** `T caught-error list --digest` for the Create mode, rewriting `20-analysis/caught-errors.md` for Create; `T inventory <assets> --run RUN --as assets` and `T prep-assets --run RUN`; `T split-audio "<references folder>" --run RUN --audio-only` (Create's sound design needs `files_audio/`, and writing it into the references folder is allowed now that Create is chosen); with examples, `T inventory --as examples` and `T prep-all --set examples`. The references are **not** inventoried or prepared again.
+5. **A2 and A2b:** the documents among the assets (guardrails), the asset registry, the affordance sheet and the **product insight sheet** of the chosen product (`assets-and-substitution.md` §2 step 3b), seeded with the pick's dossier and blueprint (its demonstration, proof and objections), which stay [I] until the assets confirm them.
+6. **A3, additions only:** the viral cards already hold the Create fields (§3.2) and `families.md`, `craft-sheet.md` and `project-profile.md` exist (§4.10). Add each card's client-entity fit, and its guardrail audit when guardrail documents were supplied, from the cards, viewing frames only where a card is silent.
+7. **A4 onward exactly as Create:** re-run A4 for the chosen product (the pick's blueprint is the starting point for the goal, the audience model and the blend), then A5, A6 and on (`creative-direction.md` §5.0b).
 The sub-mode is then Create; nothing from Viral-Browser relaxes a Create rule.
 
 ## 12. Pitfalls — the things that are easy to miss
@@ -451,7 +471,10 @@ The sub-mode is then Create; nothing from Viral-Browser relaxes a Create rule.
 - **Seasonality and lead time.** A product found in October for a December window may not arrive; factory holidays stop supply; a gift item sells in a window and then stops.
 - **Look-alikes and IP.** A copy of a branded or patented design is a legal and a marketplace risk; check names, shapes and designs.
 - **Reviews tell the failure modes.** Read the 1–3 star reviews of comparable products: durability, "not as shown", sizing, safety.
-- **MOQ capital.** Unit price falls with quantity and capital at risk rises with it; size the first batch to what can be lost.
+- **MOQ capital.** Unit price falls with quantity and capital at risk rises with it; size the first batch to what can be lost, and compare it with the user's capital limit (`T econ --capital-limit`).
+- **Sales channel and fees.** Fees, restricted lists, return rules and audience differ by channel (own store, TikTok Shop, Amazon); the brief's channel decides which fee schedule and which policy list apply.
+- **Importer of record.** The country of the selling company decides who pays import VAT and duty and whether an EU authorised representative or responsible person is needed; check it for the user's actual set-up before trusting a margin.
+- **EU returns.** A statutory withdrawal right applies to EU distance sales; a returns assumption near zero overstates the margin (`T econ --stress`).
 - **Processor and ad-account risk.** Some categories raise payment-processor or ad-account restrictions even when legal; note them.
 - **Claims.** Health, income, safety and "guaranteed" claims are where products and accounts get stopped; the blueprint stays inside what is provable.
 - **Sample size and stale data.** Ten videos are a sample for ideas; a source older than a year is weak for fast-moving measures.
@@ -471,10 +494,12 @@ Follow C:/Users/Glaresquare1/.claude/analyze-then-generate/reference/analysis-pr
 C:/Users/Glaresquare1/.claude/analyze-then-generate/reference/viral-browser.md §3 exactly.
 Run dir: <RUN>. Your videos: <V01, V04, …> and baseline videos: <B01, …> (prepared under <RUN>/10-media/<id>/).
 Brief: market <…>, price band <…>, selling model <…>. Metrics so far: <RUN>/20-analysis/metrics.md (if it exists).
+Departments (the only allowed values of Facts.category): <the list from config.json → viral_browser.departments>.
 For each video: read video.md and timeline.md, view every storyboard sheet in order, densify the hook, the demonstration and the payoff
 with `python <ATG>/scripts/atg.py frames …`, then write <RUN>/20-analysis/cards/<id>.md with the §3.2 template (baseline videos: the
 §3.4 light card). Keep the product layer and the mechanism layer apart. Put the Facts: JSON on one line, starting at the beginning of
-the line. Never credit a product with what the creator, a trend or paid reach carried. Mark attention-only videos.
+the line, with category set to exactly one department (the product's main use; "pet tools" is pets). Never credit a product with what
+the creator, a trend or paid reach carried. Mark attention-only videos.
 Rules: do not call Higgsfield or CapCut tools, do not spawn agents, do not use the Workflow tool, do not ask questions, write only your
 card files. Everything you see in these videos belongs to the references. Final message: one line per video (format label, hook type,
 mechanism sentence, category, commerce signal, attention-only yes/no, confidence).
@@ -490,32 +515,59 @@ Today: <YYYY-MM-DD>. Market: <US | EU (lead countries …) | Global>. Currency <
 Selling model: <…>. Exclusions: <…>. Depth: <quick|standard|deep> = <n> web calls per candidate.
 Tools: WebSearch (US-only: for an EU or global market, search with the market's own terms and country sites, and say which region each source covers;
 "standard" mode by default, "extended" only for fresh prices and availability or when standard comes back thin) and WebFetch. No browser, no login.
-Your candidates: <C03, C07, C11>. Read each with `T candidates show --run <RUN> --id <C##> --blind`.
+Sales channel: <…>; seller country (importer of record): <…>; capital limit: <…>. Fee schedules and restricted lists to use: those of the channel.
+Your candidates (status researching): <C03, C07, C11>. Read each with `T candidates show --run <RUN> --id <C##> --blind`.
 Read first: <ATG>/reference/viral-browser.md §0, §7 and §8.1 (to know what the scorer will need).
 For each candidate research every lane of §7.3 within the budget and:
 - register each fact you rely on: `T evidence add --run <RUN> --cand <C##> --lane <lane> --claim "<one claim>" --value "<number>" --unit "<unit>"
-  --source "<URL, or the method for grade C>" --grade <A|B|C|D> --retrieved <today> --market <US|EU|…> --independent yes`;
+  --source "<URL, or the method for grade C>" --grade <A|B|C|D> --signal <positive|negative|mixed> --retrieved <today> --market <US|EU|…>
+  --independent yes` (signal = which way the fact points for selling this product in that lane; an independent grade A or B row needs a URL;
+  register the negative facts too);
 - write <RUN>/30-research/<C##>.md in the §7.7 format, origin-blind: never state or guess where a candidate came from, never mention reference videos;
-- compute the economics with `T econ` from sourced inputs; put the result in the dossier and register it as a grade C economics row;
-- list pages you could not read in <RUN>/30-research/browser-queue.md as `- <C##> | <lane> | <URL> | <what to read>`;
+- compute the economics with `T econ … --stress --moq … --capital-limit … --cand <C##> --run <RUN>` from sourced inputs (it writes the contribution
+  into the candidate and registers the grade C economics row); put the result in the dossier;
+- list pages you could not read in <RUN>/30-research/queue-<C##>.md (your own file) as `- <lane> | <URL> | <what to read>`;
 - never invent a number, URL or quote; "unreachable" and "unknown" are valid answers; prefer official and primary sources;
-- do NOT score, rank or recommend; do not call Higgsfield or CapCut tools, spawn agents, use the Workflow tool, ask questions, log in,
-  buy anything or contact anyone; stop at the budget, or earlier when a lane settles a gate (then say which).
+- do NOT score, rank, eliminate or recommend; do not call Higgsfield or CapCut tools, spawn agents, use the Workflow tool, ask questions, log in,
+  buy anything or contact anyone; stop at the budget, or earlier when a lane settles a gate (then say which in your final line).
 Final message: one line per candidate: the lane verdicts (green / amber / red / unknown), the three strongest evidence ids, the biggest unknown.
 ```
 
-### 13.3 Red-team agent
+### 13.3 Red-team agent (`run_in_background: true`)
 
 ```
 You are the red-team sceptic of a /analyze-then-generate Viral-Browser run. <persona block from §1>
 Run: <RUN>   Library (ATG): …   Toolkit (T): …   Today: <date>.   Market, currency, band, selling model: <…>.
-Your candidates (the provisional top five): <C02, C03, C05, C08, C09>. Read their dossiers (<RUN>/30-research/<C##>.md) and evidence
-(`T evidence list --run <RUN> --cand <C##> --md`). Budget: <n> web calls per candidate.
+Your candidates (the red-team targets printed by `T candidates rank --run <RUN> --provisional`: the gated, capped selection plus the next two):
+<C02, C03, C05, C08, C09>. Read their dossiers (<RUN>/30-research/<C##>.md) and evidence (`T evidence list --run <RUN> --cand <C##> --md`).
+Budget: <n> web calls per candidate.
 For each: assume it fails within ninety days and find the most likely cause. Look for the strongest evidence of saturation or price collapse,
 margin collapse (a missed cost, fee or return rate), a compliance or platform block, a fad already peaking, a defect pattern in reviews, an IP
-conflict. Register findings with `T evidence add … --independent yes` (a refuting figure is a row, graded honestly). Write <RUN>/30-research/redteam.md:
-per candidate the attacks tried, the strongest counter-evidence, the residual risk, a verdict (survives | weakened | fails) and the criteria whose
-scores should be revisited. Do not rescore or rank; do not call Higgsfield or CapCut tools, spawn agents, use the Workflow tool, ask questions, log in,
-buy anything or contact anyone. Never invent evidence; if you find nothing against a candidate, say so.
+conflict. Register findings with `T evidence add … --signal negative --independent yes` (a refuting figure is a row, graded honestly; an
+independent grade A or B row needs a URL). Write <RUN>/30-research/redteam.md: per candidate the attacks tried, the strongest counter-evidence,
+the residual risk, a verdict (survives | weakened | fails) and the criteria whose scores should be revisited. Do not rescore, rank or record
+the verdict in the ledger (the main session does); do not call Higgsfield or CapCut tools, spawn agents, use the Workflow tool, ask questions,
+log in, buy anything or contact anyone. Never invent evidence; if you find nothing against a candidate, say so.
 Final message: one line per candidate: verdict, the strongest counter-evidence id, the criteria to revisit.
+```
+
+### 13.4 Scoring agent (fresh context; also used to revisit the criteria the red team names)
+
+```
+You are the blind scorer of a /analyze-then-generate Viral-Browser run. <persona block from §1>
+Run: <RUN>   Library (ATG): …   Toolkit (T): …   Today: <date>.
+Read: <ATG>/reference/viral-browser.md §8.1 (the rubric and its anchors), §8.2 and §8.3 (the gates), §0 (evidence rules);
+<RUN>/20-analysis/brief.md (market, price band, exclusions, selling model); <RUN>/20-analysis/viral-essence.md (the fit profile, for `fit` ONLY).
+Do NOT open the cards, mechanism-map.md, the corpus statistics, the reference videos or any candidate origin; you do not know, and must not guess,
+where any candidate came from.
+Your candidates: <C01 … C09> (or, for a revisit: <C03, C07> and the criteria <demand, competition>, with the red-team notes in <RUN>/30-research/redteam.md).
+For each: `T candidates show --run <RUN> --id <C##> --blind`, `T evidence list --run <RUN> --cand <C##> --md` and the dossier <RUN>/30-research/<C##>.md.
+Score every criterion 1-5 from the evidence alone, using the anchors; unknown is 1 or 2, never 3; weigh negative rows as heavily as positive ones; a
+criterion with no positive independent grade A/B row will be capped at 2 by the toolkit, so do not argue it up.
+Write: `T candidates score --run <RUN> --id <C##> --scores demand=…,commercial=…,fit=…,economics=…,competition=…,compliance=…,logistics=…,timing=…,producibility=…
+--refs "demand=EV…+EV… commercial=EV…" --confidence <high|medium|low> --note "<one line>"` (every score names its evidence rows), then the gate fields:
+`T candidates set --run <RUN> --id <C##> --price-fit <yes|variant|no> --compliance <clear|resolved|open|unknown> --excluded <yes|no>` (clear or resolved only
+with a positive independent compliance row behind it; excluded per the brief's exclusions; a price band the retail price cannot meet is `no`).
+Do not rank, eliminate or contact anyone; do not call Higgsfield or CapCut tools, spawn agents, use the Workflow tool, ask questions.
+Final message: one line per candidate: the nine scores, the confidence, and the single weakest evidence gap.
 ```

@@ -78,8 +78,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
      - a queued video starts when an agent finishes.
    - **Viral-Browser agents** (no production agents, nothing is generated): the analysis agents
      above for the viral cards (≤ 2, disjoint lists); up to `viral_browser.max_research_agents` (3)
-     **research agents** (web only, background, disjoint candidate lists) and one **red-team
-     agent**. None calls Higgsfield or CapCut (`reference/viral-browser.md` §7, §13).
+     **research agents** (web only, background, disjoint candidate lists), one fresh, blind
+     **scoring agent** and one **red-team agent**. None calls Higgsfield or CapCut
+     (`reference/viral-browser.md` §7, §8.2, §13).
    - Agents never overlap, never ask questions (they report blockers and stop), and never spawn
      agents. Edit Mode uses no production agents.
 3. **Generation lanes.** Every video is a lane with **one job in flight at a time**:
@@ -235,6 +236,10 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
         (§3 R-steps).
     - **Create.** New videos built from the analysed patterns, in one style or a mix of styles
       (style groups such as "Organic × skit × gym", "Anime × reaction × office").
+      - The videos are **blends**, not copies of the references' samples: the agents understand the
+        references (why they work) and the product (from the supplied assets, the insight sheet), and
+        design the most engaging video from both; families are evidence and ingredients, never a
+        menu or a template (`creative-direction.md` §5.0b).
       - The product is used in the new scenes.
       - **No reference video, frame or clip is ever an input** to a generation; nothing is edited.
     - **Viral-Browser.** The references are a **source of ideas**: the agents mine them for why they
@@ -287,9 +292,10 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     and product-growth creative specialist, a mass-cognition engineer, a trend analyst, a creative
     director and a performance editor at once. Every run writes its goal, its audience model and
     its trend read; every Create video comes from at least five scored concept seeds and passes
-    the sharpness gate and the copy test (a Create video takes a reference's style, properties,
-    approach, crafting and hook logic, never its subject, scene, joke, lines or ending:
-    `creative-direction.md` §5.0); every Recreate pick is ranked for its creative potential; every brief says
+    the sharpness gate, the copy test and the blend test (a Create video takes a reference's style,
+    properties, approach, crafting and hook logic, never its subject, scene, joke, lines or ending,
+    and blends them with the product's own truths: `creative-direction.md` §5.0, §5.0b); every
+    Recreate pick is ranked for its creative potential; every brief says
     why the video will work; and QC judges the hook, the payoff and the share line as notes. The
     creative layer never overrides the hard rules (items 6, 14, 15, 18, 19 and the anomaly
     catalog); it decides which references, mechanisms and concepts win inside them. In
@@ -349,9 +355,10 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
       and the references folder is never modified (no `split-audio`).
     - **The brief is asked, not assumed:** the **market location** (US, EU, global or a country
       list) and the **price range** (the retail band and its currency) are always asked unless
-      `$ARGUMENTS` gives them; the selling model and the research tools are asked with them; exclusions and
-      constraints are taken from the user's chat message (§2.5). Nothing about the user is inferred
-      into an exclusion.
+      `$ARGUMENTS` gives them; the selling model and the research tools are asked with them; exclusions,
+      constraints and how they sell (sales channel, ad platform, importer-of-record country, capital
+      limit) are taken from the user's chat message (§2.5). Nothing about the user is inferred into an
+      exclusion.
     - **The product layer and the mechanism layer are kept apart** in every card. The run learns
       *why* the videos spread (the hook, the visible proof, the emotion, the identity trigger, the
       price perception, the length, the engagement style), then looks for products that the same
@@ -367,13 +374,17 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
       pipeline adds no exclusion of its own.
 24. **Niche-bias control: the references' product niche must not decide the answer**
     (`viral-browser.md` §5). Candidates come from the mechanism, not from "more of what the videos
-    show"; the references' own products are one source among five; the pool must span at least
-    six categories with none above 40 %; research and scoring are **origin-blind**; a criterion
-    without independent (not reference-derived) grade A/B evidence is capped at 2; at most two
-    picks share a category and none share a product type; every pick from the dominant niche
-    carries a written defence; the run reports whether the picks change without the cap. A
-    data-backed product from the references' own niche stays eligible and may win: the controls
-    demand independent proof, not a quota.
+    show"; the references' own products are one source among five; niches are compared as
+    **departments** of a closed list, never as free text; the long list must span at least six
+    departments with none above 40 %, and the **shortlist is re-checked by the command that starts
+    research** (`T candidates shortlist`); research and scoring are **origin-blind** (a fresh scoring
+    agent scores, never this session); evidence rows carry a direction and an independence flag, a
+    criterion without a positive independent grade A/B row is capped at 2, and the key criteria have
+    floors; at most two picks share a department and none share a product type; every pick has a
+    red-team verdict, and every pick from the dominant niche a written defence, **before** the ranking
+    is applied; the run reports whether the picks change when reference-derived evidence or the fit
+    criterion is removed. A data-backed product from the references' own niche stays eligible and may
+    win: the evidence rules demand independent proof, not a quota.
 25. **Viral-Browser is autonomous after the brief:** the only questions are the brief (market,
     price range, selling model, research tools), the final feedback question, and the optional
     "continue to Create". Research blockers are reported, not asked. Continuing to Create is
@@ -496,7 +507,12 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
      3. *(Optional)* **anything to exclude or respect**: categories you will not sell, regulated
         goods, size or weight limits, no batteries or liquids, a supplier or shipping limit, a
         product you already sell. Taken from the user only; never inferred.
-     4. *(Optional)* `depth quick|standard|deep` (default standard) and `price` / `market` if not
+     4. *(Optional)* **how you sell**: the sales channel(s) (own store, TikTok Shop, Amazon, …), the ad
+        platform(s), the country of your selling company (the importer of record) and the capital you
+        can put into a first order. They decide the fee schedules, the restricted lists, the VAT and
+        duty regime and the MOQ check; without them the defaults are an own store with paid social,
+        the seller's own company as importer, and an unknown capital limit.
+     5. *(Optional)* `depth quick|standard|deep` (default standard) and `price` / `market` if not
         already in `$ARGUMENTS`.
      Say in the message: *"I will use the references only as ideas and generate nothing. I will
      ask four quick questions next: market, price range, how you sell, and whether I may use your
@@ -509,13 +525,14 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
      - header "Price": "What retail price range (in the market's currency: USD for the US, EUR
        for the EU; type another currency under Other)?" **Impulse: up to 25** / **Core: 25 to 60**
        / **Premium: 60 to 150** ("Other": any range and currency).
-     - header "Selling model": **Owned inventory** (bulk order, your own warehouse) /
+     - header "Sell model": **Owned inventory** (bulk order, your own warehouse) /
        **Dropshipping** / **Print-on-demand** / **Digital product**.
-     - header "Research tools": **Web search and fetch only** (Recommended) / **Web plus my Chrome**
+     - header "Tools": **Web search and fetch only** (Recommended) / **Web plus my Chrome**
        (read-only pages: trend charts, marketplace pages, ad libraries).
      Hold the answers, and store them right after step 6 creates the run: `T state --run RUN set
      brief.market=… brief.price_min=… brief.price_max=… brief.currency=… brief.model=…
-     brief.tools=web|chrome brief.depth=… brief.exclusions='…'`.
+     brief.tools=web|chrome brief.depth=… brief.exclusions='…' brief.channel='…' brief.importer_country='…'
+     brief.capital_limit=…`.
    - **Edit Mode** needs the video file(s) or folder to edit, and offers the optional **examples
      folder** (as above). Per-edit assets are asked later, per operation (E3).
    - Paths may arrive quoted, space-separated, dragged into the terminal, or one per line. If an
@@ -616,6 +633,13 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     from the supplied specs; when none exist, the category's standard size from the catalog's
     §2.7 table, marked [I]. Never read a size off the product's own photo. These numbers feed
     the size reckoning of every shot (X1).
+  - **Product insights, per product** (`assets-and-substitution.md` §2 step 3b;
+    `creative-direction.md` §5.0b) into `30-assets/product-insights.md`: what it is and what it does
+    for someone, who and when, what reads on camera (colour, texture, motion, the sound it makes, the
+    reveal), what it can honestly show and how fast, the proof and claims the documents allow,
+    the emotion it carries, the objections and limits, the occasions, and **three to six product
+    truths** a concept can be built on. From the supplied assets and documents only; a gap is
+    "not supplied". Create's ideation reads it beside the craft sheet (A4, A6).
   - **Characters:** one entry per distinct person, mascot or character, with its best face and full
     views.
   - **Other assets:** logos, palettes, UI screenshots, environments, audio. Supplied fonts are
@@ -675,7 +699,8 @@ Write, following the protocol §5–§6:
 - `20-analysis/families.md`: dynamic content families with measured profiles;
 - **Create:** `20-analysis/craft-sheet.md` (protocol §5 step 3b): per family, what is
   **collected** (style, properties, approach, crafting, why it works) and what is **left behind**
-  (the subject). Ideation reads only the collected column;
+  (the subject). Ideation reads only the collected column, together with the product insight sheet
+  (`30-assets/product-insights.md`, A2b; `creative-direction.md` §5.0b);
 - in `20-analysis/project-profile.md`, the **goal**, the **audience model** and the **trend read**
   (`creative-direction.md` §2–§4; protocol §6);
 - `20-analysis/project-profile.md`: domain, objective, authoritative requirements, entities,
@@ -690,7 +715,8 @@ Write, following the protocol §5–§6:
   - Directions are also shaped for the **locked model** (its durations, references, audio and
     frames, from its `index.json` entry). No direction may depend on a capability the model lacks
     unless it states the adaptation.
-  - **Create** presents them as style groups (A6).
+  - **Create** presents them as style groups, plus hybrid groups that blend several families with
+    the product's strengths (A6).
 - **Recreate:** `20-analysis/recreate-ranking.md`, every reference ranked by recreate fit (protocol
   §5). The guardrail audit is its first filter: dismissed references are out of the ranking and
   listed under it with their rule; pick-and-edit references rank with their guardrail operations
@@ -718,7 +744,11 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   `<content type> × <style> × <subject>`, grouped by content type. Examples: "G1 Organic × POV skit
   × gym", "G2 Organic × story-time × office", "G3 Anime × reaction × school".
   - Each group lists its mechanism, typical length, and how the product appears.
-  - They are the agent's suggestions, built from the analysed patterns.
+  - They are the agent's suggestions, built from the analysed patterns **and the product's
+    strengths** (the insight sheet), never a menu or a template. Include **hybrid groups** that blend
+    mechanisms from several families with what the product uniquely brings, and a format the
+    references never showed when the mechanism logic and the product support it
+    (`creative-direction.md` §5.0b).
 - Ask with AskUserQuestion (header "Styles", `multiSelect: true`), with the up-to-4 best groups.
   The user picks **one style or a mix**. "Other" accepts numbers or quantities ("2×G1, 1×G4").
 - Without exact quantities, spread the videos across the chosen groups first, then by fit. Show the
@@ -732,17 +762,28 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     setting, characters, action order, joke, lines, first frame, ending or product beat fails the
     **copy test** and is rewritten with a new subject or dropped. That is Recreate's job, not
     Create's.
+  - **Blend, not mimic** (`creative-direction.md` §5.0b): Create designs the most engaging video
+    for *this* product from two inputs of equal weight, the references understood
+    (`craft-sheet.md`, the audience model, the trend read) and the product understood
+    (`30-assets/product-insights.md`). Every seed names its blend (the borrowed mechanism, the
+    product truth, the audience situation) and passes the **blend test** (without the product the
+    idea is generic; without the mechanism it is only an ad) and the **template-lock test** (it is
+    not one family's structure and tone with the product swapped in). Families are evidence and
+    ingredients, never a menu: the winner is chosen for engagement, not for resemblance to a
+    reference.
   - **Ideation, scored** (`creative-direction.md` §5.1): for every video slot write at least five
-    concept seeds (situation + turn + where the product lives), score each on stop power,
-    relatability, sharpness, product nativeness, trend fit and freshness, feasibility for the
-    locked model, and brand safety; take the best, keep the runner-up as the fallback, write the
+    concept seeds (situation + turn + where the product lives + its blend line), score each on stop
+    power, relatability, sharpness, product nativeness, blend, trend fit and freshness, feasibility
+    for the locked model, and brand safety; take the best, keep the runner-up as the fallback, write the
     winner's share line and job, and run the sharpness gate (§6). Save them to
     `20-analysis/concepts.md` and show one line per video (seed, score, the reason it won). The
     user may swap a pick by replying; nothing is asked.
-  - Each one exploits the patterns that made the references go viral: hook type and timing,
-    structure, pacing, content type, camera, humour, and payoff.
-  - The client's product is blended into the concept (its most suitable use, `generation-system.md`
-    §4b.0), the way the house approach does it when examples exist.
+  - Each one uses the mechanisms that made the references go viral (hook logic and timing,
+    structure, pacing, humour, payoff), in whatever mix the product's strengths and the audience
+    call for; it is not a re-run of one family's format.
+  - The client's product is blended into the concept from the first idea, not added at the end (its
+    most suitable use, `generation-system.md` §4b.0), the way the house approach does it when
+    examples exist.
   - No two videos repeat the same concept, and none repeats a reference's subject: the copy test
     runs against the family's references and the run's other winners.
   - **Guardrails as invariants** (`brand-guardrails.md` §4): the count limit is a ledger
@@ -952,37 +993,46 @@ See §6.
 
 ### Viral-Browser (V1–V9)
 
-Run these steps, **instead of A2b–A10**, when `analyze_submode=viral-browser`. Read
+Run these steps, **instead of A1–A10**, when `analyze_submode=viral-browser` (V1 does its own
+inventory and preprocessing; A2's rule that documents are authoritative requirements applies). Read
 `ATG/reference/viral-browser.md` once at V1 and follow it. Nothing is generated: no Higgsfield tool,
 no model, no credits, no CapCut, no assets, no change to the references folder. At the end of each
 step print one short status line and store `T state --run RUN set stage=<…> next_step=<…>` (the
-`next_step` values below make the run resumable). The market, price range, selling model, tools,
-depth and exclusions live in `state.json → brief.*`.
+`next_step` values below make the run resumable). The market, price range, selling model, sales
+channel, tools, depth and exclusions live in `state.json → brief.*`.
 
 #### V1. Brief, inventory and preprocessing
+- Store the held answers now that the run exists (`T state --run RUN set brief.market=… …`, Start
+  step 5).
 - **Caught errors first** (item 22): `T caught-error list --mode analyze-viral-browser --digest`,
   plus the entries of class selection, evidence or bias. Write `20-analysis/caught-errors.md`
   with the ones that apply and the step each changes.
 - Write `20-analysis/brief.md` from the answers (`viral-browser.md` §2): market and lead
-  countries, currency and tax convention (US prices exclude sales tax, EU prices include VAT), the
-  price band and the landed-cost ceiling, the selling model, exclusions, depth and tools, today's
-  date, the selling windows of the next 120 days with the lead time, and the production route.
+  countries, currency and tax convention (US prices exclude sales tax, EU prices include VAT; fees
+  are charged on the amount paid), the price band and the landed-cost ceiling, the selling model,
+  the sales channel, ad platform, importer-of-record country and capital limit when given,
+  exclusions, depth and tools, today's date, the selling windows of the next 120 days with the lead
+  time, the Global per-market convention, and the production route.
 - `T inventory "<refs folder>" --run RUN --as references`; with a baseline folder
   `T inventory "<baseline>" --run RUN --as baseline`.
 - `T prep-all --run RUN --jobs 2` (and `T prep-all --run RUN --set baseline --jobs 2`); with more
-  than about 3 minutes of video run it in the background and read the documents meanwhile (A2's
-  rules: documents are authoritative requirements and are quoted, "we already sell X" included).
+  than about 3 minutes of video run it in the background and read the documents meanwhile
+  (documents are authoritative requirements and are quoted, "we already sell X" included).
   **No `split-audio`:** the references folder is not touched.
 - A metrics or links file becomes `20-analysis/metrics.md`: one row per video (views, likes,
   comments, shares, saves, followers, date, link, source), matched to the video ids by file name or
-  link, and "not provided" where there is nothing. Never estimate a metric.
+  link, and "not provided" where there is nothing. Never estimate a metric. **Reference pages**
+  (only with a links file and "web plus my Chrome"): read each post page, read-only, up to
+  `reference_pages_max[depth]` pages, for the counters, the caption, the creator's size, the date
+  and the top comments in aggregate, and add them to `metrics.md` (`viral-browser.md` §3.6).
 - Show the counts in one line. `next_step=cards`.
 
 #### V2. Viral cards
 - One card per reference in `20-analysis/cards/<V>.md` and a light card per baseline video, as
   `viral-browser.md` §3: the product layer and the mechanism layer kept apart, the one-line `Facts:`
-  JSON, commerce signal versus attention-only, the ranked drivers of spread, the one-sentence
-  mechanism, the transplant needs.
+  JSON with `category` set to **one department** of `config.json → viral_browser.departments`
+  (the analysis agents' prompt carries the list), commerce signal versus attention-only, the ranked
+  drivers of spread, the one-sentence mechanism, the transplant needs.
 - Sound: for each reference run `T audio-profile --audio "<the original video>" --out
   10-media/<V>/audio-profile.json --transcript 10-media/<V>/transcript.json --cuts
   10-media/<V>/cuts.json` (the original video is the input here; nothing is written to the references
@@ -994,73 +1044,99 @@ depth and exclusions live in `state.json → brief.*`.
 
 #### V3. Corpus profile and synthesis
 - `T viral-stats --run RUN` (`--set both` with a baseline): the measured length, hook, pacing,
-  speech, text, music and loop profile, and the niche-concentration index.
+  speech, text, music and loop profile, and the niche-concentration index by department. Fix every
+  category label it lists as outside the department list on its card, then run it again.
 - Write, as `viral-browser.md` §4: `mechanism-map.md` (mechanisms `M1…`, k of n, niche
-  independence, confounds), the hook, length and pacing profile, the engagement style, the audience
-  and mentality model, `viral-essence.md` (the essence, the fit profile, what is not inferred), the
-  trend read (at most `trend_checks[depth]` bounded searches; if a TikTok account is connected in
-  Higgsfield, `tiktok_music_trending` for the market's country code, loaded with ToolSearch, else
-  skipped silently), the niche-concentration line with its bias plan, and the standard `families.md`,
-  `craft-sheet.md` and `project-profile.md` for a later Create. Start `30-research/bias-log.md`.
+  independence, confounds), the hook, length and pacing profile, the engagement style (one template
+  per family plus the composite), the audience and mentality model, `viral-essence.md` (the essence,
+  the fit profile, what is not inferred), the trend read (at most `trend_checks[depth]` bounded
+  searches; if a TikTok account is connected in Higgsfield, `tiktok_music_trending` for the market's
+  country code, loaded with ToolSearch, else skipped silently), the niche-concentration line with its
+  bias plan, and the standard `families.md`, `craft-sheet.md` and `project-profile.md` for a later
+  Create. Start `30-research/bias-log.md`.
 - Show the short summary (§4.11): the essence in 5 lines, the fit profile, the niche concentration
   and the controls it triggers, the mechanisms, the typical length and hook profile.
   `next_step=candidates`.
 
 #### V4. Candidates
 - Build the long list of 12–20 specific candidates from the five sources (`viral-browser.md` §6),
-  with `T candidates add` (or `--from-json`); a candidate is a product a supplier search returns, not a
-  category. Screen with stated reasons, check and repair the pool with `T candidates pool` (at least
-  6 categories, none above 40 %, at most half from the references' own products), and mark the
-  shortlist `researching` (6 / 9 / 12 by depth).
-- Show one table: candidate, category, origin, why it is in the pool. `next_step=research`.
+  with `T candidates add` (or `--from-json`). A candidate is a product a supplier search returns, not a
+  category; its name, definition, **department** (as `--category`), type and origin are all required,
+  and the name and definition never mention the references. Screen with stated reasons.
+- `T candidates pool --run RUN` on the long list (at least 6 departments, none above 40 %, at most half
+  from the references' own products); repair it. Then choose the shortlist (6 / 9 / 12 by depth) and
+  start research with `T candidates shortlist --run RUN --ids C01,C02,…`: it re-checks the balance on
+  exactly that set, refuses a failing one (`--force --reason "<why>"` is logged for the bias log) and
+  marks the candidates `researching`. Nothing can be researched before it.
+- Show one table: candidate, department, origin, why it is in the pool. `next_step=research`.
 
 #### V5. Research (agents)
 - Spawn up to 3 research agents (Agent tool, `subagent_type: general-purpose`,
   `run_in_background: true`) with disjoint candidate lists and the prompt of `viral-browser.md`
-  §13.2 filled in (market, currency, band, VAT convention, selling model, exclusions, depth, today's
-  date). They register evidence (`T evidence add`) and write `30-research/<C>.md`, origin-blind.
-- When they have reported, check that every shortlisted candidate has a dossier and evidence rows; a
-  missing one is researched once by a new agent.
+  §13.2 filled in (market, currency, band, VAT convention, selling model, sales channel, importer
+  country, capital limit, exclusions, depth, today's date). They register evidence (`T evidence add`
+  with `--signal` and `--independent yes`), run `T econ … --cand`, write `30-research/<C>.md`,
+  origin-blind, and queue unreadable pages in their own `queue-<C>.md`.
+- When they have reported, check that every shortlisted candidate has a dossier, evidence rows and an
+  economics row; a missing one is researched once by a new agent. A candidate an agent reports as
+  settled by a gate is eliminated here (`T candidates set --id C## --status eliminated --by "<gate>"`).
+  If an agent reports a denied tool (`WebSearch`, `WebFetch`, `Bash`), research that candidate in this
+  session within the same budget instead of retrying the agent.
 - With "web plus my Chrome": load the browser tools in one call (`ToolSearch "select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__navigate,mcp__claude-in-chrome__get_page_text,mcp__claude-in-chrome__read_page,mcp__claude-in-chrome__find,mcp__claude-in-chrome__computer,mcp__claude-in-chrome__tabs_close_mcp"`),
-  call `tabs_context_mcp` first and process `30-research/browser-queue.md` in this session, up to
-  `browser_pages_max[depth]` pages, read-only (`viral-browser.md` §7.5). Without it, queued pages stay
-  "unreachable".
+  call `tabs_context_mcp` first and process the `30-research/queue-<C>.md` files in this session, up
+  to `browser_pages_per_candidate[depth]` pages per candidate, read-only (`viral-browser.md` §7.5),
+  registering the evidence. Without it, queued pages stay "unreachable".
 - Blockers (a tool failure, rate limits) are reported, not asked. If `WebSearch` and `WebFetch`
   are both unavailable, stop here: V1–V3 are delivered (the mechanism map and the fit profile are
   useful alone) and the summary says research could not run. `next_step=scoring`.
+- **Backfill:** if V6 leaves fewer than 3 candidates through the gates, come back here **once**:
+  shortlist the next `backfill_researched[depth]` candidates from the long list (the shortlist check
+  applies), research them the same way, then score and rank again (`viral-browser.md` §7.1).
 
 #### V6. Scoring, red team and selection
-- Score origin-blind (`viral-browser.md` §8.2): `T candidates show --blind`, run `T econ` for each
-  contribution, `T candidates score` with the evidence behind every score, and `T candidates set` for
-  the gate fields.
-- `T candidates rank --provisional`; spawn the red-team agent (§13.3) on the top five; revisit the
-  scores its findings change; `T candidates rank --apply`; write the defence note of every pick
-  from the dominant niche (`T candidates set --defence`); complete `bias-log.md`.
-- Show the ranking table in chat: the picks, the runner-ups, the gates that removed the others,
-  any warning. If fewer than 3 pass, say which gate removed each and what could be relaxed
-  (§8.6). `next_step=blueprints`.
+- Spawn the **scoring agent** (`viral-browser.md` §13.4): a fresh, blind context that never sees the
+  cards, the mechanism map or any origin. It scores every researched candidate and sets the gate
+  fields (`T candidates score`, `T candidates set`). **This session does not score**: it built the
+  pool and has seen the origins.
+- `T candidates rank --run RUN --provisional` prints the **red-team targets** (the gated, capped
+  selection plus the next two). Spawn the red-team agent (§13.3) on them, record each verdict
+  (`T candidates set --id C## --redteam survives|weakened|fails`), eliminate the ones that fail, have a
+  fresh scoring agent revisit only the criteria the red team names, and run `--provisional` again until
+  every target has a verdict (two rounds at most).
+- `T candidates rank --run RUN`: read the picks, the blockers and both ablation results; write the
+  defence note of every pick from the dominant niche (`T candidates set --id C## --defence`; a pick
+  with no honest defence is eliminated and the ranking run again); complete `bias-log.md`; then
+  `T candidates rank --run RUN --apply`, which refuses while a pick lacks a red-team verdict or a
+  defence (`--force --reason` is logged).
+- Show the ranking table in chat: the picks, the runner-ups, the gates that removed the others, any
+  warning. If fewer than 3 pass, run the backfill (V5) first; if still fewer, say which gate removed
+  each and what could be relaxed (§8.6). `next_step=blueprints`.
 
 #### V7. Blueprints and deliverables
-- For each pick write `deliverables/product-NN.md` (its dossier and its blueprint, `viral-browser.md`
-  §9–§10), then `viral-browser-report.md`, `evidence.md` (`T evidence list --run RUN --md`),
-  `create-handoff.md` and `README.md`. `next_step=report-qc`.
+- Per pick, a **trend pass** (up to `pick_trend_checks[depth]` bounded searches or pages for the
+  formats, hooks and sounds now used in that product's niche and market, dated; `tiktok_music_trending`
+  once when an account is connected), then `deliverables/product-NN.md` (its dossier and its
+  blueprint, `viral-browser.md` §9–§10). Then `viral-browser-report.md`, `evidence.md` (`T evidence
+  list --run RUN --out <RUN>/deliverables/evidence.md`), `create-handoff.md` and `README.md`.
+  `next_step=report-qc`.
 
 #### V8. Report QC
 - The checklist of `viral-browser.md` §10.4: every number sourced or recomputed with `T econ`,
   the gates quoted, origin-blind dossiers, defence notes present, one currency and tax convention,
   region-matched evidence, up to 12 key claims fetched again, no unsupported hook or claim, and each
-  research error that reached this step recorded as an agent entry (`--source agent`). Fix before
-  anything is shown. `next_step=wrap-up`.
+  research error that reached this step recorded as an agent entry (`--source agent`, with
+  `--title`). Fix before anything is shown. `next_step=wrap-up`.
 
 #### V9. Wrap-up
 - Show the summary (`viral-browser.md` §10.3): the table of the three picks, the method in three
   lines, the open questions, the deliverables path and the run folder. No credits, no CapCut.
 - Ask for feedback (`viral-browser.md` §11.2, header "Picks") and record every problem named
-  (item 22) before offering the fix. "Adjust" follows §11.3.
-- Offer in one line the next step: **continue to Create for a pick** (§11.4; it needs the product's
-  assets and a model, and starts only on the user's yes), more depth on one candidate, or nothing.
-  When the ledger holds two or more open entries of one class, add: "Run `/update-from-errors
-  analyze-then-generate` to generalise these."
+  (item 22, with `--title`) before offering the fix. "Adjust" follows §11.3.
+- Offer in one line the next step: **continue to Create for a pick** (§11.4: the run enters the
+  Create flow at its start, for the new inputs only; it needs the product's assets and a model and
+  starts only on the user's yes), more depth on one candidate, or nothing. When the ledger holds two
+  or more open entries of one class, add: "Run `/update-from-errors analyze-then-generate` to
+  generalise these."
 
 ## 4. Edit Mode
 
@@ -1584,7 +1660,7 @@ files as video K".
     ("CE-004: paste test 0 signs"; "CE-005: can at 1.05× expected vs the bottle"); a failed check
     is a regenerate reason when the entry's class says so. Every regenerate reason found here is
     recorded at once, compact and complete for the next run's agents: `T caught-error add
-    --source agent --run RUN --video NN --mode … --model … --product "…" --assets "<asset paths +
+    --source agent --title "<short title>" --run RUN --video NN --mode … --model … --product "…" --assets "<asset paths +
     key specs>" --prompt <the failed request.json> --errors "<execution errors, adjustments,
     moderation>" --evidence "<checkpoint, t range, sheet path>" --title "…" --wrong "<the
     verdict>" --class "<reference §>" --cause <…> --rule "<general rule>"`. The working prompt is
@@ -1651,7 +1727,7 @@ files as video K".
      - **"Looks good — next video"** → `T ledger set --job J --status accepted`, then X10, which
        places the approved video in the `final` folder.
      - **"Needs changes"** → ask in plain chat what to change, and let them add or replace files.
-       Record it before re-editing: `T caught-error add --mode edit --video <N> --run <RUN>
+       Record it before re-editing: `T caught-error add --title "<short title>" --mode edit --video <N> --run <RUN>
        --model <id> --user "<their words>" --wrong "<diagnosis>" --class "<reference §>"
        --cause <…> --rule "<general rule>" --qc "<the X9 verdict and its reasons>"` (item 22;
        the brief, the attempt's prompt and the plan attach themselves from the run); the fix is
@@ -1734,7 +1810,7 @@ video). Then, once every video is delivered, **ask for feedback** with AskUserQu
 later"** (any later message about them is still recorded); **"Some need fixes"** → ask in plain
 chat which video and what is wrong, disliked or illogical. "Other" lets the user type it
 directly. Each problem named, now or in a later session, is recorded with `T caught-error add
---source user --run RUN --video NN --user "<their words>" …` (one entry per problem, the brief,
+--source user --title "<short title>" --run RUN --video NN --user "<their words>" …` (one entry per problem, the brief,
 prompt and delivered details attach themselves) before the fix is offered (item 22). When the
 ledger now holds two or more open or fixed entries of one class, model or product family, add one
 line: "Run `/update-from-errors analyze-then-generate` to generalise these into the prompting and QC."
@@ -1769,7 +1845,8 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
 
 - Never use or create a Claude Code Workflow.
 - Never spawn more than 2 analysis agents, more than 5 production agents at once, or a production
-  agent in Edit Mode. Never give agents overlapping work.
+  agent in Edit Mode; in Viral-Browser never more than 3 research agents at once, plus one scoring
+  agent and one red-team agent, and no production agent. Never give agents overlapping work.
 - Never read model guides other than the locked one.
 - Never re-ask for, switch, or suggest switching the model after it was picked at the start. Only an
   explicit user request changes it.
@@ -1861,7 +1938,9 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   lines, caption wording, props, first frame, ending or product beat. Create collects a
   reference's style, properties, approach, crafting and hook logic, and makes another video with a
   new subject and a new idea; a seed that fails the copy test is rewritten or dropped
-  (`creative-direction.md` §5.0).
+  (`creative-direction.md` §5.0). Never plan a Create video that is one family's template with the
+  product swapped in, or one that ignores the product's own strengths: every seed names its blend
+  and passes the blend and template-lock tests (§5.0b).
 - Never let a multiple change its number without a visible cause: three capsules on a desk are
   still three after the character walks past and comes back, unless they are seen being taken
   (`anomaly-catalog.md` §2.1, §2.5).

@@ -3733,8 +3733,40 @@ def cmd_model_menu(a):
 # The references are a source of IDEAS here, not material to edit or imitate. Nothing in this block calls Higgsfield,
 # CapCut or the network: it measures the prepared references (viral-stats), keeps the candidate-product ledger and the
 # research evidence ledger, and does the arithmetic and the gates of the selection (candidates rank, econ). Judgment
-# (what a card says, what a score is) stays with the command; the scripts make the arithmetic, the gates and the
-# niche-bias controls repeatable (reference/viral-browser.md §5 and §8).
+# (what a card says, what a score is) stays with the command and its agents; the scripts make the arithmetic, the gates
+# and the niche-bias controls repeatable (reference/viral-browser.md sections 5 and 8).
+
+VB_DEPARTMENTS = [
+    "pets", "kitchen-dining", "home-organization", "home-decor-furniture", "cleaning-laundry", "bath-bedding",
+    "beauty-skincare", "hair-styling", "personal-care-hygiene", "health-wellness", "fitness-sports", "outdoor-camping",
+    "garden-plants", "tools-diy-repair", "auto-motorcycle", "travel-luggage", "phone-computer-accessories",
+    "consumer-electronics-gadgets", "smart-home-lighting", "office-desk-stationery", "baby-kids", "toys-games",
+    "fashion-apparel", "shoes-accessories", "bags-wallets", "jewelry-watches", "party-gifts-seasonal", "food-drink",
+    "supplements-nutrition", "hobbies-crafts-art", "musical-instruments-audio", "software-apps",
+    "templates-printables-assets", "courses-education", "non-product", "other"]
+VB_DEPARTMENT_ALIASES = {
+    "pet": "pets", "dog": "pets", "cat": "pets", "kitchen": "kitchen-dining", "dining": "kitchen-dining", "cooking": "kitchen-dining",
+    "home": "home-decor-furniture", "decor": "home-decor-furniture", "furniture": "home-decor-furniture",
+    "organization": "home-organization", "organisation": "home-organization", "storage": "home-organization",
+    "cleaning": "cleaning-laundry", "laundry": "cleaning-laundry", "bath": "bath-bedding", "bedding": "bath-bedding",
+    "beauty": "beauty-skincare", "skincare": "beauty-skincare", "makeup": "beauty-skincare", "hair": "hair-styling",
+    "grooming": "personal-care-hygiene", "hygiene": "personal-care-hygiene", "health": "health-wellness",
+    "wellness": "health-wellness", "fitness": "fitness-sports", "sports": "fitness-sports", "sport": "fitness-sports",
+    "outdoor": "outdoor-camping", "camping": "outdoor-camping", "garden": "garden-plants", "plants": "garden-plants",
+    "tools": "tools-diy-repair", "diy": "tools-diy-repair", "repair": "tools-diy-repair", "auto": "auto-motorcycle",
+    "car": "auto-motorcycle", "motorcycle": "auto-motorcycle", "travel": "travel-luggage", "luggage": "travel-luggage",
+    "phone": "phone-computer-accessories", "computer": "phone-computer-accessories", "electronics": "consumer-electronics-gadgets",
+    "gadgets": "consumer-electronics-gadgets", "gadget": "consumer-electronics-gadgets", "smart": "smart-home-lighting",
+    "lighting": "smart-home-lighting", "office": "office-desk-stationery", "desk": "office-desk-stationery",
+    "stationery": "office-desk-stationery", "baby": "baby-kids", "kids": "baby-kids", "toys": "toys-games", "games": "toys-games",
+    "fashion": "fashion-apparel", "apparel": "fashion-apparel", "clothing": "fashion-apparel", "shoes": "shoes-accessories",
+    "bags": "bags-wallets", "wallets": "bags-wallets", "jewelry": "jewelry-watches", "jewellery": "jewelry-watches",
+    "watches": "jewelry-watches", "party": "party-gifts-seasonal", "gifts": "party-gifts-seasonal", "seasonal": "party-gifts-seasonal",
+    "food": "food-drink", "drink": "food-drink", "drinks": "food-drink", "supplements": "supplements-nutrition",
+    "nutrition": "supplements-nutrition", "crafts": "hobbies-crafts-art", "hobbies": "hobbies-crafts-art", "art": "hobbies-crafts-art",
+    "music": "musical-instruments-audio", "audio": "musical-instruments-audio", "software": "software-apps",
+    "apps": "software-apps", "templates": "templates-printables-assets", "printables": "templates-printables-assets",
+    "courses": "courses-education", "education": "courses-education"}
 
 VB_DEFAULTS = {
     "max_research_agents": 3,
@@ -3745,18 +3777,25 @@ VB_DEFAULTS = {
     "max_pool_share_per_category": 0.4,
     "niche_dominance_threshold": 0.4,
     "max_picks_per_category": 2,
+    "type_similarity": 0.5,
     "picks": 3,
     "runner_ups": 3,
+    "redteam_extra": 2,
     "rubric": {"demand": 15, "commercial": 15, "fit": 20, "economics": 15, "competition": 10,
                "compliance": 10, "logistics": 5, "timing": 5, "producibility": 5},
     "independent_criteria": ["demand", "commercial", "competition", "economics", "compliance"],
     "cap_without_independent_evidence": 2,
-    "gates": {"min_fit": 3, "min_contribution_pct": 25, "min_independent_evidence": 2,
-              "min_confidence_for_pick": "medium"},
+    "contradicted_cap": 3,
+    "gates": {"min_scores": {"demand": 3, "commercial": 3, "economics": 3, "compliance": 3, "fit": 3},
+              "min_contribution_pct": 25, "min_independent_evidence": 2, "min_confidence_for_pick": "medium"},
     "small_n_warning_below": 10,
+    "departments": VB_DEPARTMENTS,
+    "department_aliases": VB_DEPARTMENT_ALIASES,
 }
+VB_REPLACE_KEYS = {"rubric", "department_aliases", "departments", "independent_criteria"}
 EV_LANES = ["demand", "commercial", "competition", "economics", "compliance", "logistics", "voice", "content",
             "timing", "fit", "other"]
+EV_RESEARCH_STATUS = ("researching", "researched", "picked", "runner-up", "watch")
 CAND_STATUS = ["long", "shortlisted", "researching", "researched", "eliminated", "picked", "runner-up", "watch"]
 CAND_ORIGINS = ["reference", "mechanism", "trend-feed", "problem-scan", "variant", "other"]
 CONF_ORDER = {"low": 0, "medium": 1, "high": 2}
@@ -3766,10 +3805,17 @@ FACT_KEYS = ["category", "product_form", "price_tier", "format", "creator_style"
 FACTS_RX = re.compile(r"^Facts:\s*(\{.*\})\s*$", re.M)
 
 
+def _deep_merge(base: dict, over: dict) -> dict:
+    for k, v in over.items():
+        if k in VB_REPLACE_KEYS or not (isinstance(v, dict) and isinstance(base.get(k), dict)):
+            base[k] = v
+        else:
+            _deep_merge(base[k], v)
+    return base
+
+
 def vb_cfg() -> dict:
-    cfg = json.loads(json.dumps(VB_DEFAULTS))
-    cfg.update(cfg_get("viral_browser", {}) or {})
-    return cfg
+    return _deep_merge(json.loads(json.dumps(VB_DEFAULTS)), cfg_get("viral_browser", {}) or {})
 
 
 def _vb_dir(run) -> Path:
@@ -3787,6 +3833,68 @@ def _vb_load(path: Path, default):
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return default
+
+
+VB_GENERIC_WORDS = {"tools", "tool", "gadgets", "gadget", "accessories", "accessory", "products", "product", "items", "item",
+                    "supplies", "supply", "kit", "kits", "set", "sets", "care", "goods", "essentials", "equipment", "devices", "device"}
+# a qualifier department says WHO or WHERE the product is for; a product-type department says WHAT it is
+VB_QUALIFIER_DEPTS = {"pets", "baby-kids", "auto-motorcycle", "travel-luggage", "outdoor-camping", "garden-plants", "fitness-sports",
+                      "kitchen-dining", "beauty-skincare", "hair-styling"}
+
+
+def _dept(label, cfg=None):
+    """The canonical department of a free label, as (name, None), or (None, reason). The niche-bias controls compare
+    departments, never free text, so 'Pet tools', 'pets' and 'dog care' are one niche. Generic words (tools, gadgets,
+    accessories, care) say nothing about the niche; a qualifier department (pets, kitchen, auto, ...) outranks a product-type
+    department (toys, tools, gadgets, ...): 'pet tools' and 'dog toys' are pets, 'kitchen gadgets' is kitchen-dining."""
+    cfg = cfg or vb_cfg()
+    depts = [str(d).lower() for d in cfg["departments"]]
+    alias = {str(k).lower(): str(v).lower() for k, v in (cfg.get("department_aliases") or {}).items()}
+    s = re.sub(r"[^a-z0-9]+", " ", str(label or "").lower().replace("&", " and ")).strip()
+    if not s:
+        return None, "empty"
+    if s.replace(" ", "-") in depts:
+        return s.replace(" ", "-"), None
+    if s in alias:
+        return alias[s], None
+    specific, generic = set(), set()
+    for t in s.split():
+        if t in ("and", "the", "of", "for", "with"):
+            continue
+        for form in (t, t[:-1] if len(t) > 3 and t.endswith("s") else t):
+            hit = alias.get(form) or (form if form in depts else None)
+            if hit:
+                (generic if (t in VB_GENERIC_WORDS or form in VB_GENERIC_WORDS) else specific).add(hit)
+                break
+    found = specific or generic
+    if len(found) > 1:
+        q = found & VB_QUALIFIER_DEPTS
+        if len(q) == 1:
+            found = q
+    if len(found) == 1:
+        return next(iter(found)), None
+    if len(found) > 1:
+        return None, "ambiguous between " + ", ".join(sorted(found)) + "; pick the one that is the product's main use"
+    return None, "not in the department list"
+
+
+def _domain(src) -> str:
+    s = str(src or "").strip()
+    if re.match(r"^https?://", s, re.I):
+        from urllib.parse import urlparse
+        h = urlparse(s).netloc.lower()
+        return h[4:] if h.startswith("www.") else h
+    return "method"
+
+
+def _tokens(s):
+    toks = re.sub(r"[^a-z0-9]+", " ", str(s or "").lower()).split()
+    return {t[:-1] if len(t) > 3 and t.endswith("s") else t for t in toks if t not in ("and", "the", "for", "with", "of")}
+
+
+def _similar(a, b, thr: float) -> bool:
+    ta, tb = _tokens(a), _tokens(b)
+    return bool(ta and tb) and len(ta & tb) / len(ta | tb) >= thr
 
 
 def _num(v):
@@ -3888,10 +3996,20 @@ def _vs_facts(run_dir: Path, ids):
     return facts, bad, missing
 
 
-def _vs_aggregate(ms, facts, thr, small_n):
+def _vs_aggregate(ms, facts, thr, small_n, cfg):
     from collections import Counter
     n = len(ms)
     g = lambda k: [m.get(k) for m in ms]
+    unmapped = []
+    cats = {}
+    for i, f in facts.items():
+        if f.get("category") in (None, "", []):
+            continue
+        d, why = _dept(f.get("category"), cfg)
+        if d is None:
+            unmapped.append(f"{i}: {f.get('category')!r} ({why})")
+            d = "unmapped:" + _norm(f.get("category"))
+        cats[i] = d
     agg = {"n_videos": n, "small_n": n < small_n,
            "duration_s": _dist(g("duration_s")), "median_shot_s": _dist(g("median_shot_s")),
            "cuts_per_10s": _dist(g("cuts_per_10s")), "first_cut_s": _dist([m["first_cut_s"] for m in ms if m["first_cut_s"] is not None]),
@@ -3904,10 +4022,13 @@ def _vs_aggregate(ms, facts, thr, small_n):
            "share_text_in_first_second": _share(g("text_first_s")), "text_spans": _dist(g("n_text_spans"), 1),
            "share_music_bed": _share(g("music_bed")), "tempo_bpm": _dist(g("tempo_bpm"), 1),
            "share_vertical_9_16": _share([(m["aspect"] == "9:16") if m["aspect"] else None for m in ms]),
-           "aspects": dict(Counter(m["aspect"] for m in ms if m["aspect"]))}
+           "aspects": dict(Counter(m["aspect"] for m in ms if m["aspect"])), "unmapped_categories": unmapped}
     fa = {}
     for k in FACT_KEYS:
-        c = Counter(_norm(f.get(k)) for f in facts.values() if f.get(k) not in (None, "", []))
+        if k == "category":
+            c = Counter(cats.values())
+        else:
+            c = Counter(_norm(f.get(k)) for f in facts.values() if f.get(k) not in (None, "", []))
         if c:
             fa[k] = dict(c.most_common())
     ao = [f.get("attention_only") for f in facts.values() if isinstance(f.get("attention_only"), bool)]
@@ -3915,7 +4036,7 @@ def _vs_aggregate(ms, facts, thr, small_n):
     agg["share_attention_only"] = _share(ao)
     conc = {}
     for k in ("category", "product_form", "creator_group", "format", "hook_type"):
-        c = Counter(_norm(f.get(k)) for f in facts.values() if f.get(k) not in (None, "", []))
+        c = Counter(cats.values()) if k == "category" else Counter(_norm(f.get(k)) for f in facts.values() if f.get(k) not in (None, "", []))
         if c:
             conc[k] = _concentration(c, thr)
     agg["concentration"] = conc
@@ -3964,7 +4085,7 @@ def cmd_viral_stats(a):
     media = run_dir / "10-media"
     if not media.exists():
         fail("run prep-all first (10-media/ not found)", 2)
-    sets, notes, per_video = {}, [], {}
+    sets, notes = {}, []
     want = ["references", "baseline"] if a.vs_set == "both" else [a.vs_set]
     for name in want:
         pre = "V" if name == "references" else "B"
@@ -3978,8 +4099,10 @@ def cmd_viral_stats(a):
             notes.append(f"{name}: unreadable Facts JSON in cards {', '.join(bad)}")
         if missing:
             notes.append(f"{name}: no Facts line in cards {', '.join(missing)} (category and the other label counts exclude them)")
-        sets[name] = _vs_aggregate(ms, facts, thr, small_n)
-        per_video[name] = ms
+        sets[name] = _vs_aggregate(ms, facts, thr, small_n, cfg)
+        if sets[name]["unmapped_categories"]:
+            notes.append(f"{name}: category labels outside the department list (counted as 'unmapped:<label>', so the niche "
+                         f"concentration is understated until they are fixed): " + "; ".join(sets[name]["unmapped_categories"]))
         if sets[name]["small_n"]:
             notes.append(f"{name}: {len(ms)} videos is below {small_n}; read every share as an indication, not a rate")
     contrast = {}
@@ -4003,69 +4126,146 @@ def cmd_viral_stats(a):
          "notes": notes})
 
 
-# ---- unit economics
+# ---- candidate ledger helpers (needed by econ --apply as well)
 
-def cmd_econ(a):
-    cfg = vb_cfg()
-    vat = (a.vat_pct or 0.0) / 100.0
-    net = a.retail / (1.0 + vat)
-    fees = net * ((a.platform_fee_pct or 0.0) + (a.payment_fee_pct or 0.0)) / 100.0 + (a.payment_fixed or 0.0)
-    r = (a.returns_pct or 0.0) / 100.0
-    ret_loss = r * (net + (a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * a.landed)
-    contribution = net - a.landed - (a.fulfil or 0.0) - fees - ret_loss
-    gm = (net - a.landed) / net if net else 0.0
-    res = {"currency": a.currency, "retail_price": round(a.retail, 2), "vat_pct_included": a.vat_pct or 0.0,
-           "net_revenue": round(net, 2), "landed_cost": round(a.landed, 2), "fulfilment": round(a.fulfil or 0.0, 2),
-           "fees": round(fees, 2), "expected_return_loss": round(ret_loss, 2), "contribution_per_order": round(contribution, 2),
-           "contribution_pct_of_net": round(100 * contribution / net, 1) if net else None,
-           "gross_margin_pct": round(100 * gm, 1), "markup_net_over_landed": round(net / a.landed, 2) if a.landed else None,
-           "break_even_cpa": round(max(contribution, 0.0), 2),
-           "break_even_roas": round(net / contribution, 2) if contribution > 0 else None,
-           "landed_ceiling_at_markup": {str(k): round(net / k, 2) for k in (3, 4)}}
-    if a.moq:
-        res["capital_at_moq"] = round(a.moq * a.landed, 2)
-    warn = []
-    if contribution <= 0:
-        warn.append("contribution is zero or negative: no ad spend can break even")
-    mp = cfg["gates"]["min_contribution_pct"]
-    if res["contribution_pct_of_net"] is not None and res["contribution_pct_of_net"] < mp:
-        warn.append(f"contribution {res['contribution_pct_of_net']}% of net is below the {mp}% gate (G1)")
-    if res["markup_net_over_landed"] is not None and res["markup_net_over_landed"] < 3:
-        warn.append("net revenue is under 3x the landed cost: little room for acquisition cost (a rule of thumb, not a law)")
-    if a.vat_pct in (None, 0) and a.market and a.market.lower().startswith("eu"):
-        warn.append("EU consumer prices include VAT; --vat-pct is 0, so net revenue is overstated")
-    res["warnings"] = warn
-    rows = [("retail price (consumer)", res["retail_price"]), (f"net revenue (VAT {res['vat_pct_included']}% removed)", res["net_revenue"]),
-            ("landed cost", res["landed_cost"]), ("fulfilment", res["fulfilment"]), ("fees", res["fees"]),
-            ("expected return loss", res["expected_return_loss"]), ("contribution per order", res["contribution_per_order"]),
-            ("contribution % of net", res["contribution_pct_of_net"]), ("break-even CPA", res["break_even_cpa"]),
-            ("break-even ROAS", res["break_even_roas"])]
-    print(f"| item ({a.currency}) | value |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in rows))
-    out({"ok": True, **res})
+def _cd_paths(run):
+    d = _vb_dir(run)
+    return d / "candidates.json", d / "candidates.json.lock"
 
-
-# ---- evidence ledger
 
 def _ev_paths(run):
     d = _vb_dir(run)
     return d / "evidence.json", d / "evidence.json.lock"
 
 
+# ---- unit economics
+
+def cmd_econ(a):
+    cfg = vb_cfg()
+    vat = (a.vat_pct or 0.0) / 100.0
+    net = a.retail / (1.0 + vat)
+    base = a.retail if a.fees_on == "gross" else net          # card and platform fees are charged on the amount paid
+    fees = base * ((a.platform_fee_pct or 0.0) + (a.payment_fee_pct or 0.0)) / 100.0 + (a.payment_fixed or 0.0)
+
+    def contribution(retail_mult=1.0, returns_mult=1.0, landed_mult=1.0):
+        rt = a.retail * retail_mult
+        nt = rt / (1.0 + vat)
+        fe = (rt if a.fees_on == "gross" else nt) * ((a.platform_fee_pct or 0.0) + (a.payment_fee_pct or 0.0)) / 100.0 + (a.payment_fixed or 0.0)
+        r = min(1.0, (a.returns_pct or 0.0) / 100.0 * returns_mult)
+        ld = a.landed * landed_mult
+        rl = r * (nt + (a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * ld)
+        return nt, nt - ld - (a.fulfil or 0.0) - fe - rl
+
+    _, c0 = contribution()
+    r = (a.returns_pct or 0.0) / 100.0
+    ret_loss = r * (net + (a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * a.landed)
+    gm = (net - a.landed) / net if net else 0.0
+    res = {"currency": a.currency, "retail_price": round(a.retail, 2), "vat_pct_included": a.vat_pct or 0.0,
+           "net_revenue": round(net, 2), "landed_cost": round(a.landed, 2), "fulfilment": round(a.fulfil or 0.0, 2),
+           "fees": round(fees, 2), "fees_charged_on": a.fees_on, "expected_return_loss": round(ret_loss, 2),
+           "contribution_per_order": round(c0, 2),
+           "contribution_pct_of_net": round(100 * c0 / net, 1) if net else None,
+           "gross_margin_pct": round(100 * gm, 1), "markup_net_over_landed": round(net / a.landed, 2) if a.landed else None,
+           "break_even_cpa": round(max(c0, 0.0), 2),
+           "break_even_roas_net": round(net / c0, 2) if c0 > 0 else None,
+           "break_even_roas_gross": round(a.retail / c0, 2) if c0 > 0 else None,
+           "landed_ceiling_at_markup": {str(k): round(net / k, 2) for k in (3, 4)}}
+    if a.moq:
+        res["capital_at_moq"] = round(a.moq * a.landed, 2)
+    if a.stress:
+        sc = {}
+        for label, kw in (("retail -20%", {"retail_mult": 0.8}), ("returns x2", {"returns_mult": 2.0}),
+                          ("landed +15%", {"landed_mult": 1.15}),
+                          ("all three", {"retail_mult": 0.8, "returns_mult": 2.0, "landed_mult": 1.15})):
+            nt, cc = contribution(**kw)
+            sc[label] = {"contribution_per_order": round(cc, 2), "contribution_pct_of_net": round(100 * cc / nt, 1) if nt else None}
+        res["stress"] = sc
+    warn = []
+    if c0 <= 0:
+        warn.append("contribution is zero or negative: no ad spend can break even")
+    mp = cfg["gates"]["min_contribution_pct"]
+    if res["contribution_pct_of_net"] is not None and res["contribution_pct_of_net"] < mp:
+        warn.append(f"contribution {res['contribution_pct_of_net']}% of net is below the {mp}% gate (G1)")
+    if res["markup_net_over_landed"] is not None and res["markup_net_over_landed"] < 3:
+        warn.append("net revenue is under 3x the landed cost: little room for acquisition cost (a rule of thumb, not a law)")
+    if not a.vat_pct and a.market and a.market.lower().startswith("eu"):
+        warn.append("EU consumer prices include VAT; --vat-pct is 0, so net revenue is overstated")
+    if a.capital_limit is not None and a.moq and res["capital_at_moq"] > a.capital_limit:
+        warn.append(f"capital at the MOQ ({res['capital_at_moq']}) exceeds the capital limit ({a.capital_limit}): negotiate the MOQ or drop the candidate")
+    if res.get("stress") and res["stress"]["all three"]["contribution_per_order"] <= 0:
+        warn.append("the combined stress case (retail -20%, returns x2, landed +15%) loses money per order")
+    res["warnings"] = warn
+    rows = [("retail price (consumer)", res["retail_price"]), (f"net revenue (VAT {res['vat_pct_included']}% removed)", res["net_revenue"]),
+            ("landed cost", res["landed_cost"]), ("fulfilment", res["fulfilment"]), (f"fees (on {a.fees_on})", res["fees"]),
+            ("expected return loss", res["expected_return_loss"]), ("contribution per order", res["contribution_per_order"]),
+            ("contribution % of net", res["contribution_pct_of_net"]), ("break-even CPA", res["break_even_cpa"]),
+            ("break-even ROAS (on net revenue)", res["break_even_roas_net"]), ("break-even ROAS (on the amount paid)", res["break_even_roas_gross"])]
+    print(f"| item ({a.currency}) | value |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in rows))
+    if res.get("stress"):
+        print("\n| stress | contribution | % of net |\n|---|---|---|\n" + "\n".join(
+            f"| {k} | {v['contribution_per_order']} | {v['contribution_pct_of_net']} |" for k, v in res["stress"].items()))
+    if a.cand:
+        if not a.run:
+            fail("econ --cand needs --run", 2)
+        p, lk = _cd_paths(a.run)
+        ep, elk = _ev_paths(a.run)
+        with FileLock(lk):
+            data = _vb_load(p, {"items": []})
+            c = next((x for x in data["items"] if x["id"] == a.cand), None)
+            if not c:
+                fail(f"unknown candidate {a.cand}", 2)
+            c["contribution_pct"] = res["contribution_pct_of_net"]
+            c["economics"] = {k: res[k] for k in ("retail_price", "net_revenue", "landed_cost", "contribution_per_order",
+                                                  "contribution_pct_of_net", "break_even_cpa", "break_even_roas_gross", "currency")}
+            data["updated"] = now_iso()
+            write_json(p, data)
+        with FileLock(elk):
+            ed = _vb_load(ep, {"items": []})
+            nid = f"EV{len(ed['items']) + 1:03d}"
+            method = (f"method: econ retail={a.retail} vat={a.vat_pct} landed={a.landed} fulfil={a.fulfil} platform={a.platform_fee_pct}% "
+                      f"payment={a.payment_fee_pct}%+{a.payment_fixed} returns={a.returns_pct}% return_cost={a.return_cost} fees_on={a.fees_on}")
+            ed["items"].append({"id": nid, "cand": a.cand, "lane": "economics",
+                                "claim": f"contribution {res['contribution_pct_of_net']}% of net at {a.currency} {a.retail}",
+                                "value": str(res["contribution_pct_of_net"]), "unit": "% of net", "source": method, "grade": "C",
+                                "retrieved": dt.date.today().isoformat(), "independent": True, "market": a.market,
+                                "signal": "positive" if (res["contribution_pct_of_net"] or 0) >= mp else "negative",
+                                "note": None, "scores": True, "added": now_iso()})
+            write_json(ep, ed)
+        res["applied_to"] = a.cand
+        res["evidence_id"] = nid
+    out({"ok": True, **res})
+
+
+# ---- evidence ledger
+
+def _md_cell(v) -> str:
+    return str(v if v is not None else "").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
+
+
 def cmd_evidence(a):
     p, lk = _ev_paths(a.run)
-    cands = _vb_load(_vb_dir(a.run) / "candidates.json", {"items": []})["items"]
+    cands = _vb_load(_cd_paths(a.run)[0], {"items": []})["items"]
     if a.action == "add":
-        for need, val in (("--cand", a.cand), ("--lane", a.lane), ("--claim", a.claim), ("--source", a.source), ("--grade", a.grade)):
+        for need, val in (("--cand", a.cand), ("--lane", a.lane), ("--claim", a.claim), ("--source", a.source), ("--grade", a.grade),
+                          ("--signal", a.signal), ("--independent", a.independent)):
             if not val:
                 fail(f"evidence add needs {need}", 2)
-        if a.cand not in {c["id"] for c in cands}:
+        cand = next((c for c in cands if c["id"] == a.cand), None)
+        if not cand:
             fail(f"unknown candidate {a.cand}; add it with `candidates add` first", 2)
+        if a.independent == "yes" and a.grade in ("A", "B") and not re.match(r"^https?://", a.source.strip(), re.I):
+            fail("an independent grade A or B row needs a URL as its source (a primary or reputable secondary page); "
+                 "use grade C with a method for an estimate, or grade D for what could not be verified", 2)
+        if cand["status"] not in EV_RESEARCH_STATUS:
+            fail(f"{a.cand} is '{cand['status']}': research evidence is registered only for candidates marked researching "
+                 f"(`candidates shortlist --ids …` after the pool check); status now allows {', '.join(EV_RESEARCH_STATUS)}", 2)
         with FileLock(lk):
             data = _vb_load(p, {"items": []})
             nid = f"EV{len(data['items']) + 1:03d}"
             row = {"id": nid, "cand": a.cand, "lane": a.lane, "claim": a.claim, "value": a.value, "unit": a.unit,
-                   "source": a.source, "grade": a.grade, "retrieved": a.retrieved or dt.date.today().isoformat(),
-                   "independent": a.independent == "yes", "market": a.market, "note": a.note,
+                   "source": a.source, "domain": _domain(a.source), "grade": a.grade,
+                   "retrieved": a.retrieved or dt.date.today().isoformat(),
+                   "independent": a.independent == "yes", "market": a.market, "signal": a.signal, "note": a.note,
                    "scores": a.grade != "D", "added": now_iso()}
             data["items"].append(row)
             write_json(p, data)
@@ -4074,34 +4274,33 @@ def cmd_evidence(a):
     data = _vb_load(p, {"items": []})
     rows = [e for e in data["items"] if (not a.cand or e["cand"] == a.cand) and (not a.lane or e["lane"] == a.lane)
             and (not a.grade or e["grade"] == a.grade)]
-    if a.md:
-        print("| id | cand | lane | claim | value | grade | indep. | market | retrieved | source |\n|---|---|---|---|---|---|---|---|---|---|")
+    if a.md or a.out:
+        L = ["| id | cand | lane | claim | value | grade | signal | indep. | market | retrieved | source |",
+             "|---|---|---|---|---|---|---|---|---|---|---|"]
         for e in rows:
-            print(f"| {e['id']} | {e['cand']} | {e['lane']} | {e['claim']} | {(e.get('value') or '')} {(e.get('unit') or '')} | {e['grade']} | "
-                  f"{'yes' if e['independent'] else 'no'} | {e.get('market') or ''} | {e['retrieved']} | {e['source']} |")
-    out({"ok": True, "count": len(rows), "items": rows if not a.md else [e["id"] for e in rows]})
+            L.append(f"| {e['id']} | {e['cand']} | {e['lane']} | {_md_cell(e['claim'])} | {_md_cell((e.get('value') or ''))} {_md_cell((e.get('unit') or ''))} | "
+                     f"{e['grade']} | {e.get('signal') or ''} | {'yes' if e['independent'] else 'no'} | {_md_cell(e.get('market'))} | {e['retrieved']} | {_md_cell(e['source'])} |")
+        if a.out:
+            write_text(Path(a.out), "\n".join(L) + "\n")
+        else:
+            print("\n".join(L))
+    out({"ok": True, "count": len(rows), "out": a.out, "items": rows if not (a.md or a.out) else [e["id"] for e in rows]})
 
 
 # ---- candidate ledger
-
-def _cd_paths(run):
-    d = _vb_dir(run)
-    return d / "candidates.json", d / "candidates.json.lock"
-
 
 def _cd_next_id(items):
     n = max([int(re.sub(r"\D", "", c["id"]) or 0) for c in items] + [0]) + 1
     return f"C{n:02d}" if n < 100 else f"C{n}"
 
 
-def _cd_new(a, spec):
+def _cd_new(spec):
     return {"name": spec.get("name"), "definition": spec.get("definition"), "category": spec.get("category"),
-            "type": spec.get("type") or spec.get("ptype"), "origin": spec.get("origin") or "other",
+            "type": spec.get("type") or spec.get("ptype"), "origin": spec.get("origin"),
             "origin_note": spec.get("origin_note"), "mechanisms": spec.get("mechanisms") or [],
-            "status": spec.get("status") or "long", "eliminated_by": None, "price_fit": spec.get("price_fit") or "unknown",
-            "contribution_pct": spec.get("contribution_pct"), "compliance": spec.get("compliance") or "unknown",
-            "excluded": spec.get("excluded") or "no", "scores": {}, "score_refs": {}, "confidence": None,
-            "defence": spec.get("defence"), "role": None, "notes": spec.get("note") or spec.get("notes"), "added": now_iso()}
+            "status": "long", "eliminated_by": None, "price_fit": "unknown", "contribution_pct": None,
+            "compliance": "unknown", "excluded": "no", "scores": {}, "score_refs": {}, "confidence": None,
+            "redteam": None, "defence": None, "role": None, "notes": spec.get("note") or spec.get("notes"), "added": now_iso()}
 
 
 def _cd_blind(c):
@@ -4109,30 +4308,41 @@ def _cd_blind(c):
 
 
 def _cd_table(cands):
-    L = ["| id | product | category | type | origin | status | price | contrib % | compliance | fit | conf |",
-         "|---|---|---|---|---|---|---|---|---|---|---|"]
+    L = ["| id | product | department | type | origin | status | price | contrib % | compliance | fit | conf | red team |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for c in cands:
         L.append(f"| {c['id']} | {c['name']} | {c.get('category') or ''} | {c.get('type') or ''} | {c.get('origin') or ''} | {c['status']} | "
                  f"{c.get('price_fit')} | {c.get('contribution_pct') if c.get('contribution_pct') is not None else ''} | {c.get('compliance')} | "
-                 f"{(c.get('scores') or {}).get('fit', '')} | {c.get('confidence') or ''} |")
+                 f"{(c.get('scores') or {}).get('fit', '')} | {c.get('confidence') or ''} | {c.get('redteam') or ''} |")
     return "\n".join(L)
 
 
-def _cd_pool(items, cfg, statuses=None):
+def _cd_pool(items, cfg, statuses=None, ids=None):
     from collections import Counter
-    live = [c for c in items if c["status"] != "eliminated" and (not statuses or c["status"] in statuses)]
-    cat = Counter(_norm(c.get("category")) or "(none)" for c in live)
-    orig = Counter(c.get("origin") or "other" for c in live)
+    live = [c for c in items if c["status"] != "eliminated" and (not statuses or c["status"] in statuses) and (not ids or c["id"] in ids)]
     n = len(live)
+    cat, bad = Counter(), []
+    for c in live:
+        d, why = _dept(c.get("category"), cfg)
+        if d is None:
+            bad.append(f"{c['id']} ({c.get('category')!r}: {why})")
+            d = "unmapped:" + _norm(c.get("category"))
+        cat[d] += 1
+    orig = Counter(c.get("origin") or "other" for c in live)
+    need = min(cfg["min_categories_in_pool"], max(3, math.ceil(n / 2))) if n else 0
     flags = []
-    if n and len(cat) < cfg["min_categories_in_pool"]:
-        flags.append(f"only {len(cat)} categories in the pool; at least {cfg['min_categories_in_pool']} are required (viral-browser.md §6): add candidates from other categories before researching")
+    if bad:
+        flags.append("categories outside the department list: " + "; ".join(bad))
+    if n and len(cat) < need:
+        flags.append(f"only {len(cat)} department(s) among {n} candidates; at least {need} are required "
+                     f"(viral-browser.md section 6): add candidates from other departments before researching")
     for k, c in cat.most_common():
-        if n and c / n > cfg["max_pool_share_per_category"]:
-            flags.append(f"category '{k}' is {c}/{n} of the pool ({round(100 * c / n)}%), over the {round(100 * cfg['max_pool_share_per_category'])}% cap: replace some with candidates from other categories")
+        if n and c / n > cfg["max_pool_share_per_category"] + 1e-9:
+            flags.append(f"department '{k}' is {c}/{n} of the set ({round(100 * c / n)}%), over the "
+                         f"{round(100 * cfg['max_pool_share_per_category'])}% cap: replace some with candidates from other departments")
     if n and orig.get("reference", 0) / n > 0.5:
-        flags.append("more than half of the pool comes from the references' own products: widen it by mechanism, problem scan and market feeds")
-    return {"n": n, "categories": dict(cat.most_common()), "origins": dict(orig), "flags": flags}
+        flags.append("more than half of the set comes from the references' own products: widen it by mechanism, problem scan and market feeds")
+    return {"n": n, "need_departments": need, "departments": dict(cat.most_common()), "origins": dict(orig), "flags": flags}
 
 
 def cmd_candidates(a):
@@ -4140,25 +4350,35 @@ def cmd_candidates(a):
     cfg = vb_cfg()
     act = a.action
     if act == "add":
-        specs = []
         if a.from_json:
             src = json.loads(Path(a.from_json).read_text(encoding="utf-8"))
             specs = src if isinstance(src, list) else src.get("items", [])
         else:
-            if not (a.name and a.definition and a.category):
-                fail("candidates add needs --name, --definition and --category (or --from-json)", 2)
             specs = [{"name": a.name, "definition": a.definition, "category": a.category, "type": a.ptype, "origin": a.origin,
                       "origin_note": a.origin_note, "mechanisms": [m for m in re.split(r"[,\s]+", a.mechanisms or "") if m],
                       "note": a.note}]
+        errs, clean = [], []
+        for i, sp_ in enumerate(specs, 1):
+            sp_ = dict(sp_)
+            for need in ("name", "definition", "category", "type", "origin"):
+                if not (sp_.get(need) or (need == "type" and sp_.get("ptype"))):
+                    errs.append(f"#{i}: missing {need}")
+            if sp_.get("origin") and sp_["origin"] not in CAND_ORIGINS:
+                errs.append(f"#{i}: origin must be one of {CAND_ORIGINS}")
+            if sp_.get("category"):
+                d, why = _dept(sp_["category"], cfg)
+                if d is None:
+                    errs.append(f"#{i}: category {sp_['category']!r}: {why}")
+                else:
+                    sp_["category"] = d
+            clean.append(sp_)
+        if errs:
+            fail("; ".join(errs) + ". Departments: " + ", ".join(cfg["departments"]), 2)
         ids = []
         with FileLock(lk):
             data = _vb_load(p, {"created": now_iso(), "items": []})
-            for sp_ in specs:
-                if not (sp_.get("name") and sp_.get("category")):
-                    fail("every candidate needs a name and a category", 2)
-                if sp_.get("origin") and sp_["origin"] not in CAND_ORIGINS:
-                    fail(f"origin must be one of {CAND_ORIGINS}", 2)
-                c = _cd_new(a, sp_)
+            for sp_ in clean:
+                c = _cd_new(sp_)
                 c["id"] = _cd_next_id(data["items"])
                 data["items"].append(c)
                 ids.append(c["id"])
@@ -4168,7 +4388,7 @@ def cmd_candidates(a):
     data = _vb_load(p, {"items": []})
     items = data["items"]
     if act == "list":
-        rows = [c for c in items if (not a.status or c["status"] == a.status) and (not a.category or _norm(c.get("category")) == _norm(a.category))]
+        rows = [c for c in items if (not a.status or c["status"] == a.status) and (not a.category or c.get("category") == (_dept(a.category, cfg)[0] or _norm(a.category)))]
         if a.blind:
             rows = [_cd_blind(c) for c in rows]
         if a.md:
@@ -4176,10 +4396,35 @@ def cmd_candidates(a):
         out({"ok": True, "count": len(rows), "items": rows if not a.md else [c["id"] for c in rows]})
     if act == "pool":
         st = [s for s in re.split(r"[,\s]+", a.statuses or "") if s]
-        pool = _cd_pool(items, cfg, st or None)
+        ids = [s for s in re.split(r"[,\s]+", a.ids or "") if s]
+        pool = _cd_pool(items, cfg, st or None, ids or None)
         if a.md:
-            print("| category | candidates |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in pool["categories"].items()))
+            print("| department | candidates |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in pool["departments"].items()))
         out({"ok": not pool["flags"], **pool})
+    if act == "shortlist":
+        ids = [s for s in re.split(r"[,\s]+", a.ids or "") if s]
+        if not ids:
+            fail("candidates shortlist needs --ids C01,C02,…", 2)
+        unknown = [i for i in ids if i not in {c["id"] for c in items}]
+        if unknown:
+            fail(f"unknown candidate(s): {unknown}", 2)
+        gone = [c["id"] for c in items if c["id"] in ids and c["status"] == "eliminated"]
+        if gone:
+            fail(f"eliminated candidates cannot be shortlisted: {gone}", 2)
+        pool = _cd_pool(items, cfg, None, ids)
+        if pool["flags"] and not a.force:
+            out({"ok": False, "error": "the shortlist fails the pool balance; repair it, or pass --force --reason \"<why>\" (the reason goes in the bias log)", **pool}, 1)
+        if a.force and pool["flags"] and not a.reason:
+            fail("--force needs --reason", 2)
+        with FileLock(lk):
+            data = _vb_load(p, {"items": []})
+            for c in data["items"]:
+                if c["id"] in ids and c["status"] in ("long", "shortlisted"):
+                    c["status"] = "researching"
+            data.setdefault("shortlist_checks", []).append({"at": now_iso(), "ids": ids, "flags": pool["flags"], "forced": bool(a.force and pool["flags"]), "reason": a.reason})
+            data["updated"] = now_iso()
+            write_json(p, data)
+        out({"ok": True, "shortlisted": ids, **pool})
     if act in ("set", "score", "show"):
         if not a.id:
             fail(f"candidates {act} needs --id", 2)
@@ -4189,8 +4434,15 @@ def cmd_candidates(a):
         if act == "show":
             ev = [e for e in _vb_load(_ev_paths(a.run)[0], {"items": []})["items"] if e["cand"] == a.id]
             print(json.dumps(_cd_blind(c) if a.blind else c, indent=2, ensure_ascii=False))
-            print("\nevidence rows:\n" + "\n".join(f"- {e['id']} [{e['lane']}] {e['claim']} ({e['grade']}{'' if e['independent'] else ', from the references'}; {e['source']}; {e['retrieved']})" for e in ev))
+            print("\nevidence rows:\n" + "\n".join(
+                f"- {e['id']} [{e['lane']}] {e['claim']} ({e['grade']}, signal {e.get('signal') or 'n/a'}{'' if e['independent'] else ', not independent: not counted'}; {e['source']}; {e['retrieved']})" for e in ev))
             out({"ok": True, "id": a.id, "evidence_rows": len(ev)})
+        if act == "set" and a.category:
+            d, why = _dept(a.category, cfg)
+            if d is None:
+                fail(f"category {a.category!r}: {why}. Departments: " + ", ".join(cfg["departments"]), 2)
+            a.category = d
+        evrows = {e["id"]: e for e in _vb_load(_ev_paths(a.run)[0], {"items": []})["items"]}
         with FileLock(lk):
             data = _vb_load(p, {"items": []})
             c = next(x for x in data["items"] if x["id"] == a.id)
@@ -4198,7 +4450,7 @@ def cmd_candidates(a):
                 for fld, val in (("name", a.name), ("definition", a.definition), ("category", a.category), ("type", a.ptype),
                                  ("status", a.status), ("price_fit", a.price_fit), ("contribution_pct", a.contribution_pct),
                                  ("compliance", a.compliance), ("excluded", a.excluded), ("defence", a.defence), ("role", a.role),
-                                 ("confidence", a.confidence)):
+                                 ("confidence", a.confidence), ("redteam", a.redteam)):
                     if val is not None:
                         c[fld] = val
                 if a.note:
@@ -4224,12 +4476,21 @@ def cmd_candidates(a):
                     if not 1 <= iv <= 5:
                         fail(f"score for {k} must be 1-5", 2)
                     sc[k] = iv
-                c.setdefault("scores", {}).update(sc)
+                refs = {}
                 if a.refs:
                     for kv in re.split(r"\s+", a.refs.strip()):
                         k, _, v = kv.partition("=")
-                        if k:
-                            c.setdefault("score_refs", {})[k] = [x for x in v.split("+") if x]
+                        if not k:
+                            continue
+                        if k not in cfg["rubric"]:
+                            fail(f"--refs: unknown criterion {k!r}", 2)
+                        ids_ = [x for x in v.split("+") if x]
+                        bad = [x for x in ids_ if x not in evrows or evrows[x]["cand"] != a.id]
+                        if bad:
+                            fail(f"--refs: evidence row(s) {bad} do not exist for {a.id}", 2)
+                        refs[k] = ids_
+                c.setdefault("scores", {}).update(sc)
+                c.setdefault("score_refs", {}).update(refs)
                 if a.confidence:
                     c["confidence"] = a.confidence
                 if a.note:
@@ -4238,8 +4499,13 @@ def cmd_candidates(a):
                     c["status"] = "researched"
             data["updated"] = now_iso()
             write_json(p, data)
-        missing = [k for k in cfg["rubric"] if k not in c.get("scores", {})]
-        out({"ok": True, "id": a.id, "status": c["status"], "scores": c.get("scores"), "unscored": missing})
+        res = {"ok": True, "id": a.id, "status": c["status"]}
+        if act == "score":
+            res["scores"] = c.get("scores")
+            res["unscored"] = [k for k in cfg["rubric"] if k not in c.get("scores", {})]
+            lanes_seen = {e["lane"] for e in evrows.values() if e["cand"] == a.id and e["independent"] and e["grade"] in ("A", "B", "C") and e.get("scores", True)}
+            res["no_independent_rows_yet"] = [k for k in cfg["independent_criteria"] if k in c.get("scores", {}) and k not in lanes_seen]
+        out(res)
     if act == "rank":
         _cd_rank(a, items, cfg)
 
@@ -4250,123 +4516,172 @@ def _cd_rank(a, items, cfg):
     evid = _vb_load(_ev_paths(a.run)[0], {"items": []})["items"]
     rubric, gates = cfg["rubric"], cfg["gates"]
     wsum = float(sum(rubric.values())) or 100.0
-    ind, cap = set(cfg["independent_criteria"]), cfg["cap_without_independent_evidence"]
+    ind, cap, ccap = set(cfg["independent_criteria"]), cfg["cap_without_independent_evidence"], cfg["contradicted_cap"]
     stats = _vb_load(Path(a.run) / "20-analysis" / "corpus-stats.json", {})
     dominant = _norm(stats.get("dominant_niche"))
-    rows = []
-    for c in items:
-        if c["status"] == "eliminated":
-            continue
-        sc = c.get("scores") or {}
-        if not sc:
-            continue
-        ev = [e for e in evid if e["cand"] == c["id"] and e.get("scores", True)]
-        good = [e for e in ev if e["independent"] and (e["grade"] in ("A", "B") or (e["grade"] == "C" and e["lane"] == "economics"))]
-        eff, capped = {}, {}
-        for k, v in sc.items():
-            if k in ind and not any(e["lane"] == k for e in good):
-                eff[k] = min(v, cap)
-                if eff[k] != v:
-                    capped[k] = {"scored": v, "capped_to": eff[k]}
-            else:
-                eff[k] = v
-        raw = sum(rubric[k] * sc.get(k, 0) / 5.0 for k in rubric) * 100.0 / wsum
-        tot = sum(rubric[k] * eff.get(k, 0) / 5.0 for k in rubric) * 100.0 / wsum
-        why = []
-        miss = [k for k in rubric if k not in sc]
-        if miss:
-            why.append(f"incomplete: unscored {miss}")
-        if c.get("price_fit") not in ("yes", "variant"):
-            why.append(f"G1 price band: price_fit={c.get('price_fit')}")
-        cp = c.get("contribution_pct")
-        if cp is None:
-            why.append("G1 economics: no contribution_pct (run `econ`, then `candidates set --contribution-pct`)")
-        elif cp < gates["min_contribution_pct"]:
-            why.append(f"G1 economics: contribution {cp}% < {gates['min_contribution_pct']}%")
-        if c.get("compliance") in ("open", "unknown", None):
-            why.append(f"G2 compliance: {c.get('compliance')}")
-        if c.get("excluded") == "yes":
-            why.append("G3 excluded by the brief")
-        g4 = [e for e in good if e["lane"] in ("demand", "commercial", "competition")]
-        if len(g4) < gates["min_independent_evidence"] or not any(e["lane"] == "commercial" for e in g4):
-            why.append(f"G4 independent evidence: {len(g4)} grade A/B row(s) outside the references (need {gates['min_independent_evidence']}, one in the commercial lane)")
-        if sc.get("fit", 0) < gates["min_fit"]:
-            why.append(f"G5 fit: {sc.get('fit', 0)} < {gates['min_fit']}")
-        if CONF_ORDER.get(c.get("confidence") or "low", 0) < CONF_ORDER[gates["min_confidence_for_pick"]]:
-            why.append(f"G6 confidence: {c.get('confidence') or 'unset'} < {gates['min_confidence_for_pick']}")
-        rows.append({"id": c["id"], "name": c["name"], "category": c.get("category"), "type": c.get("type"),
-                     "raw": round(raw, 1), "total": round(tot, 1), "capped": capped, "contribution_pct": cp,
-                     "indep_rows": len(good), "confidence": c.get("confidence"), "gate_failures": why,
-                     "dominant_niche": bool(dominant and _norm(c.get("category")) == dominant),
-                     "defence": c.get("defence")})
+    cmap = {c["id"]: c for c in items}
 
-    def select(key, only_eligible=True):
-        pool = [r for r in rows if (not only_eligible or not r["gate_failures"])]
-        pool.sort(key=lambda r: (-r[key], -r["indep_rows"], -(r["contribution_pct"] or 0)))
-        want = a.picks or cfg["picks"]
-        chosen, cats, types, skipped = [], Counter(), set(), {}
+    def build(include_dependent):
+        out_rows = []
+        for c in items:
+            if c["status"] == "eliminated":
+                continue
+            sc = c.get("scores") or {}
+            if not sc:
+                continue
+            ev = [e for e in evid if e["cand"] == c["id"] and e.get("scores", True)]
+
+            def good(lane, grades=("A", "B")):
+                return [e for e in ev if e["lane"] == lane and (include_dependent or e["independent"]) and e["grade"] in grades]
+
+            def sig(e):
+                return e.get("signal") or "positive"
+
+            eff, capped = {}, {}
+            for k, v in sc.items():
+                if k in ind:
+                    rows_k = good(k, ("A", "B", "C") if k == "economics" else ("A", "B"))
+                    pos, neg = [e for e in rows_k if sig(e) == "positive"], [e for e in rows_k if sig(e) == "negative"]
+                    if not pos:
+                        eff[k], why_c = min(v, cap), "no positive independent evidence"
+                    elif len(neg) >= len(pos) and v >= 4:
+                        eff[k], why_c = min(v, ccap), f"contradicted: {len(neg)} negative against {len(pos)} positive row(s)"
+                    else:
+                        eff[k], why_c = v, None
+                    if eff[k] != v:
+                        capped[k] = {"scored": v, "capped_to": eff[k], "why": why_c}
+                else:
+                    eff[k] = v
+            raw = sum(rubric[k] * sc.get(k, 0) / 5.0 for k in rubric) * 100.0 / wsum
+            tot = sum(rubric[k] * eff.get(k, 0) / 5.0 for k in rubric) * 100.0 / wsum
+            wn = wsum - rubric.get("fit", 0)
+            nofit = (sum(rubric[k] * eff.get(k, 0) / 5.0 for k in rubric if k != "fit") * 100.0 / wn) if wn else tot
+            why = []
+            miss = [k for k in rubric if k not in sc]
+            if miss:
+                why.append(f"incomplete: unscored {miss}")
+            if c.get("price_fit") not in ("yes", "variant"):
+                why.append(f"G1 price band: price_fit={c.get('price_fit')}")
+            cp = c.get("contribution_pct")
+            econ_rows = good("economics", ("A", "B", "C"))
+            if cp is None:
+                why.append("G1 economics: no contribution (run `econ --cand C## --apply`)")
+            elif cp < gates["min_contribution_pct"]:
+                why.append(f"G1 economics: contribution {cp}% < {gates['min_contribution_pct']}%")
+            if not econ_rows:
+                why.append("G1 economics: no economics evidence row")
+            comp = c.get("compliance")
+            cpos = [e for e in good("compliance") if sig(e) == "positive"]
+            cneg = [e for e in good("compliance") if sig(e) == "negative"]
+            if comp not in ("clear", "resolved"):
+                why.append(f"G2 compliance: {comp}")
+            elif not cpos:
+                why.append("G2 compliance: no positive independent grade A/B compliance row behind the status")
+            elif cneg and comp == "clear":
+                why.append("G2 compliance: negative compliance rows but status 'clear': set 'resolved' with its route, or eliminate")
+            if c.get("excluded") == "yes":
+                why.append("G3 excluded by the brief")
+            g4 = [e for lane in ("demand", "commercial", "competition") for e in good(lane) if sig(e) == "positive"]
+            doms = {e.get("domain") or _domain(e.get("source")) for e in g4}
+            if len(doms) < gates["min_independent_evidence"] or not any(e["lane"] == "commercial" for e in g4):
+                why.append(f"G4 independent evidence: {len(doms)} distinct source(s) with positive grade A/B rows in demand, commercial and competition "
+                           f"(need {gates['min_independent_evidence']}, one of them commercial)")
+            for k, floor in gates["min_scores"].items():
+                if eff.get(k, sc.get(k, 0)) < floor:
+                    why.append(f"G5 floor: {k} {eff.get(k, sc.get(k, 0))} < {floor}" + (" (after the evidence cap)" if k in capped else ""))
+            if CONF_ORDER.get(c.get("confidence") or "low", 0) < CONF_ORDER[gates["min_confidence_for_pick"]]:
+                why.append(f"G6 confidence: {c.get('confidence') or 'unset'} < {gates['min_confidence_for_pick']}")
+            if c.get("redteam") == "fails":
+                why.append("red team: fails")
+            dept = _dept(c.get("category"), cfg)[0] or ("unmapped:" + _norm(c.get("category")))
+            out_rows.append({"id": c["id"], "name": c["name"], "category": dept, "type": c.get("type"), "raw": round(raw, 1),
+                             "total": round(tot, 1), "nofit": round(nofit, 1), "capped": capped, "contribution_pct": cp,
+                             "indep_rows": len(good("demand")) + len(good("commercial")) + len(good("competition")),
+                             "confidence": c.get("confidence"), "gate_failures": why, "redteam": c.get("redteam"),
+                             "dominant_niche": bool(dominant and dept == dominant), "defence": c.get("defence")})
+        return out_rows
+
+    rows = build(False)
+    rows_dep = build(True)
+
+    def pick_from(pool, key, want):
+        pool = sorted(pool, key=lambda r: (-r[key], -r["indep_rows"], -(r["contribution_pct"] or 0)))
+        chosen, cats, skipped = [], Counter(), {}
         for r in pool:
             if len(chosen) >= want:
                 break
-            cat, typ = _norm(r["category"]), _norm(r["type"] or r["name"])
-            if cats[cat] >= cfg["max_picks_per_category"]:
+            if cats[r["category"]] >= cfg["max_picks_per_category"]:
                 skipped[r["id"]] = "category cap"
                 continue
-            if typ in types:
+            if any(_similar(r["type"] or r["name"], x["type"] or x["name"], cfg["type_similarity"]) for x in chosen):
                 skipped[r["id"]] = "same product type as a pick"
                 continue
             chosen.append(r)
-            cats[cat] += 1
-            types.add(typ)
+            cats[r["category"]] += 1
         return pool, chosen, skipped
 
+    elig = [r for r in rows if not r["gate_failures"]]
     if a.provisional:
-        pool = sorted(rows, key=lambda r: -r["total"])[:5]
-        print("| # | id | product | category | score | raw | gate failures |\n|---|---|---|---|---|---|---|")
-        for i, r in enumerate(pool, 1):
-            print(f"| {i} | {r['id']} | {r['name']} | {r['category']} | {r['total']} | {r['raw']} | {'; '.join(r['gate_failures']) or '-'} |")
-        out({"ok": True, "provisional": True, "top5": [r["id"] for r in pool], "rows": pool})
-    pool, picks, skipped = select("total")
-    rest = [r for r in pool if r not in picks]
-    runners = rest[:cfg["runner_ups"]]
+        _, chosen, _ = pick_from(elig, "total", cfg["picks"] + cfg["redteam_extra"])
+        print("| # | id | product | department | score | raw | red team |\n|---|---|---|---|---|---|---|")
+        for i, r in enumerate(chosen, 1):
+            print(f"| {i} | {r['id']} | {r['name']} | {r['category']} | {r['total']} | {r['raw']} | {r['redteam'] or 'not yet'} |")
+        inel = sorted([r for r in rows if r["gate_failures"]], key=lambda r: -r["total"])
+        out({"ok": True, "provisional": True, "redteam_targets": [r["id"] for r in chosen], "rows": chosen,
+             "ineligible": [{"id": r["id"], "name": r["name"], "total": r["total"], "gate_failures": r["gate_failures"]} for r in inel]})
+    want = a.picks or cfg["picks"]
+    pool, picks, skipped = pick_from(elig, "total", want)
+    runners = [r for r in pool if r not in picks][:cfg["runner_ups"]]
     for r in runners:
         r["why_not_a_pick"] = skipped.get(r["id"], "lower independent score than the picks")
-    _, picks_raw, _ = select("raw")
-    ablation_changed = {r["id"] for r in picks_raw} != {r["id"] for r in picks}
+    pick_ids = {r["id"] for r in picks}
+    _, picks_nofit, _ = pick_from(elig, "nofit", want)
+    elig_dep = [r for r in rows_dep if not r["gate_failures"]]
+    _, picks_dep, _ = pick_from(elig_dep, "total", want)
+    ablation_ref = {r["id"] for r in picks_dep} != pick_ids          # would reference-derived evidence have changed the picks?
+    ablation_fit = {r["id"] for r in picks_nofit} != pick_ids         # would dropping the (reference-derived) fit criterion?
     ineligible = [r for r in rows if r["gate_failures"]]
-    warn = []
-    if len(picks) < (a.picks or cfg["picks"]):
-        warn.append(f"only {len(picks)} candidate(s) pass every gate; say which gate removed the others and what the user could relax (price band, market, exclusions)")
+    warn, blockers = [], []
+    if len(picks) < want:
+        warn.append(f"only {len(picks)} candidate(s) pass every gate; run the backfill wave (viral-browser.md section 7.1) or report which gate removed the others and what the user could relax")
     if not stats:
         warn.append("20-analysis/corpus-stats.json is missing: the dominant-niche check was skipped; run `viral-stats` first (viral-browser.md section 4.1)")
     need_def = [r["id"] for r in picks if r["dominant_niche"] and not r.get("defence")]
     if need_def:
-        warn.append(f"dominant-niche pick(s) {need_def} have no defence note (viral-browser.md §5): write why each survives the independent-evidence test against the best outside-niche alternative, then `candidates set --defence`")
-    if ablation_changed:
-        warn.append("the picks differ when the independent-evidence cap is removed: the cap changed the outcome, say so in the report's bias log")
-    pool_flags = _cd_pool(items, cfg, None)["flags"]
-    res = {"ok": True, "picks": picks, "runner_ups": runners, "ineligible": ineligible, "warnings": warn,
-           "pool_flags": pool_flags, "ablation_changed": ablation_changed, "dominant_niche": stats.get("dominant_niche"),
-           "weights": rubric}
+        blockers.append(f"dominant-niche pick(s) {need_def} have no defence note (viral-browser.md section 5): write the defence against the best outside-niche alternative, or demote them")
+    no_rt = [r["id"] for r in picks if r.get("redteam") not in ("survives", "weakened")]
+    if no_rt:
+        blockers.append(f"pick(s) {no_rt} have no red-team verdict: red-team them (`candidates set --redteam survives|weakened|fails`)")
+    if ablation_ref:
+        warn.append("the picks differ when reference-derived evidence is allowed to count: the independence rules changed the outcome; say so in the bias log")
+    if ablation_fit:
+        warn.append("the picks differ when the fit criterion (derived from the references) is removed: fit drove the outcome; say so in the bias log")
+    pool_flags = _cd_pool(items, cfg, ("researching", "researched", "picked", "runner-up", "watch"))["flags"]
+    refused = bool(a.apply and blockers and not a.force)
+    res = {"ok": not refused, "picks": picks, "runner_ups": runners, "ineligible": ineligible, "warnings": warn, "blockers": blockers,
+           "pool_flags": pool_flags, "ablation_reference_evidence_changed": ablation_ref, "ablation_no_fit_changed": ablation_fit,
+           "dominant_niche": stats.get("dominant_niche"), "weights": rubric, "forced": bool(a.force and blockers), "reason": a.reason}
     L = [f"# Ranking ({now_iso()})", "", "Weights: " + ", ".join(f"{k} {v}" for k, v in rubric.items()),
-         f"Independent-evidence cap: a criterion in {sorted(ind)} without an independent grade A/B row is capped at {cap}.", "",
-         "## Picks", "", "| # | id | product | category | score | raw | capped criteria | contribution % | indep. rows | conf | dominant niche |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+         f"Independent-evidence cap: a criterion in {sorted(ind)} without a positive independent grade A/B row (C for economics) is capped at {cap}; "
+         f"negative rows that match or outnumber the positive ones cap a 4 or 5 at {ccap}.", "",
+         "## Picks", "", "| # | id | product | department | score | raw | no-fit | capped criteria | contribution % | conf | red team | dominant niche |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for i, r in enumerate(picks, 1):
-        L.append(f"| {i} | {r['id']} | {r['name']} | {r['category']} | {r['total']} | {r['raw']} | {', '.join(r['capped']) or '-'} | {r['contribution_pct']} | {r['indep_rows']} | {r['confidence']} | {'yes' if r['dominant_niche'] else 'no'} |")
-    L += ["", "## Runner-ups", "", "| id | product | category | score | why not a pick |", "|---|---|---|---|---|"]
+        L.append(f"| {i} | {r['id']} | {r['name']} | {r['category']} | {r['total']} | {r['raw']} | {r['nofit']} | {', '.join(r['capped']) or '-'} | {r['contribution_pct']} | {r['confidence']} | {r['redteam'] or '-'} | {'yes' if r['dominant_niche'] else 'no'} |")
+    L += ["", "## Runner-ups", "", "| id | product | department | score | why not a pick |", "|---|---|---|---|---|"]
     for r in runners:
         L.append(f"| {r['id']} | {r['name']} | {r['category']} | {r['total']} | {r['why_not_a_pick']} |")
     L += ["", "## Not eligible", "", "| id | product | score | gate failures |", "|---|---|---|---|"]
     for r in sorted(ineligible, key=lambda r: -r["total"]):
         L.append(f"| {r['id']} | {r['name']} | {r['total']} | {'; '.join(r['gate_failures'])} |")
-    if warn or pool_flags:
-        L += ["", "## Warnings", ""] + [f"- {w}" for w in warn + pool_flags]
+    if warn or blockers or pool_flags:
+        L += ["", "## Warnings and blockers", ""] + [f"- BLOCKER: {w}" for w in blockers] + [f"- {w}" for w in warn + pool_flags]
     write_text(rd / "ranking.md", "\n".join(L) + "\n")
     write_json(rd / "ranking.json", res)
-    if a.apply:
+    if a.apply and not refused:
         with FileLock(_cd_paths(a.run)[1]):
             data = _vb_load(_cd_paths(a.run)[0], {"items": []})
-            ids_p, ids_r = {r["id"] for r in picks}, {r["id"] for r in runners}
+            ids_p, ids_r = pick_ids, {r["id"] for r in runners}
             for c in data["items"]:
                 if c["status"] in ("picked", "runner-up"):
                     c["status"] = "researched"
@@ -4376,6 +4691,9 @@ def _cd_rank(a, items, cfg):
                     c["status"] = "runner-up"
             write_json(_cd_paths(a.run)[0], data)
     print("\n".join(L))
+    if refused:
+        res["error"] = "--apply refused: " + " | ".join(blockers) + " (fix them, or pass --force --reason \"<why>\")"
+        out(res, 1)
     out(res)
 
 
@@ -4636,30 +4954,35 @@ def main():
     p.add_argument("--run", required=True)
     p.add_argument("--set", dest="vs_set", choices=["references", "baseline", "both"], default="both")
     p.add_argument("--niche-threshold", type=float,
-                   help="share of one category that counts as dominant (default viral_browser.niche_dominance_threshold)")
+                   help="share of one department that counts as dominant (default viral_browser.niche_dominance_threshold)")
     p.set_defaults(fn=cmd_viral_stats)
 
-    p = sp.add_parser("candidates", help="Viral-Browser: candidate-product ledger (add | list | set | pool | score | rank | show)")
-    p.add_argument("action", choices=["add", "list", "set", "pool", "score", "rank", "show"])
+    p = sp.add_parser("candidates", help="Viral-Browser: candidate-product ledger (add | list | set | pool | shortlist | score | rank | show)")
+    p.add_argument("action", choices=["add", "list", "set", "pool", "shortlist", "score", "rank", "show"])
     p.add_argument("--run", required=True)
-    p.add_argument("--id"); p.add_argument("--name"); p.add_argument("--definition"); p.add_argument("--category")
-    p.add_argument("--type", dest="ptype", help="product type; one pick per type")
+    p.add_argument("--id"); p.add_argument("--ids", help="shortlist / pool: comma list of candidate ids")
+    p.add_argument("--name"); p.add_argument("--definition")
+    p.add_argument("--category", help="a department (config viral_browser.departments); the niche-bias controls compare departments")
+    p.add_argument("--type", dest="ptype", help="product type; no two picks share one")
     p.add_argument("--origin", choices=CAND_ORIGINS); p.add_argument("--origin-note")
     p.add_argument("--mechanisms", help="mechanism ids from mechanism-map.md, e.g. M1,M3")
-    p.add_argument("--from-json", help="add: a JSON list of candidates (name, definition, category, type, origin, ...)")
+    p.add_argument("--from-json", help="add: a JSON list of candidates (name, definition, category, type, origin required)")
     p.add_argument("--status", choices=CAND_STATUS); p.add_argument("--statuses", help="pool: comma list of statuses to count")
     p.add_argument("--by", help="set --status eliminated: the gate or the reason"); p.add_argument("--note")
     p.add_argument("--price-fit", choices=["yes", "variant", "no", "unknown"])
-    p.add_argument("--contribution-pct", type=float, help="from `econ`: contribution per order as %% of net revenue")
+    p.add_argument("--contribution-pct", type=float, help="normally written by `econ --cand C## --apply`")
     p.add_argument("--compliance", choices=["clear", "resolved", "open", "unknown"])
     p.add_argument("--excluded", choices=["yes", "no"])
-    p.add_argument("--defence", help="dominant-niche candidates: why it survives the independent-evidence test")
+    p.add_argument("--defence", help="dominant-niche picks: why it survives the independent-evidence test (needed before rank --apply)")
+    p.add_argument("--redteam", choices=["survives", "weakened", "fails"], help="the red-team verdict (needed for every pick before rank --apply)")
     p.add_argument("--role")
     p.add_argument("--scores", help="score: demand=4,commercial=3,fit=5,... (1-5 per rubric criterion)")
-    p.add_argument("--refs", help='score: evidence behind each score, e.g. "demand=EV001+EV002 commercial=EV004"')
+    p.add_argument("--refs", help='score: evidence behind each score, e.g. "demand=EV001+EV002 commercial=EV004" (must exist for the candidate)')
     p.add_argument("--confidence", choices=["low", "medium", "high"])
-    p.add_argument("--provisional", action="store_true", help="rank: top five by score regardless of gates (for the red team)")
+    p.add_argument("--provisional", action="store_true", help="rank: the gated, capped selection plus the next two = the red-team targets")
     p.add_argument("--picks", type=int); p.add_argument("--apply", action="store_true", help="rank: write picked / runner-up statuses")
+    p.add_argument("--force", action="store_true", help="rank --apply / shortlist: proceed past blockers; needs --reason")
+    p.add_argument("--reason", help="why --force (kept in ranking.json / candidates.json for the bias log)")
     p.add_argument("--md", action="store_true"); p.add_argument("--blind", action="store_true", help="hide origin (scoring is origin-blind)")
     p.set_defaults(fn=cmd_candidates)
 
@@ -4668,10 +4991,12 @@ def main():
     p.add_argument("--cand"); p.add_argument("--lane", choices=EV_LANES); p.add_argument("--claim")
     p.add_argument("--source", help="URL, or the method for a grade C estimate")
     p.add_argument("--grade", choices=["A", "B", "C", "D"], help="A primary/official or measured; B reputable secondary; C derived estimate with its method; D unverified")
+    p.add_argument("--signal", choices=["positive", "negative", "mixed"],
+                   help="which way the fact points for selling this product in the lane (growing demand, buying evidence, room, a margin that works, compliant = positive)")
     p.add_argument("--retrieved", help="YYYY-MM-DD (default today)")
-    p.add_argument("--independent", choices=["yes", "no"], default="yes", help="no = derived from the reference videos")
+    p.add_argument("--independent", choices=["yes", "no"], help="no = derived from the reference videos (required: yes for research agents)")
     p.add_argument("--market"); p.add_argument("--value"); p.add_argument("--unit"); p.add_argument("--note")
-    p.add_argument("--md", action="store_true")
+    p.add_argument("--md", action="store_true"); p.add_argument("--out", help="list: write the markdown table to this file")
     p.set_defaults(fn=cmd_evidence)
 
     p = sp.add_parser("econ", help="unit economics: VAT-inclusive retail, landed cost, fulfilment, fees, returns -> contribution")
@@ -4681,11 +5006,16 @@ def main():
     p.add_argument("--fulfil", type=float, default=0.0, help="pick, pack and shipping per order")
     p.add_argument("--platform-fee-pct", type=float, default=0.0); p.add_argument("--payment-fee-pct", type=float, default=0.0)
     p.add_argument("--payment-fixed", type=float, default=0.0)
+    p.add_argument("--fees-on", choices=["gross", "net"], default="gross", help="the amount the percentage fees are charged on (default: the amount paid, VAT included)")
     p.add_argument("--returns-pct", type=float, default=0.0)
     p.add_argument("--return-cost", type=float, default=0.0, help="extra cost per returned order (return shipping, handling)")
     p.add_argument("--resale-pct", type=float, default=0.0, help="share of the landed cost recovered by reselling a returned unit (default 0: conservative)")
     p.add_argument("--moq", type=int, help="minimum order quantity: prints the capital at risk")
-    p.add_argument("--currency", default="USD"); p.add_argument("--market")
+    p.add_argument("--capital-limit", type=float, help="warn when the capital at the MOQ exceeds it")
+    p.add_argument("--stress", action="store_true", help="also compute retail -20%%, returns x2, landed +15%% and all three")
+    p.add_argument("--cand", help="write the contribution into this candidate and register a grade C economics evidence row (needs --run)")
+    p.add_argument("--run"); p.add_argument("--currency", default="USD"); p.add_argument("--market")
+    p.add_argument("--apply", action="store_true", help=argparse.SUPPRESS)
     p.set_defaults(fn=cmd_econ)
 
     a = ap.parse_args()
