@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 2adb81e3-0d33-4268-9b11-ed9262381e95
-  modified: 2026-10-10T04:00:17.114Z
+  modified: 2026-10-10T07:24:02.592Z
 ---
 
 `~/.claude/commands/update-from-errors.md` (created 2026-10-10) takes a required command name
@@ -24,11 +24,24 @@ The order is fixed by the user:
 After that it promotes the entries through the ledger's tool, backs up and updates the build
 prompt, logs the pass in `LIB/learning-log.md`, and commits.
 
+**Main idea (user, 2026-10-10): GENERALISATION.** The command turns each miss into a kind the
+pipeline can apply to products and scenes the ledger never saw: what to achieve, what to avoid,
+the miss and its cause, the prompt correction (failed wording to corrected wording) and what
+worked, so the pipeline understands what is good and what is bad. The user's model example: "a
+Neuro sachet forcedly placed leaning on the bbq grill lid" becomes "name a fixed, natural surface
+the source frame shows; never a prop that moves or a leaning support; the pack sits where a person
+would really leave it". Implemented as §3.3b (lesson cards + transfer test), contract item 6b, a
+fourth coverage element ("gap of form"), a General rule change kind and the sample format. The
+feedback is "stacked" inside the owning sections as general rules plus short samples, never as a
+dump.
+
 **Why:** the early pipeline lacked real examples, a good/bad sense and error definitions; the
 ledger is meant to make that context accurate over time.
 
 **How to apply:**
 - Keep the order: pipeline first, then errors.
+- Generalise across products and scenes, never across models; "what worked" and any good side only
+  from a take that passed QC or was approved, otherwise write "not verified".
 - A coverage check (§3.4) comes before any edit: when the pipeline already covers every case,
   the command changes nothing, says "looks good", and only suggests optional updates (user
   asked for this explicitly, 2026-10-10).

@@ -7,6 +7,6 @@
 - [ATP creative direction](atp-creative-direction.md) — reference/creative-direction.md: roles, goal/audience/trend read, craft sheet + copy test (Create takes craft, never subject), scored concept seeds, sharpness gate; catalog §2.14 solidity added same day
 - [ATP brand guardrails](atp-brand-guardrails.md) — reference/brand-guardrails.md: client rules from assets docs → per-reference audit; core hit dismisses, peripheral hit is edited (counts, de-brand never blur, face swap, captions)
 - [ATP caught errors](atp-caught-errors.md) — ATP/caught_errors.md feedback ledger: record every reported bad video via `atp.py caught-error add` (verbatim) before fixing; read at every run start; promote general rules into references
-- [/update-from-errors](update-from-errors-command.md) — learns a pipeline from its caught_errors.md: read the full pipeline first, then the errors; rewrite the owning prompting/QC sections; learning-log.md
+- [/update-from-errors](update-from-errors-command.md) — main idea is GENERALISATION: each miss becomes a kind (achieve/avoid + miss, cause, prompt correction, what worked) in the owning prompting/QC sections; read the full pipeline first, then the errors; learning-log.md
 - [ATP deliverables folder](atp-deliverables-one-folder.md) — all finished videos of a run go in RUN/deliverables/ (clean + preview + README)
 - [ATP no emojis in text](atp-no-emojis-in-text.md) — strictly no emojis in any text layer or caption of a run's videos
