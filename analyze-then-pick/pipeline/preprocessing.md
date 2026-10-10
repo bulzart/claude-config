@@ -46,7 +46,7 @@ continuous sequence.
 |---|---|
 | `video.md` | Human summary: specs, sampling counts, pacing, speech, audio, loop similarity, motion peaks, static runs, sheet list, shot table, transcript, OCR spans |
 | `timeline.md` | Per-second table: shot, events (CUT, motion peak, static, silence), words spoken, max loudness, OCR text |
-| `sheets/storyboard-NN.jpg` | Chronological storyboard, **30 frames per sheet** (6 s at 5 fps; one 30 fps checkpoint second in QC). Portrait: 6 columns × 5 rows, 138 × 245 px cells, 1.2 s per row at 5 fps (828 × 1351 px). Landscape: 5 × 6, 240 × 135 cells (1200 × 952). Square: 5 × 6, 184 px cells (920 × 1246). Every sheet stays under 1.15 MP, the point past which Claude's vision downscales an image, so the cells are read at their real size |
+| `sheets/storyboard-NN.jpg` | Chronological storyboard, **30 frames per sheet** (6 s at 5 fps; about one second of a 30 fps QC checkpoint). A span that overflows is split into balanced pages of whole rows (31 frames → 18 + 13), never 30 + 1. Portrait: 6 columns × 5 rows, 138 × 245 px cells, 1.2 s per row at 5 fps (828 × 1351 px). Landscape: 5 × 6, 240 × 135 cells (1200 × 952). Square: 5 × 6, 184 px cells (920 × 1246). Every sheet stays under 1.15 MP, the point past which Claude's vision downscales an image, so the cells are read at their real size |
 | `frames/base/`, `frames/extra/` | Baseline and densified JPEGs (≤ 720 px long side) |
 | `video.json`, `frames.json`, `cuts.json`, `activity.json`, `audio.json`, `transcript.json`, `ocr.json`, `probe.json` | Machine data |
 | `audio/audio-16k.wav` | ASR input |
