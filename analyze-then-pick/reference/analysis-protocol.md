@@ -188,7 +188,7 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
      audit** has filtered it (`brand-guardrails.md` §4: a dismissed reference is listed under the
      ranking with its rule; a pick-and-edit reference carries its operations into the edit load):
      - the product's integration form (swap / contents / placement);
-     - the scene fit of each supplied brand (CE-020): a food, grill, party or sport scene suits a drink; a
+     - the scene fit of each supplied brand (CE-020: a grill reference went to the focus brand because the table had a free surface): a food, grill, party or sport scene suits a drink; a
        desk, class, meeting, work or commute scene suits a focus product; a reference with no tie for one
        brand ranks for the other (command A7);
      - for a placement, the anchor class the locked model renders at size: where its guide lists size as

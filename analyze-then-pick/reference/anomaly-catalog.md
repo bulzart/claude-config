@@ -403,11 +403,11 @@ across shots and after every cut for constancy. The same measurement is the "sca
   punch-in cannot shrink a product in its scene.
 - **Retry:** the lever depends on the model. For a start-frame model, rebuild the start frame at the
   reckoned height. For a reference model whose guide lists size as a model limit (`wan3_0_prime`:
-  `wan-3-0.md` §5), the sizing words, fractions, neighbour ratios, padded references and exclusions are
-  not levers: 12 of 12 comparable same-form retries moved the multiple by -15 to +24 % (CE-009, CE-011,
-  CE-014, CE-015 and eight run-level misses, 2026-10-08..10), so a wording retry is a re-roll. The one
-  retry changes the form or the anchor class from the guide's passing list, or none is spent and the best
-  take ships flagged and recorded. For any other model: name the neighbour and the ratio, the depth and
+  `wan-3-0.md` §5), a wording retry on that product form is a re-roll: sizing words did not move a flat
+  pack against a same-plane neighbour (CE-009, CE-011). The one retry changes the form or the anchor
+  class from the guide's passing list, or none is spent and the best take ships flagged and recorded.
+  The guide holds the numbers and the forms its evidence covers; cans measured against a person's head
+  are unproven (CE-014, CE-015). For any other model: name the neighbour and the ratio, the depth and
   the fraction of the frame, pad the reference and add the constancy line.
 
 ### 2.8 Body mechanics at the product

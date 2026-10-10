@@ -715,6 +715,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 - **Fit the brand to the scene first** (CE-020): a food, grill, party or sport scene suits a drink; a
   desk, class, meeting, work or commute scene suits a focus product. The plan states the tie in one
   line, and a reference with no tie for one brand goes to the other, whatever free surface it offers.
+- **Then the form** (CE-007): where one product comes in several packages, pick the form that fits the
+  scene's scale and register: the smallest closed form in a casual handheld scene, a large pack only where
+  a large pack belongs (a large stand-up pouch in a phone-and-couch scene read as too much; the small
+  carton fits).
 - **Then distribute sensibly.** Spread several products or variants across videos unless the user or a
   document says otherwise. Rotate approved characters when no assignment is given. Pair assets that
   belong together (a product with its own label close-up).
@@ -1511,7 +1515,7 @@ directly. Each problem named, now or in a later session, is recorded with `T cau
 --source user --run RUN --video NN --user "<their words>" …` (one entry per problem, the brief,
 prompt and delivered details attach themselves) before the fix is offered (item 22). When the
 ledger now holds two or more open or fixed entries of one class, model or product family, add one
-line: "Run `/update-from-errors analyze-then-pick` to fold these into the prompting and QC."
+line: "Run `/update-from-errors analyze-then-pick` to generalise these into the prompting and QC."
 
 ### 6b. Upscale the finals with Topaz (after the user's approval, both modes)
 

@@ -412,13 +412,43 @@ Verbatim first-party examples (trimmed with […]):
    > his forearm, hands and the exam sheets; nothing touches it and nobody picks it up. […] it stays flat on
    > that spot for the whole clip and never slides, tilts, stands up or leans"
    > passed QC: posture and support at 30 fps, size 1.05×, in sync. The same flat wording failed on a shelf
-   > and on a glossy table (run 09 V11 V12: propped, upright).
+   > and on a glossy table (run 09 V11 V12: propped, upright). A can standing on its base on the grill's fixed
+   > front shelf, named in the scene and excluded from the board, the lid and the walls, passed posture and
+   > support at 30 fps (run 09 V11 a4, CE-021); that take was flagged for size on an assumed 1 m distance, so
+   > it is not verified.
 9. Verified on the retry (a source surface, run 09 V04)
    > bad: "right a plain market chart with no readable text" (the news page came back with its headline)
    > good: "The right monitor in Video 1 shows a news web page with a red header, a politician's photo and a
    > large headline: replace its whole screen with a plain dark candlestick chart (green and red candles on a
    > dark background, no text, no headline, no photo, no red banner)." + "no news web page, no red header
    > banner, no politician photo, no headline text on any monitor"
+10. Failed, not verified (CE-011, run 08 V17; the miss: a closed carton leaning on a bottle rendered 1.71×
+    then 1.78× its expected size against that bottle; the cause: a model limit for a small flat pack
+    against a same-plane neighbour, the size words did not move it)
+   > bad: "The carton is tiny, like a pack of gum: only about one fifth as tall as the black bottle it
+   > leans on […] about one eighteenth of the frame height and much smaller than his head, and it keeps
+   > that small size in every frame" (a1, "a quarter of the bottle": 1.71×; a2, this wording: 1.78×)
+   > good: none verified. The lever is the anchor class (§5 passing list), not the size words.
+11. Observed, not verified (CE-018, run 09 V04; the miss: the placed can was absent from 0 to 4.2 s and then
+    appeared; the likely cause: the can named late, and a video reference with no such object)
+   > a2: "An open Celsius Cherry Cola can […] stands upright on the desk right beside the glass […] always
+   > exactly one can and one glass, not duplicated, the can is never picked up."
+   > a3 added: "The can and the glass are both on the desk from the very first frame to the last frame; the
+   > glass is lifted only at about three seconds, while the can never moves and is never touched, never
+   > picked up, and does not appear or disappear" and "visible from the first frame to the last".
+   > Result: the can in frame from 0 s on one fixed spot (dense 0 to 1 s and 0 to 4.5 s), but the take
+   > failed size, so it is not verified; a4 kept the sentence and the can vanished at 2.8 to 3.4 s.
+12. Observed, not verified (CE-019, run 09 V07; the miss: the can slid along the table between 1 s and 2 s;
+    the likely cause: a loosely named spot)
+   > a1: "A closed Celsius Cherry Cola can stands upright on the kitchen table in the centre of its length,
+   > between the roommate and the laptop […] the can stays where it is"
+   > a2: "[…] at the left end of the kitchen table, the end nearest the stove, a hand's width in from the
+   > table's left edge […] there from the first frame […] The can does NOT move, slide, rotate, shift or get
+   > touched in any shot: the table's left edge and the can keep exactly the same relation, one hand's width
+   > apart, in shot 1 and in shot 3, and the cut hides no move" + "no moving can, no sliding can, no can that
+   > changes place on the table"
+   > Result: the slide at 1 to 2 s was gone (x 182 at 1.0 s, 180 at 2.9 s), but the can relocated across the
+   > shot-2 cut; not verified.
 
 Patterns they teach:
 - **Order:** overall description (genre, length, pacing) → reference bindings → timed shots → dialogue → sound →
@@ -519,7 +549,7 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 | Product silhouette/proportion drift | grid references, heavy motion, editing | clean single-object refs, geometry sentence, "No scale drift" [OFFICIAL] |
 | **Small placed product renders 1.3–3.5× its reckoned size, whatever the words** (MODEL LIMIT, `wan3_0_prime`: Celsius cans within 1.25× on the first attempt in 11 of 23 videos, small Neuro packs in 0 of 7) | a pack, can or sachet set on a surface, shelf or desk in a tight handheld or chest-up shot (any depth tried, 0.5–1.6 m); a pack that stands upright or leans; a neighbour that is paper, a notebook or a head; a base cropped by the frame edge | 12 of 12 comparable same-form retries (run 08 V02 V06 V09 V12 V14 V15 V17 V18, run 09 V01 V03 V06 V08; CE-009 and CE-011 agree; CE-014 and CE-015 are unproven, see the caveat) moved the multiple -15 to +24 % (median -5 %) with tighter fractions, neighbour ratios, p40 to p16 padded references and "no oversized" exclusions: a wording retry is a re-roll, so spend none. **Passing list** (delivered take within ~1.25×): (1) in the hand that holds it, or swapped for the source's own handheld object (4 of 4: run 08 V01 V04 V13, run 09 V10; 1.0–1.15×); (2) on a bare surface beside a large rigid object of the source in the same plane, a laptop (5 of 7: run 08 V08 V11, run 09 V02 V05 V07; misses run 08 V12, run 09 V12); (3) one sachet lying flat on bare near-side surface, sized by "as long as his index finger, narrower than his open palm, about one tenth of the frame width" (CE-012, 1.05×; the flat wording failed in 2 of 3: run 09 V11 V12). Plan the anchor from this list in X1; on a miss the one retry changes the form or the anchor class, or none is spent and the best take ships flagged and recorded (`reference/anomaly-catalog.md` §2.7). Caveat (CE-028; re-measured 2026-10-10, §9): several multiples above were measured against a head or a distance taken from the shot size (CE-013, CE-014, CE-015, run 08 V09 V18, run 09 V11), with the product often nearer the lens than planned; the ledger's same-plane measurements are CE-009 and CE-011, so the limit holds for small flat packs against a same-plane neighbour and is unproven for cans (§9) [OBSERVED 2026-10-08..10] |
 | A small pack renders upright, tilted or propped although the prompt says "lies flat" (run 09 V11 V12; CE-012, CE-013) | the pack planned to lean on a prop the model has to invent; a spot against a person's arm; "lies flat" without the support, the reason and the exclusions | the verified sentence of §3.14 (flat, label up, entirely on bare surface at the near edge, a band of bare surface wider than the pack to the arm, the story reason) plus "no standing, leaning, propped or tilted sachet, no sachet on its edge"; never plan a lean on an invented prop; QC posture, support and place at 30 fps (`reference/anomaly-catalog.md` §2.16) [VERIFIED once; the wording failed in 2 of 3] |
-| A placed or contents product is absent in the opening seconds and appears later at another spot (run 09 V04 a1: absent 0–4.2 s, then 1.5–1.8× at the left foreground; a4: vanished; CE-018) | the product named late or only in a later clause; a source video reference with no such object | name the product at its anchor in the first clause of the Plot Summary and in the shot's opening state ("from the first frame"); read the dense 0–1 s sheet first; on a miss the one retry changes the form or the anchor class from the passing list (a start frame is out of reach while the source rides as a video reference, §9 lever a), never a flagged note (`reference/generation-system.md` §4b.3) [OBSERVED over 4 attempts; wording alone unproven] |
+| A placed or contents product is absent in the opening seconds and appears later at another spot (run 09 V04 a1: absent 0–4.2 s, then 1.5–1.8× at the left foreground; a4: vanished; CE-018) | the product named late or only in a later clause; a source video reference with no such object | name the product at its anchor in the first clause of the Plot Summary and in the shot's opening state ("from the first frame"); read the dense 0–1 s sheet first; on a miss the one retry changes the form or the anchor class from the passing list (a start frame is out of reach while the source rides as a video reference, §9 lever a), never a flagged note (`reference/generation-system.md` §4b.3) [OBSERVED over 4 attempts; wording alone unproven, §4.0 item 11] |
 | The request fails twice within ~15 s with no error text while the video reference shows a real celebrity's face (run 09 V03, both refunded; cause unconfirmed) | the person who is swapped is still in the video reference | after the second identical failure plan without the video reference (image references and the written action script), say fidelity and sync are at risk, never send a third identical request (`reference/generation-system.md` §5c.2) [OBSERVED once; the attempt without the video reference passed QC] |
 | The source's printed surface comes back (poster, airline livery, gate board, monitor page, shirt print) | the surface only described as blank, plain or "showing no text", or not named at all | replace it with a named concrete thing in the edit grammar and name the original item in the exclusion line (§3.14 "Source surfaces"); QC OCR and a full-resolution look at the surface [VERIFIED on 3 retries; 1 persistent: the gate boards, 3 attempts] |
 | Product looks pasted on (a can on a dresser at 2–3× real size, squared to the lens, flat cool light in a warm dim room, no contact shadow, straight-on in a low-angle room) | the reference's lighting, exposure, background and camera angle inherited; a tight product crop pulls it forward and up in size; an anchor alone on an empty edge | "the can in Image N: adopt only structure, material, colour and label, not its lighting, background or camera angle"; the room's light on it, "real contact shadows", "edges blend naturally with no cutout artifacts" [OFFICIAL phrasings], its size against a named neighbour, its mark angle, an anchor touching or partly behind something, padded crops; the eleven-sign paste test in QC (`reference/anomaly-catalog.md` §2.15) [INFERRED; observed 2026-10] |

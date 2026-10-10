@@ -31,7 +31,7 @@ Text may be created when it improves the concept or matches the analyzed structu
     re-placed in CapCut **word for word**, except a line that breaks a client guardrail (a banned
     claim or word, an excluded person's name): that line is rewritten minimally (remove only the banned
     element, a number, a statistic or a name, and say the same thing in the same grammar: the reference's
-    subject and meaning stay, never an unrelated line; CE-022) in the same role, position and timing, and a required disclaimer is added as a layer in the house style
+    subject and meaning stay, never an unrelated line; CE-022: a finance caption was swapped for an unrelated joke to clear a number) in the same role, position and timing, and a required disclaimer is added as a layer in the house style
     (`brand-guardrails.md` §2). A caption that *is* the banned point makes the reference a
     dismiss, not a rewrite.
   - **Create** (new videos): a generic meme caption line that carries the joke and names no brand,
@@ -40,12 +40,12 @@ Text may be created when it improves the concept or matches the analyzed structu
   - In both, **never copy** usernames, handles, watermarks or the reference's brand names.
   - **A specific keyword.** When a reference's only text is a short tag or keyword that defines its niche
     (a channel keyword), ask whether it is the hook before dropping it as a handle; when the user keeps
-    it, it is placed word for word as a CapCut text layer at the same height (CE-027), and the user's
+    it, it is placed word for word as a CapCut text layer at the same height (CE-027: the only text, "Financeaholic", was dropped as a handle and replaced by an invented caption), and the user's
     instruction outranks "never copy handles".
   - **Context-bearing overlays** (a notification, message, receipt or banner that sets up the joke): the
     original element is reused. It is cut from the reference's own frames with its look, position, size and
     timing, placed over the clean video as a picture overlay on exactly the frames where it is visible, and
-    faded with the picture under it (CE-017, CE-023, CE-026). Removing a third-party brand never removes
+    faded with the picture under it (CE-017: the banner was dropped with its brand and the joke lost its setup; CE-023: a re-typed text layer is not the original; CE-026: the crop's backdrop stayed on screen after the banner left). Removing a third-party brand never removes
     such an overlay's information role, and content the user names as part of the context outranks the
     brand removal. Text layers are for captions only.
   - **No emoji** in any text layer (the user's rule, strict): an emoji in a source caption is dropped and

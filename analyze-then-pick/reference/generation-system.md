@@ -454,10 +454,11 @@ therefore carries four more facts, and the prompt and QC quote them (`anomaly-ca
   near edge, out of the writing hand's way").
 - **Never the source's beat:** a placed product does not take over a pick-up, use or hand-off that belongs
   to another object; the prompt names the object that is picked up and says the product stays.
-- **The anchor class the locked model renders at size.** When the model guide lists size as a model limit
-  (`wan3_0_prime`: `wan-3-0.md` §5), the anchor comes from its passing list: in the hand that holds it or
-  swapped for the source's own handheld object; on a bare surface beside a large rigid object of the source
-  in the same plane; one sachet lying flat on bare near-side surface. Sizing words do not carry the plan.
+- **The anchor class the locked model renders at size.** *Achieve:* an anchor from the guide's passing
+  list. *Avoid:* sizing words as the control. When the model guide lists size as a model limit
+  (`wan3_0_prime`: `wan-3-0.md` §5), the anchor comes from its passing list (in the hand that holds it,
+  swapped for the source's own handheld object, or beside a large rigid object of the source in the same
+  plane); the guide holds the list and its evidence. Sizing words do not carry the plan.
 
 ### 4b.2 Prominence: noticed, not featured
 - **Scale:** real scale at its depth, from the plan's **size reckoning** (`anomaly-catalog.md`
@@ -560,6 +561,14 @@ therefore carries four more facts, and the prompt and QC quote them (`anomaly-ca
 - Say that it persists ("stays on the desk throughout", "stays parked"). Write any interaction as a
   chronological event with the hand or the driver named. Add a duplicate exclusion in the model's
   syntax ("only one <product> in the scene").
+- **Pin its spot to a fixed neighbour** (CE-019). *Achieve:* the spot named against something that does
+  not move ("at the left end of the table, a hand's width in from its left edge, there from the first
+  frame"), the same relation restated for every shot and across every cut, and exclusions for the move
+  itself ("no sliding product, nothing that changes place"). *Avoid:* a loosely named spot ("in the centre
+  of the table"), which the model re-drew between seconds. *Miss and cause:* V07's can slid along the table
+  between 1 s and 2 s; its first request named a loose spot ("in the centre of its length, between the
+  roommate and the laptop") and "stays where it is". [OBSERVED once: the corrected request removed the
+  slide inside a shot, not the relocation across a cut; not verified.]
 - **Keep its brand mark.** The clean-plate line carves out the item's own printed label, logo or
   badge (`text-and-format.md` §1): never a bare "no logos", which blanks the product. Its words go
   into QC `--allowed-text`.
@@ -727,13 +736,14 @@ Take the guide's preserving mode and settings, for example Seedance 2.5's `video
 duration rounded up from the source. Where the guide offers a choice, never take a creative or
 loose setting. A parameter the guide marks as not exposed on Higgsfield is not a lever.
 
-**Moderation fallback (a real celebrity's face in the video reference).** A source whose person is swapped
-still shows that person's real face in the video reference. Run 09 V03 (a celebrity swap) failed twice within
-~15 s with no error text, both jobs refunded (cause unconfirmed), and a third attempt without the video
-reference (image references and the written action script) passed QC, with sync only judged on the sheet.
-After the second identical failure plan without the video reference (the guide's image-reference route, the
-action script written out, the original audio restored as always), say in the brief that fidelity and sync are
-at risk, and never submit a third identical request. [OBSERVED once, unproven.]
+**Moderation fallback (a real person's face in the video reference).** *Achieve:* a request the service
+accepts, with the source's action still carried. *Avoid:* a third identical request after two identical
+failures. A source whose person is swapped still shows that person's real face in the video reference, and
+the service may refuse the job within seconds with no error text. After the second identical failure, with
+both jobs refunded, plan without the video reference (the guide's image-reference route, the action script
+written out, the original audio restored as always), and say in the brief that fidelity and sync are at risk.
+*Miss and cause:* run 09 V03 (a celebrity swap) failed twice within ~15 s, cause unconfirmed; a third attempt
+without the video reference passed QC, with sync only judged on the sheet. [OBSERVED once, unproven.]
 
 **Same duration.** Request the source segment's exact duration, or the nearest allowed duration
 above it and trim the extra afterwards. A shorter or longer generation squeezes or stretches the

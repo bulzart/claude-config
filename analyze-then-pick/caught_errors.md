@@ -20,9 +20,10 @@ belongs to (an anomaly-catalog class, creative-direction, brand-guardrails, text
 model guide's failure table) and marked `promoted` with the pointer; the entry stays here as the
 record. The build prompt is updated after a promotion. `/update-from-errors analyze-then-pick`
 does this for the whole ledger at once: it reads the full pipeline, then every entry, finds the
-patterns and their causes, checks which ones the pipeline already covers, rewrites the owning
-prompting, use-case, dismissal, craft, example and QC sections for the gaps, promotes the entries
-it folded in, and logs the pass in `learning-log.md`. When nothing is missing it changes nothing
+patterns and their causes, generalises each into a kind (what to achieve, what to avoid, the miss
+and its cause, the prompt correction, what worked), checks which ones the pipeline already holds in
+that form, rewrites the owning prompting, use-case, dismissal, craft, example and QC sections for
+the gaps, promotes the entries it folded in, and logs the pass in `learning-log.md`. When nothing is missing it changes nothing
 and says so, with any optional suggestion left for the user to accept.
 
 Write entries with the toolkit, never by hand, so the ids and the format stay parseable:
@@ -252,8 +253,8 @@ How agents use it:
 - **cause:** plan
 - **fix:** r4: closed Spearmint 6-piece carton at real size wording, padded reference; 3 attempts; attempt 2 accepted by the user, delivered as 08_Oct_2026_v15-3
 - **rule:** for Neurogum, default to the small closed carton (or the sachet) in casual hand-held scenes; use the pouch only where a large pack fits the scene. A placed product must never take over the source's pick-up or use beat of another object: name the object that is picked up and say the product stays where it was
-- **status:** fixed
-- **promoted to:** general part (a placed product never takes the source's beat): generation-system.md §4b.1b, anomaly-catalog.md §2.16; the Neuro form default (small closed carton or sachet in casual scenes) stays readable here
+- **status:** promoted
+- **promoted to:** general part (a placed product never takes the source's beat): generation-system.md §4b.1b, anomaly-catalog.md §2.16; the form fits the scene's scale and register: command A7 (then the form)
 
 ## CE-008 · 2026-10-08 · Caption with 'mom' made the character read underage
 - **video:** 15
@@ -301,8 +302,8 @@ How agents use it:
 - **cause:** plan
 - **fix:** attempt 2: character A20 and the caption 'When your professor says attendance is optional today, so you gotta pretend it's a hard choice'; delivered as 08_Oct_2026_v15-2
 - **rule:** for any adult-only or energy product, every caption and casting choice must read as an adult (college, work, own place): rewrite wording that implies a parent's authority, K-12 school, curfew or a minor, and cast characters who look 20 or older
-- **status:** fixed
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** brand-guardrails.md §2 (Context and audience), §3 (adults only), §5 (Audience)
 
 ## CE-009 · 2026-10-08 · Neurogum carton rendered about 1.5x its real size
 - **video:** 16
@@ -431,7 +432,7 @@ How agents use it:
 - **fix:** none: one diagnosed regeneration with tighter size wording did not shrink it; best picture (attempt 1) delivered flagged RESIDUAL FAILURE
 - **rule:** For a small flat pack (carton) wan3_0_prime ignores size wording and p40 padding when the pack sits next to a larger neighbour (1.7x); words cannot fix it. Use a smaller-pad reference (p25 or lower), a pre-built start/last frame at the reckoned pixel size, or the single sachet form, instead of another wording retry.
 - **status:** open
-- **promoted to:** wan-3-0.md §5 (small placed product row; untested levers in §9); stays open as a model limit
+- **promoted to:** wan-3-0.md §5 (small placed product row), §4.0 item 10 (failed size wording, not verified), §9 (untested levers); stays open as a model limit
 
 ## CE-012 · 2026-10-09 · Sachet stands upright against the writer's forearm; forced placement
 - **source:** user
@@ -794,7 +795,7 @@ How agents use it:
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** A placed or contents product must be in frame from the first frame to the last wherever its anchor is in frame; a product that appears, or is absent in the opening seconds, is never delivered as a note: regenerate with the product in a start frame or a reference that already shows it at its anchor, or pick another anchor.
 - **status:** open
-- **promoted to:** generation-system.md §4b.3; anomaly-catalog.md §4 step 5f; wan-3-0.md §5 (opening-seconds row); command X9, §7; stays open as a model limit (start-frame lever untested, wan-3-0.md §9)
+- **promoted to:** generation-system.md §4b.3; anomaly-catalog.md §4 step 5f; wan-3-0.md §5 (opening-seconds row), §4.0 item 11 (observed wording, not verified); command X9, §7; stays open as a model limit (start-frame lever untested, wan-3-0.md §9)
 
 ## CE-019 · 2026-10-10 · Can moves by itself along the table between seconds 1 and 2
 - **source:** user
@@ -837,7 +838,7 @@ How agents use it:
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** QC tracks a placed product's position against a fixed neighbour (table edge, laptop, chair) on a dense sheet across the whole clip, not only at checkpoints; any move without a visible cause is a regenerate reason. A move is allowed only when an action or a cut motivates it (the person puts something else where it stood, the product stays put and the cut shows a new angle).
 - **status:** promoted
-- **promoted to:** generation-system.md §4b.3; anomaly-catalog.md §4 step 5f; production-agents.md §3 item 13; command X1, X9, §7
+- **promoted to:** generation-system.md §4b.3, §4b.5 (pin its spot to a fixed neighbour); anomaly-catalog.md §4 step 5f; wan-3-0.md §4.0 item 12 (observed, not verified); production-agents.md §3 item 13; command X1, X9, §7
 
 ## CE-020 · 2026-10-10 · Wrong brand for the scene: a barbecue is Celsius's scene, not Neuro's
 - **source:** user
@@ -923,7 +924,7 @@ How agents use it:
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Name a fixed, natural surface that exists in the source frame for the anchor (the grill's side shelf, a counter, a desk), never a moving prop (a board that is carried away) or a leaning support; the pack lies or stands on that surface where a person would really leave it.
 - **status:** promoted
-- **promoted to:** generation-system.md §4b.1, §4b.1b; anomaly-catalog.md §2.16
+- **promoted to:** generation-system.md §4b.1, §4b.1b; anomaly-catalog.md §2.16; wan-3-0.md §4.0 item 8 (a standing can on the fixed shelf passed posture in V11 a4, not verified)
 
 ## CE-022 · 2026-10-10 · Caption rewritten into another subject; it must keep the same meaning
 - **source:** user
