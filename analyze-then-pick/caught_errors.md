@@ -967,3 +967,46 @@ How agents use it:
 - **rule:** A guardrail caption rewrite is minimal and keeps the reference's subject and meaning: remove only the banned element (a number, a statistic, a name) and say the same thing in the same grammar; never swap the topic for an unrelated joke.
 - **status:** open
 - **promoted to:** —
+
+## CE-023 · 2026-10-10 · Notification was re-typed as plain text instead of using the original notification
+- **source:** user
+- **video:** 03
+- **run:** 20261010-020703-09
+- **delivered:** CapCut project 10_Oct_2026_v03 · clean C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261010-020703-09/deliverables/video-03-clean.mp4 · credits 18 · run QC: RESIDUAL FAILURE: can 1.28x expected vs head (a1 delivered; a2 larger ~1.4x and changed her top, rejected); base cropped at frame bottom; action/identity/count/sync OK
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Celsius Watermelon can (V10 recreate, dividend notification)
+- **assets:** not recorded
+- **user said:** "the video 03 notification is wrong, you should've used the same notification from the original video not just place text over it"
+- **what was wrong:** After CE-017 the notification was rebuilt as a house-style text layer. A context-bearing source overlay (a phone notification banner) must be the SAME element as in the reference, cut from the original frames with its own look, position and timing and placed over the clean video, not re-typed in the house text style.
+- **brief:**
+  ```text
+  # Video 03 brief: V10 dividend notification reaction (placement, Watermelon can on the desk)
+  Concept: recreate V10 with Celsius Watermelon (placement); char-A23.jpg. Why it works: the reference's own mechanism, product native to the scene, noticed not featured.
+  Model/operation: wan3_0_prime, video_references + image_references, 3 s, 9:16 720p, generate_audio false. Cost: preflight in request file (3 credits per second expected).
+  Fidelity: source silent video as video reference, same duration, action script written out, fidelity lock; risk: Wan rebuilds the action (approx. recreate); sync-check after the merge.
+  Text: "Me receiving my $0.01 dividend in class releasing I don't need to be here" y_rel 0.1 (posY 0.8, posX 0) 0-5.4 (final timeline)
+  Guardrails: N1/C2: the student reads as a minor -> complete face swap to an adult woman (done). Third-party banner (Trading 212) removed, GBP sign rewritten to $ in the CapCut text. Verdict pick-and-edit.
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Generate a real phone-shot clip of a bored student at a window desk who picks up her phone. The woman corresponds to Image 1, adopting only her facial features and hairstyle; she replaces only the student in the grey-green T-shirt with curly brown hair in Video 1 and keeps the clothing, body and pose of Video 1; do not use the background, props, clothing or lighting of Image 1. Use Video 1 for every movement, expression, gaze, the framing and camera, the room and the timing; do not reproduce any text, captions, usernames or watermarks from Video 1. The can corresponds to Image 2 and Image 3, which jointly define the same can and generate only one instance, adopting only its structure, material, colours and printed label (a white slim 355 ml aluminium can, a red-and-grey C-swoosh above the black CELSIUS wordmark with LIVE FIT, a watermelon-slice illustration, SPARKLING WATERMELON in red, a black band with three bullets and a silver-grey lower band); in Image 2 and Image 3 the can is deliberately small in the frame and keeps that small scale; do not use the framing, lighting, exposure, background, shadow or camera angle of Image 2 or Image 3.
+  [Plot Summary] Shot: fixed phone shot, chest-up, a bright overcast window at the left with grey curtains, a dark wooden chest of drawers behind, a notebook with a pen at the bottom of the frame, a black pencil pouch at the lower left. Video 1 is one continuous take of about three seconds. The woman leans her head on her right hand, the elbow on the desk at the right edge of the frame, a pen in her left hand, looking bored and slightly down; she puts the pen down on the notebook, leans forward and reaches with her left hand to the left, picks up a phone from the desk, lifts it to eye level and looks at it, then breaks into a small smile while still leaning on her hand; the notification banner and every caption of Video 1 are absent. A closed Celsius Watermelon can stands upright on the bare desk surface behind and to the right of the notebook, clearly beyond the notebook's far edge and farther from the lens than the notebook, about 1.5 metres from the lens and as far from the lens as her face, at least a hand-width clear of her arm and not overlapping the notebook or her; its whole base is visible with a contact shadow well above the bottom edge of the frame, its label turned about thirty degrees toward the lens; it is part of this scene although Video 1 has none, it stays there for the whole clip, nobody touches or picks it up and her phone hand never passes near it. The can is a small object, 15.7 cm tall and 5.5 cm across: much smaller than her head, only about two thirds of her head's height and clearly shorter than the notebook is wide, about as tall as the black pencil pouch is wide; it fills only about one eighth of the frame height (about 160 pixels of 1280) and keeps exactly this size. Bright cool daylight from the window at the left puts a highlight on the can's left edge and a soft contact shadow on the desk. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze and mouth movement of the woman in Video 1 on the same frames, the props and how they are handled, the camera framing and handheld feel, the light, the room and the timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture, no extra camera move, no re-staging, no new people, no change of pace. There is exactly one can on the desk, one phone, one pen, small and constant in size, not duplicated, not vanished, not deformed, no scale drift; the can stays where it is and fingers or objects never pass through it. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen; the only lettering is the printed label on the Celsius Watermelon can, exactly as in Image 2; do not reproduce any text, captions, usernames or watermarks from Video 1.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no cut-out edges, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no second can, no oversized can, no can taller than the notebook is wide, no can as tall as a head, no can overlapping the notebook, no can cut off by the frame edge, no open tab, no drinking from the can, no studio lighting on the can, no glow, no clipping
+  ```
+- **params:** model=wan3_0_prime · duration=3 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=video_references, image_references×3 · request=video-03-a2-request.json
+- **errors:** none
+- **evidence:** not recorded
+- **qc:**
+  ```text
+  RESIDUAL FAILURE: can 1.28x expected vs head (a1 delivered; a2 larger ~1.4x and changed her top, rejected); base cropped at frame bottom; action/identity/count/sync OK
+  ```
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261010-020703-09\40-briefs\video-03-plan.md
+- **class:** text-and-format.md 2 and 3 (source overlays); generation-system.md 3c (insert-style cut from the reference)
+- **cause:** plan
+- **fix:** none yet
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** When a source overlay carries the joke's context (notification, message, UI banner), reuse the original element itself: crop it from the reference's frames with its alpha-like region, place it as a picture overlay at the same position, size and timing; text layers are only for captions. Content the user names as part of the context outranks the third-party-brand removal.
+- **status:** open
+- **promoted to:** —
