@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 2adb81e3-0d33-4268-9b11-ed9262381e95
-  modified: 2026-10-10T02:41:59.555Z
+  modified: 2026-10-10T04:00:17.114Z
 ---
 
 `~/.claude/commands/update-from-errors.md` (created 2026-10-10) takes a required command name
@@ -32,10 +32,12 @@ ledger is meant to make that context accurate over time.
 - A coverage check (§3.4) comes before any edit: when the pipeline already covers every case,
   the command changes nothing, says "looks good", and only suggests optional updates (user
   asked for this explicitly, 2026-10-10).
-- The pipeline's architecture is never changed (user, 2026-10-10): stages, files, sections,
-  agents, commands, formats and cross-references stay as they are. Only add elements, entities,
-  information and instruction changes inside existing sections. A structural idea is reported
-  as a design suggestion, never applied.
+- The architecture and structural design are never changed (user, 2026-10-10): nothing that
+  exists is removed, merged, split, reordered, renamed, moved or re-methoded. NEW parts are
+  fine when needed (user clarified twice the same day): a new file, stage, step, instruction,
+  tool subcommand, field or entity. The one condition is coupling: each new part is wired in
+  the way its neighbours are (caller, consumer, paths, reading lists, QC stack, README, build
+  prompt). Anything beyond adding is a design suggestion, never applied.
 - Only a prompt that passed QC may be a "good" example.
 - A rule that recurs after promotion is replaced, not repeated.
 - When the ATP pipeline changes shape, update the command's ATP target map.

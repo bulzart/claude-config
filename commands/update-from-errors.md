@@ -61,23 +61,37 @@ The aim is that the next run gets the video right the first time, and QC finds n
    - Text stays compact: one line per rule, one short good/bad pair per example.
 7. **QC only gets stricter or more precise.** It is loosened only when an entry shows a false
    positive, meaning QC rejected what the user accepted.
-7b. **The pipeline's architecture stays as it is.** This command adds and corrects; it never
-    redesigns. The pipeline stays coupled the way it was built: the same stages in the same order,
-    the same files owning the same things, the same agents with the same contracts, the same
-    toolkit commands with the same interfaces, the same section numbering and the same
-    cross-references between files.
-    - **Allowed:** adding a rule, an entity, a field, an example, a check, a threshold, a
-      table row, a sentence or a short sub-item inside an existing section; replacing the wording
-      of a rule that failed; sharpening a definition; adding a small option or default to an
+7b. **The architecture and the structural design stay as they are; what is needed gets added,
+    coupled.** This command adds and corrects; it never redesigns. What exists keeps its place,
+    its role, its name, its interface and its cross-references. Inside that, anything the errors
+    show is needed may be added: a new file, stage, step, instruction, check, tool command, field
+    or entity. The one condition is **coupling**: a new part is never a loose piece beside the
+    pipeline; it is wired into it the same way the existing parts are wired into each other.
+    - **Allowed, inside what exists:** adding a rule, an entity, a field, an example, a check, a
+      threshold, a table row, a sentence or a sub-item to an existing section; replacing the
+      wording of a rule that failed; sharpening a definition; adding an option or a default to an
       existing toolkit command.
-    - **Not allowed:** adding, removing, merging, splitting or reordering stages, steps, agents,
-      files or sections; moving a responsibility from one file or stage to another; renaming
-      sections, fields, commands or flags; changing a file's format or the run layout; replacing
-      a method with a different method (a new QC approach, a new prompt structure, a new
-      selection process); rewriting a section from scratch when a few lines would do.
-    - If a lesson seems to need a structural change, it is not applied. It goes in the report
-      and the learning log as a **design suggestion**, with the entries behind it, for the user
-      to decide.
+    - **Allowed, as a new part, when no existing part can hold the lesson:** a new reference
+      file, section, step or stage, check, toolkit subcommand, agent duty or ledger field. Each
+      new part:
+      - follows the conventions of its neighbours (naming, format, numbering, voice);
+      - takes a place that leaves the existing order alone (a new step between X4 and X5 is
+        `X4b`; X5–X9 are not renumbered);
+      - is **coupled** at every point the pipeline would need it: the step that calls it, the
+        step that consumes what it produces, the paths table, the agents' reading lists, the QC
+        stack, the pre-generation checklist, the README and the build prompt. A new file is
+        read by a named step and feeds a named output; a new check writes a named verdict line;
+        a new subcommand is called from a named step;
+      - says, in the learning log, why it had to be new and which entries demanded it.
+    - **Not allowed:** removing, merging, splitting, reordering or renaming what exists (stages,
+      steps, agents, files, sections, fields, commands, flags); moving a responsibility from one
+      file or stage to another; changing an existing file's format or the run layout; replacing
+      an existing method with a different one (a new QC approach in place of the current one, a
+      new prompt structure, a new selection process); rewriting a section from scratch when a
+      few lines would do.
+    - A lesson that would need one of those is not applied. It goes in the report and the
+      learning log as a **design suggestion**, with the entries behind it, for the user to
+      decide.
 8. **Never touch:**
    - the ledger's entries, except through its own tool. Never delete one: the ledger is the record;
    - `runs/` or any other run data;
@@ -373,9 +387,11 @@ The change kinds:
   than text. Keep the change small, and test it.
 
 Then review the set as a whole:
-- Every row is an addition or a wording change inside an existing section (item 7b). A row that
-  would add, remove, move, rename or re-method a stage, file, section, agent, field or command
-  comes out of the set and goes to the report as a design suggestion.
+- Every row is an addition, a wording change, or a new part coupled to what exists (item 7b).
+  A new-part row says why no existing part could hold the lesson and lists every coupling
+  point it is wired into; a new part with no caller, no consumer or no place in the QC stack is
+  not ready. A row that would remove, merge, split, reorder, rename, move or re-method what
+  exists comes out of the set and goes to the report as a design suggestion.
 - No two rows contradict each other or an existing hard rule.
 - Nothing duplicates a rule that already exists; merge or replace instead, and remove the
   superseded text.
@@ -389,8 +405,10 @@ Then review the set as a whole:
 
 1. **Edit each file in place, inside its existing sections.** Keep its section structure, voice,
    numbering, cross-references and line endings; the diff should read as lines added or
-   replaced, never as a section moved or rewritten. Any edit script must handle CRLF, check every
-   anchor before writing anything, and write bytes.
+   replaced, never as a section moved or rewritten. A new file, section, step, check or
+   subcommand is created in the conventions of its neighbours and coupled at every point listed
+   in its change row, in the same commit. Any edit script must handle CRLF, check every anchor
+   before writing anything, and write bytes.
 2. **Update `CMD`** wherever a step, a check or a "Never" rule changes, and keep its numbered items
    consistent.
 3. **Mark the entries in the ledger, through its tool only.**
@@ -474,10 +492,14 @@ No files are changed, nothing is committed, and the learning log gets its "none"
 - Never present an unverified fix as working, or write a "good" example that never passed QC.
 
 **The pipeline's shape**
-- Never change the pipeline's architecture: never add, remove, merge, split, reorder, rename or
-  move a stage, step, file, section, agent, field, command or flag, never change a format or the
-  run layout, and never swap a method for a different one. Add and correct inside what exists;
-  a structural idea is a design suggestion in the report, not an edit.
+- Never change the architecture or the structural design: never remove, merge, split, reorder,
+  rename or move a stage, step, file, section, agent, field, command or flag, never change an
+  existing format or the run layout, and never swap an existing method for a different one.
+  Anything beyond adding is a design suggestion in the report, not an edit.
+- Never refuse to add what the errors show is needed, a new file, stage, step, instruction,
+  check, tool or field included, and never add it uncoupled: a new part without its caller, its
+  consumer, its place in the paths table, the reading lists, the QC stack, the README and the
+  build prompt is not finished.
 
 **How lessons are written**
 - Never re-promote a recurring rule unchanged. Find what it got wrong, and replace it.
