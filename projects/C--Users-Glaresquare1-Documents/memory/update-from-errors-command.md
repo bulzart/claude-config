@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 2adb81e3-0d33-4268-9b11-ed9262381e95
-  modified: 2026-10-10T07:24:02.592Z
+  modified: 2026-10-10T07:48:25.168Z
 ---
 
 `~/.claude/commands/update-from-errors.md` (created 2026-10-10) takes a required command name
@@ -54,5 +54,9 @@ ledger is meant to make that context accurate over time.
 - Only a prompt that passed QC may be a "good" example.
 - A rule that recurs after promotion is replaced, not repeated.
 - When the ATP pipeline changes shape, update the command's ATP target map.
+- The command's own build prompt is `Documents/prompts/update-from-errors.txt` (created 2026-10-10 at
+  the user's request, CRLF, same prose style as `analyze-then-pick.txt`). After any change to the
+  command, update it in the same style with a dated `.bak-YYYYMMDD-HHMMSS` copy beside it
+  (see [[atp-build-prompt-sync]]).
 
 Related: [[atp-caught-errors]], [[atp-build-prompt-sync]].
