@@ -18,6 +18,7 @@
 !/workflows/
 !/scripts/
 !/analyze-then-pick/
+!/analyze-then-generate/
 !/analyze-stack/
 
 # memories only (never the session transcripts next to them)
@@ -35,5 +36,7 @@ __pycache__/
 .transcript-cache/
 /analyze-then-pick/runs/
 /analyze-then-pick/_backups/
+/analyze-then-generate/runs/
+/analyze-then-generate/_backups/
 /analyze-stack/runs/
 /analyze-stack/samples/

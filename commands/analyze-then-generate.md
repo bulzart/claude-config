@@ -1,6 +1,6 @@
 ---
-description: Analyze a folder of reference material (or take videos to edit), learn what makes it work, then generate new vertical 9:16 720p videos through Higgsfield MCP with model-specific prompting — one video at a time.
-argument-hint: "analyze <references-folder> assets <asset files/folders…> [examples <folder>] | edit <video files/folders…> [examples <folder>] | resume [run-dir]"
+description: Analyze a folder of reference material (or take videos to edit), learn what makes it work, then either generate new vertical 9:16 720p videos through Higgsfield MCP (Recreate, Create, Edit) or find the next three products to sell with the same viral approach (Viral-Browser, which asks the market and price range and generates nothing).
+argument-hint: "analyze <references-folder> assets <asset files/folders…> [examples <folder>] | edit <video files/folders…> [examples <folder>] | viral-browser <references-folder> [baseline <folder>] [market us|eu|global] [price <min>-<max> <currency>] [depth quick|standard|deep] | resume [run-dir]"
 disable-model-invocation: true
 disallowed-tools:
   - Workflow
@@ -23,6 +23,8 @@ allowed-tools:
   - mcp__higgsfield__list_workspaces
   - mcp__higgsfield__list_projects
   - mcp__higgsfield__show_reference_elements
+  - mcp__higgsfield__tiktok_accounts
+  - mcp__higgsfield__tiktok_music_trending
   - WebSearch
   - WebFetch
   - "Bash(capcut *)"
@@ -53,6 +55,12 @@ Arguments: `$ARGUMENTS`
 
 You are running the **/analyze-then-generate** command.
 
+It contains everything `/analyze-then-pick` does (Edit Mode; Analyze Mode with Recreate and Create) and
+adds a third Analyze sub-mode, **Viral-Browser** (§3, steps V1–V9; `ATG/reference/viral-browser.md`): the
+references become a **source of ideas**, nothing is generated, and the run returns the **next three
+products to sell** with the same viral approach, each with a blueprint. Contract items 3–6, 12–16 and 19
+concern video generation and apply to Edit Mode, Recreate and Create. Items 23–25 govern Viral-Browser.
+
 ## 0. Operating contract (read first, obey throughout)
 
 1. **Normal command, never a workflow.** Run everything in this conversation with ordinary tools.
@@ -68,6 +76,10 @@ You are running the **/analyze-then-generate** command.
        end to end: Higgsfield generation → QC → CapCut project;
      - the contract and prompt are in `reference/production-agents.md`;
      - a queued video starts when an agent finishes.
+   - **Viral-Browser agents** (no production agents, nothing is generated): the analysis agents
+     above for the viral cards (≤ 2, disjoint lists); up to `viral_browser.max_research_agents` (3)
+     **research agents** (web only, background, disjoint candidate lists) and one **red-team
+     agent**. None calls Higgsfield or CapCut (`reference/viral-browser.md` §7, §13).
    - Agents never overlap, never ask questions (they report blockers and stop), and never spawn
      agents. Edit Mode uses no production agents.
 3. **Generation lanes.** Every video is a lane with **one job in flight at a time**:
@@ -213,7 +225,7 @@ You are running the **/analyze-then-generate** command.
       project holds the clean video, split at each insert point with the insert placed in the gap,
       plus the overlay text as text layers (`reference/capcut-assembly.md`;
       `generation-system.md` §3c).
-17. **Analyze Mode has two sub-modes, chosen at the start (§2.2) and never mixed:**
+17. **Analyze Mode has three sub-modes, chosen at the start (§2.2) and never mixed:**
     - **Recreate.** The agents autonomously **edit the original reference videos** with the client's
       assets: the same scenario, with faces swapped to the supplied characters and the product
       swapped, filled into a vessel or placed (item 14).
@@ -225,8 +237,13 @@ You are running the **/analyze-then-generate** command.
       (style groups such as "Organic × skit × gym", "Anime × reaction × office").
       - The product is used in the new scenes.
       - **No reference video, frame or clip is ever an input** to a generation; nothing is edited.
-    - In both sub-modes, every video ends as a CapCut project (item 16), produced by its own agent
-      (item 2).
+    - **Viral-Browser.** The references are a **source of ideas**: the agents mine them for why they
+      spread (hooks, style, approach, subject, how the product is used, engagement, audience and its
+      mentality, length), then research the market and bring back the **next three products to sell**
+      with the same approach, each with a viral blueprint. Nothing is generated or edited (items
+      23–25; steps V1–V9).
+    - In Recreate and Create, every video ends as a CapCut project (item 16), produced by its own
+      agent (item 2).
 18. **Examples: the user's own finished videos (optional, both modes).** They are asked for with the
     other inputs (§2.5). The folder may be empty or absent; then nothing changes.
     - They show the user's **house approach**: how their products are placed, used, continued across
@@ -275,7 +292,12 @@ You are running the **/analyze-then-generate** command.
     `creative-direction.md` §5.0); every Recreate pick is ranked for its creative potential; every brief says
     why the video will work; and QC judges the hook, the payoff and the share line as notes. The
     creative layer never overrides the hard rules (items 6, 14, 15, 18, 19 and the anomaly
-    catalog); it decides which references, mechanisms and concepts win inside them.
+    catalog); it decides which references, mechanisms and concepts win inside them. In
+    Viral-Browser the team widens (item 23): an expert social-media growth strategist, a
+    direct-response product-selling specialist, a mass-cognition ("masses approach") engineer, a
+    trend analyst, a market and competitor researcher, a sourcing and compliance screener, a
+    statistician and a red-team sceptic, working for the one outcome that the user is about to put
+    money into a product.
 21. **Brand guardrails decide what may be picked and what must be edited**
     (`reference/brand-guardrails.md`). Documents among the supplied assets (and in the references
     folder) that state the client's rules (no gore, two cans per day max, no competitor brands on
@@ -316,7 +338,47 @@ You are running the **/analyze-then-generate** command.
     `20-analysis/caught-errors.md`; every plan names the entries it applies, every prompt carries
     their rules in the model's phrasing, and X9 checks each applied entry by id in the verdict.
     An entry whose rule is general, or that recurs, is promoted into the reference it belongs to
-    and marked `promoted` with the pointer; the entry stays as the record.
+    and marked `promoted` with the pointer; the entry stays as the record. In Viral-Browser the
+    same ledger records a pick the user rejects or a research error an agent caught
+    (`--mode analyze-viral-browser`, `--video "P<n> <product>"`, causes `research`, `scoring`,
+    `bias`, `evidence`), and its rules are promoted into `reference/viral-browser.md`.
+23. **Viral-Browser: the references are a source of ideas, and the run generates nothing**
+    (`reference/viral-browser.md`).
+    - **No generation, no model, no assets.** No model is picked, no Higgsfield generation tool is
+      called, no credits are spent, no CapCut project is written, no client assets are asked for,
+      and the references folder is never modified (no `split-audio`).
+    - **The brief is asked, not assumed:** the **market location** (US, EU, global or a country
+      list) and the **price range** (the retail band and its currency) are always asked unless
+      `$ARGUMENTS` gives them; the selling model and the research tools are asked with them; exclusions and
+      constraints are taken from the user's chat message (§2.5). Nothing about the user is inferred
+      into an exclusion.
+    - **The product layer and the mechanism layer are kept apart** in every card. The run learns
+      *why* the videos spread (the hook, the visible proof, the emotion, the identity trigger, the
+      price perception, the length, the engagement style), then looks for products that the same
+      mechanism could carry, across the whole market.
+    - **Three products, each data-backed:** researched in parallel by research agents, attacked by
+      a red-team agent, scored on a rubric, passed through six gates, and delivered with a
+      blueprint (the corpus's engagement style combined with what is trending now), the economics
+      at the user's price, the compliance and logistics findings, a validation plan and the
+      evidence that would change the call. "No product passes" is a valid result.
+    - **Evidence discipline:** no number without a source and a retrieval date or a method; grades
+      A–D; "unknown" never scores 3; the run is read-only on the world (no purchase, no login, no
+      contact); the compliance, platform and IP screens are viability checks, never taste. The
+      pipeline adds no exclusion of its own.
+24. **Niche-bias control: the references' product niche must not decide the answer**
+    (`viral-browser.md` §5). Candidates come from the mechanism, not from "more of what the videos
+    show"; the references' own products are one source among five; the pool must span at least
+    six categories with none above 40 %; research and scoring are **origin-blind**; a criterion
+    without independent (not reference-derived) grade A/B evidence is capped at 2; at most two
+    picks share a category and none share a product type; every pick from the dominant niche
+    carries a written defence; the run reports whether the picks change without the cap. A
+    data-backed product from the references' own niche stays eligible and may win: the controls
+    demand independent proof, not a quota.
+25. **Viral-Browser is autonomous after the brief:** the only questions are the brief (market,
+    price range, selling model, research tools), the final feedback question, and the optional
+    "continue to Create". Research blockers are reported, not asked. Continuing to Create is
+    offered at the end and runs only on the user's yes (`viral-browser.md` §11.4); it then follows
+    every Create rule, and none of Viral-Browser's output relaxes one.
 
 ## 1. Paths and tools
 
@@ -328,9 +390,10 @@ You are running the **/analyze-then-generate** command.
 | Model index | `ATG/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATG/higgsfield/higgsfield-mcp.md` |
 | Caught errors | `ATG/caught_errors.md` (item 22): `T caught-error add | list | set`; read at A1 / E1, applied in X1, X2, X9 |
-| References | `ATG/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATG/pipeline/preprocessing.md` |
+| References | `ATG/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`, `viral-browser.md`; `ATG/pipeline/preprocessing.md` |
+| Viral-Browser | `ATG/reference/viral-browser.md` (item 23; steps V1–V9); config `ATG/config.json → viral_browser`; toolkit `T viral-stats`, `T candidates`, `T evidence`, `T econ` |
 | CapCut | `capcut` MCP (drafts store and template in `ATG/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
-| Run folder | created by `T new-run` under `ATG/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
+| Run folder | created by `T new-run` under `ATG/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json; Viral-Browser adds `30-research/` for the candidates, evidence, dossiers and ranking, and `deliverables/` for the report and the three product files) |
 
 **Higgsfield tools** are deferred.
 - Load them before first use:
@@ -343,12 +406,15 @@ You are running the **/analyze-then-generate** command.
 
 1. **Resume?** If `$ARGUMENTS` starts with `resume`, or names a run folder:
    - read its `state.json` (`T state --run <run> get`);
-   - summarise where it stopped (stage, next_step, videos done);
-   - continue from `next_step`. Never re-ask a question that is answered in `state.json`.
-2. **Mode.** If `$ARGUMENTS` begins with `analyze` or `edit`, use it. Otherwise ask with
-   AskUserQuestion (header "Mode"):
+   - summarise where it stopped (stage, next_step, videos done; for Viral-Browser the candidates,
+     the evidence rows and the picks so far);
+   - continue from `next_step`. Never re-ask a question that is answered in `state.json`
+     (Viral-Browser stores its brief under `brief.*`).
+2. **Mode.** If `$ARGUMENTS` begins with `analyze`, `edit` or `viral-browser` (the last means Analyze
+   Mode, Viral-Browser), use it. Otherwise ask with AskUserQuestion (header "Mode"):
    - **Analyze Mode**: "Analyze a folder of references and instructions, learn what makes them work,
-     then create new videos for this client."
+     then create new videos for this client (Recreate, Create) or find the next products to sell
+     (Viral-Browser)."
    - **Edit Mode**: "Edit supplied videos one by one: replace, remove, insert, alter, restyle or
      recreate elements."
 
@@ -360,14 +426,22 @@ You are running the **/analyze-then-generate** command.
    `--video` so they attach themselves; when the run cannot be found, ask the user once for the
    brief or the prompt they used, or record it with "not recorded" and say so. Then offer the fix
    (a re-edit or a regeneration of that video in its mode) in one line, and continue only if the
-   user wants it.
-   **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate` or `create`, use it. Otherwise ask
-   with AskUserQuestion (header "Analyze as"):
+   user wants it. The same goes for a message that rejects a Viral-Browser pick: record it with
+   `--mode analyze-viral-browser --video "P<n> <product>"` (V9; `viral-browser.md` §11.2), then offer
+   the adjustment.
+   **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate`, `create` or `viral-browser`, use
+   it. Otherwise ask with AskUserQuestion (header "Analyze as"):
    - **Recreate**: "Analyze the references, then recreate N of them with your product and
      characters: same scenario, faces and products swapped or blended. Fully autonomous."
    - **Create**: "Analyze the references, then create new videos in suggested style groups (one
      style or a mix), using your product. No reference video is used as input."
-   Store it with `T state --run RUN set analyze_submode=recreate|create` once the run exists.
+   - **Viral-Browser**: "Use the references only as a source of ideas: learn why they spread,
+     research the market, and bring back the next 3 products to sell with the same approach.
+     Nothing is generated; no assets needed."
+   Store it with `T state --run RUN set analyze_submode=recreate|create|viral-browser` once the run
+   exists (`T new-run --submode` already does).
+   **Viral-Browser skips steps 3 and 4:** no Higgsfield tools, no model, no balance, no CapCut. Go
+   to step 5.
 3. **Higgsfield tools.** Load them (§1) and check that they are authenticated.
 4. **Model — picked now, locked for the run.**
    1. `models_explore {action:"list", type:"video", limit:100}`, then collect the returned ids.
@@ -391,9 +465,10 @@ You are running the **/analyze-then-generate** command.
       the run will work with it, e.g. "edits will be recreated from clean frames of each source
       video with your assets". Then continue. Do not suggest another model.
 5. **Inputs.** Take what `$ARGUMENTS` already gives (`analyze <references-folder> assets <paths…>
-   [examples <folder>]` / `edit <video paths…> [examples <folder>]`) and ask in plain chat, in
-   **one** message, only for what is missing. Then stop and wait.
-   - **Analyze Mode** needs two things, and offers a third:
+   [examples <folder>]` / `edit <video paths…> [examples <folder>]` / `viral-browser
+   <references-folder> [baseline <folder>] [market …] [price …] [depth …]`) and ask in plain chat,
+   in **one** message, only for what is missing. Then stop and wait.
+   - **Analyze Mode, Recreate and Create** need two things, and offer a third:
      1. The references folder to analyze.
      2. **Your assets, dropped once:** product samples, characters, logos, interface
         screenshots, anything the new videos should use. Files and/or folders; one folder per
@@ -411,6 +486,36 @@ You are running the **/analyze-then-generate** command.
      **Recreate** also needs the **characters** who replace the people in the references (face
      close-up + full body each). If none are supplied and the references show people, ask once at
      this step: add characters, or keep the people as they are.
+   - **Viral-Browser** needs the references folder, offers three optional extras, and then asks the
+     brief. In **one** plain-chat message:
+     1. The **references folder** (videos are the primary content; a notes, links or metrics file
+        in it is read: views, likes, comments, shares, saves, dates, links).
+     2. *(Optional)* a **baseline folder**: comparable videos that did **not** spread (same niche
+        and platform). It lets the run separate what the viral videos share from what all videos
+        share (`viral-browser.md` §3.4).
+     3. *(Optional)* **anything to exclude or respect**: categories you will not sell, regulated
+        goods, size or weight limits, no batteries or liquids, a supplier or shipping limit, a
+        product you already sell. Taken from the user only; never inferred.
+     4. *(Optional)* `depth quick|standard|deep` (default standard) and `price` / `market` if not
+        already in `$ARGUMENTS`.
+     Say in the message: *"I will use the references only as ideas and generate nothing. I will
+     ask four quick questions next: market, price range, how you sell, and whether I may use your
+     Chrome for live pages."*
+     Then, after the paths are validated, ask the **brief** with one AskUserQuestion call holding
+     only the questions `$ARGUMENTS` did not answer (`viral-browser.md` §2):
+     - header "Market": "Where will you sell?" **US** / **EU** (then ask which countries in the
+       next chat message, or say "all, lead countries chosen by the data") / **Global** ("Other":
+       UK or a country list).
+     - header "Price": "What retail price range (in the market's currency: USD for the US, EUR
+       for the EU; type another currency under Other)?" **Impulse: up to 25** / **Core: 25 to 60**
+       / **Premium: 60 to 150** ("Other": any range and currency).
+     - header "Selling model": **Owned inventory** (bulk order, your own warehouse) /
+       **Dropshipping** / **Print-on-demand** / **Digital product**.
+     - header "Research tools": **Web search and fetch only** (Recommended) / **Web plus my Chrome**
+       (read-only pages: trend charts, marketplace pages, ad libraries).
+     Hold the answers, and store them right after step 6 creates the run: `T state --run RUN set
+     brief.market=… brief.price_min=… brief.price_max=… brief.currency=… brief.model=…
+     brief.tools=web|chrome brief.depth=… brief.exclusions='…'`.
    - **Edit Mode** needs the video file(s) or folder to edit, and offers the optional **examples
      folder** (as above). Per-edit assets are asked later, per operation (E3).
    - Paths may arrive quoted, space-separated, dragged into the terminal, or one per line. If an
@@ -418,10 +523,13 @@ You are running the **/analyze-then-generate** command.
      Higgsfield needs the original file.
    - Validate every path (Glob/ls) and report any that don't exist.
 6. Create the run:
-   - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]`;
+   - `T new-run --mode <analyze|edit> [--submode recreate|create|viral-browser] --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"] [--baseline "<folder>"]`
+     (Viral-Browser: `--mode analyze --submode viral-browser --source "<refs folder>" [--baseline "<folder>"]`;
+     it adds `30-research/` and `deliverables/`);
    - keep `RUN` from the JSON;
-   - store the locked model (step 4.5);
-   - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
+   - store the locked model (step 4.5; not in Viral-Browser);
+   - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`;
+     not in Viral-Browser, which spends none).
 
 ## 3. Analyze Mode
 
@@ -841,6 +949,118 @@ Plan everything before production, in allocation order, **without asking for con
 
 ### A10. Wrap-up
 See §6.
+
+### Viral-Browser (V1–V9)
+
+Run these steps, **instead of A2b–A10**, when `analyze_submode=viral-browser`. Read
+`ATG/reference/viral-browser.md` once at V1 and follow it. Nothing is generated: no Higgsfield tool,
+no model, no credits, no CapCut, no assets, no change to the references folder. At the end of each
+step print one short status line and store `T state --run RUN set stage=<…> next_step=<…>` (the
+`next_step` values below make the run resumable). The market, price range, selling model, tools,
+depth and exclusions live in `state.json → brief.*`.
+
+#### V1. Brief, inventory and preprocessing
+- **Caught errors first** (item 22): `T caught-error list --mode analyze-viral-browser --digest`,
+  plus the entries of class selection, evidence or bias. Write `20-analysis/caught-errors.md`
+  with the ones that apply and the step each changes.
+- Write `20-analysis/brief.md` from the answers (`viral-browser.md` §2): market and lead
+  countries, currency and tax convention (US prices exclude sales tax, EU prices include VAT), the
+  price band and the landed-cost ceiling, the selling model, exclusions, depth and tools, today's
+  date, the selling windows of the next 120 days with the lead time, and the production route.
+- `T inventory "<refs folder>" --run RUN --as references`; with a baseline folder
+  `T inventory "<baseline>" --run RUN --as baseline`.
+- `T prep-all --run RUN --jobs 2` (and `T prep-all --run RUN --set baseline --jobs 2`); with more
+  than about 3 minutes of video run it in the background and read the documents meanwhile (A2's
+  rules: documents are authoritative requirements and are quoted, "we already sell X" included).
+  **No `split-audio`:** the references folder is not touched.
+- A metrics or links file becomes `20-analysis/metrics.md`: one row per video (views, likes,
+  comments, shares, saves, followers, date, link, source), matched to the video ids by file name or
+  link, and "not provided" where there is nothing. Never estimate a metric.
+- Show the counts in one line. `next_step=cards`.
+
+#### V2. Viral cards
+- One card per reference in `20-analysis/cards/<V>.md` and a light card per baseline video, as
+  `viral-browser.md` §3: the product layer and the mechanism layer kept apart, the one-line `Facts:`
+  JSON, commerce signal versus attention-only, the ranked drivers of spread, the one-sentence
+  mechanism, the transplant needs.
+- Sound: for each reference run `T audio-profile --audio "<the original video>" --out
+  10-media/<V>/audio-profile.json --transcript 10-media/<V>/transcript.json --cuts
+  10-media/<V>/cuts.json` (the original video is the input here; nothing is written to the references
+  folder). `T viral-stats` reads the result for the music-bed and tempo shares.
+- Scale and delegation as protocol §7: up to 6 videos in this session; more, 1 analysis agent (2 over
+  about 15 videos) with disjoint lists and the prompt of `viral-browser.md` §13.1.
+- Merge the labels into `20-analysis/labels.md` and rewrite the Facts lines so one meaning has one
+  label. `next_step=synthesis`.
+
+#### V3. Corpus profile and synthesis
+- `T viral-stats --run RUN` (`--set both` with a baseline): the measured length, hook, pacing,
+  speech, text, music and loop profile, and the niche-concentration index.
+- Write, as `viral-browser.md` §4: `mechanism-map.md` (mechanisms `M1…`, k of n, niche
+  independence, confounds), the hook, length and pacing profile, the engagement style, the audience
+  and mentality model, `viral-essence.md` (the essence, the fit profile, what is not inferred), the
+  trend read (at most `trend_checks[depth]` bounded searches; if a TikTok account is connected in
+  Higgsfield, `tiktok_music_trending` for the market's country code, loaded with ToolSearch, else
+  skipped silently), the niche-concentration line with its bias plan, and the standard `families.md`,
+  `craft-sheet.md` and `project-profile.md` for a later Create. Start `30-research/bias-log.md`.
+- Show the short summary (§4.11): the essence in 5 lines, the fit profile, the niche concentration
+  and the controls it triggers, the mechanisms, the typical length and hook profile.
+  `next_step=candidates`.
+
+#### V4. Candidates
+- Build the long list of 12–20 specific candidates from the five sources (`viral-browser.md` §6),
+  with `T candidates add` (or `--from-json`); a candidate is a product a supplier search returns, not a
+  category. Screen with stated reasons, check and repair the pool with `T candidates pool` (at least
+  6 categories, none above 40 %, at most half from the references' own products), and mark the
+  shortlist `researching` (6 / 9 / 12 by depth).
+- Show one table: candidate, category, origin, why it is in the pool. `next_step=research`.
+
+#### V5. Research (agents)
+- Spawn up to 3 research agents (Agent tool, `subagent_type: general-purpose`,
+  `run_in_background: true`) with disjoint candidate lists and the prompt of `viral-browser.md`
+  §13.2 filled in (market, currency, band, VAT convention, selling model, exclusions, depth, today's
+  date). They register evidence (`T evidence add`) and write `30-research/<C>.md`, origin-blind.
+- When they have reported, check that every shortlisted candidate has a dossier and evidence rows; a
+  missing one is researched once by a new agent.
+- With "web plus my Chrome": load the browser tools in one call (`ToolSearch "select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__navigate,mcp__claude-in-chrome__get_page_text,mcp__claude-in-chrome__read_page,mcp__claude-in-chrome__find,mcp__claude-in-chrome__computer,mcp__claude-in-chrome__tabs_close_mcp"`),
+  call `tabs_context_mcp` first and process `30-research/browser-queue.md` in this session, up to
+  `browser_pages_max[depth]` pages, read-only (`viral-browser.md` §7.5). Without it, queued pages stay
+  "unreachable".
+- Blockers (a tool failure, rate limits) are reported, not asked. If `WebSearch` and `WebFetch`
+  are both unavailable, stop here: V1–V3 are delivered (the mechanism map and the fit profile are
+  useful alone) and the summary says research could not run. `next_step=scoring`.
+
+#### V6. Scoring, red team and selection
+- Score origin-blind (`viral-browser.md` §8.2): `T candidates show --blind`, run `T econ` for each
+  contribution, `T candidates score` with the evidence behind every score, and `T candidates set` for
+  the gate fields.
+- `T candidates rank --provisional`; spawn the red-team agent (§13.3) on the top five; revisit the
+  scores its findings change; `T candidates rank --apply`; write the defence note of every pick
+  from the dominant niche (`T candidates set --defence`); complete `bias-log.md`.
+- Show the ranking table in chat: the picks, the runner-ups, the gates that removed the others,
+  any warning. If fewer than 3 pass, say which gate removed each and what could be relaxed
+  (§8.6). `next_step=blueprints`.
+
+#### V7. Blueprints and deliverables
+- For each pick write `deliverables/product-NN.md` (its dossier and its blueprint, `viral-browser.md`
+  §9–§10), then `viral-browser-report.md`, `evidence.md` (`T evidence list --run RUN --md`),
+  `create-handoff.md` and `README.md`. `next_step=report-qc`.
+
+#### V8. Report QC
+- The checklist of `viral-browser.md` §10.4: every number sourced or recomputed with `T econ`,
+  the gates quoted, origin-blind dossiers, defence notes present, one currency and tax convention,
+  region-matched evidence, up to 12 key claims fetched again, no unsupported hook or claim, and each
+  research error that reached this step recorded as an agent entry (`--source agent`). Fix before
+  anything is shown. `next_step=wrap-up`.
+
+#### V9. Wrap-up
+- Show the summary (`viral-browser.md` §10.3): the table of the three picks, the method in three
+  lines, the open questions, the deliverables path and the run folder. No credits, no CapCut.
+- Ask for feedback (`viral-browser.md` §11.2, header "Picks") and record every problem named
+  (item 22) before offering the fix. "Adjust" follows §11.3.
+- Offer in one line the next step: **continue to Create for a pick** (§11.4; it needs the product's
+  assets and a model, and starts only on the user's yes), more depth on one candidate, or nothing.
+  When the ledger holds two or more open entries of one class, add: "Run `/update-from-errors
+  analyze-then-generate` to generalise these."
 
 ## 4. Edit Mode
 
@@ -1475,6 +1695,8 @@ files as video K".
 
 ## 6. Wrap-up (both modes)
 
+Viral-Browser has its own wrap-up (V9); this section and §6b are for Edit Mode, Recreate and Create.
+
 Report in a short table: video → direction/edit → model → duration → credits → verdict → file path.
 In Edit Mode the file paths point into `<given path>/final/`; state that folder once.
 In Analyze Mode the table also names each video's **CapCut project**:
@@ -1676,4 +1898,27 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
 - Edit Mode: never spend credits before the "Go" gate of the run.
 - Analyze Mode: never ask for permission except for a video over 30 s that needs 2+ generations.
   Never generate any clip of such a video before that permission.
+- Viral-Browser: never generate anything. No model pick, no Higgsfield generation tool, no credits, no
+  CapCut project, no request for client assets, no `split-audio` or any other change to the
+  references folder; never start Create without the user's yes (item 25, `viral-browser.md` §11.4).
+- Viral-Browser: never let the references' product niche decide the answer (item 24, `viral-browser.md`
+  §5). Never build the pool from "more of what the videos show"; never run research on a pool with
+  fewer than 6 categories, one category above 40 %, or more than half its candidates from the
+  references' own products; never put a candidate's origin in a research dossier, a research prompt or
+  a scoring pass; never count reference-derived evidence as independent; never skip the defence note
+  of a dominant-niche pick; and never exclude the dominant niche for being dominant.
+- Viral-Browser: never state a number without its source and retrieval date or its method; never score
+  "unknown" as 3; never count a grade D row; never invent a URL, a quote or a figure; never present an
+  estimate as a measurement; never credit a product with what the creator, a trend or paid reach
+  carried; never take attention for buying evidence; never claim EU or global demand from US-only
+  evidence without the market-gap flag (`viral-browser.md` §0, §2, §3.2).
+- Viral-Browser: never lower a gate to fill the table (fewer than 3 passing candidates is a valid
+  result), and never show a pick without its confidence and what would change the call.
+- Viral-Browser: never buy, sign up, log in, message a seller or submit a form; never collect personal
+  data; never use a browser tool unless the user chose "web plus my Chrome", and then only to read
+  pages (`viral-browser.md` §0 rule 6, §7.5).
+- Viral-Browser: never invent an exclusion. The user's exclusions come from the user alone, and the
+  compliance, platform and IP screens are viability checks, never taste (`viral-browser.md` §0 rule 5).
+  Never recommend fake scarcity, fake or undisclosed incentivised reviews, unprovable claims or any
+  deceptive tactic in a blueprint (§0 rule 7).
 - Never claim results you did not verify.

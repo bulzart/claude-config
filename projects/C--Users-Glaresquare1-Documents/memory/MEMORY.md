@@ -12,3 +12,4 @@
 - [ATP no emojis in text](atp-no-emojis-in-text.md) — strictly no emojis in any text layer or caption of a run's videos
 - [Kosovo e-commerce founder](user-kosovo-ecommerce-founder.md) — software engineer in Kosovo, Muslim; owned-inventory store, no goods via Kosovo, wants sourced official guidance
 - [E-commerce playbook doc](ecommerce-playbook-doc.md) — Claude Docs guide built 2026-10-10; key decisions and open questions
+- [ATG pipeline](atg-pipeline.md) — /analyze-then-generate (2026-10-11): ATP fork + Viral-Browser sub-mode (references as ideas → research → 3 winning products + blueprints; asks market + price range; generates nothing); lib ~/.claude/analyze-then-generate; build prompt Documents/prompts/analyze-then-generate.txt
