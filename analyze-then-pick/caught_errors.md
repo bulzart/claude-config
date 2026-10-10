@@ -20,8 +20,10 @@ belongs to (an anomaly-catalog class, creative-direction, brand-guardrails, text
 model guide's failure table) and marked `promoted` with the pointer; the entry stays here as the
 record. The build prompt is updated after a promotion. `/update-from-errors analyze-then-pick`
 does this for the whole ledger at once: it reads the full pipeline, then every entry, finds the
-patterns and their causes, rewrites the owning prompting, use-case, dismissal, craft, example and QC
-sections, promotes the entries it folded in, and logs the pass in `learning-log.md`.
+patterns and their causes, checks which ones the pipeline already covers, rewrites the owning
+prompting, use-case, dismissal, craft, example and QC sections for the gaps, promotes the entries
+it folded in, and logs the pass in `learning-log.md`. When nothing is missing it changes nothing
+and says so, with any optional suggestion left for the user to accept.
 
 Write entries with the toolkit, never by hand, so the ids and the format stay parseable:
 

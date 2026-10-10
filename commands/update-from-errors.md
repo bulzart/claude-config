@@ -34,8 +34,8 @@ The aim is that the next run gets the video right the first time, and QC finds n
      part that owns it, once the pipeline is understood.
 2. **The argument is required.** The first word names the command whose ledger is read
    (`analyze-then-pick`).
-   - Without it, list the ledgers that exist (Glob `~/.claude/**/caught_errors.md`, plus the
-     matching `~/.claude/commands/<name>.md` for each), say "Run `/update-from-errors
+   - Without it, list the ledgers that exist (the §1.1 ledger search over `~/.claude/**`, plus
+     the matching `~/.claude/commands/<name>.md` for each), say "Run `/update-from-errors
      <command-name>`", and stop. Do not guess.
    - **`dry-run`**: do §1–§4 and show the change set, but write nothing.
    - **`only CE-012,CE-013`**: restrict the pass to those entries. The rest of the ledger is still
@@ -81,12 +81,28 @@ The aim is that the next run gets the video right the first time, and QC finds n
 |---|---|
 | `CMD` | `~/.claude/commands/<name>.md` |
 | `LIB` | `~/.claude/<name>/` (else the folder that holds the ledger) |
-| `LEDGER` | `LIB/caught_errors.md` |
+| `LEDGER` | the pipeline's error ledger: `LIB/caught_errors.md` when it exists, otherwise found by the search below |
 | `LOG` | `LIB/learning-log.md`: one section per pass of this command (§6) |
 | `BUILD` | the build prompt, if the user keeps one. Look for a memory-index entry naming "<name> build prompt", or `~/Documents/prompts/<name>.txt`; otherwise none |
 
-Stop and say so if `CMD` or `LEDGER` is missing, or if the ledger has no entries. To check for
-entries, look only for `## ` entry headings; do not read the entries yet.
+**Finding the ledger.** Not every pipeline calls it `caught_errors.md`. When that file is absent,
+search `LIB` (then `~/.claude/<name>*/` and the paths `CMD` names) for a Markdown, text, JSON or
+CSV file whose name says it holds errors: `caught_errors`, `caught-errors`, `errors_caught`,
+`generation_errors`, `generation-errors-caught`, `listed_errors`, `error_log`, `errors.md`,
+`failures`, `known_issues`, `mistakes`, `feedback_ledger`, `lessons`, and similar spellings with
+dashes, underscores or spaces, in any case. Also grep `CMD` for the word "ledger", "errors" or
+"feedback" next to a file path; the command usually names its own ledger. Rules:
+- One match: use it, and say which file was taken.
+- Several matches: pick the one `CMD` names; otherwise the one with entry headings and the most
+  recent edit, and list the others in the report.
+- A ledger in another format (JSON, CSV, a plain list) is read with the same fields in mind: an
+  id if there is one, the video, the model, what was wrong, the cause, the fix, the rule, the
+  status. Missing fields are noted as "not recorded", never invented.
+- No match: stop and say the pipeline has no error ledger to learn from, and name where one
+  should go (`LIB/caught_errors.md`).
+
+Stop and say so if `CMD` is missing, or if the ledger has no entries. To check for entries, look
+only for entry headings or records; do not read the entries yet.
 
 ### 1.2 Read the whole pipeline
 
@@ -99,7 +115,8 @@ entries, look only for `## ` entry headings; do not read the entries yet.
    analysis and selection, creative direction, prompting, integration, error definitions,
    guardrails, assembly, QC, and the agent contracts.
 3. **The model guides of the models the ledger involves.** Find those models by grepping the
-   entries' `model` fields, without reading the entries. Also read the guide template, if one
+   entries' `model` fields (or whatever field the ledger's own format uses), without reading the
+   entries. Also read the guide template, if one
    exists, to learn the guides' fixed sections.
 4. **The toolkit's surface:** `--help` of each script, plus the subcommands that encode checks
    (for example size, QC and sync checks).
@@ -163,8 +180,8 @@ For `analyze-then-pick`, the map is known. Confirm each location exists before r
 
 ## 2. Then read the caught errors and check them against their evidence
 
-1. **Read the ledger:** its header (fields, sources, statuses, tool), then **all** of its
-   entries.
+1. **Read the ledger:** its header (fields, sources, statuses, tool), if it has one, then
+   **all** of its entries or records.
 2. **Build a row for each entry in scope**, with these fields:
    - id, source, status;
    - mode, model, product;
