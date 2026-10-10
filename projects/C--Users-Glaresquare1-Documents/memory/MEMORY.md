@@ -10,3 +10,5 @@
 - [/update-from-errors](update-from-errors-command.md) — main idea is GENERALISATION: each miss becomes a kind (achieve/avoid + miss, cause, prompt correction, what worked) in the owning prompting/QC sections; read the full pipeline first, then the errors; learning-log.md
 - [ATP deliverables folder](atp-deliverables-one-folder.md) — all finished videos of a run go in RUN/deliverables/ (clean + preview + README)
 - [ATP no emojis in text](atp-no-emojis-in-text.md) — strictly no emojis in any text layer or caption of a run's videos
+- [Kosovo e-commerce founder](user-kosovo-ecommerce-founder.md) — software engineer in Kosovo, Muslim; owned-inventory store, no goods via Kosovo, wants sourced official guidance
+- [E-commerce playbook doc](ecommerce-playbook-doc.md) — Claude Docs guide built 2026-10-10; key decisions and open questions
