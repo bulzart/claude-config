@@ -9,7 +9,7 @@ and deterministically** through `scripts/atp.py`.
 | Structure (cuts, shots, pacing, motion activity) | **FFmpeg** `select` scene score on 192 px frames | Deterministic; one decode pass; no ML dependency |
 | Frame sampling | **FFmpeg** `fps=5` (one pass) plus targeted `-ss` seeks | Exact timestamps; ~5 frames per second baseline with adaptive density |
 | Static thinning | **Pillow + NumPy** (48×48 grey mean absolute difference vs. the last kept frame) | Cheap, deterministic, and never drops below 1 fps |
-| Storyboards | **Pillow** | Labelled chronological contact sheets sized for Claude's vision (~1500 px) |
+| Storyboards | **Pillow** | Labelled chronological contact sheets of **30 frames**, sized to Claude's vision limits (≤ 1.15 MP, ≤ 1568 px long side) so they are read at full size and no cell is shrunk |
 | Audio | **FFmpeg** (16 kHz mono WAV, `ebur128`, `silencedetect`, `astats` RMS per 0.5 s) | Deterministic loudness, silences and energy curve |
 | Speech | **faster-whisper** `small`, int8 CPU, local cache, word timestamps + VAD. Fallback: **FFmpeg's built-in whisper.cpp filter** (`ggml-base.en.bin`) | Word-level timing is a meaningful advantage over FFmpeg-only ASR (the fallback has segment timing only). Runs offline (`local_files_only`) |
 | On-screen text sample | **RapidOCR** (onnxruntime CPU) on ~12 frames per video | Detects captions, handles and watermarks precisely (feeds the text policy); caption-track and persistent-overlay heuristics |
@@ -46,7 +46,7 @@ continuous sequence.
 |---|---|
 | `video.md` | Human summary: specs, sampling counts, pacing, speech, audio, loop similarity, motion peaks, static runs, sheet list, shot table, transcript, OCR spans |
 | `timeline.md` | Per-second table: shot, events (CUT, motion peak, static, silence), words spoken, max loudness, OCR text |
-| `sheets/storyboard-NN.jpg` | Chronological storyboard. Portrait: 10 columns × 5 rows ≈ 2 s per row at 5 fps. Landscape: 6 × 9. Square: 10 × 8 |
+| `sheets/storyboard-NN.jpg` | Chronological storyboard, **30 frames per sheet** (6 s at 5 fps; one 30 fps checkpoint second in QC). Portrait: 6 columns × 5 rows, 138 × 245 px cells, 1.2 s per row at 5 fps (828 × 1351 px). Landscape: 5 × 6, 240 × 135 cells (1200 × 952). Square: 5 × 6, 184 px cells (920 × 1246). Every sheet stays under 1.15 MP, the point past which Claude's vision downscales an image, so the cells are read at their real size |
 | `frames/base/`, `frames/extra/` | Baseline and densified JPEGs (≤ 720 px long side) |
 | `video.json`, `frames.json`, `cuts.json`, `activity.json`, `audio.json`, `transcript.json`, `ocr.json`, `probe.json` | Machine data |
 | `audio/audio-16k.wav` | ASR input |

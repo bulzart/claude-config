@@ -471,12 +471,16 @@ def _font(size: int):
 
 
 def _layout(orientation: str, dense: bool = True) -> tuple:
-    """(cols, rows, cell_w, cell_h). ~1500 px sheets: portrait 10 cols = 2 s per row at 5 fps."""
+    """(cols, rows, cell_w, cell_h). 30 frames per sheet, sized to ≤ 1.15 MP and ≤ 1568 px on the
+    long side so Claude's vision reads it at full size: nothing is downscaled, every cell shows at
+    its real pixels. Portrait 6 × 5 = 1.2 s per row at 5 fps (828 × 1351); landscape 5 × 6 (1200 ×
+    952); square 5 × 6 (920 × 1246). The old 50-cell 1500 px sheets were 2.2 MP and came back
+    shrunk by ~0.73, so a 150 px cell showed at ~109 px."""
     if orientation == "landscape":
-        return (6, 9, 250, 141) if dense else (3, 4, 480, 270)
+        return (5, 6, 240, 135) if dense else (3, 4, 480, 270)
     if orientation == "square":
-        return (10, 8, 150, 150) if dense else (4, 3, 360, 360)
-    return (10, 5, 150, 266) if dense else (4, 3, 300, 533)
+        return (5, 6, 184, 184) if dense else (4, 3, 360, 360)
+    return (6, 5, 138, 245) if dense else (4, 3, 300, 533)
 
 
 STORYBOARD_LEGEND = ("left to right, top to bottom | white = baseline | cyan + = densified | "
