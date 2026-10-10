@@ -18,7 +18,10 @@ applies, every prompt carries their rules in the model's phrasing, and QC checks
 entry by id. An entry whose rule is general, or that recurs, is **promoted** into the reference it
 belongs to (an anomaly-catalog class, creative-direction, brand-guardrails, text-and-format, the
 model guide's failure table) and marked `promoted` with the pointer; the entry stays here as the
-record. The build prompt is updated after a promotion.
+record. The build prompt is updated after a promotion. `/update-from-errors analyze-then-pick`
+does this for the whole ledger at once: it reads the full pipeline, then every entry, finds the
+patterns and their causes, rewrites the owning prompting, use-case, dismissal, craft, example and QC
+sections, promotes the entries it folded in, and logs the pass in `learning-log.md`.
 
 Write entries with the toolkit, never by hand, so the ids and the format stay parseable:
 
@@ -299,6 +302,7 @@ How agents use it:
 - **status:** fixed
 - **promoted to:** —
 
+## CE-009 · 2026-10-08 · Neurogum carton rendered about 1.5x its real size
 - **video:** 16
 - **run:** 20261006-002423-05
 - **mode:** analyze-recreate

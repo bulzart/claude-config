@@ -7,3 +7,4 @@
 - [ATP creative direction](atp-creative-direction.md) — reference/creative-direction.md: roles, goal/audience/trend read, craft sheet + copy test (Create takes craft, never subject), scored concept seeds, sharpness gate; catalog §2.14 solidity added same day
 - [ATP brand guardrails](atp-brand-guardrails.md) — reference/brand-guardrails.md: client rules from assets docs → per-reference audit; core hit dismisses, peripheral hit is edited (counts, de-brand never blur, face swap, captions)
 - [ATP caught errors](atp-caught-errors.md) — ATP/caught_errors.md feedback ledger: record every reported bad video via `atp.py caught-error add` (verbatim) before fixing; read at every run start; promote general rules into references
+- [/update-from-errors](update-from-errors-command.md) — learns a pipeline from its caught_errors.md: read the full pipeline first, then the errors; rewrite the owning prompting/QC sections; learning-log.md

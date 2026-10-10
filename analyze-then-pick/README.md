@@ -7,7 +7,8 @@ it uses at most 2 analysis agents plus, in Analyze Mode, one production agent pe
 
 ```
 analyze-then-pick/
-├── caught_errors.md                the feedback ledger: one entry per video the user was not satisfied with (their words verbatim, the diagnosis, class, cause, fix, rule, status); read at every run start, applied in plans, prompts and QC, promoted into the references when general (`atp.py caught-error add | list | set`)
+├── caught_errors.md                the feedback ledger: one entry per video the user was not satisfied with (their words verbatim, the diagnosis, class, cause, fix, rule, status); read at every run start, applied in plans, prompts and QC, promoted into the references when general (`atp.py caught-error add | list | set`); `/update-from-errors analyze-then-pick` folds its patterns into the references in one pass
+├── learning-log.md                 one section per `/update-from-errors` pass: patterns, root causes, changes, promoted and open entries, hypotheses to test
 ├── config.json                     paths (python, runs), fixed output (9:16, 720p), analysis defaults, Edit Mode cost gate, CapCut store + template
 ├── models/
 │   ├── index.json                  model id → guide, capabilities, 9:16/720p parameter mapping, continuation (max per generation + how clips join); the only file read to build the menu

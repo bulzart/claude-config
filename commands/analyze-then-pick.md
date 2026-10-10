@@ -1415,7 +1415,9 @@ later"** (any later message about them is still recorded); **"Some need fixes"**
 chat which video and what is wrong, disliked or illogical. "Other" lets the user type it
 directly. Each problem named, now or in a later session, is recorded with `T caught-error add
 --source user --run RUN --video NN --user "<their words>" …` (one entry per problem, the brief,
-prompt and delivered details attach themselves) before the fix is offered (item 22).
+prompt and delivered details attach themselves) before the fix is offered (item 22). When the
+ledger now holds two or more open or fixed entries of one class, model or product family, add one
+line: "Run `/update-from-errors analyze-then-pick` to fold these into the prompting and QC."
 
 ## 7. Never
 
