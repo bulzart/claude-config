@@ -93,13 +93,24 @@ CSV file whose name says it holds errors: `caught_errors`, `caught-errors`, `err
 dashes, underscores or spaces, in any case. Also grep `CMD` for the word "ledger", "errors" or
 "feedback" next to a file path; the command usually names its own ledger. Rules:
 - One match: use it, and say which file was taken.
-- Several matches: pick the one `CMD` names; otherwise the one with entry headings and the most
-  recent edit, and list the others in the report.
+- Several matches that are **one ledger split up** (a file per month, per model, per class, or a
+  folder of one entry per file): take them all, in date order, as one ledger.
+- Several matches that are **different things**: pick the one `CMD` names; otherwise the one
+  with entry headings and the most recent edit, and list the others in the report.
 - A ledger in another format (JSON, CSV, a plain list) is read with the same fields in mind: an
   id if there is one, the video, the model, what was wrong, the cause, the fix, the rule, the
   status. Missing fields are noted as "not recorded", never invented.
-- No match: stop and say the pipeline has no error ledger to learn from, and name where one
-  should go (`LIB/caught_errors.md`).
+- **A more complex setup, with no single ledger:** some pipelines keep their errors where they
+  happen: QC verdicts or `result.json` files inside run folders, retry logs, a "regenerated
+  because" field in a request file, a feedback section in a per-run report, a failures table in
+  a model guide. Then `CMD` and the references say where the errors are recorded; follow those
+  paths and gather every record that says a generation, an edit or a check went wrong, from the
+  last 30 days or the last ten runs, whichever is more. Give each one an id of its own
+  (`R-<run>-<video>-<n>`), map its fields as above, and work the gathered list as the ledger.
+  Say in the report that the entries were gathered, and from where. Offer, as an optional
+  suggestion, to start a real `LIB/caught_errors.md` from them.
+- No match anywhere: stop and say the pipeline has no error record to learn from, and name
+  where one should go (`LIB/caught_errors.md`).
 
 Stop and say so if `CMD` is missing, or if the ledger has no entries. To check for entries, look
 only for entry headings or records; do not read the entries yet.
