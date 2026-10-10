@@ -1056,3 +1056,49 @@ How agents use it:
 - **rule:** A Recreate keeps the reference's timeline and the reference's ORIGINAL audio track whole and untouched under it: never shorten the timeline or splice audio pieces. To hide a performer in an insert's edge frames, cover only those frames (hold a generated frame fading to the dissolve colour) and keep every duration, so the original audio stays continuous and in sync.
 - **status:** open
 - **promoted to:** —
+
+## CE-025 · 2026-10-10 · Frozen character frames around the white flash
+- **source:** user
+- **video:** 01
+- **run:** 20261010-020703-09
+- **delivered:** CapCut project 10_Oct_2026_v01 · clean C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261010-020703-09/60-outputs/video-01/clean.mp4 · credits 24 · run QC: RESIDUAL FAILURE size: can 1.55-1.60x expected vs head (a1 1.61-1.69x); constant across cut; counts 1/1, solidity, paste, sync pass
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Celsius Cherry Cola can (V08 recreate with inserts)
+- **assets:** not recorded
+- **user said:** "okay it looks better but the moment the white flash comes the character and the just stucks until the flash takes the full view, and then when it starts to fade again the character starts as frozen then it unfreezes, and thats should not be the case"
+- **what was wrong:** To cover the gaps where the original performer showed, a held (frozen) generated frame was faded to white and a frozen first frame was faded in from white; the character visibly freezes during the flash and unfreezes after it. A hold under a transition reads as a glitch.
+- **brief:**
+  ```text
+  # Video 01 brief: V08 POV explain math (placement, Cherry Cola can on the marbled table)
+  Concept: recreate V08 with Celsius Cherry Cola (placement); char-A04.jpg. Why it works: the reference's own mechanism, product native to the scene, noticed not featured.
+  Model/operation: wan3_0_prime, video_references + image_references, 4 s, 9:16 720p, generate_audio false. Cost: preflight in request file (3 credits per second expected).
+  Fidelity: source silent video as video reference, same duration, action script written out, fidelity lock; risk: Wan rebuilds the action (approx. recreate); sync-check after the merge.
+  Text: "POV: You're trying to explain math to bro but he just looks at you like this" y_rel 0.45 (posY 0.1, posX 0) 0-9.5 (final timeline)
+  Guardrails: none (adult 20s woman replaces the young man; no competitor, no count issue). Verdict pick-clean.
+  
+  ## Attempt 2 (size regeneration)
+  a1 can 1.6-1.7x too large (CE-014). a2: can pushed to her depth, hand/head neighbours, one tenth of frame height, negatives against can closer than the woman. Result still 1.55-1.6x (residual failure, flagged). Cost 12 credits each (24 total).
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Generate a real phone-shot clip, chest-up, of a person explaining something from a sheet of paper. The woman corresponds to Image 1, adopting only her facial features and hairstyle; she replaces only the young man with the brown fringe haircut in the black sweatshirt with a red print in Video 1 and keeps the clothing, body and pose of Video 1; do not use the background, props, clothing or lighting of Image 1. Use Video 1 for every movement, expression, gaze, the framing and camera, the room and the timing; do not reproduce any text, captions, usernames or watermarks from Video 1. The can corresponds to Image 2 and Image 3, which jointly define the same can and generate only one instance, adopting only its structure, material, colours and printed label (a white slim 355 ml aluminium can, a red-and-grey C-swoosh above the black CELSIUS wordmark with LIVE FIT, a cherries-and-cola illustration, SPARKLING CHERRY COLA in a magenta tag, a black band with three bullets and a silver-grey lower band); in Image 2 and Image 3 the can is deliberately small in the frame and keeps that small scale; do not use the framing, lighting, exposure, background, shadow or camera angle of Image 2 or Image 3.
+  [Plot Summary] Shot: locked handheld chest-up framing, a plain grey wall behind, a marbled black-and-white table strip along the bottom of the frame. Video 1 has one jump cut at about 2.4 s of its length; keep that cut at the same moment. Before the cut: the woman looks down and to the left at a sheet of paper she holds up in her left hand at the left of the frame, her mouth moving as she explains, her right hand gesturing near the sheet; in the last fraction of a second before the cut she swings the sheet out to the left with a quick arm movement. After the cut: she holds the sheet up at the right of the frame, looks toward the lens and speaks, and in the last moment swings the sheet toward her head. A closed Celsius Cherry Cola can stands upright on the marbled table strip at the bottom of the frame, far to the left, at the same depth as the woman's body and her sheet (not closer to the lens than she is), its base resting on the table with a small contact shadow, its label turned about thirty degrees toward the lens; it is part of this scene although Video 1 has none, it stays on this exact spot for the whole clip, nobody touches it and the sheet stays well above it. The can is a small, slim object, 15.7 cm tall and 5.5 cm across: clearly shorter than her hand is long from wrist to fingertip, only about two thirds the height of her head from chin to crown, much shorter than the sheet of paper is tall, and as thin as three fingers side by side; it fills only about one tenth of the frame height (a small can in a wide room, roughly the height of her eye-to-chin distance doubled) and its top stays below the lower edge of the sheet; it keeps exactly this size before and after the cut. Soft cool light from the front left falls on it with a faint highlight on its left edge and a contact shadow like the table's reflections, same grain and focus as the rest. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze and mouth movement of the woman in Video 1 on the same frames, the props and how they are handled, the camera framing and handheld feel, the light, the room and the timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture, no extra camera move, no re-staging, no new people, no change of pace. There is exactly one can, closed, standing on the table left of the centre before and after the cut, small and constant in size, not duplicated, not vanished, not deformed, no scale drift; the can stays where it is and fingers or objects never pass through it. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen; the only lettering is the printed label on the Celsius Cherry Cola can, exactly as in Image 2; do not reproduce any text, captions, usernames or watermarks from Video 1.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no cut-out edges, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no second can, no oversized can, no giant can, no can taller than her hand, no can taller than a head, no can closer to the lens than the woman, no open tab, no drinking from the can, no studio lighting on the can, no glow, no clipping
+  ```
+- **params:** model=wan3_0_prime · duration=4 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=video_references, image_references×3 · request=video-01-a2-request.json
+- **errors:** none
+- **evidence:** not recorded
+- **qc:**
+  ```text
+  RESIDUAL FAILURE size: can 1.55-1.60x expected vs head (a1 1.61-1.69x); constant across cut; counts 1/1, solidity, paste, sync pass
+  ```
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261010-020703-09\40-briefs\video-01-plan.md
+- **class:** capcut-assembly.md 3 (transitions); generation-system.md 3c
+- **cause:** plan
+- **fix:** none yet
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** Never cover a gap with a frozen frame: a dissolve or flash must run over real moving footage (fade the last/first frames of the moving piece itself) and the gap itself is pure transition colour; durations stay unchanged so the original audio stays continuous.
+- **status:** open
+- **promoted to:** —
