@@ -752,7 +752,9 @@ is near, and the story reason written as its own line of the verdict.
    on it or hits it: no pass-through, no sinking, no see-through, the right occlusion order, and a
    consequence for every contact (§2.14).
 5d. **Size** with `atp.py scale` on a full-resolution frame at rest, one in use and the last:
-   the product's pixel height against the named neighbour's (A) and against a distance derived from the
+   the product's pixel height against the named neighbour's at the product's own depth (A; `--depth-ratio` is
+   read from the frame when the product stands in front of or behind that neighbour, a can on the near table
+   strip against the person seated behind it, and is never left at 1; CE-014, CE-015) and against a distance derived from the
    frame (B, `--distance-basis`), the two multiples agreeing before an oversize verdict, the observed
    multiple of the expected size and the method written in the verdict, constancy across cuts; a
    verdict from one assumed number is provisional and is viewed on the frame first (§2.7).
@@ -800,6 +802,7 @@ permanence: pouch missing 8.1–8.3 s while the arm passes; untouched static anc
 scale: pack 155 px = 12 % of frame height vs ~10 % target, constant → accept with note.
 size (method): can 270 px = 21 % of the frame; A: vs her head (23 cm, 250 px, at 1.0 m; the can at 0.55 m, `--depth-ratio 0.55`) = 0.87×; B: d = 0.55 m derived from the desk edge, f 26 → expected 264 px = 1.02×; A and B agree → accept (an assumed 1.5 m had said 2.79×).
 size (provisional): `scale --distance 1.5 --lens 26` only → "2.79× (provisional: distance assumed)": not flagged and not repeated; the frame shows the can on the near fold-out desk under a metre from the lens (CE-028) → re-measured against the head, then judged.
+size (neighbour in another plane): can 375 px = 29 % of the frame; A against her head (23 cm, 340 px) at `--depth-ratio` 1 gives 1.61×, but the can stands on the near table strip in front of her, so that A is invalid; the depth ratio is read from the frame (the can nearer than her head) and B is derived from the table plane; if they disagree the verdict is inconclusive, nothing is flagged and the depth is re-derived (CE-014, CE-015, re-measured 2026-10-10: 1.07× to about 1.4×, unsettled).
 size (wan3_0_prime): carton 163 px vs ~95 expected = 1.71× vs the bottle → regenerate; the guide lists size as a model limit, so no wording retry: the retry changes the form or the anchor class (in hand / beside a large same-plane object / one flat sachet on bare near-side surface), or none is spent and the best take ships flagged and recorded.
 anchor: can absent 0.0–4.2 s, appears at the left foreground at 4.3 s → regenerate (never a note); the 0–1 s dense sheet shows an empty table. | can at 1.0 s left of the table end, at 2.0 s one laptop-width to the right, no action, no cut → regenerate; read against the table edge every 0.25 s.
 timeline: overlay clip visible on 2.93–3.0 s as a bright rectangle on the fading picture → the overlay is cut to the frames its element is visible and faded with the picture; hold frames under the flash replaced by real-motion fades into pure white; original audio one segment, stream copy, hash identical.

@@ -981,7 +981,8 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      Everything on its **fine** list is ignored: not reported, not asked about, not regenerated.
    - **Size** (`anomaly-catalog.md` §2.7): on a full-resolution frame at rest, one in use and the
      last, `atp.py scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1>`
-     against the named neighbour (and `--distance --distance-basis --lens` for the shot, the distance
+     against the named neighbour at the product's own depth (`--depth-ratio` from the frame when the product
+     stands in front of or behind it) and `--distance --distance-basis --lens` for the shot (the distance
      derived from the frame); the two estimates must agree before an oversize verdict, a verdict from one
      assumed number is provisional and viewed on the frame first, and the observed multiple of the
      expected size and the method go in the verdict. Over 25 %, a size that changes between shots, or a

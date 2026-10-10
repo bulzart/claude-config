@@ -1299,7 +1299,8 @@ files as video K".
     post-fixes are the catalog's: a pixel hold on an untouched static anchor in a locked shot, a
     one-frame trim, a recolour or punch-in in a locked shot.
   - **Size** (`anomaly-catalog.md` §2.7): on a full-resolution frame at rest, one in use and the
-    last, measure the product's pixel height and the named neighbour's and run
+    last, measure the product's pixel height and the named neighbour's at the product's own depth (`--depth-ratio`
+    from the frame when the product stands in front of or behind it, never 1 by default) and run
     `T scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1> [--depth-ratio r]
     --distance d --distance-basis "<how d was derived from the frame>" --lens f`: two estimates, the
     neighbour ratio (A) and the frame fraction at a distance derived from the surface or another object

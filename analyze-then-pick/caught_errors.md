@@ -619,7 +619,7 @@ How agents use it:
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Do not place the can closer to the lens than the person; name same-depth hand and head neighbours and a smaller frame fraction (one tenth); measure first output
 - **status:** open
-- **promoted to:** wan-3-0.md §5 (small placed product row; untested levers in §9); anomaly-catalog.md §2.7 (derived distance, two estimates); stays open as a model limit
+- **promoted to:** wan-3-0.md §5 (small placed product row, caveat), §9 (re-measured 2026-10-10: unproven for cans, depth lever (e) untested); anomaly-catalog.md §2.7 (derived distance, two estimates), §4 step 5d and §4.1 (neighbour at the product's own depth); stays open as a model limit
 
 ## CE-015 · 2026-10-10 · Placed can 1.28x oversize, cropped base, on the notebook (V10 placement)
 - **source:** agent
@@ -662,7 +662,7 @@ How agents use it:
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Placement in the foreground of a tight handheld shot: name the depth as farther than the nearest prop, keep base visible above the frame edge, give pixel height; fractions alone are ignored
 - **status:** open
-- **promoted to:** wan-3-0.md §5 (small placed product row; untested levers in §9); anomaly-catalog.md §2.7 (derived distance, two estimates); stays open as a model limit
+- **promoted to:** wan-3-0.md §5 (small placed product row, caveat), §9 (re-measured 2026-10-10: unproven for cans, depth lever (e) untested); anomaly-catalog.md §2.7 (derived distance, two estimates), §4 step 5d and §4.1 (neighbour at the product's own depth); stays open as a model limit
 
 ## CE-016 · 2026-10-10 · Original person still visible in parts of the video
 - **source:** user

@@ -87,7 +87,9 @@ Hard rules:
 - Counts and use (anomaly-catalog.md): every multiple keeps its number except through a visible cause;
   every use goes through the product's real opening after its preparation step, with the contact
   point. Measure the product's size with `T scale` on a full-resolution frame at rest, one in use and the last:
-  against the plan's named neighbour (A) AND against a distance you derive from the frame, never from the
+  against the plan's named neighbour at the product's own depth (A: when the product stands in front of or
+  behind it, `--depth-ratio` comes from the frame, never 1 by default) AND against a distance you derive from
+  the frame, never from the
   shot size (B: `--distance` with `--distance-basis`). An oversize verdict needs A and B to agree; a verdict
   from one assumed number is PROVISIONAL: view the frame yourself before you flag or report it, and never
   write RESIDUAL FAILURE for it (CE-028). With agreeing estimates (over 25 % off, changing across a cut, or larger than the hand
@@ -190,7 +192,8 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
     5. **Audio continuity and sameness:** a Recreate's final carries the reference's ORIGINAL audio as one
        whole segment (a stream copy; compare the hash or run a null test), the reference's duration, no cut,
        drop or splice at any join.
-    6. **Size:** two estimates and a derived distance (`anomaly-catalog.md` §2.7), the frame viewed, before any
+    6. **Size:** two estimates (the neighbour at the product's own depth, and a derived distance; `anomaly-catalog.md`
+       §2.7), the frame viewed, before any
        size verdict is written.
     7. **Text:** no emoji in any text layer; every layer posX 0.
 14. **Docs and ledger, before the final message:** every regenerate reason and flagged delivery recorded with
