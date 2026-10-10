@@ -571,3 +571,89 @@ How agents use it:
 - **rule:** Never plan a lean against a prop the model must also invent; a placed pack either stands flat on its base or lies flat on bare surface, or leans on a large solid object that is already in the source frame. QC adds a support check: every tilted or standing object must show its contact with a visible solid support at 30 fps, or it is a regenerate reason.
 - **status:** open
 - **promoted to:** —
+
+## CE-014 · 2026-10-10 · Celsius can 1.6-1.7x too large in V08 placement, wan3_0_prime
+- **source:** agent
+- **video:** 01
+- **run:** C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261010-020703-09
+- **delivered:** not recorded
+- **mode:** recreate
+- **model:** wan3_0_prime
+- **product:** Celsius Cherry Cola can
+- **assets:** celsius-cherry-front-p40.png, celsius-cherry-angled-p40.png (155-159 mm, d53-58 mm); char-A04.jpg; V08 own-silent
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** Size failure: can 1.6-1.7x expected vs head, larger than her hand; wording one seventh of frame height and closer to the lens than she is did not shrink it
+- **brief:**
+  ```text
+  # Video 01 brief: V08 POV explain math (placement, Cherry Cola can on the marbled table)
+  Concept: recreate V08 with Celsius Cherry Cola (placement); char-A04.jpg. Why it works: the reference's own mechanism, product native to the scene, noticed not featured.
+  Model/operation: wan3_0_prime, video_references + image_references, 4 s, 9:16 720p, generate_audio false. Cost: preflight in request file (3 credits per second expected).
+  Fidelity: source silent video as video reference, same duration, action script written out, fidelity lock; risk: Wan rebuilds the action (approx. recreate); sync-check after the merge.
+  Text: "POV: You're trying to explain math to bro but he just looks at you like this" y_rel 0.45 (posY 0.1, posX 0) 0-9.5 (final timeline)
+  Guardrails: none (adult 20s woman replaces the young man; no competitor, no count issue). Verdict pick-clean.
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Generate a real phone-shot clip, chest-up, of a person explaining something from a sheet of paper. The woman corresponds to Image 1, adopting only her facial features and hairstyle; she replaces only the young man with the brown fringe haircut in the black sweatshirt with a red print in Video 1 and keeps the clothing, body and pose of Video 1; do not use the background, props, clothing or lighting of Image 1. Use Video 1 for every movement, expression, gaze, the framing and camera, the room and the timing; do not reproduce any text, captions, usernames or watermarks from Video 1. The can corresponds to Image 2 and Image 3, which jointly define the same can and generate only one instance, adopting only its structure, material, colours and printed label (a white slim 355 ml aluminium can, a red-and-grey C-swoosh above the black CELSIUS wordmark with LIVE FIT, a cherries-and-cola illustration, SPARKLING CHERRY COLA in a magenta tag, a black band with three bullets and a silver-grey lower band); in Image 2 and Image 3 the can is deliberately small in the frame and keeps that small scale; do not use the framing, lighting, exposure, background, shadow or camera angle of Image 2 or Image 3.
+  [Plot Summary] Shot: locked handheld chest-up framing, a plain grey wall behind, a marbled black-and-white table strip along the bottom of the frame. Video 1 has one jump cut at about 2.4 s of its length; keep that cut at the same moment. Before the cut: the woman looks down and to the left at a sheet of paper she holds up in her left hand at the left of the frame, her mouth moving as she explains, her right hand gesturing near the sheet; in the last fraction of a second before the cut she swings the sheet out to the left with a quick arm movement. After the cut: she holds the sheet up at the right of the frame, looks toward the lens and speaks, and in the last moment swings the sheet toward her head. A closed Celsius Cherry Cola can stands upright on the marbled table at the bottom of the frame, left of the centre, its base resting on the table with a small contact shadow, closer to the lens than she is, its label turned about thirty degrees toward the lens; it is part of this scene although Video 1 has none, it stays on this exact spot for the whole clip, nobody touches it and the sheet stays well above it. The can is a small object, 15.7 cm tall and 5.5 cm across: shorter than the sheet of paper is tall, about three quarters the height of her head, only as thick as three fingers side by side; it fills about one seventh of the frame height and keeps exactly this size before and after the cut. Soft cool light from the front left falls on it with a faint highlight on its left edge and a contact shadow like the table's reflections, same grain and focus as the rest. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze and mouth movement of the woman in Video 1 on the same frames, the props and how they are handled, the camera framing and handheld feel, the light, the room and the timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture, no extra camera move, no re-staging, no new people, no change of pace. There is exactly one can, closed, standing on the table left of the centre before and after the cut, small and constant in size, not duplicated, not vanished, not deformed, no scale drift; the can stays where it is and fingers or objects never pass through it. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen; the only lettering is the printed label on the Celsius Cherry Cola can, exactly as in Image 2; do not reproduce any text, captions, usernames or watermarks from Video 1.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no cut-out edges, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no second can, no oversized can, no can taller than the sheet of paper is tall, no can larger than a head, no open tab, no drinking from the can, no studio lighting on the can, no glow, no clipping
+  ```
+- **params:** model=wan3_0_prime · duration=4 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=video_references, image_references×3 · request=video-01-request.json
+- **errors:**
+  ```text
+  none; no adjustments
+  ```
+- **evidence:** a1 frames 0.0 and 3.0 s: can 375-380 px of 1280 (29.6 %), 1.61-1.69x vs head neighbour; larger than her hand; C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261010-020703-09/60-outputs/video-01/a1/qc
+- **qc:** not recorded
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261010-020703-09\40-briefs\video-01-plan.md
+- **class:** anomaly-catalog 2.7 / CE-005
+- **cause:** model-limit
+- **fix:** none yet
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** Do not place the can closer to the lens than the person; name same-depth hand and head neighbours and a smaller frame fraction (one tenth); measure first output
+- **status:** open
+- **promoted to:** —
+
+## CE-015 · 2026-10-10 · Placed can 1.28x oversize, cropped base, on the notebook (V10 placement)
+- **source:** agent
+- **video:** 03
+- **run:** 20261010-020703-09
+- **delivered:** not recorded
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Celsius Watermelon can (155-159 mm)
+- **assets:** char-A23, celsius p40 refs, V10 own-silent
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** Can at 1.28x expected vs head (regenerate), base cut off by frame bottom, overlapping the notebook (CE-006) despite 'about one metre' and 1/10 frame wording; action/sync fine
+- **brief:**
+  ```text
+  # Video 03 brief: V10 dividend notification reaction (placement, Watermelon can on the desk)
+  Concept: recreate V10 with Celsius Watermelon (placement); char-A23.jpg. Why it works: the reference's own mechanism, product native to the scene, noticed not featured.
+  Model/operation: wan3_0_prime, video_references + image_references, 3 s, 9:16 720p, generate_audio false. Cost: preflight in request file (3 credits per second expected).
+  Fidelity: source silent video as video reference, same duration, action script written out, fidelity lock; risk: Wan rebuilds the action (approx. recreate); sync-check after the merge.
+  Text: "Me receiving my $0.01 dividend in class releasing I don't need to be here" y_rel 0.1 (posY 0.8, posX 0) 0-5.4 (final timeline)
+  Guardrails: N1/C2: the student reads as a minor -> complete face swap to an adult woman (done). Third-party banner (Trading 212) removed, GBP sign rewritten to $ in the CapCut text. Verdict pick-and-edit.
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Generate a real phone-shot clip of a bored student at a window desk who picks up her phone. The woman corresponds to Image 1, adopting only her facial features and hairstyle; she replaces only the student in the grey-green T-shirt with curly brown hair in Video 1 and keeps the clothing, body and pose of Video 1; do not use the background, props, clothing or lighting of Image 1. Use Video 1 for every movement, expression, gaze, the framing and camera, the room and the timing; do not reproduce any text, captions, usernames or watermarks from Video 1. The can corresponds to Image 2 and Image 3, which jointly define the same can and generate only one instance, adopting only its structure, material, colours and printed label (a white slim 355 ml aluminium can, a red-and-grey C-swoosh above the black CELSIUS wordmark with LIVE FIT, a watermelon-slice illustration, SPARKLING WATERMELON in red, a black band with three bullets and a silver-grey lower band); in Image 2 and Image 3 the can is deliberately small in the frame and keeps that small scale; do not use the framing, lighting, exposure, background, shadow or camera angle of Image 2 or Image 3.
+  [Plot Summary] Shot: fixed phone shot, chest-up, a bright overcast window at the left with grey curtains, a dark wooden chest of drawers behind, a notebook with a pen at the bottom of the frame, a black pencil pouch at the lower left. Video 1 is one continuous take of about three seconds. The woman leans her head on her right hand, the elbow on the desk at the right edge of the frame, a pen in her left hand, looking bored and slightly down; she puts the pen down on the notebook, leans forward and reaches with her left hand to the left, picks up a phone from the desk, lifts it to eye level and looks at it, then breaks into a small smile while still leaning on her hand; the notification banner and every caption of Video 1 are absent. A closed Celsius Watermelon can stands upright on the bare desk behind the notebook's right corner, about one metre from the lens, at least a hand-width clear of her arm and not touching the notebook or her; its base is visible with a contact shadow, its label turned about thirty degrees toward the lens; it is part of this scene although Video 1 has none, it stays there for the whole clip, nobody touches or picks it up and her phone hand never passes near it. The can is a small object, 15.7 cm tall and 5.5 cm across: shorter than the notebook is wide, about two thirds the height of her head; it fills about one tenth of the frame height and keeps exactly this size. Bright cool daylight from the window at the left puts a highlight on the can's left edge and a soft contact shadow on the desk. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze and mouth movement of the woman in Video 1 on the same frames, the props and how they are handled, the camera framing and handheld feel, the light, the room and the timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture, no extra camera move, no re-staging, no new people, no change of pace. There is exactly one can on the desk, one phone, one pen, small and constant in size, not duplicated, not vanished, not deformed, no scale drift; the can stays where it is and fingers or objects never pass through it. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen; the only lettering is the printed label on the Celsius Watermelon can, exactly as in Image 2; do not reproduce any text, captions, usernames or watermarks from Video 1.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no cut-out edges, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no second can, no oversized can, no can taller than the notebook is wide, no can larger than a head, no open tab, no drinking from the can, no studio lighting on the can, no glow, no clipping
+  ```
+- **params:** model=wan3_0_prime · duration=3 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=video_references, image_references×3 · request=video-03-request.json
+- **errors:**
+  ```text
+  none; completed
+  ```
+- **evidence:** a1 frame 0.0 s: can 338 px vs head 370 px, T scale 1.28x (27.9%), base cropped at bottom, stands against/over notebook right edge; C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261010-020703-09/60-outputs/video-03/a1/f0.png
+- **qc:** not recorded
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261010-020703-09\40-briefs\video-03-plan.md
+- **class:** anomaly-catalog.md §2.7
+- **cause:** model-limit
+- **fix:** none yet
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** Placement in the foreground of a tight handheld shot: name the depth as farther than the nearest prop, keep base visible above the frame edge, give pixel height; fractions alone are ignored
+- **status:** open
+- **promoted to:** —
