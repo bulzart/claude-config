@@ -125,7 +125,7 @@ Interactions & physics: <grips, pours, handling, weight; per handled object: the
 Continuity & flaws: <source errors and dead space not to copy>                             [E/I]
 Entities → preserve / replace / adapt / ignore: <per entity, with reason>                  [I/U]
 Client-entity fit: <swap: <source entity> at t=… → client <entity> | contents: <vessel or form> holds the product, package nearby | placement: nothing analogous> [E/I]
-Placement opportunities (contents / placement): <hands free/busy per beat; surfaces near the subject + side + depth plane + shots that show them; where a large product would stand; light on each spot; best anchor> [E/I]
+Placement opportunities (contents / placement): <hands free/busy per beat; surfaces near the subject + side + depth plane + shots that show them; where a large product would stand; light on each spot; the large rigid same-plane objects the source shows (a laptop, a monitor) as size neighbours; best anchor> [E/I]
 Must not survive (generation-system.md §9b): <the copyright and ownership floor only: the person being replaced, the product being swapped, competitor products, overlay text, usernames, platform logos and watermarks, featured third-party branding, a copyrighted character as the subject; plus anything the generation service refuses>; incidental decor, clothing logos, meme faces and all brand-dependent content (alcohol, weapons, gore, profanity, …) are fine and are not listed; brand-dependent content appears only in the guardrail audit when a client rule names it [E]
 Guardrail audit (brand-guardrails.md §3): <none supplied | per hit: G<n> · t=… · element · subject/featured/peripheral · picture/caption/speech/insert/reflection · core/peripheral (why) · operation> → verdict: pick-clean | pick-and-edit: <operations> | dismiss: <rule, why core> [E/I]
 Confidence: <high/medium/low> — <what was hard to see or hear>
@@ -188,6 +188,9 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
      audit** has filtered it (`brand-guardrails.md` §4: a dismissed reference is listed under the
      ranking with its rule; a pick-and-edit reference carries its operations into the edit load):
      - the product's integration form (swap / contents / placement);
+     - for a placement, the anchor class the locked model renders at size: where its guide lists size as
+       a model limit (`wan3_0_prime`, `wan-3-0.md` §5), an in-hand, swap or large same-plane-neighbour
+       anchor ranks above a surface anchor that only paper, a notebook or a head can size;
      - the number of people against the supplied characters;
      - the own-content length after inserts, against the locked model's edit range;
      - the text and overlay load;

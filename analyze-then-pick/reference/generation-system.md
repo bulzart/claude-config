@@ -426,11 +426,33 @@ frame edge, a car parked across the street) and say so in the brief. If even tha
 write "placement weak: …" in the brief and use the least forced option. Never place it floating, out
 of context, or somewhere it could not really be.
 
+### 4b.1b Posture, support and place (every anchor)
+Caught errors CE-006, CE-007, CE-012 and CE-013 (2026-10): a flat sachet standing on its edge against a
+writer's forearm, a carton that "leaned" on a prop the model never drew, a pack resting on an exam sheet
+whose corner warped, a pouch that took over the source's bottle pick-up. The anchor row of the ledger
+therefore carries four more facts, and the prompt and QC quote them (`anomaly-catalog.md` §2.16):
+- **Posture its shape allows:** a flat sachet or pouch lies flat, label up; a carton lies flat or stands on
+  its base; a can stands on its base. Never on its edge against a person or an object.
+- **A support that is in the frame:** bare surface, or a large solid object the source frame already shows.
+  Never a lean against a prop the model has to invent, and never on or overlapping paper, cloth or any thin
+  sheet that hands move or write on.
+- **A place where a person would leave it:** out of the way of a working hand or arm, at the table's near or
+  far edge, never touching the person. The ledger row gives the story reason in one clause ("set down at the
+  near edge, out of the writing hand's way").
+- **Never the source's beat:** a placed product does not take over a pick-up, use or hand-off that belongs
+  to another object; the prompt names the object that is picked up and says the product stays.
+- **The anchor class the locked model renders at size.** When the model guide lists size as a model limit
+  (`wan3_0_prime`: `wan-3-0.md` §5), the anchor comes from its passing list: in the hand that holds it or
+  swapped for the source's own handheld object; on a bare surface beside a large rigid object of the source
+  in the same plane; one sachet lying flat on bare near-side surface. Sizing words do not carry the plan.
+
 ### 4b.2 Prominence: noticed, not featured
 - **Scale:** real scale at its depth, from the plan's **size reckoning** (`anomaly-catalog.md`
   §2.7: real dimensions, distance, lens, the expected fraction of the frame, the ratio to a named
   neighbour, the size ladder across products, constancy). Never enlarged so it gets seen: a
-  background product is a small object, and the prompt says so.
+  background product is a small object, and the prompt says so. On a model whose guide lists size as a
+  model limit (`wan3_0_prime`, `wan-3-0.md` §5) the reckoning is the check and the anchor class (§4b.1b)
+  is the control.
 - **Position:** off-centre (a side third), in the mid-ground near the subject. A large product sits
   in the mid-ground or background where it naturally stands. It never blocks the subject or the
   action, and never takes the foreground closest to the lens unless the reference's scene puts such
@@ -830,6 +852,14 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       the expected fraction of the frame and the ratio to a named neighbour are in the plan and in
       the prompt; a start frame was measured with `atp.py scale` before animating; the size ladder
       holds when several products show (`anomaly-catalog.md` §2.7).
+- [ ] Anchor class (§4b.1b): the posture, the visible support, the place and its story reason are in the plan
+      and the prompt; no lean on a prop the model has to invent; nothing on a thin sheet; no source beat
+      taken over. Where the guide lists size as a model limit, the anchor is from its passing list and no
+      sizing words are relied on.
+- [ ] Source surfaces: every printed surface of the source that a guardrail or §9b names (a poster, a
+      livery, a gate board, a monitor page, a shirt print) is an explicit "replace / remove only … and
+      reconstruct it as <named concrete content>" sentence in the model's grammar, never a description of
+      blankness, and the original item is in the exclusion line (`brand-guardrails.md` §4).
 - [ ] Scene layout, perspective and camera logic are consistent across every beat and cut.
 - [ ] Placement, contact, grip and occlusion are physically possible at every step.
 - [ ] Surroundings are consistent (surfaces, props, background people) with nothing morphing.
@@ -925,7 +955,16 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      against the named neighbour (and `--distance --lens` for the shot); the observed multiple of
      the expected size goes in the verdict. Over 25 %, a size that changes between shots, or a
      product larger than the hand that holds it is a **regenerate** reason with no post-fix;
-     15–25 % is a note only for a static product with a readable label.
+     15–25 % is a note only for a static product with a readable label. On a model whose guide lists
+     size as a model limit, the retry changes the form or the anchor class from the guide's passing list,
+     never the sizing words; a second miss ships the best take flagged, and the miss is recorded.
+   - **Posture, support and place** (`anomaly-catalog.md` §2.16): at 30 fps on every rest and every pass
+     of a hand or sheet. A lean against nothing, a posture the shape cannot take, a pack touching a
+     working hand or arm, a doubled or warped sheet, or a source beat taken over is a **regenerate**
+     reason with no post-fix; the story reason is its own line of the verdict.
+   - **Source surfaces** (§8): each printed surface that a guardrail or §9b names, at full resolution and
+     by `atp.py qc` OCR. A reproduced poster, livery, board or screen is a **regenerate** reason, and the
+     retry replaces it with a named concrete thing instead of describing blankness.
    - **Caught errors** (`ATP/caught_errors.md`, command item 22): each entry the plan applies is
      checked by id and written in the verdict; a failed check is a regenerate reason when the
      entry's class says so.

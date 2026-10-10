@@ -641,6 +641,9 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 ### A6r. Recreate: pick the references and plan the edits (Recreate only, autonomous)
 - **Use the recreate ranking from A4** (protocol §5). It weighs:
   - the integration form available for the product (swap / contents / placement);
+  - for a placement, the anchor class the locked model renders at size: where its guide lists size
+    as a model limit (`wan3_0_prime`, `wan-3-0.md` §5), an in-hand, swap or large same-plane
+    neighbour anchor ranks above a surface anchor that only paper, a notebook or a head can size;
   - the number of people against the supplied characters;
   - the own-content length after stripping inserts, against the locked model's edit range. A longer
     one is split, which may need the A7b permission;
@@ -794,6 +797,9 @@ Plan everything before production, in allocation order, **without asking for con
 - **As each agent reports:**
   - read its `60-outputs/video-NN/result.json`;
   - record it (`T state --run RUN append videos='<json>'`);
+  - reconcile the ledger: a `qc` that says RESIDUAL FAILURE or regenerated, with no entry in
+    `T caught-error list --grep <RUN>` for that video, is recorded now (`--source agent`, one entry
+    per class and anchor, the videos listed);
   - print one line: video, status, CapCut project, credits.
 - **Blockers come back from agents and are handled here:**
   - a permission is needed (A7b) → ask, then launch that video again;
@@ -1003,6 +1009,8 @@ files as video K".
       - prominence;
       - the anchor row in the ledger, with any motivated move (a pickup and set-down, a car driven
         away);
+      - the anchor's posture, support and place, with the story reason in one clause
+        (`generation-system.md` §4b.1b; `anomaly-catalog.md` §2.16);
       - the ambient match;
     - the **props in the asset photos**: what each character or environment photo shows besides the
       person or place (a glass, a cup, a snack). Each one is planned as the product's contents when
@@ -1055,7 +1063,10 @@ files as video K".
       height"), the size ladder when several products show, and the constancy line. The
       reference image is padded so the product does not fill it, and a start frame is built at
       the reckoned pixel height and measured with `T scale --frame … --product-px … --ref-cm …
-      --ref-px …` before it is animated.
+      --ref-px …` before it is animated. Where the guide lists size as a model limit
+      (`wan3_0_prime`), these words are a check, not a control: X1 chose the anchor class from the
+      guide's passing list, and a start frame is out of reach while the source rides as a video
+      reference.
     - Every vessel's contents are stated from the contents sample ("the glass holds …"); an
       unstated glass comes back as water. A character photo's role is limited to the person ("only
       his face, hair, build and clothing; not the glass, table or background of Image 4") unless
@@ -1151,6 +1162,13 @@ files as video K".
     prompt for every shot; a start frame passed `T scale`; the size ladder holds between products;
     nothing in the prompt or the references invites a bigger product (a tight crop, "hero",
     "prominent", a packshot pose).
+  - **Posture, support and place** (`generation-system.md` §4b.1b; `anomaly-catalog.md` §2.16): every
+    anchor is a posture its shape allows, on a visible support, where a person would leave it, with
+    its story reason; no lean on a prop the model has to invent, nothing on a thin sheet, no source
+    beat taken over. Where the guide lists size as a model limit, the anchor is from its passing list.
+  - **Source surfaces:** each printed surface a guardrail or §9b names is a "replace / remove only …
+    reconstruct as <named content>" sentence, never a description of blankness, with the original in
+    the exclusion line.
   - Fix any conflict in the plan and the request before continuing.
 - **X5 — Preflight.**
   - `generate_video {params:{…, get_cost:true}}` → cost and `adjustments`. **One** preflight per
@@ -1256,8 +1274,11 @@ files as video K".
     [--distance d --lens f]`; write the observed multiple of the expected size in the verdict and
     compare across cuts. Over 25 %, a size that changes between shots, or a product larger than
     the hand that holds it is a regenerate reason with no post-fix; 15–25 % is a note only for a
-    static product with a readable label. The retry names the neighbour and the ratio, the depth
-    and the fraction of the frame, pads the reference and rebuilds any start frame.
+    static product with a readable label. The retry changes the lever the guide names. For a model
+    whose guide lists size as a model limit (`wan3_0_prime`) it changes the form or the anchor class
+    from the guide's passing list, never the sizing words (12 of 12 wording retries were re-rolls);
+    otherwise it names the neighbour and the ratio, the depth and the fraction of the frame, pads the
+    reference and rebuilds any start frame. A second miss ships the best take flagged and is recorded.
   - **Blend** (`anomaly-catalog.md` §2.15): on one full-resolution frame at rest and one in use,
     the eleven-sign paste test against the nearest neighbour at the same depth (whites against the
     nearest white object, light direction, contact shadow, sharpness and grain, packshot pose,
@@ -1267,6 +1288,14 @@ files as video K".
   - **Solidity** (`anomaly-catalog.md` §2.14): at 30 fps wherever anything passes near, in front
     of or behind the product, lands on it or hits it. A pass-through, a sinking, a see-through, a
     wrong occlusion order or a hit without a consequence is a regenerate reason with no post-fix.
+  - **Posture, support and place** (`anomaly-catalog.md` §2.16): at 30 fps on every rest and every
+    pass of a hand or sheet: the posture, the whole underside on a visible support, the clearance to
+    a working hand or arm, the sheet region when paper is near; the story reason is its own line of
+    the verdict. A lean against nothing, an impossible posture, a pack touching a working hand or
+    arm, a warped sheet or a taken source beat is a regenerate reason with no post-fix.
+  - **Source surfaces:** each printed surface a guardrail or §9b names, at full resolution and by
+    `T qc` OCR; a reproduced one is a regenerate reason, and the retry replaces it with a named
+    concrete thing.
   - **Creative check** (`creative-direction.md` §8), as notes: the hook within the first second,
     the payoff where planned, the product recognisable at the moments of attention without reading
     as an ad, the planned emotion arc, the loop; Create: the copy test against the family's
@@ -1408,6 +1437,11 @@ Then give:
   close CapCut, and run `T capcut-text-style --learn --draft "<store>/<that project>"`";
 - any open issues.
 
+Analyze Mode: reconcile the ledger before the feedback question. Every `result.json` whose `qc`
+says RESIDUAL FAILURE or regenerated, and that has no entry in `T caught-error list --grep <RUN>`, is
+recorded now with `--source agent` (compact; one entry per class and anchor, the videos listed), so no
+flagged delivery leaves the run unrecorded.
+
 Offer, in one line, the next useful step (more videos, a different direction, regenerate a flagged
 video). Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header
 "Feedback"), "Watch the videos: is any of them not right?": **"All good"**; **"I'll watch them
@@ -1483,6 +1517,12 @@ line: "Run `/update-from-errors analyze-then-pick` to fold these into the prompt
   user reported as wrong unrecorded, never write an entry by hand or without the user's words
   verbatim and a general rule, and never silently fix a reported problem without its entry
   (item 22).
+- Never tell an agent not to record: the shared contract carries the recording rule, and a run is
+  never closed with a RESIDUAL FAILURE or a regenerated video that has no ledger entry (A9b, §6).
+- Never retry a size miss with the sizing words on a model whose guide lists size as a model limit,
+  never plan a pack that leans on a prop the model has to invent, stands on its edge against a
+  person or rests on a thin sheet that hands move, and never let a placed product take a beat of the
+  source (`generation-system.md` §4b.1b).
 - Never blur, soften, crop out, remove or avoid content that no client guardrail and no copyright
   floor names (meme faces, alcohol, weapons, fake blood, profanity, cameos, …); the floor (the
   replaced person, the swapped or competitor product, overlay text and handles, platform logos

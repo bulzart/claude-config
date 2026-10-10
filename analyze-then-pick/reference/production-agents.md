@@ -54,7 +54,9 @@ Follow, for this video only:
   verdict as what was wrong and a general rule. Only when the new generation passes QC, add the
   working prompt: `T caught-error set --id CE-nnn --verified-prompt <the passing request.json>
   --qc-pass "<the verdict>"`; never before, and never when the retry fails (the write is locked;
-  ids stay unique across agents). User entries come from the main session.
+  ids stay unique across agents). A flagged delivery (RESIDUAL FAILURE) is recorded the same way, one
+  entry per class and anchor with the videos listed; no shared contract file forbids recording. User
+  entries come from the main session.
 
 Hard rules:
 - Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. One job in flight in
@@ -77,9 +79,17 @@ Hard rules:
   every use goes through the product's real opening after its preparation step, with the contact
   point. Measure the product's size with `T scale` against the plan's named neighbour on a frame
   at rest, one in use and the last (over 25 % off, changing across a cut, or larger than the hand
-  that holds it: regenerate, no post-fix). Render the plan's QC checkpoints with `T qc --dense`
+  that holds it: regenerate once, no post-fix; where the model guide lists size as a model limit the
+  retry changes the form or the anchor class from its passing list, never the sizing words, and a second
+  miss ships the best take flagged). Render the plan's QC checkpoints with `T qc --dense`
   and count at each. A count or state
   that changes without a cause, or a use through the wrong or a closed part, is a regenerate reason.
+- Posture, support and place (anomaly-catalog.md §2.16): flat or on its base, on a visible surface, out
+  of a working hand's way, no lean on an invented prop, nothing on a thin sheet, the object that is
+  picked up named; checked at 30 fps and written as its own line of the verdict.
+- Printed surfaces of the source that the card or a guardrail names are replaced by a named concrete
+  thing in the model's edit grammar, with the original in the exclusion line; check them at full
+  resolution (brand-guardrails.md §4).
 - Examples (<RUN>/10-media/E…) are study material: never upload them or cut them into the video.
 Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 ```
@@ -133,6 +143,10 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
    set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `other`, plus one
    line of detail. Then stop.
 11. **Final message:** the content of `result.json`, as one JSON line.
+12. **Record.** Every regenerate reason and every flagged delivery (RESIDUAL FAILURE) is a caught-error
+   entry written at once with `T caught-error add --source agent` (one per class and anchor, the videos
+   listed). A shared contract file never forbids it; the main session reconciles the ledger against the
+   `result.json` files (§5).
 
 ## 4. `60-outputs/video-NN/result.json`
 ```json
@@ -150,11 +164,14 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 ## 5. This session, as agents report
 1. Read `result.json`, then `T state --run RUN append videos='<its json>'`.
 2. Print one line: video, status, CapCut project, credits.
-3. Launch the next queued video.
-4. Handle blockers:
+3. **Reconcile the ledger.** If `qc` says RESIDUAL FAILURE or regenerated and `T caught-error list
+   --grep <RUN>` shows no entry for this video, record it now (`--source agent`, compact, one entry per
+   class and anchor with the videos listed).
+4. Launch the next queued video.
+5. Handle blockers:
    - `permission` → ask (command A7b), store the answer, launch that video again;
    - `credits` → launch nothing more, report;
    - `capcut_running` → leave the project pending;
    - `failed_twice` / `other` → report in the wrap-up.
-5. **At the end:** if projects are pending, ask the user once to close CapCut. Then assemble them,
+6. **At the end:** if projects are pending, ask the user once to close CapCut. Then assemble them,
    by relaunching their agents with "CapCut assembly only", or in this session.

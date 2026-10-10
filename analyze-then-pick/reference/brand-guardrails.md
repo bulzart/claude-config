@@ -135,7 +135,11 @@ More cases, by kind:
   keep the two other cans exactly as they are"; "Remove only the brand name and logo from the green
   can on the shelf; keep its shape, size, position and lighting; it becomes a plain unbranded can
   of the same colour"; the person-replacement contract for the swap. Never "blur", "pixelate" or
-  "cover".
+  "cover". A printed surface the audit names (a news page on a monitor, a poster, a livery, a gate board)
+  is replaced by a named concrete thing in the same grammar ("replace its whole screen with a plain dark
+  candlestick chart, no text") with the original item in the exclusion line; a description of blankness
+  ("gate boards showing no text", "a plain market chart") or no mention at all came back printed in the
+  first requests (run 08 V01 V04, run 09 V04 V08).
 
 ## 5. QC (X9) and the wrap-up
 

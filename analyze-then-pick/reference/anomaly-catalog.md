@@ -40,6 +40,9 @@ examples illustrate the rules; they never limit them.
 6. **How big, from here?** The product's size in the frame follows from its real dimensions, its
    distance from the camera, the lens and the known size of its neighbours; it keeps that size as
    things move and across cuts (§2.7).
+7. **Where would a person leave it, and how?** The product lies or stands the way its shape allows, on
+   something that is visibly there, out of the way of the hands at work; it never takes a beat of the
+   source that belongs to another object (§2.16).
 
 ## 1. The affordance sheet (asset registry, one per product or object)
 
@@ -374,9 +377,14 @@ cut for constancy. The same measurement is the "scale" sign of the paste test (�
 - **Regenerate** over 25 %, or when the size changes between shots or across a cut, or when a
   product is larger than a hand that holds it when it should not be. There is **no post-fix**: a
   punch-in cannot shrink a product in its scene.
-- **Retry:** name the neighbour and the ratio, the depth, the fraction of the frame, pad the
-  reference, add the constancy line, and for a start-frame model rebuild the start frame at the
-  reckoned height.
+- **Retry:** the lever depends on the model. For a start-frame model, rebuild the start frame at the
+  reckoned height. For a reference model whose guide lists size as a model limit (`wan3_0_prime`:
+  `wan-3-0.md` §5), the sizing words, fractions, neighbour ratios, padded references and exclusions are
+  not levers: 12 of 12 comparable same-form retries moved the multiple by -15 to +24 % (CE-009, CE-011,
+  CE-014, CE-015 and eight run-level misses, 2026-10-08..10), so a wording retry is a re-roll. The one
+  retry changes the form or the anchor class from the guide's passing list, or none is spent and the best
+  take ships flagged and recorded. For any other model: name the neighbour and the ratio, the depth and
+  the fraction of the frame, pad the reference and add the constancy line.
 
 ### 2.8 Body mechanics at the product
 
@@ -527,6 +535,8 @@ while a hand passes in front of it. A thrown thing hits the product and the prod
 or the product moves before the thing arrives. Two objects occupy the same spot after a cut. A
 glass of drink sits half inside the can beside it. A phone slides into a laptop. Rain or a spill
 goes through a closed lid. A car's wheel passes through the kerb; a bike leans through the wall.
+A carton resting on the corner of an exam sheet doubles and warps the sheet's corner while the hand
+writes (CE-006, 2026-10): two surfaces fight for one space, so the pack goes on the bare surface (§2.16).
 
 **Ledger.** Every thrown, dropped, swung, rolled or carried thing that passes near the product (or
 near any other tracked object) gets a **path row**: where it starts, the side it passes on or the
@@ -633,6 +643,45 @@ in the verdict ("whites +1.5 stops over the door, no contact shadow, 2.4× the b
   exposure or warmth: a local regrade of the product's pixels to match the neighbour. Never a
   post-fix for size, angle, perspective, shadow or edges.
 
+### 2.16 Posture, support and place
+
+**Rule.** A placed or carried product takes the posture its shape allows, rests on something that is
+visibly there, and sits where a person would really leave it. A flat sachet or pouch lies flat, label up;
+a carton lies flat or stands on its base; a can stands on its base. Nothing leans on a prop the model has
+to invent, nothing stands on its edge against a person, and nothing rests on or overlaps a thin sheet that
+hands move or write on. A placed product never takes a beat of the source (the pick-up, the use) that
+belongs to another object.
+
+**Breaks.** A flat sachet stands upright against a writer's forearm (CE-012). A carton "leans" on a
+notebook that renders as a sliver at the frame edge, so it tilts back against nothing (CE-013). A carton
+lies on the corner of an exam sheet; from 6 s the sheet's corner doubles and warps while the hand writes
+(CE-006). The placed pouch takes the bottle's pick-up beat (CE-007). A sachet planned to lie flat on a
+grill shelf renders propped against the grill front, a carton planned flat renders upright (run 09, V11 and
+V12).
+
+**Ledger.** The anchor row carries the posture (flat / on its base / in hand), the support (bare surface or
+a named solid object that is in frame), the clearance to the nearest working hand, arm or sheet, and the
+story reason in one clause ("set down at the near edge, out of the writing hand's way").
+
+**Prompt.** Posture, support and reason as one chronological sentence, positive first, with its exclusion
+in the model's syntax: "lies flat on its wide face with its printed label facing up, resting entirely on
+the bare marble at the near edge of the table, a band of bare marble at least as wide as itself between it
+and his forearm, where someone sets a sachet of gum down out of the way of their writing; it never slides,
+tilts, stands up or leans" with "no standing, leaning, propped or tilted sachet, no sachet on its edge, no
+sachet on a sheet, no sachet touching his arm" (CE-012, verified). A support is bare surface or a large
+solid object the source frame shows. Name the object that is picked up and say the product stays where it
+was.
+
+**QC.** At 30 fps across every rest and every pass of a hand or sheet: the posture (flat or on its base, no
+tilt, no float), the support (the whole underside on a visible surface or solid, with its contact shadow),
+the clearance to a working hand or arm (touching is a regenerate reason; a gap under about half a
+hand-width is a note, CE-012's accepted take had about 0.2), the sheet region for the whole shot when paper
+is near, and the story reason written as its own line of the verdict.
+- **Regenerate** on a lean against nothing, a posture the shape cannot take, a pack touching a working hand
+  or arm, a doubled or warped sheet, or a source beat taken over. No post-fix.
+- **Retry:** re-plan the posture and the place (flat on bare near-side surface, or in hand) and drop any
+  prop the model has to invent; the sizing words are not the lever (§2.7).
+
 ## 3. The prompting stack (in order, per video)
 
 1. **Affordance sheet** (§1) for every product and object in the registry, before any plan.
@@ -679,10 +728,13 @@ in the verdict ("whites +1.5 stops over the door, no contact shadow, 2.4× the b
    observed multiple of the expected size written in the verdict, constancy across cuts (§2.7).
 5c. **Blend** on one full-resolution frame at rest and one during any interaction: the eleven-sign
    paste test against the nearest neighbour at the same depth (§2.15).
+5e. **Posture, support and place** at 30 fps across every rest and every pass of a hand or sheet: the
+   posture, the whole underside on a visible support, the clearance to a working hand or arm, the sheet
+   region when paper is near, and the story reason as its own line (§2.16).
 6. **Scale**: the product against a hand or face on two or three sheets.
 7. **Ownership** after every hand-off; who uses what.
 8. **Verdict** (`generation-system.md` §9): **regenerate** on any break in §2.1–§2.5, §2.8–§2.10,
-   §2.14, §2.15 and on physics breaks in §2.6, §2.11, §2.12; **post-fix** only in the cases each class names (an
+   §2.14, §2.15, §2.16 and on physics breaks in §2.6, §2.11, §2.12; **post-fix** only in the cases each class names (an
    untouched static anchor's pixel hold, a one-frame trim, a recolour in a locked shot, a punch-in);
    **accept with a note** only for the cases named as tolerable (a small constant oversize, a soft
    label while gripped).
@@ -700,6 +752,8 @@ use: bottle 3.5–5.6 s @30 fps — cap closed; lips on the lid's right side, no
 state: can tab raised at 0.0 s, cracked at 3.0 s in the plan → regenerate; cause: the open-tab reference → removed; "[Start state] sealed, tab flat".
 permanence: pouch missing 8.1–8.3 s while the arm passes; untouched static anchor, locked camera → post-fix (pixel hold from frame 236); checked at 30 fps, no edge artefacts.
 scale: pack 155 px = 12 % of frame height vs ~10 % target, constant → accept with note.
+size (wan3_0_prime): carton 163 px vs ~95 expected = 1.71× vs the bottle → regenerate; the guide lists size as a model limit, so no wording retry: the retry changes the form or the anchor class (in hand / beside a large same-plane object / one flat sachet on bare near-side surface), or none is spent and the best take ships flagged and recorded.
+posture: sachet upright against the forearm 4.8–6.0 s @30 fps, 0 px gap to the arm, no support under its edge → regenerate; retry: flat on bare near-side surface, a band of bare surface to the arm, the story reason; exclusion "no standing, leaning, propped or tilted sachet".
 ```
 
 ## 5. Quick reference
@@ -719,3 +773,4 @@ scale: pack 155 px = 12 % of frame height vs ~10 % target, constant → accept w
 | process impossibly fast, frozen or repeated | time budget | "real-time speed"; one process per stage | dense sheet of the process; `T qc` freezes | regenerate (dead tail: trim) |
 | a thrown, dropped or passing thing goes through the product; the product sinks or shows through; a hit without a consequence; wrong occlusion order | path row; occlusion note | "it arcs past the bottle on its far side and lands behind it; the bottle is not touched"; "hits the can, bounces off; the can rocks and settles"; "nothing passes through the bottle" | every pass-near, landing and hit at 30 fps; silhouettes, depth order, consequence | regenerate (no post-fix) |
 | the product reads as a paste: brighter or cooler than the room, flat front light, no contact shadow, crisper than the plate, packshot pose, wrong perspective, wrong size, hard edges, on an empty edge | anchor row with the light on the spot, the neighbour for scale and shadow, the occluder, the mark angle | "@ImageN defines only shape, proportions, colours and label; not its lighting, exposure, background or camera angle"; "lit by the same warm, dim ceiling light as the bottle beside it, a third shorter than it, label about 30° away, soft contact shadow to the right like the bottle's, seen from the same low angle" | one full-res frame at rest and one in use: the eleven-sign paste test against the nearest neighbour | regenerate (local regrade only for a static untouched product failing on exposure alone) |
+| a placed pack stands on its edge or leans on nothing, rests on a thin sheet, touches a working hand or arm, or takes over a source beat | the anchor row: posture, support, clearance, story reason | "lies flat on its wide face, label up, entirely on the bare marble at the near edge, a band of bare marble wider than itself to his forearm, where someone sets a sachet down out of the way"; "no standing, leaning, propped or tilted sachet, no sachet on a sheet" | every rest and every pass of a hand or sheet at 30 fps: posture, support, clearance, the sheet region; the story reason as its own line | regenerate (no post-fix) |

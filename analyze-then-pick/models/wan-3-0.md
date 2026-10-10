@@ -3,8 +3,8 @@ guide: wan-3-0
 title: Alibaba Wan 3.0 / Wan 3.0 Prime
 provider: Alibaba Cloud (Wan / Tongyi Wanxiang team; API via Alibaba Cloud Model Studio, DashScope)
 higgsfield_model_ids: [wan3_0, wan3_0_prime]
-guide_version: 1.1
-last_verified: 2026-09-30
+guide_version: 1.2
+last_verified: 2026-10-10
 catalog_snapshot: higgsfield/catalog-snapshot-2026-09-30.json
 documentation_depth: high
 ---
@@ -126,6 +126,11 @@ Speed variant: replace `"wan3_0"` with `"wan3_0_prime"` [HF]. Preflight any call
    in the array corresponds to Image 1" [OFFICIAL]].
 8. **Never send `auto`** under the fixed format: text-only lets the model choose; references may pull it landscape
    [INFERRED from OFFICIAL "adaptive" behaviour].
+9. **No pre-built start frame in Recreate.** The source video rides as `video_references`, and frame
+   roles exclude every `*_references` (gotcha 1), so a product cannot be pinned at its reckoned pixel
+   height by a start frame while the source carries the action. A frames-only build (the source's own
+   first frame with the product composited at the reckoned height as `start_image`; ✗ in the command's
+   fidelity ladder) pins the size and gives up the video reference's motion and timing; untested (§9).
 
 ### 2.6 9:16 / 720p mapping (fixed output format of /analyze-then-pick)
 | mode | params | expected output | action |
@@ -305,8 +310,12 @@ object → orientation (which face toward camera) → contact and grip (which ha
 ("her fingers overlap the front edge") → end position [INFERRED structure]. The size relation comes from the plan's
 size reckoning (`reference/anomaly-catalog.md` §2.7): the ratio to the named neighbour at the same depth, the depth
 in the shot line ("on the dresser behind him, about 2.5 m from the lens"), "a small object in the background" where
-it is one, and "No scale drift" in the consistency line; pad the product reference and build any first frame at the
-reckoned pixel height, measured with `atp.py scale` before animating [INFERRED]. Guardrail edits
+it is one, and "No scale drift" in the consistency line. On `wan3_0_prime` these words are a check, not a
+control: tighter fractions, neighbour ratios, padded references (p40 down to p16) and "no oversized"
+exclusions did not move a small placed product (12 of 12 same-form retries, -15 to +24 %; §5), and a start
+frame at the reckoned height cannot be combined with the source video (§2.5 gotcha 9). The plan chooses the
+anchor class from the §5 passing list and measures the first output with `atp.py scale` [OBSERVED
+2026-10-08..10]. Guardrail edits
 (`reference/brand-guardrails.md` §4) use the same edit grammar: "remove only the brand name, logo and markings from
 the green can on the shelf in video 1; keep its shape, size, position, lighting and shadow; it becomes a plain
 unbranded can of the same colour" (never "blur" or "pixelate"), and "remove only the third can at the left end of
@@ -322,6 +331,26 @@ the window" [OFFICIAL]. Add reflections on glossy surfaces and a contact shadow 
 "There is always only one orb, stable in size, not duplicated, not vanished, not deformed"; "Do not change the
 positions of pine trees and rocks" [OFFICIAL]. Write end states for placed objects, open/closed containers, liquid
 levels and which hand holds what ("the cup stays in her left hand, half full, lid on") [INFERRED].
+
+**Posture, support and place** (`reference/anomaly-catalog.md` §2.16). Write the pack's posture, its
+support and the reason for its spot as one chronological sentence, positive first, then the exclusions in
+the "Negative prompt list:": "lies flat on its wide face with its printed label facing up, resting entirely
+on the bare marble at the near edge of the table, a band of bare marble at least as wide as itself between
+it and his forearm, where someone sets a sachet of gum down out of the way of their writing; it never
+slides, tilts, stands up or leans" with "no standing, leaning, propped or tilted sachet, no sachet on its
+edge, no sachet on a sheet, no sachet touching his arm" [VERIFIED 2026-10-09, CE-012]. A support is bare
+surface or a large solid object the source frame shows; a prop the model has to invent renders as a sliver
+and the pack leans on nothing (CE-013). Name the object that is picked up and say the pack stays (CE-007).
+
+**Source surfaces.** Wan re-renders a printed surface of Video 1 (a poster, an airline livery, a gate board,
+a monitor page) when the prompt only describes it as blank or plain, or does not name it. Replace it with a
+named concrete thing in the edit grammar and put the original item in the exclusion line: "The right monitor
+in Video 1 shows a news web page: replace its whole screen with a plain dark candlestick chart (green and
+red candles, no text, no headline, no photo)" with "no news web page, no red header banner, no politician
+photo, no headline text on any monitor"; "remove only the red, orange and yellow airline livery from the
+winglet and reconstruct it as plain white metal" [VERIFIED on the retry: run 08 V01 V04, run 09 V04]. "Gate
+boards behind him showing no text" and "a plain blank grey panel" came back printed in 3 attempts (run 09
+V08).
 
 **Counts and use** (`reference/anomaly-catalog.md`). Count multiples in the official "always only one orb" form
 ("There are always exactly three capsules on the desk right of the lamp, not duplicated, not vanished, also while
@@ -372,6 +401,24 @@ Verbatim first-party examples (trimmed with […]):
    > handover is complete, the bouquet is only in that character's hands."
 7. Clean-plate line — same prompt guide (creative example)
    > "Do not show any text, subtitles, numbers, interface elements, or watermarks on screen."
+8. Verified in use (CE-012, 2026-10-09; the user's complaint: a sachet "standing at his arm while he writes")
+   > bad: "A single closed sealed Neuro Energy & Focus Peppermint sachet stands upright with its bottom edge
+   > on the bare marble at the lower right of the frame, leaning back against the side of a closed black
+   > hardcover notebook that lies flat beside it […] to the right of his writing forearm"
+   > good: "[…] sachet lies flat on its wide face with its printed label facing up, resting entirely on the
+   > bare white marble in the bottom right of the frame, on the near side of the table, nearer the lens than
+   > his hands and forearm, where someone sets a sachet of gum down out of the way of their writing. It is
+   > fully inside the frame, with a band of bare marble at least as wide as the sachet itself between it and
+   > his forearm, hands and the exam sheets; nothing touches it and nobody picks it up. […] it stays flat on
+   > that spot for the whole clip and never slides, tilts, stands up or leans"
+   > passed QC: posture and support at 30 fps, size 1.05×, in sync. The same flat wording failed on a shelf
+   > and on a glossy table (run 09 V11 V12: propped, upright).
+9. Verified on the retry (a source surface, run 09 V04)
+   > bad: "right a plain market chart with no readable text" (the news page came back with its headline)
+   > good: "The right monitor in Video 1 shows a news web page with a red header, a politician's photo and a
+   > large headline: replace its whole screen with a plain dark candlestick chart (green and red candles on a
+   > dark background, no text, no headline, no photo, no red banner)." + "no news web page, no red header
+   > banner, no politician photo, no headline text on any monitor"
 
 Patterns they teach:
 - **Order:** overall description (genre, length, pacing) → reference bindings → timed shots → dialogue → sound →
@@ -470,6 +517,9 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 | Gibberish text, subtitles, corner marks | described signage/screens; dialogue without a no-subtitles item; text in references | §3.11 |
 | Features bleed between people/props | vague bindings | one subject per image, unique labels, adoption scope [OFFICIAL] |
 | Product silhouette/proportion drift | grid references, heavy motion, editing | clean single-object refs, geometry sentence, "No scale drift" [OFFICIAL] |
+| **Small placed product renders 1.3–3.5× its reckoned size, whatever the words** (MODEL LIMIT, `wan3_0_prime`: Celsius cans within 1.25× on the first attempt in 11 of 23 videos, small Neuro packs in 0 of 7) | a pack, can or sachet set on a surface, shelf or desk in a tight handheld or chest-up shot (any depth tried, 0.5–1.6 m); a pack that stands upright or leans; a neighbour that is paper, a notebook or a head; a base cropped by the frame edge | 12 of 12 comparable same-form retries (run 08 V02 V06 V09 V12 V14 V15 V17 V18, run 09 V01 V03 V06 V08; CE-009, CE-011, CE-014, CE-015 agree) moved the multiple -15 to +24 % (median -5 %) with tighter fractions, neighbour ratios, p40 to p16 padded references and "no oversized" exclusions: a wording retry is a re-roll, so spend none. **Passing list** (delivered take within ~1.25×): (1) in the hand that holds it, or swapped for the source's own handheld object (4 of 4: run 08 V01 V04 V13, run 09 V10; 1.0–1.15×); (2) on a bare surface beside a large rigid object of the source in the same plane, a laptop (5 of 7: run 08 V08 V11, run 09 V02 V05 V07; misses run 08 V12, run 09 V12); (3) one sachet lying flat on bare near-side surface, sized by "as long as his index finger, narrower than his open palm, about one tenth of the frame width" (CE-012, 1.05×; the flat wording failed in 2 of 3: run 09 V11 V12). Plan the anchor from this list in X1; on a miss the one retry changes the form or the anchor class, or none is spent and the best take ships flagged and recorded (`reference/anomaly-catalog.md` §2.7) [OBSERVED 2026-10-08..10] |
+| A small pack renders upright, tilted or propped although the prompt says "lies flat" (run 09 V11 V12; CE-012, CE-013) | the pack planned to lean on a prop the model has to invent; a spot against a person's arm; "lies flat" without the support, the reason and the exclusions | the verified sentence of §3.14 (flat, label up, entirely on bare surface at the near edge, a band of bare surface wider than the pack to the arm, the story reason) plus "no standing, leaning, propped or tilted sachet, no sachet on its edge"; never plan a lean on an invented prop; QC posture, support and place at 30 fps (`reference/anomaly-catalog.md` §2.16) [VERIFIED once; the wording failed in 2 of 3] |
+| The source's printed surface comes back (poster, airline livery, gate board, monitor page, shirt print) | the surface only described as blank, plain or "showing no text", or not named at all | replace it with a named concrete thing in the edit grammar and name the original item in the exclusion line (§3.14 "Source surfaces"); QC OCR and a full-resolution look at the surface [VERIFIED on 3 retries; 1 persistent: the gate boards, 3 attempts] |
 | Product looks pasted on (a can on a dresser at 2–3× real size, squared to the lens, flat cool light in a warm dim room, no contact shadow, straight-on in a low-angle room) | the reference's lighting, exposure, background and camera angle inherited; a tight product crop pulls it forward and up in size; an anchor alone on an empty edge | "the can in Image N: adopt only structure, material, colour and label, not its lighting, background or camera angle"; the room's light on it, "real contact shadows", "edges blend naturally with no cutout artifacts" [OFFICIAL phrasings], its size against a named neighbour, its mark angle, an anchor touching or partly behind something, padded crops; the eleven-sign paste test in QC (`reference/anomaly-catalog.md` §2.15) [INFERRED; observed 2026-10] |
 | Spatial distortion | orbit >45° [OFFICIAL] | smaller arcs, slower moves |
 | Object snaps, or pauses on a pose then resumes | free physical motion (a spin, toss or roll, or a vehicle's move) given exact times or a required end state | describe the physics only; give the end state a visible cause (a hand stops it, a driver brakes); time product-pun text to the real moment (`generation-system.md` §5b) [INFERRED] |
@@ -511,7 +561,9 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 - [ ] Dialogue quoted with speaker or "No dialogue."; BGM specified or "No background music."
 - [ ] Clean-plate line (§3.11b); in-frame text only if short and scene-bound; Edit Mode: removal pass first.
 - [ ] Asset size/grip/occlusion, light direction and end states written (§3.14); slop exclusions included (§5).
-- [ ] Size from the reckoning: neighbour ratio, depth, fraction of the frame, "No scale drift"; reference padded; first frame measured with `atp.py scale` (`reference/anomaly-catalog.md` §2.7).
+- [ ] Size: the anchor is from the §5 passing list (in the hand or swapped for the source's handheld object; beside a large rigid same-plane object; one flat sachet on bare near-side surface). The reckoning (neighbour ratio, depth, fraction of the frame, "No scale drift") is written as a check, and no wording retry follows a miss (`reference/anomaly-catalog.md` §2.7).
+- [ ] Posture, support and place (§3.14): flat or on its base, on a visible surface, out of a working hand's way, with the story reason; no lean on an invented prop; nothing on a thin sheet; the object that is picked up is named (`reference/anomaly-catalog.md` §2.16).
+- [ ] Source surfaces: each printed surface of Video 1 that a guardrail or `generation-system.md` §9b names is replaced with a named concrete thing in the edit grammar, and the original is in the exclusion line (§3.14).
 - [ ] Counts with numbers per shot; every use beat names the part, the preparation step and the contact point; one "Negative prompt list:" item per product for its own wrong use and count; no reference shows a later state than t=0 (`reference/anomaly-catalog.md` §3).
 - [ ] `duration`, `generate_audio`, `enable_thinking` set deliberately; `get_cost: true`.
 - [ ] QC with `atp.py qc --mode analyze|edit`: size, freezes, pseudo-text, corner marks, identity, product geometry; `--dense` on the plan's checkpoints: counts, the part and contact of every use, permanence across exits and cuts (`reference/anomaly-catalog.md` §4).
@@ -545,3 +597,10 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 - How Higgsfield bills video references (upstream bills input + output seconds).
 - Per-shot length guidance conflicts (2–5 s vs 4–6 s); inconsistent "forward/backward" extension wording.
 - Quality parity of Prime vs standard beyond "aligned capabilities"; API page "preview" vs GA blog.
+- Size levers still untested on `wan3_0_prime` (§5 model limit; CE-011, CE-014, CE-015): (a) a frames-only
+  build, the source's first frame with the product composited at the reckoned height as `start_image`
+  (§2.5 gotcha 9), which pins size and may cost motion and sync; (b) a second, one-change edit pass
+  ("Edit the video: add …", §4.4) over the person-swapped clip; (c) asking for 0.6× the reckoned size to
+  cancel a ~1.5× bias; (d) whether the neighbour class decides it (a laptop in the same plane against
+  paper, a notebook or a head). Measure `atp.py scale` on each first output; a lever is proven when 3 of
+  4 placements land within 1.25×.
