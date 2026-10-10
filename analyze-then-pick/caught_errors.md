@@ -1145,3 +1145,46 @@ How agents use it:
 - **rule:** An overlay cut from a reference must exist only on the frames where its element is really visible and must follow every fade, dissolve or flash of the picture beneath it; QC views dense sheets at every overlay start/end and every transition for stray rectangles, halos or brightness steps, not only the content frames.
 - **status:** open
 - **promoted to:** —
+
+## CE-027 · 2026-10-10 · Caption must keep the reference's specific keyword text
+- **source:** user
+- **video:** 04
+- **run:** 20261010-020703-09
+- **delivered:** CapCut project 10_Oct_2026_v04-2 · clean C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261010-020703-09/60-outputs/video-04/clean.mp4 · credits 132 · run QC: RESIDUAL FAILURE (size only): a3 has the open can in frame from frame 0 to the end on one fixed spot (dense 0-1 s and 0-4.5 s checked, count 1, never touched); glass sipped once through the rim; headline gone. Can ~0.15 of frame height = ~1.65x planned (1/11) and in the left foreground, not beside the glass. a4 fixed size but vanished can / two glasses / drank from can, rejected. caught-error CE-018 NOT set to verified (QC not fully passed).
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Celsius Cherry Cola can + glass (V05 recreate, contents)
+- **assets:** not recorded
+- **user said:** "also the video-04-preview text let it be "Financeaholic" as in the original, due to the very specific keyword use"
+- **what was wrong:** The source's only on-screen text ('Financeaholic') was treated as a handle/watermark and dropped, and replaced by an invented caption ('Me during earnings week'). The user wants the reference's own keyword kept because the keyword is the specific hook of the video.
+- **brief:**
+  ```text
+  # Video 04 brief: V05 finance desk panic (contents: the glass holds Cherry Cola, open can beside it)
+  Concept: recreate V05 with Celsius Cherry Cola (contents); char-A19.jpg. Why it works: the reference's own mechanism, product native to the scene, noticed not featured.
+  Model/operation: wan3_0_prime, video_references + image_references, 11 s, 9:16 720p, generate_audio false. Cost: preflight in request file (3 credits per second expected).
+  Fidelity: source silent video as video reference, same duration, action script written out, fidelity lock; risk: Wan rebuilds the action (approx. recreate); sync-check after the merge.
+  Text: "Me during earnings week" y_rel 0.13 (posY 0.74, posX 0) 0-10.2
+  Guardrails: C6 politics: the right monitor's news headline (UK politics) replaced by a plain market chart (peripheral). Handle 'Financeaholic' removed. C3: one drink. C4: no coffee. Verdict pick-and-edit.
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Generate a real phone-shot clip of a stressed trader at a three-monitor desk who takes a sip from a glass. The woman corresponds to Image 1, adopting only her facial features and hairstyle; she replaces only the man with glasses in the olive sweater in Video 1 and keeps the clothing, body and pose of Video 1; do not use the background, props, clothing or lighting of Image 1. Use Video 1 for every movement, expression, gaze, the framing and camera, the room and the timing; do not reproduce any text, captions, usernames or watermarks from Video 1. The can corresponds to Image 2 and Image 3, which jointly define the same can and generate only one instance, adopting only its structure, material, colours and printed label (a white slim aluminium can, a red-and-grey C-swoosh above the black CELSIUS wordmark with LIVE FIT, a cherries-and-cola illustration, SPARKLING CHERRY COLA in a magenta tag, a black band with three bullets and a silver-grey lower band); in Image 2 and Image 3 the can is deliberately small in the frame and keeps that small scale; do not use the framing, lighting, background or camera angle of Image 2 or Image 3. The right monitor in Video 1 shows a news web page with a red header, a politician's photo and a large headline: replace its whole screen with a plain dark candlestick chart (green and red candles on a dark background, no text, no headline, no photo, no red banner). Image 4 is only the colour, clarity and bubbles of the drink; nothing else in it is used.
+  [Plot Summary] Shot: locked phone framing from the right side of a white desk, medium shot, the camera unchanged from Video 1; a dim home office, three monitors (left a chart, centre a dashboard, right a dark candlestick chart with no text at all and no news page), a keyboard and blue and red sticky notes on the desk. The woman sits at the right of the frame in profile facing the monitors, keeping the glasses of Video 1. She leans toward the right monitor and reads; puts both hands on her head and slumps; drops her right hand to the keyboard; picks up the glass from the desk at the right of the keyboard with her right hand, tips it to her lips, takes one sip with her head tilted back slightly and sets it down off the right edge; types and writes; points at the left monitor; leans in and types; points again; leans in and types. The small clear glass by the right monitor's base holds Celsius Cherry Cola poured from the can beside it: dark brown cola with fine fizz bubbles, as in Image 4. She sips from the glass through its rim, not from the can. An open Celsius Cherry Cola can with its black tab up stands upright on the desk right beside the glass, touching distance, at the same depth from the lens as the glass, behind the keyboard near the right monitor's base, label turned about thirty degrees toward the lens. The can and the glass are both on the desk from the very first frame to the last frame; the glass is lifted only at about three seconds, while the can never moves and is never touched, never picked up, and does not appear or disappear; always exactly one can and one glass, not duplicated. The can is small and far from the lens: 15.7 cm tall, only about 1.3 times as tall as the glass beside it, shorter than her hand is long, about one twelfth of the frame height, exactly this size throughout. After the sip the glass stands off-frame and is no longer seen; the can stays in its spot in view until the last frame. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze and mouth movement of the woman in Video 1 on the same frames, the props and how they are handled, the camera framing and handheld feel, the light, the room and the timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture, no extra camera move, no re-staging, no new people, no change of pace. There is exactly one can (open, standing beside the glass, visible from the first frame to the last) and one glass of Cherry Cola; glass level drops slightly after the sip, small and constant in size, not duplicated, not deformed; the can stays where it is and fingers or objects never pass through it. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen; the only lettering is the printed label on the Celsius Cherry Cola can, exactly as in Image 2.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no second can, no oversized can, no can taller than her hand is long, no can larger than a head, no can in the foreground, no can closer to the camera than the glass, no drinking from the can, no studio lighting on the can, no glow, no clipping, no news web page, no red header banner, no politician photo, no headline text on any monitor
+  ```
+- **params:** model=wan3_0_prime · duration=11 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=video_references, image_references×4 · request=video-04-a4-request.json
+- **errors:** none
+- **evidence:** not recorded
+- **qc:**
+  ```text
+  RESIDUAL FAILURE (size only): a3 has the open can in frame from frame 0 to the end on one fixed spot (dense 0-1 s and 0-4.5 s checked, count 1, never touched); glass sipped once through the rim; headline gone. Can ~0.15 of frame height = ~1.65x planned (1/11) and in the left foreground, not beside the glass. a4 fixed size but vanished can / two glasses / drank from can, rejected. caught-error CE-018 NOT set to verified (QC not fully passed).
+  ```
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261010-020703-09\40-briefs\video-04-plan.md
+- **class:** text-and-format.md 1 and 3 (what source text is re-placed)
+- **cause:** plan
+- **fix:** none yet
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** When a reference's only text is a short keyword or tag that defines its niche, ask whether it is the hook before dropping it as a handle: if the user keeps it, re-place it word for word as a CapCut text layer at the same height; the user's instruction outranks the 'never copy handles' default.
+- **status:** open
+- **promoted to:** —
