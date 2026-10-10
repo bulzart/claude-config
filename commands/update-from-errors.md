@@ -61,6 +61,23 @@ The aim is that the next run gets the video right the first time, and QC finds n
    - Text stays compact: one line per rule, one short good/bad pair per example.
 7. **QC only gets stricter or more precise.** It is loosened only when an entry shows a false
    positive, meaning QC rejected what the user accepted.
+7b. **The pipeline's architecture stays as it is.** This command adds and corrects; it never
+    redesigns. The pipeline stays coupled the way it was built: the same stages in the same order,
+    the same files owning the same things, the same agents with the same contracts, the same
+    toolkit commands with the same interfaces, the same section numbering and the same
+    cross-references between files.
+    - **Allowed:** adding a rule, an entity, a field, an example, a check, a threshold, a
+      table row, a sentence or a short sub-item inside an existing section; replacing the wording
+      of a rule that failed; sharpening a definition; adding a small option or default to an
+      existing toolkit command.
+    - **Not allowed:** adding, removing, merging, splitting or reordering stages, steps, agents,
+      files or sections; moving a responsibility from one file or stage to another; renaming
+      sections, fields, commands or flags; changing a file's format or the run layout; replacing
+      a method with a different method (a new QC approach, a new prompt structure, a new
+      selection process); rewriting a section from scratch when a few lines would do.
+    - If a lesson seems to need a structural change, it is not applied. It goes in the report
+      and the learning log as a **design suggestion**, with the entries behind it, for the user
+      to decide.
 8. **Never touch:**
    - the ledger's entries, except through its own tool. Never delete one: the ledger is the record;
    - `runs/` or any other run data;
@@ -356,6 +373,9 @@ The change kinds:
   than text. Keep the change small, and test it.
 
 Then review the set as a whole:
+- Every row is an addition or a wording change inside an existing section (item 7b). A row that
+  would add, remove, move, rename or re-method a stage, file, section, agent, field or command
+  comes out of the set and goes to the report as a design suggestion.
 - No two rows contradict each other or an existing hard rule.
 - Nothing duplicates a rule that already exists; merge or replace instead, and remove the
   superseded text.
@@ -367,8 +387,10 @@ Then review the set as a whole:
 
 ## 5. Apply
 
-1. **Edit each file in place.** Keep its section structure, voice, numbering and line endings. Any
-   edit script must handle CRLF, check every anchor before writing anything, and write bytes.
+1. **Edit each file in place, inside its existing sections.** Keep its section structure, voice,
+   numbering, cross-references and line endings; the diff should read as lines added or
+   replaced, never as a section moved or rewritten. Any edit script must handle CRLF, check every
+   anchor before writing anything, and write bytes.
 2. **Update `CMD`** wherever a step, a check or a "Never" rule changes, and keep its numbered items
    consistent.
 3. **Mark the entries in the ledger, through its tool only.**
@@ -403,6 +425,7 @@ Append one compact section per pass:
 - **Changes:** <file §>: <one line> (P1) …   (or "none: looks good")
 - **Promoted:** CE-… → <pointer>; **left open:** CE-… (<why>)
 - **Suggested, not applied:** <the optional lines> …
+- **Design suggestions (structural, for the user):** <what and why, with entries> …
 - **To test:** <hypothesis> → measure <what> on the next run of <model/class>; proven when <criterion>
 ```
 
@@ -418,6 +441,8 @@ Then list:
 - the entries promoted, and the ones left open with the reason;
 - the hypotheses to test, and what the next run should measure;
 - any diagnosis corrected in §2;
+- any **design suggestion** held back under item 7b, with the entries behind it, for the user to
+  decide;
 - the files changed, the build-prompt backup and the commit hash.
 
 End with one line:
@@ -447,6 +472,12 @@ No files are changed, nothing is committed, and the learning log gets its "none"
 - Never delete or rewrite a ledger entry's content. Set its status and pointer through its tool
   only.
 - Never present an unverified fix as working, or write a "good" example that never passed QC.
+
+**The pipeline's shape**
+- Never change the pipeline's architecture: never add, remove, merge, split, reorder, rename or
+  move a stage, step, file, section, agent, field, command or flag, never change a format or the
+  run layout, and never swap a method for a different one. Add and correct inside what exists;
+  a structural idea is a design suggestion in the report, not an edit.
 
 **How lessons are written**
 - Never re-promote a recurring rule unchanged. Find what it got wrong, and replace it.
