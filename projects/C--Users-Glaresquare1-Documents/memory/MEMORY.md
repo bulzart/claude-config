@@ -9,3 +9,4 @@
 - [ATP caught errors](atp-caught-errors.md) — ATP/caught_errors.md feedback ledger: record every reported bad video via `atp.py caught-error add` (verbatim) before fixing; read at every run start; promote general rules into references
 - [/update-from-errors](update-from-errors-command.md) — learns a pipeline from its caught_errors.md: read the full pipeline first, then the errors; rewrite the owning prompting/QC sections; learning-log.md
 - [ATP deliverables folder](atp-deliverables-one-folder.md) — all finished videos of a run go in RUN/deliverables/ (clean + preview + README)
+- [ATP no emojis in text](atp-no-emojis-in-text.md) — strictly no emojis in any text layer or caption of a run's videos
