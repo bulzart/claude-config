@@ -13,6 +13,8 @@ allowed-tools:
   - "Bash(C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe *)"
   - "Bash(python *)"
   - "Bash(ffprobe *)"
+  - "PowerShell(cd *)"
+  - "PowerShell(Get-ChildItem *)"
   - mcp__higgsfield__models_explore
   - mcp__higgsfield__balance
   - mcp__higgsfield__transactions
@@ -1453,6 +1455,32 @@ prompt and delivered details attach themselves) before the fix is offered (item 
 ledger now holds two or more open or fixed entries of one class, model or product family, add one
 line: "Run `/update-from-errors analyze-then-pick` to fold these into the prompting and QC."
 
+### 6b. Upscale the finals with Topaz (after the user's approval, both modes)
+
+Once the generated videos and the editing are done, and after the feedback question, offer the
+upscale. It runs only on the user's yes, never on its own, and never before the finals exist.
+- **The folder.** Edit Mode: `<given path>/final/`. Analyze Mode: the folder the user exported
+  the CapCut projects to; the pipeline does not know it, so the question asks for it (the clean
+  videos in `60-outputs` are not the finals and are never upscaled unless the user names that
+  folder).
+- **Ask** with AskUserQuestion (header "Upscale"), "Upscale the final videos 1.5x with Topaz?":
+  **"Yes, <folder>"** (Edit Mode: the final folder; Analyze Mode: "Yes, after I export: here is
+  the folder" and the user types the path under "Other"); **"Not now"** (say the two commands so
+  the user can run them later). Never run on "Not now".
+- **Run**, in one PowerShell call, exactly these two commands with the folder filled in (the
+  `-notmatch` filter skips files already upscaled, `…_1.5x.mp4`, so a rerun is safe; the script
+  writes `<name>_1.5x.mp4` beside each source and `-Yes` skips its cost prompt):
+  ```powershell
+  cd "$env:USERPROFILE\Scripts"
+  Get-ChildItem -Path "<folder>" -Filter *.mp4 | Where-Object { $_.Name -notmatch '_[\d.]+x\.mp4$' } | ForEach-Object { .	opaz-upscale.ps1 -InputFile $_.FullName -Scale 1.5 -Yes }
+  ```
+  The script needs `ffprobe` on PATH and `TOPAZ_API_KEY` set; if it stops on either, report the
+  real error and the fix (`winget install Gyan.FFmpeg`; `setx TOPAZ_API_KEY "<key>"`, then a new
+  window). It polls Topaz itself; run it in the foreground with a long timeout (10 minutes), and
+  if the call times out, check the folder for `_1.5x.mp4` files before anything is rerun.
+- **Report** the upscaled files (name → size → path) and any file that failed, with its error.
+  Never retry a failed upscale on its own: say what failed and ask.
+
 ## 7. Never
 
 - Never use or create a Claude Code Workflow.
@@ -1513,6 +1541,8 @@ line: "Run `/update-from-errors analyze-then-pick` to fold these into the prompt
 - Never plan a Create video from a single unscored idea, a generic "person enjoys product" beat,
   an explained joke or a dated surface element; never let two videos of a run share a situation or
   a joke; never let the creative layer override a hard rule (`creative-direction.md`).
+- Never run the Topaz upscale without the user's explicit yes in the wrap-up, never run it on
+  the clean generations instead of the finals, and never rerun or retry it on your own (§6b).
 - Never start a run without reading `ATP/caught_errors.md` (A1 / E1), never leave a video the
   user reported as wrong unrecorded, never write an entry by hand or without the user's words
   verbatim and a general rule, and never silently fix a reported problem without its entry
