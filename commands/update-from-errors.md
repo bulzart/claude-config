@@ -81,39 +81,58 @@ The aim is that the next run gets the video right the first time, and QC finds n
 |---|---|
 | `CMD` | `~/.claude/commands/<name>.md` |
 | `LIB` | `~/.claude/<name>/` (else the folder that holds the ledger) |
-| `LEDGER` | the pipeline's error ledger: `LIB/caught_errors.md` when it exists, otherwise found by the search below |
+| `LEDGER` | the pipeline's **error record set**: `LIB/caught_errors.md` when it exists, plus every file chained to it, found by the scan below. The scan runs on every pass, whether or not `caught_errors.md` exists |
 | `LOG` | `LIB/learning-log.md`: one section per pass of this command (§6) |
 | `BUILD` | the build prompt, if the user keeps one. Look for a memory-index entry naming "<name> build prompt", or `~/Documents/prompts/<name>.txt`; otherwise none |
 
-**Finding the ledger.** Not every pipeline calls it `caught_errors.md`. When that file is absent,
-search `LIB` (then `~/.claude/<name>*/` and the paths `CMD` names) for a Markdown, text, JSON or
-CSV file whose name says it holds errors: `caught_errors`, `caught-errors`, `errors_caught`,
-`generation_errors`, `generation-errors-caught`, `listed_errors`, `error_log`, `errors.md`,
-`failures`, `known_issues`, `mistakes`, `feedback_ledger`, `lessons`, and similar spellings with
-dashes, underscores or spaces, in any case. Also grep `CMD` for the word "ledger", "errors" or
-"feedback" next to a file path; the command usually names its own ledger. Rules:
-- One match: use it, and say which file was taken.
-- Several matches that are **one ledger split up** (a file per month, per model, per class, or a
-  folder of one entry per file): take them all, in date order, as one ledger.
-- Several matches that are **different things**: pick the one `CMD` names; otherwise the one
-  with entry headings and the most recent edit, and list the others in the report.
-- A ledger in another format (JSON, CSV, a plain list) is read with the same fields in mind: an
-  id if there is one, the video, the model, what was wrong, the cause, the fix, the rule, the
-  status. Missing fields are noted as "not recorded", never invented.
-- **A more complex setup, with no single ledger:** some pipelines keep their errors where they
-  happen: QC verdicts or `result.json` files inside run folders, retry logs, a "regenerated
-  because" field in a request file, a feedback section in a per-run report, a failures table in
-  a model guide. Then `CMD` and the references say where the errors are recorded; follow those
-  paths and gather every record that says a generation, an edit or a check went wrong, from the
-  last 30 days or the last ten runs, whichever is more. Give each one an id of its own
-  (`R-<run>-<video>-<n>`), map its fields as above, and work the gathered list as the ledger.
-  Say in the report that the entries were gathered, and from where. Offer, as an optional
-  suggestion, to start a real `LIB/caught_errors.md` from them.
-- No match anywhere: stop and say the pipeline has no error record to learn from, and name
-  where one should go (`LIB/caught_errors.md`).
+**The error-record scan (every pass).** `caught_errors.md` is the entry point, not the whole
+record. A pipeline's errors are usually a chain of files: the ledger, the files its entries
+point to, the files that point back at it, and sibling files that hold errors under another
+name. So the scan always runs, even when `caught_errors.md` exists, and the result is the
+**record set** that §2 reads. Do it in this order, and keep a list of what was found and why:
 
-Stop and say so if `CMD` is missing, or if the ledger has no entries. To check for entries, look
-only for entry headings or records; do not read the entries yet.
+1. **The primary ledger.** `LIB/caught_errors.md` if it exists. Otherwise, a file in `LIB` (then
+   `~/.claude/<name>*/` and the paths `CMD` names) whose name says it holds errors:
+   `caught_errors`, `caught-errors`, `errors_caught`, `generation_errors`,
+   `generation-errors-caught`, `listed_errors`, `error_log`, `errors.md`, `failures`,
+   `known_issues`, `mistakes`, `feedback_ledger`, `lessons`, and similar spellings with dashes,
+   underscores or spaces, in any case; in Markdown, text, JSON or CSV. Also grep `CMD` for
+   "ledger", "errors" or "feedback" next to a file path; the command usually names its own.
+2. **Follow the chain out from the ledger**, without reading the entries' content yet: grep the
+   ledger for paths and pointers, and record each target as part of the set:
+   - run folders and the files an entry names (brief, plan, request, `result.json`, evidence
+     frames and sheets, the run's own `caught-errors.md` or verdicts);
+   - `promoted to` pointers (the reference sections that already hold a rule from an entry);
+   - the learning log and any "see also" file;
+   - the tool that writes the ledger (its format and its fields are read from the script).
+3. **Follow the chain in.** Grep `LIB` and `CMD` for files that mention the ledger or its ids
+   (`CE-012`): per-run `caught-errors.md` digests, QC verdicts that check entries by id, model
+   guide failure tables that cite them. These are where the rules are applied, and §3 needs them
+   to tell whether a rule was in force.
+4. **Siblings by name.** The same name search as step 1, over the whole of `LIB` and the run
+   folders: a second ledger (per model, per class, per month, one entry per file), a QC log, a
+   retry log, a `failures.json`, a feedback file. A split ledger is read as one, in date order.
+   A file that is a different thing is listed and, if it holds error records, included.
+5. **Run-level records with no ledger entry.** Where `CMD` says errors are recorded at run level
+   (QC verdicts, `result.json`, "regenerated because" fields, per-run reports), gather from the
+   last 30 days or the last ten runs, whichever is more, every record that says a generation, an
+   edit or a check went wrong **and has no ledger entry** (match on run and video). These are
+   errors the ledger never received. Give each an id of its own (`R-<run>-<video>-<n>`) and
+   include it. Offer, as an optional suggestion, to add them to the ledger properly.
+
+Rules for the set:
+- Every record is read with the same fields in mind: an id, the video, the run, the model, what
+  was wrong, the cause, the fix, the rule, the status, and the evidence. Missing fields are noted
+  as "not recorded", never invented.
+- One error, several files (the ledger entry, the run digest, the QC verdict): one row, with all
+  of its sources named. The ledger entry's wording wins; the others add evidence.
+- The scan's result goes in the report: files included, files seen and skipped, and records
+  gathered from run level.
+- No ledger and no record anywhere: stop, say the pipeline has no error record to learn from,
+  and name where one should go (`LIB/caught_errors.md`).
+
+Stop and say so if `CMD` is missing, or if the record set has no entries. To check for entries,
+look only for entry headings or records; do not read their content yet.
 
 ### 1.2 Read the whole pipeline
 
