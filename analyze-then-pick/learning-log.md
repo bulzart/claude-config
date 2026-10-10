@@ -3,7 +3,7 @@
 One section per pass, newest last. The next pass reads this file before the ledger (§1.2). A pattern that
 recurs after a logged change means that change failed: revise it, do not repeat it.
 
-## 2026-10-10 · CE-014..CE-028 (only CE-014..CE-028 in scope) · 8 patterns · commit see `git log` subject "analyze-then-pick: update from caught errors CE-014..CE-028 (8 patterns)"
+## 2026-10-10 · CE-014..CE-028 (only CE-014..CE-028 in scope) · 8 patterns · commit 8385158
 - **Scan:** record set = `caught_errors.md` (28 entries, CE-001..CE-013 read as context) + run `20261010-020703-09` (plans, requests, `result.json`, `qc-verdict.md`, `capcut-edit-note.md` of videos 01, 03, 06, 09, 10, the run's `50-requests/agent-contract.md`). Run-level records with no ledger entry, gathered with ids of their own: `R-20261010-020703-09-all-1` (the run's agent contract said "Never write to ATP/caught_errors.md yourself" while `production-agents.md` §2/§3 said to record; five agents reported "contract forbids" and recorded nothing; the main session wrote entries by hand later), `R-20261010-020703-09-10-1` (video 10: `wan3_0_prime` failed twice in ~15 s with no error text, both refunded; the video reference still showed a real celebrity's face; attempt 3 without the video reference passed QC). Offered, not written: adding them through the ledger tool needs the user's words.
 - **Patterns:**
   - P1 A size verdict from an assumed distance (CE-028 user; CE-005, CE-009, CE-011, CE-014, CE-015; repeated, plus a false positive; model limit on `wan3_0_prime` for the real oversize cases).
