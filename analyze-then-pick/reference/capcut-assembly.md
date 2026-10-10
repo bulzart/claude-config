@@ -65,6 +65,14 @@ Inputs:
      `[generated 0–13] [meme 13–15] [generated 15–27]`.
    - Sound: the generated audio stays on its pieces and each insert keeps its own sound. Check
      that no track is muted (`capcut_read_timeline` → `muted`; fix with `capcut_set_track_mute`).
+   - **Recreate: the reference timeline and its ORIGINAL audio stay whole** (CE-024, CE-025). The
+     timeline's length equals the reference's, and the original audio is ONE untouched segment under all
+     of it (the pieces' and inserts' own audio muted, never assembled from parts); its hash, or a null
+     test against the source audio, proves it. An insert's edge span that showed the replaced performer
+     stays on the timeline as pure transition colour (white or black) of the same duration, and the
+     neighbouring piece fades into and out of it on real moving footage (its own last and first frames
+     fade). A held or frozen frame is never used under a flash or dissolve; an insert that starts or
+     ends on a brightness step fades from the gap colour.
 2. **Text layers.** One `capcut_add_text` per text event, all on the text track:
    - `text`, and `atSec` / `durSec` on the **final** timeline, after the inserts;
    - **position: always horizontally centred** (the user, 2026-10-09, caught error CE-010):
@@ -83,7 +91,16 @@ Inputs:
      size, fill, outline and the preset's fields). Never another font, size, colour or preset unless
      the user asks for it in the run;
    - never over the face, the product or the key action; inside the platform-safe area
-     (`text-and-format.md` §3).
+     (`text-and-format.md` §3);
+   - no emoji in any text layer (the user's rule, strict).
+2b. **Overlays cut from the reference** (a context-bearing notification, message or banner;
+   `text-and-format.md` §1): crop the original element from the reference's own frames, keep its look,
+   position, size and timing, and place it on a video track above the picture (`capcut_add_video`). It
+   exists only on the frames where the element is really visible (find its first and last visible frames
+   at 30 fps; the plain frames before and after are not part of it) and it follows every fade, dissolve or
+   flash of the picture under it (the same fade baked into the clip, or the clip trimmed to end before the
+   fade). A crop that carries its own backdrop (the window behind a banner) is never left on screen after
+   the element is gone (CE-026).
 3. **Only what the reference does:** a transition only where the reference has one
    (`capcut_add_transition`, from the catalog), and a short fade on an insert's sound when it
    clicks (`capcut_add_audio_fade`).
@@ -189,11 +206,17 @@ capcut render "<store>/<name>" --out "<preview>" --burn-captions
   - the generated pieces are contiguous, and each insert sits exactly at its split;
   - the total = generated length + the inserts;
   - every text event is at its planned time and position;
-  - `T capcut-text-style --draft "<store>/<name>" --check` reports 0 texts off the house style.
+  - `T capcut-text-style --draft "<store>/<name>" --check` reports 0 texts off the house style;
+  - no text layer contains an emoji.
 - On the preview (`atp.py qc --video <capcut-preview.mp4> --out <dir> --expect-size 540x960`, plus
   its storyboard), check:
   - the cut into and out of every insert, and the sound;
-  - text presence and timing.
+  - text presence and timing;
+  - dense sheets (15 to 30 fps) of every transition, insert start and end, overlay start and end and the
+    first second: no frame of the replaced performer, no held frame, no stray rectangle, halo or
+    brightness step (CE-016, CE-025, CE-026);
+  - audio (Recreate): the original track is one segment, the duration equals the reference's, and its
+    hash or a null test against the source audio matches (CE-024).
 - Fix through the MCP: read → edit → `capcut_validate` → `capcut_save` → §4 again. A save refused
   because the draft changed on disk → `capcut_discard`, then rebuild the edits.
 
@@ -203,5 +226,8 @@ capcut render "<store>/<name>" --out "<preview>" --burn-captions
 - **`RUN/deliverables/video-NN-clean.mp4`**: the same edit without text, assembled locally.
   - Cut the clean video at the split points with `atp.py trim`.
   - Join the pieces and inserts with `atp.py concat --seams cut,…`.
+  - A Recreate's clean carries the original audio whole (`restore-audio` over the joined result), and a
+    with-inserts clean is never replaced by the generated-only `60-outputs/video-NN/clean.mp4`.
+  - Every video of the run has both deliverable files in this one folder and a row in `README.md`.
 - **`RUN/deliverables/video-NN-preview.mp4`**: the proxy with the text burned in, for review.
 - The project uses files from the run folder: keep the run folder.

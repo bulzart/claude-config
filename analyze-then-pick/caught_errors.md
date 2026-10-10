@@ -619,7 +619,7 @@ How agents use it:
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Do not place the can closer to the lens than the person; name same-depth hand and head neighbours and a smaller frame fraction (one tenth); measure first output
 - **status:** open
-- **promoted to:** wan-3-0.md §5 (small placed product row; untested levers in §9); stays open as a model limit
+- **promoted to:** wan-3-0.md §5 (small placed product row; untested levers in §9); anomaly-catalog.md §2.7 (derived distance, two estimates); stays open as a model limit
 
 ## CE-015 · 2026-10-10 · Placed can 1.28x oversize, cropped base, on the notebook (V10 placement)
 - **source:** agent
@@ -662,7 +662,7 @@ How agents use it:
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Placement in the foreground of a tight handheld shot: name the depth as farther than the nearest prop, keep base visible above the frame edge, give pixel height; fractions alone are ignored
 - **status:** open
-- **promoted to:** wan-3-0.md §5 (small placed product row; untested levers in §9); stays open as a model limit
+- **promoted to:** wan-3-0.md §5 (small placed product row; untested levers in §9); anomaly-catalog.md §2.7 (derived distance, two estimates); stays open as a model limit
 
 ## CE-016 · 2026-10-10 · Original person still visible in parts of the video
 - **source:** user
@@ -707,8 +707,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** An insert is cut on frames that contain only the insert's own content: trim its edges past any dissolve or any frame of the replaced performer, rebuild the dissolve in CapCut, and run the identity/leftover check on every frame of the assembled timeline, inserts and their edges included.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** generation-system.md §3c; capcut-assembly.md §3 step 1, §5; anomaly-catalog.md §4 step 5g; production-agents.md §3 item 13; command A6r, X9
 
 ## CE-017 · 2026-10-10 · The notification that carries the joke's context was dropped
 - **source:** user
@@ -750,8 +750,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Removing a brand mark never removes the information role of an overlay: when a source overlay (notification, message, receipt, UI banner) carries the joke's setup, rebuild it as a neutral CapCut element with the same wording role, timing and position, without the third-party brand or foreign currency; the plan lists such context-bearing overlays and QC checks they are present.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** text-and-format.md §1 (context-bearing overlays), §3; capcut-assembly.md §3 step 2b; command item 6, §7 (superseded in form by CE-023: the original element, not a re-typed layer)
 
 ## CE-018 · 2026-10-10 · Can appears out of nowhere after the third second
 - **source:** user
@@ -794,7 +794,7 @@ How agents use it:
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** A placed or contents product must be in frame from the first frame to the last wherever its anchor is in frame; a product that appears, or is absent in the opening seconds, is never delivered as a note: regenerate with the product in a start frame or a reference that already shows it at its anchor, or pick another anchor.
 - **status:** open
-- **promoted to:** —
+- **promoted to:** generation-system.md §4b.3; anomaly-catalog.md §4 step 5f; wan-3-0.md §5 (opening-seconds row); command X9, §7; stays open as a model limit (start-frame lever untested, wan-3-0.md §9)
 
 ## CE-019 · 2026-10-10 · Can moves by itself along the table between seconds 1 and 2
 - **source:** user
@@ -836,8 +836,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** QC tracks a placed product's position against a fixed neighbour (table edge, laptop, chair) on a dense sheet across the whole clip, not only at checkpoints; any move without a visible cause is a regenerate reason. A move is allowed only when an action or a cut motivates it (the person puts something else where it stood, the product stays put and the cut shows a new angle).
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** generation-system.md §4b.3; anomaly-catalog.md §4 step 5f; production-agents.md §3 item 13; command X1, X9, §7
 
 ## CE-020 · 2026-10-10 · Wrong brand for the scene: a barbecue is Celsius's scene, not Neuro's
 - **source:** user
@@ -879,8 +879,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Choose the brand per reference by scene fit before the surface fit: a food, grill, party or sport scene suits a drink; a desk, class, meeting, work or commute scene suits a focus product; the plan states the tie in one line and a scene with no tie for one brand goes to the other.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** analysis-protocol.md §5 (recreate ranking); command A7, §7
 
 ## CE-021 · 2026-10-10 · Sachet forced against the grill lid instead of a natural surface
 - **source:** user
@@ -922,8 +922,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Name a fixed, natural surface that exists in the source frame for the anchor (the grill's side shelf, a counter, a desk), never a moving prop (a board that is carried away) or a leaning support; the pack lies or stands on that surface where a person would really leave it.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** generation-system.md §4b.1, §4b.1b; anomaly-catalog.md §2.16
 
 ## CE-022 · 2026-10-10 · Caption rewritten into another subject; it must keep the same meaning
 - **source:** user
@@ -965,8 +965,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** A guardrail caption rewrite is minimal and keeps the reference's subject and meaning: remove only the banned element (a number, a statistic, a name) and say the same thing in the same grammar; never swap the topic for an unrelated joke.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** text-and-format.md §1; brand-guardrails.md §2; command item 6, §7
 
 ## CE-023 · 2026-10-10 · Notification was re-typed as plain text instead of using the original notification
 - **source:** user
@@ -1008,8 +1008,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** When a source overlay carries the joke's context (notification, message, UI banner), reuse the original element itself: crop it from the reference's frames with its alpha-like region, place it as a picture overlay at the same position, size and timing; text layers are only for captions. Content the user names as part of the context outranks the third-party-brand removal.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** text-and-format.md §1, §3; capcut-assembly.md §3 step 2b; command item 6, §7
 
 ## CE-024 · 2026-10-10 · Audio of the re-cut video 01 drops and is not the original audio
 - **source:** user
@@ -1054,8 +1054,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** A Recreate keeps the reference's timeline and the reference's ORIGINAL audio track whole and untouched under it: never shorten the timeline or splice audio pieces. To hide a performer in an insert's edge frames, cover only those frames (hold a generated frame fading to the dissolve colour) and keep every duration, so the original audio stays continuous and in sync.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** generation-system.md §3c; capcut-assembly.md §3 step 1, §5, §6; anomaly-catalog.md §4 step 5g; production-agents.md §3 item 13; command X9, X10, §6, §7
 
 ## CE-025 · 2026-10-10 · Frozen character frames around the white flash
 - **source:** user
@@ -1100,8 +1100,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Never cover a gap with a frozen frame: a dissolve or flash must run over real moving footage (fade the last/first frames of the moving piece itself) and the gap itself is pure transition colour; durations stay unchanged so the original audio stays continuous.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** generation-system.md §3c; capcut-assembly.md §3 step 1, §5; anomaly-catalog.md §4 step 5g; command X9, §7
 
 ## CE-026 · 2026-10-10 · Leftover bright rectangle where the notification was, visible during the fade to black
 - **source:** user
@@ -1143,8 +1143,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** An overlay cut from a reference must exist only on the frames where its element is really visible and must follow every fade, dissolve or flash of the picture beneath it; QC views dense sheets at every overlay start/end and every transition for stray rectangles, halos or brightness steps, not only the content frames.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** capcut-assembly.md §3 step 2b, §5; anomaly-catalog.md §4 step 5g; production-agents.md §3 item 13; command X9, §7
 
 ## CE-027 · 2026-10-10 · Caption must keep the reference's specific keyword text
 - **source:** user
@@ -1186,8 +1186,8 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** When a reference's only text is a short keyword or tag that defines its niche, ask whether it is the hook before dropping it as a handle: if the user keeps it, re-place it word for word as a CapCut text layer at the same height; the user's instruction outranks the 'never copy handles' default.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** text-and-format.md §1; command item 6, §7
 
 ## CE-028 · 2026-10-10 · False oversize flag: size computed from a wrong assumed distance
 - **source:** user
@@ -1232,5 +1232,5 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Never take the distance from an assumption: derive it from a same-plane neighbour of known size or from the surface the product stands on in the frame, with two independent estimates (neighbour ratio and frame fraction) that must agree before an oversize verdict; a verdict from one assumed number is provisional and must be viewed on a frame before it is reported or repeated; when the user's eye disagrees the verdict is re-measured, not defended.
-- **status:** open
-- **promoted to:** —
+- **status:** promoted
+- **promoted to:** anomaly-catalog.md §2.7, §4 step 5d, §4.1; generation-system.md §8, §9; production-agents.md §2, §3 items 13-14, §5; command X1, X4, X9, A9b, §6, §7; scripts/atp.py scale (--distance-basis, provisional guard); wan-3-0.md §5 caveat, §9

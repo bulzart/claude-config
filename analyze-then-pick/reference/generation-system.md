@@ -272,7 +272,10 @@ reference has 13 s of its own footage, a 2 s meme with a meme sound, then 12 s m
    Measure it with the transcript and cuts from `atp.py prep-video`, or a dense frame sheet.
 4. **Cut each insert from the original reference video, with its sound:**
    `atp.py trim --video "<reference original>" --start <t_in> --end <t_out> --out <run>/30-assets/inserts/<V>-iK.mp4`,
-   with `t_in` / `t_out` on the cut frames from `cuts.json`. Then `atp.py conform` to 720×1280.
+   with `t_in` / `t_out` on the cut frames from `cuts.json`, moved inward past any dissolve, flash or
+   frame of the replaced performer at the edge, so that every frame of the cut holds only the insert's own
+   content (CE-016: an edge that kept the original performer left the replaced person in the final). Then
+   `atp.py conform` to 720×1280.
    - **A video meme is always cut, never screenshotted.**
    - A still image held for the insert's duration is cut the same way, which keeps its sound. Or
      take a lossless screenshot (`atp.py last-frame` on the cut) and place it with the insert's
@@ -280,6 +283,13 @@ reference has 13 s of its own footage, a 2 s meme with a meme sound, then 12 s m
    - Overlays the reference added on top of the insert (its caption, username or watermark) are
      removed with `atp.py clean`. The meme's own built-in text stays. If removal isn't clean, say
      so in the brief.
+   - **The reference timeline and its ORIGINAL audio stay whole** (Recreate; CE-024, CE-025). The edge span
+     removed from an insert stays on the timeline as pure transition colour (white or black), every
+     duration unchanged, so the original audio stays one untouched segment under the whole video: never a
+     shortened timeline, never audio assembled from pieces. The picture runs into and out of the gap on real
+     moving footage (the last and first frames of the moving piece itself fade); a held or frozen frame under
+     a flash or dissolve reads as a glitch and is never used. An insert that starts or ends on a brightness
+     step is faded in or out from the gap colour.
 5. **The 30 s permission counts only the generated content.** In the example, 25 s means one
    generation, so no question.
 6. **Assembly happens in CapCut** (`capcut-assembly.md`): the generated video split at each point,
@@ -408,7 +418,9 @@ is really used. Pick the first form the action allows:
      staged.
 2. **On a surface the character plausibly owns, within reach**: a desk, table, counter, nightstand,
    shelf beside them, the arm of a sofa, a car's cup holder or dashboard. It sits in the subject's
-   depth plane or slightly behind it, inside the main framing.
+   depth plane or slightly behind it, inside the main framing. The surface is a fixed, natural one that
+   the source frame shows, named in the plan (the grill's side shelf, the counter, the desk), never a
+   prop that moves or is carried away (a cutting board) and never a lean against a lid or a wall (CE-021).
 3. **Elsewhere in the environment, where such an item naturally lives** (a shelf, a gym bench, an
    open bag, a fridge door), still inside the main framing.
 
@@ -433,9 +445,10 @@ whose corner warped, a pouch that took over the source's bottle pick-up. The anc
 therefore carries four more facts, and the prompt and QC quote them (`anomaly-catalog.md` §2.16):
 - **Posture its shape allows:** a flat sachet or pouch lies flat, label up; a carton lies flat or stands on
   its base; a can stands on its base. Never on its edge against a person or an object.
-- **A support that is in the frame:** bare surface, or a large solid object the source frame already shows.
-  Never a lean against a prop the model has to invent, and never on or overlapping paper, cloth or any thin
-  sheet that hands move or write on.
+- **A support that is in the frame:** a fixed bare surface the source frame shows (a counter, a desk, a
+  grill's side shelf), or a large solid object it already shows. Never a lean against a prop the model has to
+  invent or against a lid, never a prop that moves or is carried away (a cutting board, a tray), and never on
+  or overlapping paper, cloth or any thin sheet that hands move or write on (CE-021).
 - **A place where a person would leave it:** out of the way of a working hand or arm, at the table's near or
   far edge, never touching the person. The ledger row gives the story reason in one clause ("set down at the
   near edge, out of the writing hand's way").
@@ -474,12 +487,19 @@ therefore carries four more facts, and the prompt and QC quote them (`anomaly-ca
 ### 4b.3 One anchor, persistent (ledger-tracked)
 - **One location at any time,** recorded in the ledger at t=0 with relational words: "on the desk,
   right of the laptop", "parked at the curb behind the bench".
+- **There from the first frame** (CE-018): wherever its anchor is in frame, the product is in frame at
+  frame 0 and in every second after, and the prompt's opening clause names it at its anchor. A product
+  that is absent in the opening seconds and then appears, or appears at another spot, is a regenerate
+  reason, never a note and never a flagged delivery; the retry changes the form or the anchor class from
+  the guide's passing list.
 - **It stays there through everything:** every cut, angle change, reframe and camera move. Its
   relation to the neighbouring objects is identical in every shot where that area is visible. It
   never jumps from desk to table to chair, and a parked car never moves along the street.
 - **It moves only through a visible, motivated action:** picked up to use it (drink, unwrap,
   apply, read), moved out of the way, handed to someone, taken along when leaving. A vehicle is
-  driven or pushed; it never slides.
+  driven or pushed; it never slides. A cut is not a motive: it shows another angle of the same spot, or
+  the cause is on screen (the person sets the laptop where the can stood). A product that drifts along the
+  surface between two seconds with no action and no motivating cut is a regenerate reason (CE-019).
   - A handheld item is picked up from its anchor, by the nearest hand. While held, it stays in that
     hand. The set-down is visible, and the new spot (usually the same one) becomes the anchor.
 - **Few interactions, timed to the rhythm:** at most one or two, at natural pauses (after a
@@ -707,6 +727,14 @@ Take the guide's preserving mode and settings, for example Seedance 2.5's `video
 duration rounded up from the source. Where the guide offers a choice, never take a creative or
 loose setting. A parameter the guide marks as not exposed on Higgsfield is not a lever.
 
+**Moderation fallback (a real celebrity's face in the video reference).** A source whose person is swapped
+still shows that person's real face in the video reference. Run 09 V03 (a celebrity swap) failed twice within
+~15 s with no error text, both jobs refunded (cause unconfirmed), and a third attempt without the video
+reference (image references and the written action script) passed QC, with sync only judged on the sheet.
+After the second identical failure plan without the video reference (the guide's image-reference route, the
+action script written out, the original audio restored as always), say in the brief that fidelity and sync are
+at risk, and never submit a third identical request. [OBSERVED once, unproven.]
+
 **Same duration.** Request the source segment's exact duration, or the nearest allowed duration
 above it and trim the extra afterwards. A shorter or longer generation squeezes or stretches the
 actions against the sound.
@@ -848,7 +876,8 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       person is excluded.
 - [ ] Client asset fidelity: canonical geometry, materials, labels and interface; correct scale
       relative to hands and body.
-- [ ] Size reckoning: for every product in every shot, the real dimensions, the depth, the lens,
+- [ ] Size reckoning: for every product in every shot, the real dimensions, the depth (derived from the
+      frame, its basis written, never assumed), the lens,
       the expected fraction of the frame and the ratio to a named neighbour are in the plan and in
       the prompt; a start frame was measured with `atp.py scale` before animating; the size ladder
       holds when several products show (`anomaly-catalog.md` §2.7).
@@ -866,7 +895,7 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
 - [ ] Lighting, reflections and shadows agree with the scene for the inserted asset in every beat.
 - [ ] Natural placement (§4b), if used:
       - the anchor is logical, and the item is visible most of the runtime;
-      - the same spot holds in every shot, and every move has a visible action;
+      - it is in frame from frame 0, the same spot holds in every shot, and every move has a visible action;
       - it is noticed, not featured, and it does not read as an edit.
 - [ ] Contents (§4b.0): every glass, cup or other vessel of the product's category in the subject's
       scene holds the product (from its contents sample), with the package open beside it, unless
@@ -952,8 +981,10 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      Everything on its **fine** list is ignored: not reported, not asked about, not regenerated.
    - **Size** (`anomaly-catalog.md` §2.7): on a full-resolution frame at rest, one in use and the
      last, `atp.py scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1>`
-     against the named neighbour (and `--distance --lens` for the shot); the observed multiple of
-     the expected size goes in the verdict. Over 25 %, a size that changes between shots, or a
+     against the named neighbour (and `--distance --distance-basis --lens` for the shot, the distance
+     derived from the frame); the two estimates must agree before an oversize verdict, a verdict from one
+     assumed number is provisional and viewed on the frame first, and the observed multiple of the
+     expected size and the method go in the verdict. Over 25 %, a size that changes between shots, or a
      product larger than the hand that holds it is a **regenerate** reason with no post-fix;
      15–25 % is a note only for a static product with a readable label. On a model whose guide lists
      size as a model limit, the retry changes the form or the anchor class from the guide's passing list,
@@ -962,6 +993,14 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      of a hand or sheet. A lean against nothing, a posture the shape cannot take, a pack touching a
      working hand or arm, a doubled or warped sheet, or a source beat taken over is a **regenerate**
      reason with no post-fix; the story reason is its own line of the verdict.
+   - **Anchor from frame 0** (`anomaly-catalog.md` §4 step 5f): the placed or contents product is in the
+     first-second dense sheet and is read against a fixed neighbour at least every 0.25 s across the clip;
+     absent in the opening seconds, or moving with no action and no motivating cut, is a **regenerate**
+     reason (CE-018, CE-019).
+   - **Assembled timeline** (`anomaly-catalog.md` §4 step 5g): dense sheets at every transition, insert
+     edge and overlay start and end; no replaced performer, frozen frame, stray rectangle or brightness
+     step, the original audio whole, no emoji in a text layer (CE-016, CE-024, CE-025, CE-026). Fixed in
+     the CapCut project.
    - **Source surfaces** (§8): each printed surface that a guardrail or §9b names, at full resolution and
      by `atp.py qc` OCR. A reproduced poster, livery, board or screen is a **regenerate** reason, and the
      retry replaces it with a named concrete thing instead of describing blankness.

@@ -102,6 +102,12 @@ You are running the **/analyze-then-pick** command.
      - The wording keeps the reference's role and format.
      - A generic meme line may stay as written; source-specific wording is rewritten.
      - Usernames, handles, watermarks and source brands are never copied.
+     - A reference's short keyword or tag that is its hook, or any text the user keeps, is placed word
+       for word at the same height (CE-027); a guardrail rewrite is minimal and keeps the reference's
+       subject and meaning (CE-022).
+     - A source overlay that carries the joke's context (a notification, a message, a banner) is the
+       original element reused as a picture overlay, not re-typed text (CE-017, CE-023).
+     - No text layer contains an emoji (the user's rule, strict).
    - **Every CapCut text layer uses the house text style:** font System, size 10, and **the user's
      chosen preset**, learned from their project `03_Oct_2026_v09` on 2026-10-03 and locked in
      `config.json → capcut.text_style.learned` (white text, black outline). `T capcut-repair` applies
@@ -177,8 +183,9 @@ You are running the **/analyze-then-pick** command.
           action);
         - software shows on a device in use;
       - it is noticed, not featured;
-      - it stays on one persistent spot, moved only by a visible, logical action (picked up to
-        use, then set down; a parked car driven away);
+      - it is there from the first frame and stays on one persistent spot, on a fixed natural
+        surface the source frame shows, moved only by a visible, logical action (picked up to
+        use, then set down; a parked car driven away; a cut alone is not a motive);
       - it is lit and rendered like the rest of the scene, so it never reads as an edit.
     - **Use only when the action invites it.** The product is used the way it really is (sipped,
       chewed, applied, driven) only when the action has room for it; the story never changes to
@@ -670,7 +677,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     back as CapCut layers, word for word. Usernames, handles, watermarks and source brands do not
     come back.
   - **Inserts** (memes) stay the reference's own: stripped before the edit, placed back in CapCut.
-    An insert that shows an excluded person or a competitor's mark is cut and not placed back.
+    An insert that shows an excluded person or a competitor's mark is cut and not placed back. Each
+    insert is cut on frames that hold only its own content (edges past any dissolve or frame of the
+    replaced performer), and the reference timeline and its original audio stay whole
+    (`generation-system.md` §3c; CE-016, CE-024, CE-025).
   - **Guardrail edits** (`brand-guardrails.md` §2, §4), as change marks in the source action
     script and as operations in the first request: an untouched unit beyond the count limit is
     removed and the ledger holds the limit at every checkpoint; a competitor's name, logo and
@@ -702,7 +712,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   - which product or object entity, and which variant (with its contents sample when needed);
   - which character(s). Recreate: which character replaces which person;
   - any interface, brand or environment asset.
-- **Distribute sensibly.** Spread several products or variants across videos unless the user or a
+- **Fit the brand to the scene first** (CE-020): a food, grill, party or sport scene suits a drink; a
+  desk, class, meeting, work or commute scene suits a focus product. The plan states the tie in one
+  line, and a reference with no tie for one brand goes to the other, whatever free surface it offers.
+- **Then distribute sensibly.** Spread several products or variants across videos unless the user or a
   document says otherwise. Rotate approved characters when no assignment is given. Pair assets that
   belong together (a product with its own label close-up).
 - For each product, record its integration form, **swap**, **contents** or **placement**
@@ -788,10 +801,14 @@ Plan everything before production, in allocation order, **without asking for con
    total once, as information, against the balance.
 4. **The only question in this phase** is a long video's permission (A7b), when a plan newly pushes
    a video over 30 s.
+5. **The agent contract:** write `<RUN>/50-requests/agent-contract.md` from the prompt in
+   `reference/production-agents.md` §2 (the canonical text: the recording rule, the checks, the size
+   method, the deliverables), filling its paths; run-specific notes go in its last block. It is generated
+   for every run and never copied from an earlier run's file.
 
 ### A9b. Produce in parallel (production agents)
-- **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt;
-  `subagent_type: general-purpose`, `run_in_background: true`).
+- **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to
+  the run's contract file at A9; `subagent_type: general-purpose`, `run_in_background: true`).
   - At most `production.max_parallel_agents` (5) run at once; start the next queued video when one
     finishes.
   - Each agent runs X3 (its own inputs) → X7 → X8 → X9 → X10 for its video, ending with its CapCut
@@ -802,6 +819,13 @@ Plan everything before production, in allocation order, **without asking for con
   - reconcile the ledger: a `qc` that says RESIDUAL FAILURE or regenerated, with no entry in
     `T caught-error list --grep <RUN>` for that video, is recorded now (`--source agent`, one entry
     per class and anchor, the videos listed);
+  - verify, and fix at once what is missing (`production-agents.md` §5 item 3): `videos[]` in
+    `state.json`; the README table (the agent's `readme-row.md` appended to `deliverables/README.md`);
+    `video-NN-clean.mp4` and `video-NN-preview.mp4` in `deliverables/`; `result.json` complete, each
+    check of the agent contract with an evidence path or "not checked: <why>"; the plan and brief files
+    with their attempts. A size verdict is never repeated or summarised before its frame was viewed
+    and its method (two estimates, a derived distance) is in the verdict; one assumed number is
+    provisional (CE-028);
   - print one line: video, status, CapCut project, credits.
 - **Blockers come back from agents and are handled here:**
   - a permission is needed (A7b) → ask, then launch that video again;
@@ -982,8 +1006,10 @@ files as video K".
       competitor objects, supplied characters only, the wording rules in the text plan
       (`brand-guardrails.md` §4);
     - the **size reckoning** for every product in every shot (`anomaly-catalog.md` §2.7): its real
-      dimensions from the registry, its distance from the camera (from the shot size and the
-      blocking: a product on a dresser behind the subject is farther than the subject), the lens
+      dimensions from the registry, its distance from the camera, derived from the frame and
+      never assumed (Recreate: the source frame; Create: the blocking asked for), from the surface it
+      stands on and a same-plane neighbour of known size, the basis written beside the number (a product
+      on a dresser behind the subject is farther than the subject), the lens
       the look implies, the expected fraction of the frame height (`T scale --product-cm H
       --distance d --lens f` prints it and a table over the usual shot distances), the one named
       neighbour at the same depth with the ratio in words, the size ladder when several products
@@ -1039,7 +1065,9 @@ files as video K".
       - the clip durations;
     - the logic and anti-slop gate;
     - the **QC checkpoints** (`anomaly-catalog.md` §3 step 8): every use beat, exit and re-entry,
-      occlusion, cut, hand-off, pour and seam, plus the first and last second, each with its time
+      occlusion, cut, hand-off, pour and seam, plus the first second (the product in frame at 0.0 s) and
+      the last, the product's position against a fixed neighbour at least every 0.25 s, and every
+      transition, insert start and end and overlay start and end of the CapCut timeline, each with its time
       range and the counts and states expected there. X9 renders them with `T qc --dense`;
     - conflict resolution.
   - Use the provenance labels.
@@ -1160,8 +1188,8 @@ files as video K".
     preparation step, the part, the contact point, the head and hands), every multiple's number at
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
     seam, and the path of every thrown, dropped or passing thing relative to the product (§2.14).
-  - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning is in the plan and in the
-    prompt for every shot; a start frame passed `T scale`; the size ladder holds between products;
+  - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning, its distance derived from the
+    frame and not assumed, is in the plan and in the prompt for every shot; a start frame passed `T scale`; the size ladder holds between products;
     nothing in the prompt or the references invites a bigger product (a tight crop, "hero",
     "prominent", a packshot pose).
   - **Posture, support and place** (`generation-system.md` §4b.1b; `anomaly-catalog.md` §2.16): every
@@ -1273,8 +1301,14 @@ files as video K".
   - **Size** (`anomaly-catalog.md` §2.7): on a full-resolution frame at rest, one in use and the
     last, measure the product's pixel height and the named neighbour's and run
     `T scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1> [--depth-ratio r]
-    [--distance d --lens f]`; write the observed multiple of the expected size in the verdict and
-    compare across cuts. Over 25 %, a size that changes between shots, or a product larger than
+    --distance d --distance-basis "<how d was derived from the frame>" --lens f`: two estimates, the
+    neighbour ratio (A) and the frame fraction at a distance derived from the surface or another object
+    (B), which must agree before an oversize verdict (`inconclusive` means re-derive). A verdict from one
+    assumed number is PROVISIONAL ("provisional: distance assumed"): never a regenerate reason or a
+    RESIDUAL FAILURE, and viewed on the full-resolution frame by whoever reports it before it is flagged,
+    repeated or summarised (CE-028). Write the multiple of the expected size with its method and distance
+    in the verdict and compare across cuts. Over 25 % on agreeing estimates, a size that changes between
+    shots, or a product larger than
     the hand that holds it is a regenerate reason with no post-fix; 15–25 % is a note only for a
     static product with a readable label. The retry changes the lever the guide names. For a model
     whose guide lists size as a model limit (`wan3_0_prime`) it changes the form or the anchor class
@@ -1295,6 +1329,17 @@ files as video K".
     a working hand or arm, the sheet region when paper is near; the story reason is its own line of
     the verdict. A lean against nothing, an impossible posture, a pack touching a working hand or
     arm, a warped sheet or a taken source beat is a regenerate reason with no post-fix.
+  - **Anchor from frame 0** (`anomaly-catalog.md` §4 step 5f): the placed or contents product is in the
+    dense sheet of the first second and in every second after it, and its position is read against a
+    fixed neighbour at least every 0.25 s across the whole clip and every cut. Absent in the opening
+    seconds, or moving with no action and no motivating cut, is a regenerate reason and never a flagged
+    note (CE-018, CE-019). Verdict line: "anchor: in frame from 0.0 s; drift vs <neighbour> <px>".
+  - **Assembled timeline** (`anomaly-catalog.md` §4 step 5g; fixed in the CapCut project): dense sheets
+    of every transition, insert start and end, overlay start and end, and the first second of the final:
+    no frame of the replaced performer, no frozen or held frame, no stray rectangle, halo or brightness
+    step; every context-bearing source overlay present as the original element; a Recreate's original
+    audio one whole untouched segment (hash or null test); no emoji in a text layer (CE-016, CE-017,
+    CE-023, CE-024, CE-025, CE-026).
   - **Source surfaces:** each printed surface a guardrail or §9b names, at full resolution and by
     `T qc` OCR; a reproduced one is a regenerate reason, and the retry replaces it with a named
     concrete thing.
@@ -1357,6 +1402,8 @@ files as video K".
     screenshot.
   - **CapCut project** (Analyze Mode, `capcut-assembly.md` §5):
     - the read-back timeline matches the plan (pieces, inserts, text times and positions);
+    - overlays exist only on their visible frames and fade with the picture; a Recreate's original audio
+      is one segment; no text layer contains an emoji;
     - `capcut lint` reports 0 errors;
     - the preview shows the right order, sound and text.
     Fix in the project, not by regenerating.
@@ -1410,9 +1457,11 @@ files as video K".
   - **Analyze Mode** (`capcut-assembly.md` §6):
     - the **CapCut project** `DD_Mon_YYYY_vNN` is the master; the final is exported from CapCut;
     - `RUN/deliverables/video-NN-clean.mp4`: the same edit with its inserts and without text,
-      assembled locally;
+      assembled locally from the pieces, the inserts and (Recreate) the original audio, and never
+      replaced by the generated-only `60-outputs/video-NN/clean.mp4` when the video has inserts;
     - `RUN/deliverables/video-NN-preview.mp4`: the CapCut proxy with the text.
-  - Append a row to `RUN/deliverables/README.md`: direction, model, params, prompt file, assets, job
+  - Append a row to `RUN/deliverables/README.md` (an agent writes it to
+    `60-outputs/video-NN/readme-row.md` and the main session appends it as the agent reports, A9b): direction, model, params, prompt file, assets, job
     id, attempt, credits, verdict, final path, notes. For a multi-clip video, list every clip's
     job id and the seam methods. Analyze Mode adds the CapCut project name, the inserts and the
     text events.
@@ -1443,6 +1492,14 @@ Analyze Mode: reconcile the ledger before the feedback question. Every `result.j
 says RESIDUAL FAILURE or regenerated, and that has no entry in `T caught-error list --grep <RUN>`, is
 recorded now with `--source agent` (compact; one entry per class and anchor, the videos listed), so no
 flagged delivery leaves the run unrecorded.
+
+Analyze Mode: before the table, check the run's deliverables and text. Every video in `state.json` →
+`videos[]` has `video-NN-clean.mp4` and `video-NN-preview.mp4` in `<RUN>/deliverables/` (all videos in that
+one folder; a with-inserts clean built from the pieces, the inserts and the original audio, never
+overwritten by a generated-only clip) and a row in `deliverables/README.md`; the plan and brief files carry
+every attempt; no CapCut text layer of any project contains an emoji (the user's rule, strict); and every
+size figure in the table was viewed on a frame with its method (two estimates, a derived distance), never
+repeated from an agent's provisional number. What is missing is fixed before the table is shown.
 
 Offer, in one line, the next useful step (more videos, a different direction, regenerate a flagged
 video). Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header
@@ -1501,6 +1558,9 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
 - Never apply generic prompting when a model guide exists.
 - Never copy usernames, handles, watermarks or source brand names. Reuse reference caption wording
   only as a generic meme line (`text-and-format.md` §1).
+- Never re-type a context-bearing source overlay as text (CE-017, CE-023), never drop a keyword the user
+  keeps (CE-027), never change a caption's subject to clear a guardrail (CE-022), and never give a brand a
+  scene it has no tie to when the other brand fits (CE-020).
 - Never let the video model render overlay text in Analyze Mode. Generate clean and place the text
   in CapCut. Never burn it in with `atp.py captions`, except as the stated fallback.
 - Never give a CapCut text layer another font, size, colour or preset than the house text style
@@ -1525,11 +1585,15 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   to swap. Integrate it instead, as contents or as a natural placement. Never force an unrelated
   source object into a swap.
 - Never let a placed product jump between spots (desk → table → chair), appear or vanish without a
-  visible action, become the hero of the shot, or look composited.
+  visible action, be missing from frame 0 (CE-018), drift along its surface with no cause (CE-019),
+  become the hero of the shot, or look composited.
 - Never leave a glass, cup or other vessel of the product's category holding something else (water
   beside the can) when the product's contents fit, and never let a prop from an asset photo carry
   over unplanned.
 - Never sacrifice temporal or physical continuity to imitate an individual source frame.
+- Never deliver a with-inserts video whose timeline or original audio was shortened, spliced or held on a
+  frozen frame (CE-024, CE-025), whose insert edges show the replaced performer (CE-016), whose overlay
+  outlives its element or its fade (CE-026), or whose text layer holds an emoji.
 - Never accept a product that fails the paste test: brighter, cooler, sharper or cleaner than its
   neighbours, lit from the front in a room lit from elsewhere, without a contact shadow, squared to
   the lens, at the wrong size or perspective, or alone on an empty edge (`anomaly-catalog.md`
@@ -1549,6 +1613,8 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   (item 22).
 - Never tell an agent not to record: the shared contract carries the recording rule, and a run is
   never closed with a RESIDUAL FAILURE or a regenerated video that has no ledger entry (A9b, §6).
+  Never copy an agent contract from an earlier run: it is generated at A9 from
+  `reference/production-agents.md` §2.
 - Never retry a size miss with the sizing words on a model whose guide lists size as a model limit,
   never plan a pack that leans on a prop the model has to invent, stands on its edge against a
   person or rests on a thin sheet that hands move, and never let a placed product take a beat of the
@@ -1577,7 +1643,10 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   can from its opened top after the tab is lifted (§2.2, §2.3).
 - Never render a product without its size reckoning (real dimensions, depth, lens, a named
   neighbour's ratio, the size ladder) in the plan and the prompt; never read a product's size off
-  its own photo; never accept a product over a quarter larger or smaller than reckoned, one that
+  its own photo; never take the distance from an assumption (derive it from the frame, with two estimates
+  that agree), and never flag, repeat or summarise a size verdict that rests on one assumed number or that
+  nobody viewed on a frame (it is provisional, CE-028); never accept a product over a quarter larger or
+  smaller than reckoned, one that
   changes size across a cut, or one larger than the hand that holds it (`anomaly-catalog.md` §2.7).
 - Never plan a product that is handled on screen without its affordance sheet in the registry
   (§1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).

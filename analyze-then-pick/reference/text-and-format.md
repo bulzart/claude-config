@@ -29,14 +29,27 @@ Text may be created when it improves the concept or matches the analyzed structu
     (§3, step 4).
   - **Recreate** (the same video, edited): the reference's overlay text is removed in the edit and
     re-placed in CapCut **word for word**, except a line that breaks a client guardrail (a banned
-    claim or word, an excluded person's name): that line is rewritten minimally in the same role,
-    position and timing, and a required disclaimer is added as a layer in the house style
+    claim or word, an excluded person's name): that line is rewritten minimally (remove only the banned
+    element, a number, a statistic or a name, and say the same thing in the same grammar: the reference's
+    subject and meaning stay, never an unrelated line; CE-022) in the same role, position and timing, and a required disclaimer is added as a layer in the house style
     (`brand-guardrails.md` §2). A caption that *is* the banned point makes the reference a
     dismiss, not a rewrite.
   - **Create** (new videos): a generic meme caption line that carries the joke and names no brand,
     person, handle or source-specific detail may keep its wording (e.g. "first day as an
     assassin"). Anything source-specific is rewritten for the client and concept.
   - In both, **never copy** usernames, handles, watermarks or the reference's brand names.
+  - **A specific keyword.** When a reference's only text is a short tag or keyword that defines its niche
+    (a channel keyword), ask whether it is the hook before dropping it as a handle; when the user keeps
+    it, it is placed word for word as a CapCut text layer at the same height (CE-027), and the user's
+    instruction outranks "never copy handles".
+  - **Context-bearing overlays** (a notification, message, receipt or banner that sets up the joke): the
+    original element is reused. It is cut from the reference's own frames with its look, position, size and
+    timing, placed over the clean video as a picture overlay on exactly the frames where it is visible, and
+    faded with the picture under it (CE-017, CE-023, CE-026). Removing a third-party brand never removes
+    such an overlay's information role, and content the user names as part of the context outranks the
+    brand removal. Text layers are for captions only.
+  - **No emoji** in any text layer (the user's rule, strict): an emoji in a source caption is dropped and
+    the rest of the wording kept.
 - Text must be intentional, readable, contextually correct and consistent across frames. No
   pseudo-text, malformed letters, words that change between frames, duplicate captions, unreadable
   typography or stray lettering.
@@ -88,7 +101,8 @@ means the check fails: pick the next method in §2.2.
 ## 3. Analyze Mode: planning text and placing it in CapCut
 
 1. **Read the reference's text** from the analysis card ("Overlay text"):
-   - its wording and role (hook, "POV:" line, running caption, label, payoff line);
+   - its wording and role (hook, "POV:" line, running caption, label, payoff line, context-bearing
+     overlay: §1);
    - position: `y_rel` / `x_rel` of its centre, from `ocr.json` and the sheets;
    - timing: in and out, in seconds;
    - style: colour, size relative to the frame, outline or box, case, line breaks.
@@ -125,15 +139,16 @@ means the check fails: pick the next method in §2.2.
    - Supplied brand fonts and colours are not used for overlay text unless the user asks for them
      in the run.
 6. **Place it in CapCut** as text layers (`capcut-assembly.md` §3, step 2), one `capcut_add_text`
-   per event.
+   per event. A context-bearing source overlay goes in as the original picture overlay instead
+   (`capcut-assembly.md` §3, step 2b).
    - **Fallback only**, when the CapCut MCP is unavailable: burn the same events with
      `atp.py captions --spec <captions.json>`, and say so.
 7. **QC:**
    - The **generated plate** must be text-free:
      `atp.py qc --mode analyze --allowed-text "<printed words of every client asset visible>"`.
      Anything else detected is pseudo-text or a copied artifact: fix the plate or regenerate.
-   - The **text** is checked on the CapCut preview (`capcut-assembly.md` §5): wording, timing and
-     position.
+   - The **text** is checked on the CapCut preview (`capcut-assembly.md` §5): wording, timing,
+     position, no emoji, and every overlay on exactly its visible frames.
 
 ## 4. Fixed output format: 9:16 at 720p (720×1280)
 

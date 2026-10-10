@@ -2928,6 +2928,14 @@ def cmd_scale(a):
     (`--depth-ratio` = product distance / neighbour distance when they differ). The verdict compares
     the observed size with the expected one: within 15 % ok, 15-25 % a note, over 25 % regenerate.
 
+    The distance is never assumed (CE-028): derive it from the frame (the surface the product stands
+    on, a same-plane neighbour of known size) and say how with `--distance-basis "<how d was
+    derived>"`. A verdict computed from --distance/--lens alone (no --ref-cm/--ref-px neighbour) is
+    PROVISIONAL: the JSON carries `"provisional": true` and `"provisional_reason"`, `verdict` reads
+    e.g. "regenerate (provisional: distance assumed)", `verdict_base` keeps the bare word, and the
+    human line starts with "PROVISIONAL (distance assumed)". Given both estimates, an oversize verdict
+    needs them to agree within --note-pct of each other; otherwise the verdict is "inconclusive".
+
     Geometry (approximate, 9:16 portrait, 35 mm-equivalent focal length f): the frame height covers
     36·d/f metres at distance d, so a product of height H fills H·f/(36·d) of the frame height."""
     if a.product_cm is None or a.product_cm <= 0:
@@ -2994,6 +3002,47 @@ def cmd_scale(a):
                           f"({'too big' if dev > 0 else 'too small'} by {pct:.0f} %, {worst[0]})")
         if verdict == "regenerate":
             res["notes"].append("size is a regenerate reason; no post-fix can resize a product in the scene")
+    # 4. provenance of the verdict (CE-028): a number from an assumed distance is provisional
+    have_nb = "size_vs_neighbour" in res
+    have_dist = "size_vs_distance" in res
+    if a.distance:
+        res["distance_basis"] = a.distance_basis or "not stated (assumed)"
+    res["estimates"] = [k for k, h in (("neighbour ratio", have_nb), ("distance+lens fraction", have_dist)) if h]
+    prov = None
+    if verdicts and have_dist and not have_nb:
+        prov = "distance assumed: no neighbour ratio (--ref-cm/--ref-px) to cross-check it"
+    elif verdicts and have_dist and have_nb:
+        lo, hi = sorted((res["size_vs_neighbour"], res["size_vs_distance"]))
+        spread = (hi / max(1e-6, lo) - 1.0) * 100.0
+        res["estimates_spread_pct"] = round(spread, 1)
+        if spread > a.note_pct:
+            res["verdict_base"] = res.get("verdict")
+            res["verdict"] = "inconclusive"
+            prov = (f"the two estimates disagree by {spread:.0f} % (neighbour {res['size_vs_neighbour']}x, "
+                    f"distance {res['size_vs_distance']}x): re-derive the distance and the neighbour on the frame")
+            res["notes"] = [n for n in res["notes"] if not n.startswith("size is a regenerate reason")]
+            res["notes"].append("no oversize verdict while the estimates disagree; view the full-resolution frame and re-measure")
+        elif not a.distance_basis:
+            res["notes"].append("state --distance-basis: how the distance was derived from the frame")
+    elif verdicts and have_nb and not have_dist:
+        res["notes"].append("one estimate only (neighbour ratio): cross-check it with a frame fraction from a distance derived "
+                            "from a different object or the surface (--distance --distance-basis)")
+    if prov:
+        res["provisional"] = True
+        res["provisional_reason"] = prov
+        if res.get("verdict") != "inconclusive":
+            res["verdict_base"] = res.get("verdict")
+            res["verdict"] = f"{res['verdict']} (provisional: distance assumed)"
+            res["notes"].append("PROVISIONAL: not a regenerate reason, not a RESIDUAL FAILURE and not to be repeated until a "
+                                "second estimate agrees; view the full-resolution frame first (anomaly-catalog.md 2.7)")
+            res["notes"] = [n for n in res["notes"] if not n.startswith("size is a regenerate reason")]
+        res["reading"] = f"PROVISIONAL ({prov}): " + res.get("reading", "")
+    elif verdicts:
+        res["provisional"] = False
+    if a.distance and not a.product_px and not a.distance_basis:
+        res["notes"].append("plan sketch only: the distance must be derived from the frame, not from the shot size (--distance-basis)")
+    if verdicts and res.get("reading"):
+        print(f"size: {res['reading']} -> {res['verdict']}", file=sys.stderr)
     if a.out:
         write_json(Path(a.out), res)
         res["file"] = a.out
@@ -3830,6 +3879,7 @@ def main():
     p.add_argument("--product-cm", type=float, required=True, help="the product's real height in cm (registry)")
     p.add_argument("--label", help="product name for the verdict")
     p.add_argument("--distance", type=float, help="camera-to-product distance in metres (from the shot size)")
+    p.add_argument("--distance-basis", help="how --distance was derived from the frame (surface, neighbour, depth order); recorded in the verdict")
     p.add_argument("--lens", type=float, default=26.0, help="35 mm-equivalent focal length (phone main lens ≈ 26)")
     p.add_argument("--frame-h", type=int, default=1280, help="frame height in px (default 1280 for 720×1280)")
     p.add_argument("--frame", help="a full-resolution frame; its height overrides --frame-h")
