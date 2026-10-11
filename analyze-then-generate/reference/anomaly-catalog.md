@@ -511,8 +511,8 @@ cream absorbing over several seconds. Nothing freezes mid-action or completes wi
 closed and open across one frame. A chew that never ends. A spin that stops early (2026-10). The
 same sip twice (a repeated cycle).
 
-**Ledger.** The time budget's beat durations from the family profile and the process's real
-duration.
+**Ledger.** The time budget's beat durations (Recreate: from the family profile; Create: from the blend's planned beats) and
+the process's real duration.
 
 **Prompt.** "Real-time speed"; one process per stage with its natural duration; never a timestamp
 on free motion (`generation-system.md` §5b).

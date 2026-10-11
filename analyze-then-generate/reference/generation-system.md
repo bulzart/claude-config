@@ -163,8 +163,8 @@ longer sequence, use the last frame of one clip as the starting image for the ne
 in an editor" [HF].
 
 ### 3b.1 Plan the clips (in the video plan, before any request)
-1. **Put seams on the reference's own cuts first.** Where the content family cuts anyway, a clip
-   boundary on that cut is invisible:
+1. **Put seams on the video's own cuts first** (Recreate: the reference's cuts; Create: the cuts the blend plans). Where the
+   content family (Create: the blend) cuts anyway, a clip boundary on that cut is invisible:
    - each clip holds whole shots, and the join is the planned hard cut (`concat --seams cut`);
    - across a cut only the world must carry over, not the pixels: identities, wardrobe, layout,
      light, props, the placed product's anchor and state (§4b), and the ambience.
@@ -191,7 +191,7 @@ in an editor" [HF].
 | continuous | Video continuation (`video_continuation`) | `flux_3_video` | `video_references` = the accepted clip; the prompt opens "Continue this video from its final frames: <what they show>", then the next action; "do not recap completed action" [OFFICIAL BFL]. `duration` = the new segment, ≤ 15 s. One media field only, so no other references in that call. Unverified whether Higgsfield maps the role to continuation: check that the first result opens on the clip's last frame |
 | continuous | Keyframe ladder (`keyframe_ladder`) | models with `start_image` + `end_image` | `start_image` = the hand-off frame. `end_image` = an approved keyframe of the planned end state, built and checked like a start frame. Pinning both ends stops drift building up across hops |
 | continuous | Last-frame chain (`last_frame`) | every model with a `start_image` role | `atg.py last-frame` on the accepted previous clip → upload the PNG → `start_image` of the next clip. Its prompt opens with the guide's continuation wording ("continue forward from this moment; do not replay what happened before it") and the hand-off state |
-| continuous | none (`cut_only`) | models without `start_image` (`wan2_6`, `gemini_omni`, `marketing_studio_video`) | Seams go on cuts only. With no cut in the reference, the boundary becomes a motivated cut the family uses (e.g. a punch-in), stated in the brief |
+| continuous | none (`cut_only`) | models without `start_image` (`wan2_6`, `gemini_omni`, `marketing_studio_video`) | Seams go on cuts only. With no cut in the reference (Create: in the plan), the boundary becomes a motivated cut the family (Create: the blend) uses (e.g. a punch-in), stated in the brief |
 | either | Driver segments (`segments`) | Genjutsu (`hf_mult_motion_control`, `hf_mult_replace_object`), edit ids | Split the driving or source video at its own cuts into 4–30 s segments (no remainder under 4 s). Every segment gets identical image references and wording. QC segment 1 before running the rest |
 
 **Native extension (Seedance 2.5)** [OFFICIAL BytePlus; HF catalog]:
@@ -1089,7 +1089,7 @@ alone in full.
 Keep it short: 8–12 lines.
 
 ```
-Video N of M — <direction / content family>
+Video N of M — <direction / style group or content family>
 Concept: <one line>
 Why it works: <goal and job; the one idea; the emotion arc or laugh mechanism; the share line> (creative-direction.md)
 Reference pattern: <which analyzed videos/mechanism, e.g. "V03/V07 hook-then-demo, payoff at ~5 s">

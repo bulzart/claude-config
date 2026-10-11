@@ -1065,8 +1065,10 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   speech, text, music and loop profile, and the niche-concentration index. It resolves labels only
   through the vocabulary you recorded: place every label it reports as not in the vocabulary
   (`T niches add` / `map`), then run it again. It also flags a word shared by the labels of different
-  niches: merge them (`T niches merge --from … --to … --reason …`) or record the word as not a niche
-  marker (`T niches distinct --word … --reason …`), then run it again.
+  niches: merge them (`T niches merge --from … --to … --reason …`), record each pair as distinct
+  (`T niches distinct --a … --b … --reason …`) or, for a word that is in no niche name, as not a niche
+  marker (`--word`), then run it again. Every reference card needs a `category` (`non-product` when no
+  product category shows): the ranking will not apply while one lacks it.
 - Write, as `viral-browser.md` §4: `mechanism-map.md` (mechanisms `M1…`, k of n, niche
   independence, confounds), the hook, length and pacing profile, the engagement style (one template
   per family plus the composite), the audience and mentality model, `viral-essence.md` (the essence,
@@ -1087,13 +1089,14 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   definition never mention the references. Screen with stated reasons.
 - `T candidates pool --run RUN` on the long list (at least 6 niches, none above 40 %, at most half
   from the references' own products); repair it. Then spawn the **niche-audit agent**
-  (`viral-browser.md` §13.5; fresh context, it changes nothing): apply its merges (`T niches merge`),
-  record its distinct pairs and non-marker words (`T niches distinct`), run `T viral-stats` again when a
-  merge touched a card label, and record the audit (`T niches audit --by … --result …`). Then choose the
+  (`viral-browser.md` §13.5; fresh context, it changes nothing and writes `30-research/niche-audit.md`):
+  apply its merges (`T niches merge … --reason …`), record its distinct pairs and non-marker words
+  (`T niches distinct`), run `T viral-stats` again when a merge touched a card label, and record the audit
+  (`T niches audit --by … --result …`, which refuses without that report). Then choose the
   shortlist (6 / 9 / 12 by depth) and start research with
   `T candidates shortlist --run RUN --ids C01,C02,…`: it re-checks the balance on exactly that set,
-  refuses a failing one, a shared-word flag or an unaudited vocabulary (`--force --reason "<why>"` is
-  logged for the bias log) and marks the candidates `researching`. Nothing can be researched before
+  refuses a failing one, a shared-word or name-overlap flag, an unaudited vocabulary or missing corpus
+  statistics (`--force --reason "<why>"`, at least 25 characters, is logged for the bias log) and marks the candidates `researching`. Nothing can be researched before
   it, and no status is typed by hand: the toolkit sets `researching`, `researched`, `picked` and
   `runner-up`.
 - Show one table: candidate, niche, origin, why it is in the pool. `next_step=research`.
@@ -1133,10 +1136,11 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   (`T candidates set --id C## --redteam survives|weakened|fails`), eliminate the ones that fail, have a
   fresh scoring agent revisit only the criteria the red team names, and run `--provisional` again until
   every target has a verdict (two rounds at most).
-- `T candidates rank --run RUN`: read the picks, the blockers (a missing verdict or defence, statistics
-  older than the vocabulary, a word shared across niches), the tie warnings and both ablation results;
-  write the defence note of every pick from the dominant niche (`T candidates set --id C## --defence`,
-  an argument of at least 30 characters; a pick with no honest defence is eliminated and the ranking
+- `T candidates rank --run RUN`: read the picks, the blockers (a missing verdict, shortlist check or defence,
+  statistics missing or older than the vocabulary, a card without a category, a word or a niche name shared
+  across niches), the tie warnings and both ablation results (`ranking.md` also lists every decision on record);
+  write the defence note of every pick from the dominant niche or linked to it by a word (`T candidates set
+  --id C## --defence`, an argument of at least 30 characters; a pick with no honest defence is eliminated and the ranking
   run again); complete `bias-log.md`; then `T candidates rank --run RUN --apply`, which refuses on any
   of those blockers (`--force` needs `--reason`, and both are logged).
 - Show the ranking table in chat: the picks, the runner-ups, the gates that removed the others, any
@@ -1327,8 +1331,8 @@ files as video K".
   - Write `40-briefs/video-NN-plan.md` with `generation-system.md` §2–§6:
     - intent (`generation-system.md` §2.1): the goal and the video's job, the audience, the one
       sharp idea, the emotion arc or laugh mechanism, the share line (`creative-direction.md` §2–§6);
-      Create: the craft carried from the family and the subject the concept brings, with the copy
-      test passed (`creative-direction.md` §5.0);
+      Create: the blend (the borrowed mechanisms and the product truth) and the subject the concept brings,
+      with the copy and template-lock tests passed (`creative-direction.md` §5.0, §5.0b);
     - the **caught errors applied** (item 22): the ids from `20-analysis/caught-errors.md` that
       apply to this video and what each adds to the plan, the ledger, the prompt and the QC
       checkpoints; an entry about creative quality goes into the ideation and the sharpness gate;
@@ -2022,8 +2026,9 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
 - Viral-Browser: never type a niche, category, product or brand name into a script or a config (the
   agents decide them from the data and record them with `T niches`); never start research on an
   unaudited niche vocabulary or on a shortlist with a shared-word flag; never leave a possibly split
-  niche without a merge or a recorded "distinct" decision; never score in this session (the fresh
-  scoring agent scores); never type a candidate's status or contribution by hand (the toolkit sets them);
+  niche without a merge or a recorded "distinct" decision; never record an audit that no fresh agent made; never score in this session (the fresh
+  scoring agent scores); never type a candidate's status or contribution by hand (the toolkit sets them),
+  and never move a researched candidate to another niche without a stated reason;
   never apply a ranking before the red-team verdicts and the defence notes exist, on statistics older
   than the vocabulary, or with `--force` and no `--reason`.
 - Viral-Browser: never state a number without its source and retrieval date or its method; never score

@@ -64,3 +64,29 @@ recurs after a logged change means that change failed: revise it, do not repeat 
 - **Hypotheses to test next:** (1) the audit agent finds real synonyms on real reference folders without over-merging (watch merges that
   push the pool below six niches); (2) the shared-word flag is not too noisy (count how often `niches distinct --word` is needed);
   (3) the per-market minimum matches the margins the user sees on a real first order.
+
+## 2026-10-11 · third independent review (E1-E10)
+- **Third review** (the same reviewer, a scratch copy of the toolkit and 13 repro scripts) found, and this pass fixed: **E1** `watch` was a status
+  anyone could type and it counts as a research status, so evidence, economics and scoring accepted a candidate that never went through the
+  shortlist (now `watch` only for a candidate already in research, and `rank --apply` refuses a pick with no recorded shortlist check);
+  **E2** the dominant-niche control could be switched off without a blocker (`viral-stats --niche-threshold 1.0`, `viral-stats --set baseline`
+  overwriting the references set, cards without a `category`, a missing or corrupt statistics file): the ranking now recomputes the dominant
+  niche from the stored table with the configured threshold, `viral-stats` keeps the sets it did not recompute, and a missing or unreadable
+  file, a references set without a category on every card, or stale resolution all block `rank --apply`; **E3** `set --category` after the audit
+  and the shortlist could move a pet product into another niche unseen (now `--force --reason`, recorded and printed); **E4** waivers were free
+  and invisible (`distinct --word pet --reason x`, an audit with no report, a merge with no reason): reasons need 25 characters, a word inside a
+  niche name cannot be waived, the audit needs the audit agent's report `30-research/niche-audit.md` (200 bytes, newer than the newest niche),
+  and `ranking.md` prints every merge, distinct decision, waived word, audit, forced shortlist, niche change and forced apply; **E5** three pet
+  products spread over three niches ("pet feeding", "pet grooming", "dog care") passed because the word check counted pool share and never the
+  picks (now niches whose names share a word, or share one with the dominant niche's labels, are flagged at the pool and shortlist and block the
+  apply, and a pick that shares a word with the dominant niche's labels needs the same defence as a pick from it); **E6** the documented remedy
+  for a shared word (`niches distinct --a --b`) did not clear it (the check now knows pairs judged distinct); **E7** `econ --cand` took an
+  optional, case-sensitive market (now required, key without case); **E8** Unicode keys split on combining marks (two different Hindi words
+  collided; now marks are kept); **E9** the docs claimed things the code did not do (reasons "printed in the bias log", "statistics older");
+  **E10** four more "family" wordings in Create paths.
+- **Not fixed, on purpose:** the toolkit cannot verify that a fresh agent performed the audit (it checks that the report exists and is newer than
+  the newest niche); Turkish dotted I and vocalised Arabic still differ from their plain spellings (an agent maps them); `portable`, `silicone`
+  and other modifiers can trip the shared-word flag on a set of nine (one `niches distinct --word` waives each, and it is printed).
+- **Hypotheses to test next:** (1) the shared-word and name-overlap flags need at most a handful of decisions per run on a real folder; if they
+  need dozens, the thresholds are wrong (`max_pool_share_per_category` is also the word threshold); (2) the audit agent's report is specific
+  (names the entries that show a merge) and not boilerplate; (3) the "linked" defence for picks is not triggered by generic words.
