@@ -90,3 +90,19 @@ recurs after a logged change means that change failed: revise it, do not repeat 
 - **Hypotheses to test next:** (1) the shared-word and name-overlap flags need at most a handful of decisions per run on a real folder; if they
   need dozens, the thresholds are wrong (`max_pool_share_per_category` is also the word threshold); (2) the audit agent's report is specific
   (names the entries that show a merge) and not boilerplate; (3) the "linked" defence for picks is not triggered by generic words.
+
+## 2026-10-11 · fourth independent review (F1-F6)
+- **Fourth review** (a narrow check of the round-3 code) found, and this pass fixed: **F1** edits after the shortlist were unrecorded, so a
+  rename (`set --name Glove`) cleared the dominant-link defence rule, and a researched candidate could be sent back to `long`, edited and still
+  picked (now the name, type, definition and niche of a candidate that went through research change only with `--force --reason`, recorded as
+  an edit and printed in `ranking.md`; a candidate in research cannot go back to the long list; `rank` ranks only candidates in research);
+  **F2** the dominant-link rule read the name, type and niche but not the `definition` or every member label of the dominant niche (now it
+  reads the definition, the dominant niche's name, member labels and card labels); **F3** `viral-stats --niche-threshold 1.0` still silenced
+  the card-label word flag (that flag now always uses the configured cap); **F4** the audit report check was satisfied by 200 bytes of "x", a
+  report copied from another run, or a report dated tomorrow (now it must name every current niche, one verdict line each, and may not be dated
+  in the future); **F5** only the biggest niche counted as dominant (every niche reaching the threshold now does); **F6** recording that a pick's
+  niche differs from the dominant niche did not stop that niche's own name linking the pick (it does now).
+- **Also:** a niche name or label with no letter or digit is refused (two of them collided as an empty key); an old statistics file of the wrong
+  shape cannot crash `viral-stats`.
+- **Not fixed, on purpose:** a stored baseline set survives after the baseline videos are removed (re-run `viral-stats --set baseline` to refresh
+  it); the audit report is still a file the main session could write itself (it is the recorded trail, not a proof).

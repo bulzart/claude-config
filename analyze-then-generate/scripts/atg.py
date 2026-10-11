@@ -3834,6 +3834,10 @@ def _niche_key(label) -> str:
     return _fold(label)
 
 
+def _has_word(label) -> bool:
+    return any(unicodedata.category(ch)[0] in "LN" for ch in _fold(label))
+
+
 def _vocab_path(run) -> Path:
     return Path(run) / "20-analysis" / "niche-vocabulary.json"
 
@@ -3955,35 +3959,39 @@ def _niche_words(vocab: dict, name, with_members=False):
     return t - _decided_words(vocab)
 
 
-def _name_overlaps(vocab: dict, names, dominant=None):
-    """Pairs of niches whose names share a word and that no agent has judged distinct. The dominant niche, when given, takes part with its
+def _name_overlaps(vocab: dict, names, dominants=()):
+    """Pairs of niches whose names share a word and that no agent has judged distinct. Each dominant niche, when given, takes part with its
     member labels (the words the references used for it)."""
     skip = lambda x: not x or str(x).startswith("unresolved:")
-    ns = sorted({x for x in names if not skip(x)} | ({dominant} if not skip(dominant) else set()))
+    doms = {d for d in dominants if not skip(d)}
+    ns = sorted({x for x in names if not skip(x)} | doms)
     found = []
     for i, x in enumerate(ns):
         for y in ns[i + 1:]:
-            sh = _niche_words(vocab, x, x == dominant) & _niche_words(vocab, y, y == dominant)
+            sh = _niche_words(vocab, x, x in doms) & _niche_words(vocab, y, y in doms)
             if sh and not _is_distinct(vocab, x, y):
                 found.append((x, y, sorted(sh)))
     return found
 
 
 def _dominant(run, cfg):
-    """The references' dominant niche, recomputed from the stored category table with the CONFIGURED threshold, so that a `--niche-threshold`
-    given to viral-stats cannot switch the control off. Returns (canonical name or None, the references' statistics block, possibly empty)."""
+    """The references' dominant niches (every niche whose share reaches the CONFIGURED threshold), recomputed from the stored category table, so
+    that a `--niche-threshold` given to viral-stats cannot switch the control off. Returns ([canonical names], the references' statistics block,
+    possibly empty)."""
     stats = _vb_load(Path(run) / "20-analysis" / "corpus-stats.json", {})
     sets = stats.get("sets") if isinstance(stats, dict) else None
     sref = sets.get("references") if isinstance(sets, dict) else None
     sref = sref if isinstance(sref, dict) else {}
     conc = (sref.get("concentration") or {}).get("category") if isinstance(sref.get("concentration"), dict) else None
     conc = conc if isinstance(conc, dict) else {}
-    top = conc.get("top1") if isinstance(conc.get("top1"), dict) else {}
     if sref and not isinstance(sref.get("category_resolution"), dict):
         sref = {**sref, "category_resolution": {}}
-    if top and conc.get("total", 0) >= 3 and top.get("share", 0) >= cfg["niche_dominance_threshold"] - 1e-9:
-        return top.get("label"), sref
-    return None, sref
+    names = []
+    if conc.get("total", 0) >= 3:
+        for row in (conc.get("table") if isinstance(conc.get("table"), list) else []):
+            if isinstance(row, dict) and row.get("label") and row.get("share", 0) >= cfg["niche_dominance_threshold"] - 1e-9:
+                names.append(row["label"])
+    return names, sref
 
 
 def _decisions(run, cd):
@@ -3995,7 +4003,7 @@ def _decisions(run, cd):
             "merges": v.get("merges", []), "distinct_pairs": v.get("distinct_pairs", []), "not_niche_words": v.get("not_niche_words", {}),
             "forced_shortlists": [{"at": c.get("at"), "ids": c.get("ids"), "flags": c.get("flags"), "reason": c.get("reason")}
                                   for c in cd.get("shortlist_checks", []) if c.get("forced")],
-            "category_changes": [{"id": c["id"], **ch} for c in cd.get("items", []) for ch in (c.get("category_changes") or [])]}
+            "edits": [{"id": c["id"], **e} for c in cd.get("items", []) for e in (c.get("edits") or [])]}
 
 
 def _decisions_md(d, forced_reason=None):
@@ -4006,7 +4014,7 @@ def _decisions_md(d, forced_reason=None):
     L += [f"- Judged distinct: {p.get('a')} / {p.get('b')}: {p.get('reason')} ({p.get('at')})" for p in d["distinct_pairs"]]
     L += [f"- Word judged not a niche marker: {w}: {r.get('reason')} ({r.get('at')})" for w, r in d["not_niche_words"].items()]
     L += [f"- Forced shortlist of {len(f.get('ids') or [])} candidate(s) past: {'; '.join(str(x)[:90] for x in (f.get('flags') or []))}: {f.get('reason')} ({f.get('at')})" for f in d["forced_shortlists"]]
-    L += [f"- Niche changed after research: {c['id']} {c.get('from')} -> {c.get('to')}: {c.get('reason')} ({c.get('at')})" for c in d["category_changes"]]
+    L += [f"- Edited after research: {e['id']} {e.get('field')}: {e.get('from')!r} -> {e.get('to')!r}: {e.get('reason')} ({e.get('at')})" for e in d["edits"]]
     if forced_reason:
         L.append(f"- Forced apply: {forced_reason}")
     return L
@@ -4062,6 +4070,7 @@ def _concentration(counter, thr: float):
             "top2_share": round(sum(s for _, s in shares[:2]), 3), "hhi": round(hhi, 3),
             "effective_n": round(1 / hhi, 2),
             "dominant": items[0][0] if (shares[0][1] >= thr and total >= 3) else None,
+            "dominants": [k for k, s_ in shares if s_ >= thr - 1e-9 and total >= 3],
             "table": [{"label": k, "count": c, "share": round(c / total, 3)} for k, c in items]}
 
 
@@ -4161,7 +4170,7 @@ def _vs_aggregate(ms, facts, thr, small_n, run):
     agg["category_resolution"] = {str(f["category"]).strip(): cats[i] for i, f in facts.items() if i in cats}
     agg["n_with_category"] = len(cats)
     agg["word_concentration"] = _word_concentration([(i, _tokens(f.get("category")), cats[i]) for i, f in facts.items() if i in cats],
-                                                    thr, _decided_words(vocab_), distinct=lambda x, y: _is_distinct(vocab_, x, y))
+                                                    vb_cfg()["niche_dominance_threshold"], _decided_words(vocab_), distinct=lambda x, y: _is_distinct(vocab_, x, y))
     return agg
 
 
@@ -4235,7 +4244,9 @@ def cmd_viral_stats(a):
         if sets[name]["small_n"]:
             notes.append(f"{name}: {len(ms)} videos is below {small_n}; read every share as an indication, not a rate")
     jp, mp = run_dir / "20-analysis" / "corpus-stats.json", run_dir / "20-analysis" / "corpus-stats.md"
-    kept = {k: v for k, v in ((_vb_load(jp, {}).get("sets")) or {}).items() if k not in sets}      # a set this run did not recompute stays
+    prior = _vb_load(jp, {})
+    prior_sets = prior.get("sets") if isinstance(prior, dict) and isinstance(prior.get("sets"), dict) else {}
+    kept = {k: v for k, v in prior_sets.items() if k not in sets}      # a set this run did not recompute stays
     all_sets = {**kept, **sets}
     contrast = {}
     if "references" in all_sets and "baseline" in all_sets:
@@ -4302,12 +4313,16 @@ def cmd_niches(a):
                 if not a.name:
                     fail("niches add needs --name", 2)
                 name = re.sub(r"\s+", " ", a.name.strip())
+                if not _has_word(name):
+                    fail("a niche name needs at least one letter or digit", 2)
                 if idx.get(_niche_key(name), name) != name:
                     fail(f"{name!r} is already a label of niche {idx[_niche_key(name)]!r} (to fold one niche into another use `niches merge --from ... --to ... --reason ...`)", 2)
                 if name not in vocab["niches"]:
                     vocab["last_added_at"] = time.time()          # an audit older than the newest niche has not seen it
                 rec = vocab["niches"].setdefault(name, {"members": [], "created": now_iso()})
                 for m in [x.strip() for x in re.split(r"[;,]", a.members or "") if x.strip()]:
+                    if not _has_word(m):
+                        fail(f"{m!r} is not a usable label: it needs at least one letter or digit", 2)
                     if idx.get(_niche_key(m), name) != name:
                         fail(f"{m!r} is already a label of niche {idx[_niche_key(m)]!r}", 2)
                     if _niche_key(m) != _niche_key(name) and m not in rec["members"]:
@@ -4322,6 +4337,8 @@ def cmd_niches(a):
                 to = next((n for n in vocab["niches"] if _niche_key(n) == _niche_key(a.to)), None)
                 if not to:
                     fail(f"unknown niche {a.to!r}; create it with `niches add` first", 2)
+                if not _has_word(a.label):
+                    fail(f"{a.label!r} is not a usable label: it needs at least one letter or digit", 2)
                 if idx.get(_niche_key(a.label), to) != to:
                     fail(f"{a.label!r} is already a label of niche {idx[_niche_key(a.label)]!r} (to fold one niche into another use `niches merge --from ... --to ... --reason ...`)", 2)
                 if _niche_key(a.label) != _niche_key(to) and a.label not in vocab["niches"][to]["members"]:
@@ -4374,8 +4391,15 @@ def cmd_niches(a):
                 if not af.exists() or af.stat().st_size < 200:
                     fail("niches audit needs the audit agent's report, 30-research/niche-audit.md (at least 200 bytes: the pairs judged one niche, the pairs judged "
                          "distinct, the niches too broad); have a fresh agent write it (viral-browser.md section 13.5)", 2)
+                if af.stat().st_mtime > time.time() + 120:
+                    fail("30-research/niche-audit.md is dated in the future: the audit agent writes the report when it has audited", 2)
                 if vocab.get("last_added_at") and af.stat().st_mtime + 2 < vocab["last_added_at"]:
                     fail("30-research/niche-audit.md is older than the last niche added, so that audit did not see it: have a fresh agent audit again", 2)
+                folded_ = " " + _fold(af.read_text(encoding="utf-8", errors="replace")) + " "
+                missing_ = [nm for nm in vocab["niches"] if f" {_niche_key(nm)} " not in folded_]
+                if missing_:
+                    fail(f"30-research/niche-audit.md does not name every niche (missing: {missing_[:8]}): the audit agent gives a verdict for each niche, one line each, "
+                         f"with the niche's exact name (viral-browser.md section 13.5)", 2)
                 vocab["audit"] = {"by": a.by, "result": a.result, "at": now_iso(), "signature": _vocab_signature(vocab), "niches": sorted(vocab["niches"]),
                                   "report": str(af), "report_bytes": af.stat().st_size}
             vocab["updated"] = now_iso()
@@ -4633,10 +4657,10 @@ def _cd_pool(items, cfg, run, statuses=None, ids=None):
                      f"({', '.join(w['niches'])}): if these are one niche, merge them (`niches merge --from ... --to ... --reason ...`); if they differ, record each pair "
                      f"(`niches distinct --a ... --b ... --reason ...`; open: {'; '.join(w['open_pairs'][:4])}); if the word only describes something else (a material, a "
                      f"modifier) and is in no niche name, record it (`niches distinct --word {w['word']} --reason \"...\"`)")
-    dominant, _sref = _dominant(run, cfg)
-    ov = _name_overlaps(vocab, list(cat), dominant)
+    dominants, _sref = _dominant(run, cfg)
+    ov = _name_overlaps(vocab, list(cat), dominants)
     for x, y, sh in ov:
-        flags.append(f"niches {x!r} and {y!r} share the word(s) {sh}" + (" (the dominant niche's name or labels)" if dominant in (x, y) else "")
+        flags.append(f"niches {x!r} and {y!r} share the word(s) {sh}" + (" (a dominant niche's name or labels)" if {x, y} & set(dominants) else "")
                      + ": merge them (`niches merge --from ... --to ... --reason ...`) or record that they differ (`niches distinct --a ... --b ... --reason ...`)")
     return {"n": n, "need_niches": need, "niches": dict(cat.most_common()), "origins": dict(orig), "flags": flags, "notes": notes,
             "word_concentration": wc, "name_overlaps": [[x, y, sh] for x, y, sh in ov]}
@@ -4759,12 +4783,19 @@ def cmd_candidates(a):
                          f"`rank --apply` marks picked and runner-up); allowed here: long, shortlisted, eliminated, and watch (only for a candidate already in research)", 2)
                 if a.status == "watch" and c["status"] not in EV_RESEARCH_STATUS:
                     fail(f"'watch' lists a near miss that was researched: {a.id} is '{c['status']}' and has not been through `candidates shortlist`", 2)
-                if a.category is not None and c["status"] in EV_RESEARCH_STATUS and a.category != c.get("category"):
+                if a.status in ("long", "shortlisted") and c["status"] in EV_RESEARCH_STATUS:
+                    fail(f"{a.id} is in research ('{c['status']}') and cannot go back to the long list: eliminate it (`--status eliminated --by ...`) or leave it", 2)
+                checked_ids = {i for chk in data.get("shortlist_checks", []) for i in chk.get("ids", [])}
+                researched_once = c["status"] in EV_RESEARCH_STATUS or c["id"] in checked_ids or bool(c.get("scores"))
+                changed = {k: v for k, v in (("name", a.name), ("type", a.ptype), ("definition", a.definition), ("category", a.category))
+                           if v is not None and v != c.get(k)}
+                if changed and researched_once:
                     if not a.force:
-                        fail(f"{a.id} is in research ('{c['status']}'): its niche ('{c.get('category')}') was audited and shortlisted. Changing it needs --force --reason "
-                             f"(the move is recorded and printed in ranking.md)", 2)
+                        fail(f"{a.id} has been through research: its {', '.join(changed)} was audited, scored and shortlisted as it is. Changing it needs --force --reason "
+                             f"(recorded and printed in ranking.md)", 2)
                     _force_reason(a)
-                    c.setdefault("category_changes", []).append({"from": c.get("category"), "to": a.category, "reason": a.reason.strip(), "at": now_iso()})
+                    for k, v in changed.items():
+                        c.setdefault("edits", []).append({"field": k, "from": c.get(k), "to": v, "reason": a.reason.strip(), "at": now_iso()})
                 if a.defence is not None and len(a.defence.strip()) < 30:
                     fail("a defence note is an argument (at least 30 characters): the independent evidence against the best outside-niche alternative", 2)
                 for fld, val in (("name", a.name), ("definition", a.definition), ("category", a.category), ("type", a.ptype),
@@ -4840,21 +4871,23 @@ def _cd_rank(a, items, cfg, checks=None):
     wsum = float(sum(rubric.values())) or 100.0
     ind, cap, ccap = set(cfg["independent_criteria"]), cfg["cap_without_independent_evidence"], cfg["contradicted_cap"]
     vocab = _vocab_load(a.run)
-    dominant_name, sref = _dominant(a.run, cfg)
-    dominant = _niche_key(dominant_name)
-    dom_words = set()
-    if dominant_name and not str(dominant_name).startswith("unresolved:"):
-        dom_words = set(_tokens(dominant_name))
+    dominants, sref = _dominant(a.run, cfg)
+    dom_keys = {_niche_key(d) for d in dominants}
+    dom_words = {}                    # dominant niche -> the words that identify it: its name, its member labels, the labels the cards used for it
+    for d in dominants:
+        if str(d).startswith("unresolved:"):
+            continue
+        w = set(_niche_words(vocab, d, True))
         for lab, canon in (sref.get("category_resolution") or {}).items():
-            if _niche_key(canon) == dominant:
-                dom_words |= _tokens(lab)
-        dom_words -= _decided_words(vocab)
+            if _niche_key(canon) == _niche_key(d):
+                w |= _tokens(lab)
+        dom_words[d] = w - _decided_words(vocab)
     cmap = {c["id"]: c for c in items}
 
     def build(include_dependent):
         out_rows = []
         for c in items:
-            if c["status"] == "eliminated":
+            if c["status"] not in EV_RESEARCH_STATUS:           # only candidates that went through `candidates shortlist` can be picked
                 continue
             sc = c.get("scores") or {}
             if not sc:
@@ -4927,8 +4960,13 @@ def _cd_rank(a, items, cfg, checks=None):
             if c.get("redteam") == "fails":
                 why.append("red team: fails")
             dept = _niche(c.get("category"), a.run)[0] or ("unresolved:" + _niche_key(c.get("category")))
-            in_dom = bool(dominant and _niche_key(dept) == dominant)
-            link = [] if (in_dom or not dom_words) else sorted((_tokens(c["name"]) | _tokens(c.get("type")) | _tokens(dept)) & dom_words)
+            in_dom = _niche_key(dept) in dom_keys
+            link = set()
+            if not in_dom:
+                own = _tokens(c["name"]) | _tokens(c.get("type")) | _tokens(c.get("definition"))
+                for d, w in dom_words.items():
+                    link |= (own | (set() if _is_distinct(vocab, dept, d) else _tokens(dept))) & w      # a niche judged distinct from d no longer links by its own name
+            link = sorted(link)
             out_rows.append({"id": c["id"], "name": c["name"], "category": dept, "type": c.get("type"), "raw": round(raw, 1),
                              "total": round(tot, 1), "nofit": round(nofit, 1), "capped": capped, "contribution_pct": cp,
                              "indep_rows": len(good("demand")) + len(good("commercial")) + len(good("competition")),
@@ -5010,20 +5048,21 @@ def _cd_rank(a, items, cfg, checks=None):
                     "have a fresh agent audit it again (viral-browser.md section 13.5) and record `niches audit`")
     need_def = [r for r in picks if (r["dominant_niche"] or r["dominant_link"]) and not r.get("defence")]
     if need_def:
-        blockers.append("pick(s) " + ", ".join(r["id"] + ("" if r["dominant_niche"] else f" (shares {r['dominant_link']} with the dominant niche '{dominant_name}')") for r in need_def)
+        blockers.append("pick(s) " + ", ".join(r["id"] + ("" if r["dominant_niche"] else f" (shares {r['dominant_link']} with the dominant niche(s) {dominants})") for r in need_def)
                         + " are in the dominant niche or linked to it and have no defence note (viral-browser.md section 5): write the defence against the best outside-niche "
                           "alternative, or demote them")
     unchecked = [r["id"] for r in picks if r["id"] not in {i for chk in (checks or []) for i in chk.get("ids", [])}]
     if unchecked:
         blockers.append(f"pick(s) {unchecked} never went through `candidates shortlist`, where the pool, overlap and audit checks run")
-    ov = _name_overlaps(vocab, [r["category"] for r in picks], dominant_name)
+    ov = _name_overlaps(vocab, [r["category"] for r in picks], dominants)
     if ov:
         blockers.append("picks sit in niches whose names share a word with each other or with the dominant niche (" + "; ".join(f"{x!r} / {y!r}: {sh}" for x, y, sh in ov[:5])
                         + "): merge the niches (`niches merge`) or record that they differ (`niches distinct --a ... --b ... --reason ...`)")
     for r in picks:
-        ch = cmap[r["id"]].get("category_changes") or []
-        if ch:
-            warn.append(f"pick {r['id']} was moved to another niche after research ({ch[-1]['from']} -> {ch[-1]['to']}: {ch[-1]['reason']}): check that this is not a way around the niche limits")
+        ed = cmap[r["id"]].get("edits") or []
+        if ed:
+            warn.append(f"pick {r['id']} was edited after research (" + "; ".join(f"{e['field']}: {e['from']!r} -> {e['to']!r}, {e['reason']}" for e in ed[-3:])
+                        + "): check that this is not a way around the niche limits or the dominant-niche defence")
     no_rt = [r["id"] for r in picks if r.get("redteam") not in ("survives", "weakened")]
     if no_rt:
         blockers.append(f"pick(s) {no_rt} have no red-team verdict: red-team them (`candidates set --redteam survives|weakened|fails`)")
@@ -5048,7 +5087,7 @@ def _cd_rank(a, items, cfg, checks=None):
     decisions = _decisions(a.run, {"items": items, "shortlist_checks": checks or []})
     res = {"ok": not refused, "picks": picks, "runner_ups": runners, "ineligible": ineligible, "warnings": warn, "blockers": blockers,
            "pool_flags": pool_flags, "ablation_reference_evidence_changed": ablation_ref, "ablation_no_fit_changed": ablation_fit,
-           "dominant_niche": dominant_name, "weights": rubric, "forced": bool(a.force and blockers), "reason": a.reason, "decisions": decisions}
+           "dominant_niche": dominants[0] if dominants else None, "dominant_niches": dominants, "weights": rubric, "forced": bool(a.force and blockers), "reason": a.reason, "decisions": decisions}
     L = [f"# Ranking ({now_iso()})", "", "Weights: " + ", ".join(f"{k} {v}" for k, v in rubric.items()),
          f"Independent-evidence cap: a criterion in {sorted(ind)} without a positive independent grade A/B row (C for economics) is capped at {cap}; "
          f"negative rows that match or outnumber the positive ones cap a 4 or 5 at {ccap}.", "",

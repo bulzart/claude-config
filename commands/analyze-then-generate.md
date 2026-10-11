@@ -1092,7 +1092,7 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   (`viral-browser.md` §13.5; fresh context, it changes nothing and writes `30-research/niche-audit.md`):
   apply its merges (`T niches merge … --reason …`), record its distinct pairs and non-marker words
   (`T niches distinct`), run `T viral-stats` again when a merge touched a card label, and record the audit
-  (`T niches audit --by … --result …`, which refuses without that report). Then choose the
+  (`T niches audit --by … --result …`, which refuses unless that report names every niche). Then choose the
   shortlist (6 / 9 / 12 by depth) and start research with
   `T candidates shortlist --run RUN --ids C01,C02,…`: it re-checks the balance on exactly that set,
   refuses a failing one, a shared-word or name-overlap flag, an unaudited vocabulary or missing corpus
@@ -2028,7 +2028,7 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   unaudited niche vocabulary or on a shortlist with a shared-word flag; never leave a possibly split
   niche without a merge or a recorded "distinct" decision; never record an audit that no fresh agent made; never score in this session (the fresh
   scoring agent scores); never type a candidate's status or contribution by hand (the toolkit sets them),
-  and never move a researched candidate to another niche without a stated reason;
+  and never edit a researched candidate's name, type, definition or niche without a stated reason;
   never apply a ranking before the red-team verdicts and the defence notes exist, on statistics older
   than the vocabulary, or with `--force` and no `--reason`.
 - Viral-Browser: never state a number without its source and retrieval date or its method; never score
