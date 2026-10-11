@@ -72,7 +72,8 @@ atg.py inventory "<baseline folder>" --run "<run>" --as baseline       → 00-in
 atg.py prep-all --run "<run>" --set baseline [--jobs 2]               → 10-media/B01…, baseline-index.md
 atg.py new-run --mode analyze --submode viral-browser --source "<refs folder>" [--baseline "<folder>"]   → adds 30-research/ and deliverables/
 atg.py viral-stats --run "<run>" [--set references|baseline|both]     → 20-analysis/corpus-stats.{json,md}: measured length, hook, pacing, speech, text, music, loop; niche concentration from the cards' Facts lines
-atg.py candidates add|list|set|pool|score|rank|show --run "<run>" …    → 30-research/candidates.json, ranking.{json,md} (viral-browser.md §6, §8)
+atg.py niches propose|add|map|list --run "<run>" …                   → 20-analysis/niche-vocabulary.json: the niche vocabulary the AGENTS decide from the labels in the data (no script lists any niche)
+atg.py candidates add|list|set|pool|shortlist|score|rank|show --run "<run>" …    → 30-research/candidates.json, ranking.{json,md} (viral-browser.md §6, §8); labels resolve through the vocabulary
 atg.py evidence add|list --run "<run>" --cand C03 --lane demand …      → 30-research/evidence.json (claim, source, date, grade, independence)
 atg.py econ --retail 39.9 --vat-pct 21 --landed 6.5 --fulfil 4.2 …    → contribution, break-even CPA and ROAS, MOQ capital
 atg.py prep-video "<video>" --out "<dir>" --id V01                     (one video)

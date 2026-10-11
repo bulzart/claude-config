@@ -56,6 +56,8 @@ Subcommands (python atg.py <cmd> -h):
   qc             storyboard + checks (size, duration, black, freeze, mode-aware visible text) for an output
   viral-stats    Viral-Browser: measured corpus profile of the references (length, hook timing, cuts, speech,
                  text, loop, sound) + the niche-concentration index from the cards' Facts lines
+  niches         Viral-Browser: the run's niche vocabulary, built by the agents from the data (add | map | list | propose);
+                 no niche or category name is built into any script
   candidates     Viral-Browser: the candidate-product ledger (add | list | set | pool | score | rank | show):
                  scoring arithmetic, gates and the niche-bias controls (independent-evidence cap, category cap)
   evidence       Viral-Browser: the research evidence ledger (add | list): claim, source, date, grade, independence
@@ -3736,38 +3738,6 @@ def cmd_model_menu(a):
 # (what a card says, what a score is) stays with the command and its agents; the scripts make the arithmetic, the gates
 # and the niche-bias controls repeatable (reference/viral-browser.md sections 5 and 8).
 
-VB_DEPARTMENTS = [
-    "pets", "kitchen-dining", "home-organization", "home-decor-furniture", "cleaning-laundry", "bath-bedding",
-    "beauty-skincare", "hair-styling", "personal-care-hygiene", "health-wellness", "fitness-sports", "outdoor-camping",
-    "garden-plants", "tools-diy-repair", "auto-motorcycle", "travel-luggage", "phone-computer-accessories",
-    "consumer-electronics-gadgets", "smart-home-lighting", "office-desk-stationery", "baby-kids", "toys-games",
-    "fashion-apparel", "shoes-accessories", "bags-wallets", "jewelry-watches", "party-gifts-seasonal", "food-drink",
-    "supplements-nutrition", "hobbies-crafts-art", "musical-instruments-audio", "software-apps",
-    "templates-printables-assets", "courses-education", "non-product", "other"]
-VB_DEPARTMENT_ALIASES = {
-    "pet": "pets", "dog": "pets", "cat": "pets", "kitchen": "kitchen-dining", "dining": "kitchen-dining", "cooking": "kitchen-dining",
-    "home": "home-decor-furniture", "decor": "home-decor-furniture", "furniture": "home-decor-furniture",
-    "organization": "home-organization", "organisation": "home-organization", "storage": "home-organization",
-    "cleaning": "cleaning-laundry", "laundry": "cleaning-laundry", "bath": "bath-bedding", "bedding": "bath-bedding",
-    "beauty": "beauty-skincare", "skincare": "beauty-skincare", "makeup": "beauty-skincare", "hair": "hair-styling",
-    "grooming": "personal-care-hygiene", "hygiene": "personal-care-hygiene", "health": "health-wellness",
-    "wellness": "health-wellness", "fitness": "fitness-sports", "sports": "fitness-sports", "sport": "fitness-sports",
-    "outdoor": "outdoor-camping", "camping": "outdoor-camping", "garden": "garden-plants", "plants": "garden-plants",
-    "tools": "tools-diy-repair", "diy": "tools-diy-repair", "repair": "tools-diy-repair", "auto": "auto-motorcycle",
-    "car": "auto-motorcycle", "motorcycle": "auto-motorcycle", "travel": "travel-luggage", "luggage": "travel-luggage",
-    "phone": "phone-computer-accessories", "computer": "phone-computer-accessories", "electronics": "consumer-electronics-gadgets",
-    "gadgets": "consumer-electronics-gadgets", "gadget": "consumer-electronics-gadgets", "smart": "smart-home-lighting",
-    "lighting": "smart-home-lighting", "office": "office-desk-stationery", "desk": "office-desk-stationery",
-    "stationery": "office-desk-stationery", "baby": "baby-kids", "kids": "baby-kids", "toys": "toys-games", "games": "toys-games",
-    "fashion": "fashion-apparel", "apparel": "fashion-apparel", "clothing": "fashion-apparel", "shoes": "shoes-accessories",
-    "bags": "bags-wallets", "wallets": "bags-wallets", "jewelry": "jewelry-watches", "jewellery": "jewelry-watches",
-    "watches": "jewelry-watches", "party": "party-gifts-seasonal", "gifts": "party-gifts-seasonal", "seasonal": "party-gifts-seasonal",
-    "food": "food-drink", "drink": "food-drink", "drinks": "food-drink", "supplements": "supplements-nutrition",
-    "nutrition": "supplements-nutrition", "crafts": "hobbies-crafts-art", "hobbies": "hobbies-crafts-art", "art": "hobbies-crafts-art",
-    "music": "musical-instruments-audio", "audio": "musical-instruments-audio", "software": "software-apps",
-    "apps": "software-apps", "templates": "templates-printables-assets", "printables": "templates-printables-assets",
-    "courses": "courses-education", "education": "courses-education"}
-
 VB_DEFAULTS = {
     "max_research_agents": 3,
     "research_budget_per_candidate": {"quick": 8, "standard": 16, "deep": 30},
@@ -3789,10 +3759,8 @@ VB_DEFAULTS = {
     "gates": {"min_scores": {"demand": 3, "commercial": 3, "economics": 3, "compliance": 3, "fit": 3},
               "min_contribution_pct": 25, "min_independent_evidence": 2, "min_confidence_for_pick": "medium"},
     "small_n_warning_below": 10,
-    "departments": VB_DEPARTMENTS,
-    "department_aliases": VB_DEPARTMENT_ALIASES,
 }
-VB_REPLACE_KEYS = {"rubric", "department_aliases", "departments", "independent_criteria"}
+VB_REPLACE_KEYS = {"rubric", "independent_criteria"}
 EV_LANES = ["demand", "commercial", "competition", "economics", "compliance", "logistics", "voice", "content",
             "timing", "fit", "other"]
 EV_RESEARCH_STATUS = ("researching", "researched", "picked", "runner-up", "watch")
@@ -3835,47 +3803,47 @@ def _vb_load(path: Path, default):
         return default
 
 
-VB_GENERIC_WORDS = {"tools", "tool", "gadgets", "gadget", "accessories", "accessory", "products", "product", "items", "item",
-                    "supplies", "supply", "kit", "kits", "set", "sets", "care", "goods", "essentials", "equipment", "devices", "device"}
-# a qualifier department says WHO or WHERE the product is for; a product-type department says WHAT it is
-VB_QUALIFIER_DEPTS = {"pets", "baby-kids", "auto-motorcycle", "travel-luggage", "outdoor-camping", "garden-plants", "fitness-sports",
-                      "kitchen-dining", "beauty-skincare", "hair-styling"}
+VB_STOP_WORDS = {"and", "the", "for", "with", "of"}      # function words only: no product, niche or category name lives in this script
 
 
-def _dept(label, cfg=None):
-    """The canonical department of a free label, as (name, None), or (None, reason). The niche-bias controls compare
-    departments, never free text, so 'Pet tools', 'pets' and 'dog care' are one niche. Generic words (tools, gadgets,
-    accessories, care) say nothing about the niche; a qualifier department (pets, kitchen, auto, ...) outranks a product-type
-    department (toys, tools, gadgets, ...): 'pet tools' and 'dog toys' are pets, 'kitchen gadgets' is kitchen-dining."""
-    cfg = cfg or vb_cfg()
-    depts = [str(d).lower() for d in cfg["departments"]]
-    alias = {str(k).lower(): str(v).lower() for k, v in (cfg.get("department_aliases") or {}).items()}
-    s = re.sub(r"[^a-z0-9]+", " ", str(label or "").lower().replace("&", " and ")).strip()
-    if not s:
-        return None, "empty"
-    if s.replace(" ", "-") in depts:
-        return s.replace(" ", "-"), None
-    if s in alias:
-        return alias[s], None
-    specific, generic = set(), set()
-    for t in s.split():
-        if t in ("and", "the", "of", "for", "with"):
-            continue
-        for form in (t, t[:-1] if len(t) > 3 and t.endswith("s") else t):
-            hit = alias.get(form) or (form if form in depts else None)
-            if hit:
-                (generic if (t in VB_GENERIC_WORDS or form in VB_GENERIC_WORDS) else specific).add(hit)
-                break
-    found = specific or generic
-    if len(found) > 1:
-        q = found & VB_QUALIFIER_DEPTS
-        if len(q) == 1:
-            found = q
-    if len(found) == 1:
-        return next(iter(found)), None
-    if len(found) > 1:
-        return None, "ambiguous between " + ", ".join(sorted(found)) + "; pick the one that is the product's main use"
-    return None, "not in the department list"
+def _niche_key(label) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(label or "").lower().replace("&", " and ")).strip()
+
+
+def _vocab_path(run) -> Path:
+    return Path(run) / "20-analysis" / "niche-vocabulary.json"
+
+
+def _vocab_load(run) -> dict:
+    d = _vb_load(_vocab_path(run), {"niches": {}})
+    d.setdefault("niches", {})
+    return d
+
+
+def _vocab_index(vocab: dict) -> dict:
+    """normalised label -> canonical niche, over the canonical names and every member label."""
+    idx = {}
+    for canon, rec in vocab["niches"].items():
+        idx[_niche_key(canon)] = canon
+        for m in rec.get("members", []):
+            idx[_niche_key(m)] = canon
+    return idx
+
+
+def _niche(label, run):
+    """The canonical niche of a label as the AGENTS recorded it in the run's niche vocabulary (`niches add`, `niches map`),
+    as (name, None), or (None, reason). What counts as the same niche is the agents' judgement, recorded as data: nothing
+    about niches, products or categories is built into this script, which only enforces that every label resolves."""
+    vocab = _vocab_load(run)
+    k = _niche_key(label)
+    if not k:
+        return None, "label is empty"
+    idx = _vocab_index(vocab)
+    if k in idx:
+        return idx[k], None
+    known = ", ".join(sorted(vocab["niches"])) or "none yet"
+    return None, (f"{str(label)!r} is not in this run's niche vocabulary (known niches: {known}); an agent decides it: map it to a known "
+                  f"niche with `niches map --label \"...\" --to \"<niche>\"`, or create a niche with `niches add --name \"...\" [--members \"a,b\"]`")
 
 
 def _domain(src) -> str:
@@ -3889,7 +3857,7 @@ def _domain(src) -> str:
 
 def _tokens(s):
     toks = re.sub(r"[^a-z0-9]+", " ", str(s or "").lower()).split()
-    return {t[:-1] if len(t) > 3 and t.endswith("s") else t for t in toks if t not in ("and", "the", "for", "with", "of")}
+    return {t[:-1] if len(t) > 3 and t.endswith("s") else t for t in toks if t not in VB_STOP_WORDS}
 
 
 def _similar(a, b, thr: float) -> bool:
@@ -3996,20 +3964,21 @@ def _vs_facts(run_dir: Path, ids):
     return facts, bad, missing
 
 
-def _vs_aggregate(ms, facts, thr, small_n, cfg):
+def _vs_aggregate(ms, facts, thr, small_n, run):
     from collections import Counter
     n = len(ms)
     g = lambda k: [m.get(k) for m in ms]
-    unmapped = []
-    cats = {}
+    idx = _vocab_index(_vocab_load(run))
+    unresolved, cats = [], {}
     for i, f in facts.items():
-        if f.get("category") in (None, "", []):
+        lab = f.get("category")
+        if lab in (None, "", []):
             continue
-        d, why = _dept(f.get("category"), cfg)
-        if d is None:
-            unmapped.append(f"{i}: {f.get('category')!r} ({why})")
-            d = "unmapped:" + _norm(f.get("category"))
-        cats[i] = d
+        canon = idx.get(_niche_key(lab))
+        if canon is None:
+            unresolved.append(f"{i}: {str(lab)!r}")
+            canon = "unresolved:" + _niche_key(lab)
+        cats[i] = canon
     agg = {"n_videos": n, "small_n": n < small_n,
            "duration_s": _dist(g("duration_s")), "median_shot_s": _dist(g("median_shot_s")),
            "cuts_per_10s": _dist(g("cuts_per_10s")), "first_cut_s": _dist([m["first_cut_s"] for m in ms if m["first_cut_s"] is not None]),
@@ -4022,7 +3991,7 @@ def _vs_aggregate(ms, facts, thr, small_n, cfg):
            "share_text_in_first_second": _share(g("text_first_s")), "text_spans": _dist(g("n_text_spans"), 1),
            "share_music_bed": _share(g("music_bed")), "tempo_bpm": _dist(g("tempo_bpm"), 1),
            "share_vertical_9_16": _share([(m["aspect"] == "9:16") if m["aspect"] else None for m in ms]),
-           "aspects": dict(Counter(m["aspect"] for m in ms if m["aspect"])), "unmapped_categories": unmapped}
+           "aspects": dict(Counter(m["aspect"] for m in ms if m["aspect"])), "unresolved_labels": unresolved}
     fa = {}
     for k in FACT_KEYS:
         if k == "category":
@@ -4099,10 +4068,10 @@ def cmd_viral_stats(a):
             notes.append(f"{name}: unreadable Facts JSON in cards {', '.join(bad)}")
         if missing:
             notes.append(f"{name}: no Facts line in cards {', '.join(missing)} (category and the other label counts exclude them)")
-        sets[name] = _vs_aggregate(ms, facts, thr, small_n, cfg)
-        if sets[name]["unmapped_categories"]:
-            notes.append(f"{name}: category labels outside the department list (counted as 'unmapped:<label>', so the niche "
-                         f"concentration is understated until they are fixed): " + "; ".join(sets[name]["unmapped_categories"]))
+        sets[name] = _vs_aggregate(ms, facts, thr, small_n, run_dir)
+        if sets[name]["unresolved_labels"]:
+            notes.append(f"{name}: category labels not in the niche vocabulary (counted as 'unresolved:<label>', so the niche concentration is "
+                         f"understated until an agent maps or adds them: `niches propose`, `niches map`, `niches add`): " + "; ".join(sets[name]["unresolved_labels"]))
         if sets[name]["small_n"]:
             notes.append(f"{name}: {len(ms)} videos is below {small_n}; read every share as an indication, not a rate")
     contrast = {}
@@ -4136,6 +4105,89 @@ def _cd_paths(run):
 def _ev_paths(run):
     d = _vb_dir(run)
     return d / "evidence.json", d / "evidence.json.lock"
+
+
+# ---- the niche vocabulary (built by the agents from the data)
+
+def _raw_labels(run):
+    """Every raw niche label in use, with its source and count: the cards' Facts.category and the candidates' category."""
+    from collections import Counter
+    run_dir = Path(run)
+    labels = Counter()
+    media = run_dir / "10-media"
+    ids_v = [d.name for d in sorted(media.glob("V[0-9]*")) if d.is_dir()] if media.exists() else []
+    facts, _, _ = _vs_facts(run_dir, ids_v)
+    for f in facts.values():
+        if f.get("category") not in (None, "", []):
+            labels[("card", str(f["category"]).strip())] += 1
+    for c in _vb_load(_cd_paths(run)[0], {"items": []})["items"]:
+        if c.get("category"):
+            labels[("candidate", str(c["category"]).strip())] += 1
+    return labels
+
+
+def cmd_niches(a):
+    run = a.run
+    p = _vocab_path(run)
+    lk = p.with_suffix(".json.lock")
+    cfg = vb_cfg()
+    if a.action in ("add", "map"):
+        if a.action == "add" and not a.name:
+            fail("niches add needs --name", 2)
+        if a.action == "map" and not (a.label and a.to):
+            fail("niches map needs --label and --to", 2)
+        notes = []
+        with FileLock(lk):
+            vocab = _vocab_load(run)
+            idx = _vocab_index(vocab)
+            if a.action == "add":
+                name = re.sub(r"\s+", " ", a.name.strip())
+                if idx.get(_niche_key(name), name) != name:
+                    fail(f"{name!r} is already a label of niche {idx[_niche_key(name)]!r}", 2)
+                rec = vocab["niches"].setdefault(name, {"members": [], "created": now_iso()})
+                for m in [x.strip() for x in re.split(r"[;,]", a.members or "") if x.strip()]:
+                    if idx.get(_niche_key(m), name) != name:
+                        fail(f"{m!r} is already a label of niche {idx[_niche_key(m)]!r}", 2)
+                    if _niche_key(m) != _niche_key(name) and m not in rec["members"]:
+                        rec["members"].append(m)
+                for other in vocab["niches"]:
+                    if other != name and _similar(name, other, cfg["type_similarity"]):
+                        notes.append(f"niche {name!r} shares many words with {other!r}: if they are the same niche, merge them "
+                                     f"(`niches map --label ... --to ...`) so the limits cannot be split across two names")
+            else:
+                to = next((n for n in vocab["niches"] if _niche_key(n) == _niche_key(a.to)), None)
+                if not to:
+                    fail(f"unknown niche {a.to!r}; create it with `niches add` first", 2)
+                if idx.get(_niche_key(a.label), to) != to:
+                    fail(f"{a.label!r} is already a label of niche {idx[_niche_key(a.label)]!r}", 2)
+                if _niche_key(a.label) != _niche_key(to) and a.label not in vocab["niches"][to]["members"]:
+                    vocab["niches"][to]["members"].append(a.label)
+            vocab["updated"] = now_iso()
+            write_json(p, vocab)
+        out({"ok": True, "niches": {k: v["members"] for k, v in vocab["niches"].items()}, "notes": notes})
+    vocab = _vocab_load(run)
+    idx = _vocab_index(vocab)
+    labels = _raw_labels(run)
+    rows, unresolved = [], []
+    for (src, lab), n in sorted(labels.items(), key=lambda kv: (-kv[1], kv[0][1].lower())):
+        canon = idx.get(_niche_key(lab))
+        rows.append({"source": src, "label": lab, "count": n, "niche": canon})
+        if canon is None and lab not in unresolved:
+            unresolved.append(lab)
+    if a.action == "propose":
+        print("| label in use | where | count | resolves to |\n|---|---|---|---|")
+        for r in rows:
+            print(f"| {r['label']} | {r['source']} | {r['count']} | {r['niche'] or '-- not in the vocabulary --'} |")
+    else:
+        print("| niche | member labels | cards | candidates |\n|---|---|---|---|")
+        for name, rec in sorted(vocab["niches"].items()):
+            cards = sum(r["count"] for r in rows if r["niche"] == name and r["source"] == "card")
+            cands = sum(r["count"] for r in rows if r["niche"] == name and r["source"] == "candidate")
+            print(f"| {name} | {', '.join(rec.get('members', [])) or '-'} | {cards} | {cands} |")
+        if unresolved:
+            print("\nnot in the vocabulary yet: " + "; ".join(unresolved))
+    out({"ok": not unresolved, "niches": {k: v.get("members", []) for k, v in vocab["niches"].items()},
+         "labels_in_use": rows, "unresolved": unresolved})
 
 
 # ---- unit economics
@@ -4308,7 +4360,7 @@ def _cd_blind(c):
 
 
 def _cd_table(cands):
-    L = ["| id | product | department | type | origin | status | price | contrib % | compliance | fit | conf | red team |",
+    L = ["| id | product | niche | type | origin | status | price | contrib % | compliance | fit | conf | red team |",
          "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for c in cands:
         L.append(f"| {c['id']} | {c['name']} | {c.get('category') or ''} | {c.get('type') or ''} | {c.get('origin') or ''} | {c['status']} | "
@@ -4317,32 +4369,37 @@ def _cd_table(cands):
     return "\n".join(L)
 
 
-def _cd_pool(items, cfg, statuses=None, ids=None):
+def _cd_pool(items, cfg, run, statuses=None, ids=None):
     from collections import Counter
     live = [c for c in items if c["status"] != "eliminated" and (not statuses or c["status"] in statuses) and (not ids or c["id"] in ids)]
     n = len(live)
     cat, bad = Counter(), []
     for c in live:
-        d, why = _dept(c.get("category"), cfg)
+        d, why = _niche(c.get("category"), run)
         if d is None:
-            bad.append(f"{c['id']} ({c.get('category')!r}: {why})")
-            d = "unmapped:" + _norm(c.get("category"))
+            bad.append(f"{c['id']} ({str(c.get('category'))!r})")
+            d = "unresolved:" + _niche_key(c.get("category"))
         cat[d] += 1
     orig = Counter(c.get("origin") or "other" for c in live)
     need = min(cfg["min_categories_in_pool"], max(3, math.ceil(n / 2))) if n else 0
-    flags = []
+    flags, notes = [], []
     if bad:
-        flags.append("categories outside the department list: " + "; ".join(bad))
+        flags.append("niche labels not in the niche vocabulary: " + "; ".join(bad) + " (an agent maps or adds them: `niches map` / `niches add`)")
     if n and len(cat) < need:
-        flags.append(f"only {len(cat)} department(s) among {n} candidates; at least {need} are required "
-                     f"(viral-browser.md section 6): add candidates from other departments before researching")
+        flags.append(f"only {len(cat)} niche(s) among {n} candidates; at least {need} are required "
+                     f"(viral-browser.md section 6): add candidates from other niches before researching")
     for k, c in cat.most_common():
         if n and c / n > cfg["max_pool_share_per_category"] + 1e-9:
-            flags.append(f"department '{k}' is {c}/{n} of the set ({round(100 * c / n)}%), over the "
-                         f"{round(100 * cfg['max_pool_share_per_category'])}% cap: replace some with candidates from other departments")
+            flags.append(f"niche '{k}' is {c}/{n} of the set ({round(100 * c / n)}%), over the "
+                         f"{round(100 * cfg['max_pool_share_per_category'])}% cap: replace some with candidates from other niches")
     if n and orig.get("reference", 0) / n > 0.5:
         flags.append("more than half of the set comes from the references' own products: widen it by mechanism, problem scan and market feeds")
-    return {"n": n, "need_departments": need, "departments": dict(cat.most_common()), "origins": dict(orig), "flags": flags}
+    names = [k for k in cat if not k.startswith("unresolved:")]
+    for i, x in enumerate(names):
+        for y in names[i + 1:]:
+            if _similar(x, y, cfg["type_similarity"]):
+                notes.append(f"niches {x!r} and {y!r} share many words: confirm they are different niches, or merge them (`niches map`) so the limits cannot be split across two names")
+    return {"n": n, "need_niches": need, "niches": dict(cat.most_common()), "origins": dict(orig), "flags": flags, "notes": notes}
 
 
 def cmd_candidates(a):
@@ -4366,14 +4423,14 @@ def cmd_candidates(a):
             if sp_.get("origin") and sp_["origin"] not in CAND_ORIGINS:
                 errs.append(f"#{i}: origin must be one of {CAND_ORIGINS}")
             if sp_.get("category"):
-                d, why = _dept(sp_["category"], cfg)
+                d, why = _niche(sp_["category"], a.run)
                 if d is None:
-                    errs.append(f"#{i}: category {sp_['category']!r}: {why}")
+                    errs.append(f"#{i}: category {why}")
                 else:
                     sp_["category"] = d
             clean.append(sp_)
         if errs:
-            fail("; ".join(errs) + ". Departments: " + ", ".join(cfg["departments"]), 2)
+            fail("; ".join(errs), 2)
         ids = []
         with FileLock(lk):
             data = _vb_load(p, {"created": now_iso(), "items": []})
@@ -4388,7 +4445,7 @@ def cmd_candidates(a):
     data = _vb_load(p, {"items": []})
     items = data["items"]
     if act == "list":
-        rows = [c for c in items if (not a.status or c["status"] == a.status) and (not a.category or c.get("category") == (_dept(a.category, cfg)[0] or _norm(a.category)))]
+        rows = [c for c in items if (not a.status or c["status"] == a.status) and (not a.category or c.get("category") == (_niche(a.category, a.run)[0] or _norm(a.category)))]
         if a.blind:
             rows = [_cd_blind(c) for c in rows]
         if a.md:
@@ -4397,9 +4454,9 @@ def cmd_candidates(a):
     if act == "pool":
         st = [s for s in re.split(r"[,\s]+", a.statuses or "") if s]
         ids = [s for s in re.split(r"[,\s]+", a.ids or "") if s]
-        pool = _cd_pool(items, cfg, st or None, ids or None)
+        pool = _cd_pool(items, cfg, a.run, st or None, ids or None)
         if a.md:
-            print("| department | candidates |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in pool["departments"].items()))
+            print("| niche | candidates |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in pool["niches"].items()))
         out({"ok": not pool["flags"], **pool})
     if act == "shortlist":
         ids = [s for s in re.split(r"[,\s]+", a.ids or "") if s]
@@ -4411,7 +4468,7 @@ def cmd_candidates(a):
         gone = [c["id"] for c in items if c["id"] in ids and c["status"] == "eliminated"]
         if gone:
             fail(f"eliminated candidates cannot be shortlisted: {gone}", 2)
-        pool = _cd_pool(items, cfg, None, ids)
+        pool = _cd_pool(items, cfg, a.run, None, ids)
         if pool["flags"] and not a.force:
             out({"ok": False, "error": "the shortlist fails the pool balance; repair it, or pass --force --reason \"<why>\" (the reason goes in the bias log)", **pool}, 1)
         if a.force and pool["flags"] and not a.reason:
@@ -4438,9 +4495,9 @@ def cmd_candidates(a):
                 f"- {e['id']} [{e['lane']}] {e['claim']} ({e['grade']}, signal {e.get('signal') or 'n/a'}{'' if e['independent'] else ', not independent: not counted'}; {e['source']}; {e['retrieved']})" for e in ev))
             out({"ok": True, "id": a.id, "evidence_rows": len(ev)})
         if act == "set" and a.category:
-            d, why = _dept(a.category, cfg)
+            d, why = _niche(a.category, a.run)
             if d is None:
-                fail(f"category {a.category!r}: {why}. Departments: " + ", ".join(cfg["departments"]), 2)
+                fail(f"category {why}", 2)
             a.category = d
         evrows = {e["id"]: e for e in _vb_load(_ev_paths(a.run)[0], {"items": []})["items"]}
         with FileLock(lk):
@@ -4593,7 +4650,7 @@ def _cd_rank(a, items, cfg):
                 why.append(f"G6 confidence: {c.get('confidence') or 'unset'} < {gates['min_confidence_for_pick']}")
             if c.get("redteam") == "fails":
                 why.append("red team: fails")
-            dept = _dept(c.get("category"), cfg)[0] or ("unmapped:" + _norm(c.get("category")))
+            dept = _niche(c.get("category"), a.run)[0] or ("unresolved:" + _niche_key(c.get("category")))
             out_rows.append({"id": c["id"], "name": c["name"], "category": dept, "type": c.get("type"), "raw": round(raw, 1),
                              "total": round(tot, 1), "nofit": round(nofit, 1), "capped": capped, "contribution_pct": cp,
                              "indep_rows": len(good("demand")) + len(good("commercial")) + len(good("competition")),
@@ -4613,7 +4670,7 @@ def _cd_rank(a, items, cfg):
             if cats[r["category"]] >= cfg["max_picks_per_category"]:
                 skipped[r["id"]] = "category cap"
                 continue
-            if any(_similar(r["type"] or r["name"], x["type"] or x["name"], cfg["type_similarity"]) for x in chosen):
+            if any(_norm(r["type"] or r["name"]) == _norm(x["type"] or x["name"]) for x in chosen):
                 skipped[r["id"]] = "same product type as a pick"
                 continue
             chosen.append(r)
@@ -4623,7 +4680,7 @@ def _cd_rank(a, items, cfg):
     elig = [r for r in rows if not r["gate_failures"]]
     if a.provisional:
         _, chosen, _ = pick_from(elig, "total", cfg["picks"] + cfg["redteam_extra"])
-        print("| # | id | product | department | score | raw | red team |\n|---|---|---|---|---|---|---|")
+        print("| # | id | product | niche | score | raw | red team |\n|---|---|---|---|---|---|---|")
         for i, r in enumerate(chosen, 1):
             print(f"| {i} | {r['id']} | {r['name']} | {r['category']} | {r['total']} | {r['raw']} | {r['redteam'] or 'not yet'} |")
         inel = sorted([r for r in rows if r["gate_failures"]], key=lambda r: -r["total"])
@@ -4656,7 +4713,14 @@ def _cd_rank(a, items, cfg):
         warn.append("the picks differ when reference-derived evidence is allowed to count: the independence rules changed the outcome; say so in the bias log")
     if ablation_fit:
         warn.append("the picks differ when the fit criterion (derived from the references) is removed: fit drove the outcome; say so in the bias log")
-    pool_flags = _cd_pool(items, cfg, ("researching", "researched", "picked", "runner-up", "watch"))["flags"]
+    _pool = _cd_pool(items, cfg, a.run, ("researching", "researched", "picked", "runner-up", "watch"))
+    pool_flags = _pool["flags"]
+    for i_, x_ in enumerate(picks):
+        for y_ in picks[i_ + 1:]:
+            if _similar(x_["type"] or x_["name"], y_["type"] or y_["name"], cfg["type_similarity"]):
+                warn.append(f"picks {x_['id']} and {y_['id']} have product types that share many words: confirm they are different kinds of product, "
+                            f"or give them the same `type` so that the one-per-type rule applies")
+    warn += _pool["notes"]
     refused = bool(a.apply and blockers and not a.force)
     res = {"ok": not refused, "picks": picks, "runner_ups": runners, "ineligible": ineligible, "warnings": warn, "blockers": blockers,
            "pool_flags": pool_flags, "ablation_reference_evidence_changed": ablation_ref, "ablation_no_fit_changed": ablation_fit,
@@ -4664,11 +4728,11 @@ def _cd_rank(a, items, cfg):
     L = [f"# Ranking ({now_iso()})", "", "Weights: " + ", ".join(f"{k} {v}" for k, v in rubric.items()),
          f"Independent-evidence cap: a criterion in {sorted(ind)} without a positive independent grade A/B row (C for economics) is capped at {cap}; "
          f"negative rows that match or outnumber the positive ones cap a 4 or 5 at {ccap}.", "",
-         "## Picks", "", "| # | id | product | department | score | raw | no-fit | capped criteria | contribution % | conf | red team | dominant niche |",
+         "## Picks", "", "| # | id | product | niche | score | raw | no-fit | capped criteria | contribution % | conf | red team | dominant niche |",
          "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for i, r in enumerate(picks, 1):
         L.append(f"| {i} | {r['id']} | {r['name']} | {r['category']} | {r['total']} | {r['raw']} | {r['nofit']} | {', '.join(r['capped']) or '-'} | {r['contribution_pct']} | {r['confidence']} | {r['redteam'] or '-'} | {'yes' if r['dominant_niche'] else 'no'} |")
-    L += ["", "## Runner-ups", "", "| id | product | department | score | why not a pick |", "|---|---|---|---|---|"]
+    L += ["", "## Runner-ups", "", "| id | product | niche | score | why not a pick |", "|---|---|---|---|---|"]
     for r in runners:
         L.append(f"| {r['id']} | {r['name']} | {r['category']} | {r['total']} | {r['why_not_a_pick']} |")
     L += ["", "## Not eligible", "", "| id | product | score | gate failures |", "|---|---|---|---|"]
@@ -4954,15 +5018,22 @@ def main():
     p.add_argument("--run", required=True)
     p.add_argument("--set", dest="vs_set", choices=["references", "baseline", "both"], default="both")
     p.add_argument("--niche-threshold", type=float,
-                   help="share of one department that counts as dominant (default viral_browser.niche_dominance_threshold)")
+                   help="share of one niche that counts as dominant (default viral_browser.niche_dominance_threshold)")
     p.set_defaults(fn=cmd_viral_stats)
+
+    p = sp.add_parser("niches", help="Viral-Browser: the run's niche vocabulary, built by the agents from the data (add | map | list | propose)")
+    p.add_argument("action", choices=["add", "map", "list", "propose"]); p.add_argument("--run", required=True)
+    p.add_argument("--name", help="add: the canonical niche name an agent chose from the labels in the data")
+    p.add_argument("--members", help="add: labels that mean the same niche, comma or semicolon separated")
+    p.add_argument("--label", help="map: a label found in the data"); p.add_argument("--to", help="map: the canonical niche it belongs to")
+    p.set_defaults(fn=cmd_niches)
 
     p = sp.add_parser("candidates", help="Viral-Browser: candidate-product ledger (add | list | set | pool | shortlist | score | rank | show)")
     p.add_argument("action", choices=["add", "list", "set", "pool", "shortlist", "score", "rank", "show"])
     p.add_argument("--run", required=True)
     p.add_argument("--id"); p.add_argument("--ids", help="shortlist / pool: comma list of candidate ids")
     p.add_argument("--name"); p.add_argument("--definition")
-    p.add_argument("--category", help="a department (config viral_browser.departments); the niche-bias controls compare departments")
+    p.add_argument("--category", help="the product's niche: a label that resolves through the run's niche vocabulary (`niches add` / `niches map`)")
     p.add_argument("--type", dest="ptype", help="product type; no two picks share one")
     p.add_argument("--origin", choices=CAND_ORIGINS); p.add_argument("--origin-note")
     p.add_argument("--mechanisms", help="mechanism ids from mechanism-map.md, e.g. M1,M3")

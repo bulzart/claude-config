@@ -22,7 +22,7 @@ recurs after a logged change means that change failed: revise it, do not repeat 
 
 ## 2026-10-11 · review of the Viral-Browser build, and the Create blend
 - **Independent review** (a fresh agent, files only, toolkit run on a scratch copy) found, and this pass fixed: niche controls that
-  compared free-text labels (now a closed department list, `candidates add` rejects what it cannot place, the shortlist is checked by
+  compared free-text labels (a first fix hardcoded a department list into the scripts; the user rejected that: no niche or category name may live in a script, so the fix is now a niche vocabulary the agents build from the data, `T niches`, which the scripts only enforce; `candidates add` refuses a label no agent has placed, the shortlist is checked by
   the command that starts research); gates that tested that evidence rows exist but not what they say (evidence now has a signal and an
   independence flag, an independent grade A/B row needs a URL, distinct sources are counted, key criteria have floors after the cap, G1
   needs an economics row written by `econ --cand`, G2 needs a positive compliance row, refs are validated); a red team that missed the
@@ -38,6 +38,6 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   understood (the craft sheet, the audience and trend read) and the product understood (a product insight sheet written from the supplied
   assets) are combined to design the most engaging video; families are evidence and ingredients, never a menu; hybrid groups are allowed;
   every seed names its blend and passes a blend test and a template-lock test (`creative-direction.md` section 5.0b).
-- **Hypotheses to test next:** (1) the department list covers real reference folders without many `other` or `non-product` labels;
+- **Hypotheses to test next:** (1) the agents' niche vocabulary stays consistent on real reference folders (watch the look-alike-niche warnings and the unresolved labels `viral-stats` reports);
   (2) the scorer's blind scores differ from what the main session would have given (compare on the first run); (3) the blend test rejects
   re-skinned reference templates without rejecting good ideas; (4) one backfill wave is enough to reach three picks at standard depth.

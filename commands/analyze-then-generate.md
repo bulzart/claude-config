@@ -374,13 +374,13 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
       pipeline adds no exclusion of its own.
 24. **Niche-bias control: the references' product niche must not decide the answer**
     (`viral-browser.md` §5). Candidates come from the mechanism, not from "more of what the videos
-    show"; the references' own products are one source among five; niches are compared as
-    **departments** of a closed list, never as free text; the long list must span at least six
-    departments with none above 40 %, and the **shortlist is re-checked by the command that starts
-    research** (`T candidates shortlist`); research and scoring are **origin-blind** (a fresh scoring
+    show"; the references' own products are one source among five; niches are compared through a
+    **vocabulary the agents build from the data** (`T niches`; no script lists or knows any niche),
+    never as free text; the long list must span at least six niches with none above 40 %, and the
+    **shortlist is re-checked by the command that starts research** (`T candidates shortlist`); research and scoring are **origin-blind** (a fresh scoring
     agent scores, never this session); evidence rows carry a direction and an independence flag, a
     criterion without a positive independent grade A/B row is capped at 2, and the key criteria have
-    floors; at most two picks share a department and none share a product type; every pick has a
+    floors; at most two picks share a niche and none share a product type; every pick has a
     red-team verdict, and every pick from the dominant niche a written defence, **before** the ranking
     is applied; the run reports whether the picks change when reference-derived evidence or the fit
     criterion is removed. A data-backed product from the references' own niche stays eligible and may
@@ -749,10 +749,14 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     mechanisms from several families with what the product uniquely brings, and a format the
     references never showed when the mechanism logic and the product support it
     (`creative-direction.md` §5.0b).
-- Ask with AskUserQuestion (header "Styles", `multiSelect: true`), with the up-to-4 best groups.
-  The user picks **one style or a mix**. "Other" accepts numbers or quantities ("2×G1, 1×G4").
-- Without exact quantities, spread the videos across the chosen groups first, then by fit. Show the
-  allocation in one line and store it in `directions`.
+- Ask with AskUserQuestion (header "Styles", `multiSelect: true`). The first option is **Agent's
+  choice (Recommended)**: the agents design the blends with the highest engagement potential for this
+  product and audience, from any family, hybrid or new format (`creative-direction.md` §5.0b); the
+  other options are up to 3 of the best groups. The user picks **Agent's choice, one style or a
+  mix**. "Other" accepts numbers or quantities ("2×G1, 1×G4").
+- Without exact quantities, spread the videos across the chosen groups first, then by fit; under
+  Agent's choice every video is its own best blend. Show the allocation in one line and store it in
+  `directions`.
 - **The N videos are varieties.** Each is its own new concept: a different scenario, hook, setting
   or character beat.
   - **Transfer, not repetition** (`creative-direction.md` §5.0): every concept takes from the
@@ -1030,9 +1034,9 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
 #### V2. Viral cards
 - One card per reference in `20-analysis/cards/<V>.md` and a light card per baseline video, as
   `viral-browser.md` §3: the product layer and the mechanism layer kept apart, the one-line `Facts:`
-  JSON with `category` set to **one department** of `config.json → viral_browser.departments`
-  (the analysis agents' prompt carries the list), commerce signal versus attention-only, the ranked
-  drivers of spread, the one-sentence mechanism, the transplant needs.
+  JSON with `category` set to a short label for the niche of the product's main use (taken from the
+  material; no script lists niches), commerce signal versus attention-only, the ranked drivers of
+  spread, the one-sentence mechanism, the transplant needs.
 - Sound: for each reference run `T audio-profile --audio "<the original video>" --out
   10-media/<V>/audio-profile.json --transcript 10-media/<V>/transcript.json --cuts
   10-media/<V>/cuts.json` (the original video is the input here; nothing is written to the references
@@ -1040,12 +1044,16 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
 - Scale and delegation as protocol §7: up to 6 videos in this session; more, 1 analysis agent (2 over
   about 15 videos) with disjoint lists and the prompt of `viral-browser.md` §13.1.
 - Merge the labels into `20-analysis/labels.md` and rewrite the Facts lines so one meaning has one
-  label. `next_step=synthesis`.
+  label. Then build the **niche vocabulary** yourself from the data: `T niches propose --run RUN`
+  lists the category labels in use, you decide which are the same niche, and you record the decision
+  with `T niches add --name "<niche>" --members "<label>,<label>"` and `T niches map --label … --to …`
+  (`viral-browser.md` §3.2, §5 item 3). `next_step=synthesis`.
 
 #### V3. Corpus profile and synthesis
 - `T viral-stats --run RUN` (`--set both` with a baseline): the measured length, hook, pacing,
-  speech, text, music and loop profile, and the niche-concentration index by department. Fix every
-  category label it lists as outside the department list on its card, then run it again.
+  speech, text, music and loop profile, and the niche-concentration index. It resolves labels only
+  through the vocabulary you recorded: place every label it reports as not in the vocabulary
+  (`T niches add` / `map`), then run it again.
 - Write, as `viral-browser.md` §4: `mechanism-map.md` (mechanisms `M1…`, k of n, niche
   independence, confounds), the hook, length and pacing profile, the engagement style (one template
   per family plus the composite), the audience and mentality model, `viral-essence.md` (the essence,
@@ -1061,14 +1069,15 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
 #### V4. Candidates
 - Build the long list of 12–20 specific candidates from the five sources (`viral-browser.md` §6),
   with `T candidates add` (or `--from-json`). A candidate is a product a supplier search returns, not a
-  category; its name, definition, **department** (as `--category`), type and origin are all required,
-  and the name and definition never mention the references. Screen with stated reasons.
-- `T candidates pool --run RUN` on the long list (at least 6 departments, none above 40 %, at most half
+  category; its name, definition, **niche** (as `--category`: a label from the vocabulary, or a new
+  niche you decide and record with `T niches add`), type and origin are all required, and the name and
+  definition never mention the references. Screen with stated reasons.
+- `T candidates pool --run RUN` on the long list (at least 6 niches, none above 40 %, at most half
   from the references' own products); repair it. Then choose the shortlist (6 / 9 / 12 by depth) and
   start research with `T candidates shortlist --run RUN --ids C01,C02,…`: it re-checks the balance on
   exactly that set, refuses a failing one (`--force --reason "<why>"` is logged for the bias log) and
   marks the candidates `researching`. Nothing can be researched before it.
-- Show one table: candidate, department, origin, why it is in the pool. `next_step=research`.
+- Show one table: candidate, niche, origin, why it is in the pool. `next_step=research`.
 
 #### V5. Research (agents)
 - Spawn up to 3 research agents (Agent tool, `subagent_type: general-purpose`,
