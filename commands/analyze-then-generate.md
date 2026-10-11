@@ -77,10 +77,11 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
      - the contract and prompt are in `reference/production-agents.md`;
      - a queued video starts when an agent finishes.
    - **Viral-Browser agents** (no production agents, nothing is generated): the analysis agents
-     above for the viral cards (≤ 2, disjoint lists); up to `viral_browser.max_research_agents` (3)
-     **research agents** (web only, background, disjoint candidate lists), one fresh, blind
-     **scoring agent** and one **red-team agent**. None calls Higgsfield or CapCut
-     (`reference/viral-browser.md` §7, §8.2, §13).
+     above for the viral cards (≤ 2, disjoint lists); one fresh **niche-audit agent** (before the
+     shortlist); up to `viral_browser.max_research_agents` (3) **research agents** (web only,
+     background, disjoint candidate lists), one fresh, blind **scoring agent** and one
+     **red-team agent**. None calls Higgsfield or CapCut (`reference/viral-browser.md` §5, §7,
+     §8.2, §13).
    - Agents never overlap, never ask questions (they report blockers and stop), and never spawn
      agents. Edit Mode uses no production agents.
 3. **Generation lanes.** Every video is a lane with **one job in flight at a time**:
@@ -376,9 +377,12 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     (`viral-browser.md` §5). Candidates come from the mechanism, not from "more of what the videos
     show"; the references' own products are one source among five; niches are compared through a
     **vocabulary the agents build from the data** (`T niches`; no script lists or knows any niche),
-    never as free text; the long list must span at least six niches with none above 40 %, and the
-    **shortlist is re-checked by the command that starts research** (`T candidates shortlist`); research and scoring are **origin-blind** (a fresh scoring
-    agent scores, never this session); evidence rows carry a direction and an independence flag, a
+    never as free text, and a fresh **niche-audit agent** checks it for one niche under several names
+    (a merge, a recorded "distinct" decision or a shared-word flag is how a split is seen); the long
+    list must span at least six niches with none above 40 %, and the
+    **shortlist is re-checked by the command that starts research** (`T candidates shortlist`, which
+    also refuses an unaudited vocabulary and a word shared across niches); research and scoring are
+    **origin-blind** (a fresh scoring agent scores, never this session); evidence rows carry a direction and an independence flag, a
     criterion without a positive independent grade A/B row is capped at 2, and the key criteria have
     floors; at most two picks share a niche and none share a product type; every pick has a
     red-team verdict, and every pick from the dominant niche a written defence, **before** the ranking
@@ -637,9 +641,10 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     `creative-direction.md` §5.0b) into `30-assets/product-insights.md`: what it is and what it does
     for someone, who and when, what reads on camera (colour, texture, motion, the sound it makes, the
     reveal), what it can honestly show and how fast, the proof and claims the documents allow,
-    the emotion it carries, the objections and limits, the occasions, and **three to six product
-    truths** a concept can be built on. From the supplied assets and documents only; a gap is
-    "not supplied". Create's ideation reads it beside the craft sheet (A4, A6).
+    the emotion it carries, the objections and limits, the occasions, and **up to six product
+    truths** a concept can be built on (as many as the supplied assets and documents support). From
+    the supplied assets and documents only; a gap is "not supplied" and is never filled by
+    invention. Create's ideation reads it beside the craft sheet (A4, A6).
   - **Characters:** one entry per distinct person, mascot or character, with its best face and full
     views.
   - **Other assets:** logos, palettes, UI screenshots, environments, audio. Supplied fonts are
@@ -755,8 +760,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   other options are up to 3 of the best groups. The user picks **Agent's choice, one style or a
   mix**. "Other" accepts numbers or quantities ("2×G1, 1×G4").
 - Without exact quantities, spread the videos across the chosen groups first, then by fit; under
-  Agent's choice every video is its own best blend. Show the allocation in one line and store it in
-  `directions`.
+  Agent's choice every video is its own best blend. A mixed answer (Agent's choice together with
+  named groups) and no quantities gives the named groups half of the videos (rounded up, spread
+  across them first) and Agent's choice the rest; quantities, when given ("2×G1, the rest Agent's
+  choice"), always win. Show the allocation in one line and store it in `directions`.
 - **The N videos are varieties.** Each is its own new concept: a different scenario, hook, setting
   or character beat.
   - **Transfer, not repetition** (`creative-direction.md` §5.0): every concept takes from the
@@ -782,21 +789,25 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     winner's share line and job, and run the sharpness gate (§6). Save them to
     `20-analysis/concepts.md` and show one line per video (seed, score, the reason it won). The
     user may swap a pick by replying; nothing is asked.
-  - Each one uses the mechanisms that made the references go viral (hook logic and timing,
-    structure, pacing, humour, payoff), in whatever mix the product's strengths and the audience
-    call for; it is not a re-run of one family's format.
+  - Each one borrows the mechanisms that made the references go viral (hook logic and timing, a
+    structure move, a pacing device, a humour or payoff device) from whichever families show them,
+    in whatever mix the product's strengths and the audience call for; its structure, pacing and
+    payoff are designed for the blend, never copied from one family's profile or re-run from one
+    family's format.
   - The client's product is blended into the concept from the first idea, not added at the end (its
     most suitable use, `generation-system.md` §4b.0), the way the house approach does it when
     examples exist.
   - No two videos repeat the same concept, and none repeats a reference's subject: the copy test
-    runs against the family's references and the run's other winners.
+    runs against every reference the blend borrows from and the run's other winners.
   - **Guardrails as invariants** (`brand-guardrails.md` §4): the count limit is a ledger
     invariant, competitor objects never appear, only supplied characters appear, the wording
     rules shape the text plan, the presentation rules shape the anchor and the use beats, and a
     seed that a content or context rule hits scores 0 on brand safety.
 - **Create never uses a reference as input.**
   - No reference video, frame or clip is uploaded, edited or passed to a generation.
-  - The analysis informs only the concept, structure, pacing, camera, product use and text role.
+  - The analysis informs only the borrowed mechanisms and the craft (hook logic, structure moves,
+    pacing devices, camera behaviour, text role); the concept and the product's use come from the
+    blend with the product insight sheet.
   - A meme the style calls for may still be placed in CapCut: an insert cut from a reference, or a
     supplied file.
 
@@ -1053,7 +1064,9 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
 - `T viral-stats --run RUN` (`--set both` with a baseline): the measured length, hook, pacing,
   speech, text, music and loop profile, and the niche-concentration index. It resolves labels only
   through the vocabulary you recorded: place every label it reports as not in the vocabulary
-  (`T niches add` / `map`), then run it again.
+  (`T niches add` / `map`), then run it again. It also flags a word shared by the labels of different
+  niches: merge them (`T niches merge --from … --to … --reason …`) or record the word as not a niche
+  marker (`T niches distinct --word … --reason …`), then run it again.
 - Write, as `viral-browser.md` §4: `mechanism-map.md` (mechanisms `M1…`, k of n, niche
   independence, confounds), the hook, length and pacing profile, the engagement style (one template
   per family plus the composite), the audience and mentality model, `viral-essence.md` (the essence,
@@ -1073,10 +1086,16 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   niche you decide and record with `T niches add`), type and origin are all required, and the name and
   definition never mention the references. Screen with stated reasons.
 - `T candidates pool --run RUN` on the long list (at least 6 niches, none above 40 %, at most half
-  from the references' own products); repair it. Then choose the shortlist (6 / 9 / 12 by depth) and
-  start research with `T candidates shortlist --run RUN --ids C01,C02,…`: it re-checks the balance on
-  exactly that set, refuses a failing one (`--force --reason "<why>"` is logged for the bias log) and
-  marks the candidates `researching`. Nothing can be researched before it.
+  from the references' own products); repair it. Then spawn the **niche-audit agent**
+  (`viral-browser.md` §13.5; fresh context, it changes nothing): apply its merges (`T niches merge`),
+  record its distinct pairs and non-marker words (`T niches distinct`), run `T viral-stats` again when a
+  merge touched a card label, and record the audit (`T niches audit --by … --result …`). Then choose the
+  shortlist (6 / 9 / 12 by depth) and start research with
+  `T candidates shortlist --run RUN --ids C01,C02,…`: it re-checks the balance on exactly that set,
+  refuses a failing one, a shared-word flag or an unaudited vocabulary (`--force --reason "<why>"` is
+  logged for the bias log) and marks the candidates `researching`. Nothing can be researched before
+  it, and no status is typed by hand: the toolkit sets `researching`, `researched`, `picked` and
+  `runner-up`.
 - Show one table: candidate, niche, origin, why it is in the pool. `next_step=research`.
 
 #### V5. Research (agents)
@@ -1084,10 +1103,12 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   `run_in_background: true`) with disjoint candidate lists and the prompt of `viral-browser.md`
   §13.2 filled in (market, currency, band, VAT convention, selling model, sales channel, importer
   country, capital limit, exclusions, depth, today's date). They register evidence (`T evidence add`
-  with `--signal` and `--independent yes`), run `T econ … --cand`, write `30-research/<C>.md`,
-  origin-blind, and queue unreadable pages in their own `queue-<C>.md`.
-- When they have reported, check that every shortlisted candidate has a dossier, evidence rows and an
-  economics row; a missing one is researched once by a new agent. A candidate an agent reports as
+  with `--signal` and `--independent yes`; each sourced economics input is its own grade A or B row
+  with a URL), run `T econ … --market … --cand` (once per market for a global or multi-country
+  market; the lowest contribution counts), write `30-research/<C>.md`, origin-blind, and queue
+  unreadable pages in their own `queue-<C>.md`.
+- When they have reported, check that every shortlisted candidate has a dossier, evidence rows, an
+  economics row and a sourced input row behind it; a missing one is researched once by a new agent. A candidate an agent reports as
   settled by a gate is eliminated here (`T candidates set --id C## --status eliminated --by "<gate>"`).
   If an agent reports a denied tool (`WebSearch`, `WebFetch`, `Bash`), research that candidate in this
   session within the same budget instead of retrying the agent.
@@ -1112,11 +1133,12 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   (`T candidates set --id C## --redteam survives|weakened|fails`), eliminate the ones that fail, have a
   fresh scoring agent revisit only the criteria the red team names, and run `--provisional` again until
   every target has a verdict (two rounds at most).
-- `T candidates rank --run RUN`: read the picks, the blockers and both ablation results; write the
-  defence note of every pick from the dominant niche (`T candidates set --id C## --defence`; a pick
-  with no honest defence is eliminated and the ranking run again); complete `bias-log.md`; then
-  `T candidates rank --run RUN --apply`, which refuses while a pick lacks a red-team verdict or a
-  defence (`--force --reason` is logged).
+- `T candidates rank --run RUN`: read the picks, the blockers (a missing verdict or defence, statistics
+  older than the vocabulary, a word shared across niches), the tie warnings and both ablation results;
+  write the defence note of every pick from the dominant niche (`T candidates set --id C## --defence`,
+  an argument of at least 30 characters; a pick with no honest defence is eliminated and the ranking
+  run again); complete `bias-log.md`; then `T candidates rank --run RUN --apply`, which refuses on any
+  of those blockers (`--force` needs `--reason`, and both are logged).
 - Show the ranking table in chat: the picks, the runner-ups, the gates that removed the others, any
   warning. If fewer than 3 pass, run the backfill (V5) first; if still fewer, say which gate removed
   each and what could be relaxed (§8.6). `next_step=blueprints`.
@@ -1323,7 +1345,8 @@ files as video K".
       --distance d --lens f` prints it and a table over the usual shot distances), the one named
       neighbour at the same depth with the ratio in words, the size ladder when several products
       show, and the size it keeps across motion, exits and cuts;
-    - the per-second time budget from the family profile;
+    - the per-second time budget (Recreate: from the source's timeline; Create: from the beats of
+      the planned blend and the locked model's duration range);
     - roles and assets;
     - the scene;
     - Edit Mode and Recreate: the **source action script** with its keep / change marks and sync
@@ -1655,8 +1678,8 @@ files as video K".
     concrete thing.
   - **Creative check** (`creative-direction.md` §8), as notes: the hook within the first second,
     the payoff where planned, the product recognisable at the moments of attention without reading
-    as an ad, the planned emotion arc, the loop; Create: the copy test against the family's
-    references and the run's other videos (craft shared, subject not). A missing hook or payoff that
+    as an ad, the planned emotion arc, the loop; Create: the copy test against the references
+    the blend borrowed from and the run's other videos (craft shared, subject not). A missing hook or payoff that
     the plan required is a narrative-gate failure and a regenerate reason; everything else is a
     note, never a question.
   - **Action sync** (item 19; Edit Mode and Recreate): the X8 sync verdict and sheet. Every sync
@@ -1854,8 +1877,9 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
 
 - Never use or create a Claude Code Workflow.
 - Never spawn more than 2 analysis agents, more than 5 production agents at once, or a production
-  agent in Edit Mode; in Viral-Browser never more than 3 research agents at once, plus one scoring
-  agent and one red-team agent, and no production agent. Never give agents overlapping work.
+  agent in Edit Mode; in Viral-Browser never more than 3 research agents at once, plus one niche-audit
+  agent, one scoring agent and one red-team agent, and no production agent. Never give agents
+  overlapping work.
 - Never read model guides other than the locked one.
 - Never re-ask for, switch, or suggest switching the model after it was picked at the start. Only an
   explicit user request changes it.
@@ -1995,6 +2019,13 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   references' own products; never put a candidate's origin in a research dossier, a research prompt or
   a scoring pass; never count reference-derived evidence as independent; never skip the defence note
   of a dominant-niche pick; and never exclude the dominant niche for being dominant.
+- Viral-Browser: never type a niche, category, product or brand name into a script or a config (the
+  agents decide them from the data and record them with `T niches`); never start research on an
+  unaudited niche vocabulary or on a shortlist with a shared-word flag; never leave a possibly split
+  niche without a merge or a recorded "distinct" decision; never score in this session (the fresh
+  scoring agent scores); never type a candidate's status or contribution by hand (the toolkit sets them);
+  never apply a ranking before the red-team verdicts and the defence notes exist, on statistics older
+  than the vocabulary, or with `--force` and no `--reason`.
 - Viral-Browser: never state a number without its source and retrieval date or its method; never score
   "unknown" as 3; never count a grade D row; never invent a URL, a quote or a figure; never present an
   estimate as a measurement; never credit a product with what the creator, a trend or paid reach

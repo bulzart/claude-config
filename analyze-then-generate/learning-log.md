@@ -41,3 +41,26 @@ recurs after a logged change means that change failed: revise it, do not repeat 
 - **Hypotheses to test next:** (1) the agents' niche vocabulary stays consistent on real reference folders (watch the look-alike-niche warnings and the unresolved labels `viral-stats` reports);
   (2) the scorer's blind scores differ from what the main session would have given (compare on the first run); (3) the blend test rejects
   re-skinned reference templates without rejecting good ideas; (4) one backfill wave is enough to reach three picks at standard depth.
+
+## 2026-10-11 · second independent review (D1-D9) and the rest of the Create blend
+- **Second review** (the same reviewer; files, and a scratch run of the toolkit) found, and this pass fixed: **D1** the dominant-niche check
+  compared strings by case and trusted statistics computed before a vocabulary change (it now compares normalised keys; `viral-stats` records
+  how every label resolved and `rank` blocks on stale statistics or unplaced labels); **D2** a careless niche split slipped past the pool
+  balance and the caps (new: `niches merge`, `niches distinct` for pairs and for words that are not niche markers, a shared-word check that
+  works from the data alone, no word list, in the pool, the shortlist, `rank` and `viral-stats`, and a fresh **niche-audit agent** whose
+  recorded audit the shortlist requires: `viral-browser.md` §13.5); **D3** statuses and the contribution could be typed in
+  (`candidates set --status researching` skipped the shortlist, `--contribution-pct` skipped `econ`): both are closed, and `score` and
+  `econ --cand` refuse a candidate that is not in research; **D4** a Global market kept only the last `econ` run (now one result and one
+  evidence row per market, the lowest contribution counts); **D5** label keys were ASCII-only (now case-folded Unicode); **D6** a grade C
+  calculation could stand alone for economics (the criterion and G1 now need a grade A or B sourced input row too); **D7** ties went to the
+  order the candidates were added (now independent rows, contribution, then name, with a warning at the pick boundary); **D8** `rank --force`
+  needed no reason, a defence could be one word, a returns assumption of 0 passed silently and an unreadable ledger was read as empty and then
+  overwritten (now: a reason, 30 characters, a warning, and a hard stop); **D9** the documentation lagged the toolkit.
+- **Create blend, what was left:** the structure, length, payoff timing, pacing QC and copy test still pointed at "the family profile" or "the
+  family's references", which pulled Create back toward one family's template. They now follow the mechanisms the blend borrows (Recreate keeps
+  the source's family profile); the ninth copy-test question (the template swap) is in the list; the copy test runs against every reference the
+  blend borrows from; the product truths are "up to six, as many as the supplied assets support" and a gap is "not supplied"; a mixed
+  "Agent's choice plus named groups" answer without quantities gives the groups half of the videos (rounded up).
+- **Hypotheses to test next:** (1) the audit agent finds real synonyms on real reference folders without over-merging (watch merges that
+  push the pool below six niches); (2) the shared-word flag is not too noisy (count how often `niches distinct --word` is needed);
+  (3) the per-market minimum matches the margins the user sees on a real first order.

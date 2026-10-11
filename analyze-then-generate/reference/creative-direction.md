@@ -17,7 +17,7 @@ The pipeline acts, at once, as:
 | **Mass-cognition engineer** | Models how a broad audience perceives in the first second and feels across the clip: instant recognition, cognitive ease, the curiosity gap, the pattern interrupt, relatability and identity, the emotion arc, the mechanics of a laugh, the "send this to…" reflex | the audience model (§3), the hook and payoff craft (§7), the sharpness gate (§6) |
 | **Trend analyst** | Reads the references as a trend corpus: formats, caption grammar, sounds, inserts, pacing; tells structural mechanisms (they outlive the trend) from surface elements (the meme of the week); judges freshness; checks a trend only when the decision depends on it | the trend read (§4) |
 | **Creative director** | Generates many ideas, scores them, picks the sharpest, kills the bland, keeps every video distinct, and chooses the best approach for the goal. Takes from a reference *how* it was made, never *what* it shows: a Create video is a new subject and a new idea built with the collected craft | the craft sheet and the copy test (§5.0), ideation and selection (§5.1), the best approach (§5.2) |
-| **Performance editor** | Lands the hook in the first second, the payoff on the family's beat, the loop at the end, the text as a hook, the sound as a lift | the time budget (`generation-system.md` §2.2), the text and sound plans, the creative QC (§8) |
+| **Performance editor** | Lands the hook in the first second, the payoff on the planned beat, the loop at the end, the text as a hook, the sound as a lift | the time budget (`generation-system.md` §2.2), the text and sound plans, the creative QC (§8) |
 
 In **Viral-Browser** the team widens to a growth strategist, a direct-response seller, a statistician and a
 red-team sceptic (`viral-browser.md` §1); §3 (the audience model) and §4 (the trend read) apply to it unchanged, and
@@ -58,7 +58,7 @@ recognises instantly. Then design every video for how people actually perceive a
   he doing that); the payoff closes it. The gap is sized to the length: a 6 s clip opens and closes
   it fast; a 25 s story escalates two or three times.
 - **Pattern interrupt.** A break in what the viewer expects (a sudden cut, an object entering, a
-  freeze, a reaction, an insert) resets attention. Use the family's interrupts at the family's
+  freeze, a reaction, an insert) resets attention. Use the interrupts of the mechanisms the video borrows (Recreate: the source's family), at their
   rhythm, never random ones (`generation-system.md` §5, "transitions").
 - **Relatability and identity.** "That's me" and "that's my friend" are the two strongest share
   triggers. Specific beats general: the exact way someone checks the time at a boring desk beats
@@ -122,7 +122,7 @@ one block per family and per reference that matters:
 
 | layer | what it holds | Create |
 |---|---|---|
-| **Craft (how)** | **style:** look, palette and grade, lens and framing habits, light, era, performance register (deadpan, over-acted, silent), stylised or real; **properties:** length, pacing curve, cut rhythm, first-cut and speech-onset timing, caption grammar and text role, sound role, camera behaviour, aspect and shot sizes; **approach:** format name, hook *type* (not the hook), structure shape, escalation and reveal logic, payoff timing, interaction pattern, laugh mechanism, emotion arc, loop logic, how the viewer is addressed; **crafting:** one take or cuts, POV or observed, where text sits and when, when and how the product reads (swap, contents, placement; in hand, on a surface, the mark's moments), how the ending is built; **why it works:** the cognitive trigger behind the hook, the turn and the share | collected and reused freely |
+| **Craft (how)** | **style:** look, palette and grade, lens and framing habits, light, era, performance register (deadpan, over-acted, silent), stylised or real; **properties:** length, pacing curve, cut rhythm, first-cut and speech-onset timing, caption grammar and text role, sound role, camera behaviour, aspect and shot sizes; **approach:** format name, hook *type* (not the hook), structure shape, escalation and reveal logic, payoff timing, interaction pattern, laugh mechanism, emotion arc, loop logic, how the viewer is addressed; **crafting:** one take or cuts, POV or observed, where text sits and when, when and how the product reads (swap, contents, placement; in hand, on a surface, the mark's moments), how the ending is built; **why it works:** the cognitive trigger behind the hook, the turn and the share | collected as **ingredients**: one mechanism at a time, re-expressed for the product; never lifted as one whole template (§5.0b rules 1 and 4) |
 | **Subject (what)** | the premise and the situation, the setting and the location, the characters and their look, the specific action sequence, the joke's content and the punchline, the lines, the caption wording (except a generic meme line, `text-and-format.md` §1), the prop set and its arrangement, the first-frame composition, the ending image, the source product's own beat, the sound or track (a meme insert is the only exception, `generation-system.md` §3c) | left behind; the concept brings its own |
 
 **The transfer rule.** A concept seed takes its **mechanism, style and properties from the craft
@@ -130,8 +130,9 @@ sheet** and its **subject from the audience model** (§3: the places, moments an
 audience lives in) and from the product's own natural use (`generation-system.md` §4b.0). It never
 takes a subject line from a card. Minimum distance from every reference: a different premise,
 a different setting, different characters in different roles, a turn with different content, a
-different product beat and a different ending image. What may coincide: the family's mechanism,
-length, pacing, caption grammar, camera behaviour and look, and a generic meme line.
+different product beat and a different ending image. What may coincide: a borrowed mechanism,
+the length and pacing the references show, caption grammar, camera behaviour and look, and a generic meme line; never the
+whole structure, beat order and tone of one reference (§5.0b rule 4).
 
 **The copy test** (at ideation on every seed, in the sharpness gate, and in the creative QC).
 Someone who has seen the reference watches the new clip. Would they say any of these?
@@ -143,8 +144,9 @@ Someone who has seen the reference watches the new clip. Would they say any of t
 6. The same first-frame composition or prop arrangement.
 7. The same ending image.
 8. The product doing exactly what the source product did at the same beat.
+9. The same structure, beat order and tone as one reference or one family, with only the product swapped (the template-lock test, §5.0b rule 4).
 One yes makes the seed a remake: it is rewritten with a new subject or dropped, and scores 0 on
-trend fit and freshness (§5.1). The test is run against every reference of the family, not only
+trend fit and freshness (§5.1). The test is run against every reference the seed borrows from (and every family it draws on), not only
 the nearest one, and across the run's own videos (§5.1 step 4).
 
 **What "collect details" means.** Details are taken as *kinds*, not as *instances*: "the hook is a
@@ -254,7 +256,8 @@ Choose, and say in one line in the brief why this is the best approach for the g
 - **Swap, contents or placement** follows `generation-system.md` §4b.0; creativity decides the
   anchor and the one interaction so that the product sits at a moment of high attention without
   becoming the subject.
-- **Length and structure** follow the family profile; a concept is never stretched to fill a
+- **Length and structure** follow the measured ranges of the mechanisms the concept borrows and what the product's
+  demonstration needs (Recreate: the source's family profile); a concept is never stretched to fill a
   duration (`generation-system.md` §2.2).
 
 ## 6. The sharpness gate (before a concept enters a plan)
@@ -263,7 +266,7 @@ A concept passes only if every answer is yes:
 - Can the idea be said in one sentence, and would a stranger get it from the clip alone?
 - Does the first second show something (a face, a motion, an oddity, a familiar place, a caption's
   first words), not a setup?
-- Is there a real turn, and does the payoff land on the family's beat?
+- Is there a real turn, and does the payoff land on the beat the plan sets (the timing of the mechanism it borrows)?
 - Would a specific viewer send it, and is the share line obvious?
 - Is the product's presence explainable in one clause, and is it used (or placed) the way it
   really is?
@@ -281,10 +284,10 @@ A concept passes only if every answer is yes:
 
 - **Hook (0–1 s):** motion onset or a face or an oddity in frame 1; the caption's first words carry
   the premise ("POV:", "when…", "me after…"); no logo, no establishing shot, no silence before
-  something happens. The reference family's hook type is kept, its surface is new.
+  something happens. The hook type the video borrows is kept, its surface is new.
 - **Middle:** escalation or demonstration, one visible change every two to three seconds, no
   dead space (`generation-system.md` §2.2); the product's interaction, if any, at a natural pause.
-- **Payoff:** on the family's measured timing; the reaction after the cause (`anomaly-catalog.md`
+- **Payoff:** on the borrowed mechanism's measured timing; the reaction after the cause (`anomaly-catalog.md`
   §2.3); the frame that would be the thumbnail.
 - **Loop:** the end state echoes the start, or the last frame is the strongest one.
 - **Text:** the hook line is the premise, never the explanation; the format's caption grammar;
@@ -300,7 +303,7 @@ After the physics and continuity checks, judge the clean video as a viewer:
 - the product is recognisable at the moments of attention and nothing reads as an ad;
 - the emotion arc and the laugh mechanism of the plan are present;
 - the clip loops or ends strong;
-- (Create) the copy test (§5.0) against the family's references and the run's other videos: the
+- (Create) the copy test (§5.0) against the references the blend borrowed from and the run's other videos: the
   clip shares craft with them, not subject;
 - (Create) the blend (§5.0b): the product truth named in the plan is visible on screen, and the clip
   reads as its own idea, not a reference template with the product swapped in.

@@ -107,7 +107,7 @@ means the check fails: pick the next method in §2.2.
    - timing: in and out, in seconds;
    - style: colour, size relative to the frame, outline or box, case, line breaks.
    No text role in the reference or its family → no text.
-2. **Write the text** per §1 "Wording". Keep it short, in the family's tone and density:
+2. **Write the text** per §1 "Wording". Keep it short, in the tone and density of the family it follows (Create: of the mechanisms it borrows):
    - hooks ≤ 8 words;
    - running captions 1–4 words per event, and ≤ 2 lines;
    - labels ≤ 5 words;
@@ -117,7 +117,7 @@ means the check fails: pick the next method in §2.2.
    - never overlapping itself;
    - captions follow the generated speech when there is speech: take the times from the clean
      video's transcript (`atg.py prep-video`);
-   - the hook appears in the first 0–0.3 s when the family's hook is textual;
+   - the hook appears in the first 0–0.3 s when the hook it follows (the family's, or the borrowed mechanism's) is textual;
    - a caption that spans the whole reference spans the whole video;
    - text that plays on the product (a logo pun, a reveal) is timed to the moment the product
      really shows it in the clean video, measured at 30 fps, never to the plan

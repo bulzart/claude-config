@@ -87,10 +87,11 @@ Steps:
    - **Objections and limits:** what it cannot do, what viewers may doubt, what must not be
      implied.
    - **Occasions and pairings:** seasons, places, the other things it naturally sits beside.
-   - **Product truths:** three to six one-sentence facts a concept can be built on ("it opens
-     with a loud crack", "it changes the colour of the water it dissolves in", "it fits one hand
-     and one pocket"). They are the product's ingredients for ideation, the way the craft sheet
-     holds the references' ingredients.
+   - **Product truths:** up to six one-sentence facts a concept can be built on, as many as the supplied
+     material supports ("it opens with a loud crack", "it changes the colour of the water it dissolves
+     in", "it fits one hand and one pocket"). A truth the assets do not show is "not supplied", never
+     invented. They are the product's ingredients for ideation, the way the craft sheet holds the
+     references' ingredients.
 4. **For each character:** the best face and full-body views, plus the outfits present.
 5. **Everything else:** logos, palettes, UI screenshots, environments, audio (voice, music). Fonts
    are listed only: overlay text always uses the house text style (`capcut-assembly.md` §3).

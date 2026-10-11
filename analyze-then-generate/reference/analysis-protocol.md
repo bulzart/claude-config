@@ -186,7 +186,8 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
      grouped by content type (e.g. "G1 Organic × POV skit × gym", "G3 Anime × reaction ×
      school"). The user picks one or a mix. The `<subject>` of a group is a *field* for new
      situations (a gym, an office, a school), never a reference's own scene; the group carries the
-     family's craft, and each video in it gets its own subject (`creative-direction.md` §5.0). The
+     craft it borrows (from one family, or from several in a hybrid), and each video in it gets its own
+     subject and its own blend with the product (`creative-direction.md` §5.0, §5.0b). The
      groups are **suggestions, not a menu**: the agents also propose **hybrid groups** that blend
      mechanisms from several families with the product's own strengths (the insight sheet,
      `assets-and-substitution.md` §2 step 3b), and a concept need not belong to any group of the

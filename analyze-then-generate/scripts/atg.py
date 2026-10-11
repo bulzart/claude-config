@@ -3902,8 +3902,9 @@ def _word_concentration(entries, cap, decided, min_n=3):
 
 
 def _vocab_signature(vocab: dict) -> str:
-    payload = json.dumps(sorted((k, sorted(v.get("members", []))) for k, v in vocab["niches"].items()), ensure_ascii=False)
-    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
+    """The set of niche names. An audit stays current while no niche is added or removed; mapping one more label into an existing
+    niche cannot split it, a new niche might be a second name for an old one."""
+    return hashlib.sha1(json.dumps(sorted(vocab["niches"]), ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
 
 
 def _decided_words(vocab: dict) -> set:
@@ -4258,7 +4259,7 @@ def cmd_niches(a):
             else:       # audit: a fresh agent checked the vocabulary for niches that are one niche under several names
                 if not (a.by and a.result):
                     fail("niches audit needs --by (the agent that audited) and --result (what it found and what was applied)", 2)
-                vocab["audit"] = {"by": a.by, "result": a.result, "at": now_iso(), "signature": _vocab_signature(vocab)}
+                vocab["audit"] = {"by": a.by, "result": a.result, "at": now_iso(), "signature": _vocab_signature(vocab), "niches": sorted(vocab["niches"])}
             vocab["updated"] = now_iso()
             write_json(p, vocab)
         out({"ok": True, "niches": {k: v["members"] for k, v in vocab["niches"].items()}, "notes": notes,
@@ -4833,9 +4834,11 @@ def _cd_rank(a, items, cfg):
     ordered = sorted(elig, key=lambda r: -r["total"])
     for i_ in range(len(ordered) - 1):
         x_, y_ = ordered[i_], ordered[i_ + 1]
-        if abs(x_["total"] - y_["total"]) < 0.05 and (x_["id"] in pick_ids or y_["id"] in pick_ids):
-            warn.append(f"tie at {x_['total']} between {x_['id']} {x_['name']} and {y_['id']} {y_['name']}: broken by independent rows, then contribution, "
-                        f"then name, never by the order they were added; look at the two before applying")
+        if abs(x_["total"] - y_["total"]) < 0.05 and ((x_["id"] in pick_ids) != (y_["id"] in pick_ids)):
+            out_ = y_ if x_["id"] in pick_ids else x_
+            if out_["id"] not in skipped:         # left out by the tie-break, not by a niche or type limit
+                warn.append(f"tie at {x_['total']} between {x_['id']} {x_['name']} and {y_['id']} {y_['name']}, only one of them a pick: broken by independent "
+                            f"rows, then contribution, then name, never by the order they were added; look at the two before applying")
     if len(picks) < want:
         warn.append(f"only {len(picks)} candidate(s) pass every gate; run the backfill wave (viral-browser.md section 7.1) or report which gate removed the others and what the user could relax")
     if not stats:
@@ -4852,6 +4855,10 @@ def _cd_rank(a, items, cfg):
         if sref.get("word_concentration"):
             blockers.append("corpus-stats.json flags words shared by card labels across different niches (" + ", ".join(w["word"] for w in sref["word_concentration"][:6])
                             + "): merge the niches or record `niches distinct --word ... --reason ...`, then run `viral-stats` again")
+    _v = _vocab_load(a.run)
+    if (_v.get("audit") or {}).get("signature") != _vocab_signature(_v):
+        warn.append("a niche was added or merged after the last audit, or the vocabulary was never audited: the niche limits rest on an unaudited vocabulary; "
+                    "have a fresh agent audit it again (viral-browser.md section 13.5) and record `niches audit`")
     need_def = [r["id"] for r in picks if r["dominant_niche"] and not r.get("defence")]
     if need_def:
         blockers.append(f"dominant-niche pick(s) {need_def} have no defence note (viral-browser.md section 5): write the defence against the best outside-niche alternative, or demote them")
@@ -4864,6 +4871,9 @@ def _cd_rank(a, items, cfg):
         warn.append("the picks differ when the fit criterion (derived from the references) is removed: fit drove the outcome; say so in the bias log")
     _pool = _cd_pool(items, cfg, a.run, ("researching", "researched", "picked", "runner-up", "watch"))
     pool_flags = _pool["flags"]
+    if _pool["word_concentration"]:
+        blockers.append("words shared by the names, types or niches of the candidates under different niches (" + ", ".join(w["word"] for w in _pool["word_concentration"][:6])
+                        + "): the niche limits may be split across two names; merge the niches or record `niches distinct --word ... --reason ...`")
     for i_, x_ in enumerate(picks):
         for y_ in picks[i_ + 1:]:
             if _similar(x_["type"] or x_["name"], y_["type"] or y_["name"], cfg["type_similarity"]):
@@ -5172,7 +5182,7 @@ def main():
                    help="share of one niche that counts as dominant (default viral_browser.niche_dominance_threshold)")
     p.set_defaults(fn=cmd_viral_stats)
 
-    p = sp.add_parser("niches", help="Viral-Browser: the run's niche vocabulary, built by the agents from the data (add | map | list | propose)")
+    p = sp.add_parser("niches", help="Viral-Browser: the run's niche vocabulary, built by the agents from the data (add | map | merge | distinct | audit | list | propose)")
     p.add_argument("action", choices=["add", "map", "merge", "distinct", "audit", "list", "propose"]); p.add_argument("--run", required=True)
     p.add_argument("--name", help="add: the canonical niche name an agent chose from the labels in the data")
     p.add_argument("--members", help="add: labels that mean the same niche, comma or semicolon separated")

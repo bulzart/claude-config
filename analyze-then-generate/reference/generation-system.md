@@ -47,10 +47,10 @@ Write this plan to `<run>/40-briefs/video-NN-plan.md` **before** any prompt. Kee
 - **Communicates:** what the viewer must understand or feel by the last frame.
 - **Why keep watching:** the curiosity / payoff contract set up in the first second.
 - **Mechanism kept from the references [E/I]:** hook type, reveal logic, rhythm, interaction pattern
-  and payoff timing, from the selected content family.
+  and payoff timing, from the selected content family (Recreate) or from the mechanisms the blend borrows, from any family (Create).
 - **Subject of its own (Create) [I]:** the premise, setting, characters, action sequence, turn,
   lines, first frame, ending image and product beat are the concept's, none of them a reference's;
-  the plan names the family's craft it carries and states that the copy test passed
+  the plan names the craft it carries (the borrowed mechanisms) and states that the copy test passed
   (`creative-direction.md` §5.0).
 - **The blend (Create) [I]:** the idea is a blend of a reference mechanism and a **product truth**
   from `30-assets/product-insights.md`, not a reference format with the product swapped in: the plan
@@ -72,14 +72,14 @@ Write this plan to `<run>/40-briefs/video-NN-plan.md` **before** any prompt. Kee
 
 Rules:
 - Rows must tile the whole duration with no unexplained gaps.
-- **Stillness** is allowed only when the content family uses it deliberately (a held reaction, a
+- **Stillness** is allowed only when the content family (Create: a borrowed mechanism) uses it deliberately (a held reaction, a
   reveal pause). Mark those rows "intentional hold".
-- The **duration** comes from the content family's typical length and the concept, and must be one
+- The **duration** comes from the content family's typical length (Create: the range the borrowed mechanisms show) and the concept, and must be one
   the selected model supports. Too long for one generation → plan clips per §3b, with explicit
   hand-off states (§3), assembled with `atg.py concat`. Hard cuts only where the family's editing
-  style cuts.
-- **Hook density, information density and payoff timing** follow the family profile from the
-  analysis, not generic AI editing habits.
+  style (Create: the blend's) cuts.
+- **Hook density, information density and payoff timing** follow the profile from the
+  analysis (Recreate: the source's family; Create: the measured ranges of the mechanisms the blend borrows), not generic AI editing habits.
 - **Reference inserts** (memes, §3c) are not in the generated time budget. Their split points are
   marked as beat boundaries.
 - **Overlay text** is never generated: the plate stays clean, and the text is placed as CapCut text
@@ -615,18 +615,18 @@ Evaluate before writing the prompt, and again in the pre-generation QC pass (§8
 | motion continuity | Natural speed; no arbitrary slow motion, sudden speed-ups or jump-speed changes |
 | interaction realism | Believable body mechanics, weight shifts and follow-through |
 | composition | The subject and asset are readable in 9:16; key action kept out of platform UI zones |
-| pacing | Matches the family profile; no dead space, filler or unexplained pauses; no repeated actions |
+| pacing | Matches the plan: the source's family profile (Recreate) or the borrowed mechanisms' measured range and the blend's beats (Create); no dead space, filler or unexplained pauses; no repeated actions |
 | transitions | Every cut, zoom, reframe, speed ramp or scene change has a reason (the action, the family's editing style, the narrative). None are added "for cinematic feel" |
 | identity | No drift in face, hair, body or wardrobe; no duplicated people or objects |
 | placement (§4b) | The placed client entity is present and recognisable, on one anchor that persists through every shot. It moves only by a visible action, matches the plate, and is noticed but not featured |
 | counts | Every multiple keeps its number except through a visible cause; nothing appears, vanishes or doubles across exits, occlusions and cuts (`anomaly-catalog.md` §2.1, §2.5) |
 | affordance | Every use goes through the object's real opening or control, after its preparation step, with a real contact point and the body mechanics of that use (§2.2, §2.3, §2.8) |
 | solidity | Nothing passes through, sinks into or shows through a solid; occlusion follows depth; every contact has its consequence (§2.14) |
-| sharpness | One clear idea, a hook in the first second, a real turn, a payoff on the family's beat, a share line, and the product native to the scene (`creative-direction.md` §6) |
+| sharpness | One clear idea, a hook in the first second, a real turn, a payoff on the planned beat, a share line, and the product native to the scene (`creative-direction.md` §6) |
 | blend (Create) | The idea needs both a reference mechanism and a product truth, and is not one family's template with the product swapped in (`creative-direction.md` §5.0b) |
 | size | Every product's size in every shot is reckoned from its real dimensions, its distance, the lens and a named neighbour, written into the prompt and the start frame, and kept across motion and cuts (§2.7) |
 | guardrails | Every hit of the client's rules is edited as planned (count at the limit, competitor marks removed, excluded faces swapped, captions rewritten, props removed) and nothing the rules ban is in the concept (`brand-guardrails.md`) |
-| transfer (Create) | The video carries the references' craft (style, properties, approach, crafting) and none of their subject: the copy test passes against every reference of the family and the run's other videos (`creative-direction.md` §5.0) |
+| transfer (Create) | The video carries the references' craft (style, properties, approach, crafting) and none of their subject: the copy test passes against every reference the blend borrows from and the run's other videos (`creative-direction.md` §5.0) |
 
 The AI-slop blacklist must never appear in a plan or a prompt:
 - unexplained dead space, filler or pauses, and unnecessary static stretches;
@@ -944,7 +944,7 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
 - [ ] Caught errors: every entry of `20-analysis/caught-errors.md` that applies to this video is
       named in the plan, its rule is in the prompt, and its check is a QC checkpoint
       (`ATG/caught_errors.md`, command item 22).
-- [ ] Pacing matches the family profile: no dead space, every second has a job.
+- [ ] Pacing matches the plan (Recreate: the family profile; Create: the borrowed mechanisms' range and the blend's beats): no dead space, every second has a job.
 - [ ] Transitions are all motivated, and multi-clip hand-offs are identical.
 - [ ] No free physical motion is pinned to exact timestamps; a required end state has a visible
       cause (§5b).
