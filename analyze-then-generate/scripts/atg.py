@@ -4482,6 +4482,9 @@ def cmd_econ(a):
     whether a margin is enough, is the agent's decision (reference/viral-browser.md section 2 and 8)."""
     if a.cand and not (a.market or "").strip():
         fail("econ --cand needs --market (the market this calculation is for, e.g. US, EU, DE): a candidate keeps one result per market, side by side", 2)
+    if (a.fixed_annual or 0.0) and not (a.units_per_year or 0):
+        fail("econ --fixed-annual needs --units-per-year (the yearly volume the fixed cost is spread over: an assumption the agent states, shown on its own row)", 2)
+    fixed_per_unit = (a.fixed_annual / a.units_per_year) if (a.fixed_annual and a.units_per_year) else 0.0
     vat = (a.vat_pct or 0.0) / 100.0
     net = a.retail / (1.0 + vat)
     base = a.retail if a.fees_on == "gross" else net          # card and platform fees are charged on the amount paid
@@ -4494,7 +4497,7 @@ def cmd_econ(a):
         r = min(1.0, (a.returns_pct or 0.0) / 100.0 * returns_mult)
         ld = a.landed * landed_mult
         rl = r * (nt + (a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * ld)
-        return nt, nt - ld - (a.extra_per_unit or 0.0) - (a.fulfil or 0.0) - fe - rl
+        return nt, nt - ld - (a.extra_per_unit or 0.0) - fixed_per_unit - (a.fulfil or 0.0) - fe - rl
 
     _, c0 = contribution()
     r = (a.returns_pct or 0.0) / 100.0
@@ -4502,7 +4505,7 @@ def cmd_econ(a):
     if a.target_pct is not None:
         # n (1 - fee% x k - r - t) = landed + extra + fulfilment + fixed fee + r (return cost - resale% x landed), with k = 1 + VAT when the fees are charged on the amount paid
         k = (1.0 + vat) if a.fees_on == "gross" else 1.0
-        fixed_cost = a.landed + (a.extra_per_unit or 0.0) + (a.fulfil or 0.0) + (a.payment_fixed or 0.0) + r * ((a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * a.landed)
+        fixed_cost = a.landed + (a.extra_per_unit or 0.0) + fixed_per_unit + (a.fulfil or 0.0) + (a.payment_fixed or 0.0) + r * ((a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * a.landed)
         den = 1.0 - ((a.platform_fee_pct or 0.0) + (a.payment_fee_pct or 0.0)) / 100.0 * k - r - a.target_pct / 100.0
         if den > 0:
             n_t = fixed_cost / den
@@ -4514,7 +4517,8 @@ def cmd_econ(a):
     gm = (net - a.landed) / net if net else 0.0
     res = {"currency": a.currency, "retail_price": round(a.retail, 2), "vat_pct_included": a.vat_pct or 0.0,
            "net_revenue": round(net, 2), "landed_cost": round(a.landed, 2), "extra_per_unit": round(a.extra_per_unit or 0.0, 2),
-           "extra_label": a.extra_label, "fulfilment": round(a.fulfil or 0.0, 2),
+           "extra_label": a.extra_label, "fixed_annual": a.fixed_annual, "units_per_year": a.units_per_year, "fixed_cost_per_unit": round(fixed_per_unit, 2),
+           "fulfilment": round(a.fulfil or 0.0, 2),
            "fees": round(fees, 2), "fees_charged_on": a.fees_on, "expected_return_loss": round(ret_loss, 2),
            "contribution_per_order": round(c0, 2),
            "contribution_pct_of_net": round(100 * c0 / net, 1) if net else None,
@@ -4540,7 +4544,8 @@ def cmd_econ(a):
                                                  ("payment_fee_pct", a.payment_fee_pct), ("payment_fixed", a.payment_fixed), ("return_cost", a.return_cost),
                                                  ("resale_pct", a.resale_pct)) if not v]
     rows = [("retail price (consumer)", res["retail_price"]), (f"net revenue (VAT {res['vat_pct_included']}% removed)", res["net_revenue"]),
-            ("landed cost", res["landed_cost"])] + ([(f"extra per unit ({a.extra_label})" if a.extra_label else "extra per unit", res["extra_per_unit"])] if a.extra_per_unit else []) + [
+            ("landed cost", res["landed_cost"])] + ([(f"extra per unit ({a.extra_label})" if a.extra_label else "extra per unit", res["extra_per_unit"])] if a.extra_per_unit else []) + (
+            [(f"fixed yearly cost {a.fixed_annual:g} / {a.units_per_year} units a year", res["fixed_cost_per_unit"])] if fixed_per_unit else []) + [
             ("fulfilment", res["fulfilment"]), (f"fees (on {a.fees_on})", res["fees"]),
             ("expected return loss", res["expected_return_loss"]), ("contribution per order", res["contribution_per_order"]),
             ("contribution % of net", res["contribution_pct_of_net"]), ("break-even CPA", res["break_even_cpa"]),
@@ -4569,7 +4574,8 @@ def cmd_econ(a):
             ebm[mk] = {"market": a.market.strip(), "at": now_iso(), "note": a.note,
                        **{k: res[k] for k in ("retail_price", "net_revenue", "landed_cost", "contribution_per_order", "contribution_pct_of_net",
                                               "break_even_cpa", "break_even_roas_gross", "currency")},
-                       "inputs": {"vat_pct": a.vat_pct, "extra_per_unit": a.extra_per_unit, "extra_label": a.extra_label, "fulfil": a.fulfil,
+                       "inputs": {"vat_pct": a.vat_pct, "extra_per_unit": a.extra_per_unit, "extra_label": a.extra_label, "fixed_annual": a.fixed_annual,
+                                  "units_per_year": a.units_per_year, "fulfil": a.fulfil,
                                   "platform_fee_pct": a.platform_fee_pct, "payment_fee_pct": a.payment_fee_pct,
                                   "payment_fixed": a.payment_fixed, "returns_pct": a.returns_pct, "return_cost": a.return_cost, "resale_pct": a.resale_pct,
                                   "fees_on": a.fees_on, "moq": a.moq}}
@@ -4582,7 +4588,7 @@ def cmd_econ(a):
         with FileLock(elk):
             ed = _vb_load(ep, {"items": []})
             nid = f"EV{len(ed['items']) + 1:03d}"
-            method = (f"method: econ retail={a.retail} vat={a.vat_pct} landed={a.landed} extra={a.extra_per_unit} fulfil={a.fulfil} platform={a.platform_fee_pct}% "
+            method = (f"method: econ retail={a.retail} vat={a.vat_pct} landed={a.landed} extra={a.extra_per_unit} fixed_annual={a.fixed_annual}/{a.units_per_year} fulfil={a.fulfil} platform={a.platform_fee_pct}% "
                       f"payment={a.payment_fee_pct}%+{a.payment_fixed} returns={a.returns_pct}% return_cost={a.return_cost} fees_on={a.fees_on}")
             ed["items"].append({"id": nid, "cand": a.cand, "lane": "economics",
                                 "claim": f"contribution {res['contribution_pct_of_net']}% of net at {a.currency} {a.retail} ({a.market.strip()})",
@@ -4744,8 +4750,9 @@ def cmd_evidence(a):
             write_json(p, data)
         out({"ok": True, "id": a.id, "retracted": True})
     data = _vb_load(p, {"items": []})
+    id_set = {x for x in re.split(r"[,\s]+", a.ids or "") if x}
     rows = [e for e in data["items"] if (not a.cand or e["cand"] == a.cand) and (not a.lane or e["lane"] == a.lane)
-            and (not a.grade or e["grade"] == a.grade) and (not a.signal or e.get("signal") == a.signal)]
+            and (not a.grade or e["grade"] == a.grade) and (not a.signal or e.get("signal") == a.signal) and (not id_set or e["id"] in id_set)]
     live = [e for e in rows if not e.get("retracted")]
     counts = _ev_counts(live) if a.counts else None
     if a.counts:
@@ -6461,7 +6468,7 @@ def main():
     p = sp.add_parser("evidence", help="Viral-Browser: research evidence ledger (add | copy | retract | list)")
     p.add_argument("action", choices=["add", "copy", "retract", "list"]); p.add_argument("--run", required=True)
     p.add_argument("--id", help="retract: the evidence row")
-    p.add_argument("--ids", help="copy: the evidence rows to repeat (EV001,EV004 ...)")
+    p.add_argument("--ids", help="copy: the evidence rows to repeat (EV001,EV004 ...); list: show only these rows (of any candidate)")
     p.add_argument("--to", help="copy: the candidates that get a copy of each row (C05,C11 ...); a row is never copied onto its own candidate")
     p.add_argument("--from-json", dest="from_json", help="add: a JSON list of rows (cand, lane, claim, source, grade, signal, independent, and optionally value, unit, market, retrieved, note, by, opened); every row is checked first and all are written in one go, or none")
     p.add_argument("--opened", choices=["yes", "no"], help="add: yes = you opened the page itself; no = you know the fact only from a search summary or snippet (left out: not recorded)")
@@ -6544,11 +6551,11 @@ def main():
                                   "  net revenue          = retail / (1 + VAT%)\n"
                                   "  fees                 = (platform% + payment%) x the amount they are charged on (--fees-on) + the fixed payment fee\n"
                                   "  return loss          = returns% x (net revenue + return cost - resale% x landed cost)\n"
-                                  "  contribution/order   = net revenue - landed - extra per unit - fulfilment - fees - return loss\n"
+                                  "  contribution/order   = net revenue - landed - extra per unit - fixed yearly cost / units per year - fulfilment - fees - return loss\n"
                                   "  break-even CPA       = the contribution per order (negative when the order loses money)\n"
                                   "  break-even ROAS      = net revenue / contribution (and retail / contribution on the amount paid); null when the contribution is not positive\n"
                                   "  capital at the MOQ   = MOQ x landed cost\n"
-                                  "  price for a target   = net revenue n solves  n (1 - fee% x k - returns% - target%) = landed + extra + fulfilment + fixed fee + returns% (return cost - resale% x landed), k = 1 + VAT when fees are on the amount paid; retail = n (1 + VAT)\n"
+                                  "  price for a target   = net revenue n solves  n (1 - fee% x k - returns% - target%) = landed + extra + fixed yearly cost per unit + fulfilment + fixed fee + returns% (return cost - resale% x landed), k = 1 + VAT when fees are on the amount paid; retail = n (1 + VAT)\n"
                                   "  stress cases         = retail -20%, returns x2, landed +15% (the landed cost only), and all three")
     p.add_argument("--retail", type=float, required=True, help="consumer price (VAT-inclusive in the EU)")
     p.add_argument("--vat-pct", type=float, default=0.0, help="VAT included in the retail price (0 for US prices, which exclude sales tax)")
@@ -6556,6 +6563,9 @@ def main():
     p.add_argument("--extra-per-unit", dest="extra_per_unit", type=float, default=0.0,
                    help="a cost per unit that is not in the landed cost (for example an amortised test or certification cost, an authorised-representative fee, a packaging-register fee); subtracted from the contribution and shown on its own row")
     p.add_argument("--extra-label", dest="extra_label", help="what the extra cost per unit is, in words (kept with the result)")
+    p.add_argument("--fixed-annual", dest="fixed_annual", type=float, default=0.0,
+                   help="a fixed cost per year that is not per unit (a device registration fee, a representative's retainer, a registration); spread over --units-per-year and shown on its own row")
+    p.add_argument("--units-per-year", dest="units_per_year", type=int, help="the yearly volume --fixed-annual is spread over (an assumption the agent states)")
     p.add_argument("--fulfil", type=float, default=0.0, help="pick, pack and shipping per order")
     p.add_argument("--platform-fee-pct", type=float, default=0.0); p.add_argument("--payment-fee-pct", type=float, default=0.0)
     p.add_argument("--payment-fixed", type=float, default=0.0)
