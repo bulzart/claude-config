@@ -188,3 +188,61 @@ T caught-flag reconcile --run <run id>
 - **status:** cleared
 - **log:** 2026-10-12 backfilled from the ledgers of runs 20261001-195409-01, 20261002-000344-01 and 20261002-232019-02 (the model of those runs was read from the request file: check the model field)
 - **promoted to:** —
+
+## CF-003 · 2026-10-12 · Preflight of V20 swap request answered with the IN THE DARK preset_recommendation notice
+- **source:** agent
+- **kind:** preset-notice
+- **tool:** generate_video
+- **stage:** preflight
+- **run:** 20261012-230535-12
+- **video:** 01
+- **attempt:** a1
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Celsius Peach Vibe can (V20 swap)
+- **response:**
+  ```text
+  notice type preset_recommendation: "This prompt looks like the Higgsfield preset \"IN THE DARK\". Ask the user whether to use that preset or generate literally." preset id 24bae836-2c4a-48e0-89b6-49fcc0b21612; retry_literal_with {declined_preset_id: 24bae836-2c4a-48e0-89b6-49fcc0b21612}; no cost returned, no job
+  ```
+- **job:** none (no job id returned)
+- **ledger:** not recorded
+- **credits:** not recorded
+- **flagged prompt:**
+  ```text
+  [Core Task] Generate a real phone-shot clip of a man in a pink satin bonnet sitting at a white kitchen counter, scrolling his phone and then silently judging with his face. Use Video 1 for all movement, framing, room and timing.  The man corresponds to Image 1, adopting only his facial features and hairstyle; he replaces only the man in the pink satin bonnet and black oversized tee in Video 1 and keeps the clothing, body and pose of Video 1; his face, neck, hands and forearms share the skin tone of the hands and body of the man in Video 1; do not use the background, props, clothing or lighting of Image 1. The can corresponds to Image 2 and Image 3, which jointly define one can, adopting only its structure, colours and printed label (a white-and-pale-pink slim 355 ml aluminium can, a red C-swoosh above the black CELSIUS wordmark with LIVE FIT, PEACH VIBE in large red italic lettering, a palm-tree illustration at the right, a silver-grey lower band with 0 SUGAR); in both images the can is deliberately small and keeps that scale; do not use the framing, lighting, exposure, background, shadow or camera angle of Image 2 or Image 3.
+  [Plot Summary] Shot: one fixed locked-off phone shot at table height, eye level, the framing unchanged from Video 1: a cream-white kitchen counter fills the bottom fifth of the frame, a grey sofa and a door with a soft pink neon glow at the left, horizontal window blinds at the right, recessed ceiling downlights above. The man sits behind the counter in the hot-pink satin bonnet and a plain black oversized short-sleeve tee with no print, no lettering and no logo, both hands cupped around a black smartphone. He slides his eyes sideways to the left of the frame with a doubtful look, then looks down and scrolls with both thumbs with two small head tilts, then looks up, lays the phone on the counter with his right hand and crosses his hands flat on the counter, stares into the lens with lowered brows and pressed lips, turns his head to the right of the frame and then down to the left while rolling his eyes, turns back to the lens with a slight chin tuck and a frown and holds still to the end. His mouth stays closed throughout. A closed Celsius Peach Vibe can stands upright on the counter at the right side of the frame on the very spot where the plastic water bottle stood in Video 1, its base on the counter beside his right forearm, never touched, there from the first frame to the last; it is the same spot, replacing the bottle, which no longer exists. The can is a small object, 15.7 cm tall and 5.5 cm across: about three quarters the height of the water bottle it replaces, about as tall as his phone is long, and about two thirds the height of his head; it fills about one seventh of the frame height and keeps this size. Cool-white downlights from above with a pink neon spill from the left; the can takes the same light, a soft highlight on its upper left, its right side in shade, colours as muted as the room's, a soft contact shadow under it falling like the other objects' shadows, label turned about thirty degrees toward the lens. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze, mouth movement and prop handling of the man in Video 1 on the same frames, with the camera, framing, light, room and timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture or camera move, no re-staging, no new people, no change of pace. There is exactly one can, closed and upright on the counter from the first frame to the last, exactly one phone, exactly one person, small and constant in size, not duplicated, not vanished, not deformed, no scale drift; the can stays where it is, his hands and the phone never pass through it. Show no text, subtitles, numbers, interface elements or watermarks; the only lettering is the printed label on the Celsius Peach Vibe can, exactly as in Image 2; do not reproduce any text, captions, usernames or watermarks from Video 1. The white caption text in Video 1 and the chest lettering on his tee do not appear.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no cut-out edges, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no second can, no oversized can, no can taller than his phone is long, no can larger than his head, no water bottle, no open tab, no drinking from the can, no studio lighting on the can, no glow, no clipping
+  ```
+- **params:** model=wan3_0_prime · duration=12 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=image_references×3, video_references · request=video-01-request.json
+- **flagged inputs:**
+  ```text
+  image_references: a5e81a94-9199-4ffd-b723-5612866c2307
+  image_references: 60a1a01f-c64d-4aa6-bc76-fea79002e3ac
+  image_references: 93553913-3505-470e-9581-1fb7eb0adb40
+  video_references: 96fc6415-e0a5-46b9-b159-65ee393fa4e7
+  ```
+- **flagged video:** none sent with the notice; the request carried the silent V20 source as video_references (media 96fc6415-e0a5-46b9-b159-65ee393fa4e7)
+- **output:** none (the job produced no file)
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261012-230535-12\40-briefs\video-01-plan.md
+- **suspected trigger:** [I] prompt wording about a pink neon glow in a dim room; the same preset recommendation appeared in about 20 first submissions of earlier runs (CF-002); the exact trigger words are not identified
+- **cause:** prompt-wording
+- **what was changed:** retry the identical request with declined_preset_id set to the notice's preset id (the planned literal retry); the prompt text is not changed
+- **outcome:** cleared: a changed request was accepted
+- **cleared prompt:**
+  ```text
+  [Core Task] Generate a real phone-shot clip of a man in a pink satin bonnet sitting at a white kitchen counter, scrolling his phone and then silently judging with his face. Use Video 1 for all movement, framing, room and timing.  The man corresponds to Image 1, adopting only his facial features and hairstyle; he replaces only the man in the pink satin bonnet and black oversized tee in Video 1 and keeps the clothing, body and pose of Video 1; his face, neck, hands and forearms share the skin tone of the hands and body of the man in Video 1; do not use the background, props, clothing or lighting of Image 1. The can corresponds to Image 2 and Image 3, which jointly define one can, adopting only its structure, colours and printed label (a white-and-pale-pink slim 355 ml aluminium can, a red C-swoosh above the black CELSIUS wordmark with LIVE FIT, PEACH VIBE in large red italic lettering, a palm-tree illustration at the right, a silver-grey lower band with 0 SUGAR); in both images the can is deliberately small and keeps that scale; do not use the framing, lighting, exposure, background, shadow or camera angle of Image 2 or Image 3.
+  [Plot Summary] Shot: one fixed locked-off phone shot at table height, eye level, the framing unchanged from Video 1: a cream-white kitchen counter fills the bottom fifth of the frame, a grey sofa and a door with a soft pink neon glow at the left, horizontal window blinds at the right, recessed ceiling downlights above. The man sits behind the counter in the hot-pink satin bonnet and a plain black oversized short-sleeve tee with no print, no lettering and no logo, both hands cupped around a black smartphone. He slides his eyes sideways to the left of the frame with a doubtful look, then looks down and scrolls with both thumbs with two small head tilts, then looks up, lays the phone on the counter with his right hand and crosses his hands flat on the counter, stares into the lens with lowered brows and pressed lips, turns his head to the right of the frame and then down to the left while rolling his eyes, turns back to the lens with a slight chin tuck and a frown and holds still to the end. His mouth stays closed throughout. A closed Celsius Peach Vibe can stands upright on the counter at the right side of the frame on the very spot where the plastic water bottle stood in Video 1, its base on the counter beside his right forearm, never touched, there from the first frame to the last; it is the same spot, replacing the bottle, which no longer exists. The can is a small object, 15.7 cm tall and 5.5 cm across: about three quarters the height of the water bottle it replaces, about as tall as his phone is long, and about two thirds the height of his head; it fills about one seventh of the frame height and keeps this size. Cool-white downlights from above with a pink neon spill from the left; the can takes the same light, a soft highlight on its upper left, its right side in shade, colours as muted as the room's, a soft contact shadow under it falling like the other objects' shadows, label turned about thirty degrees toward the lens. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze, mouth movement and prop handling of the man in Video 1 on the same frames, with the camera, framing, light, room and timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture or camera move, no re-staging, no new people, no change of pace. There is exactly one can, closed and upright on the counter from the first frame to the last, exactly one phone, exactly one person, small and constant in size, not duplicated, not vanished, not deformed, no scale drift; the can stays where it is, his hands and the phone never pass through it. Show no text, subtitles, numbers, interface elements or watermarks; the only lettering is the printed label on the Celsius Peach Vibe can, exactly as in Image 2; do not reproduce any text, captions, usernames or watermarks from Video 1. The white caption text in Video 1 and the chest lettering on his tee do not appear.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no scale drift, no cut-out edges, no slow motion, no speed ramps, no self-inserted cut points, no added or skipped action, no second can, no oversized can, no can taller than his phone is long, no can larger than his head, no water bottle, no open tab, no drinking from the can, no studio lighting on the can, no glow, no clipping
+  ```
+- **prompt change:**
+  ```text
+  not computed (the entry has no flagged prompt)
+  ```
+- **cleared params:** model=wan3_0_prime · duration=12 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=image_references×3, video_references · request=video-01-request.json
+- **cleared job:** none yet
+- **rule:** Pass declined_preset_id on every generate_video call of this run from the start; a notice is a reroute, not a content block.
+- **status:** cleared
+- **log:** 2026-10-12 the identical request with declined_preset_id was accepted at preflight (36 credits, no adjustments); declined_preset_id is now in every request of the run
+- **promoted to:** —
