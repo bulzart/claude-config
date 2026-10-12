@@ -573,7 +573,8 @@ Toolkit (T): "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/pyth
 Today: <YYYY-MM-DD>. Market: <US | EU (lead countries …) | Global>. Currency <…>; retail price band <min–max>, VAT-inclusive <yes/no, rate>.
 Selling model: <…>. Exclusions: <…>. Depth: <quick|standard|deep> = <n> web calls per candidate.
 Tools: WebSearch (US-only: for an EU or global market, search with the market's own terms and country sites, and say which region each source covers;
-"standard" mode by default, "extended" only for fresh prices and availability or when standard comes back thin) and WebFetch. No browser, no login.
+"standard" mode by default, "extended" only for fresh prices and availability or when standard comes back thin), WebFetch, Bash (only to run the toolkit T), Read, and Write
+(only for your own dossier and queue files under <RUN>/30-research/). No browser, no login.
 Sales channel: <…>; seller country (importer of record): <…>; capital limit: <…>. Fee schedules and restricted lists to use: those of the channel.
 Your candidates (status researching): <C03, C07, C11>. Read each with `T candidates show --run <RUN> --id <C##> --blind`.
 Read first: <ATG>/reference/viral-browser.md §0, §7 and §8.1 (to know what the scorer will need).
