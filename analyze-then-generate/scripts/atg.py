@@ -4456,6 +4456,23 @@ def cmd_landed(a):
         print(f"\nlanded cost per unit x {fx} = {res['landed_cost']} {a.currency}")
     if res["inputs_left_at_zero"]:
         print("\ninputs left at zero (the result assumes none of that cost): " + ", ".join(res["inputs_left_at_zero"]))
+    if a.cand:
+        if not a.run or not (a.market or "").strip():
+            fail("landed --cand needs --run and --market (the market this landed cost is for, e.g. US, EU)", 2)
+        ep, elk = _ev_paths(a.run)
+        if not any(c["id"] == a.cand for c in _vb_load(_cd_paths(a.run)[0], {"items": []})["items"]):
+            fail(f"unknown candidate {a.cand}", 2)
+        method = (f"method: landed fob={a.fob} freight_per_cbm={a.freight_per_cbm} units_per_cbm={a.units_per_cbm} insurance={a.insurance_pct}% duty={a.duty_pct}% "
+                  f"+extra {a.duty_extra_pct}% on {a.duty_base} import_vat_unrecovered={a.import_vat_pct}% other={a.other_per_unit} fx={fx}")
+        with FileLock(elk):
+            ed = _vb_load(ep, {"items": []})
+            nid = f"EV{len(ed['items']) + 1:03d}"
+            ed["items"].append({"id": nid, "cand": a.cand, "lane": "economics", "claim": f"landed cost per unit {res['landed_cost']} {a.currency} ({a.market.strip()})",
+                                "value": str(res["landed_cost"]), "unit": f"{a.currency} per unit", "source": method, "domain": "method", "grade": "C",
+                                "retrieved": dt.date.today().isoformat(), "independent": True, "market": a.market, "signal": "calculation", "note": a.note, "opened": None,
+                                "by": a.by, "added": now_iso()})
+            write_json(ep, ed)
+        res["evidence_id"] = nid
     out({"ok": True, **res})
 
 
@@ -6516,6 +6533,9 @@ def main():
     p.add_argument("--fx", type=float, help="multiply the total by this rate to express it in --currency (for example 0.87 to turn USD into EUR); the agent registers the rate's source")
     p.add_argument("--currency", default="USD", help="the currency of the result (a label)")
     p.add_argument("--moq", type=int, help="minimum order quantity: prints the capital at risk")
+    p.add_argument("--cand", help="register the build-up as a grade C economics evidence row of this candidate (needs --run and --market), so the landed cost is on the ledger beside its inputs")
+    p.add_argument("--run"); p.add_argument("--market", help="the market of this landed cost (required with --cand)")
+    p.add_argument("--note", help="a note kept with the evidence row (for example: the duty stack assumed and why)"); p.add_argument("--by", help="who recorded it")
     p.set_defaults(fn=cmd_landed)
 
     p = sp.add_parser("econ", help="unit economics: VAT-inclusive retail, landed cost, fulfilment, fees, returns -> contribution (arithmetic, per market)",
