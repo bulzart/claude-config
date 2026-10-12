@@ -21,6 +21,7 @@ Subcommands (python atp.py <cmd> -h):
   prep-assets    previews, doc text, font names and a labelled contact sheet of USER-SUPPLIED assets
   model-menu     numbered table of EVERY available video model (pinned first) + quick picks
   ledger         anti-duplicate guard for paid generations (begin before, set after every call)
+  caught-flag    flag ledger caught_flags.md: prompts and videos Higgsfield flagged or refused (add | set | list | reconcile)
   open           open a finished video in the default player for the user's review
   prep-video     probe, cuts, activity, 5 fps adaptive frames, storyboard sheets, audio, transcript,
                  OCR sample, per-second timeline, summary
@@ -2908,6 +2909,237 @@ def cmd_caught_error(a):
                  + "promote the rule into its reference when it is general or recurs, then `caught-error set --status promoted --promoted-to …`"})
 
 
+CAUGHT_FLAGS = ATP_HOME / "caught_flags.md"
+CF_KINDS = ["moderation-block", "refused-no-reason", "media-flagged", "output-flagged", "preset-notice", "other"]
+CF_CAUSES = ["prompt-wording", "reference-video", "image-reference", "output", "parameter", "unknown"]
+CF_STATUS = ["open", "cleared", "persistent"]
+CF_BLOCKS = ("response", "flagged_prompt", "cleared_prompt", "flagged_inputs", "prompt_change")
+CF_TERMS = re.compile(r"moderat|flag|nsfw|refus|polic|safety|blocked|copyright|\bip\b|celebrit|likeness|preset_recommendation|"
+                      r"rejected before creation|no reason|no error", re.I)
+
+
+def _cf_parse(text: str) -> list:
+    """Entries of caught_flags.md: '## CF-nnn · date · title' headings with '- **field:** value' lines."""
+    entries, cur, last = [], None, None
+    for line in text.splitlines():
+        m = re.match(r"^## (CF-\d{3,}) · (\S+) · (.*)$", line)
+        if m:
+            cur = {"id": m.group(1), "date": m.group(2), "title": m.group(3).strip()}
+            entries.append(cur); last = None
+            continue
+        if cur is None:
+            continue
+        m = re.match(r"^- \*\*([a-z][a-z ]*):\*\* ?(.*)$", line)
+        if m:
+            last = m.group(1).strip().replace(" ", "_")
+            cur[last] = m.group(2).strip()
+            continue
+        if last and line.startswith("  ") and line.strip():
+            body = line[2:]
+            if last in CF_BLOCKS:
+                if body.strip().startswith("```"):
+                    continue
+                cur[last] = (cur[last] + "\n" + body).strip("\n")
+            else:
+                cur[last] = (cur[last] + " " + line.strip()).strip()
+    return entries
+
+
+def _cf_inputs_from_request(src) -> str:
+    """The media of a request .json as 'role: value' lines (the Higgsfield media ids the flagged job carried)."""
+    if not src:
+        return ""
+    p = Path(str(src))
+    if not (p.is_file() and p.suffix.lower() == ".json"):
+        return ""
+    try:
+        j = json.loads(p.read_bytes().decode("utf-8"))
+    except (ValueError, OSError):
+        return ""
+    prm = j.get("params") if isinstance(j.get("params"), dict) else j
+    return "\n".join(f"{m.get('role', '?')}: {m.get('value', '?')}" for m in (prm.get("medias") or []) if isinstance(m, dict))
+
+
+def cmd_caught_flag(a):
+    """The flag ledger (caught_flags.md at the library root): every prompt and video that made Higgsfield
+    flag, refuse or withhold something during a run (a moderation block, a job that failed within seconds
+    with no reason, an upload or element marked nsfw / ip_checking / failed, an output withheld, a preset
+    notice instead of a job). The script only records and tabulates; the agent that ran the call writes
+    the diagnosis, and the ledger entry holds the verbatim response, the full prompt, the params, the
+    media ids, the flagged video, what was changed and whether it cleared.
+      add        write a CF-nnn entry (run + video attach the plan, request, prompt and params by themselves)
+      set        add a note, or the status (cleared needs the cleared prompt or job; persistent = gave up)
+      list       entries (filters; --digest for the compact run-start view)
+      reconcile  the run's ledger (state.json) against this file: rows marked --flagged with no entry,
+                 and failed rows with no job id or a flag-like note, for the agent to judge."""
+    if not CAUGHT_FLAGS.exists():
+        CAUGHT_FLAGS.write_bytes(b"# Caught flags: prompts and videos Higgsfield flagged\n")
+    lock = FileLock(CAUGHT_FLAGS.with_suffix(".lock"))
+    if a.action == "reconcile":
+        if not a.run:
+            fail("reconcile needs --run", 2)
+        rd = Path(str(a.run))
+        if not rd.exists():
+            rd = ATP_HOME / "runs" / str(a.run)
+        sp_ = rd / "state.json"
+        if not sp_.exists():
+            fail(f"state.json not found in {rd}", 2)
+        led = json.loads(sp_.read_text(encoding="utf-8")).get("submissions", [])
+        ents = [e for e in _cf_parse(CAUGHT_FLAGS.read_bytes().decode("utf-8").replace("\r\n", "\n"))
+                if str(rd.name) in e.get("run", "") or str(a.run) in e.get("run", "")]
+        def recorded(e):
+            vid = _lane(e["video"])
+            for c in ents:
+                same_v = re.sub(r"\D", "", c.get("video", "")).lstrip("0") == vid.lstrip("0")
+                jobs = (c.get("job", "") + " " + c.get("ledger", ""))
+                if same_v and (str(c.get("attempt", "")) in ("", str(e.get("attempt")))
+                               or (e.get("job_id") and e["job_id"] in jobs) or e["fingerprint"] in jobs):
+                    return c["id"]
+            return None
+        marked, check = [], []
+        for e in led:
+            notes = [h.get("note") or "" for h in e.get("history", [])]
+            row = {"video": e["video"], "attempt": e.get("attempt"), "status": e["status"], "job_id": e.get("job_id"),
+                   "fingerprint": e["fingerprint"], "notes": [n[:200] for n in notes if n], "entry": recorded(e)}
+            if e.get("flagged"):
+                marked.append(row)
+            elif e["status"] == "failed" and (not e.get("job_id") or any(CF_TERMS.search(n) for n in notes)):
+                check.append(row)
+        out({"ok": True, "run": rd.name, "entries_for_run": [c["id"] for c in ents],
+             "flagged_unrecorded": [r for r in marked if not r["entry"]],
+             "flagged_recorded": [r for r in marked if r["entry"]],
+             "failed_to_judge": [r for r in check if not r["entry"]],
+             "note": "flagged_unrecorded must each get `caught-flag add`; failed_to_judge rows are the agent's call "
+                     "(a flag or a validation/credit error); mark a row's ledger entry with `ledger set --flagged`."})
+    if a.action == "list":
+        entries = _cf_parse(CAUGHT_FLAGS.read_bytes().decode("utf-8").replace("\r\n", "\n"))
+        def keep(e):
+            if a.mode and a.mode.lower() not in (e.get("mode", "") + " any all").lower(): return False
+            if a.model and a.model.lower() not in (e.get("model", "") + " any all unknown").lower(): return False
+            if a.kind and a.kind.lower() != e.get("kind", "").lower(): return False
+            if a.status and e.get("status", "").lower() != a.status.lower(): return False
+            if a.run and a.run.lower() not in e.get("run", "").lower(): return False
+            if a.video and re.sub(r"\D", "", a.video).lstrip("0") != re.sub(r"\D", "", e.get("video", "")).lstrip("0"): return False
+            if a.grep and a.grep.lower() not in json.dumps(e, ensure_ascii=False).lower(): return False
+            return True
+        sel = [e for e in entries if keep(e)]
+        if a.digest:
+            def short(s, n=260):
+                s = re.sub(r"\s+", " ", s or "").strip()
+                return s if len(s) <= n else s[:n - 1] + "…"
+            skip = ("", "not recorded", "none", "unknown", "—")
+            sel = [{k: v for k, v in {
+                "id": e["id"], "title": e["title"], "kind": e.get("kind", ""), "status": e.get("status", ""),
+                "model": e.get("model", ""), "tool": e.get("tool", ""), "cause": e.get("cause", ""),
+                "response": short(e.get("response", "")), "params": e.get("params", ""),
+                "flagged_video": e.get("flagged_video", ""), "suspected_trigger": short(e.get("suspected_trigger", "")),
+                "changed": short(e.get("what_was_changed", "")), "outcome": short(e.get("outcome", "")),
+                "rule": e.get("rule", "")}.items() if v not in skip} for e in sel]
+        out({"ok": True, "file": str(CAUGHT_FLAGS), "total": len(entries), "count": len(sel), "entries": sel})
+    if a.action == "set":
+        if not a.id:
+            fail("--id CF-nnn is required", 2)
+        with lock:
+            text = CAUGHT_FLAGS.read_bytes().decode("utf-8").replace("\r\n", "\n")
+            m = re.search(rf"^## {re.escape(a.id)} · .*$", text, re.M)
+            if not m:
+                fail(f"{a.id} not found", 1)
+            nxt = re.search(r"^## CF-", text[m.end():], re.M)
+            s, e = m.start(), (m.end() + nxt.start()) if nxt else len(text)
+            block = text[s:e]
+            if a.status == "cleared" and not (a.cleared_prompt or a.cleared_job):
+                fail("--status cleared needs --cleared-prompt (the request .json or text that Higgsfield accepted) "
+                     "or --cleared-job (the job that ran): a flag counts as cleared only once a request went through", 2)
+            if a.cleared_prompt:
+                cp = _ce_text_or_file(a.cleared_prompt)
+                pm = re.search(r"^- \*\*flagged prompt:\*\*\n  ```text\n(.*?)\n  ```", block, re.S | re.M)
+                old = "\n".join(l[2:] for l in pm.group(1).splitlines()) if pm else ""
+                change = _ce_sentence_diff(old, cp) if old else ""
+                new_fields = (_ce_block_field("cleared prompt", cp)
+                              + _ce_block_field("prompt change", change or "not computed (the entry has no flagged prompt)")
+                              + (f"- **cleared params:** {_ce_params(a.cleared_prompt)}\n" if _ce_params(a.cleared_prompt) else ""))
+                block, n = re.subn(r"^- \*\*cleared prompt:\*\* pending.*\n", lambda mm: new_fields, block, count=1, flags=re.M)
+                if not n:
+                    block = block.rstrip("\n") + "\n" + new_fields + ("\n" if nxt else "")
+            if a.cleared_job:
+                block, n = re.subn(r"^- \*\*cleared job:\*\* .*$", f"- **cleared job:** {a.cleared_job}", block, count=1, flags=re.M)
+                if not n:
+                    block = block.rstrip("\n") + f"\n- **cleared job:** {a.cleared_job}\n"
+            if a.note:
+                stamp = f"{dt.date.today().isoformat()} {a.note.strip()}"
+                lm = re.search(r"^- \*\*log:\*\* ?(.*)$", block, re.M)
+                if lm:
+                    block = block.replace(lm.group(0), "- **log:** " + ((lm.group(1) + " | ") if lm.group(1) not in ("", "—") else "") + stamp, 1)
+                else:
+                    block = block.rstrip("\n") + f"\n- **log:** {stamp}\n"
+            for key, val in (("status", a.status), ("outcome", a.outcome), ("what was changed", a.changed),
+                             ("suspected trigger", a.trigger), ("rule", a.rule), ("promoted to", a.promoted_to)):
+                if val:
+                    block, n = re.subn(rf"^- \*\*{key}:\*\* .*$", lambda mm, key=key, val=val: f"- **{key}:** {val}", block, count=1, flags=re.M)
+                    if not n:
+                        block = block.rstrip("\n") + f"\n- **{key}:** {val}\n"
+            if a.status == "cleared" and not a.outcome:
+                block = re.sub(r"^- \*\*outcome:\*\* .*$", "- **outcome:** cleared: a changed request was accepted", block, count=1, flags=re.M)
+            text = text[:s] + block + text[e:]
+            CAUGHT_FLAGS.write_bytes(text.encode("utf-8"))
+        out({"ok": True, "id": a.id, "status": a.status, "file": str(CAUGHT_FLAGS)})
+    # add
+    need = ("title", "kind", "response", "trigger")
+    missing = [k for k in need if not getattr(a, k)]
+    if missing:
+        fail("missing " + ", ".join("--" + k for k in missing)
+             + " (the verbatim Higgsfield response, the kind and the agent's suspected trigger are required;"
+               " write 'none given' for a response that came back empty)", 2)
+    with lock:
+        text = CAUGHT_FLAGS.read_bytes().decode("utf-8").replace("\r\n", "\n")
+        ids = [int(x) for x in re.findall(r"^## CF-(\d{3,}) · ", text, re.M)]
+        cid = f"CF-{(max(ids) + 1) if ids else 1:03d}"
+        date = a.date or dt.date.today().isoformat()
+        auto = _ce_autofind(a.run, a.video)
+        prompt = _ce_text_or_file(a.prompt) or (_ce_text_or_file(auto["prompt"]) if "prompt" in auto else "")
+        req_src = a.prompt if (a.prompt and str(a.prompt).lower().endswith(".json")) else (None if a.prompt else auto.get("prompt"))
+        params = a.params or _ce_params(req_src)
+        inputs = _ce_text_or_file(a.inputs) or _cf_inputs_from_request(req_src)
+        plan = a.plan or (str(auto["plan"]) if "plan" in auto else "")
+        response = _ce_text_or_file(a.response)
+        block = (f"\n## {cid} · {date} · {a.title.strip()}\n"
+                 f"- **source:** {a.source}\n"
+                 f"- **kind:** {a.kind}\n"
+                 f"- **tool:** {a.tool or 'unknown'}\n"
+                 f"- **stage:** {a.stage or 'unknown'}\n"
+                 f"- **run:** {a.run or 'unknown'}\n"
+                 f"- **video:** {a.video or 'unknown'}\n"
+                 f"- **attempt:** {a.attempt or 'unknown'}\n"
+                 f"- **mode:** {a.mode or 'unknown'}\n"
+                 f"- **model:** {a.model or 'unknown'}\n"
+                 f"- **product:** {a.product or 'unknown'}\n"
+                 + _ce_block_field("response", response)
+                 + f"- **job:** {a.job or 'none (no job id returned)'}\n"
+                 f"- **ledger:** {a.fingerprint or 'not recorded'}\n"
+                 f"- **credits:** {a.credits or 'not recorded'}\n"
+                 + _ce_block_field("flagged prompt", prompt)
+                 + f"- **params:** {params or 'not recorded'}\n"
+                 + _ce_block_field("flagged inputs", inputs)
+                 + f"- **flagged video:** {a.flagged_video or 'not recorded'}\n"
+                 f"- **output:** {a.output or 'none (the job produced no file)'}\n"
+                 f"- **plan:** {plan or 'not recorded'}\n"
+                 f"- **suspected trigger:** {a.trigger.strip()}\n"
+                 f"- **cause:** {a.cause}\n"
+                 f"- **what was changed:** {a.changed or 'nothing yet'}\n"
+                 f"- **outcome:** {a.outcome or 'open: not cleared yet'}\n"
+                 f"- **cleared prompt:** pending (inserted only after a changed request was accepted)\n"
+                 f"- **cleared job:** none yet\n"
+                 f"- **rule:** {(a.rule or 'not yet generalised').strip()}\n"
+                 f"- **status:** {a.status or 'open'}\n"
+                 f"- **log:** —\n"
+                 f"- **promoted to:** {a.promoted_to or '—'}\n")
+        CAUGHT_FLAGS.write_bytes((text.rstrip("\n") + "\n" + block).encode("utf-8"))
+    out({"ok": True, "id": cid, "date": date, "title": a.title.strip(), "file": str(CAUGHT_FLAGS),
+         "attached": [k for k, v in (("prompt", prompt), ("params", params), ("inputs", inputs), ("plan", plan)) if v],
+         "note": "after the changed request is accepted: `caught-flag set --id %s --status cleared --cleared-prompt <request.json>`; "
+                 "if the flag stays, `--status persistent`; a general rule goes in --rule and into the owning reference" % cid})
+
+
 def _px_span(spec: str, what: str) -> float:
     """'y0-y1' (pixel rows) or a plain pixel height."""
     s = (spec or "").strip()
@@ -3602,9 +3834,12 @@ def _ledger_write(a, p: Path):
         e["status"] = a.status
         if a.job:
             e["job_id"] = a.job
+        if a.flagged:
+            e["flagged"] = True
         st["updated"] = now_iso()
         write_json(p, st)
-        out({"ok": True, "entry": e})
+        out({"ok": True, "entry": e, **({"reminder": "flagged: record it now with `caught-flag add` (the verbatim response, the prompt, the "
+                                                       "flagged video and your suspected trigger), then change the request"} if a.flagged else {})})
 
 
 def cmd_open(a):
@@ -3739,6 +3974,7 @@ def main():
     p.add_argument("--fingerprint"); p.add_argument("--job")
     p.add_argument("--status", choices=["submitted", "unknown", "completed", "failed", "accepted", "rejected", "superseded"])
     p.add_argument("--note"); p.add_argument("--allow-repeat", action="store_true")
+    p.add_argument("--flagged", action="store_true", help="set: mark this submission as flagged/refused by Higgsfield (then `caught-flag add`)")
     p.add_argument("--lane", help="lane override (default: the video number before any '-')")
     p.add_argument("--max-open", type=int, help="open submissions allowed in the run (default production.max_parallel_jobs)")
     p.set_defaults(fn=cmd_ledger)
@@ -3926,6 +4162,41 @@ def main():
     p.add_argument("--digest", action="store_true", help="list: compact context for the next run's agents (no briefs or full prompts)")
     p.add_argument("--grep", help="list: substring over the whole entry"); p.add_argument("--rules", action="store_true", help="list: ids and rules only")
     p.set_defaults(fn=cmd_caught_error)
+
+    p = sp.add_parser("caught-flag", help="the flag ledger caught_flags.md: add | list | set | reconcile")
+    p.add_argument("action", choices=["add", "list", "set", "reconcile"])
+    p.add_argument("--id", help="set: the entry id (CF-nnn)")
+    p.add_argument("--title", help="add: a short title"); p.add_argument("--date", help="add: YYYY-MM-DD (default today)")
+    p.add_argument("--run", help="run id (list: filter; reconcile: required)"); p.add_argument("--video", help="video number (list: filter)")
+    p.add_argument("--attempt", help="add: the ledger attempt (a1, 2, c2-a1 …)")
+    p.add_argument("--mode", help="analyze-recreate | analyze-create | edit (list: filter)")
+    p.add_argument("--model", help="model id (list: filter)"); p.add_argument("--product", help="client product")
+    p.add_argument("--kind", choices=CF_KINDS, help="add: what Higgsfield did (list: filter)")
+    p.add_argument("--tool", help="add: generate_video | generate_image | media_upload | show_reference_elements | reframe | other")
+    p.add_argument("--stage", help="add: preflight | submit | job | upload | result")
+    p.add_argument("--response", help="add: Higgsfield's answer verbatim (error text, notice, status), text or file; 'none given' when empty")
+    p.add_argument("--job", help="add: job id(s) that were flagged"); p.add_argument("--fingerprint", help="add: the ledger fingerprint of the request")
+    p.add_argument("--credits", help="add: charged / refunded credits")
+    p.add_argument("--prompt", help="add: the flagged prompt as text or the request .json (default: the newest <run>/50-requests/video-NN*-request.json)")
+    p.add_argument("--params", help="add: generation params (default: read from the request .json)")
+    p.add_argument("--inputs", help="add: the media the request carried (roles, media ids, local files), text or file (default: from the request .json)")
+    p.add_argument("--flagged-video", help="add: the video that carried the flag: the reference (V id, file) and/or the generated clip")
+    p.add_argument("--output", help="add: the output file when a job finished but was withheld or flagged")
+    p.add_argument("--plan", help="add: the plan file path (default: <run>/40-briefs/video-NN-plan.md)")
+    p.add_argument("--trigger", help="add/set: the agent's suspected trigger, labelled [E] evidence or [I] inference")
+    p.add_argument("--cause", choices=CF_CAUSES, default="unknown")
+    p.add_argument("--changed", help="add/set: what was changed in the next request (reworded, video reference dropped, image replaced …)")
+    p.add_argument("--outcome", help="add/set: what happened next")
+    p.add_argument("--rule", help="add/set: the general rule, as a kind not an instance")
+    p.add_argument("--status", choices=CF_STATUS, help="add: initial status (open); set: new status; list: filter")
+    p.add_argument("--source", choices=["user", "agent"], default="agent")
+    p.add_argument("--note", help="set: a dated note appended to the entry's log")
+    p.add_argument("--cleared-prompt", help="set: the request .json or text Higgsfield accepted after the change")
+    p.add_argument("--cleared-job", help="set: the job id that ran after the change")
+    p.add_argument("--promoted-to", help="set: the reference and section the rule was promoted into")
+    p.add_argument("--digest", action="store_true", help="list: compact context for the run start")
+    p.add_argument("--grep", help="list: substring over the whole entry")
+    p.set_defaults(fn=cmd_caught_flag)
 
     p = sp.add_parser("capcut-name"); p.add_argument("--video", required=True, help="the run's video number")
     p.add_argument("--date", help="YYYY-MM-DD (default: today)"); p.add_argument("--store", help="CapCut drafts dir")

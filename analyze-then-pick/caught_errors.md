@@ -2297,3 +2297,61 @@ How agents use it:
 - **rule:** A placed product is accepted only when it is grounded in the scene: a visible contact shadow in the direction of the scene's light, a reflection or surface darkening where it meets a glossy or metal surface, its base well inside a surface (never on a seam or an edge), and its brightness, saturation and softness within the scene's range as read against a neighbouring object; QC crops the base at 3x on a full-resolution frame at rest and in use and compares colour and contrast with a same-scene neighbour, and a hard clean edge with no shadow or reflection is a regenerate reason, never a pass on 'contact shadow present'. A layout composite is a placement and scale guide only; the generation prompt asks for the rendered look explicitly.
 - **status:** open
 - **promoted to:** —
+
+## CE-044 · 2026-10-12 · Grounded layout reference and grounding wording did not ground the carton: hard clean base, no cast shadow, no reflection, squared to the lens
+- **source:** agent
+- **video:** 22
+- **run:** C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261007-232745-07
+- **delivered:** CapCut project 08_Oct_2026_v22 · clean C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261007-232745-07/60-outputs/video-22/clean.mp4 · credits 21 · run QC: accepted
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Neuro Energy & Focus Cinnamon 9-piece carton (V16 recreate, CE-043 fix pass, attempt 1: grounded layout reference + grounding wording)
+- **assets:** A09.jpg; A709-p40.png; A708-p25.png; v2/refs/scale-ref-grounded-left.png (Image 4: 3D carton 0.92x, yaw 12, shadow + reflection); V16 own-silent.mp4
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** CE-043 attempt 1 (job 49927b98-ec5a-4554-9455-dc1b192406d6, v2/a1): Image 4 (layout reference) now carried the grounding (3D-projected carton at 0.92x true size, tone-matched muted warm, directional contact shadow, faint blurred reflection on the steel) and the prompt asked for the rendered look in plain words (soft darker contact shadow toward the lens and to the right, faint blurred reflection on the steel, muted warm colour, notebook's phone softness, label turned about 15 degrees) and said to use Image 4's grounding. The take has the right size (0.98x vs the notebook at the same depth), count 1, same spot, and still reads as pasted: on a 3x crop at 1.0 s the base is a hard clean line with only a hairline of dark, no cast shadow on the steel, no reflection, the carton is squared to the lens (the turn was not rendered) and it is the brightest saturated cyan block of a warm dim scene (lum 116, sat 0.54, R/B 0.46 against steel lum 83 and wood lum 98 with R/B 1.4-2.5). The model does draw cast shadows on the steel for his hand (visible at 1.25 s), so the capability exists. The grounding in a small full-scene layout image (carton about 10 percent of its area) and in the prompt text did not transfer: the carton was drawn from the two studio packshots (Images 2 and 3), which the prompt scoped to structure, material, colours and label but which are the only large views of the carton.
+- **brief:**
+  ```text
+  Video 22 of 22 — NEUROGUM — Recreate V16
+  Concept: V16 recreated beat for beat with character A09 and the Neuro Energy & Focus gum carton (Cinnamon, 9 pieces).
+  Reference pattern: V16 card (timing, beats, inserts at 1.80-4.40, 6.70-9.30).
+  Characters/assets: A09 (Image 1); A709.jpg, A708.jpg.
+  House approach: none (no examples).
+  Substitutions: creator → A09 | Placement: stands upright at the front-right corner of the table, outside the sweep of the hands, label toward the lens, in the same spot in every shot.
+  Main action & states: source beats unchanged; product untouched and persistent.
+  Style & camera: as V16, static phone camera, the source's light.
+  Text: CapCut layers in the house style, reference wording/positions (see plan).
+  Inserts: V16 1.80-4.40, V16 6.70-9.30.
+  Sound: original audio restored; inserts with their own sound.
+  Model & operation: wan3_0_prime reference-to-video (≈ recreate from Video 1), 7 s → trim 6.300 s, 9:16 720p, audio off, thinking on · est. 21 credits
+  Fidelity: Video 1 = silent own content (motion/camera/timing), action script written out in order, keep-list + exclusions, same duration; sync-check after the merge. Risk: low.
+  Adaptation logic: product placed at the analysed anchor; source branding dropped.
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Recreate Video 1 as a real phone-shot vertical clip with only these changes: the person and the product. Video 1 is the motion, camera, framing, cut and timing reference: keep every movement, gesture, head turn, gaze, expression and mouth movement of the person in Video 1 in the same order, at the same moments and at the same real-time speed, and keep the camera, framing, cuts, light, room, background and the notebook's place. Do not inherit the appearance, clothing, text, watermarks or branded items of Video 1. The man corresponds to Image 1, adopting facial features, hairstyle, skin tone, build and clothing (short hair, stubble); Image 1 is only his identity. The Neuro Energy & Focus gum carton (Cinnamon, 9 pieces) corresponds to Image 2 and Image 3, which jointly define one single package, adopting only its structure, material, colours and printed label, not their studio lighting, shadow, background or camera angle: a small closed flat paperboard carton, 7.5 cm wide, 8.5 cm tall and 1.6 cm thick, light blue with wavy lighter-blue shapes, a blue N logo and Neuro wordmark top-left, an orange-red GUM badge top-right, a Cinnamon tag, the title Energy & Focus. Image 4 is a size, spot and grounding reference: it shows this carton at the front-left corner beside the notebook, one third as wide as the page, in the room's warm dim light with its soft contact shadow and faint reflection on the steel; use that size, spot, angle and grounding, not its framing or wall. Keep its exact shape, proportions and artwork; it stays closed. Video 1 has no such item, but the carton is part of this scene from the first frame: it stands upright on its base, its whole base on the bare brushed steel front band at the front-left corner, clearly in front of the wood strip and not on the seam, left of the open spiral notebook, its base level with the notebook's front edge, a narrow band of bare steel between them, inside the frame, its label turned about fifteen degrees away from the lens. The room's warm light slants from the upper left and behind and lights it like the notebook and the man: a soft highlight on its upper left, its right side and lower part in shade, its blue slightly muted and warmed, no brighter or more saturated than the wood or his skin, with the notebook's soft phone focus and grain. A soft darker contact shadow lies under its base and falls toward the lens and to the right, as his hands' shadows fall on the page, with a faint blurred reflection of its lower edge on the steel; its bottom edge meets the steel with no gap or hard cutout outline. It stays untouched in the same place for the whole clip.
+  [Plot Summary] The open spiral notebook lies at the bottom centre as in Video 1; the small carton at the front-left corner, one third as wide as the page, keeps exactly this size, light and shadow before and after every cut.
+  Shot 1 [0-1.8s]: Static selfie framing from the table edge, a door frame behind; the carton stands at the front-left corner. The man sits square to the camera, leaning forward, both palms flat on the notebook with fingers tapping, head bobbing, mouth moving rapidly as if arguing, brows raised; the frame-right hand lifts the top page, flips it and slaps it back down; then wide sweeping open-hand gestures, leaning in, mouth still talking, as the image brightens toward white; his hands and arms never touch the carton.
+  Shot 2 [1.8-4.1s]: Hard cut, same framing, the one carton still stands in the same spot: he leans back then forward, hands chopping and waving, palms-up shrugs, mouth arguing; hands come down to the notebook; the right index finger taps the temple; the arm flings out wide toward frame-right and comes back down to the notebook.
+  Shot 3 [4.1-6.3s]: Hard cut, same framing, the one carton still stands in the same spot: hands out palms up in a shrug, a quick temple tap, an arm swing wide to frame-right; then both hands tapping and sliding across the notebook; a hand wipes across the mouth and nose, then a final open gesture, still mouthing.
+  [Audio Style] No dialogue. No background music.
+  [Camera & Core Constraints] Camera: static throughout. Real-time speed, nothing added, skipped, repeated or reordered, no new gesture, no re-staging, no new people. Exactly one carton, closed, upright, not duplicated, not vanished, not deformed, constant in size; nothing passes through it. No subtitles, captions or other on-screen text; the only lettering is the printed label on the package.
+  [Negative Prompts] no subtitles, no watermark, no face distortion, no identity drift, no extra fingers, no duplicate packages, no scale drift, no other brands, no oversized carton, no carton on the notebook or any paper, no carton right of the notebook, no tilted or leaning carton, no carton touching his hand, no floating carton, no shadowless carton, no hard cutout edge, no pasted look, no studio lighting on the carton, no carton brighter or more saturated than the room, no glow
+  ```
+- **params:** model=wan3_0_prime · duration=7 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=image_references×4, video_references · request=video-22-fix-v2-a1-request.json
+- **errors:**
+  ```text
+  none; job 49927b98-ec5a-4554-9455-dc1b192406d6 completed, 21 credits
+  ```
+- **evidence:** C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261007-232745-07/60-outputs/video-22/fix-20261012/v2/a1/base3x_1.0.png (3x base crop), v2/a1/crops_montage.png, v2/meas/colour_v2a1_1.0.json, v2/a1/raw.mp4
+- **qc:**
+  ```text
+  attempt 1 of the CE-043 pass: size ok, count/spot ok, but no cast shadow, no reflection, hard clean base, squared to the lens, brightest saturated cyan block: paste signs 3, 5, 8; regenerate with a different lever
+  ```
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261007-232745-07\40-briefs\video-22-plan.md
+- **class:** anomaly-catalog.md §2.15 (signs 3, 5, 8 and 9: no contact shadow, packshot pose, hard outline without reflection, footprint) and §2.16; wan-3-0.md §5 paste row; CE-043
+- **cause:** reference
+- **fix:** none yet
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** A look the model must copy has to be in the reference it draws the object from: when the object's only large references are studio packshots, a grounded layout image (object about 10 percent of its area) plus grounding words does not ground it. Put the grounding into a close-up reference of the object itself (standing on the real surface of the scene, with its cast shadow, its reflection, the room's warm muted colour and the footage's softness, at about 40 percent of the canvas), bind it in the prompt as the look and grounding reference, and keep one packshot for the printed label only [OBSERVED once; attempt 2 of the same pass tests the close-up].
+- **status:** open
+- **promoted to:** —
