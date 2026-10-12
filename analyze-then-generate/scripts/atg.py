@@ -4486,14 +4486,17 @@ def cmd_econ(a):
         fail("econ --fixed-annual needs --units-per-year (the yearly volume the fixed cost is spread over: an assumption the agent states, shown on its own row)", 2)
     fixed_per_unit = (a.fixed_annual / a.units_per_year) if (a.fixed_annual and a.units_per_year) else 0.0
     vat = (a.vat_pct or 0.0) / 100.0
-    net = a.retail / (1.0 + vat)
-    base = a.retail if a.fees_on == "gross" else net          # card and platform fees are charged on the amount paid
+    ship_paid = a.shipping_charge or 0.0                       # what the customer pays for shipping (the amount paid, VAT included); 0 = free shipping
+    ship_net = ship_paid / (1.0 + vat)
+    net = a.retail / (1.0 + vat) + ship_net                    # net revenue of the order: the product net of VAT plus the shipping charge net of VAT
+    pnet = net - ship_net                                      # the product's net price
+    base = (a.retail + ship_paid) if a.fees_on == "gross" else net          # card and platform fees are charged on the amount paid
     fees = base * ((a.platform_fee_pct or 0.0) + (a.payment_fee_pct or 0.0)) / 100.0 + (a.payment_fixed or 0.0)
 
     def contribution(retail_mult=1.0, returns_mult=1.0, landed_mult=1.0):
         rt = a.retail * retail_mult
-        nt = rt / (1.0 + vat)
-        fe = (rt if a.fees_on == "gross" else nt) * ((a.platform_fee_pct or 0.0) + (a.payment_fee_pct or 0.0)) / 100.0 + (a.payment_fixed or 0.0)
+        nt = rt / (1.0 + vat) + ship_net
+        fe = ((rt + ship_paid) if a.fees_on == "gross" else nt) * ((a.platform_fee_pct or 0.0) + (a.payment_fee_pct or 0.0)) / 100.0 + (a.payment_fixed or 0.0)
         r = min(1.0, (a.returns_pct or 0.0) / 100.0 * returns_mult)
         ld = a.landed * landed_mult
         rl = r * (nt + (a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * ld)
@@ -4508,29 +4511,43 @@ def cmd_econ(a):
         fixed_cost = a.landed + (a.extra_per_unit or 0.0) + fixed_per_unit + (a.fulfil or 0.0) + (a.payment_fixed or 0.0) + r * ((a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * a.landed)
         den = 1.0 - ((a.platform_fee_pct or 0.0) + (a.payment_fee_pct or 0.0)) / 100.0 * k - r - a.target_pct / 100.0
         if den > 0:
-            n_t = fixed_cost / den
-            price_for_target = {"target_contribution_pct_of_net": a.target_pct, "net_revenue": round(n_t, 2), "retail_price": round(n_t * (1.0 + vat), 2)}
+            n_t = fixed_cost / den                         # the net revenue of the order (the product and its shipping charge) at which the contribution reaches the target
+            price_for_target = {"target_contribution_pct_of_net": a.target_pct, "net_revenue": round(n_t, 2), "retail_price": round((n_t - ship_net) * (1.0 + vat), 2)}
         else:
             price_for_target = {"target_contribution_pct_of_net": a.target_pct, "net_revenue": None, "retail_price": None,
                                 "note": "no price reaches the target: the percentage costs (fees, returns, target) take more than the whole price"}
     ret_loss = r * (net + (a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * a.landed)
-    gm = (net - a.landed) / net if net else 0.0
+    gm = (pnet - a.landed) / pnet if pnet else 0.0
     res = {"currency": a.currency, "retail_price": round(a.retail, 2), "vat_pct_included": a.vat_pct or 0.0,
+           "shipping_charge": round(ship_paid, 2), "shipping_net": round(ship_net, 2),
            "net_revenue": round(net, 2), "landed_cost": round(a.landed, 2), "extra_per_unit": round(a.extra_per_unit or 0.0, 2),
            "extra_label": a.extra_label, "fixed_annual": a.fixed_annual, "units_per_year": a.units_per_year, "fixed_cost_per_unit": round(fixed_per_unit, 2),
            "fulfilment": round(a.fulfil or 0.0, 2),
            "fees": round(fees, 2), "fees_charged_on": a.fees_on, "expected_return_loss": round(ret_loss, 2),
            "contribution_per_order": round(c0, 2),
            "contribution_pct_of_net": round(100 * c0 / net, 1) if net else None,
-           "gross_margin_pct": round(100 * gm, 1), "markup_net_over_landed": round(net / a.landed, 2) if a.landed else None,
+           "gross_margin_pct": round(100 * gm, 1), "markup_net_over_landed": round(pnet / a.landed, 2) if a.landed else None,
            "break_even_cpa": round(c0, 2),
            "break_even_roas_net": round(net / c0, 2) if c0 > 0 else None,
-           "break_even_roas_gross": round(a.retail / c0, 2) if c0 > 0 else None,
-           "landed_ceiling_at_markup": {str(k): round(net / k, 2) for k in (3, 4)}}
+           "break_even_roas_gross": round((a.retail + ship_paid) / c0, 2) if c0 > 0 else None,
+           "landed_ceiling_at_markup": {str(k): round(pnet / k, 2) for k in (3, 4)}}
     if a.moq:
         res["capital_at_moq"] = round(a.moq * a.landed, 2)
     if price_for_target is not None:
         res["price_for_target"] = price_for_target
+    if a.prices:
+        try:
+            ladder_prices = [float(x) for x in re.split(r"[,\s]+", a.prices.strip()) if x]
+        except ValueError:
+            fail("econ --prices takes numbers separated by commas, for example 29.99,34.99,39.99", 2)
+        if not a.retail:
+            fail("econ --prices needs a non-zero --retail (the ladder scales the calculation from it)", 2)
+        lad = []
+        for pr in ladder_prices:
+            nt, cc = contribution(retail_mult=pr / a.retail)
+            lad.append({"retail_price": round(pr, 2), "net_revenue": round(nt, 2), "contribution_per_order": round(cc, 2),
+                        "contribution_pct_of_net": round(100 * cc / nt, 1) if nt else None})
+        res["ladder"] = lad
     if a.stress:
         sc = {}
         for label, kw in (("retail -20%", {"retail_mult": 0.8}), ("returns x2", {"returns_mult": 2.0}),
@@ -4543,7 +4560,9 @@ def cmd_econ(a):
     res["inputs_left_at_zero"] = [k for k, v in (("returns_pct", a.returns_pct), ("vat_pct", a.vat_pct), ("fulfil", a.fulfil), ("platform_fee_pct", a.platform_fee_pct),
                                                  ("payment_fee_pct", a.payment_fee_pct), ("payment_fixed", a.payment_fixed), ("return_cost", a.return_cost),
                                                  ("resale_pct", a.resale_pct)) if not v]
-    rows = [("retail price (consumer)", res["retail_price"]), (f"net revenue (VAT {res['vat_pct_included']}% removed)", res["net_revenue"]),
+    rows = [("retail price (consumer)", res["retail_price"])] + (
+            [(f"shipping paid by the customer (VAT included; counted as revenue, refunded with a returned order)", res["shipping_charge"])] if ship_paid else []) + [
+            (f"net revenue (VAT {res['vat_pct_included']}% removed" + (", shipping charge included" if ship_paid else "") + ")", res["net_revenue"]),
             ("landed cost", res["landed_cost"])] + ([(f"extra per unit ({a.extra_label})" if a.extra_label else "extra per unit", res["extra_per_unit"])] if a.extra_per_unit else []) + (
             [(f"fixed yearly cost {a.fixed_annual:g} / {a.units_per_year} units a year", res["fixed_cost_per_unit"])] if fixed_per_unit else []) + [
             ("fulfilment", res["fulfilment"]), (f"fees (on {a.fees_on})", res["fees"]),
@@ -4554,6 +4573,9 @@ def cmd_econ(a):
     if res.get("stress"):
         print("\n| stress | contribution | % of net |\n|---|---|---|\n" + "\n".join(
             f"| {k} | {v['contribution_per_order']} | {v['contribution_pct_of_net']} |" for k, v in res["stress"].items()))
+    if res.get("ladder"):
+        print(f"\n| retail price ({a.currency}) | net revenue | contribution per order | % of net |\n|---|---|---|---|\n" + "\n".join(
+            f"| {x['retail_price']} | {x['net_revenue']} | {x['contribution_per_order']} | {x['contribution_pct_of_net']} |" for x in res["ladder"]))
     if res["inputs_left_at_zero"]:
         print("\ninputs left at zero (the result assumes none of that cost): " + ", ".join(res["inputs_left_at_zero"]))
     if price_for_target is not None:
@@ -4574,13 +4596,15 @@ def cmd_econ(a):
             ebm[mk] = {"market": a.market.strip(), "at": now_iso(), "note": a.note,
                        **{k: res[k] for k in ("retail_price", "net_revenue", "landed_cost", "contribution_per_order", "contribution_pct_of_net",
                                               "break_even_cpa", "break_even_roas_gross", "currency")},
-                       "inputs": {"vat_pct": a.vat_pct, "extra_per_unit": a.extra_per_unit, "extra_label": a.extra_label, "fixed_annual": a.fixed_annual,
+                       "inputs": {"vat_pct": a.vat_pct, "shipping_charge": a.shipping_charge, "extra_per_unit": a.extra_per_unit, "extra_label": a.extra_label, "fixed_annual": a.fixed_annual,
                                   "units_per_year": a.units_per_year, "fulfil": a.fulfil,
                                   "platform_fee_pct": a.platform_fee_pct, "payment_fee_pct": a.payment_fee_pct,
                                   "payment_fixed": a.payment_fixed, "returns_pct": a.returns_pct, "return_cost": a.return_cost, "resale_pct": a.resale_pct,
                                   "fees_on": a.fees_on, "moq": a.moq}}
             if res.get("price_for_target") is not None:
                 ebm[mk]["price_for_target"] = res["price_for_target"]
+            if res.get("ladder"):
+                ebm[mk]["ladder"] = res["ladder"]
             if a.note:
                 ebm[mk]["note"] = a.note
             data["updated"] = now_iso()
@@ -4588,7 +4612,7 @@ def cmd_econ(a):
         with FileLock(elk):
             ed = _vb_load(ep, {"items": []})
             nid = f"EV{len(ed['items']) + 1:03d}"
-            method = (f"method: econ retail={a.retail} vat={a.vat_pct} landed={a.landed} extra={a.extra_per_unit} fixed_annual={a.fixed_annual}/{a.units_per_year} fulfil={a.fulfil} platform={a.platform_fee_pct}% "
+            method = (f"method: econ retail={a.retail} vat={a.vat_pct} shipping_charge={a.shipping_charge} landed={a.landed} extra={a.extra_per_unit} fixed_annual={a.fixed_annual}/{a.units_per_year} fulfil={a.fulfil} platform={a.platform_fee_pct}% "
                       f"payment={a.payment_fee_pct}%+{a.payment_fixed} returns={a.returns_pct}% return_cost={a.return_cost} fees_on={a.fees_on}")
             ed["items"].append({"id": nid, "cand": a.cand, "lane": "economics",
                                 "claim": f"contribution {res['contribution_pct_of_net']}% of net at {a.currency} {a.retail} ({a.market.strip()})",
@@ -4843,7 +4867,8 @@ def _cd_rows(items, a, cfg):
         eco = {m: {"market": v.get("market"), "currency": v.get("currency"), "retail": v.get("retail_price"), "landed": v.get("landed_cost"),
                    "contribution_pct_of_net": v.get("contribution_pct_of_net"), "contribution_per_order": v.get("contribution_per_order"),
                    "target_pct": (v.get("price_for_target") or {}).get("target_contribution_pct_of_net"),
-                   "retail_for_target": (v.get("price_for_target") or {}).get("retail_price"), "note": v.get("note")}
+                   "retail_for_target": (v.get("price_for_target") or {}).get("retail_price"), "note": v.get("note"),
+                   "shipping_charge": (v.get("inputs") or {}).get("shipping_charge")}
                for m, v in (c.get("economics_by_market") or {}).items()}
         row = {"id": c["id"], "name": c["name"], "niche": c.get("category"), "type": c.get("type"), "origin": c.get("origin"), "status": c["status"],
                "price_fit": c.get("price_fit"), "compliance": c.get("compliance"), "excluded": c.get("excluded"),
@@ -4884,7 +4909,7 @@ def _cd_md(rows, rubric, blind=False, excl=()):
     head = ["id", "product", "niche", "type"] + ([] if blind else ["origin"]) + ["status"] + crit + ["weighted sum" + (f" (without {', '.join(sorted(excl))})" if excl else ""), "conf", "red team", "price fit", "compliance", "economics by market", "evidence rows (A/B; sites)", "pick"]
     L = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for r in rows:
-        eco = "; ".join(f"{v['market']}: {v['contribution_pct_of_net']} % of net ({v['currency']} {v['retail']})"
+        eco = "; ".join(f"{v['market']}: {v['contribution_pct_of_net']} % of net ({v['currency']} {v['retail']}" + (f" + {v['shipping_charge']:g} shipping" if v.get("shipping_charge") else "") + ")"
                         + (f", {v['target_pct']:g} % needs {v['retail_for_target']}" if v.get("retail_for_target") is not None and v.get("target_pct") is not None else "")
                         + (" [note]" if v.get("note") else "") for v in r["economics"].values()) or ""
         ev = r["evidence"]
@@ -6582,6 +6607,8 @@ def main():
     p.add_argument("--resale-pct", type=float, default=0.0, help="share of the landed cost recovered by reselling a returned unit (default 0: conservative)")
     p.add_argument("--moq", type=int, help="minimum order quantity: prints the capital at risk")
     p.add_argument("--stress", action="store_true", help="also compute retail -20%%, returns x2, landed +15%% and all three")
+    p.add_argument("--shipping-charge", dest="shipping_charge", type=float, help="econ: what the customer pays for shipping on the order (the amount paid, VAT included where prices include it; omit or 0 = free shipping, the seller pays the fulfilment). It counts as revenue of the order net of VAT, the card fee is charged on it, and a returned order refunds it with the rest (the EU withdrawal right; conservative for the US). The brief's shipping policy is this input")
+    p.add_argument("--prices", help="econ: a price ladder: also show the contribution at these other retail prices (comma-separated, the same currency, every other input unchanged), for example the prices the market shows for the no-name tier and the brand tier; printed, returned and kept with a stored result, nothing is judged")
     p.add_argument("--target-pct", dest="target_pct", type=float, help="also solve the retail price at which the contribution reaches this share of net revenue (for example 25), with every other input unchanged; the agent compares it with the prices the market shows")
     p.add_argument("--cand", help="write the result into this candidate (one result per market, side by side) and register a grade C economics evidence row (needs --run and --market)")
     p.add_argument("--run"); p.add_argument("--currency", default="USD")

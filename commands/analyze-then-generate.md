@@ -1267,7 +1267,7 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
 - Decide, once, the inputs that do not depend on the product and write them with their sources in
   `30-research/cost-basis.md` (`viral-browser.md` §7.0): the postage per order by weight class from a
   carrier's own price list (US and the lead country) plus pick, pack and materials = the fulfilment per
-  order, and what the store's shipping policy does to it; the return rate and the cost of a returned order
+  order, and the store's shipping policy (`T econ --shipping-charge`, the same for every candidate; `T econ --prices` prints a price ladder); the return rate and the cost of a returned order
   per market; the card and platform fees of the channel's real fee schedule; the exchange rate with its
   source and date; the tariff regime for the origin with the guess it rests on; the freight tables and the
   calendar. Register the sourced ones once as evidence rows (`T evidence add --from-json`), under one
