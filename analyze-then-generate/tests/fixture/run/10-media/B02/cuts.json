@@ -1,0 +1,23 @@
+{
+  "detector": "ffmpeg select scene score on 192 px frames; cut = score>=0.30 or local peak >=4x neighbourhood median (>=0.14); NMS 0.25 s",
+  "cuts": [],
+  "shots": [
+    {
+      "shot": 1,
+      "start": 0.0,
+      "end": 34.0,
+      "dur": 34.0
+    }
+  ],
+  "pacing": {
+    "shots": 1,
+    "cuts": 0,
+    "median_shot_s": 34.0,
+    "mean_shot_s": 34.0,
+    "min_shot_s": 34.0,
+    "max_shot_s": 34.0,
+    "cuts_per_10s": 0.0,
+    "first_cut_s": null,
+    "cuts_in_first_3s": 0
+  }
+}

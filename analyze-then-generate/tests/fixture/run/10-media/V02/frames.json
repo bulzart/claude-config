@@ -1,0 +1,711 @@
+{
+  "baseline_fps": 5.0,
+  "baseline_note": null,
+  "static_threshold": 2.5,
+  "dense_fps": 10.0,
+  "static_runs": [],
+  "extra_frames": 26,
+  "frames": [
+    {
+      "t": 0.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000000.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.1,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m00.10s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.2,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000001.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.97
+    },
+    {
+      "t": 0.3,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m00.30s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.4,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000002.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.53
+    },
+    {
+      "t": 0.5,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m00.50s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.6,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000003.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.91
+    },
+    {
+      "t": 0.7,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m00.70s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.8,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000004.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.51
+    },
+    {
+      "t": 0.9,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m00.90s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 1.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000005.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 2.43
+    },
+    {
+      "t": 1.2,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000006.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 4.2
+    },
+    {
+      "t": 1.4,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000007.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.97
+    },
+    {
+      "t": 1.6,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000008.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.6
+    },
+    {
+      "t": 1.8,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000009.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.98
+    },
+    {
+      "t": 2.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000010.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 4.25
+    },
+    {
+      "t": 2.2,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000011.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 2.02
+    },
+    {
+      "t": 2.4,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000012.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.74
+    },
+    {
+      "t": 2.6,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000013.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 2.03
+    },
+    {
+      "t": 2.8,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000014.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.72
+    },
+    {
+      "t": 3.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000015.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 2.28
+    },
+    {
+      "t": 3.2,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000016.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.96
+    },
+    {
+      "t": 3.4,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000017.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.89
+    },
+    {
+      "t": 3.6,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000018.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.53
+    },
+    {
+      "t": 3.8,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000019.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.92
+    },
+    {
+      "t": 4.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000020.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.88
+    },
+    {
+      "t": 4.2,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000021.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 2.0
+    },
+    {
+      "t": 4.4,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000022.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.68
+    },
+    {
+      "t": 4.6,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000023.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.97
+    },
+    {
+      "t": 4.8,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000024.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.64
+    },
+    {
+      "t": 5.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000025.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 2.37
+    },
+    {
+      "t": 5.2,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000026.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 4.07
+    },
+    {
+      "t": 5.4,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000027.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 2.0
+    },
+    {
+      "t": 5.6,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000028.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.72
+    },
+    {
+      "t": 5.8,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000029.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.99
+    },
+    {
+      "t": 6.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000030.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.88
+    },
+    {
+      "t": 6.2,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000031.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.96
+    },
+    {
+      "t": 6.4,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000032.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.51
+    },
+    {
+      "t": 6.6,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000033.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 1.9
+    },
+    {
+      "t": 6.75,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m06.75s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 6.8,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000034.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 3.51
+    },
+    {
+      "t": 6.85,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m06.85s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 6.95,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m06.95s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000035.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 2.5
+    },
+    {
+      "t": 7.05,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.05s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.15,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.15s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.2,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000036.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 2.0
+    },
+    {
+      "t": 7.25,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.25s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.35,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.35s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.4,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000037.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 3.7
+    },
+    {
+      "t": 7.45,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.45s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.55,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.55s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.6,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000038.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 1.96
+    },
+    {
+      "t": 7.65,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.65s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.75,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.75s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.8,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000039.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 3.64
+    },
+    {
+      "t": 7.85,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.85s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 7.95,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m07.95s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 8.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000040.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 2.52
+    },
+    {
+      "t": 8.05,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m08.05s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 8.15,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m08.15s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 8.2,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000041.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 2.02
+    },
+    {
+      "t": 8.25,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m08.25s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 8.35,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m08.35s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 8.4,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000042.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 3.83
+    },
+    {
+      "t": 8.45,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m08.45s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 8.55,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m08.55s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 8.6,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000043.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": null,
+      "diff_prev_kept": 2.04
+    },
+    {
+      "t": 8.65,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m08.65s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 8.75,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\extra\\x-00m08.75s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [
+        "peak"
+      ],
+      "why": "peak",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 8.8,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V02\\frames\\base\\base_000044.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 3.72
+    }
+  ]
+}

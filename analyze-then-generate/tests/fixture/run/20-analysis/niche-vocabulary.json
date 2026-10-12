@@ -1,0 +1,224 @@
+{
+  "niches": {
+    "pets": {
+      "members": [
+        "pet tools",
+        "dog care",
+        "pet",
+        "Pet  Tools",
+        "dog toys",
+        "canine gear",
+        "dog accessories",
+        "Haustier-Zubehör",
+        "Straße",
+        "one more label"
+      ],
+      "created": "2026-10-12T11:22:54+02:00"
+    },
+    "desk": {
+      "members": [
+        "office & desk",
+        "ceramic desk"
+      ],
+      "created": "2026-10-12T11:22:55+02:00"
+    },
+    "kitchen": {
+      "members": [
+        "kitchen gear",
+        "ceramic kitchen"
+      ],
+      "created": "2026-10-12T11:22:55+02:00"
+    },
+    "home organization": {
+      "members": [],
+      "created": "2026-10-12T11:22:55+02:00"
+    },
+    "hair": {
+      "members": [],
+      "created": "2026-10-12T11:22:55+02:00"
+    },
+    "travel": {
+      "members": [],
+      "created": "2026-10-12T11:22:56+02:00"
+    },
+    "health": {
+      "members": [],
+      "created": "2026-10-12T11:22:56+02:00"
+    },
+    "cleaning": {
+      "members": [],
+      "created": "2026-10-12T11:22:56+02:00"
+    },
+    "gadgets": {
+      "members": [],
+      "created": "2026-10-12T11:22:57+02:00"
+    },
+    "diy": {
+      "members": [],
+      "created": "2026-10-12T11:22:57+02:00"
+    },
+    "bags": {
+      "members": [
+        "ceramic bags"
+      ],
+      "created": "2026-10-12T11:22:57+02:00"
+    },
+    "pet toys": {
+      "members": [],
+      "created": "2026-10-12T11:22:58+02:00"
+    },
+    "kitchen tools": {
+      "members": [],
+      "created": "2026-10-12T11:23:00+02:00"
+    },
+    "पानी": {
+      "members": [],
+      "created": "2026-10-12T11:23:05+02:00"
+    },
+    "पुनः": {
+      "members": [],
+      "created": "2026-10-12T11:23:06+02:00"
+    },
+    "tea": {
+      "members": [],
+      "created": "2026-10-12T11:23:08+02:00"
+    },
+    "wardrobe": {
+      "members": [],
+      "created": "2026-10-12T11:23:08+02:00"
+    },
+    "serving": {
+      "members": [],
+      "created": "2026-10-12T11:23:09+02:00"
+    },
+    "fitness": {
+      "members": [],
+      "created": "2026-10-12T11:23:14+02:00"
+    },
+    "pet feeding": {
+      "members": [],
+      "created": "2026-10-12T11:23:15+02:00"
+    },
+    "pet grooming": {
+      "members": [],
+      "created": "2026-10-12T11:23:15+02:00"
+    },
+    "outdoor": {
+      "members": [
+        "fishing",
+        "fishing lures"
+      ],
+      "created": "2026-10-12T11:24:20+02:00"
+    }
+  },
+  "last_added_at": 1791797060.5918798,
+  "updated": "2026-10-12T11:24:24+02:00",
+  "distinct_pairs": [
+    {
+      "a": "kitchen tools",
+      "b": "kitchen",
+      "reason": "cookware is bought for another job than appliances",
+      "at": "2026-10-12T11:23:00+02:00"
+    },
+    {
+      "a": "pet feeding",
+      "b": "pet grooming",
+      "reason": "feeding bowls and grooming tools are different shelves",
+      "at": "2026-10-12T11:23:16+02:00"
+    },
+    {
+      "a": "pet feeding",
+      "b": "pets",
+      "reason": "feeding supplies are bought apart from general pet care",
+      "at": "2026-10-12T11:23:16+02:00"
+    },
+    {
+      "a": "pet grooming",
+      "b": "pets",
+      "reason": "grooming tools are bought apart from general pet care",
+      "at": "2026-10-12T11:23:17+02:00"
+    },
+    {
+      "a": "pets",
+      "b": "kitchen tools",
+      "reason": "pet supplies and kitchenware are bought in different places",
+      "at": "2026-10-12T11:24:19+02:00"
+    },
+    {
+      "a": "kitchen",
+      "b": "desk",
+      "reason": "kitchenware and desk accessories are bought in different places",
+      "at": "2026-10-12T11:24:24+02:00"
+    },
+    {
+      "a": "kitchen",
+      "b": "bags",
+      "reason": "kitchenware and bags are bought in different places",
+      "at": "2026-10-12T11:24:24+02:00"
+    },
+    {
+      "a": "desk",
+      "b": "bags",
+      "reason": "desk accessories and bags are bought in different places",
+      "at": "2026-10-12T11:24:24+02:00"
+    }
+  ],
+  "merges": [
+    {
+      "from": "kitchen gear",
+      "to": "kitchen",
+      "reason": "the same shelf and the same buyer",
+      "at": "2026-10-12T11:23:01+02:00"
+    },
+    {
+      "from": "canine gear",
+      "to": "pets",
+      "reason": "the same buyers: dog owners",
+      "at": "2026-10-12T11:23:02+02:00"
+    },
+    {
+      "from": "fishing",
+      "to": "outdoor",
+      "reason": "test: the label now resolves to another niche",
+      "at": "2026-10-12T11:24:20+02:00"
+    }
+  ],
+  "not_niche_words": {
+    "bamboo": {
+      "reason": "a material or modifier, not a niche marker at all",
+      "at": "2026-10-12T11:23:09+02:00"
+    }
+  },
+  "audit": {
+    "by": "niche-auditor-test",
+    "result": "no synonyms found; no merges needed",
+    "at": "2026-10-12T11:23:24+02:00",
+    "signature": "b139dab3b3ee12db",
+    "niches": [
+      "bags",
+      "cleaning",
+      "desk",
+      "diy",
+      "fishing",
+      "fitness",
+      "gadgets",
+      "hair",
+      "health",
+      "home organization",
+      "kitchen",
+      "kitchen tools",
+      "pet feeding",
+      "pet grooming",
+      "pet toys",
+      "pets",
+      "serving",
+      "tea",
+      "travel",
+      "wardrobe",
+      "पानी",
+      "पुनः"
+    ],
+    "report": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\ff6a4b04-16a6-4927-889e-830c4c6779e4\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\30-research\\niche-audit.md",
+    "report_bytes": 630
+  }
+}

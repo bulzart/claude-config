@@ -1,0 +1,21 @@
+{
+  "run_id": "20261011-004855-vbtest",
+  "mode": "analyze",
+  "source": "C:\\Users\\Glaresquare1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\refs",
+  "assets_paths": [],
+  "examples_paths": [],
+  "baseline_paths": [
+    "C:\\Users\\Glaresquare1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\baseline"
+  ],
+  "analyze_submode": "viral-browser",
+  "created": "2026-10-11T00:48:55+02:00",
+  "updated": "2026-10-11T00:48:55+02:00",
+  "stage": "created",
+  "next_step": "inventory",
+  "model": null,
+  "requested_videos": null,
+  "directions": [],
+  "assets": {},
+  "videos": [],
+  "notes": []
+}

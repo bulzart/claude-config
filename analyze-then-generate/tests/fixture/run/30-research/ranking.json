@@ -1,0 +1,621 @@
+{
+  "ok": true,
+  "picks": [
+    {
+      "id": "C13",
+      "name": "Pet nail grinder",
+      "category": "pets",
+      "type": "nail grinder",
+      "raw": 94.0,
+      "total": 94.0,
+      "nofit": 92.5,
+      "capped": {},
+      "contribution_pct": 50.4,
+      "indep_rows": 3,
+      "confidence": "high",
+      "gate_failures": [],
+      "redteam": "survives",
+      "dominant_niche": true,
+      "dominant_link": [],
+      "defence": "survives the independent-evidence test vs the best outside-niche alternative"
+    },
+    {
+      "id": "C12",
+      "name": "Quiet pet water fountain",
+      "category": "pets",
+      "type": "water fountain",
+      "raw": 94.0,
+      "total": 94.0,
+      "nofit": 92.5,
+      "capped": {},
+      "contribution_pct": 50.4,
+      "indep_rows": 3,
+      "confidence": "high",
+      "gate_failures": [],
+      "redteam": "survives",
+      "dominant_niche": true,
+      "dominant_link": [],
+      "defence": "survives the independent-evidence test vs the best outside-niche alternative"
+    },
+    {
+      "id": "C20",
+      "name": "Heatless curl ribbon",
+      "category": "hair",
+      "type": "curl ribbon",
+      "raw": 94.0,
+      "total": 88.0,
+      "nofit": 85.0,
+      "capped": {
+        "demand": {
+          "scored": 5,
+          "capped_to": 3,
+          "why": "contradicted: 2 negative against 1 positive row(s)"
+        }
+      },
+      "contribution_pct": 50.4,
+      "indep_rows": 5,
+      "confidence": "high",
+      "gate_failures": [],
+      "redteam": null,
+      "dominant_niche": false,
+      "dominant_link": [],
+      "defence": "the ribbon is not a pet product: its independent demand and margin are its own"
+    }
+  ],
+  "runner_ups": [
+    {
+      "id": "C14",
+      "name": "Orthopedic pet bed",
+      "category": "pets",
+      "type": "pet bed",
+      "raw": 87.0,
+      "total": 87.0,
+      "nofit": 88.8,
+      "capped": {},
+      "contribution_pct": 50.4,
+      "indep_rows": 3,
+      "confidence": "high",
+      "gate_failures": [],
+      "redteam": null,
+      "dominant_niche": true,
+      "dominant_link": [],
+      "defence": null,
+      "why_not_a_pick": "lower independent score than the picks"
+    },
+    {
+      "id": "C17",
+      "name": "Collapsible silicone lunch box",
+      "category": "kitchen",
+      "type": "lunch box",
+      "raw": 77.0,
+      "total": 77.0,
+      "nofit": 76.2,
+      "capped": {},
+      "contribution_pct": 50.4,
+      "indep_rows": 3,
+      "confidence": "high",
+      "gate_failures": [],
+      "redteam": "survives",
+      "dominant_niche": false,
+      "dominant_link": [],
+      "defence": null,
+      "why_not_a_pick": "lower independent score than the picks"
+    },
+    {
+      "id": "C16",
+      "name": "Magnetic cable clips",
+      "category": "desk",
+      "type": "cable clip",
+      "raw": 77.0,
+      "total": 77.0,
+      "nofit": 76.2,
+      "capped": {},
+      "contribution_pct": 50.4,
+      "indep_rows": 3,
+      "confidence": "high",
+      "gate_failures": [],
+      "redteam": null,
+      "dominant_niche": false,
+      "dominant_link": [],
+      "defence": null,
+      "why_not_a_pick": "lower independent score than the picks"
+    }
+  ],
+  "ineligible": [
+    {
+      "id": "C15",
+      "name": "Pet hair glove",
+      "category": "pets",
+      "type": "grooming glove",
+      "raw": 94.0,
+      "total": 60.0,
+      "nofit": 50.0,
+      "capped": {
+        "demand": {
+          "scored": 5,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "commercial": {
+          "scored": 5,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "economics": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "competition": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "compliance": {
+          "scored": 5,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        }
+      },
+      "contribution_pct": 67.6,
+      "indep_rows": 0,
+      "confidence": "high",
+      "gate_failures": [
+        "G1 economics: no sourced input behind the calculation (a grade A or B economics row: the supplier price, the fee schedule, the freight or duty source)",
+        "G2 compliance: no positive independent grade A/B compliance row behind the status",
+        "G4 independent evidence: 0 distinct source(s) with positive grade A/B rows in demand, commercial and competition (need 2, one of them commercial)",
+        "G5 floor: demand 2 < 3 (after the evidence cap)",
+        "G5 floor: commercial 2 < 3 (after the evidence cap)",
+        "G5 floor: economics 2 < 3 (after the evidence cap)",
+        "G5 floor: compliance 2 < 3 (after the evidence cap)"
+      ],
+      "redteam": null,
+      "dominant_niche": true,
+      "dominant_link": [],
+      "defence": null
+    },
+    {
+      "id": "C18",
+      "name": "Mini portable blender",
+      "category": "kitchen",
+      "type": "blender",
+      "raw": 77.0,
+      "total": 77.0,
+      "nofit": 76.2,
+      "capped": {},
+      "contribution_pct": 50.4,
+      "indep_rows": 3,
+      "confidence": "high",
+      "gate_failures": [
+        "G2 compliance: open"
+      ],
+      "redteam": null,
+      "dominant_niche": false,
+      "dominant_link": [],
+      "defence": null
+    },
+    {
+      "id": "C21",
+      "name": "Travel compression cubes",
+      "category": "travel",
+      "type": "packing cubes",
+      "raw": 60.0,
+      "total": 57.0,
+      "nofit": 56.2,
+      "capped": {
+        "economics": {
+          "scored": 3,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        }
+      },
+      "contribution_pct": 50.4,
+      "indep_rows": 3,
+      "confidence": "high",
+      "gate_failures": [
+        "G1 economics: no sourced input behind the calculation (a grade A or B economics row: the supplier price, the fee schedule, the freight or duty source)",
+        "G5 floor: economics 2 < 3 (after the evidence cap)"
+      ],
+      "redteam": null,
+      "dominant_niche": false,
+      "dominant_link": [],
+      "defence": null
+    },
+    {
+      "id": "C22",
+      "name": "Posture corrector band",
+      "category": "health",
+      "type": "posture band",
+      "raw": 77.0,
+      "total": 53.0,
+      "nofit": 46.2,
+      "capped": {
+        "demand": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "commercial": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "economics": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "competition": {
+          "scored": 3,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "compliance": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        }
+      },
+      "contribution_pct": 52.0,
+      "indep_rows": 0,
+      "confidence": "high",
+      "gate_failures": [
+        "G1 economics: no sourced input behind the calculation (a grade A or B economics row: the supplier price, the fee schedule, the freight or duty source)",
+        "G2 compliance: no positive independent grade A/B compliance row behind the status",
+        "G3 excluded by the brief",
+        "G4 independent evidence: 0 distinct source(s) with positive grade A/B rows in demand, commercial and competition (need 2, one of them commercial)",
+        "G5 floor: demand 2 < 3 (after the evidence cap)",
+        "G5 floor: commercial 2 < 3 (after the evidence cap)",
+        "G5 floor: economics 2 < 3 (after the evidence cap)",
+        "G5 floor: compliance 2 < 3 (after the evidence cap)"
+      ],
+      "redteam": null,
+      "dominant_niche": false,
+      "dominant_link": [],
+      "defence": null
+    },
+    {
+      "id": "C23",
+      "name": "Stain remover stick",
+      "category": "cleaning",
+      "type": "stain stick",
+      "raw": 60.0,
+      "total": 60.0,
+      "nofit": 60.0,
+      "capped": {},
+      "contribution_pct": 50.4,
+      "indep_rows": 3,
+      "confidence": "low",
+      "gate_failures": [
+        "G6 confidence: low < medium"
+      ],
+      "redteam": null,
+      "dominant_niche": false,
+      "dominant_link": [],
+      "defence": null
+    },
+    {
+      "id": "C24",
+      "name": "Thin evidence gadget",
+      "category": "diy",
+      "type": "thin gadget",
+      "raw": 94.0,
+      "total": 75.0,
+      "nofit": 68.8,
+      "capped": {
+        "commercial": {
+          "scored": 5,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "economics": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "competition": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        }
+      },
+      "contribution_pct": 62.6,
+      "indep_rows": 1,
+      "confidence": "high",
+      "gate_failures": [
+        "G1 economics: no sourced input behind the calculation (a grade A or B economics row: the supplier price, the fee schedule, the freight or duty source)",
+        "G4 independent evidence: 1 distinct source(s) with positive grade A/B rows in demand, commercial and competition (need 2, one of them commercial)",
+        "G5 floor: commercial 2 < 3 (after the evidence cap)",
+        "G5 floor: economics 2 < 3 (after the evidence cap)"
+      ],
+      "redteam": null,
+      "dominant_niche": false,
+      "dominant_link": [],
+      "defence": null
+    },
+    {
+      "id": "C25",
+      "name": "Negative-signals tool",
+      "category": "diy",
+      "type": "negative tool",
+      "raw": 96.0,
+      "total": 66.0,
+      "nofit": 57.5,
+      "capped": {
+        "demand": {
+          "scored": 5,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "commercial": {
+          "scored": 5,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "economics": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "competition": {
+          "scored": 5,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        }
+      },
+      "contribution_pct": 62.6,
+      "indep_rows": 6,
+      "confidence": "high",
+      "gate_failures": [
+        "G1 economics: no sourced input behind the calculation (a grade A or B economics row: the supplier price, the fee schedule, the freight or duty source)",
+        "G4 independent evidence: 0 distinct source(s) with positive grade A/B rows in demand, commercial and competition (need 2, one of them commercial)",
+        "G5 floor: demand 2 < 3 (after the evidence cap)",
+        "G5 floor: commercial 2 < 3 (after the evidence cap)",
+        "G5 floor: economics 2 < 3 (after the evidence cap)"
+      ],
+      "redteam": null,
+      "dominant_niche": false,
+      "dominant_link": [
+        "tool"
+      ],
+      "defence": null
+    },
+    {
+      "id": "C26",
+      "name": "Compliance-D-only bag",
+      "category": "bags",
+      "type": "d bag",
+      "raw": 94.0,
+      "total": 82.0,
+      "nofit": 77.5,
+      "capped": {
+        "economics": {
+          "scored": 4,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        },
+        "compliance": {
+          "scored": 5,
+          "capped_to": 2,
+          "why": "no positive independent evidence"
+        }
+      },
+      "contribution_pct": 62.6,
+      "indep_rows": 3,
+      "confidence": "high",
+      "gate_failures": [
+        "G1 economics: no sourced input behind the calculation (a grade A or B economics row: the supplier price, the fee schedule, the freight or duty source)",
+        "G2 compliance: no positive independent grade A/B compliance row behind the status",
+        "G5 floor: economics 2 < 3 (after the evidence cap)",
+        "G5 floor: compliance 2 < 3 (after the evidence cap)"
+      ],
+      "redteam": null,
+      "dominant_niche": false,
+      "dominant_link": [],
+      "defence": null
+    }
+  ],
+  "warnings": [
+    "a niche was added or merged after the last audit, or the vocabulary was never audited: the niche limits rest on an unaudited vocabulary; have a fresh agent audit it again (viral-browser.md section 13.5) and record `niches audit`",
+    "pick C20 was edited after research (definition: 'lifts pet fur from sofas' -> 'Heatless curl ribbon: test', a sentence that says why, long enough to count as an argument; category: 'hair' -> 'kitchen tools', a sentence that says why, long enough to count as an argument; category: 'kitchen tools' -> 'hair', a sentence that says why, long enough to count as an argument): check that this is not a way around the niche limits or the dominant-niche defence",
+    "the picks differ when reference-derived evidence is allowed to count: the independence rules changed the outcome; say so in the bias log"
+  ],
+  "blockers": [
+    "pick(s) ['C20'] have no red-team verdict: red-team them (`candidates set --redteam survives|weakened|fails`)"
+  ],
+  "pool_flags": [],
+  "ablation_reference_evidence_changed": true,
+  "ablation_no_fit_changed": false,
+  "dominant_niche": "pets",
+  "dominant_niches": [
+    "pets"
+  ],
+  "weights": {
+    "demand": 15,
+    "commercial": 15,
+    "fit": 20,
+    "economics": 15,
+    "competition": 10,
+    "compliance": 10,
+    "logistics": 5,
+    "timing": 5,
+    "producibility": 5
+  },
+  "forced": false,
+  "reason": null,
+  "decisions": {
+    "niches": [
+      "bags",
+      "cleaning",
+      "desk",
+      "diy",
+      "fitness",
+      "gadgets",
+      "hair",
+      "health",
+      "home organization",
+      "kitchen",
+      "kitchen tools",
+      "outdoor",
+      "pet feeding",
+      "pet grooming",
+      "pet toys",
+      "pets",
+      "serving",
+      "tea",
+      "travel",
+      "wardrobe",
+      "पानी",
+      "पुनः"
+    ],
+    "audit": {
+      "by": "niche-auditor-test",
+      "result": "no synonyms found; no merges needed",
+      "at": "2026-10-12T11:23:24+02:00",
+      "current": false
+    },
+    "merges": [
+      {
+        "from": "kitchen gear",
+        "to": "kitchen",
+        "reason": "the same shelf and the same buyer",
+        "at": "2026-10-12T11:23:01+02:00"
+      },
+      {
+        "from": "canine gear",
+        "to": "pets",
+        "reason": "the same buyers: dog owners",
+        "at": "2026-10-12T11:23:02+02:00"
+      },
+      {
+        "from": "fishing",
+        "to": "outdoor",
+        "reason": "test: the label now resolves to another niche",
+        "at": "2026-10-12T11:24:20+02:00"
+      }
+    ],
+    "distinct_pairs": [
+      {
+        "a": "kitchen tools",
+        "b": "kitchen",
+        "reason": "cookware is bought for another job than appliances",
+        "at": "2026-10-12T11:23:00+02:00"
+      },
+      {
+        "a": "pet feeding",
+        "b": "pet grooming",
+        "reason": "feeding bowls and grooming tools are different shelves",
+        "at": "2026-10-12T11:23:16+02:00"
+      },
+      {
+        "a": "pet feeding",
+        "b": "pets",
+        "reason": "feeding supplies are bought apart from general pet care",
+        "at": "2026-10-12T11:23:16+02:00"
+      },
+      {
+        "a": "pet grooming",
+        "b": "pets",
+        "reason": "grooming tools are bought apart from general pet care",
+        "at": "2026-10-12T11:23:17+02:00"
+      },
+      {
+        "a": "pets",
+        "b": "kitchen tools",
+        "reason": "pet supplies and kitchenware are bought in different places",
+        "at": "2026-10-12T11:24:19+02:00"
+      },
+      {
+        "a": "kitchen",
+        "b": "desk",
+        "reason": "kitchenware and desk accessories are bought in different places",
+        "at": "2026-10-12T11:24:24+02:00"
+      },
+      {
+        "a": "kitchen",
+        "b": "bags",
+        "reason": "kitchenware and bags are bought in different places",
+        "at": "2026-10-12T11:24:24+02:00"
+      },
+      {
+        "a": "desk",
+        "b": "bags",
+        "reason": "desk accessories and bags are bought in different places",
+        "at": "2026-10-12T11:24:24+02:00"
+      }
+    ],
+    "not_niche_words": {
+      "bamboo": {
+        "reason": "a material or modifier, not a niche marker at all",
+        "at": "2026-10-12T11:23:09+02:00"
+      }
+    },
+    "forced_shortlists": [],
+    "edits": [
+      {
+        "id": "C20",
+        "field": "name",
+        "from": "Heatless curl ribbon",
+        "to": "Pet-safe heatless curl ribbon",
+        "reason": "a sentence that says why, long enough to count as an argument",
+        "at": "2026-10-12T11:24:16+02:00"
+      },
+      {
+        "id": "C20",
+        "field": "name",
+        "from": "Pet-safe heatless curl ribbon",
+        "to": "Heatless curl ribbon",
+        "reason": "a sentence that says why, long enough to count as an argument",
+        "at": "2026-10-12T11:24:18+02:00"
+      },
+      {
+        "id": "C20",
+        "field": "definition",
+        "from": "Heatless curl ribbon: test",
+        "to": "lifts pet fur from sofas",
+        "reason": "a sentence that says why, long enough to count as an argument",
+        "at": "2026-10-12T11:24:18+02:00"
+      },
+      {
+        "id": "C20",
+        "field": "definition",
+        "from": "lifts pet fur from sofas",
+        "to": "Heatless curl ribbon: test",
+        "reason": "a sentence that says why, long enough to count as an argument",
+        "at": "2026-10-12T11:24:18+02:00"
+      },
+      {
+        "id": "C20",
+        "field": "category",
+        "from": "hair",
+        "to": "kitchen tools",
+        "reason": "a sentence that says why, long enough to count as an argument",
+        "at": "2026-10-12T11:24:19+02:00"
+      },
+      {
+        "id": "C20",
+        "field": "category",
+        "from": "kitchen tools",
+        "to": "hair",
+        "reason": "a sentence that says why, long enough to count as an argument",
+        "at": "2026-10-12T11:24:20+02:00"
+      },
+      {
+        "id": "C24",
+        "field": "category",
+        "from": "gadgets",
+        "to": "diy",
+        "reason": "a sentence that says why, long enough to count as an argument",
+        "at": "2026-10-12T11:24:04+02:00"
+      },
+      {
+        "id": "C24",
+        "field": "name",
+        "from": "Thin-evidence gadget",
+        "to": "Thin evidence gadget",
+        "reason": "a sentence that says why, long enough to count as an argument",
+        "at": "2026-10-12T11:24:06+02:00"
+      }
+    ]
+  }
+}

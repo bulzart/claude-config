@@ -1,0 +1,434 @@
+{
+  "created": "2026-10-12T11:24:27+02:00",
+  "niche": false,
+  "niche_threshold": null,
+  "sets": {
+    "references": {
+      "n_videos": 4,
+      "small_n": true,
+      "duration_s": {
+        "n": 4,
+        "min": 6.0,
+        "p25": 8.25,
+        "median": 11.0,
+        "mean": 12.25,
+        "p75": 15.0,
+        "max": 21.0
+      },
+      "median_shot_s": {
+        "n": 4,
+        "min": 6.0,
+        "p25": 8.25,
+        "median": 11.0,
+        "mean": 12.25,
+        "p75": 15.0,
+        "max": 21.0
+      },
+      "cuts_per_10s": {
+        "n": 4,
+        "min": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "mean": 0.0,
+        "p75": 0.0,
+        "max": 0.0
+      },
+      "first_cut_s": null,
+      "share_no_cut_at_all": {
+        "n": 4,
+        "yes": 4,
+        "share": 1.0
+      },
+      "share_cut_in_first_3s": {
+        "n": 4,
+        "yes": 0,
+        "share": 0.0
+      },
+      "speech_starts_s": null,
+      "share_speech": {
+        "n": 4,
+        "yes": 0,
+        "share": 0.0
+      },
+      "share_speech_in_first_second": {
+        "n": 4,
+        "yes": 0,
+        "share": 0.0
+      },
+      "words_per_s": null,
+      "lufs": {
+        "n": 4,
+        "min": -21.8,
+        "p25": -21.8,
+        "median": -21.75,
+        "mean": -21.73,
+        "p75": -21.68,
+        "max": -21.6
+      },
+      "loop_similarity": {
+        "n": 4,
+        "min": 0.95,
+        "p25": 0.98,
+        "median": 0.99,
+        "mean": 0.98,
+        "p75": 0.99,
+        "max": 1.0
+      },
+      "share_text_in_first_second": null,
+      "text_spans": null,
+      "share_music_bed": null,
+      "tempo_bpm": null,
+      "share_vertical_9_16": {
+        "n": 4,
+        "yes": 4,
+        "share": 1.0
+      },
+      "aspects": {
+        "9:16": 4
+      },
+      "unresolved_labels": [],
+      "facts": {
+        "format": {
+          "hands-only demo": 3,
+          "talking head": 1
+        },
+        "creator_group": {
+          "g1": 1,
+          "g2": 1,
+          "g3": 1
+        },
+        "hook_type": {
+          "visual oddity": 3,
+          "question": 1
+        },
+        "demo_type": {
+          "before/after": 1,
+          "transformation": 1,
+          "unboxing": 1
+        },
+        "cta": {
+          "none": 1,
+          "soft": 1,
+          "hard": 1
+        },
+        "commerce_signal": {
+          "strong": 2,
+          "weak": 1
+        },
+        "driver_primary": {
+          "craft": 1,
+          "product": 1,
+          "creator": 1
+        },
+        "dependence_on_product": {
+          "medium": 1,
+          "high": 1,
+          "low": 1
+        }
+      },
+      "share_attention_only": {
+        "n": 3,
+        "yes": 1,
+        "share": 0.333
+      },
+      "concentration": {
+        "creator_group": {
+          "total": 3,
+          "distinct": 3,
+          "top1": {
+            "label": "g1",
+            "count": 1,
+            "share": 0.333
+          },
+          "top2_share": 0.667,
+          "hhi": 0.333,
+          "effective_n": 3.0,
+          "dominant": null,
+          "dominants": [],
+          "table": [
+            {
+              "label": "g1",
+              "count": 1,
+              "share": 0.333
+            },
+            {
+              "label": "g2",
+              "count": 1,
+              "share": 0.333
+            },
+            {
+              "label": "g3",
+              "count": 1,
+              "share": 0.333
+            }
+          ]
+        },
+        "format": {
+          "total": 4,
+          "distinct": 2,
+          "top1": {
+            "label": "hands-only demo",
+            "count": 3,
+            "share": 0.75
+          },
+          "top2_share": 1.0,
+          "hhi": 0.625,
+          "effective_n": 1.6,
+          "dominant": "hands-only demo",
+          "dominants": [
+            "hands-only demo"
+          ],
+          "table": [
+            {
+              "label": "hands-only demo",
+              "count": 3,
+              "share": 0.75
+            },
+            {
+              "label": "talking head",
+              "count": 1,
+              "share": 0.25
+            }
+          ]
+        },
+        "hook_type": {
+          "total": 4,
+          "distinct": 2,
+          "top1": {
+            "label": "visual oddity",
+            "count": 3,
+            "share": 0.75
+          },
+          "top2_share": 1.0,
+          "hhi": 0.625,
+          "effective_n": 1.6,
+          "dominant": "visual oddity",
+          "dominants": [
+            "visual oddity"
+          ],
+          "table": [
+            {
+              "label": "visual oddity",
+              "count": 3,
+              "share": 0.75
+            },
+            {
+              "label": "question",
+              "count": 1,
+              "share": 0.25
+            }
+          ]
+        }
+      },
+      "dominant_niche": null,
+      "category_resolution": {},
+      "n_with_category": null,
+      "word_concentration": []
+    },
+    "baseline": {
+      "n_videos": 2,
+      "small_n": true,
+      "duration_s": {
+        "n": 2,
+        "min": 15.0,
+        "p25": 19.75,
+        "median": 24.5,
+        "mean": 24.5,
+        "p75": 29.25,
+        "max": 34.0
+      },
+      "median_shot_s": {
+        "n": 2,
+        "min": 15.0,
+        "p25": 19.75,
+        "median": 24.5,
+        "mean": 24.5,
+        "p75": 29.25,
+        "max": 34.0
+      },
+      "cuts_per_10s": {
+        "n": 2,
+        "min": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "mean": 0.0,
+        "p75": 0.0,
+        "max": 0.0
+      },
+      "first_cut_s": null,
+      "share_no_cut_at_all": {
+        "n": 2,
+        "yes": 2,
+        "share": 1.0
+      },
+      "share_cut_in_first_3s": {
+        "n": 2,
+        "yes": 0,
+        "share": 0.0
+      },
+      "speech_starts_s": null,
+      "share_speech": {
+        "n": 2,
+        "yes": 0,
+        "share": 0.0
+      },
+      "share_speech_in_first_second": {
+        "n": 2,
+        "yes": 0,
+        "share": 0.0
+      },
+      "words_per_s": null,
+      "lufs": {
+        "n": 2,
+        "min": -21.9,
+        "p25": -21.9,
+        "median": -21.9,
+        "mean": -21.9,
+        "p75": -21.9,
+        "max": -21.9
+      },
+      "loop_similarity": {
+        "n": 2,
+        "min": 0.95,
+        "p25": 0.96,
+        "median": 0.97,
+        "mean": 0.97,
+        "p75": 0.99,
+        "max": 1.0
+      },
+      "share_text_in_first_second": null,
+      "text_spans": null,
+      "share_music_bed": null,
+      "tempo_bpm": null,
+      "share_vertical_9_16": {
+        "n": 2,
+        "yes": 2,
+        "share": 1.0
+      },
+      "aspects": {
+        "9:16": 2
+      },
+      "unresolved_labels": [],
+      "facts": {
+        "format": {
+          "talking head": 2
+        },
+        "hook_type": {
+          "none": 1,
+          "question": 1
+        },
+        "demo_type": {
+          "review": 1,
+          "tutorial": 1
+        },
+        "cta": {
+          "hard": 1,
+          "soft": 1
+        },
+        "commerce_signal": {
+          "none": 2
+        }
+      },
+      "share_attention_only": {
+        "n": 2,
+        "yes": 2,
+        "share": 1.0
+      },
+      "concentration": {
+        "format": {
+          "total": 2,
+          "distinct": 1,
+          "top1": {
+            "label": "talking head",
+            "count": 2,
+            "share": 1.0
+          },
+          "top2_share": 1.0,
+          "hhi": 1.0,
+          "effective_n": 1.0,
+          "dominant": null,
+          "dominants": [],
+          "table": [
+            {
+              "label": "talking head",
+              "count": 2,
+              "share": 1.0
+            }
+          ]
+        },
+        "hook_type": {
+          "total": 2,
+          "distinct": 2,
+          "top1": {
+            "label": "none",
+            "count": 1,
+            "share": 0.5
+          },
+          "top2_share": 1.0,
+          "hhi": 0.5,
+          "effective_n": 2.0,
+          "dominant": null,
+          "dominants": [],
+          "table": [
+            {
+              "label": "none",
+              "count": 1,
+              "share": 0.5
+            },
+            {
+              "label": "question",
+              "count": 1,
+              "share": 0.5
+            }
+          ]
+        }
+      },
+      "dominant_niche": null,
+      "category_resolution": {},
+      "n_with_category": null,
+      "word_concentration": []
+    }
+  },
+  "contrast": {
+    "duration_s (median)": {
+      "ref": 11.0,
+      "base": 24.5,
+      "delta": -13.5
+    },
+    "median_shot_s (median)": {
+      "ref": 11.0,
+      "base": 24.5,
+      "delta": -13.5
+    },
+    "cuts_per_10s (median)": {
+      "ref": 0.0,
+      "base": 0.0,
+      "delta": 0.0
+    },
+    "loop_similarity (median)": {
+      "ref": 0.99,
+      "base": 0.97,
+      "delta": 0.02
+    },
+    "share_cut_in_first_3s": {
+      "ref": 0.0,
+      "base": 0.0,
+      "delta": 0.0
+    },
+    "share_speech": {
+      "ref": 0.0,
+      "base": 0.0,
+      "delta": 0.0
+    },
+    "share_speech_in_first_second": {
+      "ref": 0.0,
+      "base": 0.0,
+      "delta": 0.0
+    }
+  },
+  "notes": [
+    "references: 4 videos is below 10; read every share as an indication, not a rate",
+    "baseline: 2 videos is below 10; read every share as an indication, not a rate"
+  ],
+  "dominant_niche": null
+}

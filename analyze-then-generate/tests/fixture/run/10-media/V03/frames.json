@@ -1,0 +1,238 @@
+{
+  "baseline_fps": 5.0,
+  "baseline_note": null,
+  "static_threshold": 2.5,
+  "dense_fps": 10.0,
+  "static_runs": [
+    {
+      "start": 0.2,
+      "end": 0.8,
+      "dropped": 4
+    },
+    {
+      "start": 1.2,
+      "end": 1.8,
+      "dropped": 4
+    },
+    {
+      "start": 2.2,
+      "end": 2.8,
+      "dropped": 4
+    },
+    {
+      "start": 3.2,
+      "end": 3.8,
+      "dropped": 4
+    },
+    {
+      "start": 4.2,
+      "end": 4.8,
+      "dropped": 4
+    },
+    {
+      "start": 5.2,
+      "end": 5.8,
+      "dropped": 4
+    },
+    {
+      "start": 6.2,
+      "end": 6.8,
+      "dropped": 4
+    },
+    {
+      "start": 7.2,
+      "end": 7.8,
+      "dropped": 4
+    },
+    {
+      "start": 8.2,
+      "end": 8.8,
+      "dropped": 4
+    },
+    {
+      "start": 9.2,
+      "end": 9.8,
+      "dropped": 4
+    },
+    {
+      "start": 10.2,
+      "end": 10.8,
+      "dropped": 4
+    },
+    {
+      "start": 11.2,
+      "end": 11.8,
+      "dropped": 4
+    },
+    {
+      "start": 12.2,
+      "end": 12.8,
+      "dropped": 4
+    }
+  ],
+  "extra_frames": 5,
+  "frames": [
+    {
+      "t": 0.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000000.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.1,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\extra\\x-00m00.10s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.3,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\extra\\x-00m00.30s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.5,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\extra\\x-00m00.50s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.7,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\extra\\x-00m00.70s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 0.9,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\extra\\x-00m00.90s.jpg",
+      "kind": "extra",
+      "shot": 1,
+      "flags": [],
+      "why": "hook",
+      "diff_prev_kept": null
+    },
+    {
+      "t": 1.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000005.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 2.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000010.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 3.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000015.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 4.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000020.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 5.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000025.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 6.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000030.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 7.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000035.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 8.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000040.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 9.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000045.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.06
+    },
+    {
+      "t": 10.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000050.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 11.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000055.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    },
+    {
+      "t": 12.0,
+      "file": "C:\\Users\\GLARES~1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\runs\\20261011-004855-vbtest\\10-media\\V03\\frames\\base\\base_000060.jpg",
+      "kind": "base",
+      "shot": 1,
+      "flags": [],
+      "why": null,
+      "diff_prev_kept": 0.0
+    }
+  ]
+}

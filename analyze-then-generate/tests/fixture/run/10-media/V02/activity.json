@@ -1,0 +1,143 @@
+{
+  "window_s": 0.5,
+  "windows": [
+    {
+      "start": 0.0,
+      "end": 0.5,
+      "mean_change": 0.0003,
+      "max_change": 0.0031,
+      "has_cut": false
+    },
+    {
+      "start": 0.5,
+      "end": 1.0,
+      "mean_change": 0.0001,
+      "max_change": 0.0002,
+      "has_cut": false
+    },
+    {
+      "start": 1.0,
+      "end": 1.5,
+      "mean_change": 0.0006,
+      "max_change": 0.004,
+      "has_cut": false
+    },
+    {
+      "start": 1.5,
+      "end": 2.0,
+      "mean_change": 0.0002,
+      "max_change": 0.0003,
+      "has_cut": false
+    },
+    {
+      "start": 2.0,
+      "end": 2.5,
+      "mean_change": 0.0006,
+      "max_change": 0.0051,
+      "has_cut": false
+    },
+    {
+      "start": 2.5,
+      "end": 3.0,
+      "mean_change": 0.0001,
+      "max_change": 0.0002,
+      "has_cut": false
+    },
+    {
+      "start": 3.0,
+      "end": 3.5,
+      "mean_change": 0.0004,
+      "max_change": 0.0022,
+      "has_cut": false
+    },
+    {
+      "start": 3.5,
+      "end": 4.0,
+      "mean_change": 0.0002,
+      "max_change": 0.0004,
+      "has_cut": false
+    },
+    {
+      "start": 4.0,
+      "end": 4.5,
+      "mean_change": 0.0005,
+      "max_change": 0.0032,
+      "has_cut": false
+    },
+    {
+      "start": 4.5,
+      "end": 5.0,
+      "mean_change": 0.0002,
+      "max_change": 0.0003,
+      "has_cut": false
+    },
+    {
+      "start": 5.0,
+      "end": 5.5,
+      "mean_change": 0.0006,
+      "max_change": 0.0032,
+      "has_cut": false
+    },
+    {
+      "start": 5.5,
+      "end": 6.0,
+      "mean_change": 0.0002,
+      "max_change": 0.0003,
+      "has_cut": false
+    },
+    {
+      "start": 6.0,
+      "end": 6.5,
+      "mean_change": 0.0003,
+      "max_change": 0.0012,
+      "has_cut": false
+    },
+    {
+      "start": 6.5,
+      "end": 7.0,
+      "mean_change": 0.0001,
+      "max_change": 0.0003,
+      "has_cut": false
+    },
+    {
+      "start": 7.0,
+      "end": 7.5,
+      "mean_change": 0.0007,
+      "max_change": 0.005,
+      "has_cut": false
+    },
+    {
+      "start": 7.5,
+      "end": 8.0,
+      "mean_change": 0.0002,
+      "max_change": 0.0003,
+      "has_cut": false
+    },
+    {
+      "start": 8.0,
+      "end": 8.5,
+      "mean_change": 0.0007,
+      "max_change": 0.004,
+      "has_cut": false
+    },
+    {
+      "start": 8.5,
+      "end": 9.0,
+      "mean_change": 0.0001,
+      "max_change": 0.0003,
+      "has_cut": false
+    }
+  ],
+  "peaks": [
+    {
+      "t": 7.25,
+      "mean_change": 0.0007,
+      "z": 3.0
+    },
+    {
+      "t": 8.25,
+      "mean_change": 0.0007,
+      "z": 3.0
+    }
+  ]
+}
