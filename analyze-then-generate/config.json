@@ -281,7 +281,7 @@
         "other": 2.0
       },
       "how_to_read": {
-        "min_categories_in_pool": "the long list and the shortlist should span at least this many niches",
+        "min_categories_in_pool": "the long list should span at least this many niches; a shortlist of n candidates should span at least the smaller of this and max(3, n/2 rounded up): 3 niches for six, 5 for nine, 6 for twelve",
         "max_pool_share_per_category": "no niche should be more than this share of the set",
         "niche_dominance_threshold": "a niche that is at least this share of the references' cards is a dominant niche: say so in the bias log and defend a pick from it against the best alternative outside it",
         "max_picks_per_category": "at most this many of the picks should share a niche; none should share a product type",
@@ -296,8 +296,10 @@
         "photo_min_angles": "a reference set should show at least this many of the core angles, the front among them, with links a header request confirmed",
         "photo_reference_set_angles": "the views worth a link, in order of use",
         "photo_reference_set_max": "about this many links make a reference set",
-        "spec_tolerance_pct": "numbers from different sources that differ by less than this many percent (length 3, weight 5, volume 5, other 2) are normally the same fact rounded differently; a larger gap is a disagreement to resolve or to record"
-      }
+        "spec_tolerance_pct": "numbers from different sources that differ by less than this many percent (length 3, weight 5, volume 5, other 2) are normally the same fact rounded differently; a larger gap is a disagreement to resolve or to record",
+        "max_share_from_references_own_products": "no more than this share of the long list should come from the references' own products"
+      },
+      "max_share_from_references_own_products": 0.5
     }
   }
 }
