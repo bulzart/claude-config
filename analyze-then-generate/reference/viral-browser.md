@@ -155,6 +155,8 @@ Cluster the cards' mechanism sentences into **mechanisms** `M1, M2, …`, named 
 | **niche independence** | high / medium / low: could another kind of product carry it? The test: restate the mechanism for two unrelated product categories; if it still reads as a mechanism, it is independent |
 | transplant needs | what a product must have (from the cards) |
 | confounds | creator reach, a riding trend or sound, paid reach, bait, a season |
+| **driver** | the ranked driver the carrying videos share: craft / product / creator / trend / paid / bait / timing (§3.2); in Create only the craft is borrowed (§14.2) |
+| **grade** | supported / plausible / speculative (§4.7) |
 
 ### 4.3 Hooks, length and pacing
 
@@ -461,7 +463,7 @@ After the picks are delivered the user may continue in the same run: "make video
 4. **A1, for what is new only:** `T caught-error list --digest` for the Create mode, rewriting `20-analysis/caught-errors.md` for Create; `T inventory <assets> --run RUN --as assets` and `T prep-assets --run RUN`; `T split-audio "<references folder>" --run RUN --audio-only` (Create's sound design needs `files_audio/`, and writing it into the references folder is allowed now that Create is chosen); with examples, `T inventory --as examples` and `T prep-all --set examples`. The references are **not** inventoried or prepared again.
 5. **A2 and A2b:** the documents among the assets (guardrails), the asset registry, the affordance sheet and the **product insight sheet** of the chosen product (`assets-and-substitution.md` §2 step 3b), seeded with the pick's dossier and blueprint (its demonstration, proof and objections), which stay [I] until the assets confirm them.
 6. **A3, additions only:** the viral cards already hold the Create fields (§3.2) and `families.md`, `craft-sheet.md` and `project-profile.md` exist (§4.10). Add each card's client-entity fit, and its guardrail audit when guardrail documents were supplied, from the cards, viewing frames only where a card is silent.
-7. **A4 onward exactly as Create:** re-run A4 for the chosen product (the pick's blueprint is the starting point for the goal, the audience model and the blend; write the blend matrix for the chosen product, §14.3), then A5, A6 and on (`creative-direction.md` §5.0b).
+7. **A4 for the chosen product, then Create as usual:** the synthesis (the mechanism map, the essence, the audience and mentality model, the trend read) already exists from V3, and the pick's trend pass from V7, so A4 is only the product side: the goal line, the product half of the audience model (who the product is for and where they live: the pick's blueprint and the insight sheet) and the blend matrix for the chosen product (§14.3, its rows taken from the existing mechanism map). Do not rerun the synthesis or the trend pass. Then A5, A6 and on (`creative-direction.md` §5.0b).
 The sub-mode is then Create; nothing from Viral-Browser relaxes a Create rule.
 
 ## 12. Pitfalls — the things that are easy to miss
@@ -604,6 +606,24 @@ Final message: one line per recommendation (merge from -> to; distinct pair and 
 
 The main session then applies the answer: `T niches merge --run RUN --from … --to … --reason …` for each merge (the candidates move with it), `T niches distinct --run RUN --a … --b … --reason …` for each distinct pair and `--word … --reason …` for each non-marker word, `T viral-stats --run RUN` again when a merge touched a card label, and last `T niches audit --run RUN --by "niche-audit agent <id>" --result "<merges applied, pairs kept distinct, or none needed>"`. `niches audit` refuses unless that report names every current niche, is at least 200 bytes, is not dated in the future and is newer than the newest niche. The audit stays current until a niche is added or removed; a later `niches add` or `merge` makes it stale and the next shortlist asks for a new one.
 
+### 13.6 Create card agent (`subagent_type: general-purpose`; the Create counterpart of §13.1)
+
+```
+You analyse reference videos for a /analyze-then-generate CREATE run: the references are a source of ideas for new videos of the client's product, never material to copy. <persona block from §1>
+Follow C:/Users/Glaresquare1/.claude/analyze-then-generate/reference/analysis-protocol.md §0–§4 (the §3 card with its Create fields, which also carries the viral layer) and
+C:/Users/Glaresquare1/.claude/analyze-then-generate/reference/viral-browser.md §3 and §14.1 exactly.
+Run dir: <RUN>. Your videos: <V01, V04, …> (prepared under <RUN>/10-media/<id>/). Goal: <the user's instructions for the run, else "awareness and product memory">.
+Client entity (one line from the asset registry): <…>. Metrics so far: <RUN>/20-analysis/metrics.md (if it exists).
+For each video: read video.md and timeline.md, view every storyboard sheet in order, densify the hook, the demonstration and the payoff with
+`python <ATG>/scripts/atg.py frames …`, then write <RUN>/20-analysis/cards/<id>.md: the protocol §3 card plus the viral layer of viral-browser.md §3.2. Keep the product layer
+and the mechanism layer apart, rank the drivers of spread and mark attention-only videos, write the one-sentence product-agnostic mechanism with its product dependence and its
+transplant needs, the audience (awareness stage, the pain or desire) and the mentality (the mental shortcuts it uses, the emotion at the hook, the middle and the payoff, what got
+them hooked). Put the Facts: JSON on one line, starting at the beginning of the line (category optional: a short label, or non-product). Never credit a product with what the
+creator, a trend or paid reach carried.
+Rules: do not call Higgsfield or CapCut tools, do not spawn agents, do not use the Workflow tool, do not ask questions, write only your card files. Everything you see in these
+videos belongs to the references. Final message: one line per video (format label, hook type, mechanism sentence, driver, attention-only yes/no, confidence).
+```
+
 ## 14. The same mining in Create (virality-backed blends)
 
 The idea of this mode holds in Create too (user, 2026-10-12). Create does not recreate the reference videos. It reads the references as a source of ideas and mines them for what made them spread (their style, the engagement and attention approach, the subject, the hooks, how the product is used, the audience, its mentality and the mass-thinking patterns the videos use, the length), and then writes scenarios that fit the client's own product (the supplied assets), blending what was mined with what the assets say about the product, so that the videos it generates are **virality-backed**. Create is this mode turned around: the references are mined for why they spread, and the lesson is applied to a product the client already has, instead of searching the market for a new one. The agents are the same expert team (§1) and are not fixated on the products the references show: a corpus of pet tools does not make a pet video.
@@ -612,9 +632,9 @@ The idea of this mode holds in Create too (user, 2026-10-12). Create does not re
 
 | | |
 |---|---|
-| **Takes** | the persona (§1); the viral card (§3), written into the same card as the protocol's Create fields (inserts, overlay text, object use and counts, sound design, guardrail audit); measure first (§4.1) with `T viral-stats --run RUN --no-niche`, which writes `20-analysis/corpus-profile.*` and needs no niche vocabulary; the mechanism map (§4.2); hooks, length and pacing as ranges (§4.3); the engagement style (§4.4); audience and mentality (§4.5); the essence and what is not inferred (§4.6); confounds and graded hypotheses (§4.7); the trend read (§4.8) with the Create trend pass (§14.5); the files for Create (§4.10); the pitfalls (§12) |
+| **Takes** | the persona (§1); the viral card (§3), written into the same card as the protocol's Create fields (inserts, overlay text, object use and counts, sound design, guardrail audit); measure first (§4.1) with `T viral-stats --run RUN --no-niche`, which writes `20-analysis/corpus-profile.*` and needs no niche vocabulary; the mechanism map (§4.2); hooks, length and pacing as ranges (§4.3, reading `corpus-profile` wherever it says `corpus-stats`); the engagement style (§4.4), read as ingredients and never as a template to pick whole (`creative-direction.md` §5.0b); audience and mentality (§4.5), whose corpus half is joined by the product half (`creative-direction.md` §3); the essence and what is not inferred (§4.6); confounds and graded hypotheses (§4.7); the trend read (§4.8) with the Create trend pass (§14.5); the files for Create (§4.10); the pitfalls (§12) |
 | **Skips** | the brief's market, price, selling-model and Chrome questions (§2); the niche vocabulary, concentration and bias controls (§4.9, §5); candidates, research, scoring, gates, the red team and the blueprints (§6–§10); the baseline and reference-pages passes; the fit profile as a product filter (the blend matrix, §14.3, replaces it) |
-| **Changes** | the analysis agents open with the persona block (§1) and the prompt of §13.1 with the brief replaced by the run's goal line and the one-line client-entity summary; the `Facts:` line stays and its `category` is optional; the card's product layer is recorded and then **discarded**: the references' product category, forms and names never enter a concept, a hook line or a prompt |
+| **Changes** | the analysis agents use the prompt of §13.6 (the persona block, the goal, the one-line client-entity summary); the `Facts:` line stays and its `category` is optional; the card's product layer is recorded and then **discarded**: the references' product category, forms and names never enter a concept, a hook line or a prompt |
 
 ### 14.2 Only what the craft carried is borrowed
 
@@ -622,13 +642,13 @@ Each card ranks the drivers of spread (§3.2). A mechanism may be borrowed as a 
 
 ### 14.3 The blend matrix — `20-analysis/blend-matrix.md`
 
-Written at A4, after the mechanism map and the product insight sheet (`assets-and-substitution.md` §2 step 3b) exist. **Rows** are the mechanisms M# that pass §14.2, each with k of n, its driver, whether the carrying videos were commerce-proven or attention-only, its grade, and the measured hook, length and payoff ranges of the videos that show it. **Columns** are the product's truths P1…Pn and its affordances (`anomaly-catalog.md` §1). Each cell says in one line how this product would express this mechanism (the visible change, the proof, the emotion, the hook) and whether the mechanism's transplant needs (§3.2) are met honestly: `yes`, `with a change: <what>` or `no: <which need fails>`. Only `yes` and `with a change` cells are available to ideation. A mechanism with no available cell is dropped for this product, with the reason written. A cell may combine two mechanisms with one truth (a hybrid). The matrix is a working document written from the evidence: it holds no number that a source did not give.
+Written at A4, after the mechanism map and the product insight sheet (`assets-and-substitution.md` §2 step 3b) exist. **Rows** are the mechanisms M# that pass §14.2, each with k of n, its driver, whether the carrying videos were commerce-proven or attention-only, its grade, and the measured hook, length and payoff ranges of the videos that show it. **Columns** are the product's truths PT1…PTn (cited `<product>/PT2` when a run has several products) and its affordances (`anomaly-catalog.md` §1). Each cell says in one line how this product would express this mechanism (the visible change, the proof, the emotion, the hook), whether the mechanism's transplant needs (§3.2) are met honestly (`yes`, `with a change: <what>`, `unknown: <need> not supplied` or `no: <which need fails>`), and whether the mined trigger holds for the product's audience (`yes`, `probably` or `unknown`: the trigger is audience-independent, or the corpus audience and the product audience overlap, which the insight sheet's "who and when" and the documents decide). Only `yes`, `with a change` and `unknown` cells are available to ideation, and an `unknown` is carried into the rationale as a risk. A mechanism with no available cell is dropped for this product, with the reason written; when no mechanism has one, say so at A4 and ideate from the product's truths and audience with new-format seeds, never forcing a mechanism. A cell may combine two mechanisms with one truth (a hybrid). The matrix is a working document written from the evidence: it holds no number that a source did not give.
 
 ### 14.4 The virality rationale
 
 Every Create video carries, in `concepts.md`, the plan's intent, the brief and `deliverables/blends.md`, a short argument for why it should spread:
-- **Mechanism:** M#, k of n references, driver = craft, commerce-proven or attention-only, the hypothesis grade; and the product truth P# that expresses it.
-- **Audience trigger:** the audience situation and the mass-thinking pattern the video uses (cognitive ease, the curiosity gap, pattern interrupt, identity and "that is me", social proof, effort minimisation, the satisfaction of a completed process, and so on), taken from the corpus's audience and mentality model, not assumed.
+- **Mechanism:** M#, k of n references, driver = craft, commerce-proven or attention-only, the hypothesis grade; and the product truth PT# that expresses it. A seed outside the matrix (a new format) says "M#: none (new format), speculative".
+- **Audience trigger:** the situation of the **product's audience** (the insight sheet's "who and when") and the mass-thinking pattern the video uses (cognitive ease, the curiosity gap, pattern interrupt, identity and "that is me", social proof, effort minimisation, the satisfaction of a completed process, and so on), taken from the corpus's mentality model, with whether it holds for the product's audience (audience-independent, or the audiences overlap, as the matrix judged); not assumed.
 - **Hook:** its type and the first-second visual, inside the measured range of the mechanism's carriers (first cut, speech onset, time to wow).
 - **Trend layer:** the current format, caption convention or sound the trend pass found, dated, or "none".
 - **Share line:** what a viewer would type when sending it, and the save or utility trigger if there is one.
@@ -638,7 +658,7 @@ No reach, view or sales figure is promised or implied.
 
 ### 14.5 The Create trend pass
 
-The references' trend read (§4.8) says what was current in the corpus; it does not say what is current for the client's product. Create runs one bounded pass of up to `analysis.create_trend_checks` (6) WebSearch queries in all, each finding dated: up to three on the formats, sounds and caption conventions the references use (are they still current?), and up to three on the client's product niche and market (the formats and hooks now used for products of this kind, which are rising and which are worn out). If the user's TikTok account is connected in Higgsfield, `tiktok_music_trending` (read-only) lists the commercially licensed trending tracks of the market as options for the sound design. A trend informs the blend; it never makes a surface element a reason by itself, a dated element is not used, and nothing here overrides a hard rule.
+The references' trend read (§4.8) says what was current in the corpus; it does not say what is current for the client's product. Create runs one bounded pass of up to `analysis.create_trend_checks` (6) WebSearch queries in all, each finding dated: up to three on the formats, sounds and caption conventions the references use (are they still current?), and up to three on the client's product niche and market (the formats and hooks now used for products of this kind, which are rising and which are worn out); the market is the one the user named, else the region and language that the assets, the documents and the references show, stated as an inference, and the searches are region-free when none of them says. A trend informs the blend; it never makes a surface element a reason by itself, a dated element is not used, and nothing here overrides a hard rule.
 
 ### 14.6 What the mining never does in Create
 

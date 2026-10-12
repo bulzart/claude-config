@@ -709,8 +709,8 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     Videos that have nothing to do with the client's product are kept and analysed like any other.
     Their mechanism is still useful, and the product is integrated into them later.
 - Delegate to 1–2 agents only per §7 of the protocol, with disjoint video lists. Give them the
-  one-line client-entity summary from the registry. In Create also give them the persona block
-  (`viral-browser.md` §1) and the prompt of §13.1 with the changes of §14.1.
+  one-line client-entity summary from the registry. In Create use the prompt of `viral-browser.md` §13.6
+  (the persona block, the goal, the viral-card rules).
 - Images and other files in the references folder are also **reference material**: other products,
   samples, thumbnails and executions. Analyse them as references and never treat them as client
   assets.
@@ -723,8 +723,8 @@ Write, following the protocol §5–§6:
 - `20-analysis/families.md`: dynamic content families with measured profiles;
 - **Create:** `20-analysis/craft-sheet.md` (protocol §5 step 3b): per family, what is
   **collected** (style, properties, approach, crafting, why it works) and what is **left behind**
-  (the subject). Ideation reads only the collected column, together with the product insight sheet
-  (`30-assets/product-insights.md`, A2b; `creative-direction.md` §5.0b);
+  (the subject). Ideation reads only the collected column, together with the mechanism map, the blend matrix and the product insight sheet
+  (`30-assets/product-insights.md`, A2b; `creative-direction.md` §5.0b, §5.0c);
 - **Create: the virality synthesis** (`viral-browser.md` §14.1–§14.5), from the cards, product-free:
   `T viral-stats --run RUN --no-niche` (the measured length, hook, pacing, speech, text, music and
   loop profile, in `20-analysis/corpus-profile.md`); `20-analysis/mechanism-map.md` (mechanisms M#,
@@ -734,7 +734,7 @@ Write, following the protocol §5–§6:
   read with the Create trend pass (up to `analysis.create_trend_checks` dated searches: the
   references' formats, and the client's product niche and market); and the **blend matrix**
   `20-analysis/blend-matrix.md` (the mechanisms that pass the driver test, set against the product
-  truths P# and affordances of `30-assets/product-insights.md`). Only available cells reach ideation;
+  truths PT# and affordances of `30-assets/product-insights.md`, with an audience-fit judgement per cell). Only available cells reach ideation;
 - in `20-analysis/project-profile.md`, the **goal**, the **audience model** and the **trend read**
   (`creative-direction.md` §2–§4; protocol §6);
 - `20-analysis/project-profile.md`: domain, objective, authoritative requirements, entities,
@@ -799,7 +799,7 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   - **Transfer, not repetition** (`creative-direction.md` §5.0): every concept takes from the
     references only their craft (the style, the properties, the approach, the crafting, the hook
     type, why it works) from `20-analysis/craft-sheet.md`, and brings its own subject from the
-    audience model and the product's natural use. A seed that restages a reference's premise,
+    product's audience (the audience model's product half) and the product's natural use. A seed that restages a reference's premise,
     setting, characters, action order, joke, lines, first frame, ending or product beat fails the
     **copy test** and is rewritten with a new subject or dropped. That is Recreate's job, not
     Create's.
@@ -813,13 +813,14 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     ingredients, never a menu: the winner is chosen for engagement, not for resemblance to a
     reference.
   - **Virality-backed** (`creative-direction.md` §5.0c; `viral-browser.md` §14.2–§14.4): seeds come
-    from the available cells of `20-analysis/blend-matrix.md`; only the craft is borrowed (never a
+    from the available cells of `20-analysis/blend-matrix.md` (a seed outside it is a new format and names
+    "M#: none (new format), speculative"); only the craft is borrowed (never a
     reference's creator reach, paid reach, brand, bait, season or product); the blend line also
     names the audience trigger, the hook and its timing inside the measured range, the current
     trend element and the share line; and the winner carries its **virality rationale** (why it
     should spread, and what could make it fail).
   - **Ideation, scored** (`creative-direction.md` §5.1): for every video slot write at least five
-    concept seeds (situation + turn + where the product lives + its blend line: M#, P#, the hook and its timing, the trend element, the share line), score each on stop
+    concept seeds (situation + turn + where the product lives + its blend line: M#, PT#, the hook and its timing, the trend element, the share line), score each on stop
     power, relatability, sharpness, product nativeness, blend, trend fit and freshness, feasibility
     for the locked model, and brand safety; take the best, keep the runner-up as the fallback, write the
     winner's share line, job and virality rationale (`viral-browser.md` §14.4), and run the sharpness gate (§6). Save them to
@@ -1878,7 +1879,7 @@ size figure in the table was viewed on a frame with its method (two estimates, a
 repeated from an agent's provisional number. What is missing is fixed before the table is shown.
 
 Create: write `RUN/deliverables/blends.md` from `concepts.md` and the plans, one row per video: the mechanism(s) M#
-(k of n, grade), the product truth P#, the audience trigger, the hook type and its timing, the trend element, the share
+(k of n, grade), the product truth PT#, the audience trigger, the hook type and its timing, the trend element, the share
 line and the honest risk. It shows what each video tests, so that results can be attributed to a mechanism, a hook or a
 truth; the chat table gets a "blend" column from it.
 

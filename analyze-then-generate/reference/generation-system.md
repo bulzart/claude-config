@@ -54,11 +54,11 @@ Write this plan to `<run>/40-briefs/video-NN-plan.md` **before** any prompt. Kee
   (`creative-direction.md` §5.0).
 - **The blend (Create) [I]:** the idea is a blend of a reference mechanism and a **product truth**
   from `30-assets/product-insights.md`, not a reference format with the product swapped in: the plan
-  names the borrowed mechanism (craft-sheet id), the product truth it uses and how the mechanism is
+  names the borrowed mechanism (its id M# in `mechanism-map.md`, with the craft-sheet block it comes from), the product truth it uses and how the mechanism is
   re-expressed through it, and states that the blend and template-lock tests passed
   (`creative-direction.md` §5.0b).
 - **Virality rationale (Create) [I]:** why the video should spread, in the lines of `viral-browser.md` §14.4: the mechanism (M#, k of n, driver, grade)
-  and the product truth (P#) that expresses it, the audience trigger, the hook and its timing inside the measured range, the trend element
+  and the product truth (PT#) that expresses it, the audience trigger, the hook and its timing inside the measured range, the trend element
   (dated) or none, the share line, and what could make it fail. An argument from the references' evidence, never a prediction of reach.
 - **Goal and job [I/U]:** the run's goal (`creative-direction.md` §2) and what this video makes the
   viewer do at the end, and what they keep of the product.
@@ -1097,7 +1097,8 @@ Concept: <one line>
 Why it works: <goal and job; the one idea; the emotion arc or laugh mechanism; the share line> (creative-direction.md)
 Reference pattern: <which analyzed videos/mechanism, e.g. "V03/V07 hook-then-demo, payoff at ~5 s">
 Taken / left (Create): <craft carried: style, pacing, hook type, payoff timing, text role, product read | subject invented: premise, setting, characters, turn, ending; copy test passed against V…> (creative-direction.md §5.0)
-Blend (Create): <the reference mechanism borrowed (craft-sheet id) × the product truth used (product-insights line) × the audience situation; blend and template-lock tests passed> (creative-direction.md §5.0b)
+Blend (Create): <the reference mechanism borrowed (M#, craft-sheet block) × the product truth used (PT#) × the product audience's situation; blend and template-lock tests passed> (creative-direction.md §5.0b)
+Virality rationale (Create): <M#, k of n, grade (or none: new format, speculative) · PT# · audience trigger and whether it holds for the product audience · hook type and timing · trend element (dated) or none · share line · what could make it fail> (viral-browser.md §14.4)
 Characters/assets: <approved assets used; element/media ids not shown>
 House approach: <the rules applied from 20-analysis/house-approach.md | none (no examples)>
 Substitutions: <source entity → client entity, per entity> | Placement: <client entity → anchor, e.g. "can on desk right of laptop; one sip at ~6 s, set back", "car parked at the curb behind the bench; stays parked">

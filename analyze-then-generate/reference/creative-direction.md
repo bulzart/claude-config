@@ -48,7 +48,7 @@ Rules:
 
 Write the audience model once per run (`project-profile.md`): who the references speak to, the cues
 that reveal it (setting, age, language, humour, captions, platform), and what that audience
-recognises instantly. Then design every video for how people actually perceive a vertical clip:
+recognises instantly. **In Create the model has two halves.** The corpus half (above, with the triggers and emotion arcs that worked on that audience: `viral-browser.md` §4.5) says what moves people in these videos. The **product half** says who the client's product is for and the situations, places and moments that audience lives in (`30-assets/product-insights.md`, "who and when", and the supplied documents). Scenarios are drawn from the product half; a mined trigger transfers when it is audience-independent (cognitive ease, the curiosity gap, pattern interrupt, a satisfying completed process) or when the two audiences overlap, and the blend matrix says which (`viral-browser.md` §14.3). Then design every video for how people actually perceive a vertical clip:
 
 - **The first second decides.** Before any word is read, the viewer registers a face, a motion
   onset, an oddity, a familiar situation or a caption's first words. Give them one of these; never
@@ -128,8 +128,8 @@ one block per family and per reference that matters:
 | **Subject (what)** | the premise and the situation, the setting and the location, the characters and their look, the specific action sequence, the joke's content and the punchline, the lines, the caption wording (except a generic meme line, `text-and-format.md` §1), the prop set and its arrangement, the first-frame composition, the ending image, the source product's own beat, the sound or track (a meme insert is the only exception, `generation-system.md` §3c) | left behind; the concept brings its own |
 
 **The transfer rule.** A concept seed takes its **mechanism, style and properties from the craft
-sheet** and its **subject from the audience model** (§3: the places, moments and situations the
-audience lives in) and from the product's own natural use (`generation-system.md` §4b.0). It never
+sheet** and its **subject from the audience model's product half** (§3: the places, moments and situations the
+product's audience lives in) and from the product's own natural use (`generation-system.md` §4b.0). It never
 takes a subject line from a card. Minimum distance from every reference: a different premise,
 a different setting, different characters in different roles, a turn with different content, a
 different product beat and a different ending image. What may coincide: a borrowed mechanism,
@@ -169,10 +169,10 @@ licenses the content.
 Create is not "the references again with the product swapped in", and it is not bound to the
 references' formats. It designs the most engaging video for *this* product from two inputs of equal
 weight: the **references, understood** (why they work: hook logic, structure, proof, emotion, the
-audience's situations, what is current; the craft sheet and the trend read) and the **product,
+triggers that worked on their audience, what is current; the craft sheet, the corpus half of the audience model and the trend read) and the **product,
 understood** (what it is, who wants it, what it can honestly show, what reads on camera, its
 product truths; the insight sheet `30-assets/product-insights.md`, written from the supplied assets,
-`assets-and-substitution.md` §2 step 3b). The references supply proven ingredients; the product
+`assets-and-substitution.md` §2 step 3b). The references supply candidate ingredients, each graded by its evidence (`viral-browser.md` §4.7); the product
 supplies the truth that makes the idea its own.
 
 1. **Families are evidence and ingredients, never a menu or a template.** Style groups (command A6)
@@ -180,8 +180,8 @@ supplies the truth that makes the idea its own.
    families, or a format the references never showed, when the mechanisms and the product's strengths
    support it (a skit's reveal driven by a sound the product makes; a tutorial's demonstration played
    as a deadpan one-take). A seed need not belong to any reference group.
-2. **Every seed names its blend** in one line: the reference mechanism it borrows (craft-sheet id),
-   the product truth it uses (insight-sheet line), the audience situation, and how the mechanism is
+2. **Every seed names its blend** in one line: the reference mechanism it borrows (its id M# in `mechanism-map.md`, with the craft-sheet block it comes from),
+   the product truth it uses (PT#, an insight-sheet line), the audience situation (the product audience's), and how the mechanism is
    re-expressed through what the product uniquely can do or show.
 3. **The blend test** (with the copy test, on every seed): remove the product and the idea turns
    generic; remove the mechanism and it is only an ad. Both removals must break it. A seed made only
@@ -204,10 +204,10 @@ supplies the truth that makes the idea its own.
 
 Create carries the idea of Viral-Browser (`viral-browser.md` §14): the references are mined for why they spread, and the lesson is applied to the client's own product. In ideation this means:
 
-1. **Seeds come from the blend matrix** (`20-analysis/blend-matrix.md`, `viral-browser.md` §14.3). A seed picks an available cell (a mechanism M# that the product can carry through a truth P#), or is an explicit hybrid of cells or a new format with its reason written; a mechanism the matrix dropped is not used.
-2. **Only the craft is borrowed** (`viral-browser.md` §14.2): never the references' creator reach, paid reach, brand, bait or season, and never their product, category or forms. A corpus full of one product type does not make that type the subject: the subject comes from the audience model and the client's product.
-3. **The blend line is complete:** M# (k of n, grade), P#, the audience situation and the mass-thinking trigger it uses, the hook type with its timing inside the measured range of the mechanism's carriers, the current trend element (dated) or "none", and the share line.
-4. **The winner carries its virality rationale** (`viral-browser.md` §14.4) into `concepts.md`, the plan's intent (`generation-system.md` §2.1), the brief and `deliverables/blends.md`, with the honest risk. Across a run, vary one thing at a time where the videos allow it (the mechanism, the hook, the product truth), so that results can later be attributed.
+1. **Seeds come from the blend matrix** (`20-analysis/blend-matrix.md`, `viral-browser.md` §14.3). A seed picks an available cell (a mechanism M# that the product can carry through a truth PT#), or is an explicit hybrid of cells, or a new format that names "M#: none (new format), speculative" with its reason written; a mechanism the matrix dropped is not used. When no cell is available at all (nothing the product can carry), say so in the A4 summary and ideate from the product truths and the product audience with new-format seeds, never forcing a mechanism.
+2. **Only the craft is borrowed** (`viral-browser.md` §14.2): never the references' creator reach, paid reach, brand, bait or season, and never their product, category or forms. A corpus full of one product type does not make that type the subject: the subject comes from the product's audience and the client's product.
+3. **The blend line is complete:** M# (k of n, grade) or "none (new format), speculative", PT#, the audience situation (the product audience's) and the mass-thinking trigger it uses and whether it holds for that audience, the hook type with its timing inside the measured range of the mechanism's carriers, the current trend element (dated) or "none", and the share line.
+4. **The winner carries its virality rationale** (`viral-browser.md` §14.4) into `concepts.md`, the plan's intent (`generation-system.md` §2.1), the brief and `deliverables/blends.md`, with the honest risk. Seeds are ranked by their total score (§5.1); when totals are close, the stronger mechanism evidence (k of n, grade) wins, then the seed that varies only one of the mechanism, the hook and the product truth against the run's other winners, so that results can later be attributed. This never makes a weaker idea win.
 5. **Honesty:** the rationale is an argument from the references' evidence, not a prediction; the sharpness gate (§6) and the copy and template-lock tests still apply.
 
 ### 5.1 Concept seeds, scored (Create, A6)
@@ -216,9 +216,9 @@ For every video slot in a chosen style group (or a hybrid group, §5.0b):
 
 1. **Diverge.** Write at least **five concept seeds**, one line each: `situation + turn + where the
    product lives`, plus its blend line (§5.0b: the borrowed mechanism, the product truth, the audience
-   situation; §5.0c adds M#, P#, the hook and its timing, the trend element and the share line). Example: "night shift ends, parked car, slumps, lifts the sealed can from the cup
+   situation; §5.0c adds M#, PT#, the hook and its timing, the trend element and the share line). Example: "night shift ends, parked car, slumps, lifts the sealed can from the cup
    holder, cracks it, first sip, melts — the can is the only light in the car." Draw situations from
-   the audience model (places and moments they live in), hooks and turns from the **mechanisms of the
+   the product's audience (the audience model's product half: places and moments they live in), hooks and turns from the **mechanisms of the
    craft sheet, from any family and in any mix**, the idea itself from the **product truths of the
    insight sheet**, and the product's spot from its most natural use (`generation-system.md` §4b.0).
    Never draw a situation, a setting, a joke or a line from a reference's card: the craft sheet gives

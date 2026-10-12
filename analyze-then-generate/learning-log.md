@@ -118,10 +118,20 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   cards (A3); the virality synthesis at A4 (`T viral-stats --run RUN --no-niche` writes `20-analysis/corpus-profile.*` and leaves
   `corpus-stats.*` alone, mechanism map, hook/length/pacing ranges, engagement style, audience and mentality, essence, trend read); ideation
   draws seeds from the available matrix cells (`creative-direction.md` section 5.0c); the plan's intent and the new `deliverables/blends.md`
-  carry the rationale; the persona block opens every Create analysis and ideation prompt; the product truths are numbered P1..P6.
+  carry the rationale; the persona block opens every Create analysis and ideation prompt; the product truths are numbered PT1..PT6.
 - **Not done on purpose:** no call to the Higgsfield virality predictor (it analyses an uploaded or generated video, its cost is unknown, and
   it cannot see the CapCut text and sound); the rationale is an argument from the references' evidence, never a prediction of reach.
 - **Hypotheses to test on the first Create runs:** (1) the blend matrix drops mechanisms the product cannot honestly carry instead of
   forcing them, and the surviving cells give seeds that differ from each other; (2) viral cards for every reference do not make A3 too slow
   (watch the time per reference with two agents); (3) the attribution table in `blends.md` is enough to learn which mechanism, hook or
   truth won; (4) one pass of six dated searches finds usable current formats for the product's niche.
+- **Review of this change** (a fresh agent, read only, one toolkit run) found and this pass fixed: Create's audience model was still the
+  references' audience, so a pet-tools corpus with a non-pet product could still produce pet-audience scenes (the model now has a corpus half
+  for the triggers and a **product half** for the situations and places; the blend matrix judges whether a trigger holds for the product's
+  audience); `viral-stats --no-niche` still profiled the references' product form and price tier (dropped); the brief template had no slot for
+  the rationale and still said "craft-sheet id" beside M# (both fixed); the agent prompt mixed protocol sections and a Viral-Browser run (a
+  dedicated Create prompt, `viral-browser.md` 13.6); Create has no market (inferred from assets, documents and language, else region-free) and
+  some transplant needs cannot be known (`unknown` cells stay available as a stated risk); a seed outside the matrix could not fill the blend
+  line (`M#: none (new format), speculative`); the continuation to Create re-ran the synthesis (now only the product side of A4); the TikTok
+  sound sentence was dropped; P# clashed with the pick labels and became PT#; "proven ingredients" became graded candidate ingredients.
+

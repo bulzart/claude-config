@@ -181,7 +181,7 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
    (the subject: premise, setting, characters, action sequence, joke content, lines, caption
    wording, props, first frame, ending image, the source product's beat, the sound). Create
    ideation reads only the first column for the how and invents the what
-   (`creative-direction.md` §5.0).
+   (`creative-direction.md` §5.0). Tag each block with the mechanism ids M# it carries (step 3c).
 3c. **Virality synthesis** (Create; `viral-browser.md` §14): `T viral-stats --run RUN --no-niche` (the measured profile in `20-analysis/corpus-profile.md`); `20-analysis/mechanism-map.md` (mechanisms M#, k of n, driver, strength, independence of the product, transplant needs, confounds, graded hypotheses); the hook, length and pacing ranges; the engagement style; the audience and mentality model with the mass-thinking patterns the material uses; `20-analysis/viral-essence.md`; and the trend read with the Create trend pass.
 3d. **Blend matrix** (Create): `20-analysis/blend-matrix.md`, the mined mechanisms that pass the driver test, set against the product's truths and affordances (`viral-browser.md` §14.3). Ideation reads it with the craft sheet and the insight sheet.
 4. **Directions** are meaningful combinations of subject × structure × execution style that fit the
@@ -268,7 +268,9 @@ Everything is inferred from the folder, never assumed:
 - **Goal** [E/I], **audience model** [I] and **trend read** [E/I] (`creative-direction.md` §2–§4):
   the goal in one line and each video's job; who the references speak to and what they recognise
   instantly; the format names, the structural mechanisms, the surface elements with their
-  freshness, and any bounded trend check with its date.
+  freshness, and any bounded trend check with its date. In Create the audience model also has a product half
+  (who the client's product is for and where they live, from the insight sheet and the documents) beside this
+  corpus half (`creative-direction.md` §3).
 
 ## 7. Scale and delegation (≤ 2 analysis agents, no Workflow)
 

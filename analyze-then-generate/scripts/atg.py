@@ -4149,7 +4149,10 @@ def _vs_aggregate(ms, facts, thr, small_n, run, niche=True):
            "share_vertical_9_16": _share([(m["aspect"] == "9:16") if m["aspect"] else None for m in ms]),
            "aspects": dict(Counter(m["aspect"] for m in ms if m["aspect"])), "unresolved_labels": unresolved}
     fa = {}
+    product_layer = () if niche else ("product_form", "price_tier")        # Create: the references' product layer is discarded, not profiled
     for k in FACT_KEYS:
+        if k in product_layer:
+            continue
         if k == "category":
             c = Counter(cats.values())
         else:
@@ -4161,6 +4164,8 @@ def _vs_aggregate(ms, facts, thr, small_n, run, niche=True):
     agg["share_attention_only"] = _share(ao)
     conc = {}
     for k in ("category", "product_form", "creator_group", "format", "hook_type"):
+        if k in product_layer:
+            continue
         c = Counter(cats.values()) if k == "category" else Counter(_norm(f.get(k)) for f in facts.values() if f.get(k) not in (None, "", []))
         if c:
             conc[k] = _concentration(c, thr)
