@@ -1932,7 +1932,7 @@ def _ac_repeats(words):
     return [{"phrase": g, "times": n} for g, n in sorted(grams.items(), key=lambda kv: (-kv[1], kv[0])) if n >= 2][:5]
 
 
-def _ac_record(vdir: Path, profile: bool = False) -> dict:
+def _ac_record(vdir: Path, profile: bool = False, second=None) -> dict:
     vid = vdir.name
     vj = _ac_json(vdir / "video.json") or {}
     tr = _ac_json(vdir / "transcript.json")
@@ -1989,8 +1989,22 @@ def _ac_record(vdir: Path, profile: bool = False) -> dict:
     elif status == "no-speech":
         rec["kind"] = "music-or-ambient" if music else "none"
         if music and (dur or 0) >= 3:
-            rec["flags"].append("no speech was found over a music bed: the voice filter may have dropped sung words, and a song's lyrics can identify the sound; "
-                                f"a second pass without the filter: T prep-all --run RUN --only {vid} --redo --no-vad (it may invent words over pure music: treat what it finds as lyrics at best)")
+            wav = vdir / "audio" / "audio-16k.wav"
+            if second and wav.exists():
+                r2 = transcribe(str(wav), vdir / "audio", second, "auto", False)
+                t2 = " ".join(str(x.get("text", "")).strip() for x in r2["segments"]).strip()
+                w2 = [w for x in r2["segments"] for w in (x.get("words") or [])]
+                rec["second_pass"] = {"vad_filter": False, "model": r2.get("model"), "language": r2.get("language"), "language_probability": r2.get("language_probability"),
+                                      "words": r2.get("n_words") or 0, "text": t2, "repeats": _ac_repeats([w.get("w", "") for w in w2] or t2.split())}
+                if (r2.get("n_words") or 0) >= 6:
+                    rec["kind"] = "lyrics-or-chant?" if rec["second_pass"]["repeats"] else "voice-or-lyrics-in-music?"
+                    rec["flags"].append(f"a second pass without the voice filter found {r2['n_words']} words (language {r2.get('language')}, p={r2.get('language_probability')}): "
+                                        "sung or spoken words under the music; treat them as lyrics at best, an unfiltered pass may invent words over music")
+                else:
+                    rec["flags"].append("a second pass without the voice filter found no words either: the sound is music or ambience, with no voice")
+            else:
+                rec["flags"].append("no speech was found over a music bed: the voice filter may have dropped sung words, and a song's lyrics can identify the sound; "
+                                    "try a second pass without the filter: T audio-context --run RUN --second-pass (a few seconds a video)")
     else:
         rec["kind"] = None
     return rec
@@ -2032,6 +2046,12 @@ def _ac_md(recs, set_name) -> list:
             L.append(f"- **First sentence:** \"{r['hook_line']}\"")
         if r.get("repeats"):
             L.append("- **Repeated phrases:** " + "; ".join(f"\"{x['phrase']}\" x{x['times']}" for x in r["repeats"]))
+        sp2 = r.get("second_pass")
+        if sp2:
+            L.append(f"- **Second pass (no voice filter, {sp2['model']}):** {sp2['words']} word(s)"
+                     + (f", language {sp2['language']} (p {sp2['language_probability']}): \"{sp2['text'][:400]}\"" if sp2["words"] else ""))
+            if sp2.get("repeats"):
+                L.append("- **Repeated phrases (second pass):** " + "; ".join(f"\"{x['phrase']}\" x{x['times']}" for x in sp2["repeats"]))
         for f in r["flags"]:
             L.append(f"- **Flag:** {f}")
         if r.get("lines"):
@@ -2067,7 +2087,7 @@ def cmd_audio_context(a):
     vdirs = sorted((d for d in base.glob("*") if d.is_dir() and re.fullmatch(prefix + r"\d+", d.name)), key=lambda d: int(d.name[1:]))
     if not vdirs:
         fail(f"no prepared {a.set} in {base}: run `T prep-all --run RUN" + ("" if a.set == "references" else f" --set {a.set}") + "` first", 2)
-    recs = [_ac_record(d, a.profile) for d in vdirs]
+    recs = [_ac_record(d, a.profile, a.whisper_model if a.second_pass else None) for d in vdirs]
     stem = "audio-context" if a.set == "references" else f"audio-context-{a.set}"
     md_path = Path(a.out) if a.out else Path(a.run) / "20-analysis" / f"{stem}.md"
     write_text(md_path, "\n".join(_ac_md(recs, a.set)) + "\n")
@@ -6917,6 +6937,9 @@ def main():
     p.add_argument("--run", required=True)
     p.add_argument("--set", choices=["references", "baseline", "examples"], default="references")
     p.add_argument("--profile", action="store_true", help="also measure the sound design (audio-profile.json) of the videos that lack it")
+    p.add_argument("--second-pass", action="store_true", dest="second_pass", help="for a video with a music bed and no speech found, transcribe its audio again WITHOUT the voice filter "
+                   "(sung words are not dropped; words may be invented over pure music) and show the result in the digest; nothing prepared is changed")
+    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"), help="the model of the second pass (default: the configured one)")
     p.add_argument("--check", action="store_true", help="exit 1 when a transcript is missing, failed or skipped, or when a card lacks its 'Audio context:' and 'Said:' lines")
     p.add_argument("--cards", action="store_true", help="with --check: every video must also HAVE a card")
     p.add_argument("--out", help="where to write the digest (default 20-analysis/audio-context.md; the data file is written beside it)")

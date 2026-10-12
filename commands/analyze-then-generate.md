@@ -611,10 +611,12 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     documents (A2) meanwhile, and wait for the completion notification before A3;
   - fix or report any per-item errors listed in its JSON.
 - **Audio context, every analysis mode** (`analysis-protocol.md` §2 item 4, §3): then run
-  `T audio-context --run RUN --profile`. It writes `20-analysis/audio-context.md`, one digest of what every
+  `T audio-context --run RUN --profile --second-pass`. It writes `20-analysis/audio-context.md`, one digest of what every
   reference says and how it sounds: each transcript with its times, the language and its confidence, the speech
   and sound facts, repeated phrases that may be lyrics, and flags for a video whose language is uncertain or whose
-  words have low confidence; `--profile` also measures each video's sound design (`audio-profile.json`).
+  words have low confidence; `--profile` also measures each video's sound design (`audio-profile.json`); `--second-pass`
+  transcribes a music-led video in which no speech was found once more without the voice filter, so that sung words are not
+  lost (the result is shown in the digest; nothing prepared is changed).
   - Every analysis agent reads the digest before writing a card, and every card carries the **Audio context:**,
     **Said:** and **Words and sound together:** lines. In Create the speech is read for its craft, never for its lines.
   - A video without a usable transcript (`needs_a_transcript` in the JSON) is prepared again before the cards:
@@ -1091,7 +1093,7 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   than about 3 minutes of video run it in the background and read the documents meanwhile
   (documents are authoritative requirements and are quoted, "we already sell X" included).
   **No `split-audio`:** the references folder is not touched.
-- `T audio-context --run RUN --profile` (and `--set baseline` with a baseline): the digest of every transcript and the sound
+- `T audio-context --run RUN --profile --second-pass` (and `--set baseline` with a baseline): the digest of every transcript and the sound
   profile of every video (`viral-browser.md` §3.1, `analysis-protocol.md` §2 item 4). A video without a usable transcript is
   prepared again before the cards (`T prep-all --run RUN --only <V> --redo --whisper-model medium`).
 - A metrics or links file becomes `20-analysis/metrics.md`: one row per video (views, likes,
