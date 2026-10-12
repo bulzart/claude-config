@@ -134,6 +134,8 @@ Guardrail audit (brand-guardrails.md §3): <none supplied | per hit: G<n> · t=�
 Confidence: <high/medium/low> — <what was hard to see or hear>
 ```
 
+**Create cards are also viral cards.** Besides the fields above, a Create card carries the viral layer of `viral-browser.md` §3.2, so that each reference is read once: the product layer kept apart from the mechanism layer; the ranked drivers of spread and whether it is attention-only or commerce-proven; the one-sentence product-agnostic mechanism, its dependence on its own product and its transplant needs; the audience (who, the awareness stage, the pain or desire) and the mentality (the mental shortcuts it uses, the emotion at the hook, the middle and the payoff, what got them hooked); the engagement mechanics; commerce signals when a metrics file is supplied; and the one-line `Facts:` JSON (its `category` is optional in Create). The product layer is recorded and then discarded for ideation (`viral-browser.md` §14.1).
+
 ## 4. Effectiveness lenses (apply those the material supports; add new ones when needed)
 
 | lens | guiding question |
@@ -180,6 +182,8 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
    wording, props, first frame, ending image, the source product's beat, the sound). Create
    ideation reads only the first column for the how and invents the what
    (`creative-direction.md` §5.0).
+3c. **Virality synthesis** (Create; `viral-browser.md` §14): `T viral-stats --run RUN --no-niche` (the measured profile in `20-analysis/corpus-profile.md`); `20-analysis/mechanism-map.md` (mechanisms M#, k of n, driver, strength, independence of the product, transplant needs, confounds, graded hypotheses); the hook, length and pacing ranges; the engagement style; the audience and mentality model with the mass-thinking patterns the material uses; `20-analysis/viral-essence.md`; and the trend read with the Create trend pass.
+3d. **Blend matrix** (Create): `20-analysis/blend-matrix.md`, the mined mechanisms that pass the driver test, set against the product's truths and affordances (`viral-browser.md` §14.3). Ideation reads it with the craft sheet and the insight sheet.
 4. **Directions** are meaningful combinations of subject × structure × execution style that fit the
    client.
    - **Create** presents them as numbered **style groups**, `<content type> × <style> × <subject>`

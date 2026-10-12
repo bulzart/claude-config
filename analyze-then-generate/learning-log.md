@@ -106,3 +106,22 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   shape cannot crash `viral-stats`.
 - **Not fixed, on purpose:** a stored baseline set survives after the baseline videos are removed (re-run `viral-stats --set baseline` to refresh
   it); the audit report is still a file the main session could write itself (it is the recorded trail, not a proof).
+
+## 2026-10-12 · Create takes the Viral-Browser mining
+- **User request:** the idea of Viral-Browser must also drive Analyze -> Create: understand the references' style, engagement and attention
+  approach and the logic that made them viral (hooks, how the product is used, audience, mentality, mass-thinking patterns, length), then
+  generate fitting scenario videos for the product in the assets folder, blending the mined data with the product information, as
+  virality-backed videos; the agents must not be fixated on the references' product type.
+- **Added (Create only; Recreate and `/analyze-then-pick` unchanged):** `viral-browser.md` section 14 (what Create takes and skips from the
+  mining; only mechanisms whose driver is the craft are borrowed; the blend matrix `20-analysis/blend-matrix.md`; the virality rationale per
+  video; the Create trend pass of up to `analysis.create_trend_checks` = 6 dated searches; what the mining never does); Create cards are viral
+  cards (A3); the virality synthesis at A4 (`T viral-stats --run RUN --no-niche` writes `20-analysis/corpus-profile.*` and leaves
+  `corpus-stats.*` alone, mechanism map, hook/length/pacing ranges, engagement style, audience and mentality, essence, trend read); ideation
+  draws seeds from the available matrix cells (`creative-direction.md` section 5.0c); the plan's intent and the new `deliverables/blends.md`
+  carry the rationale; the persona block opens every Create analysis and ideation prompt; the product truths are numbered P1..P6.
+- **Not done on purpose:** no call to the Higgsfield virality predictor (it analyses an uploaded or generated video, its cost is unknown, and
+  it cannot see the CapCut text and sound); the rationale is an argument from the references' evidence, never a prediction of reach.
+- **Hypotheses to test on the first Create runs:** (1) the blend matrix drops mechanisms the product cannot honestly carry instead of
+  forcing them, and the surviving cells give seeds that differ from each other; (2) viral cards for every reference do not make A3 too slow
+  (watch the time per reference with two agents); (3) the attribution table in `blends.md` is enough to learn which mechanism, hook or
+  truth won; (4) one pass of six dated searches finds usable current formats for the product's niche.

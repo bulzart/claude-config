@@ -56,6 +56,7 @@ analyze-then-generate/
 4. It builds a pool of specific candidate products across the whole market (the references' niche is one source of five), has a fresh agent audit the niche vocabulary, researches the shortlist in parallel (demand, commercial proof, competition, economics, compliance, logistics, customer voice, content fit, timing), has a fresh blind agent score the candidates origin-blind on a rubric, passes six gates, attacks the would-be picks (plus the next two) with a red team, runs one backfill wave when fewer than three pass, and delivers **three picks** with a blueprint each (`deliverables/`).
 5. The references' product niche cannot decide the answer: an agent-built and audited niche vocabulary, pool balance, the independent-evidence cap (sourced economics inputs included), the two-per-niche cap, defence notes and the ablation tests; every merge, waiver, audit and override is printed in `ranking.md` under "Decisions on record". A data-backed product from that niche can still win.
 6. At the end it can continue to Create for a pick, on your yes, once you supply that product's assets.
+7. The same mining runs inside Create (`reference/viral-browser.md` §14): the references are mined for why they spread, and the videos are virality-backed blends of a mined mechanism with a truth of your own product (a blend matrix, a virality rationale per video, `deliverables/blends.md`).
 
 ## Adding a model
 1. Confirm it exists: `models_explore {action:"get", model_id:"<id>"}`.

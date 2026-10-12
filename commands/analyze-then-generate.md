@@ -1,5 +1,5 @@
 ---
-description: Analyze a folder of reference material (or take videos to edit), learn what makes it work, then either generate new vertical 9:16 720p videos through Higgsfield MCP (Recreate, Create, Edit) or find the next three products to sell with the same viral approach (Viral-Browser, which asks the market and price range and generates nothing).
+description: Analyze a folder of reference material (or take videos to edit), learn what makes it work, then either generate new vertical 9:16 720p videos through Higgsfield MCP (Recreate, virality-backed Create, Edit) or find the next three products to sell with the same viral approach (Viral-Browser, which asks the market and price range and generates nothing).
 argument-hint: "analyze <references-folder> assets <asset files/folders…> [examples <folder>] | edit <video files/folders…> [examples <folder>] | viral-browser <references-folder> [baseline <folder>] [market us|eu|global] [price <min>-<max> <currency>] [depth quick|standard|deep] | resume [run-dir]"
 disable-model-invocation: true
 disallowed-tools:
@@ -241,6 +241,11 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
         references (why they work) and the product (from the supplied assets, the insight sheet), and
         design the most engaging video from both; families are evidence and ingredients, never a
         menu or a template (`creative-direction.md` §5.0b).
+      - The references are **mined like Viral-Browser's** (`viral-browser.md` §14): why they spread
+        (style, engagement and attention approach, hooks, how the product is used, the audience and
+        its mentality, the mass-thinking patterns, length, trends), and every video is
+        **virality-backed**: a mined mechanism blended with a truth of the client's own product (the
+        assets folder), never a copy of a reference and never fixated on the references' product type.
       - The product is used in the new scenes.
       - **No reference video, frame or clip is ever an input** to a generation; nothing is edited.
     - **Viral-Browser.** The references are a **source of ideas**: the agents mine them for why they
@@ -304,7 +309,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     direct-response product-selling specialist, a mass-cognition ("masses approach") engineer, a
     trend analyst, a market and competitor researcher, a sourcing and compliance screener, a
     statistician and a red-team sceptic, working for the one outcome that the user is about to put
-    money into a product.
+    money into a product. In Create the same persona block opens every analysis and ideation
+    prompt, and the references are mined for why they spread before anything is written
+    (`viral-browser.md` §14).
 21. **Brand guardrails decide what may be picked and what must be edited**
     (`reference/brand-guardrails.md`). Documents among the supplied assets (and in the references
     folder) that state the client's rules (no gore, two cans per day max, no competitor brands on
@@ -448,8 +455,10 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
    it. Otherwise ask with AskUserQuestion (header "Analyze as"):
    - **Recreate**: "Analyze the references, then recreate N of them with your product and
      characters: same scenario, faces and products swapped or blended. Fully autonomous."
-   - **Create**: "Analyze the references, then create new videos in suggested style groups (one
-     style or a mix), using your product. No reference video is used as input."
+   - **Create**: "Analyze the references like a viral-growth team (why they spread: style, hooks,
+     engagement, audience mentality, trends), then create new virality-backed videos for your product,
+     blending what was learned with your assets, in suggested style groups (one style or a mix) or the
+     agents' own blends. No reference video is used as input."
    - **Viral-Browser**: "Use the references only as a source of ideas: learn why they spread,
      research the market, and bring back the next 3 products to sell with the same approach.
      Nothing is generated; no assets needed."
@@ -653,6 +662,15 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
   looking (e.g. two different-looking items presented as the same product). Otherwise proceed.
 
 ### A3. Video analysis (as continuous sequences)
+- **Create: virality mining** (`viral-browser.md` §14). Each card is also a **viral card** (§3.2), so a
+  reference is read once: the product layer kept apart from the mechanism layer (the product layer
+  is recorded and then discarded), the ranked drivers of spread (craft / product / creator / trend /
+  paid / bait / timing) and attention-only versus commerce-proven, the one-sentence product-agnostic
+  mechanism with its product dependence and transplant needs, the audience (awareness stage, the pain
+  or desire) and its mentality (the mental shortcuts, the emotion at the hook, the middle and the
+  payoff, what got them hooked), the engagement mechanics, commerce signals when a metrics file is
+  supplied, and the one-line `Facts:` JSON (its `category` optional). The agents open with the
+  persona block (`viral-browser.md` §1). Recreate keeps the plain protocol card.
 - Follow `ATG/reference/analysis-protocol.md` exactly. For each video:
   - read `video.md` and `timeline.md`;
   - view **every** storyboard sheet in order, reading the timeline beside it;
@@ -691,7 +709,8 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     Videos that have nothing to do with the client's product are kept and analysed like any other.
     Their mechanism is still useful, and the product is integrated into them later.
 - Delegate to 1–2 agents only per §7 of the protocol, with disjoint video lists. Give them the
-  one-line client-entity summary from the registry.
+  one-line client-entity summary from the registry. In Create also give them the persona block
+  (`viral-browser.md` §1) and the prompt of §13.1 with the changes of §14.1.
 - Images and other files in the references folder are also **reference material**: other products,
   samples, thumbnails and executions. Analyse them as references and never treat them as client
   assets.
@@ -706,6 +725,16 @@ Write, following the protocol §5–§6:
   **collected** (style, properties, approach, crafting, why it works) and what is **left behind**
   (the subject). Ideation reads only the collected column, together with the product insight sheet
   (`30-assets/product-insights.md`, A2b; `creative-direction.md` §5.0b);
+- **Create: the virality synthesis** (`viral-browser.md` §14.1–§14.5), from the cards, product-free:
+  `T viral-stats --run RUN --no-niche` (the measured length, hook, pacing, speech, text, music and
+  loop profile, in `20-analysis/corpus-profile.md`); `20-analysis/mechanism-map.md` (mechanisms M#,
+  k of n, driver, strength, independence of the product, transplant needs, confounds, graded
+  hypotheses); the hook, length and pacing ranges; the engagement style; the audience and mentality
+  model with the mass-thinking patterns the material uses; `20-analysis/viral-essence.md`; the trend
+  read with the Create trend pass (up to `analysis.create_trend_checks` dated searches: the
+  references' formats, and the client's product niche and market); and the **blend matrix**
+  `20-analysis/blend-matrix.md` (the mechanisms that pass the driver test, set against the product
+  truths P# and affordances of `30-assets/product-insights.md`). Only available cells reach ideation;
 - in `20-analysis/project-profile.md`, the **goal**, the **audience model** and the **trend read**
   (`creative-direction.md` §2–§4; protocol §6);
 - `20-analysis/project-profile.md`: domain, objective, authoritative requirements, entities,
@@ -733,6 +762,7 @@ Write, following the protocol §5–§6:
 Show a **short** chat summary:
 - the project profile in about 5 lines;
 - the families table;
+- Create: the essence in 3 lines and the mechanisms the product can carry (k of n);
 - the house approach in 2–4 lines, or "no examples";
 - then the numbered style groups (Create) or the top of the recreate ranking (Recreate).
 Then run `T state --run RUN set stage=analyzed next_step=count`.
@@ -748,7 +778,7 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 - From the families and directions (A4), present numbered **style groups**:
   `<content type> × <style> × <subject>`, grouped by content type. Examples: "G1 Organic × POV skit
   × gym", "G2 Organic × story-time × office", "G3 Anime × reaction × school".
-  - Each group lists its mechanism, typical length, and how the product appears.
+  - Each group lists its mechanisms (M#, k of n references, graded), the typical length range, and how the product appears (its blend-matrix cell).
   - They are the agent's suggestions, built from the analysed patterns **and the product's
     strengths** (the insight sheet), never a menu or a template. Include **hybrid groups** that blend
     mechanisms from several families with what the product uniquely brings, and a format the
@@ -782,11 +812,17 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     not one family's structure and tone with the product swapped in). Families are evidence and
     ingredients, never a menu: the winner is chosen for engagement, not for resemblance to a
     reference.
+  - **Virality-backed** (`creative-direction.md` §5.0c; `viral-browser.md` §14.2–§14.4): seeds come
+    from the available cells of `20-analysis/blend-matrix.md`; only the craft is borrowed (never a
+    reference's creator reach, paid reach, brand, bait, season or product); the blend line also
+    names the audience trigger, the hook and its timing inside the measured range, the current
+    trend element and the share line; and the winner carries its **virality rationale** (why it
+    should spread, and what could make it fail).
   - **Ideation, scored** (`creative-direction.md` §5.1): for every video slot write at least five
-    concept seeds (situation + turn + where the product lives + its blend line), score each on stop
+    concept seeds (situation + turn + where the product lives + its blend line: M#, P#, the hook and its timing, the trend element, the share line), score each on stop
     power, relatability, sharpness, product nativeness, blend, trend fit and freshness, feasibility
     for the locked model, and brand safety; take the best, keep the runner-up as the fallback, write the
-    winner's share line and job, and run the sharpness gate (§6). Save them to
+    winner's share line, job and virality rationale (`viral-browser.md` §14.4), and run the sharpness gate (§6). Save them to
     `20-analysis/concepts.md` and show one line per video (seed, score, the reason it won). The
     user may swap a pick by replying; nothing is asked.
   - Each one borrows the mechanisms that made the references go viral (hook logic and timing, a
@@ -1332,7 +1368,8 @@ files as video K".
     - intent (`generation-system.md` §2.1): the goal and the video's job, the audience, the one
       sharp idea, the emotion arc or laugh mechanism, the share line (`creative-direction.md` §2–§6);
       Create: the blend (the borrowed mechanisms and the product truth) and the subject the concept brings,
-      with the copy and template-lock tests passed (`creative-direction.md` §5.0, §5.0b);
+      with the copy and template-lock tests passed (`creative-direction.md` §5.0, §5.0b), and its virality
+      rationale (`viral-browser.md` §14.4);
     - the **caught errors applied** (item 22): the ids from `20-analysis/caught-errors.md` that
       apply to this video and what each adds to the plan, the ledger, the prompt and the QC
       checkpoints; an entry about creative quality goes into the ideation and the sharpness gate;
@@ -1840,6 +1877,11 @@ every attempt; no CapCut text layer of any project contains an emoji (the user's
 size figure in the table was viewed on a frame with its method (two estimates, a derived distance), never
 repeated from an agent's provisional number. What is missing is fixed before the table is shown.
 
+Create: write `RUN/deliverables/blends.md` from `concepts.md` and the plans, one row per video: the mechanism(s) M#
+(k of n, grade), the product truth P#, the audience trigger, the hook type and its timing, the trend element, the share
+line and the honest risk. It shows what each video tests, so that results can be attributed to a mechanism, a hook or a
+truth; the chat table gets a "blend" column from it.
+
 Offer, in one line, the next useful step (more videos, a different direction, regenerate a flagged
 video). Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header
 "Feedback"), "Watch the videos: is any of them not right?": **"All good"**; **"I'll watch them
@@ -1978,6 +2020,10 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   (`creative-direction.md` §5.0). Never plan a Create video that is one family's template with the
   product swapped in, or one that ignores the product's own strengths: every seed names its blend
   and passes the blend and template-lock tests (§5.0b).
+- Never let the references' product category, forms or names decide a Create concept (a corpus of pet tools does
+  not make a pet video); never borrow a mechanism whose driver is not the craft (a creator's reach, paid reach, a
+  known brand, bait, a season); never state that a video will go viral or quote a reach or sales figure that no
+  source gave (`viral-browser.md` §14.2, §14.6).
 - Never let a multiple change its number without a visible cause: three capsules on a desk are
   still three after the character walks past and comes back, unless they are seen being taken
   (`anomaly-catalog.md` §2.1, §2.5).

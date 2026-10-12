@@ -54,7 +54,7 @@ Subcommands (python atg.py <cmd> -h):
                  a locked preset is only replaced with --learn --replace)
   strip-inserts  a reference minus its inserts (memes) in one pass + silent copy + map of the split points
   qc             storyboard + checks (size, duration, black, freeze, mode-aware visible text) for an output
-  viral-stats    Viral-Browser: measured corpus profile of the references (length, hook timing, cuts, speech,
+  viral-stats    Viral-Browser (and Create, with --no-niche): measured corpus profile of the references (length, hook timing, cuts, speech,
                  text, loop, sound) + the niche-concentration index from the cards' Facts lines
   niches         Viral-Browser: the run's niche vocabulary, built by the agents from the data (add | map | merge | distinct | audit | list | propose);
                  no niche or category name is built into any script
@@ -4120,15 +4120,15 @@ def _vs_facts(run_dir: Path, ids):
     return facts, bad, missing
 
 
-def _vs_aggregate(ms, facts, thr, small_n, run):
+def _vs_aggregate(ms, facts, thr, small_n, run, niche=True):
     from collections import Counter
     n = len(ms)
     g = lambda k: [m.get(k) for m in ms]
-    idx = _vocab_index(_vocab_load(run))
+    idx = _vocab_index(_vocab_load(run)) if niche else {}
     unresolved, cats = [], {}
     for i, f in facts.items():
         lab = f.get("category")
-        if lab in (None, "", []):
+        if not niche or lab in (None, "", []):
             continue
         canon = idx.get(_niche_key(lab))
         if canon is None:
@@ -4166,6 +4166,9 @@ def _vs_aggregate(ms, facts, thr, small_n, run):
             conc[k] = _concentration(c, thr)
     agg["concentration"] = conc
     agg["dominant_niche"] = (conc.get("category") or {}).get("dominant")
+    if not niche:                     # Create: the profile only; no vocabulary, no niche concentration, nothing for the niche controls to read
+        agg["category_resolution"], agg["n_with_category"], agg["word_concentration"] = {}, None, []
+        return agg
     vocab_ = _vocab_load(run)
     agg["category_resolution"] = {str(f["category"]).strip(): cats[i] for i, f in facts.items() if i in cats}
     agg["n_with_category"] = len(cats)
@@ -4229,7 +4232,11 @@ def cmd_viral_stats(a):
             notes.append(f"{name}: unreadable Facts JSON in cards {', '.join(bad)}")
         if missing:
             notes.append(f"{name}: no Facts line in cards {', '.join(missing)} (category and the other label counts exclude them)")
-        sets[name] = _vs_aggregate(ms, facts, thr, small_n, run_dir)
+        sets[name] = _vs_aggregate(ms, facts, thr, small_n, run_dir, niche=not a.no_niche)
+        if a.no_niche:
+            if sets[name]["small_n"]:
+                notes.append(f"{name}: {len(ms)} videos is below {small_n}; read every share as an indication, not a rate")
+            continue
         if sets[name]["unresolved_labels"]:
             notes.append(f"{name}: category labels not in the niche vocabulary (counted as 'unresolved:<label>', so the niche concentration is "
                          f"understated until an agent maps or adds them: `niches propose`, `niches map`, `niches add`): " + "; ".join(sets[name]["unresolved_labels"]))
@@ -4243,7 +4250,8 @@ def cmd_viral_stats(a):
                          f"the others are not counted in the niche concentration, so the dominant niche may be understated; a video that shows no product category says `non-product`")
         if sets[name]["small_n"]:
             notes.append(f"{name}: {len(ms)} videos is below {small_n}; read every share as an indication, not a rate")
-    jp, mp = run_dir / "20-analysis" / "corpus-stats.json", run_dir / "20-analysis" / "corpus-stats.md"
+    base = "corpus-profile" if a.no_niche else "corpus-stats"       # the profile alone never overwrites the niche-aware statistics
+    jp, mp = run_dir / "20-analysis" / f"{base}.json", run_dir / "20-analysis" / f"{base}.md"
     prior = _vb_load(jp, {})
     prior_sets = prior.get("sets") if isinstance(prior, dict) and isinstance(prior.get("sets"), dict) else {}
     kept = {k: v for k, v in prior_sets.items() if k not in sets}      # a set this run did not recompute stays
@@ -4257,7 +4265,7 @@ def cmd_viral_stats(a):
         for k in ("share_cut_in_first_3s", "share_speech", "share_speech_in_first_second", "share_text_in_first_second", "share_music_bed"):
             if r.get(k) and b.get(k):
                 contrast[k] = {"ref": r[k]["share"], "base": b[k]["share"], "delta": round(r[k]["share"] - b[k]["share"], 3)}
-    result = {"created": now_iso(), "niche_threshold": thr, "sets": all_sets, "contrast": contrast, "notes": notes,
+    result = {"created": now_iso(), "niche": not a.no_niche, "niche_threshold": None if a.no_niche else thr, "sets": all_sets, "contrast": contrast, "notes": notes,
               "dominant_niche": (all_sets.get("references") or {}).get("dominant_niche")}
     write_json(jp, result)
     write_text(mp, _vs_md(all_sets, contrast, notes))
@@ -5378,8 +5386,11 @@ def main():
     p.add_argument("--crf", type=int, default=18); p.set_defaults(fn=cmd_clean)
 
 
-    p = sp.add_parser("viral-stats", help="Viral-Browser: measured corpus profile of the references + niche concentration")
+    p = sp.add_parser("viral-stats", help="Viral-Browser: measured corpus profile of the references + niche concentration (Create: --no-niche, the profile only)")
     p.add_argument("--run", required=True)
+    p.add_argument("--no-niche", action="store_true",
+                   help="Create: measure the profile only (length, hook, pacing, speech, text, music, loop); no niche vocabulary or concentration; "
+                        "writes 20-analysis/corpus-profile.* and leaves corpus-stats.* alone")
     p.add_argument("--set", dest="vs_set", choices=["references", "baseline", "both"], default="both")
     p.add_argument("--niche-threshold", type=float,
                    help="share of one niche that counts as dominant (default viral_browser.niche_dominance_threshold)")

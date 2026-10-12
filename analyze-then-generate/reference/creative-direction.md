@@ -22,6 +22,8 @@ The pipeline acts, at once, as:
 In **Viral-Browser** the team widens to a growth strategist, a direct-response seller, a statistician and a
 red-team sceptic (`viral-browser.md` §1); §3 (the audience model) and §4 (the trend read) apply to it unchanged, and
 §5.0 (craft versus subject) is what separates a mechanism from a product there.
+In **Create** the same persona block (`viral-browser.md` §1) opens every analysis and ideation prompt: the references are mined for why they spread
+(`viral-browser.md` §14) and the lesson is applied to the client's own product.
 
 ## 2. The goal model (written into `20-analysis/project-profile.md`)
 
@@ -102,7 +104,7 @@ The references are the trend corpus. For each family and for the folder as a who
   craft sheet and the copy test (§5.0).
 - **Optional trend check (bounded):** when a decision depends on whether a specific format, meme,
   sound or caption convention is still current, or on its exact conventions, run at most two
-  WebSearch queries per run to confirm, record the finding with its date in the trend read, and
+  WebSearch queries per run to confirm (Create: the trend pass of `viral-browser.md` §14.5, up to `analysis.create_trend_checks`), record the finding with its date in the trend read, and
   move on. The references stay the primary source; a search never replaces them, never adds a
   reference, and never slows the run beyond that.
 
@@ -198,13 +200,23 @@ supplies the truth that makes the idea its own.
 7. **Precedence stays:** the blend never overrides the hard rules (command items 6, 14, 15, 18, 19),
    the anomaly catalog, the guardrails, the house approach or the user's instructions.
 
+### 5.0c Virality-backed blend (Create): mined mechanisms × the product's truths
+
+Create carries the idea of Viral-Browser (`viral-browser.md` §14): the references are mined for why they spread, and the lesson is applied to the client's own product. In ideation this means:
+
+1. **Seeds come from the blend matrix** (`20-analysis/blend-matrix.md`, `viral-browser.md` §14.3). A seed picks an available cell (a mechanism M# that the product can carry through a truth P#), or is an explicit hybrid of cells or a new format with its reason written; a mechanism the matrix dropped is not used.
+2. **Only the craft is borrowed** (`viral-browser.md` §14.2): never the references' creator reach, paid reach, brand, bait or season, and never their product, category or forms. A corpus full of one product type does not make that type the subject: the subject comes from the audience model and the client's product.
+3. **The blend line is complete:** M# (k of n, grade), P#, the audience situation and the mass-thinking trigger it uses, the hook type with its timing inside the measured range of the mechanism's carriers, the current trend element (dated) or "none", and the share line.
+4. **The winner carries its virality rationale** (`viral-browser.md` §14.4) into `concepts.md`, the plan's intent (`generation-system.md` §2.1), the brief and `deliverables/blends.md`, with the honest risk. Across a run, vary one thing at a time where the videos allow it (the mechanism, the hook, the product truth), so that results can later be attributed.
+5. **Honesty:** the rationale is an argument from the references' evidence, not a prediction; the sharpness gate (§6) and the copy and template-lock tests still apply.
+
 ### 5.1 Concept seeds, scored (Create, A6)
 
 For every video slot in a chosen style group (or a hybrid group, §5.0b):
 
 1. **Diverge.** Write at least **five concept seeds**, one line each: `situation + turn + where the
    product lives`, plus its blend line (§5.0b: the borrowed mechanism, the product truth, the audience
-   situation). Example: "night shift ends, parked car, slumps, lifts the sealed can from the cup
+   situation; §5.0c adds M#, P#, the hook and its timing, the trend element and the share line). Example: "night shift ends, parked car, slumps, lifts the sealed can from the cup
    holder, cracks it, first sip, melts — the can is the only light in the car." Draw situations from
    the audience model (places and moments they live in), hooks and turns from the **mechanisms of the
    craft sheet, from any family and in any mix**, the idea itself from the **product truths of the
@@ -305,8 +317,9 @@ After the physics and continuity checks, judge the clean video as a viewer:
 - the clip loops or ends strong;
 - (Create) the copy test (§5.0) against the references the blend borrowed from and the run's other videos: the
   clip shares craft with them, not subject;
-- (Create) the blend (§5.0b): the product truth named in the plan is visible on screen, and the clip
-  reads as its own idea, not a reference template with the product swapped in.
+- (Create) the blend (§5.0b): the product truth named in the plan is visible on screen, the mined mechanism shows at the planned time
+  (the visible change, the proof, the hook inside the measured range), and the clip reads as its own idea, not a reference template
+  with the product swapped in.
 A missing hook or payoff that the plan required is a **narrative** failure
 (`generation-system.md` §5 gate) and a regenerate reason like any other gate failure; everything
 else here is a **note** in the verdict ("hook lands at 0.4 s; payoff reads; share line holds"),

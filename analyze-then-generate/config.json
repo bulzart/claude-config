@@ -23,7 +23,8 @@
     "static_threshold": 2.5,
     "max_baseline_frames": 1800,
     "ocr_frames": 10,
-    "jobs": 2
+    "jobs": 2,
+    "create_trend_checks": 6
   },
   "production": {
     "max_parallel_agents": 5,

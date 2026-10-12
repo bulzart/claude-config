@@ -57,6 +57,9 @@ Write this plan to `<run>/40-briefs/video-NN-plan.md` **before** any prompt. Kee
   names the borrowed mechanism (craft-sheet id), the product truth it uses and how the mechanism is
   re-expressed through it, and states that the blend and template-lock tests passed
   (`creative-direction.md` §5.0b).
+- **Virality rationale (Create) [I]:** why the video should spread, in the lines of `viral-browser.md` §14.4: the mechanism (M#, k of n, driver, grade)
+  and the product truth (P#) that expresses it, the audience trigger, the hook and its timing inside the measured range, the trend element
+  (dated) or none, the share line, and what could make it fail. An argument from the references' evidence, never a prediction of reach.
 - **Goal and job [I/U]:** the run's goal (`creative-direction.md` §2) and what this video makes the
   viewer do at the end, and what they keep of the product.
 - **Audience and the one sharp idea [I]:** who it is for, the situation they have lived, the one

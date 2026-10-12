@@ -87,7 +87,7 @@ Steps:
    - **Objections and limits:** what it cannot do, what viewers may doubt, what must not be
      implied.
    - **Occasions and pairings:** seasons, places, the other things it naturally sits beside.
-   - **Product truths:** up to six one-sentence facts a concept can be built on, as many as the supplied
+   - **Product truths:** up to six one-sentence facts a concept can be built on (numbered P1, P2, … so that the blend matrix and the plans can name them), as many as the supplied
      material supports ("it opens with a loud crack", "it changes the colour of the water it dissolves
      in", "it fits one hand and one pocket"). A truth the assets do not show is "not supplied", never
      invented. They are the product's ingredients for ideation, the way the craft sheet holds the
