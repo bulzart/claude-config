@@ -3542,7 +3542,7 @@ How agents use it:
 - **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261012-230535-12\40-briefs\video-03-plan.md
 - **class:** generation-system.md 4b.1 posture/anchor; anomaly-catalog.md 2.7 size; creative-direction N12 (product just happens to be there)
 - **cause:** plan
-- **fix:** regenerate with the carton lying flat on the left side of the desk, about 70 % in frame (a part cropped or partly tucked behind an object, never hidden label), casual angle
+- **fix:** regenerated (a3, job 182b4aba): carton lies flat on its largest face, label up, on the bare desk at the bottom left, static, 1.09x size; shipped as 13_Oct_2026_v03-2 flagged: display about 95 percent in frame not 70 (CE-063); the cropped retry a4 (CE-068) lost the performer's pose lock, so a3 shipped
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Neuro (and any small flat pack) is left casually: lying flat on the desk at one side, partly displayed (about 70 %), not fully staged and not upright; noticed, not featured
 - **status:** open
@@ -3728,7 +3728,7 @@ How agents use it:
 - **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261012-230535-12\40-briefs\video-03-plan.md
 - **class:** generation-system.md 4b.1b; anomaly-catalog.md 2.16
 - **cause:** prompt
-- **fix:** none yet
+- **fix:** a4 retry with the frame-edge-cut wording met the 70 percent display (about 85 percent) but broke the pose lock (CE-068); a3 shipped flagged
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** A partial-display request (X percent in frame) is written as the frame edge doing the cutting (which edge, which part lies outside) and not only as the pack's share; check the visible fraction on the first dense frame
 - **status:** open
