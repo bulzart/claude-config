@@ -4752,7 +4752,8 @@ def cmd_evidence(a):
     data = _vb_load(p, {"items": []})
     id_set = {x for x in re.split(r"[,\s]+", a.ids or "") if x}
     rows = [e for e in data["items"] if (not a.cand or e["cand"] == a.cand) and (not a.lane or e["lane"] == a.lane)
-            and (not a.grade or e["grade"] == a.grade) and (not a.signal or e.get("signal") == a.signal) and (not id_set or e["id"] in id_set)]
+            and (not a.grade or e["grade"] == a.grade) and (not a.signal or e.get("signal") == a.signal) and (not id_set or e["id"] in id_set)
+            and not (a.no_copies and e.get("copy_of"))]
     live = [e for e in rows if not e.get("retracted")]
     counts = _ev_counts(live) if a.counts else None
     if a.counts:
@@ -4975,12 +4976,15 @@ def cmd_candidates(a):
         c = next((x for x in items if x["id"] == a.id), None)
         if not c:
             fail(f"unknown candidate {a.id}", 2)
-        ev = [e for e in _vb_load(_ev_paths(a.run)[0], {"items": []})["items"] if e["cand"] == a.id]
+        ev_all = [e for e in _vb_load(_ev_paths(a.run)[0], {"items": []})["items"] if e["cand"] == a.id]
+        ev = [e for e in ev_all if not e.get("retracted")]
         print(json.dumps(_cd_blind(c) if a.blind else c, indent=2, ensure_ascii=False))
         print("\nevidence rows:\n" + "\n".join(
-            f"- {e['id']} [{e['lane']}] {e['claim']} (grade {e['grade']}, signal {e.get('signal') or 'n/a'}, {'independent' if e['independent'] else 'not independent'}"
-            f"{', RETRACTED: ' + str(e.get('retracted_reason')) if e.get('retracted') else ''}; {e['source']}; {e['retrieved']})" for e in ev))
-        out({"ok": True, "id": a.id, "evidence_rows": len(ev)})
+            f"- {e['id']} [{e['lane']}] {e['claim']} (grade {e['grade']}, signal {e.get('signal') or 'n/a'}, {'independent' if e['independent'] else 'not independent'}; "
+            f"opened {'yes' if e.get('opened') is True else 'no' if e.get('opened') is False else 'not recorded'}; {e['source']}; {e['retrieved']})" for e in ev))
+        if len(ev_all) != len(ev):
+            print(f"\n({len(ev_all) - len(ev)} retracted row(s) are not listed here; `evidence list --cand {a.id}` shows them with the reason)")
+        out({"ok": True, "id": a.id, "evidence_rows": len(ev), "retracted_rows_not_listed": len(ev_all) - len(ev)})
     # set / rate
     ids = _cd_ids(a)
     if not ids:
@@ -5012,7 +5016,9 @@ def cmd_candidates(a):
                 c.setdefault("history", []).append({"at": now_iso(), "by": a.by, "action": "set", "changes": changes, "reason": a.reason})
             data["updated"] = now_iso()
             write_json(p, data)
-        out({"ok": True, "ids": ids, "status": {c["id"]: c["status"] for c in data["items"] if c["id"] in ids}})
+        out({"ok": True, "ids": ids, "status": {c["id"]: c["status"] for c in data["items"] if c["id"] in ids},
+             "stored": {c["id"]: {k: c.get(k) for k in ("status", "price_fit", "compliance", "excluded", "confidence", "redteam", "pick_rank", "role")}
+                        for c in data["items"] if c["id"] in ids}})
     if act == "rate":
         if len(ids) != 1:
             fail("candidates rate takes one candidate (--id)", 2)
@@ -5040,7 +5046,7 @@ def cmd_candidates(a):
                 continue
             if k not in cfg["rubric"]:
                 fail(f"--refs: unknown criterion {k!r}", 2)
-            ids_ = [x for x in v.split("+") if x]
+            ids_ = [x for x in v.split("+") if x and x.strip().lower() != "none"]       # "none" records that no evidence row backs the rating
             bad = [x for x in ids_ if x not in evrows or evrows[x]["cand"] != ids[0]]
             if bad:
                 fail(f"--refs: evidence row(s) {bad} do not exist for {ids[0]}", 2)
@@ -6454,7 +6460,7 @@ def main():
     p.add_argument("--role")
     p.add_argument("--pick-rank", type=int, dest="pick_rank", help="set: the position the agent gives this candidate among the picks (1, 2, 3 ...)")
     p.add_argument("--ratings", help="rate: demand=4,commercial=3,fit=5,... (1-5 per criterion: the agent's reading, recorded as given)")
-    p.add_argument("--refs", help='rate: the evidence behind each rating, e.g. "demand=EV001+EV002 commercial=EV004" (the rows must exist for the candidate)')
+    p.add_argument("--refs", help='rate: the evidence behind each rating, e.g. "demand=EV001+EV002 commercial=EV004" (the rows must exist for the candidate); "demand=none" records that no row backs that rating')
     p.add_argument("--confidence", choices=["low", "medium", "high"])
     p.add_argument("--sort", help="table: id | name | niche | type | status | confidence | evidence | pick | weighted | rating:<criterion> | economics:<market> (an order for reading; it marks no winner)")
     p.add_argument("--desc", action="store_true", help="table: highest (or last in the alphabet) first; rows with no value always come last")
@@ -6482,6 +6488,7 @@ def main():
     p.add_argument("--market"); p.add_argument("--value"); p.add_argument("--unit"); p.add_argument("--note")
     p.add_argument("--by", help="who recorded it"); p.add_argument("--reason", help="retract: why the row is withdrawn")
     p.add_argument("--counts", action="store_true", help="list: also print the rows counted by lane, signal, grade and site (a tabulation; it weighs nothing)")
+    p.add_argument("--no-copies", dest="no_copies", action="store_true", help="list: leave out the rows recorded as copies of another candidate's row (the shared inputs), so only the candidate's own rows show")
     p.add_argument("--md", action="store_true"); p.add_argument("--out", help="list: write the markdown table to this file")
     p.set_defaults(fn=cmd_evidence)
 

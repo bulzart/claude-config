@@ -1330,17 +1330,26 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   (`T candidates rate --id C## --ratings demand=4,commercial=3,… --refs "demand=EV001+EV002 …"
   --confidence low|medium|high --by …`; a form check only: an integer 1-5, a known criterion, evidence rows
   that exist for the candidate) and records its readings of price fit, compliance and exclusion with
-  `T candidates set --price-fit … --compliance … --excluded …`. It applies the rules of thumb for evidence
+  `T candidates set --price-fit yes|variant|no|unknown --compliance clear|resolved|open|unknown --excluded …`
+  (the words are defined in `viral-browser.md` §8.2 item 3; the command echoes what it stored; a rating no
+  row backs says `--refs "demand=none"`). It applies the rules of thumb for evidence
   and says so in its note: a rating on demand, commercial, competition, economics or compliance with no
   positive independent grade A or B row is 2 at most (for economics the calculated estimate also needs a
   sourced input row); negative rows that match the positive ones hold a 4 or a 5 at 3. No script caps or
-  changes a rating. **This session does not score**: it built the pool and has seen the origins.
+  changes a rating. **This session does not score**: it built the pool and has seen the origins. A
+  compliance row is **positive** only when the obligation can be met by a known route at a stated cost
+  (`viral-browser.md` §7.4), so `resolved` and G2 need the route and cost rows; the fit profile holds
+  mechanism requirements only (the brief's price, cost and compliance constraints are read under economics,
+  compliance and G1/G2). The stored `economics_by_market` is the authority, not the dossier's older numbers.
+  The scorers read `T candidates show --blind` and `T evidence list --cand C## --md --no-copies`.
 - Read the table yourself: `T candidates table --run RUN --sort weighted --desc` sets the candidates
   side by side (ratings per criterion, `weighted_sum_of_rated` = a plain weighted sum of the ratings where
   an unrated criterion adds nothing, confidence, red team, price fit, compliance, economics per market, an
   evidence cell "rows (grade A/B; distinct sites)", pick rank; `--blind` hides the origin). It marks no
   winner and applies no gate. Choose the **red-team targets** yourself: the candidates you would pick under
-  the gates of thumb below, plus the next two. Spawn the red-team agent (§13.3) on them and record each
+  the gates of thumb below, plus the next two (when fewer than three pass, the near misses nearest to
+  passing, each with the gate it fails: the red team also closes the gaps that decide those gates, for
+  example the compliance route and its cost per market). Spawn the red-team agent (§13.3) on them and record each
   reading (`T candidates set --id C## --redteam survives|weakened|fails --note "…" --by red-team`),
   eliminate the ones that fail (`--status eliminated --by main --reason "…"`), have a fresh scoring agent
   revisit only the criteria the red team names, and read the table again until every target has a reading
