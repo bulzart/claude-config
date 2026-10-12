@@ -1,9 +1,5 @@
 {
   "model": "sonnet",
-  "statusLine": {
-    "type": "command",
-    "command": "bash C:/Users/Glaresquare1/.claude/scripts/statusline.sh"
-  },
   "hooks": {
     "Stop": [
       {
@@ -31,6 +27,10 @@
   "worktree": {
     "baseRef": "fresh"
   },
+  "statusLine": {
+    "type": "command",
+    "command": "bash C:/Users/Glaresquare1/.claude/scripts/statusline.sh"
+  },
   "modelSettings": {
     "claude-fable-5-1": {
       "effortLevel": "xhigh"
@@ -39,10 +39,18 @@
       "effortLevel": "high"
     },
     "claude-sonnet-5-5": {
-      "effortLevel": "xhigh"
+      "effortLevel": "high"
     }
   },
+  "autoCompactWindow": 600000,
   "askUserQuestionTimeout": "never",
+  "pluginConfigs": {
+    "cc-plugin-agents-md@builtin": {
+      "options": {
+        "instructionFiles": "claude-md-and-agents-md"
+      }
+    }
+  },
   "autoUpdatesChannel": "latest",
   "voice": {
     "enabled": true,
@@ -52,7 +60,6 @@
   "theme": "dark",
   "editorMode": "vim",
   "autoCompactEnabled": true,
-  "autoCompactWindow": 600000,
   "terminalProgressBarEnabled": true,
   "autoMode": {
     "environment": [
@@ -82,12 +89,5 @@
       "**Org-specific CLIs**: None configured"
     ]
   },
-  "voiceEnabled": true,
-  "pluginConfigs": {
-    "cc-plugin-agents-md@builtin": {
-      "options": {
-        "instructionFiles": "claude-md-and-agents-md"
-      }
-    }
-  }
+  "voiceEnabled": true
 }
