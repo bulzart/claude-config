@@ -139,7 +139,7 @@ recurs after a logged change means that change failed: revise it, do not repeat 
 - **User request:** for each of the 3 winning products, official or verified product information (size, width, height, weight, texture, usage and
   other useful data) and photo references from several angles, which may later be used as the product reference in Higgsfield video generation.
 - **Added:** `viral-browser.md` section 9.1 (the reference unit; the sourced specification with grades and the verified / official / reported /
-  conflict statuses; the photo set and its checks; rights and honesty; use in Create; the files in `deliverables/product-NN-reference/`), section
+  conflict statuses; the photo set and its checks; rights and honesty; use in Create; the files in `deliverables/reference-C##-<name>/`, named after the candidate so that a re-ranking cannot send two products into one folder), section
   13.7 (the reference-pack agent prompt, one per pick after `rank --apply`, up to 3 at once), QC items in 10.4, pitfalls, the continuation to
   Create (the pack is offered as the product's assets, on the user's yes); toolkit `spec` (add, list, render, check, reject) and `photo` (add, set,
   list, sheet, check) with `config.json -> viral_browser` keys (`reference_pack_budget`, `photo_*`, `spec_tolerance_pct`).
@@ -151,3 +151,9 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   often blocked and the user must save images by hand (count the blocked rows); (2) one reference unit per pick is enough when the pick is a generic
   white-label product (watch whether the specification differs between listings); (3) 24 web calls per pick at standard depth are enough for a complete
   sheet and a ready photo set.
+- **Hardening after the first own review (same day):** (a) the pack folder is `deliverables/reference-C##-<name>/`, named after the candidate and
+  recorded in `photos.json`, because a pick number changes when the ranking is applied again; (b) `photo find` lists the image addresses a page
+  declares (WebFetch's text rarely carries them), read-only like the downloads; (c) only public http(s) addresses are fetched, redirects are followed
+  by hand and each hop is checked, so a page cannot steer the toolkit to the user's own machine or network (the test suite reaches its local server
+  with a hidden `--allow-private-host` switch that no prompt uses); (d) `photo_max_attempts` (30) caps the download attempts per pick; (e) an image
+  above 60 megapixels is refused before it is decoded, and a file already in the photos folder is never overwritten.

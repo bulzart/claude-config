@@ -239,6 +239,7 @@
       "deep": 40
     },
     "photo_max_per_pick": 12,
+    "photo_max_attempts": 30,
     "photo_min_px": 800,
     "photo_max_px": 4096,
     "photo_max_mb": 25,

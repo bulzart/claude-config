@@ -3764,7 +3764,7 @@ VB_DEFAULTS = {
               "min_contribution_pct": 25, "min_independent_evidence": 2, "min_confidence_for_pick": "medium"},
     "small_n_warning_below": 10,
     "reference_pack_budget": {"quick": 12, "standard": 24, "deep": 40},        # web calls per pick, read by the command
-    "photo_max_per_pick": 12, "photo_min_px": 800, "photo_max_px": 4096, "photo_max_mb": 25,
+    "photo_max_per_pick": 12, "photo_max_attempts": 30, "photo_min_px": 800, "photo_max_px": 4096, "photo_max_mb": 25,
     "photo_min_angles": 4, "photo_core_angles": ["front", "back", "left", "right", "top"], "photo_similarity_distance": 5,
     "spec_tolerance_pct": {"length": 3.0, "weight": 5.0, "volume": 5.0, "other": 2.0},
 }
@@ -5519,38 +5519,250 @@ def _photo_dhash(im) -> int:
     return bits
 
 
-def _fetch_image(url, referer, max_bytes):
-    """One read-only GET of an image URL. A 4xx answer (a login wall, a block, a rate limit, a missing file) is final:
-    it is never retried under another identity. Server errors and timeouts are retried twice. Returns
-    (bytes | None, error | None, http status | None)."""
+PHOTO_UA = "Mozilla/5.0 (compatible; atg-product-reference; read-only)"
+
+
+def _public_host_error(url, allow_private=False):
+    """None when the URL is http(s) and its host resolves only to public addresses; otherwise the reason it is not fetched. A product page is
+    public: an address on the user's own machine or network is never a product photo. `allow_private` exists for the local test server only."""
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+    u = urlparse(url)
+    if u.scheme not in ("http", "https") or not u.hostname:
+        return "only http and https addresses are fetched"
+    if allow_private:
+        return None
+    try:
+        infos = socket.getaddrinfo(u.hostname, u.port or (443 if u.scheme == "https" else 80), proto=socket.IPPROTO_TCP)
+    except Exception as e:
+        return f"cannot resolve {u.hostname}: {str(e)[:80]}"
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if not ip.is_global or ip.is_multicast:
+            return f"{u.hostname} resolves to a non-public address ({ip}): not fetched"
+    return None
+
+
+def _http_get(url, referer, accept, max_bytes, allow_private=False, ctype_error=None):
+    """One read-only GET with the toolkit's fixed identity (it never changes it). Redirects are followed by hand, at most 5, and every hop must be
+    a public http(s) address. A 4xx answer (a login wall, a block, a rate limit, a missing file) is final: it is never retried and never worked
+    around. Server errors and timeouts are retried twice. ctype_error(content type) may refuse a response before its body is read.
+    Returns (body | None, error | None, http status | None, content type, final url)."""
     import requests  # type: ignore
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; atg-product-reference; read-only)", "Accept": "image/jpeg,image/png,image/webp,*/*;q=0.5"}
+    from urllib.parse import urljoin
+    headers = {"User-Agent": PHOTO_UA, "Accept": accept}
     if referer:
         headers["Referer"] = referer
     last = None
     for attempt in range(3):
         try:
-            with requests.get(url, stream=True, timeout=(15, 60), headers=headers, allow_redirects=True) as r:
-                if 400 <= r.status_code < 500:
-                    return None, f"blocked or not found: HTTP {r.status_code} (not retried, not bypassed)", r.status_code
-                if r.status_code >= 500:
-                    raise IOError(f"HTTP {r.status_code}")
-                ctype = r.headers.get("Content-Type", "").split(";")[0].strip().lower()
-                if ctype and not ctype.startswith("image/") and ctype not in ("application/octet-stream", "binary/octet-stream"):
-                    return None, f"not an image (Content-Type {ctype})", r.status_code
-                if ctype in ("image/svg+xml", "image/gif"):
-                    return None, f"not a usable still photo (Content-Type {ctype})", r.status_code
-                chunks, n = [], 0
-                for chunk in r.iter_content(1 << 20):
-                    n += len(chunk)
-                    if n > max_bytes:
-                        return None, f"larger than {max_bytes / 1e6:.0f} MB", r.status_code
-                    chunks.append(chunk)
-                return b"".join(chunks), None, r.status_code
+            cur = url
+            for _hop in range(6):
+                why = _public_host_error(cur, allow_private)
+                if why:
+                    return None, why, None, "", cur
+                with requests.get(cur, stream=True, timeout=(15, 60), headers=headers, allow_redirects=False) as r:
+                    if r.status_code in (301, 302, 303, 307, 308) and r.headers.get("Location"):
+                        cur = urljoin(cur, r.headers["Location"])
+                        continue
+                    if 400 <= r.status_code < 500:
+                        return None, f"blocked or not found: HTTP {r.status_code} (not retried, not bypassed)", r.status_code, "", cur
+                    if r.status_code >= 500:
+                        raise IOError(f"HTTP {r.status_code}")
+                    ctype = r.headers.get("Content-Type", "").split(";")[0].strip().lower()
+                    bad = ctype_error(ctype) if ctype_error else None
+                    if bad:
+                        return None, bad, r.status_code, ctype, cur
+                    chunks, n = [], 0
+                    for chunk in r.iter_content(1 << 20):
+                        n += len(chunk)
+                        if n > max_bytes:
+                            return None, f"larger than {max_bytes / 1e6:.0f} MB", r.status_code, ctype, cur
+                        chunks.append(chunk)
+                    return b"".join(chunks), None, r.status_code, ctype, cur
+            return None, "too many redirects", None, "", cur
         except Exception as e:
             last = str(e)[:200]
             time.sleep(2 ** attempt)
-    return None, f"download failed: {last}", None
+    return None, f"download failed: {last}", None, "", url
+
+
+def _image_ctype_error(ctype):
+    if ctype and not ctype.startswith("image/") and ctype not in ("application/octet-stream", "binary/octet-stream"):
+        return f"not an image (Content-Type {ctype})"
+    if ctype in ("image/svg+xml", "image/gif"):
+        return f"not a usable still photo (Content-Type {ctype})"
+    return None
+
+
+def _html_ctype_error(ctype):
+    if ctype and ctype not in ("text/html", "application/xhtml+xml", "text/plain"):
+        return f"not an HTML page (Content-Type {ctype})"
+    return None
+
+
+def _fetch_image(url, referer, max_bytes, allow_private=False):
+    """One read-only GET of an image URL. Returns (bytes | None, error | None, http status | None)."""
+    body, err, status, _ctype, _final = _http_get(url, referer, "image/jpeg,image/png,image/webp,*/*;q=0.5", max_bytes, allow_private, _image_ctype_error)
+    return body, err, status
+
+
+from html.parser import HTMLParser
+
+PHOTO_JUNK_RX = re.compile(r"(^|[^a-z])(logo|sprite|icons?|favicon|pixel|spacer|blank|avatar|badge|loader|loading|placeholder|payment|flag|banner|captcha|tracking|beacon|rating|stars?|social|share)([^a-z]|$)", re.I)
+PHOTO_BIG_RX = re.compile(r"(large|zoom|original|full|hires|hi-res|master|2000|1600|1500|1200|1024)", re.I)
+PHOTO_NOT_ACCEPTED_EXT = {"svg", "gif", "ico", "bmp", "tif", "tiff", "avif", "heic", "heif"}
+
+
+class _ImgCollector(HTMLParser):
+    """Collects the image addresses that a product page declares: its Open Graph and Twitter images, the images in its JSON-LD data, link
+    rel=image_src, the <img> and <source> tags (src, the lazy-load attributes, the largest srcset entry) and links straight to an image file."""
+    LAZY = ("data-zoom-image", "data-large", "data-large-img", "data-original", "data-hires", "data-src", "data-lazy-src", "data-image", "src")
+
+    def __init__(self, base):
+        super().__init__(convert_charrefs=True)
+        self.base, self.items, self.title = base, [], ""
+        self._ld, self._buf, self._in_title = False, [], False
+
+    def add(self, url, source, attrs=None, declared=None):
+        from urllib.parse import urldefrag, urljoin
+        url = (url or "").strip()
+        if not url or url.lower().startswith(("data:", "javascript:", "blob:", "about:")):
+            return
+        try:
+            url = urldefrag(urljoin(self.base, url))[0]
+        except Exception:
+            return
+        if not re.match(r"^https?://", url, re.I):
+            return
+        a = attrs or {}
+        dims = [declared] if declared else []
+        for k in ("width", "height"):
+            m = re.match(r"^\s*(\d{1,5})\s*(px)?\s*$", a.get(k, ""))
+            if m:
+                dims.append(int(m.group(1)))
+        self.items.append({"url": url, "source": source, "alt": (a.get("alt") or a.get("title") or "")[:120],
+                           "label": " ".join(x for x in (a.get("class", ""), a.get("id", "")) if x)[:120], "declared_px": max(dims) if dims else None})
+
+    def handle_starttag(self, tag, attrs):
+        a = {k.lower(): (v or "") for k, v in attrs}
+        if tag == "meta":
+            key = (a.get("property") or a.get("name") or a.get("itemprop") or "").lower()
+            if key in ("og:image", "og:image:url", "og:image:secure_url", "twitter:image", "twitter:image:src", "image"):
+                self.add(a.get("content"), "meta " + key)
+        elif tag == "link":
+            if "image_src" in a.get("rel", "").lower():
+                self.add(a.get("href"), "link image_src")
+        elif tag in ("img", "source"):
+            for k in self.LAZY:
+                if a.get(k):
+                    self.add(a[k], f"{tag} {k}", a)
+            ss = a.get("srcset") or a.get("data-srcset")
+            if ss:
+                best, best_key = None, (-1, -1.0)
+                for part in re.split(r",\s+(?=\S)", ss.strip()):
+                    bits = part.strip().split()
+                    if not bits:
+                        continue
+                    m = re.match(r"^(\d+(?:\.\d+)?)([wx])$", bits[1]) if len(bits) > 1 else None
+                    key = (1 if (m and m.group(2) == "w") else 0, float(m.group(1)) if m else 0.0)
+                    if key > best_key:
+                        best, best_key = (bits[0], int(key[1]) if key[0] else None), key
+                if best:
+                    self.add(best[0], f"{tag} srcset", a, best[1])
+        elif tag == "a":
+            href = a.get("href", "")
+            if re.search(r"\.(jpe?g|png|webp)(\?|$)", href, re.I):
+                self.add(href, "a href (linked image)", a)
+        elif tag == "script" and "ld+json" in a.get("type", "").lower():
+            self._ld, self._buf = True, []
+        elif tag == "title":
+            self._in_title = True
+
+    def handle_data(self, data):
+        if self._ld:
+            self._buf.append(data)
+        elif self._in_title and len(self.title) < 200:
+            self.title += data
+
+    def handle_endtag(self, tag):
+        if tag == "script" and self._ld:
+            self._ld = False
+            try:
+                self._walk(json.loads("".join(self._buf)))
+            except Exception:
+                pass
+        elif tag == "title":
+            self._in_title = False
+
+    def _walk(self, node):
+        if isinstance(node, list):
+            for x in node:
+                self._walk(x)
+        elif isinstance(node, dict):
+            for k, v in node.items():
+                if str(k).lower() == "image":
+                    for x in (v if isinstance(v, list) else [v]):
+                        if isinstance(x, str):
+                            self.add(x, "json-ld image")
+                        elif isinstance(x, dict):
+                            self.add(x.get("url") or x.get("contentUrl"), "json-ld image")
+                elif isinstance(v, (dict, list)):
+                    self._walk(v)
+
+
+def _photo_find(html, page_url, limit):
+    """The image addresses a page declares, best first. Judgement stays with the agent: a candidate is a lead, not a photo of the reference unit."""
+    from urllib.parse import urlparse
+    col = _ImgCollector(page_url)
+    try:
+        col.feed(html)
+        col.close()
+    except Exception:
+        pass
+    merged = {}
+    for i, it in enumerate(col.items):
+        u = it["url"]
+        path = urlparse(u).path.lower()
+        name = path.rsplit("/", 1)[-1]
+        ext = name.rsplit(".", 1)[-1] if "." in name else ""
+        sc = 3 if it["source"].startswith(("meta", "json-ld")) else 2 if it["source"].startswith("link") else 1
+        px = it["declared_px"]
+        if px and px >= 800:
+            sc += 2
+        elif px and px >= 500:
+            sc += 1
+        elif px and px < 200:
+            sc -= 2
+        if PHOTO_BIG_RX.search(path):
+            sc += 1
+        junk = bool(PHOTO_JUNK_RX.search(path) or PHOTO_JUNK_RX.search(it["alt"]) or PHOTO_JUNK_RX.search(it["label"]))
+        if junk:
+            sc -= 3
+        refused = ext in PHOTO_NOT_ACCEPTED_EXT
+        if refused:
+            sc -= 3
+        cur = merged.get(u)
+        if cur is None:
+            merged[u] = {"url": u, "sources": [it["source"]], "alt": it["alt"], "declared_px": px, "score": sc, "likely_not_a_photo": junk,
+                         "photo_add_refuses_format": refused, "order": i}
+        else:
+            if it["source"] not in cur["sources"]:
+                cur["sources"].append(it["source"])
+            cur["score"] = max(cur["score"], sc)
+            cur["declared_px"] = max([x for x in (cur["declared_px"], px) if x] or [None]) if (cur["declared_px"] or px) else None
+            cur["alt"] = cur["alt"] or it["alt"]
+    rows = sorted(merged.values(), key=lambda r: (-r["score"], r["order"]))
+    for r in rows:
+        r.pop("order")
+    return rows[:limit], len(rows), col.title.strip()
+
+
+def _page_looks_blocked(html) -> bool:
+    text = re.sub(r"(?is)<(script|style|noscript)\b.*?</\1>", " ", html[:200000])
+    text = re.sub(r"(?s)<[^>]+>", " ", text)[:20000]
+    return bool(re.search(r"captcha|are you a (human|robot)|unusual traffic|verify (that )?you are (a )?human|access denied|request blocked", text, re.I))
 
 
 def _photo_summary(rows, cfg):
@@ -5603,10 +5815,27 @@ def cmd_photo(a):
     elif a.cand not in cands:
         fail(f"unknown candidate {a.cand}", 2)
     n = _pick_number(a.run, a.cand)
-    if a.action == "add" and n is None:
+    if a.action in ("add", "find") and n is None:
         fail(f"{a.cand} is not a pick of the current ranking: reference packs are made for the picks (run `candidates rank --apply` first)", 2)
     pack = _pack_dir(a.run, a.cand, cands.get(a.cand, {}).get("name"), create=(a.action == "add"))
-    if pack is None:
+    if a.action == "find":
+        if not a.page_url or not re.match(r"^https?://", a.page_url.strip(), re.I):
+            fail("photo find needs --page-url (an http or https page)", 2)
+        body, err, status, _ctype, final = _http_get(a.page_url.strip(), None, "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5", 3_000_000,
+                                                      a.allow_private_host, _html_ctype_error)
+        if body is None:
+            out({"ok": False, "error": err, "page": a.page_url, "blocked": bool(status and 400 <= status < 500),
+                 "next": "the page is not read any other way: take the images from another source, or list the page in the queue file for a hand-saved image"}, 1)
+        html = body.decode("utf-8", errors="replace")
+        found, total, title = _photo_find(html, final, max(1, a.limit))
+        notes = []
+        if _page_looks_blocked(html):
+            notes.append("the page looks like a bot check or an access wall: do not try to get past it; use another source or queue the page")
+        if total <= 2:
+            notes.append("the page declares few images: its gallery may be built by script; try the maker's other pages, a supplier or a retailer")
+        out({"ok": True, "page": final, "status": status, "title": title[:160], "found": total, "shown": len(found), "candidates": found, "notes": notes,
+             "next": "pick the images that show the reference unit, one angle each, and `photo add` them with this page as --page-url; the order is a lead, not a judgement"})
+    if pack is None and a.action not in ("list", "check"):
         fail(f"{a.cand} has no reference pack yet: it is created by the first `photo add` (the candidate must be a pick of the current ranking)", 2)
     if a.action == "add":
         for need, val in (("--url", a.url), ("--angle", a.angle), ("--source-kind", a.source_kind)):
@@ -5620,7 +5849,10 @@ def cmd_photo(a):
         rows0 = [r for r in _vb_load(p, {"items": []})["items"] if r["cand"] == a.cand]
         if sum(1 for r in rows0 if r["status"] == "downloaded") >= cfg["photo_max_per_pick"]:
             fail(f"{a.cand} already has {cfg['photo_max_per_pick']} photos (viral_browser.photo_max_per_pick): reject one with `photo set --reject` or stop here", 2)
-        data_b, err, status = _fetch_image(a.url.strip(), a.page_url, int(cfg["photo_max_mb"] * 1e6))
+        attempts = sum(1 for r in rows0 if r["status"] in ("downloaded", "blocked", "failed", "rejected"))
+        if attempts >= cfg["photo_max_attempts"]:
+            fail(f"{a.cand} already has {attempts} download attempts (viral_browser.photo_max_attempts): stop here and list the pages that need a hand-saved image in the queue file", 2)
+        data_b, err, status = _fetch_image(a.url.strip(), a.page_url, int(cfg["photo_max_mb"] * 1e6), a.allow_private_host)
 
         def record(row):
             with FileLock(lk):
@@ -5765,9 +5997,9 @@ def cmd_photo(a):
         sheet.save(dest)
         out({"ok": True, "sheet": str(dest), "photos": len(shown)})
     summ = _photo_summary(rows, cfg)       # check
-    L = _photo_md(a.cand, cands[a.cand].get("name"), rows)
-    write_text(pack / "photos.md", "\n".join(L) + "\n")
-    out({"ok": summ["verdict"] == "ready", **summ})
+    if pack is not None:
+        write_text(pack / "photos.md", "\n".join(_photo_md(a.cand, cands[a.cand].get("name"), rows)) + "\n")
+    out({"ok": summ["verdict"] == "ready", **summ, "pack": str(pack) if pack is not None else None})
 
 
 # --------------------------------------------------------------------------- CLI
@@ -6103,10 +6335,12 @@ def main():
     p.add_argument("--out", help="render: where to write spec.md (default: the candidate's pack folder, deliverables/reference-C##-<name>/spec.md; spec.json beside it)")
     p.add_argument("--md", action="store_true"); p.set_defaults(fn=cmd_spec)
 
-    p = sp.add_parser("photo", help="Viral-Browser: the photo references of a pick (add | set | list | sheet | check)")
-    p.add_argument("action", choices=["add", "set", "list", "sheet", "check"]); p.add_argument("--run", required=True)
+    p = sp.add_parser("photo", help="Viral-Browser: the photo references of a pick (find | add | set | list | sheet | check)")
+    p.add_argument("action", choices=["find", "add", "set", "list", "sheet", "check"]); p.add_argument("--run", required=True)
     p.add_argument("--cand", help="a pick of the current ranking"); p.add_argument("--id", help="set: the photo id (PH###)")
-    p.add_argument("--url", help="add: the direct image URL (http or https)"); p.add_argument("--page-url", help="add: the page it was found on (sent as the referer, like a browser)")
+    p.add_argument("--url", help="add: the direct image URL (http or https)"); p.add_argument("--page-url", help="add: the page it was found on (sent as the referer, like a browser); find: the page to read")
+    p.add_argument("--limit", type=int, default=40, help="find: how many image addresses to show (best first)")
+    p.add_argument("--allow-private-host", action="store_true", help=argparse.SUPPRESS)      # the local test server only; no prompt uses it
     p.add_argument("--angle", help="front, back, left, right, top, bottom, three-quarter-left, three-quarter-right, detail, texture, in-use, scale, packaging, contents, open ...")
     p.add_argument("--source-kind", choices=SPEC_SOURCE_KINDS, help="add: manufacturer / brand / supplier / retailer / marketplace / test / other")
     p.add_argument("--variant"); p.add_argument("--note"); p.add_argument("--allow-similar", action="store_true", help="add: keep a photo that looks like an existing one (a symmetric product seen from the back)")

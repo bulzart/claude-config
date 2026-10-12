@@ -1201,7 +1201,7 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   contact sheet yourself (`T photo sheet`, then Read), process `30-research/queue-<C>-pack.md` with the
   user's Chrome only when they allowed it (read-only: the image URLs of a gallery, a specification
   table; register them with `T spec add` / `T photo add`), then `T spec render` for each pick. The
-  packs go in `deliverables/product-NN-reference/`.
+  packs go in `deliverables/reference-C##-<name>/` (named after the candidate; the toolkit creates the folder and remembers it).
 - Then `viral-browser-report.md` (with each pick's specification table, photo list and flags),
   `evidence.md` (`T evidence list --run RUN --out <RUN>/deliverables/evidence.md`),
   `create-handoff.md` and `README.md`. `next_step=report-qc`.
