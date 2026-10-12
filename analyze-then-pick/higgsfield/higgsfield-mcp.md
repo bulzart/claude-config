@@ -237,8 +237,9 @@ output_9x16_720p` holds the exact per-model parameters. Rules:
 | Validation error naming a field | Fix that field only (role name, parameter name, value out of range) and resubmit. The creative intent stays unchanged. Log the correction |
 | Unsupported feature for the model | Do not fake it in prose. Switch the operation (e.g. start frame instead of references), or tell the user the model cannot do it and suggest a model from `index.json` that can |
 | PUT not 200 | Do not confirm. Request a new `media_upload` slot (URLs are single-use, signed per content type) |
-| Job `failed` | A refund appears in `transactions`. Read `fail_reason` if present, adjust (content filter → rephrase; input → fix), and retry once |
-| Content protection block ("May contain protected content") | Remove real-person likeness claims or protected IP from the prompt and references, then ask the user if the asset itself is the cause [HF-DOC] |
+| Job `failed` | A refund appears in `transactions`. Read `fail_reason` if present, adjust (content filter → rephrase; input → fix), and retry once. A failure within seconds, with no reason or a filter text, is a **flag**: record it first (`T ledger set --flagged`, `T caught-flag add`, command item 23), then change the request |
+| Content protection block ("May contain protected content") | Remove real-person likeness claims or protected IP from the prompt and references, then ask the user if the asset itself is the cause [HF-DOC]. It is a flag: `T caught-flag add` with the verbatim text before the change |
+| An uploaded image, video or Element comes back `nsfw`, `ip_checking` or `failed`; an output is withheld; a `preset_recommendation` notice comes back instead of a job | Flags: record with `T caught-flag add` (`--stage upload` / `result` / `submit`), then replace the input with another supplied asset, or retry the one literal request with `declined_preset_id`; never re-upload a flagged file unchanged |
 | Result shorter than planned | Report it. Never loop or freeze frames to pad a result |
 
 ## 10. Utility operations (on Higgsfield, only when the plan needs them)

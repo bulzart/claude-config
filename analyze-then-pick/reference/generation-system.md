@@ -744,6 +744,9 @@ both jobs refunded, plan without the video reference (the guide's image-referenc
 written out, the original audio restored as always), and say in the brief that fidelity and sync are at risk.
 *Miss and cause:* run 09 V03 (a celebrity swap) failed twice within ~15 s, cause unconfirmed; a third attempt
 without the video reference passed QC, with sync only judged on the sheet. [OBSERVED once, unproven.]
+Every such refusal is a flag and is recorded before the request changes (`T ledger set --flagged`, `T caught-flag
+add`, command item 23; this case is CF-001 in `caught_flags.md`), and the plan reads `20-analysis/caught-flags.md`
+so a trigger that already cleared or persisted is not sent again unchanged.
 
 **Same duration.** Request the source segment's exact duration, or the nearest allowed duration
 above it and trim the extra afterwards. A shorter or longer generation squeezes or stretches the

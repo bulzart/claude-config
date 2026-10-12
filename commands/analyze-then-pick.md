@@ -317,6 +317,32 @@ You are running the **/analyze-then-pick** command.
     their rules in the model's phrasing, and X9 checks each applied entry by id in the verdict.
     An entry whose rule is general, or that recurs, is promoted into the reference it belongs to
     and marked `promoted` with the pointer; the entry stays as the record.
+23. **Caught flags: every prompt and video that Higgsfield flagged is recorded**
+    (`ATP/caught_flags.md`, written only with `T caught-flag`). A flag is any time Higgsfield
+    refuses, blocks, withholds or reroutes something during the run: a moderation or policy
+    block, a job that fails within seconds with no reason (refunded), an upload, video or
+    Element marked `nsfw`, `ip_checking` or `failed`, an output withheld, or a notice returned
+    instead of a job (`preset_recommendation`). Validation errors (a prompt over 5000
+    characters, out of credits) are not flags. **Whoever made the call records it at once,
+    before changing the request** (agents and this session alike, in both modes): mark the
+    submission with `T ledger set … --flagged`, then `T caught-flag add` with Higgsfield's
+    response verbatim (or "none given"), the kind, the tool and stage, the job ids and credits,
+    **the flagged video** (the reference that rode as the video reference and/or the generated
+    clip, with its path), the full prompt, the params and the media the request carried (with
+    `--run` and `--video` the script attaches the newest request's prompt, params, media ids and
+    the plan path itself), and the agent's own **suspected trigger** labelled [E] or [I]. The
+    script only records; the diagnosis is the agent's. After the changed request is accepted:
+    `T caught-flag set --id CF-nnn --status cleared --cleared-prompt <the accepted request.json>
+    --cleared-job J` (never `cleared` before a request went through; a flag that stays is
+    `persistent` and the video is planned another way or reported). Every run reads the file at
+    the start (A1 / E1: `T caught-flag list --digest`), writes the entries that apply (same model,
+    tool or kind, or a trigger a plan could repeat: a real person's face in a video reference, a
+    brand or celebrity name, an image kind) to `20-analysis/caught-flags.md`, every plan names the
+    ones it avoids, and X4 checks each request against them before any credit is spent. The
+    main session runs `T caught-flag reconcile --run RUN` as each agent reports and in the
+    wrap-up, so no flagged call leaves the run unrecorded. A rule that is general or recurs is
+    promoted into the model guide's failure table or `generation-system.md` §5c.2 and marked
+    `promoted`; the entry stays as the record.
 
 ## 1. Paths and tools
 
@@ -328,6 +354,7 @@ You are running the **/analyze-then-pick** command.
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` |
 | Caught errors | `ATP/caught_errors.md` (item 22): `T caught-error add | list | set`; read at A1 / E1, applied in X1, X2, X9 |
+| Caught flags | `ATP/caught_flags.md` (item 23): `T caught-flag add | set | list | reconcile`, `T ledger set --flagged`; read at A1 / E1, checked in X4, written in X7, reconciled in A9b and §6 |
 | References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
 | Run folder | created by `T new-run` under `ATP/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
@@ -434,6 +461,12 @@ You are running the **/analyze-then-pick** command.
   the client's product family, or a class any video may hit) with their rules, one line each, and
   which step applies each (plan, prompt, QC, ideation). Promoted entries are listed by their
   pointer; open ones in full.
+- **Caught flags next** (item 23): `T caught-flag list --digest` and read every entry (the kind,
+  Higgsfield's response, the params, the flagged video, the suspected trigger, what was changed,
+  and the cleared prompt where there is one). Write `20-analysis/caught-flags.md`: the entries
+  that apply to this run (the locked model, the tools it will call, a trigger a plan could
+  repeat) with what each avoids, one line each, and which step uses it (plan, prompt, input
+  choice, X4). A cleared prompt shows the shape Higgsfield accepted.
 - `T inventory "<references folder>" --run RUN --as references`: everything in it is **reference
   material only**.
 - `T inventory "<asset path>" "<asset path>" … --run RUN --as assets` (scope `project`), then
@@ -823,6 +856,11 @@ Plan everything before production, in allocation order, **without asking for con
   - reconcile the ledger: a `qc` that says RESIDUAL FAILURE or regenerated, with no entry in
     `T caught-error list --grep <RUN>` for that video, is recorded now (`--source agent`, one entry
     per class and anchor, the videos listed);
+  - reconcile the flags (item 23): `T caught-flag reconcile --run RUN`. Every row in
+    `flagged_unrecorded` gets `T caught-flag add` now (from the agent's `result.json` notes, the
+    ledger history and the request file); each `failed_to_judge` row is read and either marked
+    (`ledger set --flagged`, then added) or left as the validation or credit error it was; a
+    video whose flag is `open` or `persistent` is named in the wrap-up;
   - verify, and fix at once what is missing (`production-agents.md` §5 item 3): `videos[]` in
     `state.json`; the README table (the agent's `readme-row.md` appended to `deliverables/README.md`);
     `video-NN-clean.mp4` and `video-NN-preview.mp4` in `deliverables/`; `result.json` complete, each
@@ -848,6 +886,9 @@ See §6.
 - **Caught errors first** (item 22): `T caught-error list --mode edit` plus the class entries;
   write `20-analysis/caught-errors.md` with the entries that apply to this model and the edit
   kinds, and apply them in X1, X2 and X9 like any plan rule.
+- **Caught flags** (item 23): `T caught-flag list --digest`; write `20-analysis/caught-flags.md`
+  with the entries that apply to this model, the edit kind and the source's content, and check
+  each request against them in X4.
 - `T inventory "<video path>" … --run RUN --as sources`: only videos are processed. Any other file
   there is ignored and never used as an asset.
 - `T split-audio "<video path>" … --run RUN`. For every original video, **inside the given path**
@@ -1188,6 +1229,12 @@ files as video K".
     the prompt. Nothing in the prompt invites new motion. The duration matches the source segment.
     No change operation forces a motion change: a bigger product gets a planned grip that keeps the
     same hand path.
+  - **Caught flags** (item 23): read the request against `20-analysis/caught-flags.md`: no prompt
+    wording, video reference, image or Element that an open or persistent flag names as the
+    suspected trigger goes out unchanged; where a cleared flag shows the accepted shape (the
+    video reference dropped, the name removed), the request takes it. A trigger the plan cannot
+    avoid is written in the brief as a risk, and the fallback request (for example without the
+    video reference, fidelity and sync at risk) is planned before the first submission.
   - **Counts, openings and permanence** (`anomaly-catalog.md` §3): walk every use beat (the
     preparation step, the part, the contact point, the head and hands), every multiple's number at
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
@@ -1245,6 +1292,26 @@ files as video K".
        resubmit because a job is slow.
   5. A failed job is refunded. Diagnose it before any retry; the ledger allows at most one retry of
      an identical request.
+  6. **A flag is recorded before the request changes** (item 23). When Higgsfield blocks, refuses,
+     withholds or reroutes (a moderation or policy message; a job failed within seconds with no
+     reason; an upload, video or Element marked `nsfw` / `ip_checking` / `failed`; an output
+     withheld; a `preset_recommendation` notice instead of a job):
+     - `T ledger set --run RUN --job J --status failed --flagged --note "<what came back>"` (no job id:
+       `--fingerprint F`);
+     - `T caught-flag add --run RUN --video NN --attempt aK --kind <…> --tool <…> --stage <…>
+       --response "<verbatim | none given>" --job J --credits "<refunded n>" --flagged-video "<the
+       reference V id + file riding as the video reference, and/or the clip + path>" --trigger "[E|I]
+       <suspected trigger>" --cause <…> --mode … --model … --product …` (the request's prompt,
+       params, media ids and the plan are attached from `50-requests/`);
+     - then change the request (the one diagnosed retry of X7 step 5; after the second identical
+       refunded failure, never a third: plan without the trigger, for example without the video
+       reference, `generation-system.md` §5c.2), say what changed with `caught-flag set --changed`,
+       and once that request is accepted `caught-flag set --id CF-nnn --status cleared
+       --cleared-prompt <request.json> --cleared-job J`. A flag that stays is `--status
+       persistent --note "<what was tried>"` and the video is reported in the wrap-up;
+     - a flagged **input** (an asset or a reference video that came back marked) is recorded the
+       same way with `--stage upload` and the file's path, and is replaced by another supplied
+       asset, never re-uploaded unchanged.
 - **X8 — Download and post-process.** `T hf-get` into `60-outputs/video-NN/aK/raw.mp4` (K = the
   attempt number; the raw Higgsfield output is always kept), then as needed, in this order:
   1. **Edit Mode and Recreate — original audio back:**
@@ -1491,7 +1558,15 @@ Then give:
 - only if `config.json → capcut.text_style.learned` is ever empty (it holds the user's locked
   preset): "To copy CapCut's exact text preset, add a text in any CapCut project, pick the preset,
   close CapCut, and run `T capcut-text-style --learn --draft "<store>/<that project>"`";
+- the flags (item 23): "N flags recorded in `caught_flags.md` (CF-…): M cleared, K persistent",
+  each persistent or open one with its video, the flagged prompt or video and what was tried;
+  or "no flags this run";
 - any open issues.
+
+Both modes: reconcile the flags before the table. Run `T caught-flag reconcile --run RUN`; every
+`flagged_unrecorded` row gets `T caught-flag add` now, each `failed_to_judge` row is read and
+marked or dismissed (a validation or credit error is not a flag), and every entry of the run is
+`cleared` (with its accepted request) or `persistent`; none is left `open` without a reason.
 
 Analyze Mode: reconcile the ledger before the feedback question. Every `result.json` whose `qc`
 says RESIDUAL FAILURE or regenerated, and that has no entry in `T caught-error list --grep <RUN>`, is
@@ -1616,6 +1691,12 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   user reported as wrong unrecorded, never write an entry by hand or without the user's words
   verbatim and a general rule, and never silently fix a reported problem without its entry
   (item 22).
+- Never start a run without reading `ATP/caught_flags.md` (A1 / E1), never change or resend a
+  request that Higgsfield flagged before its `T caught-flag add` entry exists (the verbatim
+  response, the prompt, the media, the flagged video, the suspected trigger), never write an
+  entry by hand, never mark one `cleared` before a changed request was accepted, never send a
+  third identical request after two refunded flagged failures, and never re-upload a flagged
+  asset or video unchanged (item 23).
 - Never tell an agent not to record: the shared contract carries the recording rule, and a run is
   never closed with a RESIDUAL FAILURE or a regenerated video that has no ledger entry (A9b, §6).
   Never copy an agent contract from an earlier run: it is generated at A9 from

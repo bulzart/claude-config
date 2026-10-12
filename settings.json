@@ -39,10 +39,11 @@
       "effortLevel": "high"
     },
     "claude-sonnet-5-5": {
-      "effortLevel": "high"
+      "effortLevel": "high",
+      "autoCompactWindow": 850000
     }
   },
-  "autoCompactWindow": 600000,
+  "autoCompactWindow": 850000,
   "askUserQuestionTimeout": "never",
   "pluginConfigs": {
     "cc-plugin-agents-md@builtin": {

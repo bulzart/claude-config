@@ -66,6 +66,23 @@ Follow, for this video only:
   entry per class and anchor with the videos listed. Recording is part of this contract, not optional: if a
   write fails, put the full text and the error in result.json `notes` and say so. User entries come from
   the main session.
+- <RUN>/20-analysis/caught-flags.md (the entries of <ATP>/caught_flags.md that apply to this run: prompts
+  and videos Higgsfield flagged before; your plan names the ones this video avoids and X4 checks your
+  request against them). When Higgsfield flags, refuses, withholds or reroutes anything in your lane
+  (a moderation or policy message; a job failed within seconds with no reason; an upload, video or
+  Element marked nsfw / ip_checking / failed; an output withheld; a preset_recommendation notice instead
+  of a job), record it BEFORE you change the request: `T ledger set --run <RUN> --job J --status failed
+  --flagged --note "<what came back>"`, then `T caught-flag add --run <RUN> --video NN --attempt aK --kind
+  … --tool … --stage … --response "<verbatim | none given>" --job J --credits "<refunded n>"
+  --flagged-video "<the reference V id + file that rode as the video reference, and/or the clip + path>"
+  --trigger "[E|I] <suspected trigger>" --cause … --mode … --model … --product …` (the prompt, params,
+  media ids and plan attach themselves). Then make the one diagnosed change, say it with `T caught-flag
+  set --id CF-nnn --changed "…"`, and once the changed request is accepted `T caught-flag set --id CF-nnn
+  --status cleared --cleared-prompt <request.json> --cleared-job J`; a flag that stays is `--status
+  persistent --note "<what was tried>"`. Never a third identical request after two refunded flagged
+  failures: plan without the trigger (for example without the video reference) and say fidelity and sync
+  are at risk. Never re-upload a flagged asset or video unchanged. A validation error (prompt over 5000
+  characters, out of credits) is not a flag.
 
 Hard rules:
 - Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. One job in flight in
@@ -199,7 +216,14 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 14. **Docs and ledger, before the final message:** every regenerate reason and flagged delivery recorded with
     `T caught-error add --source agent`; the brief carries a block per attempt and the final prompt;
     `result.json` complete; `readme-row.md` and the deliverables files written; the CE ids written are listed
-    in `result.json` → `notes`.
+    in `result.json` → `notes`; the CF ids of any flag (item 15) too.
+15. **Flags** (command item 23; `ATP/caught_flags.md`). Every call Higgsfield flagged, refused, withheld or
+    rerouted in the agent's lane is marked with `T ledger set --flagged` and recorded with `T caught-flag add`
+    before the request changes, with the verbatim response, the flagged video and prompt, the media the
+    request carried and the agent's suspected trigger ([E] or [I]); it is `cleared` only once a changed request
+    was accepted (with the accepted request.json and job), else `persistent`. `result.json` → `notes` lists the
+    CF ids, and `qc` names a video whose flag stayed. The main session reconciles them with `T caught-flag
+    reconcile` (§5).
 
 ## 4. `60-outputs/video-NN/result.json`
 ```json
@@ -219,6 +243,10 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 2. Print one line: video, status, CapCut project, credits.
 3. **Check that nothing was left undone** (the as-agents-report checklist; command A9b), and fix what is
    missing here or relaunch the agent; nothing waits for the wrap-up:
+   0. **The flags** (command item 23). `T caught-flag reconcile --run <RUN>`: every `flagged_unrecorded` row gets
+      `T caught-flag add` now (from the agent's `result.json` notes, the ledger history and the request file); each
+      `failed_to_judge` row is read and marked or left as the validation or credit error it was; a flag still
+      `open` or `persistent` is named in the wrap-up.
    1. **The ledger.** If `qc` says RESIDUAL FAILURE or regenerated and `T caught-error list --grep <RUN>`
       shows no entry for this video, record it now (`--source agent`, compact, one entry per class and
       anchor with the videos listed).
