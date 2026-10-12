@@ -4426,6 +4426,39 @@ def cmd_niches(a):
 
 # ---- unit economics
 
+def cmd_landed(a):
+    """The landed cost per unit, built up from the inputs an agent found (a supplier price, a freight table, a duty rate): PURE ARITHMETIC. It judges
+    nothing and records nothing; the agent registers each input as an evidence row and passes the total to `econ --landed`."""
+    fx = a.fx if a.fx else 1.0
+    fob = a.fob
+    freight = (a.freight_per_cbm / a.units_per_cbm) if (a.freight_per_cbm and a.units_per_cbm) else 0.0
+    insurance = (a.insurance_pct or 0.0) / 100.0 * (fob + freight)
+    cif = fob + freight + insurance
+    base = cif if a.duty_base == "cif" else fob
+    duty = ((a.duty_pct or 0.0) + (a.duty_extra_pct or 0.0)) / 100.0 * base
+    vat = (a.import_vat_pct or 0.0) / 100.0 * (cif + duty)
+    other = a.other_per_unit or 0.0
+    total_in = fob + freight + insurance + duty + vat + other
+    total = total_in * fx
+    res = {"currency": a.currency, "fx_applied": fx, "fob": round(fob, 4), "freight_per_unit": round(freight, 4), "insurance": round(insurance, 4),
+           "cif": round(cif, 4), "duty_base": a.duty_base, "duty": round(duty, 4), "import_vat_not_recovered": round(vat, 4), "other_per_unit": round(other, 4),
+           "landed_cost_input_currency": round(total_in, 4), "landed_cost": round(total, 2)}
+    if a.moq:
+        res["capital_at_moq"] = round(a.moq * total, 2)
+    res["inputs_left_at_zero"] = [k for k, v in (("freight_per_cbm", a.freight_per_cbm), ("units_per_cbm", a.units_per_cbm), ("insurance_pct", a.insurance_pct),
+                                                 ("duty_pct", a.duty_pct), ("duty_extra_pct", a.duty_extra_pct), ("import_vat_pct", a.import_vat_pct),
+                                                 ("other_per_unit", a.other_per_unit)) if not v]
+    rows = [("product price (FOB)", res["fob"]), ("freight per unit (freight per CBM / units per CBM)", res["freight_per_unit"]), ("insurance", res["insurance"]),
+            (f"customs value (CIF)", res["cif"]), (f"duty (on {a.duty_base.upper()})", res["duty"]), ("import VAT not recovered", res["import_vat_not_recovered"]),
+            ("other per unit", res["other_per_unit"]), ("landed cost per unit (input currency)", res["landed_cost_input_currency"])]
+    print("| item | value |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in rows))
+    if fx != 1.0:
+        print(f"\nlanded cost per unit x {fx} = {res['landed_cost']} {a.currency}")
+    if res["inputs_left_at_zero"]:
+        print("\ninputs left at zero (the result assumes none of that cost): " + ", ".join(res["inputs_left_at_zero"]))
+    out({"ok": True, **res})
+
+
 def cmd_econ(a):
     """Unit economics: PURE ARITHMETIC from the inputs given (retail price, VAT, landed cost, fulfilment, fees, returns). It judges nothing: no gate, no
     floor, no 'good' or 'bad'. With --cand and --market the result is stored on the candidate, one result per market, side by side; which market counts, and
@@ -4444,14 +4477,27 @@ def cmd_econ(a):
         r = min(1.0, (a.returns_pct or 0.0) / 100.0 * returns_mult)
         ld = a.landed * landed_mult
         rl = r * (nt + (a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * ld)
-        return nt, nt - ld - (a.fulfil or 0.0) - fe - rl
+        return nt, nt - ld - (a.extra_per_unit or 0.0) - (a.fulfil or 0.0) - fe - rl
 
     _, c0 = contribution()
     r = (a.returns_pct or 0.0) / 100.0
+    price_for_target = None
+    if a.target_pct is not None:
+        # n (1 - fee% x k - r - t) = landed + extra + fulfilment + fixed fee + r (return cost - resale% x landed), with k = 1 + VAT when the fees are charged on the amount paid
+        k = (1.0 + vat) if a.fees_on == "gross" else 1.0
+        fixed_cost = a.landed + (a.extra_per_unit or 0.0) + (a.fulfil or 0.0) + (a.payment_fixed or 0.0) + r * ((a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * a.landed)
+        den = 1.0 - ((a.platform_fee_pct or 0.0) + (a.payment_fee_pct or 0.0)) / 100.0 * k - r - a.target_pct / 100.0
+        if den > 0:
+            n_t = fixed_cost / den
+            price_for_target = {"target_contribution_pct_of_net": a.target_pct, "net_revenue": round(n_t, 2), "retail_price": round(n_t * (1.0 + vat), 2)}
+        else:
+            price_for_target = {"target_contribution_pct_of_net": a.target_pct, "net_revenue": None, "retail_price": None,
+                                "note": "no price reaches the target: the percentage costs (fees, returns, target) take more than the whole price"}
     ret_loss = r * (net + (a.return_cost or 0.0) - (a.resale_pct or 0.0) / 100.0 * a.landed)
     gm = (net - a.landed) / net if net else 0.0
     res = {"currency": a.currency, "retail_price": round(a.retail, 2), "vat_pct_included": a.vat_pct or 0.0,
-           "net_revenue": round(net, 2), "landed_cost": round(a.landed, 2), "fulfilment": round(a.fulfil or 0.0, 2),
+           "net_revenue": round(net, 2), "landed_cost": round(a.landed, 2), "extra_per_unit": round(a.extra_per_unit or 0.0, 2),
+           "extra_label": a.extra_label, "fulfilment": round(a.fulfil or 0.0, 2),
            "fees": round(fees, 2), "fees_charged_on": a.fees_on, "expected_return_loss": round(ret_loss, 2),
            "contribution_per_order": round(c0, 2),
            "contribution_pct_of_net": round(100 * c0 / net, 1) if net else None,
@@ -4462,6 +4508,8 @@ def cmd_econ(a):
            "landed_ceiling_at_markup": {str(k): round(net / k, 2) for k in (3, 4)}}
     if a.moq:
         res["capital_at_moq"] = round(a.moq * a.landed, 2)
+    if price_for_target is not None:
+        res["price_for_target"] = price_for_target
     if a.stress:
         sc = {}
         for label, kw in (("retail -20%", {"retail_mult": 0.8}), ("returns x2", {"returns_mult": 2.0}),
@@ -4475,7 +4523,8 @@ def cmd_econ(a):
                                                  ("payment_fee_pct", a.payment_fee_pct), ("payment_fixed", a.payment_fixed), ("return_cost", a.return_cost),
                                                  ("resale_pct", a.resale_pct)) if not v]
     rows = [("retail price (consumer)", res["retail_price"]), (f"net revenue (VAT {res['vat_pct_included']}% removed)", res["net_revenue"]),
-            ("landed cost", res["landed_cost"]), ("fulfilment", res["fulfilment"]), (f"fees (on {a.fees_on})", res["fees"]),
+            ("landed cost", res["landed_cost"])] + ([(f"extra per unit ({a.extra_label})" if a.extra_label else "extra per unit", res["extra_per_unit"])] if a.extra_per_unit else []) + [
+            ("fulfilment", res["fulfilment"]), (f"fees (on {a.fees_on})", res["fees"]),
             ("expected return loss", res["expected_return_loss"]), ("contribution per order", res["contribution_per_order"]),
             ("contribution % of net", res["contribution_pct_of_net"]), ("break-even CPA", res["break_even_cpa"]),
             ("break-even ROAS (on net revenue)", res["break_even_roas_net"]), ("break-even ROAS (on the amount paid)", res["break_even_roas_gross"])]
@@ -4485,6 +4534,9 @@ def cmd_econ(a):
             f"| {k} | {v['contribution_per_order']} | {v['contribution_pct_of_net']} |" for k, v in res["stress"].items()))
     if res["inputs_left_at_zero"]:
         print("\ninputs left at zero (the result assumes none of that cost): " + ", ".join(res["inputs_left_at_zero"]))
+    if price_for_target is not None:
+        print(f"\nretail price at which the contribution reaches {a.target_pct} % of net revenue (same inputs): {price_for_target['retail_price']} {a.currency}"
+              + (f" ({price_for_target['note']})" if price_for_target.get("note") else ""))
     if a.cand:
         if not a.run:
             fail("econ --cand needs --run", 2)
@@ -4497,10 +4549,11 @@ def cmd_econ(a):
                 fail(f"unknown candidate {a.cand}", 2)
             mk = _norm(a.market)
             ebm = c.setdefault("economics_by_market", {})
-            ebm[mk] = {"market": a.market.strip(), "at": now_iso(),
+            ebm[mk] = {"market": a.market.strip(), "at": now_iso(), "note": a.note,
                        **{k: res[k] for k in ("retail_price", "net_revenue", "landed_cost", "contribution_per_order", "contribution_pct_of_net",
                                               "break_even_cpa", "break_even_roas_gross", "currency")},
-                       "inputs": {"vat_pct": a.vat_pct, "fulfil": a.fulfil, "platform_fee_pct": a.platform_fee_pct, "payment_fee_pct": a.payment_fee_pct,
+                       "inputs": {"vat_pct": a.vat_pct, "extra_per_unit": a.extra_per_unit, "extra_label": a.extra_label, "fulfil": a.fulfil,
+                                  "platform_fee_pct": a.platform_fee_pct, "payment_fee_pct": a.payment_fee_pct,
                                   "payment_fixed": a.payment_fixed, "returns_pct": a.returns_pct, "return_cost": a.return_cost, "resale_pct": a.resale_pct,
                                   "fees_on": a.fees_on, "moq": a.moq}}
             data["updated"] = now_iso()
@@ -4508,13 +4561,13 @@ def cmd_econ(a):
         with FileLock(elk):
             ed = _vb_load(ep, {"items": []})
             nid = f"EV{len(ed['items']) + 1:03d}"
-            method = (f"method: econ retail={a.retail} vat={a.vat_pct} landed={a.landed} fulfil={a.fulfil} platform={a.platform_fee_pct}% "
+            method = (f"method: econ retail={a.retail} vat={a.vat_pct} landed={a.landed} extra={a.extra_per_unit} fulfil={a.fulfil} platform={a.platform_fee_pct}% "
                       f"payment={a.payment_fee_pct}%+{a.payment_fixed} returns={a.returns_pct}% return_cost={a.return_cost} fees_on={a.fees_on}")
             ed["items"].append({"id": nid, "cand": a.cand, "lane": "economics",
                                 "claim": f"contribution {res['contribution_pct_of_net']}% of net at {a.currency} {a.retail} ({a.market.strip()})",
                                 "value": str(res["contribution_pct_of_net"]), "unit": "% of net", "source": method, "grade": "C",
                                 "retrieved": dt.date.today().isoformat(), "independent": True, "market": a.market,
-                                "signal": "calculation", "note": None, "added": now_iso()})
+                                "signal": "calculation", "note": a.note, "added": now_iso()})
             write_json(ep, ed)
         res["applied_to"] = a.cand
         res["evidence_id"] = nid
@@ -4528,14 +4581,16 @@ def _md_cell(v) -> str:
 
 
 def _ev_counts(rows):
-    """Plain counts of evidence rows by lane, signal and grade, and the sites behind them. A tabulation: it weighs nothing."""
+    """Plain counts of evidence rows by lane, signal and grade, the pages that were opened, and the sites behind them. A tabulation: it weighs nothing."""
     by_lane = {}
     for e in rows:
-        l = by_lane.setdefault(e["lane"], {"rows": 0, "signal": {}, "grade": {}, "independent": 0, "sites": set(), "ab_positive_sites": set()})
+        l = by_lane.setdefault(e["lane"], {"rows": 0, "signal": {}, "grade": {}, "independent": 0, "opened": {}, "sites": set(), "ab_positive_sites": set()})
         l["rows"] += 1
         l["signal"][e.get("signal") or "none"] = l["signal"].get(e.get("signal") or "none", 0) + 1
         l["grade"][e["grade"]] = l["grade"].get(e["grade"], 0) + 1
         l["independent"] += 1 if e.get("independent") else 0
+        ok = "yes" if e.get("opened") is True else "no" if e.get("opened") is False else "unrecorded"
+        l["opened"][ok] = l["opened"].get(ok, 0) + 1
         site = _site_key(e.get("source"))
         l["sites"].add(site)
         if e["grade"] in ("A", "B") and e.get("signal") == "positive":
@@ -4544,32 +4599,118 @@ def _ev_counts(rows):
                 "sites_behind_positive_grade_A_or_B_rows": len(v["ab_positive_sites"])} for k, v in sorted(by_lane.items())}
 
 
+def _ev_row_problem(spec, cand_ids):
+    """The form check of one evidence row: the required fields, a known candidate, lane, grade and signal, and a URL behind an independent grade A or B
+    row. None when the form is complete. It reads no claim and weighs no source."""
+    for need in ("cand", "lane", "claim", "source", "grade", "signal", "independent"):
+        if spec.get(need) in (None, ""):
+            return f"needs {need}"
+    if spec["cand"] not in cand_ids:
+        return f"unknown candidate {spec['cand']}; add it with `candidates add` first"
+    if spec["lane"] not in EV_LANES:
+        return f"lane {spec['lane']!r} is not one of {', '.join(EV_LANES)}"
+    if spec["grade"] not in ("A", "B", "C", "D"):
+        return f"grade {spec['grade']!r} is not A, B, C or D"
+    if spec["signal"] not in ("positive", "negative", "mixed", "neutral"):
+        return f"signal {spec['signal']!r} is not positive, negative, mixed or neutral"
+    if spec["independent"] not in ("yes", "no", True, False):
+        return "independent must be yes or no"
+    if spec["independent"] in ("yes", True) and spec["grade"] in ("A", "B") and not re.match(r"^https?://", str(spec["source"]).strip(), re.I):
+        return ("an independent grade A or B row needs a URL as its source (a primary or reputable secondary page); "
+                "use grade C with a method for an estimate, or grade D for what could not be verified")
+    if spec.get("opened") not in (None, "", "yes", "no", True, False):
+        return "opened must be yes or no"
+    return None
+
+
+def _ev_row(spec, nid, by_default=None):
+    """One ledger row from a checked spec. `opened` records whether the researcher opened the page itself (yes) or knows the fact only from a search
+    summary or snippet (no); left out, it stays unrecorded."""
+    op = spec.get("opened")
+    return {"id": nid, "cand": spec["cand"], "lane": spec["lane"], "claim": spec["claim"], "value": spec.get("value"), "unit": spec.get("unit"),
+            "source": spec["source"], "domain": _domain(spec["source"]), "grade": spec["grade"],
+            "retrieved": spec.get("retrieved") or dt.date.today().isoformat(),
+            "independent": spec["independent"] in ("yes", True), "market": spec.get("market"), "signal": spec["signal"], "note": spec.get("note"),
+            "opened": True if op in ("yes", True) else False if op in ("no", False) else None,
+            "by": spec.get("by") or by_default, "added": now_iso()}
+
+
 def cmd_evidence(a):
     """The research evidence ledger: each row is a claim with its source, date, grade, signal and independence AS THE RESEARCHING AGENT STATED THEM. The
     ledger checks the form (the required fields, and a URL behind an independent grade A or B row) and tabulates; it does not weigh a row, count it toward
-    anything or decide what is enough evidence."""
+    anything or decide what is enough evidence. `add` records one row (or a whole JSON list in one write, or none); `copy` repeats rows for other candidates
+    (the facts that do not depend on the product: a fee schedule, a freight table) and marks them as copies; `retract` withdraws a row that was wrong."""
     p, lk = _ev_paths(a.run)
     cands = _vb_load(_cd_paths(a.run)[0], {"items": []})["items"]
+    cand_ids = {c["id"] for c in cands}
+    if a.action == "add" and a.from_json:
+        try:
+            raw = json.loads(Path(a.from_json).read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError) as e:
+            fail(f"evidence add --from-json: cannot read {a.from_json}: {e}", 2)
+        specs = raw.get("items") if isinstance(raw, dict) else raw
+        if not isinstance(specs, list) or not specs or not all(isinstance(x, dict) for x in specs):
+            fail("evidence add --from-json needs a JSON list of row objects (or {\"items\": [...]}) with cand, lane, claim, source, grade, signal and independent", 2)
+        problems = []
+        for i, sp_ in enumerate(specs, 1):
+            pr = _ev_row_problem(sp_, cand_ids)
+            if pr:
+                problems.append(f"row {i}: {pr}")
+        if problems:
+            fail("evidence add --from-json: nothing was written. " + "; ".join(problems[:25]), 2)
+        with FileLock(lk):
+            data = _vb_load(p, {"items": []})
+            ids = []
+            for sp_ in specs:
+                nid = f"EV{len(data['items']) + 1:03d}"
+                data["items"].append(_ev_row(sp_, nid, a.by))
+                ids.append(nid)
+            write_json(p, data)
+        out({"ok": True, "ids": ids, "count": len(ids)})
     if a.action == "add":
-        for need, val in (("--cand", a.cand), ("--lane", a.lane), ("--claim", a.claim), ("--source", a.source), ("--grade", a.grade),
-                          ("--signal", a.signal), ("--independent", a.independent)):
-            if not val:
-                fail(f"evidence add needs {need}", 2)
-        if not any(c["id"] == a.cand for c in cands):
-            fail(f"unknown candidate {a.cand}; add it with `candidates add` first", 2)
-        if a.independent == "yes" and a.grade in ("A", "B") and not re.match(r"^https?://", a.source.strip(), re.I):
-            fail("an independent grade A or B row needs a URL as its source (a primary or reputable secondary page); "
-                 "use grade C with a method for an estimate, or grade D for what could not be verified", 2)
+        spec = {"cand": a.cand, "lane": a.lane, "claim": a.claim, "source": a.source, "grade": a.grade, "signal": a.signal, "independent": a.independent,
+                "value": a.value, "unit": a.unit, "market": a.market, "note": a.note, "retrieved": a.retrieved, "by": a.by, "opened": a.opened}
+        pr = _ev_row_problem(spec, cand_ids)
+        if pr:
+            fail((f"evidence add {pr.replace('needs ', 'needs --')}") if pr.startswith("needs ") else pr, 2)
         with FileLock(lk):
             data = _vb_load(p, {"items": []})
             nid = f"EV{len(data['items']) + 1:03d}"
-            row = {"id": nid, "cand": a.cand, "lane": a.lane, "claim": a.claim, "value": a.value, "unit": a.unit,
-                   "source": a.source, "domain": _domain(a.source), "grade": a.grade,
-                   "retrieved": a.retrieved or dt.date.today().isoformat(),
-                   "independent": a.independent == "yes", "market": a.market, "signal": a.signal, "note": a.note, "by": a.by, "added": now_iso()}
-            data["items"].append(row)
+            data["items"].append(_ev_row(spec, nid))
             write_json(p, data)
         out({"ok": True, "id": nid})
+    if a.action == "copy":
+        src_ids = [x for x in re.split(r"[,\s]+", a.ids or "") if x]
+        tos = [x for x in re.split(r"[,\s]+", a.to or "") if x]
+        if not (src_ids and tos and (a.by or "").strip()):
+            fail("evidence copy needs --ids (the rows to repeat), --to (the candidates that get a copy) and --by", 2)
+        unknown = [t for t in tos if t not in cand_ids]
+        if unknown:
+            fail(f"unknown candidate(s) {', '.join(unknown)}", 2)
+        with FileLock(lk):
+            data = _vb_load(p, {"items": []})
+            by_id = {e["id"]: e for e in data["items"]}
+            bad = [i for i in src_ids if i not in by_id]
+            if bad:
+                fail(f"unknown evidence row(s) {', '.join(bad)}", 2)
+            gone = [i for i in src_ids if by_id[i].get("retracted")]
+            if gone:
+                fail(f"{', '.join(gone)} is retracted; a withdrawn row is not copied", 2)
+            made = {}
+            for i in src_ids:
+                e0 = by_id[i]
+                for t in tos:
+                    if t == e0["cand"]:
+                        continue
+                    nid = f"EV{len(data['items']) + 1:03d}"
+                    row = {k: v for k, v in e0.items() if k not in ("retracted", "retracted_reason", "retracted_at", "retracted_by")}
+                    row.update({"id": nid, "cand": t, "by": a.by, "added": now_iso(), "copy_of": e0.get("copy_of") or i,
+                                "note": f"copy of {e0.get('copy_of') or i} (recorded by {e0.get('by') or 'unknown'}, retrieved {e0.get('retrieved')})"
+                                        + (f"; {e0['note']}" if e0.get("note") else "")})
+                    data["items"].append(row)
+                    made.setdefault(i, {})[t] = nid
+            write_json(p, data)
+        out({"ok": True, "copies": made, "count": sum(len(v) for v in made.values())})
     if a.action == "retract":
         if not (a.id and (a.reason or "").strip()):
             fail("evidence retract needs --id and --reason (the record is kept; the row is marked retracted and left out of the counts)", 2)
@@ -4587,17 +4728,18 @@ def cmd_evidence(a):
     live = [e for e in rows if not e.get("retracted")]
     counts = _ev_counts(live) if a.counts else None
     if a.counts:
-        print("| lane | rows | signals | grades | independent | sites | sites behind positive A/B rows |\n|---|---|---|---|---|---|---|")
+        print("| lane | rows | signals | grades | independent | pages opened | sites | sites behind positive A/B rows |\n|---|---|---|---|---|---|---|---|")
         for k, v in counts.items():
             print(f"| {k} | {v['rows']} | {', '.join(f'{x} {n}' for x, n in sorted(v['signal'].items()))} | {', '.join(f'{x} {n}' for x, n in sorted(v['grade'].items()))} | "
-                  f"{v['independent']} | {v['sites']} | {v['sites_behind_positive_grade_A_or_B_rows']} |")
+                  f"{v['independent']} | {', '.join(f'{x} {n}' for x, n in sorted(v['opened'].items()))} | {v['sites']} | {v['sites_behind_positive_grade_A_or_B_rows']} |")
     if a.md or a.out:
-        L = ["| id | cand | lane | claim | value | grade | signal | indep. | market | retrieved | source | retracted |",
-             "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+        L = ["| id | cand | lane | claim | value | unit | grade | signal | indep. | opened | market | retrieved | source | note | retracted |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for e in rows:
-            L.append(f"| {e['id']} | {e['cand']} | {e['lane']} | {_md_cell(e['claim'])} | {_md_cell((e.get('value') or ''))} {_md_cell((e.get('unit') or ''))} | "
-                     f"{e['grade']} | {e.get('signal') or ''} | {'yes' if e['independent'] else 'no'} | {_md_cell(e.get('market'))} | {e['retrieved']} | {_md_cell(e['source'])} | "
-                     f"{_md_cell(e.get('retracted_reason')) if e.get('retracted') else ''} |")
+            op = "yes" if e.get("opened") is True else "no" if e.get("opened") is False else ""
+            L.append(f"| {e['id']} | {e['cand']} | {e['lane']} | {_md_cell(e['claim'])} | {_md_cell((e.get('value') or ''))} | {_md_cell((e.get('unit') or ''))} | "
+                     f"{e['grade']} | {e.get('signal') or ''} | {'yes' if e['independent'] else 'no'} | {op} | {_md_cell(e.get('market'))} | {e['retrieved']} | "
+                     f"{_md_cell(e['source'])} | {_md_cell(e.get('note'))} | {_md_cell(e.get('retracted_reason')) if e.get('retracted') else ''} |")
         if a.out:
             write_text(Path(a.out), "\n".join(L) + "\n")
         else:
@@ -4622,7 +4764,9 @@ def _cd_new(spec):
 
 
 def _cd_blind(c):
-    return {k: v for k, v in c.items() if k not in ("origin", "origin_note", "mechanisms", "added")}
+    """What a blind reader (a research or scoring agent) may see of a candidate: its product, never where it came from or what the person who built the
+    pool expected of it (origin, origin note, mechanisms, the builder's notes and hypotheses, the history of status changes with their reasons)."""
+    return {k: v for k, v in c.items() if k not in ("origin", "origin_note", "mechanisms", "added", "notes", "history")}
 
 
 def _cd_ids(a):
@@ -6286,12 +6430,16 @@ def main():
     p.add_argument("--exclude-eliminated", action="store_true", help="summary: leave the eliminated candidates out")
     p.add_argument("--md", action="store_true"); p.add_argument("--json", action="store_true", help="table: also return the rows in the JSON line")
     p.add_argument("--out", help="table: write the markdown table to this file")
-    p.add_argument("--blind", action="store_true", help="hide origin (rating is origin-blind)")
+    p.add_argument("--blind", action="store_true", help="hide origin, origin note, mechanisms, the pool builder's notes and the history of status changes (a blind reader sees only the product)")
     p.set_defaults(fn=cmd_candidates)
 
-    p = sp.add_parser("evidence", help="Viral-Browser: research evidence ledger (add | retract | list)")
-    p.add_argument("action", choices=["add", "retract", "list"]); p.add_argument("--run", required=True)
+    p = sp.add_parser("evidence", help="Viral-Browser: research evidence ledger (add | copy | retract | list)")
+    p.add_argument("action", choices=["add", "copy", "retract", "list"]); p.add_argument("--run", required=True)
     p.add_argument("--id", help="retract: the evidence row")
+    p.add_argument("--ids", help="copy: the evidence rows to repeat (EV001,EV004 ...)")
+    p.add_argument("--to", help="copy: the candidates that get a copy of each row (C05,C11 ...); a row is never copied onto its own candidate")
+    p.add_argument("--from-json", dest="from_json", help="add: a JSON list of rows (cand, lane, claim, source, grade, signal, independent, and optionally value, unit, market, retrieved, note, by, opened); every row is checked first and all are written in one go, or none")
+    p.add_argument("--opened", choices=["yes", "no"], help="add: yes = you opened the page itself; no = you know the fact only from a search summary or snippet (left out: not recorded)")
     p.add_argument("--cand"); p.add_argument("--lane", choices=EV_LANES); p.add_argument("--claim")
     p.add_argument("--source", help="URL, or the method for a grade C estimate")
     p.add_argument("--grade", choices=["A", "B", "C", "D"], help="A primary/official or measured; B reputable secondary; C derived estimate with its method; D unverified")
@@ -6347,10 +6495,39 @@ def main():
     p.add_argument("--allow-private-host", action="store_true", help=argparse.SUPPRESS)      # the local test server only; no prompt uses it
     p.add_argument("--out"); p.add_argument("--md", action="store_true"); p.set_defaults(fn=cmd_photo)
 
-    p = sp.add_parser("econ", help="unit economics: VAT-inclusive retail, landed cost, fulfilment, fees, returns -> contribution (arithmetic, per market)")
+    p = sp.add_parser("landed", help="landed cost per unit built up from a supplier price, freight per CBM, a duty rate and other costs (arithmetic only; pass the result to econ --landed)")
+    p.add_argument("--fob", type=float, required=True, help="the supplier's price per unit (FOB)")
+    p.add_argument("--freight-per-cbm", dest="freight_per_cbm", type=float, default=0.0, help="ocean freight plus handling per cubic metre")
+    p.add_argument("--units-per-cbm", dest="units_per_cbm", type=float, default=0.0, help="how many packed units fit in one cubic metre")
+    p.add_argument("--insurance-pct", dest="insurance_pct", type=float, default=0.0, help="insurance as a share of price plus freight")
+    p.add_argument("--duty-pct", dest="duty_pct", type=float, default=0.0, help="the ordinary customs duty rate")
+    p.add_argument("--duty-extra-pct", dest="duty_extra_pct", type=float, default=0.0, help="additional duties or tariffs that stack on the ordinary rate")
+    p.add_argument("--duty-base", dest="duty_base", choices=["cif", "fob"], default="cif", help="what the duty is charged on (default: price plus freight and insurance)")
+    p.add_argument("--import-vat-pct", dest="import_vat_pct", type=float, default=0.0, help="import VAT that cannot be recovered (0 when the importer recovers it)")
+    p.add_argument("--other-per-unit", dest="other_per_unit", type=float, default=0.0, help="inland transport, brokerage, packaging-register fees and similar, per unit")
+    p.add_argument("--fx", type=float, help="multiply the total by this rate to express it in --currency (for example 0.87 to turn USD into EUR); the agent registers the rate's source")
+    p.add_argument("--currency", default="USD", help="the currency of the result (a label)")
+    p.add_argument("--moq", type=int, help="minimum order quantity: prints the capital at risk")
+    p.set_defaults(fn=cmd_landed)
+
+    p = sp.add_parser("econ", help="unit economics: VAT-inclusive retail, landed cost, fulfilment, fees, returns -> contribution (arithmetic, per market)",
+                      formatter_class=argparse.RawDescriptionHelpFormatter,
+                      description="Arithmetic only; it judges nothing. The formulas, so that nothing is hidden:\n"
+                                  "  net revenue          = retail / (1 + VAT%)\n"
+                                  "  fees                 = (platform% + payment%) x the amount they are charged on (--fees-on) + the fixed payment fee\n"
+                                  "  return loss          = returns% x (net revenue + return cost - resale% x landed cost)\n"
+                                  "  contribution/order   = net revenue - landed - extra per unit - fulfilment - fees - return loss\n"
+                                  "  break-even CPA       = the contribution per order (negative when the order loses money)\n"
+                                  "  break-even ROAS      = net revenue / contribution (and retail / contribution on the amount paid); null when the contribution is not positive\n"
+                                  "  capital at the MOQ   = MOQ x landed cost\n"
+                                  "  price for a target   = net revenue n solves  n (1 - fee% x k - returns% - target%) = landed + extra + fulfilment + fixed fee + returns% (return cost - resale% x landed), k = 1 + VAT when fees are on the amount paid; retail = n (1 + VAT)\n"
+                                  "  stress cases         = retail -20%, returns x2, landed +15% (the landed cost only), and all three")
     p.add_argument("--retail", type=float, required=True, help="consumer price (VAT-inclusive in the EU)")
     p.add_argument("--vat-pct", type=float, default=0.0, help="VAT included in the retail price (0 for US prices, which exclude sales tax)")
     p.add_argument("--landed", type=float, required=True, help="cost per unit delivered to the warehouse: product + freight + duty + non-recoverable import VAT")
+    p.add_argument("--extra-per-unit", dest="extra_per_unit", type=float, default=0.0,
+                   help="a cost per unit that is not in the landed cost (for example an amortised test or certification cost, an authorised-representative fee, a packaging-register fee); subtracted from the contribution and shown on its own row")
+    p.add_argument("--extra-label", dest="extra_label", help="what the extra cost per unit is, in words (kept with the result)")
     p.add_argument("--fulfil", type=float, default=0.0, help="pick, pack and shipping per order")
     p.add_argument("--platform-fee-pct", type=float, default=0.0); p.add_argument("--payment-fee-pct", type=float, default=0.0)
     p.add_argument("--payment-fixed", type=float, default=0.0)
@@ -6360,9 +6537,11 @@ def main():
     p.add_argument("--resale-pct", type=float, default=0.0, help="share of the landed cost recovered by reselling a returned unit (default 0: conservative)")
     p.add_argument("--moq", type=int, help="minimum order quantity: prints the capital at risk")
     p.add_argument("--stress", action="store_true", help="also compute retail -20%%, returns x2, landed +15%% and all three")
+    p.add_argument("--target-pct", dest="target_pct", type=float, help="also solve the retail price at which the contribution reaches this share of net revenue (for example 25), with every other input unchanged; the agent compares it with the prices the market shows")
     p.add_argument("--cand", help="write the result into this candidate (one result per market, side by side) and register a grade C economics evidence row (needs --run and --market)")
     p.add_argument("--run"); p.add_argument("--currency", default="USD")
     p.add_argument("--market", help="the market of this calculation (required with --cand)")
+    p.add_argument("--note", help="a note kept with the stored result and its evidence row (for example: a scenario run at the ceiling, not a quote)")
     p.add_argument("--apply", action="store_true", help=argparse.SUPPRESS)
     p.set_defaults(fn=cmd_econ)
 
