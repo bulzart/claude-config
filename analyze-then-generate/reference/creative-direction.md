@@ -304,8 +304,9 @@ A concept passes only if every answer is yes:
 - **Loop:** the end state echoes the start, or the last frame is the strongest one.
 - **Text:** the hook line is the premise, never the explanation; the format's caption grammar;
   placed clear of the product (`capcut-assembly.md`), in the house style.
-- **Sound (Create):** the soundtrack's role from the references' sound profiles (dramatic, comic,
-  suspense, hype, SFX-driven); the lift or the drop on the payoff; memes keep their sound.
+- **Sound (Create):** the soundtrack's role from the references' sound profiles, which are numbers the agent
+  reads (dramatic, comic, suspense, hype, SFX-driven; `analysis-protocol.md` §3 says how to read them); the lift
+  or the drop on the payoff; memes keep their sound.
 
 ## 8. Creative QC (X9, as notes; the narrative gate decides)
 

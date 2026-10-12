@@ -146,9 +146,9 @@ More cases, by kind:
 
 - **Count:** the limit holds at every checkpoint (`T qc --dense`), including the first and last
   frame.
-- **De-branding:** `T qc` OCR shows no competitor name anywhere, and a full-resolution look at every
-  de-branded object shows no logo, claw, crest or livery that names the brand, no blur and no
-  patch; the object stands as before.
+- **De-branding:** the text `T qc` lists (`visible_text`, from its OCR) contains no competitor name anywhere (you
+  compare it with the competitor list), and a full-resolution look at every de-branded object shows no logo,
+  claw, crest or livery that names the brand, no blur and no patch; the object stands as before.
 - **Likeness:** the identity check covers every shot, reflection and mirror, and every insert
   placed back; the swapped character is the only face.
 - **Text:** the rewritten lines and the disclaimers are on the CapCut preview, in the house style.

@@ -297,7 +297,7 @@ sizes of what stands beside it. A product that reads too big reads as a paste (�
 size. A can taller than a forearm. A child's bottle adult-sized in his hands and tiny on the table.
 A phone that grows when lifted. A car shorter than the person beside it. A product that changes size
 across cuts. A glass larger than the can that filled it. A false flag is a break of the check, not of the video: a can
-standing under a metre from the lens was judged against an assumed 1.5 m and reported at 2.8× its size
+standing under a metre from the lens was measured against an assumed 1.5 m and read as 2.8× its size
 (1.07× by eye; CE-028), and the same assumption may sit under other flags of that run.
 
 **Ledger: the size reckoning,** one line per product per shot, written in the plan from these
@@ -377,27 +377,32 @@ filled over 12 % and stood taller than the bottle, which puts it either at 0.9 m
 **QC.** On one full-resolution frame at rest, one in use and the last frame, measure the product's
 pixel height and the pixel height of the named neighbour (or a hand or face) at the same depth, and
 run `atg.py scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1>
-[--depth-ratio r] [--distance d --distance-basis "<how d was derived>" --lens f]`; write the observed
-multiple of the expected size in the verdict ("renders at 2.6× its expected size vs the bottle"). Compare
-across shots and after every cut for constancy. The same measurement is the "scale" sign of the paste test
-(§2.15).
-- **Two independent estimates must agree before an oversize verdict** (CE-028; CE-005, CE-014, CE-015):
+[--depth-ratio r] [--distance d --distance-basis "<how d was derived>" --lens f]`. The tool does
+arithmetic only: for each estimate it can make it returns `size_factor` (the observed size as a multiple of the
+expected size) and `deviation_pct`, with two estimates also `estimates_spread_pct`, and it records the distance
+basis as given; it prints no verdict. You read the numbers with the rules of thumb below (guidance, not enforced by
+the tool: depart from them when the evidence says so, and write down what you applied or set aside and why), and
+write the observed multiple of the expected size in the verdict ("renders at 2.6× its expected size vs the
+bottle"). Compare across shots and after every cut for constancy. The same measurement is the "scale" sign of the
+paste test (§2.15).
+- **Two independent estimates should agree before you call a size oversize** (CE-028; CE-005, CE-014, CE-015):
   (A) the ratio to a named same-plane neighbour (`--ref-cm/--ref-px`), and (B) the expected fraction of the
   frame height from a distance derived from a different object or the surface (`--distance` with
-  `--distance-basis`). They agree when the two multiples are within 25 % of each other; the tool prints
-  `inconclusive` when they do not, and nothing is flagged until the distance and the neighbour are
-  re-derived on the frame.
-- **A verdict from one assumed number is provisional.** A `scale` call with `--distance/--lens` and no
-  neighbour prints "provisional: distance assumed". A provisional verdict is not a regenerate reason, not
-  a RESIDUAL FAILURE, and is never repeated or summarised. Whoever reports a size (the production agent
+  `--distance-basis`). Rule of thumb: they agree when the two multiples are within 25 % of each other
+  (`estimates_spread_pct`); when they are further apart the reading is inconclusive, and nothing is flagged
+  until the distance and the neighbour are re-derived on the full-resolution frame.
+- **A size from one assumed number is provisional** (your word; the tool does not label it). A `scale` call with
+  `--distance/--lens` and no neighbour gives one estimate from a distance that may be an assumption. A
+  provisional reading is not a regenerate reason until a second estimate agrees, not a RESIDUAL FAILURE, and is
+  never repeated or summarised. Whoever reports a size (the production agent
   and the main session alike) first views the full-resolution frame, checks that the rows measured are the
   product and the neighbour, and re-measures when the eye disagrees with the number.
 - **The verdict line records the method:** the multiple vs the neighbour (A: product px / neighbour px ×
   cm), the multiple vs distance (B: d, its basis, f), and whether the two agree. When the user's eye
   disagrees with a flag, it is re-measured, not defended; the other flags that rest on the same
   assumption are re-measured too.
-- **Accept** within 15 %. **Note** between 15 and 25 % when the product is static, the label stays
-  readable and nothing else fails (the sachet case).
+- **Accept** within 15 % (`deviation_pct`). **Note** between 15 and 25 % when the product is static, the label
+  stays readable and nothing else fails (the sachet case).
 - **Regenerate** over 25 %, or when the size changes between shots or across a cut, or when a
   product is larger than a hand that holds it when it should not be. There is **no post-fix**: a
   punch-in cannot shrink a product in its scene.
@@ -517,7 +522,8 @@ the process's real duration.
 **Prompt.** "Real-time speed"; one process per stage with its natural duration; never a timestamp
 on free motion (`generation-system.md` §5b).
 
-**QC.** The dense sheet of the process: continuous progress at a natural duration; `T qc` freezes.
+**QC.** The dense sheet of the process: continuous progress at a natural duration; the freeze starts `T qc` lists
+are pointers to look at on the sheet.
 - **Regenerate** on frozen, impossibly fast or repeated processes. **Post-fix** (trim) a dead tail.
 
 ### 2.13 Stylised and anime rendering
@@ -758,7 +764,12 @@ frame <path>"); an unchecked item counts as failed. **Regenerate** on a visible 
 
 1. `T qc --video <final> --out <dir> --mode <mode> --allowed-text "…" --dense "<label>:<a>-<b>" …`
    with every checkpoint of the plan: it writes a 30 fps sheet per checkpoint under `<dir>/dense/`
-   beside the 5 fps storyboard. View every sheet.
+   beside the 5 fps storyboard, and returns measurements beside the expected values (duration, aspect, size,
+   audio, black spans, freeze starts, and `planned_text` beside the `visible_text` its OCR saw), with no pass or
+   fail. View every sheet, read the numbers, and write the verdict yourself. Rules of thumb for the numbers: a
+   duration off by more than max(0.25 s, 5 %) is a duration problem; any black span or freeze needs a look at the
+   sheet; Edit Mode: no source text may remain unless the user kept it; Analyze Mode: only the planned text may
+   appear, anything else is pseudo-text or a copied artifact.
 2. **Count** every multiple at every checkpoint and write the numbers in the QC note
    ("capsules 3 / 3 / 3 / 1, two taken at 7.5 s").
 3. **Part and contact** on every use beat: the preparation step, the part used, the lips or hand on
@@ -774,9 +785,10 @@ frame <path>"); an unchecked item counts as failed. **Regenerate** on a visible 
    the product's pixel height against the named neighbour's at the product's own depth (A; `--depth-ratio` is
    read from the frame when the product stands in front of or behind that neighbour, a can on the near table
    strip against the person seated behind it, and is never left at 1; CE-014, CE-015) and against a distance derived from the
-   frame (B, `--distance-basis`), the two multiples agreeing before an oversize verdict, the observed
-   multiple of the expected size and the method written in the verdict, constancy across cuts; a
-   verdict from one assumed number is provisional and is viewed on the frame first (§2.7).
+   frame (B, `--distance-basis`), the two multiples agreeing (within 25 % of each other) before you call a size
+   oversize, the observed multiple of the expected size and the method written in the verdict, constancy across
+   cuts; a size from one assumed number is read as provisional and is viewed on the frame first (§2.7; the tool
+   returns numbers only).
 5e. **Identity match** on a full-resolution frame with the face and a hand or forearm: same skin tone, age
    and build as the kept body, with the frame path in the verdict (§2.17; CE-029).
 5c. **Blend** on one full-resolution frame at rest and one during any interaction: the eleven-sign
@@ -822,8 +834,8 @@ state: can tab raised at 0.0 s, cracked at 3.0 s in the plan → regenerate; cau
 permanence: pouch missing 8.1–8.3 s while the arm passes; untouched static anchor, locked camera → post-fix (pixel hold from frame 236); checked at 30 fps, no edge artefacts.
 scale: pack 155 px = 12 % of frame height vs ~10 % target, constant → accept with note.
 size (method): can 270 px = 21 % of the frame; A: vs her head (23 cm, 250 px, at 1.0 m; the can at 0.55 m, `--depth-ratio 0.55`) = 0.87×; B: d = 0.55 m derived from the desk edge, f 26 → expected 264 px = 1.02×; A and B agree → accept (an assumed 1.5 m had said 2.79×).
-size (provisional): `scale --distance 1.5 --lens 26` only → "2.79× (provisional: distance assumed)": not flagged and not repeated; the frame shows the can on the near fold-out desk under a metre from the lens (CE-028) → re-measured against the head, then judged.
-size (neighbour in another plane): can 375 px = 29 % of the frame; A against her head (23 cm, 340 px) at `--depth-ratio` 1 gives 1.61×, but the can stands on the near table strip in front of her, so that A is invalid; the depth ratio is read from the frame (the can nearer than her head) and B is derived from the table plane; if they disagree the verdict is inconclusive, nothing is flagged and the depth is re-derived (CE-014, CE-015, re-measured 2026-10-10: 1.07× to about 1.4×, unsettled).
+size (provisional): `scale --distance 1.5 --lens 26` only → one estimate, 2.79× from an assumed distance, which the agent reads as provisional (the tool prints numbers, not that word): not flagged and not repeated; the frame shows the can on the near fold-out desk under a metre from the lens (CE-028) → re-measured against the head, then judged.
+size (neighbour in another plane): can 375 px = 29 % of the frame; A against her head (23 cm, 340 px) at `--depth-ratio` 1 gives 1.61×, but the can stands on the near table strip in front of her, so that A is invalid; the depth ratio is read from the frame (the can nearer than her head) and B is derived from the table plane; if they disagree (`estimates_spread_pct` above about 25 %) the reading is inconclusive, nothing is flagged and the depth is re-derived (CE-014, CE-015, re-measured 2026-10-10: 1.07× to about 1.4×, unsettled).
 size (wan3_0_prime): carton 163 px vs ~95 expected = 1.71× vs the bottle → regenerate; the guide lists size as a model limit, so no wording retry: the retry changes the form or the anchor class (in hand / beside a large same-plane object / one flat sachet on bare near-side surface), or none is spent and the best take ships flagged and recorded.
 anchor: can absent 0.0–4.2 s, appears at the left foreground at 4.3 s → regenerate (never a note); the 0–1 s dense sheet shows an empty table. | can at 1.0 s left of the table end, at 2.0 s one laptop-width to the right, no action, no cut → regenerate; read against the table edge every 0.25 s.
 timeline: overlay clip visible on 2.93–3.0 s as a bright rectangle on the fading picture → the overlay is cut to the frames its element is visible and faded with the picture; hold frames under the flash replaced by real-motion fades into pure white; original audio one segment, stream copy, hash identical.
@@ -839,14 +851,14 @@ posture: sachet upright against the forearm 4.8–6.0 s @30 fps, 0 px gap to the
 | used before being made ready | event with cause | "lifts the tab; it stays up; then drinks from the opening" | state-change beat at 30 fps; cause before effect | regenerate; drop the leaking reference |
 | opened, torn or poured state reverses | states copied forward | "continuing with the pouch torn open …" | every cut and re-entry; last frame | regenerate (trim a one-frame flicker) |
 | level rises or falls without cause; wrong contents | level; sample binding | "half full … the can then nearly empty"; contents = the liquid of @ImageN | pours and sips at 30 fps; levels at checkpoints | regenerate |
-| product too big, or its size changes | the size reckoning per shot: real dimensions, depth, lens, expected fraction of the frame, ratio to a named neighbour, the size ladder, constancy | "two thirds the height of the bottle beside it, on the dresser about 2.5 m from the camera, a small object in the background; it keeps this size" | `T scale` on a frame at rest, one in use and the last: observed vs expected by two estimates (neighbour ratio; a distance derived from the frame with `--distance-basis`) that agree; one assumed number is provisional and viewed first; constancy across cuts | regenerate (> 25 % on agreeing estimates, changing, or larger than the hand that holds it; no post-fix); a note at 15–25 % when static and readable |
+| product too big, or its size changes | the size reckoning per shot: real dimensions, depth, lens, expected fraction of the frame, ratio to a named neighbour, the size ladder, constancy | "two thirds the height of the bottle beside it, on the dresser about 2.5 m from the camera, a small object in the background; it keeps this size" | `T scale` on a frame at rest, one in use and the last: observed vs expected by two estimates (neighbour ratio; a distance derived from the frame with `--distance-basis`) that agree; one assumed number is read as provisional and viewed first; constancy across cuts | regenerate (> 25 % on agreeing estimates, changing, or larger than the hand that holds it; no post-fix); a note at 15–25 % when static and readable |
 | a placed or contents product absent in the opening seconds, or moving along the surface without an action or a motivating cut | the anchor row from t=0 with a fixed neighbour; a visible cause for every move | "stands on the table from the first frame, left of the laptop, and stays; nobody touches it" | dense sheets of 0–1 s and of the whole clip, the product read against the fixed neighbour at least every 0.25 s | regenerate (no post-fix) |
 | a transition, insert edge or overlay leaves a frozen frame, the replaced performer, a stray rectangle or brightness step, a spliced or shortened audio track, or an emoji in a text layer | the timeline row of the CapCut plan: pieces, edges, overlay lifetimes, one audio segment | edges cut on frames of the insert only; real-motion fades into a pure-colour gap; overlays trimmed to their visible frames and faded with the picture | dense sheets at every transition, insert and overlay start and end; audio hash or null test; text-layer scan | fix in the CapCut project (no regeneration) |
 | head tilted on a straw; fingers through; a second copy in the other hand | holder and hand; mouth | "drinks through the straw with his head level"; "both hands around the bottle" | use beat at 30 fps | regenerate |
 | label mirrored, rotated or migrated; flavour changes; a part moves | mark orientation | "label upright, faces the camera, tilts with the bottle; same flavour throughout; strap on the lid" | first and last frame; rests; a full-resolution frame | regenerate (soft label while gripped: a note or a punch-in) |
 | giver still holds it after the hand-off; two items | holder per row | "after that, only the boy holds it; her hands are empty" | hand-off at 30 fps; count after | regenerate |
 | floats, sinks, wrong shadow, decor moves, wrong user | environment row; roles | contact shadow; "stays on the table"; who uses what | every sheet; cuts | regenerate (constant colour drift: post-fix) |
-| process impossibly fast, frozen or repeated | time budget | "real-time speed"; one process per stage | dense sheet of the process; `T qc` freezes | regenerate (dead tail: trim) |
+| process impossibly fast, frozen or repeated | time budget | "real-time speed"; one process per stage | dense sheet of the process; the freeze starts `T qc` lists | regenerate (dead tail: trim) |
 | a thrown, dropped or passing thing goes through the product; the product sinks or shows through; a hit without a consequence; wrong occlusion order | path row; occlusion note | "it arcs past the bottle on its far side and lands behind it; the bottle is not touched"; "hits the can, bounces off; the can rocks and settles"; "nothing passes through the bottle" | every pass-near, landing and hit at 30 fps; silhouettes, depth order, consequence | regenerate (no post-fix) |
 | the product reads as a paste: brighter or cooler than the room, flat front light, no contact shadow, crisper than the plate, packshot pose, wrong perspective, wrong size, hard edges, on an empty edge | anchor row with the light on the spot, the neighbour for scale and shadow, the occluder, the mark angle | "@ImageN defines only shape, proportions, colours and label; not its lighting, exposure, background or camera angle"; "lit by the same warm, dim ceiling light as the bottle beside it, a third shorter than it, label about 30° away, soft contact shadow to the right like the bottle's, seen from the same low angle" | one full-res frame at rest and one in use: the eleven-sign paste test against the nearest neighbour | regenerate (local regrade only for a static untouched product failing on exposure alone) |
 | a placed pack stands on its edge or leans on nothing, rests on a thin sheet, touches a working hand or arm, or takes over a source beat | the anchor row: posture, support, clearance, story reason | "lies flat on its wide face, label up, entirely on the bare marble at the near edge, a band of bare marble wider than itself to his forearm, where someone sets a sachet down out of the way"; "no standing, leaning, propped or tilted sachet, no sachet on a sheet" | every rest and every pass of a hand or sheet at 30 fps: posture, support, clearance, the sheet region; the story reason as its own line | regenerate (no post-fix) |

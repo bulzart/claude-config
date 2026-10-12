@@ -74,9 +74,15 @@ Text may be created when it improves the concept or matches the analyzed structu
 ## 2. Edit Mode: removing source text
 
 ### 2.1 Inventory (before planning the edit)
-Sources: `10-media/<id>/ocr.json` (spans with `kind_hint`, `y_rel` and `caption_bands_y_rel`),
+Sources: `10-media/<id>/ocr.json` (spans with the numbers that describe each text: `first_t`, `last_t`, `hits`
+(frames it was seen in), `share_of_frames_scanned`, `y_rel` and `band`, `band_distinct_texts` and `band_frames`
+(how many different texts, in how many frames, sat in that row of the frame), `score_mean`, and the spelling
+facts `has_at_handle`, `has_hashtag`, `has_url_pattern`; plus `bands[]`, the rows of the frame with their counts),
 `timeline.md` (the text column per second), and the storyboard sheets (read every overlay by eye; OCR
-misses stylised text and stickers).
+misses stylised text and stickers). The tool labels nothing: whether a text is a caption, a fixed overlay, a
+handle, a watermark, a label or noise is your reading of these numbers and the picture. Rules of thumb: a row of
+the frame that held many different texts over several frames reads like a caption track; a text seen in most of
+the scanned frames reads like a fixed overlay; the spelling facts help to tell a handle or a URL from a caption.
 
 For each element record:
 
@@ -95,8 +101,11 @@ For each element record:
 | The user asked to keep specific text | Preserve exactly that element; name it in the prompt as preserved, and remove everything else |
 
 ### 2.3 Verify
-Run `atg.py qc --mode edit` (OCR) and view the storyboard. Any residual source text, ghosting or smear
-means the check fails: pick the next method in §2.2.
+Run `atg.py qc --mode edit` and view the storyboard. `qc` lists the text its OCR saw (`visible_text`, with
+times, frames seen and row) beside any text you planned to keep (`--allowed-text`) and says nothing about pass or
+fail: you read the list against the storyboard. In Edit Mode no source text may remain unless the user kept it
+explicitly, so any residual source text, ghosting or smear means the check fails (your verdict): pick the next
+method in §2.2.
 
 ## 3. Analyze Mode: planning text and placing it in CapCut
 
@@ -146,7 +155,9 @@ means the check fails: pick the next method in §2.2.
 7. **QC:**
    - The **generated plate** must be text-free:
      `atg.py qc --mode analyze --allowed-text "<printed words of every client asset visible>"`.
-     Anything else detected is pseudo-text or a copied artifact: fix the plate or regenerate.
+     `qc` returns `planned_text` (what you allowed) beside `visible_text` (what its OCR saw); you compare the two
+     and read the storyboard. Anything visible that was not planned is pseudo-text or a copied artifact: fix the
+     plate or regenerate.
    - The **text** is checked on the CapCut preview (`capcut-assembly.md` §5): wording, timing,
      position, no emoji, and every overlay on exactly its visible frames.
 
@@ -166,7 +177,9 @@ stretched.
    - reframe the source (below).
 4. **A source video is not 9:16 in Edit Mode** → before the edit:
    - `atg.py conform --focus-x/--focus-y` when a crop keeps every important subject, prop and action
-     (the tool refuses more than 12 % loss unless `--allow-large-crop`; check the storyboard first);
+     (`--dry-run` reports `lost_fraction`, the share of the picture the crop removes, and writes nothing; the
+     tool never refuses a crop, so you decide: a loss above about 12 % is a reason to use Higgsfield `reframe` or
+     to regenerate from a 9:16 start frame; check the storyboard first);
    - otherwise Higgsfield `reframe` (`aspect_ratio:"9:16"`, `resolution:"720p"`, AI-expanded edges;
      preflight with `get_cost`);
    - otherwise regenerate with the source as a video reference in a 9:16 generation.

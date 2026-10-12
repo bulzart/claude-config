@@ -149,7 +149,7 @@
     }
   },
   "viral_browser": {
-    "note": "Analyze Mode, Viral-Browser sub-mode (reference/viral-browser.md). Nothing is generated. Keys the scripts read have defaults in atg.py (VB_DEFAULTS) and a key here replaces the default (the rubric and independent_criteria replace wholesale; other nested keys merge); the other keys (browser_pages_per_candidate, reference_pages_max, pick_trend_checks, backfill_researched, reference_pack_budget, red_team_budget_per_candidate, verification_budget, trend_checks) are read by the command. No niche, product or category name is configured or built in anywhere: the niche vocabulary is data the agents write into each run (20-analysis/niche-vocabulary.json).",
+    "note": "Analyze Mode, Viral-Browser sub-mode (reference/viral-browser.md). Nothing is generated. THE RULE (user, 2026-10-12): scripts gather, extract, record, tabulate and calculate; they never evaluate. So no script reads a threshold from here to refuse, cap, rank or flag anything. The keys that scripts DO read are only names: `rubric` (the rating criteria and their weights, for `candidates rate` and the optional weighted-sum column of `candidates table`), `spec_core_fields` (the rows of `spec gaps`) and `photo_core_angles` (the columns of the photo coverage table). The other flat keys (budgets, counts, page limits) are read by the command. `rules_of_thumb` is GUIDANCE for the agent that runs the pipeline: it applies it by its own reading, may depart from it when the evidence says so, and writes down what it applied or departed from, and why, in the bias log (30-research/ranking.md). No niche, product or category name is configured or built in anywhere: the niche vocabulary is data the agents write into each run (20-analysis/niche-vocabulary.json).",
     "max_research_agents": 3,
     "research_budget_per_candidate": {
       "quick": 8,
@@ -165,10 +165,6 @@
       "min": 12,
       "max": 20
     },
-    "min_categories_in_pool": 6,
-    "max_pool_share_per_category": 0.4,
-    "niche_dominance_threshold": 0.4,
-    "max_picks_per_category": 2,
     "picks": 3,
     "runner_ups": 3,
     "rubric": {
@@ -182,27 +178,6 @@
       "timing": 5,
       "producibility": 5
     },
-    "independent_criteria": [
-      "demand",
-      "commercial",
-      "competition",
-      "economics",
-      "compliance"
-    ],
-    "cap_without_independent_evidence": 2,
-    "gates": {
-      "min_scores": {
-        "demand": 3,
-        "commercial": 3,
-        "economics": 3,
-        "compliance": 3,
-        "fit": 3
-      },
-      "min_contribution_pct": 25,
-      "min_independent_evidence": 2,
-      "min_confidence_for_pick": "medium"
-    },
-    "small_n_warning_below": 10,
     "red_team_budget_per_candidate": 8,
     "verification_budget": 12,
     "trend_checks": {
@@ -210,8 +185,6 @@
       "standard": 6,
       "deep": 12
     },
-    "contradicted_cap": 3,
-    "type_similarity": 0.5,
     "redteam_extra": 2,
     "browser_pages_per_candidate": {
       "quick": 2,
@@ -238,10 +211,6 @@
       "standard": 24,
       "deep": 40
     },
-    "photo_max_per_pick": 12,
-    "photo_max_attempts": 30,
-    "photo_small_bytes": 30000,
-    "photo_min_angles": 4,
     "photo_core_angles": [
       "front",
       "back",
@@ -249,22 +218,86 @@
       "right",
       "top"
     ],
-    "photo_reference_set_angles": [
-      "front",
-      "three-quarter",
-      "back",
-      "left",
-      "right",
-      "side",
-      "top",
-      "detail"
+    "spec_core_fields": [
+      "width",
+      "height",
+      "depth",
+      "length",
+      "diameter",
+      "thickness",
+      "weight",
+      "material",
+      "texture",
+      "finish",
+      "usage"
     ],
-    "photo_reference_set_max": 5,
-    "spec_tolerance_pct": {
-      "length": 3.0,
-      "weight": 5.0,
-      "volume": 5.0,
-      "other": 2.0
+    "rules_of_thumb": {
+      "note": "Guidance for the agents, not enforced by any script. Read it, apply it with judgement, record what was applied or set aside and why.",
+      "min_categories_in_pool": 6,
+      "max_pool_share_per_category": 0.4,
+      "niche_dominance_threshold": 0.4,
+      "max_picks_per_category": 2,
+      "independent_criteria": [
+        "demand",
+        "commercial",
+        "competition",
+        "economics",
+        "compliance"
+      ],
+      "cap_without_independent_evidence": 2,
+      "contradicted_cap": 3,
+      "gates": {
+        "min_scores": {
+          "demand": 3,
+          "commercial": 3,
+          "economics": 3,
+          "compliance": 3,
+          "fit": 3
+        },
+        "min_contribution_pct": 25,
+        "min_independent_evidence": 2,
+        "min_confidence_for_pick": "medium"
+      },
+      "small_n_warning_below": 10,
+      "photo_max_per_pick": 12,
+      "photo_max_attempts": 30,
+      "photo_small_bytes": 30000,
+      "photo_min_angles": 4,
+      "photo_reference_set_angles": [
+        "front",
+        "three-quarter",
+        "back",
+        "left",
+        "right",
+        "side",
+        "top",
+        "detail"
+      ],
+      "photo_reference_set_max": 5,
+      "spec_tolerance_pct": {
+        "length": 3.0,
+        "weight": 5.0,
+        "volume": 5.0,
+        "other": 2.0
+      },
+      "how_to_read": {
+        "min_categories_in_pool": "the long list and the shortlist should span at least this many niches",
+        "max_pool_share_per_category": "no niche should be more than this share of the set",
+        "niche_dominance_threshold": "a niche that is at least this share of the references' cards is a dominant niche: say so in the bias log and defend a pick from it against the best alternative outside it",
+        "max_picks_per_category": "at most this many of the picks should share a niche; none should share a product type",
+        "independent_criteria": "the criteria that need evidence not derived from the references",
+        "cap_without_independent_evidence": "a rating on an independent criterion that has no positive independent grade A or B row should not be above this",
+        "contradicted_cap": "negative rows that match the positive ones: a 4 or 5 should not be above this",
+        "gates": "the six conditions a pick should meet (price band, contribution margin, compliance, exclusions, independent evidence from distinct sources with one commercial, rating floors and confidence); the main session applies them and writes the reason per candidate",
+        "small_n_warning_below": "fewer videos than this: read every share as an indication, not a rate",
+        "photo_max_per_pick": "about this many photo links per candidate is plenty",
+        "photo_max_attempts": "stop looking for links after about this many attempts",
+        "photo_small_bytes": "an image under this many bytes is probably a thumbnail: look at it before relying on it",
+        "photo_min_angles": "a reference set should show at least this many of the core angles, the front among them, with links a header request confirmed",
+        "photo_reference_set_angles": "the views worth a link, in order of use",
+        "photo_reference_set_max": "about this many links make a reference set",
+        "spec_tolerance_pct": "numbers from different sources that differ by less than this many percent (length 3, weight 5, volume 5, other 2) are normally the same fact rounded differently; a larger gap is a disagreement to resolve or to record"
+      }
     }
   }
 }

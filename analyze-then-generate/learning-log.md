@@ -204,3 +204,35 @@ recurs after a logged change means that change failed: revise it, do not repeat 
 - **Hypotheses to test on the first run:** (1) the `small` model is enough for the speech references and the flagged ones are few; (2) the "Said:" lines
   change the mechanism map (hook lines, promises, calls to action) beyond what the pictures gave; (3) the music-led videos with no speech are a real
   silent-friendly mechanism and not a transcription miss (check one with `--no-vad`).
+
+## 2026-10-12 · scripts gather, agents decide (every mode)
+- **User rule, verbatim:** "make sure that the python scripts do not carry the heavy comparison and the final word because thats not correct, we do not
+  want 'script that counts x word or niche that was gathered by the agents and then decides who wins because the script gathered x word to be more used than
+  x word' because thats not normal, scripts can be used to gather and excract but never evaluate, scripts do not have decisive logic nor can understand data,
+  decisions and evaluating the data should be carried by the ai agent that will run the pipeline", and then: "this logic should be true for all the modes ...
+  on each mode the agents are those who decide what to do based on the mode specs, scripts just help with gathering and collecting".
+- **Audit result (what decided in the scripts):** (a) shared tools, all modes: `qc` (problems list, pass flag, substring comparison of planned and seen text),
+  `sync-check` (in_sync / constant_offset / drift / out_of_sync and a fix), `scale` (ok / note / regenerate / provisional / inconclusive), `conform` (refused a
+  large crop), `finalize` (refused a file that failed its checks), `restore-audio` (gates), the submission ledger (refused four ways), `model-menu` (a ranked
+  quick-pick list), `inventory` (guessed what a file is from its name), the OCR (caption track, persistent overlay, likely noise), the audio profile
+  (music bed likely/unlikely, energy arc, reusable whole) and the audio digest (kind, language-uncertain flags); (b) Viral-Browser: `viral-stats` (dominant
+  niche, concentration index, small-sample flag), `niches` (shared-word and look-alike warnings, a 25-character reason rule, an audit the script validated),
+  `candidates` (pool balance, shortlist refusal, status guards, the independent-evidence cap, floors, six gates, the niche cap, tie-breaks, the ranking, two
+  ablations), `spec` (clusters, verified / official / reported / conflict, a completeness verdict, text-agreement and negation heuristics), `photo` (scores,
+  a junk flag, view guesses, a coverage verdict, a suggested reference set, caps) and `econ` (judging warnings, "the lowest market counts").
+- **What replaced them:** numbers, records and side-by-side tables, with the decision recorded by the agent (`--by`, `--reason`, histories, `spec judge`,
+  `niches audit`, the bias log in `ranking.md`). New or changed: `candidates rate | table | summary` (no `rank`, `pool`, `shortlist`), `spec judge | table | gaps`
+  (no `check`), `niches` as a record (no `distinct`), `evidence retract | list --counts`, `ledger begin` reports `conflicts` and refuses nothing, `conform --dry-run`,
+  `sync-check` windows with their correlation and motion, audio numbers (spectral flatness, steady-tone share, harmonic share, first confident word).
+  The numbers the scripts enforced are rules of thumb in `config.json -> viral_browser.rules_of_thumb` and in the references, for the agent to apply, to
+  depart from when the evidence says so, and to write down.
+- **Kept, on purpose:** file locks, the exact-fingerprint bookkeeping, the safe-address guard of the page reader and the link probe, the form checks (a URL behind a
+  sourced row, an integer 1-5, a unit for a size), the CapCut "close CapCut" and locked-preset checks. None of them reads meaning.
+- **Found by the first live run (15 references, 2 card agents):** sung and rapped words counted as speech, a ghost first word, a beep read as words, the
+  music-bed label wrong on noise and on a tone; the c< frame showed the new shot; the index printed prep time as if it were the length; a card agent could not tell
+  who sets price_tier and creator_group. The first four are exactly what a label hides and a number shows.
+- **Lesson, as a kind:** a label computed by a script (likely, covered, dominant, verified) lets the reader skip the data, and a heuristic behind it hides its inputs;
+  a threshold in code is a decision nobody wrote down. Return the inputs, tabulate them, and let the agent that reads them decide and say why.
+- **Hypotheses to test on the first full run:** (1) the main session's bias log names the dominant-niche reading and every departure from a rule of thumb, with
+  its reason; (2) the blind scorer's notes say which evidence rule it applied; (3) `ranking.md` and the recorded `pick-rank`s agree; (4) no agent treats
+  a table order as a ranking.

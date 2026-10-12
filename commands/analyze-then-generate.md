@@ -61,6 +61,22 @@ references become a **source of ideas**, nothing is generated, and the run retur
 products to sell** with the same viral approach, each with a blueprint. Contract items 3–6, 12–16 and 19
 concern video generation and apply to Edit Mode, Recreate and Create. Items 23–25 govern Viral-Browser.
 
+**Scripts gather, the agent decides** (the user's rule, 2026-10-12; it holds in every mode and for every
+`T` command). The scripts measure, extract, record, tabulate and calculate. They never hand out a
+verdict, status, flag or label derived from content, never apply a threshold that refuses, caps or
+changes an answer, never rank, pick or break a tie, and never compare texts or count words to decide
+anything. They refuse only a bad argument, a missing file or tool, a damaged ledger, an unsafe web
+address or a failed ffmpeg run (the mechanical exceptions: file locks, the submission ledger's
+fingerprint bookkeeping, the public-address guard of the page reader, CapCut's "close it first" and the
+locked house preset). **You**, the agent that runs the pipeline, read the numbers and tables they return,
+decide under the mode's specification, and record every decision with its reason (`--by` / `--reason`, the
+caught-error ledger, the bias log in `30-research/ranking.md`, `ledger set --status superseded --note`).
+Numbers that older versions of the toolkit enforced (the 0.10 s sync tolerance, the 15 % / 25 % size
+bands, the 12 % crop loss, the pool shares, the rating floors, the evidence caps) are **rules of thumb**:
+apply them with judgement, depart from them when the evidence says so, and write down what you applied,
+what you set aside and why. Independent checks stay fresh AI agents (niche audit, blind scoring, red
+team, reference packs), never script gates.
+
 ## 0. Operating contract (read first, obey throughout)
 
 1. **Normal command, never a workflow.** Run everything in this conversation with ordinary tools.
@@ -80,15 +96,17 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
      above for the viral cards (≤ 2, disjoint lists); one fresh **niche-audit agent** (before the
      shortlist); up to `viral_browser.max_research_agents` (3) **research agents** (web only,
      background, disjoint candidate lists), one fresh, blind **scoring agent** and one
-     **red-team agent**; and, after the picks are applied, up to 3 **reference-pack agents** (web
+     **red-team agent**; and, after the picks are recorded, up to 3 **reference-pack agents** (web
      only, one per pick). None calls Higgsfield or CapCut (`reference/viral-browser.md` §5, §7,
      §8.2, §9.1, §13).
    - Agents never overlap, never ask questions (they report blockers and stop), and never spawn
      agents. Edit Mode uses no production agents.
 3. **Generation lanes.** Every video is a lane with **one job in flight at a time**:
    plan → preflight → brief → submit → wait → download → post-process → QC.
-   - The ledger enforces at most `production.max_parallel_jobs` (5) jobs in flight per run, across
-     the production agents.
+   - The ledger records every submission and reports what is already in flight; the agents keep to at
+     most `production.max_parallel_jobs` (5) jobs in flight per run, across the production agents
+     (`T ledger begin` reports the open submissions against that cap; whether to submit is the
+     agent's decision, §5 X7).
    - Never use `generate_video_batch`, never submit twice in one lane, and never start an
      uncontrolled batch.
    - A multi-clip video runs **clip by clip** inside its lane: a clip is submitted only after the
@@ -160,9 +178,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     - The **examples folder** (item 18) is never a source of client assets either.
 12. **Generation discipline: no spam, no glitches.**
     - Every paid Higgsfield generation (`generate_video`, and `generate_image` for start frames)
-      goes through the ledger (`T ledger begin` before, `T ledger set` after; §5 X7). There is at
-      most **one job in flight per video lane**, at most 5 per run, one generation call per turn
-      per agent, and never parallel calls inside a lane.
+      goes through the ledger (`T ledger begin` before, `T ledger set` after; §5 X7: the ledger
+      records and reports, the agent decides). There is at most **one job in flight per video lane**, at
+      most 5 per run, one generation call per turn per agent, and never parallel calls inside a lane.
     - Never resubmit after a timeout or an unclear answer until the outcome has been checked, and
       never resubmit because a job is slow.
     - Never repeat an identical finished request.
@@ -289,9 +307,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
       For models that rebuild the action (≈, ✗), the action script is also written out in order.
       The timing comes from the source video, never from timestamps in the prompt (§5c.3);
     - X4 checks the request against the action script before any credit is spent (§5c.4);
-    - after the merge, `T sync-check` measures the timing (X8 step 5). A steady offset is fixed in
-      post. Drift or a moved action is a regenerate reason in Recreate, or the first QC note in
-      Edit Mode.
+    - after the merge, `T sync-check` measures the timing and returns numbers, not a verdict (X8 step
+      5); you read them and the sheet. A steady offset is fixed in post. Drift or a moved action is a
+      regenerate reason in Recreate, or the first QC note in Edit Mode.
     Create is not affected: it makes new scenes, and its sound is built in CapCut on their own
     beats.
 
@@ -373,8 +391,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
       price perception, the length, the engagement style), then looks for products that the same
       mechanism could carry, across the whole market.
     - **Three products, each data-backed:** researched in parallel by research agents, attacked by
-      a red-team agent, scored on a rubric, passed through six gates, and delivered with a
-      blueprint (the corpus's engagement style combined with what is trending now), the economics
+      a red-team agent, rated on a rubric by a fresh blind agent, read by the main session against
+      six gates of thumb (the reasoning written down), and delivered with a blueprint (the corpus's
+      engagement style combined with what is trending now), the economics
       at the user's price, the compliance and logistics findings, a **reference pack** (the
       product's sourced specification: size, weight, material, texture, usage; and links to photos
       from several angles, none downloaded, `viral-browser.md` §9.1), a validation plan and the evidence that would
@@ -386,19 +405,27 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
 24. **Niche-bias control: the references' product niche must not decide the answer**
     (`viral-browser.md` §5). Candidates come from the mechanism, not from "more of what the videos
     show"; the references' own products are one source among five; niches are compared through a
-    **vocabulary the agents build from the data** (`T niches`; no script lists or knows any niche),
-    never as free text, and a fresh **niche-audit agent** checks it for one niche under several names
-    (a merge, a recorded "distinct" decision or a shared-word flag is how a split is seen); the long
-    list must span at least six niches with none above 40 %, and the
-    **shortlist is re-checked by the command that starts research** (`T candidates shortlist`, which
-    also refuses an unaudited vocabulary and a word shared across niches); research and scoring are
-    **origin-blind** (a fresh scoring agent scores, never this session); evidence rows carry a direction and an independence flag, a
-    criterion without a positive independent grade A/B row is capped at 2, and the key criteria have
-    floors; at most two picks share a niche and none share a product type; every pick has a
-    red-team verdict, and every pick from the dominant niche a written defence, **before** the ranking
-    is applied; the run reports whether the picks change when reference-derived evidence or the fit
-    criterion is removed. A data-backed product from the references' own niche stays eligible and may
-    win: the evidence rules demand independent proof, not a quota.
+    **vocabulary the agents build from the data** (`T niches`, a record with its history; no script
+    lists, knows or compares any niche), never as free text, and a fresh **niche-audit agent** reads
+    it for one niche under several names, synonyms that share no word included (no script flags
+    look-alike names: the main session applies the agent's merges with a reason and records the
+    audit); the long list should span at least six niches with none above 40 %, and the main session
+    reads the **shortlist against the same rules of thumb before research starts**
+    (`T candidates summary`, then `T candidates set --status researching --by main --reason "…"`;
+    the numbers are guidance, and every exception is written in the bias log with its reason);
+    research and rating are **origin-blind** (a fresh scoring agent rates, never this session); evidence rows carry a direction
+    and an independence flag, and the scoring agent applies the rule of thumb that a criterion without
+    a positive independent grade A/B row is rated 2 at most; the key criteria need a 3 when the main
+    session selects; at most two picks should share a niche and none a product type; every pick has a
+    red-team reading, and every pick from the dominant niche (a niche that is 40 % or more of the
+    references' cards, read from `T viral-stats` by the main session) a written defence against the
+    best outside-niche alternative, **before** the picks are recorded; the run reports whether the
+    picks change when reference-derived evidence or the fit criterion is removed (the main session's
+    own what-if: `T candidates table --exclude-criteria fit`). A data-backed product from the
+    references' own niche stays eligible and may win: the evidence rules demand independent proof, not
+    a quota. No script ranks, caps, gates or picks: the main session reads the tables, decides, and
+    writes the decisions and their reasons in `30-research/ranking.md` (the picks, the runner-ups, why
+    each other candidate is not a pick, the what-if and the bias log).
 25. **Viral-Browser is autonomous after the brief:** the only questions are the brief (market,
     price range, selling model, research tools), the final feedback question, and the optional
     "continue to Create". Research blockers are reported, not asked. Continuing to Create is
@@ -411,12 +438,12 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
 |---|---|
 | `ATG` | `C:/Users/Glaresquare1/.claude/analyze-then-generate` (library root) |
 | `PY` | `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` (see `ATG/config.json`) |
-| `T` | `"$PY" "$ATG/scripts/atg.py"`. Every call prints one JSON object on its last line; run through Bash |
+| `T` | `"$PY" "$ATG/scripts/atg.py"`. Every call prints one JSON object on its last line (numbers, tables and records, never a verdict: the agent decides); run through Bash |
 | Model index | `ATG/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATG/higgsfield/higgsfield-mcp.md` |
 | Caught errors | `ATG/caught_errors.md` (item 22): `T caught-error add | list | set`; read at A1 / E1, applied in X1, X2, X9 |
 | References | `ATG/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`, `viral-browser.md`; `ATG/pipeline/preprocessing.md` |
-| Viral-Browser | `ATG/reference/viral-browser.md` (item 23; steps V1–V9); config `ATG/config.json → viral_browser`; toolkit `T viral-stats`, `T candidates`, `T evidence`, `T econ`, `T spec`, `T photo` |
+| Viral-Browser | `ATG/reference/viral-browser.md` (item 23; steps V1–V9); config `ATG/config.json → viral_browser`; toolkit `T viral-stats`, `T niches`, `T candidates`, `T evidence`, `T econ`, `T spec`, `T photo` |
 | CapCut | `capcut` MCP (drafts store and template in `ATG/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
 | Run folder | created by `T new-run` under `ATG/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json; Viral-Browser adds `30-research/` for the candidates, evidence, dossiers and ranking, and `deliverables/` for the report, the three product files and their reference packs) |
 
@@ -478,13 +505,18 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
       - It prints one numbered table of **every available video model**, with ★ Seedance 2.5 and
         ★ Wan 3.0 Prime pinned at the top and the rest in `index.json → menu.order`.
       - Live models without a guide are appended.
-      - The columns show what each can do and its fit for the mode. The Edit column reads: ✓ edits
-        video, ↔ motion transfer, ≈ recreates, ✗ frames only.
+      - The columns show what each model can do and what it offers for each mode (an Analyze and an
+        Edit column); the order is the pins, then `menu.order`, not a ranking. The Edit column reads: ✓
+        edits video, ↔ motion transfer, ≈ recreates, ✗ frames only.
    3. **Show the whole table in chat, verbatim, every row, however long.** Never shorten it to a
       top-N. The user wants to see all models.
-   4. Ask with AskUserQuestion (header "Model"). The options are the 4 `quick_picks` from the JSON
-      line (label = model name; description = its "what it can do" and mode fit). "Other" = any
-      number or name from the table; resolve numbers with the JSON `numbers` map.
+   4. Ask with AskUserQuestion (header "Model"). **You choose the 4 options** from the table (the
+      script offers no picks): the pinned models first (`pinned` in the JSON line), then the models
+      that fit the mode: for Edit Mode and Recreate the video editors (✓), then motion transfer (↔),
+      then recreation (≈); for Create the models that can analyze (the Analyze column). Label =
+      model name; description = its "what it can do" and what the mode column says. "Other" = any
+      number or name from the table; resolve numbers with the JSON `numbers` map (`unavailable`
+      lists any model of the index that is not live).
    5. Store it: after the run exists (step 6), `T state --run RUN set model=<id> model_locked=true`.
       Read its `index.json` entry now (capabilities, durations, 9:16/720p params, and
       `continuation`: the maximum per generation and how clips join), but not yet its guide.
@@ -526,8 +558,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
      4. *(Optional)* **how you sell**: the sales channel(s) (own store, TikTok Shop, Amazon, …), the ad
         platform(s), the country of your selling company (the importer of record) and the capital you
         can put into a first order. They decide the fee schedules, the restricted lists, the VAT and
-        duty regime and the MOQ check; without them the defaults are an own store with paid social,
-        the seller's own company as importer, and an unknown capital limit.
+        duty regime and the MOQ capital figure (`T econ --moq` prints the capital at risk; you compare
+        it with the limit); without them the defaults are an own store with paid social, the seller's
+        own company as importer, and an unknown capital limit.
      5. *(Optional)* `depth quick|standard|deep` (default standard) and `price` / `market` if not
         already in `$ARGUMENTS`.
      Say in the message: *"I will use the references only as ideas and generate nothing. I will
@@ -611,21 +644,40 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     documents (A2) meanwhile, and wait for the completion notification before A3;
   - fix or report any per-item errors listed in its JSON.
 - **Audio context, every analysis mode** (`analysis-protocol.md` §2 item 4, §3): then run
-  `T audio-context --run RUN --profile --second-pass`. It writes `20-analysis/audio-context.md`, one digest of what every
-  reference says and how it sounds: each transcript with its times, the language and its confidence, the speech
-  and sound facts, repeated phrases that may be lyrics, and flags for a video whose language is uncertain or whose
-  words have low confidence; `--profile` also measures each video's sound design (`audio-profile.json`); `--second-pass`
-  transcribes a music-led video in which no speech was found once more without the voice filter, so that sung words are not
-  lost (the result is shown in the digest; nothing prepared is changed).
+  `T audio-context --run RUN --profile --second-pass`. It writes `20-analysis/audio-context.md` (and the
+  `.json` beside it), one digest of what every reference says and how it sounds, as numbers and
+  extractions and never as labels. Per video: the `status` of the transcription run (a fact about the
+  run: ok = the transcriber returned words, no-speech = it returned none, no-audio, failed, missing,
+  skipped), the language and its probability, the words and words per minute, the first word (any word,
+  and the first word of probability 0.5 or more), the words below probability 0.5, the first sentence,
+  every line with its times, the three-word phrases said twice or more (an extraction), and the sound
+  numbers (`speech_share`, `non_speech_audible_share`, `harmonic_ratio_non_speech`, `tempo_bpm`,
+  `beat_strength`, `spectral_flatness_median` (near 0 tonal, near 1 noise-like), `peak_frequency_hz_median`
+  with `peak_frequency_steady_share` (near 1 = one steady tone, such as a beep), and the energy change from
+  the first to the last third); `notes` state only facts about the run (missing, skipped, failed).
+  `--profile` also measures each video's sound design (`audio-profile.json`); `--second-pass` transcribes
+  every video in which no words were found once more without the voice filter, so that sung words are
+  not dropped (shown in the digest and kept between runs; nothing prepared is changed; over pure music or a
+  tone the transcriber can invent words, so read the second pass as a second look, not as proof of speech).
+  - The scripts label nothing. You decide what the numbers mean: whether there is a music bed, whether
+    the voice is on camera, a voice-over, sung, rapped or chanted (the transcriber cannot tell speech
+    from lyrics), whether the sound is reusable whole, and what it does for the video. Every card agent
+    judges the machine transcript (ASR: it mishears and can drop or invent words) against the picture and
+    `timeline.md`.
   - Every analysis agent reads the digest before writing a card, and every card carries the **Audio context:**,
     **Said:** and **Words and sound together:** lines. In Create the speech is read for its craft, never for its lines.
-  - A video without a usable transcript (`needs_a_transcript` in the JSON) is prepared again before the cards:
-    `T prep-all --run RUN --only <V> --redo [--whisper-model medium]`. When speech cannot be recovered, the card
-    says `transcript unavailable: <why>`.
+    Sung, rapped or chanted speech is the card agent's judgement, recorded in the Facts key `voice_type`
+    (on-camera / voice-over / sung / rap / chant / none / mixed …); `Said:` may be one compact structured
+    line for a long pitch.
+  - A video without a usable transcript (status failed, missing or skipped: `without_a_transcript` in the
+    JSON) is prepared again before the cards: `T prep-all --run RUN --only <V> --redo [--whisper-model medium]`.
+    When speech cannot be recovered, the card says `transcript unavailable: <why>`.
   - **Recreate:** context only. The audio never goes to Higgsfield: only the silent copy is uploaded, and the
     original audio is restored after the result is approved (A6r). What is said tells the plan which beats the
     restored audio must still fit.
-  - After the cards are written, `T audio-context --run RUN --check --cards` must pass.
+  - After the cards are written, run `T audio-context --run RUN --check --cards`: a completeness check only (a
+    transcript for every video; a card for every video, each with its `Audio context:` and `Said:` lines). It
+    exits 1 and lists what is missing, and writes nothing unless `--out` is given; add what it lists.
 - With examples: `T prep-all --run RUN --set examples --jobs 2` (into `10-media/E01…`, listed in
   `10-media/examples-index.md`).
 - Pipeline details: `ATG/pipeline/preprocessing.md`.
@@ -648,8 +700,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
 ### A2b. Understand the supplied assets (autonomous — no questions by default)
 - Load `ATG/reference/assets-and-substitution.md`.
 - View `30-assets/project/assets-sheet-*.jpg` and any preview that needs a closer look. Read
-  `asset-inventory.md` (sub-folder groups and name hints), then build the **asset registry**
-  (`30-assets/registry.md` and `state.json → assets`):
+  `asset-inventory.md` (the paths grouped by sub-folder, and `duplicate_of` for identical files; file
+  names are not interpreted, so you confirm every role by looking at the asset), then build the
+  **asset registry** (`30-assets/registry.md` and `state.json → assets`):
   - **Group into entities.** Each distinct product, object, character, interface, brand kit or
     environment is one entity, using sub-folders, names and what the images show. Several products,
     samples or characters are expected.
@@ -689,11 +742,13 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
   mechanism with its product dependence and transplant needs, the audience (awareness stage, the pain
   or desire) and its mentality (the mental shortcuts, the emotion at the hook, the middle and the
   payoff, what got them hooked), the engagement mechanics, commerce signals when a metrics file is
-  supplied, and the one-line `Facts:` JSON (its `category` optional). The agents open with the
-  persona block (`viral-browser.md` §1). Recreate keeps the plain protocol card.
+  supplied, and the one-line `Facts:` JSON (its `category` optional; `voice_type` and `shots_seen` as in
+  V2). The agents open with the persona block (`viral-browser.md` §1). Recreate keeps the plain
+  protocol card.
 - Follow `ATG/reference/analysis-protocol.md` exactly. For each video:
   - read `video.md` and `timeline.md`;
-  - view **every** storyboard sheet in order, reading the timeline beside it;
+  - view **every** storyboard sheet in order, reading the timeline beside it, and state in the card
+    "sheets seen n of n" (a sheet that did not display is read again before the card is written);
   - densify with `T frames … --range a-b --fps 15 --sheet` around fast actions, cuts, interactions,
     gestures, product appearances and text appearances;
   - write `20-analysis/cards/<V>.md`, including (protocol §2.9–§2.11, §3):
@@ -720,14 +775,24 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
       verdict: pick-clean, pick-and-edit with the operations, or dismiss with the rule;
     - its **inserts**: memes or other clips that interrupt the reference, with their exact in and
       out on cut frames, video or still, and their sound;
-    - its **overlay text**: wording, role, centre position, in and out times, and style;
+    - its **overlay text**: wording, role, centre position, in and out times, and style. The OCR spans
+      (`ocr.json`, `video.json`, `video.md`, `timeline.md`) carry numbers and spelling facts only: `text`,
+      `first_t`, `last_t`, `hits`, `share_of_frames_scanned`, `y_rel`, `band`, `band_distinct_texts`,
+      `band_frames`, `score_mean`, `chars`, `words`, `has_at_handle`, `has_hashtag`, `has_url_pattern`,
+      and `bands[]` per row of the frame. No script says whether a text is a caption, a fixed overlay, a
+      watermark, a handle, a label or noise: you decide that from the numbers and the storyboard;
     - its **audio context** (every mode; `analysis-protocol.md` §2 item 4): the `Audio context:`, `Said:` and
       `Words and sound together:` lines, from `20-analysis/audio-context.md` and the transcript (context only in Recreate);
     - its **sound design** (every mode; Create builds its sound layer from it):
       `T audio-profile --audio "<files_audio file>" --out 10-media/<V>/audio-profile.json --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json`.
-      It measures the music bed, tempo, beat strength, energy arc, and hits (and whether they land
-      on cuts), plus whether the sound is speech-free and so reusable whole. From those numbers and
-      the visuals, infer its role: dramatic, comic, suspense, hype or sound-effect-driven.
+      It returns numbers only: the speech share and the audible non-speech share, the harmonic share
+      outside speech, the tempo and beat strength, the spectral flatness (near 0 tonal, near 1
+      noise-like), the strongest frequency and how steady it is (near 1 = one steady tone, such as a
+      beep), the energy per second and from the first to the last third, and the hits (each with
+      whether it lands on a cut). From those numbers, the transcript and the visuals, you decide
+      whether there is a music bed, whether the sound is speech-free and so reusable whole, how its
+      energy moves, and its role: dramatic, comic, suspense, hype or sound-effect-driven. The card
+      records that judgement.
     Videos that have nothing to do with the client's product are kept and analysed like any other.
     Their mechanism is still useful, and the product is integrated into them later.
 - Delegate to 1–2 agents only per §7 of the protocol, with disjoint video lists. Give them the
@@ -1050,9 +1115,9 @@ Plan everything before production, in allocation order, **without asking for con
     `state.json`; the README table (the agent's `readme-row.md` appended to `deliverables/README.md`);
     `video-NN-clean.mp4` and `video-NN-preview.mp4` in `deliverables/`; `result.json` complete, each
     check of the agent contract with an evidence path or "not checked: <why>"; the plan and brief files
-    with their attempts. A size verdict is never repeated or summarised before its frame was viewed
-    and its method (two estimates, a derived distance) is in the verdict; one assumed number is
-    provisional (CE-028);
+    with their attempts. A size reading is never repeated or summarised before its frame was viewed
+    and its method (two estimates, a derived distance) is in the verdict; a size from one assumed
+    number is provisional, the agent's own label (CE-028);
   - print one line: video, status, CapCut project, credits.
 - **Blockers come back from agents and are handled here:**
   - a permission is needed (A7b) → ask, then launch that video again;
@@ -1094,8 +1159,10 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   (documents are authoritative requirements and are quoted, "we already sell X" included).
   **No `split-audio`:** the references folder is not touched.
 - `T audio-context --run RUN --profile --second-pass` (and `--set baseline` with a baseline): the digest of every transcript and the sound
-  profile of every video (`viral-browser.md` §3.1, `analysis-protocol.md` §2 item 4). A video without a usable transcript is
-  prepared again before the cards (`T prep-all --run RUN --only <V> --redo --whisper-model medium`).
+  numbers of every video, with no labels (A1 lists them; `--second-pass` runs for every video in which no
+  words were found; `viral-browser.md` §3.1, `analysis-protocol.md` §2 item 4). A video whose status is
+  failed, missing or skipped (`without_a_transcript` in the JSON) is prepared again before the cards
+  (`T prep-all --run RUN --only <V> --redo --whisper-model medium`).
 - A metrics or links file becomes `20-analysis/metrics.md`: one row per video (views, likes,
   comments, shares, saves, followers, date, link, source), matched to the video ids by file name or
   link, and "not provided" where there is nothing. Never estimate a metric. **Reference pages**
@@ -1108,41 +1175,61 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
 - One card per reference in `20-analysis/cards/<V>.md` and a light card per baseline video, as
   `viral-browser.md` §3: the product layer and the mechanism layer kept apart, the one-line `Facts:`
   JSON with `category` set to a short label for the niche of the product's main use (taken from the
-  material; no script lists niches), commerce signal versus attention-only, the ranked drivers of
-  spread, the one-sentence mechanism, the transplant needs.
+  material; no script lists niches), `voice_type` (on-camera / voice-over / sung / rap / chant / none /
+  mixed …: the card agent's judgement, since the transcriber cannot tell speech from lyrics),
+  `shots_seen` (the agent's own shot count from the storyboard, beside the measured one) and
+  `price_tier` only when the video shows or says a price, commerce signal versus attention-only,
+  the ranked drivers of spread, the one-sentence mechanism, the transplant needs. Every card states
+  "sheets seen n of n", and a sheet that did not display is read again before the card is written.
 - Sound: for each reference run `T audio-profile --audio "<the original video>" --out
   10-media/<V>/audio-profile.json --transcript 10-media/<V>/transcript.json --cuts
   10-media/<V>/cuts.json` (the original video is the input here; nothing is written to the references
-  folder). `T viral-stats` reads the result for the music-bed and tempo shares. Every card carries the `Audio context:`, `Said:` and
-  `Words and sound together:` lines (`viral-browser.md` §3.2); when the cards are written, `T audio-context --run RUN --check --cards`
-  (and `--set baseline`) must pass before V3.
+  folder). `T viral-stats` tabulates the numbers (tempo, beat strength, harmonic share, spectral
+  flatness, audible non-speech share) and labels nothing; what each sound is, is the card agent's call.
+  Every card carries the `Audio context:`, `Said:` and
+  `Words and sound together:` lines (`viral-browser.md` §3.2); when the cards are written, run
+  `T audio-context --run RUN --check --cards` (and with `--set baseline`): a completeness check only, which
+  writes nothing; add what it lists before V3.
 - Scale and delegation as protocol §7: up to 6 videos in this session; more, 1 analysis agent (2 over
   about 15 videos) with disjoint lists and the prompt of `viral-browser.md` §13.1.
 - Merge the labels into `20-analysis/labels.md` and rewrite the Facts lines so one meaning has one
-  label. Then build the **niche vocabulary** yourself from the data: `T niches propose --run RUN`
-  lists the category labels in use, you decide which are the same niche, and you record the decision
-  with `T niches add --name "<niche>" --members "<label>,<label>"` and `T niches map --label … --to …`
-  (`viral-browser.md` §3.2, §5 item 3). `next_step=synthesis`.
+  label; set `creator_group` in them yourself (the main session), from the creator handle each card
+  carries, in the format `g01`. Then build the **niche vocabulary** yourself from the data:
+  `T niches propose --run RUN` tabulates the category labels in use with their counts, the niche each
+  is recorded under and the `unmapped_labels`; you decide which labels are the same niche (no script
+  compares labels or words) and record each decision with its reason:
+  `T niches add --name "<niche>" --members "<label>,<label>" --by main --reason "…"` and
+  `T niches map --label … --to … --by main --reason "…"` (a label that another niche held moves, and
+  the move is noted; `viral-browser.md` §3.2, §5 item 3). `next_step=synthesis`.
 
 #### V3. Corpus profile and synthesis
-- `T viral-stats --run RUN` (`--set both` with a baseline): the measured length, hook, pacing,
-  speech, text, music and loop profile, and the niche-concentration index. It resolves labels only
-  through the vocabulary you recorded: place every label it reports as not in the vocabulary
-  (`T niches add` / `map`), then run it again. It also flags a word shared by the labels of different
-  niches: merge them (`T niches merge --from … --to … --reason …`), record each pair as distinct
-  (`T niches distinct --a … --b … --reason …`) or, for a word that is in no niche name, as not a niche
-  marker (`--word`), then run it again. Every reference card needs a `category` (`non-product` when no
-  product category shows): the ranking will not apply while one lacks it.
+- `T viral-stats --run RUN` (`--set both` with a baseline): tables only. Per set it prints the
+  distributions (length, median shot, cuts per 10 s, first cut, when speech starts (any word, and the
+  first word of probability 0.5 or more), words per second, loudness, loop similarity, text spans,
+  tempo, beat strength, harmonic share, spectral flatness, audible non-speech share), the shares (a cut in the first 3 s, no cut at all, words found, a word or
+  a text in the first second, vertical 9:16, attention-only) and one `labels` table per Facts key
+  (label, count, share, videos). The `category` table is read through the niche vocabulary you
+  recorded, with the raw labels written on the cards folded in, and marks each label
+  `recorded_in_vocabulary` true or false: place every label that is not in the vocabulary
+  (`T niches add` / `map`, with `--by main --reason "…"`), then run it again. It also lists
+  `cards_without_facts` and `cards_with_unreadable_facts`: fix those cards (every reference card needs a
+  `category`, `non-product` when no product category shows). Nothing is flagged, labelled or ranked: no
+  script says which niche dominates or whether two names are one niche.
+  **You read the category table** and apply the rule of thumb (`viral_browser.rules_of_thumb`): a niche
+  that is 40 % or more of the references' cards is a **dominant niche**; with fewer than 10 videos read
+  every share as an indication, not a rate. Write your reading, with any exception and its reason, in
+  the bias log.
 - Write, as `viral-browser.md` §4: `mechanism-map.md` (mechanisms `M1…`, k of n, niche
   independence, confounds), the hook, length and pacing profile, the engagement style (one template
   per family plus the composite), the audience and mentality model, `viral-essence.md` (the essence,
   the fit profile, what is not inferred), the trend read (at most `trend_checks[depth]` bounded
   searches; if a TikTok account is connected in Higgsfield, `tiktok_music_trending` for the market's
-  country code, loaded with ToolSearch, else skipped silently), the niche-concentration line with its
+  country code, loaded with ToolSearch, else skipped silently), your niche-dominance reading with its
   bias plan, and the standard `families.md`, `craft-sheet.md` and `project-profile.md` for a later
-  Create. Start `30-research/bias-log.md`.
-- Show the short summary (§4.11): the essence in 5 lines, the fit profile, the niche concentration
-  and the controls it triggers, the mechanisms, the typical length and hook profile.
+  Create. Start the bias log, the "Bias log" section of `30-research/ranking.md` (written by the main
+  session, not by a script).
+- Show the short summary (§4.11): the essence in 5 lines, the fit profile, the niche shares (your
+  dominance reading) and the controls it triggers, the mechanisms, the typical length and hook profile.
   `next_step=candidates`.
 
 #### V4. Candidates
@@ -1150,19 +1237,27 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   with `T candidates add` (or `--from-json`). A candidate is a product a supplier search returns, not a
   category; its name, definition, **niche** (as `--category`: a label from the vocabulary, or a new
   niche you decide and record with `T niches add`), type and origin are all required, and the name and
-  definition never mention the references. Screen with stated reasons.
-- `T candidates pool --run RUN` on the long list (at least 6 niches, none above 40 %, at most half
-  from the references' own products); repair it. Then spawn the **niche-audit agent**
-  (`viral-browser.md` §13.5; fresh context, it changes nothing and writes `30-research/niche-audit.md`):
-  apply its merges (`T niches merge … --reason …`), record its distinct pairs and non-marker words
-  (`T niches distinct`), run `T viral-stats` again when a merge touched a card label, and record the audit
-  (`T niches audit --by … --result …`, which refuses unless that report names every niche). Then choose the
-  shortlist (6 / 9 / 12 by depth) and start research with
-  `T candidates shortlist --run RUN --ids C01,C02,…`: it re-checks the balance on exactly that set,
-  refuses a failing one, a shared-word or name-overlap flag, an unaudited vocabulary or missing corpus
-  statistics (`--force --reason "<why>"`, at least 25 characters, is logged for the bias log) and marks the candidates `researching`. Nothing can be researched before
-  it, and no status is typed by hand: the toolkit sets `researching`, `researched`, `picked` and
-  `runner-up`.
+  definition never mention the references. `add` stores the niche under the one the agents recorded for
+  that label (as written otherwise) and reports `niche_not_recorded_in_the_vocabulary`: record those.
+  Screen with stated reasons.
+- Read the balance of the long list yourself: `T candidates summary --run RUN` counts the candidates by
+  niche, type, origin and status (`--exclude-eliminated` leaves the eliminated out). The rules of thumb
+  (`viral_browser.rules_of_thumb`): at least 6 niches, none above 40 % of the list, at most half from
+  the references' own products. Repair the list where the numbers show it departs from them, or keep
+  it and write the exception and its reason in the bias log; no script flags or refuses anything. Then
+  spawn the **niche-audit agent** (`viral-browser.md` §13.5; fresh context, it changes nothing and
+  writes `30-research/niche-audit.md`): it reads the vocabulary for one niche under several names,
+  synonyms that share no word included. Apply its merges (`T niches merge --from … --to … --reason "…"
+  --by main`, which folds the members and renames the niche on the candidates), run `T viral-stats` again
+  when a merge touched a card label, and record the audit (`T niches audit --by main --result "<what it
+  found and what was applied>" --report 30-research/niche-audit.md`). Then choose the shortlist (6 / 9 /
+  12 by depth), read `T candidates summary --run RUN --ids C01,C02,…` for exactly that set against the
+  same rules of thumb, and start research with
+  `T candidates set --run RUN --ids C01,C02,… --status researching --by main --reason "<the balance reading and any exception>"`.
+  Statuses are a vocabulary you use and record (long, shortlisted, researching, researched, eliminated,
+  picked, runner-up, watch): `set` changes any field and any status from any status, logs `--by` and
+  `--reason` in the candidate's history, and the toolkit sets none on its own. Change a researched
+  candidate's name, type, definition or niche only with a stated reason.
 - Show one table: candidate, niche, origin, why it is in the pool. `next_step=research`.
 
 #### V5. Research (agents)
@@ -1170,13 +1265,22 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   `run_in_background: true`) with disjoint candidate lists and the prompt of `viral-browser.md`
   §13.2 filled in (market, currency, band, VAT convention, selling model, sales channel, importer
   country, capital limit, exclusions, depth, today's date). They register evidence (`T evidence add`
-  with `--signal` and `--independent yes`; each sourced economics input is its own grade A or B row
-  with a URL), run `T econ … --market … --cand` (once per market for a global or multi-country
-  market; the lowest contribution counts), write `30-research/<C>.md`, origin-blind, and queue
-  unreadable pages in their own `queue-<C>.md`.
+  with `--signal positive|negative|mixed|neutral`, `--independent yes` and `--by`; the toolkit checks the
+  form only: the required fields, and a URL on an independent grade A or B row; each sourced economics
+  input is its own grade A or B row with a URL), run `T econ … --cand C## --run RUN --market <M>`
+  (arithmetic only; once per market for a global or multi-country market: the results are kept per market
+  in `economics_by_market`, side by side, each with its inputs, and an evidence row with signal
+  `calculation` is written; the contribution per order, `break_even_cpa` (it can be negative),
+  `break_even_roas_*` (null when the contribution is not positive) and `inputs_left_at_zero` are numbers
+  for you to read, not judgements), write `30-research/<C>.md`, origin-blind, and queue unreadable pages
+  in their own `queue-<C>.md`.
 - When they have reported, check that every shortlisted candidate has a dossier, evidence rows, an
-  economics row and a sourced input row behind it; a missing one is researched once by a new agent. A candidate an agent reports as
-  settled by a gate is eliminated here (`T candidates set --id C## --status eliminated --by "<gate>"`).
+  economics row and a sourced input row behind it (`T evidence list --counts` tabulates the rows by lane,
+  signal, grade, independence and distinct sites; it weighs nothing); a missing one is researched once by
+  a new agent. A candidate an agent reports as settled by a gate is eliminated here by you
+  (`T candidates set --id C## --status eliminated --by main --reason "<the gate and the evidence>"`; the
+  reason stays on the candidate). A wrong evidence row is withdrawn with
+  `T evidence retract --id EV### --reason "…"` (kept on record, left out of the counts).
   If an agent reports a denied tool (`WebSearch`, `WebFetch`, `Bash`), research that candidate in this
   session within the same budget instead of retrying the agent.
 - With "web plus my Chrome": load the browser tools in one call (`ToolSearch "select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__navigate,mcp__claude-in-chrome__get_page_text,mcp__claude-in-chrome__read_page,mcp__claude-in-chrome__find,mcp__claude-in-chrome__computer,mcp__claude-in-chrome__tabs_close_mcp"`),
@@ -1186,59 +1290,101 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
 - Blockers (a tool failure, rate limits) are reported, not asked. If `WebSearch` and `WebFetch`
   are both unavailable, stop here: V1–V3 are delivered (the mechanism map and the fit profile are
   useful alone) and the summary says research could not run. `next_step=scoring`.
-- **Backfill:** if V6 leaves fewer than 3 candidates through the gates, come back here **once**:
-  shortlist the next `backfill_researched[depth]` candidates from the long list (the shortlist check
-  applies), research them the same way, then score and rank again (`viral-browser.md` §7.1).
+- **Backfill:** if your selection in V6 leaves fewer than 3 candidates that meet the gates of thumb, come
+  back here **once**: shortlist the next `backfill_researched[depth]` candidates from the long list (read
+  the balance rules of thumb on that set again and record `researching` with `--by main --reason`),
+  research them the same way, then rate and select again (`viral-browser.md` §7.1).
 
 #### V6. Scoring, red team and selection
 - Spawn the **scoring agent** (`viral-browser.md` §13.4): a fresh, blind context that never sees the
-  cards, the mechanism map or any origin. It scores every researched candidate and sets the gate
-  fields (`T candidates score`, `T candidates set`). **This session does not score**: it built the
-  pool and has seen the origins.
-- `T candidates rank --run RUN --provisional` prints the **red-team targets** (the gated, capped
-  selection plus the next two). Spawn the red-team agent (§13.3) on them, record each verdict
-  (`T candidates set --id C## --redteam survives|weakened|fails`), eliminate the ones that fail, have a
-  fresh scoring agent revisit only the criteria the red team names, and run `--provisional` again until
-  every target has a verdict (two rounds at most).
-- `T candidates rank --run RUN`: read the picks, the blockers (a missing verdict, shortlist check or defence,
-  statistics missing or older than the vocabulary, a card without a category, a word or a niche name shared
-  across niches), the tie warnings and both ablation results (`ranking.md` also lists every decision on record);
-  write the defence note of every pick from the dominant niche or linked to it by a word (`T candidates set
-  --id C## --defence`, an argument of at least 30 characters; a pick with no honest defence is eliminated and the ranking
-  run again); complete `bias-log.md`; then `T candidates rank --run RUN --apply`, which refuses on any
-  of those blockers (`--force` needs `--reason`, and both are logged).
-- Show the ranking table in chat: the picks, the runner-ups, the gates that removed the others, any
-  warning. If fewer than 3 pass, run the backfill (V5) first; if still fewer, say which gate removed
-  each and what could be relaxed (§8.6). `next_step=blueprints`.
+  cards, the mechanism map or any origin. It rates every researched candidate
+  (`T candidates rate --id C## --ratings demand=4,commercial=3,… --refs "demand=EV001+EV002 …"
+  --confidence low|medium|high --by …`; a form check only: an integer 1-5, a known criterion, evidence rows
+  that exist for the candidate) and records its readings of price fit, compliance and exclusion with
+  `T candidates set --price-fit … --compliance … --excluded …`. It applies the rules of thumb for evidence
+  and says so in its note: a rating on demand, commercial, competition, economics or compliance with no
+  positive independent grade A or B row is 2 at most (for economics the calculated estimate also needs a
+  sourced input row); negative rows that match the positive ones hold a 4 or a 5 at 3. No script caps or
+  changes a rating. **This session does not score**: it built the pool and has seen the origins.
+- Read the table yourself: `T candidates table --run RUN --sort weighted --desc` sets the candidates
+  side by side (ratings per criterion, `weighted_sum_of_rated` = a plain weighted sum of the ratings where
+  an unrated criterion adds nothing, confidence, red team, price fit, compliance, economics per market, an
+  evidence cell "rows (grade A/B; distinct sites)", pick rank; `--blind` hides the origin). It marks no
+  winner and applies no gate. Choose the **red-team targets** yourself: the candidates you would pick under
+  the gates of thumb below, plus the next two. Spawn the red-team agent (§13.3) on them and record each
+  reading (`T candidates set --id C## --redteam survives|weakened|fails --note "…" --by red-team`),
+  eliminate the ones that fail (`--status eliminated --by main --reason "…"`), have a fresh scoring agent
+  revisit only the criteria the red team names, and read the table again until every target has a reading
+  (two rounds at most).
+- **Select** (this session, by your own reading). Apply the six gates of thumb to each candidate: the price
+  band; a contribution margin of at least 25 % of net revenue from `T econ` with a sourced input row
+  (read per market in `economics_by_market`, side by side: you decide which market governs for this
+  brief and write down why); compliance clear or resolved, backed by a positive independent official or
+  reputable row; not excluded by
+  the brief; positive independent evidence from at least two distinct sources across demand, commercial and
+  competition, one of them commercial; ratings of at least 3 on demand, commercial, economics, compliance
+  and fit, and confidence of at least medium. Choose the three picks and the runner-ups (at most two picks
+  in a niche, none sharing a product type) and break any tie by your own reading, written down. Write the
+  defence of every pick from the dominant niche against the best outside-niche alternative
+  (`T candidates set --id C## --defence "…"`); a pick with no honest defence is eliminated and the selection
+  redone. Run the what-if yourself: the same selection without the reference-derived evidence and without the
+  fit criterion (`T candidates table --exclude-criteria fit`), and say whether the picks change. Write
+  `30-research/ranking.md`: the picks, the runner-ups, every other candidate with the reason it is not a
+  pick, the what-if and the bias log (your dominance reading, and every gate of thumb you applied or set
+  aside, each with its reason). Then record the result for each pick: `T candidates set --id C##
+  --status picked --pick-rank N --by main --reason "…"` (`--status runner-up` for the runner-ups;
+  `--pick-rank` records your pick order).
+- Show the ranking table in chat: the picks, the runner-ups, the gate each other candidate did not meet
+  (your reading), any exception. If fewer than 3 meet the gates, run the backfill (V5) first; if still
+  fewer, report the shortfall and say which gate removed each and what could be relaxed (§8.6): a gate is
+  never lowered silently to fill the table. `next_step=blueprints`.
 
 #### V7. Blueprints, reference packs and deliverables
 - Per pick, a **trend pass** (up to `pick_trend_checks[depth]` bounded searches or pages for the
   formats, hooks and sounds now used in that product's niche and market, dated; `tiktok_music_trending`
   once when an account is connected), then `deliverables/product-NN.md` (its dossier and its
   blueprint, `viral-browser.md` §9–§10).
-- **Reference packs** (`viral-browser.md` §9.1): right after `rank --apply`, spawn up to 3
+- **Reference packs** (`viral-browser.md` §9.1): right after the picks are recorded, spawn up to 3
   reference-pack agents, one per pick, in the background with the prompt of §13.7 filled in (run,
   toolkit, date, market, the pick, the depth and its `reference_pack_budget`), and write the blueprints
-  meanwhile. When they report, check each pack: `T spec check --run RUN --cand C##` and
-  `T photo check --run RUN --cand C##` (covered, unconfirmed, partial, thin or none). A pack that is not complete or covered gets one more reference-pack agent for that pick alone, told what is
-  missing, with the same budget again (one extra round only), and what is still missing is reported, never invented. **No image
-  is downloaded: the packs hold links.** Process `30-research/queue-<C>-pack.md` with the user's
-  Chrome only when they allowed it (read-only: the image links of a gallery, a specification table;
-  register them with `T spec add` / `T photo add`; an image you open in the browser may get its
-  flags with `T photo set --looked-at yes`), then `T spec render` and `T photo check` for each pick
-  (`photos.md` and `photos.html` are written into the pack). The packs go in
-  `deliverables/reference-C##-<name>/` (named after the candidate; the toolkit creates the folder and remembers it).
-- Then `viral-browser-report.md` (with each pick's specification table and photo links with their status and flags),
+  meanwhile.
+  - Each agent records the facts it finds (`T spec add`, with source, kind, grade, scope and variant),
+    the photo links (`T photo find` / `add`) and its judgement of each core field with
+    `T spec judge --cand C## --field … --fact SP### --status "<its own label, for example verified, official, reported, unverified, conflict>" --reason "…" --by …`
+    (the latest judgement wins and nothing is computed). A fact found to be wrong is withdrawn with
+    `T spec reject --id SP### --reason "…"`, a link with `T photo set --id PH### --reject --reason "…"`
+    (both stay on record, off the sheet; `--restore` brings a link back).
+  - When they report, read each pack yourself: `T spec gaps --run RUN --cand C##` counts the facts and
+    judgements for the core fields, `T spec table --run RUN --cand C##` sets the facts side by side with
+    the plain spread of the numbers, and `T photo list --run RUN --cand C##` / `T photo check` produce the
+    photo coverage table (links, confirmed, https and looked-at per view label as the agents wrote it,
+    and for the core views). Whether a pack is enough is your reading, guided by the pack rules of thumb
+    in `viral_browser.rules_of_thumb` (photo links per pick, attempts, thumbnail size, minimum angles,
+    spec tolerance): no script suggests a set or calls a pack covered. A pack you judge not enough gets
+    one more reference-pack agent for that pick alone,
+    told what is missing, with the same budget again (one extra round only), and what is still missing is
+    reported, never invented.
+  - **No image is downloaded: the packs hold links.** Process `30-research/queue-<C>-pack.md` with the
+    user's Chrome only when they allowed it (read-only: the image links of a gallery, a specification
+    table; register them with `T spec add` / `T photo add`; an image you open in the browser may get its
+    flags with `T photo set --looked-at yes`, which the four visual flags require), then `T spec render`
+    and `T photo check` for each pick (`spec.md`, `photos.md` and `photos.html` are written into the pack:
+    the judged value with its status and reason, or "no judgement recorded" with the facts side by side).
+    The packs go in `deliverables/reference-C##-<name>/` (named after the candidate; the first
+    `T spec render` or `T photo add` creates the folder).
+- Then `viral-browser-report.md` (with each pick's specification table and photo links with their link
+  status and the flags recorded),
   `evidence.md` (`T evidence list --run RUN --out <RUN>/deliverables/evidence.md`),
   `create-handoff.md` and `README.md`. `next_step=report-qc`.
 
 #### V8. Report QC
-- The checklist of `viral-browser.md` §10.4: every number sourced or recomputed with `T econ`,
-  the gates quoted, origin-blind dossiers, defence notes present, one currency and tax convention,
-  region-matched evidence, up to 12 key claims fetched again, no unsupported hook or claim, each pick's reference pack (spec and photo-link verdicts, nothing read off a
-  photo, no image downloaded, angles shown as the source's labels, rights stated), and each
-  research error that reached this step recorded as an agent entry (`--source agent`, with
-  `--title`). Fix before anything is shown. `next_step=wrap-up`.
+- The checklist of `viral-browser.md` §10.4, run by you (no script runs it): every number sourced or
+  recomputed with `T econ`, the gate reading per pick quoted from `ranking.md`, origin-blind dossiers,
+  defence notes present, one currency and tax convention, region-matched evidence, up to 12 key claims
+  fetched again, no unsupported hook or claim, each pick's reference pack (spec judgements and the photo
+  coverage table, nothing read off a photo, no image downloaded, angles shown as the source's labels,
+  rights stated), and each research error that reached this step recorded as an agent entry
+  (`--source agent`, with `--title`). Fix before anything is shown. `next_step=wrap-up`.
 
 #### V9. Wrap-up
 - Show the summary (`viral-browser.md` §10.3): the table of the three picks (with each pick's reference unit, size,
@@ -1359,7 +1505,10 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   Every preparation below produces a silent file under `RUN/10-media/<V>/prepared/`. The user's
   folders keep only `files_audio` and `videos_without_audio`.
 - **9:16.** If the source is not 9:16, choose (per `text-and-format.md` §4.1):
-  - `T conform` with a focus point, when a crop keeps every important subject;
+  - `T conform` with a focus point, when a crop keeps every important subject: run it with `--dry-run`
+    first; it writes nothing and reports `lost_fraction`, the share of the picture the crop removes. It
+    never refuses a crop; the decision is yours, and the rule of thumb is that a loss above about 12 % is
+    a reason to use `reframe` or to regenerate from a 9:16 start frame (say what you chose and why);
   - Higgsfield `reframe` (9:16, 720p; preflight first);
   - regeneration with the source as a video reference.
 - **Length.** If the source exceeds the edit model's input range, split it at cuts with `T trim` into
@@ -1470,7 +1619,7 @@ files as video K".
       placed in CapCut later and never generated;
     - the **sound plan** (Create, `capcut-assembly.md` §3b), placed in CapCut:
       - the generation carries only dialogue, action sounds and ambience, with no generated music;
-      - the soundtrack's role, mood, tempo and energy arc, from the references' sound profiles;
+      - the soundtrack's role, mood, tempo and how its energy moves, read from the references' sound-profile numbers;
       - its source: a supplied track, the reference's own speech-free sound, or a matching track
         to download;
       - the sound effects and their hit points on the new video's beats;
@@ -1605,8 +1754,9 @@ files as video K".
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
     seam, and the path of every thrown, dropped or passing thing relative to the product (§2.14).
   - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning, its distance derived from the
-    frame and not assumed, is in the plan and in the prompt for every shot; a start frame passed `T scale`; the size ladder holds between products;
-    nothing in the prompt or the references invites a bigger product (a tight crop, "hero",
+    frame and not assumed, is in the plan and in the prompt for every shot; a start frame was measured
+    with `T scale` and its size factors read (X9 gives the bands); the size ladder holds between
+    products; nothing in the prompt or the references invites a bigger product (a tight crop, "hero",
     "prominent", a packshot pose).
   - **Posture, support and place** (`generation-system.md` §4b.1b; `anomaly-catalog.md` §2.16): every
     anchor is a posture its shape allows, on a visible support, where a person would leave it, with
@@ -1632,21 +1782,31 @@ files as video K".
     first), so a later caught-error entry can carry it (item 22): `T caught-error add --run RUN
     --video NN` attaches the brief, the newest request's prompt and the plan path by itself.
   - Analyze Mode: no gate; the brief is information (item 15). Edit Mode: the E6 gate.
-- **X7 — Submit and wait (ledger-guarded; no spam, no glitches).**
+- **X7 — Submit and wait (ledger-recorded; no spam, no glitches).**
   1. `T ledger begin --run RUN --video NN --attempt K --request 50-requests/video-NN[-aK]-request.json`
      (a clip: `--video NN-cK` with its own request file).
-     - **Exit 3 means do not submit.** Follow its `action`:
+     - It **records a `pending` entry every time** and exits 0; it never refuses. It reports `conflicts[]`
+       as facts, with the entries involved: an open submission (pending / submitted / unknown) in this
+       video's lane; the submissions in flight in the run against the cap (`open_in_run`, `cap`); this
+       exact request failed before; this exact request already produced a finished job. **You decide
+       whether to submit**, under the production rules: one job in flight per video, none past
+       `production.max_parallel_jobs`, never the same request again once it produced a finished job, and a
+       diagnosis before another attempt. Act on what it shows:
        - an open job exists → resolve it with `jobs_wait`, or for `pending` / `unknown` via
          `show_generations {type:"video", only_completed:false, size:5}` and `transactions`;
        - the request is a duplicate of a finished job → reuse that job;
-       - the request failed twice → change it or report the failure.
+       - the request failed before → diagnose it first; one retry of the identical request is allowed,
+         and after a second failure change it or report the failure;
+       - if you decide **not** to submit, record that: `T ledger set --run RUN --fingerprint F --status
+         superseded --note "<why>"`, which frees the lane.
   2. Exactly **one** `generate_video {params}` call: `count` 1, no `get_cost`, never in parallel with
      anything, never twice in one turn, never inside a retry loop.
   3. Record the outcome at once:
      - a job id came back → `T ledger set --run RUN --fingerprint F --job J --status submitted`;
      - a transport error or timeout with no job id → `--status unknown`. Then find out what happened
        (history and transactions), and set `submitted` with the found job id, or `failed` with the
-       note "not created". Only then may a new `begin` happen.
+       note "not created". Only then begin a new attempt (an `unknown` entry counts as an open
+       submission in the lane).
      - Handle `unlim_choice` (ask), `recovery_tool` (call it), and validation errors. A validation
        error means nothing was created: set `failed` with the note "rejected before creation", fix
        only the named field, and begin a new attempt.
@@ -1655,16 +1815,18 @@ files as video K".
      - Terminal → `T ledger set --job J --status completed|failed`.
      - Still running after ~25 min → tell the user, and keep waiting on that same job. Never
        resubmit because a job is slow.
-  5. A failed job is refunded. Diagnose it before any retry; the ledger allows at most one retry of
-     an identical request.
+  5. A failed job is refunded. Diagnose it before any retry; retry an identical request at most once
+     (`begin` reports a request that failed before, and the decision is yours).
 - **X8 — Download and post-process.** `T hf-get` into `60-outputs/video-NN/aK/raw.mp4` (K = the
   attempt number; the raw Higgsfield output is always kept), then as needed, in this order:
   1. **Edit Mode and Recreate — original audio back:**
      `T restore-audio --generated <raw or joined> --audio "<files_audio file>" --audio-offset <audio_offset> [--start <segment start>] --out <aK>/with-original-audio.mp4`.
      The picture is Higgsfield's and the sound is the original's. A clip that is slightly shorter
-     keeps sync from the start and cuts the audio at its end; the tool reports it. A source that had
-     no audio gives a silent final.
-  2. `T conform` → exactly 720×1280;
+     keeps sync from the start and cuts the audio at its end; the tool reports `generated_shorter_by_s`
+     (a plain difference) and a note. It returns `facts` (`has_video`, `has_audio`, `audio_was_available`,
+     `duration_s`, `requested_duration_s`, `size`, `source_size`): read them; `ok` only means ffmpeg
+     produced the file. A source that had no audio gives a silent final.
+  2. `T conform` → exactly 720×1280 (it reports `lost_fraction`; the crop rule of thumb is in E5);
   3. `T trim` (generated dead head or tail);
   4. `T concat` (multi-clip videos):
      - each clip is downloaded to `60-outputs/video-NN/cK/aJ/raw.mp4`, conformed, trimmed and
@@ -1676,16 +1838,25 @@ files as video K".
   5. **Sync check** (item 19; Edit Mode and Recreate), once the picture is final and the original
      audio is on it:
      `T sync-check --source <the prepared source; own-silent for a Recreate> --output <final> [--start <segment start>] --out <aK>/sync`.
-     View `sync-sheet.jpg` and the sync anchors densified (mouths on their words, contact on its
-     impacts). Then act on the verdict:
-     - `in_sync` (within ±0.1 s everywhere) → continue;
-     - `constant_offset` → apply its `fix`, with no new generation: trim the picture's head when the
-       output is late, or re-run `restore-audio` with `--start` increased when it is early. Then
-       merge and check again;
-     - `drift` or `out_of_sync` (faster, slower, or an action added, skipped or moved) → a
-       regenerate reason in X9;
-     - `inconclusive` (motion too different to measure, e.g. a heavy restyle) → judge it on the
-       sheet and the densified anchors.
+     It measures and returns numbers; it gives no verdict and no fix, and exits 0 whenever it measured:
+     `global_offset_s` and `global_corr`, `windows[]` (`t`, `offset_s`, `corr`, `motion_ratio`),
+     `windows_used` / `windows_total`, `median_window_offset_s`, `window_spread_s`, `drift_s_per_10s`,
+     `windows_beyond_tolerance` (listed against `--tol`, default 0.10 s), `duration_diff_s`, and the
+     side-by-side `sheet` (`--min-corr`, default 0.5, and `--min-motion`, default 0.25, only select the
+     windows the summary uses; every window stays listed). A positive offset means the output's action
+     happens later than the source's sound. View `sync-sheet.jpg` and the sync anchors densified (mouths on
+     their words, contact on its impacts), then **decide** with these rules of thumb and write the decision
+     and why in the verdict:
+     - in sync: the global offset and every used window within the tolerance (±0.10 s) → continue;
+     - a steady offset (the spread of the used windows at most twice the tolerance) is fixed in post, with
+       no new generation: when the output is late (positive), trim the picture's head by that much, then
+       run `restore-audio` again; when it is early (negative), run `restore-audio` again with `--start`
+       increased by that much. Then merge and check again;
+     - a drift (|`drift_s_per_10s`| × the compared span / 10 above the tolerance) or scattered offsets
+       cannot be fixed in post: diagnose (duration, speed, an action added, skipped or reordered) and
+       regenerate with the timing lock, a regenerate reason in X9;
+     - a global correlation below 0.3, or no used window, is inconclusive (motion too different to
+       measure, e.g. a heavy restyle) → judge it on the sheet and the densified anchors.
   6. **Analyze Mode:** the result is the **clean video** `60-outputs/video-NN/clean.mp4`: conformed,
      trimmed, joined, with no overlay text. After it passes X9, assemble its CapCut project
      (`reference/capcut-assembly.md` §2–§5):
@@ -1698,7 +1869,19 @@ files as video K".
 - **X9 — QC.**
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
     every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan,
-    then view the storyboard sheets and every dense sheet under `<dir>/dense/`.
+    then view the storyboard sheets and every dense sheet under `<dir>/dense/`. It returns measurements
+    beside the expectations and no verdict: `checks` (`duration_s`, `aspect`, `size`, `has_audio`,
+    `black_spans`, `freeze_starts`, `expected`, `size_delta_px`, `duration_delta_s`, `aspect_error_pct`,
+    `mode`), `planned_text[]` (from `--allowed-text`), `visible_text[]` (every text the OCR saw, with its
+    `first_t`, `last_t`, `hits`, `share_of_frames_scanned`, height `y_rel`, `score_mean`, `chars` and
+    `band_distinct_texts`), `frames_scanned_for_text` and `dense_checkpoints`. **You** compare
+    `planned_text` with `visible_text`, read the sheets, and write the QC verdict (it goes into
+    `result.json` and, when an error is caught, into `T caught-error add --qc`). Rules of thumb: a
+    duration off by more than max(0.25 s, 5 %) is a duration problem; any black span or freeze needs a
+    look; in Edit Mode no source text may remain unless it was explicitly kept; in Analyze Mode only the
+    planned text may appear, and anything else is pseudo-text or a copied artifact. Whether a visible text
+    is a caption, a fixed overlay, a watermark, a label or noise is your reading of those numbers and the
+    picture.
   - Check identity, asset geometry against the canonical template, the ledger states, interactions
     (densify contact moments), lighting and reflections, text, pacing and dead space, and the format.
   - **Motion beats at 30 fps** (`generation-system.md` §5b): every motion beat (spins, tosses,
@@ -1718,20 +1901,25 @@ files as video K".
     last, measure the product's pixel height and the named neighbour's at the product's own depth (`--depth-ratio`
     from the frame when the product stands in front of or behind it, never 1 by default) and run
     `T scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1> [--depth-ratio r]
-    --distance d --distance-basis "<how d was derived from the frame>" --lens f`: two estimates, the
-    neighbour ratio (A) and the frame fraction at a distance derived from the surface or another object
-    (B), which must agree before an oversize verdict (`inconclusive` means re-derive). A verdict from one
-    assumed number is PROVISIONAL ("provisional: distance assumed"): never a regenerate reason or a
-    RESIDUAL FAILURE, and viewed on the full-resolution frame by whoever reports it before it is flagged,
-    repeated or summarised (CE-028). Write the multiple of the expected size with its method and distance
-    in the verdict and compare across cuts. Over 25 % on agreeing estimates, a size that changes between
-    shots, or a product larger than
-    the hand that holds it is a regenerate reason with no post-fix; 15–25 % is a note only for a
-    static product with a readable label. The retry changes the lever the guide names. For a model
-    whose guide lists size as a model limit (`wan3_0_prime`) it changes the form or the anchor class
-    from the guide's passing list, never the sizing words (12 of 12 wording retries were re-rolls);
-    otherwise it names the neighbour and the ratio, the depth and the fraction of the frame, pads the
-    reference and rebuilds any start frame. A second miss ships the best take flagged and is recorded.
+    --distance d --distance-basis "<how d was derived from the frame>" --lens f`. It returns numbers and no
+    verdict: `estimates[]`, two of them when both can be made, the neighbour ratio (A) and the frame
+    fraction at a distance derived from the surface or another object (B), each with its `size_factor` (the
+    observed size as a multiple of the expected size) and `deviation_pct`; also `size_vs_neighbour`,
+    `size_vs_distance`, `estimates_spread_pct` (when there are two), the expected and observed values and
+    `distance_basis` as you gave it. **You** read them under the guidance: within 15 % is fine; 15–25 % is a
+    note, only for a static product with a readable label; over 25 % on agreeing estimates, a size that
+    changes between shots, or a product larger than the hand that holds it is a regenerate reason with no
+    post-fix; two estimates more than 25 % apart are inconclusive, so re-derive the distance and measure
+    again on the full-resolution frame. A size read from one assumed number, with no neighbour estimate, is
+    PROVISIONAL (your own label, "provisional: distance assumed"): not a regenerate reason or a RESIDUAL
+    FAILURE until a second estimate agrees, and viewed on the full-resolution frame by whoever reports it
+    before it is flagged, repeated or summarised (CE-028). Write the multiple of the expected size with its
+    method and distance in the verdict and compare across cuts. The retry changes the lever the guide
+    names. For a model whose guide lists size as a model limit (`wan3_0_prime`) it changes the form or the
+    anchor class from the guide's passing list, never the sizing words (12 of 12 wording retries were
+    re-rolled); otherwise it names the neighbour and the ratio, the depth and the fraction of the frame,
+    pads the reference and rebuilds any start frame. A second miss ships the best take flagged and is
+    recorded.
   - **Blend** (`anomaly-catalog.md` §2.15): on one full-resolution frame at rest and one in use,
     the eleven-sign paste test against the nearest neighbour at the same depth (whites against the
     nearest white object, light direction, contact shadow, sharpness and grain, packshot pose,
@@ -1766,10 +1954,10 @@ files as video K".
     the blend borrowed from and the run's other videos (craft shared, subject not). A missing hook or payoff that
     the plan required is a narrative-gate failure and a regenerate reason; everything else is a
     note, never a question.
-  - **Action sync** (item 19; Edit Mode and Recreate): the X8 sync verdict and sheet. Every sync
-    anchor lands within ±0.1 s of its sound: words on mouth movements, impacts on contact, steps on
-    footfalls. Drift, or an action added, skipped or moved, is a regenerate reason; a steady offset
-    is a post-fix.
+  - **Action sync** (item 19; Edit Mode and Recreate): your sync reading from X8 (the numbers and the
+    sheet). Every sync anchor should land within ±0.1 s of its sound: words on mouth movements, impacts on
+    contact, steps on footfalls. Drift, or an action added, skipped or moved, is a regenerate reason; a
+    steady offset is a post-fix.
   - **Leftovers** (`generation-system.md` §9b): only the must-not-survive list counts, and it is
     fixed autonomously.
   - **Caught errors** (item 22): each applied entry checked by id and written in the verdict
@@ -1781,9 +1969,9 @@ files as video K".
     moderation>" --evidence "<checkpoint, t range, sheet path>" --title "…" --wrong "<the
     verdict>" --class "<reference §>" --cause <…> --rule "<general rule>"`. The working prompt is
     inserted **only after the new generation passes QC**: `T caught-error set --id CE-nnn
-    --verified-prompt <the passing request.json> --qc-pass "<the passing verdict>"` (the tool
-    refuses a fix without a passing verdict). If the retry fails too, the entry stays open with no
-    fix. A new failure the user later reports becomes a user entry, never a silent fix.
+    --verified-prompt <the passing request.json> --qc-pass "<the passing verdict>"` (the tool needs that
+    verdict as `--qc-pass`; it checks only that you gave one). If the retry fails too, the entry stays
+    open with no fix. A new failure the user later reports becomes a user entry, never a silent fix.
   - **Guardrails** (`brand-guardrails.md` §5): the count limit at every checkpoint; `T qc` OCR
     with no competitor name and a full-resolution look at every de-branded object (no logo,
     claw, crest or livery, no blur, no patch); the identity check over every shot, reflection and
@@ -1837,8 +2025,9 @@ files as video K".
      - its path and the raw Higgsfield file next to it;
      - the Higgsfield result URL;
      - 1–3 QC notes (e.g. leftover text or a duration difference, or "no issues found").
-     - the sync verdict (item 19), always: the measured offset and the sheet's path. A `drift` or
-       `out_of_sync` comes first, with the moments that miss their sound.
+     - the sync reading (item 19), always: the measured offsets (global, and the spread and drift of the
+       windows) and the sheet's path. A drift or scattered offsets come first, with the moments that
+       miss their sound.
   2. Ask with AskUserQuestion (header "Review"), "Video N, attempt K — is it okay?":
      - **"Looks good — next video"** → `T ledger set --job J --status accepted`, then X10, which
        places the approved video in the `final` folder.
@@ -1867,7 +2056,9 @@ files as video K".
     the **`final` folder inside the given path**:
     `T finalize --run RUN --video NN --file <aK approved file> --original "<original video path>"`.
     - It is named after the original video (`<given path>/final/<name>.mp4`, sub-folders mirrored).
-    - It is checked: picture present, 720×1280, audio present exactly when the original had audio.
+    - It never refuses the user's approval. It returns `facts` (`has_video`, `size`, `expected_size`,
+      `has_audio`, `original_has_audio`): read them (picture present, 720×1280, audio present exactly
+      when the original had audio) and report any mismatch to the user.
     - The folder is marked so later scans skip it. A previously approved final of the same video is
       moved into the run folder, never overwritten silently.
     - Only approved videos are placed there.
@@ -1965,6 +2156,10 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
 ## 7. Never
 
 - Never use or create a Claude Code Workflow.
+- Never take a script's output for a decision. The `T` scripts gather, extract, record, tabulate and
+  calculate; you read what they return, decide under the mode's rules (their numbers are rules of thumb),
+  and record the decision with its reason (`--by` / `--reason`, the bias log, the caught-error ledger,
+  `ledger set --status superseded --note`). Never lower a gate or set a rule of thumb aside silently.
 - Never spawn more than 2 analysis agents, more than 5 production agents at once, or a production
   agent in Edit Mode; in Viral-Browser never more than 3 research agents at once, plus one niche-audit
   agent, one scoring agent and one red-team agent, and, after the picks, up to 3 reference-pack
@@ -2108,26 +2303,31 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   CapCut project, no request for client assets, no `split-audio` or any other change to the
   references folder; never start Create without the user's yes (item 25, `viral-browser.md` §11.4).
 - Viral-Browser: never let the references' product niche decide the answer (item 24, `viral-browser.md`
-  §5). Never build the pool from "more of what the videos show"; never run research on a pool with
-  fewer than 6 categories, one category above 40 %, or more than half its candidates from the
-  references' own products; never put a candidate's origin in a research dossier, a research prompt or
+  §5). Never build the pool from "more of what the videos show"; never start research on a pool you have
+  not read for balance (fewer than 6 niches, one niche above 40 %, or more than half the candidates from
+  the references' own products is a departure to repair, or an exception to write down with its reason in
+  the bias log); never put a candidate's origin in a research dossier, a research prompt or
   a scoring pass; never count reference-derived evidence as independent; never skip the defence note
   of a dominant-niche pick; and never exclude the dominant niche for being dominant.
 - Viral-Browser: never type a niche, category, product or brand name into a script or a config (the
-  agents decide them from the data and record them with `T niches`); never start research on an
-  unaudited niche vocabulary or on a shortlist with a shared-word flag; never leave a possibly split
-  niche without a merge or a recorded "distinct" decision; never record an audit that no fresh agent made; never score in this session (the fresh
-  scoring agent scores); never type a candidate's status or contribution by hand (the toolkit sets them),
-  and never edit a researched candidate's name, type, definition or niche without a stated reason;
-  never apply a ranking before the red-team verdicts and the defence notes exist, on statistics older
-  than the vocabulary, or with `--force` and no `--reason`.
+  agents decide them from the data and record them with `T niches`); never start research on a niche
+  vocabulary that no fresh agent has audited (`T niches audit` records it; no script flags look-alike
+  names); never leave a possibly split niche without a merge (`T niches merge --reason`) or a written
+  reason in the bias log for keeping it apart; never record an audit that no fresh agent made; never
+  rate in this session (the fresh scoring agent rates); never change a candidate's status, ratings or
+  pick order without `--by` and `--reason` (the toolkit sets none by itself), never type an economics
+  figure by hand (`T econ --cand` records it), and never change a researched candidate's name, type,
+  definition or niche without a stated reason; never record the picks before the red-team readings and the
+  defence notes exist, or from `T viral-stats` tables older than the niche vocabulary (run it again after
+  a merge or a new mapping).
 - Viral-Browser: never state a number without its source and retrieval date or its method; never score
   "unknown" as 3; never count a grade D row; never invent a URL, a quote or a figure; never present an
   estimate as a measurement; never credit a product with what the creator, a trend or paid reach
   carried; never take attention for buying evidence; never claim EU or global demand from US-only
   evidence without the market-gap flag (`viral-browser.md` §0, §2, §3.2).
-- Viral-Browser: never lower a gate to fill the table (fewer than 3 passing candidates is a valid
-  result), and never show a pick without its confidence and what would change the call.
+- Viral-Browser: never lower a gate silently to fill the table (fewer than 3 candidates meeting the gates
+  is a valid result; any gate you relax is named in the report with its reason), and never show a pick
+  without its confidence and what would change the call.
 - Viral-Browser: never buy, sign up, log in, message a seller or submit a form; never collect personal
   data; never use a browser tool unless the user chose "web plus my Chrome", and then only to read
   pages (`viral-browser.md` §0 rule 6, §7.5).

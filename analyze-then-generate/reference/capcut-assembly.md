@@ -110,19 +110,24 @@ Inputs:
 ## 3b. Sound layer (Create)
 Generated clips usually carry only voices, action sounds and ambience. Viral reels add a soundtrack
 (dramatic, comic, suspense, hype), sound effects, or both. Create videos get that layer here, in
-CapCut, shaped by the references' sound profiles (`10-media/<V>/audio-profile.json`).
+CapCut, shaped by the references' sound profiles (`10-media/<V>/audio-profile.json`: numbers only, no label).
 
-1. **Plan it from the profiles** (in X1):
+1. **Plan it from the profiles** (in X1), reading the numbers yourself:
    - the role, which the agent infers from the numbers plus the visuals;
-   - the tempo and the energy arc;
-   - whether there is a music bed at all;
-   - where the hits land: on cuts, reveals or punchlines, mapped onto the new video's beats.
+   - the tempo (`tempo_bpm`, `beat_strength`) and the energy change (`energy_change_db`, first to last third);
+   - whether there is a music bed at all, your reading of the numbers (rules of thumb: a harmonic ratio outside
+     speech, `harmonic_ratio_non_speech`, of about 0.55 or more with an audible non-speech share,
+     `non_speech_audible_share`, of 0.15 or more, or a beat strength of about 0.35 or more, usually means a
+     music bed; spectral flatness near 0 is tonal and near 1 noise-like; a steady-tone share,
+     `peak_frequency_steady_share`, near 1 is one steady tone such as a beep, not music);
+   - where the hits land (`hits`, each with `on_cut`): on cuts, reveals or punchlines, mapped onto the new
+     video's beats.
    Never add a bed where the references' family has none.
 2. **Choose the source, in this order:**
    1. **A soundtrack the client supplied** (registry, audio entity).
-   2. **The reference's own sound,** when its profile says `reusable_whole` (no speech over it, a
-      music bed present). Use the extracted `files_audio` track, at the in-point and length the new
-      video needs.
+   2. **The reference's own sound,** when your reading of its profile is that it is a reusable whole (no
+      speech over it, a music bed present by the numbers above). Use the extracted `files_audio` track, at the
+      in-point and length the new video needs.
       - It may be a commercial or trending song whose rights belong to its owner. Mark it in the
         brief and the README so the user decides before posting; brand accounts may only post
         commercially licensed sounds.
@@ -158,8 +163,9 @@ CapCut, shaped by the references' sound profiles (`10-media/<V>/audio-profile.js
      puts them.
    - The generated video's own audio (dialogue, actions) stays on its clips at full volume.
 4. **Check:**
-   - `T audio-profile --audio <capcut-preview.mp4> --out <…/preview-audio.json>` confirms the bed
-     is present and the hits land where planned (±0.15 s);
+   - `T audio-profile --audio <capcut-preview.mp4> --out <…/preview-audio.json>` measures the preview; you
+     read its numbers (harmonic ratio, beat strength, `hits` with their times) to confirm that the bed is
+     present and the hits land where planned (±0.15 s);
    - integrated loudness near −14 LUFS is the social norm; the user fine-tunes levels in CapCut;
    - record the source, license and in-point of every audio file in the README row.
 

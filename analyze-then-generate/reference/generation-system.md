@@ -795,19 +795,27 @@ Walk the action script beat by beat against the request:
 Fix the request before the preflight.
 
 #### 5c.5 Measure it after the merge
-`atg.py sync-check --source <source> --output <final>` compares the output's motion with the
-source's at 30 fps. It reports the offset, any drift and the duration difference, and writes a
-side-by-side sheet (source | output at the same timestamps) at the strongest moments. Also view the
-sync anchors densified, and compare the keep beats on the sheet.
-- **in_sync**, within ±0.1 s everywhere: accept.
-- **constant_offset**, the same offset everywhere (e.g. a generated dead head): post-fix. Trim the
-  picture's head when the output is late, or start the audio later (`restore-audio --start`) when
-  it is early. Then merge and check again.
-- **drift** (the output runs faster or slower) or **out_of_sync** (an action added, skipped or
-  moved): no post-fix can repair it. It is a **regenerate** reason, and the corrected request names
-  what went wrong (duration, speed, the action that moved) and tightens the fidelity lock.
-- **inconclusive**, when the motion is too different to measure (e.g. a heavy restyle): judge it on
-  the sheet and the densified anchors.
+`atg.py sync-check --source <source> --output <final>` measures the output's motion against the
+source's at 30 fps and returns numbers, never a verdict or a fix: `global_offset_s` and `global_corr`; the
+per-window `windows` (`t`, `offset_s`, `corr`, `motion_ratio`); a summary over the windows that pass the two
+filters the call names (`--min-corr`, default 0.5, and `--min-motion`, default 0.25; every window stays listed):
+`median_window_offset_s`, `window_spread_s`, `drift_s_per_10s`, `windows_used` of `windows_total`; the
+`duration_diff_s`; the windows beyond the `--tol` it was given (default 0.10 s), as a list; and a side-by-side
+sheet (source | output at the same timestamps) at the strongest moments. A positive offset means the output's
+action happens later than the source's, so after its sound. Also view the sync anchors densified, and compare the
+keep beats on the sheet. You read the numbers and decide; the guide, as rules of thumb:
+- **In sync:** the global offset and every used window within ±0.10 s. Accept.
+- **A steady offset** (the used windows agree, their spread at most twice the tolerance; e.g. a generated dead
+  head): post-fix. Positive (the output is late): trim the picture's head by that much, then run `restore-audio`
+  again and check again. Negative (the output is early): run `restore-audio` again with `--start` increased by
+  that much, then check again.
+- **Drift** (|`drift_s_per_10s`| × the compared span / 10 above the tolerance: the output runs faster or slower)
+  or **scattered offsets** (an action added, skipped or moved): no post-fix can repair it. It is a
+  **regenerate** reason, and the corrected request names what went wrong (duration, speed, the action that
+  moved) and tightens the fidelity lock.
+- **Inconclusive** (a global correlation below 0.3, or no window used: the motion is too different to measure,
+  e.g. a heavy restyle): judge it on the sheet and the densified anchors.
+Write what you read and what you decided in the verdict (in Analyze Mode also in `result.json` → `sync`).
 
 ### 5d. Counts, openings and object permanence
 Two anomalies from anime Create videos (2026-10) define this rule set: three capsules on a desk
@@ -968,11 +976,13 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
 1. `atg.py qc --video <final> --out <dir> --mode <analyze|edit> --allowed-text "<planned text>"
    --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan (`anomaly-catalog.md` §3
    step 8), then **view the 5 fps storyboard** sheets in order and every dense sheet under
-   `<dir>/dense/`.
+   `<dir>/dense/`. `qc` returns measurements beside the expected values (duration, aspect, size, audio, black
+   spans, freeze starts, `planned_text` beside the `visible_text` its OCR saw) and no pass or fail; you read them
+   with the sheets (`anomaly-catalog.md` §4 step 1 gives the rules of thumb) and write the verdict.
 2. Check against the plan: identity, asset geometry (compare with the canonical template), the ledger
    states, interactions (densify contact moments with `atg.py frames --range a-b --fps 15 --sheet`),
-   lighting, text (unexpected text or pseudo-text = fail), pacing (dead head/tail → `atg.py trim`),
-   and format (720×1280).
+   lighting, text (compare `planned_text` with `visible_text`: unexpected text or pseudo-text = fail), pacing
+   (dead head/tail → `atg.py trim`), and format (720×1280).
    - **Placement (§4b):** compare the item's spot and state across the sheets, and densify around
      cuts, pickups, set-downs and any move (a car driven in or away).
    - These count as a **regenerate** reason: the item missing, unrecognisable, duplicated, changing
@@ -994,16 +1004,18 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      cause, a reversal, a slide without a cause, or a morphing label, badge or body is a
      **regenerate** reason (§5b).
    - **Action sync (§5c),** whenever the original audio comes back: `atg.py sync-check` and its
-     sheet, plus the sync anchors densified. Drift or a moved action is a **regenerate** reason;
-     a steady offset is a post-fix.
+     sheet, plus the sync anchors densified. You read its offsets against the 0.10 s tolerance (§5c.5): drift or
+     a moved action is a **regenerate** reason; a steady offset is a post-fix.
    - **Leftovers:** check against §9b. Only its **must-not-survive** list counts as a finding.
      Everything on its **fine** list is ignored: not reported, not asked about, not regenerated.
    - **Size** (`anomaly-catalog.md` §2.7): on a full-resolution frame at rest, one in use and the
      last, `atg.py scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1>`
      against the named neighbour at the product's own depth (`--depth-ratio` from the frame when the product
      stands in front of or behind it) and `--distance --distance-basis --lens` for the shot (the distance
-     derived from the frame); the two estimates must agree before an oversize verdict, a verdict from one
-     assumed number is provisional and viewed on the frame first, and the observed multiple of the
+     derived from the frame). The tool returns the observed size as a multiple of the expected size per
+     estimate (`size_factor`, `deviation_pct`) and no verdict; you read it: the two estimates should agree (within
+     25 % of each other) before an oversize verdict, a size from one assumed number is provisional and viewed on
+     the frame first, and the observed multiple of the
      expected size and the method go in the verdict. Over 25 %, a size that changes between shots, or a
      product larger than the hand that holds it is a **regenerate** reason with no post-fix;
      15–25 % is a note only for a static product with a readable label. On a model whose guide lists
@@ -1022,7 +1034,7 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      step, the original audio whole, no emoji in a text layer (CE-016, CE-024, CE-025, CE-026). Fixed in
      the CapCut project.
    - **Source surfaces** (§8): each printed surface that a guardrail or §9b names, at full resolution and
-     by `atg.py qc` OCR. A reproduced poster, livery, board or screen is a **regenerate** reason, and the
+     in the text `atg.py qc` lists from its OCR. A reproduced poster, livery, board or screen is a **regenerate** reason, and the
      retry replaces it with a named concrete thing instead of describing blankness.
    - **Caught errors** (`ATG/caught_errors.md`, command item 22): each entry the plan applies is
      checked by id and written in the verdict; a failed check is a regenerate reason when the

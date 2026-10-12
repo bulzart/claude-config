@@ -69,8 +69,16 @@ Follow, for this video only:
   the main session.
 
 Hard rules:
-- Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. One job in flight in
-  your lane; exit 3 means do not submit. Never use generate_video_batch.
+- The toolkit T measures, extracts, records and calculates; it never judges. Every reading (in sync or not,
+  oversize or not, pasted in or not, planned text or stray text, whether to submit past a conflict) is yours:
+  write the decision and its reason in the verdict.
+- Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. `begin` records a pending
+  entry and reports `conflicts` (an open submission in your lane, jobs in flight against the cap, this exact
+  request failed before or already produced a finished job); it refuses nothing, so you decide whether to
+  submit: one job in flight in your lane, the run not past the cap, never the same request again once it
+  produced a finished job, a diagnosis before another attempt. If you decide not to submit, record
+  `T ledger set --fingerprint F --status superseded --note "why"` (that frees the lane). Never use
+  generate_video_batch.
 - Never ask the user anything. On a blocker, write result.json with status "blocked" and stop.
 - Caught errors: every entry your plan applies has its rule in the prompt and is checked by id in
   X9 and written in the verdict (command item 22).
@@ -91,9 +99,10 @@ Hard rules:
   against the plan's named neighbour at the product's own depth (A: when the product stands in front of or
   behind it, `--depth-ratio` comes from the frame, never 1 by default) AND against a distance you derive from
   the frame, never from the
-  shot size (B: `--distance` with `--distance-basis`). An oversize verdict needs A and B to agree; a verdict
-  from one assumed number is PROVISIONAL: view the frame yourself before you flag or report it, and never
-  write RESIDUAL FAILURE for it (CE-028). With agreeing estimates (over 25 % off, changing across a cut, or larger than the hand
+  shot size (B: `--distance` with `--distance-basis`). The tool returns numbers only (the observed size as a
+  multiple of the expected size, per estimate): you read them. An oversize verdict needs A and B to agree (within
+  25 % of each other); a size from one assumed number is PROVISIONAL (your word): view the frame yourself before
+  you flag or report it, and never write RESIDUAL FAILURE for it (CE-028). With agreeing estimates (over 25 % off, changing across a cut, or larger than the hand
   that holds it: regenerate once, no post-fix; where the model guide lists size as a model limit the
   retry changes the form or the anchor class from its passing list, never the sizing words, and a second
   miss ships the best take flagged). Render the plan's QC checkpoints with `T qc --dense`
@@ -136,8 +145,10 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
    - never resubmit after an unknown outcome until it is resolved;
    - at most one autonomous, diagnosed regeneration per clip;
    - a request that failed twice → stop and report.
-   The ledger also caps the whole run at 5 jobs in flight. On "parallel cap", wait with `jobs_wait`
-   on its own job, or simply retry `begin` after a short pause; never work around it.
+   The run keeps at most 5 jobs in flight (`production.max_parallel_jobs`): `begin` reports the number open
+   against that cap, and keeping to it is your call. When the cap is reached, record the entry you did not
+   follow as `superseded`, wait with `jobs_wait` on your own job (or pause briefly), then call `begin`
+   again; never submit past the cap.
 4. **Inputs.** Reuse the shared media ids and folder id from `state.json`. Upload only this video's
    own inputs: the Recreate source, hand-off frames, start frames.
 5. **State.** Write only through `T state` / `T ledger`; both are locked against the other agents.
@@ -164,9 +175,10 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 9. **Recreate: source fidelity** (command item 19). The first request already carries the fidelity
    lock: the source action script, the most preserving input and mode, the scoped change, the
    keep-list and the exclusions (`generation-system.md` §5c), checked at X4. The reference's own
-   audio comes back, so run `T sync-check` after the merge. Fix a steady offset in post; spend the
-   one diagnosed regeneration on drift or a moved action. Record the verdict in `result.json`
-   (`sync`).
+   audio comes back, so run `T sync-check` after the merge and read its numbers against the 0.10 s
+   tolerance (`generation-system.md` §5c.5; the tool gives no verdict). Fix a steady offset in post; spend the
+   one diagnosed regeneration on drift or a moved action. Record what you read and decided in
+   `result.json` (`sync`).
 10. **No questions.** On any blocker, write `result.json` with `"status":"blocked"` and `"blocker"`
    set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `other`, plus one
    line of detail. Then stop.
@@ -211,7 +223,7 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
  "jobs": [{"clip": "c1", "job_id": "…", "credits": 35, "attempts": 1}], "credits": 35,
  "qc": "accepted | regenerated once: <why> | failed: <why>",
  "continuity": "counts: <item N/N/N …> | use: <part, contact, verdict> | permanence: <checkpoints ok | …> | anchor: <in frame from 0.0 s; max drift vs <neighbour> <px> | …> | timeline: <transitions, inserts, overlays, fades ok | …> | audio: <original, whole, hash match | …> | size: <A ×, B ×, agree | provisional> | evidence: <sheet and hash paths>",
- "sync": "in_sync | fixed offset <s> | regenerated once: <why> | off: <why> | n/a (create)",
+ "sync": "within 0.10 s | fixed offset <s> | regenerated once: <why> | off: <why> | n/a (create)",
  "blocker": null, "notes": "…"}
 ```
 
@@ -220,7 +232,7 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 2. Print one line: video, status, CapCut project, credits.
 3. **Check that nothing was left undone** (the as-agents-report checklist; command A9b), and fix what is
    missing here or relaunch the agent; nothing waits for the wrap-up:
-   1. **The ledger.** If `qc` says RESIDUAL FAILURE or regenerated and `T caught-error list --grep <RUN>`
+   1. **The ledger.** If the `qc` field of result.json says RESIDUAL FAILURE or regenerated and `T caught-error list --grep <RUN>`
       shows no entry for this video, record it now (`--source agent`, compact, one entry per class and
       anchor with the videos listed).
    2. **`state.json` → `videos[]`** holds this video (step 1).
