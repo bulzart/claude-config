@@ -149,7 +149,7 @@
     }
   },
   "viral_browser": {
-    "note": "Analyze Mode, Viral-Browser sub-mode (reference/viral-browser.md). Nothing is generated. Keys the scripts read have defaults in atg.py (VB_DEFAULTS) and a key here replaces the default (the rubric and independent_criteria replace wholesale; other nested keys merge); the other keys (browser_pages_per_candidate, reference_pages_max, pick_trend_checks, backfill_researched, red_team_budget_per_candidate, verification_budget, trend_checks) are read by the command. No niche, product or category name is configured or built in anywhere: the niche vocabulary is data the agents write into each run (20-analysis/niche-vocabulary.json).",
+    "note": "Analyze Mode, Viral-Browser sub-mode (reference/viral-browser.md). Nothing is generated. Keys the scripts read have defaults in atg.py (VB_DEFAULTS) and a key here replaces the default (the rubric and independent_criteria replace wholesale; other nested keys merge); the other keys (browser_pages_per_candidate, reference_pages_max, pick_trend_checks, backfill_researched, reference_pack_budget, red_team_budget_per_candidate, verification_budget, trend_checks) are read by the command. No niche, product or category name is configured or built in anywhere: the niche vocabulary is data the agents write into each run (20-analysis/niche-vocabulary.json).",
     "max_research_agents": 3,
     "research_budget_per_candidate": {
       "quick": 8,
@@ -232,6 +232,30 @@
       "quick": 3,
       "standard": 5,
       "deep": 6
+    },
+    "reference_pack_budget": {
+      "quick": 12,
+      "standard": 24,
+      "deep": 40
+    },
+    "photo_max_per_pick": 12,
+    "photo_min_px": 800,
+    "photo_max_px": 4096,
+    "photo_max_mb": 25,
+    "photo_min_angles": 4,
+    "photo_core_angles": [
+      "front",
+      "back",
+      "left",
+      "right",
+      "top"
+    ],
+    "photo_similarity_distance": 5,
+    "spec_tolerance_pct": {
+      "length": 3.0,
+      "weight": 5.0,
+      "volume": 5.0,
+      "other": 2.0
     }
   }
 }

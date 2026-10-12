@@ -135,3 +135,19 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   line (`M#: none (new format), speculative`); the continuation to Create re-ran the synthesis (now only the product side of A4); the TikTok
   sound sentence was dropped; P# clashed with the pick labels and became PT#; "proven ingredients" became graded candidate ingredients.
 
+## 2026-10-12 · the product reference pack (Viral-Browser)
+- **User request:** for each of the 3 winning products, official or verified product information (size, width, height, weight, texture, usage and
+  other useful data) and photo references from several angles, which may later be used as the product reference in Higgsfield video generation.
+- **Added:** `viral-browser.md` section 9.1 (the reference unit; the sourced specification with grades and the verified / official / reported /
+  conflict statuses; the photo set and its checks; rights and honesty; use in Create; the files in `deliverables/product-NN-reference/`), section
+  13.7 (the reference-pack agent prompt, one per pick after `rank --apply`, up to 3 at once), QC items in 10.4, pitfalls, the continuation to
+  Create (the pack is offered as the product's assets, on the user's yes); toolkit `spec` (add, list, render, check, reject) and `photo` (add, set,
+  list, sheet, check) with `config.json -> viral_browser` keys (`reference_pack_budget`, `photo_*`, `spec_tolerance_pct`).
+- **Decisions:** a size or weight is never read off a photo; grade A is only the maker's, brand's or a regulator's own document (a listing is B);
+  two sources count as independent only on different domains; a block (401, 403, 429) is final and is never bypassed; a photo is usable only after it
+  was viewed; the pack records rights as unknown unless the source says otherwise and flags watermarks and third-party brand marks; the reference
+  unit is one real identifiable product (brand and model, or the supplier's listing), not the category.
+- **Hypotheses to test on the first run:** (1) the maker's page gives three or more angles for most picks, otherwise the marketplace galleries are
+  often blocked and the user must save images by hand (count the blocked rows); (2) one reference unit per pick is enough when the pick is a generic
+  white-label product (watch whether the specification differs between listings); (3) 24 web calls per pick at standard depth are enough for a complete
+  sheet and a ready photo set.

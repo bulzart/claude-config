@@ -61,6 +61,10 @@ Subcommands (python atg.py <cmd> -h):
   candidates     Viral-Browser: the candidate-product ledger (add | list | set | pool | score | rank | show):
                  scoring arithmetic, gates and the niche-bias controls (independent-evidence cap, category cap)
   evidence       Viral-Browser: the research evidence ledger (add | list): claim, source, date, grade, independence
+  spec           Viral-Browser: the sourced specification of a pick (add | list | render | check): size, weight, material, texture,
+                 usage ...; each fact with its source, grade and variant; verified / official / reported / conflict; never read off a photo
+  photo          Viral-Browser: the photo references of a pick (add | set | list | sheet | check): a read-only download that is
+                 never retried past a block, dedupe, resolution, angle, viewed / usable / watermark / brand-mark / rights flags
   econ           unit economics at a price (VAT-inclusive retail, landed cost, fulfilment, fees, returns ->
                  contribution, break-even CPA and ROAS)
 
@@ -3759,6 +3763,10 @@ VB_DEFAULTS = {
     "gates": {"min_scores": {"demand": 3, "commercial": 3, "economics": 3, "compliance": 3, "fit": 3},
               "min_contribution_pct": 25, "min_independent_evidence": 2, "min_confidence_for_pick": "medium"},
     "small_n_warning_below": 10,
+    "reference_pack_budget": {"quick": 12, "standard": 24, "deep": 40},        # web calls per pick, read by the command
+    "photo_max_per_pick": 12, "photo_min_px": 800, "photo_max_px": 4096, "photo_max_mb": 25,
+    "photo_min_angles": 4, "photo_core_angles": ["front", "back", "left", "right", "top"], "photo_similarity_distance": 5,
+    "spec_tolerance_pct": {"length": 3.0, "weight": 5.0, "volume": 5.0, "other": 2.0},
 }
 VB_REPLACE_KEYS = {"rubric", "independent_criteria"}
 EV_LANES = ["demand", "commercial", "competition", "economics", "compliance", "logistics", "voice", "content",
@@ -3799,7 +3807,7 @@ def _norm(s) -> str:
     return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", str(s or "")).strip().casefold())
 
 
-VB_LEDGER_FILES = {"candidates.json", "evidence.json", "niche-vocabulary.json"}
+VB_LEDGER_FILES = {"candidates.json", "evidence.json", "niche-vocabulary.json", "specs.json", "photos.json"}
 
 
 def _vb_load(path: Path, default):
@@ -5138,6 +5146,630 @@ def _cd_rank(a, items, cfg, checks=None):
     out(res)
 
 
+# ---- the product reference pack of a pick: sourced specifications and photo references (reference/viral-browser.md section 9.1)
+
+SPEC_UNITS = {      # unit -> (class, factor to the canonical unit: mm, g, ml)
+    "mm": ("length", 1.0), "cm": ("length", 10.0), "m": ("length", 1000.0), "in": ("length", 25.4), "inch": ("length", 25.4),
+    "inches": ("length", 25.4), "ft": ("length", 304.8),
+    "g": ("weight", 1.0), "kg": ("weight", 1000.0), "oz": ("weight", 28.349523125), "lb": ("weight", 453.59237), "lbs": ("weight", 453.59237),
+    "ml": ("volume", 1.0), "cl": ("volume", 10.0), "l": ("volume", 1000.0), "fl oz": ("volume", 29.5735295625), "floz": ("volume", 29.5735295625),
+    "gal": ("volume", 3785.411784),
+}
+SPEC_CANON = {"length": "mm", "weight": "g", "volume": "ml"}
+SPEC_LENGTH_FIELDS = ("length", "width", "height", "depth", "diameter", "thickness")
+SPEC_FIELD_CLASS = {**{f: "length" for f in SPEC_LENGTH_FIELDS}, "weight": "weight", "volume": "volume", "capacity": "volume"}
+SPEC_SOURCE_KINDS = ["manufacturer", "brand", "regulatory", "supplier", "retailer", "marketplace", "test", "derived", "measured", "other"]
+SPEC_OFFICIAL_KINDS = ("manufacturer", "brand", "regulatory", "measured")
+SPEC_FLOOR = {"length": 2.0, "weight": 2.0, "volume": 5.0}
+SPEC_GRADE_RANK = {"A": 0, "B": 1, "C": 2, "D": 3}
+PHOTO_ANGLE_RX = re.compile(r"^[a-z0-9][a-z0-9-]{0,40}$")
+PHOTO_RIGHTS = ["unknown", "manufacturer-provided", "supplier-provided", "own-sample", "licensed"]
+
+
+def _spec_paths(run):
+    d = _vb_dir(run)
+    return d / "specs.json", d / "specs.json.lock"
+
+
+def _photo_paths(run):
+    d = _vb_dir(run)
+    return d / "photos.json", d / "photos.json.lock"
+
+
+def _spec_field(s) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", unicodedata.normalize("NFKC", str(s or "")).casefold()).strip("_")
+
+
+def _fmt_num(x, nd=2) -> str:
+    s = f"{x:.{nd}f}"
+    if "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return s or "0"
+
+
+def _pick_number(run, cand):
+    rj = _vb_load(_vb_dir(run) / "ranking.json", {})
+    for i, r in enumerate((rj.get("picks") if isinstance(rj, dict) else None) or [], 1):
+        if isinstance(r, dict) and r.get("id") == cand:
+            return i
+    return None
+
+
+def _pack_dir(run, cand, name=None, create=False):
+    """The reference-pack folder of a candidate. It is named after the CANDIDATE (reference-C##-<name>) and remembered in photos.json, so that a
+    re-ranking, which renumbers the picks, can never send two products into one folder or move a pack. Returns None when it does not exist
+    and create is False."""
+    p, lk = _photo_paths(run)
+    rel = (_vb_load(p, {"items": []}).get("packs") or {}).get(cand)
+    if rel is None:
+        if not create:
+            return None
+        with FileLock(lk):
+            data = _vb_load(p, {"created": now_iso(), "items": []})
+            rel = data.setdefault("packs", {}).get(cand)
+            if rel is None:
+                rel = f"deliverables/reference-{cand}-{slugify(name or cand, 28)}"
+                data["packs"][cand] = rel
+                data["updated"] = now_iso()
+                write_json(p, data)
+    return Path(run) / rel
+
+
+def _spec_display(cls, value_si, value, unit) -> str:
+    if cls == "length":
+        return f"{_fmt_num(value_si / 10.0, 1)} cm ({_fmt_num(value_si / 25.4, 2)} in)"
+    if cls == "weight":
+        if value_si >= 1000:
+            return f"{_fmt_num(value_si / 1000.0, 3)} kg ({_fmt_num(value_si / 453.59237, 2)} lb)"
+        return f"{_fmt_num(value_si, 1)} g ({_fmt_num(value_si / 28.349523125, 2)} oz)"
+    if cls == "volume":
+        return f"{_fmt_num(value_si, 0)} ml ({_fmt_num(value_si / 1000.0, 2)} L; {_fmt_num(value_si / 29.5735295625, 1)} fl oz)"
+    return f"{_fmt_num(value)} {unit}".strip()
+
+
+def _spec_variant(facts, variant):
+    if variant is not None:
+        return variant
+    counts = {}
+    for f in facts:
+        if f.get("variant") and f["field"] in SPEC_FIELD_CLASS:
+            counts[f["variant"]] = counts.get(f["variant"], 0) + 1
+    return max(counts, key=lambda k: (counts[k], k)) if counts else ""
+
+
+def _spec_resolve(facts, variant, cfg):
+    """Judge each (field, scope) of one variant (the facts that name no variant count for every variant).
+    Status: verified (two or more sources on different domains agree within the tolerance), official (one grade A
+    source: the maker's, the brand's, a regulator's, or a measurement), reported (one grade B source), unverified
+    (only grade C or D), conflict (grade A/B sources disagree beyond the tolerance: the leading value is shown, the
+    others are listed)."""
+    tol = cfg["spec_tolerance_pct"]
+    groups = {}
+    for f in facts:
+        if f.get("variant", "") in ("", variant):
+            groups.setdefault((f["field"], f["scope"]), []).append(f)
+    res = {}
+    for (field, scope), fs in sorted(groups.items()):
+        fs = sorted(fs, key=lambda f: f["retrieved"], reverse=True)
+        fs.sort(key=lambda f: SPEC_GRADE_RANK[f["grade"]])
+        numeric = [f for f in fs if f.get("value_si") is not None]
+        entry = {"field": field, "scope": scope, "facts": [{k: f.get(k) for k in ("id", "value", "unit", "text", "grade", "source", "source_kind", "retrieved", "variant", "note")} for f in fs]}
+        if numeric:
+            cls = numeric[0].get("unit_class") or "other"
+            valid = [f for f in numeric if f["grade"] in ("A", "B")]
+            pool = valid or numeric
+            clusters = []
+            for f in pool:
+                for cl in clusters:
+                    ref = cl[0]["value_si"]
+                    tv = max(max(ref, f["value_si"]) * tol.get(cls, tol["other"]) / 100.0, SPEC_FLOOR.get(cls, 0.0))
+                    if abs(f["value_si"] - ref) <= tv:
+                        cl.append(f)
+                        break
+                else:
+                    clusters.append([f])
+            clusters.sort(key=lambda cl: (min(SPEC_GRADE_RANK[f["grade"]] for f in cl), -len(cl)))
+            lead = clusters[0]
+            domains = {f["domain"] for f in lead if f["grade"] in ("A", "B")}
+            if not valid:
+                status = "unverified"
+            elif len(clusters) > 1:
+                status = "conflict"
+            elif len(domains) >= 2:
+                status = "verified"
+            elif any(f["grade"] == "A" for f in lead):
+                status = "official"
+            else:
+                status = "reported"
+            top = lead[0]
+            entry.update({"kind": "number", "status": status, "class": cls, "value_si": top["value_si"], "si_unit": top.get("si_unit"),
+                          "display": _spec_display(cls, top["value_si"], top["value"], top["unit"]),
+                          "others": [[f["id"] for f in cl] for cl in clusters[1:]]})
+        else:
+            texts = {}
+            for f in fs:
+                texts.setdefault(_norm(f.get("text")), []).append(f)
+            top = fs[0]
+            agree = [{f["domain"] for f in v if f["grade"] in ("A", "B")} for v in texts.values()]
+            if any(len(d) >= 2 for d in agree):
+                status = "verified"
+            elif any(f["grade"] == "A" for f in fs):
+                status = "official"
+            elif any(f["grade"] == "B" for f in fs):
+                status = "reported"
+            else:
+                status = "unverified"
+            all_texts = [v[0].get("text") for v in texts.values() if v[0].get("text")]
+            entry.update({"kind": "text", "status": status, "display": " · ".join(all_texts) if all_texts else top.get("text"), "all_texts": all_texts})
+        res[(field, scope)] = entry
+    return res
+
+
+def _spec_check(res):
+    """Completeness of the core facts of a pick's reference sheet. Dimensions: two linear measures of the product
+    (a diameter counts as two), the weight, a material, a texture or finish, and how it is used."""
+    usable = ("verified", "official", "reported")
+
+    def ok(field, scope="product"):
+        e = res.get((field, scope))
+        return bool(e) and e["status"] in usable + ("conflict",)
+
+    dims = [f for f in SPEC_LENGTH_FIELDS if ok(f)]
+    n_dims = len(dims) + (1 if "diameter" in dims else 0)
+    have, missing = [], []
+    for label, cond in (("two linear dimensions", n_dims >= 2), ("weight", ok("weight")), ("material", ok("material")),
+                        ("texture or finish", ok("texture") or ok("finish")), ("usage", ok("usage"))):
+        (have if cond else missing).append(label)
+    conflicts = sorted(f"{f}/{s}" for (f, s), e in res.items() if e["status"] == "conflict")
+    weak = sorted(f"{f}/{s}" for (f, s), e in res.items() if e["status"] == "unverified")
+    if "two linear dimensions" in missing or "weight" in missing:
+        verdict = "insufficient"
+    elif missing or conflicts:
+        verdict = "partial"
+    else:
+        verdict = "complete"
+    rec = [r for r in ("colour", "included", "features", "care", "warnings", "certifications") if not ok(r)]
+    if not (ok("volume") or ok("capacity")):
+        rec.insert(1, "volume or capacity (if the product holds anything)")
+    return {"verdict": verdict, "have": have, "missing": missing, "conflicts": conflicts, "unverified_only": weak,
+            "not_found_recommended": rec, "dimensions_found": dims}
+
+
+def _spec_md(name, cand, variant, res, chk, cfg, rejected=()) -> list:
+    L = [f"# {name or cand} - specification sheet", "",
+         f"Candidate {cand} · variant: {variant or 'not specified'} · generated {now_iso()} · completeness: **{chk['verdict']}**", "",
+         "Status: **verified** = two sources on different domains agree; **official** = the maker's, the brand's or a regulator's own document (or a measurement); "
+         "**reported** = one supplier, retailer or marketplace listing; **unverified** = estimate or unsourced; **conflict** = sources disagree (the leading value is shown). "
+         "A size or weight is never read off a photo; a fact that was not found is written 'not found'.", ""]
+    ident = [(k, res.get((k, "product"))) for k in ("brand", "model", "variant", "sku", "gtin")]
+    ident = [(k, e) for k, e in ident if e]
+    if ident:
+        L += ["## Reference unit", ""] + [f"- **{k}:** {e['display']} ({e['status']})" for k, e in ident] + [""]
+
+    def table(title, keys, scope, absent=None):
+        got = [(k, res[(k, scope)]) for k in keys if (k, scope) in res]
+        if absent is None:
+            absent = [k for k in keys if (k, scope) not in res]
+        if not got and scope == "packaged":
+            return []
+        out_ = [f"## {title}", ""]
+        if got:
+            out_ += ["| fact | value | status | source |", "|---|---|---|---|"]
+            for k, e in got:
+                top = e["facts"][0]
+                more = f" (+{len(e['facts']) - 1} more)" if len(e["facts"]) > 1 else ""
+                out_.append(f"| {k} | {_md_cell(str(e['display'])[:700])} | {e['status']} | {_md_cell(top['source'])} ({top['grade']}, {top['retrieved']}){more} |")
+            out_.append("")
+        if absent and scope == "product":
+            out_.append(f"Not found: {', '.join(absent)}.")
+        return out_ + [""]
+
+    dims_found = [k for k in SPEC_LENGTH_FIELDS if (k, "product") in res]
+    need = 2 if "diameter" in dims_found else 3
+    lin_absent = [] if len(dims_found) >= need else [k for k in ("width", "height", "depth") if k not in dims_found]
+    size_absent = lin_absent + (["weight"] if ("weight", "product") not in res else [])
+    L += table("Size and weight (the product itself)", list(SPEC_LENGTH_FIELDS) + ["weight", "volume", "capacity"], "product", size_absent)
+    L += table("Packaged (for shipping)", list(SPEC_LENGTH_FIELDS) + ["weight"], "packaged")
+    L += table("Materials, texture and finish", ["material", "texture", "finish", "colour"], "product")
+    used = {"brand", "model", "variant", "sku", "gtin"} | set(SPEC_LENGTH_FIELDS) | {"weight", "volume", "capacity", "material", "texture", "finish", "colour"}
+    L += table("Usage and features", ["usage", "features", "included", "care", "warnings"], "product")
+    used |= {"usage", "features", "included", "care", "warnings", "certifications"}
+    L += table("Certifications and labels (as the sources list them; the compliance lane decides)", ["certifications"], "product")
+    rest = sorted(k for (k, s_) in res if k not in used and s_ == "product")
+    if rest:
+        L += table("Technical and other facts", rest, "product")
+    if chk["conflicts"]:
+        L += ["## Conflicts", ""]
+        for key in chk["conflicts"]:
+            f, s_ = key.split("/")
+            e = res[(f, s_)]
+            L.append(f"- **{key}**: " + "; ".join(f"{x['value']} {x['unit']} ({x['grade']}, {x['source']})" for x in e["facts"]))
+        L.append("")
+    if rejected:
+        L += ["## Rejected facts (kept on record, not judged)", "", "| id | fact | source | why |", "|---|---|---|---|"]
+        L += [f"| {f['id']} | {f['field']} {_md_cell(f['text'] if f['text'] is not None else str(f['value']) + ' ' + str(f['unit']))} | {_md_cell(f['source'])} | {_md_cell(f.get('rejected_reason'))} |" for f in rejected]
+        L.append("")
+    srcs = {}
+    for e in res.values():
+        for x in e["facts"]:
+            d = _domain(x["source"]) if str(x["source"]).startswith("http") else "method"
+            srcs.setdefault((d, x["source_kind"], x["grade"]), set()).add(x["retrieved"])
+    L += ["## Sources", "", "| domain | kind | grade | retrieved |", "|---|---|---|---|"]
+    L += [f"| {d} | {k} | {g} | {', '.join(sorted(r))} |" for (d, k, g), r in sorted(srcs.items())]
+    L += ["", f"Missing for a complete sheet: {', '.join(chk['missing']) or 'nothing'}. Not found (recommended): {', '.join(chk['not_found_recommended']) or 'nothing'}."]
+    return L
+
+
+def cmd_spec(a):
+    cfg = vb_cfg()
+    p, lk = _spec_paths(a.run)
+    if a.action == "reject":        # a fact found to be wrong (another variant, a typo in a listing) stays on record but is no longer judged
+        if not (a.id and a.reason):
+            fail("spec reject needs --id (SP###) and --reason", 2)
+        with FileLock(lk):
+            data = _vb_load(p, {"items": []})
+            row = next((f for f in data["items"] if f["id"] == a.id), None)
+            if not row:
+                fail(f"unknown fact {a.id}", 2)
+            row["rejected"], row["rejected_reason"] = True, a.reason
+            data["updated"] = now_iso()
+            write_json(p, data)
+        out({"ok": True, "id": a.id, "rejected": True})
+    cands = {c["id"]: c for c in _vb_load(_cd_paths(a.run)[0], {"items": []})["items"]}
+    if not a.cand:
+        fail(f"spec {a.action} needs --cand", 2)
+    if a.cand not in cands:
+        fail(f"unknown candidate {a.cand}", 2)
+    if a.action == "add":
+        field = _spec_field(a.field)
+        if not field:
+            fail("spec add needs --field (for example width, weight, material, usage)", 2)
+        if (a.value is None) == (a.text is None):
+            fail("spec add needs exactly one of --value (with --unit) or --text", 2)
+        if not a.source or not a.source_kind or not a.grade:
+            fail("spec add needs --source, --source-kind and --grade", 2)
+        if a.source_kind == "photo":
+            fail("a size or weight is never read off a photo: find the maker's or a listing's figure, or leave the fact 'not found'", 2)
+        if a.grade in ("A", "B") and a.source_kind != "measured" and not re.match(r"^https?://", a.source.strip(), re.I):
+            fail("a grade A or B fact needs the source URL (a page, manual or datasheet that states it); use grade C with a method for an estimate or D for an unverified claim", 2)
+        if a.grade == "A" and a.source_kind not in SPEC_OFFICIAL_KINDS:
+            fail("grade A is the manufacturer's, the brand's or a regulator's own document, or a measurement of a sample; a supplier, retailer or marketplace listing is grade B", 2)
+        if a.grade == "C" and a.source_kind != "derived":
+            fail("grade C is an estimate with its method: use --source-kind derived and write the method in --source", 2)
+        retrieved = a.retrieved or dt.date.today().isoformat()
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", retrieved):
+            fail("--retrieved must be YYYY-MM-DD", 2)
+        row = {"cand": a.cand, "field": field, "scope": a.scope, "variant": (a.variant or "").strip(), "value": None, "unit": None, "unit_class": None,
+               "value_si": None, "si_unit": None, "text": None, "source": a.source.strip(), "domain": _domain(a.source) if re.match(r"^https?://", a.source.strip(), re.I) else "method",
+               "source_kind": a.source_kind, "grade": a.grade, "retrieved": retrieved, "note": a.note, "added": now_iso()}
+        if a.value is not None:
+            if not math.isfinite(a.value) or a.value <= 0:
+                fail("--value must be a positive number", 2)
+            unit = re.sub(r"\s+", " ", (a.unit or "").strip().lower().replace(".", ""))
+            if not unit:
+                fail("a numeric fact needs --unit", 2)
+            want = SPEC_FIELD_CLASS.get(field)
+            if unit in SPEC_UNITS:
+                cls, factor = SPEC_UNITS[unit]
+                if want and cls != want:
+                    fail(f"{field} is a {want}: the unit {unit!r} is a {cls}", 2)
+                row.update({"value": a.value, "unit": unit, "unit_class": cls, "value_si": round(a.value * factor, 4), "si_unit": SPEC_CANON[cls]})
+            elif want:
+                fail(f"unknown unit {unit!r} for {field}; accepted: {', '.join(sorted(u for u, (c, _f) in SPEC_UNITS.items() if c == want))}", 2)
+            else:
+                row.update({"value": a.value, "unit": unit, "unit_class": "other", "value_si": a.value, "si_unit": unit})
+        else:
+            if not a.text.strip():
+                fail("--text is empty", 2)
+            row["text"] = a.text.strip()
+        with FileLock(lk):
+            data = _vb_load(p, {"created": now_iso(), "items": []})
+            key = (row["cand"], row["field"], row["scope"], row["variant"], row["value_si"], _norm(row["text"]), row["source"])
+            for f in data["items"]:
+                if (f["cand"], f["field"], f["scope"], f["variant"], f["value_si"], _norm(f["text"]), f["source"]) == key:
+                    out({"ok": True, "id": f["id"], "duplicate": True})
+            row["id"] = f"SP{len(data['items']) + 1:03d}"
+            data["items"].append(row)
+            data["updated"] = now_iso()
+            write_json(p, data)
+        out({"ok": True, "id": row["id"], "field": field, "scope": row["scope"], "value_si": row["value_si"], "si_unit": row["si_unit"]})
+    all_facts = [f for f in _vb_load(p, {"items": []})["items"] if f["cand"] == a.cand]
+    facts = [f for f in all_facts if not f.get("rejected")]
+    variant = _spec_variant(facts, a.variant)
+    if a.action == "list":
+        if a.md:
+            print("| id | field | scope | variant | value | grade | kind | retrieved | source | rejected |\n|---|---|---|---|---|---|---|---|---|---|")
+            for f in all_facts:
+                v = f["text"] if f["text"] is not None else f"{_fmt_num(f['value'], 3)} {f['unit']}"
+                print(f"| {f['id']} | {f['field']} | {f['scope']} | {_md_cell(f['variant'])} | {_md_cell(v)} | {f['grade']} | {f['source_kind']} | {f['retrieved']} | {_md_cell(f['source'])} | {_md_cell(f.get('rejected_reason') or '')} |")
+        out({"ok": True, "count": len(all_facts), "variant": variant, "items": all_facts if not a.md else [f["id"] for f in all_facts]})
+    res = _spec_resolve(facts, variant, cfg)
+    chk = _spec_check(res)
+    if a.action == "check":
+        out({"ok": chk["verdict"] == "complete", "variant": variant, **chk})
+    name = cands[a.cand].get("name")
+    n = _pick_number(a.run, a.cand)
+    L = _spec_md(name, a.cand, variant, res, chk, cfg, [f for f in all_facts if f.get("rejected")])
+    pack = None if a.out else _pack_dir(a.run, a.cand, name, create=bool(n))
+    md_path = Path(a.out) if a.out else (pack / "spec.md" if pack else None)
+    if md_path is None:
+        fail(f"{a.cand} is not a pick of the current ranking: pass --out, or run `candidates rank --apply` first", 2)
+    dims_cm = {f: {"cm": round(res[(f, "product")]["value_si"] / 10.0, 2), "status": res[(f, "product")]["status"]} for f in SPEC_LENGTH_FIELDS if (f, "product") in res and res[(f, "product")].get("kind") == "number"}
+    wt = res.get(("weight", "product"))
+    vol = res.get(("volume", "product")) or res.get(("capacity", "product"))
+    js = {"cand": a.cand, "name": name, "pick": n, "variant": variant, "generated": now_iso(), "completeness": chk,
+          "dimensions_cm": dims_cm,
+          "weight_g": ({"g": wt["value_si"], "status": wt["status"]} if wt and wt.get("kind") == "number" else None),
+          "volume_ml": ({"ml": vol["value_si"], "status": vol["status"]} if vol and vol.get("kind") == "number" else None),
+          "fields": {f"{k}|{s}": {kk: vv for kk, vv in e.items()} for (k, s), e in res.items()}}
+    write_text(md_path, "\n".join(L) + "\n")
+    write_json(md_path.with_suffix(".json"), js)
+    out({"ok": True, "md": str(md_path), "json": str(md_path.with_suffix(".json")), "pack": str(md_path.parent), "variant": variant, "verdict": chk["verdict"], "missing": chk["missing"],
+         "conflicts": chk["conflicts"], "dimensions_cm": dims_cm, "weight_g": js["weight_g"]})
+
+
+def _photo_dhash(im) -> int:
+    from PIL import Image
+    g = im.convert("L").resize((9, 8), Image.LANCZOS)
+    px = list(g.getdata())
+    bits = 0
+    for r in range(8):
+        for c in range(8):
+            bits = (bits << 1) | (1 if px[r * 9 + c] > px[r * 9 + c + 1] else 0)
+    return bits
+
+
+def _fetch_image(url, referer, max_bytes):
+    """One read-only GET of an image URL. A 4xx answer (a login wall, a block, a rate limit, a missing file) is final:
+    it is never retried under another identity. Server errors and timeouts are retried twice. Returns
+    (bytes | None, error | None, http status | None)."""
+    import requests  # type: ignore
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; atg-product-reference; read-only)", "Accept": "image/jpeg,image/png,image/webp,*/*;q=0.5"}
+    if referer:
+        headers["Referer"] = referer
+    last = None
+    for attempt in range(3):
+        try:
+            with requests.get(url, stream=True, timeout=(15, 60), headers=headers, allow_redirects=True) as r:
+                if 400 <= r.status_code < 500:
+                    return None, f"blocked or not found: HTTP {r.status_code} (not retried, not bypassed)", r.status_code
+                if r.status_code >= 500:
+                    raise IOError(f"HTTP {r.status_code}")
+                ctype = r.headers.get("Content-Type", "").split(";")[0].strip().lower()
+                if ctype and not ctype.startswith("image/") and ctype not in ("application/octet-stream", "binary/octet-stream"):
+                    return None, f"not an image (Content-Type {ctype})", r.status_code
+                if ctype in ("image/svg+xml", "image/gif"):
+                    return None, f"not a usable still photo (Content-Type {ctype})", r.status_code
+                chunks, n = [], 0
+                for chunk in r.iter_content(1 << 20):
+                    n += len(chunk)
+                    if n > max_bytes:
+                        return None, f"larger than {max_bytes / 1e6:.0f} MB", r.status_code
+                    chunks.append(chunk)
+                return b"".join(chunks), None, r.status_code
+        except Exception as e:
+            last = str(e)[:200]
+            time.sleep(2 ** attempt)
+    return None, f"download failed: {last}", None
+
+
+def _photo_summary(rows, cfg):
+    live = [r for r in rows if r["status"] == "downloaded"]
+    good = [r for r in live if r.get("viewed") and r.get("usable")]
+    angles = sorted({r["angle"] for r in good})
+    core = cfg["photo_core_angles"]
+    core_present = [x for x in core if x in angles]
+    unviewed = [r["id"] for r in live if not r.get("viewed")]
+    flags = {"brand_marks": [r["id"] for r in good if r.get("brand_marks")], "watermark": [r["id"] for r in good if r.get("watermark")],
+             "other_variant": [r["id"] for r in good if r.get("same_variant") is False],
+             "rights_unknown": [r["id"] for r in good if r.get("rights") == "unknown"]}
+    if not live:
+        verdict = "none"
+    elif len(good) < 2 or "front" not in angles:
+        verdict = "insufficient"
+    elif unviewed or len(set(angles) & set(core)) < cfg["photo_min_angles"]:
+        verdict = "partial"
+    else:
+        verdict = "ready"
+    return {"verdict": verdict, "downloaded": len(live), "usable_viewed": len(good), "angles": angles, "core_angles_present": core_present,
+            "core_angles_missing": [x for x in core if x not in angles], "unviewed": unviewed, "blocked_urls": [r["id"] for r in rows if r["status"] == "blocked"],
+            "flags": flags, "smallest_long_side_px": min([max(r["width"], r["height"]) for r in good], default=None)}
+
+
+def _photo_md(cand, name, rows) -> list:
+    L = [f"# {name or cand} - photo references", "",
+         "| id | file | angle | px | source kind | viewed | usable | background | watermark | third-party brand marks | same variant | rights | status | source |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    yn = lambda v: "-" if v is None else ("yes" if v else "no")
+    for r in rows:
+        px = f"{r['width']}x{r['height']}" if r.get("width") else "-"
+        L.append(f"| {r['id']} | {Path(r['file']).name if r.get('file') else '-'} | {r['angle']} | {px} | {r['source_kind']} | {yn(r.get('viewed'))} | {yn(r.get('usable'))} | "
+                 f"{r.get('background') or '-'} | {yn(r.get('watermark'))} | {yn(r.get('brand_marks'))} | {yn(r.get('same_variant'))} | {r.get('rights')} | {r['status']} | {_md_cell(r['url'])} |")
+    return L
+
+
+def cmd_photo(a):
+    cfg = vb_cfg()
+    p, lk = _photo_paths(a.run)
+    cands = {c["id"]: c for c in _vb_load(_cd_paths(a.run)[0], {"items": []})["items"]}
+    if not a.cand and a.action != "set":
+        fail(f"photo {a.action} needs --cand", 2)
+    if a.action == "set":
+        data = _vb_load(p, {"items": []})
+        row = next((r for r in data["items"] if r["id"] == a.id), None)
+        if not a.id or not row:
+            fail(f"photo set needs --id of an existing photo (see `photo list`)", 2)
+        a.cand = row["cand"]
+    elif a.cand not in cands:
+        fail(f"unknown candidate {a.cand}", 2)
+    n = _pick_number(a.run, a.cand)
+    if a.action == "add" and n is None:
+        fail(f"{a.cand} is not a pick of the current ranking: reference packs are made for the picks (run `candidates rank --apply` first)", 2)
+    pack = _pack_dir(a.run, a.cand, cands.get(a.cand, {}).get("name"), create=(a.action == "add"))
+    if pack is None:
+        fail(f"{a.cand} has no reference pack yet: it is created by the first `photo add` (the candidate must be a pick of the current ranking)", 2)
+    if a.action == "add":
+        for need, val in (("--url", a.url), ("--angle", a.angle), ("--source-kind", a.source_kind)):
+            if not val:
+                fail(f"photo add needs {need}", 2)
+        angle = a.angle.strip().lower()
+        if not PHOTO_ANGLE_RX.match(angle):
+            fail("--angle is a short lowercase word such as front, back, left, right, top, three-quarter-left, detail, in-use, scale, packaging, contents", 2)
+        if not re.match(r"^https?://", a.url.strip(), re.I):
+            fail("the image URL must be http or https", 2)
+        rows0 = [r for r in _vb_load(p, {"items": []})["items"] if r["cand"] == a.cand]
+        if sum(1 for r in rows0 if r["status"] == "downloaded") >= cfg["photo_max_per_pick"]:
+            fail(f"{a.cand} already has {cfg['photo_max_per_pick']} photos (viral_browser.photo_max_per_pick): reject one with `photo set --reject` or stop here", 2)
+        data_b, err, status = _fetch_image(a.url.strip(), a.page_url, int(cfg["photo_max_mb"] * 1e6))
+
+        def record(row):
+            with FileLock(lk):
+                data = _vb_load(p, {"created": now_iso(), "items": []})
+                row["id"] = f"PH{len(data['items']) + 1:03d}"
+                data["items"].append(row)
+                data["updated"] = now_iso()
+                write_json(p, data)
+            return row["id"]
+
+        base = {"cand": a.cand, "pick": n, "url": a.url.strip(), "page_url": a.page_url, "source_kind": a.source_kind, "variant": (a.variant or "").strip(),
+                "angle": angle, "retrieved": dt.date.today().isoformat(), "note": a.note, "rights": "unknown", "viewed": False, "usable": None, "background": None,
+                "watermark": None, "brand_marks": None, "same_variant": None, "added": now_iso()}
+        if data_b is None:
+            pid = record({**base, "file": None, "status": "blocked" if (status and 400 <= status < 500) else "failed", "reason": err})
+            out({"ok": False, "error": err, "id": pid, "blocked": bool(status and 400 <= status < 500),
+                 "next": "the URL stays in the ledger; open the page by hand (or the user's Chrome) and save the image yourself if it is needed"}, 1)
+        try:
+            import io
+            from PIL import Image, ImageOps
+            im = Image.open(io.BytesIO(data_b))
+            im.verify()
+            im = Image.open(io.BytesIO(data_b))
+            if im.size[0] * im.size[1] > 60_000_000:
+                raise ValueError(f"{im.size[0]}x{im.size[1]} is more than 60 megapixels")
+            fmt = im.format
+            if fmt not in ("JPEG", "PNG", "WEBP"):
+                raise ValueError(f"format {fmt} is not accepted (JPEG, PNG or WEBP only; convert HEIC or AVIF first)")
+            orient = im.getexif().get(274, 1)
+            im.load()
+        except Exception as e:
+            pid = record({**base, "file": None, "status": "failed", "reason": f"not a readable image: {str(e)[:160]}"})
+            out({"ok": False, "error": f"not a readable image: {str(e)[:160]}", "id": pid}, 1)
+        changed, resized_from = False, None
+        if orient not in (None, 1):
+            im = ImageOps.exif_transpose(im)
+            changed = True
+        w, h = im.size
+        if max(w, h) < cfg["photo_min_px"]:
+            pid = record({**base, "file": None, "status": "rejected", "reason": f"too small: {w}x{h}, the long side must be at least {cfg['photo_min_px']} px"})
+            out({"ok": False, "error": f"too small: {w}x{h}; look for a larger version of this photo (at least {cfg['photo_min_px']} px on the long side)", "id": pid}, 1)
+        if max(w, h) > cfg["photo_max_px"]:
+            resized_from = f"{w}x{h}"
+            im = im.copy()
+            im.thumbnail((cfg["photo_max_px"], cfg["photo_max_px"]), Image.LANCZOS)
+            w, h = im.size
+            changed = True
+        if changed:
+            buf = io.BytesIO()
+            if fmt == "JPEG":
+                im.convert("RGB").save(buf, "JPEG", quality=95)
+            elif fmt == "PNG":
+                im.save(buf, "PNG")
+            else:
+                im.save(buf, "WEBP", quality=95)
+            data_b = buf.getvalue()
+        sha = hashlib.sha256(data_b).hexdigest()
+        dh = _photo_dhash(im)
+        with FileLock(lk):
+            data = _vb_load(p, {"created": now_iso(), "items": []})
+            mine = [r for r in data["items"] if r["cand"] == a.cand]
+            for r in mine:
+                if r["status"] == "downloaded" and r.get("sha256") == sha:
+                    out({"ok": False, "error": f"duplicate of {r['id']} (the same file)", "duplicate_of": r["id"]}, 1)
+                if r["status"] == "downloaded" and not a.allow_similar and r.get("dhash") is not None and bin(int(r["dhash"], 16) ^ dh).count("1") <= cfg["photo_similarity_distance"]:
+                    out({"ok": False, "error": f"near-duplicate of {r['id']} ({r['angle']}): the same photo at another size? If it is truly a different view (a symmetric product seen from the back), repeat with --allow-similar",
+                         "duplicate_of": r["id"]}, 1)
+            idx = len(mine) + 1
+            ext = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}[fmt]
+            dest = pack / "photos" / f"{idx:02d}-{angle}.{ext}"
+            while dest.exists():
+                idx += 1
+                dest = pack / "photos" / f"{idx:02d}-{angle}.{ext}"
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(data_b)
+            row = {**base, "file": str(dest.relative_to(Path(a.run))).replace("\\", "/"), "status": "downloaded", "bytes": len(data_b), "sha256": sha, "dhash": f"{dh:016x}",
+                   "width": w, "height": h, "format": fmt, "has_alpha": im.mode in ("RGBA", "LA", "P"), "reoriented": orient not in (None, 1), "resized_from": resized_from}
+            row["id"] = f"PH{len(data['items']) + 1:03d}"
+            data["items"].append(row)
+            data["updated"] = now_iso()
+            write_json(p, data)
+        out({"ok": True, "id": row["id"], "file": str(dest), "width": w, "height": h, "bytes": len(data_b), "format": fmt, "reoriented": row["reoriented"], "resized_from": resized_from,
+             "next": "view the image (Read), then `photo set --id " + row["id"] + " --viewed yes --usable yes|no --background … --watermark … --brand-marks … --same-variant …`"})
+    if a.action == "set":
+        with FileLock(lk):
+            data = _vb_load(p, {"items": []})
+            row = next(r for r in data["items"] if r["id"] == a.id)
+            for k, v in (("angle", a.angle), ("background", a.background), ("rights", a.rights), ("note", a.note), ("variant", a.variant)):
+                if v is not None:
+                    if k == "angle":
+                        v = v.strip().lower()
+                        if not PHOTO_ANGLE_RX.match(v):
+                            fail("--angle is a short lowercase word", 2)
+                    row[k] = v
+            for k, v in (("viewed", a.viewed), ("usable", a.usable), ("watermark", a.watermark), ("brand_marks", a.brand_marks), ("same_variant", a.same_variant)):
+                if v is not None:
+                    row[k] = (v == "yes")
+            if a.reject:
+                if not a.reason:
+                    fail("--reject needs --reason", 2)
+                row["status"], row["reason"], row["usable"] = "rejected", a.reason, False
+            if row.get("usable") and not row.get("viewed"):
+                fail("a photo is usable only after it was viewed: set --viewed yes (look at the image first)", 2)
+            data["updated"] = now_iso()
+            write_json(p, data)
+        out({"ok": True, **{k: row.get(k) for k in ("id", "angle", "viewed", "usable", "background", "watermark", "brand_marks", "same_variant", "rights", "status")}})
+    rows = [r for r in _vb_load(p, {"items": []})["items"] if r["cand"] == a.cand]
+    if a.action == "list":
+        L = _photo_md(a.cand, cands[a.cand].get("name"), rows)
+        if a.out:
+            write_text(Path(a.out), "\n".join(L) + "\n")
+        if a.md:
+            print("\n".join(L))
+        out({"ok": True, "count": len(rows), "items": rows if not (a.md or a.out) else [r["id"] for r in rows], "out": a.out})
+    if a.action == "sheet":
+        from PIL import Image, ImageDraw, ImageOps
+        shown = [r for r in rows if r["status"] == "downloaded" and r.get("file") and (Path(a.run) / r["file"]).exists()]
+        if not shown:
+            fail("no downloaded photos to show", 1)
+        cols, cell, lab_h = 3, 380, 34
+        nrows = math.ceil(len(shown) / cols)
+        sheet = Image.new("RGB", (cols * cell, 30 + nrows * (cell + lab_h)), (22, 22, 22))
+        dr, f1, f2 = ImageDraw.Draw(sheet), _font(15), _font(12)
+        dr.text((8, 6), f"{cands[a.cand].get('name') or a.cand}: {len(shown)} photo(s)", fill=(240, 240, 240), font=f1)
+        for i, r in enumerate(shown):
+            rr, cc = divmod(i, cols)
+            x0, y0 = cc * cell, 30 + rr * (cell + lab_h)
+            try:
+                with Image.open(Path(a.run) / r["file"]) as im:
+                    im = ImageOps.exif_transpose(im).convert("RGB")
+                    im.thumbnail((cell - 6, cell - 6))
+                    sheet.paste(im, (x0 + (cell - im.width) // 2, y0 + (cell - im.height) // 2))
+            except Exception:
+                dr.rectangle([x0 + 3, y0 + 3, x0 + cell - 3, y0 + cell - 3], outline=(200, 0, 0))
+            state = "usable" if r.get("usable") else ("not usable" if r.get("usable") is False else "not judged")
+            dr.rectangle([x0, y0 + cell, x0 + cell, y0 + cell + lab_h], fill=(0, 0, 0))
+            dr.text((x0 + 6, y0 + cell + 2), f"{r['id']}  {r['angle']}  {r['width']}x{r['height']}", fill=(235, 235, 235), font=f2)
+            flags = ", ".join(x for x, on in (("watermark", r.get("watermark")), ("brand marks", r.get("brand_marks")), ("other variant", r.get("same_variant") is False)) if on)
+            dr.text((x0 + 6, y0 + cell + 18), f"{state}" + (f" | {flags}" if flags else ""), fill=(200, 200, 120) if flags else (170, 170, 170), font=f2)
+        dest = Path(a.out) if a.out else pack / "photos-sheet.png"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        sheet.save(dest)
+        out({"ok": True, "sheet": str(dest), "photos": len(shown)})
+    summ = _photo_summary(rows, cfg)       # check
+    L = _photo_md(a.cand, cands[a.cand].get("name"), rows)
+    write_text(pack / "photos.md", "\n".join(L) + "\n")
+    out({"ok": summ["verdict"] == "ready", **summ})
+
+
 # --------------------------------------------------------------------------- CLI
 
 def main():
@@ -5454,6 +6086,36 @@ def main():
     p.add_argument("--market"); p.add_argument("--value"); p.add_argument("--unit"); p.add_argument("--note")
     p.add_argument("--md", action="store_true"); p.add_argument("--out", help="list: write the markdown table to this file")
     p.set_defaults(fn=cmd_evidence)
+
+    p = sp.add_parser("spec", help="Viral-Browser: the sourced specification of a pick (add | list | render | check | reject)")
+    p.add_argument("action", choices=["add", "list", "render", "check", "reject"]); p.add_argument("--run", required=True)
+    p.add_argument("--id", help="reject: the fact id (SP###) found to be wrong"); p.add_argument("--reason", help="reject: why")
+    p.add_argument("--cand"); p.add_argument("--field", help="add: width, height, depth, length, diameter, thickness, weight, volume, capacity, material, texture, finish, colour, usage, features, included, care, warnings, certifications, brand, model, gtin ... (any short name)")
+    p.add_argument("--value", type=float, help="add: a number (with --unit); a size or weight is never read off a photo")
+    p.add_argument("--unit", help="add: mm cm m in ft | g kg oz lb | ml cl l fl oz gal | or any other unit for a free field (W, V, mAh ...)")
+    p.add_argument("--text", help="add: a text fact (material, texture, usage ...)")
+    p.add_argument("--source", help="add: the URL of the page, manual or datasheet that states it (grade A/B), or the method (grade C)")
+    p.add_argument("--source-kind", choices=SPEC_SOURCE_KINDS + ["photo"], help="add: manufacturer / brand / regulatory / measured = grade A; supplier / retailer / marketplace / test = grade B; derived = grade C")
+    p.add_argument("--grade", choices=list("ABCD"), help="add: A the maker's, brand's or regulator's own document (or a measurement); B a supplier, retailer, marketplace or independent test page; C an estimate with its method; D unverified")
+    p.add_argument("--scope", choices=["product", "packaged"], default="product", help="add: the product itself, or its packaging (for shipping)")
+    p.add_argument("--variant", help="add: the size or colour this fact belongs to; render / check: the variant to judge (default: the one with most facts)")
+    p.add_argument("--retrieved", help="add: YYYY-MM-DD (default today)"); p.add_argument("--note")
+    p.add_argument("--out", help="render: where to write spec.md (default: the candidate's pack folder, deliverables/reference-C##-<name>/spec.md; spec.json beside it)")
+    p.add_argument("--md", action="store_true"); p.set_defaults(fn=cmd_spec)
+
+    p = sp.add_parser("photo", help="Viral-Browser: the photo references of a pick (add | set | list | sheet | check)")
+    p.add_argument("action", choices=["add", "set", "list", "sheet", "check"]); p.add_argument("--run", required=True)
+    p.add_argument("--cand", help="a pick of the current ranking"); p.add_argument("--id", help="set: the photo id (PH###)")
+    p.add_argument("--url", help="add: the direct image URL (http or https)"); p.add_argument("--page-url", help="add: the page it was found on (sent as the referer, like a browser)")
+    p.add_argument("--angle", help="front, back, left, right, top, bottom, three-quarter-left, three-quarter-right, detail, texture, in-use, scale, packaging, contents, open ...")
+    p.add_argument("--source-kind", choices=SPEC_SOURCE_KINDS, help="add: manufacturer / brand / supplier / retailer / marketplace / test / other")
+    p.add_argument("--variant"); p.add_argument("--note"); p.add_argument("--allow-similar", action="store_true", help="add: keep a photo that looks like an existing one (a symmetric product seen from the back)")
+    p.add_argument("--viewed", choices=["yes", "no"]); p.add_argument("--usable", choices=["yes", "no"])
+    p.add_argument("--background", choices=["clean", "lifestyle", "busy"]); p.add_argument("--watermark", choices=["yes", "no"])
+    p.add_argument("--brand-marks", dest="brand_marks", choices=["yes", "no"], help="set: a third party's brand or logo is visible")
+    p.add_argument("--same-variant", dest="same_variant", choices=["yes", "no"], help="set: it shows the same variant (size, colour) as the specification")
+    p.add_argument("--rights", choices=PHOTO_RIGHTS); p.add_argument("--reject", action="store_true"); p.add_argument("--reason")
+    p.add_argument("--out"); p.add_argument("--md", action="store_true"); p.set_defaults(fn=cmd_photo)
 
     p = sp.add_parser("econ", help="unit economics: VAT-inclusive retail, landed cost, fulfilment, fees, returns -> contribution")
     p.add_argument("--retail", type=float, required=True, help="consumer price (VAT-inclusive in the EU)")

@@ -80,8 +80,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
      above for the viral cards (≤ 2, disjoint lists); one fresh **niche-audit agent** (before the
      shortlist); up to `viral_browser.max_research_agents` (3) **research agents** (web only,
      background, disjoint candidate lists), one fresh, blind **scoring agent** and one
-     **red-team agent**. None calls Higgsfield or CapCut (`reference/viral-browser.md` §5, §7,
-     §8.2, §13).
+     **red-team agent**; and, after the picks are applied, up to 3 **reference-pack agents** (web
+     only, one per pick). None calls Higgsfield or CapCut (`reference/viral-browser.md` §5, §7,
+     §8.2, §9.1, §13).
    - Agents never overlap, never ask questions (they report blockers and stop), and never spawn
      agents. Edit Mode uses no production agents.
 3. **Generation lanes.** Every video is a lane with **one job in flight at a time**:
@@ -374,8 +375,10 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     - **Three products, each data-backed:** researched in parallel by research agents, attacked by
       a red-team agent, scored on a rubric, passed through six gates, and delivered with a
       blueprint (the corpus's engagement style combined with what is trending now), the economics
-      at the user's price, the compliance and logistics findings, a validation plan and the
-      evidence that would change the call. "No product passes" is a valid result.
+      at the user's price, the compliance and logistics findings, a **reference pack** (the
+      product's sourced specification: size, weight, material, texture, usage; and photo references
+      from several angles, `viral-browser.md` §9.1), a validation plan and the evidence that would
+      change the call. "No product passes" is a valid result.
     - **Evidence discipline:** no number without a source and a retrieval date or a method; grades
       A–D; "unknown" never scores 3; the run is read-only on the world (no purchase, no login, no
       contact); the compliance, platform and IP screens are viability checks, never taste. The
@@ -413,9 +416,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
 | Higgsfield guide | `ATG/higgsfield/higgsfield-mcp.md` |
 | Caught errors | `ATG/caught_errors.md` (item 22): `T caught-error add | list | set`; read at A1 / E1, applied in X1, X2, X9 |
 | References | `ATG/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`, `viral-browser.md`; `ATG/pipeline/preprocessing.md` |
-| Viral-Browser | `ATG/reference/viral-browser.md` (item 23; steps V1–V9); config `ATG/config.json → viral_browser`; toolkit `T viral-stats`, `T candidates`, `T evidence`, `T econ` |
+| Viral-Browser | `ATG/reference/viral-browser.md` (item 23; steps V1–V9); config `ATG/config.json → viral_browser`; toolkit `T viral-stats`, `T candidates`, `T evidence`, `T econ`, `T spec`, `T photo` |
 | CapCut | `capcut` MCP (drafts store and template in `ATG/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
-| Run folder | created by `T new-run` under `ATG/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json; Viral-Browser adds `30-research/` for the candidates, evidence, dossiers and ranking, and `deliverables/` for the report and the three product files) |
+| Run folder | created by `T new-run` under `ATG/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json; Viral-Browser adds `30-research/` for the candidates, evidence, dossiers and ranking, and `deliverables/` for the report, the three product files and their reference packs) |
 
 **Higgsfield tools** are deferred.
 - Load them before first use:
@@ -1184,23 +1187,36 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   warning. If fewer than 3 pass, run the backfill (V5) first; if still fewer, say which gate removed
   each and what could be relaxed (§8.6). `next_step=blueprints`.
 
-#### V7. Blueprints and deliverables
+#### V7. Blueprints, reference packs and deliverables
 - Per pick, a **trend pass** (up to `pick_trend_checks[depth]` bounded searches or pages for the
   formats, hooks and sounds now used in that product's niche and market, dated; `tiktok_music_trending`
   once when an account is connected), then `deliverables/product-NN.md` (its dossier and its
-  blueprint, `viral-browser.md` §9–§10). Then `viral-browser-report.md`, `evidence.md` (`T evidence
-  list --run RUN --out <RUN>/deliverables/evidence.md`), `create-handoff.md` and `README.md`.
-  `next_step=report-qc`.
+  blueprint, `viral-browser.md` §9–§10).
+- **Reference packs** (`viral-browser.md` §9.1): right after `rank --apply`, spawn up to 3
+  reference-pack agents, one per pick, in the background with the prompt of §13.7 filled in (run,
+  toolkit, date, market, the pick, the depth and its `reference_pack_budget`), and write the blueprints
+  meanwhile. When they report, check each pack: `T spec check --run RUN --cand C##` and
+  `T photo check --run RUN --cand C##`. A pack that is not complete or ready gets one more targeted
+  fill-in within the same budget, and what is still missing is reported, never invented. View each
+  contact sheet yourself (`T photo sheet`, then Read), process `30-research/queue-<C>-pack.md` with the
+  user's Chrome only when they allowed it (read-only: the image URLs of a gallery, a specification
+  table; register them with `T spec add` / `T photo add`), then `T spec render` for each pick. The
+  packs go in `deliverables/product-NN-reference/`.
+- Then `viral-browser-report.md` (with each pick's specification table, photo list and flags),
+  `evidence.md` (`T evidence list --run RUN --out <RUN>/deliverables/evidence.md`),
+  `create-handoff.md` and `README.md`. `next_step=report-qc`.
 
 #### V8. Report QC
 - The checklist of `viral-browser.md` §10.4: every number sourced or recomputed with `T econ`,
   the gates quoted, origin-blind dossiers, defence notes present, one currency and tax convention,
-  region-matched evidence, up to 12 key claims fetched again, no unsupported hook or claim, and each
+  region-matched evidence, up to 12 key claims fetched again, no unsupported hook or claim, each pick's reference pack (spec and photo verdicts, nothing read off a
+  photo, every image viewed, flags and rights stated), and each
   research error that reached this step recorded as an agent entry (`--source agent`, with
   `--title`). Fix before anything is shown. `next_step=wrap-up`.
 
 #### V9. Wrap-up
-- Show the summary (`viral-browser.md` §10.3): the table of the three picks, the method in three
+- Show the summary (`viral-browser.md` §10.3): the table of the three picks (with each pick's reference unit, size,
+  weight, material and photo verdict), the method in three
   lines, the open questions, the deliverables path and the run folder. No credits, no CapCut.
 - Ask for feedback (`viral-browser.md` §11.2, header "Picks") and record every problem named
   (item 22, with `--title`) before offering the fix. "Adjust" follows §11.3.
@@ -1925,7 +1941,8 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
 - Never use or create a Claude Code Workflow.
 - Never spawn more than 2 analysis agents, more than 5 production agents at once, or a production
   agent in Edit Mode; in Viral-Browser never more than 3 research agents at once, plus one niche-audit
-  agent, one scoring agent and one red-team agent, and no production agent. Never give agents
+  agent, one scoring agent and one red-team agent, and, after the picks, up to 3 reference-pack
+  agents (never alongside the research agents), and no production agent. Never give agents
   overlapping work.
 - Never read model guides other than the locked one.
 - Never re-ask for, switch, or suggest switching the model after it was picked at the start. Only an
@@ -2088,6 +2105,11 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
 - Viral-Browser: never buy, sign up, log in, message a seller or submit a form; never collect personal
   data; never use a browser tool unless the user chose "web plus my Chrome", and then only to read
   pages (`viral-browser.md` §0 rule 6, §7.5).
+- Viral-Browser: never read a size or weight off a photo; never give a specification fact without its
+  source, kind, grade and date, and never call a single listing verified; never download an image behind
+  a login or past a block (401, 403, 429), or by another route after one; never keep an image nobody
+  viewed; and never present a web image as rights-cleared or as the user's own asset (`viral-browser.md`
+  §9.1).
 - Viral-Browser: never invent an exclusion. The user's exclusions come from the user alone, and the
   compliance, platform and IP screens are viability checks, never taste (`viral-browser.md` §0 rule 5).
   Never recommend fake scarcity, fake or undisclosed incentivised reviews, unprovable claims or any
