@@ -1334,7 +1334,7 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   (the words are defined in `viral-browser.md` §8.2 item 3; the command echoes what it stored; a rating no
   row backs says `--refs "demand=none"`). It applies the rules of thumb for evidence
   and says so in its note: a rating on demand, commercial, competition, economics or compliance with no
-  positive independent grade A or B row is 2 at most (for economics the calculated estimate also needs a
+  independent grade A or B row (of any direction) is 2 at most; a 4 or 5 needs a positive one, and so does a 3 on compliance (§7.4) (for economics the calculated estimate also needs a
   sourced input row); negative rows that match the positive ones hold a 4 or a 5 at 3. No script caps or
   changes a rating. **This session does not score**: it built the pool and has seen the origins. A
   compliance row is **positive** only when the obligation can be met by a known route at a stated cost

@@ -1280,3 +1280,133 @@ How agents use it:
 - **rule:** A swapped identity must match the source performer's skin tone and ethnicity on the whole body (face, neck, hands, forearms) because the video reference keeps the body; pick the character by skin tone and build before style, state the tone match in the prompt with an exclusion against a lighter or darker face, and QC compares face vs neck vs hands tone on a full-resolution frame with an evidence path; a noted tone mismatch is a regenerate reason, never a delivered note.
 - **status:** promoted
 - **promoted to:** anomaly-catalog.md 2.17, 4 (5e); build prompt
+
+## CE-030 · 2026-10-12 · Inconsistent cost inputs across research agents made a slicer look viable
+- **source:** agent
+- **video:** C05
+- **run:** 20261012-113001-test-hunt
+- **delivered:** not recorded
+- **mode:** analyze-viral-browser
+- **model:** unknown
+- **product:** unknown
+- **assets:** not recorded
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** one research agent stored its economics with an unsourced US fulfilment of 7.00 per order while the others used 10.74 to 14.70 from sourced postage; C05 showed 33.7 % / 30.0 % of net, the only amber economics lane of the wave; on one common basis it is 7.2 % / 18.4 %
+- **brief:** not recorded
+- **prompt:** not recorded
+- **params:** not recorded
+- **errors:** none
+- **evidence:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
+- **class:** viral-browser.md §7.0
+- **cause:** research
+- **fix:** common cost basis written after the wave, T econ re-run for 18 results, the superseded rows retracted with a reason
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** The inputs that do not depend on the product are decided once, with sources, before the research wave, and every agent's economics use them.
+- **status:** promoted
+- **promoted to:** viral-browser.md §7.0; command V4b
+
+## CE-031 · 2026-10-12 · Retail price taken from search summaries of a cheaper variant
+- **source:** agent
+- **video:** C14
+- **run:** 20261012-113001-test-hunt
+- **delivered:** not recorded
+- **mode:** analyze-viral-browser
+- **model:** unknown
+- **product:** unknown
+- **assets:** not recorded
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** C14 was priced at 34.99 from search summaries about plastic units; the marketplace pages showed ceramic 2 L units at 45 to 60 selling 200 to 1K+ a month (US contribution 2.0 % at 34.99, 27.5 % at 49.99)
+- **brief:** not recorded
+- **prompt:** not recorded
+- **params:** not recorded
+- **errors:** none
+- **evidence:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
+- **class:** viral-browser.md §7.5
+- **cause:** evidence
+- **fix:** browser pass read the marketplace pages and the economics were re-run at the price they show
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** Price evidence is read on the marketplace pages; a price from a search summary about a cheaper variant is not the product's price.
+- **status:** promoted
+- **promoted to:** viral-browser.md §7.4, §7.5, §12
+
+## CE-032 · 2026-10-12 · Price re-read at one variant, landed cost left at another
+- **source:** agent
+- **video:** C14
+- **run:** 20261012-113001-test-hunt
+- **delivered:** not recorded
+- **mode:** analyze-viral-browser
+- **model:** unknown
+- **product:** unknown
+- **assets:** not recorded
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** after the browser pass the main session re-ran C14 at the ceramic market price (49.99 USD) while the landed cost stayed at a plastic proxy (9.55 FOB); the pair passed G1 (27.5 % / 30.4 %); the red team found ceramic units at 14.00 to 18.20 FOB in a larger carton: 12.6 % / 16.7 %
+- **brief:** not recorded
+- **prompt:** not recorded
+- **params:** not recorded
+- **errors:** none
+- **evidence:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
+- **class:** viral-browser.md §7.5
+- **cause:** plan
+- **fix:** red team re-ran the economics on the ceramic cost (EV620 to EV623); EV452 and EV453 retracted
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** A price and a cost are read at the same variant; after the browser pass the supplier price of that variant is re-read and the economics re-run for every candidate whose market price differs from the stored one.
+- **status:** promoted
+- **promoted to:** viral-browser.md §7.5, §12, §13.3
+
+## CE-033 · 2026-10-12 · Scenario price stored without market evidence
+- **source:** agent
+- **video:** C06
+- **run:** 20261012-113001-test-hunt
+- **delivered:** not recorded
+- **mode:** analyze-viral-browser
+- **model:** unknown
+- **product:** unknown
+- **assets:** not recorded
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** the backfill agent stored C06 at 39.99 as a scenario while the market it had read showed generics at 8 to 20 USD; the table showed 31.7 % / 36.0 %; at the volume price read later (29.99 USD) the US result is 13.2 %
+- **brief:** not recorded
+- **prompt:** not recorded
+- **params:** not recorded
+- **errors:** none
+- **evidence:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
+- **class:** viral-browser.md §7.3
+- **cause:** evidence
+- **fix:** re-run at the market price with a price ladder (EV637, EV638); the stored scenario row retracted
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** Store the price the market shows and say which tier it is; a higher price is a labelled scenario with no weight for a gate, and the ladder (T econ --prices) shows the rest.
+- **status:** promoted
+- **promoted to:** viral-browser.md §7.3, §12
+
+## CE-034 · 2026-10-12 · Derived figure inside a page-read evidence row went stale
+- **source:** agent
+- **video:** C14
+- **run:** 20261012-113001-test-hunt
+- **delivered:** not recorded
+- **mode:** analyze-viral-browser
+- **model:** unknown
+- **product:** unknown
+- **assets:** not recorded
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** two grade A page-read rows (EV449, EV451) carried the price for 25 % (47.95 USD / 41.75 EUR) in their claim and note; the figure changed to 59.94 / 52.49 when the cost was re-read, and the rows could not be edited
+- **brief:** not recorded
+- **prompt:** not recorded
+- **params:** not recorded
+- **errors:** none
+- **evidence:** not recorded
+- **qc:** not recorded
+- **plan:** not recorded
+- **class:** viral-browser.md §7.4
+- **cause:** evidence
+- **fix:** flagged in ranking.md; EV622 and EV623 are the authority
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** Keep derived figures out of page-read rows: a page row states what the page shows, and what depends on the inputs belongs in the grade C economics row.
+- **status:** open
+- **promoted to:** —
