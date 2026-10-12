@@ -4825,8 +4825,9 @@ def _cd_new(spec):
 
 
 def _cd_blind(c):
-    """What a blind reader (a research or scoring agent) may see of a candidate: its product, never where it came from or what the person who built the
-    pool expected of it (origin, origin note, mechanisms, the builder's notes and hypotheses, the history of status changes with their reasons)."""
+    """What a blind reader (a research or scoring agent) may see of a candidate: its product and its record, never where it came from or what the person who built
+    the pool expected of it (origin, origin note, mechanisms, the builder's notes and hypotheses, the history of status changes with their reasons). The status, ratings,
+    confidence, red-team reading and stored economics stay in view; `show --product-only` is the view without them."""
     return {k: v for k, v in c.items() if k not in ("origin", "origin_note", "mechanisms", "added", "notes", "history")}
 
 
@@ -5461,9 +5462,9 @@ def cmd_spec(a):
         for field in cfg["spec_core_fields"]:
             fs = [f for f in live if f["field"] == field and f["scope"] == "product"]
             js_ = [j for j in judgements if j["cand"] == a.cand and j["field"] == field and j["scope"] == "product"]
-            rows.append({"field": field, "facts": len(fs), "judgements": len(js_), "judged_as": sorted({j["status"] for j in js_})})
-        print("| core field | facts recorded | judgements recorded | judged as |\n|---|---|---|---|\n"
-              + "\n".join(f"| {r['field']} | {r['facts']} | {r['judgements']} | {_md_cell(', '.join(r['judged_as']))} |" for r in rows))
+            rows.append({"field": field, "facts": len(fs), "judgements": len(js_), "latest_judgement": js_[-1]["status"] if js_ else None})
+        print("| core field | facts recorded | judgements recorded | latest judgement |\n|---|---|---|---|\n"
+              + "\n".join(f"| {r['field']} | {r['facts']} | {r['judgements']} | {_md_cell(r['latest_judgement'] or '')} |" for r in rows))
         out({"ok": True, "core_fields": rows, "no_fact_recorded": [r["field"] for r in rows if not r["facts"]], "no_judgement_recorded": [r["field"] for r in rows if not r["judgements"]]})
     # render: the sheet of the candidate (spec.md and spec.json) in its pack folder, or --out
     name = cands[a.cand].get("name")
@@ -6640,7 +6641,7 @@ def main():
     p.add_argument("--exclude-eliminated", action="store_true", help="summary: leave the eliminated candidates out")
     p.add_argument("--md", action="store_true"); p.add_argument("--json", action="store_true", help="table: also return the rows in the JSON line")
     p.add_argument("--out", help="table: write the markdown table to this file")
-    p.add_argument("--blind", action="store_true", help="hide origin, origin note, mechanisms, the pool builder's notes and the history of status changes (a blind reader sees only the product)")
+    p.add_argument("--blind", action="store_true", help="hide origin, origin note, mechanisms, the pool builder's notes and the history of status changes; it still shows the status, ratings, confidence, red-team reading and stored economics (--product-only hides those too)")
     p.add_argument("--no-copies", dest="no_copies", action="store_true", help="show: leave out the rows recorded as copies of another candidate's row (the shared inputs); their number is printed")
     p.add_argument("--product-only", dest="product_only", action="store_true", help="show: only the product (name, definition, category, type): no status, ratings, confidence, economics, red-team reading or evidence, for an agent that must not be steered by them")
     p.set_defaults(fn=cmd_candidates)

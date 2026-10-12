@@ -1391,7 +1391,11 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
     `T spec judge --cand C## --field … --fact SP### --status "<its own label, for example verified, official, reported, unverified, conflict>" --reason "…" --by …`
     (the latest judgement wins and nothing is computed). A fact found to be wrong is withdrawn with
     `T spec reject --id SP### --reason "…"`, a link with `T photo set --id PH### --reject --reason "…"`
-    (both stay on record, off the sheet; `--restore` brings a link back).
+    (both stay on record, off the sheet; `--restore` brings a link back). A manual or datasheet that is
+    a PDF is read with `T pdf-text --url <PDF> [--pages 1-5]` (WebFetch cannot open a PDF with compressed
+    text); a page that lists related products before its gallery is narrowed with
+    `T photo find --match <word> --offset N --md`. The agent reads the product with
+    `T candidates show --id C## --product-only` (no status, ratings or economics).
   - When they report, read each pack yourself: `T spec gaps --run RUN --cand C##` counts the facts and
     judgements for the core fields, `T spec table --run RUN --cand C##` sets the facts side by side with
     the plain spread of the numbers, and `T photo list --run RUN --cand C##` / `T photo check` produce the
@@ -1405,7 +1409,9 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   - **No image is downloaded: the packs hold links.** Process `30-research/queue-<C>-pack.md` with the
     user's Chrome only when they allowed it (read-only: the image links of a gallery, a specification
     table; register them with `T spec add` / `T photo add`; an image you open in the browser may get its
-    flags with `T photo set --looked-at yes`, which the four visual flags require), then `T spec render`
+    flags with `T photo set --looked-at yes`, which the four visual flags require; the views no source
+    names are recorded the same way, `T photo set --angle front --basis looked --looked-at yes`: the
+    looking step belongs to the stage, a background agent cannot do it), then `T spec render`
     and `T photo check` for each pick (`spec.md`, `photos.md` and `photos.html` are written into the pack:
     the judged value with its status and reason, or "no judgement recorded" with the facts side by side).
     The packs go in `deliverables/reference-C##-<name>/` (named after the candidate; the first
