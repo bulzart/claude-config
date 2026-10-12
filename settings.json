@@ -52,6 +52,7 @@
   "theme": "dark",
   "editorMode": "vim",
   "autoCompactEnabled": true,
+  "autoCompactWindow": 750000,
   "terminalProgressBarEnabled": true,
   "autoMode": {
     "environment": [
