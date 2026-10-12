@@ -74,7 +74,7 @@ atg.py new-run --mode analyze --submode viral-browser --source "<refs folder>" [
 atg.py viral-stats --run "<run>" [--set references|baseline|both]     → 20-analysis/corpus-stats.{json,md}: measured length, hook, pacing, speech, text, music, loop; niche concentration from the cards' Facts lines
 atg.py viral-stats --run "<run>" --no-niche                           → 20-analysis/corpus-profile.{json,md} (Create): the same measured profile without the niche vocabulary, the concentration or the references' product layer
 atg.py spec add|list|render|check|reject --run "<run>" --cand C## …              → 30-research/specs.json; render → deliverables/reference-C##-<name>/spec.{md,json} (viral-browser.md §9.1)
-atg.py photo find|add|set|list|sheet|check --run "<run>" --cand C## …                 → 30-research/photos.json; images in deliverables/reference-C##-<name>/photos/ (read-only download, never past a block)
+atg.py photo find|add|set|list|check --run "<run>" --cand C## …                    → 30-research/photos.json; LINKS ONLY, no image is downloaded; photos.md + photos.html in deliverables/reference-C##-<name>/ (pages read-only, links probed with HEAD, never past a block)
 atg.py niches propose|add|map|list --run "<run>" …                   → 20-analysis/niche-vocabulary.json: the niche vocabulary the AGENTS decide from the labels in the data (no script lists any niche)
 atg.py candidates add|list|set|pool|shortlist|score|rank|show --run "<run>" …    → 30-research/candidates.json, ranking.{json,md} (viral-browser.md §6, §8); labels resolve through the vocabulary
 atg.py evidence add|list --run "<run>" --cand C03 --lane demand …      → 30-research/evidence.json (claim, source, date, grade, independence)

@@ -376,8 +376,8 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
       a red-team agent, scored on a rubric, passed through six gates, and delivered with a
       blueprint (the corpus's engagement style combined with what is trending now), the economics
       at the user's price, the compliance and logistics findings, a **reference pack** (the
-      product's sourced specification: size, weight, material, texture, usage; and photo references
-      from several angles, `viral-browser.md` §9.1), a validation plan and the evidence that would
+      product's sourced specification: size, weight, material, texture, usage; and links to photos
+      from several angles, none downloaded, `viral-browser.md` §9.1), a validation plan and the evidence that would
       change the call. "No product passes" is a valid result.
     - **Evidence discipline:** no number without a source and a retrieval date or a method; grades
       A–D; "unknown" never scores 3; the run is read-only on the world (no purchase, no login, no
@@ -1196,27 +1196,29 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   reference-pack agents, one per pick, in the background with the prompt of §13.7 filled in (run,
   toolkit, date, market, the pick, the depth and its `reference_pack_budget`), and write the blueprints
   meanwhile. When they report, check each pack: `T spec check --run RUN --cand C##` and
-  `T photo check --run RUN --cand C##`. A pack that is not complete or ready gets one more targeted
-  fill-in within the same budget, and what is still missing is reported, never invented. View each
-  contact sheet yourself (`T photo sheet`, then Read), process `30-research/queue-<C>-pack.md` with the
-  user's Chrome only when they allowed it (read-only: the image URLs of a gallery, a specification
-  table; register them with `T spec add` / `T photo add`), then `T spec render` for each pick. The
-  packs go in `deliverables/reference-C##-<name>/` (named after the candidate; the toolkit creates the folder and remembers it).
-- Then `viral-browser-report.md` (with each pick's specification table, photo list and flags),
+  `T photo check --run RUN --cand C##` (covered, partial, thin or none). A pack that is not complete or covered gets one more reference-pack agent for that pick alone, told what is
+  missing, with the same budget again (one extra round only), and what is still missing is reported, never invented. **No image
+  is downloaded: the packs hold links.** Process `30-research/queue-<C>-pack.md` with the user's
+  Chrome only when they allowed it (read-only: the image links of a gallery, a specification table;
+  register them with `T spec add` / `T photo add`; an image you open in the browser may get its
+  flags with `T photo set --looked-at yes`), then `T spec render` and `T photo check` for each pick
+  (`photos.md` and `photos.html` are written into the pack). The packs go in
+  `deliverables/reference-C##-<name>/` (named after the candidate; the toolkit creates the folder and remembers it).
+- Then `viral-browser-report.md` (with each pick's specification table and photo links with their status and flags),
   `evidence.md` (`T evidence list --run RUN --out <RUN>/deliverables/evidence.md`),
   `create-handoff.md` and `README.md`. `next_step=report-qc`.
 
 #### V8. Report QC
 - The checklist of `viral-browser.md` §10.4: every number sourced or recomputed with `T econ`,
   the gates quoted, origin-blind dossiers, defence notes present, one currency and tax convention,
-  region-matched evidence, up to 12 key claims fetched again, no unsupported hook or claim, each pick's reference pack (spec and photo verdicts, nothing read off a
-  photo, every image viewed, flags and rights stated), and each
+  region-matched evidence, up to 12 key claims fetched again, no unsupported hook or claim, each pick's reference pack (spec and photo-link verdicts, nothing read off a
+  photo, no image downloaded, angles shown as the source's labels, rights stated), and each
   research error that reached this step recorded as an agent entry (`--source agent`, with
   `--title`). Fix before anything is shown. `next_step=wrap-up`.
 
 #### V9. Wrap-up
 - Show the summary (`viral-browser.md` §10.3): the table of the three picks (with each pick's reference unit, size,
-  weight, material and photo verdict), the method in three
+  weight, material and photo-link coverage), the method in three
   lines, the open questions, the deliverables path and the run folder. No credits, no CapCut.
 - Ask for feedback (`viral-browser.md` §11.2, header "Picks") and record every problem named
   (item 22, with `--title`) before offering the fix. "Adjust" follows §11.3.
@@ -2106,10 +2108,10 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   data; never use a browser tool unless the user chose "web plus my Chrome", and then only to read
   pages (`viral-browser.md` §0 rule 6, §7.5).
 - Viral-Browser: never read a size or weight off a photo; never give a specification fact without its
-  source, kind, grade and date, and never call a single listing verified; never download an image behind
-  a login or past a block (401, 403, 429), or by another route after one; never keep an image nobody
-  viewed; and never present a web image as rights-cleared or as the user's own asset (`viral-browser.md`
-  §9.1).
+  source, kind, grade and date, and never call a single listing verified; never download an image (the
+  packs hold links); never read a page or probe a link behind a login or past a block (401, 403, 429),
+  or by another route after one; never call an angle verified when nobody looked at the image; and
+  never present a web image as rights-cleared or as the user's own asset (`viral-browser.md` §9.1).
 - Viral-Browser: never invent an exclusion. The user's exclusions come from the user alone, and the
   compliance, platform and IP screens are viability checks, never taste (`viral-browser.md` §0 rule 5).
   Never recommend fake scarcity, fake or undisclosed incentivised reviews, unprovable claims or any

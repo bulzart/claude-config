@@ -240,9 +240,7 @@
     },
     "photo_max_per_pick": 12,
     "photo_max_attempts": 30,
-    "photo_min_px": 800,
-    "photo_max_px": 4096,
-    "photo_max_mb": 25,
+    "photo_small_bytes": 30000,
     "photo_min_angles": 4,
     "photo_core_angles": [
       "front",
@@ -251,7 +249,17 @@
       "right",
       "top"
     ],
-    "photo_similarity_distance": 5,
+    "photo_reference_set_angles": [
+      "front",
+      "three-quarter",
+      "back",
+      "left",
+      "right",
+      "side",
+      "top",
+      "detail"
+    ],
+    "photo_reference_set_max": 5,
     "spec_tolerance_pct": {
       "length": 3.0,
       "weight": 5.0,

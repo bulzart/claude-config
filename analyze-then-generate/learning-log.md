@@ -138,22 +138,30 @@ recurs after a logged change means that change failed: revise it, do not repeat 
 ## 2026-10-12 · the product reference pack (Viral-Browser)
 - **User request:** for each of the 3 winning products, official or verified product information (size, width, height, weight, texture, usage and
   other useful data) and photo references from several angles, which may later be used as the product reference in Higgsfield video generation.
+- **User correction (the same day, on seeing the first version, which downloaded the images):** "no don't download them just bring the image url
+  links". The pack now holds LINKS only: no image is downloaded, resized, hashed or stored, and the PNG contact sheet, the EXIF and resolution
+  handling, the duplicate detection by image content and the viewed / usable flow were removed. Lesson, as a kind: when the user asks for references
+  to web material, deliver the pointers (links with their provenance and status), not copies; build the lightest thing that answers the request and
+  offer the heavier one.
 - **Added:** `viral-browser.md` section 9.1 (the reference unit; the sourced specification with grades and the verified / official / reported /
-  conflict statuses; the photo set and its checks; rights and honesty; use in Create; the files in `deliverables/reference-C##-<name>/`, named after the candidate so that a re-ranking cannot send two products into one folder), section
-  13.7 (the reference-pack agent prompt, one per pick after `rank --apply`, up to 3 at once), QC items in 10.4, pitfalls, the continuation to
-  Create (the pack is offered as the product's assets, on the user's yes); toolkit `spec` (add, list, render, check, reject) and `photo` (add, set,
-  list, sheet, check) with `config.json -> viral_browser` keys (`reference_pack_budget`, `photo_*`, `spec_tolerance_pct`).
-- **Decisions:** a size or weight is never read off a photo; grade A is only the maker's, brand's or a regulator's own document (a listing is B);
-  two sources count as independent only on different domains; a block (401, 403, 429) is final and is never bypassed; a photo is usable only after it
-  was viewed; the pack records rights as unknown unless the source says otherwise and flags watermarks and third-party brand marks; the reference
-  unit is one real identifiable product (brand and model, or the supplier's listing), not the category.
-- **Hypotheses to test on the first run:** (1) the maker's page gives three or more angles for most picks, otherwise the marketplace galleries are
-  often blocked and the user must save images by hand (count the blocked rows); (2) one reference unit per pick is enough when the pick is a generic
-  white-label product (watch whether the specification differs between listings); (3) 24 web calls per pick at standard depth are enough for a complete
-  sheet and a ready photo set.
-- **Hardening after the first own review (same day):** (a) the pack folder is `deliverables/reference-C##-<name>/`, named after the candidate and
-  recorded in `photos.json`, because a pick number changes when the ranking is applied again; (b) `photo find` lists the image addresses a page
-  declares (WebFetch's text rarely carries them), read-only like the downloads; (c) only public http(s) addresses are fetched, redirects are followed
-  by hand and each hop is checked, so a page cannot steer the toolkit to the user's own machine or network (the test suite reaches its local server
-  with a hidden `--allow-private-host` switch that no prompt uses); (d) `photo_max_attempts` (30) caps the download attempts per pick; (e) an image
-  above 60 megapixels is refused before it is decoded, and a file already in the photos folder is never overwritten.
+  conflict statuses; the photo links and their coverage; rights and honesty; use in Create; the files in `deliverables/reference-C##-<name>/`, named
+  after the candidate so that a re-ranking cannot send two products into one folder), section 13.7 (the reference-pack agent prompt, one per pick
+  after `rank --apply`, up to 3 at once), QC items in 10.4, pitfalls, the continuation to Create; toolkit `spec` (add, list, render, check, reject) and
+  `photo` (find, add, set, list, check) with `config.json -> viral_browser` keys (`reference_pack_budget`, `photo_*`, `spec_tolerance_pct`).
+- **Decisions:** a size or weight is never read off a photo; grade A is only the maker's, brand's or a regulator's own document (a listing is B); two
+  sources count as independent only on different domains; a block (401, 403, 429) is final and is never bypassed; the angle of a link is as the source
+  labels it (a background agent cannot see images and nobody has looked), so the visual flags stay unset until someone opens the image and `photo set`
+  refuses them without `--looked-at yes`; the coverage verdict is covered / partial / thin / none, never "ready"; HEAD only (a server that does not
+  answer HEAD leaves the link unchecked, there is no GET instead); only public http(s) addresses are probed, redirects by hand with each hop checked;
+  `photo find` reads product PAGES (read-only) to list the image addresses they declare, because WebFetch's text rarely carries them; Higgsfield's
+  `media_import_url` (HTTPS only) is the route from a link to a generation reference without saving the image; rights are unknown unless the source
+  says otherwise; the reference unit is one real identifiable product (brand and model, or the supplier's listing), not the category.
+- **Hypotheses to test on the first run:** (1) the maker's page declares three or more angles for most picks, otherwise galleries are built by script
+  and `photo find` returns few addresses (count the "few images" notes); (2) the first image of a gallery really is the front (ask the user to open
+  `photos.html` and say how many labels were wrong); (3) most image hosts answer HEAD (count the unchecked and blocked rows); (4) one reference unit
+  per pick is enough when the pick is a generic white-label product (watch whether the specification differs between listings); (5) 24 web calls per
+  pick at standard depth are enough for a complete sheet and a covered link set.
+- **Hardening in the same pass:** (a) the pack folder is named after the candidate and recorded in `photos.json`, because a pick number changes when
+  the ranking is applied again; (b) only public http(s) addresses are fetched and each redirect hop is checked, so a page cannot steer the toolkit to
+  the user's own machine or network (the test suite reaches its local server with a hidden `--allow-private-host` switch that no prompt uses);
+  (c) `photo_max_attempts` (30) caps the links tried per pick.
