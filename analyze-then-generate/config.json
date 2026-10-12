@@ -259,6 +259,7 @@
         "min_confidence_for_pick": "medium"
       },
       "small_n_warning_below": 10,
+      "cost_basis_inputs": ["postage per order by weight class (a carrier price list)", "pick, pack and materials", "return rate and the cost of a returned order", "card and platform fees", "exchange rate", "the tariff regime and the freight tables for the origin", "the store's shipping policy"],
       "photo_max_per_pick": 12,
       "photo_max_attempts": 30,
       "photo_small_bytes": 30000,
@@ -290,6 +291,7 @@
         "contradicted_cap": "negative rows that match the positive ones: a 4 or 5 should not be above this",
         "gates": "the six conditions a pick should meet (price band, contribution margin, compliance, exclusions, independent evidence from distinct sources with one commercial, rating floors and confidence); the main session applies them and writes the reason per candidate",
         "small_n_warning_below": "fewer videos than this: read every share as an indication, not a rate",
+        "cost_basis_inputs": "the inputs that do not depend on the product are decided once for every candidate and written, with their sources, in 30-research/cost-basis.md before the screen and the research; every T econ of the run uses them, and only the retail price the market supports, the landed cost, the MOQ and a per-unit allowance are the candidate's own",
         "photo_max_per_pick": "about this many photo links per candidate is plenty",
         "photo_max_attempts": "stop looking for links after about this many attempts",
         "photo_small_bytes": "an image under this many bytes is probably a thumbnail: look at it before relying on it",

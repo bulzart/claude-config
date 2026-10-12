@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "atg_home": "C:/Users/Glaresquare1/.claude/analyze-then-generate",
+  "python": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe",
+  "runs_root": "C:/Users/Glaresquare1/.claude/analyze-then-generate/runs",
+  "whisper_model": "small",
+  "tools": {},
+  "output": {
+    "aspect_ratio": "9:16",
+    "resolution": "720p",
+    "size": "720x1280",
+    "note": "Fixed for every Higgsfield generation in both modes; never asked. Model-specific mapping lives in models/index.json (output_9x16_720p)."
+  },
+  "higgsfield": {
+    "mcp_server": "higgsfield",
+    "tool_prefix": "mcp__higgsfield__",
+    "default_resolution": "720p",
+    "confirm_cost_above_credits": 150
+  },
+  "analysis": {
+    "baseline_fps": 5.0,
+    "dense_fps": 10.0,
+    "static_threshold": 2.5,
+    "max_baseline_frames": 1800,
+    "ocr_frames": 10,
+    "jobs": 2,
+    "create_trend_checks": 6
+  },
+  "production": {
+    "max_parallel_agents": 5,
+    "max_parallel_jobs": 5,
+    "note": "Analyze Mode (Recreate and Create): one production agent per video, at most max_parallel_agents at once; the ledger allows one job in flight per video lane and at most max_parallel_jobs per run (reference/production-agents.md). Edit Mode stays one video at a time."
+  },
+  "capcut": {
+    "drafts_dir": "C:/Users/Glaresquare1/AppData/Local/CapCut/User Data/Projects/com.lveditor.draft",
+    "template_draft": "_analyze-stack-template",
+    "note": "Analyze Mode assembles every video as its own CapCut project DD_Mon_YYYY_vNN (reference/capcut-assembly.md). Same store and template as the capcut MCP server's CAPCUT_DRAFTS_DIR / CAPCUT_TEMPLATE_DRAFT.",
+    "text_style": {
+      "font": "System",
+      "size": 10,
+      "preset": "the user's chosen CapCut preset, learned from 03_Oct_2026_v09 on 2026-10-03 (white text, black outline 0.06); stored in 'learned'",
+      "fill": "#FFFFFF",
+      "stroke": {
+        "color": "#000000",
+        "width": 0.06
+      },
+      "learned": {
+        "from": "03_Oct_2026_v09 / text 06245FC5-2444-4184-8E8A-991EBCD388C3",
+        "at": "2026-10-03T18:51:45+02:00",
+        "font_path": "C:/Users/Glaresquare1/AppData/Local/CapCut/Apps/9.5.0.4050/Resources/Font/SystemFont/en.ttf",
+        "material": {
+          "global_alpha": 1.0,
+          "letter_spacing": 0.0,
+          "line_spacing": 0.02,
+          "has_shadow": false,
+          "shadow_color": "#000000",
+          "shadow_alpha": 0.8,
+          "shadow_smoothing": 1.0,
+          "shadow_distance": 4.0,
+          "shadow_point": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "shadow_angle": -45.0,
+          "shadow_thickness_projection_enable": false,
+          "shadow_thickness_projection_angle": 0.0,
+          "shadow_thickness_projection_distance": 0.0,
+          "border_alpha": 1.0,
+          "border_color": "#000000",
+          "border_width": 0.08,
+          "border_mode": 0,
+          "style_name": "",
+          "text_color": "#ffffff",
+          "text_alpha": 1.0,
+          "font_name": "",
+          "font_title": "none",
+          "font_id": "",
+          "font_resource_id": "",
+          "font_url": "",
+          "use_effect_default_color": false,
+          "ktv_color": "",
+          "bold_width": 0.0,
+          "italic_degree": 0,
+          "underline": false,
+          "underline_width": 0.05,
+          "underline_offset": 0.22,
+          "check_flag": 15,
+          "font_category_name": "",
+          "font_source_platform": 0,
+          "font_third_resource_id": "",
+          "font_category_id": "",
+          "fonts": [],
+          "background_color": "#000000",
+          "background_alpha": 1.0,
+          "background_style": 0,
+          "background_round_radius": 0.0,
+          "background_width": 0.14,
+          "background_height": 0.14,
+          "background_vertical_offset": 0.0,
+          "background_horizontal_offset": 0.0,
+          "background_fill": "",
+          "font_team_id": "",
+          "text_preset_resource_id": "",
+          "preset_id": "",
+          "preset_name": "",
+          "preset_category": "",
+          "preset_category_id": "",
+          "preset_index": 0,
+          "preset_has_set_alignment": false
+        },
+        "style": {
+          "fill": {
+            "alpha": 1.0,
+            "content": {
+              "render_type": "solid",
+              "solid": {
+                "alpha": 1.0,
+                "color": [
+                  1.0,
+                  1.0,
+                  1.0
+                ]
+              }
+            }
+          },
+          "strokes": [
+            {
+              "alpha": 1.0,
+              "content": {
+                "render_type": "solid",
+                "solid": {
+                  "alpha": 1.0,
+                  "color": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              },
+              "width": 0.05999999865889549
+            }
+          ],
+          "useLetterColor": true
+        },
+        "segment_refs": []
+      },
+      "note": "Every CapCut text layer of every /analyze-then-generate video uses this style: font System, size 10, and the user's chosen preset in 'learned' (applied by atg.py capcut-text-style, run by capcut-repair after every save). 'locked': true = the user chose it for all videos (2026-10-03); never re-learn or replace it unless the user explicitly asks for a different preset (atg.py capcut-text-style --learn --replace). fill/stroke above are only the fallback look if 'learned' were ever missing.",
+      "locked": true
+    }
+  },
+  "viral_browser": {
+    "note": "Analyze Mode, Viral-Browser sub-mode (reference/viral-browser.md). Nothing is generated. THE RULE (user, 2026-10-12): scripts gather, extract, record, tabulate and calculate; they never evaluate. So no script reads a threshold from here to refuse, cap, rank or flag anything. The keys that scripts DO read are only names: `rubric` (the rating criteria and their weights, for `candidates rate` and the optional weighted-sum column of `candidates table`), `spec_core_fields` (the rows of `spec gaps`) and `photo_core_angles` (the columns of the photo coverage table). The other flat keys (budgets, counts, page limits) are read by the command. `rules_of_thumb` is GUIDANCE for the agent that runs the pipeline: it applies it by its own reading, may depart from it when the evidence says so, and writes down what it applied or departed from, and why, in the bias log (30-research/ranking.md). No niche, product or category name is configured or built in anywhere: the niche vocabulary is data the agents write into each run (20-analysis/niche-vocabulary.json).",
+    "max_research_agents": 3,
+    "research_budget_per_candidate": {
+      "quick": 8,
+      "standard": 16,
+      "deep": 30
+    },
+    "researched_candidates": {
+      "quick": 6,
+      "standard": 9,
+      "deep": 12
+    },
+    "long_list": {
+      "min": 12,
+      "max": 20
+    },
+    "picks": 3,
+    "runner_ups": 3,
+    "rubric": {
+      "demand": 15,
+      "commercial": 15,
+      "fit": 20,
+      "economics": 15,
+      "competition": 10,
+      "compliance": 10,
+      "logistics": 5,
+      "timing": 5,
+      "producibility": 5
+    },
+    "red_team_budget_per_candidate": 8,
+    "verification_budget": 12,
+    "trend_checks": {
+      "quick": 3,
+      "standard": 6,
+      "deep": 12
+    },
+    "redteam_extra": 2,
+    "browser_pages_per_candidate": {
+      "quick": 2,
+      "standard": 3,
+      "deep": 5
+    },
+    "reference_pages_max": {
+      "quick": 0,
+      "standard": 10,
+      "deep": 30
+    },
+    "pick_trend_checks": {
+      "quick": 2,
+      "standard": 4,
+      "deep": 8
+    },
+    "backfill_researched": {
+      "quick": 3,
+      "standard": 5,
+      "deep": 6
+    },
+    "reference_pack_budget": {
+      "quick": 12,
+      "standard": 24,
+      "deep": 40
+    },
+    "photo_core_angles": [
+      "front",
+      "back",
+      "left",
+      "right",
+      "top"
+    ],
+    "spec_core_fields": [
+      "width",
+      "height",
+      "depth",
+      "length",
+      "diameter",
+      "thickness",
+      "weight",
+      "material",
+      "texture",
+      "finish",
+      "usage"
+    ],
+    "rules_of_thumb": {
+      "note": "Guidance for the agents, not enforced by any script. Read it, apply it with judgement, record what was applied or set aside and why.",
+      "min_categories_in_pool": 6,
+      "max_pool_share_per_category": 0.4,
+      "niche_dominance_threshold": 0.4,
+      "max_picks_per_category": 2,
+      "independent_criteria": [
+        "demand",
+        "commercial",
+        "competition",
+        "economics",
+        "compliance"
+      ],
+      "cap_without_independent_evidence": 2,
+      "contradicted_cap": 3,
+      "gates": {
+        "min_scores": {
+          "demand": 3,
+          "commercial": 3,
+          "economics": 3,
+          "compliance": 3,
+          "fit": 3
+        },
+        "min_contribution_pct": 25,
+        "min_independent_evidence": 2,
+        "min_confidence_for_pick": "medium"
+      },
+      "small_n_warning_below": 10,
+      "photo_max_per_pick": 12,
+      "photo_max_attempts": 30,
+      "photo_small_bytes": 30000,
+      "photo_min_angles": 4,
+      "photo_reference_set_angles": [
+        "front",
+        "three-quarter",
+        "back",
+        "left",
+        "right",
+        "side",
+        "top",
+        "detail"
+      ],
+      "photo_reference_set_max": 5,
+      "spec_tolerance_pct": {
+        "length": 3.0,
+        "weight": 5.0,
+        "volume": 5.0,
+        "other": 2.0
+      },
+      "how_to_read": {
+        "min_categories_in_pool": "the long list should span at least this many niches; a shortlist of n candidates should span at least the smaller of this and max(3, n/2 rounded up): 3 niches for six, 5 for nine, 6 for twelve",
+        "max_pool_share_per_category": "no niche should be more than this share of the set",
+        "niche_dominance_threshold": "a niche that is at least this share of the references' cards is a dominant niche: say so in the bias log and defend a pick from it against the best alternative outside it",
+        "max_picks_per_category": "at most this many of the picks should share a niche; none should share a product type",
+        "independent_criteria": "the criteria that need evidence not derived from the references",
+        "cap_without_independent_evidence": "a rating on an independent criterion that has no positive independent grade A or B row should not be above this",
+        "contradicted_cap": "negative rows that match the positive ones: a 4 or 5 should not be above this",
+        "gates": "the six conditions a pick should meet (price band, contribution margin, compliance, exclusions, independent evidence from distinct sources with one commercial, rating floors and confidence); the main session applies them and writes the reason per candidate",
+        "small_n_warning_below": "fewer videos than this: read every share as an indication, not a rate",
+        "photo_max_per_pick": "about this many photo links per candidate is plenty",
+        "photo_max_attempts": "stop looking for links after about this many attempts",
+        "photo_small_bytes": "an image under this many bytes is probably a thumbnail: look at it before relying on it",
+        "photo_min_angles": "a reference set should show at least this many of the core angles, the front among them, with links a header request confirmed",
+        "photo_reference_set_angles": "the views worth a link, in order of use",
+        "photo_reference_set_max": "about this many links make a reference set",
+        "spec_tolerance_pct": "numbers from different sources that differ by less than this many percent (length 3, weight 5, volume 5, other 2) are normally the same fact rounded differently; a larger gap is a disagreement to resolve or to record",
+        "max_share_from_references_own_products": "no more than this share of the long list should come from the references' own products"
+      },
+      "max_share_from_references_own_products": 0.5
+    }
+  }
+}

@@ -556,11 +556,14 @@ team, reference packs), never script gates.
         goods, size or weight limits, no batteries or liquids, a supplier or shipping limit, a
         product you already sell. Taken from the user only; never inferred.
      4. *(Optional)* **how you sell**: the sales channel(s) (own store, TikTok Shop, Amazon, …), the ad
-        platform(s), the country of your selling company (the importer of record) and the capital you
-        can put into a first order. They decide the fee schedules, the restricted lists, the VAT and
-        duty regime and the MOQ capital figure (`T econ --moq` prints the capital at risk; you compare
-        it with the limit); without them the defaults are an own store with paid social, the seller's
-        own company as importer, and an unknown capital limit.
+        platform(s), the country of your selling company (the importer of record), the capital you
+        can put into a first order and the shipping policy of the store (free to the customer / the
+        customer pays a flat amount / free above a threshold). They decide the fee schedules, the
+        restricted lists, the VAT and duty regime, the fulfilment cost in the cost basis and the MOQ
+        capital figure (`T econ --moq` prints the capital at risk; you compare it with the limit);
+        without them the defaults are an own store with paid social, the seller's own company as
+        importer, an unknown capital limit and shipping free to the customer (the conservative
+        reading, said in the cost basis).
      5. *(Optional)* `depth quick|standard|deep` (default standard) and `price` / `market` if not
         already in `$ARGUMENTS`.
      Say in the message: *"I will use the references only as ideas and generate nothing. I will
@@ -581,7 +584,7 @@ team, reference packs), never script gates.
      Hold the answers, and store them right after step 6 creates the run: `T state --run RUN set
      brief.market=… brief.price_min=… brief.price_max=… brief.currency=… brief.model=…
      brief.tools=web|chrome brief.depth=… brief.exclusions='…' brief.channel='…' brief.importer_country='…'
-     brief.capital_limit=…`.
+     brief.capital_limit=… brief.shipping='…'`.
    - **Edit Mode** needs the video file(s) or folder to edit, and offers the optional **examples
      folder** (as above). Per-edit assets are asked later, per operation (E3).
    - Paths may arrive quoted, space-separated, dragged into the terminal, or one per line. If an
@@ -1260,6 +1263,19 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   candidate's name, type, definition or niche only with a stated reason.
 - Show one table: candidate, niche, origin, why it is in the pool. `next_step=research`.
 
+#### V4b. Cost basis and shared inputs (before the wave)
+- Decide, once, the inputs that do not depend on the product and write them with their sources in
+  `30-research/cost-basis.md` (`viral-browser.md` §7.0): the postage per order by weight class from a
+  carrier's own price list (US and the lead country) plus pick, pack and materials = the fulfilment per
+  order, and what the store's shipping policy does to it; the return rate and the cost of a returned order
+  per market; the card and platform fees of the channel's real fee schedule; the exchange rate with its
+  source and date; the tariff regime for the origin with the guess it rests on; the freight tables and the
+  calendar. Register the sourced ones once as evidence rows (`T evidence add --from-json`), under one
+  candidate, so that the research agents copy them (`T evidence copy`) instead of searching again. Use the
+  cost basis for the economics screen of V4: `T econ … --target-pct 25` per market on a rough landed cost
+  (`T landed`) says which retail price a candidate needs; a price above the band's top, or far above what
+  the market shows, removes the candidate with that reason.
+
 #### V5. Research (agents)
 - Spawn up to 3 research agents (Agent tool, `subagent_type: general-purpose`,
   `run_in_background: true`) with disjoint candidate lists and the prompt of `viral-browser.md`
@@ -1273,7 +1289,15 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   `calculation` is written; the contribution per order, `break_even_cpa` (it can be negative),
   `break_even_roas_*` (null when the contribution is not positive) and `inputs_left_at_zero` are numbers
   for you to read, not judgements), write `30-research/<C>.md`, origin-blind, and queue unreadable pages
-  in their own `queue-<C>.md`.
+  in their own `queue-<C>.md`. The prompt carries the cost basis and the shared rows to copy; the agents
+  use `T landed`, `T econ … --target-pct 25` (the retail price a 25 % contribution needs, set against the
+  prices the market shows), `T evidence add --from-json` and `--opened yes|no`. A background wave stops when
+  you interrupt the turn: the ledger keeps what was registered, so restart each agent with only its
+  unfinished candidates and a STATE AT RESTART note (`viral-browser.md` §13.2).
+- Before you read the results side by side, read the stored economics inputs of every candidate (each
+  candidate's `economics_by_market` has them) for different assumptions on the same cost lines; reconcile them
+  on the cost basis: re-run `T econ` for each candidate and market, withdraw the superseded calculation rows
+  with `T evidence retract` and the reason, and note it in the bias log.
 - When they have reported, check that every shortlisted candidate has a dossier, evidence rows, an
   economics row and a sourced input row behind it (`T evidence list --counts` tabulates the rows by lane,
   signal, grade, independence and distinct sites; it weighs nothing); a missing one is researched once by
@@ -1286,7 +1310,12 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
 - With "web plus my Chrome": load the browser tools in one call (`ToolSearch "select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__tabs_create_mcp,mcp__claude-in-chrome__navigate,mcp__claude-in-chrome__get_page_text,mcp__claude-in-chrome__read_page,mcp__claude-in-chrome__find,mcp__claude-in-chrome__computer,mcp__claude-in-chrome__tabs_close_mcp"`),
   call `tabs_context_mcp` first and process the `30-research/queue-<C>.md` files in this session, up
   to `browser_pages_per_candidate[depth]` pages per candidate, read-only (`viral-browser.md` §7.5),
-  registering the evidence. Without it, queued pages stay "unreachable".
+  registering the evidence. Without it, queued pages stay "unreachable". Read a marketplace search page
+  with a short read-only script (title, price, rating count and sold badge of each result), a trend chart
+  from a screenshot, an official rules page as text; then re-run `T econ --cand` at the retail price the
+  pages support (the market's stored result is replaced; withdraw the superseded calculation row with the
+  reason). A page that informs several candidates counts for each; call `tabs_context_mcp` with
+  `createIfEmpty` again before each batch, and stop after two failed attempts to connect.
 - Blockers (a tool failure, rate limits) are reported, not asked. If `WebSearch` and `WebFetch`
   are both unavailable, stop here: V1–V3 are delivered (the mechanism map and the fit profile are
   useful alone) and the summary says research could not run. `next_step=scoring`.
