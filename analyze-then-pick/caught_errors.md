@@ -1603,7 +1603,7 @@ How agents use it:
 - **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261010-020703-09\40-briefs\video-12-plan.md
 - **class:** anomaly-catalog.md §2.17 (identity image chosen and scoped to fit the kept body) and models/wan-3-0.md §3.12; generation-system.md §4b.5 (asset photos bring their props)
 - **cause:** reference
-- **fix:** none yet
+- **fix:** Observed, not verified: the identity reference cropped to head and neck on a neutral grey (30-assets/stage-fix-12/char-A10-face.jpg) + the kept polo named in positive words + 'no button-up overshirt, no chest pockets, no lilac or white shirt' kept the light-blue polo in 2 of 2 rolls (video 12 fix a2 job 4903885c, a3 job d07e9d1a); those takes were rejected for the label, so the prompt is not stored as verified.
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** An identity reference that shows clothing re-dresses the swapped person even when the prompt scopes it to face and hair. Crop the identity image above the collar (head and neck only), name the kept garment from the source in positive words (colour, collar, sleeves, pattern), and put the identity photo's garment in the exclusion line by name; QC compares the garment on a full-resolution frame at rest, a costume change is a regenerate reason.
 - **status:** open
@@ -1655,7 +1655,7 @@ How agents use it:
 - **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261010-020703-09\40-briefs\video-12-plan.md
 - **class:** anomaly-catalog.md §2.7 / §2.15 / §2.16; models/wan-3-0.md §5 (size model limit) and §3.11 (text approximate); generation-system.md §4b.1b
 - **cause:** model-limit
-- **fix:** none yet
+- **fix:** Tried (video 12 fix pass, 3 generations, 144 credits, none passed): a1 1080p p60 refs; a2 head-crop identity (fixes CE-035) + label-forward closeup artwork reference + near anchor asked in metres; a3 near anchor asked by frame position + label demand narrowed to Neuro / Spearmint / Energy & Focus. Result in all three: wordmark and Energy & Focus exact, Spearmint tag, badge (GUM read as CUM in a1 and a3), 9 Pieces line and band line wrong letters; the carton stays at the laptop depth at 1.62-1.96x (A and B agree) whatever the placement words. Not fixed; options left for the user: a tracked composite of the client's real label render in post, or a shot where the carton is honestly large in frame (held in hand).
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** Label legibility is a pixel budget: a carton at its honest size 1.5 m away has about 65 px (1080p) of width, so only the wordmark and the largest title can read; tag, badge and band lines need about 3x that. Resolution and tighter references raise sharpness but not the size inflation (1.5x at 720p p25, 1.96x at 1080p p60). A label that must read needs an anchor honestly nearer the lens (derive the distance from the table plane, both size estimates at that depth) and a posture facing the camera (a flat label at a 20 degree camera elevation shows a third of its height); QC reads the label word by word on a full-resolution frame, and a wrong letter (GUM as CUM) is a regenerate reason.
 - **status:** open
@@ -1861,5 +1861,137 @@ How agents use it:
 - **fix:** none yet
 - **verified prompt:** pending (inserted only after a new generation passes QC)
 - **rule:** An identity photo whose clothing carries lettering is used only when that lettering is fully visible and un-mirrored in the image (a selfie photo is itself mirrored: read its text first and flip it); a print the photo cuts off is never left for the model to finish: the image is cropped above the print and the prompt states a plain garment with no print, no lettering and no logo, and QC reads every printed line at full resolution as part of the text check.
+- **status:** open
+- **promoted to:** —
+
+## CE-040 · 2026-10-12 · Upright carton right of the notebook stands on the notebook page at 1.28x its size (size-reference image halved the error)
+- **source:** agent
+- **video:** 22
+- **run:** C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261007-232745-07
+- **delivered:** CapCut project 08_Oct_2026_v22 · clean C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261007-232745-07/60-outputs/video-22/clean.mp4 · credits 21 · run QC: accepted
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Neuro Energy & Focus Cinnamon 9-piece carton (V16 recreate, fix pass for CE-034, attempt 2: upright right of the notebook with a size-reference image)
+- **assets:** A09.jpg; A709-p40.png; A708-p25.png; scale-ref-carton-notebook.png (composite of the source frame at 2.0 s and the A709 packshot: carton 7.5 cm at true ratio 0.33 beside the notebook); V16 own-silent.mp4
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** a2 (upright, same plane as the notebook, plus a composite size-reference image of the carton beside the notebook at the true 0.33 ratio): the carton came out 183-189 px wide, A 1.23-1.27x vs the notebook (near-edge width 500 px, depth ratio 1.2 from its base row) and B 1.27-1.31x from the table plane calibrated on the source notebook: A and B agree, just over 25 percent, against 1.7-2.1x for the flat a1. But the model kept the notebook centred (the source layout) and, with no room right of it (40 px between the notebook corner and the frame edge), stood the carton on the notebook's upper-right page, base overlapping the sheet (CE-006 class: nothing on a thin sheet), and the right hand rests beside its right edge at 4.0 s
+- **brief:**
+  ```text
+  Video 22 of 22 — NEUROGUM — Recreate V16
+  Concept: V16 recreated beat for beat with character A09 and the Neuro Energy & Focus gum carton (Cinnamon, 9 pieces).
+  Reference pattern: V16 card (timing, beats, inserts at 1.80-4.40, 6.70-9.30).
+  Characters/assets: A09 (Image 1); A709.jpg, A708.jpg.
+  House approach: none (no examples).
+  Substitutions: creator → A09 | Placement: stands upright at the front-right corner of the table, outside the sweep of the hands, label toward the lens, in the same spot in every shot.
+  Main action & states: source beats unchanged; product untouched and persistent.
+  Style & camera: as V16, static phone camera, the source's light.
+  Text: CapCut layers in the house style, reference wording/positions (see plan).
+  Inserts: V16 1.80-4.40, V16 6.70-9.30.
+  Sound: original audio restored; inserts with their own sound.
+  Model & operation: wan3_0_prime reference-to-video (≈ recreate from Video 1), 7 s → trim 6.300 s, 9:16 720p, audio off, thinking on · est. 21 credits
+  Fidelity: Video 1 = silent own content (motion/camera/timing), action script written out in order, keep-list + exclusions, same duration; sync-check after the merge. Risk: low.
+  Adaptation logic: product placed at the analysed anchor; source branding dropped.
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Recreate Video 1 as a real phone-shot vertical clip with only these changes: the person and the product. Video 1 is the motion, camera, framing, cut and timing reference: keep every movement, gesture, head turn, gaze, expression and mouth movement of the person in Video 1 in the same order, at the same moments and at the same real-time speed, and keep the camera, framing, cuts, light, room and background. Do not inherit the appearance, clothing, text, captions, usernames, watermarks or branded items of Video 1. The man corresponds to Image 1, adopting facial features, hairstyle, skin tone, build and clothing (short hair, stubble); Image 1 is only his identity, not its pose, background or objects. The man replaces the person of Video 1 and performs exactly that person's movements. The Neuro Energy & Focus gum carton (Cinnamon, 9 pieces) corresponds to Image 2 and Image 3, which jointly define one single package, adopting only its structure, material, colours and printed label: a small closed flat paperboard carton, 7.5 cm wide, 8.5 cm tall and 1.6 cm thick, light blue with wavy lighter-blue shapes, a blue N logo and Neuro wordmark top-left, an orange-red GUM badge top-right, a Cinnamon tag, the title Energy & Focus. Image 4 is a size reference only: it shows this carton standing on the table beside the notebook of Video 1, the carton about one third as wide as the notebook page; use only that size relation, not its framing, background, lighting or perspective. In Image 2 and Image 3 the carton is deliberately small in the frame and keeps that small scale. Keep its exact shape, proportions and artwork without deformation and without scale drift; it stays closed. Video 1 has no such item, but the carton is part of this scene from the first frame: it stands upright on its base on the bare table at the front edge, to the right of the open spiral notebook, its base level with the notebook's front edge, in the same plane as the notebook and no nearer to the lens than the notebook, its label turned about twenty degrees away from the lens, a band of bare table between the notebook and the carton; lit by the scene's own light with a soft contact shadow, untouched and in the same place for the whole clip.
+  [Plot Summary] The open spiral notebook lies at the bottom left of the frame, its whole page in view, about 21 cm wide; the carton stands to its right and is small beside it: about one third as wide as the notebook page, a little narrower than the man's open palm and about one fifth of the frame width; it keeps exactly this size before and after every cut.
+  Shot 1 [0-1.8s]: Static selfie framing from the table edge, a door frame behind. The carton stands on the table right of the notebook. The man sits square to the camera, leaning forward, both palms flat on the notebook with fingers tapping, head bobbing, mouth moving rapidly as if arguing, brows raised, intense eyes to the lens; the frame-right hand lifts the top page, flips it and slaps it back down; then wide sweeping open-hand gestures across the table, leaning in, mouth still talking, as the image brightens toward white; his hands and arms stay farther from the lens than the carton and never touch it.
+  Shot 2 [1.8-4.1s]: Hard cut, same framing, the one carton still stands in the same spot: he leans back then forward, hands chopping and waving, palms-up shrugs, mouth arguing; hands come down to the notebook; the right index finger taps the temple; the arm flings out wide toward frame-right behind the carton and comes back down to the notebook.
+  Shot 3 [4.1-6.3s]: Hard cut, same framing, the one carton still stands in the same spot: hands out palms up in a shrug, a quick temple tap, an arm swing wide to frame-right behind the carton; then both hands on the notebook tapping and sliding across the page as proof; a hand wipes across the mouth and nose, then a final open gesture, still mouthing.
+  [Audio Style] No dialogue. No background music.
+  [Camera & Core Constraints] Camera: static throughout. Real-time speed, nothing added, skipped, repeated or reordered, no new gesture, no extra camera move, no re-staging, no new people. Exactly one carton, closed, upright, not duplicated, not vanished, not deformed, constant in size; nothing passes through it. No subtitles, captions or other on-screen text; the only lettering is the printed label on the package.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no extra fingers, no duplicate packages, no scale drift, no slow motion, no speed ramps, no other brands, no oversized or giant carton, no carton as wide as the notebook, no carton wider than his palm, no carton closer to the camera than the notebook, no carton in the foreground, no lying or tilted carton, no carton on the notebook or on any paper, no carton touching his hand or arm, no studio lighting on the carton, no glow, no blister, no opened carton, no loose gum pieces
+  ```
+- **params:** model=wan3_0_prime · duration=7 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=image_references×4, video_references · request=video-22-fix-a2-request.json
+- **errors:**
+  ```text
+  none; job 57cda53c-eb77-4f3c-a7cf-46046104735e completed, 21 credits
+  ```
+- **evidence:** a2 frames 0.0, 3.0, 4.0, 6.2 s in C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261007-232745-07/60-outputs/video-22/fix-20261012/a2/ and T scale JSON a2/scale_rest.json, scale_last.json, scale_use.json
+- **qc:**
+  ```text
+  accepted
+  ```
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261007-232745-07\40-briefs\video-22-plan.md
+- **class:** anomaly-catalog.md 2.16 (support), 2.7 (size); wan-3-0.md 5 size row
+- **cause:** model-limit
+- **fix:** none yet
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** A size-reference image that shows the product at the true ratio beside the neighbour cut the oversize from 1.7-2x to about 1.3x on wan3_0_prime, but a layout the frame cannot hold (a 9:16 frame where the neighbour already spans 70 percent of the width) is resolved by the model by putting the product on the neighbour; the reference must show the product on a spot that exists in the source frame (the free table corner), not beside a neighbour that leaves no room
+- **status:** open
+- **promoted to:** —
+
+## CE-041 · 2026-10-12 · Flat pouch jammed against the writer's forearm and hand; label word Focus renders as Fccus
+- **source:** agent
+- **video:** 14
+- **run:** C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261008-235833-08
+- **delivered:** CapCut project 09_Oct_2026_v14-2 · clean C:/Users/Glaresquare1/.claude/analyze-then-pick/runs/20261008-235833-08/60-outputs/video-14/clean.mp4 · credits 78 · run QC: r2 accepted (flat sachet). POSTURE/SUPPORT: lies flat on its wide face, label up, whole underside on bare marble with contact shadow, no tilt/edge/float at 30 fps (write, glance, flip, last). STORY: set down on the near table edge to the right of the writing hand, out of the way; a real person leaves a gum pack like that. Size 1.05x (5 cm width: 92-105 px vs 93 expected at 0.5 m). Count 1/1/1, sealed. Never touches the arm: 2-D marble gap 18-37 px (~0.2 hand-width; flagged, frame leaves only ~150 px under the forearm). r1 carton rejected: flat and ~1.1x but its corner sat against the forearm (gap 3-4 px) 0.5-8 s. CE-001/002/003/004/006/007/008/010/012 pass; CE-012 set fixed with the r2 prompt.
+- **mode:** analyze-recreate
+- **model:** wan3_0_prime
+- **product:** Neuro Energy & Focus Extra Strength Peppermint 90-piece pouch (V05 recreate, CE-033 fix pass 2)
+- **assets:** lying-flat pose reference (A567 front render rotated 90 deg cw, foreshortened 0.55, p40, media e677b4c0) + flat top view (A567 rotated 90 deg cw, p40, media 1a5631a9), char-K3, V05 own-silent; pouch 17.9 x 10.2 x 4.6 cm
+- **user said:** — (caught by the agent during the run)
+- **what was wrong:** Fix pass 2 (lying-flat references) fixed the posture: the 90-piece pouch lies flat on its front face, label up, long side left-right, top seal right (30 fps, write/glance/flip/last), size 1.08x (A vs hand back, depth ratio 0.92; B table-plane distance; agree), count 1, sealed. But (1) it was drawn about as tall as its true top view (165 px, 280 x 165) instead of foreshortened (about 90 px) and placed with its far long edge on his forearm and its left end against his hand: 0 px gap from 0.5 s to the end (the request asked for a band of marble and said so twice); (2) the label word Focus renders as Fccus for the whole clip (OCR '&Fccus' 0.00-12.00 s), a wrong-letters label (CE-032) caused by small rotated label text; fine print also garbled.
+- **brief:**
+  ```text
+  Video 14 of 18 - Recreate of V05: Neuro XE Peppermint carton, placement on the marble table
+  Concept: the reference recreated as itself (same scenario, action, camera and timing), faces swapped to the supplied character(s), the product integrated (placement on the marble table).
+  Why it works: Communicates: "what teachers think would happen if they let us listen to music in an exam" - the VO reads answers like a track; deadpan. Why Neuro: students under sustained mental load (A456 sec 4), calm and wry (G24), the product 'just happens to be there' (G23). Kept [E]: the take, the VO, writing, the page flip. Goal/job [I]: awareness; the carton on the marble, noticed; share line "this is why we can't have music". Adapted: man -> K3; the caption box and shirt print removed from the plate; the package is Extra Strength Peppermint, closed (hero per G18, form per G27).
+  Reference pattern: V05 (see 20-analysis/cards/V05.md and families.md)
+  Characters/assets: see the plan sec 2.3; Higgsfield media ids in 30-assets/uploads.json and the request file.
+  Substitutions: Placement; the closed hardcover notebook (a solid, not a sheet hands move: CE-006) is the smallest native element that lets a 1.6 cm-thick carton stand readable; hands busy: no use beat (G19/G27 satisfied: no piece is taken).
+  Counts & use: | entity | count | state |
+  |---|---|---|
+  | carton | 1 | upright on its long edge, propped against a closed hardcover notebook on the bare marble, lower right, ~0.6 m, closed, label 30 deg; never moved |
+  | sheets | 1-2 | flipped at 9.2-10.4 over the left edge, away from the carton |
+  Size: Carton 7.5 cm at ~0.6 m, 26 mm eq -> ~9.0% (~116 px) (T scale --product-cm 7.5 --distance 0.6 --lens 26); neighbour: the exam sheet (29.7 cm) -> ~0.25 of its length; his palm is ~8.5 cm wide, the carton 7.2 cm wide -> slightly narrower than his palm. Oversize check: a carton taller than ~0.4 of the sheet is a regenerate reason.
+  Guardrails: G16 (the client's real renders are the only product references; no AI-invented packaging: QC compares the label geometry and any morphed text is a regenerate reason), G17/G18 (Extra Strength, Peppermint or Spearmint, 9-piece carton, closed; the 6-pack box never appears), G19/G27 (closed package, nobody takes a piece, no blister shown), G23/G24 (the product just happens to be there; calm, wry register), G25 [U] (no sleeping/drained scene), G11/G21 (no numbers or claims in any text layer; the carton's own 100MG band is the only number), G12 (no competitor shown or replaced), G13/G14 (an adult supplied character, no ambassador likeness), G22 (phone-shot, everything in focus).
+  Caught errors applied: CE-006 (a product is never placed on or overlapping paper: bare surface or a solid prop; sheets stay flat; QC densifies the contact region for the whole shot), CE-007 (small closed carton by default in casual scenes; the pouch only where a large pack fits; a placed product never takes over the source's pick-up beat: the object picked up is named and the product stays), CE-008 (adult framing in captions and casting), CE-010 (text centred), CE-001 (the package count stays 1; nothing taken), CE-002
+  Text: CapCut layer as in the scene.
+  Inserts: none.
+  Sound: Original VO audio restored.
+  Fidelity approach: the silent own-content source as video_references (the most preserving input Wan 3.0 Prime offers: recreate-from-video-reference), exact duration rounded up, fidelity lock + the action script written out in the prompt; risks to fidelity or sync: lip-sync and exact timing are not guaranteed by this model; sync-check after the merge.
+  Model & operation: video-14-request.json: wan3_0_prime reference-to-video, 13 s, 9:16 720p, generate_audio false, 4 media - est. 39 credits (3 credits/s, preflight read: no adjustments)
+  Adaptation logic: One generation of 13 s (own 12.07 s). Credits 39. No inserts.
+  
+  ## Redo (CE-012, 2026-10-09)
+  r1: closed XE Peppermint carton lying flat label up on the bare near-camera marble, lower right (50-requests/video-14-r1-request.json, p40 refs 36960471/2bc3de47) - flat and ~1.1x but against the forearm; r2: flat-lying single Energy & Focus Peppermint sachet on the same strip, band of marble to the forearm (50-requests/video-14-r2-request.json) - delivered. Action script and fidelity lock unchanged. CapCut project 09_Oct_2026_v14-2.
+  
+  ## Client fix 2026-10-12 (CE-033), attempt fix1 (ledger 14-fix attempt 4)
+  Concept unchanged (V05 exam scene, same man K3, caption, original audio, sync anchors). Change: the product is the Neuro Energy & Focus Extra Strength Peppermint 90-piece POUCH (17.9 x 10.2 x 4.6 cm), sealed, lying flat on its front face, label up, long side left-right on the near-camera bare marble strip below the forearm, top seal to the right, count 1; plan: 40-briefs/video-14-fix-plan-20261012.md.
+  Why: the client read the delivered sachet as box-sized ("the bag is bigger than the boxes"); the delivered 1.05x had rested on an assumed 0.5 m, the frame puts the strip at about 0.6 m (sachet 1.2-1.35x). Size ladder: pouch 17.9 : carton 7.5 : sachet 7 cm (2.4 : 1 : 0.93).
+  Reference pattern: V05; fidelity lock and action script as delivered (r2 request structure); request 50-requests/video-14-fix1-request.json: wan3_0_prime reference-to-video, 13 s 9:16 720p, generate_audio false, enable_thinking true, 4 media (Video 1 own-silent, Image 1 K3, Image 2 pouch front A567 p40, Image 3 pouch left A568 p40), new-account media ids (30-assets/uploads-fix-14.json), no folder_id; 4920 chars; preflight 39 credits, no adjustments (preset recommendation declined).
+  Size: pouch at 0.6 m (distance from the frame: hand back 160 px = 10.5 cm, A4 sheet 21 cm = 285 px -> hands 0.65-0.68 m; table plane: strip 0.56-0.62 m), f 26 mm eq: long side 276 px (38 % of the frame width), short side about 83 px of frame height (157 x 0.53 foreshortening); hand 18 cm = 245 px at 0.68 m. Accept within 25 % by A (hand, depth ratio from the frame) and B (derived distance); check both too small (client's miss) and too big.
+  Posture/support/place/story: lies flat, label up, bare marble only, band of marble to the forearm and below it, not touching the arm or sheets; he set it down on the near edge out of the pen hand's way. Object picked up: the exam sheet (flip 9.2-10.4); the pouch stays.
+  Risks: the model may stand the pouch up (reference shows it upright), inflate it, or cross the forearm; levers for attempt 2 are in the plan (pose reference / anchor depth), not sizing words. Text layer: caption posX 0, posY 0.66 in CapCut, house style, no emoji. Credits cap 3 x 39.
+  
+  ## Client fix 2026-10-12 (CE-033), attempt fix2 (ledger 14-fix attempt 5) - lever: references
+  fix1 (job d19013be, 39 credits) REJECTED, recorded as CE-037: the pouch rendered STANDING on its gusset in front of his hand and forearm from frame 0 to the end (left edge about 5 px from the hand); size 1.11x by A (his hand back, depth ratio 0.93) and B (table-plane distance 0.607 m), count 1, sealed, "Neuro" and "Energy & Focus" legible, the 100MG band garbled. Cause: upright client renders as references plus "lies flat" wording.
+  fix2 changes only the reference lever (never the sizing words): Image 2 = a lying-flat pose reference (the client's A567 front render, rotated 90 degrees clockwise so the top seal points right, foreshortened 0.55, soft shadow, p40, by pure geometric transform in 60-outputs/video-14/fix-20261012/make_request... refs/make_pose_refs.py), Image 3 = the same render rotated 90 degrees clockwise, top view (label at full resolution), p40; no upright reference; the prompt calls it "a gum pouch ... flat like an envelope" (not stand-up) and binds how it lies to Image 2. Request 50-requests/video-14-fix2-request.json, 4916 chars, preflight 39 credits, no adjustments. Everything else as fix1.
+  ```
+- **prompt:**
+  ```text
+  [Core Task] Generate single shot. The man corresponds to Image 1, adopting only his facial features and hairstyle and light stubble; man replaces only the person in Video 1 and keeps the plain white t-shirt without lettering and the white over-ear headphones; do not use the background, props or clothing of Image 1. His face, neck, hands and forearms share one consistent skin tone as in Image 1. Use Video 1 for his movements, expressions, gaze, the camera framing, the room, the exam sheets and the timing. The pouch corresponds to Images 2 and 3, which jointly define the same entity, and generates only one instance, adopting only its structure, material, colours, printed label and how it lies: Image 2 shows it lying flat on its front face with the label up and the top seal to the right, Image 3 shows its label from directly above (a closed, sealed gum pouch about 18 cm long and 10 cm wide, flat like an envelope, of sky-blue matte foil with a zipper strip under a flat top seal, the dark-blue Neuro wordmark, a mint and navy EXTRA STRENGTH GUM badge, a Peppermint tag, 'Energy & Focus' in large navy type, '90 Pieces Dietary Supplement' and a navy band along the bottom); the pouch keeps its real size; do not use the lighting, exposure, background, shadow or camera angle of Images 2 and 3.
+  [Plot Summary] Locked phone camera at eye level, medium shot, a white marble table filling the lower third, a bright room corner with a white door and warm lamp light from the upper left. He sits turned about forty degrees toward the left of the frame with his head tilted left, listening to his headphones, a blue pen in his right hand resting on an exam sheet and his left hand flat on the table; he turns his head down to the sheet and squares his torso; he writes with small right-hand strokes, glancing up and to the left once, and keeps writing; then both hands lift the right edge of the sheet and flip it over to the left, his left hand smoothing it down, and it lands on the same spot; he writes again with a glance to the right of the frame. A single closed sealed Neuro Energy & Focus Extra Strength Peppermint pouch lies flat on its front face with its printed label facing up, its top seal pointing to the right of the frame so that the label reads sideways, resting entirely on the bare white marble in the lower middle of the frame, on the near side of the table, nearer the lens than his hands and forearm, where someone sets a pouch of gum down out of the way of their writing. It is fully inside the frame, with a visible band of bare marble between it and his forearm and hands and another below it; nothing touches it and nobody picks it up. It is about sixty centimetres from the lens and true to its real size, about as long as his hand from wrist to fingertip and a little wider than his open palm, its long side spanning about two fifths of the frame width and its short side about one fifteenth of the frame height as it lies, seen from above at a slight angle as a flat plump rectangle, lit by the same warm lamp light with a soft contact shadow on the marble falling to the right like the sheets' shadows; it stays flat on that spot for the whole clip and never slides, tilts, stands up or leans, the exam sheets lie flat except when he flips the top one, and the flipped sheet stays on the left and never reaches the pouch. Phone-shot look, everything in focus. Real-time speed. No dialogue. No background music.
+  [Camera & Core Constraints] Keep every movement, gesture, expression, gaze and mouth movement of the person in Video 1 on the same frames, the props and how they are handled, the camera framing, the light, the room and the timing of Video 1 unchanged; no added, skipped, repeated or reordered action, no new gesture, no extra camera move, no re-staging, no new people, no change of pace. There is exactly one pouch, constant and true to its real size, lying flat, sealed with its zipper closed and never opened, not duplicated, not vanished, not deformed, no scale drift; nothing passes through it. Do not show any text, subtitles, numbers, interface elements, or watermarks on screen; the only lettering is the printed label on the Neuro pouch, exactly as in Images 2 and 3; do not reproduce any text, captions, usernames or watermarks from Video 1.
+  [Negative Prompts] no subtitles, no on-screen text, no watermark, no face distortion, no identity drift, no costume changes, no slow motion, no self-inserted cut points, no added or skipped action, no face lighter or darker than the hands, no pouch much longer than his hand, no standing, upright, leaning, propped, folded or tilted pouch, no pouch on its base or on its edge, no pouch on a sheet, no pouch touching his arm or hand, no notebook, no carton, no sachet, no six-pack box, no blister card, no opened pouch, no torn top, no gum in anyone's mouth, no chewing, no glow, no white caption box, no text on the shirt
+  ```
+- **params:** model=wan3_0_prime · duration=13 · aspect_ratio=9:16 · resolution=720p · generate_audio=False · enable_thinking=True · medias=video_references, image_references×3 · request=video-14-fix2-request.json
+- **errors:**
+  ```text
+  none: job fe6a0281 completed, 39 credits, no adjustments
+  ```
+- **evidence:** fix-20261012/a5/crop6.png and a5/crop98.png (full-resolution crops at 6.0 s and 9.8 s), a5/qc/dense/sheet-03-flip-01.jpg (30 fps), a5/qc/qc.json (OCR: &Fccus 0.00-12.00 s), a5/scale-6.0.json
+- **qc:**
+  ```text
+  r2 accepted (flat sachet). POSTURE/SUPPORT: lies flat on its wide face, label up, whole underside on bare marble with contact shadow, no tilt/edge/float at 30 fps (write, glance, flip, last). STORY: set down on the near table edge to the right of the writing hand, out of the way; a real person leaves a gum pack like that. Size 1.05x (5 cm width: 92-105 px vs 93 expected at 0.5 m). Count 1/1/1, sealed. Never touches the arm: 2-D marble gap 18-37 px (~0.2 hand-width; flagged, frame leaves only ~150 px under the forearm). r1 carton rejected: flat and ~1.1x but its corner sat against the forearm (gap 3-4 px) 0.5-8 s. CE-001/002/003/004/006/007/008/010/012 pass; CE-012 set fixed with the r2 prompt.
+  ```
+- **plan:** C:\Users\Glaresquare1\.claude\analyze-then-pick\runs\20261008-235833-08\40-briefs\video-14-plan.md
+- **class:** anomaly-catalog.md §2.16 (clearance to a working hand or arm) and §2.7 (perspective of a flat pack); CE-032 (label must read)
+- **cause:** reference
+- **fix:** none yet
+- **verified prompt:** pending (inserted only after a new generation passes QC)
+- **rule:** A flat-lying pack needs a pose reference that carries the camera's foreshortening and only that (a top-view reference teaches a top-down footprint far taller than the table strip allows and the pack ends up against the arm); positions in words (a band to the arm) are not honoured, the reference and the placed spot are the levers. A label rotated a quarter turn and foreshortened gets fewer legible pixels: tight-cropped label detail in the reference and fewer label words in the prompt, and QC reads the wordmark and the main line word by word.
 - **status:** open
 - **promoted to:** —
