@@ -587,7 +587,8 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
 - **Recreate only:** `T split-audio "<references folder>" --run RUN` writes `files_audio/` and
   `videos_without_audio/` inside the references folder.
   - The references are Recreate's edit sources, so only the **silent copy** is uploaded.
-  - The reference's own-content audio is restored onto the edited picture (A6r).
+  - The reference's own-content audio is restored onto the edited picture (A6r). Its transcript and sound
+    profile are still read for context (below): the audio is analysed and never uploaded.
 - **Create: audio only, no silent copies.** `T split-audio "<references folder>" --run RUN
   --audio-only` writes `files_audio/` (no `videos_without_audio/`).
   - No reference is ever uploaded or used as a generation input.
@@ -609,6 +610,20 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
   - with more than ~3 minutes of total video, run it with `run_in_background: true`, read the
     documents (A2) meanwhile, and wait for the completion notification before A3;
   - fix or report any per-item errors listed in its JSON.
+- **Audio context, every analysis mode** (`analysis-protocol.md` §2 item 4, §3): then run
+  `T audio-context --run RUN --profile`. It writes `20-analysis/audio-context.md`, one digest of what every
+  reference says and how it sounds: each transcript with its times, the language and its confidence, the speech
+  and sound facts, repeated phrases that may be lyrics, and flags for a video whose language is uncertain or whose
+  words have low confidence; `--profile` also measures each video's sound design (`audio-profile.json`).
+  - Every analysis agent reads the digest before writing a card, and every card carries the **Audio context:**,
+    **Said:** and **Words and sound together:** lines. In Create the speech is read for its craft, never for its lines.
+  - A video without a usable transcript (`needs_a_transcript` in the JSON) is prepared again before the cards:
+    `T prep-all --run RUN --only <V> --redo [--whisper-model medium]`. When speech cannot be recovered, the card
+    says `transcript unavailable: <why>`.
+  - **Recreate:** context only. The audio never goes to Higgsfield: only the silent copy is uploaded, and the
+    original audio is restored after the result is approved (A6r). What is said tells the plan which beats the
+    restored audio must still fit.
+  - After the cards are written, `T audio-context --run RUN --check --cards` must pass.
 - With examples: `T prep-all --run RUN --set examples --jobs 2` (into `10-media/E01…`, listed in
   `10-media/examples-index.md`).
 - Pipeline details: `ATG/pipeline/preprocessing.md`.
@@ -704,7 +719,9 @@ concern video generation and apply to Edit Mode, Recreate and Create. Items 23�
     - its **inserts**: memes or other clips that interrupt the reference, with their exact in and
       out on cut frames, video or still, and their sound;
     - its **overlay text**: wording, role, centre position, in and out times, and style;
-    - its **sound design** (Create):
+    - its **audio context** (every mode; `analysis-protocol.md` §2 item 4): the `Audio context:`, `Said:` and
+      `Words and sound together:` lines, from `20-analysis/audio-context.md` and the transcript (context only in Recreate);
+    - its **sound design** (every mode; Create builds its sound layer from it):
       `T audio-profile --audio "<files_audio file>" --out 10-media/<V>/audio-profile.json --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json`.
       It measures the music bed, tempo, beat strength, energy arc, and hits (and whether they land
       on cuts), plus whether the sound is speech-free and so reusable whole. From those numbers and
@@ -1074,6 +1091,9 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   than about 3 minutes of video run it in the background and read the documents meanwhile
   (documents are authoritative requirements and are quoted, "we already sell X" included).
   **No `split-audio`:** the references folder is not touched.
+- `T audio-context --run RUN --profile` (and `--set baseline` with a baseline): the digest of every transcript and the sound
+  profile of every video (`viral-browser.md` §3.1, `analysis-protocol.md` §2 item 4). A video without a usable transcript is
+  prepared again before the cards (`T prep-all --run RUN --only <V> --redo --whisper-model medium`).
 - A metrics or links file becomes `20-analysis/metrics.md`: one row per video (views, likes,
   comments, shares, saves, followers, date, link, source), matched to the video ids by file name or
   link, and "not provided" where there is nothing. Never estimate a metric. **Reference pages**
@@ -1091,7 +1111,9 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
 - Sound: for each reference run `T audio-profile --audio "<the original video>" --out
   10-media/<V>/audio-profile.json --transcript 10-media/<V>/transcript.json --cuts
   10-media/<V>/cuts.json` (the original video is the input here; nothing is written to the references
-  folder). `T viral-stats` reads the result for the music-bed and tempo shares.
+  folder). `T viral-stats` reads the result for the music-bed and tempo shares. Every card carries the `Audio context:`, `Said:` and
+  `Words and sound together:` lines (`viral-browser.md` §3.2); when the cards are written, `T audio-context --run RUN --check --cards`
+  (and `--set baseline`) must pass before V3.
 - Scale and delegation as protocol §7: up to 6 videos in this session; more, 1 analysis agent (2 over
   about 15 videos) with disjoint lists and the prompt of `viral-browser.md` §13.1.
 - Merge the labels into `20-analysis/labels.md` and rewrite the Facts lines so one meaning has one
@@ -1196,7 +1218,7 @@ channel, tools, depth and exclusions live in `state.json → brief.*`.
   reference-pack agents, one per pick, in the background with the prompt of §13.7 filled in (run,
   toolkit, date, market, the pick, the depth and its `reference_pack_budget`), and write the blueprints
   meanwhile. When they report, check each pack: `T spec check --run RUN --cand C##` and
-  `T photo check --run RUN --cand C##` (covered, partial, thin or none). A pack that is not complete or covered gets one more reference-pack agent for that pick alone, told what is
+  `T photo check --run RUN --cand C##` (covered, unconfirmed, partial, thin or none). A pack that is not complete or covered gets one more reference-pack agent for that pick alone, told what is
   missing, with the same budget again (one extra round only), and what is still missing is reported, never invented. **No image
   is downloaded: the packs hold links.** Process `30-research/queue-<C>-pack.md` with the user's
   Chrome only when they allowed it (read-only: the image links of a gallery, a specification table;

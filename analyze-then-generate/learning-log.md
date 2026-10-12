@@ -165,3 +165,42 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   the ranking is applied again; (b) only public http(s) addresses are fetched and each redirect hop is checked, so a page cannot steer the toolkit to
   the user's own machine or network (the test suite reaches its local server with a hidden `--allow-private-host` switch that no prompt uses);
   (c) `photo_max_attempts` (30) caps the links tried per pick.
+- **Second independent review (same day):** it verified real problems in the first links-only version, all fixed and tested: (a) text facts: wording
+  that merely contained another's words was called verified, negations ("not dishwasher safe") merged with their opposite, the result depended on the
+  order of registration, and a retailer's word-for-word copy of the maker's paragraph counted as a second source - now equal words verify, containment
+  is only compatible, a negation or different words is a conflict, and a long text repeated by another site counts once; (b) a sheet could be "complete"
+  with words in place of numbers ("wide", "light") - numeric fields now refuse text; (c) `photo check` said "covered" for five http links that all
+  answered 403 - the verdict now needs confirmed links (`unconfirmed` otherwise); (d) the probe sent the maker's page as Referer, so a hotlink-protected image
+  looked fine while Higgsfield's importer and the gallery would be refused - the probe now sends none; (e) a fact for another variant, or a generic fact
+  beside a variant-specific one, could silently decide the sheet - the variant of the reference unit decides, a variant-specific fact outranks a
+  generic one, and what was left out is listed; (f) a slow server or a hostile page could hold the command for a minute or more - every page read, probe and
+  parse has a deadline, scripts are scanned in bounded time; (g) with only an https proxy configured the connect-time check stood aside for http
+  addresses - the decision is now per address, and the check is installed once and switched on per thread; (h) a date such as 2026-02-30 broke the
+  whole sheet later - dates are validated; (i) `derived` could be grade B and "measured" could be a size eyeballed from a thumbnail - both closed;
+  (j) concurrent writers of one pack could collide on a fixed temporary name - names are unique, and the lock waits out a Windows deletion;
+  (k) smaller: the https twin replaces an http link, angle spellings fold (rear, top-down, close-up), field names fold (Product Weight, Colors),
+  compact srcset, <base href>, preload links and image addresses inside scripts are read, packaged lists reach the sheet, usage steps keep order and
+  full text. Lesson, as a kind: a status that can be reached without evidence (verified by wording, complete by words, covered by unconfirmed links) is
+  a defect of the same class as a missing check; test every status with the cheapest input that should NOT earn it.
+
+## 2026-10-12 · audio context in every analysis mode
+- **User request:** the agents that mine and analyse the video references should also transcribe the references' audio and understand it, to gather more
+  context about each video, in Create and Viral-Browser, and in Recreate too (context only: the reference sent to Higgsfield stays silent); and verify the
+  method really works on mp3 audio, extracted from the reference videos or from another sample, before relying on it.
+- **Verified first:** the transcription already in the toolkit (faster-whisper, the open-source Whisper model, `small` cached locally, CPU, offline) was
+  run on mp3 files: a text-to-speech sample of known text came back with a 2.9 % word error rate (only "ten" written as "10"), and the audio of all 15
+  references in `Documents/test` was transcribed without an error: 6 had speech in English, 3 were songs (English lyrics, Spanish lyrics, a rap), 6 had no
+  speech. The same audio through the pipeline's own 16 kHz route and through an mp3 gave different words for one music-led video, so the digest flags a
+  doubtful language and low-confidence words instead of trusting the text.
+- **Added:** `atg.py audio-context` (the digest `20-analysis/audio-context.md` and `.json`: every transcript with its times, the language, the speech and sound
+  facts, repeated phrases, flags; `--profile` measures the sound design of the videos that lack it; `--check` fails while a transcript is missing, failed or
+  skipped and, with `--cards`, while a card lacks its `Audio context:` and `Said:` lines), `--no-vad` on `prep-video` and `prep-all` for a second pass
+  without the voice filter, `audio-profile` refactored into a function; the three card lines in the protocol card and the viral card; the spoken layer in
+  the synthesis (`viral-browser.md` 4.3, 4.5); the pitfall "a transcript is a machine's hearing"; the agent prompts 13.1 and 13.6; the command's A1, A3, V1 and
+  V2 steps; the build prompt.
+- **Decisions:** the transcript is evidence of the words as heard, never of what the speaker meant; a spoken claim is a claim, not proof; in Recreate the audio
+  is analysed and never uploaded (only the silent copy goes to Higgsfield, the original audio is restored afterwards); in Create the craft of the speech may
+  be borrowed, never its lines, claims or subject; a larger model is optional and only for the videos the digest flags.
+- **Hypotheses to test on the first run:** (1) the `small` model is enough for the speech references and the flagged ones are few; (2) the "Said:" lines
+  change the mechanism map (hook lines, promises, calls to action) beyond what the pictures gave; (3) the music-led videos with no speech are a real
+  silent-friendly mechanism and not a transcription miss (check one with `--no-vad`).

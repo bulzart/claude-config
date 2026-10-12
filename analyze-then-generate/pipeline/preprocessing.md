@@ -87,6 +87,7 @@ atg.py hf-put --file "<local>" --url "<upload_url>" --content-type "<exact type>
 atg.py hf-get --url "<result_url>" --out "<file.mp4>"
 atg.py split-audio "<given video path>" --run "<run>" [--audio-only]   → <path>/files_audio/ (+ <path>/videos_without_audio/ unless --audio-only)
 atg.py audio-profile --audio "<files_audio file>" --out "<json>" [--transcript …] [--cuts …]   → music bed, BPM, energy arc, hits on cuts
+atg.py audio-context --run "<run>" [--set references|baseline|examples] [--profile] [--check [--cards]]   → 20-analysis/audio-context.{md,json}: every transcript with its times, the language, the speech and sound facts, flags; --check: no transcript missing/failed/skipped, every card has its Audio context lines
 atg.py fetch-audio --url "<direct audio url>" --page "<page>" --license "<license>" --out "<file>"   → download + <file>.source.json
 atg.py restore-audio --generated "<edit>" --audio "<path>/files_audio/<name>.m4a" --audio-offset <s> [--start <s>] --out "<file>"
 atg.py finalize --run "<run>" --video V01 --file "<approved.mp4>" --original "<original video>"   → <path>/final/<name>.mp4

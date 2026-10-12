@@ -31,6 +31,7 @@ loudness); opinions come from viewing.
 | `10-media/<V>/timeline.md` | One row per second: shot, cuts, motion peaks, static stretches, words spoken, loudness, on-screen text |
 | `10-media/<V>/sheets/storyboard-NN.jpg` | The video at **~5 frames per second**, in order. White labels are the baseline; cyan `+` labels are densified frames (cut boundaries, motion peaks, first second); a red bar marks the first frame after a cut; grey cells mark thinned static stretches (≥ 1 fps kept) |
 | `frames.json`, `cuts.json`, `activity.json`, `audio.json`, `transcript.json`, `ocr.json` | Machine data for exact look-ups |
+| `20-analysis/audio-context.md` (and `.json`, from `T audio-context --profile`) | The audio of every reference in one file: each transcript with its times, the language and its confidence, the speech and sound facts, repeated phrases that may be lyrics, and flags for a video whose transcript is missing, failed or doubtful. Read it before writing any card |
 
 **Densify on demand** where the default rate is not enough: fast actions, object interactions, hand
 contact, gestures, product appearances, swaps, text appearances, transitions.
@@ -50,8 +51,18 @@ is one second of the sheets. Do not describe isolated frames. Answer:
    (person, character, product, service, interface, topic, brand, place, prop).
 3. **Message:** what is communicated and how the viewer is addressed (direct to camera, voice-over,
    POV, silent demonstration, text-led, dialogue between characters).
-4. **Speech:** what is said (transcript, verified against the lips and timing), the delivery (pace,
-   tone), and where the words land relative to the visual beats.
+4. **Speech and sound (the audio context, in every mode):** read `20-analysis/audio-context.md` and the
+   video's transcript right through, not only its first line.
+   - What is said, checked against the lips, the picture and the on-screen text (the machine mishears, so a
+     doubtful line is marked), in the language it is said in and translated into the card.
+   - Who says it: on camera, a voice-over, sung, a text-to-speech voice, nobody.
+   - The hook line, the story or the steps, the claims, numbers, prices and names spoken aloud, and the calls to action.
+   - The delivery (pace, tone, emotion) and where the words land relative to the visual beats.
+   - What the sound adds that the picture does not: credibility, instruction, humour, identity, rhythm, a
+     trending song named by its lyrics or tempo.
+   - A video with no speech is a finding too (a silent-friendly demonstration, a song under a visual).
+   - **In Recreate this is context only:** the reference that goes to Higgsfield is the silent copy, and the
+     original audio is restored afterwards (the audio is analysed, never uploaded).
 5. **Evolution:** scene changes, state changes of objects, reveals, transformations.
 6. **Camera and edit:** shot sizes, movement, handheld or locked-off, cut rhythm (median shot length
    from `video.md`), why each cut happens, transitions and their motivation, speed changes.
@@ -117,10 +128,13 @@ Beat map:
 Hook (0–1 s, 0–3 s): <visual, audio, text role, curiosity gap>                          [E/I]
 Payoff: <what, at t=…>; loop: <yes/no, why>; depends on its own object's geometry? <e.g. its logo lands between two caption words → the new video gives that landing a visible cause and the text follows the product (generation-system.md §5b)> [E/I]
 Camera & editing: <shot sizes, moves, median shot …s, cut logic, transitions + motivation> [E/I]
+Audio context: language <code (confidence)> · voice <on-camera | voice-over | sung | text-to-speech | none> · transcript <ok | doubtful: why | unavailable: why> (T audio-context) [E]
+Said: <what is said, in one to three sentences (translated into English when it is not); the hook line verbatim with its time and, beside it, its translation; the story or steps, the claims, numbers, prices, product and brand names and calls to action spoken aloud; or "no speech"> [E]
+Words and sound together: <what the words and the sound add that the picture does not: credibility, instruction, humour, emotion, identity, rhythm; the song or the trending sound, named when the lyrics, the tempo or a known format identify it> [I]
 Audio & address: <speech / VO / music / SFX; how the viewer is addressed>                 [E/I]
 Overlay text: <per event: wording, role (hook / "POV:" line / running caption / label / meme line / none), centre x_rel,y_rel, in–out s, style (colour, size, outline/box, case, line breaks)> — re-placed in CapCut over the clean video; wording kept only for a generic meme line (text-and-format.md §1) [E/I]
 Inserts: <per insert: t_in–t_out (cut frames), what it is (name the meme if recognisable), video or still, its sound, the reference's own overlays on it> — cut from this video, never generated (generation-system.md §3c) [E]
-Sound design (Create; audio-profile.json): <music bed yes/no/unknown, ~BPM, beat strength, energy arc, hits (t, on cut?), speech share, reusable whole?> → role [I]: <dramatic / comic / suspense / hype / SFX-driven / voice-only>; lyrics in the transcript may identify the song [E/I]
+Sound design (every mode; audio-profile.json from `T audio-context --profile`; Create builds its sound layer from it): <music bed yes/no/unknown, ~BPM, beat strength, energy arc, hits (t, on cut?), speech share, reusable whole?> → role [I]: <dramatic / comic / suspense / hype / SFX-driven / voice-only>; lyrics in the transcript may identify the song [E/I]
 Engagement mechanisms: <mechanism — evidence (t=…) — why it works>                         [I]
 Trend & cognition: <format name + caption grammar; structural mechanism; surface elements (current / fading / dated); emotion arc hook→middle→payoff; laugh mechanism; share line> (creative-direction.md §3–§4) [E/I]
 Transferable craft (how, as kinds not instances): <style: look, grade, lens, light, performance register | properties: length, pacing curve, cut rhythm, caption grammar, sound role, camera behaviour | approach: hook type, structure shape, reveal logic, payoff timing, laugh mechanism, loop | crafting: one take or cuts, POV or observed, where text sits, when and how the product reads | why it works> — what a Create video may take; everything under "Subject & entities" and the beat map is what it may not (creative-direction.md §5.0) [I]
@@ -135,6 +149,8 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
 ```
 
 **Create cards are also viral cards.** Besides the fields above, a Create card carries the viral layer of `viral-browser.md` §3.2, so that each reference is read once: the product layer kept apart from the mechanism layer; the ranked drivers of spread and whether it is attention-only or commerce-proven; the one-sentence product-agnostic mechanism, its dependence on its own product and its transplant needs; the audience (who, the awareness stage, the pain or desire) and the mentality (the mental shortcuts it uses, the emotion at the hook, the middle and the payoff, what got them hooked); the engagement mechanics; commerce signals when a metrics file is supplied; and the one-line `Facts:` JSON (its `category` is optional in Create). The product layer is recorded and then discarded for ideation (`viral-browser.md` §14.1).
+
+**The audio context in each mode.** Every card, in Recreate, Create and Viral-Browser, carries the three lines `Audio context:`, `Said:` and `Words and sound together:` (a baseline's light card, the first one), written from `20-analysis/audio-context.md` and the transcript; `T audio-context --check --cards` refuses while one is missing or empty. **Recreate:** context only, so that the plan knows what is said and which beats the restored original audio must still fit; only the silent copy is ever uploaded. **Create:** the craft of the speech may be borrowed (the hook type, the delivery, the way the viewer is addressed), never the lines, the claims or the subject. **Viral-Browser:** the words are evidence of the hook, the promise, the audience and the mentality (`viral-browser.md` §4.3, §4.5).
 
 ## 4. Effectiveness lenses (apply those the material supports; add new ones when needed)
 
@@ -172,7 +188,7 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
    tabletop reveal with dry humour", "creator-to-camera myth-busting with cutaways").
 3. **Profile each family** from measured data:
 
-| family | members | typical length | median shot | first cut | speech onset | hook mechanism | payoff time | camera style | editing logic | text role | audio | structure template |
+| family | members | typical length | median shot | first cut | speech onset | hook mechanism | payoff time | camera style | editing logic | text role | audio (language, voice type, sound role) | structure template |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 3b. **Craft sheet** (Create): write `20-analysis/craft-sheet.md`, one block per family (and per
