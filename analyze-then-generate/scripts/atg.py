@@ -4556,6 +4556,10 @@ def cmd_econ(a):
                                   "platform_fee_pct": a.platform_fee_pct, "payment_fee_pct": a.payment_fee_pct,
                                   "payment_fixed": a.payment_fixed, "returns_pct": a.returns_pct, "return_cost": a.return_cost, "resale_pct": a.resale_pct,
                                   "fees_on": a.fees_on, "moq": a.moq}}
+            if res.get("price_for_target") is not None:
+                ebm[mk]["price_for_target"] = res["price_for_target"]
+            if a.note:
+                ebm[mk]["note"] = a.note
             data["updated"] = now_iso()
             write_json(p, data)
         with FileLock(elk):
@@ -4812,7 +4816,9 @@ def _cd_rows(items, a, cfg):
     for c in items:
         wsum, n_rated = _cd_weighted(c, cfg["rubric"], excl)
         eco = {m: {"market": v.get("market"), "currency": v.get("currency"), "retail": v.get("retail_price"), "landed": v.get("landed_cost"),
-                   "contribution_pct_of_net": v.get("contribution_pct_of_net"), "contribution_per_order": v.get("contribution_per_order")}
+                   "contribution_pct_of_net": v.get("contribution_pct_of_net"), "contribution_per_order": v.get("contribution_per_order"),
+                   "target_pct": (v.get("price_for_target") or {}).get("target_contribution_pct_of_net"),
+                   "retail_for_target": (v.get("price_for_target") or {}).get("retail_price"), "note": v.get("note")}
                for m, v in (c.get("economics_by_market") or {}).items()}
         row = {"id": c["id"], "name": c["name"], "niche": c.get("category"), "type": c.get("type"), "origin": c.get("origin"), "status": c["status"],
                "price_fit": c.get("price_fit"), "compliance": c.get("compliance"), "excluded": c.get("excluded"),
@@ -4853,7 +4859,9 @@ def _cd_md(rows, rubric, blind=False, excl=()):
     head = ["id", "product", "niche", "type"] + ([] if blind else ["origin"]) + ["status"] + crit + ["weighted sum" + (f" (without {', '.join(sorted(excl))})" if excl else ""), "conf", "red team", "price fit", "compliance", "economics by market", "evidence rows (A/B; sites)", "pick"]
     L = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for r in rows:
-        eco = "; ".join(f"{v['market']}: {v['contribution_pct_of_net']} % of net ({v['currency']} {v['retail']})" for v in r["economics"].values()) or ""
+        eco = "; ".join(f"{v['market']}: {v['contribution_pct_of_net']} % of net ({v['currency']} {v['retail']})"
+                        + (f", {v['target_pct']:g} % needs {v['retail_for_target']}" if v.get("retail_for_target") is not None and v.get("target_pct") is not None else "")
+                        + (" [note]" if v.get("note") else "") for v in r["economics"].values()) or ""
         ev = r["evidence"]
         cells = [r["id"], _md_cell(r["name"]), _md_cell(r["niche"]), _md_cell(r["type"])] + ([] if blind else [_md_cell(r.get("origin"))]) + [r["status"]]
         cells += [str(r["ratings"].get(k, "")) for k in crit]
