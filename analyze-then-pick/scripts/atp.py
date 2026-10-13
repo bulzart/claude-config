@@ -21,7 +21,8 @@ Subcommands (python atp.py <cmd> -h):
   prep-assets    previews, doc text, font names and a labelled contact sheet of USER-SUPPLIED assets
   model-menu     numbered table of EVERY available video model (pinned first) + quick picks
   ledger         anti-duplicate guard for paid generations (begin before, set after every call)
-  caught-flag    flag ledger caught_flags.md: prompts and videos Higgsfield flagged or refused (add | set | list | reconcile)
+  caught-flag    flag record caught_flags.html (data + viewer page): prompts and videos Higgsfield flagged or refused
+                 (add | set | list | reconcile | open | render)
   open           open a finished video in the default player for the user's review
   prep-video     probe, cuts, activity, 5 fps adaptive frames, storyboard sheets, audio, transcript,
                  OCR sample, per-second timeline, summary
@@ -61,6 +62,7 @@ Every command prints one JSON object on its last stdout line. Exit codes: 0 ok, 
 from __future__ import annotations
 
 import argparse
+import base64
 import concurrent.futures as cf
 import datetime as dt
 import glob
@@ -76,6 +78,7 @@ import subprocess
 import sys
 import threading
 import time
+import webbrowser
 import zipfile
 from pathlib import Path
 
@@ -2628,11 +2631,17 @@ def _count_frames(path) -> tuple[int, float]:
     return int(s.get("nb_read_frames", 0) or 0), fps
 
 
-# Helpers below are shared by the caught-flag ledger (caught_flags.md). The caught-error ledger
-# (caught_errors.md) was retired on 2026-10-13: its lessons live in the references.
+# ----------------------------------------------------------------------------------------------------------------
+# Caught flags. ATP/caught_flags.html is the flag record AND its viewer in one self-contained page: the data is a
+# JSON block inside it, scripts/caught_flags_template.html is the viewer (search, filters, grouping, detail).
+# `caught-flag` is the only writer (add | set | reconcile | render); no step of a run and no agent reads the page
+# (command item 23): it is for the person who opens it. The script gathers what the run already knows (the video,
+# the attempt, the request's prompt and parameters, every input with its file, type and thumbnail, the reference
+# and its source segment, the job and its ledger row); the agent adds the judgement (Higgsfield's reply, the
+# suspected trigger, which input, which words, which part of a video, the grouping tags).
 
 
-def _ce_text_or_file(v):
+def _cf_text_or_file(v):
     """A literal text, or a file path: a .md/.txt file is read whole; a request .json gives its prompt."""
     if not v:
         return ""
@@ -2656,73 +2665,8 @@ def _ce_text_or_file(v):
     return str(v)
 
 
-def _ce_autofind(run, video) -> dict:
-    """The run's own files for a video: 40-briefs/video-NN-brief.md, the newest request json, the plan."""
-    found = {}
-    if not run or not video:
-        return found
-    rd = Path(str(run))
-    if not rd.exists():
-        rd = ATP_HOME / "runs" / str(run)
-    if not rd.exists():
-        return found
-    v = str(video).strip()
-    m = re.search(r"(\d{1,3})", v)
-    nn = m.group(1).zfill(2) if m else v
-    b = rd / "40-briefs" / f"video-{nn}-brief.md"
-    if b.is_file():
-        found["brief"] = b
-    plan = rd / "40-briefs" / f"video-{nn}-plan.md"
-    if plan.is_file():
-        found["plan"] = plan
-    res = rd / "60-outputs" / f"video-{nn}" / "result.json"
-    if res.is_file():
-        try:
-            r = json.loads(res.read_bytes().decode("utf-8"))
-            bits = [f"CapCut project {r['capcut_project']}" if r.get("capcut_project") else "",
-                    f"clean {r['clean']}" if r.get("clean") else "",
-                    f"credits {r['credits']}" if r.get("credits") is not None else "",
-                    f"run QC: {r['qc']}" if r.get("qc") else ""]
-            found["delivered"] = " · ".join(b for b in bits if b)
-            if r.get("qc"):
-                found["qc"] = str(r["qc"])
-        except (ValueError, OSError):
-            pass
-    reqs = [p for p in (rd / "50-requests").glob(f"video-{nn}*-request.json")] if (rd / "50-requests").is_dir() else []
-    if reqs:
-        found["prompt"] = max(reqs, key=lambda p: p.stat().st_mtime)
-    return found
-
-
-def _ce_params(src) -> str:
-    """Compact generation parameters from a request .json: model, mode, duration, format, media roles."""
-    if not src:
-        return ""
-    p = Path(str(src))
-    if not (p.is_file() and p.suffix.lower() == ".json"):
-        return ""
-    try:
-        j = json.loads(p.read_bytes().decode("utf-8"))
-    except (ValueError, OSError):
-        return ""
-    prm = j.get("params") if isinstance(j.get("params"), dict) else j
-    bits = []
-    for k in ("model", "mode", "duration", "duration_policy", "aspect_ratio", "resolution", "generate_audio", "enable_thinking"):
-        if k in prm:
-            bits.append(f"{k}={prm[k]}")
-    roles = {}
-    for m in prm.get("medias") or []:
-        if isinstance(m, dict):
-            r = m.get("role", "?")
-            roles[r] = roles.get(r, 0) + 1
-    if roles:
-        bits.append("medias=" + ", ".join(f"{r}×{n}" if n > 1 else r for r, n in roles.items()))
-    bits.append(f"request={p.name}")
-    return " · ".join(bits)
-
-
-def _ce_sentence_diff(old: str, new: str, cap: int = 14) -> str:
-    """What changed between the failed and the verified prompt, sentence by sentence (- removed, + added)."""
+def _cf_sentence_diff(old: str, new: str, cap: int = 14) -> str:
+    """What changed between the failed and the accepted prompt, sentence by sentence (- removed, + added)."""
     import difflib
     def sp(t):
         return [s.strip() for s in re.split(r"(?<=[.;!?])\s+|\n+", t or "") if s.strip()]
@@ -2738,100 +2682,415 @@ def _ce_sentence_diff(old: str, new: str, cap: int = 14) -> str:
     return "\n".join(lines)
 
 
-def _ce_block_field(name: str, text: str) -> str:
-    """A multi-line field as an indented fenced block (the parser joins the lines back)."""
-    text = (text or "").strip("\n")
-    if not text:
-        return f"- **{name}:** not recorded\n"
-    lines = "\n".join("  " + l for l in text.splitlines())
-    return f"- **{name}:**\n  ```text\n{lines}\n  ```\n"
-
-
-CAUGHT_FLAGS = ATP_HOME / "caught_flags.md"
+CAUGHT_FLAGS = ATP_HOME / "caught_flags.html"
+CF_TEMPLATE = ATP_HOME / "scripts" / "caught_flags_template.html"
 CF_KINDS = ["moderation-block", "refused-no-reason", "media-flagged", "output-flagged", "preset-notice", "other"]
 CF_CAUSES = ["prompt-wording", "reference-video", "image-reference", "output", "parameter", "unknown"]
 CF_STATUS = ["open", "cleared", "persistent"]
-CF_BLOCKS = ("response", "flagged_prompt", "cleared_prompt", "flagged_inputs", "prompt_change")
 CF_TERMS = re.compile(r"moderat|flag|nsfw|refus|polic|safety|blocked|copyright|\bip\b|celebrit|likeness|preset_recommendation|"
                       r"rejected before creation|no reason|no error", re.I)
+CF_DATA_RE = re.compile(r'(<script id="flags-data" type="application/json">)(.*?)(</script>)', re.S)
+CF_ROLE_LABEL = {"image_references": "Image", "video_references": "Video", "audio_references": "Audio"}
+CF_PARAM_KEYS = ("model", "mode", "duration", "duration_policy", "aspect_ratio", "resolution", "generate_audio",
+                 "enable_thinking", "count", "declined_preset_id")
 
 
-def _cf_parse(text: str) -> list:
-    """Entries of caught_flags.md: '## CF-nnn · date · title' headings with '- **field:** value' lines."""
-    entries, cur, last = [], None, None
-    for line in text.splitlines():
-        m = re.match(r"^## (CF-\d{3,}) · (\S+) · (.*)$", line)
-        if m:
-            cur = {"id": m.group(1), "date": m.group(2), "title": m.group(3).strip()}
-            entries.append(cur); last = None
-            continue
-        if cur is None:
-            continue
-        m = re.match(r"^- \*\*([a-z][a-z ]*):\*\* ?(.*)$", line)
-        if m:
-            last = m.group(1).strip().replace(" ", "_")
-            cur[last] = m.group(2).strip()
-            continue
-        if last and line.startswith("  ") and line.strip():
-            body = line[2:]
-            if last in CF_BLOCKS:
-                if body.strip().startswith("```"):
-                    continue
-                cur[last] = (cur[last] + "\n" + body).strip("\n")
-            else:
-                cur[last] = (cur[last] + " " + line.strip()).strip()
-    return entries
+def _cf_load() -> list:
+    """The entries stored in the page's flags-data block ([] when the page does not exist yet)."""
+    if not CAUGHT_FLAGS.exists():
+        return []
+    page = CAUGHT_FLAGS.read_bytes().decode("utf-8")
+    m = CF_DATA_RE.search(page)
+    if not m:
+        fail(f"{CAUGHT_FLAGS.name} has no flags-data block (restore it from git)", 2)
+    try:
+        return list((json.loads(m.group(2)) or {}).get("entries", []))
+    except ValueError as e:
+        fail(f"{CAUGHT_FLAGS.name}: the flags-data block is not valid JSON ({e})", 2)
 
 
-def _cf_inputs_from_request(src) -> str:
-    """The media of a request .json as 'role: value' lines (the Higgsfield media ids the flagged job carried)."""
+def _cf_save(entries: list):
+    """Write the page: the viewer template with the entries injected as one JSON block (atomic)."""
+    if not CF_TEMPLATE.is_file():
+        fail(f"the viewer template is missing: {CF_TEMPLATE}", 2)
+    tpl = CF_TEMPLATE.read_bytes().decode("utf-8")
+    if tpl.count("__FLAGS_JSON__") != 1:
+        fail("the viewer template must contain __FLAGS_JSON__ exactly once", 2)
+    blob = json.dumps({"version": 1, "generated": now_iso(), "entries": entries}, ensure_ascii=False, separators=(",", ":"))
+    blob = blob.replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    tmp = CAUGHT_FLAGS.with_suffix(".html.tmp")
+    tmp.write_bytes(tpl.replace("__FLAGS_JSON__", blob).encode("utf-8"))
+    os.replace(tmp, CAUGHT_FLAGS)
+
+
+def _cf_run_dir(run):
+    if not run:
+        return None
+    rd = Path(str(run))
+    if not rd.exists():
+        rd = ATP_HOME / "runs" / str(run)
+    return rd if rd.exists() else None
+
+
+def _cf_nn(video) -> str:
+    m = re.search(r"(\d{1,3})", str(video or ""))
+    return m.group(1).zfill(2) if m else str(video or "")
+
+
+def _cf_request_file(rd, video, attempt):
+    """The request json of this video and attempt (the newest one when the attempt is not given or not found)."""
+    d = rd / "50-requests" if rd else None
+    if not d or not d.is_dir() or not video:
+        return None
+    nn = _cf_nn(video)
+    reqs = sorted(d.glob(f"video-{nn}*-request.json"), key=lambda p: p.stat().st_mtime)
+    if not reqs:
+        return None
+    tok = re.sub(r"[^a-z0-9]+", "-", str(attempt or "").lower()).strip("-")
+    if tok:
+        exact = [p for p in reqs if f"-{tok}-" in p.name.lower()]
+        if exact:
+            return exact[-1]
+        if tok in ("a1", "1"):
+            plain = [p for p in reqs if p.name.lower() == f"video-{nn}-request.json"]
+            if plain:
+                return plain[-1]
+    return reqs[-1]
+
+
+def _cf_request_json(src) -> dict:
     if not src:
-        return ""
+        return {}
     p = Path(str(src))
     if not (p.is_file() and p.suffix.lower() == ".json"):
-        return ""
+        return {}
     try:
         j = json.loads(p.read_bytes().decode("utf-8"))
     except (ValueError, OSError):
-        return ""
-    prm = j.get("params") if isinstance(j.get("params"), dict) else j
-    return "\n".join(f"{m.get('role', '?')}: {m.get('value', '?')}" for m in (prm.get("medias") or []) if isinstance(m, dict))
+        return {}
+    return j if isinstance(j, dict) else {}
+
+
+def _cf_params_dict(req: dict) -> dict:
+    """The generation parameters of a request (model, duration, format, flags) plus a summary of the media roles."""
+    prm = req.get("params") if isinstance(req.get("params"), dict) else req
+    d = {k: str(prm[k]) for k in CF_PARAM_KEYS if k in prm and prm[k] not in (None, "")}
+    roles = {}
+    for m in prm.get("medias") or []:
+        if isinstance(m, dict):
+            roles[m.get("role", "?")] = roles.get(m.get("role", "?"), 0) + 1
+    if roles:
+        d["medias"] = ", ".join(f"{r}×{n}" if n > 1 else r for r, n in roles.items())
+    return d
+
+
+def _cf_params_text(s: str) -> dict:
+    """'model=x · duration=15 · medias=a, b' -> {'model': 'x', ...} (a --params text)."""
+    d = {}
+    for part in re.split(r"\s+·\s+", s or ""):
+        k, sep, v = part.partition("=")
+        if sep and k.strip():
+            d[k.strip()] = v.strip()
+    return d
+
+
+def _cf_uploads(rd) -> dict:
+    """media id -> {'name', 'type'} from the run's uploads maps (what each uploaded file was)."""
+    res = {}
+    if not rd:
+        return res
+    for fn in ("uploads.json", "uploads-map.json"):
+        p = rd / "30-assets" / fn
+        if not p.is_file():
+            continue
+        try:
+            j = json.loads(p.read_bytes().decode("utf-8"))
+        except (ValueError, OSError):
+            continue
+        for name, v in (j.items() if isinstance(j, dict) else []):
+            mid, typ = (v.get("media_id"), v.get("content_type", "")) if isinstance(v, dict) else (v, "")
+            if mid and mid not in res:
+                res[mid] = {"name": name, "type": typ}
+    return res
+
+
+def _cf_asset_path(rd, name, req):
+    """The local file behind an uploaded input: the prepared source for a src-* video, else the staged asset."""
+    if not rd or not name:
+        return None
+    sp = req.get("source_prepared") if isinstance(req, dict) else None
+    if sp and name.lower().startswith("src-"):
+        p = rd / str(sp)
+        if p.is_file():
+            return p
+    for base in (rd / "30-assets" / "stage", rd / "30-assets", rd / "10-media"):
+        p = base / name
+        if p.is_file():
+            return p
+    return None
+
+
+def _cf_ref(name: str) -> str:
+    """A reference video (V20) or asset (A12) id read from a file name such as src-V20.mp4 or char-A12-head.jpg."""
+    for pat in (r"(?<![A-Za-z0-9])(V\d{1,3})(?![0-9])", r"(?<![A-Za-z0-9])(A\d{1,4})(?![0-9])"):
+        m = re.search(pat, name or "")
+        if m:
+            return m.group(1)
+    return ""
+
+
+def _cf_type(name: str) -> str:
+    import mimetypes
+    return mimetypes.guess_type(name or "")[0] or ""
+
+
+def _cf_thumb(path, width: int = 200, t=None) -> str:
+    """A small JPEG of an image, or of a video at time t, as a data URI ('' when it cannot be made)."""
+    try:
+        cmd = [find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-y"]
+        if t:
+            cmd += ["-ss", f"{max(0.0, float(t)):.2f}"]
+        cmd += ["-i", str(path), "-frames:v", "1", "-vf", f"scale={int(width)}:-2", "-pix_fmt", "yuvj420p", "-q:v", "7",
+                "-f", "image2pipe", "-vcodec", "mjpeg", "-"]
+        cp = subprocess.run(cmd, capture_output=True, timeout=90)
+        if cp.returncode == 0 and cp.stdout:
+            return "data:image/jpeg;base64," + base64.b64encode(cp.stdout).decode("ascii")
+    except Exception:
+        pass
+    return ""
+
+
+def _cf_inputs(req: dict, rd, thumbs: bool = True) -> list:
+    """Every media the request carried: label (Image 2, Video 1), role, media id, file, type, V/A id, thumbnail."""
+    prm = req.get("params") if isinstance(req.get("params"), dict) else req
+    meaning = next((req[k] for k in ("medias_meaning", "media_meaning") if isinstance(req.get(k), dict)), {})
+    ups = _cf_uploads(rd)
+    counts, res = {}, []
+    for m in (prm.get("medias") or []):
+        if not isinstance(m, dict):
+            continue
+        role, mid = str(m.get("role", "?")), str(m.get("value", ""))
+        counts[role] = counts.get(role, 0) + 1
+        base = CF_ROLE_LABEL.get(role)
+        label = f"{base} {counts[role]}" if base else role
+        name = str(meaning.get(label) or ups.get(mid, {}).get("name") or "")
+        item = {"label": label, "role": role, "media_id": mid, "name": name,
+                "type": ups.get(mid, {}).get("type") or _cf_type(name), "ref": _cf_ref(name)}
+        path = _cf_asset_path(rd, name, req)
+        if not path and role == "video_references" and item["ref"].startswith("V"):
+            path = _cf_video_file(item["ref"], rd, req, None)
+        if path:
+            item["path"] = str(path)
+            if thumbs:
+                th = _cf_thumb(path, 200)
+                if th:
+                    item["thumb"] = th
+        res.append(item)
+    return res
+
+
+def _cf_inputs_from_text(text: str, rd) -> list:
+    """'role: media id' lines (a --inputs text) as inputs; names come from the run's uploads map when known."""
+    ups, counts, res = _cf_uploads(rd), {}, []
+    for line in (text or "").splitlines():
+        m = re.match(r"^\s*([a-z_]+)\s*:\s*(\S+)", line)
+        if not m:
+            continue
+        role, mid = m.group(1), m.group(2)
+        counts[role] = counts.get(role, 0) + 1
+        base = CF_ROLE_LABEL.get(role)
+        name = ups.get(mid, {}).get("name", "")
+        res.append({"label": f"{base} {counts[role]}" if base else role, "role": role, "media_id": mid, "name": name,
+                    "type": ups.get(mid, {}).get("type") or _cf_type(name), "ref": _cf_ref(name)})
+    return res
+
+
+def _cf_submission(rd, video, attempt) -> dict:
+    """The run ledger row (state.json submissions) of this video and attempt: job id, fingerprint, history."""
+    sp = rd / "state.json" if rd else None
+    if not sp or not sp.is_file() or not video:
+        return {}
+    try:
+        st = json.loads(sp.read_bytes().decode("utf-8"))
+    except (ValueError, OSError):
+        return {}
+    rows = [e for e in st.get("submissions", []) if _cf_nn(_lane(e.get("video", ""))) == _cf_nn(video)]
+    m = re.search(r"(\d+)\s*$", str(attempt or ""))
+    if m:
+        sel = [e for e in rows if e.get("attempt") == int(m.group(1))]
+        rows = sel or rows
+    return rows[-1] if rows else {}
+
+
+def _cf_state_info(rd):
+    """(mode, model) of the run: 'analyze-recreate', 'wan3_0_prime'."""
+    sp = rd / "state.json" if rd else None
+    if not sp or not sp.is_file():
+        return "", ""
+    try:
+        st = json.loads(sp.read_bytes().decode("utf-8"))
+    except (ValueError, OSError):
+        return "", ""
+    mode = str(st.get("mode") or "")
+    sub = str(st.get("analyze_submode") or "")
+    return (f"{mode}-{sub}" if mode and sub else mode), str(st.get("model") or "")
+
+
+def _cf_tags(v) -> list:
+    """Grouping tags: lower-case words joined by hyphens, no duplicates."""
+    res = []
+    for t in re.split(r"[,;]", v or ""):
+        t = re.sub(r"[^a-z0-9]+", "-", t.strip().lower()).strip("-")
+        if t and t not in res:
+            res.append(t)
+    return res
+
+
+def _cf_mark_assets(entry: dict, wanted, thumbs: bool = True):
+    """Mark the inputs the agent named (by label, media id, file name or V/A id). A name that matches no input is kept
+    as given (assets_unmatched); an existing file path that matches none becomes an input of its own (an upload flag)."""
+    trig = entry["trigger"]
+    assets, unmatched = trig.setdefault("assets", []), trig.setdefault("assets_unmatched", [])
+    for w in wanted or []:
+        x = str(w).strip()
+        if not x:
+            continue
+        hit = False
+        for i in entry["inputs"]:
+            nm = str(i.get("name") or "")
+            if (str(i.get("label", "")).lower() == x.lower()
+                    or (len(x) >= 8 and str(i.get("media_id", "")).lower().startswith(x.lower()))
+                    or (len(x) >= 3 and nm and x.lower() in nm.lower())
+                    or (i.get("ref") and x.upper() == str(i["ref"]).upper())):
+                i["suspect"] = True
+                hit = True
+                if i["label"] not in assets:
+                    assets.append(i["label"])
+        if hit:
+            continue
+        p = Path(x)
+        if p.is_file():
+            it = {"label": p.name, "role": "upload", "media_id": "", "name": p.name, "type": _cf_type(p.name),
+                  "ref": _cf_ref(p.name), "path": str(p), "suspect": True}
+            if thumbs:
+                th = _cf_thumb(p, 200)
+                if th:
+                    it["thumb"] = th
+            entry["inputs"].append(it)
+            assets.append(it["label"])
+        elif x not in unmatched:
+            unmatched.append(x)
+
+
+def _cf_video_file(of: str, rd, req, output):
+    """The video file a --part-of names: 'reference V10', 'clip a2' / 'output', or a path."""
+    of = str(of or "")
+    if not of:
+        return None
+    p = Path(of)
+    if p.is_file():
+        return p
+    m = re.search(r"\bV(\d{1,3})\b", of, re.I)
+    if m and rd:
+        d = rd / "10-media" / f"V{int(m.group(1)):02d}"
+        if not d.is_dir():
+            d = rd / "10-media" / f"V{int(m.group(1))}"
+        for cand in (d / "prepared" / "src.mp4", d / "own" / "own-silent.mp4", d / "own-silent.mp4", d / "own.mp4"):
+            if cand.is_file():
+                return cand
+        vids = (sorted(d.glob("prepared/*.mp4")) + sorted(d.glob("own/*.mp4")) + sorted(d.glob("*.mp4"))) if d.is_dir() else []
+        if vids:
+            return vids[0]
+    if re.search(r"output|clip|generated|result", of, re.I) and output and Path(str(output)).is_file():
+        return Path(str(output))
+    sp = req.get("source_prepared") if isinstance(req, dict) else None
+    if sp and rd and re.search(r"reference|source", of, re.I) and (rd / str(sp)).is_file():
+        return rd / str(sp)
+    return None
+
+
+def _cf_part(a, existing, rd, req, output, thumbs: bool = True):
+    """The part of a video the agent suspects: which video, from/to seconds, a note, and a frame of it."""
+    if not any([a.part_of, a.part_from is not None, a.part_to is not None, a.part_note]):
+        return existing
+    part = dict(existing or {})
+    if a.part_of:
+        part["of"] = a.part_of.strip()
+    if a.part_from is not None:
+        part["from"] = a.part_from
+    if a.part_to is not None:
+        part["to"] = a.part_to
+    if a.part_note:
+        part["note"] = a.part_note.strip()
+    if thumbs and part.get("of"):
+        vf = _cf_video_file(part["of"], rd, req, output)
+        if vf:
+            t0, t1 = part.get("from"), part.get("to")
+            t = (t0 + t1) / 2.0 if (t0 is not None and t1 is not None) else (t0 if t0 is not None else 0)
+            th = _cf_thumb(vf, 320, t)
+            if th:
+                part["frame"] = th
+    return part
+
+
+def _cf_compact(e: dict, full: bool = False) -> dict:
+    """An entry without thumbnails (and with long texts cut, unless full) for the terminal."""
+    c = json.loads(json.dumps(e, ensure_ascii=False))
+    for i in c.get("inputs", []):
+        i.pop("thumb", None)
+    (c.get("trigger", {}).get("part") or {}).pop("frame", None)
+    if not full:
+        if len(c.get("prompt", "")) > 400:
+            c["prompt"] = c["prompt"][:399] + "…"
+        cl = c.get("cleared") or {}
+        for k in ("prompt", "diff"):
+            if len(cl.get(k, "")) > 400:
+                cl[k] = cl[k][:399] + "…"
+    return c
 
 
 def cmd_caught_flag(a):
-    """The flag ledger (caught_flags.md at the library root): every prompt and video that made Higgsfield
-    flag, refuse or withhold something during a run (a moderation block, a job that failed within seconds
-    with no reason, an upload or element marked nsfw / ip_checking / failed, an output withheld, a preset
-    notice instead of a job). The script only records and tabulates; the agent that ran the call writes
-    the diagnosis, and the ledger entry holds the verbatim response, the full prompt, the params, the
-    media ids, the flagged video, what was changed and whether it cleared.
-      add        write a CF-nnn entry (run + video attach the plan, request, prompt and params by themselves)
-      set        add a note, or the status (cleared needs the cleared prompt or job; persistent = gave up)
-      list       entries (filters; --digest for a compact view; no step of a run reads the file)
-      reconcile  the run's ledger (state.json) against this file: rows marked --flagged with no entry,
-                 and failed rows with no job id or a flag-like note, for the agent to judge."""
-    if not CAUGHT_FLAGS.exists():
-        CAUGHT_FLAGS.write_bytes(b"# Caught flags: prompts and videos Higgsfield flagged\n")
+    """The flag record: ATP/caught_flags.html, a self-contained page (data + viewer with search, filters, grouping)
+    of every prompt and video that made Higgsfield flag, refuse, withhold or reroute something during a run (a
+    moderation block, a job that failed within seconds with no reason, an upload or element marked nsfw / ip_checking
+    / failed, an output withheld, a preset notice instead of a job). Written only through this command; no step of a
+    run and no agent reads it (command item 23). The script gathers what the run knows (the video, the request, every
+    input with its file and thumbnail, the reference, the source segment, the ledger row); the agent writes the
+    judgement (the reply, the suspected trigger, --asset, --prompt-span, --part-*, --tags).
+      add        write a CF-nnn entry (--run and --video attach the request, inputs, plan, ledger row by themselves)
+      set        update an entry: status (cleared needs the accepted request or job), notes, tags, assets, outcome
+      list       entries as JSON for the terminal (filters; --full keeps the long texts)
+      reconcile  the run's ledger (state.json) against the page: rows marked --flagged with no entry, and failed
+                 rows with no job id or a flag-like note, for the agent to judge
+      open       open the page in the default browser
+      render     rewrite the page from its own data with the current viewer template"""
+    if a.action == "open":
+        if not CAUGHT_FLAGS.exists():
+            _cf_save([])
+        webbrowser.open(CAUGHT_FLAGS.as_uri())
+        out({"ok": True, "file": str(CAUGHT_FLAGS), "opened": True})
     lock = FileLock(CAUGHT_FLAGS.with_suffix(".lock"))
+    if a.action == "render":
+        with lock:
+            ents = _cf_load()
+            _cf_save(ents)
+        out({"ok": True, "file": str(CAUGHT_FLAGS), "entries": len(ents)})
     if a.action == "reconcile":
         if not a.run:
             fail("reconcile needs --run", 2)
-        rd = Path(str(a.run))
-        if not rd.exists():
-            rd = ATP_HOME / "runs" / str(a.run)
-        sp_ = rd / "state.json"
-        if not sp_.exists():
-            fail(f"state.json not found in {rd}", 2)
-        led = json.loads(sp_.read_text(encoding="utf-8")).get("submissions", [])
-        ents = [e for e in _cf_parse(CAUGHT_FLAGS.read_bytes().decode("utf-8").replace("\r\n", "\n"))
-                if str(rd.name) in e.get("run", "") or str(a.run) in e.get("run", "")]
+        rd = _cf_run_dir(a.run)
+        if not rd or not (rd / "state.json").exists():
+            fail(f"state.json not found for run {a.run}", 2)
+        led = json.loads((rd / "state.json").read_text(encoding="utf-8")).get("submissions", [])
+        ents = [e for e in _cf_load() if rd.name in str(e.get("where", {}).get("run", "")) or str(a.run) in str(e.get("where", {}).get("run", ""))]
         def recorded(e):
             vid = _lane(e["video"])
             for c in ents:
-                same_v = re.sub(r"\D", "", c.get("video", "")).lstrip("0") == vid.lstrip("0")
-                jobs = (c.get("job", "") + " " + c.get("ledger", ""))
-                if same_v and (str(c.get("attempt", "")) in ("", str(e.get("attempt")))
-                               or (e.get("job_id") and e["job_id"] in jobs) or e["fingerprint"] in jobs):
+                cw = c.get("where", {})
+                same_v = re.sub(r"\D", "", str(cw.get("video", ""))).lstrip("0") == vid.lstrip("0")
+                att = re.sub(r"\D", "", str(cw.get("attempt", "")))[-1:]
+                jobs = str(c.get("job", "")) + " " + str(c.get("fingerprint", ""))
+                if same_v and (att in ("", str(e.get("attempt"))) or (e.get("job_id") and e["job_id"] in jobs) or e["fingerprint"] in jobs):
                     return c["id"]
             return None
         marked, check = [], []
@@ -2850,77 +3109,76 @@ def cmd_caught_flag(a):
              "note": "flagged_unrecorded must each get `caught-flag add`; failed_to_judge rows are the agent's call "
                      "(a flag or a validation/credit error); mark a row's ledger entry with `ledger set --flagged`."})
     if a.action == "list":
-        entries = _cf_parse(CAUGHT_FLAGS.read_bytes().decode("utf-8").replace("\r\n", "\n"))
+        entries = _cf_load()
         def keep(e):
-            if a.mode and a.mode.lower() not in (e.get("mode", "") + " any all").lower(): return False
-            if a.model and a.model.lower() not in (e.get("model", "") + " any all unknown").lower(): return False
-            if a.kind and a.kind.lower() != e.get("kind", "").lower(): return False
-            if a.status and e.get("status", "").lower() != a.status.lower(): return False
-            if a.run and a.run.lower() not in e.get("run", "").lower(): return False
-            if a.video and re.sub(r"\D", "", a.video).lstrip("0") != re.sub(r"\D", "", e.get("video", "")).lstrip("0"): return False
-            if a.grep and a.grep.lower() not in json.dumps(e, ensure_ascii=False).lower(): return False
+            w, t = e.get("where", {}), e.get("trigger", {})
+            if a.mode and a.mode.lower() not in (str(w.get("mode", "")) + " any all").lower(): return False
+            if a.model and a.model.lower() not in (str(w.get("model", "")) + " any all unknown").lower(): return False
+            if a.kind and a.kind.lower() != str(e.get("kind", "")).lower(): return False
+            if a.status and str(e.get("status", "")).lower() != a.status.lower(): return False
+            if a.run and a.run.lower() not in str(w.get("run", "")).lower(): return False
+            if a.video and re.sub(r"\D", "", a.video).lstrip("0") != re.sub(r"\D", "", str(w.get("video", ""))).lstrip("0"): return False
+            if a.tags and not set(_cf_tags(a.tags)) <= set(t.get("tags", [])): return False
+            if a.asset and " ".join(a.asset).lower() not in json.dumps([i for i in e.get("inputs", []) if i.get("suspect")] + t.get("assets_unmatched", []),
+                                                                      ensure_ascii=False).lower(): return False
+            if a.grep and a.grep.lower() not in json.dumps(_cf_compact(e, True), ensure_ascii=False).lower(): return False
             return True
-        sel = [e for e in entries if keep(e)]
-        if a.digest:
-            def short(s, n=260):
-                s = re.sub(r"\s+", " ", s or "").strip()
-                return s if len(s) <= n else s[:n - 1] + "…"
-            skip = ("", "not recorded", "none", "unknown", "—")
-            sel = [{k: v for k, v in {
-                "id": e["id"], "title": e["title"], "kind": e.get("kind", ""), "status": e.get("status", ""),
-                "model": e.get("model", ""), "tool": e.get("tool", ""), "cause": e.get("cause", ""),
-                "response": short(e.get("response", "")), "params": e.get("params", ""),
-                "flagged_video": e.get("flagged_video", ""), "suspected_trigger": short(e.get("suspected_trigger", "")),
-                "changed": short(e.get("what_was_changed", "")), "outcome": short(e.get("outcome", "")),
-                "rule": e.get("rule", "")}.items() if v not in skip} for e in sel]
+        sel = [_cf_compact(e, a.full) for e in entries if keep(e)]
         out({"ok": True, "file": str(CAUGHT_FLAGS), "total": len(entries), "count": len(sel), "entries": sel})
     if a.action == "set":
         if not a.id:
             fail("--id CF-nnn is required", 2)
         with lock:
-            text = CAUGHT_FLAGS.read_bytes().decode("utf-8").replace("\r\n", "\n")
-            m = re.search(rf"^## {re.escape(a.id)} · .*$", text, re.M)
-            if not m:
+            entries = _cf_load()
+            e = next((x for x in entries if x.get("id") == a.id), None)
+            if e is None:
                 fail(f"{a.id} not found", 1)
-            nxt = re.search(r"^## CF-", text[m.end():], re.M)
-            s, e = m.start(), (m.end() + nxt.start()) if nxt else len(text)
-            block = text[s:e]
             if a.status == "cleared" and not (a.cleared_prompt or a.cleared_job):
                 fail("--status cleared needs --cleared-prompt (the request .json or text that Higgsfield accepted) "
                      "or --cleared-job (the job that ran): a flag counts as cleared only once a request went through", 2)
+            e.setdefault("trigger", {})
+            e.setdefault("inputs", [])
+            cl = e.setdefault("cleared", {})
             if a.cleared_prompt:
-                cp = _ce_text_or_file(a.cleared_prompt)
-                pm = re.search(r"^- \*\*flagged prompt:\*\*\n  ```text\n(.*?)\n  ```", block, re.S | re.M)
-                old = "\n".join(l[2:] for l in pm.group(1).splitlines()) if pm else ""
-                change = _ce_sentence_diff(old, cp) if old else ""
-                new_fields = (_ce_block_field("cleared prompt", cp)
-                              + _ce_block_field("prompt change", change or "not computed (the entry has no flagged prompt)")
-                              + (f"- **cleared params:** {_ce_params(a.cleared_prompt)}\n" if _ce_params(a.cleared_prompt) else ""))
-                block, n = re.subn(r"^- \*\*cleared prompt:\*\* pending.*\n", lambda mm: new_fields, block, count=1, flags=re.M)
-                if not n:
-                    block = block.rstrip("\n") + "\n" + new_fields + ("\n" if nxt else "")
-            if a.cleared_job:
-                block, n = re.subn(r"^- \*\*cleared job:\*\* .*$", f"- **cleared job:** {a.cleared_job}", block, count=1, flags=re.M)
-                if not n:
-                    block = block.rstrip("\n") + f"\n- **cleared job:** {a.cleared_job}\n"
-            if a.note:
-                stamp = f"{dt.date.today().isoformat()} {a.note.strip()}"
-                lm = re.search(r"^- \*\*log:\*\* ?(.*)$", block, re.M)
-                if lm:
-                    block = block.replace(lm.group(0), "- **log:** " + ((lm.group(1) + " | ") if lm.group(1) not in ("", "—") else "") + stamp, 1)
+                cp = _cf_text_or_file(a.cleared_prompt)
+                old = (e.get("prompt") or "").strip()
+                if old and cp.strip() == old:
+                    cl.update({"same_as_flagged": True})
+                    cl.pop("prompt", None); cl.pop("diff", None)
                 else:
-                    block = block.rstrip("\n") + f"\n- **log:** {stamp}\n"
-            for key, val in (("status", a.status), ("outcome", a.outcome), ("what was changed", a.changed),
-                             ("suspected trigger", a.trigger), ("rule", a.rule), ("promoted to", a.promoted_to)):
+                    cl.update({"same_as_flagged": False, "prompt": cp, "diff": _cf_sentence_diff(old, cp) if old else ""})
+                prm = _cf_params_dict(_cf_request_json(a.cleared_prompt))
+                if prm:
+                    cl["params"] = prm
+            if a.cleared_job:
+                cl["job"] = a.cleared_job
+            if a.note:
+                e.setdefault("log", []).append({"at": now_iso(), "note": a.note.strip()})
+            for key, val in (("status", a.status), ("outcome", a.outcome), ("changed", a.changed), ("rule", a.rule),
+                             ("promoted_to", a.promoted_to)):
                 if val:
-                    block, n = re.subn(rf"^- \*\*{key}:\*\* .*$", lambda mm, key=key, val=val: f"- **{key}:** {val}", block, count=1, flags=re.M)
-                    if not n:
-                        block = block.rstrip("\n") + f"\n- **{key}:** {val}\n"
-            if a.status == "cleared" and not a.outcome:
-                block = re.sub(r"^- \*\*outcome:\*\* .*$", "- **outcome:** cleared: a changed request was accepted", block, count=1, flags=re.M)
-            text = text[:s] + block + text[e:]
-            CAUGHT_FLAGS.write_bytes(text.encode("utf-8"))
-        out({"ok": True, "id": a.id, "status": a.status, "file": str(CAUGHT_FLAGS)})
+                    e[key] = val
+            if a.status == "cleared" and not a.outcome and not e.get("outcome"):
+                e["outcome"] = "cleared: a changed request was accepted"
+            if a.trigger:
+                m = re.match(r"^\[(E|I)\]\s*", a.trigger.strip(), re.I)
+                e["trigger"]["text"] = a.trigger.strip()[m.end():] if m else a.trigger.strip()
+                if m:
+                    e["trigger"]["evidence"] = m.group(1).upper()
+            if a.tags:
+                e["trigger"]["tags"] = e["trigger"].get("tags", []) + [t for t in _cf_tags(a.tags) if t not in e["trigger"].get("tags", [])]
+            if a.asset:
+                _cf_mark_assets(e, a.asset, not a.no_thumbs)
+            if a.prompt_span:
+                e["trigger"]["prompt_span"] = a.prompt_span.strip()
+                e["trigger"]["span_in_prompt"] = a.prompt_span.strip().lower() in (e.get("prompt") or "").lower()
+            rd = _cf_run_dir(e.get("where", {}).get("run"))
+            e["trigger"]["part"] = _cf_part(a, e["trigger"].get("part"), rd, {}, e.get("where", {}).get("output"), not a.no_thumbs)
+            if not e["trigger"]["part"]:
+                e["trigger"].pop("part", None)
+            e["updated"] = now_iso()
+            _cf_save(entries)
+        out({"ok": True, "id": a.id, "status": e.get("status"), "file": str(CAUGHT_FLAGS)})
     # add
     need = ("title", "kind", "response", "trigger")
     missing = [k for k in need if not getattr(a, k)]
@@ -2928,54 +3186,79 @@ def cmd_caught_flag(a):
         fail("missing " + ", ".join("--" + k for k in missing)
              + " (the verbatim Higgsfield response, the kind and the agent's suspected trigger are required;"
                " write 'none given' for a response that came back empty)", 2)
+    tags = _cf_tags(a.tags)
+    if not tags:
+        fail("missing --tags: 1 to 4 grouping labels for the trigger (for example real-person-face, video-reference, "
+             "celebrity-name, brand-name, protected-ip, nsfw-image, element, prompt-wording, preset-notice, output-withheld, "
+             "unknown-trigger); the page groups and filters by them", 2)
+    thumbs = not a.no_thumbs
     with lock:
-        text = CAUGHT_FLAGS.read_bytes().decode("utf-8").replace("\r\n", "\n")
-        ids = [int(x) for x in re.findall(r"^## CF-(\d{3,}) · ", text, re.M)]
+        entries = _cf_load()
+        ids = [int(re.sub(r"\D", "", x.get("id", "0")) or 0) for x in entries]
         cid = f"CF-{(max(ids) + 1) if ids else 1:03d}"
-        date = a.date or dt.date.today().isoformat()
-        auto = _ce_autofind(a.run, a.video)
-        prompt = _ce_text_or_file(a.prompt) or (_ce_text_or_file(auto["prompt"]) if "prompt" in auto else "")
-        req_src = a.prompt if (a.prompt and str(a.prompt).lower().endswith(".json")) else (None if a.prompt else auto.get("prompt"))
-        params = a.params or _ce_params(req_src)
-        inputs = _ce_text_or_file(a.inputs) or _cf_inputs_from_request(req_src)
-        plan = a.plan or (str(auto["plan"]) if "plan" in auto else "")
-        response = _ce_text_or_file(a.response)
-        block = (f"\n## {cid} · {date} · {a.title.strip()}\n"
-                 f"- **source:** {a.source}\n"
-                 f"- **kind:** {a.kind}\n"
-                 f"- **tool:** {a.tool or 'unknown'}\n"
-                 f"- **stage:** {a.stage or 'unknown'}\n"
-                 f"- **run:** {a.run or 'unknown'}\n"
-                 f"- **video:** {a.video or 'unknown'}\n"
-                 f"- **attempt:** {a.attempt or 'unknown'}\n"
-                 f"- **mode:** {a.mode or 'unknown'}\n"
-                 f"- **model:** {a.model or 'unknown'}\n"
-                 f"- **product:** {a.product or 'unknown'}\n"
-                 + _ce_block_field("response", response)
-                 + f"- **job:** {a.job or 'none (no job id returned)'}\n"
-                 f"- **ledger:** {a.fingerprint or 'not recorded'}\n"
-                 f"- **credits:** {a.credits or 'not recorded'}\n"
-                 + _ce_block_field("flagged prompt", prompt)
-                 + f"- **params:** {params or 'not recorded'}\n"
-                 + _ce_block_field("flagged inputs", inputs)
-                 + f"- **flagged video:** {a.flagged_video or 'not recorded'}\n"
-                 f"- **output:** {a.output or 'none (the job produced no file)'}\n"
-                 f"- **plan:** {plan or 'not recorded'}\n"
-                 f"- **suspected trigger:** {a.trigger.strip()}\n"
-                 f"- **cause:** {a.cause}\n"
-                 f"- **what was changed:** {a.changed or 'nothing yet'}\n"
-                 f"- **outcome:** {a.outcome or 'open: not cleared yet'}\n"
-                 f"- **cleared prompt:** pending (inserted only after a changed request was accepted)\n"
-                 f"- **cleared job:** none yet\n"
-                 f"- **rule:** {(a.rule or 'not yet generalised').strip()}\n"
-                 f"- **status:** {a.status or 'open'}\n"
-                 f"- **log:** —\n"
-                 f"- **promoted to:** {a.promoted_to or '—'}\n")
-        CAUGHT_FLAGS.write_bytes((text.rstrip("\n") + "\n" + block).encode("utf-8"))
-    out({"ok": True, "id": cid, "date": date, "title": a.title.strip(), "file": str(CAUGHT_FLAGS),
-         "attached": [k for k, v in (("prompt", prompt), ("params", params), ("inputs", inputs), ("plan", plan)) if v],
+        rd = _cf_run_dir(a.run)
+        given_json = bool(a.prompt) and str(a.prompt).lower().endswith(".json") and Path(str(a.prompt)).is_file()
+        rq = Path(str(a.prompt)) if given_json else (_cf_request_file(rd, a.video, a.attempt) if rd and a.video else None)
+        req = _cf_request_json(rq)
+        prm = req.get("params") if isinstance(req.get("params"), dict) else req
+        prompt = _cf_text_or_file(a.prompt) if (a.prompt and not given_json) else str(prm.get("prompt") or "").strip()
+        params = _cf_params_text(a.params) if a.params else _cf_params_dict(req)
+        inputs = _cf_inputs(req, rd, thumbs) if req else []
+        if not inputs and a.inputs:
+            inputs = _cf_inputs_from_text(_cf_text_or_file(a.inputs), rd)
+        sub = _cf_submission(rd, a.video, a.attempt)
+        mode_, model_ = _cf_state_info(rd)
+        nn = _cf_nn(a.video)
+        output = a.output or ""
+        clip = a.clip or ""
+        if not clip and str(req.get("clip") or "").lower() not in ("", "none", "null"):
+            clip = str(req["clip"])
+        plan = a.plan or (str(rd / "40-briefs" / f"video-{nn}-plan.md") if rd and (rd / "40-briefs" / f"video-{nn}-plan.md").is_file() else "")
+        brief = str(rd / "40-briefs" / f"video-{nn}-brief.md") if rd and (rd / "40-briefs" / f"video-{nn}-brief.md").is_file() else ""
+        where = {"run": rd.name if rd else (a.run or ""), "video": a.video or "", "attempt": a.attempt or "", "clip": clip,
+                 "mode": a.mode or mode_, "model": a.model or model_ or str(prm.get("model") or ""), "tool": a.tool or "",
+                 "stage": a.stage or "", "product": a.product or "", "reference": a.flagged_video or str(req.get("reference") or ""),
+                 "segment": str(req.get("duration_basis") or ""), "plan": plan, "brief": brief, "request": str(rq) if rq else "",
+                 "output": output}
+        where = {k: v for k, v in where.items() if v not in ("", None)}
+        trig_text, ev = a.trigger.strip(), "I"
+        m = re.match(r"^\[(E|I)\]\s*", trig_text, re.I)
+        if m:
+            ev, trig_text = m.group(1).upper(), trig_text[m.end():]
+        trig = {"text": trig_text, "evidence": ev, "cause": a.cause, "tags": tags}
+        entry = {"id": cid, "created": a.date or now_iso(), "updated": now_iso(), "title": a.title.strip(), "source": a.source,
+                 "status": a.status or "open", "kind": a.kind, "where": where, "response": _cf_text_or_file(a.response),
+                 "job": a.job or str(sub.get("job_id") or ""), "fingerprint": a.fingerprint or str(sub.get("fingerprint") or ""),
+                 "credits": a.credits or "", "prompt": prompt, "params": params, "inputs": inputs, "trigger": trig,
+                 "changed": a.changed or "", "outcome": a.outcome or "", "cleared": {}, "rule": (a.rule or "").strip(),
+                 "promoted_to": a.promoted_to or "", "log": []}
+        _cf_mark_assets(entry, a.asset, thumbs)
+        if a.prompt_span:
+            trig["prompt_span"] = a.prompt_span.strip()
+            trig["span_in_prompt"] = a.prompt_span.strip().lower() in prompt.lower()
+        part = _cf_part(a, None, rd, req, output, thumbs)
+        if part:
+            trig["part"] = part
+        if not trig["assets"]:
+            trig.pop("assets")
+        if not trig["assets_unmatched"]:
+            trig.pop("assets_unmatched")
+        entries.append(entry)
+        _cf_save(entries)
+    gaps = []
+    if not (trig.get("assets") or trig.get("assets_unmatched")):
+        gaps.append("asset: say which input you suspect with --asset (an 'Image 2' label, a media id, a file name or an A/V id)")
+    if not trig.get("prompt_span"):
+        gaps.append("prompt words: --prompt-span \"<the exact words>\" when a wording is suspected")
+    if not trig.get("part"):
+        gaps.append("video part: --part-of / --part-from / --part-to when a part of a video is suspected")
+    out({"ok": True, "id": cid, "title": entry["title"], "file": str(CAUGHT_FLAGS),
+         "attached": [k for k, v in (("request", rq), ("prompt", prompt), ("params", params), ("inputs", inputs), ("plan", plan),
+                                     ("ledger row", sub), ("thumbnails", any(i.get("thumb") for i in inputs))) if v],
+         "inputs": [{"label": i["label"], "name": i.get("name"), "suspect": bool(i.get("suspect"))} for i in inputs],
+         "unmatched_assets": trig.get("assets_unmatched", []), "not_given": gaps,
          "note": "after the changed request is accepted: `caught-flag set --id %s --status cleared --cleared-prompt <request.json>`; "
-                 "if the flag stays, `--status persistent`; a general rule goes in --rule and into the owning reference" % cid})
+                 "if the flag stays, `--status persistent`; `caught-flag open` shows the page" % cid})
 
 
 def _px_span(spec: str, what: str) -> float:
@@ -3676,8 +3959,8 @@ def _ledger_write(a, p: Path):
             e["flagged"] = True
         st["updated"] = now_iso()
         write_json(p, st)
-        out({"ok": True, "entry": e, **({"reminder": "flagged: record it now with `caught-flag add` (the verbatim response, the prompt, the "
-                                                       "flagged video and your suspected trigger), then change the request"} if a.flagged else {})})
+        out({"ok": True, "entry": e, **({"reminder": "flagged: record it now with `caught-flag add` (the verbatim response, your suspected trigger and --tags; "
+                                                       "--asset, --prompt-span and --part-* when you can tell what caused it), then change the request"} if a.flagged else {})})
 
 
 def cmd_open(a):
@@ -3969,28 +4252,41 @@ def main():
     p.add_argument("--out", help="write the result as JSON")
     p.set_defaults(fn=cmd_scale)
 
-    p = sp.add_parser("caught-flag", help="the flag ledger caught_flags.md: add | list | set | reconcile")
-    p.add_argument("action", choices=["add", "list", "set", "reconcile"])
+    p = sp.add_parser("caught-flag", help="the flag record caught_flags.html (data + viewer page): add | list | set | reconcile | open | render")
+    p.add_argument("action", choices=["add", "list", "set", "reconcile", "open", "render"])
     p.add_argument("--id", help="set: the entry id (CF-nnn)")
-    p.add_argument("--title", help="add: a short title"); p.add_argument("--date", help="add: YYYY-MM-DD (default today)")
-    p.add_argument("--run", help="run id (list: filter; reconcile: required)"); p.add_argument("--video", help="video number (list: filter)")
-    p.add_argument("--attempt", help="add: the ledger attempt (a1, 2, c2-a1 …)")
+    p.add_argument("--title", help="add: a short title"); p.add_argument("--date", help="add: YYYY-MM-DD (default: now)")
+    p.add_argument("--run", help="run id or folder (add: attaches the request, inputs, plan and ledger row; list: filter; reconcile: required)")
+    p.add_argument("--video", help="video number (add: attaches that video's files; list: filter)")
+    p.add_argument("--attempt", help="add: the attempt (a1, a2, c2-a1 …); picks the request file")
+    p.add_argument("--clip", help="add: the clip (c1, c2 …) of a multi-clip video")
     p.add_argument("--mode", help="analyze-recreate | analyze-create | edit (list: filter)")
     p.add_argument("--model", help="model id (list: filter)"); p.add_argument("--product", help="client product")
     p.add_argument("--kind", choices=CF_KINDS, help="add: what Higgsfield did (list: filter)")
     p.add_argument("--tool", help="add: generate_video | generate_image | media_upload | show_reference_elements | reframe | other")
     p.add_argument("--stage", help="add: preflight | submit | job | upload | result")
     p.add_argument("--response", help="add: Higgsfield's answer verbatim (error text, notice, status), text or file; 'none given' when empty")
-    p.add_argument("--job", help="add: job id(s) that were flagged"); p.add_argument("--fingerprint", help="add: the ledger fingerprint of the request")
+    p.add_argument("--job", help="add: job id(s) that were flagged (default: the ledger row's)")
+    p.add_argument("--fingerprint", help="add: the ledger fingerprint of the request (default: the ledger row's)")
     p.add_argument("--credits", help="add: charged / refunded credits")
-    p.add_argument("--prompt", help="add: the flagged prompt as text or the request .json (default: the newest <run>/50-requests/video-NN*-request.json)")
-    p.add_argument("--params", help="add: generation params (default: read from the request .json)")
-    p.add_argument("--inputs", help="add: the media the request carried (roles, media ids, local files), text or file (default: from the request .json)")
-    p.add_argument("--flagged-video", help="add: the video that carried the flag: the reference (V id, file) and/or the generated clip")
+    p.add_argument("--prompt", help="add: the flagged prompt as text, or the request .json (default: the run's request for this video and attempt)")
+    p.add_argument("--params", help="add: generation params as 'k=v · k=v' (default: read from the request .json)")
+    p.add_argument("--inputs", help="add: 'role: media id' lines or a file, when there is no request .json")
+    p.add_argument("--flagged-video", help="add: the reference video that carried the flag (V id, file; default: the request's reference)")
     p.add_argument("--output", help="add: the output file when a job finished but was withheld or flagged")
     p.add_argument("--plan", help="add: the plan file path (default: <run>/40-briefs/video-NN-plan.md)")
     p.add_argument("--trigger", help="add/set: the agent's suspected trigger, labelled [E] evidence or [I] inference")
     p.add_argument("--cause", choices=CF_CAUSES, default="unknown")
+    p.add_argument("--tags", help="add/set: 1 to 4 grouping labels for the trigger, comma-separated (real-person-face, video-reference, "
+                                  "celebrity-name, brand-name, protected-ip, nsfw-image, element, prompt-wording, preset-notice, output-withheld, unknown-trigger …); list: filter")
+    p.add_argument("--asset", action="append", help="add/set: the input you suspect: its label in the request (Image 2, Video 1), a media id, a file name "
+                                                    "or an A/V id, or a file path for an upload flag; repeatable (list: text filter)")
+    p.add_argument("--prompt-span", help="add/set: the exact words of the prompt you suspect")
+    p.add_argument("--part-of", help="add/set: which video holds the suspected part: 'reference V10', 'clip a2' or a path")
+    p.add_argument("--part-from", type=float, help="add/set: start of the suspected part, seconds")
+    p.add_argument("--part-to", type=float, help="add/set: end of the suspected part, seconds")
+    p.add_argument("--part-note", help="add/set: what is on screen in that part")
+    p.add_argument("--no-thumbs", action="store_true", help="add/set: do not embed thumbnails of the inputs and of the part")
     p.add_argument("--changed", help="add/set: what was changed in the next request (reworded, video reference dropped, image replaced …)")
     p.add_argument("--outcome", help="add/set: what happened next")
     p.add_argument("--rule", help="add/set: the general rule, as a kind not an instance")
@@ -3999,9 +4295,9 @@ def main():
     p.add_argument("--note", help="set: a dated note appended to the entry's log")
     p.add_argument("--cleared-prompt", help="set: the request .json or text Higgsfield accepted after the change")
     p.add_argument("--cleared-job", help="set: the job id that ran after the change")
-    p.add_argument("--promoted-to", help="set: the reference and section the rule was promoted into")
-    p.add_argument("--digest", action="store_true", help="list: compact view (no step of a run reads this file)")
+    p.add_argument("--promoted-to", help="set: the reference and section the rule was written into")
     p.add_argument("--grep", help="list: substring over the whole entry")
+    p.add_argument("--full", action="store_true", help="list: keep the long prompt texts")
     p.set_defaults(fn=cmd_caught_flag)
 
     p = sp.add_parser("capcut-name"); p.add_argument("--video", required=True, help="the run's video number")
