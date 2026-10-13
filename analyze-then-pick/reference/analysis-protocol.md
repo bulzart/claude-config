@@ -125,7 +125,8 @@ Interactions & physics: <grips, pours, handling, weight; per handled object: the
 Continuity & flaws: <source errors and dead space not to copy>                             [E/I]
 Entities → preserve / replace / adapt / ignore: <per entity, with reason>                  [I/U]
 Client-entity fit: <swap: <source entity> at t=… → client <entity> | contents: <vessel or form> holds the product, package nearby | placement: nothing analogous> [E/I]
-Placement opportunities (contents / placement): <hands free/busy per beat; surfaces near the subject + side + depth plane + shots that show them; where a large product would stand; light on each spot; the large rigid same-plane objects the source shows (a laptop, a monitor) as size neighbours; best anchor> [E/I]
+Placement opportunities (contents / placement): <hands free/busy per beat and each hand's lane over the whole clip (resting, writing, page-turning, pick-up sweeps); surfaces near the subject + side + depth plane + shots that show them; the region that is bare and in frame at 0, 1, 2.5, 4 and 6 s (an orbit or a sweep especially); strip widths against the pack; where a large product would stand; light on each spot; the large rigid same-plane objects the source shows (a laptop, a monitor) as size neighbours; best anchor, checked against generation-system.md §4b.1c> [E/I]
+Source preparation flags (generation-system.md §5c.2b): <mirrored: a front-camera selfie shown un-flipped (reversed print or signs, a left-handed instrument), with the evidence frame | burned-in text on a flat surface | a real person's name, or a patch or logo on the kept garment, with the shots where it is legible | a face effect baked in (mask, filter, clone) | cut structure: n hard cuts, alternation of person and person-free shots | camera path: locked, handheld, orbit | none> [E]
 Must not survive (generation-system.md §9b): <the copyright and ownership floor only: the person being replaced, the product being swapped, competitor products, overlay text, usernames, platform logos and watermarks, featured third-party branding, a copyrighted character as the subject; plus anything the generation service refuses>; incidental decor, clothing logos, meme faces and all brand-dependent content (alcohol, weapons, gore, profanity, …) are fine and are not listed; brand-dependent content appears only in the guardrail audit when a client rule names it [E]
 Guardrail audit (brand-guardrails.md §3): <none supplied | per hit: G<n> · t=… · element · subject/featured/peripheral · picture/caption/speech/insert/reflection · core/peripheral (why) · operation> → verdict: pick-clean | pick-and-edit: <operations> | dismiss: <rule, why core> [E/I]
 Confidence: <high/medium/low> — <what was hard to see or hear>
@@ -194,6 +195,15 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
      - for a placement, the anchor class the locked model renders at size: where its guide lists size as
        a model limit (`wan3_0_prime`, `wan-3-0.md` §5), an in-hand, swap or large same-plane-neighbour
        anchor ranks above a surface anchor that only paper, a notebook or a head can size;
+     - placement feasibility (`generation-system.md` §4b.1c): a spot that is bare at frame 0, stays in frame
+       along the whole path, lies outside every hand's lane and is wider than the pack. A reference with none
+       (both hands cover the lower half in turn; an orbit that leaves the only free strip; a cluttered strip
+       narrower than the pack) ranks low for a placed product, and its plan is the swap of a source object or
+       an in-hand product (CE-055, CE-061, CE-073, CE-082);
+     - cut structure and source flags: a reference with many hard cuts, one that alternates a person with
+       person-free close-ups, or one with a face effect baked in ranks low (`generation-system.md` §3b.1 item
+       7, §5c.2b; CE-051, CE-079, CE-083, CE-086); a mirrored source ranks normally and is flipped in the
+       prepared copy (CE-030);
      - the number of people against the supplied characters;
      - the own-content length after inserts, against the locked model's edit range;
      - the text and overlay load;
@@ -233,10 +243,6 @@ Everything is inferred from the folder, never assumed:
 - **Authoritative requirements [E]:** quote every instruction found in documents, scripts, briefs,
   PDFs and spreadsheets, with the file id. These override inferences. Conflicts between documents go
   to the user.
-- **Caught errors that apply [E]:** the ids from `20-analysis/caught-errors.md` (command A1,
-  item 22) relevant to this project's product family, mode and model, with the step each one
-  changes (ideation, plan, prompt, QC). An entry about creative quality shapes the directions and
-  the concept seeds; an entry about a product family shapes its affordance sheet and ledger.
 - **Entities:** the client entities (what to put in, taken **only** from the user-supplied asset
   registry), the source entities (what the references show, possibly many different products or
   executions), and the mapping options:

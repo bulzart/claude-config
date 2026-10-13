@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 2adb81e3-0d33-4268-9b11-ed9262381e95
-  modified: 2026-10-07T23:04:52.568Z
+  modified: 2026-10-13T16:36:01.761Z
 ---
 
 On 2026-10-08 the user reported two logical anomalies in anime Create videos made with
@@ -28,11 +28,12 @@ Seedance 2.5 and Wan 3.0 guides, the template and fallback guides, and `atp.py q
 **Why:** the ledger only tracked where the product was, so count changes and wrong-opening use
 passed planning and QC; the user wants every generated video to behave like real life.
 
-**How to apply:** a user-reported bad video is first recorded in `ATP/caught_errors.md` via
-`atp.py caught-error add` ([[atp-caught-errors]]); the catalog receives the promoted rule. when the user reports a new illogical or physically wrong moment, add it as a
-case to the matching class in `anomaly-catalog.md` (or a new class) with its ledger entry, prompt
-line, QC checkpoint and verdict, and keep the pointers in `generation-system.md` and the command
-intact. Plans must list QC checkpoints and X9 must run `T qc --dense` on them. Related:
+**How to apply:** there is no error ledger since 2026-10-13 ([[atp-caught-errors]]): a user-reported bad
+video is diagnosed in its brief and the catalog receives the rule through `/update-from-errors
+analyze-then-pick`. When the user reports a new illogical or physically wrong moment, that pass adds
+it as a case to the matching class in `anomaly-catalog.md` (or a new class) with its entity-ledger
+entry, prompt line, QC checkpoint and verdict, and keeps the pointers in `generation-system.md` and
+the command intact. Plans must list QC checkpoints and X9 must run `T qc --dense` on them. Related:
 [[analyze-then-pick-system]], [[claude-folder-git-versioning]].
 
 **2026-10-08, size reckoning (§2.7 rewritten):** after a can on a dresser rendered 2–3× its real

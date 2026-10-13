@@ -1,6 +1,6 @@
 ---
 name: update-from-errors-command
-description: "/update-from-errors <command> learns a pipeline from its caught_errors.md ledger; pipeline first, then errors, then rewrite the owning sections"
+description: "/update-from-errors <command> learns a pipeline from its error records (a ledger where the pipeline has one, else run-level records and the user's words); pipeline first, then errors, then rewrite the owning sections"
 metadata:
   node_type: memory
   type: project
@@ -58,5 +58,7 @@ ledger is meant to make that context accurate over time.
   the user's request, CRLF, same prose style as `analyze-then-pick.txt`). After any change to the
   command, update it in the same style with a dated `.bak-YYYYMMDD-HHMMSS` copy beside it
   (see [[atp-build-prompt-sync]]).
+
+**analyze-then-pick has no ledger since 2026-10-13** ([[atp-caught-errors]]): its record set is the user's words given as the argument plus the run-level records (briefs, requests, result.json); nothing is marked or promoted through a tool, and `learning-log.md` keeps the map from each CE label to the section that holds its lesson. The 2026-10-13 pass over all 94 entries was the first to consume CE-029..CE-094. The skill's ledger steps still apply to pipelines that keep one (analyze-then-generate).
 
 Related: [[atp-caught-errors]], [[atp-build-prompt-sync]].

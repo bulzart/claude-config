@@ -177,6 +177,14 @@ in an editor" [HF].
 6. **Keep everything else identical:** the same references in the same order, the same parameters
    (resolution, audio flag, mode), and the same wording for identities, wardrobe, setting, light and
    style in every clip.
+7. **Cut-heavy references go in separate clips even under the model's maximum.** *Avoid:* one clip for a
+   reference with many hard cuts (ten in 15 s) or one that alternates a person with person-free close-ups.
+   *Miss and cause:* with a person identity reference the model lost the cuts of the first seconds, rendered
+   the cutaways as face shots or as ghost dissolves, dropped the placed prop in a face shot framed differently
+   from the opening shot, and lost an emotion beat at the end; the numbered shot list and "only the screen, no
+   man" did not hold (CE-079, CE-083, CE-086). *Achieve (planned, not yet verified):* one clip per face run and
+   one per cutaway run, cut on the reference's own cuts, each at least the model's minimum duration, joined by
+   hard cuts, with the product's place named per shot.
 
 ### 3b.2 Join methods, by the locked model's capability (`continuation` in the index)
 | seam | method (`continuous` value) | models on Higgsfield | how |
@@ -330,6 +338,15 @@ Resolution rules:
   the most natural analogous staging (a screen, a document, a gesture) instead of forcing a literal
   swap.
 - **One frame is never optimised at the expense of the timeline.** Check the whole ledger.
+- **A swap is written as a replacement, anchored by its neighbours.** "Replace only <the source object> with
+  <the product> at that exact spot, on the same footprint; the <source object> does not remain anywhere", with
+  "exactly one <category> container in each shot". Written as the product "standing at the old spot" plus a
+  negative, the old object stayed and a second, oversize product appeared (CE-048: an iced cup stayed beside
+  the new can). The spot is named by the neighbours that occlude or border the source object in the source
+  frame (behind the glasses case, against the wall), because "the cup's spot" alone is snapped to the nearest
+  open desk (CE-071). A source object that a guardrail names is removed in the same grammar with a named
+  replacement ("replace only the red can between the third bottle and the glass jar with a small pot; it does
+  not remain"); "the shelf holds X" plus a negative did not remove it (CE-071, VERIFIED on the retry).
 
 For a natural placement (§4b), the "source entity" column holds the **anchor** instead: the hand
 or surface it sits on [E], the light on that spot [E], and what surrounds it [E].
@@ -439,12 +456,19 @@ write "placement weak: …" in the brief and use the least forced option. Never 
 of context, or somewhere it could not really be.
 
 ### 4b.1b Posture, support and place (every anchor)
-Caught errors CE-006, CE-007, CE-012 and CE-013 (2026-10): a flat sachet standing on its edge against a
+Cases CE-006, CE-007, CE-012 and CE-013 (2026-10): a flat sachet standing on its edge against a
 writer's forearm, a carton that "leaned" on a prop the model never drew, a pack resting on an exam sheet
 whose corner warped, a pouch that took over the source's bottle pick-up. The anchor row of the ledger
 therefore carries four more facts, and the prompt and QC quote them (`anomaly-catalog.md` §2.16):
-- **Posture its shape allows:** a flat sachet or pouch lies flat, label up; a carton lies flat or stands on
-  its base; a can stands on its base. Never on its edge against a person or an object.
+- **Posture its shape allows:** a flat sachet or pouch lies flat, label up; a small flat carton lies flat on
+  a bare surface, the way people leave it (the user, on a standing one: "would look more common if it were
+  laying on the desk rather than standing", CE-059; "looks a bit forced", CE-060), and stands on its base only
+  for a reason the plan states (a frontal label that must read, a use beat); a can stands on its base. Never
+  on its edge against a person or an object. A pack whose natural posture is standing (a stand-up pouch) that
+  the plan lays flat needs a reference that shows it lying flat in the scene's perspective (the client's
+  render rotated and foreshortened for the camera height): upright references plus "lies flat" rendered it
+  standing at the forearm, and a top-view reference taught a footprint far taller than the strip allowed and
+  put the pack against the arm (CE-037, CE-041).
 - **A support that is in the frame:** a fixed bare surface the source frame shows (a counter, a desk, a
   grill's side shelf), or a large solid object it already shows. Never a lean against a prop the model has to
   invent or against a lid, never a prop that moves or is carried away (a cutting board, a tray), and never on
@@ -455,10 +479,44 @@ therefore carries four more facts, and the prompt and QC quote them (`anomaly-ca
 - **Never the source's beat:** a placed product does not take over a pick-up, use or hand-off that belongs
   to another object; the prompt names the object that is picked up and says the product stays.
 - **The anchor class the locked model renders at size.** *Achieve:* an anchor from the guide's passing
-  list. *Avoid:* sizing words as the control. When the model guide lists size as a model limit
-  (`wan3_0_prime`: `wan-3-0.md` §5), the anchor comes from its passing list (in the hand that holds it,
-  swapped for the source's own handheld object, or beside a large rigid object of the source in the same
-  plane); the guide holds the list and its evidence. Sizing words do not carry the plan.
+  list, or a size-and-place guide image (§4b.6) where none fits. *Avoid:* sizing words as the control. When
+  the model guide lists size as a model limit (`wan3_0_prime`: `wan-3-0.md` §5), the anchor comes from its
+  passing list (in the hand that holds it, swapped for the source's own handheld object, or beside a large
+  rigid object of the source in the same plane where §4b.1c holds); the guide holds the list and its
+  evidence. Sizing words do not carry the plan.
+
+### 4b.1c Is the spot feasible? (read the source before choosing)
+*Achieve:* a spot that is bare in the source's first frame, stays in frame along the whole camera path, lies
+outside every hand's lane in every beat, is wider than the pack at its depth and is not the nearest plane.
+*Avoid:* the first surface that looks free. *Miss and cause:* the takes of run 12 put the pack where the plan
+named a surface the source does not have, where a hand rests or sweeps, on a cluttered strip, in the nearest
+plane or at the frame edge, and wording never moved it (CE-053, CE-055, CE-056, CE-061, CE-066, CE-070,
+CE-072, CE-073, CE-077, CE-082, CE-084, CE-087). Read the prepared frames (at 0, 1, 2.5, 4 and 6 s, and
+around every hand beat), then check each line:
+- **Visible at frame 0 and along the path.** A spot beside the far side of a neighbour that the opening
+  camera faces away from is hidden at 0 s; a near-side spot leaves the frame when an orbit or a sweep passes
+  over the neighbour (absent for the last 3 s). Take a region that is bare in every sampled frame.
+- **Outside every hand's lane.** Map each hand's territory over every beat of the whole source, resting,
+  writing, page-turning and pick-up sweeps included, before choosing. A hand that covers, wraps or passes
+  through the pack is a regenerate reason (the hand "went through it and teleported", CE-076). The object the
+  hand picks up is named in the prompt; unnamed, the model turned the grabbed object into the product and the
+  count went from 1 to 2 (CE-074).
+- **Bare and wide enough.** A strip narrower than the pack, or cluttered (a bowl, a lid, cables), is not a
+  spot: the model drops the pack on the nearest soft support (a laptop deck, a keyboard end) and may
+  duplicate it (CE-061, CE-084, CE-087, CE-092).
+- **Not the nearest plane.** In a table-level phone shot or an orbit, a free strip near the lens renders the
+  pack hero-sized (25–47 % of the frame height, taller than the head). Take the middle or far plane the
+  source shows, or swap a source object there (CE-066, CE-070, CE-073, CE-078, CE-081).
+- **Not "in front of" a neighbour the model snaps onto** (a lid, a keyboard, a mouse): the pack lands on it
+  and can displace a small neighbour (the mouse count went from 1 to 0). Name the bare surface below or
+  beside it and say the neighbour stays fully visible (CE-057, CE-091).
+- **Fully inside the frame.** A pack cut by the frame edge pulls the camera onto it (a push-in, a pan; the
+  working hand leaves the frame) or costs the performer's pose late in the clip; a shot that must stay put
+  gets its own camera-lock sentence (§5c.3) (CE-056, CE-068).
+- **A spot the user marks is the anchor.** The plan checks it for lanes and size, and the guide (§4b.6) pins
+  it (CE-076, CE-081).
+When no spot passes, the reference ranks low for a placed product (`analysis-protocol.md` §5) and the plan
+uses the swap of a source object or an in-hand product; if neither exists, the best take ships flagged.
 
 ### 4b.2 Prominence: noticed, not featured
 - **Scale:** real scale at its depth, from the plan's **size reckoning** (`anomaly-catalog.md`
@@ -477,6 +535,13 @@ therefore carries four more facts, and the prompt and QC quote them (`anomaly-ca
   off-axis), recognisable at a glance but not squared to the lens like a packshot. Brief, natural
   occlusion is fine; permanent occlusion is not.
 - **Same image as everything around it:** same focus, exposure, grain and motion blur.
+- **Left casually.** A small flat pack lies flat at one side of the desk, partly tucked beside or behind a
+  neighbour, as someone left it: not upright, not squared to the lens, not fully displayed at the edge (the
+  user: "the package looks a bit forced, if it were 70% displayed and standing flat in the left side of the
+  desk maybe it would've looked better", CE-060). A partial display is written as the neighbour doing the
+  cutting (which part lies behind what), and the visible fraction is read on the first dense frame: "about 70
+  percent in frame" came back as a fully visible pack (CE-063). The frame edge is not the cutter: a pack cut
+  by it pulled the camera or the performer's pose (CE-056, CE-068; no passing take yet).
 - **No hero treatment:**
   - no light, glow or rim light of its own;
   - no push-in, cutaway or insert shot of it;
@@ -492,7 +557,9 @@ therefore carries four more facts, and the prompt and QC quote them (`anomaly-ca
   frame 0 and in every second after, and the prompt's opening clause names it at its anchor. A product
   that is absent in the opening seconds and then appears, or appears at another spot, is a regenerate
   reason, never a note and never a flagged delivery; the retry changes the form or the anchor class from
-  the guide's passing list.
+  the guide's passing list. The spot is read off the SOURCE's first frame, not the end of the camera path
+  (§4b.1c): a spot beside the far side of a neighbour the opening camera faces away from was hidden for the
+  first 0.5 s (CE-053), and a near-side spot left the frame at 2.9 s in an orbit (CE-077, CE-082).
 - **It stays there through everything:** every cut, angle change, reframe and camera move. Its
   relation to the neighbouring objects is identical in every shot where that area is visible. It
   never jumps from desk to table to chair, and a parked car never moves along the street.
@@ -540,8 +607,15 @@ therefore carries four more facts, and the prompt and QC quote them (`anomaly-ca
 - **Lived-in pose:**
   - slightly angled, not perfectly centred or aligned;
   - it may sit among everyday items without being crowded out;
-  - its state fits the scene (opened beside a laptop mid-work, a car parked with its wheels
-    straight);
+  - its state follows the scene's use: the plan decides from the story and the room whether the product is
+    sealed (nothing in the scene suggests use) or in use (a snack or gum pack at a class or desk scene is
+    open, a drink at a table is cracked, a car at a curb is parked with its wheels straight), says which and
+    why in one clause, and writes it as one positive sentence in the first clause with its exclusions. An
+    open pouch: top torn at the notches, zip mouth open, a few pieces visible in the mouth only, standing on
+    its gusset, label about twenty degrees toward the lens, never poured, nobody touching it; excluded:
+    sealed, a second pouch, loose or spilled pieces, a hand taking a piece, chewing. A sealed, untouched pack
+    in a class scene read as unnatural (the client: "I think he'd have it open if he's in class", CE-031,
+    VERIFIED). The open state must be one the affordance sheet and the client's package-form rules allow;
   - never a pristine product-shot pose.
 - **No sticker or edit artifacts:** no flat look, no halo or cut-out edges, no sharpness or colour
   mismatch.
@@ -569,6 +643,13 @@ therefore carries four more facts, and the prompt and QC quote them (`anomaly-ca
   between 1 s and 2 s; its first request named a loose spot ("in the centre of its length, between the
   roommate and the laptop") and "stays where it is". [OBSERVED once: the corrected request removed the
   slide inside a shot, not the relocation across a cut; not verified.]
+- **Say what is not there.** An empty surface is written as empty ("the desk holds only the laptop; no can
+  stands on it at any moment"), and per shot for a multi-shot source ("shot 1: only the laptop and the
+  planner; no can anywhere"); "out of frame in shot 1" did not hold (CE-078, VERIFIED). When the source's own
+  object is handheld and only enters with a hand, padded standing-product references pull a standing product
+  onto the nearest desk from frame 0 (1.66× its size), it is picked up and set back at the end: write the
+  empty desk, that the product enters in the hand and leaves below the frame edge with it, and never describe
+  it as standing (CE-046, VERIFIED).
 - **Keep its brand mark.** The clean-plate line carves out the item's own printed label, logo or
   badge (`text-and-format.md` §1): never a bare "no logos", which blanks the product. Its words go
   into QC `--allowed-text`.
@@ -592,6 +673,45 @@ therefore carries four more facts, and the prompt and QC quote them (`anomaly-ca
   a snack makes the model reproduce it. Plan each such prop as the product's contents when it is of
   the product's category, or limit that image's role in the prompt ("Image 4 is only the man's
   identity: face, hair, build and clothing; not its glass, table or background").
+
+### 4b.6 The size-and-place guide (a reference image for spot, size and look)
+*Achieve:* where the locked model's guide lists size or place as a model limit and no passing-list anchor
+fits, an extra image reference that shows only where the product stands and how big it is beside a neighbour,
+in the scene's own perspective, with the room's colour and a soft contact shadow, so the model copies spot,
+size and look. It goes into the FIRST request when the only free surface is a near plane or a cluttered strip,
+not only into the retry (CE-070). *Avoid:* sizing words as the lever (every comparable wording retry was a
+re-roll); a guide that is a flat packshot paste; a guide that carries anything of the source; a spot the
+source does not have. *Miss and cause:* small placed packs and cans rendered 1.3–2.8× their size in most first
+takes whatever the words said; eight takes built with a guide landed within 1.25× (`wan-3-0.md` §5 lists them),
+and the guides that failed failed on place or copy, not on size. Build it locally, no credit:
+1. **Material.** The source's bare surface at the chosen spot, with the neighbour's edge in it for scale,
+   blurred beyond recognition or drawn from neutral texture: no person, skin, garment, screen lettering or
+   caption. A guide cut from the source frame brought the replaced person, the jersey's sponsor lettering or
+   the monitor's lettering back, and was copied as a flat sticker (CE-067, CE-069).
+2. **The product.** The client's render turned into the scene's perspective (turned about thirty degrees with
+   a side face, foreshortened when lying flat, top and base ellipses for the camera height), tone-matched to
+   the room, with a soft contact shadow toward the room's light and a faint reflection on a glossy surface,
+   scaled to the reckoned size (`anomaly-catalog.md` §2.7). A real shaded render from an earlier take, cut out
+   cleanly with no mask notch, is the best source. A flat front-on packshot paste is copied as a flat sticker
+   (CE-052, CE-093).
+3. **The label** sharp at the video's pixel scale with a thin edge: the model copies the guide's soft label
+   and thick bevel (CE-090, CE-093). A guide never fixes label legibility (`anomaly-catalog.md` §2.9).
+4. **The spot** exists in the source frame, passes §4b.1c, and shows a lying pack lying in perspective.
+   Beside a neighbour that leaves no room, the model puts the pack on the neighbour (CE-040).
+5. **The prompt binds it as spot and size only** and repeats the relation in the anchor sentence: "Image 4 is a
+   size and placement guide only: it shows the <product> at its true small size <lying flat | standing> on the
+   bare <surface> <beside the named neighbour>; use only that size and that spot, never its crop, hand,
+   keyboard or any other content", then "<anchor sentence>, exactly where Image 4 shows it, and it keeps
+   exactly the size it has in Image 4". The neighbours that stay are named; the one hand in frame is named
+   together with the bare empty area ("no other hand is near the <product>") and no further limb is named: a
+   sentence that listed a hand and a forearm drew a second fist in CE-085 and CE-089 and held once (CE-054 a2).
+   No sizing words beside it.
+6. **X4 checks the guide before a credit is spent:** nothing of the source in it, the product shaded and in
+   perspective, the label sharp, the spot free (§4b.1c), the product's size against its neighbour at the
+   reckoned ratio (`atp.py scale --frame`).
+The guide shrinks a nearest-plane product by about a fifth, not to the guide's own size (CE-081): start from the
+true ratio and read the first output with `atp.py scale`. Seedance 2.5 `video_edit` copies a guide literally,
+pose, size, spot, soft label and bevel (`seedance-2-5.md` §5).
 
 ## 5. Logic, continuity and anti-slop gate
 
@@ -752,6 +872,29 @@ so a trigger that already cleared or persisted is not sent again unchanged.
 above it and trim the extra afterwards. A shorter or longer generation squeezes or stretches the
 actions against the sound.
 
+#### 5c.2b Prepare the source (before it rides as the video reference)
+The model keeps what the source holds, so what must not survive is changed in the prepared copy, not only in
+the prompt. The analysis card flags each (`analysis-protocol.md` §3, "Source preparation flags").
+- **Orientation.** A source that is a front-camera selfie shown un-flipped (reversed shirt print, a
+  left-handed guitar, reversed signs) is flipped horizontally in the preparation step before upload, and an
+  identity photo that is itself a mirrored selfie is flipped too (read its lettering first). The action script
+  swaps its sides, the placed product's spot moves to the mirrored side, and the prompt says "Video 1 is
+  already in true orientation; nothing is mirrored; all lettering reads correctly from left to right".
+  Unflipped, everything the source held came out reversed while the product's own label read correctly, and
+  the frame contradicted itself (the client: "everything in the frame is reversed except the bag. Text on his
+  shirt, guitar on the wall. Maybe flip video, then add bag", CE-030, VERIFIED: the flipped video and the
+  flipped identity photo).
+- **Burned-in text on a flat surface** (a caption on a wall) is inpainted out of the reference itself
+  (temporal median over the static strokes, mask-aware fill, grain kept): otherwise the model hands a caption,
+  or a garbled grey ghost of it at the same place, to the take (CE-045, VERIFIED).
+- **Names and marks that identify** (a real person's name in a chat bubble, a patch or logo on the kept
+  garment): removed from the prepared source where they sit on a flat label, or written as an edit of the
+  source surface in the model's edit grammar (§8, `brand-guardrails.md` §4). A one-sentence edit changed a
+  name in one shot only and left it legible in two others (CE-080); a patch named only in the negatives came
+  back from 0.4 s (CE-065).
+- **A face effect baked into the video reference** (a mask, a filter, a clone) is carried whatever the prompt
+  says about identity: plan a lever up front (hide it in the prepared source) or accept it flagged (CE-051).
+
 #### 5c.3 The fidelity lock in the prompt
 Write it in the model's own structure and wording (its §4.0 examples and keep-lists). The edit kind
 decides how much is described:
@@ -774,6 +917,20 @@ decides how much is described:
   most visible actions come first.
 - **Exclusions:** no added, skipped, repeated or reordered action; no new gesture; no extra camera
   move; no re-staging; no new people or background action; no change of pace.
+- **A camera lock, as its own sentence,** when the product sits near a frame edge or the shot is handheld or an
+  orbit: "the camera keeps the same position and framing for the whole shot; no zoom, push-in, pan or tilt
+  toward the <product>; the hand, the keys and the trackpad keep their place in the frame". Without it a
+  product at the frame edge pulled a 3.3× push-in and a pan and the working hand left the frame (CE-056); with
+  it the shot stayed static (CE-061, CE-078, VERIFIED).
+- **Left and right are read on the prepared frames,** beat by beat, before the action script is written (a
+  mirrored preparation swaps them). A second body that wears the same face (a clone) is bound to the identity
+  image in positive words; a global grade change gets its own sentence in beat order ("after the can is
+  gone"); a short use beat is ordered before the next event without timestamps ("one short sip"). The first
+  request had the clone enter from the wrong side with the replaced face, skipped the grade shift and ran the
+  sip twice as long (CE-047, VERIFIED on the retry).
+- **An emotion keep-beat** (helpless laughter at the end) is spelled with its physical signs (mouth open, eyes
+  shut, head back) and its opposite excluded; it was lost whatever the wording on a long many-cut reference
+  (CE-083, CE-086; not verified).
 - **Not a schedule.** The timing comes from the source video, never from timestamps in the prompt.
   Free physical motion still follows §5b. What must match is when a motion starts and lands, and
   the source already shows it.
@@ -802,6 +959,10 @@ sync anchors densified, and compare the keep beats on the sheet.
   what went wrong (duration, speed, the action that moved) and tightens the fidelity lock.
 - **inconclusive**, when the motion is too different to measure (e.g. a heavy restyle): judge it on
   the sheet and the densified anchors.
+
+Whenever a retry moves the product toward a frame edge or crops it, also compare gaze and head pose in the last
+third of the clip with the source: a crop request cost the performer's pose lock from 4.4 s (the head turned to
+the lens, the hair restyled; CE-068).
 
 ### 5d. Counts, openings and object permanence
 Two anomalies from anime Create videos (2026-10) define this rule set: three capsules on a desk
@@ -896,12 +1057,13 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       holds when several products show (`anomaly-catalog.md` §2.7).
 - [ ] Anchor class (§4b.1b): the posture, the visible support, the place and its story reason are in the plan
       and the prompt; no lean on a prop the model has to invent; nothing on a thin sheet; no source beat
-      taken over. Where the guide lists size as a model limit, the anchor is from its passing list and no
-      sizing words are relied on.
+      taken over. Where the guide lists size as a model limit, the anchor is from its passing list or a guide
+      image (§4b.6) carries spot and size, and no sizing words are relied on.
 - [ ] Source surfaces: every printed surface of the source that a guardrail or §9b names (a poster, a
-      livery, a gate board, a monitor page, a shirt print) is an explicit "replace / remove only … and
-      reconstruct it as <named concrete content>" sentence in the model's grammar, never a description of
-      blankness, and the original item is in the exclusion line (`brand-guardrails.md` §4).
+      livery, a gate board, a monitor page, a shirt print, a patch or logo on the kept garment) is an explicit
+      "replace / remove only … and reconstruct it as <named concrete content>" sentence in the model's
+      grammar, never a description of blankness, and the original item is in the exclusion line
+      (`brand-guardrails.md` §4); a real person's name on a screen is removed from the prepared source (§5c.2b).
 - [ ] Scene layout, perspective and camera logic are consistent across every beat and cut.
 - [ ] Placement, contact, grip and occlusion are physically possible at every step.
 - [ ] Surroundings are consistent (surfaces, props, background people) with nothing morphing.
@@ -938,9 +1100,16 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       reference's (`creative-direction.md` §5.0).
 - [ ] Motion is natural in speed and weight, with no unmotivated speed changes.
 - [ ] Every object state matches the ledger at every checkpoint.
-- [ ] Caught errors: every entry of `20-analysis/caught-errors.md` that applies to this video is
-      named in the plan, its rule is in the prompt, and its check is a QC checkpoint
-      (`ATP/caught_errors.md`, command item 22).
+- [ ] Spot (§4b.1c): visible in the source's first frame and along the whole camera path, outside every
+      hand's lane over every beat, bare and wider than the pack, not the nearest plane, not "in front of" a
+      neighbour it would sit on, fully inside the frame; the user's marked spot is used.
+- [ ] Guide (§4b.6), when the model lists size or place as a limit and no passing-list anchor fits: built from
+      neutral bare-surface material (nothing of the source), the product shaded in the scene's perspective at
+      the reckoned size, its label sharp, the spot passing the line above, bound in the prompt as spot and size
+      only, and measured with `atp.py scale --frame`.
+- [ ] Source prepared (§5c.2b): orientation (a mirrored selfie flipped, the identity photo too), burned-in
+      text on flat surfaces inpainted, identifying names and marks removed or edited, a baked face effect
+      planned for; left and right of every beat read on the prepared frames.
 - [ ] Pacing matches the family profile: no dead space, every second has a job.
 - [ ] Transitions are all motivated, and multi-clip hand-offs are identical.
 - [ ] No free physical motion is pinned to exact timestamps; a required end state has a visible
@@ -1018,9 +1187,13 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
    - **Source surfaces** (§8): each printed surface that a guardrail or §9b names, at full resolution and
      by `atp.py qc` OCR. A reproduced poster, livery, board or screen is a **regenerate** reason, and the
      retry replaces it with a named concrete thing instead of describing blankness.
-   - **Caught errors** (`ATP/caught_errors.md`, command item 22): each entry the plan applies is
-     checked by id and written in the verdict; a failed check is a regenerate reason when the
-     entry's class says so.
+   - **Label legibility** (`anomaly-catalog.md` §2.9, §4 step 5h): the wordmark and the flavour tag read
+     exactly on a full-resolution frame at rest, word by word against the asset; a wrong letter is a
+     **regenerate** reason, never "OCR noise".
+   - **Hand lanes and camera path:** no hand covers, wraps or passes through the placed product in any beat;
+     the camera and the performer's pose in the last third match the source (§5c.5); a placed product that
+     leaves the frame while its anchor should still be in frame is a **regenerate** reason, like one missing
+     at 0 s.
    - **Counts, openings and permanence** (`anomaly-catalog.md` §4): count every multiple at every
      checkpoint and write the numbers in the verdict; on every use beat check the preparation step,
      the part used and the contact point on the 30 fps sheet; before and after every exit,
@@ -1098,7 +1271,7 @@ Main action & states: <start → key change → end>
 Counts & use: <every multiple with its number over time; each use beat's part and contact ("spout, cap flipped open, head level"); the QC checkpoints>
 Size: <per product and shot: real H cm; depth d m; lens f mm → ~N % of frame height (~px); neighbour and ratio ("2/3 of the bottle beside it"); size ladder across products; constancy> (anomaly-catalog.md §2.7)
 Guardrails: <none supplied | G<n> (rule) → operation and time, per hit, e.g. "G2 (two cans max) → third can removed, count 2 at every checkpoint; G3 (no competitors) → Monster can de-branded on the shelf; G4 (ambassador) → face swapped, voice remains in the original audio" | Create: the invariants applied> (brand-guardrails.md)
-Caught errors applied: <none apply | CE-004 (blend: reference scoped, room light stated, paste test in QC); CE-005 (size: reckoning in the prompt, T scale in QC); …> (ATP/caught_errors.md)
+Guide: <none | Image N: the spot, the size it fixes and what it was built from (bare surface only, product render, label crop)> (generation-system.md §4b.6)
 Style & camera: <look, lighting, camera behaviour>
 Text: <none | CapCut text layers in the house style: "…" (where, when) | real label, logo or badge text on the product>
 Inserts: <none | "<meme>" cut from <V> at <t_in–t_out>, placed at <split> s>
@@ -1111,9 +1284,9 @@ Adaptation logic: <what was changed from the reference and why (geometry, grip, 
 For a multi-clip video, add one line: `Clips: K — <seam times and methods (cut / extension /
 last-frame chain)>`.
 
-The brief is also saved as `40-briefs/video-NN-brief.md` (command X6): a caught-error entry
-(`ATP/caught_errors.md`, item 22) carries it with the final prompt and the QC verdict, so a
-reported problem can be read against what was planned and what was asked.
+The brief is also saved as `40-briefs/video-NN-brief.md` (command X6), and each attempt appends its own block
+with the failed request, the verdict and what changed, so a reported problem can be read against what was
+planned and what was asked.
 
 In Analyze Mode, proceed after showing the brief. The only pause is the permission for a video over
 30 s that needs 2+ generations (command A7b). Uncertainties are resolved by the plan's own rules and

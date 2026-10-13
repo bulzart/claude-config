@@ -3,8 +3,8 @@ guide: wan-3-0
 title: Alibaba Wan 3.0 / Wan 3.0 Prime
 provider: Alibaba Cloud (Wan / Tongyi Wanxiang team; API via Alibaba Cloud Model Studio, DashScope)
 higgsfield_model_ids: [wan3_0, wan3_0_prime]
-guide_version: 1.2
-last_verified: 2026-10-10
+guide_version: 1.3
+last_verified: 2026-10-13
 catalog_snapshot: higgsfield/catalog-snapshot-2026-09-30.json
 documentation_depth: high
 ---
@@ -131,6 +131,10 @@ Speed variant: replace `"wan3_0"` with `"wan3_0_prime"` [HF]. Preflight any call
    height by a start frame while the source carries the action. A frames-only build (the source's own
    first frame with the product composited at the reckoned height as `start_image`; ✗ in the command's
    fidelity ladder) pins the size and gives up the video reference's motion and timing; untested (§9).
+10. **A size-and-place guide rides as one more `image_references` entry** beside the source
+   `video_references` (reference modes combine; only the frame roles are exclusive, gotcha 1). It pins spot,
+   size and look without giving up the source's motion and timing (§3.14, `reference/generation-system.md`
+   §4b.6) [VERIFIED, 8 takes, 2026-10-12..13].
 
 ### 2.6 9:16 / 720p mapping (fixed output format of /analyze-then-pick)
 | mode | params | expected output | action |
@@ -255,7 +259,10 @@ signs, captions or screens with words, and never quote non-dialogue strings — 
 described subtitles ('White English subtitles "My little Max…" appear at the bottom of the screen') are requested
 content [OFFICIAL example]. Keep the no-subtitles item whenever there is dialogue [INFERRED]. With reference media
 add: "do not reproduce any text, captions, usernames or watermarks from Video 1" [INFERRED from the official "do not
-inherit" pattern].
+inherit" pattern]. Never cut these lines to fit Higgsfield's 5000-character limit (cut descriptive wording):
+with "captions, usernames" and "no on-screen text" trimmed, a garbled grey ghost of the source caption stood
+on the wall at its old position for the whole clip; restoring them and giving the model a reference with the
+caption inpainted removed it (§4.0 item 19) [VERIFIED CE-045 a3].
 
 **(c) Intentional in-frame text.** Only when it belongs to the scene (a sign, packaging, a screen UI), is 1–3 short
 words, large, frontal and mostly static; state it once, bound to its surface, and QC every frame [INFERRED]. Anything
@@ -288,6 +295,13 @@ corresponds to exactly one character") [OFFICIAL]; clean, well-lit front or thre
 facial features, hairstyle, and clothing". To replace a source performer: "Replace the <person> in Video 1 with the
 <person> in Image 1, keeping only the motion, trajectory and camera of Video 1; do not inherit Video 1's
 appearance" [composite of OFFICIAL patterns]. Labels "unique and consistent — no pronouns or synonyms" [OFFICIAL].
+The identity image brings its clothing, lettering and props (`reference/anomaly-catalog.md` §2.17): crop it above
+the collar when its clothing differs from the kept garment and name that garment in positive words (the photo's
+overshirt re-dressed the man in some rolls, CE-035); a print the photo cuts off is finished by the model, in one
+case as an upside-down second line on every frame: crop above it and state "a plain black crew-neck t-shirt with no
+print, no lettering and no logo" [VERIFIED CE-039 a2]; describe the replacement's glasses positively; state a
+hidden face or closed eyes of the source in words; flip a mirrored selfie photo (`reference/generation-system.md`
+§5c.2b).
 
 ### 3.13 Product and object fidelity
 Official claim: "multi-angle appearance, hardware structure, logos, and material details remain stable shot to
@@ -313,9 +327,9 @@ in the shot line ("on the dresser behind him, about 2.5 m from the lens"), "a sm
 it is one, and "No scale drift" in the consistency line. On `wan3_0_prime` these words are a check, not a
 control: tighter fractions, neighbour ratios, padded references (p40 down to p16) and "no oversized"
 exclusions did not move a small placed product (12 of 12 same-form retries, -15 to +24 %; §5), and a start
-frame at the reckoned height cannot be combined with the source video (§2.5 gotcha 9). The plan chooses the
-anchor class from the §5 passing list and measures the first output with `atp.py scale` [OBSERVED
-2026-10-08..10]. Guardrail edits
+frame at the reckoned height cannot be combined with the source video (§2.5 gotcha 9). The control is a
+size-and-place guide image (§4.0 items 13–14; `reference/generation-system.md` §4b.6) or an anchor from the §5
+passing list, and the first output is measured with `atp.py scale` [OBSERVED 2026-10-08..13]. Guardrail edits
 (`reference/brand-guardrails.md` §4) use the same edit grammar: "remove only the brand name, logo and markings from
 the green can on the shelf in video 1; keep its shape, size, position, lighting and shadow; it becomes a plain
 unbranded can of the same colour" (never "blur" or "pixelate"), and "remove only the third can at the left end of
@@ -360,6 +374,16 @@ through it with his head level, both hands around the bottle"); restate counts a
 every shot after a cut or an exit; put one item per product in the "Negative prompt list:" for its own wrong use
 and count ("no drinking from any side of the bottle other than the spout", "no capsule appears or disappears")
 [INFERRED; observed 2026-10].
+
+**Guide, camera lock, swap grammar, empty surfaces** (`reference/generation-system.md` §4b.6, §5c.3, §4,
+§4b.5). Bind the guide as spot and size only and repeat it in the anchor sentence ("exactly where Image 4 shows it
+… keeps exactly the size it has in Image 4"), with no sizing words beside it; the camera lock is its own sentence
+("the camera keeps the same position and framing for the whole shot; no zoom, push-in, pan or tilt toward the
+carton; the hand, the keys and the trackpad keep their place in the frame"); a swap is "Replace only <the source
+object> with <the product> at that exact spot, on the same footprint; <the source object> does not remain
+anywhere"; an empty surface is written empty, per shot ("shot 1: only the laptop and the planner; no can
+anywhere"); name the one hand in frame and the bare empty area, and the object a hand picks up. Items 13–19 of
+§4.0 carry the verified wording.
 
 **Known failures.** Alibaba's own exclusion categories name them: face distortion/swapping, extra fingers, twisted
 limbs, "clipping artifacts", "cutout traces", "characters running illogically", "No scale drift (common in editing
@@ -449,6 +473,111 @@ Verbatim first-party examples (trimmed with […]):
    > changes place on the table"
    > Result: the slide at 1 to 2 s was gone (x 182 at 1.0 s, 180 at 2.9 s), but the can relocated across the
    > shot-2 cut; not verified.
+13. Verified, the size-and-place guide (CE-054, run 12 V08 a2; the miss: a carton on the near desk strip, 217 px =
+    17 % of the frame height, A 1.32× / B 1.57× agreeing, plus an invented second fist; the cause: a model limit,
+    sizing words did not move it)
+   > bad (a1): "[…] stands upright on its base on the bare wooden desk to the right of the keyboard, a hand's
+   > width from the keyboard's right edge, nearer the lens than the monitor stands […] a small flat object, 7.5
+   > cm tall and 7.5 cm wide and 1.6 cm thick: about a sixth of the keyboard's length […] it fills about one
+   > twelfth of the frame height and keeps this size"
+   > good (a2): "Image 4 is a size and placement guide only: it shows the carton at its true small size standing on
+   > the bare desk in front of the round base of the right monitor, beside the keyboard; use only that size and
+   > that spot, never its crop, hand or keyboard as new content. […] stands upright on its base on the bare
+   > wooden desk right of the keyboard, in front of the round black base of the right monitor, exactly where
+   > Image 4 shows it […] only the hand resting on the keyboard's left edge and the man's left forearm are in
+   > frame, no other hand is near the carton. […] about four keyboard keys wide, much smaller than the man's
+   > hand, and keeps the size it has in Image 4"
+   > passed [VERIFIED 2026-10-13]: 141 px = 11.1 % of the frame height, constant, A 1.20× (key pitch), B 1.02×
+   > (distance), no second hand, label legible, in sync. Guide: the first take's carton cut out and pasted back at
+   > 0.65× on the source desk crop, perspective and shadow kept. Seven more guided takes landed within 1.25×:
+   > CE-034 a3 (0.91–0.93×), CE-057 a2 (A 1.21× / B 0.96×), CE-064 a4 (1.0–1.04×), CE-074 a2 (0.89×), CE-078 a2
+   > (0.85×), CE-076/CE-081 b2 (A 1.21× / B 1.10×), CE-048 a2 (cup gone, B 1.06×). Guides that failed, failed on
+   > place or copy: laptop deck (CE-055, CE-061, CE-084, CE-087), the source's scene or person copied (CE-067,
+   > CE-069), a flat paste copied (CE-052). The sentence naming a forearm beside the hand held here and drew a
+   > second fist in CE-085 and CE-089: name only the one hand and the bare empty area.
+14. Verified, a spot that exists in the source plus a scale reference (CE-034, CE-038, CE-040, run 07 V16 a3; the
+    miss, the client: "please check sizing of the box, I know it's close to the camera here, but it's next to the
+    notebook and seems really big in relation to the notebook"; the cause: the working hands cover every bare spot at
+    the neighbour's depth, and a layout the frame cannot hold is resolved by standing the pack on the neighbour)
+   > bad (a1/a2): the carton lying or standing "directly to the right of the open spiral notebook" with "Image 4 is
+   > a size reference only: it shows this carton standing on the table beside the notebook […] about one third as
+   > wide as the notebook page" (1.7–2.1× flat; 1.23–1.31× upright, standing on the notebook page)
+   > good (a3): "Image 4 is a size and spot reference only: it shows this carton standing on the grey front edge of
+   > the table at the front-left corner beside the notebook of Video 1, only about one third as wide as the
+   > notebook page; use that size relation and that spot, not its framing, wall, lighting or perspective. […] it
+   > stands upright on its base on the bare grey front edge of the table at the front-left corner, to the left of
+   > the open spiral notebook, its base level with the notebook's front edge, no nearer to the lens than the
+   > notebook"
+   > passed [VERIFIED 2026-10-12]: A 0.91–0.93×, B 0.90–0.91×, constant at 0.0, 3.0 and 6.2 s, count 1, the same
+   > spot on both sides of each insert, in sync.
+15. Verified, grounding (CE-043, CE-044, run 07 V16 a3; the miss, the client: "the neurogum package looks a bit
+    fake underneath (like it is floating and lightning doest match too)"; the cause: the layout composite
+    carried a pasted look, the base stood on the seam between wood and steel, and QC wrote "contact shadow" without
+    a 3× crop; a grounded layout image plus grounding words (a1) still gave a hard clean base)
+   > bad (a1): "Image 4 is a size, spot and grounding reference: it shows this carton at the front-left corner
+   > beside the notebook […] in the room's warm dim light with its soft contact shadow and faint reflection on the
+   > steel; use that size, spot, angle and grounding, not its framing or wall"
+   > good (a3): "Image 2 gives only its exact printed label and artwork, not its studio lighting, shadow or
+   > background; Image 3 shows this same carton as it sits in the room and gives its look and grounding: soft phone
+   > focus, slightly muted warm colour, its right side and lower part in shade, a soft dark contact shadow under
+   > and in front of its base on the brushed steel and a faint blurred reflection of its lower edge […]; adopt that
+   > look and grounding, not Image 3's framing or wall"
+   > passed [VERIFIED 2026-10-12]: steel under the base lum 68–70 against 136–139 clean, a bluish reflection tint,
+   > base 43 px inside the steel band, carton lum 98–99 against steel 107–112 and wood 127–137.
+16. Verified, a swap and the product's material (CE-048 → CE-058 → CE-064, run 12 V04 a4; the misses: a1 kept the
+    iced cup and added a second can at 1.9–2.4×; a2 passed size but the can "looks like an animation or a photoshop
+    placement", the user; the causes: the swap written as an addition plus a negative, and no material sentence)
+   > bad (a1): "A single closed […] can stands upright on the desk at the back of the desk near the monitor stand
+   > in both shots: in shot 1 at the exact spot where the iced Dunkin cup stood […]" with "no Dunkin cup" in the
+   > negatives
+   > good (a4): "Replace only the iced Dunkin coffee cup with the red straw that stands at the back of the desk
+   > behind the customer's elbow in shot 1 with one closed […] can that stands upright at that exact spot, on the
+   > same footprint, as in Image 4; the cup does not remain anywhere on the desk. […] The can reads as a real
+   > aluminium can in the room: a curved metal body with a soft specular highlight and a faint reflection of the
+   > room, the label wrapped around the curve, shading darker toward one side, a soft contact shadow, not a flat
+   > cut-out" with layout references (Image 4, 5) built from a realistic can crop, for spot and scale only
+   > passed [VERIFIED 2026-10-13]: paste test 0–1 signs, drink containers 1/1/1, the can at the cup's spot in both
+   > shots, shot 2 1.04× / 1.04×, last frame 1.01×.
+17. Verified, a mirrored source, an open pouch and a plain shirt (CE-030, CE-031, CE-039, run 07 V20 a2; the
+    misses, the client: "everything in the frame is reversed except the bag. Text on his shirt, guitar on the wall.
+    Maybe flip video, then add bag. Also, maybe bag here is open, it's still sealed. I think he'd have it open if
+    he's in class"; the causes: the source and the identity photo were both mirrored selfies, the plan defaulted to
+    "sealed, untouched", and the photo's cut-off chest print was finished upside down)
+   > bad: "Video 1 is the motion, camera, framing, cut and timing reference: […]"; "[…] adopting facial features,
+   > hairstyle, skin tone, build and clothing […]"; "a sealed stand-up pouch […]"; "it stays closed"
+   > good: Video 1 and Image 1 flipped in preparation; "Video 1 is already in true orientation and is the motion,
+   > camera, framing, cut and timing reference: […]; nothing is mirrored or flipped and all lettering reads
+   > correctly from left to right"; "[…] clothing (short brown hair, trimmed beard, a plain black crew-neck t-shirt
+   > with no print, no lettering and no logo)"; the pouch "top torn at the tear notches, zipper mouth open, a few
+   > tablets with green flecks visible in the mouth only, upright on its gusset, label turned about twenty degrees
+   > toward the lens, its left side two finger-widths from the notebook's right edge", with "no sealed pouch, no
+   > second pouch, no loose or spilled gum, no hand taking a piece, no chewing, no hand touching the pouch" and
+   > "no mirrored image, no reversed lettering, no mirrored label, no text or print on the t-shirt"
+   > passed [VERIFIED 2026-10-12]: guitars frame-left and right-handed, the pen in the frame-left hand, the tee
+   > plain (OCR none), the label legible at full resolution, count 1 in every dense checkpoint, the same spot across
+   > the flash (drift ≤ 3 px), in sync.
+18. Verified, empty surfaces (CE-046 run 12 V05 a2; CE-078 V20 a2; the misses: padded standing-can references pulled a
+    standing can onto the desk from frame 0 (1.66×) for a source whose can only enters in a hand; "out of frame in
+    shot 1" put a hero can in shot 1 and another on the keyboard in shot 2)
+   > bad: the can "enters with the hand" described, the desk not mentioned; "in shot 1 its spot is out of frame at
+   > the other side of the laptop"
+   > good: "[…] and an empty black desk […]; nothing else stands on the desk at any moment"; the can "comes up from
+   > below the frame holding […]" and leaves below the frame edge; "Shot 1: […] the desk holds only the laptop and
+   > the planner; no can anywhere", negatives "no can in shot 1, no can on the laptop, no can on the keyboard", the
+   > guide for shot 2, the camera lock sentence
+   > passed [VERIFIED 2026-10-13]: V05 empty desk at 30 fps in 0–1 s and after 2.0 s, the can enters in the hand at
+   > 0.8 s, exits below the frame by 1.97 s, 1.00×; V20 shot 1 count 0, shot 2 count 1 on bare wood in front of the
+   > lunch box, 0.85× / 0.77×, no hand contact.
+19. Verified, the clean-plate lines and a clean reference (CE-045, run 07 V16 a3; the miss: a faint garbled grey
+    ghost of the source caption on the wall for the whole clip; the cause: the lines were trimmed to fit 5000
+    characters while the video reference still carried the burned-in caption)
+   > bad (a2): "Do not inherit the appearance, clothing, text, watermarks or branded items of Video 1"; "No
+   > subtitles, captions or other on-screen text"; negatives without "no on-screen text"
+   > good (a3): "Do not inherit the appearance, clothing, text, captions, usernames, watermarks or branded items of
+   > Video 1"; "No subtitles, captions, letters or other on-screen text anywhere"; "[Negative Prompts] no subtitles,
+   > no on-screen text, […]", other wording cut to fit; the video reference replaced by a copy with the caption
+   > inpainted from the static wall
+   > passed [VERIFIED 2026-10-12]: no source text on the wall in any sample.
 
 Patterns they teach:
 - **Order:** overall description (genre, length, pacing) → reference bindings → timed shots → dialogue → sound →
@@ -547,11 +676,17 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 | Gibberish text, subtitles, corner marks | described signage/screens; dialogue without a no-subtitles item; text in references | §3.11 |
 | Features bleed between people/props | vague bindings | one subject per image, unique labels, adoption scope [OFFICIAL] |
 | Product silhouette/proportion drift | grid references, heavy motion, editing | clean single-object refs, geometry sentence, "No scale drift" [OFFICIAL] |
-| **Small placed product renders 1.3–3.5× its reckoned size, whatever the words** (MODEL LIMIT, `wan3_0_prime`: Celsius cans within 1.25× on the first attempt in 11 of 23 videos, small Neuro packs in 0 of 7) | a pack, can or sachet set on a surface, shelf or desk in a tight handheld or chest-up shot (any depth tried, 0.5–1.6 m); a pack that stands upright or leans; a neighbour that is paper, a notebook or a head; a base cropped by the frame edge | 12 of 12 comparable same-form retries (run 08 V02 V06 V09 V12 V14 V15 V17 V18, run 09 V01 V03 V06 V08; CE-009 and CE-011 agree; CE-014 and CE-015 are unproven, see the caveat) moved the multiple -15 to +24 % (median -5 %) with tighter fractions, neighbour ratios, p40 to p16 padded references and "no oversized" exclusions: a wording retry is a re-roll, so spend none. **Passing list** (delivered take within ~1.25×): (1) in the hand that holds it, or swapped for the source's own handheld object (4 of 4: run 08 V01 V04 V13, run 09 V10; 1.0–1.15×); (2) on a bare surface beside a large rigid object of the source in the same plane, a laptop (5 of 7: run 08 V08 V11, run 09 V02 V05 V07; misses run 08 V12, run 09 V12); (3) one sachet lying flat on bare near-side surface, sized by "as long as his index finger, narrower than his open palm, about one tenth of the frame width" (CE-012, 1.05×; the flat wording failed in 2 of 3: run 09 V11 V12). Plan the anchor from this list in X1; on a miss the one retry changes the form or the anchor class, or none is spent and the best take ships flagged and recorded (`reference/anomaly-catalog.md` §2.7). Caveat (CE-028; re-measured 2026-10-10, §9): several multiples above were measured against a head or a distance taken from the shot size (CE-013, CE-014, CE-015, run 08 V09 V18, run 09 V11), with the product often nearer the lens than planned; the ledger's same-plane measurements are CE-009 and CE-011, so the limit holds for small flat packs against a same-plane neighbour and is unproven for cans (§9) [OBSERVED 2026-10-08..10] |
-| A small pack renders upright, tilted or propped although the prompt says "lies flat" (run 09 V11 V12; CE-012, CE-013) | the pack planned to lean on a prop the model has to invent; a spot against a person's arm; "lies flat" without the support, the reason and the exclusions | the verified sentence of §3.14 (flat, label up, entirely on bare surface at the near edge, a band of bare surface wider than the pack to the arm, the story reason) plus "no standing, leaning, propped or tilted sachet, no sachet on its edge"; never plan a lean on an invented prop; QC posture, support and place at 30 fps (`reference/anomaly-catalog.md` §2.16) [VERIFIED once; the wording failed in 2 of 3] |
+| **Small placed product renders 1.3–3.5× its reckoned size, whatever the words** (MODEL LIMIT, `wan3_0_prime`: most first takes of runs 08–09 and 12; Celsius cans within 1.25× on the first attempt in 11 of 23 videos of runs 08–09, small Neuro packs in 0 of 7) | a pack, can or sachet set on a surface in a tight handheld or chest-up shot, any depth tried; the nearest plane of a table-level shot (hero-sized, 25–47 % of the frame height); a laptop-side strip; a pack that stands upright or leans; a neighbour that is paper, a notebook or a head; a base cropped by the frame edge | 12 of 12 comparable wording retries moved the multiple −15 to +24 % (median −5 %): spend none. **The lever is a size-and-place guide** (§4.0 items 13–14; `reference/generation-system.md` §4b.6): 8 takes within 1.25× (CE-034 a3 0.91–0.93×; CE-054 a2 A 1.20× / B 1.02×; CE-057 a2 A 1.21× / B 0.96×; CE-064 a4 1.0–1.04×; CE-074 a2 0.89×; CE-078 a2 0.85×; CE-076/CE-081 b2 A 1.21× / B 1.10×; CE-048 a2), put in the FIRST request when no passing anchor fits (CE-070). **Passing anchors without a guide** (delivered take within ~1.25×): (1) in the hand that holds it, or swapped for the source's own handheld object (4 of 4 in runs 08–09, 1.0–1.15×; a static source bottle swapped for a can landed at 1.25–1.27× on edit grammar, CE-049); (2) one sachet lying flat on bare near-side surface, sized by "as long as his index finger, narrower than his open palm, about one tenth of the frame width" (CE-012, 1.05×; the flat wording failed in 2 of 3: run 09 V11 V12); (3) on a bare surface beside a large rigid same-plane object, a laptop (5 of 7 in runs 08–09), which failed in run 12 on cluttered strips, orbit paths and the nearest plane (CE-050, CE-055, CE-061, CE-077, CE-084, CE-087): use it only where `reference/generation-system.md` §4b.1c holds, and with a guide. Caveat (CE-028; re-measured 2026-10-10, §9): several multiples of runs 08–09 were measured against a head or a distance taken from the shot size, with the product often nearer the lens than planned; the same-plane measurements are CE-009 and CE-011, so the limit holds for small flat packs against a same-plane neighbour and is unproven for cans without a guide [OBSERVED 2026-10-08..13] |
+| A small pack renders upright, tilted or propped although the prompt says "lies flat" (run 09 V11 V12; CE-012, CE-013, CE-037, CE-041) | the pack planned to lean on a prop the model has to invent; a spot against a person's arm; "lies flat" without the support, the reason and the exclusions; upright references for a stand-up pouch; a top-view reference for a flat pack | the verified sentence of §3.14 (flat, label up, entirely on bare surface at the near edge, a band of bare surface wider than the pack to the arm, the story reason) plus "no standing, leaning, propped or tilted sachet, no sachet on its edge"; references that show the pack lying flat in the scene's perspective; never plan a lean on an invented prop; QC posture, support and place at 30 fps (`reference/anomaly-catalog.md` §2.16) [VERIFIED once; the wording alone failed in 2 of 3] |
 | A placed or contents product is absent in the opening seconds and appears later at another spot (run 09 V04 a1: absent 0–4.2 s, then 1.5–1.8× at the left foreground; a4: vanished; CE-018) | the product named late or only in a later clause; a source video reference with no such object | name the product at its anchor in the first clause of the Plot Summary and in the shot's opening state ("from the first frame"); read the dense 0–1 s sheet first; on a miss the one retry changes the form or the anchor class from the passing list (a start frame is out of reach while the source rides as a video reference, §9 lever a), never a flagged note (`reference/generation-system.md` §4b.3) [OBSERVED over 4 attempts; wording alone unproven, §4.0 item 11] |
 | The request fails twice within ~15 s with no error text while the video reference shows a real celebrity's face (run 09 V03, both refunded; cause unconfirmed; recorded as CF-001 in `caught_flags.md`) | the person who is swapped is still in the video reference | after the second identical failure plan without the video reference (image references and the written action script), say fidelity and sync are at risk, never send a third identical request (`reference/generation-system.md` §5c.2) [OBSERVED once; the attempt without the video reference passed QC] |
 | The source's printed surface comes back (poster, airline livery, gate board, monitor page, shirt print) | the surface only described as blank, plain or "showing no text", or not named at all | replace it with a named concrete thing in the edit grammar and name the original item in the exclusion line (§3.14 "Source surfaces"); QC OCR and a full-resolution look at the surface [VERIFIED on 3 retries; 1 persistent: the gate boards, 3 attempts] |
+| A placed pack sits in a hand's lane, on a laptop deck or keyboard end, in the nearest plane, off the camera path or at the frame edge (CE-053, CE-055, CE-056, CE-061, CE-066, CE-070, CE-072, CE-073, CE-077, CE-082, CE-084, CE-087) | a spot the source does not have, a cluttered strip narrower than the pack, an orbit or sweep that leaves the strip, a pack cut by the frame edge | the spot checks of `reference/generation-system.md` §4b.1c; the camera-lock sentence (it stopped a 3.3× push-in and held in CE-061, CE-078); per-shot desk state; name the object a hand picks up [VERIFIED CE-074, CE-078] |
+| The source person, clothing, sponsor lettering or monitor text comes back, or the pack is copied as a flat sticker | the guide or layout reference cut from the source frame, or a flat packshot paste | build the guide from bare surface only (`reference/generation-system.md` §4b.6) (CE-052, CE-067, CE-069) |
+| Everything the source holds is reversed while the product's label reads correctly | a mirrored front-camera selfie source and a mirrored identity photo | flip both in preparation; "nothing is mirrored" (`reference/generation-system.md` §5c.2b) [VERIFIED CE-030] |
+| The swapped person is re-dressed, a cut-off print is invented, the source's glasses stay, or a hidden face shows open eyes | the identity image brings its clothing, lettering, props and open eyes | `reference/anomaly-catalog.md` §2.17; §3.12 [VERIFIED CE-039; CE-035 observed] |
+| Small print on a placed pack comes back as wrong letters (Nero, CUM) while large type reads | a wordmark under about 25 px upright; a flat or rotated label; resolution and padding do not help | an anchor that gives the wordmark its pixels, or the limit recorded; QC word by word (`reference/anomaly-catalog.md` §2.9) [no fix has passed: CE-032, CE-036, CE-042, CE-090] |
+| A many-cut reference loses its first cuts, ghost-dissolves person-free cutaways and drops an emotion beat; a face effect or mask in the video reference keeps the replaced face; a real person's name stays legible in some shots | one clip with a person identity reference; the video reference carries the effect and the name whatever the prompt says | separate clips on the reference's own cuts (`reference/generation-system.md` §3b.1 item 7); hide the effect or name in the prepared source, or ship flagged (§5c.2b) [not verified: CE-051, CE-079, CE-080, CE-083, CE-086] |
 | Product looks pasted on (a can on a dresser at 2–3× real size, squared to the lens, flat cool light in a warm dim room, no contact shadow, straight-on in a low-angle room) | the reference's lighting, exposure, background and camera angle inherited; a tight product crop pulls it forward and up in size; an anchor alone on an empty edge | "the can in Image N: adopt only structure, material, colour and label, not its lighting, background or camera angle"; the room's light on it, "real contact shadows", "edges blend naturally with no cutout artifacts" [OFFICIAL phrasings], its size against a named neighbour, its mark angle, an anchor touching or partly behind something, padded crops; the eleven-sign paste test in QC (`reference/anomaly-catalog.md` §2.15) [INFERRED; observed 2026-10] |
 | Spatial distortion | orbit >45° [OFFICIAL] | smaller arcs, slower moves |
 | Object snaps, or pauses on a pose then resumes | free physical motion (a spin, toss or roll, or a vehicle's move) given exact times or a required end state | describe the physics only; give the end state a visible cause (a hand stops it, a driver brakes); time product-pun text to the real moment (`generation-system.md` §5b) [INFERRED] |
@@ -593,7 +728,10 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 - [ ] Dialogue quoted with speaker or "No dialogue."; BGM specified or "No background music."
 - [ ] Clean-plate line (§3.11b); in-frame text only if short and scene-bound; Edit Mode: removal pass first.
 - [ ] Asset size/grip/occlusion, light direction and end states written (§3.14); slop exclusions included (§5).
-- [ ] Size: the anchor is from the §5 passing list (in the hand or swapped for the source's handheld object; beside a large rigid same-plane object; one flat sachet on bare near-side surface). The reckoning (neighbour ratio, depth, fraction of the frame, "No scale drift") is written as a check, and no wording retry follows a miss (`reference/anomaly-catalog.md` §2.7).
+- [ ] Size: the anchor is from the §5 passing list, or a size-and-place guide (§4.0 items 13–14) carries spot and size; the reckoning (neighbour ratio, depth, fraction of the frame, "No scale drift") is written as a check, and no wording retry follows a miss (`reference/anomaly-catalog.md` §2.7).
+- [ ] Spot and camera: the spot passes `reference/generation-system.md` §4b.1c; a camera-lock sentence when the product is near a frame edge or the shot is handheld or an orbit; per-shot desk state; the one hand in frame named with the bare empty area, and the object a hand picks up.
+- [ ] Identity image: cropped to the face when its clothing differs from the kept garment, the kept garment in positive words, a mirrored selfie flipped (`reference/anomaly-catalog.md` §2.17); the prepared source flipped, inpainted and cleaned as its card flags (`reference/generation-system.md` §5c.2b).
+- [ ] Label pixel budget (`reference/anomaly-catalog.md` §2.9): the wordmark at least about 25 px upright, or the limit recorded before generating.
 - [ ] Posture, support and place (§3.14): flat or on its base, on a visible surface, out of a working hand's way, with the story reason; no lean on an invented prop; nothing on a thin sheet; the object that is picked up is named (`reference/anomaly-catalog.md` §2.16).
 - [ ] Source surfaces: each printed surface of Video 1 that a guardrail or `generation-system.md` §9b names is replaced with a named concrete thing in the edit grammar, and the original is in the exclusion line (§3.14).
 - [ ] Counts with numbers per shot; every use beat names the part, the preparation step and the contact point; one "Negative prompt list:" item per product for its own wrong use and count; no reference shows a later state than t=0 (`reference/anomaly-catalog.md` §3).
@@ -629,24 +767,15 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 - How Higgsfield bills video references (upstream bills input + output seconds).
 - Per-shot length guidance conflicts (2–5 s vs 4–6 s); inconsistent "forward/backward" extension wording.
 - Quality parity of Prime vs standard beyond "aligned capabilities"; API page "preview" vs GA blog.
-- Size levers still untested on `wan3_0_prime` (§5 model limit; CE-011, CE-014, CE-015): (a) a frames-only
-  build, the source's first frame with the product composited at the reckoned height as `start_image`
-  (§2.5 gotcha 9), which pins size and may cost motion and sync; (b) a second, one-change edit pass
-  ("Edit the video: add …", §4.4) over the person-swapped clip; (c) asking for 0.6× the reckoned size to
-  cancel a ~1.5× bias; (d) whether the neighbour class decides it (a laptop in the same plane against
-  paper, a notebook or a head); (e) pin the depth, not the size: a scene landmark and a neighbour at the
-  product's depth in the shot, plus "no <product> in the foreground, no <product> closer to the camera than
-  <neighbour>" in the negatives. V04 a4 (can at the glass's depth behind the keyboard, "about 1.3 times as
-  tall as the glass", one twelfth of the frame height planned) rendered about 0.086 of the frame height where
-  a3 gave about 1.65×, but a4 lost the can at 2.8 to 3.4 s and a sip came from the can, so it is unproven.
-  Measure `atp.py scale` on each first output with the depth read from the frame; a lever is proven when 3 of
-  4 placements land within 1.25×.
-- Re-measured 2026-10-10 on the frames still on disk (V01 a1 f0, V03 a1 f0; V04 a3 and a4 from the run's
-  verdict and prompts; V11's "expected ~140 px" came from a "1 m shot"). The Celsius cans stood nearer the
-  lens than planned and than the person (on the near table strip, in front of the notebook, in the left
-  foreground) and were measured against her head at an assumed same depth. V01 a1: 29 % of the frame height;
-  the can's own width (130 px for 5.8 cm) puts it at 0.41 m, where it is 1.07× expected, and the table plane
-  puts it nearer 1.4×; V03 a1 reads 0.94× the same way, base cropped. Both stay unsettled between about 1×
-  and 1.4× until a known-size object at the can's depth is in the frame. So the §5 row stands for small flat
-  packs against a same-plane neighbour (CE-009, CE-011) and is unproven for cans; a product found nearer the
-  lens than planned is a depth miss, a different failure from oversize (CE-014, CE-015).
+- Size levers (§5 model limit): the size-and-place guide is proven (§4.0 items 13–14; 8 takes). Still untested: (a) a
+  frames-only build, the source's first frame with the product composited at the reckoned height as `start_image`
+  (§2.5 gotcha 9), which pins size and may cost motion and sync; (c) asking for 0.6× the reckoned size to cancel a
+  ~1.5× bias; (e) pinning the depth with a scene landmark and a same-depth neighbour (V04 a4 reached about 0.086 of
+  the frame height against 0.083 planned but lost the can at 2.8–3.4 s). Open: whether a guide's shrink is a stable
+  ~20 % of the nearest-plane size (CE-081), and whether a guide on open wood can make a small closed carton lie flat
+  on Seedance edits (CE-087, CE-094: no).
+- Re-measured 2026-10-10 on the frames still on disk: the Celsius cans stood nearer the lens than planned and than
+  the person and were measured against a head at the assumed same depth; the readings are unsettled between about
+  1× and 1.4×. So the §5 row stands for small flat packs against a same-plane neighbour (CE-009, CE-011) and is
+  unproven for cans without a guide; a product found nearer the lens than planned is a depth miss, a different
+  failure from oversize (CE-014, CE-015).

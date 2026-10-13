@@ -1,43 +1,41 @@
 ---
 name: atp-caught-errors
-description: "/analyze-then-pick keeps ATP/caught_errors.md, a feedback ledger of videos the user was not satisfied with (verbatim words, diagnosis, class, cause, fix, rule); written only via `atp.py caught-error add`, read at every run start, applied in plans/prompts/QC, promoted into references when general"
+description: "RETIRED 2026-10-13: /analyze-then-pick has no error ledger any more (caught_errors.md and `atp.py caught-error` removed); lessons live generalised in the references; a user's bad-video report is diagnosed in the brief and folded in with /update-from-errors"
 metadata:
+  node_type: memory
   type: project
+  originSessionId: 018f5736-eb42-45a5-8337-7d44d473e9a2
+  modified: 2026-10-13T16:35:59.351Z
 ---
 
-On 2026-10-08 the user asked for a file that catches errors from their feedback per video they
-were not satisfied with, with the issue and details, that the agents learn from on every run.
-Result: `~/.claude/analyze-then-pick/caught_errors.md` (entries `## CE-nnn · date · title` with
-video, run, mode, model, product, user said (verbatim), what was wrong, class, cause, fix, rule,
-status, promoted to), the toolkit command `atp.py caught-error add | list | set` (locked writes,
-auto ids), and wiring: command item 22, paths row, "Feedback first" before the mode question, A1
-and E1 read the ledger into `20-analysis/caught-errors.md`, X1 names applied entries, X2 carries
-their rules, X9 checks them by id, X9-R "Needs changes" writes an entry, the wrap-up invites
-feedback, Never rules; production-agents reading list and hard rule; generation-system §8, §9,
-§10 line; analysis-protocol §6; README; preprocessing usage; build prompt. Seeded with CE-001 to
-CE-005 (capsules count, bottle spout, paper through bottle, pasted can, oversized can), all
-promoted.
+History: on 2026-10-08 the user asked for a file of the videos they were not satisfied with
+(`~/.claude/analyze-then-pick/caught_errors.md`, `atp.py caught-error add | list | set`, command item
+22, read at A1/E1, applied in X1/X2/X9, fed by the agents and by the wrap-up feedback question). It
+grew to 94 entries (CE-001..CE-094, 1.3 MB, mostly attached briefs, prompts and QC verdicts).
 
-**Why:** the user wants every dissatisfaction recorded in their own words and turned into a
-rule the next runs apply, not a one-off fix.
+**Decision (user, 2026-10-13): errors are no longer inserted and saved in a different file.** The user
+ran `/update-from-errors analyze-then-pick` and asked to remove the caught_errors files, inserting each
+error entry completely into the pipeline, because the separate file was causing AI-agent context memory
+rot and "we've had enough cases covered to be generalized for a final pipeline". The pass consumed
+CE-029..CE-094 (never processed before), wrote every lesson into its owning section (generation-system
+§4b.1c/§4b.6/§5c.2b, anomaly-catalog §2.9/§2.15–§2.17, the Wan and Seedance guides, the command) and
+retired the ledger.
 
-**Sources (user, 2026-10-09):** agents ALSO feed the ledger (`--source agent`: errors caught in QC
-/ pre-gen / sync that cost a regeneration or survived the retry, recorded after the fix), AND the
-wrap-up asks the user for feedback once everything is delivered (AskUserQuestion "Feedback";
-each named problem → `--source user`, verbatim, with delivered details from result.json).
+**Why:** a growing ledger read at every run start rots the agents' context; the lessons belong in the
+owning sections as general rules (what to achieve, what to avoid) with short samples.
 
-**Agent entries carry compact, useful data (user, 2026-10-09):** `--assets` (paths + key specs),
-`--prompt <failed request.json>` (params auto-read), `--errors` (execution errors), `--evidence`
-(checkpoint, t, sheet). The working prompt is inserted ONLY after the new generation passes QC
-(`set --verified-prompt <passing request.json> --qc-pass "<verdict>"`; the tool refuses
-`--status fixed` without a passing verdict) — never on assumption. Runs read `list --digest`.
+**How to apply:**
+- Never recreate `caught_errors.md`, `atp.py caught-error`, `20-analysis/caught-errors.md` digests or
+  any other error file for analyze-then-pick. Agents write a regenerate reason or a flagged delivery in
+  the video's brief (an attempt block) and in `result.json`, nothing else.
+- When the user reports a bad video: take their words verbatim, diagnose in pipeline terms (stage that
+  made the miss, stage that should have caught it), say which section holds the rule, offer the fix; if
+  the miss is a kind the references do not hold, name `/update-from-errors analyze-then-pick "<their
+  words>"`.
+- `CE-nnn` in the references are case labels: the README explains them, `learning-log.md` maps each to
+  its section, the old file is in git history (last commit `aba83d3`).
+- Not affected, and not asked about: `caught_flags.md` (flag ledger, [[atp-caught-flags]]) and the
+  analyze-then-generate pipeline's own ledger ([[atg-pipeline]]). Both carry the same rot risk; suggest
+  retiring them only if the user raises it.
 
-**How to apply:** when the user reports a bad video, run `atp.py caught-error add` FIRST (their
-words verbatim, diagnosis, class, cause, fix, general rule) WITH the video's brief, final prompt
-and QC verdict (user, 2026-10-08: "video brief should come along with the error"): pass `--run`
-and `--video` so the saved brief (`40-briefs/video-NN-brief.md`, saved at X6), the newest request
-prompt and the plan attach themselves, or `--brief/--prompt/--qc` as text or files; then offer
-the fix. When a rule is
-general or recurs, promote it into the right reference, `caught-error set --status promoted
---promoted-to …`, and update the build prompt ([[atp-build-prompt-sync]]). Never edit the ledger
-by hand. Related: [[atp-anomaly-catalog]], [[atp-brand-guardrails]], [[atp-creative-direction]].
+Related: [[atp-anomaly-catalog]], [[update-from-errors-command]], [[atp-build-prompt-sync]].

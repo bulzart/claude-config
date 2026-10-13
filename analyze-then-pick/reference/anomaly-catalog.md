@@ -110,7 +110,10 @@ amount the cause explains, and whatever was taken exists somewhere (a hand, a mo
 is chewed. Two cans on the table are three after a cut. A six-pack never loses the can that was
 taken. A glass fills itself; a can pours a full glass and stays full. A bite leaves no bite mark. Two
 wrappers for one piece. A plate of cookies refills. A second strap. A twin bottle once the arm has
-passed. Two earbuds in the case and two in the ears.
+passed. Two earbuds in the case and two in the ears. A second hand or fist appears beside the product,
+invited by a sentence that named a forearm (CE-054, CE-085), or a dark object at the counter's end
+(CE-088). The object a hand grabs turns into the product and the count goes from 1 to 2 (CE-074). The pack
+is duplicated on a strip narrower than itself (CE-061).
 
 **Ledger.** A **count** column for every multiple and a **level** column for every vessel:
 `capsules | 3 | on the desk, right of the lamp | 4.0 s he walks past behind the desk, untouched: 3 | 7.5 s back at the desk; right hand takes two, mouth, swallow: 1 on the desk, 2 swallowed | end: 1`.
@@ -126,6 +129,10 @@ passed. Two earbuds in the case and two in the ears.
 - Restate the count after every exit, occlusion, cut, hand-off and seam (§3 step 4).
 - One exclusion in the model's syntax: "no capsule appears or disappears"; "only one pack"; "only
   one glass".
+- Name only the one hand in frame and the bare empty area beside the product ("only the hand resting on the
+  keyboard's left edge is in frame, no other hand is near the carton"): a sentence that also named a forearm
+  drew a second fist in CE-085 and CE-089 and held once (CE-054 a2); and name the object a hand picks up, so
+  it cannot turn into the product [VERIFIED CE-074 a2].
 
 **QC.** At every checkpoint where the anchor is visible, **count** and write the numbers in the QC
 note: the first frame, before the exit, after the re-entry, after each occlusion, after each cut,
@@ -396,6 +403,14 @@ across shots and after every cut for constancy. The same measurement is the "sca
   cm), the multiple vs distance (B: d, its basis, f), and whether the two agree. When the user's eye
   disagrees with a flag, it is re-measured, not defended; the other flags that rest on the same
   assumption are re-measured too.
+- **"It is close to the camera" is a number to compute, not a reason.** A placed product near the lens is
+  accepted at its apparent size only when A (with the depth ratio read from the frame) and B both put it
+  within the allowed multiple. A same-table neighbour (a notebook, a laptop) that the product looks as big
+  as or bigger than is a regenerate reason, and the retry moves the product to the neighbour's depth instead
+  of the lens-side corner. A carton was accepted as "large in frame because it sits at the table edge next to
+  the lens" and measured 1.27× (A) and 1.29× (B) afterwards; the client had already allowed for the camera
+  distance ("please check sizing of the box, I know it's close to the camera here, but it's next to the
+  notebook and seems really big in relation to the notebook", CE-034).
 - **Accept** within 15 %. **Note** between 15 and 25 % when the product is static, the label stays
   readable and nothing else fails (the sachet case).
 - **Regenerate** over 25 %, or when the size changes between shots or across a cut, or when a
@@ -404,11 +419,12 @@ across shots and after every cut for constancy. The same measurement is the "sca
 - **Retry:** the lever depends on the model. For a start-frame model, rebuild the start frame at the
   reckoned height. For a reference model whose guide lists size as a model limit (`wan3_0_prime`:
   `wan-3-0.md` §5), a wording retry on that product form is a re-roll: sizing words did not move a flat
-  pack against a same-plane neighbour (CE-009, CE-011). The one retry changes the form or the anchor
-  class from the guide's passing list, or none is spent and the best take ships flagged and recorded.
-  The guide holds the numbers and the forms its evidence covers; cans measured against a person's head
-  are unproven (CE-014, CE-015). For any other model: name the neighbour and the ratio, the depth and
-  the fraction of the frame, pad the reference and add the constancy line.
+  pack against a same-plane neighbour (CE-009, CE-011). The lever is the size-and-place guide
+  (`generation-system.md` §4b.6: eight takes within 1.25×), planned into the first request when the only free
+  surface is a near plane (CE-070), or an anchor class from the guide's passing list; a miss ships the best
+  take flagged and recorded. The guide holds the numbers and the forms its evidence covers; cans measured
+  against a person's head are unproven (CE-014, CE-015). For any other model: name the neighbour and the
+  ratio, the depth and the fraction of the frame, pad the reference and add the constancy line.
 
 ### 2.8 Body mechanics at the product
 
@@ -456,6 +472,25 @@ full-resolution frame (`T frames <video> --out <dir> --at <t> --max-side 1280`);
 count and attachment on every use beat.
 - **Regenerate** for a mirrored, rotated, migrated or changed label or part. A brief soft label at
   small scale while gripped is a **note**, or a **post-fix** when a punch-in removes it.
+
+**Legibility (a pixel budget).** *Achieve:* a label that must read reads at the delivered resolution.
+*Avoid:* "the main line reads" as a pass when the wordmark does not; upscaling as a fix. *Miss and cause:* the
+label of a small placed pack came back as letter-like shapes, the wordmark "Neuro" as "Nero", GUM as CUM,
+the title as "Eneryy & Focus" (the client: "the text on the box is very jumbled, maybe do at higher quality",
+CE-032; also CE-036, CE-042, CE-090, CE-093). A wordmark needs about 25 px of upright height; a flavour tag,
+a badge and fine print need about three times that; large type survives where a small wordmark does not. A
+pack at its honest size 1.5 m away has about 65 px of width at 1080p; a flat label at a 20° camera elevation
+shows 0.39 of its height; rotated a quarter turn it loses more. Higher resolution and tighter references
+raised sharpness, not the legibility of a small mark (1080p with 60 % padding gave exact large type and wrong
+small print at 1.9× size), and a layout reference that carried the label crisply at 14 px, rotated and
+foreshortened, did not either. **Plan:** estimate the label's pixel height from the size reckoning (§2.7) and
+the posture; when the wordmark would be a few pixels, choose an anchor that gives it more (held, standing
+frontal, nearer within the size rule) or record the limit before generating; never enlarge the pack to buy
+legibility. **QC:** read the label word by word on a full-resolution frame at rest against the asset
+(wordmark and flavour tag exact; fine print may blur but never turns into wrong letters); a wrong letter is
+a regenerate reason, never "OCR noise". **Guide:** a guide image copies its own soft label and thick edge, so
+its label is sharp at the video's pixel scale (CE-093). No fix has passed yet: the limit is recorded in the
+verdict and the take ships flagged.
 
 ### 2.10 Ownership and hand-offs (two or more people)
 
@@ -629,7 +664,9 @@ inherited into the scene; the reference's **camera angle** inherited instead of 
 **tight product crop** pulling the product to the foreground and up in size; the **anchor** chosen
 on an empty, unoccluded, edge-of-surface spot where nothing in the scene touches or shades it; the
 prompt describing the product's look but not the room's light on it; a start frame checked for
-geometry but not for blend.
+geometry but not for blend; a **layout or size guide that is itself a flat packshot paste**, copied as a
+flat sticker (CE-052, CE-069, CE-093); **grounding carried only by a small layout image and words** when the
+object's only large references are studio packshots (CE-044).
 
 **Ledger.** The anchor row carries the blend facts: the key light on that spot (direction, colour,
 dimness), the neighbour it is scaled against, the neighbour whose shadow it copies, what partly
@@ -647,6 +684,20 @@ own light:
   the same low angle as the dresser, with the same grain and focus as the bottle."
 - For a model that composites easily, choose an anchor that forces integration: partly behind a
   neighbour, touching another object, inside the lamp's falloff, never alone on an empty edge.
+- **State the material.** "The can reads as a real aluminium can in the room: a curved metal body with a soft
+  specular highlight, a faint reflection of the room, the label wrapped around the curve, shading darker
+  toward one side, a soft contact shadow, not a flat cut-out" (the material, curvature, highlight,
+  reflection, shading and contact shadow of the product at hand). Without it a layout-guided can came back
+  "like an animation or a photoshop placement" (CE-058, user) and a flat white rectangle with a packshot
+  edge; with it the paste test gave 0–1 signs [VERIFIED CE-058 a4, CE-064 a4].
+- **Put the grounding in the reference the object is drawn from.** A grounded layout image (the object at about
+  10 % of its area) plus grounding words did not ground a carton drawn from two studio packshots: hard clean
+  base, no cast shadow, no reflection, squared to the lens, the brightest block of a warm dim scene (CE-044).
+  Bind a close-up reference of the object itself on the real surface of the scene (about 40 % of the canvas:
+  cast shadow, reflection, the room's warm muted colour, the footage's softness, the object turned about
+  twelve degrees) as "the look and grounding reference", keep one packshot for the printed label only, and
+  keep any layout image as placement and scale only [VERIFIED CE-043 a3: soft directional cast shadow, a
+  bluish reflection tint, the base 43 px inside the steel band, brightness within the neighbours' range].
 - The exclusion in the model's syntax: "no studio lighting on the can, no cut-out edges, no glow;
   the can is not brighter than the room".
 - Start-frame models: the frame is checked with the paste test before it is animated. Reference
@@ -659,6 +710,14 @@ brightness and warmth of its whites against the nearest white object, shadow dir
 the neighbour's, sharpness and grain, label angle, ellipse geometry against the camera height,
 height against the neighbour per the affordance sheet, edge quality, footprint. Write the result
 in the verdict ("whites +1.5 stops over the door, no contact shadow, 2.4× the bottle: paste").
+- **Crop the base at 3×** on a full-resolution frame at rest and in use and compare its colour, contrast and
+  shadow with a same-scene neighbour: a cast shadow in the direction of the room's light, a reflection or
+  darkening where it meets a glossy or metal surface, its base well inside a surface (never on a seam or an
+  edge), its brightness, saturation and softness inside the scene's range. "Contact shadow present" written
+  without that crop passed a carton that "looks a bit fake underneath (like it is floating and lightning
+  doest match too)" (CE-043, user). **Any sign is a regenerate reason at any size**: "mild packshot
+  crispness" and "reads slightly flat white" are signs, not notes (CE-058, user: "video 04 can looks like an
+  animation or a photoshop placement").
 - **Regenerate** on any sign of a paste; it is the §4b "looks pasted in" reason. The retry fixes the
   named cause: scope the reference's lighting, write the room's light on the product, give the
   size against a neighbour, angle the mark, move the anchor into contact or partial occlusion,
@@ -673,7 +732,8 @@ in the verdict ("whites +1.5 stops over the door, no contact shadow, 2.4× the b
 visibly there and fixed (a counter, a desk, a grill's side shelf: a natural surface the source frame shows,
 never a prop that moves or is carried away, never a lean; CE-021), and sits where a person would really
 leave it. A flat sachet or pouch lies flat, label up;
-a carton lies flat or stands on its base; a can stands on its base. Nothing leans on a prop the model has
+a small flat carton lies flat on a bare surface (it stands on its base only for a reason the plan states;
+CE-059, CE-060); a can stands on its base. Nothing leans on a prop the model has
 to invent, nothing stands on its edge against a person, and nothing rests on or overlaps a thin sheet that
 hands move or write on. A placed product never takes a beat of the source (the pick-up, the use) that
 belongs to another object.
@@ -685,6 +745,10 @@ lies on the corner of an exam sheet; from 6 s the sheet's corner doubles and war
 grill shelf renders propped against the grill front, a carton planned flat renders upright (run 09, V11 and
 V12). A sachet leans against the grill front while the grill's side shelf, a natural surface the source
 shows, was free (CE-021); the retry that moved it onto the cutting board put it on a prop that is carried away.
+A stand-up pouch asked to lie flat renders standing at the forearm from frame 0 (CE-037, CE-041). A pack
+lands in the resting hand's lane and the hand covers or wraps it, the label garbles under the pass, and the
+hand "goes through it and teleports" (CE-072, CE-076, user). A pack is dropped on a laptop deck or a keyboard
+end where the free strip is narrower than the pack (CE-061, CE-084, CE-087, CE-092).
 
 **Ledger.** The anchor row carries the posture (flat / on its base / in hand), the support (bare surface or
 a named solid object that is in frame), the clearance to the nearest working hand, arm or sheet, and the
@@ -706,9 +770,13 @@ hand-width is a note, CE-012's accepted take had about 0.2), the sheet region fo
 is near, and the story reason written as its own line of the verdict.
 - **Regenerate** on a lean against nothing, a posture the shape cannot take, a pack touching a working hand
   or arm, a doubled or warped sheet, or a source beat taken over. No post-fix.
+- **Hand lanes:** each hand's path over the whole clip (resting, writing, page-turning, pick-up sweeps) stays
+  clear of the pack; a hand that covers, wraps or passes through it, or a teleport, is a regenerate reason
+  (CE-072, CE-076).
 - **Retry:** re-plan the posture and the place (flat on bare near-side surface, on the fixed natural surface
-  the source shows, or in hand) and drop any prop the model has to invent or that moves; the sizing words
-  are not the lever (§2.7).
+  the source shows, or in hand; a spot that passes `generation-system.md` §4b.1c) and drop any prop the model
+  has to invent or that moves; a size-and-place guide that shows the pack in its posture and place
+  (`generation-system.md` §4b.6) is the lever for posture and size; the sizing words are not (§2.7).
 
 ### 2.17 Identity: the swapped face matches the kept body (skin tone, build, age)
 
@@ -728,6 +796,26 @@ plus an exclusion against a face lighter or darker than the hands.
 **QC.** On a full-resolution frame with the face and a hand or forearm together, compare their tone and
 write the observation and the frame path in the verdict (agents record "skin tone face vs hands: match,
 frame <path>"); an unchecked item counts as failed. **Regenerate** on a visible mismatch; no post-fix.
+
+**Identity reference hygiene.** The identity image brings everything in it. *Achieve:* a reference that
+carries the face and nothing else of the person. *Avoid:* clothing, lettering and props in it. *Miss and
+cause:* the swapped man was re-dressed in the photo's lilac overshirt in some rolls though the prompt scoped
+the photo to face and hair (CE-035); a chest print cut by the photo's edge was finished by the model as an
+upside-down mirrored second line, in every frame (CE-039); the source's round glasses stayed because the
+prompt named them as the thing replaced (CE-090); the photo's open eyes replaced a source face that was
+hidden or had closed eyes (CE-053, CE-055, CE-062); a clone wearing the same face kept the replaced
+performer's face (CE-047, CE-051). *Prompt:* crop the identity image above the collar (head and neck on a
+neutral grey) when its clothing differs from the kept garment, name the kept garment from the source in
+positive words (colour, collar, sleeves, pattern) and put the photo's garment in the exclusion line by name
+[CE-035: kept the polo in 2 of 2 rolls; not verified, the takes failed on the label]; when the photo's
+clothing carries lettering that the frame cuts off, crop above the print and state "a plain black crew-neck
+t-shirt with no print, no lettering and no logo" with "no text or print on the t-shirt" [VERIFIED CE-039 a2:
+plain tee, OCR none]; describe the identity's glasses and accessories positively ("black rectangular
+frames"), never by negating the source's; state a hidden face or closed eyes of the source in words (held in
+CE-077 a1); bind a second body that wears the same face to the identity image in positive words (CE-047,
+VERIFIED on the retry). A photo that is a mirrored selfie has its lettering read first and is flipped
+(`generation-system.md` §5c.2b). *QC:* compare the garment, the accessories and every printed line on a
+full-resolution frame; a costume change or a reversed print is a regenerate reason.
 
 ## 3. The prompting stack (in order, per video)
 
@@ -749,7 +837,8 @@ frame <path>"); an unchecked item counts as failed. **Regenerate** on a visible 
    the model's exclusion syntax. A generic list never replaces it.
 7. **References**: when the model takes images, one view that shows the part in its ready state;
    never a view that shows a later state than t=0 (an open tab for a can cracked on screen); tight
-   product crops padded small.
+   product crops padded small; a size-and-place guide where the model lists size or place as a limit
+   (`generation-system.md` §4b.6); identity images cropped to the face (§2.17).
 8. **QC checkpoints** listed in the plan: every use beat, exit and re-entry, occlusion, cut,
    hand-off, pour and seam, plus the first and last second, each with its time range and the counts
    and states expected there. They become the `--dense` arguments of X9.
@@ -778,7 +867,9 @@ frame <path>"); an unchecked item counts as failed. **Regenerate** on a visible 
    multiple of the expected size and the method written in the verdict, constancy across cuts; a
    verdict from one assumed number is provisional and is viewed on the frame first (§2.7).
 5e. **Identity match** on a full-resolution frame with the face and a hand or forearm: same skin tone, age
-   and build as the kept body, with the frame path in the verdict (§2.17; CE-029).
+   and build as the kept body, the garment and every printed line of the kept clothing as planned (no costume
+   change, no reversed or invented print), with the frame path in the verdict (§2.17; CE-029, CE-035,
+   CE-039).
 5c. **Blend** on one full-resolution frame at rest and one during any interaction: the eleven-sign
    paste test against the nearest neighbour at the same depth (§2.15).
 5e. **Posture, support and place** at 30 fps across every rest and every pass of a hand or sheet: the
@@ -798,10 +889,14 @@ frame <path>"); an unchecked item counts as failed. **Regenerate** on a visible 
    (Recreate): the reference's ORIGINAL track is one whole segment under the whole timeline, a stream
    copy (identical hash or a null-test residual of silence), the duration equal to the reference's, no
    splice. The evidence path of each of these checks goes in `result.json` (`continuity`).
+5h. **Label legibility** on a full-resolution frame at rest: the wordmark and the flavour tag read exactly,
+   word by word against the asset (fine print may blur but never become wrong letters), the frame path in
+   the verdict; a wrong letter is a regenerate reason (§2.9; CE-032, CE-036, CE-042, CE-090, CE-093). **Hand
+   lanes:** no hand covers, wraps or passes through the product in any beat (§2.16; CE-072, CE-076).
 6. **Scale**: the product against a hand or face on two or three sheets.
 7. **Ownership** after every hand-off; who uses what.
 8. **Verdict** (`generation-system.md` §9): **regenerate** on any break in §2.1–§2.5, §2.8–§2.10,
-   §2.14, §2.15, §2.16, on a failed step 5f (an anchor missing in the opening seconds or moving without a
+   §2.14, §2.15, §2.16, §2.17, on a failed step 5f (an anchor missing in the opening seconds or moving without a
    cause; a step 5g break is fixed in the CapCut project, not by regeneration) and on physics breaks in
    §2.6, §2.11, §2.12; **post-fix** only in the cases each class names (an
    untouched static anchor's pixel hold, a one-frame trim, a recolour in a locked shot, a punch-in);
@@ -828,6 +923,11 @@ size (wan3_0_prime): carton 163 px vs ~95 expected = 1.71× vs the bottle → re
 anchor: can absent 0.0–4.2 s, appears at the left foreground at 4.3 s → regenerate (never a note); the 0–1 s dense sheet shows an empty table. | can at 1.0 s left of the table end, at 2.0 s one laptop-width to the right, no action, no cut → regenerate; read against the table edge every 0.25 s.
 timeline: overlay clip visible on 2.93–3.0 s as a bright rectangle on the fading picture → the overlay is cut to the frames its element is visible and faded with the picture; hold frames under the flash replaced by real-motion fades into pure white; original audio one segment, stream copy, hash identical.
 posture: sachet upright against the forearm 4.8–6.0 s @30 fps, 0 px gap to the arm, no support under its edge → regenerate; retry: flat on bare near-side surface, a band of bare surface to the arm, the story reason; exclusion "no standing, leaning, propped or tilted sachet".
+label: wordmark reads "Nero" at 14 px (rotated, foreshortened), Energy & Focus exact, GUM badge reads CUM → regenerate; the pack is at its honest size, so it is not enlarged: the anchor gives the wordmark ≥ 25 px upright or the limit is recorded (CE-042, CE-036).
+blend: 3× base crop at 1.0 s: hard clean edge, no cast shadow, no reflection, the brightest block of the scene → regenerate (never "contact shadow present" without the crop); retry: a close-up reference of the carton on the steel bound as the look and grounding reference (CE-043, CE-044).
+lane: can behind the resting hand; the left hand covers its lower half 2.2–3.3 s and seems to go through it → regenerate; retry: the user's marked bottom-left spot with a size-and-place guide, every hand passes behind it (CE-076, CE-081).
+guide: Image 4 shows the carton on the source desk crop at 0.65× the first take, perspective and shadow kept; take: 11.1 % of the frame height, A 1.20× (key pitch), B 1.02× (distance), agree → accept (CE-054).
+orientation: shirt print reads reversed, the guitar is left-handed, the pouch label reads correctly → regenerate; cause: a mirrored selfie source; retry: Video 1 and the identity photo flipped, "nothing is mirrored" (CE-030).
 ```
 
 ## 5. Quick reference
@@ -850,3 +950,6 @@ posture: sachet upright against the forearm 4.8–6.0 s @30 fps, 0 px gap to the
 | a thrown, dropped or passing thing goes through the product; the product sinks or shows through; a hit without a consequence; wrong occlusion order | path row; occlusion note | "it arcs past the bottle on its far side and lands behind it; the bottle is not touched"; "hits the can, bounces off; the can rocks and settles"; "nothing passes through the bottle" | every pass-near, landing and hit at 30 fps; silhouettes, depth order, consequence | regenerate (no post-fix) |
 | the product reads as a paste: brighter or cooler than the room, flat front light, no contact shadow, crisper than the plate, packshot pose, wrong perspective, wrong size, hard edges, on an empty edge | anchor row with the light on the spot, the neighbour for scale and shadow, the occluder, the mark angle | "@ImageN defines only shape, proportions, colours and label; not its lighting, exposure, background or camera angle"; "lit by the same warm, dim ceiling light as the bottle beside it, a third shorter than it, label about 30° away, soft contact shadow to the right like the bottle's, seen from the same low angle" | one full-res frame at rest and one in use: the eleven-sign paste test against the nearest neighbour | regenerate (local regrade only for a static untouched product failing on exposure alone) |
 | a placed pack stands on its edge or leans on nothing, rests on a thin sheet, touches a working hand or arm, or takes over a source beat | the anchor row: posture, support, clearance, story reason | "lies flat on its wide face, label up, entirely on the bare marble at the near edge, a band of bare marble wider than itself to his forearm, where someone sets a sachet down out of the way"; "no standing, leaning, propped or tilted sachet, no sachet on a sheet" | every rest and every pass of a hand or sheet at 30 fps: posture, support, clearance, the sheet region; the story reason as its own line | regenerate (no post-fix) |
+| a label that must read comes out as wrong letters (Nero, CUM) while large type reads | the affordance sheet's label words; the pixel budget of the posture and size | the label clause "exactly as in @ImageN" in the model's grammar; the guide's label sharp | a full-resolution frame at rest, word by word against the asset | regenerate (no post-fix; upscaling is no fix) |
+| the pack lands in a hand's lane, on a laptop deck or keyboard, in the nearest plane or off the camera path | the anchor row from t=0 with the hand-lane map and the path coverage (`generation-system.md` §4b.1c) | "exactly where Image 4 shows it … keeps exactly the size it has in Image 4"; the neighbours that stay; the one hand and the bare empty area | every beat at 30 fps: hands, support, frame 0, the whole path | regenerate (no post-fix) |
+| a mirrored source: reversed print, handed objects, reversed signs beside a correctly read label | the card's source flag; the prepared copy flipped (`generation-system.md` §5c.2b) | "Video 1 is already in true orientation; nothing is mirrored; all lettering reads left to right" | every readable thing and handed object on a full-resolution frame | regenerate |

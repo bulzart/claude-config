@@ -2628,36 +2628,8 @@ def _count_frames(path) -> tuple[int, float]:
     return int(s.get("nb_read_frames", 0) or 0), fps
 
 
-CAUGHT_ERRORS = ATP_HOME / "caught_errors.md"
-CE_CAUSES = ["prompt", "reference", "parameter", "plan", "qc-miss", "model-limit", "unknown"]
-CE_STATUS = ["open", "fixed", "promoted"]
-
-
-def _ce_parse(text: str) -> list:
-    """Entries of caught_errors.md: '## CE-nnn · date · title' headings with '- **field:** value' lines."""
-    entries, cur, last = [], None, None
-    for line in text.splitlines():
-        m = re.match(r"^## (CE-\d{3,}) · (\S+) · (.*)$", line)
-        if m:
-            cur = {"id": m.group(1), "date": m.group(2), "title": m.group(3).strip()}
-            entries.append(cur); last = None
-            continue
-        if cur is None:
-            continue
-        m = re.match(r"^- \*\*([a-z][a-z ]*):\*\* ?(.*)$", line)
-        if m:
-            last = m.group(1).strip().replace(" ", "_")
-            cur[last] = m.group(2).strip()
-            continue
-        if last and line.startswith("  ") and line.strip():
-            body = line[2:]
-            if last in ("brief", "prompt", "qc", "verified_prompt", "prompt_change", "errors"):
-                if body.strip().startswith("```"):
-                    continue
-                cur[last] = (cur[last] + "\n" + body).strip("\n")
-            else:
-                cur[last] = (cur[last] + " " + line.strip()).strip()
-    return entries
+# Helpers below are shared by the caught-flag ledger (caught_flags.md). The caught-error ledger
+# (caught_errors.md) was retired on 2026-10-13: its lessons live in the references.
 
 
 def _ce_text_or_file(v):
@@ -2773,140 +2745,6 @@ def _ce_block_field(name: str, text: str) -> str:
         return f"- **{name}:** not recorded\n"
     lines = "\n".join("  " + l for l in text.splitlines())
     return f"- **{name}:**\n  ```text\n{lines}\n  ```\n"
-
-
-def cmd_caught_error(a):
-    """The feedback ledger (caught_errors.md at the library root): add an entry for a video the user
-    was not satisfied with, list the entries that apply to a run, or set an entry's status."""
-    if not CAUGHT_ERRORS.exists():
-        CAUGHT_ERRORS.write_bytes(b"# Caught errors: the feedback ledger\n")
-    if a.action == "list":
-        entries = _ce_parse(CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n"))
-        def keep(e):
-            if a.mode and a.mode.lower() not in (e.get("mode", "") + " any all").lower(): return False
-            if a.model and a.model.lower() not in (e.get("model", "") + " any all unknown").lower(): return False
-            if a.cls and a.cls.lower() not in e.get("class", "").lower(): return False
-            if a.status and e.get("status", "").lower() != a.status.lower(): return False
-            if a.grep and a.grep.lower() not in json.dumps(e, ensure_ascii=False).lower(): return False
-            return True
-        sel = [e for e in entries if keep(e)]
-        if a.digest:
-            def short(s, n=240):
-                s = re.sub(r"\s+", " ", s or "").strip()
-                return s if len(s) <= n else s[:n - 1] + "…"
-            skip = ("", "not recorded", "none", "unknown", "—")
-            sel = [{k: v for k, v in {
-                "id": e["id"], "title": e["title"], "source": e.get("source", "user"), "status": e.get("status", ""),
-                "mode": e.get("mode", ""), "model": e.get("model", ""), "product": e.get("product", ""),
-                "assets": e.get("assets", ""), "class": e.get("class", ""), "evidence": e.get("evidence", ""),
-                "wrong": short(e.get("what_was_wrong", "")), "params": e.get("params", ""),
-                "errors": short(e.get("errors", ""), 300), "rule": e.get("rule", ""),
-                "verified": e.get("verified", ""), "prompt_change": e.get("prompt_change", ""),
-            }.items() if v not in skip} for e in sel]
-        elif a.rules:
-            sel = [{"id": e["id"], "title": e["title"], "class": e.get("class", ""), "status": e.get("status", ""),
-                    "rule": e.get("rule", "")} for e in sel]
-        out({"ok": True, "file": str(CAUGHT_ERRORS), "total": len(entries), "count": len(sel), "entries": sel})
-    if a.action == "set":
-        if not a.id:
-            fail("--id CE-nnn is required", 2)
-        with FileLock(CAUGHT_ERRORS.with_suffix(".lock")):
-            text = CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n")
-            m = re.search(rf"^## {re.escape(a.id)} · .*$", text, re.M)
-            if not m:
-                fail(f"{a.id} not found", 1)
-            nxt = re.search(r"^## CE-", text[m.end():], re.M)
-            s, e = m.start(), (m.end() + nxt.start()) if nxt else len(text)
-            block = text[s:e]
-            if a.status == "fixed" and not a.qc_pass:
-                fail("--status fixed needs --qc-pass: the verdict of the regenerated (or re-edited) video that passed QC "
-                     "or that the user approved; a fix is recorded only once it is verified", 2)
-            if a.verified_prompt:
-                if not a.qc_pass:
-                    fail("--verified-prompt needs --qc-pass: insert the working prompt only after the new generation "
-                         "came back correct and passed QC", 2)
-                vp = _ce_text_or_file(a.verified_prompt)
-                pm = re.search(r"^- \*\*prompt:\*\*\n  ```text\n(.*?)\n  ```", block, re.S | re.M)
-                old_prompt = "\n".join(l[2:] for l in pm.group(1).splitlines()) if pm else ""
-                change = _ce_sentence_diff(old_prompt, vp) if old_prompt else ""
-                vparams = _ce_params(a.verified_prompt)
-                new_fields = (_ce_block_field("verified prompt", vp)
-                              + _ce_block_field("prompt change", change or "not computed (the entry has no failed prompt)")
-                              + (f"- **verified params:** {vparams}\n" if vparams else ""))
-                block, n = re.subn(r"^- \*\*verified prompt:\*\* pending.*\n", lambda m: new_fields, block, count=1, flags=re.M)
-                if not n:
-                    block = block.rstrip("\n") + "\n" + new_fields + ("\n" if nxt else "")
-                a.status = a.status or "fixed"
-                a.fix = a.fix or "regenerated with the verified prompt; see prompt change"
-            if a.qc_pass:
-                vline = f"- **verified:** {a.qc_pass.strip()} ({dt.date.today().isoformat()})\n"
-                block, n = re.subn(r"^- \*\*verified:\*\* .*\n", lambda m: vline, block, count=1, flags=re.M)
-                if not n:
-                    block = block.rstrip("\n") + "\n" + vline + ("\n" if nxt else "")
-            for key, val in (("status", a.status), ("promoted to", a.promoted_to), ("fix", a.fix)):
-                if val:
-                    block, n = re.subn(rf"^- \*\*{key}:\*\* .*$", f"- **{key}:** {val}", block, count=1, flags=re.M)
-                    if not n:
-                        block = block.rstrip("\n") + f"\n- **{key}:** {val}\n"
-            text = text[:s] + block + text[e:]
-            CAUGHT_ERRORS.write_bytes(text.encode("utf-8"))
-        out({"ok": True, "id": a.id, "status": a.status, "promoted_to": a.promoted_to, "file": str(CAUGHT_ERRORS)})
-    # add
-    need = ("title", "wrong", "rule") if a.source == "agent" else ("title", "user", "wrong", "rule")
-    missing = [k for k in need if not getattr(a, k)]
-    if missing:
-        fail("missing " + ", ".join("--" + k for k in missing)
-             + (" (an agent entry needs the diagnosis and the rule)" if a.source == "agent"
-                else " (the user's words, the diagnosis and the rule are required)"), 2)
-    with FileLock(CAUGHT_ERRORS.with_suffix(".lock")):
-        text = CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n")
-        ids = [int(x) for x in re.findall(r"^## CE-(\d{3,}) · ", text, re.M)]
-        cid = f"CE-{(max(ids) + 1) if ids else 1:03d}"
-        date = a.date or dt.date.today().isoformat()
-        user = (a.user or "").strip().strip('"')
-        said = f"\"{user}\"" if user else "— (caught by the agent during the run)"
-        auto = _ce_autofind(a.run, a.video)
-        brief = _ce_text_or_file(a.brief) or (_ce_text_or_file(auto["brief"]) if "brief" in auto else "")
-        prompt = _ce_text_or_file(a.prompt) or (_ce_text_or_file(auto["prompt"]) if "prompt" in auto else "")
-        qc = _ce_text_or_file(a.qc) or auto.get("qc", "")
-        delivered = a.delivered or auto.get("delivered", "")
-        plan = a.plan or (str(auto["plan"]) if "plan" in auto else "")
-        req_src = a.prompt if (a.prompt and str(a.prompt).lower().endswith(".json")) else (None if a.prompt else auto.get("prompt"))
-        params = a.params or _ce_params(req_src)
-        errors = _ce_text_or_file(a.errors)
-        attached = [k for k, v in (("brief", brief), ("prompt", prompt), ("qc", qc), ("plan", plan)) if v]
-        ctx = (_ce_block_field("brief", brief)
-               + _ce_block_field("prompt", prompt)
-               + f"- **params:** {params or 'not recorded'}\n"
-               + (_ce_block_field("errors", errors) if errors else "- **errors:** none\n")
-               + f"- **evidence:** {a.evidence or 'not recorded'}\n"
-               + _ce_block_field("qc", qc)
-               + f"- **plan:** {plan or 'not recorded'}\n")
-        block = (f"\n## {cid} · {date} · {a.title.strip()}\n"
-                 f"- **source:** {a.source}\n"
-                 f"- **video:** {a.video or 'unknown'}\n"
-                 f"- **run:** {a.run or 'unknown'}\n"
-                 f"- **delivered:** {delivered or 'not recorded'}\n"
-                 f"- **mode:** {a.mode or 'unknown'}\n"
-                 f"- **model:** {a.model or 'unknown'}\n"
-                 f"- **product:** {a.product or 'unknown'}\n"
-                 f"- **assets:** {a.assets or 'not recorded'}\n"
-                 f"- **user said:** {said}\n"
-                 f"- **what was wrong:** {a.wrong.strip()}\n"
-                 + ctx +
-                 f"- **class:** {a.cls or 'new'}\n"
-                 f"- **cause:** {a.cause}\n"
-                 f"- **fix:** {a.fix or 'none yet'}\n"
-                 f"- **verified prompt:** pending (inserted only after a new generation passes QC)\n"
-                 f"- **rule:** {a.rule.strip()}\n"
-                 f"- **status:** {a.status or 'open'}\n"
-                 f"- **promoted to:** {a.promoted_to or '—'}\n")
-        CAUGHT_ERRORS.write_bytes((text.rstrip("\n") + "\n" + block).encode("utf-8"))
-    missing_ctx = [k for k in ("brief", "prompt") if k not in attached]
-    out({"ok": True, "id": cid, "date": date, "title": a.title.strip(), "file": str(CAUGHT_ERRORS),
-         "attached": attached, "missing": missing_ctx,
-         "note": ("attach the brief and the final prompt (--brief/--prompt, text or file; or --run + --video to find them) so the cause can be read; " if missing_ctx else "")
-                 + "promote the rule into its reference when it is general or recurs, then `caught-error set --status promoted --promoted-to …`"})
 
 
 CAUGHT_FLAGS = ATP_HOME / "caught_flags.md"
@@ -4130,38 +3968,6 @@ def main():
     p.add_argument("--ok-pct", type=float, default=15.0); p.add_argument("--note-pct", type=float, default=25.0)
     p.add_argument("--out", help="write the result as JSON")
     p.set_defaults(fn=cmd_scale)
-
-    p = sp.add_parser("caught-error", help="the feedback ledger caught_errors.md: add | list | set")
-    p.add_argument("action", choices=["add", "list", "set"])
-    p.add_argument("--id", help="set: the entry id (CE-nnn)")
-    p.add_argument("--title", help="add: a short title"); p.add_argument("--date", help="add: YYYY-MM-DD (default today)")
-    p.add_argument("--video", help="video number or CapCut project name"); p.add_argument("--run", help="run id")
-    p.add_argument("--mode", help="analyze-recreate | analyze-create | edit (list: filter)")
-    p.add_argument("--model", help="model id (list: filter)"); p.add_argument("--product", help="client product")
-    p.add_argument("--user", help="add: the user's words, verbatim")
-    p.add_argument("--wrong", help="add: what was wrong, diagnosed in pipeline terms")
-    p.add_argument("--class", dest="cls", help="reference and section, e.g. 'anomaly-catalog.md §2.7' (list: filter)")
-    p.add_argument("--cause", choices=CE_CAUSES, default="unknown")
-    p.add_argument("--fix", help="what was done (regenerate with …, post-fix, none)")
-    p.add_argument("--rule", help="add: the general rule, as a kind not an instance")
-    p.add_argument("--status", choices=CE_STATUS, help="add: initial status (open); set: new status; list: filter")
-    p.add_argument("--promoted-to", help="set: the reference and section the rule was promoted into")
-    p.add_argument("--brief", help="add: the video's brief, as text or a file (default: <run>/40-briefs/video-NN-brief.md when --run and --video are given)")
-    p.add_argument("--prompt", help="add: the final prompt sent, as text or a request .json (default: the newest <run>/50-requests/video-NN*-request.json)")
-    p.add_argument("--qc", help="add: the QC verdict and its reasons, as text or a file")
-    p.add_argument("--plan", help="add: the plan file path (default: <run>/40-briefs/video-NN-plan.md)")
-    p.add_argument("--source", choices=["user", "agent"], default="user",
-                   help="add: user = the user's feedback (--user required); agent = an error an agent caught during the run")
-    p.add_argument("--delivered", help="add: what was delivered (CapCut project, final file); default from <run>/60-outputs/video-NN/result.json")
-    p.add_argument("--assets", help="add: product/asset files used + key specs, e.g. '<path> (9-piece carton 7.5×7.5×1.6 cm)'")
-    p.add_argument("--params", help="add: generation params (default: read from the failed request .json)")
-    p.add_argument("--errors", help="add: execution errors (Higgsfield errors, preflight adjustments, moderation, failed jobs), text or file")
-    p.add_argument("--evidence", help="add: where it shows: checkpoint, time range, sheet or frame path")
-    p.add_argument("--verified-prompt", help="set: the prompt (text or request .json) of the regeneration that PASSED QC; needs --qc-pass")
-    p.add_argument("--qc-pass", help="set: the passing verdict of the new generation (or the user's approval); required for --status fixed")
-    p.add_argument("--digest", action="store_true", help="list: compact context for the next run's agents (no briefs or full prompts)")
-    p.add_argument("--grep", help="list: substring over the whole entry"); p.add_argument("--rules", action="store_true", help="list: ids and rules only")
-    p.set_defaults(fn=cmd_caught_error)
 
     p = sp.add_parser("caught-flag", help="the flag ledger caught_flags.md: add | list | set | reconcile")
     p.add_argument("action", choices=["add", "list", "set", "reconcile"])

@@ -97,7 +97,7 @@ You are running the **/analyze-then-pick** command.
    - **Analyze Mode generates every video clean.** It places all overlay text ("POV: …", "when …",
      hooks, captions) afterwards as **CapCut text layers** at the reference text's height and
      timing, always **horizontally centred** (posX 0; when centred text would cover the product, a
-     face or an insert, it moves up or down, never sideways; caught error CE-010)
+     face or an insert, it moves up or down, never sideways; CE-010)
      (`reference/capcut-assembly.md`).
      - The wording keeps the reference's role and format.
      - A generic meme line may stay as written; source-specific wording is rewritten.
@@ -297,26 +297,22 @@ You are running the **/analyze-then-pick** command.
     floor (`generation-system.md` §9b rows 1–6) and the generation service's blocks apply;
     alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
     them, and nothing is blurred, softened or removed for taste.
-22. **Caught errors: the pipeline learns from every video the user was not satisfied with**
-    (`ATP/caught_errors.md`, written only with `T caught-error`). Whenever the user says a
-    delivered video is wrong, in the run or in a later session, an entry is written first, with
-    their words verbatim, the diagnosis in pipeline terms, the class (reference and section), the
-    cause (prompt, reference, parameter, plan, qc-miss, model-limit), the fix and a general rule,
-    **and the video's brief, the final prompt and the QC verdict** so the cause can be read
-    against what was planned and asked (with `--run` and `--video` the command attaches the saved
-    brief, the newest request's prompt and the plan path itself; `--brief`, `--prompt`, `--qc`
-    take text or a file for a video from an earlier session); Edit Mode's "Needs changes" always
-    writes one. **Two sources feed it:** the agents record, with `--source agent`, every error
-    they caught that cost a regeneration or survived the retry (after fixing it, as always); and
-    once every video is delivered, the wrap-up **asks the user for feedback**, and each problem
-    they name is recorded with `--source user` and the video's details (CapCut project, final
-    file, credits and the run's QC verdict, read from `result.json`). A user entry outranks an
-    agent entry on the same point. Every run reads the ledger at the start (A1,
-    E1) and writes the entries that apply (same mode, model, product family or class) to
-    `20-analysis/caught-errors.md`; every plan names the entries it applies, every prompt carries
-    their rules in the model's phrasing, and X9 checks each applied entry by id in the verdict.
-    An entry whose rule is general, or that recurs, is promoted into the reference it belongs to
-    and marked `promoted` with the pointer; the entry stays as the record.
+22. **No error ledger: the rules live in the pipeline.** Every lesson learned from a video that went wrong
+    (the user's reports, the agents' regenerate reasons) is written, generalised, in the section that owns
+    it (`reference/`, the model guides): as a kind (what to achieve, what to avoid) with the miss, its
+    cause, the corrected wording and what worked as the sample beside it. There is no `caught_errors.md`,
+    no `T caught-error`, no per-run digest of past errors, and nothing in a run reads or writes an error
+    file: the plan, the prompt and QC follow the references. `CE-nnn` in the references are case labels of
+    those lessons (`README.md`). **When a delivered video is wrong**, in the run or in a later session:
+    take the user's words verbatim, diagnose them in pipeline terms (the stage that made the miss and the
+    stage that should have caught it), say which section already holds the rule and why it did not
+    prevent this video, and offer the fix (a re-edit or a regeneration of that video in its mode); when the
+    miss is a kind the references do not hold, say so in one line and name `/update-from-errors
+    analyze-then-pick` with the user's words as its argument, which generalises them into the owning
+    sections. A user's word outranks the agents' QC on the same point: the user saw what QC passed. **The
+    agents** write a regenerate reason or a flagged delivery in the video's brief (an attempt block with the
+    failed request, the verdict and what changed) and in `result.json` (`reference/production-agents.md` §3
+    item 12); nothing is written to the library.
 23. **Caught flags: every prompt and video that Higgsfield flagged is recorded**
     (`ATP/caught_flags.md`, written only with `T caught-flag`). A flag is any time Higgsfield
     refuses, blocks, withholds or reroutes something during the run: a moderation or policy
@@ -353,7 +349,6 @@ You are running the **/analyze-then-pick** command.
 | `T` | `"$PY" "$ATP/scripts/atp.py"`. Every call prints one JSON object on its last line; run through Bash |
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` |
-| Caught errors | `ATP/caught_errors.md` (item 22): `T caught-error add | list | set`; read at A1 / E1, applied in X1, X2, X9 |
 | Caught flags | `ATP/caught_flags.md` (item 23): `T caught-flag add | set | list | reconcile`, `T ledger set --flagged`; read at A1 / E1, checked in X4, written in X7, reconciled in A9b and §6 |
 | References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
@@ -380,14 +375,13 @@ You are running the **/analyze-then-pick** command.
      recreate elements."
 
    **Feedback first.** If `$ARGUMENTS` or the opening message reports a delivered video as wrong
-   (it names a video, a CapCut project or a run and says what was not right), record it before
-   anything else: `T caught-error add` with the user's words verbatim, the diagnosis, the class,
-   the cause, the fix if known and the rule, plus the video's brief and prompt (item 22): find
-   the run under `ATP/runs/` by the video's CapCut project name or date and pass `--run` and
-   `--video` so they attach themselves; when the run cannot be found, ask the user once for the
-   brief or the prompt they used, or record it with "not recorded" and say so. Then offer the fix
-   (a re-edit or a regeneration of that video in its mode) in one line, and continue only if the
-   user wants it.
+   (it names a video, a CapCut project or a run and says what was not right), handle it before
+   anything else (item 22): find the run under `ATP/runs/` by the video's CapCut project name or date
+   and read its brief, its final prompt and its QC verdict (`40-briefs/`, `50-requests/`,
+   `60-outputs/video-NN/result.json`); when the run cannot be found, ask the user once for the brief or
+   the prompt they used. Say in two lines which stage made the miss and which reference section holds the
+   rule, then offer the fix (a re-edit or a regeneration of that video in its mode) in one line, and
+   continue only if the user wants it.
    **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate` or `create`, use it. Otherwise ask
    with AskUserQuestion (header "Analyze as"):
    - **Recreate**: "Analyze the references, then recreate N of them with your product and
@@ -453,15 +447,7 @@ You are running the **/analyze-then-pick** command.
 ## 3. Analyze Mode
 
 ### A1. Inventory and preprocessing (deterministic, local)
-- **Caught errors first** (item 22): `T caught-error list --digest` and read every entry (the
-  compact view: product and assets, model and params, class, evidence, errors, rule, and the
-  verified prompt change where one exists). A verified prompt change is reused in the locked
-  model's phrasing; an unverified entry tells only what to avoid. Write
-  `20-analysis/caught-errors.md`: the entries that apply to this run (same mode, the locked model,
-  the client's product family, or a class any video may hit) with their rules, one line each, and
-  which step applies each (plan, prompt, QC, ideation). Promoted entries are listed by their
-  pointer; open ones in full.
-- **Caught flags next** (item 23): `T caught-flag list --digest` and read every entry (the kind,
+- **Caught flags first** (item 23): `T caught-flag list --digest` and read every entry (the kind,
   Higgsfield's response, the params, the flagged video, the suspected trigger, what was changed,
   and the cleared prompt where there is one). Write `20-analysis/caught-flags.md`: the entries
   that apply to this run (the locked model, the tools it will call, a trigger a plan could
@@ -559,8 +545,12 @@ You are running the **/analyze-then-pick** command.
       - **swap**: its analog in the same form exists;
       - **contents**: the product's category sits in another vessel whose action matters;
       - **placement**: nothing analogous.
-      For contents and placement, also record the placement opportunities: free or busy hands,
-      nearby surfaces, and the light on them.
+      For contents and placement, also record the placement opportunities: free or busy hands and
+      each hand's lane over the whole clip, nearby surfaces, the region that stays bare and in frame along
+      the whole camera path, and the light on them (`generation-system.md` §4b.1c).
+    - its **source preparation flags** (`generation-system.md` §5c.2b; protocol §3): a mirrored selfie, burned-in
+      text on a flat surface, a real person's name or a patch on screen, a baked face effect, the cut
+      structure (many hard cuts, a person alternating with person-free shots), the camera path;
     - its **object use and counts** (protocol §2.8; `anomaly-catalog.md` §2): for every handled
       object, the part used, the preparation step, the contact point, the hand and the head angle;
       the count of every multiple over time; the path of every thrown, dropped or passing thing
@@ -686,6 +676,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   - for a placement, the anchor class the locked model renders at size: where its guide lists size
     as a model limit (`wan3_0_prime`, `wan-3-0.md` §5), an in-hand, swap or large same-plane
     neighbour anchor ranks above a surface anchor that only paper, a notebook or a head can size;
+  - the placement's feasibility and the source's flags (`generation-system.md` §4b.1c, §5c.2b; protocol
+    §5): a spot that is bare at frame 0, stays in frame along the path, lies outside every hand's lane and
+    is wider than the pack; a reference with many hard cuts, a person alternating with person-free shots
+    or a baked face effect ranks low;
   - the number of people against the supplied characters;
   - the own-content length after stripping inserts, against the locked model's edit range. A longer
     one is split, which may need the A7b permission;
@@ -736,6 +730,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     `T strip-inserts --video "<original reference>" --inserts "<in-out,…>" --out <RUN>/10-media/<V>/own`
     gives `own-silent.mp4`, and `map.json` with the split points.
   - **Without inserts:** the silent copy from A1.
+  - **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): a mirrored
+    selfie has its silent copy flipped (`hflip`) and its mirrored identity photos flipped too; burned-in
+    text on a flat surface is inpainted out of the copy; a real person's name is removed from it; a baked
+    face effect is hidden or planned as flagged.
   - Then 9:16 (`T conform` / `reframe`). Split at cuts into the edit model's range when it is
     longer.
 
@@ -751,7 +749,11 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 - **Then the form** (CE-007): where one product comes in several packages, pick the form that fits the
   scene's scale and register: the smallest closed form in a casual handheld scene, a large pack only where
   a large pack belongs (a large stand-up pouch in a phone-and-couch scene read as too much; the small
-  carton fits).
+  carton fits). The forms keep their real size ladder (a pouch is larger than a carton, a carton larger than
+  a sachet): a retry changes the anchor or the posture of the same form, and a smaller form is never put in
+  for a planned one, because the client reads it as a different product ("Idea is great, the bag is too small
+  here. This would be the size of the box packaging. The bag is bigger than the boxes", CE-033: a sachet
+  stood in for the pouch and read carton-sized).
 - **Then distribute sensibly.** Spread several products or variants across videos unless the user or a
   document says otherwise. Rotate approved characters when no assignment is given. Pair assets that
   belong together (a product with its own label close-up).
@@ -853,9 +855,8 @@ Plan everything before production, in allocation order, **without asking for con
 - **As each agent reports:**
   - read its `60-outputs/video-NN/result.json`;
   - record it (`T state --run RUN append videos='<json>'`);
-  - reconcile the ledger: a `qc` that says RESIDUAL FAILURE or regenerated, with no entry in
-    `T caught-error list --grep <RUN>` for that video, is recorded now (`--source agent`, one entry
-    per class and anchor, the videos listed);
+  - check the brief: a `qc` that says RESIDUAL FAILURE or regenerated has an attempt block in the
+    video's brief with the verdict and what changed, or it is added now from `result.json`;
   - reconcile the flags (item 23): `T caught-flag reconcile --run RUN`. Every row in
     `flagged_unrecorded` gets `T caught-flag add` now (from the agent's `result.json` notes, the
     ledger history and the request file); each `failed_to_judge` row is read and either marked
@@ -883,9 +884,6 @@ See §6.
 ## 4. Edit Mode
 
 ### E1. Intake
-- **Caught errors first** (item 22): `T caught-error list --mode edit` plus the class entries;
-  write `20-analysis/caught-errors.md` with the entries that apply to this model and the edit
-  kinds, and apply them in X1, X2 and X9 like any plan rule.
 - **Caught flags** (item 23): `T caught-flag list --digest`; write `20-analysis/caught-flags.md`
   with the entries that apply to this model, the edit kind and the source's content, and check
   each request against them in X4.
@@ -1003,6 +1001,9 @@ See §6.
   - local `T clean` for small static overlays;
   - otherwise explicit remove operations in the edit prompt;
   - otherwise clean-frame regeneration.
+- **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): flip a mirrored
+  selfie, inpaint burned-in text on a flat surface, remove a real person's name, plan for a baked face
+  effect, in the silent copy under `prepared/`.
 
 ### E6. Generate
 Run **X1–X10** (§5) for this video, as an edit. The source video is the unique master, and the plan
@@ -1043,9 +1044,11 @@ files as video K".
       sharp idea, the emotion arc or laugh mechanism, the share line (`creative-direction.md` §2–§6);
       Create: the craft carried from the family and the subject the concept brings, with the copy
       test passed (`creative-direction.md` §5.0);
-    - the **caught errors applied** (item 22): the ids from `20-analysis/caught-errors.md` that
-      apply to this video and what each adds to the plan, the ledger, the prompt and the QC
-      checkpoints; an entry about creative quality goes into the ideation and the sharpness gate;
+    - the **spot** (`generation-system.md` §4b.1c; from the source in Recreate and Edit Mode, from the
+      blocking the plan asks for in Create): the hand-lane map, the region that is bare and in frame at 0,
+      1, 2.5, 4 and 6 s, the strip's width against the pack, the plane, the camera path and any spot the
+      user marked; and, where the model guide lists size or place as a limit and no passing-list anchor
+      fits, the **size-and-place guide** (§4b.6) with what it is built from;
     - the **guardrail hits** of the source (Recreate, Edit Mode) with their operations and times,
       or the guardrail invariants of the concept (Create): the count limit in the ledger, no
       competitor objects, supplied characters only, the wording rules in the text plan
@@ -1162,8 +1165,12 @@ files as video K".
       has its path written relative to the product, past it on a named side or onto it with the
       consequence, plus the solidity exclusion ("nothing passes through the bottle";
       `anomaly-catalog.md` §2.14).
-    - Every **applied caught-error rule** (item 22) is in the prompt in the model's phrasing: a
-      positive line plus the model's exclusion syntax, like an anomaly-catalog prompt line.
+    - The **guide, the camera lock, the swap grammar, the empty surfaces and the prepared-source sentence**,
+      where the plan has them, in the model's phrasing (`generation-system.md` §4, §4b.5, §4b.6, §5c.2b,
+      §5c.3): the guide bound as spot and size only; the camera lock as its own sentence; a swap written as a
+      replacement; an empty surface written empty, per shot; "Video 1 is already in true orientation" after a
+      flip; the one hand in frame named with the bare empty area; the clean-plate lines never cut to fit the
+      length limit (`text-and-format.md` §1).
     - **Guardrail operations** in the model's own edit syntax (`brand-guardrails.md` §4): "Remove
       only the third can at the left end of the desk and reconstruct the desk and wall behind it;
       keep the two other cans exactly as they are"; "Remove only the brand name and logo from the
@@ -1213,6 +1220,9 @@ files as video K".
     own first frame with the operations applied, and the end frame, when the model takes one, is
     its last frame with the same operations. The model then interpolates the source's own action.
   - Create Elements when the model supports them and assets recur.
+  - **The size-and-place guide** (`generation-system.md` §4b.6), when the plan has one: build it locally from
+    neutral bare-surface material, check it at X4, upload it with this video's own inputs and bind it as the
+    last `image_references` entry, for spot and size only.
   - **Contents form:** upload the variant's contents sample with the product views, and bind it to
     the vessel's contents in the prompt ("the drink in the cup has the colour, clarity and bubbles
     of @ImageN", "the gum piece she takes has the shape and colour of @ImageN"). A start frame
@@ -1247,6 +1257,10 @@ files as video K".
     anchor is a posture its shape allows, on a visible support, where a person would leave it, with
     its story reason; no lean on a prop the model has to invent, nothing on a thin sheet, no source
     beat taken over. Where the guide lists size as a model limit, the anchor is from its passing list.
+  - **Spot and guide** (`generation-system.md` §4b.1c, §4b.6; `anomaly-catalog.md` §2.9): the spot passes the
+    feasibility lines; a guide holds nothing of the source, shows the product shaded in perspective with a
+    sharp label and fits the reckoned size (`T scale --frame`); the wordmark's pixel height from the size
+    reckoning is at least about 25 px, or the limit is written in the brief.
   - **Source surfaces:** each printed surface a guardrail or §9b names is a "replace / remove only …
     reconstruct as <named content>" sentence, never a description of blankness, with the original in
     the exclusion line.
@@ -1263,9 +1277,9 @@ files as video K".
     characters/assets, substitutions, main action and states, style/camera, text plan, model /
     operation / duration / 9:16 720p, cost, adaptation logic. In Edit Mode and Recreate it also names
     the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
-  - Save it as `40-briefs/video-NN-brief.md` (an attempt or clip appends its own block under the
-    first), so a later caught-error entry can carry it (item 22): `T caught-error add --run RUN
-    --video NN` attaches the brief, the newest request's prompt and the plan path by itself.
+  - Save it as `40-briefs/video-NN-brief.md`; each attempt or clip appends its own block under the first
+    (the failed request, the verdict, what changed), so a reported problem can be read against what was
+    planned and asked (item 22).
   - Analyze Mode: no gate; the brief is information (item 15). Edit Mode: the E6 gate.
 - **X7 — Submit and wait (ledger-guarded; no spam, no glitches).**
   1. `T ledger begin --run RUN --video NN --attempt K --request 50-requests/video-NN[-aK]-request.json`
@@ -1427,18 +1441,17 @@ files as video K".
     is a post-fix.
   - **Leftovers** (`generation-system.md` §9b): only the must-not-survive list counts, and it is
     fixed autonomously.
-  - **Caught errors** (item 22): each applied entry checked by id and written in the verdict
-    ("CE-004: paste test 0 signs"; "CE-005: can at 1.05× expected vs the bottle"); a failed check
-    is a regenerate reason when the entry's class says so. Every regenerate reason found here is
-    recorded at once, compact and complete for the next run's agents: `T caught-error add
-    --source agent --run RUN --video NN --mode … --model … --product "…" --assets "<asset paths +
-    key specs>" --prompt <the failed request.json> --errors "<execution errors, adjustments,
-    moderation>" --evidence "<checkpoint, t range, sheet path>" --title "…" --wrong "<the
-    verdict>" --class "<reference §>" --cause <…> --rule "<general rule>"`. The working prompt is
-    inserted **only after the new generation passes QC**: `T caught-error set --id CE-nnn
-    --verified-prompt <the passing request.json> --qc-pass "<the passing verdict>"` (the tool
-    refuses a fix without a passing verdict). If the retry fails too, the entry stays open with no
-    fix. A new failure the user later reports becomes a user entry, never a silent fix.
+  - **Label legibility** (`anomaly-catalog.md` §2.9, §4 step 5h): on a full-resolution frame at rest the
+    wordmark and the flavour tag read exactly, word by word against the asset, the frame path in the
+    verdict; a wrong letter is a regenerate reason, and upscaling is no fix.
+  - **Hand lanes, camera path and orientation** (`anomaly-catalog.md` §2.16; `generation-system.md` §5c.5,
+    §5c.2b): no hand covers, wraps or passes through the placed product in any beat; the product stays in
+    frame wherever its anchor does; the camera and the performer's pose in the last third match the source;
+    every readable thing and handed object reads the right way round. A guide's artefacts copied into the
+    take (a soft label, a thick rim, a lid notch, the source's scene or person) are a regenerate reason.
+  - **Every regenerate reason found here is written at once** in the video's brief as an attempt block (the
+    failed request.json, the verdict with its numbers and frame paths, what the retry changes) and in
+    `result.json`; the retry changes the lever the diagnosis names (item 22).
   - **Guardrails** (`brand-guardrails.md` §5): the count limit at every checkpoint; `T qc` OCR
     with no competitor name and a full-resolution look at every de-branded object (no logo,
     claw, crest or livery, no blur, no patch); the identity check over every shot, reflection and
@@ -1498,12 +1511,8 @@ files as video K".
      - **"Looks good — next video"** → `T ledger set --job J --status accepted`, then X10, which
        places the approved video in the `final` folder.
      - **"Needs changes"** → ask in plain chat what to change, and let them add or replace files.
-       Record it before re-editing: `T caught-error add --mode edit --video <N> --run <RUN>
-       --model <id> --user "<their words>" --wrong "<diagnosis>" --class "<reference §>"
-       --cause <…> --rule "<general rule>" --qc "<the X9 verdict and its reasons>"` (item 22;
-       the brief, the attempt's prompt and the plan attach themselves from the run); the fix is
-       set on the entry once the next attempt is approved (`T caught-error set --id CE-nnn
-       --status fixed --fix "<what changed>"`).
+       Write their words verbatim, and the diagnosis, in the video's brief as the next attempt's block
+       before re-editing (item 22).
      - **"Stop here"** → keep the files, go to the wrap-up.
      "Other" lets the user type the changes directly.
   3. **Re-edit from the original.** A new attempt always starts from the **original source video**
@@ -1568,10 +1577,9 @@ Both modes: reconcile the flags before the table. Run `T caught-flag reconcile -
 marked or dismissed (a validation or credit error is not a flag), and every entry of the run is
 `cleared` (with its accepted request) or `persistent`; none is left `open` without a reason.
 
-Analyze Mode: reconcile the ledger before the feedback question. Every `result.json` whose `qc`
-says RESIDUAL FAILURE or regenerated, and that has no entry in `T caught-error list --grep <RUN>`, is
-recorded now with `--source agent` (compact; one entry per class and anchor, the videos listed), so no
-flagged delivery leaves the run unrecorded.
+Analyze Mode: check the briefs before the feedback question. Every `result.json` whose `qc` says
+RESIDUAL FAILURE or regenerated has an attempt block in its video's brief, so no flagged delivery leaves
+the run unexplained.
 
 Analyze Mode: before the table, check the run's deliverables and text. Every video in `state.json` →
 `videos[]` has `video-NN-clean.mp4` and `video-NN-preview.mp4` in `<RUN>/deliverables/` (all videos in that
@@ -1586,11 +1594,10 @@ video). Then, once every video is delivered, **ask for feedback** with AskUserQu
 "Feedback"), "Watch the videos: is any of them not right?": **"All good"**; **"I'll watch them
 later"** (any later message about them is still recorded); **"Some need fixes"** → ask in plain
 chat which video and what is wrong, disliked or illogical. "Other" lets the user type it
-directly. Each problem named, now or in a later session, is recorded with `T caught-error add
---source user --run RUN --video NN --user "<their words>" …` (one entry per problem, the brief,
-prompt and delivered details attach themselves) before the fix is offered (item 22). When the
-ledger now holds two or more open or fixed entries of one class, model or product family, add one
-line: "Run `/update-from-errors analyze-then-pick` to generalise these into the prompting and QC."
+directly. Each problem named, now or in a later session, is handled as item 22 says: their words verbatim
+and the diagnosis go into the video's brief before the fix is offered. When a problem is a kind the
+references do not hold, add one line: "Run `/update-from-errors analyze-then-pick "<their words>"` to
+generalise this into the prompting and QC."
 
 ### 6b. Upscale the finals with Topaz (after the user's approval, both modes)
 
@@ -1687,20 +1694,25 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   a joke; never let the creative layer override a hard rule (`creative-direction.md`).
 - Never run the Topaz upscale without the user's explicit yes in the wrap-up, never run it on
   the clean generations instead of the finals, and never rerun or retry it on your own (§6b).
-- Never start a run without reading `ATP/caught_errors.md` (A1 / E1), never leave a video the
-  user reported as wrong unrecorded, never write an entry by hand or without the user's words
-  verbatim and a general rule, and never silently fix a reported problem without its entry
-  (item 22).
+- Never create or read an error ledger (item 22): a video the user reports as wrong is diagnosed with their
+  words verbatim, in its brief, and fixed only after the diagnosis.
 - Never start a run without reading `ATP/caught_flags.md` (A1 / E1), never change or resend a
   request that Higgsfield flagged before its `T caught-flag add` entry exists (the verbatim
   response, the prompt, the media, the flagged video, the suspected trigger), never write an
   entry by hand, never mark one `cleared` before a changed request was accepted, never send a
   third identical request after two refunded flagged failures, and never re-upload a flagged
   asset or video unchanged (item 23).
-- Never tell an agent not to record: the shared contract carries the recording rule, and a run is
-  never closed with a RESIDUAL FAILURE or a regenerated video that has no ledger entry (A9b, §6).
-  Never copy an agent contract from an earlier run: it is generated at A9 from
+- Never close a run with a RESIDUAL FAILURE or a regenerated video that has no attempt block in its
+  brief (A9b, §6). Never copy an agent contract from an earlier run: it is generated at A9 from
   `reference/production-agents.md` §2.
+- Never place a product at a spot that is hidden at the source's frame 0, leaves the frame along the camera
+  path, lies in a hand's lane, is narrower than the pack or is the nearest plane (`generation-system.md`
+  §4b.1c); never build a size-and-place guide from the source frame, a flat packshot paste or a soft-labelled
+  image (§4b.6); never upload a mirrored selfie source un-flipped, or leave a baked face effect, a burned-in
+  caption or an identifying name unplanned (§5c.2b).
+- Never accept a placed product's wordmark or flavour tag that reads as wrong letters, a paste sign written as
+  a note, or "it is close to the camera" as a reason without the numbers (`anomaly-catalog.md` §2.7, §2.9,
+  §2.15).
 - Never retry a size miss with the sizing words on a model whose guide lists size as a model limit,
   never plan a pack that leans on a prop the model has to invent, stands on its edge against a
   person or rests on a thin sheet that hands move, and never let a placed product take a beat of the

@@ -7,8 +7,7 @@ it uses at most 2 analysis agents plus, in Analyze Mode, one production agent pe
 
 ```
 analyze-then-pick/
-├── caught_errors.md                the feedback ledger: one entry per video the user was not satisfied with (their words verbatim, the diagnosis, class, cause, fix, rule, status); read at every run start, applied in plans, prompts and QC, promoted into the references when general (`atp.py caught-error add | list | set`); `/update-from-errors analyze-then-pick` generalises its patterns into the references in one pass (what to achieve, what to avoid, the miss and its cause, the prompt correction, what worked)
-├── learning-log.md                 one section per `/update-from-errors` pass: patterns, root causes, changes, promoted and open entries, hypotheses to test
+├── learning-log.md                 one section per `/update-from-errors` pass: patterns, root causes, changes, hypotheses to test; the pass of 2026-10-13 retired the feedback ledger and holds the map from every `CE-nnn` case label to the section that now holds its lesson (read by the update command only, never by a run)
 ├── config.json                     paths (python, runs), fixed output (9:16, 720p), analysis defaults, Edit Mode cost gate, CapCut store + template
 ├── models/
 │   ├── index.json                  model id → guide, capabilities, 9:16/720p parameter mapping, continuation (max per generation + how clips join); the only file read to build the menu
@@ -21,8 +20,8 @@ analyze-then-pick/
 │   └── first-party/                verbatim Higgsfield recipes (ad-multiplier edit contract, media pipeline, Genjutsu)
 ├── reference/
 │   ├── analysis-protocol.md        Analyze Mode: reading 5 fps storyboards + timelines, cards, lenses, families, directions, delegation; the user's examples → house approach (§9)
-│   ├── generation-system.md        dependency chain, work-backward plan, state ledger, multi-generation videos (§3b), reference inserts (§3c), integration analysis, swap / contents / natural placement (§4b), anti-slop gate, physics (§5b), source fidelity and audio-locked timing (§5c), counts / openings / permanence (§5d), model translation, pre/post QC, brief
-│   ├── anomaly-catalog.md          logical and physical anomaly classes (counts, openings and use, preparation, persistent states, object permanence, liquids, scale with the size reckoning and standard-size table, body mechanics, labels, hand-offs, environment, timing, stylised rendering, solidity and collision, blend with the eleven-sign paste test): the affordance sheet per product, ledger entries, prompt lines, QC checkpoints and verdicts
+│   ├── generation-system.md        dependency chain, work-backward plan, state ledger, multi-generation videos (§3b), reference inserts (§3c), integration analysis, swap / contents / natural placement (§4b, with the spot-feasibility checks §4b.1c and the size-and-place guide §4b.6), anti-slop gate, physics (§5b), source fidelity and audio-locked timing (§5c, with preparing the source §5c.2b), counts / openings / permanence (§5d), model translation, pre/post QC, brief
+│   ├── anomaly-catalog.md          logical and physical anomaly classes (counts, openings and use, preparation, persistent states, object permanence, liquids, scale with the size reckoning and standard-size table, label legibility (a pixel budget), identity reference hygiene, body mechanics, labels, hand-offs, environment, timing, stylised rendering, solidity and collision, blend with the eleven-sign paste test): the affordance sheet per product, ledger entries, prompt lines, QC checkpoints and verdicts
 │   ├── creative-direction.md       the creative team the pipeline plays (growth creative, mass-cognition engineer, trend analyst, creative director, performance editor): goal model, audience model, trend read, the craft sheet and the copy test (Create takes a reference's craft, never its subject), scored concept seeds, the sharpness gate, hook/payoff craft, creative QC notes
 │   ├── brand-guardrails.md         the client's rules from the assets folder (no gore, count limits, no competitor brands, no ambassador likeness, claims, disclaimers): extraction, rule kinds, the per-reference guardrail audit (core → dismiss; peripheral → pick and edit: count reduced, competitor marks removed never blurred, faces swapped, captions rewritten), Create invariants, Edit Mode hits, QC
 │   ├── text-and-format.md          mode-dependent text policy (Analyze: clean plate + CapCut text layers), text removal, fixed 9:16 / 720p rules
@@ -30,9 +29,19 @@ analyze-then-pick/
 │   ├── production-agents.md        Analyze Mode (Recreate / Create): one background agent per video (max 5 at once), its prompt, contract and result.json
 │   └── assets-and-substitution.md  user-supplied assets only (analyze: dropped once; edit: per operation), contents samples, understanding + registry, substitution map, reference strategy per model
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
-├── scripts/atp.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), caught-error (the feedback ledger), sync-check, locked ledger/state, CapCut name/prep/repair, transfers)
+├── scripts/atp.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), sync-check, locked ledger/state, CapCut name/prep/repair, transfers)
 └── runs/<stamp>-<slug>/            one folder per run (state.json makes runs resumable: /analyze-then-pick resume <run-dir>)
 ```
+
+## Case labels (`CE-nnn`)
+`CE-nnn` in the references, the model guides and the command are case labels. Each marks a lesson learned from a
+video that went wrong (a user report or an agent's regenerate reason, 2026-10-03 to 2026-10-13); the lesson is
+written out where the label stands, as a kind (what to achieve, what to avoid) with its miss, cause, corrected
+wording and what worked. There is no error ledger: `caught_errors.md` and `atp.py caught-error` were retired on
+2026-10-13 so that a run reads rules, not a growing pile of past errors. The last version of that file is in
+this folder's git history (`git log --follow -- analyze-then-pick/caught_errors.md`, last commit `aba83d3`), and
+`learning-log.md` maps every label to the section that holds its lesson. New lessons go straight into the
+owning section through `/update-from-errors analyze-then-pick "<what went wrong>"`.
 
 ## How a run uses the documentation
 1. Right after the mode (Analyze / Edit), the command prints the model menu with

@@ -60,6 +60,13 @@ Text may be created when it improves the concept or matches the analyzed structu
      (`capcut-assembly.md` §3).
   - Text never gets burned in with `atp.py captions`, except as the fallback when the CapCut MCP is
     unavailable.
+  - The clean-plate lines are never the lines to cut when a prompt must fit the length limit (Higgsfield
+    rejects a prompt over 5000 characters): cut descriptive wording instead. The lines are: do not inherit
+    text, captions, usernames or watermarks from the video reference; no subtitles; no on-screen text
+    anywhere. With them trimmed, a faint garbled ghost of the source caption stood on the wall at the
+    caption's old position for the whole clip (CE-045, VERIFIED on the retry with the lines restored). A
+    caption burned into a flat surface of the video reference is also inpainted out of the reference itself
+    (`generation-system.md` §5c.2b).
   - Only text that physically belongs to the scene stays in the generation: the client product's
     own printed label, logo or badge (below).
 - **The client asset's own label is not stray text.** A swapped or placed product keeps its real
@@ -124,7 +131,7 @@ means the check fails: pick the next method in §2.2.
      (`generation-system.md` §5b).
 4. **Place it at the reference's height, always horizontally centred**, inside the 9:16 safe area
    (the user, 2026-10-09: "make the text be in the center, whether up, down or in the middle";
-   caught error CE-010):
+   CE-010):
    - every text layer is centred left to right: CapCut `posX = 0`, centre alignment; the
      reference's horizontal offset is never copied;
    - the height follows the reference: `posY = 1 − 2·y_rel`;
@@ -146,7 +153,9 @@ means the check fails: pick the next method in §2.2.
 7. **QC:**
    - The **generated plate** must be text-free:
      `atp.py qc --mode analyze --allowed-text "<printed words of every client asset visible>"`.
-     Anything else detected is pseudo-text or a copied artifact: fix the plate or regenerate.
+     Anything else detected is pseudo-text or a copied artifact: fix the plate or regenerate. A garbled
+     ghost of the source caption at its old position is one (CE-045): restore the clean-plate lines and strip
+     the caption from the reference.
    - The **text** is checked on the CapCut preview (`capcut-assembly.md` §5): wording, timing,
      position, no emoji, and every overlay on exactly its visible frames.
 

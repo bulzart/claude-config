@@ -75,7 +75,7 @@ Inputs:
      ends on a brightness step fades from the gap colour.
 2. **Text layers.** One `capcut_add_text` per text event, all on the text track:
    - `text`, and `atSec` / `durSec` on the **final** timeline, after the inserts;
-   - **position: always horizontally centred** (the user, 2026-10-09, caught error CE-010):
+   - **position: always horizontally centred** (the user, 2026-10-09, CE-010):
      `posX = 0` with centre alignment on every text layer, whatever the reference's `x_rel`. Only
      the height comes from the reference: `posY = 1 − 2·y_rel` (`y_rel` = the text centre in the
      reference, 0 = top, 1 = bottom; CapCut's transform uses half-canvas units with +y up). When

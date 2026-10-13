@@ -27,11 +27,10 @@ For each video in allocation order, use the Agent tool with `subagent_type: "gen
 `run_in_background: true` and description "Produce video NN". Keep at most 5 running; launch the
 next one when an agent reports. **This prompt is the canonical agent contract.** At A9 the main session
 fills it in and writes it to `<RUN>/50-requests/agent-contract.md`, and each agent's spawn message points to
-that file. It is generated fresh for every run and never copied from an earlier run's file: run
-20261010-020703-09 inherited "Never write to ATP/caught_errors.md yourself" from run 08 while this section
-told agents to record, five agents reported "contract forbids" and recorded nothing, and the main session
-wrote the entries by hand later. Run-specific notes go in a "Run-specific notes" block at the end of the
-generated file, never in the rules above it. Prompt (fill the `<…>`):
+that file. It is generated fresh for every run and never copied from an earlier run's file (a copied contract
+once carried a rule that contradicted this section, and five agents obeyed the stale one). Run-specific notes
+go in a "Run-specific notes" block at the end of the generated file, never in the rules above it. Prompt (fill
+the `<…>`):
 
 ```
 You are the production agent for video NN of a /analyze-then-pick run (Analyze Mode, <recreate|create>).
@@ -54,18 +53,11 @@ Follow, for this video only:
 - <ATP>/reference/capcut-assembly.md, <ATP>/reference/text-and-format.md §3, and the model guide;
 - <RUN>/20-analysis/house-approach.md, when it exists (the user's house approach; your plan says
   which of its rules this video applies);
-- <RUN>/20-analysis/caught-errors.md (the entries of <ATP>/caught_errors.md that apply to this
-  run; your plan names the ones this video applies, their rules are in your prompt, and X9 checks
-  each by id). When your QC finds a regenerate reason, record it at once: `T caught-error add
-  --source agent --run <RUN> --video NN --assets "<asset paths + key specs>" --prompt <the failed
-  request.json> --errors "<execution errors>" --evidence "<checkpoint, t, sheet>" …` with the
-  verdict as what was wrong and a general rule. Only when the new generation passes QC, add the
-  working prompt: `T caught-error set --id CE-nnn --verified-prompt <the passing request.json>
-  --qc-pass "<the verdict>"`; never before, and never when the retry fails (the write is locked;
-  ids stay unique across agents). A flagged delivery (RESIDUAL FAILURE) is recorded the same way, one
-  entry per class and anchor with the videos listed. Recording is part of this contract, not optional: if a
-  write fails, put the full text and the error in result.json `notes` and say so. User entries come from
-  the main session.
+- When your QC finds a regenerate reason, write it at once in the video's brief as an attempt block (the
+  failed request.json, the verdict with its numbers and frame paths, and what the retry changes) and in
+  result.json (`qc`, `continuity`, `notes`); a flagged delivery (RESIDUAL FAILURE) is written the same way.
+  There is no other error file and you write nothing to the library: the rules live in the references you
+  read above.
 - <RUN>/20-analysis/caught-flags.md (the entries of <ATP>/caught_flags.md that apply to this run: prompts
   and videos Higgsfield flagged before; your plan names the ones this video avoids and X4 checks your
   request against them). When Higgsfield flags, refuses, withholds or reroutes anything in your lane
@@ -88,8 +80,12 @@ Hard rules:
 - Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. One job in flight in
   your lane; exit 3 means do not submit. Never use generate_video_batch.
 - Never ask the user anything. On a blocker, write result.json with status "blocked" and stop.
-- Caught errors: every entry your plan applies has its rule in the prompt and is checked by id in
-  X9 and written in the verdict (command item 22).
+- Spot and guide: the plan's spot passed `generation-system.md` §4b.1c (visible at the source's frame 0 and
+  along the whole path, outside every hand's lane, bare and wider than the pack, not the nearest plane);
+  where the model guide lists size or place as a limit and no passing-list anchor fits, the request carries
+  the size-and-place guide of §4b.6, built from neutral bare-surface material only (nothing of the source).
+- Label: read the wordmark and the flavour tag word by word on a full-resolution frame at rest; a wrong
+  letter is a regenerate reason (`anomaly-catalog.md` §2.9, §4 step 5h).
 - Touch only video NN's files and its CapCut project. Reuse the media ids and the folder id in
   state.json.
 - Never capcut_save with force:true.
@@ -98,7 +94,7 @@ Hard rules:
   `capcut-text-style --learn` / `--replace`.
 - Text layers are always horizontally centred: posX 0 on every layer; only posY follows the
   reference. If centred text would cover the product, a face or an insert, move it up or down,
-  never sideways (caught error CE-010). No text layer contains an emoji.
+  never sideways (CE-010). No text layer contains an emoji.
 - Every glass, cup or vessel of the product's category shows the product's contents
   (generation-system.md §4b.0, §9). A glass of water beside the can is a regenerate reason, not a note.
 - Counts and use (anomaly-catalog.md): every multiple keeps its number except through a visible cause;
@@ -187,10 +183,10 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
    set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `other`, plus one
    line of detail. Then stop.
 11. **Final message:** the content of `result.json`, as one JSON line.
-12. **Record.** Every regenerate reason and every flagged delivery (RESIDUAL FAILURE) is a caught-error
-   entry written at once with `T caught-error add --source agent` (one per class and anchor, the videos
-   listed). The run's contract is generated from §2 at A9 and never forbids it; the main session reconciles
-   the ledger against the `result.json` files (§5).
+12. **Record.** Every regenerate reason and every flagged delivery (RESIDUAL FAILURE) is written at once in
+   the video's brief as an attempt block (the failed request, the verdict with its numbers and frame paths,
+   what the retry changes) and in `result.json`; nothing is written to the library. The main session checks
+   the briefs against the `result.json` files (§5).
 13. **Checks that are never skipped** (CE-016, CE-017, CE-018, CE-019, CE-023, CE-024, CE-025, CE-026, CE-027,
     CE-028). The agent views the sheets itself; an assumption, "the contract forbids" and an unviewed sheet are
     not evidence. Each check's evidence path (sheet, hash, measurement) goes in `result.json` → `continuity`.
@@ -213,10 +209,12 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
        §2.7), the frame viewed, before any
        size verdict is written.
     7. **Text:** no emoji in any text layer; every layer posX 0.
-14. **Docs and ledger, before the final message:** every regenerate reason and flagged delivery recorded with
-    `T caught-error add --source agent`; the brief carries a block per attempt and the final prompt;
-    `result.json` complete; `readme-row.md` and the deliverables files written; the CE ids written are listed
-    in `result.json` → `notes`; the CF ids of any flag (item 15) too.
+    8. **Label and lanes:** the wordmark and the flavour tag read exactly on a full-resolution frame at rest,
+       word by word (a wrong letter regenerates once); no hand covers, wraps or passes through the placed
+       product in any beat; the camera and the performer's pose in the last third match the source.
+14. **Docs, before the final message:** the brief carries a block per attempt (every regenerate reason and
+    flagged delivery included) and the final prompt; `result.json` complete; `readme-row.md` and the
+    deliverables files written; the CF ids of any flag (item 15) listed in `result.json` → `notes`.
 15. **Flags** (command item 23; `ATP/caught_flags.md`). Every call Higgsfield flagged, refused, withheld or
     rerouted in the agent's lane is marked with `T ledger set --flagged` and recorded with `T caught-flag add`
     before the request changes, with the verbatim response, the flagged video and prompt, the media the
@@ -247,9 +245,8 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
       `T caught-flag add` now (from the agent's `result.json` notes, the ledger history and the request file); each
       `failed_to_judge` row is read and marked or left as the validation or credit error it was; a flag still
       `open` or `persistent` is named in the wrap-up.
-   1. **The ledger.** If `qc` says RESIDUAL FAILURE or regenerated and `T caught-error list --grep <RUN>`
-      shows no entry for this video, record it now (`--source agent`, compact, one entry per class and
-      anchor with the videos listed).
+   1. **The attempts.** If `qc` says RESIDUAL FAILURE or regenerated and the video's brief has no attempt
+      block with the verdict and what changed, add it now from `result.json`.
    2. **`state.json` → `videos[]`** holds this video (step 1).
    3. **The README table:** the agent's `readme-row.md` is appended to `<RUN>/deliverables/README.md`.
    4. **`<RUN>/deliverables/`** holds `video-NN-clean.mp4` and `video-NN-preview.mp4`.

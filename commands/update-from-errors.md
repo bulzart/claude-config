@@ -276,7 +276,9 @@ For `analyze-then-pick`, the map is known. Confirm each location exists before r
   - `CMD` X4 and X9;
 - **model failure modes:** `models/<model>.md` §5 (failure table), §7 (checklist) and §9 (open
   questions);
-- **toolkit:** `scripts/atp.py` (`scale`, `qc`, `sync-check`, `caught-error`).
+- **toolkit:** `scripts/atp.py` (`scale`, `qc`, `sync-check`, `caught-flag`; the `caught-error` ledger was
+  retired on 2026-10-13, so ATP has no ledger to read: its record set is the user's words given as the
+  argument plus the run-level records).
 
 ## 2. Then read the caught errors and check them against their evidence
 
@@ -526,8 +528,8 @@ Then review the set as a whole:
 2. **Update `CMD`** wherever a step, a check or a "Never" rule changes, and keep its numbered items
    consistent.
 3. **Mark the entries in the ledger, through its tool only.**
-   - For ATP: `"$PY" -X utf8 "$LIB/scripts/atp.py" caught-error set --id CE-nnn --status promoted
-     --promoted-to "<file §, file §>"`.
+   - For ATP: none. The ledger was retired on 2026-10-13; `learning-log.md` keeps the map from each CE
+     case label to the section that holds its lesson.
    - **Proven** entry: promote it with its pointer.
    - **Repeated or single** entry: promote it with its pointer, and **keep it as the record**. Its
      fields stay untouched, and its fix is never marked verified.
@@ -541,7 +543,7 @@ Then review the set as a whole:
    - read every new or changed rule for entry-specific nouns: none outside a sample, and each rule
      has its achieve and its avoid side;
    - check the toolkit still runs (`atp.py --help`, plus each changed subcommand on a small input);
-   - check `caught-error list --rules` still parses every entry;
+   - check the ledger tool still parses every entry, where the pipeline keeps a ledger;
    - check no file's line endings changed unintentionally (`git diff --stat`, plus a CRLF check).
 6. **Commit** in `~/.claude` (a git repo with auto-commit hooks), as one commit:
    - subject: `<name>: update from caught errors CE-a..CE-b (<n> patterns)`;
