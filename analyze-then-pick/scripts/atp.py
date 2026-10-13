@@ -153,7 +153,8 @@ def cfg_get(path: str, default=None):
 
 
 def out(obj: dict, code: int = 0):
-    print(json.dumps(obj, ensure_ascii=False))
+    # one JSON object on the last line: U+2028/2029 are escaped so a line-splitting reader never cuts it in two
+    print(json.dumps(obj, ensure_ascii=False).replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
     sys.exit(code)
 
 

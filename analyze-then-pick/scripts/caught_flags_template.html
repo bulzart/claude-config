@@ -72,7 +72,9 @@ h1 { font-size: 26px; line-height: 1.2; margin: 0 0 4px; letter-spacing: -.01em;
 .controls { margin: 0 0 12px; display: grid; gap: 10px; }
 .groupby-row { display: flex; gap: 12px 16px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
 .groupby { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.viewend { display: flex; gap: 10px; align-items: center; }
 .sortl { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+.btn.small:disabled { opacity: .45; cursor: default; }
 .sortl select { padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 .groupby .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin-right: 4px; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: end; }
@@ -96,6 +98,7 @@ details.group[open] > summary::before { transform: rotate(45deg); }
 .flag.is-open { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 .flag-head { display: grid; grid-template-columns: 92px minmax(150px, 1.1fr) 150px minmax(220px, 2.3fr) 104px; gap: 14px; align-items: start;
   width: 100%; text-align: left; background: none; border: 0; padding: 12px 14px; cursor: pointer; }
+.flag-head > span { min-width: 0; overflow-wrap: anywhere; }
 .flag-head:hover { background: var(--surface-2); }
 .flag-head small { display: block; color: var(--muted); font-size: 12px; }
 .flag-head b { font-weight: 600; }
@@ -148,7 +151,8 @@ footer details { margin-top: 6px; } footer summary { cursor: pointer; }
 footer table td { padding: 1px 14px 1px 0; vertical-align: top; }
 
 @media (max-width: 900px) {
-  .flag-head { grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .flag-head { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; }
+  .c-video small, .c-suspect small { white-space: normal; }
   .c-suspect { grid-column: 1 / -1; order: 5; }
   .c-status { text-align: right; }
   .detail { grid-template-columns: minmax(0, 1fr); }
@@ -188,7 +192,8 @@ footer table td { padding: 1px 14px 1px 0; vertical-align: top; }
   <section class="controls" aria-label="Grouping and filters">
     <div class="groupby-row">
       <div class="groupby" role="group" aria-label="Group by"><span class="lbl">Group by</span><span id="g-seg" class="groupby"></span></div>
-      <label class="sortl">Sort <select id="s"></select></label>
+      <span class="viewend"><label class="sortl">Sort <select id="s"></select></label>
+        <button class="btn small" id="clear" type="button">Clear filters</button></span>
     </div>
     <div class="filters">
       <label>Status <select id="f-status"></select></label>
@@ -198,8 +203,6 @@ footer table td { padding: 1px 14px 1px 0; vertical-align: top; }
       <label>Model <select id="f-model"></select></label>
       <label>Cause <select id="f-cause"></select></label>
       <label>Run <select id="f-run"></select></label>
-      <span class="grow"></span>
-      <button class="btn" id="clear" type="button">Clear filters</button>
     </div>
     <p class="hint">Operators (combine freely, all must match): <code>kind:preset-notice</code> <code>tag:real-person-face</code> <code>asset:char-A12</code>
       <code>video:10</code> <code>run:09</code> <code>status:open</code> <code>prompt:neon</code> <code>response:"no reason"</code></p>
@@ -296,8 +299,8 @@ footer table td { padding: 1px 14px 1px 0; vertical-align: top; }
   function readHash() {
     var p = new URLSearchParams(location.hash.replace(/^#/, ''));
     Object.keys(state).forEach(function (k) {
-      if (!p.has(k)) return;
-      state[k] = k === 'open' ? p.get(k).split(',').filter(Boolean) : p.get(k);
+      var v = p.has(k) ? p.get(k) : (k === 'g' ? 'tag' : k === 's' ? 'new' : '');
+      state[k] = k === 'open' ? v.split(',').filter(Boolean) : v;
     });
   }
   function writeHash() {
