@@ -896,12 +896,12 @@ the prompt. The analysis card flags each (`analysis-protocol.md` §3, "Source pr
   the frame contradicted itself (the client: "everything in the frame is reversed except the bag. Text on his
   shirt, guitar on the wall. Maybe flip video, then add bag", CE-030, VERIFIED: the flipped video and the
   flipped identity photo).
-- **Burned-in text on a flat surface** (a caption on a wall) is inpainted out of the reference itself
-  (temporal median over the static strokes, mask-aware fill, grain kept): otherwise the model hands a caption,
-  or a garbled grey ghost of it at the same place, to the take (CE-045, VERIFIED).
+- **Burned-in text on a flat surface** (a caption on a wall) is never removed by a tool (no inpaint, delogo or
+  crop in Analyze Mode). The clean-plate lines are the highest-priority lines of the prompt and are never
+  trimmed: with them cut, the model handed a garbled grey ghost of the caption to the take at the same place
+  (CE-045; gone on the retry that restored them).
 - **Names and marks that identify** (a real person's name in a chat bubble, a patch or logo on the kept
-  garment): removed from the prepared source where they sit on a flat label, or written as an edit of the
-  source surface in the model's edit grammar (§8, `brand-guardrails.md` §4). A one-sentence edit changed a
+  garment): written as an edit of the source surface in the model's edit grammar (§8, `brand-guardrails.md` §4). A one-sentence edit changed a
   name in one shot only and left it legible in two others (CE-080); a patch named only in the negatives came
   back from 0.4 s (CE-065).
 - **A face effect baked into the video reference** (a mask, a filter, a clone) is carried whatever the prompt
@@ -1121,9 +1121,10 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       and lettering (Create: neutral texture only), the product shaded in the scene's perspective at
       the reckoned size, its label sharp, the spot passing the line above, bound in the prompt as spot and size
       only, and measured with `atp.py scale --frame`.
-- [ ] Source prepared (§5c.2b): orientation (a mirrored selfie flipped, the identity photo too), burned-in
-      text on flat surfaces inpainted, identifying names and marks removed or edited, a baked face effect
-      planned for; left and right of every beat read on the prepared frames.
+- [ ] Source prepared (§5c.2b): orientation (a mirrored selfie flipped, the identity photo too); burned-in
+      text, identifying names and marks covered by prompt sentences (clean-plate lines first, never trimmed;
+      no tool removes them); a baked face effect planned for; left and right of every beat read on the
+      prepared frames.
 - [ ] Pacing matches the family profile: no dead space, every second has a job.
 - [ ] Transitions are all motivated, and multi-clip hand-offs are identical.
 - [ ] No free physical motion is pinned to exact timestamps; a required end state has a visible
@@ -1269,8 +1270,9 @@ alone in full.
 
 **Fixes are autonomous and cost-aware:**
 - **Small static leftovers** (a watermark, a corner logo, a sticker remnant): fix them locally and
-  for free with `atp.py clean --delogo` on the clean video before CapCut. A Recreate / Edit source
-  is cleaned before upload (`text-and-format.md` §2.2).
+  for free with `atp.py clean --delogo` on the clean video before CapCut. An Edit Mode source is cleaned
+  before upload (`text-and-format.md` §2.2); a Recreate source never is: the clean-plate lines and the
+  character-swap script carry its captions.
 - **Everything else on the left:** one corrected regeneration that names the item explicitly
   ("Replace only…", "Remove only…").
 - **Still failing:** report it in the wrap-up. In Analyze Mode, never ask about it mid-run.

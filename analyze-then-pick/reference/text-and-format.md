@@ -64,10 +64,9 @@ Text may be created when it improves the concept or matches the analyzed structu
     rejects a prompt over 5000 characters): cut descriptive wording instead. The lines are: do not inherit
     text, captions, usernames or watermarks from the video reference; no subtitles; no on-screen text
     anywhere. With them trimmed, a faint garbled ghost of the source caption stood on the wall at the
-    caption's old position for the whole clip (CE-045, VERIFIED on the retry with the lines restored and the
-    caption inpainted out of the video reference; the two were changed together). A
-    caption burned into a flat surface of the video reference is also inpainted out of the reference itself
-    (`generation-system.md` §5c.2b).
+    caption's old position for the whole clip (CE-045; gone on the retry with the lines restored). A
+    caption burned into the video reference is never removed by a tool in Analyze Mode: these lines carry
+    it (`generation-system.md` §5c.2b).
   - Only text that physically belongs to the scene stays in the generation: the client product's
     own printed label, logo or badge (below).
 - **The client asset's own label is not stray text.** A swapped or placed product keeps its real

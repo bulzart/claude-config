@@ -737,8 +737,8 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   - **Without inserts:** the silent copy from A1.
   - **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): a mirrored
     selfie has its silent copy flipped (`hflip`) and its mirrored identity photos flipped too; burned-in
-    text on a flat surface is inpainted out of the copy; a real person's name is removed from it; a baked
-    face effect is hidden or planned as flagged.
+    text, names and patches are never removed by a tool: the prompt's clean-plate lines and, for a name or a
+    patch, one named replace sentence carry them; a baked face effect is planned as flagged.
   - Then 9:16 (`T conform` / `reframe`). Split at cuts into the edit model's range when it is
     longer.
 
@@ -1003,10 +1003,10 @@ See §6.
   - local `T clean` for small static overlays;
   - otherwise explicit remove operations in the edit prompt;
   - otherwise clean-frame regeneration.
-- **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): inpaint burned-in
-  text on a flat surface, remove a real person's name, plan for a baked face effect, in the silent copy under
-  `prepared/`; a mirrored selfie is flipped only when the user asks (E3), since only the planned operations
-  change.
+- **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): plan for a baked
+  face effect; burned-in text, names and patches are written as the edit prompt's remove or replace
+  operations, never removed by a tool; a mirrored selfie is flipped only when the user asks (E3), since only
+  the planned operations change.
 
 ### E6. Generate
 Run **X1–X10** (§5) for this video, as an edit. The source video is the unique master, and the plan
@@ -1724,7 +1724,9 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   it, and then only with a guide (`generation-system.md` §4b.1c); never build a size-and-place guide from an
   unscrubbed source frame (performer, clothing or lettering still in it), a flat packshot paste or a
   soft-labelled image (§4b.6); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
-  face effect, a burned-in caption or an identifying name unplanned (§5c.2b).
+  face effect, a burned-in caption or an identifying name without its prompt sentence (§5c.2b); never try to
+  remove a caption, a name or a patch from a source with a tool in Analyze Mode (inpaint, delogo, crop): the
+  clean-plate lines and the character-swap script carry it.
 - Never accept a placed product's wordmark or variant tag (flavour, size or model) that reads as wrong letters, a paste sign written as
   a note, or "it is close to the camera" as a reason without the numbers (`anomaly-catalog.md` §2.7, §2.9,
   §2.15).

@@ -261,8 +261,9 @@ content [OFFICIAL example]. Keep the no-subtitles item whenever there is dialogu
 add: "do not reproduce any text, captions, usernames or watermarks from Video 1" [INFERRED from the official "do not
 inherit" pattern]. Never cut these lines to fit Higgsfield's 5000-character limit (cut descriptive wording):
 with "captions, usernames" and "no on-screen text" trimmed, a garbled grey ghost of the source caption stood
-on the wall at its old position for the whole clip; restoring them and giving the model a reference with the
-caption inpainted removed it (§4.0 item 19) [VERIFIED CE-045 a3].
+on the wall at its old position for the whole clip; restoring them removed it (§4.0 item 19) [VERIFIED CE-045 a3;
+that retry also swapped in a reference with the caption inpainted, which is not the method: no tool removes a
+caption, the lines do].
 
 **(c) Intentional in-frame text.** Only when it belongs to the scene (a sign, packaging, a screen UI), is 1–3 short
 words, large, frontal and mostly static; state it once, bound to its surface, and QC every frame [INFERRED]. Anything
@@ -580,9 +581,9 @@ Verbatim first-party examples (trimmed with […]):
    > subtitles, captions or other on-screen text"; negatives without "no on-screen text"
    > good (a3): "Do not inherit the appearance, clothing, text, captions, usernames, watermarks or branded items of
    > Video 1"; "No subtitles, captions, letters or other on-screen text anywhere"; "[Negative Prompts] no subtitles,
-   > no on-screen text, […]", other wording cut to fit; the video reference replaced by a copy with the caption
-   > inpainted from the static wall
-   > passed [VERIFIED 2026-10-12]: no source text on the wall in any sample.
+   > no on-screen text, […]", other wording cut to fit
+   > passed [VERIFIED 2026-10-12]: no source text on the wall in any sample (the retry also used a caption-
+   > inpainted reference; the rule keeps only the lines).
 
 Patterns they teach:
 - **Order:** overall description (genre, length, pacing) → reference bindings → timed shots → dialogue → sound →
@@ -735,7 +736,7 @@ pace. Negative prompt list: No subtitles, no on-screen text, no watermark, no fa
 - [ ] Asset size/grip/occlusion, light direction and end states written (§3.14); slop exclusions included (§5).
 - [ ] Size: the anchor is from the §5 passing list, or a size-and-place guide (§4.0 items 13–14) carries spot and size; the reckoning (neighbour ratio, depth, fraction of the frame, "No scale drift") is written as a check, and no wording retry follows a miss (`reference/anomaly-catalog.md` §2.7).
 - [ ] Spot and camera: the spot passes `reference/generation-system.md` §4b.1c; a camera-lock sentence when the product is near a frame edge or the shot is handheld or an orbit; per-shot desk state; the one hand in frame named with the bare empty area, and the object a hand picks up.
-- [ ] Identity image: cropped to the face when its clothing differs from the kept garment, the kept garment in positive words, a mirrored selfie flipped (`reference/anomaly-catalog.md` §2.17); the prepared source flipped, inpainted and cleaned as its card flags (`reference/generation-system.md` §5c.2b).
+- [ ] Identity image: cropped to the face when its clothing differs from the kept garment, the kept garment in positive words, a mirrored selfie flipped (`reference/anomaly-catalog.md` §2.17); the prepared source flipped as its card flags, captions and names left to the prompt (`reference/generation-system.md` §5c.2b).
 - [ ] Label pixel budget (`reference/anomaly-catalog.md` §2.9): the wordmark at least about 25 px upright, or the limit written in the brief before generating.
 - [ ] Posture, support and place (§3.14): flat on a bare surface by default, upright only for a reason the plan states, on a visible surface, out of a working hand's way, with the story reason; no lean on an invented prop; nothing on a thin sheet; the object that is picked up is named (`reference/anomaly-catalog.md` §2.16).
 - [ ] Source surfaces: each printed surface of Video 1 that a guardrail or `generation-system.md` §9b names is replaced with a named concrete thing in the edit grammar, and the original is in the exclusion line (§3.14).
