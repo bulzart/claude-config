@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 2adb81e3-0d33-4268-9b11-ed9262381e95
-  modified: 2026-10-10T07:48:25.168Z
+  modified: 2026-10-13T17:14:09.735Z
 ---
 
 `~/.claude/commands/update-from-errors.md` (created 2026-10-10) takes a required command name
@@ -59,6 +59,6 @@ ledger is meant to make that context accurate over time.
   command, update it in the same style with a dated `.bak-YYYYMMDD-HHMMSS` copy beside it
   (see [[atp-build-prompt-sync]]).
 
-**analyze-then-pick has no ledger since 2026-10-13** ([[atp-caught-errors]]): its record set is the user's words given as the argument plus the run-level records (briefs, requests, result.json); nothing is marked or promoted through a tool, and `learning-log.md` keeps the map from each CE label to the section that holds its lesson. The 2026-10-13 pass over all 94 entries was the first to consume CE-029..CE-094. The skill's ledger steps still apply to pipelines that keep one (analyze-then-generate).
+**analyze-then-pick has no ledger since 2026-10-13** ([[atp-caught-errors]]): its record set is the user's words given as the argument plus the run-level records (briefs, requests, result.json); nothing is marked or promoted through a tool, and `learning-log.md` keeps the map from each CE label to the section that holds its lesson. The 2026-10-13 pass over all 94 entries was the first to consume CE-029..CE-094. The skill's ledger steps still apply to pipelines that keep one (analyze-then-generate). After the independent review of that pass the skill itself was made ledger-optional: it takes the user's own quoted words after the command name as records `U-1`, `U-2`, … (read first, verbatim), uses run-level records newer than the learning log's "Consumed" line when there is no ledger, never gives a retired ledger back, and §0 item 8 allows deleting a ledger only when the user explicitly asks to retire it (frontmatter, §0 items 2 and 8, §1.1 step 5 and the no-record rule, the Never list; mirrored in `Documents/prompts/update-from-errors.txt`).
 
 Related: [[atp-caught-errors]], [[atp-build-prompt-sync]].
