@@ -316,23 +316,30 @@ You are running the **/analyze-then-pick** command.
     failed request, the verdict and what changed) and in `result.json` (`reference/production-agents.md` §3
     item 12); nothing else is written to the library but the Higgsfield flag record of item 23.
 23. **Caught flags: every prompt and video that Higgsfield flagged is recorded**
-    (`ATP/caught_flags.md`, written only with `T caught-flag`). A flag is any time Higgsfield
-    refuses, blocks, withholds or reroutes something during the run: a moderation or policy
-    block, a job that fails within seconds with no reason (refunded), an upload, video or
-    Element marked `nsfw`, `ip_checking` or `failed`, an output withheld, or a notice returned
+    (`ATP/caught_flags.html`: one self-contained page that holds the data and a viewer with search,
+    filters and grouping, written only with `T caught-flag`; `T caught-flag open` shows it to the user).
+    A flag is any time Higgsfield refuses, blocks, withholds or reroutes something during the run: a
+    moderation or policy block, a job that fails within seconds with no reason (refunded), an upload,
+    video or Element marked `nsfw`, `ip_checking` or `failed`, an output withheld, or a notice returned
     instead of a job (`preset_recommendation`). Validation errors (a prompt over 5000
     characters, out of credits) are not flags. **Whoever made the call records it at once,
     before changing the request** (agents and this session alike, in both modes): mark the
-    submission with `T ledger set … --flagged`, then `T caught-flag add` with Higgsfield's
-    response verbatim (or "none given"), the kind, the tool and stage, the job ids and credits,
-    **the flagged video** (the reference that rode as the video reference and/or the generated
-    clip, with its path), the full prompt, the params and the media the request carried (with
-    `--run` and `--video` the script attaches the newest request's prompt, params, media ids and
-    the plan path itself), and the agent's own **suspected trigger** labelled [E] or [I]. The
-    script only records; the diagnosis is the agent's. After the changed request is accepted:
+    submission with `T ledger set … --flagged`, then `T caught-flag add --run RUN --video NN --attempt aK`.
+    **The script gathers** what the run already knows: the request's prompt and parameters, every input
+    with its file, type, V or A id and a thumbnail, the reference video and the source segment it covered,
+    the plan and the brief, and the job and fingerprint of the ledger row marked flagged. **The agent
+    supplies the judgement:** Higgsfield's response verbatim (or "none given"), the kind, the tool and
+    stage, the credits, its **suspected trigger** labelled [E] or [I], and what the page searches and
+    groups by: `--tags` (1 to 4 labels for the trigger, for example `real-person-face`, `celebrity-name`,
+    `brand-name`, `protected-ip`, `nsfw-image`, `video-reference`, `element`, `prompt-wording`,
+    `preset-notice`, `output-withheld`, `unknown-trigger`), `--asset` (which input: `"Image 2"`,
+    `"Video 1"`, a media id, a file name or an A or V id; a file path for an upload flag),
+    `--prompt-span` (the exact words of the prompt) and `--part-of` / `--part-from` / `--part-to` (which
+    video, which seconds). Name what can be told and leave the rest out: the script lists what was not
+    given and never guesses. After the changed request is accepted:
     `T caught-flag set --id CF-nnn --status cleared --cleared-prompt <the accepted request.json>
     --cleared-job J` (never `cleared` before a request went through; a flag that stays is
-    `persistent` and the video is planned another way or reported). **The file is written, never
+    `persistent` and the video is planned another way or reported). **The page is written, never
     read:** no step of a run (A1, E1, a plan, X4) and no agent contract opens it, and no digest or copy
     of it is made, because a growing file read at every run start rots the agents' context. What a flag
     teaches is held as a general rule in the references (`generation-system.md` §5c.2, the model guides'
@@ -340,7 +347,8 @@ You are running the **/analyze-then-pick** command.
     main session runs `T caught-flag reconcile --run RUN` as each agent reports and in the wrap-up; it
     only lists the calls marked flagged that have no entry yet, so no flagged call leaves the run
     unrecorded. A flag whose rule is general or recurs is written into those references by
-    `/update-from-errors`; the entry stays as the record.
+    `/update-from-errors`; the entry stays as the record. The user opens the page to see the flags
+    grouped by trigger, asset, video, kind, run or model and searched by field.
 
 ## 1. Paths and tools
 
@@ -351,7 +359,7 @@ You are running the **/analyze-then-pick** command.
 | `T` | `"$PY" "$ATP/scripts/atp.py"`. Every call prints one JSON object on its last line; run through Bash |
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` |
-| Caught flags | `ATP/caught_flags.md` (item 23): `T caught-flag add, set, reconcile` and `T ledger set --flagged`; written in X7, reconciled in A9b and §6, never read during a run |
+| Caught flags | `ATP/caught_flags.html` (item 23): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7, reconciled in A9b and §6, never read during a run |
 | References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
 | Run folder | created by `T new-run` under `ATP/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
@@ -1241,7 +1249,7 @@ files as video K".
     face riding in the video reference without the planned fallback, protected IP or a real person's
     likeness claimed in the prompt, a flagged asset sent again unchanged). A trigger the plan cannot avoid
     is written in the brief as a risk, and the fallback request (for example without the video reference,
-    fidelity and sync at risk) is planned before the first submission. Nothing here opens `caught_flags.md`.
+    fidelity and sync at risk) is planned before the first submission. Nothing here opens `caught_flags.html`.
   - **Counts, openings and permanence** (`anomaly-catalog.md` §3): walk every use beat (the
     preparation step, the part, the contact point, the head and hands), every multiple's number at
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
@@ -1311,10 +1319,12 @@ files as video K".
      - `T ledger set --run RUN --job J --status failed --flagged --note "<what came back>"` (no job id:
        `--fingerprint F`);
      - `T caught-flag add --run RUN --video NN --attempt aK --kind <…> --tool <…> --stage <…>
-       --response "<verbatim | none given>" --job J --credits "<refunded n>" --flagged-video "<the
-       reference V id + file riding as the video reference, and/or the clip + path>" --trigger "[E|I]
-       <suspected trigger>" --cause <…> --mode … --model … --product …` (the request's prompt,
-       params, media ids and the plan are attached from `50-requests/`);
+       --response "<verbatim | none given>" --credits "<refunded n>" --trigger "[E|I] <suspected
+       trigger>" --cause <…> --tags <1 to 4 labels> [--asset "Image 2"] [--prompt-span "<the exact
+       words>"] [--part-of "reference V10" --part-from 3.2 --part-to 6.0] --product …` (the request's
+       prompt and params, every input with its file and thumbnail, the reference, the source segment,
+       the plan and the flagged ledger row are attached from the run; name the asset, the words and the
+       part only when you can tell);
      - then change the request (the one diagnosed retry of X7 step 5; after the second identical
        refunded failure, never a third: plan without the trigger, for example without the video
        reference, `generation-system.md` §5c.2), say what changed with `caught-flag set --changed`,
@@ -1570,7 +1580,8 @@ Then give:
 - only if `config.json → capcut.text_style.learned` is ever empty (it holds the user's locked
   preset): "To copy CapCut's exact text preset, add a text in any CapCut project, pick the preset,
   close CapCut, and run `T capcut-text-style --learn --draft "<store>/<that project>"`";
-- the flags (item 23): "N flags recorded in `caught_flags.md` (CF-…): M cleared, K persistent",
+- the flags (item 23): "N flags recorded in `caught_flags.html` (CF-…): M cleared, K persistent",
+  and that `T caught-flag open` shows them grouped and searchable,
   each persistent or open one with its video, the flagged prompt or video and what was tried;
   or "no flags this run";
 - any open issues.
@@ -1699,7 +1710,7 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   the clean generations instead of the finals, and never rerun or retry it on your own (§6b).
 - Never create or read an error ledger (item 22): a video the user reports as wrong is diagnosed with their
   words verbatim, in its brief, and fixed only after the diagnosis.
-- Never read `ATP/caught_flags.md` or hand it to an agent (item 23: it is written, not read), never
+- Never read `ATP/caught_flags.html` or hand it to an agent (item 23: it is written, not read), never
   change or resend a request that Higgsfield flagged before its `T caught-flag add` entry exists (the verbatim
   response, the prompt, the media, the flagged video, the suspected trigger), never write an
   entry by hand, never mark one `cleared` before a changed request was accepted, never send a

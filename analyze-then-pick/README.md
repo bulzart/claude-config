@@ -9,6 +9,7 @@ it uses at most 2 analysis agents plus, in Analyze Mode, one production agent pe
 analyze-then-pick/
 ├── learning-log.md                 one section per `/update-from-errors` pass: patterns, root causes, changes, hypotheses to test; the pass of 2026-10-13 retired the feedback ledger and holds the map from every `CE-nnn` case label to the section that now holds its lesson (read by the update command only, never by a run)
 ├── config.json                     paths (python, runs), fixed output (9:16, 720p), analysis defaults, Edit Mode cost gate, CapCut store + template
+├── caught_flags.html               the flag record: one self-contained page (data + viewer: search, filters, grouping by trigger, asset, video, kind) of every prompt and video Higgsfield flagged; written only by `atp.py caught-flag`, opened with `caught-flag open`, never read by a run
 ├── models/
 │   ├── index.json                  model id → guide, capabilities, 9:16/720p parameter mapping, continuation (max per generation + how clips join); the only file read to build the menu
 │   ├── _TEMPLATE.md                structure every model guide follows
@@ -30,6 +31,7 @@ analyze-then-pick/
 │   └── assets-and-substitution.md  user-supplied assets only (analyze: dropped once; edit: per operation), contents samples, understanding + registry, substitution map, reference strategy per model
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
 ├── scripts/atp.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), sync-check, locked ledger/state, CapCut name/prep/repair, transfers)
+├── scripts/caught_flags_template.html  the viewer of caught_flags.html (`atp.py caught-flag render` rewrites the page from it)
 └── runs/<stamp>-<slug>/            one folder per run (state.json makes runs resumable: /analyze-then-pick resume <run-dir>)
 ```
 
@@ -42,6 +44,15 @@ wording and what worked. There is no error ledger: `caught_errors.md` and `atp.p
 this folder's git history (`git log --follow -- analyze-then-pick/caught_errors.md`, last commit `aba83d3`), and
 `learning-log.md` maps every label to the section that holds its lesson. New lessons go straight into the
 owning section through `/update-from-errors analyze-then-pick "<what went wrong>"`.
+
+## The flag page (`caught_flags.html`)
+It records every prompt and video Higgsfield flagged, refused, withheld or rerouted, as one self-contained page: the
+data is a JSON block inside it and the viewer (search with `field:value` operators, filters, grouping by trigger tag,
+suspected asset, video, kind, run, model, cause, status or month, and a detail view with the input thumbnails, the
+prompt with the suspect words marked, the response and what happened next) comes from `scripts/caught_flags_template.html`.
+`atp.py caught-flag add` gathers the video, the request, every input with its file and thumbnail and the reference it
+covered, and takes the agent's trigger, tags, asset, prompt words and video part; `caught-flag open` shows the page.
+No step of a run and no agent reads it; what a flag teaches is written into the references as a rule.
 
 ## How a run uses the documentation
 1. Right after the mode (Analyze / Edit), the command prints the model menu with

@@ -58,16 +58,19 @@ Follow, for this video only:
   result.json (`qc`, `continuity`, `notes`); a flagged delivery (RESIDUAL FAILURE) is written the same way.
   There is no other error file; the only thing you write to the library is a Higgsfield flag record (below),
   and you read none: the rules live in the references you read above.
-- Flags (command item 23). <ATP>/caught_flags.md is written, never read: do not open it. When Higgsfield
+- Flags (command item 23). <ATP>/caught_flags.html is written, never read: do not open it. When Higgsfield
   flags, refuses, withholds or reroutes anything in your lane
   (a moderation or policy message; a job failed within seconds with no reason; an upload, video or
   Element marked nsfw / ip_checking / failed; an output withheld; a preset_recommendation notice instead
   of a job), record it BEFORE you change the request: `T ledger set --run <RUN> --job J --status failed
   --flagged --note "<what came back>"`, then `T caught-flag add --run <RUN> --video NN --attempt aK --kind
-  … --tool … --stage … --response "<verbatim | none given>" --job J --credits "<refunded n>"
-  --flagged-video "<the reference V id + file that rode as the video reference, and/or the clip + path>"
-  --trigger "[E|I] <suspected trigger>" --cause … --mode … --model … --product …` (the prompt, params,
-  media ids and plan attach themselves). Then make the one diagnosed change, say it with `T caught-flag
+  … --tool … --stage … --response "<verbatim | none given>" --credits "<refunded n>" --trigger "[E|I]
+  <suspected trigger>" --cause … --tags <1 to 4 labels, e.g. real-person-face,video-reference> [--asset
+  "Image 2" | "Video 1" | <media id> | <file name>] [--prompt-span "<the exact words>"] [--part-of
+  "reference V10" --part-from 3.2 --part-to 6.0] --product …` (the prompt, params, every input with its
+  file and thumbnail, the reference, the source segment, the plan and the flagged ledger row attach
+  themselves; name the asset, the words and the part only when you can tell). Then make the one diagnosed
+  change, say it with `T caught-flag
   set --id CF-nnn --changed "…"`, and once the changed request is accepted `T caught-flag set --id CF-nnn
   --status cleared --cleared-prompt <request.json> --cleared-job J`; a flag that stays is `--status
   persistent --note "<what was tried>"`. Never a third identical request after two refunded flagged
@@ -223,10 +226,11 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 14. **Docs, before the final message:** the brief carries a block per attempt (every regenerate reason and
     flagged delivery included) and the final prompt; `result.json` complete; `readme-row.md` and the
     deliverables files written; the CF ids of any flag (item 15) listed in `result.json` → `notes`.
-15. **Flags** (command item 23; `ATP/caught_flags.md`). Every call Higgsfield flagged, refused, withheld or
+15. **Flags** (command item 23; `ATP/caught_flags.html`). Every call Higgsfield flagged, refused, withheld or
     rerouted in the agent's lane is marked with `T ledger set --flagged` and recorded with `T caught-flag add`
-    before the request changes, with the verbatim response, the flagged video and prompt, the media the
-    request carried and the agent's suspected trigger ([E] or [I]); it is `cleared` only once a changed request
+    before the request changes, with the verbatim response, the agent's suspected trigger ([E] or [I]) and
+    its grouping tags, and the asset, the prompt words and the video part when it can tell (the prompt, the
+    inputs with their files and the reference attach themselves); it is `cleared` only once a changed request
     was accepted (with the accepted request.json and job), else `persistent`. `result.json` → `notes` lists the
     CF ids, and `qc` names a video whose flag stayed. The main session reconciles them with `T caught-flag
     reconcile` (§5).

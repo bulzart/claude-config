@@ -34,7 +34,7 @@ owning sections as general rules (what to achieve, what to avoid) with short sam
   words>"`.
 - `CE-nnn` in the references are case labels: the README explains them, `learning-log.md` maps each to
   its section, the old file is in git history (last commit `aba83d3`).
-- Not affected, and not asked about: `caught_flags.md` (flag ledger, [[atp-caught-flags]]) and the
+- Not affected, and not asked about: `caught_flags.html` (the flag record, now an HTML page, [[atp-caught-flags]]) and the
   analyze-then-generate pipeline's own ledger ([[atg-pipeline]]). Both carry the same rot risk; suggest
   retiring them only if the user raises it.
 

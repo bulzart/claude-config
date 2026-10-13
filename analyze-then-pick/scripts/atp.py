@@ -2907,7 +2907,8 @@ def _cf_inputs_from_text(text: str, rd) -> list:
 
 
 def _cf_submission(rd, video, attempt) -> dict:
-    """The run ledger row (state.json submissions) of this video and attempt: job id, fingerprint, history."""
+    """The run ledger row (state.json submissions) the agent marked `ledger set --flagged` for this video (and attempt):
+    its job id and fingerprint. Never a row that was not marked: the attempt's later, accepted retry is not the flagged call."""
     sp = rd / "state.json" if rd else None
     if not sp or not sp.is_file() or not video:
         return {}
@@ -2915,7 +2916,7 @@ def _cf_submission(rd, video, attempt) -> dict:
         st = json.loads(sp.read_bytes().decode("utf-8"))
     except (ValueError, OSError):
         return {}
-    rows = [e for e in st.get("submissions", []) if _cf_nn(_lane(e.get("video", ""))) == _cf_nn(video)]
+    rows = [e for e in st.get("submissions", []) if e.get("flagged") and _cf_nn(_lane(e.get("video", ""))) == _cf_nn(video)]
     m = re.search(r"(\d+)\s*$", str(attempt or ""))
     if m:
         sel = [e for e in rows if e.get("attempt") == int(m.group(1))]
