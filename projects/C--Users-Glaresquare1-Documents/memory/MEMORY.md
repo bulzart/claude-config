@@ -1,6 +1,6 @@
 - [CapCut text preset locked](capcut-text-preset-locked.md) — /analyze-then-pick always uses the user's chosen preset (from 03_Oct_2026_v09); text always horizontally centred; never replace unasked
 - [~/.claude git versioning](claude-folder-git-versioning.md) — local repo + auto-commit hooks; allow-list .gitignore; add new user folders to it; never leave backup copies in tracked folders
-- [Neurogum package forms](neurogum-package-forms.md) — updated official samples; closed cartons/pouch, never big box or opened carton with blister; vary forms; rotate 5 flavours
+- [Neurogum package forms](neurogum-package-forms.md) — updated official samples; closed cartons/pouch, never big box or opened carton with blister; vary forms; rotate 5 flavours; size authority = per-folder product_properties.txt (master + Mints group file + mint sachets deliberately removed 2026-10-13, never recreate)
 - [Celsius: no Orange flavour](celsius-no-orange-flavor.md) — rotate Cherry Cola, Peach Vibe, Watermelon; Orange already overused
 - [ATP anomaly catalog](atp-anomaly-catalog.md) — reference/anomaly-catalog.md: counts, openings/use, permanence, solidity, blend/paste test, size reckoning (atp.py scale); wired into the entity ledger, prompts, QC (qc --dense); new reported anomalies go there via /update-from-errors
 - [ATP build prompt sync](atp-build-prompt-sync.md) — Documents/prompts/analyze-then-pick.txt is the pipeline's build prompt; update it after every pipeline change; it specifies skills-based packaging (target, not current)
