@@ -81,11 +81,13 @@ Hard rules:
   your lane; exit 3 means do not submit. Never use generate_video_batch.
 - Never ask the user anything. On a blocker, write result.json with status "blocked" and stop.
 - Spot and guide: the plan's spot passed `generation-system.md` §4b.1c (visible at the source's frame 0 and
-  along the whole path, outside every hand's lane, bare and wider than the pack, not the nearest plane);
-  where the model guide lists size or place as a limit and no passing-list anchor fits, the request carries
-  the size-and-place guide of §4b.6, built from neutral bare-surface material only (nothing of the source).
-- Label: read the wordmark and the flavour tag word by word on a full-resolution frame at rest; a wrong
-  letter is a regenerate reason (`anomaly-catalog.md` §2.9, §4 step 5h).
+  along the whole path, outside every hand's lane, bare and wider than the product, not the nearest plane
+  unless the user marked it); where the model guide lists size or place as a limit and no passing-list anchor
+  fits, and always for a near-plane spot the user marked, the request carries the size-and-place guide of
+  §4b.6, built from the source's bare surface scrubbed of performer, clothing and lettering (Create: neutral
+  texture only).
+- Label: read the wordmark and the variant tag (flavour, size or model) word by word on a full-resolution
+  frame at rest; a wrong letter is a regenerate reason (`anomaly-catalog.md` §2.9, §4 step 5h).
 - Touch only video NN's files and its CapCut project. Reuse the media ids and the folder id in
   state.json.
 - Never capcut_save with force:true.
@@ -107,11 +109,12 @@ Hard rules:
   from one assumed number is PROVISIONAL: view the frame yourself before you flag or report it, and never
   write RESIDUAL FAILURE for it (CE-028). With agreeing estimates (over 25 % off, changing across a cut, or larger than the hand
   that holds it: regenerate once, no post-fix; where the model guide lists size as a model limit the
-  retry changes the lever (the size-and-place guide of generation-system.md §4b.6, the form or the anchor
-  class from its passing list), never the sizing words, and a second miss ships the best take flagged). Render the plan's QC checkpoints with `T qc --dense`
+  retry changes the lever (the size-and-place guide of generation-system.md §4b.6, the integration form or the
+  anchor class from its passing list), never the sizing words, and a second miss ships the best take flagged). Render the plan's QC checkpoints with `T qc --dense`
   and count at each. A count or state
   that changes without a cause, or a use through the wrong or a closed part, is a regenerate reason.
-- Posture, support and place (anomaly-catalog.md §2.16): flat or on its base, on a visible surface, out
+- Posture, support and place (anomaly-catalog.md §2.16): flat on a bare surface by default, upright only for
+  a reason the plan states, on a visible surface, out
   of a working hand's way, no lean on an invented prop, nothing on a thin sheet, the object that is
   picked up named; checked at 30 fps and written as its own line of the verdict.
 - Printed surfaces of the source that the card or a guardrail names are replaced by a named concrete
@@ -209,7 +212,7 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
        §2.7), the frame viewed, before any
        size verdict is written.
     7. **Text:** no emoji in any text layer; every layer posX 0.
-    8. **Label and lanes:** the wordmark and the flavour tag read exactly on a full-resolution frame at rest,
+    8. **Label and lanes:** the wordmark and the variant tag read exactly on a full-resolution frame at rest,
        word by word (a wrong letter regenerates once); no hand covers, wraps or passes through the placed
        product in any beat; the camera and the performer's pose in the last third match the source.
 14. **Docs, before the final message:** the brief carries a block per attempt (every regenerate reason and

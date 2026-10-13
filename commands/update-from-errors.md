@@ -1,6 +1,6 @@
 ---
-description: Learn a command's full pipeline, then read its caught_errors.md ledger and the error records around it, and generalise each failure into a kind the pipeline can apply to products and scenes it has never seen (what to achieve, what to avoid, the miss and its cause, the prompt correction, what worked), folded into that pipeline's first-try prompting, use cases, examples, craft, dismissal rules, instructions and QC.
-argument-hint: "<command-name> [dry-run] [only CE-nnn,CE-nnn…]   e.g. analyze-then-pick"
+description: Learn a command's full pipeline, then read its error records (its caught_errors.md ledger and the files around it where it keeps one; otherwise the user's own words and the run-level records since the last pass), and generalise each failure into a kind the pipeline can apply to products and scenes it has never seen (what to achieve, what to avoid, the miss and its cause, the prompt correction, what worked), folded into that pipeline's first-try prompting, use cases, examples, craft, dismissal rules, instructions and QC.
+argument-hint: "<command-name> [dry-run] [only CE-nnn,CE-nnn…] [the user's words]   e.g. analyze-then-pick"
 disable-model-invocation: true
 disallowed-tools:
   - Workflow
@@ -14,8 +14,10 @@ You are running **/update-from-errors**. When a pipeline command was first built
 thin. It had few generation examples. It had an untested idea of what counts as an error and of
 what a good prompt is. It had no record of what makes a great video and what should be dismissed.
 
-Its `caught_errors.md` ledger, and the error records around it, now hold what really went wrong:
-what the QC agents caught, what the user saw after delivery, and what the retries changed.
+Its error records now hold what really went wrong: its `caught_errors.md` ledger and the files around
+it where the pipeline keeps one; where it keeps none (analyze-then-pick since 2026-10-13), the user's own
+words about delivered videos and the run-level records since the last pass. They show what the QC agents
+caught, what the user saw after delivery, and what the retries changed.
 
 **The main idea is generalisation.** One miss is an instance: a sachet leaning on a grill lid, a
 can that slid along a table. The pipeline gains little from the instance alone. This command turns
@@ -54,7 +56,7 @@ never saw, and QC finds nothing.
    - Never open the ledger's entries before the pipeline model (§1.3) is written.
    - An error can only be traced to the step that let it through, and an edit can only land in the
      part that owns it, once the pipeline is understood.
-2. **The argument is required.** The first word names the command whose ledger is read
+2. **The argument is required.** The first word names the command whose error records are read
    (`analyze-then-pick`).
    - Without it, list the ledgers that exist (the §1.1 ledger search over `~/.claude/**`, plus
      the matching `~/.claude/commands/<name>.md` for each), say "Run `/update-from-errors
@@ -62,6 +64,9 @@ never saw, and QC finds nothing.
    - **`dry-run`**: do §1–§4 and show the change set, but write nothing.
    - **`only CE-012,CE-013`**: restrict the pass to those entries. The rest of the ledger is still
      read as context.
+   - **The user's words**: anything else after the command name is the user's own account of a delivered
+     video. It is a record of its own (`U-1`, `U-2`, …), kept verbatim and read first. A pipeline with no
+     ledger takes its record set from these words and the run-level records (§1.1 step 5).
 3. **Normal command, never a workflow.**
    - It uses ordinary tools in this conversation.
    - At most two read-only Explore agents are allowed, and only to sweep a large library.
@@ -132,7 +137,10 @@ never saw, and QC finds nothing.
       learning log as a **design suggestion**, with the entries behind it, for the user to
       decide.
 8. **Never touch:**
-   - the ledger's entries, except through its own tool. Never delete one: the ledger is the record;
+   - the ledger's entries, except through its own tool. Never delete one: the ledger is the record,
+     unless the user explicitly asks to retire it (analyze-then-pick, 2026-10-13). Then every entry is
+     first written completely into the sections that own its lesson, the file and its tool are removed,
+     nothing takes their place, and the log names the commit that still holds the file;
    - `runs/` or any other run data;
    - locked user preferences (memory files, locked config such as a CapCut text preset);
    - the hard rules the command marks as fixed, unless an entry is the user explicitly overriding
@@ -188,7 +196,9 @@ name. So the scan always runs, even when `caught_errors.md` exists, and the resu
    last 30 days or the last ten runs, whichever is more, every record that says a generation, an
    edit or a check went wrong **and has no ledger entry** (match on run and video). These are
    errors the ledger never received. Give each an id of its own (`R-<run>-<video>-<n>`) and
-   include it. Offer, as an optional suggestion, to add them to the ledger properly.
+   include it. Where the pipeline keeps a ledger, offer, as an optional suggestion, to add them to it
+   properly. Where it keeps none, the learning log's "Consumed" line says which runs earlier passes
+   covered: the records of newer runs, together with the user's words, are the record set.
 
 Rules for the set:
 - Every record is read with the same fields in mind: an id, the video, the run, the model, what
@@ -198,8 +208,10 @@ Rules for the set:
   of its sources named. The ledger entry's wording wins; the others add evidence.
 - The scan's result goes in the report: files included, files seen and skipped, and records
   gathered from run level.
-- No ledger and no record anywhere: stop, say the pipeline has no error record to learn from,
-  and name where one should go (`LIB/caught_errors.md`).
+- No ledger, no user words and no run-level record newer than the last pass: stop and say the
+  pipeline has no error record to learn from. A pipeline whose learning log says its ledger was
+  retired (analyze-then-pick, 2026-10-13) is not given one back: its record set is the user's words
+  and the run-level records, and the old file stays in git history, named in the log.
 
 Stop and say so if `CMD` is missing, or if the record set has no entries. To check for entries,
 look only for entry headings or records; do not read their content yet.
@@ -393,7 +405,7 @@ a passing request is the strongest evidence there is).
 | **Transfer test** | the rule restated for two other products or scenes; if it does not read for them, it is rewritten |
 | **Owners** | the sections that will hold it (§4) |
 
-Example, from the ATP ledger (CE-012, CE-013, CE-021):
+Example, from the retired ATP ledger (CE-012, CE-013, CE-021):
 - **Instance:** "the one piece sachet thats used is so forcedly placed leaning on the bbq grill lid
   meanwhile it could've just been placed somewhere on the grills side shelf instead".
 - **Miss:** the plan said "bare table beside the board"; the model put the pack on the board that is
@@ -611,7 +623,7 @@ No files are changed, nothing is committed, and the learning log gets its "none"
 
 **The ledger and evidence**
 - Never delete or rewrite a ledger entry's content. Set its status and pointer through its tool
-  only.
+  only (the one exception is §0 item 8: a ledger the user explicitly asks to retire).
 - Never present an unverified fix as working, or write a "good" example that never passed QC.
 
 **The pipeline's shape**

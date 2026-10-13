@@ -197,9 +197,9 @@ Confidence: <high/medium/low> — <what was hard to see or hear>
        anchor (the last only where `generation-system.md` §4b.1c holds, and with a guide) ranks above a
        surface anchor that only paper, a notebook or a head can size;
      - placement feasibility (`generation-system.md` §4b.1c): a spot that is bare at frame 0, stays in frame
-       along the whole path, lies outside every hand's lane and is wider than the pack. A reference with none
+       along the whole path, lies outside every hand's lane and is wider than the product. A reference with none
        (both hands cover the lower half in turn; an orbit that leaves the only free strip; a cluttered strip
-       narrower than the pack) ranks low for a placed product, and its plan is the swap of a source object or
+       narrower than the product) ranks low for a placed product, and its plan is the swap of a source object or
        an in-hand product (CE-055, CE-061, CE-073, CE-082);
      - cut structure and source flags: a reference with many hard cuts, one that alternates a person with
        person-free close-ups, or one with a face effect baked in ranks low (`generation-system.md` §3b.1 item

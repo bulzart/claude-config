@@ -420,9 +420,9 @@ across shots and after every cut for constancy. The same measurement is the "sca
   reckoned height. For a reference model whose guide lists size as a model limit (`wan3_0_prime`:
   `wan-3-0.md` §5), a wording retry on that product form is a re-roll: sizing words did not move a flat
   pack against a same-plane neighbour (CE-009, CE-011). The lever is the size-and-place guide
-  (`generation-system.md` §4b.6: eight takes within 1.25×), planned into the first request when the only free
-  surface is a near plane (CE-070), or an anchor class from the guide's passing list; a miss ships the best
-  take flagged and recorded. The guide holds the numbers and the forms its evidence covers; cans measured
+  (`generation-system.md` §4b.6: eight takes within 1.25×), planned into the first request whenever no
+  passing-list anchor fits (CE-070), or an anchor class from the guide's passing list; a miss ships the best
+  take flagged, with the attempt written as a block in the brief. The guide holds the numbers and the forms its evidence covers; cans measured
   against a person's head are unproven (CE-014, CE-015). For any other model: name the neighbour and the
   ratio, the depth and the fraction of the frame, pad the reference and add the constancy line.
 
@@ -477,20 +477,22 @@ count and attachment on every use beat.
 *Avoid:* "the main line reads" as a pass when the wordmark does not; upscaling as a fix. *Miss and cause:* the
 label of a small placed pack came back as letter-like shapes, the wordmark "Neuro" as "Nero", GUM as CUM,
 the title as "Eneryy & Focus" (the client: "the text on the box is very jumbled, maybe do at higher quality",
-CE-032; also CE-036, CE-042, CE-090, CE-093). A wordmark needs about 25 px of upright height; a flavour tag,
-a badge and fine print need about three times that; large type survives where a small wordmark does not. A
-pack at its honest size 1.5 m away has about 65 px of width at 1080p; a flat label at a 20° camera elevation
-shows 0.39 of its height; rotated a quarter turn it loses more. Higher resolution and tighter references
+CE-032; also CE-036, CE-042, CE-090, CE-093). A wordmark needs about 25 px of upright height; a variant tag
+(flavour, size or model), a badge and fine print need about three times that; large type survives where a
+small wordmark does not. A pack at its honest size 1.5 m away has about 65 px of width at 1080p; a flat-lying
+label seen from a camera 23° above the table shows 0.39 of its height (CE-036); rotated a quarter turn it
+loses more. Higher resolution and tighter references
 raised sharpness, not the legibility of a small mark (1080p with 60 % padding gave exact large type and wrong
 small print at 1.9× size), and a layout reference that carried the label crisply at 14 px, rotated and
 foreshortened, did not either. **Plan:** estimate the label's pixel height from the size reckoning (§2.7) and
 the posture; when the wordmark would be a few pixels, choose an anchor that gives it more (held, standing
-frontal, nearer within the size rule) or record the limit before generating; never enlarge the pack to buy
-legibility. **QC:** read the label word by word on a full-resolution frame at rest against the asset
-(wordmark and flavour tag exact; fine print may blur but never turns into wrong letters); a wrong letter is
+frontal, nearer within the size rule) or write the limit in the brief before generating; never enlarge the
+pack to buy legibility. **QC:** read the label word by word on a full-resolution frame at rest against the
+asset (wordmark and variant tag exact; fine print may blur but never turns into wrong letters); a wrong letter is
 a regenerate reason, never "OCR noise". **Guide:** a guide image copies its own soft label and thick edge, so
-its label is sharp at the video's pixel scale (CE-093). No fix has passed yet: the limit is recorded in the
-verdict and the take ships flagged.
+its label is sharp at the video's pixel scale (CE-093). No fix has passed yet for a small pack at its honest
+size (a 13×18 cm pouch read every line in CE-030 a2): the limit is written in the verdict and the take ships
+flagged.
 
 ### 2.10 Ownership and hand-offs (two or more people)
 
@@ -889,7 +891,7 @@ full-resolution frame; a costume change or a reversed print is a regenerate reas
    (Recreate): the reference's ORIGINAL track is one whole segment under the whole timeline, a stream
    copy (identical hash or a null-test residual of silence), the duration equal to the reference's, no
    splice. The evidence path of each of these checks goes in `result.json` (`continuity`).
-5h. **Label legibility** on a full-resolution frame at rest: the wordmark and the flavour tag read exactly,
+5h. **Label legibility** on a full-resolution frame at rest: the wordmark and the variant tag read exactly,
    word by word against the asset (fine print may blur but never become wrong letters), the frame path in
    the verdict; a wrong letter is a regenerate reason (§2.9; CE-032, CE-036, CE-042, CE-090, CE-093). **Hand
    lanes:** no hand covers, wraps or passes through the product in any beat (§2.16; CE-072, CE-076).
@@ -919,11 +921,11 @@ scale: pack 155 px = 12 % of frame height vs ~10 % target, constant → accept w
 size (method): can 270 px = 21 % of the frame; A: vs her head (23 cm, 250 px, at 1.0 m; the can at 0.55 m, `--depth-ratio 0.55`) = 0.87×; B: d = 0.55 m derived from the desk edge, f 26 → expected 264 px = 1.02×; A and B agree → accept (an assumed 1.5 m had said 2.79×).
 size (provisional): `scale --distance 1.5 --lens 26` only → "2.79× (provisional: distance assumed)": not flagged and not repeated; the frame shows the can on the near fold-out desk under a metre from the lens (CE-028) → re-measured against the head, then judged.
 size (neighbour in another plane): can 375 px = 29 % of the frame; A against her head (23 cm, 340 px) at `--depth-ratio` 1 gives 1.61×, but the can stands on the near table strip in front of her, so that A is invalid; the depth ratio is read from the frame (the can nearer than her head) and B is derived from the table plane; if they disagree the verdict is inconclusive, nothing is flagged and the depth is re-derived (CE-014, CE-015, re-measured 2026-10-10: 1.07× to about 1.4×, unsettled).
-size (wan3_0_prime): carton 163 px vs ~95 expected = 1.71× vs the bottle → regenerate; the guide lists size as a model limit, so no wording retry: the retry adds or fixes the size-and-place guide (`generation-system.md` §4b.6), or changes the form or the anchor class (in hand / one flat sachet on bare near-side surface / beside a large same-plane object where §4b.1c holds), or none is spent and the best take ships flagged and recorded.
+size (wan3_0_prime): carton 163 px vs ~95 expected = 1.71× vs the bottle → regenerate; the guide lists size as a model limit, so no wording retry: the retry adds or fixes the size-and-place guide (`generation-system.md` §4b.6), or changes the integration form or the anchor class (in hand / one flat sachet on bare near-side surface when the plan's package is the sachet / beside a large same-plane object where §4b.1c holds, with a guide), or none is spent and the best take ships flagged with its attempt block in the brief.
 anchor: can absent 0.0–4.2 s, appears at the left foreground at 4.3 s → regenerate (never a note); the 0–1 s dense sheet shows an empty table. | can at 1.0 s left of the table end, at 2.0 s one laptop-width to the right, no action, no cut → regenerate; read against the table edge every 0.25 s.
 timeline: overlay clip visible on 2.93–3.0 s as a bright rectangle on the fading picture → the overlay is cut to the frames its element is visible and faded with the picture; hold frames under the flash replaced by real-motion fades into pure white; original audio one segment, stream copy, hash identical.
 posture: sachet upright against the forearm 4.8–6.0 s @30 fps, 0 px gap to the arm, no support under its edge → regenerate; retry: flat on bare near-side surface, a band of bare surface to the arm, the story reason; exclusion "no standing, leaning, propped or tilted sachet".
-label: wordmark reads "Nero" at 14 px (rotated, foreshortened), Energy & Focus exact, GUM badge reads CUM → regenerate; the pack is at its honest size, so it is not enlarged: the anchor gives the wordmark ≥ 25 px upright or the limit is recorded (CE-042, CE-036).
+label: wordmark reads "Nero" at 14 px (rotated, foreshortened), Energy & Focus exact, GUM badge reads CUM → regenerate; the pack is at its honest size, so it is not enlarged: the anchor gives the wordmark ≥ 25 px upright or the limit is written in the brief (CE-042, CE-036).
 blend: 3× base crop at 1.0 s: hard clean edge, no cast shadow, no reflection, the brightest block of the scene → regenerate (never "contact shadow present" without the crop); retry: a close-up reference of the carton on the steel bound as the look and grounding reference (CE-043, CE-044).
 lane: can behind the resting hand; the left hand covers its lower half 2.2–3.3 s and seems to go through it → regenerate; retry: the user's marked bottom-left spot with a size-and-place guide, every hand passes behind it (CE-076, CE-081).
 guide: Image 4 shows the carton on the source desk crop at 0.65× the first take, perspective and shadow kept; take: 11.1 % of the frame height, A 1.20× (key pitch), B 1.02× (distance), agree → accept (CE-054).

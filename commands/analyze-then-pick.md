@@ -679,7 +679,7 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     above a surface anchor that only paper, a notebook or a head can size;
   - the placement's feasibility and the source's flags (`generation-system.md` §4b.1c, §5c.2b; protocol
     §5): a spot that is bare at frame 0, stays in frame along the path, lies outside every hand's lane and
-    is wider than the pack; a reference with many hard cuts, a person alternating with person-free shots
+    is wider than the product; a reference with many hard cuts, a person alternating with person-free shots
     or a baked face effect ranks low;
   - the number of people against the supplied characters;
   - the own-content length after stripping inserts, against the locked model's edit range. A longer
@@ -1002,9 +1002,10 @@ See §6.
   - local `T clean` for small static overlays;
   - otherwise explicit remove operations in the edit prompt;
   - otherwise clean-frame regeneration.
-- **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): flip a mirrored
-  selfie, inpaint burned-in text on a flat surface, remove a real person's name, plan for a baked face
-  effect, in the silent copy under `prepared/`.
+- **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): inpaint burned-in
+  text on a flat surface, remove a real person's name, plan for a baked face effect, in the silent copy under
+  `prepared/`; a mirrored selfie is flipped only when the user asks (E3), since only the planned operations
+  change.
 
 ### E6. Generate
 Run **X1–X10** (§5) for this video, as an edit. The source video is the unique master, and the plan
@@ -1047,9 +1048,10 @@ files as video K".
       test passed (`creative-direction.md` §5.0);
     - the **spot** (`generation-system.md` §4b.1c; from the source in Recreate and Edit Mode, from the
       blocking the plan asks for in Create): the hand-lane map, the region that is bare and in frame at 0,
-      1, 2.5, 4 and 6 s, the strip's width against the pack, the plane, the camera path and any spot the
+      1, 2.5, 4 and 6 s, the strip's width against the product, the plane, the camera path and any spot the
       user marked; and, where the model guide lists size or place as a limit and no passing-list anchor
-      fits, the **size-and-place guide** (§4b.6) with what it is built from;
+      fits (always for a near-plane spot the user marked), the **size-and-place guide** (§4b.6) with what it
+      is built from;
     - the **guardrail hits** of the source (Recreate, Edit Mode) with their operations and times,
       or the guardrail invariants of the concept (Create): the count limit in the ledger, no
       competitor objects, supplied characters only, the wording rules in the text plan
@@ -1144,8 +1146,8 @@ files as video K".
       the reckoned pixel height and measured with `T scale --frame … --product-px … --ref-cm …
       --ref-px …` before it is animated. Where the guide lists size as a model limit
       (`wan3_0_prime`), these words are a check, not a control: X1 chose the anchor class from the
-      guide's passing list, and a start frame is out of reach while the source rides as a video
-      reference.
+      guide's passing list or planned a size-and-place guide (§4b.6), and a start frame is out of reach
+      while the source rides as a video reference.
     - Every vessel's contents are stated from the contents sample ("the glass holds …"); an
       unstated glass comes back as water. A character photo's role is limited to the person ("only
       his face, hair, build and clothing; not the glass, table or background of Image 4") unless
@@ -1222,8 +1224,9 @@ files as video K".
     its last frame with the same operations. The model then interpolates the source's own action.
   - Create Elements when the model supports them and assets recur.
   - **The size-and-place guide** (`generation-system.md` §4b.6), when the plan has one: build it locally from
-    neutral bare-surface material, check it at X4, upload it with this video's own inputs and bind it as the
-    last `image_references` entry, for spot and size only.
+    the source's bare surface scrubbed of performer, clothing and lettering (Create: neutral texture only),
+    check it at X4, upload it with this video's own inputs and bind it as the last `image_references`
+    entry, for spot and size only.
   - **Contents form:** upload the variant's contents sample with the product views, and bind it to
     the vessel's contents in the prompt ("the drink in the cup has the colour, clarity and bubbles
     of @ImageN", "the gum piece she takes has the shape and colour of @ImageN"). A start frame
@@ -1257,9 +1260,10 @@ files as video K".
   - **Posture, support and place** (`generation-system.md` §4b.1b; `anomaly-catalog.md` §2.16): every
     anchor is a posture its shape allows, on a visible support, where a person would leave it, with
     its story reason; no lean on a prop the model has to invent, nothing on a thin sheet, no source
-    beat taken over. Where the guide lists size as a model limit, the anchor is from its passing list.
+    beat taken over. Where the guide lists size as a model limit, the anchor is from its passing list or a
+    size-and-place guide (§4b.6) carries spot and size.
   - **Spot and guide** (`generation-system.md` §4b.1c, §4b.6; `anomaly-catalog.md` §2.9): the spot passes the
-    feasibility lines; a guide holds nothing of the source, shows the product shaded in perspective with a
+    feasibility lines; a guide holds nothing of the performer, clothing or lettering, shows the product shaded in perspective with a
     sharp label and fits the reckoned size (`T scale --frame`); the wordmark's pixel height from the size
     reckoning is at least about 25 px, or the limit is written in the brief.
   - **Source surfaces:** each printed surface a guardrail or §9b names is a "replace / remove only …
@@ -1399,10 +1403,10 @@ files as video K".
     the hand that holds it is a regenerate reason with no post-fix; 15–25 % is a note only for a
     static product with a readable label. The retry changes the lever the guide names. For a model
     whose guide lists size as a model limit (`wan3_0_prime`) it changes the lever: the size-and-place
-    guide (`generation-system.md` §4b.6), the form or the anchor class from the guide's passing list,
-    never the sizing words (12 of 12 wording retries were re-rolls);
+    guide (`generation-system.md` §4b.6), the integration form (§4b.0) or the anchor class from the guide's
+    passing list, never the sizing words (12 of 12 wording retries were re-rolls);
     otherwise it names the neighbour and the ratio, the depth and the fraction of the frame, pads the
-    reference and rebuilds any start frame. A second miss ships the best take flagged and is recorded.
+    reference and rebuilds any start frame. A second miss ships the best take flagged, both attempts written as blocks in the brief.
   - **Blend** (`anomaly-catalog.md` §2.15): on one full-resolution frame at rest and one in use,
     the eleven-sign paste test against the nearest neighbour at the same depth (whites against the
     nearest white object, light direction, contact shadow, sharpness and grain, packshot pose,
@@ -1444,7 +1448,7 @@ files as video K".
   - **Leftovers** (`generation-system.md` §9b): only the must-not-survive list counts, and it is
     fixed autonomously.
   - **Label legibility** (`anomaly-catalog.md` §2.9, §4 step 5h): on a full-resolution frame at rest the
-    wordmark and the flavour tag read exactly, word by word against the asset, the frame path in the
+    wordmark and the variant tag (flavour, size or model) read exactly, word by word against the asset, the frame path in the
     verdict; a wrong letter is a regenerate reason, and upscaling is no fix.
   - **Hand lanes, camera path and orientation** (`anomaly-catalog.md` §2.16; `generation-system.md` §5c.5,
     §5c.2b): no hand covers, wraps or passes through the placed product in any beat; the product stays in
@@ -1452,8 +1456,8 @@ files as video K".
     every readable thing and handed object reads the right way round. A guide's artefacts copied into the
     take (a soft label, a thick rim, a lid notch, the source's scene or person) are a regenerate reason.
   - **Every regenerate reason found here is written at once** in the video's brief as an attempt block (the
-    failed request.json, the verdict with its numbers and frame paths, what the retry changes) and in
-    `result.json`; the retry changes the lever the diagnosis names (item 22).
+    failed request.json, the verdict with its numbers and frame paths, what the retry changes) and, in
+    Analyze Mode, in `result.json`; the retry changes the lever the diagnosis names (item 22).
   - **Guardrails** (`brand-guardrails.md` §5): the count limit at every checkpoint; `T qc` OCR
     with no competitor name and a full-resolution look at every de-branded object (no logo,
     claw, crest or livery, no blur, no patch); the identity check over every shot, reflection and
@@ -1594,7 +1598,7 @@ repeated from an agent's provisional number. What is missing is fixed before the
 Offer, in one line, the next useful step (more videos, a different direction, regenerate a flagged
 video). Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header
 "Feedback"), "Watch the videos: is any of them not right?": **"All good"**; **"I'll watch them
-later"** (any later message about them is still recorded); **"Some need fixes"** → ask in plain
+later"** (any later message about them is handled as item 22 says); **"Some need fixes"** → ask in plain
 chat which video and what is wrong, disliked or illogical. "Other" lets the user type it
 directly. Each problem named, now or in a later session, is handled as item 22 says: their words verbatim
 and the diagnosis go into the video's brief before the fix is offered. When a problem is a kind the
@@ -1708,11 +1712,12 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   brief (A9b, §6). Never copy an agent contract from an earlier run: it is generated at A9 from
   `reference/production-agents.md` §2.
 - Never place a product at a spot that is hidden at the source's frame 0, leaves the frame along the camera
-  path, lies in a hand's lane, is narrower than the pack or is the nearest plane (`generation-system.md`
-  §4b.1c); never build a size-and-place guide from the source frame, a flat packshot paste or a soft-labelled
-  image (§4b.6); never upload a mirrored selfie source un-flipped, or leave a baked face effect, a burned-in
-  caption or an identifying name unplanned (§5c.2b).
-- Never accept a placed product's wordmark or flavour tag that reads as wrong letters, a paste sign written as
+  path, lies in a hand's lane, is narrower than the product or is the nearest plane unless the user marked
+  it, and then only with a guide (`generation-system.md` §4b.1c); never build a size-and-place guide from an
+  unscrubbed source frame (performer, clothing or lettering still in it), a flat packshot paste or a
+  soft-labelled image (§4b.6); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
+  face effect, a burned-in caption or an identifying name unplanned (§5c.2b).
+- Never accept a placed product's wordmark or variant tag (flavour, size or model) that reads as wrong letters, a paste sign written as
   a note, or "it is close to the camera" as a reason without the numbers (`anomaly-catalog.md` §2.7, §2.9,
   §2.15).
 - Never retry a size miss with the sizing words on a model whose guide lists size as a model limit,
