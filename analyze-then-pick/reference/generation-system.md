@@ -346,7 +346,8 @@ Resolution rules:
   frame (behind the glasses case, against the wall), because "the cup's spot" alone is snapped to the nearest
   open desk (CE-071). A source object that a guardrail names is removed in the same grammar with a named
   replacement ("replace only the red can between the third bottle and the glass jar with a small pot; it does
-  not remain"); "the shelf holds X" plus a negative did not remove it (CE-071, VERIFIED on the retry).
+  not remain"); "the shelf holds X" plus a negative did not remove it (CE-071: the removal worked on the retry,
+  but that take shipped with the can at the wrong spot, so the sentence is observed, not verified).
 
 For a natural placement (§4b), the "source entity" column holds the **anchor** instead: the hand
 or surface it sits on [E], the light on that spot [E], and what surrounds it [E].

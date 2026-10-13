@@ -143,10 +143,12 @@ More cases, by kind:
   first requests (run 08 V01 V04, run 09 V04 V08). A patch or logo on the kept garment is the same: named
   only in the negatives ("no patch, no logo") it came back from 0.4 s; "remove only the <named patch> at
   <named place> in Video 1 and reconstruct the plain <fabric> there; it does not remain anywhere on the
-  garment", with the original in the exclusion line, removed it (CE-065, CE-075). An object a rule names (a
-  rival can on a shelf) is removed with a named replacement ("replace only the red can between the third
-  bottle and the glass jar with a small pot; it does not remain"), because "the shelf holds the pot" plus a
-  negative left it standing (CE-071, VERIFIED on the retry). A real person's name on a screen is carried by
+  garment", with the original in the exclusion line, removed patches and a flag emblem cleanly in a later take
+  (CE-065; CE-075 a1, observed, that take failed on other points). An object a rule names (a rival can on a
+  shelf) is removed with a named replacement ("replace only the red can between the third bottle and the glass
+  jar with a small pot; it does not remain"), because "the shelf holds the pot" plus a negative left it
+  standing (CE-071: the removal worked on the retry, whose take shipped with another flaw; observed, not
+  verified). A real person's name on a screen is carried by
   the video reference in every shot where it is legible, and a one-sentence edit changed it in one shot only
   (CE-080): remove it from the prepared source (`generation-system.md` §5c.2b) or ship the take flagged.
 
