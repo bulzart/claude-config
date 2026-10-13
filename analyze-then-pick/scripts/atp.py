@@ -2807,7 +2807,7 @@ def cmd_caught_flag(a):
     media ids, the flagged video, what was changed and whether it cleared.
       add        write a CF-nnn entry (run + video attach the plan, request, prompt and params by themselves)
       set        add a note, or the status (cleared needs the cleared prompt or job; persistent = gave up)
-      list       entries (filters; --digest for the compact run-start view)
+      list       entries (filters; --digest for a compact view; no step of a run reads the file)
       reconcile  the run's ledger (state.json) against this file: rows marked --flagged with no entry,
                  and failed rows with no job id or a flag-like note, for the agent to judge."""
     if not CAUGHT_FLAGS.exists():
@@ -4000,7 +4000,7 @@ def main():
     p.add_argument("--cleared-prompt", help="set: the request .json or text Higgsfield accepted after the change")
     p.add_argument("--cleared-job", help="set: the job id that ran after the change")
     p.add_argument("--promoted-to", help="set: the reference and section the rule was promoted into")
-    p.add_argument("--digest", action="store_true", help="list: compact context for the run start")
+    p.add_argument("--digest", action="store_true", help="list: compact view (no step of a run reads this file)")
     p.add_argument("--grep", help="list: substring over the whole entry")
     p.set_defaults(fn=cmd_caught_flag)
 

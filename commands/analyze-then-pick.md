@@ -301,8 +301,10 @@ You are running the **/analyze-then-pick** command.
     (the user's reports, the agents' regenerate reasons) is written, generalised, in the section that owns
     it (`reference/`, the model guides): as a kind (what to achieve, what to avoid) with the miss, its
     cause, the corrected wording and what worked as the sample beside it. There is no `caught_errors.md`,
-    no `T caught-error`, no per-run digest of past errors, and nothing in a run reads or writes an error
-    file: the plan, the prompt and QC follow the references. `CE-nnn` in the references are case labels of
+    no `T caught-error`, no per-run digest of past errors, and nothing in a run reads an error file: the
+    plan, the prompt and QC follow the references. The only error text a run writes is a video's own
+    attempt block in its brief, `result.json`, and the Higgsfield flag record of item 23; no later run
+    reads any of it. `CE-nnn` in the references are case labels of
     those lessons (`README.md`). **When a delivered video is wrong**, in the run or in a later session:
     take the user's words verbatim, diagnose them in pipeline terms (the stage that made the miss and the
     stage that should have caught it), say which section already holds the rule and why it did not
@@ -312,7 +314,7 @@ You are running the **/analyze-then-pick** command.
     sections. A user's word outranks the agents' QC on the same point: the user saw what QC passed. **The
     agents** write a regenerate reason or a flagged delivery in the video's brief (an attempt block with the
     failed request, the verdict and what changed) and in `result.json` (`reference/production-agents.md` §3
-    item 12); nothing is written to the library.
+    item 12); nothing else is written to the library but the Higgsfield flag record of item 23.
 23. **Caught flags: every prompt and video that Higgsfield flagged is recorded**
     (`ATP/caught_flags.md`, written only with `T caught-flag`). A flag is any time Higgsfield
     refuses, blocks, withholds or reroutes something during the run: a moderation or policy
@@ -330,15 +332,15 @@ You are running the **/analyze-then-pick** command.
     script only records; the diagnosis is the agent's. After the changed request is accepted:
     `T caught-flag set --id CF-nnn --status cleared --cleared-prompt <the accepted request.json>
     --cleared-job J` (never `cleared` before a request went through; a flag that stays is
-    `persistent` and the video is planned another way or reported). Every run reads the file at
-    the start (A1 / E1: `T caught-flag list --digest`), writes the entries that apply (same model,
-    tool or kind, or a trigger a plan could repeat: a real person's face in a video reference, a
-    brand or celebrity name, an image kind) to `20-analysis/caught-flags.md`, every plan names the
-    ones it avoids, and X4 checks each request against them before any credit is spent. The
-    main session runs `T caught-flag reconcile --run RUN` as each agent reports and in the
-    wrap-up, so no flagged call leaves the run unrecorded. A rule that is general or recurs is
-    promoted into the model guide's failure table or `generation-system.md` §5c.2 and marked
-    `promoted`; the entry stays as the record.
+    `persistent` and the video is planned another way or reported). **The file is written, never
+    read:** no step of a run (A1, E1, a plan, X4) and no agent contract opens it, and no digest or copy
+    of it is made, because a growing file read at every run start rots the agents' context. What a flag
+    teaches is held as a general rule in the references (`generation-system.md` §5c.2, the model guides'
+    failure tables, `higgsfield/higgsfield-mcp.md` §9), and X4 tests the plan against those rules. The
+    main session runs `T caught-flag reconcile --run RUN` as each agent reports and in the wrap-up; it
+    only lists the calls marked flagged that have no entry yet, so no flagged call leaves the run
+    unrecorded. A flag whose rule is general or recurs is written into those references by
+    `/update-from-errors`; the entry stays as the record.
 
 ## 1. Paths and tools
 
@@ -349,7 +351,7 @@ You are running the **/analyze-then-pick** command.
 | `T` | `"$PY" "$ATP/scripts/atp.py"`. Every call prints one JSON object on its last line; run through Bash |
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params) |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` |
-| Caught flags | `ATP/caught_flags.md` (item 23): `T caught-flag add | set | list | reconcile`, `T ledger set --flagged`; read at A1 / E1, checked in X4, written in X7, reconciled in A9b and §6 |
+| Caught flags | `ATP/caught_flags.md` (item 23): `T caught-flag add, set, reconcile` and `T ledger set --flagged`; written in X7, reconciled in A9b and §6, never read during a run |
 | References | `ATP/reference/analysis-protocol.md`, `generation-system.md`, `anomaly-catalog.md`, `creative-direction.md`, `brand-guardrails.md`, `text-and-format.md`, `assets-and-substitution.md`, `capcut-assembly.md`, `production-agents.md`; `ATP/pipeline/preprocessing.md` |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly.md` |
 | Run folder | created by `T new-run` under `ATP/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
@@ -447,12 +449,6 @@ You are running the **/analyze-then-pick** command.
 ## 3. Analyze Mode
 
 ### A1. Inventory and preprocessing (deterministic, local)
-- **Caught flags first** (item 23): `T caught-flag list --digest` and read every entry (the kind,
-  Higgsfield's response, the params, the flagged video, the suspected trigger, what was changed,
-  and the cleared prompt where there is one). Write `20-analysis/caught-flags.md`: the entries
-  that apply to this run (the locked model, the tools it will call, a trigger a plan could
-  repeat) with what each avoids, one line each, and which step uses it (plan, prompt, input
-  choice, X4). A cleared prompt shows the shape Higgsfield accepted.
 - `T inventory "<references folder>" --run RUN --as references`: everything in it is **reference
   material only**.
 - `T inventory "<asset path>" "<asset path>" … --run RUN --as assets` (scope `project`), then
@@ -885,9 +881,6 @@ See §6.
 ## 4. Edit Mode
 
 ### E1. Intake
-- **Caught flags** (item 23): `T caught-flag list --digest`; write `20-analysis/caught-flags.md`
-  with the entries that apply to this model, the edit kind and the source's content, and check
-  each request against them in X4.
 - `T inventory "<video path>" … --run RUN --as sources`: only videos are processed. Any other file
   there is ignored and never used as an asset.
 - `T split-audio "<video path>" … --run RUN`. For every original video, **inside the given path**
@@ -1243,12 +1236,12 @@ files as video K".
     the prompt. Nothing in the prompt invites new motion. The duration matches the source segment.
     No change operation forces a motion change: a bigger product gets a planned grip that keeps the
     same hand path.
-  - **Caught flags** (item 23): read the request against `20-analysis/caught-flags.md`: no prompt
-    wording, video reference, image or Element that an open or persistent flag names as the
-    suspected trigger goes out unchanged; where a cleared flag shows the accepted shape (the
-    video reference dropped, the name removed), the request takes it. A trigger the plan cannot
-    avoid is written in the brief as a risk, and the fallback request (for example without the
-    video reference, fidelity and sync at risk) is planned before the first submission.
+  - **Service blocks** (`generation-system.md` §5c.2 moderation fallback; `higgsfield/higgsfield-mcp.md` §9;
+    the model guide's failure table): the request carries no trigger those rules name (a real person's
+    face riding in the video reference without the planned fallback, protected IP or a real person's
+    likeness claimed in the prompt, a flagged asset sent again unchanged). A trigger the plan cannot avoid
+    is written in the brief as a risk, and the fallback request (for example without the video reference,
+    fidelity and sync at risk) is planned before the first submission. Nothing here opens `caught_flags.md`.
   - **Counts, openings and permanence** (`anomaly-catalog.md` §3): walk every use beat (the
     preparation step, the part, the contact point, the head and hands), every multiple's number at
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
@@ -1455,6 +1448,10 @@ files as video K".
     frame wherever its anchor does; the camera and the performer's pose in the last third match the source;
     every readable thing and handed object reads the right way round. A guide's artefacts copied into the
     take (a soft label, a thick rim, a lid notch, the source's scene or person) are a regenerate reason.
+  - **Shot structure** (`anomaly-catalog.md` §4 step 5i; `generation-system.md` §3b.1 item 7; Recreate and
+    Edit Mode with hard cuts): the output's cuts against the source's shot list: the same count at the same
+    times, person-free cutaways still person-free, the placed product in every shot where its anchor is in
+    frame, the closing emotion beat present; a merged, dropped or dissolved shot is a regenerate reason.
   - **Every regenerate reason found here is written at once** in the video's brief as an attempt block (the
     failed request.json, the verdict with its numbers and frame paths, what the retry changes) and, in
     Analyze Mode, in `result.json`; the retry changes the lever the diagnosis names (item 22).
@@ -1702,8 +1699,8 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
   the clean generations instead of the finals, and never rerun or retry it on your own (§6b).
 - Never create or read an error ledger (item 22): a video the user reports as wrong is diagnosed with their
   words verbatim, in its brief, and fixed only after the diagnosis.
-- Never start a run without reading `ATP/caught_flags.md` (A1 / E1), never change or resend a
-  request that Higgsfield flagged before its `T caught-flag add` entry exists (the verbatim
+- Never read `ATP/caught_flags.md` or hand it to an agent (item 23: it is written, not read), never
+  change or resend a request that Higgsfield flagged before its `T caught-flag add` entry exists (the verbatim
   response, the prompt, the media, the flagged video, the suspected trigger), never write an
   entry by hand, never mark one `cleared` before a changed request was accepted, never send a
   third identical request after two refunded flagged failures, and never re-upload a flagged

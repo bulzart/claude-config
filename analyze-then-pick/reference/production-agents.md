@@ -56,11 +56,10 @@ Follow, for this video only:
 - When your QC finds a regenerate reason, write it at once in the video's brief as an attempt block (the
   failed request.json, the verdict with its numbers and frame paths, and what the retry changes) and in
   result.json (`qc`, `continuity`, `notes`); a flagged delivery (RESIDUAL FAILURE) is written the same way.
-  There is no other error file and you write nothing to the library: the rules live in the references you
-  read above.
-- <RUN>/20-analysis/caught-flags.md (the entries of <ATP>/caught_flags.md that apply to this run: prompts
-  and videos Higgsfield flagged before; your plan names the ones this video avoids and X4 checks your
-  request against them). When Higgsfield flags, refuses, withholds or reroutes anything in your lane
+  There is no other error file; the only thing you write to the library is a Higgsfield flag record (below),
+  and you read none: the rules live in the references you read above.
+- Flags (command item 23). <ATP>/caught_flags.md is written, never read: do not open it. When Higgsfield
+  flags, refuses, withholds or reroutes anything in your lane
   (a moderation or policy message; a job failed within seconds with no reason; an upload, video or
   Element marked nsfw / ip_checking / failed; an output withheld; a preset_recommendation notice instead
   of a job), record it BEFORE you change the request: `T ledger set --run <RUN> --job J --status failed
@@ -188,10 +187,11 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
 11. **Final message:** the content of `result.json`, as one JSON line.
 12. **Record.** Every regenerate reason and every flagged delivery (RESIDUAL FAILURE) is written at once in
    the video's brief as an attempt block (the failed request, the verdict with its numbers and frame paths,
-   what the retry changes) and in `result.json`; nothing is written to the library. The main session checks
+   what the retry changes) and in `result.json`; nothing else is written to the library but the flag record
+   of item 15. The main session checks
    the briefs against the `result.json` files (§5).
 13. **Checks that are never skipped** (CE-016, CE-017, CE-018, CE-019, CE-023, CE-024, CE-025, CE-026, CE-027,
-    CE-028). The agent views the sheets itself; an assumption, "the contract forbids" and an unviewed sheet are
+    CE-028, CE-079, CE-083, CE-086). The agent views the sheets itself; an assumption, "the contract forbids" and an unviewed sheet are
     not evidence. Each check's evidence path (sheet, hash, measurement) goes in `result.json` → `continuity`.
     1. **Anchor from frame 0:** the placed or contents product is in the dense sheet of 0 to 1 s and in every
        second after it wherever its anchor is in frame, and its position is read against a fixed neighbour
@@ -215,6 +215,11 @@ Final message: the one-line JSON of <RUN>/60-outputs/video-NN/result.json.
     8. **Label and lanes:** the wordmark and the variant tag read exactly on a full-resolution frame at rest,
        word by word (a wrong letter regenerates once); no hand covers, wraps or passes through the placed
        product in any beat; the camera and the performer's pose in the last third match the source.
+    9. **Shot structure** (a source with hard cuts): the output's cuts against the source's shot list, the same
+       count at the same times, person-free cutaways not face shots or ghost dissolves, the placed product in
+       every shot where its anchor is in frame, the closing emotion beat present (`anomaly-catalog.md` §4 step
+       5i); a merged, dropped or dissolved shot regenerates once as separate clips on the source's own cuts
+       (`generation-system.md` §3b.1 item 7).
 14. **Docs, before the final message:** the brief carries a block per attempt (every regenerate reason and
     flagged delivery included) and the final prompt; `result.json` complete; `readme-row.md` and the
     deliverables files written; the CF ids of any flag (item 15) listed in `result.json` → `notes`.

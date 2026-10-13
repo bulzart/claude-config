@@ -895,6 +895,13 @@ full-resolution frame; a costume change or a reversed print is a regenerate reas
    word by word against the asset (fine print may blur but never become wrong letters), the frame path in
    the verdict; a wrong letter is a regenerate reason (§2.9; CE-032, CE-036, CE-042, CE-090, CE-093). **Hand
    lanes:** no hand covers, wraps or passes through the product in any beat (§2.16; CE-072, CE-076).
+5i. **Shot structure** (Recreate and Edit Mode, wherever the source has hard cuts; CE-079, CE-083, CE-086): the
+   output's cuts (30 fps sheets, or `T prep-video` on the output) beside the source's shot list from the card:
+   the same count at the same times (within 0.2 s); a person-free cutaway still shows only the screen or the
+   object, not a face shot and not a ghost dissolve into one; the placed product is in every shot where its
+   anchor is in frame; the closing emotion beat (a laugh, a reaction) is there. A merged, dropped or dissolved
+   shot is a **regenerate** reason; the retry follows `generation-system.md` §3b.1 item 7 (separate clips on
+   the reference's own cuts). The shot list and the evidence path go in the verdict and in `result.json`.
 6. **Scale**: the product against a hand or face on two or three sheets.
 7. **Ownership** after every hand-off; who uses what.
 8. **Verdict** (`generation-system.md` §9): **regenerate** on any break in §2.1–§2.5, §2.8–§2.10,

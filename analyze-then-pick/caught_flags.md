@@ -24,18 +24,17 @@ and tabulates only; the diagnosis is the agent's. `ledger set --flagged` marks t
 `caught-flag reconcile --run RUN` lists marked rows with no entry and failed rows to judge; the main session
 runs it as each agent reports and in the wrap-up.
 
-**Who reads it.** Every run reads it at the start (command A1 / E1): `T caught-flag list --digest`. The entries
-that apply (same model, tool, kind, or a trigger the plan could repeat: a person's face in a video reference,
-a brand or celebrity in the prompt, an image kind) go into `<RUN>/20-analysis/caught-flags.md`; every plan
-names the ones it avoids, and X4 checks the request against them before any credit is spent. A cleared prompt
-shows what Higgsfield accepted. A general rule is promoted into the owning reference (the model guide's failure
-table, `generation-system.md` §5c.2, brand-guardrails) and marked `promoted`; the entry stays as the record.
+**Who reads it.** Nobody during a run. The file is written when Higgsfield flags something and is never opened by
+a step, a plan or an agent (no digest, no per-run copy), because a growing file read at every run start rots the
+agents' context. What a flag teaches is written as a general rule in the owning reference (the model guide's
+failure table, `generation-system.md` §5c.2, `higgsfield/higgsfield-mcp.md` §9, brand-guardrails) by
+`/update-from-errors`; the entry stays here as the record.
 
 ```
 T caught-flag add --title "<short>" --kind <moderation-block|refused-no-reason|media-flagged|output-flagged|preset-notice|other> --run "<run id>" --video "<NN>" --attempt "<a1|c2-a1>" --mode <…> --model <id> --tool generate_video --stage <preflight|submit|job|upload|result> --response "<verbatim | none given>" --job "<job id(s)>" --credits "<refunded n>" --flagged-video "<V id + file, and/or the clip>" --trigger "[E|I] <suspected trigger>" --cause <prompt-wording|reference-video|image-reference|output|parameter|unknown> [--changed "<what the next request changes>"]
 T caught-flag set --id CF-nnn --status cleared --cleared-prompt <the accepted request.json> --cleared-job <job id> [--rule "<general rule>"]
 T caught-flag set --id CF-nnn --status persistent --note "<what was tried>"
-T caught-flag list [--digest] [--model <id>] [--kind <k>] [--status open|cleared|persistent] [--run <id>] [--grep <text>]
+T caught-flag list [--model <id>] [--kind <k>] [--status open|cleared|persistent] [--run <id>] [--grep <text>]
 T caught-flag reconcile --run <run id>
 ```
 

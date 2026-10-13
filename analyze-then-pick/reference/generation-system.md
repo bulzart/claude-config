@@ -876,8 +876,8 @@ written out, the original audio restored as always), and say in the brief that f
 *Miss and cause:* run 09 V03 (a celebrity swap) failed twice within ~15 s, cause unconfirmed; a third attempt
 without the video reference passed QC, with sync only judged on the sheet. [OBSERVED once, unproven.]
 Every such refusal is a flag and is recorded before the request changes (`T ledger set --flagged`, `T caught-flag
-add`, command item 23; this case is CF-001 in `caught_flags.md`), and the plan reads `20-analysis/caught-flags.md`
-so a trigger that already cleared or persisted is not sent again unchanged.
+add`, command item 23); the record is written, never read, so this paragraph carries the rule: a trigger that
+already led to a refusal is not sent again unchanged.
 
 **Same duration.** Request the source segment's exact duration, or the nearest allowed duration
 above it and trim the extra afterwards. A shorter or longer generation squeezes or stretches the
@@ -1209,6 +1209,11 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      the camera and the performer's pose in the last third match the source (§5c.5); a placed product that
      leaves the frame while its anchor should still be in frame is a **regenerate** reason, like one missing
      at 0 s.
+   - **Shot structure** (`anomaly-catalog.md` §4 step 5i; Recreate and Edit Mode with hard cuts): the output's
+     cuts match the source's shot list in count and time, a person-free cutaway is not a face shot or a ghost
+     dissolve, the placed product is in every shot where its anchor is in frame, and the closing emotion beat
+     survives; a merged, dropped or dissolved shot is a **regenerate** reason, and the retry follows §3b.1
+     item 7.
    - **Counts, openings and permanence** (`anomaly-catalog.md` §4): count every multiple at every
      checkpoint and write the numbers in the verdict; on every use beat check the preparation step,
      the part used and the contact point on the 30 fps sheet; before and after every exit,
