@@ -557,8 +557,8 @@ uses the swap of a source object or an in-hand product; if neither exists, the b
 - **There from the first frame** (CE-018): wherever its anchor is in frame, the product is in frame at
   frame 0 and in every second after, and the prompt's opening clause names it at its anchor. A product
   that is absent in the opening seconds and then appears, or appears at another spot, is a regenerate
-  reason, never a note and never a flagged delivery; the retry changes the form or the anchor class from
-  the guide's passing list. The spot is read off the SOURCE's first frame, not the end of the camera path
+  reason, never a note and never a flagged delivery; the retry changes the form, the anchor class or the spot
+  (§4b.1c) and adds the size-and-place guide (§4b.6). The spot is read off the SOURCE's first frame, not the end of the camera path
   (§4b.1c): a spot beside the far side of a neighbour the opening camera faces away from was hidden for the
   first 0.5 s (CE-053), and a near-side spot left the frame at 2.9 s in an orbit (CE-077, CE-082).
 - **It stays there through everything:** every cut, angle change, reframe and camera move. Its
@@ -1171,8 +1171,9 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
      expected size and the method go in the verdict. Over 25 %, a size that changes between shots, or a
      product larger than the hand that holds it is a **regenerate** reason with no post-fix;
      15–25 % is a note only for a static product with a readable label. On a model whose guide lists
-     size as a model limit, the retry changes the form or the anchor class from the guide's passing list,
-     never the sizing words; a second miss ships the best take flagged, and the miss is recorded.
+     size as a model limit, the retry changes the lever (the size-and-place guide, §4b.6, the form or the
+     anchor class from the guide's passing list), never the sizing words; a second miss ships the best take
+     flagged, and the miss is recorded.
    - **Posture, support and place** (`anomaly-catalog.md` §2.16): at 30 fps on every rest and every pass
      of a hand or sheet. A lean against nothing, a posture the shape cannot take, a pack touching a
      working hand or arm, a doubled or warped sheet, or a source beat taken over is a **regenerate**

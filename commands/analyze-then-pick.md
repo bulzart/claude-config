@@ -675,7 +675,8 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   - the integration form available for the product (swap / contents / placement);
   - for a placement, the anchor class the locked model renders at size: where its guide lists size
     as a model limit (`wan3_0_prime`, `wan-3-0.md` §5), an in-hand, swap or large same-plane
-    neighbour anchor ranks above a surface anchor that only paper, a notebook or a head can size;
+    neighbour anchor (the last only where `generation-system.md` §4b.1c holds, and with a guide) ranks
+    above a surface anchor that only paper, a notebook or a head can size;
   - the placement's feasibility and the source's flags (`generation-system.md` §4b.1c, §5c.2b; protocol
     §5): a spot that is bare at frame 0, stays in frame along the path, lies outside every hand's lane and
     is wider than the pack; a reference with many hard cuts, a person alternating with person-free shots
@@ -1397,8 +1398,9 @@ files as video K".
     shots, or a product larger than
     the hand that holds it is a regenerate reason with no post-fix; 15–25 % is a note only for a
     static product with a readable label. The retry changes the lever the guide names. For a model
-    whose guide lists size as a model limit (`wan3_0_prime`) it changes the form or the anchor class
-    from the guide's passing list, never the sizing words (12 of 12 wording retries were re-rolls);
+    whose guide lists size as a model limit (`wan3_0_prime`) it changes the lever: the size-and-place
+    guide (`generation-system.md` §4b.6), the form or the anchor class from the guide's passing list,
+    never the sizing words (12 of 12 wording retries were re-rolls);
     otherwise it names the neighbour and the ratio, the depth and the fraction of the frame, pads the
     reference and rebuilds any start frame. A second miss ships the best take flagged and is recorded.
   - **Blend** (`anomaly-catalog.md` §2.15): on one full-resolution frame at rest and one in use,

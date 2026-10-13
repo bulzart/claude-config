@@ -107,8 +107,8 @@ Hard rules:
   from one assumed number is PROVISIONAL: view the frame yourself before you flag or report it, and never
   write RESIDUAL FAILURE for it (CE-028). With agreeing estimates (over 25 % off, changing across a cut, or larger than the hand
   that holds it: regenerate once, no post-fix; where the model guide lists size as a model limit the
-  retry changes the form or the anchor class from its passing list, never the sizing words, and a second
-  miss ships the best take flagged). Render the plan's QC checkpoints with `T qc --dense`
+  retry changes the lever (the size-and-place guide of generation-system.md §4b.6, the form or the anchor
+  class from its passing list), never the sizing words, and a second miss ships the best take flagged). Render the plan's QC checkpoints with `T qc --dense`
   and count at each. A count or state
   that changes without a cause, or a use through the wrong or a closed part, is a regenerate reason.
 - Posture, support and place (anomaly-catalog.md §2.16): flat or on its base, on a visible surface, out
