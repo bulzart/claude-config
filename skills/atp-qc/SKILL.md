@@ -57,8 +57,8 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - **X9 — QC.**
   - **Samples first (Loupe, this phase only).** The admin keeps a library of generation misses in Loupe, each
-    one image: the miss with its marks on the left, the correct frame of the same moment on the right, and the
-    admin's words. A separate read-only keeper session holds that library and nothing else. Before the first
+    one image: the miss with its marks on the left, the correct frame of the same moment on the right (both can
+    carry marks), a zoom of the marked place, and the admin's explanation burned in at the bottom centre. A separate read-only keeper session holds that library and nothing else. Before the first
     sheet: `T qc-consult --run RUN --video NN --question "<what this video shows that a past miss looked like:
     the product form, the beat, what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
     --checkpoint "<a plan checkpoint>" …` (repeat `--checkpoint`). The JSON line has `relevant` (or `samples`
