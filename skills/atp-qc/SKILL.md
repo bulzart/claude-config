@@ -31,6 +31,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a person is swapped (skin tone face vs hands):*
   - anomaly-catalog §2.17: `ATP/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - generation-system §9: `ATP/reference/generation-system/340_9_post-generation-qc-after-downloa.md` (8.0 KB)
+- generation-system §6: `ATP/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
 - generation-system §9b: `ATP/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.6 KB)
 - generation-system §5b: `ATP/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5d: `ATP/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
@@ -56,6 +57,16 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Step X9
 
 - **X9 — QC.**
+  - **Judge by reasoning, not by list** (`generation-system.md` §6). For every possible finding ask what the plan or source needed
+    at that beat, what the product's real details allow (shape, size, opening, posture: its registry row) and what the scene offers.
+    A finding is a deviation from the first, the second or physics, written as expected, why, seen. A deviation from a default alone is
+    a note, never a regenerate reason. Three short evaluations of the same reasoning:
+    - A flat sachet stands upright on a surface. Its details (thin, flat) cannot hold that and no support is visible: product details and
+      physics, so a finding. The same sachet held upright in a hand is fine, because the hand is the support.
+    - The product rests somewhere other than the usual place. Compare with the plan's anchor row, not with a habit: a deviation from the
+      plan is a finding; a placement the plan and the source's scene call for is not, whatever the default would have been.
+    - Two defaults seem to demand opposite things (a label that must read, a pack that lies flat). Read what this beat needs and judge
+      by that need; never fail the video on one default to satisfy another.
   - **Samples first (Loupe, this phase only).** The admin keeps a library of generation misses in Loupe, each
     one image: the miss (WRONG) with its marks on the left, the same moment in the right version (RIGHT) on the right
     with the same marks, a zoom of the marked place, and the admin's explanation burned in at the bottom centre. A separate read-only keeper session holds that library and nothing else. Before the first

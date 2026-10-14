@@ -17,6 +17,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atp-model-guide`) — §2.4 (call recipes), §2.6 (9:16/720p), §3.1–§3.7 (structure, subject and identity, action, environment and light, chronology, camera, references), §3.10–§3.14 (negatives, visible text, identity consistency, product fidelity, integration), §4.0 (official examples: the pattern card) and the §4.x of the request kind (4.1 text-to-video, 4.2 frames, 4.3 reference, 4.4 edit/extension); §3.8 when frames are used; §3.9 when audio is used; §6 when a model feature is planned
 - generation-system §4: `ATP/reference/generation-system/100_4_replacement-and-insertion-integr.md` (3.3 KB)
+- generation-system §6: `ATP/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
 - generation-system §5b: `ATP/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5c.3: `ATP/reference/generation-system/270_5c.3_the-fidelity-lock-in-the-prompt.md` (3.1 KB)
 - generation-system §7: `ATP/reference/generation-system/320_7_translating-the-plan-into-the-se.md` (2.7 KB)
@@ -56,7 +57,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Sample hints (the first request of a video only).** The admin keeps past misses in Loupe; one separate
     keeper session holds them. Ask it once, before the prompt is written, in text only: `T plan-hints --run RUN
     --video NN --beats "<one line per beat of the plan: what happens, the product's form and state, the camera>"
-    --product "<form>"`. A regeneration never asks: it works from its own diagnosed cause (`atp-qc`). The answer
+    --product "<form>" --product-details "<its shape, size, opening and natural posture, from its registry row>"`. A regeneration never asks: it works from its own diagnosed cause (`atp-qc`). The answer
     has 0 to 3 hints, and 0 is the normal answer (`mode: empty` or `unavailable` also mean none: write the
     request as always). Each hint has a `trigger` (the plan situation where that miss arises), a `right_outcome`,
     a `lever` and a `caveat`.
@@ -79,6 +80,12 @@ Only these section files for this phase, nothing else unless a step below says s
       applied to which beat with the change in one line, or not applied and why. X4 checks it and X6 copies it
       into the brief. The hints themselves are in `40-briefs/video-NN-hints.json`; never paste them into the
       brief or the prompt.
+  - **Reason first** (`generation-system.md` §6). For every beat that places, moves or uses the product, derive what the plan or source
+    needs there, what the product's own details allow (its registry row, affordance sheet and `product_properties.txt`) and what the
+    source scene offers, then write the one state all three allow, once, in positive words. The rules below are checks on that result,
+    never lines to paste: no "never" or "always" in the prompt, at most one targeted exclusion per product, and no two sentences that
+    ask opposite things of a beat (the higher authority in §6 wins, the other line is dropped, one line of reason goes in the pattern card).
+    An example sentence in a reference or a guide shows a mechanism for another case: write this video's own nouns.
   - Write the prompt in the model's proven structure and syntax.
     - A placed product (or a contents vessel with its package beside it) is described as part of
       the scene from the first frame, at its anchor. Use no edit verbs and no ad vocabulary
@@ -90,20 +97,18 @@ Only these section files for this phase, nothing else unless a step below says s
       something rather than standing alone on an empty edge (`anomaly-catalog.md` §2.15).
     - The **size** comes from the plan's size reckoning (`anomaly-catalog.md` §2.7), in the model's
       own phrasing (its guide §3.14): the ratio to the named neighbour at the same depth in words
-      ("two thirds the height of the water bottle beside it"), the depth ("on the dresser about
-      two and a half metres from the camera, behind him"), the fraction of the frame when the
-      model takes it ("a small object in the background, about one twentieth of the frame
-      height"), the size ladder when several products show, and the constancy line. The
+      (against a named neighbour at the same depth), the depth (its distance from the camera), the fraction of the
+      frame when the model takes it, the size ladder when several products show, and the constancy line. The
       reference image is padded so the product does not fill it, and a start frame is built at
       the reckoned pixel height and measured with `T scale --frame … --product-px … --ref-cm …
       --ref-px …` before it is animated. Where the guide lists size as a model limit
       (`wan3_0_prime`), these words are a check, not a control: X1 chose the anchor class from the
       guide's passing list or planned a size-and-place guide (§4b.6), and a start frame is out of reach
       while the source rides as a video reference.
-    - Every vessel's contents are stated from the contents sample ("the glass holds …"); an
-      unstated glass comes back as water. A character photo's role is limited to the person ("only
-      his face, hair, build and clothing; not the glass, table or background of Image 4") unless
-      the plan keeps its props as the product's contents (`generation-system.md` §4b.5).
+    - Every vessel's contents are stated from the contents sample; an unstated vessel comes back as
+      water. A character photo's role is limited to the person (face, hair, build and clothing, not its
+      props or background) unless the plan keeps its props as the product's contents
+      (`generation-system.md` §4b.5).
     - Free physical motion (a spin, toss, roll or pour, or a vehicle's move) is described by its
       physics, never by a schedule of exact times. A required end state gets a visible cause, such
       as a hand stopping the product label-forward or a driver braking into the spot
@@ -111,27 +116,23 @@ Only these section files for this phase, nothing else unless a step below says s
       it never adds them.
     - Every **use beat** is written as initial state → operation on the named part → observable
       result, with the contact point, orientation and body mechanics of the product's affordance
-      sheet ("he flips the cap open with his thumb, puts his lips on the spout and drinks through
-      it with his head level"). Every **multiple** carries its number at t=0, at each event and at
+      sheet. Every **multiple** carries its number at t=0, at each event and at
       the end, restated after exits, occlusions, cuts, hand-offs and seams. Each product gets **one
-      targeted exclusion** for its own wrong use and count ("only through the spout; no other
-      opening", "exactly three capsules; none appears or disappears"). No reference image shows a
+      targeted exclusion**: the one wrong use or count that this product's own details make possible
+      (its other end, a second copy, a count that changes). No reference image shows a
       later state than t=0 (`anomaly-catalog.md` §3). Every thrown, dropped, swung or passing thing
       has its path written relative to the product, past it on a named side or onto it with the
-      consequence, plus the solidity exclusion ("nothing passes through the bottle";
-      `anomaly-catalog.md` §2.14).
+      consequence, plus the solidity exclusion (`anomaly-catalog.md` §2.14).
     - The **guide, the camera lock, the swap grammar, the empty surfaces and the prepared-source sentence**,
       where the plan has them, in the model's phrasing (`generation-system.md` §4, §4b.5, §4b.6, §5c.2b,
       §5c.3): the guide bound as spot and size only; the camera lock as its own sentence; a swap written as a
       replacement; an empty surface written empty, per shot; "Video 1 is already in true orientation" after a
       flip; the one hand in frame named with the bare empty area; the clean-plate lines never cut to fit the
       length limit (`text-and-format.md` §1).
-    - **Guardrail operations** in the model's own edit syntax (`brand-guardrails.md` §4): "Remove
-      only the third can at the left end of the desk and reconstruct the desk and wall behind it;
-      keep the two other cans exactly as they are"; "Remove only the brand name and logo from the
-      green can on the shelf; keep its shape, size, position and lighting; it becomes a plain
-      unbranded can of the same colour"; the person-replacement contract for an excluded person.
-      Never "blur", "pixelate" or "cover".
+    - **Guardrail operations** in the model's own edit syntax (`brand-guardrails.md` §4): remove only the named
+      item or mark, reconstruct what is behind it, keep everything else exactly as it is (a mark removed leaves a plain
+      product of the same shape, size, position and lighting); the person-replacement contract for an
+      excluded person. Never "blur", "pixelate" or "cover".
     - Analyze Mode prompts are always **clean plates**: no overlay text. The only lettering is the
       product's own label, logo or badge.
     - With inserts, the prompt covers only the generated content, and puts a natural beat boundary

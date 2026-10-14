@@ -15,6 +15,7 @@ Callers. Edit Mode: X4, X5, X6 in sequence for the video. Analyze Mode, this ses
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
+- generation-system §6: `ATP/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
 - generation-system §8: `ATP/reference/generation-system/330_8_pre-generation-qc-pass-mental-re.md` (7.0 KB)
 - generation-system §10: `ATP/reference/generation-system/360_10_the-short-brief-printed-at-x6.md` (3.1 KB)
 - *Edit Mode or Recreate:*
@@ -54,6 +55,10 @@ Only these section files for this phase, nothing else unless a step below says s
     preparation step, the part, the contact point, the head and hands), every multiple's number at
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
     seam, and the path of every thrown, dropped or passing thing relative to the product (§2.14).
+  - **Rules that pull apart** (`generation-system.md` §6): read the final prompt as the model will, beat by beat. No two sentences ask
+    opposite things of the same beat, no "never" or "always" stands outside the product's one targeted exclusion and the fidelity
+    lock's scoped "only", and every placement, posture and use line follows from the product's own details and what the source scene
+    offers, not from an example. A line that fights another is dropped by the §6 order of authority, with its reason in the brief.
   - **Sample hints** (only if X2 asked for them): the pattern card's "Sample hints" block exists; the prompt and the reference
     notes carry none of a hint's wrong-behaviour wording and no negative list that was not already the product's one targeted
     exclusion; at most two hints were applied, each only on the beat its trigger matched, each as one small positive change.

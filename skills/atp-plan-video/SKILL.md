@@ -24,7 +24,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §5: `ATP/reference/generation-system/210_5_logic-continuity-and-anti-slop-g.md` (4.6 KB)
 - generation-system §5b: `ATP/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5d: `ATP/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
-- generation-system §6: `ATP/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (1.5 KB)
+- generation-system §6: `ATP/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
 - generation-system §9b: `ATP/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.6 KB)
 - *a contents or placement video:*
   - generation-system §4b: `ATP/reference/generation-system/110_4b_natural-placement-and-contents-w.md` (1.2 KB)
