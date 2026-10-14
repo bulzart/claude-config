@@ -27,6 +27,7 @@ Subcommands (python atp.py <cmd> -h):
   loupe          ensure | status | open: the Loupe web app (flags, generation misses, QC samples)
   qc-consult     QC phase only: ask the QC keeper which samples (generation misses) apply to the video under QC
   qc-brief       QC phase only: the matching samples as a plain brief (no model call)
+  plan-hints     first request of a video only (X2): ask the keeper which past misses could matter for the plan, as a few text-only hints (usually none)
   open           open a finished video in the default player for the user's review
   prep-video     probe, cuts, activity, 5 fps adaptive frames, storyboard sheets, audio, transcript,
                  OCR sample, per-second timeline, summary
@@ -3429,6 +3430,40 @@ def cmd_qc(a):
     out(d)
 
 
+def cmd_plan_hints(a):
+    """First request of a video only (X2). Asks the keeper (the same separate read-only session that holds the sample library) which past
+    misses could matter for the plan of a video that has not been generated. The answer is a few text-only hints, usually none: each has
+    the plan situation that triggers it, what the right version shows, the writer's own tool to use at that beat, and when it does not apply.
+    A hint is a risk to check the plan against, never prompt text. Keeper unavailable or library empty: no hints, and the request is written
+    as always. Nothing here changes a request."""
+    ctx = _qc_ctx(a)
+    beats = (a.beats or "").strip()
+    if not beats:
+        fail("plan-hints needs --beats (one line per beat of the plan: what happens, the product's form and state, the camera)", 2)
+    cut = len(beats) > 2000
+    beats = beats[:2000]
+    s, d = _cf_api("POST", "/api/qc/consult", {**ctx, "purpose": "plan", "question": beats}, key="qc", timeout=190)
+    if s != 200:
+        out({"ok": True, "mode": "unavailable", "hints": [], "note": "no sample hints: " + str((d or {}).get("error"))})
+    rd = _cf_run_dir(a.run) if a.run else None
+    res = {"ok": True, "mode": d.get("mode"), "hints": d.get("hints", []), "held_back": d.get("held_back", 0), "none_reason": d.get("none_reason", ""),
+           "beats_cut": cut}
+    if res["hints"]:
+        res["rules"] = ("Hints are risks to check the plan against, never prompt text: do not copy their words, do not name the wrong behaviour in the "
+                        "prompt, add no negative list. Apply one only to the beat its trigger matches and only if its caveat does not exclude it, by the "
+                        "smallest change inside the existing prompting stack, written positively as its right_outcome. At most two per video. "
+                        "Record each (applied to which beat, or why not) under 'Sample hints' in the brief.")
+    try:
+        if rd and a.video:
+            f = rd / "40-briefs" / f"video-{_cf_nn(a.video)}-hints.json"
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(json.dumps({**res, "beats": beats}, ensure_ascii=False, indent=1), encoding="utf-8")
+            res["saved"] = str(f)
+    except OSError:
+        pass
+    out(res)
+
+
 def _px_span(spec: str, what: str) -> float:
     """'y0-y1' (pixel rows) or a plain pixel height."""
     s = (spec or "").strip()
@@ -4501,6 +4536,12 @@ def main():
         p.add_argument("--question", help="what you see or suspect in the video under QC, in words (needed for qc-consult)")
         p.add_argument("--checkpoint", action="append", help="a QC checkpoint of the plan to check against the samples; repeatable")
         p.set_defaults(fn=cmd_qc, cmd=_nm)
+
+    p = sp.add_parser("plan-hints", help="first request of a video only (X2): ask the keeper which past misses could matter for the plan (text-only hints, usually none)")
+    p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
+    p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
+    p.add_argument("--beats", help="one line per beat of the plan: what happens, the product's form and state, the camera (2000 characters at most)")
+    p.set_defaults(fn=cmd_plan_hints, kinds=None)
 
     p = sp.add_parser("capcut-name"); p.add_argument("--video", required=True, help="the run's video number")
     p.add_argument("--date", help="YYYY-MM-DD (default: today)"); p.add_argument("--store", help="CapCut drafts dir")
