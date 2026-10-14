@@ -412,6 +412,8 @@ a passing request is the strongest evidence there is).
 | **Instance** | the user's words verbatim, or the agent's verdict, with the ids |
 | **Miss** | what came out, in the pipeline's terms: the stage, the time, the thing |
 | **Cause** | the lever (§3.2) and what the rule in force got wrong or lacked |
+| **Trigger** | the situation in which the lesson holds, in product and scene terms: the product detail that makes it true and the beat it applies to, so a reader can check whether it applies |
+| **Counter-case** | when it does not apply: the source, the plan or the product's own details make the opposite right ("none known" is allowed, "none" is never assumed) |
 | **Achieve** | the kind to aim for, with no product, brand or scene of the entry in it |
 | **Avoid** | the kinds to avoid, one line each |
 | **Prompt correction** | the failed wording and the corrected wording, in the model's phrasing; "none verified" when no passing take exists |
@@ -419,28 +421,24 @@ a passing request is the strongest evidence there is).
 | **Transfer test** | the rule restated for two other products or scenes; if it does not read for them, it is rewritten |
 | **Owners** | the sections that will hold it (§4) |
 
-Example, from the retired ATP ledger (CE-012, CE-013, CE-021):
-- **Instance:** "the one piece sachet thats used is so forcedly placed leaning on the bbq grill lid
-  meanwhile it could've just been placed somewhere on the grills side shelf instead".
-- **Miss:** the plan said "bare table beside the board"; the model put the pack on the board that is
-  carried away, and the retry leaned it against the grill front, while the grill's side shelf, a
-  natural surface the source frame shows, was free.
-- **Cause:** wording and plan choice: the support rule said "bare surface or a large solid object",
-  so a moving board and a lid both passed.
-- **Achieve:** name a fixed, natural surface the source frame shows, and put the product where a
-  person would really leave it.
-- **Avoid:** a lean; a prop that moves or is carried away; a support the model has to invent; a
-  thin sheet that hands move.
-- **Prompt correction:** verified for CE-012 (a flat sachet on bare marble): bad "stands upright …
-  leaning back against … a notebook"; good "lies flat on its wide face, label facing up, resting
-  entirely on the bare marble at the near edge … it never slides, tilts, stands up or leans", plus
-  "no standing, leaning, propped or tilted sachet". For the grill shelf (CE-021): none verified.
-- **What worked:** CE-012's retry: posture and support passed at 30 fps, size 1.05×, in sync.
-  CE-013 and CE-021: not verified.
-- **Transfer test:** a can on a counter, not on a tray that gets carried away; a phone on a desk, not
-  on a book that gets picked up. Both read as the same rule.
+Example, shortened (CE-012, CE-013, CE-021):
+- **Instance:** the user's words on a sachet that leaned on a grill lid while the grill's side shelf was free.
+- **Miss:** the support rule said "bare surface or a large solid object", so a board that gets carried away and a lid both passed.
+- **Cause:** a support that is not fixed and not in the frame was allowed.
+- **Trigger:** a thin placed product near working hands, with a natural fixed surface visible in the source frame.
+- **Counter-case:** the source itself shows the product held, or on a surface the story moves.
+- **Achieve:** a fixed, natural surface the source frame shows, where a person would leave the product.
+- **Avoid:** a lean; a support the model has to invent; a prop that moves; a thin sheet that hands move.
+- **Prompt correction and What worked:** verified for CE-012 (its brief holds the wording and the 30 fps verdict); CE-013 and CE-021: not verified.
+- **Transfer test:** a can on a counter rather than on a tray that gets carried away; a phone on a desk rather than on a book. The same rule.
 
 Rules for the card:
+- **A lesson is a default with a trigger, not a law.** The owning section states the trigger and the product detail that makes it
+  true, and phrases the rule as a derivation ("because the pack is thin and flat, it lies flat"), never as a bare "never" or
+  "always" unless physics or the generation service makes it hold for every product. Two lessons that seem to pull apart are two
+  triggers: write what separates them rather than both as universals.
+- **At most one short example per lesson** in the owning section; the case ids carry the rest. A quoted example sentence shows a
+  mechanism, so it uses a placeholder or one neutral noun, never a product the next agent might copy.
 - The **Achieve** and **Avoid** lines are kinds ("a prop that moves"), never instances ("the cutting
   board"). The instance lives only in the Miss, the Prompt correction and the sample.
 - A rule written for one product that fails the transfer test is rewritten before it is written
