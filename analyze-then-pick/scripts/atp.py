@@ -3387,6 +3387,7 @@ def cmd_loupe(a):
 
 def _qc_ctx(a) -> dict:
     ctx = {"run": a.run or "", "video": a.video or "", "model": a.model or "", "mode": a.mode or "", "product": a.product or "",
+           "product_details": (getattr(a, "product_details", "") or "")[:600],
            "kinds": [k.strip() for k in (a.kinds or "").split(",") if k.strip()]}
     rd = _cf_run_dir(a.run) if a.run else None
     if rd:
@@ -4532,6 +4533,7 @@ def main():
         p = sp.add_parser(_nm, help=_h)
         p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
         p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
+        p.add_argument("--product-details", help="its shape, size, opening and natural posture, from its registry row: samples are matched to this video by what the products have in common")
         p.add_argument("--kinds", help="comma-separated kinds you suspect (counts, openings-use, permanence, scale-size, label-orientation, solidity, blend-paste, posture-place, identity, continuity …)")
         p.add_argument("--question", help="what you see or suspect in the video under QC, in words (needed for qc-consult)")
         p.add_argument("--checkpoint", action="append", help="a QC checkpoint of the plan to check against the samples; repeatable")
@@ -4540,6 +4542,7 @@ def main():
     p = sp.add_parser("plan-hints", help="first request of a video only (X2): ask the keeper which past misses could matter for the plan (text-only hints, usually none)")
     p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
     p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
+    p.add_argument("--product-details", help="its shape, size, opening and natural posture, from its registry row")
     p.add_argument("--beats", help="one line per beat of the plan: what happens, the product's form and state, the camera (2000 characters at most)")
     p.set_defaults(fn=cmd_plan_hints, kinds=None)
 

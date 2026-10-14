@@ -72,7 +72,8 @@ Only these section files for this phase, nothing else unless a step below says s
     with the same marks, a zoom of the marked place, and the admin's explanation burned in at the bottom centre. A separate read-only keeper session holds that library and nothing else. Before the first
     sheet: `T qc-consult --run RUN --video NN --question "<what this video shows that a past miss looked like:
     the product form, the beat, what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
-    --checkpoint "<a plan checkpoint>" …` (repeat `--checkpoint`). The JSON line has `relevant` (or `samples`
+    --product-details "<its shape, size, opening and natural posture, from its registry row>" --checkpoint "<a plan checkpoint>" …`
+    (repeat `--checkpoint`). The JSON line has `relevant` (or `samples`
     when `mode` is `fallback`): each with `composite_path`, the miss in words and `advice`. **View every
     `composite_path`**, add what each says to look for as extra `--dense` checkpoints, and write in the verdict
     which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
