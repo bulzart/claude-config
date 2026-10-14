@@ -1,0 +1,23 @@
+## 8. Sources
+
+- S1 [OFFICIAL] Kling AI — Kling VIDEO 3.0 Model User Guide (series description, 3–15 s, multi-shot switch, custom multi-shot example, dialogue format, dialects/accents, 3+ characters, element binding, text output, 15 s example) — https://kling.ai/quickstart/klingai-video-3-model-user-guide (accessed 2026-09-30)
+- S2 [OFFICIAL] Kling AI — Kling VIDEO 3.0 Omni Model User Guide (`Shot N (Ns)` storyboards, @Element usage, examples) — https://kling.ai/quickstart/klingai-video-3-omni-model-user-guide (accessed 2026-09-30)
+- S3 [OFFICIAL] Kling AI — KLING VIDEO O1 User Guide (T2V formula, start/end-frame rules, image limits) — https://kling.ai/quickstart/klingai-video-o1-user-guide (accessed 2026-09-30)
+- S4 [OFFICIAL] Kling AI — KLING VIDEO 2.6 User Guide (audio formulas, speaker labels, action-first example, lowercase English rule, multi-voice two-character guidance) — https://kling.ai/quickstart/klingai-video-26-audio-user-guide (accessed 2026-09-30)
+- S5 [OFFICIAL] Kling AI 3.0 launch press release (2026-02-06), via Bernama — https://www.bernama.com/en/news.php/?id=2520897 (accessed 2026-09-30)
+- S6 [OFFICIAL] Kling AI blog — "Kling AI Prompt Guide: The Secret to Cinematic Video Prompts" (2026-08-07; formula, camera terms, text-rendering recipe, 4K mode) — https://kling.ai/blog/kling-ai-prompt-guide (accessed 2026-09-30)
+- S7 [OFFICIAL] Kling AI blog — "Kling AI Negative Prompts: Fix Video Distortion & Glitches" (2026-05-26) — https://kling.ai/blog/kling-ai-negative-prompts-fix-video-distortion (page body not retrievable; search-index content, 2026-09-30)
+- S8 [HF] Higgsfield catalog snapshot (`kling3_0`, `kling3_0_turbo`) and MCP tool contract (call shape, `get_cost`, Elements `<<<element_id>>>` for Kling 3.0, legacy `motion_control` params, Genjutsu routing) — `higgsfield/catalog-snapshot-2026-09-30.json`; /analyze-then-pick brief 2026-09-30
+- S9 [HF] Higgsfield blog — "Kling 3.0 is on Higgsfield: User Guide" (tiers 720p/1080p/4K, multi-shot auto/custom, Elements usage, frames, audio, common mistakes) — https://higgsfield.ai/blog/Kling-3.0-is-on-Higgsfield-User-Guide-AI-Video-Generation (accessed 2026-09-30); Higgsfield help centre "How do I use Kling" — https://higgsfield.ai/creator-hub/help-center/ai-models/how-do-i-use-kling (accessed 2026-09-30)
+- S10 [SECONDARY] fal.ai — Kling Video v3 Pro API reference — https://fal.ai/docs/model-api-reference/video-generation-api/kling-video-v3-pro.md; Magnific — Kling V3 API overview (2,500-character prompts, up to 6 shots, ≥3 s per shot, image specs) — https://docs.magnific.com/api-reference/video/kling-v3/overview (accessed 2026-09-30)
+- S11 [SECONDARY] CometAPI — Kling omni-video API mirror (`<<<image_1>>>` syntax) — https://apidoc.cometapi.com/api/video/kling/omni-video.md (accessed 2026-09-30); Kling's own API reference (https://kling.ai/document-api/apiReference/model/textToVideo) returned "Access Denied" to automated fetches
+- S12 [SECONDARY] Atlas Cloud — "Kling 3.0 Turbo and Omni: What Launched on June 17, 2026" — https://www.atlascloud.ai/blog/guides/kling-3.0-turbo-kling-omni (accessed 2026-09-30)
+- S13 [SECONDARY] DataCamp — "Kling 3.0" hands-on tutorial (character mix-ups, left-right swaps, reassigned line, extra character, empty opening frames) — https://www.datacamp.com/tutorial/kling-3-0 (accessed 2026-09-30)
+- S14 [HF] Higgsfield Ad Multiplier workflow v1.4, "Unlimited generations (use_unlim)" — `higgsfield/first-party/ad-multiplier-recipe.md` (retrieved 2026-09-30)
+- S15 [HF] Higgsfield blog — "Why You Need Kling Motion Control 3.0 In Your Workflow" (2026-03-05; orientation, background source, 720p/1080p) — https://higgsfield.ai/blog/kling-motion-control-3 (accessed 2026-09-30)
+- S16 [SECONDARY] Comfy docs — Kling Camera Controls node (API `camera_control` presets) — https://docs.comfy.org/built-in-nodes/partner-node/video/kwai_vgi/kling-camera-controls (accessed 2026-09-30)
+- S17 [HF] Higgsfield — Kling 3.0 page (physics claims, up to 6 cuts, voice binding) — https://higgsfield.ai/kling-3.0 (accessed 2026-09-30)
+- S18 [OFFICIAL] Kling AI — Motion Control User Guide (inputs, orientation options, 3.0 facial consistency, element binding) — https://kling.ai/quickstart/motion-control-user-guide (accessed 2026-09-30)
+- S19 [SECONDARY] fal.ai blog — "Kling 3.0 Prompting Guide" (avoid pronouns, unique labels) — https://blog.fal.ai/kling-3-0-prompting-guide/ (accessed 2026-09-30)
+- S20 [SECONDARY] muapi — "Kling 3.0 API Pricing — Standard, Pro, 4K & Omni Tiers" (Standard 720p, Pro 1080p, 4K 3840×2160) — https://muapi.ai/kling-3-pricing (search-index content, 2026-09-30)
+

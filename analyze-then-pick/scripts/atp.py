@@ -20,7 +20,8 @@ Subcommands (python atp.py <cmd> -h):
                  | examples (your own finished videos: study only)
   prep-assets    previews, doc text, font names and a labelled contact sheet of USER-SUPPLIED assets
   model-menu     numbered table of EVERY available video model (pinned first) + quick picks
-  ledger         anti-duplicate guard for paid generations (begin before, set after every call)
+  model-entry    ONE model's index.json entry + its guide path and section folder (index.json is 40 KB: never read it whole)
+  ledger        anti-duplicate guard for paid generations (begin before, set after every call)
   caught-flag    flag record caught_flags.html (data + viewer page): prompts and videos Higgsfield flagged or refused
                  (add | set | list | reconcile | open | render)
   open           open a finished video in the default player for the user's review
@@ -4066,6 +4067,21 @@ def cmd_model_menu(a):
          "numbers": {str(r["n"]): r["id"] for r in rows}, "unavailable": unavailable})
 
 
+def cmd_model_entry(a):
+    """Print one model's entry of models/index.json with its guide path and section folder, so the 40 KB index is never
+    read whole. An id with no guide returns the fallback guide."""
+    idx = json.loads((ATP_HOME / "models" / "index.json").read_text(encoding="utf-8"))
+    e = idx["models"].get(a.id)
+    if e is None:
+        fail(f"unknown model id {a.id}", known=sorted(idx["models"]))
+    guide = e.get("guide") or idx.get("fallback_guide")
+    g = ATP_HOME / guide
+    sec = g.with_suffix("")
+    out({"ok": True, "id": a.id, "entry": e, "guide": guide, "guide_exists": g.is_file(),
+         "sections_dir": str(sec).replace("\\", "/") if sec.is_dir() else None,
+         "higgsfield_guide": idx.get("higgsfield_guide"), "fixed_output": idx.get("fixed_output")})
+
+
 # --------------------------------------------------------------------------- CLI
 
 def main():
@@ -4109,6 +4125,9 @@ def main():
     p.add_argument("--live-ids", help="comma/space separated model ids from models_explore list type=video")
     p.add_argument("--live-file", help="JSON file with the models_explore list output (items[].id)")
     p.set_defaults(fn=cmd_model_menu)
+
+    p = sp.add_parser("model-entry"); p.add_argument("--id", required=True, help="model id from models_explore / the menu")
+    p.set_defaults(fn=cmd_model_entry)
 
     def media_opts(p):
         p.add_argument("--fps", type=float, default=cfg_get("analysis.baseline_fps", 5.0),

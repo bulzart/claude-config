@@ -223,9 +223,17 @@ look only for entry headings or records; do not read their content yet.
    - every step from input to delivery;
    - its agents and their contracts;
    - its wrap-up and its "Never" list.
+
+   If `CMD` is a **router** (it names phase skills, as `analyze-then-pick` does with `atp-*`): `CMD`
+   plus **every skill its phase map names** (`~/.claude/skills/<prefix>-*/SKILL.md`) is the whole
+   command. A rule that two phases act on is written in both skills: change both. (This command is
+   the one place that reads the whole pipeline; a run never does.)
 2. **`LIB`'s README and file tree.** Then read every reference file `CMD` points to: planning,
    analysis and selection, creative direction, prompting, integration, error definitions,
-   guardrails, assembly, QC, and the agent contracts.
+   guardrails, assembly, QC, and the agent contracts. A document stored as **sections** (an index
+   file `<name>.md` with a folder `<name>/`, made by `LIB/scripts/docs_tool.py`) is read whole with
+   `python LIB/scripts/docs_tool.py join <name>.md`; it is edited in its section file, never in the
+   index.
 3. **The model guides of the models the ledger involves.** Find those models by grepping the
    entries' `model` fields (or whatever field the ledger's own format uses), without reading the
    entries. Also read the guide template, if one
@@ -266,8 +274,12 @@ look only for entry headings or records; do not read their content yet.
   and failed.
 
 For `analyze-then-pick`, the map is known. Confirm each location exists before relying on it:
-- **the flow:** `CMD` §2–§6 (A-steps for analysis and planning, X-steps per video, X9 QC, the §6
-  wrap-up), plus `reference/production-agents.md`;
+- **the flow:** the router `CMD` (phase map, labels table, core rules) and the 19 skills `~/.claude/skills/atp-*`
+  (start, A-steps for analysis and planning in `atp-analyze-*` / `atp-create-plan` / `atp-recreate-plan` /
+  `atp-asset-plan` / `atp-analyze-produce`, E-steps in `atp-edit`, X-steps per video in `atp-plan-video`,
+  `atp-write-request`, `atp-inputs`, `atp-precheck`, `atp-submit`, `atp-postprocess`, `atp-qc`, `atp-record`, the
+  wrap-up in `atp-wrapup`, item 22 in `atp-feedback`, the model sections table in `atp-model-guide`), plus
+  `reference/production-agents.md` (its §2 prompt is the agent contract and invokes the per-video skills);
 - **first-try prompting:**
   - `reference/generation-system.md` §7–§8;
   - `reference/anomaly-catalog.md` §3;
@@ -285,7 +297,7 @@ For `analyze-then-pick`, the map is known. Confirm each location exists before r
   - `generation-system.md` §8–§9;
   - `anomaly-catalog.md` §4 and §4.1 (verdict examples);
   - `reference/production-agents.md` §3;
-  - `CMD` X4 and X9;
+  - the X4 and X9 steps (`atp-precheck`, `atp-qc`);
 - **model failure modes:** `models/<model>.md` §5 (failure table), §7 (checklist) and §9 (open
   questions);
 - **toolkit:** `scripts/atp.py` (`scale`, `qc`, `sync-check`, `caught-flag`; the `caught-error` ledger was
@@ -539,7 +551,10 @@ Then review the set as a whole:
    in its change row, in the same commit. Any edit script must handle CRLF, check every anchor
    before writing anything, and write bytes.
 2. **Update `CMD`** wherever a step, a check or a "Never" rule changes, and keep its numbered items
-   consistent.
+   consistent. For a router pipeline (`analyze-then-pick`) the step, check or Never rule is edited in the
+   skill that owns it (the router's labels table says which; a rule two phases act on is edited in both),
+   the router's one-line core rule is kept consistent with it, and a changed section file is followed by
+   `python LIB/scripts/docs_tool.py index <doc>.md` and `python LIB/scripts/docs_tool.py check` (0 errors).
 3. **Mark the entries in the ledger, through its tool only.**
    - For ATP: none. The ledger was retired on 2026-10-13; `learning-log.md` keeps the map from each CE
      case label to the section that holds its lesson.
