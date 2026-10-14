@@ -16,6 +16,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - capcut-assembly §6: `ATP/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (0.8 KB)
 - production-agents §4: `ATP/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (0.9 KB)
 
+A production agent does not touch `state.json → videos[]` or `next_step`: it writes `result.json` and `readme-row.md`, and the main session appends `videos[]` as the agent reports (`production-agents` §5 item 1).
+
 ## Step X10
 
 - **X10 — Record.**
@@ -44,5 +46,5 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Hand-off
 
 - Production agent: write `result.json`, `readme-row.md`, the deliverables, then send the one-line JSON as the final message and stop.
-- Edit Mode: next video (`atp-edit` E7) or the wrap-up.
+- Edit Mode: more videos: `T state --run RUN set video=<NN+1> next_skill=atp-edit` and continue with E7 in `atp-edit`. No more videos, or the user stops: `T state --run RUN set stage=edited next_skill=atp-wrapup`, then invoke Skill `atp-wrapup`.
 - Analyze Mode main session: continue A9b in `atp-analyze-produce`.

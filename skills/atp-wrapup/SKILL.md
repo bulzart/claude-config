@@ -13,7 +13,14 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- *(nothing from the library: the run folder, `state.json`, the deliverables and the briefs are the sources)*
+- the run folder, `state.json`, the deliverables and the briefs are the sources
+- *Analyze Mode with CapCut projects still pending:*
+  - capcut-assembly §1: `ATP/reference/capcut-assembly/010_1_tools-and-rules.md` (1.9 KB)
+  - capcut-assembly §2: `ATP/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
+  - capcut-assembly §3: `ATP/reference/capcut-assembly/030_3_build-the-timeline.md` (4.6 KB)
+  - capcut-assembly §4: `ATP/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (2.3 KB)
+  - capcut-assembly §5: `ATP/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.2 KB)
+  - production-agents §5: `ATP/reference/production-agents/050_5_this-session-as-agents-report.md` (2.0 KB)
 
 ## 6. Wrap-up (both modes)
 

@@ -9,7 +9,8 @@ user-invocable: false
 > `ATP` = `C:/Users/Glaresquare1/.claude/analyze-then-pick` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATP/reference/<file>/` (models: `ATP/models/<guide>/`, Higgsfield: `ATP/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
-A production agent comes here after `atp-inputs`. The Higgsfield tools were loaded in `atp-inputs`.
+A production agent comes here after `atp-inputs`. The Higgsfield tools were loaded in `atp-inputs`. Provenance labels: **[E]** evidence · **[I]** inference · **[U]** user instruction · **[A]** client asset · **[M]** model knowledge · **[G]** generation instruction.
+Changing a request (the one diagnosed retry of X7 step 5, or after a flag): invoke Skill `atp-write-request` for the rewrite, then return here for X5 and X7. A production agent never asks the user: where a line below or in a Higgsfield guide says to ask (`unlim_choice`, authentication, a permission), write `result.json` with `"status":"blocked"` and the blocker, then stop.
 
 ## Read now
 
@@ -18,6 +19,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - higgsfield-mcp §3: `ATP/higgsfield/higgsfield-mcp/030_3_standard-execution-sequence-for.md` (3.9 KB)
 - higgsfield-mcp §8: `ATP/higgsfield/higgsfield-mcp/080_8_credits-and-cost.md` (1.1 KB)
 - higgsfield-mcp §9: `ATP/higgsfield/higgsfield-mcp/090_9_errors-and-recovery.md` (2.5 KB)
+- *Edit Mode or Recreate (the moderation fallback after a refused request):*
+  - generation-system §5c.2: `ATP/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atp-model-guide`) — §2.1 (parameters per id), §2.3 (duration/aspect/audio), §2.5 (parameter gotchas)
 
 ## Step X5 (again, only when the request changed)
@@ -150,4 +153,4 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Hand-off
 
-When the job is terminal and downloaded: invoke Skill `atp-postprocess` (X8).
+When the job is terminal: invoke Skill `atp-postprocess` (X8; its first step downloads the result).

@@ -21,6 +21,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - capcut-assembly §6: `ATP/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (0.8 KB)
 - *Create (the sound layer):*
   - capcut-assembly §3b: `ATP/reference/capcut-assembly/040_3b_sound-layer-create.md` (3.9 KB)
+- text-and-format §1: `ATP/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
 - text-and-format §3: `ATP/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (3.5 KB)
 - *a multi-clip video:*
   - generation-system §3b.3: `ATP/reference/generation-system/070_3b.3_seam-discipline.md` (2.4 KB)
@@ -28,6 +29,8 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §3c: `ATP/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.2 KB)
 - *Edit Mode or Recreate (the sync check):*
   - generation-system §5c.5: `ATP/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (1.3 KB)
+
+Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the edited pictures first, then run step 1 (restore the original audio) once over the joined picture. (2) Recreate: `--audio` is the reference's `files_audio` file and `--audio-offset` its inventory `audio_offset` (fields `audio_path` and `audio_offset` of `RUN/00-inventory/inventory.json`, linked by `T split-audio`); a reference with inserts uses `T restore-audio --generated <edit> --source <own.mp4>` as the plan says. (3) Analyze Mode: stop after step 5 (the clean video) and go to `atp-qc` for the picture checks; once the picture passes, come back here for step 6 (the CapCut project), then `atp-qc` again for the project checks.
 
 ## Step X8
 
@@ -135,4 +138,4 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Hand-off
 
-Invoke Skill `atp-qc` (X9) on the final picture.
+Invoke Skill `atp-qc` (X9) on the final picture. In Analyze Mode, when `atp-qc` returns you here for step 6, assemble the CapCut project and invoke `atp-qc` again for the project checks.

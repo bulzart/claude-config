@@ -14,7 +14,8 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - production-agents §1: `ATP/reference/production-agents/010_1_prepared-by-this-session-before.md` (0.8 KB)
-- production-agents §2: `ATP/reference/production-agents/020_2_spawning.md` (9.8 KB)
+- production-agents §2: `ATP/reference/production-agents/020_2_spawning.md` (10.5 KB)
+- production-agents §3: `ATP/reference/production-agents/030_3_the-agent-s-contract.md` (7.8 KB)
 - production-agents §5: `ATP/reference/production-agents/050_5_this-session-as-agents-report.md` (2.0 KB)
 - higgsfield-mcp §1: `ATP/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)
 - `models_explore {action:"get", model_id}` once (A8.2)
@@ -34,7 +35,9 @@ The model was picked at the start (§2.4) and does not change.
    Overlay text never depends on the model: it goes in CapCut. Never switch models.
 
 ### A9. Prepare every video (this session)
-Per video, X1–X4 are run by this session. Invoke Skill `atp-plan-video` (X1), then `atp-write-request` (X2) and `atp-precheck` (X4–X6) once, and apply them to every video in allocation order; `atp-inputs` (X3) for the shared uploads of step 2. Their text stays loaded for the next video.
+At the start of A9: `T state --run RUN set stage=producing next_skill=atp-analyze-produce` (a resume re-enters here; the ledger and `state.json → videos[]` show which videos are done).
+
+**How A9 invokes the per-video skills.** Step 1 (X1–X4 for every video, in allocation order): invoke Skill `atp-plan-video` (X1), `atp-write-request` (X2) and `atp-precheck` for **X4 only**; their text stays loaded for the next video. Step 2 (shared inputs, X3 for the shared uploads and X5's folder): invoke Skill `atp-inputs`, then return here. Step 3 (X5–X6 per video): invoke `atp-precheck` again for X5 and X6 of every video and print the total once. Steps 4 and 5 follow here.
 Plan everything before production, in allocation order, **without asking for confirmation**
 (contract item 15):
 1. **X1–X4 for every video:** plan, pattern card, request(s), pre-generation QC. Recreate plans

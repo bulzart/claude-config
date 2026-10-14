@@ -26,8 +26,9 @@ Only the **locked model's** guide is ever read, and only the sections the curren
 
 | step (skill) | model guide sections |
 |---|---|
-| A8 / planning (`atp-analyze-produce`, `atp-plan-video`) | §1 at a glance, §6 model-specific features (what the model can and cannot do) |
-| X2 request (`atp-write-request`) | §2.4 call recipes, §2.6 9:16/720p, §3.1 structure, §3.3 action, §3.5 chronology, §3.7 references, §3.10 negatives, §3.11 visible text, §3.13 product fidelity, §3.14 integration, **§4.0 official examples** (the pattern card), the §4.x of the request kind: 4.1 text-to-video, 4.2 start/end frame, 4.3 reference-to-video, 4.4 edit / extension / motion transfer; §3.8 frames and §3.9 audio only when used |
+| A8 / planning (`atp-analyze-produce`, `atp-plan-video`) | §1 at a glance, §3.14 integration and continuity, §5 failure modes (where the guide lists size or place as a limit), §6 model-specific features |
+| E4 Edit Mode, Recreate plan (`atp-edit`, `atp-recreate-plan`) | §1 at a glance, §2.4 call recipes, §4.4 video edit / extension / motion transfer (the preserving mode and settings), §6 features |
+| X2 request (`atp-write-request`) | §2.4 call recipes, §2.6 9:16/720p, §3.1 to §3.7 (structure, subject and identity, action, environment and light, chronology, camera, references), §3.10 to §3.14 (negatives, visible text, identity consistency, product fidelity, integration), **§4.0 official examples** (the pattern card), the §4.x of the request kind: 4.1 text-to-video, 4.2 start/end frame, 4.3 reference-to-video, 4.4 edit / extension / motion transfer; §3.8 frames and §3.9 audio only when used; §6 when a feature is planned |
 | X3 inputs (`atp-inputs`) | §2.2 media roles, §3.7 references, §3.8 frames |
 | X4 pre-generation QC (`atp-precheck`) | §5 strengths, weaknesses and failure modes, §7 pre-generation checklist |
 | X5/X7 preflight and submit (`atp-submit`) | §2.1 parameters per model id, §2.3 duration/aspect/audio, §2.5 parameter gotchas |

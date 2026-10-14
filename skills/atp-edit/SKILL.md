@@ -22,6 +22,9 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §5c.2: `ATP/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
 - generation-system §5c.2b: `ATP/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.2 KB)
 - anomaly-catalog §1: `ATP/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.6 KB)
+- assets-and-substitution §4: `ATP/reference/assets-and-substitution/040_4_substitution-map-per-video.md` (2.4 KB)
+- creative-direction §9: `ATP/reference/creative-direction/120_9_edit-mode.md` (0.3 KB)
+- model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atp-model-guide`) — §1 at a glance, §2.4 call recipes, §4.4 video edit / extension / motion transfer (the preserving mode and settings), §6 features
 - the locked model's `edit_kind`: `T model-entry --id <model>`
 
 ## 4. Edit Mode
@@ -177,7 +180,13 @@ files as video K".
 
 ### The per-video loop for one edit (E6)
 
-E6 runs the per-video steps for this video, in this order, each by invoking its skill when you get to it: `atp-plan-video` (X1) → `atp-write-request` (X2) → `atp-inputs` (X3) → `atp-precheck` (X4–X6, including the E6 "Go" gate for the first video) → `atp-submit` (X7) → `atp-postprocess` (X8) → `atp-qc` (X9) → the review below (X9-R) → `atp-record` (X10). A re-edit goes back to `atp-write-request`.
+At the start of each video (before E2): `T state --run RUN set stage=editing video=NN next_skill=atp-edit`; when E5 is done: `next_skill=atp-plan-video`; when the user approves it (X9-R): `next_skill=atp-record`. A resume lands on the video's step; the ledger and the files on disk show how far it got (`T ledger begin` exit 3 stops any double submission).
+
+E6 runs the per-video steps for this video, in this order, each by invoking its skill when you get to it: `atp-plan-video` (X1) → `atp-write-request` (X2) → `atp-inputs` (X3) → `atp-precheck` (X4–X6, including the E6 "Go" gate for the first video) → `atp-submit` (X7) → `atp-postprocess` (X8) → `atp-qc` (X9) → the review below (X9-R) → `atp-record` (X10). At every preflight (X5, in `atp-precheck` or `atp-submit`) apply E6's pause rule above (cost above `confirm_cost_above_credits`, or credits running low).
+
+**A re-edit** (X9-R item 3: a new attempt from the original source) runs `atp-write-request` (the feedback folded into the plan and the request, the fidelity lock kept) → `atp-inputs` only for files the user added or replaced → `atp-submit` (X5 again, X7) → `atp-postprocess` → `atp-qc` → this review again.
+
+In Edit Mode the X9 findings are the QC notes of the review: there is no automatic regeneration, the user decides.
 
 ### X9-R — Edit Mode review (every edit, every attempt)
 
@@ -283,6 +292,7 @@ E6 runs the per-video steps for this video, in this order, each by invoking its 
 
 ## Hand-off
 
-After the last video is approved or the user stops: `T state --run RUN set stage=edited next_skill=atp-wrapup`, then invoke Skill `atp-wrapup`.
+- Per video: after E5, invoke Skill `atp-plan-video` (the per-video loop above).
+- After the last video is approved or the user stops: `T state --run RUN set stage=edited next_skill=atp-wrapup`, then invoke Skill `atp-wrapup`.
 
 After a compaction, or on `resume`, re-invoke the skill named in `RUN/state.json → next_skill`: its text may have been summarised away.

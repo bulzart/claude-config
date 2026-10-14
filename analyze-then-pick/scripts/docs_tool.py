@@ -15,6 +15,7 @@ the index table, or Glob  <doc>/*_<id>_*.md . Nothing here decides anything; it 
   index  <doc.md>                  rebuild the table of <doc.md> from the files in its folder (after an edit/add/rename)
   check  [--root ATP] [--skills DIR]   integrity of indexes, section files, skills, paths and citations (exit 1 on errors)
   budget [--root ATP] [--skills DIR]   size of every skill and of the files it names (what a phase loads)
+  coverage [--root ATP] [--skills DIR] [--skill NAME]   every § citation a skill makes that its own "Read now" does not load
 
 Part file name:  <seq>_<id>_<slug>.md   (seq = 010, 020, ... so a section can be inserted as 015_...)
 """
@@ -297,14 +298,79 @@ def cmd_budget(a):
     return 0
 
 
+SEC_ID = re.compile(r"§\s*(\d+[a-z]?(?:\.\d+[a-z]?)*)")
+DOCMENT = re.compile(r"`([a-z0-9-]+)\.md`")
+
+
+def split_skill(text):
+    """(the 'Read now' section, everything after it)"""
+    if "## Read now" not in text:
+        return "", text
+    after = text.split("## Read now", 1)[1]
+    read, sep, rest = after.partition("\n## ")
+    return read, rest
+
+
+def skill_citations(text):
+    """(doc, id) pairs cited as `doc.md` §a, §b ... in a skill body after its Read-now list (the ids that follow one doc mention, up to the next doc mention)"""
+    body = split_skill(text)[1]
+    out = []
+    mentions = list(DOCMENT.finditer(body))
+    for k, m in enumerate(mentions):
+        end = mentions[k + 1].start() if k + 1 < len(mentions) else len(body)
+        seg = body[m.end():min(end, m.end() + 140)]
+        # stop at a sentence break so a later unrelated § is not attributed to this document
+        seg = re.split(r"[.;:](?:\s|$)", seg, maxsplit=1)[0] if not seg.lstrip().startswith("§") else seg
+        for s in SEC_ID.finditer(seg):
+            out.append((m.group(1), s.group(1)))
+    return out
+
+
+def row_of(rows, sec):
+    anc = sec
+    while anc not in rows and "." in anc:
+        anc = anc.rsplit(".", 1)[0]
+    return anc if anc in rows else None
+
+
+def cmd_coverage(a):
+    root, skills = Path(a.root), Path(a.skills)
+    rows = {d.stem: {part_info(p)[1] for p in part_files(d)} for d in indexed_docs(root)}
+    total = 0
+    for d in skill_dirs(skills):
+        if a.skill and d.name != a.skill:
+            continue
+        t = rd(d / "SKILL.md")
+        read = split_skill(t)[0]
+        have = set(re.findall(r"- ([a-z0-9-]+) §([0-9a-z.]+):", read))
+        # a parent id read with its children counts for the children too
+        miss = []
+        for doc, sec in dict.fromkeys(skill_citations(t)):
+            if doc not in rows:
+                continue
+            r = row_of(rows[doc], sec)
+            if r is None:
+                continue
+            if (doc, r) in have or any(h[0] == doc and (h[1] == r or h[1].startswith(r + ".")) for h in have):
+                continue
+            miss.append(f"{doc} §{sec}" + (f" (row {r})" if r != sec else ""))
+        if miss:
+            total += len(miss)
+            print(f"{d.name}: {len(miss)} cited, not in Read now: " + "; ".join(miss))
+    print(f"{total} uncovered citations")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
     s = sp.add_parser("split"); s.add_argument("doc"); s.add_argument("--limit", type=int, default=8000)
     j = sp.add_parser("join"); j.add_argument("doc"); j.add_argument("--out")
     i = sp.add_parser("index"); i.add_argument("doc")
-    for nm in ("check", "budget"):
+    for nm in ("check", "budget", "coverage"):
         c = sp.add_parser(nm); c.add_argument("--root", default=str(ATP)); c.add_argument("--skills", default=str(SKILLS))
+        if nm == "coverage":
+            c.add_argument("--skill")
     a = ap.parse_args()
     if a.cmd == "split":
         split_doc(a.doc, a.limit)
@@ -320,6 +386,8 @@ def main():
         sys.exit(cmd_check(a))
     elif a.cmd == "budget":
         sys.exit(cmd_budget(a))
+    elif a.cmd == "coverage":
+        sys.exit(cmd_coverage(a))
 
 
 if __name__ == "__main__":

@@ -15,17 +15,36 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - anomaly-catalog §4: `ATP/reference/anomaly-catalog/220_4_the-qc-stack-x9-in-order.md` (6.2 KB)
 - anomaly-catalog §2.14: `ATP/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.9 KB)
+- *a product handled, prepared, used, poured or counted on screen:*
+  - anomaly-catalog §2.1: `ATP/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.5 KB)
+  - anomaly-catalog §2.2: `ATP/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (3.0 KB)
+  - anomaly-catalog §2.3: `ATP/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.7 KB)
+  - anomaly-catalog §2.4: `ATP/reference/anomaly-catalog/070_2.4_irreversible-and-persistent-stat.md` (1.4 KB)
+  - anomaly-catalog §2.5: `ATP/reference/anomaly-catalog/080_2.5_object-permanence-exits-occlusio.md` (1.5 KB)
+  - anomaly-catalog §2.6: `ATP/reference/anomaly-catalog/090_2.6_liquids-powders-and-materials.md` (1.9 KB)
+  - anomaly-catalog §2.8: `ATP/reference/anomaly-catalog/110_2.8_body-mechanics-at-the-product.md` (1.5 KB)
 - *a placed or contents product (size, label, blend, posture checks):*
   - anomaly-catalog §2.7: `ATP/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.1 KB)
   - anomaly-catalog §2.9: `ATP/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.3 KB)
   - anomaly-catalog §2.15: `ATP/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (8.3 KB)
   - anomaly-catalog §2.16: `ATP/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (4.3 KB)
+- *a person is swapped (skin tone face vs hands):*
+  - anomaly-catalog §2.17: `ATP/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - generation-system §9: `ATP/reference/generation-system/340_9_post-generation-qc-after-downloa.md` (8.0 KB)
 - generation-system §9b: `ATP/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.6 KB)
 - generation-system §5b: `ATP/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
+- generation-system §5d: `ATP/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
+- *a contents video, or a vessel of the product's category:*
+  - generation-system §4b.0: `ATP/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
+- *a placed product (posture):*
+  - generation-system §4b.1b: `ATP/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (3.1 KB)
+- *the plan has a size-and-place guide, or a size retry adds one:*
+  - generation-system §4b.6: `ATP/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
 - *Edit Mode or Recreate:*
+  - generation-system §5c.2b: `ATP/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.2 KB)
   - generation-system §5c.5: `ATP/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (1.3 KB)
-- *a multi-clip video:*
+- *a multi-clip video, or a source with hard cuts (shot structure):*
+  - generation-system §3b.1: `ATP/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
   - generation-system §3b.3: `ATP/reference/generation-system/070_3b.3_seam-discipline.md` (2.4 KB)
 - creative-direction §8: `ATP/reference/creative-direction/110_8_creative-qc-x9-as-notes-the-narr.md` (0.9 KB)
 - brand-guardrails §5: `ATP/reference/brand-guardrails/050_5_qc-x9-and-the-wrap-up.md` (1.2 KB)
@@ -324,5 +343,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Hand-off
 
-- Verdict accept (or the autonomous regeneration decided above): Edit Mode → the review (X9-R) in `atp-edit`, then `atp-record`. Analyze Mode → invoke Skill `atp-record` (X10).
-- A regeneration goes back to `atp-write-request` (changed request), `atp-precheck` (X5), `atp-submit` (X7) with the next attempt number.
+- Edit Mode: the findings become the QC notes of the review. Return to the review (X9-R) in `atp-edit` (re-invoke it if its text is no longer in context); there is no automatic regeneration.
+- Analyze Mode, the picture passed but the CapCut project is not built yet: go back to `atp-postprocess` step 6, then return here for the project checks.
+- Analyze Mode, accepted (picture and project): invoke Skill `atp-record` (X10).
+- Analyze Mode, one diagnosed regeneration: `atp-write-request` (the rewritten request; the diagnosis is already written in the brief as an attempt block) → `atp-inputs` only for new inputs → `atp-submit` (X5 again, X7, next attempt number) → `atp-postprocess` → `atp-qc`.

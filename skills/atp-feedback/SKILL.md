@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- *(nothing up front: read the run's brief, final prompt and QC verdict named below, and only the one reference section that owns the rule)*
+- nothing up front: read the run's brief, final prompt and QC verdict named below, and only the one reference section that owns the rule
 
 ## Feedback first
 

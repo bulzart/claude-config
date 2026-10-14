@@ -19,6 +19,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - creative-direction §6: `ATP/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - creative-direction §7: `ATP/reference/creative-direction/100_7_hook-payoff-loop-text-and-sound.md` (1.1 KB)
 - brand-guardrails §4: `ATP/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
+- generation-system §4b.0: `ATP/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
 
 ### A6. Create: style groups (Create only)
 - From the families and directions (A4), present numbered **style groups**:

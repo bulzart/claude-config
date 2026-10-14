@@ -79,7 +79,7 @@ Only these section files for this phase, nothing else unless a step below says s
   Without a guardrail document, write "none supplied" and apply `generation-system.md` §9b alone.
 
 ### A2b. Understand the supplied assets (autonomous — no questions by default)
-- Load `ATP/reference/assets-and-substitution.md`.
+- Load the `assets-and-substitution` sections named in Read now (not the whole reference).
 - View `30-assets/project/assets-sheet-*.jpg` and any preview that needs a closer look. Read
   `asset-inventory.md` (sub-folder groups and name hints), then build the **asset registry**
   (`30-assets/registry.md` and `state.json → assets`):

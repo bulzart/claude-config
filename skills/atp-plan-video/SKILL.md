@@ -9,17 +9,25 @@ user-invocable: false
 > `ATP` = `C:/Users/Glaresquare1/.claude/analyze-then-pick` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATP/reference/<file>/` (models: `ATP/models/<guide>/`, Higgsfield: `ATP/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
-Per-video loop: `atp-plan-video` (X1) → `atp-write-request` (X2) → `atp-inputs` (X3) → `atp-precheck` (X4–X6) → `atp-submit` (X7) → `atp-postprocess` (X8) → `atp-qc` (X9) → `atp-record` (X10). Analyze Mode: this session runs X1, X2, X4–X6 for every video (A9), a production agent runs the rest of its own video.
+Per-video loop: `atp-plan-video` (X1) → `atp-write-request` (X2) → `atp-inputs` (X3) → `atp-precheck` (X4–X6) → `atp-submit` (X7) → `atp-postprocess` (X8) → `atp-qc` (X9) → `atp-record` (X10). Analyze Mode: this session runs X1, X2 and X4 for every video, X3 for the shared uploads and X5–X6 (A9); a production agent runs the rest of its own video.
+
+Provenance labels: **[E]** evidence · **[I]** inference · **[U]** user instruction · **[A]** client asset · **[M]** model knowledge · **[G]** generation instruction.
 
 ## Read now
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
+- generation-system §1: `ATP/reference/generation-system/010_1_the-dependency-chain.md` (1.2 KB)
 - generation-system §2: `ATP/reference/generation-system/020_2_work-backward-from-the-finished.md` (3.9 KB)
 - generation-system §3: `ATP/reference/generation-system/030_3_entity-state-ledger-one-continuo.md` (3.8 KB)
 - generation-system §4: `ATP/reference/generation-system/100_4_replacement-and-insertion-integr.md` (3.3 KB)
+- generation-system §5: `ATP/reference/generation-system/210_5_logic-continuity-and-anti-slop-g.md` (4.6 KB)
+- generation-system §5b: `ATP/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5d: `ATP/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
+- generation-system §6: `ATP/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (1.5 KB)
+- generation-system §9b: `ATP/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.6 KB)
 - *a contents or placement video:*
+  - generation-system §4b: `ATP/reference/generation-system/110_4b_natural-placement-and-contents-w.md` (1.2 KB)
   - generation-system §4b.0: `ATP/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
   - generation-system §4b.1: `ATP/reference/generation-system/130_4b.1_choose-the-anchor-by-the-product.md` (2.4 KB)
   - generation-system §4b.1b: `ATP/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (3.1 KB)
@@ -31,24 +39,45 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §4b.6: `ATP/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
 - *Edit Mode or Recreate (the source action script):*
   - generation-system §5c.1: `ATP/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.2 KB)
-- *a multi-clip video:*
+- *a multi-clip video, or a Recreate/Edit source with hard cuts (item 7: separate clips on the source's own cuts):*
+  - generation-system §3b: `ATP/reference/generation-system/040_3b_videos-longer-than-one-generatio.md` (0.8 KB)
   - generation-system §3b.1: `ATP/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
 - *a video with inserts:*
   - generation-system §3c: `ATP/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.2 KB)
+- anomaly-catalog §0: `ATP/reference/anomaly-catalog/010_0_four-questions-behind-every-anom.md` (1.5 KB)
 - anomaly-catalog §1: `ATP/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.6 KB)
 - anomaly-catalog §2.7: `ATP/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.1 KB)
 - anomaly-catalog §2.14: `ATP/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.9 KB)
 - anomaly-catalog §2.16: `ATP/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (4.3 KB)
 - anomaly-catalog §3: `ATP/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.1 KB)
+- *a product that is handled, prepared, used, poured or counted on screen:*
+  - anomaly-catalog §2.1: `ATP/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.5 KB)
+  - anomaly-catalog §2.2: `ATP/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (3.0 KB)
+  - anomaly-catalog §2.3: `ATP/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.7 KB)
+  - anomaly-catalog §2.4: `ATP/reference/anomaly-catalog/070_2.4_irreversible-and-persistent-stat.md` (1.4 KB)
+  - anomaly-catalog §2.5: `ATP/reference/anomaly-catalog/080_2.5_object-permanence-exits-occlusio.md` (1.5 KB)
+  - anomaly-catalog §2.6: `ATP/reference/anomaly-catalog/090_2.6_liquids-powders-and-materials.md` (1.9 KB)
+  - anomaly-catalog §2.8: `ATP/reference/anomaly-catalog/110_2.8_body-mechanics-at-the-product.md` (1.5 KB)
+  - anomaly-catalog §2.9: `ATP/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.3 KB)
+- *a person is swapped for a supplied character:*
+  - anomaly-catalog §2.17: `ATP/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - creative-direction §2: `ATP/reference/creative-direction/020_2_the-goal-model-written-into-20-a.md` (1.4 KB)
 - creative-direction §3: `ATP/reference/creative-direction/030_3_the-audience-model-mass-cognitio.md` (3.0 KB)
 - creative-direction §4: `ATP/reference/creative-direction/040_4_the-trend-read-written-into-20-a.md` (1.9 KB)
 - creative-direction §6: `ATP/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
+- *Create (the craft carried, the copy test):*
+  - creative-direction §5.0: `ATP/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (4.7 KB)
+- *Edit Mode:*
+  - creative-direction §9: `ATP/reference/creative-direction/120_9_edit-mode.md` (0.3 KB)
+- text-and-format §1: `ATP/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
 - text-and-format §3: `ATP/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (3.5 KB)
-- *Analyze Mode with guardrails:*
+- *Edit Mode (the substitution map):*
+  - assets-and-substitution §4: `ATP/reference/assets-and-substitution/040_4_substitution-map-per-video.md` (2.4 KB)
+- *guardrails supplied:*
   - brand-guardrails §4: `ATP/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - *Create (the sound plan):*
   - capcut-assembly §3b: `ATP/reference/capcut-assembly/040_3b_sound-layer-create.md` (3.9 KB)
+- model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atp-model-guide`) — §1 at a glance, §3.14 integration and continuity, §5 failure modes (where the guide lists size or place as a limit), §6 features
 - the registry `RUN/30-assets/registry.md`, the card `RUN/20-analysis/cards/<V>.md`, `RUN/20-analysis/house-approach.md` when it exists
 
 ## Step X1

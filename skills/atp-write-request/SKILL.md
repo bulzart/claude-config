@@ -9,24 +9,39 @@ user-invocable: false
 > `ATP` = `C:/Users/Glaresquare1/.claude/analyze-then-pick` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATP/reference/<file>/` (models: `ATP/models/<guide>/`, Higgsfield: `ATP/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
+A production agent comes here only to rewrite a request for its one diagnosed regeneration (then `atp-inputs` for new inputs only, `atp-submit` for X5 and X7).
+
 ## Read now
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atp-model-guide`) — §2.4 (call recipes), §2.6 (9:16/720p), §3.1, §3.3, §3.5, §3.7, §3.10, §3.11, §3.13, §3.14, §4.0 (official examples, the pattern card) and the §4.x of the request kind (4.1 text-to-video, 4.2 frames, 4.3 reference, 4.4 edit/extension); §3.8 when frames are used; §3.9 when audio is used; §6 when a model feature is planned
+- model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atp-model-guide`) — §2.4 (call recipes), §2.6 (9:16/720p), §3.1–§3.7 (structure, subject and identity, action, environment and light, chronology, camera, references), §3.10–§3.14 (negatives, visible text, identity consistency, product fidelity, integration), §4.0 (official examples: the pattern card) and the §4.x of the request kind (4.1 text-to-video, 4.2 frames, 4.3 reference, 4.4 edit/extension); §3.8 when frames are used; §3.9 when audio is used; §6 when a model feature is planned
+- generation-system §4: `ATP/reference/generation-system/100_4_replacement-and-insertion-integr.md` (3.3 KB)
 - generation-system §5b: `ATP/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5c.3: `ATP/reference/generation-system/270_5c.3_the-fidelity-lock-in-the-prompt.md` (3.1 KB)
 - generation-system §7: `ATP/reference/generation-system/320_7_translating-the-plan-into-the-se.md` (2.7 KB)
 - generation-system §4b.5: `ATP/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (4.0 KB)
 - *Edit Mode or Recreate:*
   - generation-system §5c.2: `ATP/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
-- *the plan has a size-and-place guide:*
+  - generation-system §5c.2b: `ATP/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.2 KB)
+- *a placed or contents product (the spot):*
+  - generation-system §4b.1c: `ATP/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
+- *the plan has a size-and-place guide, or a retry adds one:*
   - generation-system §4b.6: `ATP/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
 - anomaly-catalog §3: `ATP/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.1 KB)
-- *the video shows a product in use or a throw/pass (solidity lines):*
+- *a product in use, prepared or counted:*
+  - anomaly-catalog §2.1: `ATP/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.5 KB)
+  - anomaly-catalog §2.2: `ATP/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (3.0 KB)
+  - anomaly-catalog §2.3: `ATP/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.7 KB)
+  - anomaly-catalog §2.5: `ATP/reference/anomaly-catalog/080_2.5_object-permanence-exits-occlusio.md` (1.5 KB)
+- *a placed or contents product (size words):*
+  - anomaly-catalog §2.7: `ATP/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.1 KB)
+- *the video shows a throw/pass (solidity lines):*
   - anomaly-catalog §2.14: `ATP/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.9 KB)
 - *a placed or contents product (blend lines):*
   - anomaly-catalog §2.15: `ATP/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (8.3 KB)
+- *a person is swapped (the skin-tone sentence):*
+  - anomaly-catalog §2.17: `ATP/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - text-and-format §1: `ATP/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
 - *guardrail operations in the plan:*
   - brand-guardrails §4: `ATP/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
@@ -191,4 +206,5 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Hand-off
 
 - Edit Mode: invoke Skill `atp-inputs` (X3).
-- Analyze Mode (this session, A9): continue with X4 → invoke Skill `atp-precheck` for this video.
+- Analyze Mode (this session, A9 step 1): continue with X4 → invoke Skill `atp-precheck` (X4 only) for this video.
+- A regeneration or a re-edit with a rewritten request: `atp-inputs` only for new or replaced inputs, then Skill `atp-submit` (X5 again, X7).

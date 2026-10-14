@@ -63,7 +63,7 @@ only what it needs and the context of a run does not rot. The skills are interco
 
 ## How the pipeline loads (obey throughout)
 
-1. **Start by invoking Skill `atp-start`**, after the resume and feedback checks below. Then follow each skill's **Hand-off**: when a phase ends it records
+1. **Start by invoking Skill `atp-start` with `$ARGUMENTS` as its args**, after the resume and feedback checks below. Then follow each skill's **Hand-off**: when a phase ends it records
    `T state --run RUN set stage=… next_skill=…` and names the next skill. Invoke that skill when you reach it, never earlier.
 2. **Load only what the current phase names.** Each skill has a "Read now" list of exact section files (some conditional); read those and nothing else unless a step
    says so. Never Read a whole reference, a whole guide or `models/index.json`; never run `docs_tool.py join` in a run. A section already read in this session is not read again.
@@ -72,9 +72,11 @@ only what it needs and the context of a run does not rot. The skills are interco
    an id that is not a row lives in its nearest parent row. Labels such as A7b, X9, E5, "item 19" resolve with the **labels** table below.
 4. **A phase boundary is a safe cut.** Everything a later phase needs is in `RUN/state.json` and the run files, not in this conversation. When many phases lie behind you and the context is
    long, tell the user in one line that they may run `/compact` (or open a new session and send `/analyze-then-pick resume <RUN>`); nothing is lost. After a compaction, or on resume,
-   **re-invoke the skill named in `state.json → next_skill`**: its text may have been summarised away.
-5. **Agents never receive this file.** Production and analysis agents get a contract that names the skills to invoke (Skill tool; if it is unavailable or the name is not found, Read
-   `C:/Users/Glaresquare1/.claude/skills/<name>/SKILL.md` and follow it). They read the same section lists as the main session and nothing else.
+   **re-invoke the skill named in `state.json → next_skill`**: its text may have been summarised away. Inside the per-video loop a run resumes at the video level
+   (`state.json` holds `video` and `next_skill`; the ledger and the files on disk show the step reached).
+5. **Agents never receive this file.** A production agent gets a contract that names the skills to invoke (Skill tool; if it is unavailable or the name is not found, Read
+   `C:/Users/Glaresquare1/.claude/skills/<name>/SKILL.md` and follow it); it reads the same section lists as the main session and nothing else. An analysis agent is briefed by the prompt
+   in `reference/analysis-protocol/` §7.
 
 ## Resume, and a video reported as wrong
 
@@ -147,11 +149,12 @@ and handle it before anything else (item 22).
 | the locked model's guide, by section | `atp-model-guide` | both | — |
 
 **The per-video loop** (both modes): X1 `atp-plan-video` → X2 `atp-write-request` → X3 `atp-inputs` → X4–X6 `atp-precheck` → X7 `atp-submit` (X5 again when the request changed) →
-X8 `atp-postprocess` → X9 `atp-qc` → (Edit Mode: X9-R in `atp-edit`) → X10 `atp-record`. Analyze Mode: this session runs X1, X2 and X4–X6 for every video (A9); each production agent then runs
-X3 → X7 → X8 → X9 → X10 for its own video by invoking those skills from its contract. Edit Mode runs the whole loop in this session, one video at a time.
+X8 `atp-postprocess` → X9 `atp-qc` → (Edit Mode: X9-R in `atp-edit`) → X10 `atp-record`. Analyze Mode: this session runs X1, X2 and X4 for every video, X3 for the shared uploads, then X5–X6 for every video (A9);
+each production agent then runs X3 → X7 → X8 → X9 → X10 for its own video by invoking those skills from its contract (Analyze Mode: the CapCut project of X8 step 6 is built after the picture passes X9, then X9 checks
+it). A regeneration or re-edit runs `atp-write-request` → (`atp-inputs` for new inputs) → `atp-submit` → `atp-postprocess` → `atp-qc`. Edit Mode runs the whole loop in this session, one video at a time.
 
 **Labels** (as cited in the skills and the references): §1 paths and §2 Start, items 4 · 11 · 17 → `atp-start` · A1, A2, A2b → `atp-analyze-prepare` · A3, A4, A5 → `atp-analyze-study` · A6 → `atp-create-plan` ·
-A6r → `atp-recreate-plan` · A7, A7b → `atp-asset-plan` · A8, A9, A9b, A10 → `atp-analyze-produce` · E1–E7, X9-R → `atp-edit` · X1 → `atp-plan-video` · X2 → `atp-write-request` · X3 → `atp-inputs` ·
+A6r (the "R-steps" of item 17; E4–E5 as Recreate uses them are repeated in it) → `atp-recreate-plan` · A7, A7b → `atp-asset-plan` · A8, A9, A9b, A10 → `atp-analyze-produce` · E1–E7, X9-R → `atp-edit` · X1 → `atp-plan-video` · X2 → `atp-write-request` · X3 → `atp-inputs` ·
 X4, X5, X6 → `atp-precheck` (X5 also in `atp-submit`) · X7 → `atp-submit` · X8 → `atp-postprocess` · X9 → `atp-qc` · X10 → `atp-record` · §6, §6b → `atp-wrapup` · item 22 → `atp-feedback` · item 23 → `atp-submit`.
 A rule that two phases both act on is written in both skills.
 

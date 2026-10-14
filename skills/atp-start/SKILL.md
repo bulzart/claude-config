@@ -9,7 +9,7 @@ user-invocable: false
 > `ATP` = `C:/Users/Glaresquare1/.claude/analyze-then-pick` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATP/reference/<file>/` (models: `ATP/models/<guide>/`, Higgsfield: `ATP/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
-Phase 1 of `/analyze-then-pick`. The router (the command) sent you here. Nothing else needs to be loaded for this phase.
+Phase 1 of `/analyze-then-pick`. The router (the command) sent you here and passes the command's arguments (`$ARGUMENTS` below) as this skill's args. Nothing else needs to be loaded for this phase.
 
 ## Read now
 
@@ -28,7 +28,7 @@ Only these section files for this phase, nothing else unless a step below says s
 | Model guides | `ATP/models/<guide>.md` is an index; the sections are in `ATP/models/<guide>/`. Which sections each step reads: `atp-model-guide` |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` (index) and `ATP/higgsfield/higgsfield-mcp/` (sections) |
 | Flag record | `ATP/caught_flags.html` (item 23): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7 (`atp-submit`), reconciled in A9b and §6, never read during a run |
-| References | `ATP/reference/<name>/` section files (index: `ATP/reference/<name>.md`): `analysis-protocol`, `generation-system`, `anomaly-catalog`, `creative-direction`, `brand-guardrails`, `text-and-format`, `assets-and-substitution`, `capcut-assembly`, `production-agents`; `ATP/pipeline/preprocessing.md`. Each phase skill lists the sections it needs under "Read now" |
+| References | `ATP/reference/<name>/` section files (index: `ATP/reference/<name>.md`): `analysis-protocol`, `generation-system`, `anomaly-catalog`, `creative-direction`, `brand-guardrails`, `text-and-format`, `assets-and-substitution`, `capcut-assembly`, `production-agents`. Each phase skill lists the sections it needs under "Read now" |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly/` (`atp-postprocess`) |
 | Run folder | created by `T new-run` under `ATP/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
 
@@ -147,6 +147,8 @@ Only these section files for this phase, nothing else unless a step below says s
       - **No reference video, frame or clip is ever an input** to a generation; nothing is edited.
     - In both sub-modes, every video ends as a CapCut project (item 16), produced by its own agent
       (item 2).
+
+Item 17's "§3 R-steps" are step A6r (`atp-recreate-plan`).
 
 ## Never (this phase)
 

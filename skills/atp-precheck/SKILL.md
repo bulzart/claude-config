@@ -9,6 +9,8 @@ user-invocable: false
 > `ATP` = `C:/Users/Glaresquare1/.claude/analyze-then-pick` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATP/reference/<file>/` (models: `ATP/models/<guide>/`, Higgsfield: `ATP/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
+Callers. Edit Mode: X4, X5, X6 in sequence for the video. Analyze Mode, this session (A9): **X4 only** at A9 step 1 for each video; **X5 and X6** at A9 step 3 for each video, after the shared uploads of step 2. Production agents do not use this skill.
+
 ## Read now
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
@@ -16,8 +18,18 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §8: `ATP/reference/generation-system/330_8_pre-generation-qc-pass-mental-re.md` (7.0 KB)
 - generation-system §10: `ATP/reference/generation-system/360_10_the-short-brief-printed-at-x6.md` (3.1 KB)
 - *Edit Mode or Recreate:*
+  - generation-system §5c.2: `ATP/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
   - generation-system §5c.4: `ATP/reference/generation-system/280_5c.4_check-before-spending-x4.md` (0.5 KB)
+- *a contents or placement video:*
+  - generation-system §4b.1b: `ATP/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (3.1 KB)
+  - generation-system §4b.1c: `ATP/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
+- *the plan has a size-and-place guide:*
+  - generation-system §4b.6: `ATP/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
 - anomaly-catalog §3: `ATP/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.1 KB)
+- *a placed or contents product (size, label, posture checks):*
+  - anomaly-catalog §2.7: `ATP/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.1 KB)
+  - anomaly-catalog §2.9: `ATP/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.3 KB)
+  - anomaly-catalog §2.16: `ATP/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (4.3 KB)
 - higgsfield-mcp §8: `ATP/higgsfield/higgsfield-mcp/080_8_credits-and-cost.md` (1.1 KB)
 - higgsfield-mcp §9: `ATP/higgsfield/higgsfield-mcp/090_9_errors-and-recovery.md` (2.5 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atp-model-guide`) — §5 (failure table), §7 (pre-generation checklist)
@@ -103,4 +115,5 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Hand-off
 
 - Edit Mode: show the "Go" gate (E6) for the first video, then invoke Skill `atp-submit` (X7).
-- Analyze Mode (this session, A9): next video's X1, or when every video has its plan, brief and preflight, continue A9 step 5 in `atp-analyze-produce`.
+- Analyze Mode, A9 step 1 (X4): next video's X1; when every video has its plan, request and X4, continue A9 step 2 in `atp-analyze-produce` (shared uploads via `atp-inputs`).
+- Analyze Mode, A9 step 3 (X5–X6 of every video): continue A9 steps 4–5 in `atp-analyze-produce`.

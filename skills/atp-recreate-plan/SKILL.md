@@ -21,9 +21,15 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §5c.1: `ATP/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.2 KB)
 - generation-system §5c.2: `ATP/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
 - generation-system §5c.2b: `ATP/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.2 KB)
+- *a source with many hard cuts (item 7: separate clips on its own cuts):*
+  - generation-system §3b.1: `ATP/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
 - creative-direction §5.2: `ATP/reference/creative-direction/080_5.2_the-best-approach-both-sub-modes.md` (1.0 KB)
 - text-and-format §2: `ATP/reference/text-and-format/020_2_edit-mode-removing-source-text.md` (2.3 KB)
+- text-and-format §4: `ATP/reference/text-and-format/040_4_fixed-output-format-9-16-at-720p.md` (2.4 KB)
+- *a person is swapped for a supplied character:*
+  - anomaly-catalog §2.17: `ATP/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - the locked model's `edit_kind` and edit range: `T model-entry --id <model>`
+- model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atp-model-guide`) — §1 at a glance, §2.4 call recipes, §4.4 video edit (the preserving mode and settings), §6 features
 
 ### A6r. Recreate: pick the references and plan the edits (Recreate only, autonomous)
 - **Use the recreate ranking from A4** (protocol §5). It weighs:
@@ -92,6 +98,51 @@ Only these section files for this phase, nothing else unless a step below says s
     patch, one named replace sentence carry them; a baked face effect is planned as flagged.
   - Then 9:16 (`T conform` / `reframe`). Split at cuts into the edit model's range when it is
     longer.
+
+### Edit Mode's E4–E5, as Recreate uses them
+
+### E4. Locked model — how it performs this edit (Recreate uses Edit Mode's machinery E4–E5)
+- The model was picked at the start (§2.4) and does not change. Invoke Skill `atp-model-guide` (once) and call `models_explore get` once; each per-video skill then names the guide and reference sections it reads.
+- Map the chosen operations onto the model's edit capability (`index.json → edit_kind`):
+  - **✓ edits video** (`video_edit`, `object_replace`): a true edit of the 9:16 source.
+  - **↔ motion transfer:** the source drives motion; the supplied files define the subjects and
+    scene.
+  - **≈ recreate** (`video_refs`): regenerate the clip with the source as a motion, camera and timing
+    reference, applying the operations.
+  - **✗ frames only:** recreate from clean 9:16 frames of the source, with the operations applied to
+    those frames through the supplied files, plus a prompt that rebuilds the source's action.
+- **Fidelity (item 19).** Take the most preserving way the locked model can perform this edit,
+  with the guide's preserving mode and settings (`generation-system.md` §5c.2). ✓ and ↔ keep the
+  source's movements and timing by construction. ≈ keeps them only with the source as the video
+  reference, the same duration and the action script written out. ✗ cannot guarantee them: use
+  the source's own first frame, and its last frame when the model takes one, with the operations
+  applied; write the action script out; and say in the brief that fidelity and sync are at risk.
+- State the approach in the brief (one line). Never switch models.
+
+### E5. Prepare the source (local, deterministic)
+- **Start from the silent copy** (`videos_without_audio/…`), never from the original with audio.
+  Every preparation below produces a silent file under `RUN/10-media/<V>/prepared/`. The user's
+  folders keep only `files_audio` and `videos_without_audio`.
+- **9:16.** If the source is not 9:16, choose (per `text-and-format.md` §4.1):
+  - `T conform` with a focus point, when a crop keeps every important subject;
+  - Higgsfield `reframe` (9:16, 720p; preflight first);
+  - regeneration with the source as a video reference.
+- **Length.** If the source exceeds the edit model's input range, split it at cuts with `T trim` into
+  segments, edit them in order with identical references and wording, then `T concat` the edited
+  pictures. The original audio is restored once over the joined result.
+- **Duration (item 19).** Request each segment at its exact source duration, or at the nearest
+  allowed duration above it and trim the extra afterwards. Never request a shorter one: the actions
+  would be squeezed against the original sound.
+- **Text.** Plan the removal per `text-and-format.md` §2.2:
+  - local `T clean` for small static overlays;
+  - otherwise explicit remove operations in the edit prompt;
+  - otherwise clean-frame regeneration.
+- **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): plan for a baked
+  face effect; burned-in text, names and patches are written as the edit prompt's remove or replace
+  operations, never removed by a tool; a mirrored selfie is flipped only when the user asks (E3), since only
+  the planned operations change.
+
+In Recreate (Analyze Mode) the tool methods that `text-and-format` §2 lists for removing source text (`--delogo`, `--crop`) are not used: a caption, a name or a patch is never removed by a tool, the prompt's clean-plate lines and the character-swap script carry it (see Never below).
 
 ## Rules this phase owns (contract items 16, 19)
 

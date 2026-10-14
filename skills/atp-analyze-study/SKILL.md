@@ -39,7 +39,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - anomaly-catalog §2.14: `ATP/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.9 KB)
 
 ### A3. Video analysis (as continuous sequences)
-- Follow `ATP/reference/analysis-protocol.md` exactly. For each video:
+- Follow `ATP/reference/analysis-protocol/` (the sections named in Read now) exactly. For each video:
   - read `video.md` and `timeline.md`;
   - view **every** storyboard sheet in order, reading the timeline beside it;
   - densify with `T frames … --range a-b --fps 15 --sheet` around fast actions, cuts, interactions,

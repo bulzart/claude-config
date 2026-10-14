@@ -19,6 +19,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §4b.1: `ATP/reference/generation-system/130_4b.1_choose-the-anchor-by-the-product.md` (2.4 KB)
 - generation-system §3b.1: `ATP/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
 - generation-system §3b.2: `ATP/reference/generation-system/060_3b.2_join-methods-by-the-locked-model.md` (3.2 KB)
+- *Recreate (a person is swapped for a supplied character: choose the character by comparison, not by turn):*
+  - anomaly-catalog §2.17: `ATP/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - the locked model's `continuation` entry: `T model-entry --id <model>`
 
 ### A7. Asset plan (autonomous — picks from the supplied assets only)

@@ -11,8 +11,12 @@
 Agent prompt (fill in the placeholders; use the Agent tool with `subagent_type: general-purpose`):
 
 ```
-You analyse reference videos for a /analyze-then-pick run. Follow
-C:/Users/Glaresquare1/.claude/analyze-then-pick/reference/analysis-protocol.md §0–§4 exactly.
+You analyse reference videos for a /analyze-then-pick run. Follow the section files of
+C:/Users/Glaresquare1/.claude/analyze-then-pick/reference/analysis-protocol/ (the index is analysis-protocol.md) §0–§4 exactly, and read
+only those. The card fields that §3 names also use: brand-guardrails/ §3 (the guardrail audit, only when <RUN>/30-assets/guardrails.md exists),
+creative-direction/ §3, §4 and, for Create, §5.0 (trend elements, transferable craft), generation-system/ §4b.1c, §5c.1 and §5c.2b (placement
+opportunities, source preparation flags), anomaly-catalog/ §2.1, §2.2, §2.5 and §2.14 (object use, counts, paths) and, for Create,
+`python <ATP>/scripts/atp.py audio-profile` (sound design). Never read a whole reference or models/index.json.
 Run dir: <RUN>. Your videos: <V01, V04, …> (prepared under <RUN>/10-media/<V>/).
 For each video: read video.md and timeline.md, view every storyboard sheet in order, densify with
 `python <ATP>/scripts/atp.py frames …` where §1 says so, then write <RUN>/20-analysis/cards/<V>.md

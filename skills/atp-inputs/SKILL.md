@@ -9,7 +9,7 @@ user-invocable: false
 > `ATP` = `C:/Users/Glaresquare1/.claude/analyze-then-pick` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATP/reference/<file>/` (models: `ATP/models/<guide>/`, Higgsfield: `ATP/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
-Load the Higgsfield tools first (below). A production agent starts its lane here.
+Load the Higgsfield tools first (below). A production agent starts its lane here. Provenance labels: **[E]** evidence · **[I]** inference · **[U]** user instruction · **[A]** client asset · **[M]** model knowledge · **[G]** generation instruction.
 
 ### Higgsfield tools
 
@@ -30,8 +30,10 @@ Only these section files for this phase, nothing else unless a step below says s
 - assets-and-substitution §5: `ATP/reference/assets-and-substitution/050_5_getting-references-into-the-mode.md` (2.3 KB)
 - *a multi-clip video (hand-off inputs):*
   - generation-system §3b.3: `ATP/reference/generation-system/070_3b.3_seam-discipline.md` (2.4 KB)
-- *the plan has a size-and-place guide:*
+- *the plan has a size-and-place guide, or a retry adds one:*
   - generation-system §4b.6: `ATP/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
+- *a production agent (the `blocked` path and the QC `continuity` text are defined here):*
+  - production-agents §4: `ATP/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (0.9 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atp-model-guide`) — §2.2 (media roles), §3.7 (references), §3.8 (frames)
 
 ## Step X3
@@ -90,4 +92,5 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Hand-off
 
 - Edit Mode: invoke Skill `atp-precheck` (X4–X6).
-- Production agent: if the request changed, run X5 (in `atp-precheck`/`atp-submit`), then invoke Skill `atp-submit` (X7).
+- Analyze Mode main session, A9 step 2 (the shared uploads): return to `atp-analyze-produce` and continue A9 (step 3: `atp-precheck` for X5–X6 of every video).
+- Production agent: invoke Skill `atp-submit` (X5 again if the request changed, then X7).

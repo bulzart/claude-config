@@ -24,13 +24,14 @@ under "Read now" the exact section files it needs: read those and nothing else. 
 a whole model guide or models/index.json (that is what rots your context):
   1. atp-inputs      (X3: your own inputs; it loads the Higgsfield tools)
   2. atp-submit      (X5 again only when you change a request; X7: ledger, submit, wait, flags)
-  3. atp-postprocess (X8: download, original audio, conform, join, sync check, the CapCut project)
-  4. atp-qc          (X9: QC of every checkpoint of your plan; a regeneration goes back to atp-submit with the next attempt number)
-  5. atp-record      (X10: deliverables, README row, result.json)
+  3. atp-postprocess (X8 steps 1 to 5: download, original audio, conform, join, sync check)
+  4. atp-qc          (X9, the picture checks: every checkpoint of your plan)
+  5. atp-postprocess (X8 step 6: the CapCut project, built once the picture has passed) and atp-qc again for the project checks
+  6. atp-record      (X10: deliverables, README row, result.json)
+  A regeneration (one diagnosed per clip) runs atp-write-request (X2, the rewrite only), then atp-inputs for new inputs only, then
+  atp-submit (X5 again, X7, the next attempt number), atp-postprocess and atp-qc. You never call atp-precheck.
   Before step 1: read <ATP>/reference/production-agents/ §3 (your contract; the file 030_3_… in that folder) and invoke atp-model-guide
-  once. The plan, brief and request files above were written by the main session (X1, X2, X4); you do not re-plan. Only when a
-  regeneration needs a changed request, invoke atp-write-request (X2) for the rewrite and atp-precheck (X4–X6) before the new
-  submission.
+  once. The plan, brief and request files above were written by the main session (X1, X2, X4); you do not re-plan.
 - <RUN>/30-assets/guardrails.md, when it exists (the client's rules; your plan lists this video's hits and operations);
 - <RUN>/20-analysis/house-approach.md, when it exists (the user's house approach; your plan says
   which of its rules this video applies);
@@ -62,7 +63,11 @@ a whole model guide or models/index.json (that is what rots your context):
 Hard rules:
 - Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. One job in flight in
   your lane; exit 3 means do not submit. Never use generate_video_batch.
-- Never ask the user anything. On a blocker, write result.json with status "blocked" and stop.
+- Never ask the user anything. On a blocker, write result.json with status "blocked" and stop. A line in a skill or a Higgsfield
+  guide that says "ask" (`unlim_choice`, authentication, a permission) is for the main session: you write the blocker instead.
+- Never spawn agents and never use the Workflow tool. Honest reporting: never claim a generation, upload or check that did not
+  happen; report failures with the real error. Provenance labels as in `analysis-protocol.md` §0 ([E] evidence, [I] inference, [U] user,
+  [A] client asset, [M] model knowledge, [G] generation instruction).
 - Spot and guide: the plan's spot passed `generation-system.md` §4b.1c (visible at the source's frame 0 and
   along the whole path, outside every hand's lane, bare and wider than the product, not the nearest plane
   unless the user marked it); where the model guide lists size or place as a limit and no passing-list anchor
