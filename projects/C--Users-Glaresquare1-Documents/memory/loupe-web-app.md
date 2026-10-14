@@ -21,3 +21,4 @@ On 2026-10-14 the user asked for a web app that (1) saves every Higgsfield gener
 - Scripts only gather; the agents decide ([[scripts-gather-agents-decide]]); no niche/brand names in Loupe code ([[no-hardcoded-names-in-scripts]]).
 - Keep `loupe/data` out of git; run `python loupe/tests/selftest.py` (36 checks, `--keeper` adds 3) after changes.
 - Flags are recorded here now, see [[atp-caught-flags]].
+- The keeper also gives sparse planning hints for the first request of a video (`atp.py plan-hints`), see [[atp-sample-hints-delicate]].
