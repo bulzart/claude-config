@@ -22,8 +22,11 @@ Subcommands (python atp.py <cmd> -h):
   model-menu     numbered table of EVERY available video model (pinned first) + quick picks
   model-entry    ONE model's index.json entry + its guide path and section folder (index.json is 40 KB: never read it whole)
   ledger        anti-duplicate guard for paid generations (begin before, set after every call)
-  caught-flag    flag record caught_flags.html (data + viewer page): prompts and videos Higgsfield flagged or refused
-                 (add | set | list | reconcile | open | render)
+  caught-flag    flag record in Loupe (the web app): prompts and videos Higgsfield flagged or refused, with gathered evidence
+                 (add | set | list | reconcile | open)
+  loupe          ensure | status | open: the Loupe web app (flags, generation misses, QC samples)
+  qc-consult     QC phase only: ask the QC keeper which samples (generation misses) apply to the video under QC
+  qc-brief       QC phase only: the matching samples as a plain brief (no model call)
   open           open a finished video in the default player for the user's review
   prep-video     probe, cuts, activity, 5 fps adaptive frames, storyboard sheets, audio, transcript,
                  OCR sample, per-second timeline, summary
@@ -2634,13 +2637,40 @@ def _count_frames(path) -> tuple[int, float]:
 
 
 # ----------------------------------------------------------------------------------------------------------------
-# Caught flags. ATP/caught_flags.html is the flag record AND its viewer in one self-contained page: the data is a
-# JSON block inside it, scripts/caught_flags_template.html is the viewer (search, filters, grouping, detail).
-# `caught-flag` is the only writer (add | set | reconcile | render); no step of a run and no agent reads the page
-# (command item 23): it is for the person who opens it. The script gathers what the run already knows (the video,
-# the attempt, the request's prompt and parameters, every input with its file, type and thumbnail, the reference
-# and its source segment, the job and its ledger row); the agent adds the judgement (Higgsfield's reply, the
-# suspected trigger, which input, which words, which part of a video, the grouping tags).
+# Caught flags. The flag record lives in Loupe (~/.claude/loupe, the web app); `caught-flag` is how the pipeline writes to it
+# (add | set | reconcile | list | open). No step of a run and no agent reads the record (command item 23): it is for the person
+# who opens Loupe. The script gathers what the run already knows (the video, the attempt, the request's prompt and parameters,
+# every input with its file, type, thumbnail and file facts, the reference and its source segment, the job and its ledger row,
+# the raw response a hook captured); the agent adds the judgement (Higgsfield's reply, the suspected trigger, which input, which
+# words, which part of a video, the grouping tags). Loupe adds the history evidence (the same input elsewhere, similar flags).
+# If Loupe cannot be reached a new flag is queued in loupe/data/outbox and recorded when it starts: nothing is lost.
+
+LOUPE_HOME = Path(os.environ.get("LOUPE_HOME") or (Path.home() / ".claude" / "loupe"))
+
+
+def _lc():
+    if str(LOUPE_HOME) not in sys.path:
+        sys.path.insert(0, str(LOUPE_HOME))
+    import loupe_client
+    return loupe_client
+
+
+def _cf_api(method, path, body=None, key="pipeline", timeout=60):
+    lc = _lc()
+    if not lc.ensure():
+        return 0, {"ok": False, "error": "Loupe is not running and could not be started (python ~/.claude/loupe/loupe.py serve)"}
+    return lc.call(method, path, body, key_name=key, timeout=timeout)
+
+
+def _cf_facts(path, ocr=True):
+    """File facts for a flag input: sha1, size, dimensions, duration, perceptual hash, text seen on screen (Loupe's facts module)."""
+    try:
+        if str(LOUPE_HOME) not in sys.path:
+            sys.path.insert(0, str(LOUPE_HOME))
+        from loupe_app import facts as lf
+        return lf.file_facts(path, ocr=ocr)
+    except Exception as e:  # noqa: BLE001
+        return {"facts_error": str(e)[:160]}
 
 
 def _cf_text_or_file(v):
@@ -2684,45 +2714,81 @@ def _cf_sentence_diff(old: str, new: str, cap: int = 14) -> str:
     return "\n".join(lines)
 
 
-CAUGHT_FLAGS = ATP_HOME / "caught_flags.html"
-CF_TEMPLATE = ATP_HOME / "scripts" / "caught_flags_template.html"
+_CF_SNAP = {}
 CF_KINDS = ["moderation-block", "refused-no-reason", "media-flagged", "output-flagged", "preset-notice", "other"]
 CF_CAUSES = ["prompt-wording", "reference-video", "image-reference", "output", "parameter", "unknown"]
 CF_STATUS = ["open", "cleared", "persistent"]
 CF_TERMS = re.compile(r"moderat|flag|nsfw|refus|polic|safety|blocked|copyright|\bip\b|celebrit|likeness|preset_recommendation|"
                       r"rejected before creation|no reason|no error", re.I)
-CF_DATA_RE = re.compile(r'(<script id="flags-data" type="application/json">)(.*?)(</script>)', re.S)
 CF_ROLE_LABEL = {"image_references": "Image", "video_references": "Video", "audio_references": "Audio"}
 CF_PARAM_KEYS = ("model", "mode", "duration", "duration_policy", "aspect_ratio", "resolution", "generate_audio",
                  "enable_thinking", "count", "declined_preset_id")
 
 
-def _cf_load() -> list:
-    """The entries stored in the page's flags-data block ([] when the page does not exist yet)."""
-    if not CAUGHT_FLAGS.exists():
-        return []
-    page = CAUGHT_FLAGS.read_bytes().decode("utf-8")
-    m = CF_DATA_RE.search(page)
-    if not m:
-        fail(f"{CAUGHT_FLAGS.name} has no flags-data block (restore it from git)", 2)
-    try:
-        return list((json.loads(m.group(2)) or {}).get("entries", []))
-    except ValueError as e:
-        fail(f"{CAUGHT_FLAGS.name}: the flags-data block is not valid JSON ({e})", 2)
+def _cf_outbox_find(eid):
+    ob = Path(os.environ.get("LOUPE_DATA") or (LOUPE_HOME / "data")) / "outbox"
+    for p in sorted(ob.glob("*.json")) if ob.is_dir() else []:
+        try:
+            j = json.loads(p.read_bytes().decode("utf-8"))
+        except (OSError, ValueError):
+            continue
+        if (j.get("doc") or {}).get("id") == eid:
+            return p, j
+    return None, None
+
+
+def _cf_load(eid=None, q="") -> list:
+    """Flag entries from Loupe: one by id, or those matching a search (the web app's operators: status:open run:... tag:...)."""
+    import urllib.parse
+    if eid:
+        if str(eid).startswith("CF-Q"):
+            p, j = _cf_outbox_find(eid)
+            if not j:
+                fail(f"{eid} not found", 1)
+            _CF_SNAP[eid] = json.dumps(j["doc"], sort_keys=True)
+            return [j["doc"]]
+        s, d = _cf_api("GET", f"/api/flags/{eid}")
+        if s != 200:
+            fail(f"{eid}: {d.get('error', 'not found')}", 1)
+        ents = [d["entry"]]
+    else:
+        s, d = _cf_api("GET", "/api/flags?limit=5000&q=" + urllib.parse.quote(q or ""))
+        if s != 200:
+            fail("cannot read the flags: " + str(d.get("error")), 1)
+        ents = d["entries"]
+    for e in ents:
+        _CF_SNAP[e["id"]] = json.dumps(e, sort_keys=True)
+    return ents
 
 
 def _cf_save(entries: list):
-    """Write the page: the viewer template with the entries injected as one JSON block (atomic)."""
-    if not CF_TEMPLATE.is_file():
-        fail(f"the viewer template is missing: {CF_TEMPLATE}", 2)
-    tpl = CF_TEMPLATE.read_bytes().decode("utf-8")
-    if tpl.count("__FLAGS_JSON__") != 1:
-        fail("the viewer template must contain __FLAGS_JSON__ exactly once", 2)
-    blob = json.dumps({"version": 1, "generated": now_iso(), "entries": entries}, ensure_ascii=False, separators=(",", ":"))
-    blob = blob.replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
-    tmp = CAUGHT_FLAGS.with_suffix(".html.tmp")
-    tmp.write_bytes(tpl.replace("__FLAGS_JSON__", blob).encode("utf-8"))
-    os.replace(tmp, CAUGHT_FLAGS)
+    """Push what changed since _cf_load to Loupe: a new entry is created (Loupe assigns its id), a changed one replaced."""
+    lc = _lc()
+    for e in entries:
+        cur = json.dumps(e, sort_keys=True)
+        eid = e.get("id", "")
+        if eid in _CF_SNAP:
+            if _CF_SNAP[eid] == cur:
+                continue
+            if str(eid).startswith("CF-Q"):
+                p, j = _cf_outbox_find(eid)
+                if p:
+                    j["doc"] = e
+                    p.write_text(json.dumps(j, ensure_ascii=False), encoding="utf-8")
+                continue
+            s, d = _cf_api("PUT", f"/api/flags/{eid}", e)
+            if s != 200:
+                fail(f"Loupe refused the update of {eid}: {d.get('error')}", 1)
+        else:
+            s, d = _cf_api("POST", "/api/flags", e)
+            if s == 200:
+                e["id"] = d["id"]
+            else:
+                e["id"] = "CF-Q" + os.urandom(4).hex()
+                e["queued"] = True
+                lc.queue("add", e)
+                print(f"WARNING: Loupe could not be reached ({d.get('error')}); the flag is queued as {e['id']} and will be recorded when Loupe starts.", file=sys.stderr)
+        _CF_SNAP[e["id"]] = json.dumps(e, sort_keys=True)
 
 
 def _cf_run_dir(run):
@@ -2810,9 +2876,9 @@ def _cf_uploads(rd) -> dict:
         except (ValueError, OSError):
             continue
         for name, v in (j.items() if isinstance(j, dict) else []):
-            mid, typ = (v.get("media_id"), v.get("content_type", "")) if isinstance(v, dict) else (v, "")
+            mid, typ = (v.get("media_id"), v.get("content_type") or v.get("type") or "") if isinstance(v, dict) else (v, "")
             if mid and mid not in res:
-                res[mid] = {"name": name, "type": typ}
+                res[mid] = {"name": name, "type": typ, "file": (v.get("file") if isinstance(v, dict) else "") or ""}
     return res
 
 
@@ -2879,6 +2945,10 @@ def _cf_inputs(req: dict, rd, thumbs: bool = True) -> list:
         item = {"label": label, "role": role, "media_id": mid, "name": name,
                 "type": ups.get(mid, {}).get("type") or _cf_type(name), "ref": _cf_ref(name)}
         path = _cf_asset_path(rd, name, req)
+        _uf = ups.get(mid, {}).get("file")
+        if not path and _uf and Path(_uf).is_file():
+            path = Path(_uf)             # the file the uploads map recorded for this media id
+        item["file"] = ups.get(mid, {}).get("name", "")
         if not path and role == "video_references" and item["ref"].startswith("V"):
             path = _cf_video_file(item["ref"], rd, req, None)
         if path:
@@ -3053,31 +3123,30 @@ def _cf_compact(e: dict, full: bool = False) -> dict:
 
 
 def cmd_caught_flag(a):
-    """The flag record: ATP/caught_flags.html, a self-contained page (data + viewer with search, filters, grouping)
+    """The flag record, kept in Loupe (the web app: search, filters, grouping, evidence)
     of every prompt and video that made Higgsfield flag, refuse, withhold or reroute something during a run (a
     moderation block, a job that failed within seconds with no reason, an upload or element marked nsfw / ip_checking
     / failed, an output withheld, a preset notice instead of a job). Written only through this command; no step of a
     run and no agent reads it (command item 23). The script gathers what the run knows (the video, the request, every
-    input with its file and thumbnail, the reference, the source segment, the ledger row); the agent writes the
-    judgement (the reply, the suspected trigger, --asset, --prompt-span, --part-*, --tags).
+    input with its file, thumbnail and file facts, the reference, the source segment, the ledger row, the hook's raw capture); the
+    agent writes the judgement (the reply, the suspected trigger, --asset, --prompt-span, --part-*, --tags). Loupe adds the history
+    evidence.
       add        write a CF-nnn entry (--run and --video attach the request, inputs, plan, ledger row by themselves)
       set        update an entry: status (cleared needs the accepted request or job), notes, tags, assets, outcome
       list       entries as JSON for the terminal (filters; --full keeps the long texts)
       reconcile  the run's ledger (state.json) against the page: rows marked --flagged with no entry, and failed
                  rows with no job id or a flag-like note, for the agent to judge
-      open       open the page in the default browser
-      render     rewrite the page from its own data with the current viewer template"""
+      open       open Loupe's flag page in the default browser (sign in there)"""
     if a.action == "open":
-        if not CAUGHT_FLAGS.exists():
-            _cf_save([])
-        webbrowser.open(CAUGHT_FLAGS.as_uri())
-        out({"ok": True, "file": str(CAUGHT_FLAGS), "opened": True})
-    lock = FileLock(CAUGHT_FLAGS.with_suffix(".lock"))
-    if a.action == "render":
-        with lock:
-            ents = _cf_load()
-            _cf_save(ents)
-        out({"ok": True, "file": str(CAUGHT_FLAGS), "entries": len(ents)})
+        lc = _lc()
+        if not lc.ensure():
+            fail("Loupe is not running and could not be started (python ~/.claude/loupe/loupe.py serve)", 1)
+        url = lc.base_url() + "/#/flags" + (f"/{a.id}" if a.id else "")
+        webbrowser.open(url)
+        out({"ok": True, "url": url, "opened": True})
+    _ld = Path(os.environ.get("LOUPE_DATA") or (LOUPE_HOME / "data"))
+    _ld.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(_ld / "flags-client.lock")
     if a.action == "reconcile":
         if not a.run:
             fail("reconcile needs --run", 2)
@@ -3085,7 +3154,7 @@ def cmd_caught_flag(a):
         if not rd or not (rd / "state.json").exists():
             fail(f"state.json not found for run {a.run}", 2)
         led = json.loads((rd / "state.json").read_text(encoding="utf-8")).get("submissions", [])
-        ents = [e for e in _cf_load() if rd.name in str(e.get("where", {}).get("run", "")) or str(a.run) in str(e.get("where", {}).get("run", ""))]
+        ents = [e for e in _cf_load(q=f"run:{rd.name}") if rd.name in str(e.get("where", {}).get("run", "")) or str(a.run) in str(e.get("where", {}).get("run", ""))]
         def recorded(e):
             vid = _lane(e["video"])
             for c in ents:
@@ -3105,14 +3174,22 @@ def cmd_caught_flag(a):
                 marked.append(row)
             elif e["status"] == "failed" and (not e.get("job_id") or any(CF_TERMS.search(n) for n in notes)):
                 check.append(row)
+        _s, _cd = _cf_api("GET", "/api/captures?unclaimed=1&limit=30")
+        caps = [{"id": c["id"], "at": c["ts"], "tool": c["tool"].replace("mcp__higgsfield__", ""), "job": c["job"], "summary": c["summary"][:200]}
+                for c in (_cd.get("captures", []) if _s == 200 else [])]
         out({"ok": True, "run": rd.name, "entries_for_run": [c["id"] for c in ents],
+             "unclaimed_captures": caps,
              "flagged_unrecorded": [r for r in marked if not r["entry"]],
              "flagged_recorded": [r for r in marked if r["entry"]],
              "failed_to_judge": [r for r in check if not r["entry"]],
              "note": "flagged_unrecorded must each get `caught-flag add`; failed_to_judge rows are the agent's call "
-                     "(a flag or a validation/credit error); mark a row's ledger entry with `ledger set --flagged`."})
+                     "(a flag or a validation/credit error); mark a row's ledger entry with `ledger set --flagged`. "
+                     "unclaimed_captures are raw Higgsfield responses the hook saved that no flag claimed yet: one that is a flag of this run gets "
+                     "`caught-flag add ... --capture <id>`; the others are for the admin to dismiss in Loupe."})
     if a.action == "list":
-        entries = _cf_load()
+        qs = " ".join(x for x in ((f"status:{a.status}" if a.status else ""), (f"run:{a.run}" if a.run else ""), (f"video:{a.video}" if a.video else ""),
+                                  (f"model:{a.model}" if a.model else ""), (f"kind:{a.kind}" if a.kind else "")) if x)
+        entries = _cf_load(q=qs)
         def keep(e):
             w, t = e.get("where", {}), e.get("trigger", {})
             if a.mode and a.mode.lower() not in (str(w.get("mode", "")) + " any all").lower(): return False
@@ -3127,12 +3204,12 @@ def cmd_caught_flag(a):
             if a.grep and a.grep.lower() not in json.dumps(_cf_compact(e, True), ensure_ascii=False).lower(): return False
             return True
         sel = [_cf_compact(e, a.full) for e in entries if keep(e)]
-        out({"ok": True, "file": str(CAUGHT_FLAGS), "total": len(entries), "count": len(sel), "entries": sel})
+        out({"ok": True, "url": _lc().base_url() + "/#/flags", "total": len(entries), "count": len(sel), "entries": sel})
     if a.action == "set":
         if not a.id:
             fail("--id CF-nnn is required", 2)
         with lock:
-            entries = _cf_load()
+            entries = _cf_load(a.id)
             e = next((x for x in entries if x.get("id") == a.id), None)
             if e is None:
                 fail(f"{a.id} not found", 1)
@@ -3153,6 +3230,12 @@ def cmd_caught_flag(a):
                 prm = _cf_params_dict(_cf_request_json(a.cleared_prompt))
                 if prm:
                     cl["params"] = prm
+                _crq = _cf_request_json(a.cleared_prompt)
+                if _crq:
+                    _crd = _cf_run_dir(e.get("where", {}).get("run"))
+                    cl["inputs"] = [{"label": i["label"], "role": i["role"], "name": i.get("name", ""),
+                                     "sha1": (_cf_facts(i["path"], ocr=False).get("sha1", "") if i.get("path") else "")}
+                                    for i in _cf_inputs(_crq, _crd, False)]
             if a.cleared_job:
                 cl["job"] = a.cleared_job
             if a.note:
@@ -3181,7 +3264,7 @@ def cmd_caught_flag(a):
                 e["trigger"].pop("part", None)
             e["updated"] = now_iso()
             _cf_save(entries)
-        out({"ok": True, "id": a.id, "status": e.get("status"), "file": str(CAUGHT_FLAGS)})
+        out({"ok": True, "id": a.id, "status": e.get("status"), "url": _lc().base_url() + f"/#/flags/{a.id}"})
     # add
     need = ("title", "kind", "response", "trigger")
     missing = [k for k in need if not getattr(a, k)]
@@ -3196,9 +3279,8 @@ def cmd_caught_flag(a):
              "unknown-trigger); the page groups and filters by them", 2)
     thumbs = not a.no_thumbs
     with lock:
-        entries = _cf_load()
-        ids = [int(re.sub(r"\D", "", x.get("id", "0")) or 0) for x in entries]
-        cid = f"CF-{(max(ids) + 1) if ids else 1:03d}"
+        entries = []
+        cid = ""            # Loupe assigns the CF-nnn id
         rd = _cf_run_dir(a.run)
         given_json = bool(a.prompt) and str(a.prompt).lower().endswith(".json") and Path(str(a.prompt)).is_file()
         rq = Path(str(a.prompt)) if given_json else (_cf_request_file(rd, a.video, a.attempt) if rd and a.video else None)
@@ -3209,6 +3291,11 @@ def cmd_caught_flag(a):
         inputs = _cf_inputs(req, rd, thumbs) if req else []
         if not inputs and a.inputs:
             inputs = _cf_inputs_from_text(_cf_text_or_file(a.inputs), rd)
+        for _it in inputs:      # file facts: sha1, size, dimensions, duration, text seen on screen (OCR)
+            if _it.get("path"):
+                _f = _cf_facts(_it["path"], ocr=not a.no_facts)
+                if _f:
+                    _it["facts"] = _f
         sub = _cf_submission(rd, a.video, a.attempt)
         mode_, model_ = _cf_state_info(rd)
         nn = _cf_nn(a.video)
@@ -3246,8 +3333,24 @@ def cmd_caught_flag(a):
             trig.pop("assets")
         if not trig["assets_unmatched"]:
             trig.pop("assets_unmatched")
+        # the raw response a hook captured the moment it came back (by job id, or the one named with --capture)
+        _cap = None
+        _jobs = [j for j in re.split(r"[,\s]+", str(entry.get("job") or "")) if j]
+        if a.capture:
+            _s, _d = _cf_api("GET", f"/api/captures?full=1&limit=200")
+            _cap = next((c for c in (_d.get("captures", []) if _s == 200 else []) if str(c["id"]) == str(a.capture)), None)
+        elif _jobs:
+            _s, _d = _cf_api("GET", "/api/captures?full=1&limit=10&job=" + _jobs[0])
+            _cap = next(iter(_d.get("captures", []) if _s == 200 else []), None)
+        if _cap:
+            _pl = _cap.get("payload") or {}
+            entry["captured"] = {"id": _cap["id"], "at": _cap["ts"], "tool": _cap["tool"], "response": str(_pl.get("response", ""))[:12000],
+                                 "agent": _cap.get("agent", "")}
         entries.append(entry)
         _cf_save(entries)
+        cid = entry["id"]
+        if _cap and not str(cid).startswith("CF-Q"):
+            _cf_api("POST", f"/api/captures/{_cap['id']}/claim", {"flag": cid})
     gaps = []
     if not (trig.get("assets") or trig.get("assets_unmatched")):
         gaps.append("asset: say which input you suspect with --asset (an 'Image 2' label, a media id, a file name or an A/V id)")
@@ -3255,13 +3358,75 @@ def cmd_caught_flag(a):
         gaps.append("prompt words: --prompt-span \"<the exact words>\" when a wording is suspected")
     if not trig.get("part"):
         gaps.append("video part: --part-of / --part-from / --part-to when a part of a video is suspected")
-    out({"ok": True, "id": cid, "title": entry["title"], "file": str(CAUGHT_FLAGS),
+    out({"ok": True, "id": cid, "title": entry["title"], "url": _lc().base_url() + f"/#/flags/{cid}", "capture": (entry.get("captured") or {}).get("id"),
          "attached": [k for k, v in (("request", rq), ("prompt", prompt), ("params", params), ("inputs", inputs), ("plan", plan),
-                                     ("ledger row", sub), ("thumbnails", any(i.get("thumb") for i in inputs))) if v],
+                                     ("ledger row", sub), ("thumbnails", any(i.get("thumb") for i in inputs)),
+                                     ("file facts", any(i.get("facts") for i in inputs)), ("raw response", entry.get("captured"))) if v],
          "inputs": [{"label": i["label"], "name": i.get("name"), "suspect": bool(i.get("suspect"))} for i in inputs],
          "unmatched_assets": trig.get("assets_unmatched", []), "not_given": gaps,
          "note": "after the changed request is accepted: `caught-flag set --id %s --status cleared --cleared-prompt <request.json>`; "
-                 "if the flag stays, `--status persistent`; `caught-flag open` shows the page" % cid})
+                 "if the flag stays, `--status persistent`; `caught-flag open --id %s` shows it in Loupe" % (cid, cid)})
+
+
+def cmd_loupe(a):
+    """The Loupe web app: ensure (start it if needed) | status | open."""
+    lc = _lc()
+    if a.action == "ensure":
+        ok = lc.ensure()
+        out({"ok": ok, "url": lc.base_url(), "note": "" if ok else "Loupe could not be started: python ~/.claude/loupe/loupe.py serve"}, 0 if ok else 1)
+    if a.action == "status":
+        h = lc.health()
+        out({"ok": bool(h), "url": lc.base_url(), "running": bool(h), **(h or {})})
+    if a.action == "open":
+        if not lc.ensure():
+            fail("Loupe could not be started", 1)
+        webbrowser.open(lc.base_url() + (a.path or "/"))
+        out({"ok": True, "url": lc.base_url() + (a.path or "/")})
+
+
+def _qc_ctx(a) -> dict:
+    ctx = {"run": a.run or "", "video": a.video or "", "model": a.model or "", "mode": a.mode or "", "product": a.product or "",
+           "kinds": [k.strip() for k in (a.kinds or "").split(",") if k.strip()]}
+    rd = _cf_run_dir(a.run) if a.run else None
+    if rd:
+        mode_, model_ = _cf_state_info(rd)
+        ctx["run"] = rd.name
+        ctx["mode"] = ctx["mode"] or mode_
+        ctx["model"] = ctx["model"] or model_
+    return ctx
+
+
+def _qc_sample_files(res, rd, video):
+    """Where the answer is kept for the video's record (the agent reads it from the JSON line, the file is the audit)."""
+    try:
+        if rd and video:
+            d = rd / "60-outputs" / f"video-{_cf_nn(video)}"
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "qc-consult.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+            return str(d / "qc-consult.json")
+    except OSError:
+        pass
+    return ""
+
+
+def cmd_qc(a):
+    """QC phase only. qc-consult asks the QC keeper (a separate read-only Claude session that holds the sample library: the generation
+    misses the admin marked, each as one image with the miss on the left and the correct frame on the right); qc-brief returns the
+    matching samples with no model call. Both print the samples' image paths: view them, then compare the marked region with the same
+    place in the video under QC. Loupe unreachable: the answer says so and the QC goes on without samples."""
+    ctx = _qc_ctx(a)
+    ctx["q"] = a.question or ""
+    if a.cmd == "qc-consult":
+        if not a.question:
+            fail("qc-consult needs --question (what you see or suspect in the video under QC)", 2)
+        s, d = _cf_api("POST", "/api/qc/consult", {**ctx, "question": a.question, "checkpoints": a.checkpoint or []}, key="qc", timeout=190)
+    else:
+        s, d = _cf_api("POST", "/api/qc/brief", ctx, key="qc", timeout=60)
+    if s != 200:
+        out({"ok": True, "mode": "unavailable", "samples": [], "note": "no QC samples for this check: " + str((d or {}).get("error"))})
+    rd = _cf_run_dir(a.run) if a.run else None
+    d["saved"] = _qc_sample_files(d, rd, a.video)
+    out(d)
 
 
 def _px_span(spec: str, what: str) -> float:
@@ -4273,8 +4438,8 @@ def main():
     p.add_argument("--out", help="write the result as JSON")
     p.set_defaults(fn=cmd_scale)
 
-    p = sp.add_parser("caught-flag", help="the flag record caught_flags.html (data + viewer page): add | list | set | reconcile | open | render")
-    p.add_argument("action", choices=["add", "list", "set", "reconcile", "open", "render"])
+    p = sp.add_parser("caught-flag", help="the flag record in Loupe (the web app): add | list | set | reconcile | open")
+    p.add_argument("action", choices=["add", "list", "set", "reconcile", "open"])
     p.add_argument("--id", help="set: the entry id (CF-nnn)")
     p.add_argument("--title", help="add: a short title"); p.add_argument("--date", help="add: YYYY-MM-DD (default: now)")
     p.add_argument("--run", help="run id or folder (add: attaches the request, inputs, plan and ledger row; list: filter; reconcile: required)")
@@ -4308,6 +4473,8 @@ def main():
     p.add_argument("--part-to", type=float, help="add/set: end of the suspected part, seconds")
     p.add_argument("--part-note", help="add/set: what is on screen in that part")
     p.add_argument("--no-thumbs", action="store_true", help="add/set: do not embed thumbnails of the inputs and of the part")
+    p.add_argument("--no-facts", action="store_true", help="add: skip the on-screen-text (OCR) facts of the inputs (hashes and sizes are still gathered)")
+    p.add_argument("--capture", help="add: the id of a hook capture (the raw Higgsfield response saved when it came back) to attach; a capture whose job id matches --job is attached by itself")
     p.add_argument("--changed", help="add/set: what was changed in the next request (reworded, video reference dropped, image replaced …)")
     p.add_argument("--outcome", help="add/set: what happened next")
     p.add_argument("--rule", help="add/set: the general rule, as a kind not an instance")
@@ -4320,6 +4487,20 @@ def main():
     p.add_argument("--grep", help="list: substring over the whole entry")
     p.add_argument("--full", action="store_true", help="list: keep the long prompt texts")
     p.set_defaults(fn=cmd_caught_flag)
+
+    p = sp.add_parser("loupe", help="the Loupe web app: ensure | status | open")
+    p.add_argument("action", choices=["ensure", "status", "open"]); p.add_argument("--path", help="open: a page, e.g. /#/misses")
+    p.set_defaults(fn=cmd_loupe)
+
+    for _nm, _h in (("qc-consult", "QC phase only: ask the QC keeper which generation-miss samples apply to the video under QC"),
+                    ("qc-brief", "QC phase only: the matching generation-miss samples as a plain brief (no model call)")):
+        p = sp.add_parser(_nm, help=_h)
+        p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
+        p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
+        p.add_argument("--kinds", help="comma-separated kinds you suspect (counts, openings-use, permanence, scale-size, label-orientation, solidity, blend-paste, posture-place, identity, continuity …)")
+        p.add_argument("--question", help="what you see or suspect in the video under QC, in words (needed for qc-consult)")
+        p.add_argument("--checkpoint", action="append", help="a QC checkpoint of the plan to check against the samples; repeatable")
+        p.set_defaults(fn=cmd_qc, cmd=_nm)
 
     p = sp.add_parser("capcut-name"); p.add_argument("--video", required=True, help="the run's video number")
     p.add_argument("--date", help="YYYY-MM-DD (default: today)"); p.add_argument("--store", help="CapCut drafts dir")
