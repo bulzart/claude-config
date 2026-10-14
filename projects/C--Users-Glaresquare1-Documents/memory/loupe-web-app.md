@@ -22,4 +22,5 @@ On 2026-10-14 the user asked for a web app that (1) saves every Higgsfield gener
 - Keep `loupe/data` out of git; run `python loupe/tests/selftest.py` (36 checks, `--keeper` adds 3) after changes.
 - Flags are recorded here now, see [[atp-caught-flags]].
 - The report page never guesses the right version (user 2026-10-14): the user picks it, or picks "No right version exists" (then the miss stays a miss example); saving is disabled until they choose. A miss may have no right version at all.
+- The saved image's bottom band is split in half (user 2026-10-15): explanation on the left, the product sample the video used on the right, found automatically from the run's request + product registry + asset inventory as the original file in the client's reference folder (`runs.product_samples`); per-report tick box `sample_on`; no sample found = full-width description.
 - The keeper also gives sparse planning hints for the first request of a video (`atp.py plan-hints`), see [[atp-sample-hints-delicate]].
