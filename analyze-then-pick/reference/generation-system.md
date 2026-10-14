@@ -30,7 +30,7 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | 4b | Natural placement and contents — when nothing in the reference is the sa | `110_4b_natural-placement-and-contents-w.md` | 1.2 |
 | 4b.0 | · Choose the integration form: the most suitable use and blend | `120_4b.0_choose-the-integration-form-the.md` | 4.1 |
 | 4b.1 | · Choose the anchor by the product's size and use (first logical option wi | `130_4b.1_choose-the-anchor-by-the-product.md` | 2.4 |
-| 4b.1b | · Posture, support and place (every anchor) | `140_4b.1b_posture-support-and-place-every.md` | 3.1 |
+| 4b.1b | · Posture, support and place (every anchor) | `140_4b.1b_posture-support-and-place-every.md` | 2.6 |
 | 4b.1c | · Is the spot feasible? (read the source before choosing) | `150_4b.1c_is-the-spot-feasible-read-the-so.md` | 3.1 |
 | 4b.2 | · Prominence: noticed, not featured | `160_4b.2_prominence-noticed-not-featured.md` | 2.5 |
 | 4b.3 | · One anchor, persistent (ledger-tracked) | `170_4b.3_one-anchor-persistent-ledger-tra.md` | 3.0 |
@@ -47,7 +47,7 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | 5c.4 | · · Check before spending (X4) | `280_5c.4_check-before-spending-x4.md` | 0.5 |
 | 5c.5 | · · Measure it after the merge | `290_5c.5_measure-it-after-the-merge.md` | 1.3 |
 | 5d | · Counts, openings and object permanence | `300_5d_counts-openings-and-object-perma.md` | 1.7 |
-| 6 | Conflict resolution (resolve before sending) | `310_6_conflict-resolution-resolve-befo.md` | 1.5 |
+| 6 | Conflict resolution (resolve before sending) | `310_6_conflict-resolution-resolve-befo.md` | 3.7 |
 | 7 | Translating the plan into the selected model's language | `320_7_translating-the-plan-into-the-se.md` | 2.7 |
 | 8 | Pre-generation QC pass (mental render, first frame → last frame) | `330_8_pre-generation-qc-pass-mental-re.md` | 7.0 |
 | 9 | Post-generation QC (after download) | `340_9_post-generation-qc-after-downloa.md` | 8.0 |

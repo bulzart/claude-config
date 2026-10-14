@@ -42,7 +42,7 @@ Stored as section files in `brand-guardrails/` (next to this file); **read only 
 | § | Section | File | KB |
 |---|---|---|---|
 | 1 | Finding and reading the guardrails (A2) | `010_1_finding-and-reading-the-guardrai.md` | 1.8 |
-| 2 | Rule kinds, and what each does to a reference | `020_2_rule-kinds-and-what-each-does-to.md` | 4.7 |
+| 2 | Rule kinds, and what each does to a reference | `020_2_rule-kinds-and-what-each-does-to.md` | 4.9 |
 | 3 | The guardrail audit, per reference (A3 card, E2 card) | `030_3_the-guardrail-audit-per-referenc.md` | 3.2 |
 | 4 | The audit in the pipeline | `040_4_the-audit-in-the-pipeline.md` | 3.8 |
 | 5 | QC (X9) and the wrap-up | `050_5_qc-x9-and-the-wrap-up.md` | 1.2 |

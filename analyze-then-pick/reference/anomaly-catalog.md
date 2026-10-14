@@ -34,22 +34,22 @@ Stored as section files in `anomaly-catalog/` (next to this file); **read only t
 | 0 | Four questions behind every anomaly | `010_0_four-questions-behind-every-anom.md` | 1.5 |
 | 1 | The affordance sheet (asset registry, one per product or object) | `020_1_the-affordance-sheet-asset-regis.md` | 7.6 |
 | 2 | Anomaly classes | `030_2_anomaly-classes.md` | 0.2 |
-| 2.1 | · Counts and conservation | `040_2.1_counts-and-conservation.md` | 3.5 |
-| 2.2 | · Openings and use (affordances) | `050_2.2_openings-and-use-affordances.md` | 3.0 |
-| 2.3 | · Preparation and causality (cause before effect) | `060_2.3_preparation-and-causality-cause.md` | 1.7 |
-| 2.4 | · Irreversible and persistent states | `070_2.4_irreversible-and-persistent-stat.md` | 1.4 |
+| 2.1 | · Counts and conservation | `040_2.1_counts-and-conservation.md` | 3.2 |
+| 2.2 | · Openings and use (affordances) | `050_2.2_openings-and-use-affordances.md` | 2.8 |
+| 2.3 | · Preparation and causality (cause before effect) | `060_2.3_preparation-and-causality-cause.md` | 1.5 |
+| 2.4 | · Irreversible and persistent states | `070_2.4_irreversible-and-persistent-stat.md` | 1.3 |
 | 2.5 | · Object permanence: exits, occlusions, pans and cuts | `080_2.5_object-permanence-exits-occlusio.md` | 1.5 |
-| 2.6 | · Liquids, powders and materials | `090_2.6_liquids-powders-and-materials.md` | 1.9 |
-| 2.7 | · Scale and proportion (the size reckoning) | `100_2.7_scale-and-proportion-the-size-re.md` | 11.1 |
+| 2.6 | · Liquids, powders and materials | `090_2.6_liquids-powders-and-materials.md` | 1.8 |
+| 2.7 | · Scale and proportion (the size reckoning) | `100_2.7_scale-and-proportion-the-size-re.md` | 11.0 |
 | 2.8 | · Body mechanics at the product | `110_2.8_body-mechanics-at-the-product.md` | 1.5 |
 | 2.9 | · Orientation, label and parts | `120_2.9_orientation-label-and-parts.md` | 3.3 |
 | 2.10 | · Ownership and hand-offs (two or more people) | `130_2.10_ownership-and-hand-offs-two-or-m.md` | 0.9 |
 | 2.11 | · Environment, context and suitability | `140_2.11_environment-context-and-suitabil.md` | 1.7 |
 | 2.12 | · Timing of real processes | `150_2.12_timing-of-real-processes.md` | 1.0 |
 | 2.13 | · Stylised and anime rendering | `160_2.13_stylised-and-anime-rendering.md` | 1.3 |
-| 2.14 | · Solidity, collision and occlusion | `170_2.14_solidity-collision-and-occlusion.md` | 3.9 |
-| 2.15 | · Blend: a render, not a paste | `180_2.15_blend-a-render-not-a-paste.md` | 8.3 |
-| 2.16 | · Posture, support and place | `190_2.16_posture-support-and-place.md` | 4.3 |
+| 2.14 | · Solidity, collision and occlusion | `170_2.14_solidity-collision-and-occlusion.md` | 3.4 |
+| 2.15 | · Blend: a render, not a paste | `180_2.15_blend-a-render-not-a-paste.md` | 8.2 |
+| 2.16 | · Posture, support and place | `190_2.16_posture-support-and-place.md` | 3.9 |
 | 2.17 | · Identity: the swapped face matches the kept body (skin tone, build, age) | `200_2.17_identity-the-swapped-face-matche.md` | 3.2 |
 | 3 | The prompting stack (in order, per video) | `210_3_the-prompting-stack-in-order-per.md` | 2.1 |
 | 4 | The QC stack (X9, in order) | `220_4_the-qc-stack-x9-in-order.md` | 6.2 |
