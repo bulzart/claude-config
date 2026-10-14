@@ -54,6 +54,11 @@ Only these section files for this phase, nothing else unless a step below says s
     preparation step, the part, the contact point, the head and hands), every multiple's number at
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
     seam, and the path of every thrown, dropped or passing thing relative to the product (§2.14).
+  - **Sample hints** (only if X2 asked for them): the pattern card's "Sample hints" block exists; the prompt and the reference
+    notes carry none of a hint's wrong-behaviour wording and no negative list that was not already the product's one targeted
+    exclusion; at most two hints were applied, each only on the beat its trigger matched, each as one small positive change.
+    A prompt that was bent by a hint (a changed story beat, an extra element, a longer sentence than the pattern card calls for)
+    is rewritten without it.
   - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning, its distance derived from the
     frame and not assumed, is in the plan and in the prompt for every shot; a start frame passed `T scale`; the size ladder holds between products;
     nothing in the prompt or the references invites a bigger product (a tight crop, "hero",
@@ -83,6 +88,8 @@ Only these section files for this phase, nothing else unless a step below says s
     characters/assets, substitutions, main action and states, style/camera, text plan, model /
     operation / duration / 9:16 720p, cost, adaptation logic. In Edit Mode and Recreate it also names
     the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
+  - When X2 asked for sample hints, the brief carries the pattern card's short "Sample hints" block (id, applied to which beat or
+    not applied and why), so QC and a reported miss can be read against it.
   - Save it as `40-briefs/video-NN-brief.md`; each attempt or clip appends its own block under the first
     (the failed request, the verdict, what changed), so a reported problem can be read against what was
     planned and asked (item 22).

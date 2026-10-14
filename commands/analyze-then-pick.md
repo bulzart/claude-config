@@ -130,7 +130,7 @@ and handle it before anything else (item 22).
 20. **The pipeline is also the creative team** (`reference/creative-direction/`): goal, audience, trend read, scored concept seeds, sharpness gate, copy test. → `atp-analyze-study`, `atp-create-plan`
 21. **Brand guardrails** from the client's documents decide what may be picked and what must be edited (core hit → dismiss; peripheral → edit). The pipeline has no content rules of its own. → `atp-analyze-prepare`, `atp-analyze-study`, `atp-plan-video`
 22. **No error ledger**: a video the user reports as wrong is diagnosed in pipeline terms in its brief, then fixed; lessons are generalised by `/update-from-errors`. → `atp-feedback`
-23. **Caught flags**: every prompt/video Higgsfield flags is recorded in Loupe before the request changes (`T caught-flag add`); the record is written, never read during a run, and only QC consults Loupe's separate sample library (`T qc-consult`). → `atp-submit`, `atp-qc`
+23. **Caught flags**: every prompt/video Higgsfield flags is recorded in Loupe before the request changes (`T caught-flag add`); the record is written, never read during a run, and only QC (`T qc-consult`) and the first request of a video (`T plan-hints`, a few text-only hints, usually none) consult Loupe's separate sample library. → `atp-submit`, `atp-qc`, `atp-write-request`
 
 ## Phases (the skills)
 

@@ -53,6 +53,29 @@ Only these section files for this phase, nothing else unless a step below says s
   - From the selected guide's **§4.0 official examples**, write the pattern card
     (`50-requests/video-NN-pattern.md`).
   - Decide the channel for everything: parameters vs. references vs. prompt vs. post-production.
+  - **Sample hints (the first request of a video only).** The admin keeps past misses in Loupe; one separate
+    keeper session holds them. Ask it once, before the prompt is written, in text only: `T plan-hints --run RUN
+    --video NN --beats "<one line per beat of the plan: what happens, the product's form and state, the camera>"
+    --product "<form>"`. A regeneration never asks: it works from its own diagnosed cause (`atp-qc`). The answer
+    has 0 to 3 hints, and 0 is the normal answer (`mode: empty` or `unavailable` also mean none: write the
+    request as always). Each hint has a `trigger` (the plan situation where that miss arises), a `right_outcome`,
+    a `lever` and a `caveat`.
+    - A hint is a risk to check this plan against, never prompt text. Do not copy its words, do not name the wrong
+      behaviour anywhere in the prompt or the reference notes (a thing that is named, even in a negative, is what
+      comes back: `generation-system.md` §4, §5c.2b), and add no negative list beyond the product's one targeted
+      exclusion.
+    - Apply a hint only if its `trigger` matches a beat of this plan and its `caveat` does not exclude it;
+      otherwise change nothing. Apply it by the smallest change inside the prompting stack
+      (`anomaly-catalog.md` §3): the restatement at that beat, the product's targeted exclusion, the reference
+      view, the beat written as start state, operation, result, or the anchor, written positively as the hint's
+      `right_outcome`. Touch only the matching beat: no new element, camera move or sentence elsewhere, nothing of
+      the source's story, timing or the locked model changes, and any rule of this phase wins a conflict.
+    - At most two hints are applied per video. A hint whose application would reshape more than one clause of
+      the prompt is over-applied: drop it. When the video is already planned correctly, applying nothing is right.
+    - Write the decisions as a short "Sample hints" block at the end of the pattern card: per hint, its id,
+      applied to which beat with the change in one line, or not applied and why. X4 checks it and X6 copies it
+      into the brief. The hints themselves are in `40-briefs/video-NN-hints.json`; never paste them into the
+      brief or the prompt.
   - Write the prompt in the model's proven structure and syntax.
     - A placed product (or a contents vessel with its package beside it) is described as part of
       the scene from the first frame, at its anchor. Use no edit verbs and no ad vocabulary
@@ -165,6 +188,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Never (this phase)
 
+- Never ask for sample hints on a regeneration or a re-edit, never copy a hint's words into a prompt, never name a past
+  miss's wrong behaviour in a prompt, never apply a hint to a beat its trigger does not match, and never apply more
+  than two per video.
 - Never apply generic prompting when a model guide exists.
 - Never let the video model render overlay text in Analyze Mode. Generate clean and place the text
   in CapCut. Never burn it in with `atp.py captions`, except as the stated fallback.
