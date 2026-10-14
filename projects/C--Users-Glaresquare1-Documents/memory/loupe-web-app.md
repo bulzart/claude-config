@@ -19,8 +19,9 @@ On 2026-10-14 the user asked for a web app that (1) saves every Higgsfield gener
 **How to apply:**
 - **Standing instruction (user, 2026-10-14): after EVERY edit to Loupe (code, routes, UI, hooks, keys, the atp.py commands that call it), update `C:\Users\Glaresquare1\Documents\prompts\loupe.txt` in the same sitting** — copy to `loupe.txt.bak-<date>-<why>` first, keep CRLF prose with no headings, keep it true to the code; also keep `loupe/README.md` in step. Same discipline as [[atp-build-prompt-sync]].
 - Scripts only gather; the agents decide ([[scripts-gather-agents-decide]]); no niche/brand names in Loupe code ([[no-hardcoded-names-in-scripts]]).
-- Keep `loupe/data` out of git; run `python loupe/tests/selftest.py` (36 checks, `--keeper` adds 3) after changes.
+- Keep `loupe/data` out of git; run `python loupe/tests/selftest.py` (66 checks with `--keeper`) after changes.
 - Flags are recorded here now, see [[atp-caught-flags]].
 - The report page never guesses the right version (user 2026-10-14): the user picks it, or picks "No right version exists" (then the miss stays a miss example); saving is disabled until they choose. A miss may have no right version at all.
+- The user marks BOTH sides themself (user 2026-10-15): no automatic marks, no guide/dashed boxes, nothing copied; the optional "also copy each new mark to the other video" tick box is off by default; the right video has its own frame slider (the shift is only the difference); each saved zoom is cut around that side's own marks (the other side's when it has none).
 - The saved image's bottom band is split in half (user 2026-10-15): explanation on the left, the product sample the video used on the right, found automatically from the run's request + product registry + asset inventory as the original file in the client's reference folder (`runs.product_samples`); per-report tick box `sample_on`; no sample found = full-width description.
 - The keeper also gives sparse planning hints for the first request of a video (`atp.py plan-hints`), see [[atp-sample-hints-delicate]].
