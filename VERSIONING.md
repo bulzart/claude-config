@@ -1,7 +1,7 @@
 # ~/.claude version history
 
 This folder is a local git repository (no remote) that keeps the history of **your**
-customizations: commands, skills, pipelines (`analyze-then-pick`, `analyze-stack`), hooks,
+customizations: commands, skills, pipelines (`analyze-then-pick`, `analyze-stack`), the Loupe web app (`loupe/`, code only: its `data/` is not tracked), hooks,
 memory files and `settings.json`.
 
 ## What is tracked

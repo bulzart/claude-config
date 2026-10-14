@@ -49,7 +49,7 @@ Only these section files for this phase, nothing else unless a step below says s
     face riding in the video reference without the planned fallback, protected IP or a real person's
     likeness claimed in the prompt, a flagged asset sent again unchanged). A trigger the plan cannot avoid
     is written in the brief as a risk, and the fallback request (for example without the video reference,
-    fidelity and sync at risk) is planned before the first submission. Nothing here opens `caught_flags.html`.
+    fidelity and sync at risk) is planned before the first submission. Nothing here lists or opens the flag record.
   - **Counts, openings and permanence** (`anomaly-catalog.md` §3): walk every use beat (the
     preparation step, the part, the contact point, the head and hands), every multiple's number at
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
@@ -103,7 +103,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Never (this phase)
 
-- Never read `ATP/caught_flags.html` or hand it to an agent (item 23: it is written, not read), never
+- Never list, search or read the flag record or hand it to an agent during a run (item 23: it is written, not read), never
   change or resend a request that Higgsfield flagged before its `T caught-flag add` entry exists (the verbatim
   response, the prompt, the media, the flagged video, the suspected trigger), never write an
   entry by hand, never mark one `cleared` before a changed request was accepted, never send a

@@ -25,5 +25,5 @@ single spec from which the pipeline can be rebuilt.
 
 **How to apply:** after any change to the command, a skill or the library, also update the build prompt
 (same prose style, no new headings; one paragraph or bullet per rule; keep CRLF; make the `.bak-*` first).
-Keep its skills section consistent with how skills really live on this machine. Related: [[atp-anomaly-catalog]],
+Keep its skills section consistent with how skills really live on this machine. The flag record, the QC samples/keeper and the three hooks are Loupe's: they have their own build prompt `Documents/prompts/loupe.txt` ([[loupe-web-app]]); this prompt only says that flags go to Loupe, that atp-qc calls `qc-consult`, and that the hooks exist. Related: [[atp-anomaly-catalog]],
 [[analyze-then-pick-system]].

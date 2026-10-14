@@ -302,8 +302,9 @@ For `analyze-then-pick`, the map is known. Confirm each location exists before r
   questions);
 - **toolkit:** `scripts/atp.py` (`scale`, `qc`, `sync-check`, `caught-flag`; the `caught-error` ledger was
   retired on 2026-10-13, so ATP has no ledger to read: its record set is the user's words given as the
-  argument plus the run-level records, plus the flag record `caught_flags.html`, which no run reads and
-  this command reads with `T caught-flag list --full` to generalise its flags into the references).
+  argument plus the run-level records, plus the flag record in Loupe (`T caught-flag list --full`), which no run reads and this command reads to generalise
+  its flags into the references; the QC sample library of generation misses with their wrong-vs-correct images is the
+  admin's, never edited here).
 
 ## 2. Then read the caught errors and check them against their evidence
 

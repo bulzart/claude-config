@@ -20,6 +20,7 @@
 !/analyze-then-pick/
 !/analyze-then-generate/
 !/analyze-stack/
+!/loupe/
 
 # memories only (never the session transcripts next to them)
 !/projects/
@@ -40,3 +41,4 @@ __pycache__/
 /analyze-then-generate/_backups/
 /analyze-stack/runs/
 /analyze-stack/samples/
+/loupe/data/

@@ -25,7 +25,7 @@ a whole model guide or models/index.json (that is what rots your context):
   1. atp-inputs      (X3: your own inputs; it loads the Higgsfield tools)
   2. atp-submit      (X5 again only when you change a request; X7: ledger, submit, wait, flags)
   3. atp-postprocess (X8 steps 1 to 5: download, original audio, conform, join, sync check)
-  4. atp-qc          (X9, the picture checks: every checkpoint of your plan)
+  4. atp-qc          (X9, the picture checks: first `T qc-consult` for the admin's QC samples, then every checkpoint of your plan)
   5. atp-postprocess (X8 step 6: the CapCut project, built once the picture has passed) and atp-qc again for the project checks
   6. atp-record      (X10: deliverables, README row, result.json)
   A regeneration (one diagnosed per clip) runs atp-write-request (X2, the rewrite only), then atp-inputs for new inputs only, then
@@ -40,7 +40,7 @@ a whole model guide or models/index.json (that is what rots your context):
   result.json (`qc`, `continuity`, `notes`); a flagged delivery (RESIDUAL FAILURE) is written the same way.
   There is no other error file; the only thing you write to the library is a Higgsfield flag record (below),
   and you read none: the rules live in the references you read above.
-- Flags (command item 23). <ATP>/caught_flags.html is written, never read: do not open it. When Higgsfield
+- Flags (command item 23). The flag record (Loupe) is written, never read: do not list, search or open it. When Higgsfield
   flags, refuses, withholds or reroutes anything in your lane
   (a moderation or policy message; a job failed within seconds with no reason; an upload, video or
   Element marked nsfw / ip_checking / failed; an output withheld; a preset_recommendation notice instead
@@ -51,7 +51,9 @@ a whole model guide or models/index.json (that is what rots your context):
   "Image 2" | "Video 1" | <media id> | <file name>] [--prompt-span "<the exact words>"] [--part-of
   "reference V10" --part-from 3.2 --part-to 6.0] --product …` (the prompt, params, every input with its
   file and thumbnail, the reference, the source segment, the plan and the flagged ledger row attach
-  themselves; name the asset, the words and the part only when you can tell). Then make the one diagnosed
+  themselves, with the raw answer the Higgsfield hook saved when it came back, matched by job id or named with
+  `--capture <id>` from the hook's reminder; name the asset, the words and the part only when you can tell).
+  Then make the one diagnosed
   change, say it with `T caught-flag
   set --id CF-nnn --changed "…"`, and once the changed request is accepted `T caught-flag set --id CF-nnn
   --status cleared --cleared-prompt <request.json> --cleared-job J`; a flag that stays is `--status

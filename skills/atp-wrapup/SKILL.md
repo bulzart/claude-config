@@ -40,7 +40,7 @@ Then give:
 - only if `config.json → capcut.text_style.learned` is ever empty (it holds the user's locked
   preset): "To copy CapCut's exact text preset, add a text in any CapCut project, pick the preset,
   close CapCut, and run `T capcut-text-style --learn --draft "<store>/<that project>"`";
-- the flags (item 23): "N flags recorded in `caught_flags.html` (CF-…): M cleared, K persistent",
+- the flags (item 23): "N flags recorded in Loupe (CF-…): M cleared, K persistent",
   and that `T caught-flag open` shows them grouped and searchable,
   each persistent or open one with its video, the flagged prompt or video and what was tried;
   or "no flags this run";
@@ -49,7 +49,10 @@ Then give:
 Both modes: reconcile the flags before the table. Run `T caught-flag reconcile --run RUN`; every
 `flagged_unrecorded` row gets `T caught-flag add` now, each `failed_to_judge` row is read and
 marked or dismissed (a validation or credit error is not a flag), and every entry of the run is
-`cleared` (with its accepted request) or `persistent`; none is left `open` without a reason.
+`cleared` (with its accepted request) or `persistent`; none is left `open` without a reason. The
+answer also lists `unclaimed_captures` (raw Higgsfield answers the hook saved that no flag claimed): one that
+belongs to this run gets `T caught-flag add … --capture <id>`; the rest are left for the admin to dismiss in
+Loupe.
 
 Analyze Mode: check the briefs before the feedback question. Every `result.json` whose `qc` says
 RESIDUAL FAILURE or regenerated has an attempt block in its video's brief, so no flagged delivery leaves

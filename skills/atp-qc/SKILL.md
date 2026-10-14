@@ -56,6 +56,18 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Step X9
 
 - **X9 — QC.**
+  - **Samples first (Loupe, this phase only).** The admin keeps a library of generation misses in Loupe, each
+    one image: the miss with its marks on the left, the correct frame of the same moment on the right, and the
+    admin's words. A separate read-only keeper session holds that library and nothing else. Before the first
+    sheet: `T qc-consult --run RUN --video NN --question "<what this video shows that a past miss looked like:
+    the product form, the beat, what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
+    --checkpoint "<a plan checkpoint>" …` (repeat `--checkpoint`). The JSON line has `relevant` (or `samples`
+    when `mode` is `fallback`): each with `composite_path`, the miss in words and `advice`. **View every
+    `composite_path`**, add what each says to look for as extra `--dense` checkpoints, and write in the verdict
+    which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
+    empty list means no sample applies: QC goes on without them. The answer is also saved as
+    `RUN/60-outputs/video-NN/qc-consult.json`. `T qc-brief` takes the same arguments with no model call.
+    A sample is a lead, never a verdict: a match is a regenerate reason only by this phase's own rules.
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
     every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan,
     then view the storyboard sheets and every dense sheet under `<dir>/dense/`.
@@ -285,6 +297,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Never (this phase)
 
+- Never call `T qc-consult` or `T qc-brief` outside X9, never hand the keeper the video or the run's files
+  (it holds the sample library only), never write to Loupe's samples from a run, and never treat a sample
+  that "looks like" this video as a finding without the same place viewed in this video's own frames.
 - Never let source identities or competitor branding survive when approved replacements exist.
 - Never pin free physical motion (spins, tosses, rolls, pours, a vehicle's moves) to exact
   timestamps. Never accept a snap, a pause-and-resume, a slide without a cause, or a morphing

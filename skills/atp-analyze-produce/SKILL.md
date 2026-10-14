@@ -72,7 +72,9 @@ Plan everything before production, in allocation order, **without asking for con
     `flagged_unrecorded` gets `T caught-flag add` now (from the agent's `result.json` notes, the
     ledger history and the request file); each `failed_to_judge` row is read and either marked
     (`ledger set --flagged`, then added) or left as the validation or credit error it was; a
-    video whose flag is `open` or `persistent` is named in the wrap-up;
+    video whose flag is `open` or `persistent` is named in the wrap-up; `unclaimed_captures` (raw answers the
+    Higgsfield hook saved) that belong to this run get `T caught-flag add … --capture <id>`, the rest are left
+    for the admin;
   - verify, and fix at once what is missing (`production-agents.md` §5 item 3): `videos[]` in
     `state.json`; the README table (the agent's `readme-row.md` appended to `deliverables/README.md`);
     `video-NN-clean.mp4` and `video-NN-preview.mp4` in `deliverables/`; `result.json` complete, each
@@ -123,8 +125,8 @@ See §6.
       permissions and stay.
     - Edit Mode keeps its gates (E6, X9-R).
 23. **Caught flags: every prompt and video that Higgsfield flagged is recorded**
-    (`ATP/caught_flags.html`: one self-contained page that holds the data and a viewer with search,
-    filters and grouping, written only with `T caught-flag`; `T caught-flag open` shows it to the user).
+    (in Loupe, the pipeline's web app at `http://127.0.0.1:8787`: a database with a viewer that searches,
+    filters and groups, written only with `T caught-flag`; `T loupe open --path /#/flags` shows it to the user).
     A flag is any time Higgsfield refuses, blocks, withholds or reroutes something during the run: a
     moderation or policy block, a job that fails within seconds with no reason (refunded), an upload,
     video or Element marked `nsfw`, `ip_checking` or `failed`, an output withheld, or a notice returned
@@ -136,7 +138,7 @@ See §6.
     with its file, type, V or A id and a thumbnail, the reference video and the source segment it covered,
     the plan and the brief, and the job and fingerprint of the ledger row marked flagged. **The agent
     supplies the judgement:** Higgsfield's response verbatim (or "none given"), the kind, the tool and
-    stage, the credits, its **suspected trigger** labelled [E] or [I], and what the page searches and
+    stage, the credits, its **suspected trigger** labelled [E] or [I], and what Loupe searches and
     groups by: `--tags` (1 to 4 labels for the trigger, for example `real-person-face`, `celebrity-name`,
     `brand-name`, `protected-ip`, `nsfw-image`, `video-reference`, `element`, `prompt-wording`,
     `preset-notice`, `output-withheld`, `unknown-trigger`), `--asset` (which input: `"Image 2"`,
@@ -146,22 +148,24 @@ See §6.
     given and never guesses. After the changed request is accepted:
     `T caught-flag set --id CF-nnn --status cleared --cleared-prompt <the accepted request.json>
     --cleared-job J` (never `cleared` before a request went through; a flag that stays is
-    `persistent` and the video is planned another way or reported). **The page is written, never
-    read:** no step of a run (A1, E1, a plan, X4) and no agent contract opens it, and no digest or copy
-    of it is made, because a growing file read at every run start rots the agents' context. What a flag
+    `persistent` and the video is planned another way or reported). **The record is written, never
+    read during a run:** no step of a run (A1, E1, a plan, X4) and no agent contract lists, searches or opens it,
+    and no digest or copy of it is made, because a growing record read at every run start rots the agents'
+    context. (QC reads Loupe's separate sample library through `T qc-consult`, never the flags.) What a flag
     teaches is held as a general rule in the references (`generation-system.md` §5c.2, the model guides'
     failure tables, `higgsfield/higgsfield-mcp.md` §9), and X4 tests the plan against those rules. The
     main session runs `T caught-flag reconcile --run RUN` as each agent reports and in the wrap-up; it
     only lists the calls marked flagged that have no entry yet, so no flagged call leaves the run
     unrecorded. A flag whose rule is general or recurs is written into those references by
-    `/update-from-errors`; the entry stays as the record. The user opens the page to see the flags
-    grouped by trigger, asset, video, kind, run or model and searched by field.
+    `/update-from-errors`, which reads the flags with `T caught-flag list --full`; the entry stays as the record.
+    The user opens Loupe to see the flags grouped by trigger, asset, video, kind, run or model and searched
+    by field, with the evidence Loupe gathered next to each.
 
 ## Never (this phase)
 
 - Never spawn more than 2 analysis agents, more than 5 production agents at once, or a production
   agent in Edit Mode. Never give agents overlapping work.
-- Never read `ATP/caught_flags.html` or hand it to an agent (item 23: it is written, not read), never
+- Never list, search or read the flag record or hand it to an agent during a run (item 23: it is written, not read), never
   change or resend a request that Higgsfield flagged before its `T caught-flag add` entry exists (the verbatim
   response, the prompt, the media, the flagged video, the suspected trigger), never write an
   entry by hand, never mark one `cleared` before a changed request was accepted, never send a

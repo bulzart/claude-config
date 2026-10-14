@@ -85,11 +85,12 @@
 14. **Docs, before the final message:** the brief carries a block per attempt (every regenerate reason and
     flagged delivery included) and the final prompt; `result.json` complete; `readme-row.md` and the
     deliverables files written; the CF ids of any flag (item 15) listed in `result.json` → `notes`.
-15. **Flags** (command item 23; `ATP/caught_flags.html`). Every call Higgsfield flagged, refused, withheld or
+15. **Flags** (command item 23; recorded in Loupe). Every call Higgsfield flagged, refused, withheld or
     rerouted in the agent's lane is marked with `T ledger set --flagged` and recorded with `T caught-flag add`
     before the request changes, with the verbatim response, the agent's suspected trigger ([E] or [I]) and
     its grouping tags, and the asset, the prompt words and the video part when it can tell (the prompt, the
-    inputs with their files and the reference attach themselves); it is `cleared` only once a changed request
+    inputs with their files and the reference attach themselves, and so does the raw answer the Higgsfield hook
+    saved, by job id); it is `cleared` only once a changed request
     was accepted (with the accepted request.json and job), else `persistent`. `result.json` → `notes` lists the
     CF ids, and `qc` names a video whose flag stayed. The main session reconciles them with `T caught-flag
     reconcile` (§5).
