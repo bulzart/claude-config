@@ -70,6 +70,9 @@ Only these section files for this phase, nothing else unless a step below says s
       view, the beat written as start state, operation, result, or the anchor, written positively as the hint's
       `right_outcome`. Touch only the matching beat: no new element, camera move or sentence elsewhere, nothing of
       the source's story, timing or the locked model changes, and any rule of this phase wins a conflict.
+    - A hint that comes from a miss example (the admin never had a right version for it) may carry no `right_outcome` of its own:
+      apply it only when its lever is a plain restatement at the matching beat (the count, the state or the orientation the plan
+      already intends, said once positively); otherwise leave it out. Never invent what a right version would look like.
     - At most two hints are applied per video. A hint whose application would reshape more than one clause of
       the prompt is over-applied: drop it. When the video is already planned correctly, applying nothing is right.
     - Write the decisions as a short "Sample hints" block at the end of the pattern card: per hint, its id,

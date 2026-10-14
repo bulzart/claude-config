@@ -67,6 +67,8 @@ Only these section files for this phase, nothing else unless a step below says s
     which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
     empty list means no sample applies: QC goes on without them. The answer is also saved as
     `RUN/60-outputs/video-NN/qc-consult.json`. `T qc-brief` takes the same arguments with no model call.
+    A sample with `has_right: false` is a miss example only (nothing was corrected, its right panel is a card that says so):
+    it shows the wrong pattern to look for and nothing about what is right, so never infer a right look from it.
     A sample is a lead, never a verdict: a match is a regenerate reason only by this phase's own rules.
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
     every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan,
