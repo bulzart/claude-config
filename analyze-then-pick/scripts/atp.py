@@ -3410,7 +3410,7 @@ def _qc_sample_files(res, rd, video):
     return ""
 
 
-def cmd_qc(a):
+def cmd_qc_consult(a):
     """QC phase only. qc-consult asks the QC keeper (a separate read-only Claude session that holds the sample library: the generation
     misses the admin marked, each as one image with the miss on the left and the correct frame on the right); qc-brief returns the
     matching samples with no model call. Both print the samples' image paths: view them, then compare the marked region with the same
@@ -4535,7 +4535,7 @@ def main():
         p.add_argument("--kinds", help="comma-separated kinds you suspect (counts, openings-use, permanence, scale-size, label-orientation, solidity, blend-paste, posture-place, identity, continuity …)")
         p.add_argument("--question", help="what you see or suspect in the video under QC, in words (needed for qc-consult)")
         p.add_argument("--checkpoint", action="append", help="a QC checkpoint of the plan to check against the samples; repeatable")
-        p.set_defaults(fn=cmd_qc, cmd=_nm)
+        p.set_defaults(fn=cmd_qc_consult, cmd=_nm)
 
     p = sp.add_parser("plan-hints", help="first request of a video only (X2): ask the keeper which past misses could matter for the plan (text-only hints, usually none)")
     p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
