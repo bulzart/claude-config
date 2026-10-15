@@ -20,7 +20,7 @@
 !/analyze-then-pick/
 !/analyze-then-generate/
 !/analyze-stack/
-!/loupe/
+# (loupe/ is its own git repository now, private GitHub repo bulzart/loupe: not tracked here)
 
 # memories only (never the session transcripts next to them)
 !/projects/

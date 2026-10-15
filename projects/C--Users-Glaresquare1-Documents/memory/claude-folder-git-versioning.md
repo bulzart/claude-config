@@ -13,6 +13,7 @@ Since 2026-10-05, `C:\Users\Glaresquare1\.claude` is a local git repo (branch ma
 - Hooks in `~/.claude/settings.json` (Stop, SessionStart) run `hooks/autocommit.py`, which commits tracked changes as `auto(<event>): …`.
 - `.gitignore` is an allow-list (`/*` then `!/commands/`, `!/skills/`, `!/analyze-then-pick/`, `!/analyze-stack/`, `!/hooks/`, memory dirs, settings.json…). Claude Code's own files (credentials, sessions, transcripts, plugins, skills/synced, caches) are never tracked; run folders, samples, node_modules, `_backups` are excluded.
 - How-to for the user lives in `~/.claude/VERSIONING.md`.
+- **`loupe/` left this repo on 2026-10-15**: it is its own git repo (history kept via `git subtree split`), origin = private GitHub `bulzart/loupe`; the parent `.gitignore` no longer allow-lists it and the auto-commit hook does NOT cover it, so Loupe changes must be committed and pushed inside `~/.claude/loupe` (its `CLAUDE.md` says so).
 
 **Why:** the user wants every change to their skills/commands/pipelines committed so they can go back in time, but never Claude Code's engine or files that official releases change.
 

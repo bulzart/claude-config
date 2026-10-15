@@ -1,8 +1,8 @@
 # ~/.claude version history
 
 This folder is a local git repository (no remote) that keeps the history of **your**
-customizations: commands, skills, pipelines (`analyze-then-pick`, `analyze-stack`), the Loupe web app (`loupe/`, code only: its `data/` is not tracked), hooks,
-memory files and `settings.json`.
+customizations: commands, skills, pipelines (`analyze-then-pick`, `analyze-stack`), hooks,
+memory files and `settings.json`. The Loupe web app (`loupe/`) is no longer tracked here: it is its own git repository with a private GitHub remote (`bulzart/loupe`); see `loupe/CLAUDE.md`.
 
 ## What is tracked
 Only what `.gitignore` allow-lists. Claude Code's own files are never committed: credentials,
