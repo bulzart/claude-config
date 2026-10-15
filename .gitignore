@@ -8,6 +8,8 @@
 !/.gitignore
 !/VERSIONING.md
 !/CLAUDE.md
+!/AGENTS.md
+!/rules/
 !/settings.json
 !/keybindings.json
 !/commands/

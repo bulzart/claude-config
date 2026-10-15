@@ -8,7 +8,7 @@ metadata:
   modified: 2026-10-05T21:13:29.651Z
 ---
 
-Since 2026-10-05, `C:\Users\Glaresquare1\.claude` is a local git repo (branch main, no remote) so the user can revert commands, skills, pipelines, hooks, memory and settings to any earlier point.
+Since 2026-10-05, `C:\Users\Glaresquare1\.claude` is a local git repo (branch main; since 2026-10-15 it has a private GitHub remote, `origin` = bulzart/claude-config, pushed manually with `git -C ~/.claude push`: the auto-commit hook only commits) so the user can revert commands, skills, pipelines, hooks, memory and settings to any earlier point.
 
 - Hooks in `~/.claude/settings.json` (Stop, SessionStart) run `hooks/autocommit.py`, which commits tracked changes as `auto(<event>): …`.
 - `.gitignore` is an allow-list (`/*` then `!/commands/`, `!/skills/`, `!/analyze-then-pick/`, `!/analyze-stack/`, `!/hooks/`, memory dirs, settings.json…). Claude Code's own files (credentials, sessions, transcripts, plugins, skills/synced, caches) are never tracked; run folders, samples, node_modules, `_backups` are excluded.
