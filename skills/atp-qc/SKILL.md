@@ -68,18 +68,19 @@ Only these section files for this phase, nothing else unless a step below says s
     - Two defaults seem to demand opposite things (a label that must read, a pack that lies flat). Read what this beat needs and judge
       by that need; never fail the video on one default to satisfy another.
   - **Samples first (Loupe, this phase only).** The admin keeps a library of generation misses in Loupe, each
-    one image: the miss (WRONG) with its marks on the left, the same moment in the right version (RIGHT) on the right
-    with the same marks, a zoom of the marked place, and the admin's explanation burned in at the bottom centre. A separate read-only keeper session holds that library and nothing else. Before the first
+    one image of the frames the admin chose (one to twelve), every frame tagged WRONG (red) or RIGHT (green) with its own time and carrying only the marks the admin
+    drew on it (a RIGHT frame can come from the right version or from an earlier part of the same video), a zoom of each frame, and the admin's words burned in at the bottom beside the product sample
+    the video used. A separate read-only keeper session holds that library and nothing else. Before the first
     sheet: `T qc-consult --run RUN --video NN --question "<what this video shows that a past miss looked like:
     the product form, the beat, what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
     --product-details "<its shape, size, opening and natural posture, from its registry row>" --checkpoint "<a plan checkpoint>" …`
     (repeat `--checkpoint`). The JSON line has `relevant` (or `samples`
-    when `mode` is `fallback`): each with `composite_path`, the miss in words and `advice`. **View every
+    when `mode` is `fallback`): each with `composite_path`, `frames` (role, where it comes from, time), the miss in words and `advice`. **View every
     `composite_path`**, add what each says to look for as extra `--dense` checkpoints, and write in the verdict
     which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
     empty list means no sample applies: QC goes on without them. The answer is also saved as
     `RUN/60-outputs/video-NN/qc-consult.json`. `T qc-brief` takes the same arguments with no model call.
-    A sample with `has_right: false` is a miss example only (nothing was corrected, its right panel is a card that says so):
+    A sample with `has_right: false` is a miss example only (no frame of it is called RIGHT, and a lone miss frame has a card beside it that says so):
     it shows the wrong pattern to look for and nothing about what is right, so never infer a right look from it.
     A sample is a lead, never a verdict: a match is a regenerate reason only by this phase's own rules.
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of

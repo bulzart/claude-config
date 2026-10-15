@@ -3413,7 +3413,7 @@ def _qc_sample_files(res, rd, video):
 
 def cmd_qc_consult(a):
     """QC phase only. qc-consult asks the QC keeper (a separate read-only Claude session that holds the sample library: the generation
-    misses the admin marked, each as one image with the miss on the left and the correct frame on the right); qc-brief returns the
+    misses the admin marked, each as one image of the frames the admin chose, tagged WRONG or RIGHT with their times); qc-brief returns the
     matching samples with no model call. Both print the samples' image paths: view them, then compare the marked region with the same
     place in the video under QC. Loupe unreachable: the answer says so and the QC goes on without samples."""
     ctx = _qc_ctx(a)
