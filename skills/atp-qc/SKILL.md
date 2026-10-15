@@ -80,7 +80,7 @@ Only these section files for this phase, nothing else unless a step below says s
     which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
     empty list means no sample applies: QC goes on without them. The answer is also saved as
     `RUN/60-outputs/video-NN/qc-consult.json`. `T qc-brief` takes the same arguments with no model call.
-    A sample with `has_right: false` is a miss example only (no frame of it is called RIGHT, and a lone miss frame has a card beside it that says so):
+    A sample has a `sample_kind`: `pair` (a WRONG and a RIGHT frame), `miss-only` (`has_right: false`: no frame of it is called RIGHT, and a lone miss frame has a card beside it that says so), or `scenario` (no frame is called WRONG: the admin's words only, or unjudged frames; it carries `idea`, `better` and `missed`: what was meant to happen, what could have been better, what the AI agents missed or could not understand). A scenario is insight, not a visual pattern: compare the video with the idea and with what was missed, and never look for a match of the image. For a miss-only sample:
     it shows the wrong pattern to look for and nothing about what is right, so never infer a right look from it.
     A sample is a lead, never a verdict: a match is a regenerate reason only by this phase's own rules.
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of

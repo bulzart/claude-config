@@ -71,7 +71,7 @@ Only these section files for this phase, nothing else unless a step below says s
       view, the beat written as start state, operation, result, or the anchor, written positively as the hint's
       `right_outcome`. Touch only the matching beat: no new element, camera move or sentence elsewhere, nothing of
       the source's story, timing or the locked model changes, and any rule of this phase wins a conflict.
-    - A hint that comes from a miss example (the admin never had a right version for it) may carry no `right_outcome` of its own:
+    - A hint that comes from a scenario (`sample_kind: scenario`: the admin's idea, what could be better, what the agents missed) states a situation to check the plan against; it carries no right outcome of its own beyond the admin's words, so apply it only as a plain restatement at the matching beat. A hint that comes from a miss example (the admin never had a right version for it) may carry no `right_outcome` of its own:
       apply it only when its lever is a plain restatement at the matching beat (the count, the state or the orientation the plan
       already intends, said once positively); otherwise leave it out. Never invent what a right version would look like.
     - At most two hints are applied per video. A hint whose application would reshape more than one clause of
