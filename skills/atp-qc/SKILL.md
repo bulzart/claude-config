@@ -69,7 +69,7 @@ Only these section files for this phase, nothing else unless a step below says s
       by that need; never fail the video on one default to satisfy another.
   - **Samples first (Loupe, this phase only).** The admin keeps a library of generation misses in Loupe, each
     one image of the frames the admin chose (one to twelve), every frame tagged WRONG (red) or RIGHT (green) with its own time and carrying only the marks the admin
-    drew on it (a RIGHT frame can come from the right version or from an earlier part of the same video), a zoom of each frame, and the admin's words burned in at the bottom beside the product sample
+    drew on it (a RIGHT frame can come from the right version or from an earlier part of the same video), a zoom of each frame (a frame alone in its row is shown as its normal-range shot with its close range beside it), and the admin's words burned in at the bottom beside the product sample
     the video used. A separate read-only keeper session holds that library and nothing else. Before the first
     sheet: `T qc-consult --run RUN --video NN --question "<what this video shows that a past miss looked like:
     the product form, the beat, what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
@@ -80,7 +80,7 @@ Only these section files for this phase, nothing else unless a step below says s
     which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
     empty list means no sample applies: QC goes on without them. The answer is also saved as
     `RUN/60-outputs/video-NN/qc-consult.json`. `T qc-brief` takes the same arguments with no model call.
-    A sample has a `sample_kind`: `pair` (a WRONG and a RIGHT frame), `miss-only` (`has_right: false`: no frame of it is called RIGHT, and a lone miss frame has a card beside it that says so), or `scenario` (no frame is called WRONG: the admin's words only, or unjudged frames; it carries `idea`, `better` and `missed`: what was meant to happen, what could have been better, what the AI agents missed or could not understand). A scenario is insight, not a visual pattern: compare the video with the idea and with what was missed, and never look for a match of the image. For a miss-only sample:
+    A sample has a `sample_kind`: `pair` (a WRONG and a RIGHT frame), `miss-only` (`has_right: false`: no frame of it is called RIGHT, and a lone miss frame carries a grey NO RIGHT VERSION tag), or `scenario` (no frame is called WRONG: the admin's words only, or unjudged frames; it carries `idea`, `better` and `missed`: what was meant to happen, what could have been better, what the AI agents missed or could not understand). A scenario is insight, not a visual pattern: compare the video with the idea and with what was missed, and never look for a match of the image. For a miss-only sample:
     it shows the wrong pattern to look for and nothing about what is right, so never infer a right look from it.
     A sample is a lead, never a verdict: a match is a regenerate reason only by this phase's own rules.
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
