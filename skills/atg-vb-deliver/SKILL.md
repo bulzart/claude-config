@@ -78,7 +78,7 @@ Only these section files for this phase, nothing else unless a step below says s
   "unknown" as 3; never count a grade D row; never invent a URL, a quote or a figure; never present an
   estimate as a measurement; never credit a product with what the creator, a trend or paid reach
   carried; never take attention for buying evidence (attention-only videos teach mechanisms and never prove a
-  product sells, `viral-browser.md` §3.2); never claim EU or global demand from US-only evidence without the
+  product sells); never claim EU or global demand from US-only evidence without the
   "market gap" flag (a pick for the EU or a global market backed only by US evidence carries it, with confidence
   no higher than medium, §2).
 - Viral-Browser: never lower a gate silently to fill the table (fewer than 3 candidates meeting the gates
