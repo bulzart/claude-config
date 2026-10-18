@@ -1,6 +1,6 @@
 # ~/.claude is versioned for YOUR customizations only.
 # Allow-list: everything is ignored unless re-included below, so Claude Code's own runtime data,
-# caches, sessions, transcripts, credentials, plugins, updates and installs never get committed.
+# caches, sessions, transcripts, credentials, plugin code, updates and installs never get committed.
 # To track a new folder of yours, add a line  !/<folder>/  in the "your customizations" block.
 /*
 
@@ -22,6 +22,12 @@
 !/analyze-then-pick/
 !/analyze-then-generate/
 !/analyze-stack/
+# plugin settings only (which plugins and marketplaces are installed); their downloaded code, caches and marketplace clones stay out
+!/plugins/
+/plugins/*
+!/plugins/installed_plugins.json
+!/plugins/known_marketplaces.json
+!/plugins/plugin-directory-bindings.json
 # (loupe/ is its own git repository now, private GitHub repo bulzart/loupe: not tracked here)
 
 # memories only (never the session transcripts next to them)

@@ -6,8 +6,8 @@ memory files and `settings.json`. The Loupe web app (`loupe/`) is no longer trac
 
 ## What is tracked
 Only what `.gitignore` allow-lists. Claude Code's own files are never committed: credentials,
-sessions and transcripts, history, caches, plugins and marketplaces, synced claude.ai skills,
-telemetry, update state. Run folders, samples, `node_modules` and backups are also left out.
+sessions (live-process registries with their keys) and transcripts, history, caches, plugin code and marketplace clones, synced claude.ai skills,
+telemetry, update state. Plugin settings are tracked: `plugins/installed_plugins.json`, `known_marketplaces.json` and `plugin-directory-bindings.json`. Run folders, samples, `node_modules` and backups are also left out.
 A new top-level folder is reported once and stays untracked until you add `!/<folder>/` to
 `.gitignore`.
 
