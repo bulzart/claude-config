@@ -25,4 +25,4 @@ What exists now (full description: `~/.claude/analyze-then-pick/README.md`):
 **How to apply:** to change a step or rule, edit the owning skill (the router's labels table says which; a rule two phases act on lives in both) or the section file; then
 `python ~/.claude/analyze-then-pick/scripts/docs_tool.py index <doc>.md` (if sections changed) and `... check` (must be 0 errors), update the build prompt ([[atp-build-prompt-sync]]),
 and commit. Never recreate a monolithic command, never Read a whole reference/guide or `models/index.json` in a run (a PreToolUse hook `hooks/atp_read_guard.py` now refuses whole-file reads of atp.py, models/index.json, the catalog snapshot and backups; a SessionStart compact|resume hook `hooks/atp_resume_note.py` names the unfinished run and its `next_skill`; [[loupe-web-app]]), never leave backups in tracked folders ([[claude-folder-git-versioning]]).
-`/update-from-errors` is the only reader of whole documents (`docs_tool.py join`).
+Only a maintenance edit reads a whole document (`docs_tool.py join`).

@@ -1,16 +1,14 @@
-# Learning log: /update-from-errors passes on /analyze-then-generate
+# Learning log: /analyze-then-generate
 
-One section per pass, newest last. The next pass reads this file before the ledger (§1.2). A pattern that
+One section per change of substance, newest last. A pattern that
 recurs after a logged change means that change failed: revise it, do not repeat it.
 
-## 2026-10-11 · fork · /analyze-then-generate created from /analyze-then-pick
-- **Origin:** a copy of the `/analyze-then-pick` library as of 2026-10-10 14:04 (all references, the model guides, the
-  toolkit renamed `atg.py`, the ledger CE-001..CE-029). The history of every inherited rule is that pipeline's own
-  learning log: `~/.claude/analyze-then-pick/learning-log.md`.
+## 2026-10-11 · fork · /analyze-then-generate created
+- **Origin:** a copy of an earlier pipeline library as of 2026-10-10 14:04 (all references, the model guides, the
+  toolkit renamed `atg.py`, the ledger CE-001..CE-029). The history of every inherited rule predates this log.
 - **Added:** the Viral-Browser sub-mode (`reference/viral-browser.md`; command steps V1-V9 and contract items 23-25;
   toolkit `viral-stats`, `candidates`, `evidence`, `econ`, `new-run --submode`, the `baseline` set of `inventory` and
   `prep-all`; config `viral_browser`; the ledger causes research, scoring, bias, evidence).
-- **No `/update-from-errors` pass has run on this pipeline yet.**
 - **Hypotheses to test on the first Viral-Browser runs:**
   1. The independent-evidence cap and the category cap keep a dominant niche from filling the picks without
      excluding it (check `ablation_changed` and the defence notes).
@@ -112,7 +110,7 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   approach and the logic that made them viral (hooks, how the product is used, audience, mentality, mass-thinking patterns, length), then
   generate fitting scenario videos for the product in the assets folder, blending the mined data with the product information, as
   virality-backed videos; the agents must not be fixated on the references' product type.
-- **Added (Create only; Recreate and `/analyze-then-pick` unchanged):** `viral-browser.md` section 14 (what Create takes and skips from the
+- **Added (Create only; Recreate unchanged):** `viral-browser.md` section 14 (what Create takes and skips from the
   mining; only mechanisms whose driver is the craft are borrowed; the blend matrix `20-analysis/blend-matrix.md`; the virality rationale per
   video; the Create trend pass of up to `analysis.create_trend_checks` = 6 dated searches; what the mining never does); Create cards are viral
   cards (A3); the virality synthesis at A4 (`T viral-stats --run RUN --no-niche` writes `20-analysis/corpus-profile.*` and leaves
@@ -236,3 +234,21 @@ recurs after a logged change means that change failed: revise it, do not repeat 
 - **Hypotheses to test on the first full run:** (1) the main session's bias log names the dominant-niche reading and every departure from a rule of thumb, with
   its reason; (2) the blind scorer's notes say which evidence rule it applied; (3) `ranking.md` and the recorded `pick-rank`s agree; (4) no agent treats
   a table order as a ranking.
+
+## 2026-10-18 · rebuild · router, 25 phase skills, section files; no error ledger; Loupe
+- **What changed:** the monolithic command (about 190 KB) became a router (about 20 KB) plus 25 phase skills (`atg-*`), and every long document (the
+  references including `viral-browser`, the Higgsfield guide, the model guides) an index plus section files (`scripts/docs_tool.py`). A phase loads only the
+  sections its "Read now" list names, and `state.json -> next_skill` makes every phase boundary resumable. Viral-Browser's steps V1-V9 became six skills
+  (`atg-vb-*`); the Create virality mining stays in `atg-analyze-study` and `atg-create-plan`. Contract items were renumbered: 22 no error ledger, 23 caught
+  flags, 24-26 Viral-Browser (they were 23-25).
+- **Error ledger retired:** `caught_errors.md` and `atg.py caught-error` are gone. The lessons of the first Viral-Browser research wave (the common cost basis,
+  price and cost read at one variant, stored scenario prices, derived figures inside evidence rows) are written, as kinds, in `viral-browser` section 7.0 and
+  sections 7.3 to 7.5. A video or a pick the user reports as wrong is diagnosed in its brief (Viral-Browser: `deliverables/feedback.md`); a lesson the references do not hold is
+  written, generalised, into the section that owns it.
+- **Loupe:** `atg.py caught-flag`, `qc-consult`, `qc-brief`, `plan-hints` and `loupe` are linked. The flag record is written and never read during a run; only QC
+  reads the sample library, and the first request of a video asks it once for a few text-only hints.
+- **Cleaned while moving (reasoning over rule lists):** niche, product and brand examples removed from rules and agent prompts (an example biases a run toward
+  itself), live-run anecdotes and figures reduced to the kind of miss, the pitfalls list cut to the cross-cutting traps with the owning section named,
+  the reference-pack and card prompts now cite section files.
+- **Hypotheses to test:** (1) a Viral-Browser run resumed in a new session continues from `next_skill` without rereading earlier skills; (2) card labels and candidate
+  pools no longer echo words from the removed examples; (3) Create's A3-A4 phase (about 110 KB of sections) still writes complete cards, otherwise split A3 from A4.

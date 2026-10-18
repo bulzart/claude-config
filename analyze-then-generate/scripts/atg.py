@@ -21,7 +21,14 @@ Subcommands (python atg.py <cmd> -h):
                  did NOT spread, the contrast set)
   prep-assets    previews, doc text, font names and a labelled contact sheet of USER-SUPPLIED assets
   model-menu     numbered table of EVERY available video model (pinned first); it picks nothing
+  model-entry    ONE model's index.json entry + its guide path and section folder (index.json is 40 KB: never read it whole)
   ledger         record of every paid generation (begin before, set after every call); begin reports conflicts, the agent decides
+  caught-flag    flag record in Loupe (the web app): prompts and videos Higgsfield flagged or refused, with gathered evidence
+                 (add | set | list | reconcile | open)
+  loupe          ensure | status | open: the Loupe web app (flags, generation misses, QC samples)
+  qc-consult     QC phase only: ask the QC keeper which samples (generation misses) apply to the video under QC
+  qc-brief       QC phase only: the matching samples as a plain brief (no model call)
+  plan-hints     first request of a video only (X2): ask the keeper which past misses could matter for the plan, as a few text-only hints (usually none)
   open           open a finished video in the default player for the user's review
   prep-video     probe, cuts, activity, 5 fps adaptive frames, storyboard sheets, audio, transcript,
                  OCR sample, per-second timeline, summary
@@ -88,6 +95,7 @@ Every command prints one JSON object on its last stdout line. Exit codes: 0 ok, 
 from __future__ import annotations
 
 import argparse
+import base64
 import concurrent.futures as cf
 import datetime as dt
 import glob
@@ -103,6 +111,7 @@ import subprocess
 import sys
 import threading
 import time
+import webbrowser
 import zipfile
 from pathlib import Path
 
@@ -162,7 +171,8 @@ def cfg_get(path: str, default=None):
 
 
 def out(obj: dict, code: int = 0):
-    print(json.dumps(obj, ensure_ascii=False))
+    # one JSON object on the last line: U+2028/2029 are escaped so a line-splitting reader never cuts it in two
+    print(json.dumps(obj, ensure_ascii=False).replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
     sys.exit(code)
 
 
@@ -2847,40 +2857,44 @@ def _count_frames(path) -> tuple[int, float]:
     return int(s.get("nb_read_frames", 0) or 0), fps
 
 
-CAUGHT_ERRORS = ATG_HOME / "caught_errors.md"
-CE_CAUSES = ["prompt", "reference", "parameter", "plan", "qc-miss", "model-limit", "unknown",
-             "research", "scoring", "bias", "evidence"]       # the last four: Viral-Browser picks
-CE_STATUS = ["open", "fixed", "promoted"]
+# ----------------------------------------------------------------------------------------------------------------
+# Caught flags. The flag record lives in Loupe (~/.claude/loupe, the web app); `caught-flag` is how the pipeline writes to it
+# (add | set | reconcile | list | open). No step of a run and no agent reads the record (command item 23): it is for the person
+# who opens Loupe. The script gathers what the run already knows (the video, the attempt, the request's prompt and parameters,
+# every input with its file, type, thumbnail and file facts, the reference and its source segment, the job and its ledger row,
+# the raw response a hook captured); the agent adds the judgement (Higgsfield's reply, the suspected trigger, which input, which
+# words, which part of a video, the grouping tags). Loupe adds the history evidence (the same input elsewhere, similar flags).
+# If Loupe cannot be reached a new flag is queued in loupe/data/outbox and recorded when it starts: nothing is lost.
+
+LOUPE_HOME = Path(os.environ.get("LOUPE_HOME") or (Path.home() / ".claude" / "loupe"))
 
 
-def _ce_parse(text: str) -> list:
-    """Entries of caught_errors.md: '## CE-nnn · date · title' headings with '- **field:** value' lines."""
-    entries, cur, last = [], None, None
-    for line in text.splitlines():
-        m = re.match(r"^## (CE-\d{3,}) · (\S+) · (.*)$", line)
-        if m:
-            cur = {"id": m.group(1), "date": m.group(2), "title": m.group(3).strip()}
-            entries.append(cur); last = None
-            continue
-        if cur is None:
-            continue
-        m = re.match(r"^- \*\*([a-z][a-z ]*):\*\* ?(.*)$", line)
-        if m:
-            last = m.group(1).strip().replace(" ", "_")
-            cur[last] = m.group(2).strip()
-            continue
-        if last and line.startswith("  ") and line.strip():
-            body = line[2:]
-            if last in ("brief", "prompt", "qc", "verified_prompt", "prompt_change", "errors"):
-                if body.strip().startswith("```"):
-                    continue
-                cur[last] = (cur[last] + "\n" + body).strip("\n")
-            else:
-                cur[last] = (cur[last] + " " + line.strip()).strip()
-    return entries
+def _lc():
+    if str(LOUPE_HOME) not in sys.path:
+        sys.path.insert(0, str(LOUPE_HOME))
+    import loupe_client
+    return loupe_client
 
 
-def _ce_text_or_file(v):
+def _cf_api(method, path, body=None, key="pipeline", timeout=60):
+    lc = _lc()
+    if not lc.ensure():
+        return 0, {"ok": False, "error": "Loupe is not running and could not be started (python ~/.claude/loupe/loupe.py serve)"}
+    return lc.call(method, path, body, key_name=key, timeout=timeout)
+
+
+def _cf_facts(path, ocr=True):
+    """File facts for a flag input: sha1, size, dimensions, duration, perceptual hash, text seen on screen (Loupe's facts module)."""
+    try:
+        if str(LOUPE_HOME) not in sys.path:
+            sys.path.insert(0, str(LOUPE_HOME))
+        from loupe_app import facts as lf
+        return lf.file_facts(path, ocr=ocr)
+    except Exception as e:  # noqa: BLE001
+        return {"facts_error": str(e)[:160]}
+
+
+def _cf_text_or_file(v):
     """A literal text, or a file path: a .md/.txt file is read whole; a request .json gives its prompt."""
     if not v:
         return ""
@@ -2904,73 +2918,8 @@ def _ce_text_or_file(v):
     return str(v)
 
 
-def _ce_autofind(run, video) -> dict:
-    """The run's own files for a video: 40-briefs/video-NN-brief.md, the newest request json, the plan."""
-    found = {}
-    if not run or not video:
-        return found
-    rd = Path(str(run))
-    if not rd.exists():
-        rd = ATG_HOME / "runs" / str(run)
-    if not rd.exists():
-        return found
-    v = str(video).strip()
-    m = re.search(r"(\d{1,3})", v)
-    nn = m.group(1).zfill(2) if m else v
-    b = rd / "40-briefs" / f"video-{nn}-brief.md"
-    if b.is_file():
-        found["brief"] = b
-    plan = rd / "40-briefs" / f"video-{nn}-plan.md"
-    if plan.is_file():
-        found["plan"] = plan
-    res = rd / "60-outputs" / f"video-{nn}" / "result.json"
-    if res.is_file():
-        try:
-            r = json.loads(res.read_bytes().decode("utf-8"))
-            bits = [f"CapCut project {r['capcut_project']}" if r.get("capcut_project") else "",
-                    f"clean {r['clean']}" if r.get("clean") else "",
-                    f"credits {r['credits']}" if r.get("credits") is not None else "",
-                    f"run QC: {r['qc']}" if r.get("qc") else ""]
-            found["delivered"] = " · ".join(b for b in bits if b)
-            if r.get("qc"):
-                found["qc"] = str(r["qc"])
-        except (ValueError, OSError):
-            pass
-    reqs = [p for p in (rd / "50-requests").glob(f"video-{nn}*-request.json")] if (rd / "50-requests").is_dir() else []
-    if reqs:
-        found["prompt"] = max(reqs, key=lambda p: p.stat().st_mtime)
-    return found
-
-
-def _ce_params(src) -> str:
-    """Compact generation parameters from a request .json: model, mode, duration, format, media roles."""
-    if not src:
-        return ""
-    p = Path(str(src))
-    if not (p.is_file() and p.suffix.lower() == ".json"):
-        return ""
-    try:
-        j = json.loads(p.read_bytes().decode("utf-8"))
-    except (ValueError, OSError):
-        return ""
-    prm = j.get("params") if isinstance(j.get("params"), dict) else j
-    bits = []
-    for k in ("model", "mode", "duration", "duration_policy", "aspect_ratio", "resolution", "generate_audio", "enable_thinking"):
-        if k in prm:
-            bits.append(f"{k}={prm[k]}")
-    roles = {}
-    for m in prm.get("medias") or []:
-        if isinstance(m, dict):
-            r = m.get("role", "?")
-            roles[r] = roles.get(r, 0) + 1
-    if roles:
-        bits.append("medias=" + ", ".join(f"{r}×{n}" if n > 1 else r for r, n in roles.items()))
-    bits.append(f"request={p.name}")
-    return " · ".join(bits)
-
-
-def _ce_sentence_diff(old: str, new: str, cap: int = 14) -> str:
-    """What changed between the failed and the verified prompt, sentence by sentence (- removed, + added)."""
+def _cf_sentence_diff(old: str, new: str, cap: int = 14) -> str:
+    """What changed between the failed and the accepted prompt, sentence by sentence (- removed, + added)."""
     import difflib
     def sp(t):
         return [s.strip() for s in re.split(r"(?<=[.;!?])\s+|\n+", t or "") if s.strip()]
@@ -2986,147 +2935,754 @@ def _ce_sentence_diff(old: str, new: str, cap: int = 14) -> str:
     return "\n".join(lines)
 
 
-def _ce_block_field(name: str, text: str) -> str:
-    """A multi-line field as an indented fenced block (the parser joins the lines back)."""
-    text = (text or "").strip("\n")
-    if not text:
-        return f"- **{name}:** not recorded\n"
-    lines = "\n".join("  " + l for l in text.splitlines())
-    return f"- **{name}:**\n  ```text\n{lines}\n  ```\n"
+_CF_SNAP = {}
+CF_KINDS = ["moderation-block", "refused-no-reason", "media-flagged", "output-flagged", "preset-notice", "other"]
+CF_CAUSES = ["prompt-wording", "reference-video", "image-reference", "output", "parameter", "unknown"]
+CF_STATUS = ["open", "cleared", "persistent"]
+CF_TERMS = re.compile(r"moderat|flag|nsfw|refus|polic|safety|blocked|copyright|\bip\b|celebrit|likeness|preset_recommendation|"
+                      r"rejected before creation|no reason|no error", re.I)
+CF_ROLE_LABEL = {"image_references": "Image", "video_references": "Video", "audio_references": "Audio"}
+CF_PARAM_KEYS = ("model", "mode", "duration", "duration_policy", "aspect_ratio", "resolution", "generate_audio",
+                 "enable_thinking", "count", "declined_preset_id")
 
 
-def cmd_caught_error(a):
-    """The feedback ledger (caught_errors.md at the library root): add an entry for a video the user
-    was not satisfied with, list the entries that apply to a run, or set an entry's status."""
-    if not CAUGHT_ERRORS.exists():
-        CAUGHT_ERRORS.write_bytes(b"# Caught errors: the feedback ledger\n")
+def _cf_outbox_find(eid):
+    ob = Path(os.environ.get("LOUPE_DATA") or (LOUPE_HOME / "data")) / "outbox"
+    for p in sorted(ob.glob("*.json")) if ob.is_dir() else []:
+        try:
+            j = json.loads(p.read_bytes().decode("utf-8"))
+        except (OSError, ValueError):
+            continue
+        if (j.get("doc") or {}).get("id") == eid:
+            return p, j
+    return None, None
+
+
+def _cf_load(eid=None, q="") -> list:
+    """Flag entries from Loupe: one by id, or those matching a search (the web app's operators: status:open run:... tag:...)."""
+    import urllib.parse
+    if eid:
+        if str(eid).startswith("CF-Q"):
+            p, j = _cf_outbox_find(eid)
+            if not j:
+                fail(f"{eid} not found", 1)
+            _CF_SNAP[eid] = json.dumps(j["doc"], sort_keys=True)
+            return [j["doc"]]
+        s, d = _cf_api("GET", f"/api/flags/{eid}")
+        if s != 200:
+            fail(f"{eid}: {d.get('error', 'not found')}", 1)
+        ents = [d["entry"]]
+    else:
+        s, d = _cf_api("GET", "/api/flags?limit=5000&q=" + urllib.parse.quote(q or ""))
+        if s != 200:
+            fail("cannot read the flags: " + str(d.get("error")), 1)
+        ents = d["entries"]
+    for e in ents:
+        _CF_SNAP[e["id"]] = json.dumps(e, sort_keys=True)
+    return ents
+
+
+def _cf_save(entries: list):
+    """Push what changed since _cf_load to Loupe: a new entry is created (Loupe assigns its id), a changed one replaced."""
+    lc = _lc()
+    for e in entries:
+        cur = json.dumps(e, sort_keys=True)
+        eid = e.get("id", "")
+        if eid in _CF_SNAP:
+            if _CF_SNAP[eid] == cur:
+                continue
+            if str(eid).startswith("CF-Q"):
+                p, j = _cf_outbox_find(eid)
+                if p:
+                    j["doc"] = e
+                    p.write_text(json.dumps(j, ensure_ascii=False), encoding="utf-8")
+                continue
+            s, d = _cf_api("PUT", f"/api/flags/{eid}", e)
+            if s != 200:
+                fail(f"Loupe refused the update of {eid}: {d.get('error')}", 1)
+        else:
+            s, d = _cf_api("POST", "/api/flags", e)
+            if s == 200:
+                e["id"] = d["id"]
+            else:
+                e["id"] = "CF-Q" + os.urandom(4).hex()
+                e["queued"] = True
+                lc.queue("add", e)
+                print(f"WARNING: Loupe could not be reached ({d.get('error')}); the flag is queued as {e['id']} and will be recorded when Loupe starts.", file=sys.stderr)
+        _CF_SNAP[e["id"]] = json.dumps(e, sort_keys=True)
+
+
+def _cf_run_dir(run):
+    if not run:
+        return None
+    rd = Path(str(run))
+    if not rd.exists():
+        rd = ATG_HOME / "runs" / str(run)
+    return rd if rd.exists() else None
+
+
+def _cf_nn(video) -> str:
+    m = re.search(r"(\d{1,3})", str(video or ""))
+    return m.group(1).zfill(2) if m else str(video or "")
+
+
+def _cf_request_file(rd, video, attempt):
+    """The request json of this video and attempt (the newest one when the attempt is not given or not found)."""
+    d = rd / "50-requests" if rd else None
+    if not d or not d.is_dir() or not video:
+        return None
+    nn = _cf_nn(video)
+    reqs = sorted(d.glob(f"video-{nn}*-request.json"), key=lambda p: p.stat().st_mtime)
+    if not reqs:
+        return None
+    tok = re.sub(r"[^a-z0-9]+", "-", str(attempt or "").lower()).strip("-")
+    if tok:
+        exact = [p for p in reqs if f"-{tok}-" in p.name.lower()]
+        if exact:
+            return exact[-1]
+        if tok in ("a1", "1"):
+            plain = [p for p in reqs if p.name.lower() == f"video-{nn}-request.json"]
+            if plain:
+                return plain[-1]
+    return reqs[-1]
+
+
+def _cf_request_json(src) -> dict:
+    if not src:
+        return {}
+    p = Path(str(src))
+    if not (p.is_file() and p.suffix.lower() == ".json"):
+        return {}
+    try:
+        j = json.loads(p.read_bytes().decode("utf-8"))
+    except (ValueError, OSError):
+        return {}
+    return j if isinstance(j, dict) else {}
+
+
+def _cf_params_dict(req: dict) -> dict:
+    """The generation parameters of a request (model, duration, format, flags) plus a summary of the media roles."""
+    prm = req.get("params") if isinstance(req.get("params"), dict) else req
+    d = {k: str(prm[k]) for k in CF_PARAM_KEYS if k in prm and prm[k] not in (None, "")}
+    roles = {}
+    for m in prm.get("medias") or []:
+        if isinstance(m, dict):
+            roles[m.get("role", "?")] = roles.get(m.get("role", "?"), 0) + 1
+    if roles:
+        d["medias"] = ", ".join(f"{r}×{n}" if n > 1 else r for r, n in roles.items())
+    return d
+
+
+def _cf_params_text(s: str) -> dict:
+    """'model=x · duration=15 · medias=a, b' -> {'model': 'x', ...} (a --params text)."""
+    d = {}
+    for part in re.split(r"\s+·\s+", s or ""):
+        k, sep, v = part.partition("=")
+        if sep and k.strip():
+            d[k.strip()] = v.strip()
+    return d
+
+
+def _cf_uploads(rd) -> dict:
+    """media id -> {'name', 'type'} from the run's uploads maps (what each uploaded file was)."""
+    res = {}
+    if not rd:
+        return res
+    for fn in ("uploads.json", "uploads-map.json"):
+        p = rd / "30-assets" / fn
+        if not p.is_file():
+            continue
+        try:
+            j = json.loads(p.read_bytes().decode("utf-8"))
+        except (ValueError, OSError):
+            continue
+        for name, v in (j.items() if isinstance(j, dict) else []):
+            mid, typ = (v.get("media_id"), v.get("content_type") or v.get("type") or "") if isinstance(v, dict) else (v, "")
+            if mid and mid not in res:
+                res[mid] = {"name": name, "type": typ, "file": (v.get("file") if isinstance(v, dict) else "") or ""}
+    return res
+
+
+def _cf_asset_path(rd, name, req):
+    """The local file behind an uploaded input: the prepared source for a src-* video, else the staged asset."""
+    if not rd or not name:
+        return None
+    sp = req.get("source_prepared") if isinstance(req, dict) else None
+    if sp and name.lower().startswith("src-"):
+        p = rd / str(sp)
+        if p.is_file():
+            return p
+    for base in (rd / "30-assets" / "stage", rd / "30-assets", rd / "10-media"):
+        p = base / name
+        if p.is_file():
+            return p
+    return None
+
+
+def _cf_ref(name: str) -> str:
+    """A reference video (V20) or asset (A12) id read from a file name such as src-V20.mp4 or char-A12-head.jpg."""
+    for pat in (r"(?<![A-Za-z0-9])(V\d{1,3})(?![0-9])", r"(?<![A-Za-z0-9])(A\d{1,4})(?![0-9])"):
+        m = re.search(pat, name or "")
+        if m:
+            return m.group(1)
+    return ""
+
+
+def _cf_type(name: str) -> str:
+    import mimetypes
+    return mimetypes.guess_type(name or "")[0] or ""
+
+
+def _cf_thumb(path, width: int = 200, t=None) -> str:
+    """A small JPEG of an image, or of a video at time t, as a data URI ('' when it cannot be made)."""
+    try:
+        cmd = [find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-y"]
+        if t:
+            cmd += ["-ss", f"{max(0.0, float(t)):.2f}"]
+        cmd += ["-i", str(path), "-frames:v", "1", "-vf", f"scale={int(width)}:-2", "-pix_fmt", "yuvj420p", "-q:v", "7",
+                "-f", "image2pipe", "-vcodec", "mjpeg", "-"]
+        cp = subprocess.run(cmd, capture_output=True, timeout=90)
+        if cp.returncode == 0 and cp.stdout:
+            return "data:image/jpeg;base64," + base64.b64encode(cp.stdout).decode("ascii")
+    except Exception:
+        pass
+    return ""
+
+
+def _cf_inputs(req: dict, rd, thumbs: bool = True) -> list:
+    """Every media the request carried: label (Image 2, Video 1), role, media id, file, type, V/A id, thumbnail."""
+    prm = req.get("params") if isinstance(req.get("params"), dict) else req
+    meaning = next((req[k] for k in ("medias_meaning", "media_meaning") if isinstance(req.get(k), dict)), {})
+    ups = _cf_uploads(rd)
+    counts, res = {}, []
+    for m in (prm.get("medias") or []):
+        if not isinstance(m, dict):
+            continue
+        role, mid = str(m.get("role", "?")), str(m.get("value", ""))
+        counts[role] = counts.get(role, 0) + 1
+        base = CF_ROLE_LABEL.get(role)
+        label = f"{base} {counts[role]}" if base else role
+        name = str(meaning.get(label) or ups.get(mid, {}).get("name") or "")
+        item = {"label": label, "role": role, "media_id": mid, "name": name,
+                "type": ups.get(mid, {}).get("type") or _cf_type(name), "ref": _cf_ref(name)}
+        path = _cf_asset_path(rd, name, req)
+        _uf = ups.get(mid, {}).get("file")
+        if not path and _uf and Path(_uf).is_file():
+            path = Path(_uf)             # the file the uploads map recorded for this media id
+        item["file"] = ups.get(mid, {}).get("name", "")
+        if not path and role == "video_references" and item["ref"].startswith("V"):
+            path = _cf_video_file(item["ref"], rd, req, None)
+        if path:
+            item["path"] = str(path)
+            if thumbs:
+                th = _cf_thumb(path, 200)
+                if th:
+                    item["thumb"] = th
+        res.append(item)
+    return res
+
+
+def _cf_inputs_from_text(text: str, rd) -> list:
+    """'role: media id' lines (a --inputs text) as inputs; names come from the run's uploads map when known."""
+    ups, counts, res = _cf_uploads(rd), {}, []
+    for line in (text or "").splitlines():
+        m = re.match(r"^\s*([a-z_]+)\s*:\s*(\S+)", line)
+        if not m:
+            continue
+        role, mid = m.group(1), m.group(2)
+        counts[role] = counts.get(role, 0) + 1
+        base = CF_ROLE_LABEL.get(role)
+        name = ups.get(mid, {}).get("name", "")
+        res.append({"label": f"{base} {counts[role]}" if base else role, "role": role, "media_id": mid, "name": name,
+                    "type": ups.get(mid, {}).get("type") or _cf_type(name), "ref": _cf_ref(name)})
+    return res
+
+
+def _cf_submission(rd, video, attempt) -> dict:
+    """The run ledger row (state.json submissions) the agent marked `ledger set --flagged` for this video (and attempt):
+    its job id and fingerprint. Never a row that was not marked: the attempt's later, accepted retry is not the flagged call."""
+    sp = rd / "state.json" if rd else None
+    if not sp or not sp.is_file() or not video:
+        return {}
+    try:
+        st = json.loads(sp.read_bytes().decode("utf-8"))
+    except (ValueError, OSError):
+        return {}
+    rows = [e for e in st.get("submissions", []) if e.get("flagged") and _cf_nn(_lane(e.get("video", ""))) == _cf_nn(video)]
+    m = re.search(r"(\d+)\s*$", str(attempt or ""))
+    if m:
+        sel = [e for e in rows if e.get("attempt") == int(m.group(1))]
+        rows = sel or rows
+    return rows[-1] if rows else {}
+
+
+def _cf_state_info(rd):
+    """(mode, model) of the run: 'analyze-recreate', 'wan3_0_prime'."""
+    sp = rd / "state.json" if rd else None
+    if not sp or not sp.is_file():
+        return "", ""
+    try:
+        st = json.loads(sp.read_bytes().decode("utf-8"))
+    except (ValueError, OSError):
+        return "", ""
+    mode = str(st.get("mode") or "")
+    sub = str(st.get("analyze_submode") or "")
+    return (f"{mode}-{sub}" if mode and sub else mode), str(st.get("model") or "")
+
+
+def _cf_tags(v) -> list:
+    """Grouping tags: lower-case words joined by hyphens, no duplicates."""
+    res = []
+    for t in re.split(r"[,;]", v or ""):
+        t = re.sub(r"[^a-z0-9]+", "-", t.strip().lower()).strip("-")
+        if t and t not in res:
+            res.append(t)
+    return res
+
+
+def _cf_mark_assets(entry: dict, wanted, thumbs: bool = True):
+    """Mark the inputs the agent named (by label, media id, file name or V/A id). A name that matches no input is kept
+    as given (assets_unmatched); an existing file path that matches none becomes an input of its own (an upload flag)."""
+    trig = entry["trigger"]
+    assets, unmatched = trig.setdefault("assets", []), trig.setdefault("assets_unmatched", [])
+    for w in wanted or []:
+        x = str(w).strip()
+        if not x:
+            continue
+        hit = False
+        for i in entry["inputs"]:
+            nm = str(i.get("name") or "")
+            if (str(i.get("label", "")).lower() == x.lower()
+                    or (len(x) >= 8 and str(i.get("media_id", "")).lower().startswith(x.lower()))
+                    or (len(x) >= 3 and nm and x.lower() in nm.lower())
+                    or (i.get("ref") and x.upper() == str(i["ref"]).upper())):
+                i["suspect"] = True
+                hit = True
+                if i["label"] not in assets:
+                    assets.append(i["label"])
+        if hit:
+            continue
+        p = Path(x)
+        if p.is_file():
+            it = {"label": p.name, "role": "upload", "media_id": "", "name": p.name, "type": _cf_type(p.name),
+                  "ref": _cf_ref(p.name), "path": str(p), "suspect": True}
+            if thumbs:
+                th = _cf_thumb(p, 200)
+                if th:
+                    it["thumb"] = th
+            entry["inputs"].append(it)
+            assets.append(it["label"])
+        elif x not in unmatched:
+            unmatched.append(x)
+
+
+def _cf_video_file(of: str, rd, req, output):
+    """The video file a --part-of names: 'reference V10', 'clip a2' / 'output', or a path."""
+    of = str(of or "")
+    if not of:
+        return None
+    p = Path(of)
+    if p.is_file():
+        return p
+    m = re.search(r"\bV(\d{1,3})\b", of, re.I)
+    if m and rd:
+        d = rd / "10-media" / f"V{int(m.group(1)):02d}"
+        if not d.is_dir():
+            d = rd / "10-media" / f"V{int(m.group(1))}"
+        for cand in (d / "prepared" / "src.mp4", d / "own" / "own-silent.mp4", d / "own-silent.mp4", d / "own.mp4"):
+            if cand.is_file():
+                return cand
+        vids = (sorted(d.glob("prepared/*.mp4")) + sorted(d.glob("own/*.mp4")) + sorted(d.glob("*.mp4"))) if d.is_dir() else []
+        if vids:
+            return vids[0]
+    if re.search(r"output|clip|generated|result", of, re.I) and output and Path(str(output)).is_file():
+        return Path(str(output))
+    sp = req.get("source_prepared") if isinstance(req, dict) else None
+    if sp and rd and re.search(r"reference|source", of, re.I) and (rd / str(sp)).is_file():
+        return rd / str(sp)
+    return None
+
+
+def _cf_part(a, existing, rd, req, output, thumbs: bool = True):
+    """The part of a video the agent suspects: which video, from/to seconds, a note, and a frame of it."""
+    if not any([a.part_of, a.part_from is not None, a.part_to is not None, a.part_note]):
+        return existing
+    part = dict(existing or {})
+    if a.part_of:
+        part["of"] = a.part_of.strip()
+    if a.part_from is not None:
+        part["from"] = a.part_from
+    if a.part_to is not None:
+        part["to"] = a.part_to
+    if a.part_note:
+        part["note"] = a.part_note.strip()
+    if thumbs and part.get("of"):
+        vf = _cf_video_file(part["of"], rd, req, output)
+        if vf:
+            t0, t1 = part.get("from"), part.get("to")
+            t = (t0 + t1) / 2.0 if (t0 is not None and t1 is not None) else (t0 if t0 is not None else 0)
+            th = _cf_thumb(vf, 320, t)
+            if th:
+                part["frame"] = th
+    return part
+
+
+def _cf_compact(e: dict, full: bool = False) -> dict:
+    """An entry without thumbnails (and with long texts cut, unless full) for the terminal."""
+    c = json.loads(json.dumps(e, ensure_ascii=False))
+    for i in c.get("inputs", []):
+        i.pop("thumb", None)
+    (c.get("trigger", {}).get("part") or {}).pop("frame", None)
+    if not full:
+        if len(c.get("prompt", "")) > 400:
+            c["prompt"] = c["prompt"][:399] + "…"
+        cl = c.get("cleared") or {}
+        for k in ("prompt", "diff"):
+            if len(cl.get(k, "")) > 400:
+                cl[k] = cl[k][:399] + "…"
+    return c
+
+
+def cmd_caught_flag(a):
+    """The flag record, kept in Loupe (the web app: search, filters, grouping, evidence)
+    of every prompt and video that made Higgsfield flag, refuse, withhold or reroute something during a run (a
+    moderation block, a job that failed within seconds with no reason, an upload or element marked nsfw / ip_checking
+    / failed, an output withheld, a preset notice instead of a job). Written only through this command; no step of a
+    run and no agent reads it (command item 23). The script gathers what the run knows (the video, the request, every
+    input with its file, thumbnail and file facts, the reference, the source segment, the ledger row, the hook's raw capture); the
+    agent writes the judgement (the reply, the suspected trigger, --asset, --prompt-span, --part-*, --tags). Loupe adds the history
+    evidence.
+      add        write a CF-nnn entry (--run and --video attach the request, inputs, plan, ledger row by themselves)
+      set        update an entry: status (cleared needs the accepted request or job), notes, tags, assets, outcome
+      list       entries as JSON for the terminal (filters; --full keeps the long texts)
+      reconcile  the run's ledger (state.json) against the page: rows marked --flagged with no entry, and failed
+                 rows with no job id or a flag-like note, for the agent to judge
+      open       open Loupe's flag page in the default browser (sign in there)"""
+    if a.action == "open":
+        lc = _lc()
+        if not lc.ensure():
+            fail("Loupe is not running and could not be started (python ~/.claude/loupe/loupe.py serve)", 1)
+        url = lc.base_url() + "/#/flags" + (f"/{a.id}" if a.id else "")
+        webbrowser.open(url)
+        out({"ok": True, "url": url, "opened": True})
+    _ld = Path(os.environ.get("LOUPE_DATA") or (LOUPE_HOME / "data"))
+    _ld.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(_ld / "flags-client.lock")
+    if a.action == "reconcile":
+        if not a.run:
+            fail("reconcile needs --run", 2)
+        rd = _cf_run_dir(a.run)
+        if not rd or not (rd / "state.json").exists():
+            fail(f"state.json not found for run {a.run}", 2)
+        led = json.loads((rd / "state.json").read_text(encoding="utf-8")).get("submissions", [])
+        ents = [e for e in _cf_load(q=f"run:{rd.name}") if rd.name in str(e.get("where", {}).get("run", "")) or str(a.run) in str(e.get("where", {}).get("run", ""))]
+        def recorded(e):
+            vid = _lane(e["video"])
+            for c in ents:
+                cw = c.get("where", {})
+                same_v = re.sub(r"\D", "", str(cw.get("video", ""))).lstrip("0") == vid.lstrip("0")
+                att = re.sub(r"\D", "", str(cw.get("attempt", "")))[-1:]
+                jobs = str(c.get("job", "")) + " " + str(c.get("fingerprint", ""))
+                if same_v and (att in ("", str(e.get("attempt"))) or (e.get("job_id") and e["job_id"] in jobs) or e["fingerprint"] in jobs):
+                    return c["id"]
+            return None
+        marked, check = [], []
+        for e in led:
+            notes = [h.get("note") or "" for h in e.get("history", [])]
+            row = {"video": e["video"], "attempt": e.get("attempt"), "status": e["status"], "job_id": e.get("job_id"),
+                   "fingerprint": e["fingerprint"], "notes": [n[:200] for n in notes if n], "entry": recorded(e)}
+            if e.get("flagged"):
+                marked.append(row)
+            elif e["status"] == "failed" and (not e.get("job_id") or any(CF_TERMS.search(n) for n in notes)):
+                check.append(row)
+        _s, _cd = _cf_api("GET", "/api/captures?unclaimed=1&limit=30")
+        caps = [{"id": c["id"], "at": c["ts"], "tool": c["tool"].replace("mcp__higgsfield__", ""), "job": c["job"], "summary": c["summary"][:200]}
+                for c in (_cd.get("captures", []) if _s == 200 else [])]
+        out({"ok": True, "run": rd.name, "entries_for_run": [c["id"] for c in ents],
+             "unclaimed_captures": caps,
+             "flagged_unrecorded": [r for r in marked if not r["entry"]],
+             "flagged_recorded": [r for r in marked if r["entry"]],
+             "failed_to_judge": [r for r in check if not r["entry"]],
+             "note": "flagged_unrecorded must each get `caught-flag add`; failed_to_judge rows are the agent's call "
+                     "(a flag or a validation/credit error); mark a row's ledger entry with `ledger set --flagged`. "
+                     "unclaimed_captures are raw Higgsfield responses the hook saved that no flag claimed yet: one that is a flag of this run gets "
+                     "`caught-flag add ... --capture <id>`; the others are for the admin to dismiss in Loupe."})
     if a.action == "list":
-        entries = _ce_parse(CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n"))
+        qs = " ".join(x for x in ((f"status:{a.status}" if a.status else ""), (f"run:{a.run}" if a.run else ""), (f"video:{a.video}" if a.video else ""),
+                                  (f"model:{a.model}" if a.model else ""), (f"kind:{a.kind}" if a.kind else "")) if x)
+        entries = _cf_load(q=qs)
         def keep(e):
-            if a.mode and a.mode.lower() not in (e.get("mode", "") + " any all").lower(): return False
-            if a.model and a.model.lower() not in (e.get("model", "") + " any all unknown").lower(): return False
-            if a.cls and a.cls.lower() not in e.get("class", "").lower(): return False
-            if a.status and e.get("status", "").lower() != a.status.lower(): return False
-            if a.grep and a.grep.lower() not in json.dumps(e, ensure_ascii=False).lower(): return False
+            w, t = e.get("where", {}), e.get("trigger", {})
+            if a.mode and a.mode.lower() not in (str(w.get("mode", "")) + " any all").lower(): return False
+            if a.model and a.model.lower() not in (str(w.get("model", "")) + " any all unknown").lower(): return False
+            if a.kind and a.kind.lower() != str(e.get("kind", "")).lower(): return False
+            if a.status and str(e.get("status", "")).lower() != a.status.lower(): return False
+            if a.run and a.run.lower() not in str(w.get("run", "")).lower(): return False
+            if a.video and re.sub(r"\D", "", a.video).lstrip("0") != re.sub(r"\D", "", str(w.get("video", ""))).lstrip("0"): return False
+            if a.tags and not set(_cf_tags(a.tags)) <= set(t.get("tags", [])): return False
+            if a.asset and " ".join(a.asset).lower() not in json.dumps([i for i in e.get("inputs", []) if i.get("suspect")] + t.get("assets_unmatched", []),
+                                                                      ensure_ascii=False).lower(): return False
+            if a.grep and a.grep.lower() not in json.dumps(_cf_compact(e, True), ensure_ascii=False).lower(): return False
             return True
-        sel = [e for e in entries if keep(e)]
-        if a.digest:
-            def short(s, n=240):
-                s = re.sub(r"\s+", " ", s or "").strip()
-                return s if len(s) <= n else s[:n - 1] + "…"
-            skip = ("", "not recorded", "none", "unknown", "—")
-            sel = [{k: v for k, v in {
-                "id": e["id"], "title": e["title"], "source": e.get("source", "user"), "status": e.get("status", ""),
-                "mode": e.get("mode", ""), "model": e.get("model", ""), "product": e.get("product", ""),
-                "assets": e.get("assets", ""), "class": e.get("class", ""), "evidence": e.get("evidence", ""),
-                "wrong": short(e.get("what_was_wrong", "")), "params": e.get("params", ""),
-                "errors": short(e.get("errors", ""), 300), "rule": e.get("rule", ""),
-                "verified": e.get("verified", ""), "prompt_change": e.get("prompt_change", ""),
-            }.items() if v not in skip} for e in sel]
-        elif a.rules:
-            sel = [{"id": e["id"], "title": e["title"], "class": e.get("class", ""), "status": e.get("status", ""),
-                    "rule": e.get("rule", "")} for e in sel]
-        out({"ok": True, "file": str(CAUGHT_ERRORS), "total": len(entries), "count": len(sel), "entries": sel})
+        sel = [_cf_compact(e, a.full) for e in entries if keep(e)]
+        out({"ok": True, "url": _lc().base_url() + "/#/flags", "total": len(entries), "count": len(sel), "entries": sel})
     if a.action == "set":
         if not a.id:
-            fail("--id CE-nnn is required", 2)
-        with FileLock(CAUGHT_ERRORS.with_suffix(".lock")):
-            text = CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n")
-            m = re.search(rf"^## {re.escape(a.id)} · .*$", text, re.M)
-            if not m:
+            fail("--id CF-nnn is required", 2)
+        with lock:
+            entries = _cf_load(a.id)
+            e = next((x for x in entries if x.get("id") == a.id), None)
+            if e is None:
                 fail(f"{a.id} not found", 1)
-            nxt = re.search(r"^## CE-", text[m.end():], re.M)
-            s, e = m.start(), (m.end() + nxt.start()) if nxt else len(text)
-            block = text[s:e]
-            if a.status == "fixed" and not a.qc_pass:
-                fail("--status fixed needs --qc-pass: the verdict of the regenerated (or re-edited) video that passed QC "
-                     "or that the user approved; a fix is recorded only once it is verified", 2)
-            if a.verified_prompt:
-                if not a.qc_pass:
-                    fail("--verified-prompt needs --qc-pass: insert the working prompt only after the new generation "
-                         "came back correct and passed QC", 2)
-                vp = _ce_text_or_file(a.verified_prompt)
-                pm = re.search(r"^- \*\*prompt:\*\*\n  ```text\n(.*?)\n  ```", block, re.S | re.M)
-                old_prompt = "\n".join(l[2:] for l in pm.group(1).splitlines()) if pm else ""
-                change = _ce_sentence_diff(old_prompt, vp) if old_prompt else ""
-                vparams = _ce_params(a.verified_prompt)
-                new_fields = (_ce_block_field("verified prompt", vp)
-                              + _ce_block_field("prompt change", change or "not computed (the entry has no failed prompt)")
-                              + (f"- **verified params:** {vparams}\n" if vparams else ""))
-                block, n = re.subn(r"^- \*\*verified prompt:\*\* pending.*\n", lambda m: new_fields, block, count=1, flags=re.M)
-                if not n:
-                    block = block.rstrip("\n") + "\n" + new_fields + ("\n" if nxt else "")
-                a.status = a.status or "fixed"
-                a.fix = a.fix or "regenerated with the verified prompt; see prompt change"
-            if a.qc_pass:
-                vline = f"- **verified:** {a.qc_pass.strip()} ({dt.date.today().isoformat()})\n"
-                block, n = re.subn(r"^- \*\*verified:\*\* .*\n", lambda m: vline, block, count=1, flags=re.M)
-                if not n:
-                    block = block.rstrip("\n") + "\n" + vline + ("\n" if nxt else "")
-            for key, val in (("status", a.status), ("promoted to", a.promoted_to), ("fix", a.fix)):
+            if a.status == "cleared" and not (a.cleared_prompt or a.cleared_job):
+                fail("--status cleared needs --cleared-prompt (the request .json or text that Higgsfield accepted) "
+                     "or --cleared-job (the job that ran): a flag counts as cleared only once a request went through", 2)
+            e.setdefault("trigger", {})
+            e.setdefault("inputs", [])
+            cl = e.setdefault("cleared", {})
+            if a.cleared_prompt:
+                cp = _cf_text_or_file(a.cleared_prompt)
+                old = (e.get("prompt") or "").strip()
+                if old and cp.strip() == old:
+                    cl.update({"same_as_flagged": True})
+                    cl.pop("prompt", None); cl.pop("diff", None)
+                else:
+                    cl.update({"same_as_flagged": False, "prompt": cp, "diff": _cf_sentence_diff(old, cp) if old else ""})
+                prm = _cf_params_dict(_cf_request_json(a.cleared_prompt))
+                if prm:
+                    cl["params"] = prm
+                _crq = _cf_request_json(a.cleared_prompt)
+                if _crq:
+                    _crd = _cf_run_dir(e.get("where", {}).get("run"))
+                    cl["inputs"] = [{"label": i["label"], "role": i["role"], "name": i.get("name", ""),
+                                     "sha1": (_cf_facts(i["path"], ocr=False).get("sha1", "") if i.get("path") else "")}
+                                    for i in _cf_inputs(_crq, _crd, False)]
+            if a.cleared_job:
+                cl["job"] = a.cleared_job
+            if a.note:
+                e.setdefault("log", []).append({"at": now_iso(), "note": a.note.strip()})
+            for key, val in (("status", a.status), ("outcome", a.outcome), ("changed", a.changed), ("rule", a.rule),
+                             ("promoted_to", a.promoted_to)):
                 if val:
-                    block, n = re.subn(rf"^- \*\*{key}:\*\* .*$", f"- **{key}:** {val}", block, count=1, flags=re.M)
-                    if not n:
-                        block = block.rstrip("\n") + f"\n- **{key}:** {val}\n"
-            text = text[:s] + block + text[e:]
-            CAUGHT_ERRORS.write_bytes(text.encode("utf-8"))
-        out({"ok": True, "id": a.id, "status": a.status, "promoted_to": a.promoted_to, "file": str(CAUGHT_ERRORS)})
+                    e[key] = val
+            if a.status == "cleared" and not a.outcome and not e.get("outcome"):
+                e["outcome"] = "cleared: a changed request was accepted"
+            if a.trigger:
+                m = re.match(r"^\[(E|I)\]\s*", a.trigger.strip(), re.I)
+                e["trigger"]["text"] = a.trigger.strip()[m.end():] if m else a.trigger.strip()
+                if m:
+                    e["trigger"]["evidence"] = m.group(1).upper()
+            if a.tags:
+                e["trigger"]["tags"] = e["trigger"].get("tags", []) + [t for t in _cf_tags(a.tags) if t not in e["trigger"].get("tags", [])]
+            if a.asset:
+                _cf_mark_assets(e, a.asset, not a.no_thumbs)
+            if a.prompt_span:
+                e["trigger"]["prompt_span"] = a.prompt_span.strip()
+                e["trigger"]["span_in_prompt"] = a.prompt_span.strip().lower() in (e.get("prompt") or "").lower()
+            rd = _cf_run_dir(e.get("where", {}).get("run"))
+            e["trigger"]["part"] = _cf_part(a, e["trigger"].get("part"), rd, {}, e.get("where", {}).get("output"), not a.no_thumbs)
+            if not e["trigger"]["part"]:
+                e["trigger"].pop("part", None)
+            e["updated"] = now_iso()
+            _cf_save(entries)
+        out({"ok": True, "id": a.id, "status": e.get("status"), "url": _lc().base_url() + f"/#/flags/{a.id}"})
     # add
-    need = ("title", "wrong", "rule") if a.source == "agent" else ("title", "user", "wrong", "rule")
+    need = ("title", "kind", "response", "trigger")
     missing = [k for k in need if not getattr(a, k)]
     if missing:
         fail("missing " + ", ".join("--" + k for k in missing)
-             + (" (an agent entry needs the diagnosis and the rule)" if a.source == "agent"
-                else " (the user's words, the diagnosis and the rule are required)"), 2)
-    with FileLock(CAUGHT_ERRORS.with_suffix(".lock")):
-        text = CAUGHT_ERRORS.read_bytes().decode("utf-8").replace("\r\n", "\n")
-        ids = [int(x) for x in re.findall(r"^## CE-(\d{3,}) · ", text, re.M)]
-        cid = f"CE-{(max(ids) + 1) if ids else 1:03d}"
-        date = a.date or dt.date.today().isoformat()
-        user = (a.user or "").strip().strip('"')
-        said = f"\"{user}\"" if user else "— (caught by the agent during the run)"
-        auto = _ce_autofind(a.run, a.video)
-        brief = _ce_text_or_file(a.brief) or (_ce_text_or_file(auto["brief"]) if "brief" in auto else "")
-        prompt = _ce_text_or_file(a.prompt) or (_ce_text_or_file(auto["prompt"]) if "prompt" in auto else "")
-        qc = _ce_text_or_file(a.qc) or auto.get("qc", "")
-        delivered = a.delivered or auto.get("delivered", "")
-        plan = a.plan or (str(auto["plan"]) if "plan" in auto else "")
-        req_src = a.prompt if (a.prompt and str(a.prompt).lower().endswith(".json")) else (None if a.prompt else auto.get("prompt"))
-        params = a.params or _ce_params(req_src)
-        errors = _ce_text_or_file(a.errors)
-        attached = [k for k, v in (("brief", brief), ("prompt", prompt), ("qc", qc), ("plan", plan)) if v]
-        ctx = (_ce_block_field("brief", brief)
-               + _ce_block_field("prompt", prompt)
-               + f"- **params:** {params or 'not recorded'}\n"
-               + (_ce_block_field("errors", errors) if errors else "- **errors:** none\n")
-               + f"- **evidence:** {a.evidence or 'not recorded'}\n"
-               + _ce_block_field("qc", qc)
-               + f"- **plan:** {plan or 'not recorded'}\n")
-        block = (f"\n## {cid} · {date} · {a.title.strip()}\n"
-                 f"- **source:** {a.source}\n"
-                 f"- **video:** {a.video or 'unknown'}\n"
-                 f"- **run:** {a.run or 'unknown'}\n"
-                 f"- **delivered:** {delivered or 'not recorded'}\n"
-                 f"- **mode:** {a.mode or 'unknown'}\n"
-                 f"- **model:** {a.model or 'unknown'}\n"
-                 f"- **product:** {a.product or 'unknown'}\n"
-                 f"- **assets:** {a.assets or 'not recorded'}\n"
-                 f"- **user said:** {said}\n"
-                 f"- **what was wrong:** {a.wrong.strip()}\n"
-                 + ctx +
-                 f"- **class:** {a.cls or 'new'}\n"
-                 f"- **cause:** {a.cause}\n"
-                 f"- **fix:** {a.fix or 'none yet'}\n"
-                 f"- **verified prompt:** pending (inserted only after a new generation passes QC)\n"
-                 f"- **rule:** {a.rule.strip()}\n"
-                 f"- **status:** {a.status or 'open'}\n"
-                 f"- **promoted to:** {a.promoted_to or '—'}\n")
-        CAUGHT_ERRORS.write_bytes((text.rstrip("\n") + "\n" + block).encode("utf-8"))
-    missing_ctx = [k for k in ("brief", "prompt") if k not in attached]
-    out({"ok": True, "id": cid, "date": date, "title": a.title.strip(), "file": str(CAUGHT_ERRORS),
-         "attached": attached, "missing": missing_ctx,
-         "note": ("attach the brief and the final prompt (--brief/--prompt, text or file; or --run + --video to find them) so the cause can be read; " if missing_ctx else "")
-                 + "promote the rule into its reference when it is general or recurs, then `caught-error set --status promoted --promoted-to …`"})
+             + " (the verbatim Higgsfield response, the kind and the agent's suspected trigger are required;"
+               " write 'none given' for a response that came back empty)", 2)
+    tags = _cf_tags(a.tags)
+    if not tags:
+        fail("missing --tags: 1 to 4 grouping labels for the trigger (for example real-person-face, video-reference, "
+             "celebrity-name, brand-name, protected-ip, nsfw-image, element, prompt-wording, preset-notice, output-withheld, "
+             "unknown-trigger); the page groups and filters by them", 2)
+    thumbs = not a.no_thumbs
+    with lock:
+        entries = []
+        cid = ""            # Loupe assigns the CF-nnn id
+        rd = _cf_run_dir(a.run)
+        given_json = bool(a.prompt) and str(a.prompt).lower().endswith(".json") and Path(str(a.prompt)).is_file()
+        rq = Path(str(a.prompt)) if given_json else (_cf_request_file(rd, a.video, a.attempt) if rd and a.video else None)
+        req = _cf_request_json(rq)
+        prm = req.get("params") if isinstance(req.get("params"), dict) else req
+        prompt = _cf_text_or_file(a.prompt) if (a.prompt and not given_json) else str(prm.get("prompt") or "").strip()
+        params = _cf_params_text(a.params) if a.params else _cf_params_dict(req)
+        inputs = _cf_inputs(req, rd, thumbs) if req else []
+        if not inputs and a.inputs:
+            inputs = _cf_inputs_from_text(_cf_text_or_file(a.inputs), rd)
+        for _it in inputs:      # file facts: sha1, size, dimensions, duration, text seen on screen (OCR)
+            if _it.get("path"):
+                _f = _cf_facts(_it["path"], ocr=not a.no_facts)
+                if _f:
+                    _it["facts"] = _f
+        sub = _cf_submission(rd, a.video, a.attempt)
+        mode_, model_ = _cf_state_info(rd)
+        nn = _cf_nn(a.video)
+        output = a.output or ""
+        clip = a.clip or ""
+        if not clip and str(req.get("clip") or "").lower() not in ("", "none", "null"):
+            clip = str(req["clip"])
+        plan = a.plan or (str(rd / "40-briefs" / f"video-{nn}-plan.md") if rd and (rd / "40-briefs" / f"video-{nn}-plan.md").is_file() else "")
+        brief = str(rd / "40-briefs" / f"video-{nn}-brief.md") if rd and (rd / "40-briefs" / f"video-{nn}-brief.md").is_file() else ""
+        where = {"run": rd.name if rd else (a.run or ""), "video": a.video or "", "attempt": a.attempt or "", "clip": clip,
+                 "mode": a.mode or mode_, "model": a.model or model_ or str(prm.get("model") or ""), "tool": a.tool or "",
+                 "stage": a.stage or "", "product": a.product or "", "reference": a.flagged_video or str(req.get("reference") or ""),
+                 "segment": str(req.get("duration_basis") or ""), "plan": plan, "brief": brief, "request": str(rq) if rq else "",
+                 "output": output}
+        where = {k: v for k, v in where.items() if v not in ("", None)}
+        trig_text, ev = a.trigger.strip(), "I"
+        m = re.match(r"^\[(E|I)\]\s*", trig_text, re.I)
+        if m:
+            ev, trig_text = m.group(1).upper(), trig_text[m.end():]
+        trig = {"text": trig_text, "evidence": ev, "cause": a.cause, "tags": tags}
+        entry = {"id": cid, "created": a.date or now_iso(), "updated": now_iso(), "title": a.title.strip(), "source": a.source,
+                 "status": a.status or "open", "kind": a.kind, "where": where, "response": _cf_text_or_file(a.response),
+                 "job": a.job or str(sub.get("job_id") or ""), "fingerprint": a.fingerprint or str(sub.get("fingerprint") or ""),
+                 "credits": a.credits or "", "prompt": prompt, "params": params, "inputs": inputs, "trigger": trig,
+                 "changed": a.changed or "", "outcome": a.outcome or "", "cleared": {}, "rule": (a.rule or "").strip(),
+                 "promoted_to": a.promoted_to or "", "log": []}
+        _cf_mark_assets(entry, a.asset, thumbs)
+        if a.prompt_span:
+            trig["prompt_span"] = a.prompt_span.strip()
+            trig["span_in_prompt"] = a.prompt_span.strip().lower() in prompt.lower()
+        part = _cf_part(a, None, rd, req, output, thumbs)
+        if part:
+            trig["part"] = part
+        if not trig["assets"]:
+            trig.pop("assets")
+        if not trig["assets_unmatched"]:
+            trig.pop("assets_unmatched")
+        # the raw response a hook captured the moment it came back (by job id, or the one named with --capture)
+        _cap = None
+        _jobs = [j for j in re.split(r"[,\s]+", str(entry.get("job") or "")) if j]
+        if a.capture:
+            _s, _d = _cf_api("GET", f"/api/captures?full=1&limit=200")
+            _cap = next((c for c in (_d.get("captures", []) if _s == 200 else []) if str(c["id"]) == str(a.capture)), None)
+        elif _jobs:
+            _s, _d = _cf_api("GET", "/api/captures?full=1&limit=10&job=" + _jobs[0])
+            _cap = next(iter(_d.get("captures", []) if _s == 200 else []), None)
+        if _cap:
+            _pl = _cap.get("payload") or {}
+            entry["captured"] = {"id": _cap["id"], "at": _cap["ts"], "tool": _cap["tool"], "response": str(_pl.get("response", ""))[:12000],
+                                 "agent": _cap.get("agent", "")}
+        entries.append(entry)
+        _cf_save(entries)
+        cid = entry["id"]
+        if _cap and not str(cid).startswith("CF-Q"):
+            _cf_api("POST", f"/api/captures/{_cap['id']}/claim", {"flag": cid})
+    gaps = []
+    if not (trig.get("assets") or trig.get("assets_unmatched")):
+        gaps.append("asset: say which input you suspect with --asset (an 'Image 2' label, a media id, a file name or an A/V id)")
+    if not trig.get("prompt_span"):
+        gaps.append("prompt words: --prompt-span \"<the exact words>\" when a wording is suspected")
+    if not trig.get("part"):
+        gaps.append("video part: --part-of / --part-from / --part-to when a part of a video is suspected")
+    out({"ok": True, "id": cid, "title": entry["title"], "url": _lc().base_url() + f"/#/flags/{cid}", "capture": (entry.get("captured") or {}).get("id"),
+         "attached": [k for k, v in (("request", rq), ("prompt", prompt), ("params", params), ("inputs", inputs), ("plan", plan),
+                                     ("ledger row", sub), ("thumbnails", any(i.get("thumb") for i in inputs)),
+                                     ("file facts", any(i.get("facts") for i in inputs)), ("raw response", entry.get("captured"))) if v],
+         "inputs": [{"label": i["label"], "name": i.get("name"), "suspect": bool(i.get("suspect"))} for i in inputs],
+         "unmatched_assets": trig.get("assets_unmatched", []), "not_given": gaps,
+         "note": "after the changed request is accepted: `caught-flag set --id %s --status cleared --cleared-prompt <request.json>`; "
+                 "if the flag stays, `--status persistent`; `caught-flag open --id %s` shows it in Loupe" % (cid, cid)})
+
+
+def cmd_loupe(a):
+    """The Loupe web app: ensure (start it if needed) | status | open."""
+    lc = _lc()
+    if a.action == "ensure":
+        ok = lc.ensure()
+        out({"ok": ok, "url": lc.base_url(), "note": "" if ok else "Loupe could not be started: python ~/.claude/loupe/loupe.py serve"}, 0 if ok else 1)
+    if a.action == "status":
+        h = lc.health()
+        out({"ok": bool(h), "url": lc.base_url(), "running": bool(h), **(h or {})})
+    if a.action == "open":
+        if not lc.ensure():
+            fail("Loupe could not be started", 1)
+        webbrowser.open(lc.base_url() + (a.path or "/"))
+        out({"ok": True, "url": lc.base_url() + (a.path or "/")})
+
+
+def _qc_ctx(a) -> dict:
+    ctx = {"run": a.run or "", "video": a.video or "", "model": a.model or "", "mode": a.mode or "", "product": a.product or "",
+           "product_details": (getattr(a, "product_details", "") or "")[:600],
+           "kinds": [k.strip() for k in (a.kinds or "").split(",") if k.strip()]}
+    rd = _cf_run_dir(a.run) if a.run else None
+    if rd:
+        mode_, model_ = _cf_state_info(rd)
+        ctx["run"] = rd.name
+        ctx["mode"] = ctx["mode"] or mode_
+        ctx["model"] = ctx["model"] or model_
+    return ctx
+
+
+def _qc_sample_files(res, rd, video):
+    """Where the answer is kept for the video's record (the agent reads it from the JSON line, the file is the audit)."""
+    try:
+        if rd and video:
+            d = rd / "60-outputs" / f"video-{_cf_nn(video)}"
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "qc-consult.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+            return str(d / "qc-consult.json")
+    except OSError:
+        pass
+    return ""
+
+
+def cmd_qc_consult(a):
+    """QC phase only. qc-consult asks the QC keeper (a separate read-only Claude session that holds the sample library: the generation
+    misses the admin marked, each as one image of the frames the admin chose, tagged WRONG or RIGHT with their times); qc-brief returns the
+    matching samples with no model call. Both print the samples' image paths: view them, then compare the marked region with the same
+    place in the video under QC. Loupe unreachable: the answer says so and the QC goes on without samples."""
+    ctx = _qc_ctx(a)
+    ctx["q"] = a.question or ""
+    if a.cmd == "qc-consult":
+        if not a.question:
+            fail("qc-consult needs --question (what you see or suspect in the video under QC)", 2)
+        s, d = _cf_api("POST", "/api/qc/consult", {**ctx, "question": a.question, "checkpoints": a.checkpoint or []}, key="qc", timeout=190)
+    else:
+        s, d = _cf_api("POST", "/api/qc/brief", ctx, key="qc", timeout=60)
+    if s != 200:
+        out({"ok": True, "mode": "unavailable", "samples": [], "note": "no QC samples for this check: " + str((d or {}).get("error"))})
+    rd = _cf_run_dir(a.run) if a.run else None
+    d["saved"] = _qc_sample_files(d, rd, a.video)
+    out(d)
+
+
+def cmd_plan_hints(a):
+    """First request of a video only (X2). Asks the keeper (the same separate read-only session that holds the sample library) which past
+    misses could matter for the plan of a video that has not been generated. The answer is a few text-only hints, usually none: each has
+    the plan situation that triggers it, what the right version shows, the writer's own tool to use at that beat, and when it does not apply.
+    A hint is a risk to check the plan against, never prompt text. Keeper unavailable or library empty: no hints, and the request is written
+    as always. Nothing here changes a request."""
+    ctx = _qc_ctx(a)
+    beats = (a.beats or "").strip()
+    if not beats:
+        fail("plan-hints needs --beats (one line per beat of the plan: what happens, the product's form and state, the camera)", 2)
+    cut = len(beats) > 2000
+    beats = beats[:2000]
+    s, d = _cf_api("POST", "/api/qc/consult", {**ctx, "purpose": "plan", "question": beats}, key="qc", timeout=190)
+    if s != 200:
+        out({"ok": True, "mode": "unavailable", "hints": [], "note": "no sample hints: " + str((d or {}).get("error"))})
+    rd = _cf_run_dir(a.run) if a.run else None
+    res = {"ok": True, "mode": d.get("mode"), "hints": d.get("hints", []), "held_back": d.get("held_back", 0), "none_reason": d.get("none_reason", ""),
+           "beats_cut": cut}
+    if res["hints"]:
+        res["rules"] = ("Hints are risks to check the plan against, never prompt text: do not copy their words, do not name the wrong behaviour in the "
+                        "prompt, add no negative list. Apply one only to the beat its trigger matches and only if its caveat does not exclude it, by the "
+                        "smallest change inside the existing prompting stack, written positively as its right_outcome. At most two per video. "
+                        "Record each (applied to which beat, or why not) under 'Sample hints' in the brief.")
+    try:
+        if rd and a.video:
+            f = rd / "40-briefs" / f"video-{_cf_nn(a.video)}-hints.json"
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(json.dumps({**res, "beats": beats}, ensure_ascii=False, indent=1), encoding="utf-8")
+            res["saved"] = str(f)
+    except OSError:
+        pass
+    out(res)
 
 
 def _px_span(spec: str, what: str) -> float:
@@ -3773,9 +4329,12 @@ def _ledger_write(a, p: Path):
         e["status"] = a.status
         if a.job:
             e["job_id"] = a.job
+        if a.flagged:
+            e["flagged"] = True
         st["updated"] = now_iso()
         write_json(p, st)
-        out({"ok": True, "entry": e})
+        out({"ok": True, "entry": e, **({"reminder": "flagged: record it now with `caught-flag add` (the verbatim response, your suspected trigger and --tags; "
+                                                       "--asset, --prompt-span and --part-* when you can tell what caused it), then change the request"} if a.flagged else {})})
 
 
 def cmd_open(a):
@@ -6320,6 +6879,21 @@ def cmd_pdf_text(a):
                  + (f"; stopped at page {res['stopped_at_page']} because of --max-chars: read on with --pages {res['stopped_at_page']}-" if res.get("stopped_at_page") else "")})
 
 
+def cmd_model_entry(a):
+    """Print one model's entry of models/index.json with its guide path and section folder, so the 40 KB index is never
+    read whole. An id with no guide returns the fallback guide."""
+    idx = json.loads((ATG_HOME / "models" / "index.json").read_text(encoding="utf-8"))
+    e = idx["models"].get(a.id)
+    if e is None:
+        fail(f"unknown model id {a.id}", known=sorted(idx["models"]))
+    guide = e.get("guide") or idx.get("fallback_guide")
+    g = ATG_HOME / guide
+    sec = g.with_suffix("")
+    out({"ok": True, "id": a.id, "entry": e, "guide": guide, "guide_exists": g.is_file(),
+         "sections_dir": str(sec).replace("\\", "/") if sec.is_dir() else None,
+         "higgsfield_guide": idx.get("higgsfield_guide"), "fixed_output": idx.get("fixed_output")})
+
+
 # --------------------------------------------------------------------------- CLI
 
 def main():
@@ -6354,6 +6928,7 @@ def main():
     p.add_argument("--fingerprint"); p.add_argument("--job")
     p.add_argument("--status", choices=["submitted", "unknown", "completed", "failed", "accepted", "rejected", "superseded"])
     p.add_argument("--note")
+    p.add_argument("--flagged", action="store_true", help="set: mark this submission as flagged/refused by Higgsfield (then `caught-flag add`)")
     p.add_argument("--lane", help="lane override (default: the video number before any '-')")
     p.add_argument("--max-open", type=int, help="the cap that begin reports the open submissions against (default production.max_parallel_jobs)")
     p.set_defaults(fn=cmd_ledger)
@@ -6365,6 +6940,9 @@ def main():
     p.add_argument("--live-ids", help="comma/space separated model ids from models_explore list type=video")
     p.add_argument("--live-file", help="JSON file with the models_explore list output (items[].id)")
     p.set_defaults(fn=cmd_model_menu)
+
+    p = sp.add_parser("model-entry"); p.add_argument("--id", required=True, help="model id from models_explore / the menu")
+    p.set_defaults(fn=cmd_model_entry)
 
     def media_opts(p):
         p.add_argument("--fps", type=float, default=cfg_get("analysis.baseline_fps", 5.0),
@@ -6528,37 +7106,77 @@ def main():
     p.add_argument("--out", help="write the result as JSON")
     p.set_defaults(fn=cmd_scale)
 
-    p = sp.add_parser("caught-error", help="the feedback ledger caught_errors.md: add | list | set")
-    p.add_argument("action", choices=["add", "list", "set"])
-    p.add_argument("--id", help="set: the entry id (CE-nnn)")
-    p.add_argument("--title", help="add: a short title"); p.add_argument("--date", help="add: YYYY-MM-DD (default today)")
-    p.add_argument("--video", help="video number or CapCut project name"); p.add_argument("--run", help="run id")
+    p = sp.add_parser("caught-flag", help="the flag record in Loupe (the web app): add | list | set | reconcile | open")
+    p.add_argument("action", choices=["add", "list", "set", "reconcile", "open"])
+    p.add_argument("--id", help="set: the entry id (CF-nnn)")
+    p.add_argument("--title", help="add: a short title"); p.add_argument("--date", help="add: YYYY-MM-DD (default: now)")
+    p.add_argument("--run", help="run id or folder (add: attaches the request, inputs, plan and ledger row; list: filter; reconcile: required)")
+    p.add_argument("--video", help="video number (add: attaches that video's files; list: filter)")
+    p.add_argument("--attempt", help="add: the attempt (a1, a2, c2-a1 …); picks the request file")
+    p.add_argument("--clip", help="add: the clip (c1, c2 …) of a multi-clip video")
     p.add_argument("--mode", help="analyze-recreate | analyze-create | analyze-viral-browser | edit (list: filter)")
     p.add_argument("--model", help="model id (list: filter)"); p.add_argument("--product", help="client product")
-    p.add_argument("--user", help="add: the user's words, verbatim")
-    p.add_argument("--wrong", help="add: what was wrong, diagnosed in pipeline terms")
-    p.add_argument("--class", dest="cls", help="reference and section, e.g. 'anomaly-catalog.md §2.7' (list: filter)")
-    p.add_argument("--cause", choices=CE_CAUSES, default="unknown")
-    p.add_argument("--fix", help="what was done (regenerate with …, post-fix, none)")
-    p.add_argument("--rule", help="add: the general rule, as a kind not an instance")
-    p.add_argument("--status", choices=CE_STATUS, help="add: initial status (open); set: new status; list: filter")
-    p.add_argument("--promoted-to", help="set: the reference and section the rule was promoted into")
-    p.add_argument("--brief", help="add: the video's brief, as text or a file (default: <run>/40-briefs/video-NN-brief.md when --run and --video are given)")
-    p.add_argument("--prompt", help="add: the final prompt sent, as text or a request .json (default: the newest <run>/50-requests/video-NN*-request.json)")
-    p.add_argument("--qc", help="add: the QC reading (the agent's verdict) and its reasons, as text or a file")
+    p.add_argument("--kind", choices=CF_KINDS, help="add: what Higgsfield did (list: filter)")
+    p.add_argument("--tool", help="add: generate_video | generate_image | media_upload | show_reference_elements | reframe | other")
+    p.add_argument("--stage", help="add: preflight | submit | job | upload | result")
+    p.add_argument("--response", help="add: Higgsfield's answer verbatim (error text, notice, status), text or file; 'none given' when empty")
+    p.add_argument("--job", help="add: job id(s) that were flagged (default: the ledger row's)")
+    p.add_argument("--fingerprint", help="add: the ledger fingerprint of the request (default: the ledger row's)")
+    p.add_argument("--credits", help="add: charged / refunded credits")
+    p.add_argument("--prompt", help="add: the flagged prompt as text, or the request .json (default: the run's request for this video and attempt)")
+    p.add_argument("--params", help="add: generation params as 'k=v · k=v' (default: read from the request .json)")
+    p.add_argument("--inputs", help="add: 'role: media id' lines or a file, when there is no request .json")
+    p.add_argument("--flagged-video", help="add: the reference video that carried the flag (V id, file; default: the request's reference)")
+    p.add_argument("--output", help="add: the output file when a job finished but was withheld or flagged")
     p.add_argument("--plan", help="add: the plan file path (default: <run>/40-briefs/video-NN-plan.md)")
-    p.add_argument("--source", choices=["user", "agent"], default="user",
-                   help="add: user = the user's feedback (--user required); agent = an error an agent caught during the run")
-    p.add_argument("--delivered", help="add: what was delivered (CapCut project, final file); default from <run>/60-outputs/video-NN/result.json")
-    p.add_argument("--assets", help="add: product/asset files used + key specs, e.g. '<path> (9-piece carton 7.5×7.5×1.6 cm)'")
-    p.add_argument("--params", help="add: generation params (default: read from the failed request .json)")
-    p.add_argument("--errors", help="add: execution errors (Higgsfield errors, preflight adjustments, moderation, failed jobs), text or file")
-    p.add_argument("--evidence", help="add: where it shows: checkpoint, time range, sheet or frame path")
-    p.add_argument("--verified-prompt", help="set: the prompt (text or request .json) of the regeneration that PASSED QC; needs --qc-pass")
-    p.add_argument("--qc-pass", help="set: the passing verdict of the new generation (or the user's approval); required for --status fixed")
-    p.add_argument("--digest", action="store_true", help="list: compact context for the next run's agents (no briefs or full prompts)")
-    p.add_argument("--grep", help="list: substring over the whole entry"); p.add_argument("--rules", action="store_true", help="list: ids and rules only")
-    p.set_defaults(fn=cmd_caught_error)
+    p.add_argument("--trigger", help="add/set: the agent's suspected trigger, labelled [E] evidence or [I] inference")
+    p.add_argument("--cause", choices=CF_CAUSES, default="unknown")
+    p.add_argument("--tags", help="add/set: 1 to 4 grouping labels for the trigger, comma-separated (real-person-face, video-reference, "
+                                  "celebrity-name, brand-name, protected-ip, nsfw-image, element, prompt-wording, preset-notice, output-withheld, unknown-trigger …); list: filter")
+    p.add_argument("--asset", action="append", help="add/set: the input you suspect: its label in the request (Image 2, Video 1), a media id, a file name "
+                                                    "or an A/V id, or a file path for an upload flag; repeatable (list: text filter)")
+    p.add_argument("--prompt-span", help="add/set: the exact words of the prompt you suspect")
+    p.add_argument("--part-of", help="add/set: which video holds the suspected part: 'reference V10', 'clip a2' or a path")
+    p.add_argument("--part-from", type=float, help="add/set: start of the suspected part, seconds")
+    p.add_argument("--part-to", type=float, help="add/set: end of the suspected part, seconds")
+    p.add_argument("--part-note", help="add/set: what is on screen in that part")
+    p.add_argument("--no-thumbs", action="store_true", help="add/set: do not embed thumbnails of the inputs and of the part")
+    p.add_argument("--no-facts", action="store_true", help="add: skip the on-screen-text (OCR) facts of the inputs (hashes and sizes are still gathered)")
+    p.add_argument("--capture", help="add: the id of a hook capture (the raw Higgsfield response saved when it came back) to attach; a capture whose job id matches --job is attached by itself")
+    p.add_argument("--changed", help="add/set: what was changed in the next request (reworded, video reference dropped, image replaced …)")
+    p.add_argument("--outcome", help="add/set: what happened next")
+    p.add_argument("--rule", help="add/set: the general rule, as a kind not an instance")
+    p.add_argument("--status", choices=CF_STATUS, help="add: initial status (open); set: new status; list: filter")
+    p.add_argument("--source", choices=["user", "agent"], default="agent")
+    p.add_argument("--note", help="set: a dated note appended to the entry's log")
+    p.add_argument("--cleared-prompt", help="set: the request .json or text Higgsfield accepted after the change")
+    p.add_argument("--cleared-job", help="set: the job id that ran after the change")
+    p.add_argument("--promoted-to", help="set: the reference and section the rule was written into")
+    p.add_argument("--grep", help="list: substring over the whole entry")
+    p.add_argument("--full", action="store_true", help="list: keep the long prompt texts")
+    p.set_defaults(fn=cmd_caught_flag)
+
+    p = sp.add_parser("loupe", help="the Loupe web app: ensure | status | open")
+    p.add_argument("action", choices=["ensure", "status", "open"]); p.add_argument("--path", help="open: a page, e.g. /#/misses")
+    p.set_defaults(fn=cmd_loupe)
+
+    for _nm, _h in (("qc-consult", "QC phase only: ask the QC keeper which generation-miss samples apply to the video under QC"),
+                    ("qc-brief", "QC phase only: the matching generation-miss samples as a plain brief (no model call)")):
+        p = sp.add_parser(_nm, help=_h)
+        p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
+        p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
+        p.add_argument("--product-details", help="its shape, size, opening and natural posture, from its registry row: samples are matched to this video by what the products have in common")
+        p.add_argument("--kinds", help="comma-separated kinds you suspect (counts, openings-use, permanence, scale-size, label-orientation, solidity, blend-paste, posture-place, identity, continuity …)")
+        p.add_argument("--question", help="what you see or suspect in the video under QC, in words (needed for qc-consult)")
+        p.add_argument("--checkpoint", action="append", help="a QC checkpoint of the plan to check against the samples; repeatable")
+        p.set_defaults(fn=cmd_qc_consult, cmd=_nm)
+
+    p = sp.add_parser("plan-hints", help="first request of a video only (X2): ask the keeper which past misses could matter for the plan (text-only hints, usually none)")
+    p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
+    p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
+    p.add_argument("--product-details", help="its shape, size, opening and natural posture, from its registry row")
+    p.add_argument("--beats", help="one line per beat of the plan: what happens, the product's form and state, the camera (2000 characters at most)")
+    p.set_defaults(fn=cmd_plan_hints, kinds=None)
 
     p = sp.add_parser("capcut-name"); p.add_argument("--video", required=True, help="the run's video number")
     p.add_argument("--date", help="YYYY-MM-DD (default: today)"); p.add_argument("--store", help="CapCut drafts dir")

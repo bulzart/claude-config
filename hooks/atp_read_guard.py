@@ -8,7 +8,7 @@ import sys
 
 BIG = [
     (r"/analyze-(then-pick|then-generate)/models/index\.json$",
-     "this is the 40 KB model index: use `atp.py model-entry --id <model>` for one model, or Read it with offset/limit."),
+     "this is the 40 KB model index: use the toolkit's `model-entry --id <model>` for one model, or Read it with offset/limit."),
     (r"/higgsfield/catalog-snapshot-[^/]+\.json$",
      "this is a 33 KB catalog snapshot, only compared with `models_explore list` on drift: Grep it for the model, or Read with offset/limit."),
     (r"/(analyze-then-pick|analyze-then-generate|analyze-stack)/scripts/(atp|atg|analyze_stack|stack)\.py$",
@@ -16,7 +16,7 @@ BIG = [
     (r"/(analyze-then-pick|analyze-then-generate|analyze-stack)/_backups/",
      "backups are never read in a run: they are for `diff` by the person who made them. Read an excerpt with offset/limit if you really need one."),
     (r"/analyze-then-pick/caught_flags\.html$",
-     "the old flag page is retired and was never to be read: flags live in Loupe (`atp.py caught-flag list`)."),
+     "the old flag page is retired and was never to be read: flags live in Loupe (the toolkit's `caught-flag list`)."),
 ]
 
 

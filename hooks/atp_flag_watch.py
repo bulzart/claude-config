@@ -28,23 +28,26 @@ VALIDATION = re.compile(r"insufficient|not enough credits|out of credits|too lon
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 
-def atp_home() -> Path:
-    return Path(os.environ.get("ATP_HOME") or CLAUDE / "analyze-then-pick")
+# (library folder, environment override, toolkit script)
+LIBS = [("analyze-then-pick", "ATP_HOME", "atp.py"), ("analyze-then-generate", "ATG_HOME", "atg.py")]
 
 
-def active_run() -> str:
-    """The run whose state.json changed most recently (within 36 h), as a hint only; the agent names the run when it records the flag."""
-    best, best_t = "", 0.0
-    for p in (atp_home() / "runs").glob("*/state.json"):
-        if p.parent.name.startswith("client-fixes"):
-            continue
-        try:
-            t = p.stat().st_mtime
-        except OSError:
-            continue
-        if t > best_t:
-            best, best_t = p.parent.name, t
-    return best if best and time.time() - best_t < 36 * 3600 else ""
+def active_run() -> tuple[str, str]:
+    """(run name, toolkit script) of the run whose state.json changed most recently (within 36 h, in either library), as a hint only;
+    the agent names the run when it records the flag."""
+    best, best_t, script = "", 0.0, ""
+    for folder, env, tool in LIBS:
+        home = Path(os.environ.get(env) or CLAUDE / folder)
+        for p in (home / "runs").glob("*/state.json"):
+            if p.parent.name.startswith("client-fixes"):
+                continue
+            try:
+                t = p.stat().st_mtime
+            except OSError:
+                continue
+            if t > best_t:
+                best, best_t, script = p.parent.name, t, tool
+    return (best, script) if best and time.time() - best_t < 36 * 3600 else ("", "")
 
 
 def flat(o) -> str:
@@ -103,7 +106,7 @@ def main():
         seen = []
     if key in seen:
         return
-    run = active_run()
+    run, script = active_run()
     ids = list(dict.fromkeys(UUID.findall(text)))[:6]
     doc = {"ts": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"), "tool": tool.replace("mcp__higgsfield__", ""), "run": run,
            "agent": str(ev.get("agent_id") or ev.get("agent_type") or "")[:60] or "main", "session": str(ev.get("session_id", ""))[:12],
@@ -123,7 +126,7 @@ def main():
     if run:
         where = f"capture {cid}" if cid else "queued capture"
         note = (f"Loupe saved Higgsfield's raw answer ({where}; signals: {', '.join(sig)}). If this is a flag of run {run}, record it with "
-                f"`atp.py caught-flag add --run {run} --video NN --attempt aK` before changing the request (the capture attaches itself by job id"
+                f"`{script} caught-flag add --run {run} --video NN --attempt aK` before changing the request (the capture attaches itself by job id"
                 f"{', or --capture ' + str(cid) if cid else ''}).")
         print(json.dumps({"hookSpecificOutput": {"hookEventName": ev.get("hook_event_name") or "PostToolUse", "additionalContext": note}}))
 

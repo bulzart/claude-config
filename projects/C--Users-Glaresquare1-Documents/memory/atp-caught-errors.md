@@ -1,6 +1,6 @@
 ---
 name: atp-caught-errors
-description: "RETIRED 2026-10-13: /analyze-then-pick has no error ledger any more (caught_errors.md and `atp.py caught-error` removed); lessons live generalised in the references; a user's bad-video report is diagnosed in the brief and folded in with /update-from-errors"
+description: "RETIRED 2026-10-13: /analyze-then-pick has no error ledger any more (caught_errors.md and `atp.py caught-error` removed); lessons live generalised in the references; a user's bad-video report is diagnosed in the brief and the rule is written into the owning section on the user's yes"
 metadata:
   node_type: memory
   type: project
@@ -30,12 +30,11 @@ owning sections as general rules (what to achieve, what to avoid) with short sam
   the video's brief (an attempt block) and in `result.json`, nothing else.
 - When the user reports a bad video: take their words verbatim, diagnose in pipeline terms (stage that
   made the miss, stage that should have caught it), say which section holds the rule, offer the fix; if
-  the miss is a kind the references do not hold, name `/update-from-errors analyze-then-pick "<their
-  words>"`.
+  the miss is a kind the references do not hold, offer to write the rule into the owning section (on the
+  user's yes; /update-from-errors is obsolete, [[update-from-errors-command]]).
 - `CE-nnn` in the references are case labels: the README explains them, `learning-log.md` maps each to
   its section, the old file is in git history (last commit `aba83d3`).
 - Not affected, and not asked about: `caught_flags.html` (the flag record, now an HTML page, [[atp-caught-flags]]) and the
-  analyze-then-generate pipeline's own ledger ([[atg-pipeline]]). Both carry the same rot risk; suggest
-  retiring them only if the user raises it.
+  Loupe flag record. (analyze-then-generate's own ledger was retired on 2026-10-18 in its rebuild, [[atg-pipeline]].)
 
 Related: [[atp-anomaly-catalog]], [[update-from-errors-command]], [[atp-build-prompt-sync]].

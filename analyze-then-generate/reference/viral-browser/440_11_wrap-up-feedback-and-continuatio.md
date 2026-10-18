@@ -1,0 +1,22 @@
+## 11. Wrap-up, feedback and continuation (V9)
+
+### 11.1 Wrap-up
+Show the summary (§10.3), the open questions, and the deliverables path. Reconcile the ledger (§10.4 item 8) before the question.
+
+### 11.2 Feedback
+Ask with AskUserQuestion (header "Picks"): **"All good"**, **"I'll review later"** (any later message about the picks is still handled below), **"Adjust"**. Each problem the user names, now or later, is handled as contract item 22 says (`atg-feedback`): their words verbatim and the diagnosis in pipeline terms (the lane, the score, the gate or the control that failed) go into `<RUN>/deliverables/feedback.md` before the fix is offered. A lesson that the references do not hold is written, generalised, into the section that owns the rule (§7.4, §8, §12) when the user asks for it.
+
+### 11.3 Adjust
+A changed brief (market, price band, exclusions, selling model) or a request ("more candidates", "go deeper on C07", "replace pick 2 because …") re-runs only what it touches: re-screen the pool (V4), research the new candidates (V5), choose again (V6, cheap; the changes are recorded with `candidates set --by main --reason`), regenerate the blueprints of the new picks (V7) and re-run V8. The evidence of unchanged candidates is reused if its date is still fresh (§7.4). State what was reused.
+
+### 11.4 Continue to Create
+After the picks are delivered the user may continue in the same run: "make videos for pick N". The run does **not** start generating by itself. On a yes it becomes a Create run and enters the Create flow at its start, for the new inputs only:
+1. `T state --run RUN set analyze_submode=create viral_browser_done=true chosen_product=<C##>`.
+2. **Start steps 3–4** (`atg-start`): load the Higgsfield tools, then pick and lock the model (`T model-menu --mode analyze`).
+3. **Start step 5, new inputs only** (`atg-start`): the product's assets (samples, a contents sample, real dimensions, characters if needed; offer the pick's reference pack (§9.1) as the starting point: `spec.json` gives the real dimensions and the usage steps; the photo links are for the user to open in `photos.html` and save into the assets folder (the Create flow views every asset), or to import into Higgsfield as references without saving (`media_import_url`, HTTPS); no image is fetched on the pipeline's own initiative, and a link whose flags show a watermark or a third party's brand marks is not used as a reference; otherwise the user supplies their own) and an optional examples folder; record the asset paths in `state.json` (`T state --run RUN set assets_paths='[…]'`) and note the credits (`balance`, `credits_start`).
+4. **A1, for what is new only** (`atg-analyze-prepare`): `T inventory <assets> --run RUN --as assets` and `T prep-assets --run RUN`; `T split-audio "<references folder>" --run RUN --audio-only` (Create's sound design needs `files_audio/`, and writing it into the references folder is allowed now that Create is chosen); with examples, `T inventory --as examples` and `T prep-all --set examples`. The references are **not** inventoried or prepared again.
+5. **A2 and A2b** (`atg-analyze-prepare`): the documents among the assets (guardrails), the asset registry, the affordance sheet and the **product insight sheet** of the chosen product (`assets-and-substitution.md` §2 step 3b), seeded with the pick's dossier and blueprint (its demonstration, proof and objections), which stay [I] until the assets confirm them.
+6. **A3, additions only** (`atg-analyze-study`): the viral cards already hold the Create fields (§3.2) and `families.md`, `craft-sheet.md` and `project-profile.md` exist (§4.10). Add each card's client-entity fit, and its guardrail audit when guardrail documents were supplied, from the cards, viewing frames only where a card is silent.
+7. **A4 for the chosen product, then Create as usual** (`atg-analyze-study`, then `atg-create-plan`): the synthesis (the mechanism map, the essence, the audience and mentality model, the trend read) already exists from V3, and the pick's trend pass from V7, so A4 is only the product side: the goal line, the product half of the audience model (who the product is for and where they live: the pick's blueprint and the insight sheet) and the blend matrix for the chosen product (§14.3, its rows taken from the existing mechanism map). Do not rerun the synthesis or the trend pass. Then A5, A6 and on (`creative-direction.md` §5.0b).
+The sub-mode is then Create; nothing from Viral-Browser relaxes a Create rule.
+

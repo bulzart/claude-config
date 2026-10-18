@@ -11,6 +11,10 @@ documentation_depth: high | medium | low # how much first-party prompting docume
 
 # <Title> — model engineering guide
 
+> Write the guide as ONE file on this template, then run `python scripts/docs_tool.py split models/<guide-slug>.md`: the file becomes
+> an index (this front matter, the scope below and a table of sections) and the sections go to `models/<guide-slug>/`. Steps load
+> only the sections they name (`atg-model-guide` has the step → section table), so keep the section numbers below. Delete this note.
+>
 > Scope: what the model is, which Higgsfield ids this file covers, which operations are available.
 > The live `models_explore` catalog always wins over the parameter tables in this file.
 >

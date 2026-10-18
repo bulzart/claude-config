@@ -29,8 +29,7 @@ Seedance 2.5 and Wan 3.0 guides, the template and fallback guides, and `atp.py q
 passed planning and QC; the user wants every generated video to behave like real life.
 
 **How to apply:** there is no error ledger since 2026-10-13 ([[atp-caught-errors]]): a user-reported bad
-video is diagnosed in its brief and the catalog receives the rule through `/update-from-errors
-analyze-then-pick`. When the user reports a new illogical or physically wrong moment, that pass adds
+video is diagnosed in its brief and the catalog receives the rule when the user says so. When the user reports a new illogical or physically wrong moment, offer to add
 it as a case to the matching class in `anomaly-catalog.md` (or a new class) with its entity-ledger
 entry, prompt line, QC checkpoint and verdict, and keeps the pointers in `generation-system.md` and
 the command intact. Plans must list QC checkpoints and X9 must run `T qc --dense` on them. Related:
