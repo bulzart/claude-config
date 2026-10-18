@@ -45,7 +45,7 @@ analyze-then-generate/
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
 ├── scripts/atg.py                  deterministic local toolkit (see below)
 ├── scripts/docs_tool.py            the section tool: `split` / `join` / `index` for the documents, `check` (indexes, section files, skills, paths, § citations) and `budget` (what each skill and the command load)
-├── tests/                          regression suites of the toolkit (`python tests/run_all.py`: about 320 checks on a slim synthetic run; the rule that a script never decides is tested, not only written)
+├── tests/                          regression suites (`python tests/run_all.py`: seven suites, about 330 checks): the toolkit on a slim synthetic run (the rule that a script never decides is tested, not only written) and the structure of the library (`t14_library`: indexes, skills, hand-offs and `T` commands agree)
 └── runs/<stamp>-<slug>/            one folder per run (state.json makes runs resumable: /analyze-then-generate resume <run-dir>; `next_skill` names the phase to continue); Viral-Browser runs add 30-research/ (candidates.json, evidence.json, dossiers, red team, ranking, bias log) and deliverables/ (report, three product files, evidence, reference packs, Create hand-off)
 
 ~/.claude/skills/atg-*/SKILL.md     the 25 phase skills (see above)

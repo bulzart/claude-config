@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from t11_common import ATG, LIB, PY, check, finish  # noqa: E402
 
-HOME = LIB.parent.parent if (LIB.parent / "skills").is_dir() is False else LIB.parent
+HOME = LIB.parent                                                  # ~/.claude: commands/, skills/ and the library sit side by side
 ROUTER = HOME / "commands" / "analyze-then-generate.md"
 SKILLS = sorted((HOME / "skills").glob("atg-*/SKILL.md"))
 
@@ -39,15 +39,17 @@ h = subprocess.run([PY, "-X", "utf8", ATG, "-h"], capture_output=True, text=True
 cmds = set(re.search(r"\{([^}]+)\}", h).group(1).split(","))
 used = set()
 for p in [ROUTER] + SKILLS:
-    used |= set(re.findall(r"`T ([a-z][a-z-]+)(?= |`)", rd(p)))
-missing = sorted(c for c in used if c not in cmds and c != "caught-error")
+    used |= set(re.findall(r"(?<!no )`T ([a-z][a-z-]+)(?= |`)", rd(p)))     # "no `T caught-error`" states a retirement, it is not a use
+missing = sorted(c for c in used if c not in cmds)
 check(not missing, "every `T <command>` in the router and the skills is a command of atg.py: " + ", ".join(missing))
 
 # --- what must not come back
 text = router + "\n".join(rd(p) for p in SKILLS) + rd(LIB / "README.md")
 check("update-from-errors" not in text, "no mention of the obsolete update-from-errors command in the router, skills and README")
-check("analyze-then-pick" not in text, "the router, skills and README do not mention the other pipeline")
-check("T caught-error" not in re.sub(r"no `T caught-error`", "", text) and "caught_errors.md" not in re.sub(r"There is no `caught_errors.md`", "", re.sub(r"`caught_errors.md` and", "", text)), "the retired error ledger is not used by any step")
+OTHER = "analyze-then-" + "pick"      # built in two pieces so that a search for the name finds only real mentions
+check(OTHER not in text, "the router, skills and README do not mention the other pipeline")
+uses = [ln.strip() for ln in text.splitlines() if re.search(r"caught_errors|caught-error", ln) and not re.search(r"There is no|no `|retired|git history", ln)]
+check(not uses and "caught-error" not in cmds, "the retired error ledger is not used by any step (only 'there is no ...' statements mention it): " + " | ".join(uses[:3]))
 check(not (LIB / "caught_errors.md").exists(), "caught_errors.md is gone")
 
 finish()
