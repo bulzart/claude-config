@@ -14,19 +14,19 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - production-agents §1: `ATG/reference/production-agents/010_1_prepared-by-this-session-before.md` (0.8 KB)
-- production-agents §2: `ATG/reference/production-agents/020_2_spawning.md` (12.1 KB)
-- production-agents §3: `ATG/reference/production-agents/030_3_the-agent-s-contract.md` (8.1 KB)
-- production-agents §5: `ATG/reference/production-agents/050_5_this-session-as-agents-report.md` (1.9 KB)
+- production-agents §2: `ATG/reference/production-agents/020_2_spawning.md` (13.2 KB)
+- production-agents §3: `ATG/reference/production-agents/030_3_the-agent-s-contract.md` (8.3 KB)
+- production-agents §5: `ATG/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 - higgsfield-mcp §1: `ATG/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)
 - `models_explore {action:"get", model_id}` once (A8.2)
 
 ### A8. Load the locked model's documentation
-The model was picked at the start (§2.4) and does not change.
-1. **Read no guide or reference wholesale.** Invoke Skill `atg-model-guide` once: it resolves the locked model's guide folder and says which
+The model was picked at the start (`atg-start`, step 4) and does not change.
+1. **Read no guide or reference wholesale.** Invoke Skill `atg-model-guide` once per run (skip it when the Recreate plan, E4, already did): it resolves the locked model's guide folder and says which
    sections each step reads. Each per-video skill (`atg-plan-video`, `atg-write-request`, `atg-inputs`, `atg-precheck`, `atg-submit`, `atg-qc`)
    names the exact reference and guide sections it needs; they are read at that step and not before. For a model with no guide, `atg-model-guide`
    points to `ATG/models/_generic-fallback.md`.
-2. `models_explore {action:"get", model_id}` once. If the live parameters differ from the guide, the
+2. `models_explore {action:"get", model_id}` once per run (skip it when E4 already did). If the live parameters differ from the guide, the
    live ones win; note the drift.
 3. Where a planned concept needs something this model cannot do, adapt the approach within the model
    and state it in the video's brief. Examples:
@@ -50,11 +50,11 @@ Plan everything before production, in allocation order, **without asking for con
 3. **X5–X6 per video:** preflight its first request and print its brief. Then print the estimated
    total once, as information, against the balance.
 4. **The only question in this phase** is a long video's permission (A7b), when a plan newly pushes
-   a video over 30 s.
+   a video over 30 s. (With QC fixes `ask`, the fix questions of A9b come later, one per finding.)
 5. **The agent contract:** write `<RUN>/50-requests/agent-contract.md` from the prompt in
    `reference/production-agents.md` §2 (the canonical text: the recording rule, the checks, the size
    method, the deliverables), filling its paths; run-specific notes go in its last block. It is generated
-   for every run and never copied from an earlier run's file.
+   for every run and never copied from an earlier run's file. Fill its "QC fixes" line from `state.json → qc_fixes` (`auto` when the run has none).
 
 ### A9b. Produce in parallel (production agents)
 - **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to
@@ -85,16 +85,17 @@ Plan everything before production, in allocation order, **without asking for con
   - print one line: video, status, CapCut project, credits.
 - **Blockers come back from agents and are handled here:**
   - a permission is needed (A7b) → ask, then launch that video again;
+  - `qc_fix_permission` (only with QC fixes `ask`) → ask the user the fix question of item 27, then continue that agent with the answer;
   - CapCut was running → its project is pending until the wrap-up;
   - credits ran short → launch nothing more, report the shortfall; the run stays resumable;
   - a request failed twice → report it in the wrap-up.
-- **QC verdicts are autonomous** (X9); a video that still fails is reported in the wrap-up.
-- **Without the Agent tool**, run X3–X10 per video in this session, one video at a time.
+- **QC verdicts are the agent's** (X9); with QC fixes `ask` the fix generation waits for the user's yes (item 27); a video that still fails, or whose fix the user declined, is reported in the wrap-up.
+- **Without the Agent tool**, run X3–X10 per video in this session, one video at a time (with QC fixes `ask`, ask the fix question of item 27 yourself instead of writing a proposal).
 
 ### A10. Wrap-up
 See §6.
 
-## Rules this phase owns (contract items 2, 3, 15, 23)
+## Rules this phase owns (contract items 2, 3, 15, 23, 27)
 
 2. **Agents.**
    - **Analysis agents:** 0 by default; **1** when there are many videos, **2** only when the folder
@@ -109,8 +110,10 @@ See §6.
      agents. Edit Mode uses no production agents.
 3. **Generation lanes.** Every video is a lane with **one job in flight at a time**:
    plan → preflight → brief → submit → wait → download → post-process → QC.
-   - The ledger enforces at most `production.max_parallel_jobs` (5) jobs in flight per run, across
-     the production agents.
+   - The ledger records every submission and reports what is already in flight; the agents keep to at
+     most `production.max_parallel_jobs` (5) jobs in flight per run, across the production agents
+     (`T ledger begin` reports the open submissions against that cap; whether to submit is the
+     agent's decision, X7).
    - Never use `generate_video_batch`, never submit twice in one lane, and never start an
      uncontrolled batch.
    - A multi-clip video runs **clip by clip** inside its lane: a clip is submitted only after the
@@ -118,9 +121,10 @@ See §6.
    - Edit Mode runs one video at a time.
 15. **Analyze Mode asks for permission in exactly one case:** a video **over 30 s that needs 2 or
     more generations** (A7b).
-    - Everything else runs without confirmation: no "Go" question, no cost pauses, no QC questions.
+    - Everything else runs without confirmation: no "Go" question, no cost pauses, no QC questions of its own
+      (the one fix question of item 27, asked only when the user chose `ask`, is the exception).
     - Blockers are reported, not asked: the balance can't cover the next video, or Higgsfield
-      itself demands a choice (`unlim_choice`, `recovery_tool`, §5 X7).
+      itself demands a choice (`unlim_choice`, `recovery_tool`, X7 in `atg-submit`).
     - The planning questions (mode, model, inputs, number of videos, directions) are not
       permissions and stay.
     - Edit Mode keeps its gates (E6, X9-R).
@@ -159,6 +163,13 @@ See §6.
     unrecorded. A flag whose rule is general or recurs is written into those references as a rule when the user asks for it; the entry stays as the record.
     The user opens Loupe to see the flags grouped by trigger, asset, video, kind, run or model and searched
     by field, with the evidence Loupe gathered next to each.
+27. **QC fixes (Recreate and Create): the question.** With `state.json → qc_fixes = ask`, a production agent that found issues or anomalies only a new generation can fix writes
+    `result.json` with `blocker: qc_fix_permission` and a `fix_proposal` and stops (it never asks). When it reports, record it as for any report, then ask with AskUserQuestion
+    (header "QC fix"; one question per waiting video, up to four in one call): "Video NN: QC found <the findings in one line>. Fix generation: <what the corrected request changes>,
+    about <preflight credits> credits (<balance> left). Proceed?" with **"Fix it"** (`approved`), **"Keep this take"** (`declined`) and **"Fix it, and stop asking"** (`auto`: also
+    `T state --run RUN set qc_fixes=auto`, so no later video asks). Continue the stopped agent with the answer (SendMessage to that agent, its context intact; if it cannot be continued,
+    launch a fresh production agent for that video with the contract plus "resume at atg-submit X7 with <request file>, decision <…>"). The other videos keep running meanwhile; the next
+    queued video starts when an agent stops. With `auto`, nothing is asked: the agent submits its one diagnosed regeneration itself.
 
 ## Never (this phase)
 

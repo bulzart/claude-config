@@ -16,7 +16,7 @@ Changing a request (the one diagnosed retry of X7 step 5, or after a flag): invo
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- higgsfield-mcp §3: `ATG/higgsfield/higgsfield-mcp/030_3_standard-execution-sequence-for.md` (3.9 KB)
+- higgsfield-mcp §3: `ATG/higgsfield/higgsfield-mcp/030_3_standard-execution-sequence-for.md` (4.6 KB)
 - higgsfield-mcp §8: `ATG/higgsfield/higgsfield-mcp/080_8_credits-and-cost.md` (1.1 KB)
 - higgsfield-mcp §9: `ATG/higgsfield/higgsfield-mcp/090_9_errors-and-recovery.md` (2.5 KB)
 - *Edit Mode or Recreate (the moderation fallback after a refused request):*
@@ -35,7 +35,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Step X7
 
-- **X7 — Submit and wait (ledger-recorded; no spam, no glitches).**
+- **X7 — Submit and wait (ledger-recorded; no spam, no glitches).** A fix generation after a QC finding (attempt K+1) with QC fixes `ask` starts here only after the main session said `approved` or `auto`; until then you stop after X5 with the fix proposal (`atg-qc`, item 27).
   1. `T ledger begin --run RUN --video NN --attempt K --request 50-requests/video-NN[-aK]-request.json`
      (a clip: `--video NN-cK` with its own request file).
      - It **records a `pending` entry every time** and exits 0; it never refuses. It reports `conflicts[]`
@@ -112,7 +112,7 @@ Only these section files for this phase, nothing else unless a step below says s
    - Edit Mode runs one video at a time.
 12. **Generation discipline: no spam, no glitches.**
     - Every paid Higgsfield generation (`generate_video`, and `generate_image` for start frames)
-      goes through the ledger (`T ledger begin` before, `T ledger set` after; §5 X7: the ledger
+      goes through the ledger (`T ledger begin` before, `T ledger set` after; X7: the ledger
       records and reports, the agent decides). There is at most **one job in flight per video lane**, at
       most 5 per run, one generation call per turn per agent, and never parallel calls inside a lane.
     - Never resubmit after a timeout or an unclear answer until the outcome has been checked, and

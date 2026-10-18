@@ -14,7 +14,7 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - capcut-assembly §6: `ATG/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (0.8 KB)
-- production-agents §4: `ATG/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (0.9 KB)
+- production-agents §4: `ATG/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (1.3 KB)
 
 A production agent does not touch `state.json → videos[]` or `next_step`: it writes `result.json` and `readme-row.md`, and the main session appends `videos[]` as the agent reports (`production-agents` §5 item 1).
 

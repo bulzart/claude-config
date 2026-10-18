@@ -9,7 +9,7 @@ user-invocable: false
 > `ATG` = `C:/Users/Glaresquare1/.claude/analyze-then-generate` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATG/scripts/atg.py"` (every call prints one JSON object on its last line: numbers, tables and records, never a verdict; run through Bash) · `RUN` = the run folder `ATG/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATG/reference/<file>/` (for the Viral-Browser playbook `<file>` is `viral-browser`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
-Phase of `/analyze-then-generate` (Viral-Browser). Nothing is generated. Store `T state --run RUN set stage=<…> next_step=<…>` at the end of the step.
+Phase of `/analyze-then-generate` (Viral-Browser). Nothing is generated. At the end of each step print one short status line and store `T state --run RUN set stage=<…> next_step=<…>`.
 
 Scripts gather, you decide: the `T` commands measure, extract, record, tabulate and calculate. Every reading of their numbers, every choice and every exception is yours, written down with its reason (`--by` / `--reason`, the bias log in `30-research/ranking.md`). The numbers in this phase (the 40 % niche share, the six gates, the evidence caps, the pack minimums) are rules of thumb: apply them with judgement, depart from them when the evidence says so, and write what you applied, what you set aside and why.
 
@@ -17,12 +17,13 @@ Scripts gather, you decide: the `T` commands measure, extract, record, tabulate 
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
+- viral-browser §1: `ATG/reference/viral-browser/020_1_the-team.md` (2.7 KB) (the persona block for the agent prompts)
 - viral-browser §0: `ATG/reference/viral-browser/010_0_precedence-and-hard-rules.md` (4.4 KB) (precedence, hard rules, the evidence grades)
 - viral-browser §5: `ATG/reference/viral-browser/230_5_niche-bias-control-the-reference.md` (13.6 KB) (niche-bias control: the selection obligations)
-- viral-browser §7.4: `ATG/reference/viral-browser/300_7.4_rules-of-evidence.md` (4.4 KB) (rules of evidence)
+- viral-browser §7.4: `ATG/reference/viral-browser/300_7.4_rules-of-evidence.md` (4.7 KB) (rules of evidence)
 - viral-browser §7.6: `ATG/reference/viral-browser/320_7.6_the-red-team-pass.md` (2.1 KB) (the red-team pass)
 - viral-browser §8.1: `ATG/reference/viral-browser/350_8.1_the-rubric-weights-in-config-jso.md` (2.6 KB)
-- viral-browser §8.2: `ATG/reference/viral-browser/360_8.2_scoring-procedure.md` (4.0 KB)
+- viral-browser §8.2: `ATG/reference/viral-browser/360_8.2_scoring-procedure.md` (4.1 KB)
 - viral-browser §8.3: `ATG/reference/viral-browser/370_8.3_the-gates.md` (2.6 KB)
 - viral-browser §8.4: `ATG/reference/viral-browser/380_8.4_procedure.md` (2.5 KB)
 - viral-browser §8.5: `ATG/reference/viral-browser/390_8.5_selection-rules.md` (1.3 KB)
@@ -81,7 +82,8 @@ Only these section files for this phase, nothing else unless a step below says s
   --status picked --pick-rank N --by main --reason "…"` (`--status runner-up` for the runner-ups;
   `--pick-rank` records your pick order).
 - Show the ranking table in chat: the picks, the runner-ups, the gate each other candidate did not meet
-  (your reading), any exception. If fewer than 3 meet the gates, run the backfill (V5) first; if still
+  (your reading), any exception. If fewer than 3 meet the gates, run the backfill first (once: `T state --run RUN set stage=backfill next_step=research next_skill=atg-vb-research`,
+  then invoke Skill `atg-vb-research`, whose Backfill step hands back here); if still
   fewer, report the shortfall and say which gate removed each and what could be relaxed (§8.6): a gate is
   never lowered silently to fill the table. `next_step=blueprints`.
 
@@ -112,8 +114,10 @@ Item 25 is written out in `atg-vb-synthesis`; at selection it means: a fresh sco
 - Viral-Browser: never state a number without its source and retrieval date or its method; never score
   "unknown" as 3; never count a grade D row; never invent a URL, a quote or a figure; never present an
   estimate as a measurement; never credit a product with what the creator, a trend or paid reach
-  carried; never take attention for buying evidence; never claim EU or global demand from US-only
-  evidence without the market-gap flag (`viral-browser.md` §0).
+  carried; never take attention for buying evidence (attention-only videos teach mechanisms and never prove a
+  product sells, `viral-browser.md` §3.2); never claim EU or global demand from US-only evidence without the
+  "market gap" flag (a pick for the EU or a global market backed only by US evidence carries it, with confidence
+  no higher than medium, §2).
 - Viral-Browser: never lower a gate silently to fill the table (fewer than 3 candidates meeting the gates
   is a valid result; any gate you relax is named in the report with its reason), and never show a pick
   without its confidence and what would change the call.

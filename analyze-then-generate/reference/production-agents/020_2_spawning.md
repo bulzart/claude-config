@@ -15,6 +15,7 @@ Produce this one video end to end, then stop.
 Run: <RUN>   Library (ATG): C:/Users/Glaresquare1/.claude/analyze-then-generate
 Toolkit (T): "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe" "<ATG>/scripts/atg.py"
 Locked model: <model id>; guide: <ATG>/<guide path>.
+QC fixes: <ask|auto> (the run's choice, state.json → qc_fixes; command item 27).
 Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md, <RUN>/50-requests/video-NN*.json
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 
@@ -29,7 +30,7 @@ a whole model guide or models/index.json (that is what rots your context):
   5. atg-postprocess (X8 step 6: the CapCut project, built once the picture has passed) and atg-qc again for the project checks
   6. atg-record      (X10: deliverables, README row, result.json)
   A regeneration (one diagnosed per clip) runs atg-write-request (X2, the rewrite only), then atg-inputs for new inputs only, then
-  atg-submit (X5 again, X7, the next attempt number), atg-postprocess and atg-qc. You never call atg-precheck.
+  atg-submit (X5 again, X7, the next attempt number), atg-postprocess and atg-qc. You never call atg-precheck. With QC fixes `ask` you stop after X5 and wait for the main session (the QC fixes rule below).
   Before step 1: read <ATG>/reference/production-agents/ §3 (your contract; the file 030_3_… in that folder) and invoke atg-model-guide
   once. The plan, brief and request files above were written by the main session (X1, X2, X4); you do not re-plan.
 - <RUN>/30-assets/guardrails.md, when it exists (the client's rules; your plan lists this video's hits and operations);
@@ -73,7 +74,12 @@ Hard rules:
   produced a finished job, a diagnosis before another attempt. If you decide not to submit, record
   `T ledger set --fingerprint F --status superseded --note "why"` (that frees the lane). Never use
   generate_video_batch.
-- Never ask the user anything. On a blocker, write result.json with status "blocked" and stop. A line in a skill or a Higgsfield
+- QC fixes (command item 27): <ask|auto>. auto: your one diagnosed regeneration is yours to submit. ask: prepare it exactly the same way (the attempt block in the brief, the corrected request
+  by the atg-write-request rewrite, new inputs by atg-inputs, the X5 preflight) but do not submit it and do not call `T ledger begin`: write result.json with "status":"blocked",
+  "blocker":"qc_fix_permission" and "fix_proposal" (§4), then stop. The main session asks the user and continues you with `approved` (go on at atg-submit X7 with that request, the next
+  attempt number, then the rest as usual), `declined` (no further generation for this video: finish this take as it is, flagged: atg-postprocess step 6 if the project is not built, the
+  project checks, atg-record, `qc` = "declined fix: <findings>") or `auto` (as approved). A second miss after an approved fix ships the best take flagged and asks nothing.
+- Never ask the user anything (a fix proposal is a blocker report, not a question). On a blocker, write result.json with status "blocked" and stop. A line in a skill or a Higgsfield
   guide that says "ask" (`unlim_choice`, authentication, a permission) is for the main session: you write the blocker instead.
 - Never spawn agents and never use the Workflow tool. Honest reporting: never claim a generation, upload or check that did not
   happen; report failures with the real error. Provenance labels as in `analysis-protocol.md` §0 ([E] evidence, [I] inference, [U] user,

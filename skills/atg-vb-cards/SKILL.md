@@ -19,23 +19,30 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - viral-browser §0: `ATG/reference/viral-browser/010_0_precedence-and-hard-rules.md` (4.4 KB) (precedence and hard rules)
 - viral-browser §1: `ATG/reference/viral-browser/020_1_the-team.md` (2.7 KB) (the team: the persona block)
-- viral-browser §2: `ATG/reference/viral-browser/030_2_the-brief-inputs.md` (6.2 KB) (the brief)
+- viral-browser §2: `ATG/reference/viral-browser/030_2_the-brief-inputs.md` (6.3 KB) (the brief)
 - viral-browser §3.1: `ATG/reference/viral-browser/050_3.1_how-to-read.md` (1.6 KB)
-- viral-browser §3.2: `ATG/reference/viral-browser/060_3.2_the-card.md` (13.2 KB) (the card)
+- viral-browser §3.2: `ATG/reference/viral-browser/060_3.2_the-card.md` (13.3 KB) (the card)
 - viral-browser §3.3: `ATG/reference/viral-browser/070_3.3_reading-the-product-s-price.md` (0.5 KB)
 - viral-browser §3.5: `ATG/reference/viral-browser/090_3.5_scale-and-delegation.md` (0.8 KB)
-- viral-browser §13.1: `ATG/reference/viral-browser/470_13.1_viral-card-analysis-agent-use-th.md` (3.6 KB) (the card agent's prompt)
+- viral-browser §4.5: `ATG/reference/viral-browser/160_4.5_audience-and-mentality.md` (1.3 KB) (the mental shortcuts of the card's Mentality line)
+- creative-direction §5.0: `ATG/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB) (the craft kinds of the card's Craft line)
+- viral-browser §13.1: `ATG/reference/viral-browser/470_13.1_viral-card-analysis-agent-use-th.md` (3.8 KB) (the card agent's prompt)
 - *a baseline folder was given:*
   - viral-browser §3.4: `ATG/reference/viral-browser/080_3.4_baseline-cards-when-a-baseline-f.md` (0.5 KB)
 - *a links file and "web plus my Chrome" (reference pages):*
   - viral-browser §3.6: `ATG/reference/viral-browser/100_3.6_reference-pages-optional-read-on.md` (1.0 KB)
+- analysis-protocol §0: `ATG/reference/analysis-protocol/010_0_provenance-labels-use-everywhere.md` (0.6 KB) (provenance labels)
+- analysis-protocol §1: `ATG/reference/analysis-protocol/020_1_inputs-per-video-produced-by-atg.md` (1.9 KB) (the per-video inputs, `T frames` and the sheet legend)
 - analysis-protocol §2: `ATG/reference/analysis-protocol/030_2_reading-a-video-as-one-continuou.md` (6.5 KB) (item 4: the audio context)
-- analysis-protocol §7: `ATG/reference/analysis-protocol/080_7_scale-and-delegation-2-analysis.md` (2.6 KB) (scale and delegation)
+- analysis-protocol §4: `ATG/reference/analysis-protocol/050_4_effectiveness-lenses-apply-those.md` (2.1 KB) (the effectiveness lenses)
+- analysis-protocol §7: `ATG/reference/analysis-protocol/080_7_scale-and-delegation-2-analysis.md` (2.7 KB) (scale and delegation)
 
 ## Inputs and the run (the Start steps for Viral-Browser)
 
 - **Viral-Browser** needs the references folder, offers four optional extras, and then asks the
-  brief. In **one** plain-chat message:
+  brief. Take what `$ARGUMENTS` already gives (`viral-browser <references-folder> [baseline <folder>]
+  [market …] [price …] [depth …]`) and ask, in **one** plain-chat message, only for what is missing;
+  then stop and wait:
   1. The **references folder** (videos are the primary content; a notes, links or metrics file
      in it is read: views, likes, comments, shares, saves, dates, links).
   2. *(Optional)* a **baseline folder**: comparable videos that did **not** spread (same niche
@@ -57,7 +64,7 @@ Only these section files for this phase, nothing else unless a step below says s
      already in `$ARGUMENTS`.
   Say in the message: *"I will use the references only as ideas and generate nothing. I will
   ask four quick questions next: market, price range, how you sell, and whether I may use your
-  Chrome for live pages."*
+  Chrome for live pages."* Stop and wait for the reply.
   Then, after the paths are validated, ask the **brief** with one AskUserQuestion call holding
   only the questions `$ARGUMENTS` did not answer (`viral-browser.md` §2):
   - header "Market": "Where will you sell?" **US** / **EU** (then ask which countries in the
@@ -137,7 +144,7 @@ Paths may arrive quoted, space-separated, dragged into the terminal, or one per 
   compares labels or words) and record each decision with its reason:
   `T niches add --name "<niche>" --members "<label>,<label>" --by main --reason "…"` and
   `T niches map --label … --to … --by main --reason "…"` (a label that another niche held moves, and
-  the move is noted; `viral-browser.md` §3.2). `next_step=synthesis`.
+  the move is noted; `viral-browser.md` §3.2; the full procedure is §5 item 3, read in `atg-vb-synthesis`). `next_step=synthesis`.
 
 ## Rules this phase owns (contract item 24)
 
@@ -150,8 +157,8 @@ Paths may arrive quoted, space-separated, dragged into the terminal, or one per 
       list) and the **price range** (the retail band and its currency) are always asked unless
       `$ARGUMENTS` gives them; the selling model and the research tools are asked with them; exclusions,
       constraints and how they sell (sales channel, ad platform, importer-of-record country, capital
-      limit) are taken from the user's chat message (§2.5). Nothing about the user is inferred into an
-      exclusion.
+      limit) are taken from the user's chat message (the optional questions of "Inputs and the run" above). Nothing about the
+      user is inferred into an exclusion.
     - **The product layer and the mechanism layer are kept apart** in every card. The run learns
       *why* the videos spread (the hook, the visible proof, the emotion, the identity trigger, the
       price perception, the length, the engagement style), then looks for products that the same

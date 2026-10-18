@@ -11,7 +11,7 @@ the client's own product. Everything it loads at run time lives here or in the s
 
 The context of a run is its scarcest resource, so nothing is loaded before its step:
 
-- **The command is a router** (about 20 KB): arguments, resume, the loading rules, one line per contract item (1–26), the phase map, the labels table and the global Never rules.
+- **The command is a router** (about 20 KB): arguments, resume, the loading rules, one line per contract item (1–27), the phase map, the labels table and the global Never rules.
 - **Phase skills** `~/.claude/skills/atg-*/SKILL.md` (25, `user-invocable: false`, descriptions marked internal) hold the steps, the contract items and the Never rules of one phase
   each, plus a "Read now" list of the exact section files the phase needs and a hand-off that names the next skill. The chains:
   - Recreate / Create: `atg-start` → `atg-analyze-prepare` → `atg-analyze-study` → `atg-create-plan` | `atg-recreate-plan` → `atg-asset-plan` → `atg-analyze-produce` → `atg-wrapup`;
@@ -23,6 +23,9 @@ The context of a run is its scarcest resource, so nothing is loaded before its s
   `§2.14`, `viral-browser §7.4`, `guide §3.14`) are unchanged. A skill reads the sections it names, never a whole document.
 - **Production agents** get a contract that invokes the per-video skills (`atg-inputs`, `atg-submit`, `atg-postprocess`, `atg-qc`, `atg-record`); they never read the command file.
   Viral-Browser's agents are briefed by the prompts of `reference/viral-browser/` §13.
+- **QC fixes** (Recreate and Create, contract item 27). At the start the user chooses how a fix generation after a QC finding is decided: `ask` (from the first video on, the production
+  agent prepares the fix and stops with a proposal, the main session asks the user, and nothing is spent until the user says yes) or `auto` (the QC agents correct on their own, without
+  asking). The choice is `state.json → qc_fixes`; a run without it is `auto`; the argument is `qc-fixes ask|auto`. Edit Mode has no automatic regeneration: the user reviews every attempt.
 
 ```
 analyze-then-generate/

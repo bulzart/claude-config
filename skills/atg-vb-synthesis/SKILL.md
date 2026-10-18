@@ -9,7 +9,7 @@ user-invocable: false
 > `ATG` = `C:/Users/Glaresquare1/.claude/analyze-then-generate` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATG/scripts/atg.py"` (every call prints one JSON object on its last line: numbers, tables and records, never a verdict; run through Bash) · `RUN` = the run folder `ATG/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATG/reference/<file>/` (for the Viral-Browser playbook `<file>` is `viral-browser`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
-Phase of `/analyze-then-generate` (Viral-Browser). Nothing is generated. Store `T state --run RUN set stage=<…> next_step=<…>` at the end of each step.
+Phase of `/analyze-then-generate` (Viral-Browser). Nothing is generated. At the end of each step print one short status line and store `T state --run RUN set stage=<…> next_step=<…>`.
 
 Scripts gather, you decide: the `T` commands measure, extract, record, tabulate and calculate. Every reading of their numbers, every choice and every exception is yours, written down with its reason (`--by` / `--reason`, the bias log in `30-research/ranking.md`). The numbers in this phase (the 40 % niche share, the six gates, the evidence caps, the pack minimums) are rules of thumb: apply them with judgement, depart from them when the evidence says so, and write what you applied, what you set aside and why.
 
@@ -17,6 +17,7 @@ Scripts gather, you decide: the `T` commands measure, extract, record, tabulate 
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
+- viral-browser §1: `ATG/reference/viral-browser/020_1_the-team.md` (2.7 KB) (the persona block for the agent prompts)
 - viral-browser §4.1: `ATG/reference/viral-browser/120_4.1_measure-first.md` (2.5 KB)
 - viral-browser §4.2: `ATG/reference/viral-browser/130_4.2_mechanism-map-20-analysis-mechan.md` (1.1 KB)
 - viral-browser §4.3: `ATG/reference/viral-browser/140_4.3_hooks-length-and-pacing.md` (1.0 KB)
@@ -32,6 +33,9 @@ Only these section files for this phase, nothing else unless a step below says s
 - viral-browser §6: `ATG/reference/viral-browser/240_6_candidate-generation-v4.md` (4.5 KB) (candidate generation)
 - viral-browser §7.0: `ATG/reference/viral-browser/260_7.0_before-the-wave-the-common-cost.md` (3.4 KB) (the common cost basis)
 - viral-browser §13.5: `ATG/reference/viral-browser/510_13.5_niche-audit-agent-fresh-context.md` (3.5 KB) (the niche-audit agent's prompt)
+- creative-direction §4: `ATG/reference/creative-direction/040_4_the-trend-read-written-into-20-a.md` (2.0 KB) (the trend read, for §4.8)
+- analysis-protocol §5: `ATG/reference/analysis-protocol/060_5_cross-video-synthesis.md` (6.5 KB) (the cross-video synthesis, for §4.10)
+- viral-browser §7.3: `ATG/reference/viral-browser/290_7.3_the-lanes.md` (9.3 KB) (the economics paragraph: the arguments of `T econ` and `T landed`, for V4b)
 
 ## Steps
 
@@ -91,7 +95,7 @@ Only these section files for this phase, nothing else unless a step below says s
   picked, runner-up, watch): `set` changes any field and any status from any status, logs `--by` and
   `--reason` in the candidate's history, and the toolkit sets none on its own. Change a researched
   candidate's name, type, definition or niche only with a stated reason.
-- Show one table: candidate, niche, origin, why it is in the pool. `next_step=research`.
+- Show one table: candidate, niche, origin, why it is in the pool. `next_step=cost-basis`.
 
 ### V4b. Cost basis and shared inputs (before the wave)
 - Decide, once, the inputs that do not depend on the product and write them with their sources in
@@ -104,7 +108,7 @@ Only these section files for this phase, nothing else unless a step below says s
   candidate, so that the research agents copy them (`T evidence copy`) instead of searching again. Use the
   cost basis for the economics screen of V4: `T econ … --target-pct 25` per market on a rough landed cost
   (`T landed`) says which retail price a candidate needs; a price above the band's top, or far above what
-  the market shows, removes the candidate with that reason.
+  the market shows, removes the candidate with that reason. `next_step=research`.
 
 ## Rules this phase owns (contract item 25)
 

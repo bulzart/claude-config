@@ -9,7 +9,7 @@ user-invocable: false
 > `ATG` = `C:/Users/Glaresquare1/.claude/analyze-then-generate` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATG/scripts/atg.py"` (every call prints one JSON object on its last line: numbers, tables and records, never a verdict; run through Bash) · `RUN` = the run folder `ATG/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATG/reference/<file>/` (for the Viral-Browser playbook `<file>` is `viral-browser`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
-Phase of `/analyze-then-generate` (Viral-Browser). Nothing is generated. Store `T state --run RUN set stage=<…> next_step=<…>` at the end of the step.
+Phase of `/analyze-then-generate` (Viral-Browser). Nothing is generated. At the end of each step print one short status line and store `T state --run RUN set stage=<…> next_step=<…>`.
 
 Scripts gather, you decide: the `T` commands measure, extract, record, tabulate and calculate. Every reading of their numbers, every choice and every exception is yours, written down with its reason (`--by` / `--reason`, the bias log in `30-research/ranking.md`). The numbers in this phase (the 40 % niche share, the six gates, the evidence caps, the pack minimums) are rules of thumb: apply them with judgement, depart from them when the evidence says so, and write what you applied, what you set aside and why.
 
@@ -17,8 +17,9 @@ Scripts gather, you decide: the `T` commands measure, extract, record, tabulate 
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
+- viral-browser §1: `ATG/reference/viral-browser/020_1_the-team.md` (2.7 KB) (the persona block for the agent prompts)
 - viral-browser §0: `ATG/reference/viral-browser/010_0_precedence-and-hard-rules.md` (4.4 KB) (precedence, hard rules, the evidence grades)
-- viral-browser §9: `ATG/reference/viral-browser/410_9_the-viral-blueprint-v7-per-pick.md` (3.1 KB) (the viral blueprint)
+- viral-browser §9: `ATG/reference/viral-browser/410_9_the-viral-blueprint-v7-per-pick.md` (3.2 KB) (the viral blueprint)
 - viral-browser §9.1: `ATG/reference/viral-browser/420_9.1_the-product-reference-pack-per-p.md` (16.1 KB) (the product reference pack)
 - viral-browser §10: `ATG/reference/viral-browser/430_10_deliverables-v7-v8.md` (5.4 KB) (deliverables)
 - viral-browser §13.7: `ATG/reference/viral-browser/530_13.7_reference-pack-agent-run-in-back.md` (9.8 KB) (the reference-pack agent's prompt)
@@ -76,8 +77,10 @@ Only these section files for this phase, nothing else unless a step below says s
 - Viral-Browser: never state a number without its source and retrieval date or its method; never score
   "unknown" as 3; never count a grade D row; never invent a URL, a quote or a figure; never present an
   estimate as a measurement; never credit a product with what the creator, a trend or paid reach
-  carried; never take attention for buying evidence; never claim EU or global demand from US-only
-  evidence without the market-gap flag (`viral-browser.md` §0).
+  carried; never take attention for buying evidence (attention-only videos teach mechanisms and never prove a
+  product sells, `viral-browser.md` §3.2); never claim EU or global demand from US-only evidence without the
+  "market gap" flag (a pick for the EU or a global market backed only by US evidence carries it, with confidence
+  no higher than medium, §2).
 - Viral-Browser: never lower a gate silently to fill the table (fewer than 3 candidates meeting the gates
   is a valid result; any gate you relax is named in the report with its reason), and never show a pick
   without its confidence and what would change the call.

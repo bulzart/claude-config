@@ -26,7 +26,7 @@ e.g. "slim 355 ml aluminium drink can", "palm-sized pack of 10 gum pellets", "co
 hatchback, about 4 m long">.
 Your examples (if any): <E01, …> (prepared under <RUN>/10-media/<E>/): the user's own finished
 videos. For each, write <RUN>/20-analysis/examples/<E>.md with the §9.2 template (§9.1 says what to read).
-Rules: do not call Higgsfield tools, do not spawn agents, do not use the Workflow tool, do not ask
+Rules: do not call Higgsfield or CapCut tools, do not spawn agents, do not use the Workflow tool, do not ask
 questions, write only your card files. Every product, person or brand you see in these videos
 belongs to the references; client assets come only from the user's supplied asset registry, which you
 do not need. Final message: one line per video (format label, hook, mechanism,

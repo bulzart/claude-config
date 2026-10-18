@@ -23,6 +23,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - capcut-assembly §3b: `ATG/reference/capcut-assembly/040_3b_sound-layer-create.md` (4.6 KB)
 - text-and-format §1: `ATG/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
 - text-and-format §3: `ATG/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (3.7 KB)
+- text-and-format §4: `ATG/reference/text-and-format/040_4_fixed-output-format-9-16-at-720p.md` (2.5 KB) (the fixed output and the crop)
 - *a multi-clip video:*
   - generation-system §3b.3: `ATG/reference/generation-system/070_3b.3_seam-discipline.md` (2.4 KB)
 - *a video with inserts:*
@@ -43,7 +44,9 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
      (a plain difference) and a note. It returns `facts` (`has_video`, `has_audio`, `audio_was_available`,
      `duration_s`, `requested_duration_s`, `size`, `source_size`): read them; `ok` only means ffmpeg
      produced the file. A source that had no audio gives a silent final.
-  2. `T conform` → exactly 720×1280 (it reports `lost_fraction`; the crop rule of thumb is in E5);
+  2. `T conform` → exactly 720×1280 (scale-to-cover plus a focus crop; it reports `lost_fraction` and never refuses a crop: a loss
+     above about 12 % means the frame ratio was wrong, a reason to regenerate with corrected inputs rather than force the crop,
+     `text-and-format.md` §4.1);
   3. `T trim` (generated dead head or tail);
   4. `T concat` (multi-clip videos):
      - each clip is downloaded to `60-outputs/video-NN/cK/aJ/raw.mp4`, conformed, trimmed and

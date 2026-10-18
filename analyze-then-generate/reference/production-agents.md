@@ -17,8 +17,8 @@ Stored as section files in `production-agents/` (next to this file); **read only
 | § | Section | File | KB |
 |---|---|---|---|
 | 1 | Prepared by this session before any agent starts (command A9) | `010_1_prepared-by-this-session-before.md` | 0.8 |
-| 2 | Spawning | `020_2_spawning.md` | 12.2 |
-| 3 | The agent's contract | `030_3_the-agent-s-contract.md` | 8.2 |
-| 4 | `60-outputs/video-NN/result.json` | `040_4_60-outputs-video-nn-result-json.md` | 0.9 |
-| 5 | This session, as agents report | `050_5_this-session-as-agents-report.md` | 2.0 |
+| 2 | Spawning | `020_2_spawning.md` | 13.2 |
+| 3 | The agent's contract | `030_3_the-agent-s-contract.md` | 8.3 |
+| 4 | `60-outputs/video-NN/result.json` | `040_4_60-outputs-video-nn-result-json.md` | 1.3 |
+| 5 | This session, as agents report | `050_5_this-session-as-agents-report.md` | 2.3 |
 <!-- sections:end -->

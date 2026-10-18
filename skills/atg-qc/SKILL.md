@@ -15,6 +15,14 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - anomaly-catalog §4: `ATG/reference/anomaly-catalog/220_4_the-qc-stack-x9-in-order.md` (6.7 KB)
 - anomaly-catalog §2.14: `ATG/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.3 KB)
+- anomaly-catalog §2.11: `ATG/reference/anomaly-catalog/140_2.11_environment-context-and-suitabil.md` (1.7 KB) (where things live, who uses what)
+- *two or more people handle the product:*
+  - anomaly-catalog §2.10: `ATG/reference/anomaly-catalog/130_2.10_ownership-and-hand-offs-two-or-m.md` (0.9 KB)
+- *a real process is shown (a sip, a pour, an unwrap, a bite, a spin):*
+  - anomaly-catalog §2.12: `ATG/reference/anomaly-catalog/150_2.12_timing-of-real-processes.md` (1.1 KB)
+- *a stylised or anime reference:*
+  - anomaly-catalog §2.13: `ATG/reference/anomaly-catalog/160_2.13_stylised-and-anime-rendering.md` (1.2 KB)
+- anomaly-catalog §4.1: `ATG/reference/anomaly-catalog/230_4.1_how-the-verdict-is-written-examp.md` (4.8 KB) (how the verdict is written)
 - *a product handled, prepared, used, poured or counted on screen:*
   - anomaly-catalog §2.1: `ATG/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
   - anomaly-catalog §2.2: `ATG/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (2.8 KB)
@@ -26,12 +34,12 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a placed or contents product (size, label, blend, posture checks):*
   - anomaly-catalog §2.7: `ATG/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.5 KB)
   - anomaly-catalog §2.9: `ATG/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.3 KB)
-  - anomaly-catalog §2.15: `ATG/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (8.1 KB)
+  - anomaly-catalog §2.15: `ATG/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (8.3 KB)
   - anomaly-catalog §2.16: `ATG/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (3.8 KB)
 - *a person is swapped (skin tone face vs hands):*
   - anomaly-catalog §2.17: `ATG/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - generation-system §9: `ATG/reference/generation-system/340_9_post-generation-qc-after-downloa.md` (8.6 KB)
-- generation-system §6: `ATG/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
+- generation-system §6: `ATG/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
 - generation-system §9b: `ATG/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.6 KB)
 - generation-system §5b: `ATG/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5d: `ATG/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
@@ -60,7 +68,8 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Judge by reasoning, not by list** (`generation-system.md` §6). For every possible finding ask what the plan or source needed
     at that beat, what the product's real details allow (shape, size, opening, posture: its registry row) and what the scene offers.
     A finding is a deviation from the first, the second or physics, written as expected, why, seen. A deviation from a default alone is
-    a note, never a regenerate reason. Three short evaluations of the same reasoning:
+    a note, never a regenerate reason. (A paste sign, a count that changes or a pass-through is a deviation from the scene or from physics,
+    not from a default, so it stays a regenerate reason; a pose or a light that the plan's anchor row asks for is not a sign.) Three short evaluations of the same reasoning:
     - A flat sachet stands upright on a surface. Its details (thin, flat) cannot hold that and no support is visible: product details and
       physics, so a finding. The same sachet held upright in a hand is fine, because the hand is the support.
     - The product rests somewhere other than the usual place. Compare with the plan's anchor row, not with a habit: a deviation from the
@@ -79,7 +88,8 @@ Only these section files for this phase, nothing else unless a step below says s
     `composite_path`**, add what each says to look for as extra `--dense` checkpoints, and write in the verdict
     which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
     empty list means no sample applies: QC goes on without them. The answer is also saved as
-    `RUN/60-outputs/video-NN/qc-consult.json`. `T qc-brief` takes the same arguments with no model call.
+    `RUN/60-outputs/video-NN/qc-consult.json`. Ask the keeper **once per video**, on its first picture pass: the CapCut project pass and a
+    regenerated take read the saved file again; ask again only when the product form, the beat or the plan's checkpoints changed. `T qc-brief` takes the same arguments with no model call.
     A sample has a `sample_kind`: `pair` (a WRONG and a RIGHT frame), `miss-only` (`has_right: false`: no frame of it is called RIGHT, and a lone miss frame carries a grey NO RIGHT VERSION tag), or `scenario` (no frame is called WRONG: the admin's words only, or frames the admin called EXAMPLE (blue: something the admin keeps for you to understand and remember, neither a miss nor the right look); it carries `idea`, `better` and `missed`: what was meant to happen, what could have been better, what the AI agents missed or could not understand). A scenario is insight, not a visual pattern: compare the video with the idea and with what was missed, and never look for a match of the image. For a miss-only sample:
     it shows the wrong pattern to look for and nothing about what is right, so never infer a right look from it.
     A sample is a lead, never a verdict: a match is a regenerate reason only by this phase's own rules.
@@ -139,7 +149,7 @@ Only these section files for this phase, nothing else unless a step below says s
     the eleven-sign paste test against the nearest neighbour at the same depth (whites against the
     nearest white object, light direction, contact shadow, sharpness and grain, packshot pose,
     perspective, scale, edges, footprint, depth of field, prominence), written in the verdict. Any
-    sign is the "looks pasted in" regenerate reason; the retry fixes the named cause. A local
+    sign that neither the plan nor the scene explains is the "looks pasted in" regenerate reason; the retry fixes the named cause. A local
     regrade is the only post-fix, for a static untouched product failing on exposure alone.
   - **Solidity** (`anomaly-catalog.md` §2.14): at 30 fps wherever anything passes near, in front
     of or behind the product, lands on it or hits it. A pass-through, a sinking, a see-through, a
@@ -206,7 +216,7 @@ Only these section files for this phase, nothing else unless a step below says s
       refuses, and the hits a client guardrail names.
     - Background decor, clothing logos, meme faces and all brand-dependent content that no
       guardrail names are fine. They are not reported, not asked about, never softened and never
-      cost a retry. In Analyze Mode no QC question ever goes to the user.
+      cost a retry. In Analyze Mode QC asks the user nothing itself; with QC fixes `ask` it hands a fix proposal to the main session (item 27).
   - For a placement, also check the product's spot across the sheets, densified around cuts and
     pickups. These are regenerate reasons:
     - it is missing or unrecognisable;
@@ -231,13 +241,19 @@ Only these section files for this phase, nothing else unless a step below says s
     - the preview shows the right order, sound and text.
     Fix in the project, not by regenerating.
   - Apply the post-fixes (`trim`, `conform`, `restore-audio`, a sync offset) that need no new generation.
-  - **Analyze Mode verdict** (autonomous):
+  - **Analyze Mode verdict** (the production agent's; item 27):
     - accept;
     - or **one** deliberate regeneration with a diagnosed, corrected request (a new ledger attempt;
-      the preflight cost is shown in its brief);
+      the preflight cost is shown in its brief). With QC fixes `auto` (the contract's "QC fixes" line, or `state.json → qc_fixes`; missing means `auto`) you submit it yourself.
+      With `ask` you prepare it the same way (the attempt block in the brief, the corrected request by the `atg-write-request` rewrite, new inputs by `atg-inputs`, the X5 preflight) but
+      do **not** submit it and do not call `T ledger begin`: write `result.json` with `"status":"blocked"`, `"blocker":"qc_fix_permission"` and a `fix_proposal`
+      (`production-agents` §4), then stop. The main session asks the user and continues you with `approved`, `declined` or `auto`; you never ask the user yourself.
+      `approved` or `auto`: go on at `atg-submit` (X7 with the prepared request, the next attempt number), then `atg-postprocess` and `atg-qc` as usual. `declined`: no further generation
+      for this video; finish this take as it is, flagged: `atg-postprocess` step 6 if the project is not built yet, the project checks here, then `atg-record`, with `qc` = "declined fix: <the findings>".
+      A second miss after an approved fix ships the best take flagged and asks nothing;
     - or report the failure honestly.
 
-## Rules this phase owns (contract items 14, 19, 21)
+## Rules this phase owns (contract items 14, 19, 21, 27)
 
 14. **Analyze Mode: the client's product is always in the video.** This applies when the supplied
     assets include a product or physical object of any size (a drink, a pack of gum, a car), or
@@ -324,6 +340,9 @@ Only these section files for this phase, nothing else unless a step below says s
     floor (`generation-system.md` §9b rows 1–6) and the generation service's blocks apply;
     alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
     them, and nothing is blurred, softened or removed for taste.
+27. **QC fixes (Recreate and Create).** A regenerate reason found here is fixed by a new generation only as the user chose at the start (`state.json → qc_fixes`): `auto`: the agent submits the one
+    diagnosed regeneration itself; `ask`: the agent prepares it and stops with a `fix_proposal`, and nothing is submitted until the main session says `approved` or `auto` (the user's yes). Local post-fixes
+    (`trim`, `conform`, `restore-audio`, a sync offset, a local regrade) and CapCut fixes need no permission in either case. Edit Mode has no automatic regeneration.
 
 ## Never (this phase)
 
@@ -381,7 +400,7 @@ Only these section files for this phase, nothing else unless a step below says s
   smaller than reckoned, one that
   changes size across a cut, or one larger than the hand that holds it (`anomaly-catalog.md` §2.7).
 - Never plan a product that is handled on screen without its affordance sheet in the registry
-  (§1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).
+  (`anomaly-catalog.md` §1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).
 - Never deliver a video that carries the original audio without its sync check (X8 step 5), and
   never leave drift or a moved action unreported. Never fix sync by stretching or looping the
   original audio.
@@ -391,4 +410,4 @@ Only these section files for this phase, nothing else unless a step below says s
 - Edit Mode: the findings become the QC notes of the review. Return to the review (X9-R) in `atg-edit` (re-invoke it if its text is no longer in context); there is no automatic regeneration.
 - Analyze Mode, the picture passed but the CapCut project is not built yet: go back to `atg-postprocess` step 6, then return here for the project checks.
 - Analyze Mode, accepted (picture and project): invoke Skill `atg-record` (X10).
-- Analyze Mode, one diagnosed regeneration: `atg-write-request` (the rewritten request; the diagnosis is already written in the brief as an attempt block) → `atg-inputs` only for new inputs → `atg-submit` (X5 again, X7, next attempt number) → `atg-postprocess` → `atg-qc`.
+- Analyze Mode, one diagnosed regeneration: `atg-write-request` (the rewritten request; the diagnosis is already written in the brief as an attempt block) → `atg-inputs` only for new inputs → `atg-submit` (X5 again, X7, next attempt number) → `atg-postprocess` → `atg-qc`. With QC fixes `ask`, stop after X5 with the `fix_proposal` and resume at X7 only on the main session's `approved` or `auto`.

@@ -27,6 +27,7 @@ Only these section files for this phase, nothing else unless a step below says s
 | Model index | `ATG/models/index.json` (model id → guide, capabilities, 9:16/720p params). **Never Read it whole** (40 KB): `T model-menu` builds the menu, `T model-entry --id <id>` prints one model's entry and its guide path |
 | Model guides | `ATG/models/<guide>.md` is an index; the sections are in `ATG/models/<guide>/`. Which sections each step reads: `atg-model-guide` |
 | Higgsfield guide | `ATG/higgsfield/higgsfield-mcp.md` (index) and `ATG/higgsfield/higgsfield-mcp/` (sections) |
+| Preprocessing | `ATG/pipeline/preprocessing.md` (the recorded local pipeline, FFmpeg-first, and the sampling policy; `atg-analyze-prepare` reads it only when a prep step reports an error) |
 | Flag record | Loupe, `http://127.0.0.1:8787` (item 23): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7 (`atg-submit`), reconciled in A9b and §6, never read during a run. The sample library is read only by `T qc-consult` (`atg-qc`) and, once per video at its first request, `T plan-hints` (`atg-write-request`) |
 | References | `ATG/reference/<name>/` section files (index: `ATG/reference/<name>.md`): `analysis-protocol`, `generation-system`, `anomaly-catalog`, `creative-direction`, `brand-guardrails`, `text-and-format`, `assets-and-substitution`, `capcut-assembly`, `production-agents`, `viral-browser`. Each phase skill lists the sections it needs under "Read now" |
 | Viral-Browser | `ATG/reference/viral-browser/` (items 24–26; skills `atg-vb-*`); config `ATG/config.json → viral_browser`; toolkit `T viral-stats`, `T niches`, `T candidates`, `T evidence`, `T econ`, `T landed`, `T spec`, `T photo`, `T pdf-text` |
@@ -55,7 +56,7 @@ Only these section files for this phase, nothing else unless a step below says s
    **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate`, `create` or `viral-browser`, use
    it. Otherwise ask with AskUserQuestion (header "Analyze as"):
    - **Recreate**: "Analyze the references, then recreate N of them with your product and
-     characters: same scenario, faces and products swapped or blended. Fully autonomous."
+     characters: same scenario, faces and products swapped or blended. Autonomous after its planning questions."
    - **Create**: "Analyze the references like a viral-growth team (why they spread: style, hooks,
      engagement, audience mentality, trends), then create new virality-backed videos for your product,
      blending what was learned with your assets, in suggested style groups (one style or a mix) or the
@@ -67,7 +68,9 @@ Only these section files for this phase, nothing else unless a step below says s
    (`T new-run --submode` already does).
    **Viral-Browser skips steps 3–6** (no Higgsfield tools, no model, no balance, no CapCut): invoke Skill
    `atg-vb-cards` now with `$ARGUMENTS` as its args. It asks the references folder, the optional extras and the
-   brief, creates the run and does the first steps. Nothing below applies to it.
+   brief, creates the run and does the first steps. Nothing below applies to it, except when the user later says yes to *continue to Create*
+   (`viral-browser.md` §11.4): that run already exists and has `analyze_submode=create`; it re-enters this skill at steps 3–5 for the new inputs only,
+   step 6 does not run again, and the model is stored with `T state --run RUN set model=<id> model_locked=true`.
 3. **Higgsfield tools.** Load them (§1) and check that they are authenticated.
 4. **Model — picked now, locked for the run.**
    1. `models_explore {action:"list", type:"video", limit:100}`, then collect the returned ids.
@@ -96,7 +99,7 @@ Only these section files for this phase, nothing else unless a step below says s
       the run will work with it, e.g. "edits will be recreated from clean frames of each source
       video with your assets". Then continue. Do not suggest another model.
 5. **Inputs.** Take what `$ARGUMENTS` already gives (`analyze <references-folder> assets <paths…>
-   [examples <folder>]` / `edit <video paths…> [examples <folder>]`) and ask in plain chat,
+   [examples <folder>] [qc-fixes ask|auto]` / `edit <video paths…> [examples <folder>]`) and ask in plain chat,
    in **one** message, only for what is missing. Then stop and wait.
    - **Analyze Mode, Recreate and Create** need two things, and offer a third:
      1. The references folder to analyze.
@@ -112,10 +115,16 @@ Only these section files for this phase, nothing else unless a step below says s
      Say in the message: *"Drop or paste the paths. I will use only these as your assets and pick
      from them for each video on my own. Examples are optional: I study them for how you use your
      products and never use them as assets."* The user may answer "no assets" for a project that
-     needs none.
+     needs none. If the user asks what a well-prepared asset set looks like, share the table in `assets-and-substitution.md` §1
+     (`ATG/reference/assets-and-substitution/010_1_where-client-assets-come-from-on.md`), and only then.
      **Recreate** also needs the **characters** who replace the people in the references (face
      close-up + full body each). If none are supplied and the references show people, ask once at
      this step: add characters, or keep the people as they are.
+     **QC fixes (Recreate and Create; a choice, asked once the paths are validated, unless `$ARGUMENTS` has `qc-fixes ask|auto`).**
+     Ask with AskUserQuestion (header "QC fixes"), "If QC finds issues or anomalies in a generated video, how should the fix generation be decided?":
+     - **"Ask me first"**: "From the first video on, I show you what QC found, what the fix generation would change and cost, and wait for your yes or no before spending credits on it."
+     - **"QC agents fix on their own"**: "The QC agents regenerate a video with one diagnosed fix on their own, without asking, and ship the best take flagged if it still fails."
+     Store it once the run exists (step 6). Edit Mode is not asked (the user reviews every attempt, X9-R); Viral-Browser generates nothing.
    - **Viral-Browser** is handled by `atg-vb-cards`, which asks for its own inputs and the brief (market, price range, how the user sells, tools) and creates its run: invoke it as soon as the sub-mode is known (step 2).
    - **Edit Mode** needs the video file(s) or folder to edit, and offers the optional **examples
      folder** (as above). Per-edit assets are asked later, per operation (E3).
@@ -127,9 +136,10 @@ Only these section files for this phase, nothing else unless a step below says s
    - `T new-run --mode <analyze|edit> [--submode recreate|create] --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]`;
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
+   - Recreate and Create: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto`);
    - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
 
-## Rules this phase owns (contract items 4, 11, 17)
+## Rules this phase owns (contract items 4, 11, 17, 27)
 
 4. **One model per run, picked at the start, then locked.**
    - The user picks the video model right after choosing the mode (§2.4), from a menu that lists
@@ -180,6 +190,12 @@ Only these section files for this phase, nothing else unless a step below says s
       24–26; skills `atg-vb-*`).
     - In Recreate and Create, every video ends as a CapCut project (item 16), produced by its own
       agent (item 2).
+
+27. **QC fixes (Recreate and Create).** The user chooses at the start; the choice is stored in `state.json → qc_fixes` (a run without it is `auto`):
+    - **`ask`**: when QC finds issues or anomalies in a generated video, from the first video on, and only a new generation can fix them, the fix is not generated until the user answers yes:
+      the production agent prepares the corrected request and stops with a proposal, and the main session asks (`atg-analyze-produce`);
+    - **`auto`**: the QC agents correct on their own, without asking: one diagnosed regeneration per clip, then the best take ships flagged.
+    Never asked: local post-fixes, CapCut fixes, the retry of a job that failed with no output, and anything in Edit Mode (every attempt is reviewed, X9-R).
 
 Item 17's "§3 R-steps" are step A6r (`atg-recreate-plan`).
 

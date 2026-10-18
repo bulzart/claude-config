@@ -18,7 +18,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - brand-guardrails §1: `ATG/reference/brand-guardrails/010_1_finding-and-reading-the-guardrai.md` (1.8 KB)
 - brand-guardrails §2: `ATG/reference/brand-guardrails/020_2_rule-kinds-and-what-each-does-to.md` (4.9 KB)
 - anomaly-catalog §1: `ATG/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.5 KB)
-- *Create, for the product insight sheet:*
+- *the product insight sheet (Create and Recreate):*
   - creative-direction §5.0b: `ATG/reference/creative-direction/070_5.0b_blend-not-mimic-reference-craft.md` (3.1 KB)
 - *only when a product has no supplied spec and its size must come from the standard-size table:*
   - anomaly-catalog §2.7: `ATG/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.5 KB)
@@ -136,13 +136,13 @@ Only these section files for this phase, nothing else unless a step below says s
     from the supplied specs; when none exist, the category's standard size from the catalog's
     §2.7 table, marked [I]. Never read a size off the product's own photo. These numbers feed
     the size reckoning of every shot (X1).
-  - **Product insights, per product** (Create; `assets-and-substitution.md` §2 step 3b; `creative-direction.md` §5.0b) into
+  - **Product insights, per product** (every Analyze run; `assets-and-substitution.md` §2 step 3b; `creative-direction.md` §5.0b) into
     `30-assets/product-insights.md`: what it is and what it does for someone, who and when, what reads on camera (colour,
     texture, motion, the sound it makes, the reveal), what it can honestly show and how fast, the proof and claims the
     documents allow, the emotion it carries, the objections and limits, the occasions, and **up to six product truths**
     (PT1…) a concept can be built on (as many as the supplied assets and documents support). From the supplied assets and
     documents only; a gap is "not supplied" and is never filled by invention. Create's ideation reads it beside the craft
-    sheet (A4, A6).
+    sheet (A4, A6); Recreate keeps it for the plan's product details.
   - **Characters:** one entry per distinct person, mascot or character, with its best face and full
     views.
   - **Other assets:** logos, palettes, UI screenshots, environments, audio. Supplied fonts are
@@ -153,7 +153,7 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Rules this phase owns (contract items 18, 21)
 
 18. **Examples: the user's own finished videos (optional, both modes).** They are asked for with the
-    other inputs (§2.5). The folder may be empty or absent; then nothing changes.
+    other inputs (`atg-start`, step 5). The folder may be empty or absent; then nothing changes.
     - They show the user's **house approach**: how their products are placed, used, continued across
       clips and blended, plus anything else they consistently do (text placement, pacing, sound,
       characters, endings).

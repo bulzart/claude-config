@@ -24,8 +24,9 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §5: `ATG/reference/generation-system/210_5_logic-continuity-and-anti-slop-g.md` (4.9 KB)
 - generation-system §5b: `ATG/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5d: `ATG/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
-- generation-system §6: `ATG/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
+- generation-system §6: `ATG/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
 - generation-system §9b: `ATG/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.6 KB)
+- assets-and-substitution §6: `ATG/reference/assets-and-substitution/060_6_fidelity-rules.md` (0.8 KB) (the client's asset is never deformed; which file is the authority)
 - *a contents or placement video:*
   - generation-system §4b: `ATG/reference/generation-system/110_4b_natural-placement-and-contents-w.md` (1.2 KB)
   - generation-system §4b.0: `ATG/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
@@ -42,14 +43,22 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a multi-clip video, or a Recreate/Edit source with hard cuts (item 7: separate clips on the source's own cuts):*
   - generation-system §3b: `ATG/reference/generation-system/040_3b_videos-longer-than-one-generatio.md` (0.8 KB)
   - generation-system §3b.1: `ATG/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
+  - generation-system §3b.2: `ATG/reference/generation-system/060_3b.2_join-methods-by-the-locked-model.md` (3.2 KB) (the join method of each seam)
 - *a video with inserts:*
   - generation-system §3c: `ATG/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.2 KB)
 - anomaly-catalog §0: `ATG/reference/anomaly-catalog/010_0_four-questions-behind-every-anom.md` (1.4 KB)
 - anomaly-catalog §1: `ATG/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.5 KB)
 - anomaly-catalog §2.7: `ATG/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.5 KB)
 - anomaly-catalog §2.14: `ATG/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.3 KB)
+- anomaly-catalog §2.11: `ATG/reference/anomaly-catalog/140_2.11_environment-context-and-suitabil.md` (1.7 KB) (where things live, who uses what)
+- *two or more people handle the product:*
+  - anomaly-catalog §2.10: `ATG/reference/anomaly-catalog/130_2.10_ownership-and-hand-offs-two-or-m.md` (0.9 KB)
+- *a real process is shown (a sip, a pour, an unwrap, a bite, a spin):*
+  - anomaly-catalog §2.12: `ATG/reference/anomaly-catalog/150_2.12_timing-of-real-processes.md` (1.1 KB)
+- *a stylised or anime reference:*
+  - anomaly-catalog §2.13: `ATG/reference/anomaly-catalog/160_2.13_stylised-and-anime-rendering.md` (1.2 KB)
 - anomaly-catalog §2.16: `ATG/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (3.8 KB)
-- anomaly-catalog §3: `ATG/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.1 KB)
+- anomaly-catalog §3: `ATG/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.2 KB)
 - *a product that is handled, prepared, used, poured or counted on screen:*
   - anomaly-catalog §2.1: `ATG/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
   - anomaly-catalog §2.2: `ATG/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (2.8 KB)
@@ -250,7 +259,7 @@ Only these section files for this phase, nothing else unless a step below says s
       plus the overlay text as text layers (`reference/capcut-assembly.md`;
       `generation-system.md` §3c).
 18. **Examples: the user's own finished videos (optional, both modes).** They are asked for with the
-    other inputs (§2.5). The folder may be empty or absent; then nothing changes.
+    other inputs (`atg-start`, step 5). The folder may be empty or absent; then nothing changes.
     - They show the user's **house approach**: how their products are placed, used, continued across
       clips and blended, plus anything else they consistently do (text placement, pacing, sound,
       characters, endings).
@@ -330,7 +339,7 @@ Only these section files for this phase, nothing else unless a step below says s
   smaller than reckoned, one that
   changes size across a cut, or one larger than the hand that holds it (`anomaly-catalog.md` §2.7).
 - Never plan a product that is handled on screen without its affordance sheet in the registry
-  (§1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).
+  (`anomaly-catalog.md` §1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).
 
 ## Hand-off
 

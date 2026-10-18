@@ -13,6 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
+- analysis-protocol §1: `ATG/reference/analysis-protocol/020_1_inputs-per-video-produced-by-atg.md` (1.9 KB) (the per-video inputs, `T frames` and the sheet legend, for E2)
 - analysis-protocol §3: `ATG/reference/analysis-protocol/040_3_per-video-card-20-analysis-cards.md` (9.0 KB)
 - analysis-protocol §9: `ATG/reference/analysis-protocol/100_9_examples-the-user-s-own-videos-t.md` (3.1 KB)
 - brand-guardrails §3: `ATG/reference/brand-guardrails/030_3_the-guardrail-audit-per-referenc.md` (3.2 KB)
@@ -107,7 +108,7 @@ Only these section files for this phase, nothing else unless a step below says s
    is removed unless they name text to keep.
 
 ### E4. Locked model — how it performs this edit
-- The model was picked at the start (§2.4) and does not change. Before the first edit invoke Skill `atg-model-guide` (once) and call `models_explore get` once; each per-video skill then names the guide and reference sections it reads.
+- The model was picked at the start (`atg-start`, step 4) and does not change. Before the first edit invoke Skill `atg-model-guide` (once) and call `models_explore get` once; each per-video skill then names the guide and reference sections it reads.
 - Map the chosen operations onto the model's edit capability (`index.json → edit_kind`):
   - **✓ edits video** (`video_edit`, `object_replace`): a true edit of the 9:16 source.
   - **↔ motion transfer:** the source drives motion; the supplied files define the subjects and
@@ -146,12 +147,13 @@ Only these section files for this phase, nothing else unless a step below says s
   - otherwise explicit remove operations in the edit prompt;
   - otherwise clean-frame regeneration.
 - **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): plan for a baked
-  face effect; burned-in text, names and patches are written as the edit prompt's remove or replace
-  operations, never removed by a tool; a mirrored selfie is flipped only when the user asks (E3), since only
-  the planned operations change.
+  face effect; names and patches that identify are written as the edit prompt's remove or replace operations
+  (`brand-guardrails.md` §4); burned-in text follows the Text bullet above (the rule of §5c.2b that a tool never
+  removes it is Analyze Mode's); a mirrored selfie is flipped only when the user asks (E3), since only the
+  planned operations change.
 
 ### E6. Generate
-Run **X1–X10** (§5) for this video, as an edit. The source video is the unique master, and the plan
+Run **X1–X10** (the per-video loop of the router) for this video, as an edit. The source video is the unique master, and the plan
 holds:
 - the operations;
 - the substitution map;
@@ -183,7 +185,7 @@ files as video K".
 
 ### The per-video loop for one edit (E6)
 
-At the start of each video (before E2): `T state --run RUN set stage=editing video=NN next_skill=atg-edit`; when E5 is done: `next_skill=atg-plan-video`; when the user approves it (X9-R): `next_skill=atg-record`. A resume lands on the video's step; the ledger and the files on disk show how far it got (`T ledger begin` exit 3 stops any double submission).
+At the start of each video (before E2): `T state --run RUN set stage=editing video=NN next_skill=atg-edit`; when E5 is done: `next_skill=atg-plan-video`; when the user approves it (X9-R): `next_skill=atg-record`. A resume lands on the video's step; the ledger and the files on disk show how far it got (`T ledger show --run RUN --video NN` lists what was already submitted, and `T ledger begin` reports an open submission in the lane or a finished job of the same request: read that before you submit again).
 
 E6 runs the per-video steps for this video, in this order, each by invoking its skill when you get to it: `atg-plan-video` (X1) → `atg-write-request` (X2) → `atg-inputs` (X3) → `atg-precheck` (X4–X6, including the E6 "Go" gate for the first video) → `atg-submit` (X7) → `atg-postprocess` (X8) → `atg-qc` (X9) → the review below (X9-R) → `atg-record` (X10). At every preflight (X5, in `atg-precheck` or `atg-submit`) apply E6's pause rule above (cost above `confirm_cost_above_credits`, or credits running low).
 
@@ -226,9 +228,9 @@ In Edit Mode the X9 findings are the QC notes of the review: there is no automat
 
 13. **Edit Mode review.** After every edit attempt, the user sees the finished video and approves
     it or asks for changes. Changes are re-applied to the **original** source video. The next video
-    starts only after approval (§5 X9-R).
+    starts only after approval (X9-R).
 18. **Examples: the user's own finished videos (optional, both modes).** They are asked for with the
-    other inputs (§2.5). The folder may be empty or absent; then nothing changes.
+    other inputs (`atg-start`, step 5). The folder may be empty or absent; then nothing changes.
     - They show the user's **house approach**: how their products are placed, used, continued across
       clips and blended, plus anything else they consistently do (text placement, pacing, sound,
       characters, endings).

@@ -32,7 +32,7 @@ Stored as section files in `minimax-h3/` (next to this file); **read only the se
 | § | Section | File | KB |
 |---|---|---|---|
 | 1 | At a glance | `010_1_at-a-glance.md` | 2.5 |
-| 2 | Higgsfield parameter surface | `020_2_higgsfield-parameter-surface.md` | 7.4 |
+| 2 | Higgsfield parameter surface | `020_2_higgsfield-parameter-surface.md` | 7.5 |
 | 3 | How the model reads a prompt | `030_3_how-the-model-reads-a-prompt.md` | 0.0 |
 | 3.1 | · Recommended prompt structure | `040_3.1_recommended-prompt-structure.md` | 1.4 |
 | 3.2 | · Subject and identity | `050_3.2_subject-and-identity.md` | 0.4 |

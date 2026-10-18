@@ -29,7 +29,7 @@ Stored as section files in `wan-2-6/` (next to this file); **read only the secti
 
 | § | Section | File | KB |
 |---|---|---|---|
-| 1 | At a glance | `010_1_at-a-glance.md` | 2.2 |
+| 1 | At a glance | `010_1_at-a-glance.md` | 2.1 |
 | 2 | Higgsfield parameter surface | `020_2_higgsfield-parameter-surface.md` | 4.8 |
 | 3 | How the model reads a prompt | `030_3_how-the-model-reads-a-prompt.md` | 0.0 |
 | 3.1 | · Recommended prompt structure | `040_3.1_recommended-prompt-structure.md` | 0.9 |
@@ -45,8 +45,8 @@ Stored as section files in `wan-2-6/` (next to this file); **read only the secti
 | 3.11 | · Visible text | `140_3.11_visible-text.md` | 1.4 |
 | 3.12 | · Character / identity consistency | `150_3.12_character-identity-consistency.md` | 0.5 |
 | 3.13 | · Product and object fidelity | `160_3.13_product-and-object-fidelity.md` | 0.4 |
-| 3.14 | · Integration and continuity | `170_3.14_integration-and-continuity.md` | 1.5 |
-| 4 | Prompt construction | `180_4_prompt-construction.md` | 5.2 |
+| 3.14 | · Integration and continuity | `170_3.14_integration-and-continuity.md` | 1.4 |
+| 4 | Prompt construction | `180_4_prompt-construction.md` | 5.1 |
 | 5 | Strengths, weaknesses and failure modes | `190_5_strengths-weaknesses-and-failure.md` | 1.8 |
 | 6 | Model-specific features and controls | `200_6_model-specific-features-and-cont.md` | 0.4 |
 | 7 | Model-specific pre-generation checklist | `210_7_model-specific-pre-generation-ch.md` | 0.8 |

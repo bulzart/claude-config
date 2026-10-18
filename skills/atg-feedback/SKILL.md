@@ -22,8 +22,10 @@ Only these section files for this phase, nothing else unless a step below says s
    anything else (item 22): find the run under `ATG/runs/` by the video's CapCut project name or date
    and read its brief, its final prompt and its QC verdict (`40-briefs/`, `50-requests/`,
    `60-outputs/video-NN/result.json`); when the run cannot be found, ask the user once for the brief or
-   the prompt they used. Say in two lines which stage made the miss and which reference section holds the
-   rule, then offer the fix (a re-edit or a regeneration of that video in its mode) in one line, and
+   the prompt they used; if they have neither, diagnose from their words and the video itself and say in the
+   diagnosis that the brief and the prompt were not available. Say in two lines which stage made the miss and which reference section holds the
+   rule; write the user's words verbatim and that diagnosis in the video's brief (a block headed "User report") before the fix is
+   offered; then offer the fix (a re-edit or a regeneration of that video in its mode) in one line, and
    continue only if the user wants it. The same goes for a message that rejects a Viral-Browser pick: diagnose
    it the same way (the lane, the score, the gate or the control that failed), write the user's words and the
    diagnosis in `<RUN>/deliverables/feedback.md`, and offer the adjustment as `atg-vb-wrapup` describes.
@@ -36,7 +38,8 @@ Only these section files for this phase, nothing else unless a step below says s
     cause, the corrected wording and what worked as the sample beside it. There is no `caught_errors.md`,
     no `T caught-error`, no per-run digest of past errors, and nothing in a run reads an error file: the
     plan, the prompt and QC follow the references. The only error text a run writes is a video's own
-    attempt block in its brief, `result.json`, and the Higgsfield flag record of item 23; no later run
+    attempt blocks in its brief, the user's words with their diagnosis (in the video's brief; for a rejected pick,
+    `deliverables/feedback.md`), `result.json`, and the Higgsfield flag record of item 23; no later run
     reads any of it. `CE-nnn` in the references are case labels of
     those lessons (`README.md`). **When a delivered video is wrong**, in the run or in a later session:
     take the user's words verbatim, diagnose them in pipeline terms (the stage that made the miss and the

@@ -5,15 +5,15 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 550ea8f9-fa48-4983-be86-ce42635bab6a
-  modified: 2026-10-18T12:37:35.447Z
+  modified: 2026-10-18T13:12:08.655Z
 ---
 
 On 2026-10-18 the user asked to rewrite `/analyze-then-generate` with the same context-rot-avoiding structure as the other pipeline, linked to
 Loupe, with ambiguity and double-edged example cleanup, without losing any ATG logic ("split sections into skills").
 
 What exists (full description: `~/.claude/analyze-then-generate/README.md`):
-- `~/.claude/commands/analyze-then-generate.md`: router only (~20 KB: loading rules, resume incl. Viral-Browser `next_step` map, 26 one-line contract
-  items, phase table, per-video loop, labels, global Never).
+- `~/.claude/commands/analyze-then-generate.md`: router only (~20 KB: loading rules, resume incl. Viral-Browser `next_step` map, 27 one-line contract
+  items (27 = QC fixes, [[atg-qc-fixes-option]]), phase table, per-video loop, labels, global Never).
 - 25 skills `~/.claude/skills/atg-*/SKILL.md` (`user-invocable: false`, LF endings, descriptions <=200 chars): the 19 shared phase skills
   (start, analyze-prepare/-study, create-plan, recreate-plan, asset-plan, analyze-produce, edit, plan-video, write-request, inputs, precheck, submit,
   postprocess, qc, record, wrapup, feedback, model-guide) + 6 Viral-Browser skills: `atg-vb-cards` (V1-V2 incl. the inputs/brief questions and

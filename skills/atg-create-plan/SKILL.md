@@ -27,7 +27,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §4b.0: `ATG/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
 
 ### A6. Create: style groups and blends (Create only)
-- From the families, the mechanism map, the blend matrix and the product insight sheet (A2b, A4) present numbered **style
+- From the families and the directions (A4), the mechanism map, the blend matrix and the product insight sheet (A2b) present numbered **style
   groups**: `<content type> × <style> × <subject>`, grouped by content type. The values come from the analysed patterns and
   the product, not from a stock list.
   - Each group lists its mechanisms (M#, k of n references, graded), the typical length range, and how the product appears
@@ -110,7 +110,10 @@ Only these section files for this phase, nothing else unless a step below says s
     Recreate pick is ranked for its creative potential; every brief says
     why the video will work; and QC judges the hook, the payoff and the share line as notes. The
     creative layer never overrides the hard rules (items 6, 14, 15, 18, 19 and the anomaly
-    catalog); it decides which references, mechanisms and concepts win inside them.
+    catalog); it decides which references, mechanisms and concepts win inside them. In Create the same persona block
+    opens every analysis and ideation prompt (a growth strategist, a direct-response specialist, a mass-cognition
+    engineer, a trend analyst), and the references are mined for why they spread before anything is written
+    (`viral-browser.md` §14).
 
 ## Never (this phase)
 

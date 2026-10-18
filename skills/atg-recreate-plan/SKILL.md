@@ -15,7 +15,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - brand-guardrails §3: `ATG/reference/brand-guardrails/030_3_the-guardrail-audit-per-referenc.md` (3.2 KB)
 - brand-guardrails §4: `ATG/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
-- analysis-protocol §5: `ATG/reference/analysis-protocol/060_5_cross-video-synthesis.md` (6.4 KB)
+- analysis-protocol §5: `ATG/reference/analysis-protocol/060_5_cross-video-synthesis.md` (6.5 KB)
 - generation-system §3c: `ATG/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.2 KB)
 - generation-system §4b.1c: `ATG/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
 - generation-system §5c.1: `ATG/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.2 KB)
@@ -29,7 +29,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a person is swapped for a supplied character:*
   - anomaly-catalog §2.17: `ATG/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - the locked model's `edit_kind` and edit range: `T model-entry --id <model>`
-- model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atg-model-guide`) — §1 at a glance, §2.4 call recipes, §4.4 video edit (the preserving mode and settings), §6 features
+- model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atg-model-guide`) — §1 at a glance, §2.4 call recipes, §4.4 video edit (the preserving mode and settings), §5 failure modes (where the guide lists size or place as a limit: the anchor ranking), §6 features
 
 ### A6r. Recreate: pick the references and plan the edits (Recreate only, autonomous)
 - **Use the recreate ranking from A4** (protocol §5). It weighs:
@@ -102,7 +102,7 @@ Only these section files for this phase, nothing else unless a step below says s
 ### Edit Mode's E4–E5, as Recreate uses them
 
 ### E4. Locked model — how it performs this edit (Recreate uses Edit Mode's machinery E4–E5)
-- The model was picked at the start (§2.4) and does not change. Invoke Skill `atg-model-guide` (once) and call `models_explore get` once; each per-video skill then names the guide and reference sections it reads.
+- The model was picked at the start (`atg-start`, step 4) and does not change. Invoke Skill `atg-model-guide` (once) and call `models_explore get` once; each per-video skill then names the guide and reference sections it reads.
 - Map the chosen operations onto the model's edit capability (`index.json → edit_kind`):
   - **✓ edits video** (`video_edit`, `object_replace`): a true edit of the 9:16 source.
   - **↔ motion transfer:** the source drives motion; the supplied files define the subjects and
@@ -136,16 +136,11 @@ Only these section files for this phase, nothing else unless a step below says s
 - **Duration (item 19).** Request each segment at its exact source duration, or at the nearest
   allowed duration above it and trim the extra afterwards. Never request a shorter one: the actions
   would be squeezed against the original sound.
-- **Text.** Plan the removal per `text-and-format.md` §2.2:
-  - local `T clean` for small static overlays;
-  - otherwise explicit remove operations in the edit prompt;
-  - otherwise clean-frame regeneration.
-- **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): plan for a baked
-  face effect; burned-in text, names and patches are written as the edit prompt's remove or replace
-  operations, never removed by a tool; a mirrored selfie is flipped only when the user asks (E3), since only
-  the planned operations change.
-
-In Recreate (Analyze Mode) the tool methods that `text-and-format` §2 lists for removing source text (`--delogo`, `--crop`) are not used: a caption, a name or a patch is never removed by a tool, the prompt's clean-plate lines and the character-swap script carry it (see Never below).
+- **Text.** In Recreate (Analyze Mode) source text is never removed by a tool (`T clean`, `--delogo` and `--crop` are not used;
+  `generation-system.md` §5c.2b): the prompt's clean-plate lines (the highest-priority lines, never trimmed) and the
+  character-swap script carry it (see Never below). The Edit Mode methods of `text-and-format.md` §2.2 do not apply.
+- **Source flags**: as in A6r above: a mirrored selfie has its silent copy flipped (`hflip`) and the action script swaps
+  its sides; a name or a patch is one named replace sentence; a baked face effect is planned as flagged.
 
 ## Rules this phase owns (contract items 16, 19)
 

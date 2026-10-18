@@ -20,7 +20,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - capcut-assembly §3: `ATG/reference/capcut-assembly/030_3_build-the-timeline.md` (4.6 KB)
   - capcut-assembly §4: `ATG/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (2.3 KB)
   - capcut-assembly §5: `ATG/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.2 KB)
-  - production-agents §5: `ATG/reference/production-agents/050_5_this-session-as-agents-report.md` (1.9 KB)
+  - production-agents §5: `ATG/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 
 ## 6. Wrap-up (both modes)
 
@@ -46,6 +46,7 @@ Then give:
   and that `T caught-flag open` shows them grouped and searchable,
   each persistent or open one with its video, the flagged prompt or video and what was tried;
   or "no flags this run";
+- the QC fixes (item 27, Recreate and Create): "N videos fixed after QC, M fixes you declined (kept as generated, flagged: V03 …)", or "no QC finding needed a fix";
 - any open issues.
 
 Both modes: reconcile the flags before the table. Run `T caught-flag reconcile --run RUN`; every
@@ -57,7 +58,7 @@ belongs to this run gets `T caught-flag add … --capture <id>`; the rest are le
 Loupe.
 
 Analyze Mode: check the briefs before the feedback question. Every `result.json` whose `qc` says
-RESIDUAL FAILURE or regenerated has an attempt block in its video's brief, so no flagged delivery leaves
+RESIDUAL FAILURE, regenerated or declined fix has an attempt block in its video's brief, so no flagged delivery leaves
 the run unexplained.
 
 Analyze Mode: before the table, check the run's deliverables and text. Every video in `state.json` →
@@ -116,7 +117,8 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
     cause, the corrected wording and what worked as the sample beside it. There is no `caught_errors.md`,
     no `T caught-error`, no per-run digest of past errors, and nothing in a run reads an error file: the
     plan, the prompt and QC follow the references. The only error text a run writes is a video's own
-    attempt block in its brief, `result.json`, and the Higgsfield flag record of item 23; no later run
+    attempt blocks in its brief, the user's words with their diagnosis (in the video's brief; for a rejected pick,
+    `deliverables/feedback.md`), `result.json`, and the Higgsfield flag record of item 23; no later run
     reads any of it. `CE-nnn` in the references are case labels of
     those lessons (`README.md`). **When a delivered video is wrong**, in the run or in a later session:
     take the user's words verbatim, diagnose them in pipeline terms (the stage that made the miss and the

@@ -59,6 +59,6 @@ Preflight with `get_cost: true` [HF]. A completed job ID may be used as a media 
 | If an image reference is used as a first frame (unverified route) | same params | output follows the image's aspect [OFFICIAL i2v] | supply 9:16 reference images |
 
 Finish with `atg.py conform --video "<in>" --out "<out>"` (scale-to-cover + focus crop to exactly 720×1280, never
-stretched; a no-op when already exact). Expected loss ~0%; if `conform` refuses (>12% loss), the output was not 9:16 —
+stretched; a no-op when already exact). Expected loss ~0%; if `conform` reports a loss above about 12% (`lost_fraction`), the output was not 9:16 —
 regenerate with 9:16 inputs [INFERRED].
 

@@ -1,6 +1,6 @@
 # Creative direction — the roles the pipeline plays, the goal, the audience, the trend, the idea
 
-Load this with `analysis-protocol.md` (A3–A7) and `generation-system.md` (X1, X6, X9). It makes
+Used with `analysis-protocol.md` (A3–A7) and `generation-system.md` (X1, X6, X9): read the sections the phase skill names. It makes
 the pipeline think like the people who make content that works, before it thinks like the people
 who render it. It never overrides the hard rules: physical and logical correctness
 (`generation-system.md` §3–§5d, `anomaly-catalog.md`), the must-not-survive list (§9b), the

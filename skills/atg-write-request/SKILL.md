@@ -17,7 +17,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atg-model-guide`) — §2.4 (call recipes), §2.6 (9:16/720p), §3.1–§3.7 (structure, subject and identity, action, environment and light, chronology, camera, references), §3.10–§3.14 (negatives, visible text, identity consistency, product fidelity, integration), §4.0 (official examples: the pattern card) and the §4.x of the request kind (4.1 text-to-video, 4.2 frames, 4.3 reference, 4.4 edit/extension); §3.8 when frames are used; §3.9 when audio is used; §6 when a model feature is planned
 - generation-system §4: `ATG/reference/generation-system/100_4_replacement-and-insertion-integr.md` (3.3 KB)
-- generation-system §6: `ATG/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
+- generation-system §6: `ATG/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
 - generation-system §5b: `ATG/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5c.3: `ATG/reference/generation-system/270_5c.3_the-fidelity-lock-in-the-prompt.md` (3.1 KB)
 - generation-system §7: `ATG/reference/generation-system/320_7_translating-the-plan-into-the-se.md` (2.7 KB)
@@ -29,7 +29,14 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §4b.1c: `ATG/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
 - *the plan has a size-and-place guide, or a retry adds one:*
   - generation-system §4b.6: `ATG/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
-- anomaly-catalog §3: `ATG/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.1 KB)
+- anomaly-catalog §3: `ATG/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.2 KB)
+- anomaly-catalog §2.11: `ATG/reference/anomaly-catalog/140_2.11_environment-context-and-suitabil.md` (1.7 KB) (where things live, who uses what)
+- *two or more people handle the product:*
+  - anomaly-catalog §2.10: `ATG/reference/anomaly-catalog/130_2.10_ownership-and-hand-offs-two-or-m.md` (0.9 KB)
+- *a real process is shown (a sip, a pour, an unwrap, a bite, a spin):*
+  - anomaly-catalog §2.12: `ATG/reference/anomaly-catalog/150_2.12_timing-of-real-processes.md` (1.1 KB)
+- *a stylised or anime reference:*
+  - anomaly-catalog §2.13: `ATG/reference/anomaly-catalog/160_2.13_stylised-and-anime-rendering.md` (1.2 KB)
 - *a product in use, prepared or counted:*
   - anomaly-catalog §2.1: `ATG/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
   - anomaly-catalog §2.2: `ATG/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (2.8 KB)
@@ -40,10 +47,11 @@ Only these section files for this phase, nothing else unless a step below says s
 - *the video shows a throw/pass (solidity lines):*
   - anomaly-catalog §2.14: `ATG/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.3 KB)
 - *a placed or contents product (blend lines):*
-  - anomaly-catalog §2.15: `ATG/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (8.1 KB)
+  - anomaly-catalog §2.15: `ATG/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (8.3 KB)
 - *a person is swapped (the skin-tone sentence):*
   - anomaly-catalog §2.17: `ATG/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - text-and-format §1: `ATG/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
+- assets-and-substitution §6: `ATG/reference/assets-and-substitution/060_6_fidelity-rules.md` (0.8 KB)
 - *guardrail operations in the plan:*
   - brand-guardrails §4: `ATG/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - the plan `RUN/40-briefs/video-NN-plan.md` (X1)
@@ -64,10 +72,10 @@ Only these section files for this phase, nothing else unless a step below says s
     - A hint is a risk to check this plan against, never prompt text. Do not copy its words, do not name the wrong
       behaviour anywhere in the prompt or the reference notes (a thing that is named, even in a negative, is what
       comes back: `generation-system.md` §4, §5c.2b), and add no negative list beyond the product's one targeted
-      exclusion.
+      exclusion (the only place a wrong behaviour is named, and only the one wrong thing the product's own details make possible; a hint never adds a second).
     - Apply a hint only if its `trigger` matches a beat of this plan and its `caveat` does not exclude it;
       otherwise change nothing. Apply it by the smallest change inside the prompting stack
-      (`anomaly-catalog.md` §3): the restatement at that beat, the product's targeted exclusion, the reference
+      (`anomaly-catalog.md` §3): the restatement at that beat, the product's targeted exclusion (only when the hint's miss is that very one wrong thing), the reference
       view, the beat written as start state, operation, result, or the anchor, written positively as the hint's
       `right_outcome`. Touch only the matching beat: no new element, camera move or sentence elsewhere, nothing of
       the source's story, timing or the locked model changes, and any rule of this phase wins a conflict.
@@ -83,7 +91,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Reason first** (`generation-system.md` §6). For every beat that places, moves or uses the product, derive what the plan or source
     needs there, what the product's own details allow (its registry row, affordance sheet and `product_properties.txt`) and what the
     source scene offers, then write the one state all three allow, once, in positive words. The rules below are checks on that result,
-    never lines to paste: no "never" or "always" in the prompt, at most one targeted exclusion per product, and no two sentences that
+    never lines to paste: no "never", "always" or "only" of your own in the prompt (the lines a section mandates by name are not counted: §6), at most one targeted exclusion per product, and no two sentences that
     ask opposite things of a beat (the higher authority in §6 wins, the other line is dropped, one line of reason goes in the pattern card).
     An example sentence in a reference or a guide shows a mechanism for another case: write this video's own nouns.
   - Write the prompt in the model's proven structure and syntax.
@@ -118,8 +126,8 @@ Only these section files for this phase, nothing else unless a step below says s
       result, with the contact point, orientation and body mechanics of the product's affordance
       sheet. Every **multiple** carries its number at t=0, at each event and at
       the end, restated after exits, occlusions, cuts, hand-offs and seams. Each product gets **one
-      targeted exclusion**: the one wrong use or count that this product's own details make possible
-      (its other end, a second copy, a count that changes). No reference image shows a
+      targeted exclusion**: the one wrong thing that this product's own details make possible
+      (a wrong use, its other end, a second copy, a count that changes). No reference image shows a
       later state than t=0 (`anomaly-catalog.md` §3). Every thrown, dropped, swung or passing thing
       has its path written relative to the product, past it on a named side or onto it with the
       consequence, plus the solidity exclusion (`anomaly-catalog.md` §2.14).

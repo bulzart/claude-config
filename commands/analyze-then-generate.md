@@ -1,6 +1,6 @@
 ---
 description: Analyze a folder of reference material (or take videos to edit), learn what makes it work, then either generate new vertical 9:16 720p videos through Higgsfield MCP (Recreate, virality-backed Create, Edit) or find the next three products to sell with the same viral approach (Viral-Browser, which asks the market and price range and generates nothing).
-argument-hint: "analyze <references-folder> assets <asset files/folders…> [examples <folder>] | edit <video files/folders…> [examples <folder>] | viral-browser <references-folder> [baseline <folder>] [market us|eu|global] [price <min>-<max> <currency>] [depth quick|standard|deep] | resume [run-dir]"
+argument-hint: "analyze <references-folder> assets <asset files/folders…> [examples <folder>] [qc-fixes ask|auto] | edit <video files/folders…> [examples <folder>] | viral-browser <references-folder> [baseline <folder>] [market us|eu|global] [price <min>-<max> <currency>] [depth quick|standard|deep] | resume [run-dir]"
 disable-model-invocation: true
 disallowed-tools:
   - Workflow
@@ -58,7 +58,7 @@ You are running the **/analyze-then-generate** command.
 
 Modes: **Edit Mode**, and **Analyze Mode** with three sub-modes: **Recreate**, **Create** and **Viral-Browser**. In Viral-Browser the references become a **source of ideas**, nothing is
 generated, and the run returns the **next three products to sell**, each with a blueprint and a reference pack. Create is virality-backed (the references are mined for why they spread and blended with the
-client's product). Items 3–6, 12–16 and 19 concern video generation; items 24–26 govern Viral-Browser.
+client's product). Items 3–6, 12–16 and 19 concern video generation and apply to Edit Mode, Recreate and Create; item 27 (QC fixes) applies to Recreate and Create; items 24–26 govern Viral-Browser.
 
 This file is only the **router**, and it is small on purpose. The pipeline is split into **phase skills** (`atg-*`, one per mode and per step) and its rules and data into **section files**
 (`ATG/reference/<name>/`, `ATG/models/<guide>/`, `ATG/higgsfield/higgsfield-mcp/`), so that every phase loads only what it needs and the context of a run does not rot. The skills are interconnected:
@@ -68,8 +68,9 @@ each ends with a hand-off that names the next one.
 `T` = `"$PY" "$ATG/scripts/atg.py"` (one JSON object on its last line; run through Bash) · `RUN` = `ATG/runs/<stamp>-<slug>/`.
 
 **Scripts gather, the agent decides** (the user's rule, 2026-10-12; every mode, every `T` command). `T` measures, extracts, records, tabulates and calculates; it never hands out a verdict, status or label
-derived from content, never applies a threshold that refuses or changes an answer, never ranks, picks or breaks a tie, and refuses only a bad argument, a missing file or tool, a damaged ledger, an unsafe web address
-or a failed ffmpeg run. **You** read its numbers and tables, decide under the mode's specification, and record every decision with its reason (`--by` / `--reason`, the bias log in `30-research/ranking.md`,
+derived from content, never applies a threshold that refuses, caps or changes an answer, never ranks, picks or breaks a tie, never compares texts or counts words to decide anything, and refuses only a bad argument, a missing file
+or tool, a damaged ledger, an unsafe web address or a failed ffmpeg run (the mechanical exceptions: file locks, the submission ledger's fingerprint bookkeeping, the page reader's public-address guard, CapCut's
+"close it first" and the locked house preset). **You** read its numbers and tables, decide under the mode's specification, and record every decision with its reason (`--by` / `--reason`, the bias log in `30-research/ranking.md`,
 `ledger set --status superseded --note`). The old thresholds (0.10 s sync tolerance, 15 % / 25 % size bands, 12 % crop loss, pool shares, rating floors, evidence caps) are rules of thumb: apply them with
 judgement, depart from them when the evidence says so, and write down what you applied, what you set aside and why. Independent checks stay fresh AI agents (niche audit, blind scoring, red team, reference
 packs), never script gates.
@@ -99,7 +100,7 @@ packs), never script gates.
    - continue from `next_step`. Never re-ask a question that is answered in `state.json` (Viral-Browser stores its brief under `brief.*`).
    Then invoke the skill named by `next_skill` in `state.json`. A run made before this layout has none: take the phase from `stage` / `next_step` with the map below
    (for example `stage=analyzed next_step=count` → A5 in `atg-analyze-study`; videos in `videos[]` but not all done → `atg-analyze-produce`; Edit Mode → `atg-edit`;
-   Viral-Browser `next_step` cards → `atg-vb-cards`; synthesis, candidates → `atg-vb-synthesis`; research → `atg-vb-research`; scoring → `atg-vb-select`; blueprints → `atg-vb-deliver`; report-qc, wrap-up → `atg-vb-wrapup`).
+   Viral-Browser `next_step` cards → `atg-vb-cards`; synthesis, candidates, cost-basis → `atg-vb-synthesis`; research → `atg-vb-research`; scoring → `atg-vb-select`; blueprints → `atg-vb-deliver`; report-qc, wrap-up → `atg-vb-wrapup`).
 
 If `$ARGUMENTS` or the opening message reports a delivered video, or a Viral-Browser pick, as wrong (it names a video, a CapCut project, a pick or a run and says what was not right), invoke Skill `atg-feedback` first
 and handle it before anything else (item 22).
@@ -136,7 +137,7 @@ and handle it before anything else (item 22).
 12. **Generation discipline.** Every paid call through `T ledger begin/set`; never resubmit after a timeout or unclear answer until checked; never repeat an identical finished request; preflight once per distinct request; no test or "just in case" calls. → `atg-submit`
 13. **Edit Mode review** after every attempt; changes re-apply to the original source; the next video starts only after approval. → `atg-edit`
 14. **Analyze Mode: the client's product is always in the video** (Recreate, Create): swap, contents or natural placement, physically and logically correct. → `atg-asset-plan`, `atg-plan-video`
-15. **Analyze Mode asks permission in exactly one case**: a video over 30 s needing 2+ generations (A7b). Blockers are reported, not asked. → `atg-asset-plan`
+15. **Analyze Mode asks permission in exactly one case**: a video over 30 s needing 2+ generations (A7b); the one other question is the fix generation after a QC finding, and only when the user chose `ask` (item 27). Blockers are reported, not asked. → `atg-asset-plan`
 16. **Analyze Mode: reference inserts are cut, never generated; every video ends as a CapCut project** `DD_Mon_YYYY_vNN`. → `atg-recreate-plan`, `atg-plan-video`, `atg-postprocess`
 17. **Three Analyze sub-modes, chosen at the start, never mixed**: Recreate (edit the original references with the client's assets), Create (new virality-backed blends of the analysed mechanisms and the client's product; no reference is ever an input) and Viral-Browser (the references as ideas; products to sell; nothing generated). → `atg-start`
 18. **Examples** (the user's own finished videos, optional, both modes) are study material for the house approach; never assets. → `atg-analyze-prepare`, `atg-analyze-study`
@@ -148,6 +149,7 @@ and handle it before anything else (item 22).
 24. **Viral-Browser: the references are a source of ideas and the run generates nothing**: no model, generation tool, credits, CapCut or assets, the references folder untouched; the brief (market, price range, selling model, tools) is asked, not assumed; three data-backed products, each with a blueprint and a reference pack (sourced specification and photo links, none downloaded); "no product passes" is a valid result. → `atg-vb-cards`
 25. **Niche-bias control**: the references' product niche must not decide the answer: a niche vocabulary the agents build from the data (`T niches`) and a fresh niche-audit agent reads, a pool read for balance before research, a fresh blind scorer, a red-team reading for every pick and a written defence for a dominant-niche pick; no script ranks, caps, gates or picks. → `atg-vb-synthesis`, `atg-vb-select`
 26. **Viral-Browser is autonomous after the brief**: the only questions are the brief, the picks feedback and the optional "continue to Create", which runs only on the user's yes and then follows every Create rule. → `atg-vb-wrapup`
+27. **QC fixes** (Recreate, Create): at the start the user chooses `ask` or `auto` for the fix generation after a QC finding. `ask`: from the first video on, when QC finds issues or anomalies that only a new generation can fix, the production agent prepares the fix and stops with a proposal, the main session asks the user, and no credits are spent until the user says yes. `auto`: the QC agents correct on their own, without asking (one diagnosed regeneration per clip). Stored in `state.json → qc_fixes` (a run without it is `auto`). Local post-fixes, CapCut fixes and the retry of a job that failed with no output are never asked; Edit Mode is not asked (the user reviews every attempt). → `atg-start`, `atg-qc`, `atg-analyze-produce`
 
 ## Phases (the skills)
 
@@ -159,7 +161,7 @@ and handle it before anything else (item 22).
 | A6 style groups, blends, scored concepts | `atg-create-plan` | Create | `atg-asset-plan` |
 | A6r pick the references, plan the edits | `atg-recreate-plan` | Recreate | `atg-asset-plan` |
 | A7–A7b asset plan, long-video permission | `atg-asset-plan` | Recreate, Create | `atg-analyze-produce` |
-| A8–A10 prepare every video, production agents, reports | `atg-analyze-produce` | Recreate, Create | `atg-wrapup` |
+| A8–A10 prepare every video, production agents, reports, QC-fix questions | `atg-analyze-produce` | Recreate, Create | `atg-wrapup` |
 | V1–V2 inputs and brief, run, inventory, viral cards | `atg-vb-cards` | Viral-Browser | `atg-vb-synthesis` |
 | V3–V4b corpus profile, niche vocabulary, candidates, cost basis | `atg-vb-synthesis` | Viral-Browser | `atg-vb-research` |
 | V5 research wave | `atg-vb-research` | Viral-Browser | `atg-vb-select` |
@@ -180,7 +182,7 @@ it). A regeneration or re-edit runs `atg-write-request` → (`atg-inputs` for ne
 A6r (the "R-steps" of item 17; E4–E5 as Recreate uses them are repeated in it) → `atg-recreate-plan` · A7, A7b → `atg-asset-plan` · A8, A9, A9b, A10 → `atg-analyze-produce` · V1, V2 → `atg-vb-cards` · V3, V4, V4b → `atg-vb-synthesis` ·
 V5 → `atg-vb-research` · V6 → `atg-vb-select` · V7 → `atg-vb-deliver` · V8, V9 → `atg-vb-wrapup` · E1–E7, X9-R → `atg-edit` · X1 → `atg-plan-video` · X2 → `atg-write-request` · X3 → `atg-inputs` ·
 X4, X5, X6 → `atg-precheck` (X5 also in `atg-submit`) · X7 → `atg-submit` · X8 → `atg-postprocess` · X9 → `atg-qc` · X10 → `atg-record` · §6, §6b → `atg-wrapup` · item 22 → `atg-feedback` · item 23 → `atg-submit` ·
-items 24 → `atg-vb-cards`, 25 → `atg-vb-synthesis`, 26 → `atg-vb-wrapup`.
+items 24 → `atg-vb-cards`, 25 → `atg-vb-synthesis`, 26 → `atg-vb-wrapup`, 27 → `atg-start` (the choice), `atg-qc` (the proposal), `atg-analyze-produce` (the question).
 A rule that two phases both act on is written in both skills.
 
 ## Never (global; each skill carries the rest of the Never list for its own phase)

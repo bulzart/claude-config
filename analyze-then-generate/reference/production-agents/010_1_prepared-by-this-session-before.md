@@ -10,5 +10,5 @@
   - `higgsfield.folder_id`;
   - `assets.uploads`: media ids of every shared asset, plus Element ids;
   - `long_videos.NN`: the permissions;
-  - `analyze_submode`, `model`.
+  - `analyze_submode`, `model`, `qc_fixes` (`ask` or `auto`; the contract's "QC fixes" line).
 

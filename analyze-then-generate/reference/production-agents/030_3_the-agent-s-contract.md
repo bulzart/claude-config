@@ -10,7 +10,7 @@
    - `T ledger begin` before and `T ledger set` after every `generate_video` / `generate_image`;
    - one job in flight in its lane;
    - never resubmit after an unknown outcome until it is resolved;
-   - at most one autonomous, diagnosed regeneration per clip;
+   - at most one diagnosed regeneration per clip (yours to submit with QC fixes `auto`; submitted only after the main session's `approved` or `auto` with `ask`);
    - a request that failed twice → stop and report.
    The run keeps at most 5 jobs in flight (`production.max_parallel_jobs`): `begin` reports the number open
    against that cap, and keeping to it is your call. When the cap is reached, record the entry you did not
@@ -47,8 +47,8 @@
    one diagnosed regeneration on drift or a moved action. Record what you read and decided in
    `result.json` (`sync`).
 10. **No questions.** On any blocker, write `result.json` with `"status":"blocked"` and `"blocker"`
-   set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `other`, plus one
-   line of detail. Then stop.
+   set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `qc_fix_permission` | `other`, plus one
+   line of detail (`qc_fix_permission` also carries `fix_proposal`, §4). Then stop.
 11. **Final message:** the content of `result.json`, as one JSON line.
 12. **Record.** Every regenerate reason and every flagged delivery (RESIDUAL FAILURE) is written at once in
    the video's brief as an attempt block (the failed request, the verdict with its numbers and frame paths,

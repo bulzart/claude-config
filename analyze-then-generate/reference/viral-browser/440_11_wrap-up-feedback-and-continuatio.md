@@ -1,7 +1,7 @@
 ## 11. Wrap-up, feedback and continuation (V9)
 
 ### 11.1 Wrap-up
-Show the summary (§10.3), the open questions, and the deliverables path. Reconcile the ledger (§10.4 item 8) before the question.
+Show the summary (§10.3), the open questions, and the deliverables path. Fix what §10.4 item 8 found (each research error corrected and noted in the bias log) before the question.
 
 ### 11.2 Feedback
 Ask with AskUserQuestion (header "Picks"): **"All good"**, **"I'll review later"** (any later message about the picks is still handled below), **"Adjust"**. Each problem the user names, now or later, is handled as contract item 22 says (`atg-feedback`): their words verbatim and the diagnosis in pipeline terms (the lane, the score, the gate or the control that failed) go into `<RUN>/deliverables/feedback.md` before the fix is offered. A lesson that the references do not hold is written, generalised, into the section that owns the rule (§7.4, §8, §12) when the user asks for it.

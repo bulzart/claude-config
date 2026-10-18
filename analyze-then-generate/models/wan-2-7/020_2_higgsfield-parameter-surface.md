@@ -71,6 +71,6 @@ A `<JOB_ID>` of a completed Higgsfield image job can be the `value` [HF]. Prefli
 
 Require 9:16 frames (e.g. 1080×1920 or 720×1280) — crop or regenerate the still before upload; never rely on
 `aspect_ratio` in frame mode. Finish with `atg.py conform --video "<in>" --out "<out>"` (scale-to-cover + focus crop to
-exactly 720×1280, never stretched; a no-op when already exact). Expected loss ~0%; `conform` refuses losses above
-12% — that means the frame ratio was wrong: fix the frame and regenerate [INFERRED].
+exactly 720×1280, never stretched; a no-op when already exact). Expected loss ~0%; `conform` reports `lost_fraction`, and a loss above
+about 12% means the frame ratio was wrong: fix the frame and regenerate [INFERRED].
 

@@ -19,6 +19,8 @@
 4. Launch the next queued video.
 5. Handle blockers:
    - `permission` → ask (command A7b), store the answer, launch that video again;
+   - `qc_fix_permission` (only with QC fixes `ask`) → ask the user the fix question of command item 27 (`atg-analyze-produce`), then continue the stopped agent with `approved`, `declined` or `auto`
+     (SendMessage to that agent; if it cannot be continued, launch a fresh agent for that video: "resume at atg-submit X7 with <request file>, decision <…>");
    - `credits` → launch nothing more, report;
    - `capcut_running` → leave the project pending;
    - `failed_twice` / `other` → report in the wrap-up.

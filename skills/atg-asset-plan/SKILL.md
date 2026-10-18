@@ -149,9 +149,10 @@ generated without the user's permission. Nothing else in Analyze Mode asks for p
       occlusion and cut. These rules are general; the examples only illustrate them.
 15. **Analyze Mode asks for permission in exactly one case:** a video **over 30 s that needs 2 or
     more generations** (A7b).
-    - Everything else runs without confirmation: no "Go" question, no cost pauses, no QC questions.
+    - Everything else runs without confirmation: no "Go" question, no cost pauses, no QC questions of its own
+      (the one fix question of item 27, asked only when the user chose `ask`, is the exception).
     - Blockers are reported, not asked: the balance can't cover the next video, or Higgsfield
-      itself demands a choice (`unlim_choice`, `recovery_tool`, §5 X7).
+      itself demands a choice (`unlim_choice`, `recovery_tool`, X7 in `atg-submit`).
     - The planning questions (mode, model, inputs, number of videos, directions) are not
       permissions and stay.
     - Edit Mode keeps its gates (E6, X9-R).

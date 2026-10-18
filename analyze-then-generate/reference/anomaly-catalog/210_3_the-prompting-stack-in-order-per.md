@@ -13,9 +13,10 @@
 4. **Restatements**: the count and state of every tracked item right after each exit, re-entry,
    occlusion, cut, hand-off and seam (§2.1, §2.4, §2.5), and in every multi-clip hand-off state.
 5. **Contents** bound to the sample and to the liquid only, with levels and conservation (§2.6).
-6. **One targeted exclusion per product**, naming its own wrong use and its count ("drunk only
-   through the spout; no other opening", "exactly three capsules; none appears or disappears"), in
-   the model's exclusion syntax. A generic list never replaces it.
+6. **One targeted exclusion per product**, naming the one wrong thing its own details make possible
+   (a wrong use, a second copy, a count that changes: "drunk through the spout; no other opening",
+   "exactly three capsules; none appears or disappears"), in the model's exclusion syntax. A generic list
+   never replaces it, and the lines a section mandates by name (`generation-system.md` §6) are not counted against it.
 7. **References**: when the model takes images, one view that shows the part in its ready state;
    never a view that shows a later state than t=0 (an open tab for a can cracked on screen); tight
    product crops padded small; a size-and-place guide where the model lists size or place as a limit

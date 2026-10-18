@@ -1,7 +1,7 @@
 # Logical and physical anomalies — catalog, prompting stack and QC stack
 
-Load this with `generation-system.md`: when the asset registry is built (command A2b; Edit Mode E3),
-at X1 (plan), X2 (prompt), X4 (pre-generation QC) and X9 (QC). It is model-agnostic; the locked
+Used when the asset registry is built (command A2b; Edit Mode E3), at X1 (plan), X2 (prompt), X4 (pre-generation QC) and X9 (QC):
+read the sections those skills name, not this whole catalog. It is model-agnostic; the locked
 model's guide (§3.14, §5, §7) says how to phrase the lines below in that model's structure.
 
 It generalises two failures seen in anime Create videos (2026-10):
@@ -48,10 +48,10 @@ Stored as section files in `anomaly-catalog/` (next to this file); **read only t
 | 2.12 | · Timing of real processes | `150_2.12_timing-of-real-processes.md` | 1.1 |
 | 2.13 | · Stylised and anime rendering | `160_2.13_stylised-and-anime-rendering.md` | 1.2 |
 | 2.14 | · Solidity, collision and occlusion | `170_2.14_solidity-collision-and-occlusion.md` | 3.3 |
-| 2.15 | · Blend: a render, not a paste | `180_2.15_blend-a-render-not-a-paste.md` | 8.1 |
+| 2.15 | · Blend: a render, not a paste | `180_2.15_blend-a-render-not-a-paste.md` | 8.3 |
 | 2.16 | · Posture, support and place | `190_2.16_posture-support-and-place.md` | 3.8 |
 | 2.17 | · Identity: the swapped face matches the kept body (skin tone, build, age) | `200_2.17_identity-the-swapped-face-matche.md` | 3.2 |
-| 3 | The prompting stack (in order, per video) | `210_3_the-prompting-stack-in-order-per.md` | 2.1 |
+| 3 | The prompting stack (in order, per video) | `210_3_the-prompting-stack-in-order-per.md` | 2.2 |
 | 4 | The QC stack (X9, in order) | `220_4_the-qc-stack-x9-in-order.md` | 6.7 |
 | 4.1 | · How the verdict is written (examples) | `230_4.1_how-the-verdict-is-written-examp.md` | 4.8 |
 | 5 | Quick reference | `240_5_quick-reference.md` | 7.1 |

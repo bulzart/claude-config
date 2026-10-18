@@ -18,9 +18,9 @@ Only these section files for this phase, nothing else unless a step below says s
 - analysis-protocol §2: `ATG/reference/analysis-protocol/030_2_reading-a-video-as-one-continuou.md` (6.5 KB)
 - analysis-protocol §3: `ATG/reference/analysis-protocol/040_3_per-video-card-20-analysis-cards.md` (9.0 KB)
 - analysis-protocol §4: `ATG/reference/analysis-protocol/050_4_effectiveness-lenses-apply-those.md` (2.1 KB)
-- analysis-protocol §5: `ATG/reference/analysis-protocol/060_5_cross-video-synthesis.md` (6.4 KB)
+- analysis-protocol §5: `ATG/reference/analysis-protocol/060_5_cross-video-synthesis.md` (6.5 KB)
 - analysis-protocol §6: `ATG/reference/analysis-protocol/070_6_project-inference-20-analysis-pr.md` (2.6 KB)
-- analysis-protocol §7: `ATG/reference/analysis-protocol/080_7_scale-and-delegation-2-analysis.md` (2.6 KB)
+- analysis-protocol §7: `ATG/reference/analysis-protocol/080_7_scale-and-delegation-2-analysis.md` (2.7 KB)
 - analysis-protocol §8: `ATG/reference/analysis-protocol/090_8_presenting-results-to-the-user.md` (0.2 KB)
 - analysis-protocol §9: `ATG/reference/analysis-protocol/100_9_examples-the-user-s-own-videos-t.md` (3.1 KB)
 - creative-direction §1: `ATG/reference/creative-direction/010_1_the-roles.md` (2.3 KB)
@@ -32,7 +32,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Create only (the virality mining: the same mining as Viral-Browser's, without its market work):*
   - viral-browser §1: `ATG/reference/viral-browser/020_1_the-team.md` (2.7 KB)
   - viral-browser §3.1: `ATG/reference/viral-browser/050_3.1_how-to-read.md` (1.6 KB)
-  - viral-browser §3.2: `ATG/reference/viral-browser/060_3.2_the-card.md` (13.2 KB)
+  - viral-browser §3.2: `ATG/reference/viral-browser/060_3.2_the-card.md` (13.3 KB)
   - viral-browser §4.1: `ATG/reference/viral-browser/120_4.1_measure-first.md` (2.5 KB)
   - viral-browser §4.2: `ATG/reference/viral-browser/130_4.2_mechanism-map-20-analysis-mechan.md` (1.1 KB)
   - viral-browser §4.3: `ATG/reference/viral-browser/140_4.3_hooks-length-and-pacing.md` (1.0 KB)
@@ -42,7 +42,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - viral-browser §4.7: `ATG/reference/viral-browser/180_4.7_confounds-survivorship-and-small.md` (0.6 KB)
   - viral-browser §4.8: `ATG/reference/viral-browser/190_4.8_trend-read.md` (0.7 KB)
   - viral-browser §4.10: `ATG/reference/viral-browser/210_4.10_files-for-a-later-create.md` (0.4 KB)
-  - viral-browser §13.6: `ATG/reference/viral-browser/520_13.6_create-card-agent-subagent-type.md` (2.7 KB)
+  - viral-browser §13.6: `ATG/reference/viral-browser/520_13.6_create-card-agent-subagent-type.md` (2.8 KB)
   - viral-browser §14.1: `ATG/reference/viral-browser/550_14.1_what-create-takes-what-it-skips.md` (1.8 KB)
   - viral-browser §14.2: `ATG/reference/viral-browser/560_14.2_only-what-the-craft-carried-is-b.md` (1.0 KB)
   - viral-browser §14.3: `ATG/reference/viral-browser/570_14.3_the-blend-matrix-20-analysis-ble.md` (1.6 KB)
@@ -190,7 +190,7 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 ## Rules this phase owns (contract items 18, 20, 21)
 
 18. **Examples: the user's own finished videos (optional, both modes).** They are asked for with the
-    other inputs (§2.5). The folder may be empty or absent; then nothing changes.
+    other inputs (`atg-start`, step 5). The folder may be empty or absent; then nothing changes.
     - They show the user's **house approach**: how their products are placed, used, continued across
       clips and blended, plus anything else they consistently do (text placement, pacing, sound,
       characters, endings).

@@ -15,7 +15,7 @@ Callers. Edit Mode: X4, X5, X6 in sequence for the video. Analyze Mode, this ses
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- generation-system §6: `ATG/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
+- generation-system §6: `ATG/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
 - generation-system §8: `ATG/reference/generation-system/330_8_pre-generation-qc-pass-mental-re.md` (7.1 KB)
 - generation-system §10: `ATG/reference/generation-system/360_10_the-short-brief-printed-at-x6.md` (3.6 KB)
 - *Edit Mode or Recreate:*
@@ -26,10 +26,13 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §4b.1c: `ATG/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
 - *the plan has a size-and-place guide:*
   - generation-system §4b.6: `ATG/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
-- anomaly-catalog §3: `ATG/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.1 KB)
+- anomaly-catalog §3: `ATG/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.2 KB)
+- anomaly-catalog §2.14: `ATG/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.3 KB)
+- generation-system §9b: `ATG/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.6 KB)
 - *a placed or contents product (size, label, posture checks):*
   - anomaly-catalog §2.7: `ATG/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.5 KB)
   - anomaly-catalog §2.9: `ATG/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.3 KB)
+  - anomaly-catalog §2.15: `ATG/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (8.3 KB)
   - anomaly-catalog §2.16: `ATG/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (3.8 KB)
 - higgsfield-mcp §8: `ATG/higgsfield/higgsfield-mcp/080_8_credits-and-cost.md` (1.1 KB)
 - higgsfield-mcp §9: `ATG/higgsfield/higgsfield-mcp/090_9_errors-and-recovery.md` (2.5 KB)
@@ -56,8 +59,8 @@ Only these section files for this phase, nothing else unless a step below says s
     every event, every effect's cause, every restatement after an exit, occlusion, cut, hand-off or
     seam, and the path of every thrown, dropped or passing thing relative to the product (§2.14).
   - **Rules that pull apart** (`generation-system.md` §6): read the final prompt as the model will, beat by beat. No two sentences ask
-    opposite things of the same beat, no "never" or "always" stands outside the product's one targeted exclusion and the fidelity
-    lock's scoped "only", and every placement, posture and use line follows from the product's own details and what the source scene
+    opposite things of the same beat, no "never", "always" or "only" of the writer's own stands in it (the lines a section mandates by name are not counted: §6 "In the prompt"),
+    there is at most one targeted exclusion per product, and every placement, posture and use line follows from the product's own details and what the source scene
     offers, not from an example. A line that fights another is dropped by the §6 order of authority, with its reason in the brief.
   - **Sample hints** (only if X2 asked for them): the pattern card's "Sample hints" block exists; the prompt and the reference
     notes carry none of a hint's wrong-behaviour wording and no negative list that was not already the product's one targeted
@@ -99,15 +102,15 @@ Only these section files for this phase, nothing else unless a step below says s
   - Save it as `40-briefs/video-NN-brief.md`; each attempt or clip appends its own block under the first
     (the failed request, the verdict, what changed), so a reported problem can be read against what was
     planned and asked (item 22).
-  - Analyze Mode: no gate; the brief is information (item 15). Edit Mode: the E6 gate.
+  - Analyze Mode: no gate; the brief is information (item 15). Edit Mode: the E6 gate (below, Hand-off).
 
 ## Rules this phase owns (contract items 12)
 
 12. **Generation discipline: no spam, no glitches.**
     - Every paid Higgsfield generation (`generate_video`, and `generate_image` for start frames)
-      goes through the ledger (`T ledger begin` before, `T ledger set` after; §5 X7). There is at
-      most **one job in flight per video lane**, at most 5 per run, one generation call per turn
-      per agent, and never parallel calls inside a lane.
+      goes through the ledger (`T ledger begin` before, `T ledger set` after; X7: the ledger
+      records and reports, the agent decides). There is at most **one job in flight per video lane**,
+      at most 5 per run, one generation call per turn per agent, and never parallel calls inside a lane.
     - Never resubmit after a timeout or an unclear answer until the outcome has been checked, and
       never resubmit because a job is slow.
     - Never repeat an identical finished request.
@@ -127,6 +130,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Hand-off
 
-- Edit Mode: show the "Go" gate (E6) for the first video, then invoke Skill `atg-submit` (X7).
+- Edit Mode: show the "Go" gate (E6) for the first video, then invoke Skill `atg-submit` (X7). The gate: before the first submission of the run show the estimated
+  total against the balance (the preflight of video 1 × the number of videos) and ask with AskUserQuestion (header "Go"): "Start editing (≈X credits)" /
+  "Edit video 1 first, then decide" / "Stop here". Pause again before an attempt whose preflight exceeds `config.json → higgsfield.confirm_cost_above_credits`,
+  or when credits run low.
 - Analyze Mode, A9 step 1 (X4): next video's X1; when every video has its plan, request and X4, continue A9 step 2 in `atg-analyze-produce` (shared uploads via `atg-inputs`).
 - Analyze Mode, A9 step 3 (X5–X6 of every video): continue A9 steps 4–5 in `atg-analyze-produce`.

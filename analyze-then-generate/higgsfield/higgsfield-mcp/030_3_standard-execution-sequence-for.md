@@ -5,9 +5,12 @@ before submitting the next.
 - **Edit Mode** runs one video at a time.
 - **Analyze Mode** runs one production agent per video, at most 5 at once
   (`reference/production-agents.md`).
-- The ledger caps the run at `production.max_parallel_jobs` (5) jobs in flight.
+- The ledger records every submission and reports what is in flight; the agents keep to at most
+  `production.max_parallel_jobs` (5) jobs in flight per run.
 
-1. **Model entry.** Read `models/index.json` for the selected `model_id`, then read its guide.
+1. **Model entry.** `atg.py model-entry --id <model_id>` prints the selected model's index entry and
+   its guide path (never Read `models/index.json` whole); then read the guide's sections as
+   `atg-model-guide` lists them.
    Call `models_explore {action:"get", model_id}` once per run. If the live parameters, roles or ranges
    differ from the guide, the live catalog wins; note the drift in the run log.
 2. **Project folder, once per run.** `list_workspaces` → the `is_selected` workspace. Then
@@ -25,10 +28,14 @@ before submitting the next.
    [VERIFIED]. Read `adjustments`: it names every parameter the server defaulted or changed. If it
    changed something that matters (e.g. audio default, duration clamp), fix the params and preflight
    again. Show the cost in the per-video brief.
-6. **Submit (ledger-guarded).** Run `atg.py ledger begin --run <run> --video NN --attempt K
-   --request <request.json>` first.
-   - Exit 3 means **do not submit**: an open job must be resolved first, the request duplicates a
-     finished job, or the request already failed twice.
+6. **Submit (ledger first).** Run `atg.py ledger begin --run <run> --video NN --attempt K
+   --request <request.json>` first. It records a `pending` entry and exits 0; it never refuses. It
+   lists `conflicts` as facts: an open job in this video's lane, the jobs in flight in the run against
+   the cap, this exact request failed before, this exact request already produced a finished job.
+   - **You decide**: do not submit while an open job in the lane is unresolved, when the request
+     duplicates a finished job, or when the identical request already failed twice (change it or
+     report the failure); record a decision not to submit with
+     `atg.py ledger set --fingerprint F --status superseded --note "why"` (`atg-submit`, X7).
    - Otherwise make exactly one `generate_video {params:{…}}` call, with `get_cost` removed and
      `count` 1.
    - Immediately record the job id with `atg.py ledger set --fingerprint F --job J --status

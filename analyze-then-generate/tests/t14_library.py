@@ -43,6 +43,22 @@ for p in [ROUTER] + SKILLS:
 missing = sorted(c for c in used if c not in cmds)
 check(not missing, "every `T <command>` in the router and the skills is a command of atg.py: " + ", ".join(missing))
 
+# --- the QC-fixes option (command item 27) is written wherever it acts, with the same words for the choice and the blocker
+PA = LIB / "reference" / "production-agents"
+SKD = HOME / "skills"
+wired = [("router", ROUTER, "`ask`"), ("atg-start", SKD / "atg-start" / "SKILL.md", "qc_fixes"), ("atg-qc", SKD / "atg-qc" / "SKILL.md", "qc_fix_permission"),
+         ("atg-submit", SKD / "atg-submit" / "SKILL.md", "QC fixes `ask`"), ("atg-analyze-produce", SKD / "atg-analyze-produce" / "SKILL.md", "qc_fix_permission"),
+         ("production-agents §1", PA / "010_1_prepared-by-this-session-before.md", "qc_fixes"), ("production-agents §2", PA / "020_2_spawning.md", "qc_fix_permission"),
+         ("production-agents §3", PA / "030_3_the-agent-s-contract.md", "qc_fix_permission"), ("production-agents §4", PA / "040_4_60-outputs-video-nn-result-json.md", "fix_proposal"),
+         ("production-agents §5", PA / "050_5_this-session-as-agents-report.md", "qc_fix_permission")]
+check(not [lbl for lbl, p, needle in wired if needle not in rd(p)], "the QC-fixes option is written in every place that acts on it: " + ", ".join(lbl for lbl, p, needle in wired if needle not in rd(p)))
+check(all(w in router for w in ("27. **QC fixes**", "qc-fixes ask|auto")), "the router has contract item 27 and the qc-fixes argument")
+
+# --- the ledger is described the same way everywhere: it records and reports, it never refuses
+stale = [p.name for p in list((LIB / "higgsfield").rglob("*.md")) + list((LIB / "models").rglob("*.md")) + list((LIB / "reference").rglob("*.md")) + SKILLS
+         if re.search(r"ledger (caps|enforces)|Exit 3 means|conform` refuses|refuses to crop", rd(p))]
+check(not stale, "no guide, reference or skill says the ledger caps/enforces or that conform refuses: " + ", ".join(stale))
+
 # --- what must not come back
 text = router + "\n".join(rd(p) for p in SKILLS) + rd(LIB / "README.md")
 check("update-from-errors" not in text, "no mention of the obsolete update-from-errors command in the router, skills and README")

@@ -4,7 +4,7 @@ Analyze Mode's third sub-mode (skills `atg-vb-*`, steps V1–V9). **The referenc
 
 **Nothing is generated:** no model is picked, no Higgsfield generation tool is called, no credits are spent, no CapCut project is written, no client assets are asked for. The run reads, measures, searches and reasons, and writes files.
 
-Load this with `analysis-protocol.md` (§0 provenance, §1–§2 how to read a video, §4 lenses, §7 scale and delegation), `creative-direction.md` (§1 roles, §3 audience model, §4 trend read, §5.0 craft versus subject) and, only at the continuation to Create (§11), `anomaly-catalog.md`.
+Used with `analysis-protocol.md` (§0 provenance, §1–§2 how to read a video, §4 lenses, §7 scale and delegation) and `creative-direction.md` (§1 roles, §3 audience model, §4 trend read, §5.0 craft versus subject); the continuation to Create (§11) adds `anomaly-catalog.md`. Each `atg-vb-*` skill lists the exact sections it reads.
 
 Two things this mode must never do: **let the references' product niche decide the answer** (§5), and **state a number it did not get from a source or a method** (§0).
 
@@ -21,10 +21,10 @@ Stored as section files in `viral-browser/` (next to this file); **read only the
 |---|---|---|---|
 | 0 | Precedence and hard rules | `010_0_precedence-and-hard-rules.md` | 4.4 |
 | 1 | The team | `020_1_the-team.md` | 2.7 |
-| 2 | The brief (inputs) | `030_2_the-brief-inputs.md` | 6.2 |
+| 2 | The brief (inputs) | `030_2_the-brief-inputs.md` | 6.3 |
 | 3 | The viral card (per reference, `20-analysis/cards/<V>.md`) | `040_3_the-viral-card-per-reference-20.md` | 0.1 |
 | 3.1 | · How to read | `050_3.1_how-to-read.md` | 1.6 |
-| 3.2 | · The card | `060_3.2_the-card.md` | 13.2 |
+| 3.2 | · The card | `060_3.2_the-card.md` | 13.3 |
 | 3.3 | · Reading the product's price | `070_3.3_reading-the-product-s-price.md` | 0.5 |
 | 3.4 | · Baseline cards (when a baseline folder exists) | `080_3.4_baseline-cards-when-a-baseline-f.md` | 0.5 |
 | 3.5 | · Scale and delegation | `090_3.5_scale-and-delegation.md` | 0.8 |
@@ -45,32 +45,32 @@ Stored as section files in `viral-browser/` (next to this file); **read only the
 | 6 | Candidate generation (V4) | `240_6_candidate-generation-v4.md` | 4.5 |
 | 7 | Research protocol (V5) | `250_7_research-protocol-v5.md` | 0.0 |
 | 7.0 | · Before the wave: the common cost basis and the shared inputs | `260_7.0_before-the-wave-the-common-cost.md` | 3.4 |
-| 7.1 | · Who does what | `270_7.1_who-does-what.md` | 6.4 |
+| 7.1 | · Who does what | `270_7.1_who-does-what.md` | 7.3 |
 | 7.2 | · Depth | `280_7.2_depth.md` | 1.4 |
-| 7.3 | · The lanes | `290_7.3_the-lanes.md` | 9.1 |
-| 7.4 | · Rules of evidence | `300_7.4_rules-of-evidence.md` | 4.4 |
+| 7.3 | · The lanes | `290_7.3_the-lanes.md` | 9.3 |
+| 7.4 | · Rules of evidence | `300_7.4_rules-of-evidence.md` | 4.7 |
 | 7.5 | · The browser queue | `310_7.5_the-browser-queue.md` | 3.1 |
 | 7.6 | · The red-team pass | `320_7.6_the-red-team-pass.md` | 2.1 |
 | 7.7 | · The dossier — `30-research/<C>.md` (origin-blind) | `330_7.7_the-dossier-30-research-c-md-ori.md` | 1.5 |
 | 8 | Scoring, gates and selection (V6) | `340_8_scoring-gates-and-selection-v6.md` | 0.0 |
 | 8.1 | · The rubric (weights in `config.json → viral_browser.rubric`, summing to  | `350_8.1_the-rubric-weights-in-config-jso.md` | 2.6 |
-| 8.2 | · Scoring procedure | `360_8.2_scoring-procedure.md` | 4.0 |
+| 8.2 | · Scoring procedure | `360_8.2_scoring-procedure.md` | 4.1 |
 | 8.3 | · The gates | `370_8.3_the-gates.md` | 2.6 |
 | 8.4 | · Procedure | `380_8.4_procedure.md` | 2.5 |
 | 8.5 | · Selection rules | `390_8.5_selection-rules.md` | 1.3 |
 | 8.6 | · Fewer than three | `400_8.6_fewer-than-three.md` | 0.8 |
-| 9 | The viral blueprint (V7), per pick | `410_9_the-viral-blueprint-v7-per-pick.md` | 3.1 |
+| 9 | The viral blueprint (V7), per pick | `410_9_the-viral-blueprint-v7-per-pick.md` | 3.2 |
 | 9.1 | · The product reference pack, per pick | `420_9.1_the-product-reference-pack-per-p.md` | 16.1 |
-| 10 | Deliverables (V7–V8) | `430_10_deliverables-v7-v8.md` | 5.5 |
-| 11 | Wrap-up, feedback and continuation (V9) | `440_11_wrap-up-feedback-and-continuatio.md` | 4.4 |
-| 12 | Easy-to-miss traps | `450_12_easy-to-miss-traps.md` | 4.2 |
+| 10 | Deliverables (V7–V8) | `430_10_deliverables-v7-v8.md` | 5.4 |
+| 11 | Wrap-up, feedback and continuation (V9) | `440_11_wrap-up-feedback-and-continuatio.md` | 4.5 |
+| 12 | Easy-to-miss traps | `450_12_easy-to-miss-traps.md` | 4.3 |
 | 13 | Agent prompts | `460_13_agent-prompts.md` | 0.0 |
-| 13.1 | · Viral-card analysis agent (use the Agent tool, `subagent_type: general-p | `470_13.1_viral-card-analysis-agent-use-th.md` | 3.6 |
+| 13.1 | · Viral-card analysis agent (use the Agent tool, `subagent_type: general-p | `470_13.1_viral-card-analysis-agent-use-th.md` | 3.8 |
 | 13.2 | · Research agent (`run_in_background: true`) | `480_13.2_research-agent-run-in-background.md` | 7.4 |
 | 13.3 | · Red-team agent (`run_in_background: true`) | `490_13.3_red-team-agent-run-in-background.md` | 4.9 |
 | 13.4 | · Scoring agent (fresh context; also used to revisit the criteria the red  | `500_13.4_scoring-agent-fresh-context-also.md` | 3.3 |
 | 13.5 | · Niche-audit agent (fresh context; `subagent_type: general-purpose`) | `510_13.5_niche-audit-agent-fresh-context.md` | 3.5 |
-| 13.6 | · Create card agent (`subagent_type: general-purpose`; the Create counterp | `520_13.6_create-card-agent-subagent-type.md` | 2.7 |
+| 13.6 | · Create card agent (`subagent_type: general-purpose`; the Create counterp | `520_13.6_create-card-agent-subagent-type.md` | 2.8 |
 | 13.7 | · Reference-pack agent (`run_in_background: true`; one per pick, after the | `530_13.7_reference-pack-agent-run-in-back.md` | 9.8 |
 | 14 | The same mining in Create (virality-backed blends) | `540_14_the-same-mining-in-create-virali.md` | 1.0 |
 | 14.1 | · What Create takes, what it skips | `550_14.1_what-create-takes-what-it-skips.md` | 1.8 |

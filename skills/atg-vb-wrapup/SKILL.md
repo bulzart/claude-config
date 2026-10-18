@@ -9,7 +9,7 @@ user-invocable: false
 > `ATG` = `C:/Users/Glaresquare1/.claude/analyze-then-generate` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATG/scripts/atg.py"` (every call prints one JSON object on its last line: numbers, tables and records, never a verdict; run through Bash) · `RUN` = the run folder `ATG/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATG/reference/<file>/` (for the Viral-Browser playbook `<file>` is `viral-browser`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
-Phase of `/analyze-then-generate` (Viral-Browser). Nothing is generated. Store `T state --run RUN set stage=<…> next_step=<…>` at the end of the step.
+Phase of `/analyze-then-generate` (Viral-Browser). Nothing is generated. At the end of each step print one short status line and store `T state --run RUN set stage=<…> next_step=<…>`.
 
 Scripts gather, you decide: the `T` commands measure, extract, record, tabulate and calculate. Every reading of their numbers, every choice and every exception is yours, written down with its reason (`--by` / `--reason`, the bias log in `30-research/ranking.md`). The numbers in this phase (the 40 % niche share, the six gates, the evidence caps, the pack minimums) are rules of thumb: apply them with judgement, depart from them when the evidence says so, and write what you applied, what you set aside and why.
 
@@ -18,8 +18,8 @@ Scripts gather, you decide: the `T` commands measure, extract, record, tabulate 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - viral-browser §10: `ATG/reference/viral-browser/430_10_deliverables-v7-v8.md` (5.4 KB) (deliverables, the chat summary and the report QC checklist)
-- viral-browser §11: `ATG/reference/viral-browser/440_11_wrap-up-feedback-and-continuatio.md` (4.4 KB) (wrap-up, feedback, adjust, continue to Create)
-- viral-browser §12: `ATG/reference/viral-browser/450_12_easy-to-miss-traps.md` (4.2 KB) (pitfalls)
+- viral-browser §11: `ATG/reference/viral-browser/440_11_wrap-up-feedback-and-continuatio.md` (4.5 KB) (wrap-up, feedback, adjust, continue to Create)
+- viral-browser §12: `ATG/reference/viral-browser/450_12_easy-to-miss-traps.md` (4.3 KB) (pitfalls)
 
 ## Steps
 

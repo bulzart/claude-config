@@ -33,7 +33,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *the plan has a size-and-place guide, or a retry adds one:*
   - generation-system §4b.6: `ATG/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
 - *a production agent (the `blocked` path and the QC `continuity` text are defined here):*
-  - production-agents §4: `ATG/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (0.9 KB)
+  - production-agents §4: `ATG/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (1.3 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `atg-model-guide`) — §2.2 (media roles), §3.7 (references), §3.8 (frames)
 
 ## Step X3

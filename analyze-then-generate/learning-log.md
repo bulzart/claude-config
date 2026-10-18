@@ -252,3 +252,26 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   the reference-pack and card prompts now cite section files.
 - **Hypotheses to test:** (1) a Viral-Browser run resumed in a new session continues from `next_skill` without rereading earlier skills; (2) card labels and candidate
   pools no longer echo words from the removed examples; (3) Create's A3-A4 phase (about 110 KB of sections) still writes complete cards, otherwise split A3 from A4.
+
+## 2026-10-18 · QC fixes option; consistency pass after the rebuild
+- **What changed (the user's request):** new contract item 27, QC fixes, for Recreate and Create. At the start the user chooses `ask` or `auto` for the fix generation after a QC
+  finding. `ask`: from the first video on, a production agent that finds issues or anomalies only a new generation can fix writes its attempt block, prepares the corrected request and
+  its cost preflight, submits nothing and stops with a `fix_proposal` (`blocker: qc_fix_permission`); the main session asks the user (one question per waiting video: fix it / keep this
+  take / fix it and stop asking), continues the stopped agent with `approved`, `declined` or `auto`, and a declined fix ships the take as generated, flagged. `auto`: the QC agents
+  correct on their own, as before. Stored in `state.json -> qc_fixes` (a run without it is `auto`), argument `qc-fixes ask|auto`. Edit Mode is unchanged: it never regenerates
+  automatically and the user reviews every attempt. Written in the router (item 27), `atg-start` (the choice), `atg-qc` (the proposal), `atg-submit` (X7 waits), `atg-analyze-produce`
+  (the question), `atg-wrapup` (the report) and `production-agents` sections 1 to 5.
+- **Found by comparing every step of the rebuilt skills with the previous command, and fixed:** (1) the submission ledger was described in three places as enforcing a cap and
+  refusing (exit 3); it records and reports `conflicts` and never refuses; (2) six model guides and the Higgsfield guide said `conform` refuses a crop over 12 %; it reports
+  `lost_fraction` and never refuses, and the crop rule is now where Create and the production agents read it; (3) rules whose only copy sat in a section read at the end of a phase
+  moved into the sections that own them (a product already in every feed, region details, processor and ad-account limits, brand dependence, the PDF reader, the heartbeat and
+  "the toolkit does not change during a wave"); (4) sections that no phase loaded are on Read-now lists (anomaly catalog 2.10 to 2.13 and 4.1, assets 1 and 6, the persona block for
+  agent prompts, the card template's pointers); (5) old section numbers (`§5 X7`, `§2.4`, `§2.5`) replaced by labels that resolve; (6) the paste test and "a deviation from a default is
+  a note" got a tie-break (a pose or light the plan asks for is not a sign), the prompt's "never / always / only" rule got one list of the lines a section mandates by name, and the
+  one targeted exclusion has one wording; (7) the market-gap flag and the confidence rule agree (a gap alone caps confidence at medium); (8) the Viral-Browser state loops (V4 to V4b,
+  V6 to V5 backfill) store a next step that resumes correctly; (9) index preambles no longer tell an agent to load a whole document; (10) the QC stack's step labels are in order.
+- **Lesson, as a kind:** when a document is split into sections, every rule that two phases act on, every pointer to a section and every sentence that describes what a script does has to be
+  checked against the new loading plan: a rule can survive in a section that is read too late, a pointer can name a section nobody loads, and a script described as refusing something it
+  does not refuse sends an agent to wait for a signal that never comes.
+- **Hypotheses to test:** (1) with `ask`, a run whose agents stop at the same time asks their questions in one call, and a continued agent resumes at X7 without rereading its plan;
+  (2) a run resumed while an agent waits shows the `qc_fix_permission` row in `videos[]` and asks again; (3) with `auto`, nothing changes from before.

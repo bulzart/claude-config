@@ -27,7 +27,7 @@ Only the **locked model's** guide is ever read, and only the sections the curren
 | step (skill) | model guide sections |
 |---|---|
 | A8 / planning (`atg-analyze-produce`, `atg-plan-video`) | §1 at a glance, §3.14 integration and continuity, §5 failure modes (where the guide lists size or place as a limit), §6 model-specific features |
-| E4 Edit Mode, Recreate plan (`atg-edit`, `atg-recreate-plan`) | §1 at a glance, §2.4 call recipes, §4.4 video edit / extension / motion transfer (the preserving mode and settings), §6 features |
+| E4 Edit Mode, Recreate plan (`atg-edit`, `atg-recreate-plan`) | §1 at a glance, §2.4 call recipes, §4.4 video edit / extension / motion transfer (the preserving mode and settings), §5 failure modes (where the guide lists size or place as a limit: the Recreate anchor ranking), §6 features |
 | X2 request (`atg-write-request`) | §2.4 call recipes, §2.6 9:16/720p, §3.1 to §3.7 (structure, subject and identity, action, environment and light, chronology, camera, references), §3.10 to §3.14 (negatives, visible text, identity consistency, product fidelity, integration), **§4.0 official examples** (the pattern card), the §4.x of the request kind: 4.1 text-to-video, 4.2 start/end frame, 4.3 reference-to-video, 4.4 edit / extension / motion transfer; §3.8 frames and §3.9 audio only when used; §6 when a feature is planned |
 | X3 inputs (`atg-inputs`) | §2.2 media roles, §3.7 references, §3.8 frames |
 | X4 pre-generation QC (`atg-precheck`) | §5 strengths, weaknesses and failure modes, §7 pre-generation checklist |

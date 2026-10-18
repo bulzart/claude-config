@@ -16,10 +16,10 @@
    causes, contents right.
 5. **Permanence** before and after every exit, occlusion, cut and seam: count, spot, state, size,
    label orientation; reflections and shadows.
-5b. **Solidity** at 30 fps wherever anything passes near, in front of or behind the product, lands
+5a. **Solidity** at 30 fps wherever anything passes near, in front of or behind the product, lands
    on it or hits it: no pass-through, no sinking, no see-through, the right occlusion order, and a
    consequence for every contact (§2.14).
-5d. **Size** with `atg.py scale` on a full-resolution frame at rest, one in use and the last:
+5b. **Size** with `atg.py scale` on a full-resolution frame at rest, one in use and the last:
    the product's pixel height against the named neighbour's at the product's own depth (A; `--depth-ratio` is
    read from the frame when the product stands in front of or behind that neighbour, a can on the near table
    strip against the person seated behind it, and is never left at 1; CE-014, CE-015) and against a distance derived from the
@@ -27,11 +27,11 @@
    oversize, the observed multiple of the expected size and the method written in the verdict, constancy across
    cuts; a size from one assumed number is read as provisional and is viewed on the frame first (§2.7; the tool
    returns numbers only).
-5e. **Identity match** on a full-resolution frame with the face and a hand or forearm: same skin tone, age
+5c. **Identity match** on a full-resolution frame with the face and a hand or forearm: same skin tone, age
    and build as the kept body, the garment and every printed line of the kept clothing as planned (no costume
    change, no reversed or invented print), with the frame path in the verdict (§2.17; CE-029, CE-035,
    CE-039).
-5c. **Blend** on one full-resolution frame at rest and one during any interaction: the eleven-sign
+5d. **Blend** on one full-resolution frame at rest and one during any interaction: the eleven-sign
    paste test against the nearest neighbour at the same depth (§2.15).
 5e. **Posture, support and place** at 30 fps across every rest and every pass of a hand or sheet: the
    posture, the whole underside on a visible support, the clearance to a working hand or arm, the sheet
