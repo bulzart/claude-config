@@ -20,7 +20,7 @@ The context of a run is its scarcest resource, so nothing is loaded before its s
 
 ```
 analyze-then-pick/
-├── learning-log.md                 one section per `/update-from-errors` pass: patterns, root causes, changes, hypotheses to test; the pass of 2026-10-13 retired the feedback ledger and holds the map from every `CE-nnn` case label to the section that now holds its lesson (read by the update command only, never by a run)
+├── learning-log.md                 one section per change of substance: patterns, root causes, changes, hypotheses to test; the section of 2026-10-13 records the retirement of the feedback ledger and holds the map from every `CE-nnn` case label to the section that now holds its lesson (never read by a run)
 ├── config.json                     paths (python, runs), fixed output (9:16, 720p), analysis defaults, Edit Mode cost gate, CapCut store + template
 ├── (flag record)                   lives in Loupe (`~/.claude/loupe`, `http://127.0.0.1:8787`), not in this folder: written only by `atp.py caught-flag`, never read by a run
 ├── models/
@@ -59,8 +59,8 @@ written out where the label stands, as a kind (what to achieve, what to avoid) w
 wording and what worked. There is no error ledger: `caught_errors.md` and `atp.py caught-error` were retired on
 2026-10-13 so that a run reads rules, not a growing pile of past errors. The last version of that file is in
 this folder's git history (`git log --follow -- analyze-then-pick/caught_errors.md`, last commit `aba83d3`), and
-`learning-log.md` maps every label to the section that holds its lesson. New lessons go straight into the
-owning section through `/update-from-errors analyze-then-pick "<what went wrong>"`.
+`learning-log.md` maps every label to the section that holds its lesson. A new lesson goes, generalised, straight into the
+section that owns it (on the user's yes).
 
 ## The flag record and the QC samples (Loupe)
 Loupe is the pipeline's web app (`~/.claude/loupe`, run by `python loupe.py serve`, or started by `atp.py loupe ensure` when a command needs it;
@@ -69,7 +69,7 @@ localhost only, admin passphrase for the person, API keys for agents). It holds 
   request, every input with its file, thumbnail and file facts (sha1, size, dimensions, printed words), whether the same file went through earlier
   runs, and the raw answer the Higgsfield hook saved, and takes the agent's trigger, tags, asset, prompt words and video part. Loupe searches with
   `field:value` operators, groups by trigger, asset, video, kind, run, model, cause, status or month, and shows the evidence next to each flag.
-  No step of a run and no agent reads it; what a flag teaches is written into the references as a rule by `/update-from-errors`.
+  No step of a run and no agent reads it; what a flag teaches is written into the references as a rule when the user asks for it.
 - **Generation misses:** the admin picks a run and a video in Loupe, marks the second of the miss with an arrow, circle or box and a note, then picks
   the fixed version and the same moment of it. Loupe saves one image: the miss on the left, the correct frame on the right, a zoom of the marked
   place below. Only the QC phase reads them: `atp.py qc-consult` asks the QC keeper (one separate read-only Claude session that holds the whole
@@ -95,7 +95,7 @@ passes). Build prompt for the app: `Documents/prompts/loupe.txt`.
 - **A step or a rule of a phase:** edit that phase's `~/.claude/skills/atp-*/SKILL.md` (the router's labels table says which skill owns which step; a rule that two phases act on is written in both skills).
 - **A reference or a guide section:** edit its section file; after adding, renaming or removing one run `python scripts/docs_tool.py index <doc>.md`. Never edit between the index markers by hand.
 - After any edit: `python scripts/docs_tool.py check` (it must report 0 errors) and, for a pipeline change, update the build prompt `Documents/prompts/analyze-then-pick.txt`.
-- `python scripts/docs_tool.py budget` shows what each skill weighs; `join <doc>.md` prints a whole document (for `/update-from-errors`, never in a run).
+- `python scripts/docs_tool.py budget` shows what each skill weighs; `join <doc>.md` prints a whole document (never in a run).
 
 ## Adding a model
 1. Confirm it exists: `models_explore {action:"get", model_id:"<id>"}`.

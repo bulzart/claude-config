@@ -38,7 +38,7 @@ Only the **locked model's** guide is ever read, and only the sections the curren
 
 ## Rules
 
-- Never read a guide of another model; never Read `ATP/models/index.json` whole (40 KB); never `join` a whole guide (that is for `/update-from-errors`).
+- Never read a guide of another model; never Read `ATP/models/index.json` whole (40 KB); never `join` a whole guide in a run.
 - Prompting always follows the guide (contract item 4 and the Never list); where a section is missing in a short guide, the nearest parent row is read.
 - A model's skill-like first-party prompt optimiser (for Seedance 2.5: Skill `sd25-pe`) may be used for the prompt text; it never replaces the guide's pattern card.
 

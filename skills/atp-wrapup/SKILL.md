@@ -73,8 +73,7 @@ later"** (any later message about them is handled as item 22 says); **"Some need
 chat which video and what is wrong, disliked or illogical. "Other" lets the user type it
 directly. Each problem named, now or in a later session, is handled as item 22 says: their words verbatim
 and the diagnosis go into the video's brief before the fix is offered. When a problem is a kind the
-references do not hold, add one line: "Run `/update-from-errors analyze-then-pick "<their words>"` to
-generalise this into the prompting and QC."
+references do not hold, add one line offering to write the rule into the section that owns it.
 
 ### 6b. Upscale the finals with Topaz (after the user's approval, both modes)
 
@@ -116,9 +115,9 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
     take the user's words verbatim, diagnose them in pipeline terms (the stage that made the miss and the
     stage that should have caught it), say which section already holds the rule and why it did not
     prevent this video, and offer the fix (a re-edit or a regeneration of that video in its mode); when the
-    miss is a kind the references do not hold, say so in one line and name `/update-from-errors
-    analyze-then-pick` with the user's words as its argument, which generalises them into the owning
-    sections. A user's word outranks the agents' QC on the same point: the user saw what QC passed. **The
+    miss is a kind the references do not hold, say so in one line and offer to write the rule, generalised
+    (what to achieve, what to avoid, the miss and its cause, the corrected wording), into the section that
+    owns it; write it only on the user's yes. A user's word outranks the agents' QC on the same point: the user saw what QC passed. **The
     agents** write a regenerate reason or a flagged delivery in the video's brief (an attempt block with the
     failed request, the verdict and what changed) and in `result.json` (`reference/production-agents.md` §3
     item 12); nothing else is written to the library but the Higgsfield flag record of item 23.

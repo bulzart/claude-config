@@ -40,9 +40,9 @@ Only these section files for this phase, nothing else unless a step below says s
     take the user's words verbatim, diagnose them in pipeline terms (the stage that made the miss and the
     stage that should have caught it), say which section already holds the rule and why it did not
     prevent this video, and offer the fix (a re-edit or a regeneration of that video in its mode); when the
-    miss is a kind the references do not hold, say so in one line and name `/update-from-errors
-    analyze-then-pick` with the user's words as its argument, which generalises them into the owning
-    sections. A user's word outranks the agents' QC on the same point: the user saw what QC passed. **The
+    miss is a kind the references do not hold, say so in one line and offer to write the rule, generalised
+    (what to achieve, what to avoid, the miss and its cause, the corrected wording), into the section that
+    owns it; write it only on the user's yes. A user's word outranks the agents' QC on the same point: the user saw what QC passed. **The
     agents** write a regenerate reason or a flagged delivery in the video's brief (an attempt block with the
     failed request, the verdict and what changed) and in `result.json` (`reference/production-agents.md` §3
     item 12); nothing else is written to the library but the Higgsfield flag record of item 23.
@@ -54,4 +54,4 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Hand-off
 
-Continue only if the user wants the fix (a re-edit or a regeneration of that video in its mode): re-enter the per-video loop at `atp-write-request` with the diagnosis. A miss that is a kind the references do not hold: say `/update-from-errors analyze-then-pick "<their words>"`.
+Continue only if the user wants the fix (a re-edit or a regeneration of that video in its mode): re-enter the per-video loop at `atp-write-request` with the diagnosis. A miss that is a kind the references do not hold: offer to write the rule into the section that owns it (on the user's yes).

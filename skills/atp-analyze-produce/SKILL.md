@@ -156,8 +156,7 @@ See §6.
     failure tables, `higgsfield/higgsfield-mcp.md` §9), and X4 tests the plan against those rules. The
     main session runs `T caught-flag reconcile --run RUN` as each agent reports and in the wrap-up; it
     only lists the calls marked flagged that have no entry yet, so no flagged call leaves the run
-    unrecorded. A flag whose rule is general or recurs is written into those references by
-    `/update-from-errors`, which reads the flags with `T caught-flag list --full`; the entry stays as the record.
+    unrecorded. A flag whose rule is general or recurs is written into those references as a rule when the user asks for it; the entry stays as the record.
     The user opens Loupe to see the flags grouped by trigger, asset, video, kind, run or model and searched
     by field, with the evidence Loupe gathered next to each.
 
