@@ -28,7 +28,7 @@ Only these section files for this phase, nothing else unless a step below says s
 | Model guides | `ATG/models/<guide>.md` is an index; the sections are in `ATG/models/<guide>/`. Which sections each step reads: `atg-model-guide` |
 | Higgsfield guide | `ATG/higgsfield/higgsfield-mcp.md` (index) and `ATG/higgsfield/higgsfield-mcp/` (sections) |
 | Preprocessing | `ATG/pipeline/preprocessing.md` (the recorded local pipeline, FFmpeg-first, and the sampling policy; `atg-analyze-prepare` reads it only when a prep step reports an error) |
-| Flag record | Loupe, `http://127.0.0.1:8787` (item 23): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7 (`atg-submit`), reconciled in A9b and §6, never read during a run. The sample library is read only by `T qc-consult` (`atg-qc`) and, once per video at its first request, `T plan-hints` (`atg-write-request`) |
+| Flag record | Loupe, `http://127.0.0.1:8787` (item 23), started by `T loupe ensure` at run creation and recorded in `state.json → loupe` (`up` or `down`; missing = up): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7 (`atg-submit`), reconciled in A9b and §6, never read during a run. The sample library is read only by `T qc-consult` (`atg-qc`) and, once per video at its first request, `T plan-hints` (`atg-write-request`) |
 | References | `ATG/reference/<name>/` section files (index: `ATG/reference/<name>.md`): `analysis-protocol`, `generation-system`, `anomaly-catalog`, `creative-direction`, `brand-guardrails`, `text-and-format`, `assets-and-substitution`, `capcut-assembly`, `production-agents`, `viral-browser`. Each phase skill lists the sections it needs under "Read now" |
 | Viral-Browser | `ATG/reference/viral-browser/` (items 24–26; skills `atg-vb-*`); config `ATG/config.json → viral_browser`; toolkit `T viral-stats`, `T niches`, `T candidates`, `T evidence`, `T econ`, `T landed`, `T spec`, `T photo`, `T pdf-text` |
 | CapCut | `capcut` MCP (drafts store and template in `ATG/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly/` (`atg-postprocess`) |
@@ -137,6 +137,10 @@ Only these section files for this phase, nothing else unless a step below says s
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
    - Recreate and Create: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto`);
+   - Edit, Recreate and Create (Viral-Browser generates nothing): start Loupe with `T loupe ensure` (it starts the web app detached when it is
+     down; the JSON line has `library_size`, the number of QC samples the keeper is fed from), then `T state --run RUN set loupe=up`, or
+     `loupe=down` when it exits 1 (tell the user in one line that `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on,
+     QC without samples, flags wait in Loupe's outbox);
    - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
 
 ## Rules this phase owns (contract items 4, 11, 17, 27)

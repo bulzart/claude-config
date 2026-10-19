@@ -87,7 +87,8 @@ Only these section files for this phase, nothing else unless a step below says s
     when `mode` is `fallback`): each with `composite_path`, `frames` (role, where it comes from, time), the miss in words and `advice`. **View every
     `composite_path`**, add what each says to look for as extra `--dense` checkpoints, and write in the verdict
     which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
-    empty list means no sample applies: QC goes on without them. The answer is also saved as
+    empty list means no sample applies: QC goes on without them. On `mode: unavailable` while the contract's Loupe line (`state.json → loupe`,
+    none = up) says `up`, run `T loupe ensure` once and ask again; if it stays unavailable the verdict says "no sample consulted: Loupe unavailable". The answer is also saved as
     `RUN/60-outputs/video-NN/qc-consult.json`. Ask the keeper **once per video**, on its first picture pass: the CapCut project pass and a
     regenerated take read the saved file again; ask again only when the product form, the beat or the plan's checkpoints changed. `T qc-brief` takes the same arguments with no model call.
     A sample has a `sample_kind`: `pair` (a WRONG and a RIGHT frame), `miss-only` (`has_right: false`: no frame of it is called RIGHT, and a lone miss frame carries a grey NO RIGHT VERSION tag), or `scenario` (no frame is called WRONG: the admin's words only, or frames the admin called EXAMPLE (blue: something the admin keeps for you to understand and remember, neither a miss nor the right look); it carries `idea`, `better` and `missed`: what was meant to happen, what could have been better, what the AI agents missed or could not understand). A scenario is insight, not a visual pattern: compare the video with the idea and with what was missed, and never look for a match of the image. For a miss-only sample:

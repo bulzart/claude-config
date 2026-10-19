@@ -27,7 +27,7 @@ Only these section files for this phase, nothing else unless a step below says s
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params). **Never Read it whole** (40 KB): `T model-menu` builds the menu, `T model-entry --id <id>` prints one model's entry and its guide path |
 | Model guides | `ATP/models/<guide>.md` is an index; the sections are in `ATP/models/<guide>/`. Which sections each step reads: `atp-model-guide` |
 | Higgsfield guide | `ATP/higgsfield/higgsfield-mcp.md` (index) and `ATP/higgsfield/higgsfield-mcp/` (sections) |
-| Flag record | Loupe, `http://127.0.0.1:8787` (item 23): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7 (`atp-submit`), reconciled in A9b and §6, never read during a run. The sample library is read only by `T qc-consult` (`atp-qc`) and, once per video at its first request, `T plan-hints` (`atp-write-request`) |
+| Flag record | Loupe, `http://127.0.0.1:8787` (item 23), started by `T loupe ensure` at run creation and recorded in `state.json → loupe` (`up` or `down`; missing = up): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7 (`atp-submit`), reconciled in A9b and §6, never read during a run. The sample library is read only by `T qc-consult` (`atp-qc`) and, once per video at its first request, `T plan-hints` (`atp-write-request`) |
 | References | `ATP/reference/<name>/` section files (index: `ATP/reference/<name>.md`): `analysis-protocol`, `generation-system`, `anomaly-catalog`, `creative-direction`, `brand-guardrails`, `text-and-format`, `assets-and-substitution`, `capcut-assembly`, `production-agents`. Each phase skill lists the sections it needs under "Read now" |
 | CapCut | `capcut` MCP (drafts store and template in `ATP/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly/` (`atp-postprocess`) |
 | Run folder | created by `T new-run` under `ATP/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
@@ -110,6 +110,9 @@ Only these section files for this phase, nothing else unless a step below says s
    - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]`;
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
+   - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples
+     the keeper is fed from), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
+     `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
    - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
 
 ## Rules this phase owns (contract items 4, 11, 17)

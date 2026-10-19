@@ -16,6 +16,9 @@ Run: <RUN>   Library (ATG): C:/Users/Glaresquare1/.claude/analyze-then-generate
 Toolkit (T): "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe" "<ATG>/scripts/atg.py"
 Locked model: <model id>; guide: <ATG>/<guide path>.
 QC fixes: <ask|auto> (the run's choice, state.json → qc_fixes; command item 27).
+Loupe: <up|down> (state.json → loupe; none = up). Loupe commands start the web app themselves; you read the admin's samples only through
+`T qc-consult`, never from Loupe's data folder or database. If `qc-consult` answers `mode: unavailable` on an `up` run, run
+`T loupe ensure` once and ask again; if it stays unavailable, QC goes on without samples and the verdict says so.
 Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md, <RUN>/50-requests/video-NN*.json
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 

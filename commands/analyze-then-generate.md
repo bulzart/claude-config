@@ -98,6 +98,7 @@ packs), never script gates.
    - read its `state.json` (`T state --run <run> get`);
    - summarise where it stopped (stage, next_step, videos done; for Viral-Browser the candidates, the evidence rows and the picks so far);
    - continue from `next_step`. Never re-ask a question that is answered in `state.json` (Viral-Browser stores its brief under `brief.*`).
+   Run `T loupe ensure` and update `loupe` in `state.json` (a run without the key counts as `up`; Loupe may have been stopped since).
    Then invoke the skill named by `next_skill` in `state.json`. A run made before this layout has none: take the phase from `stage` / `next_step` with the map below
    (for example `stage=analyzed next_step=count` → A5 in `atg-analyze-study`; videos in `videos[]` but not all done → `atg-analyze-produce`; Edit Mode → `atg-edit`;
    Viral-Browser `next_step` cards → `atg-vb-cards`; synthesis, candidates, cost-basis → `atg-vb-synthesis`; research → `atg-vb-research`; scoring → `atg-vb-select`; blueprints → `atg-vb-deliver`; report-qc, wrap-up → `atg-vb-wrapup`).

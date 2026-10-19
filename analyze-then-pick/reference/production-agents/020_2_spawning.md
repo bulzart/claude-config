@@ -15,6 +15,9 @@ Produce this one video end to end, then stop.
 Run: <RUN>   Library (ATP): C:/Users/Glaresquare1/.claude/analyze-then-pick
 Toolkit (T): "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe" "<ATP>/scripts/atp.py"
 Locked model: <model id>; guide: <ATP>/<guide path>.
+Loupe: <up|down> (state.json → loupe; none = up). Loupe commands start the web app themselves; you read the admin's samples only through
+`T qc-consult`, never from Loupe's data folder or database. If `qc-consult` answers `mode: unavailable` on an `up` run, run
+`T loupe ensure` once and ask again; if it stays unavailable, QC goes on without samples and the verdict says so.
 Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md, <RUN>/50-requests/video-NN*.json
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 

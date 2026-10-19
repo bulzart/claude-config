@@ -54,7 +54,8 @@ Plan everything before production, in allocation order, **without asking for con
 5. **The agent contract:** write `<RUN>/50-requests/agent-contract.md` from the prompt in
    `reference/production-agents.md` §2 (the canonical text: the recording rule, the checks, the size
    method, the deliverables), filling its paths; run-specific notes go in its last block. It is generated
-   for every run and never copied from an earlier run's file.
+   for every run and never copied from an earlier run's file. Before the first agent is spawned run `T loupe ensure` and update
+   `state.json → loupe` (five agents must not race to start it); fill the contract's "Loupe" line from it (`up` when the run has none).
 
 ### A9b. Produce in parallel (production agents)
 - **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to

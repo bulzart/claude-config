@@ -3594,7 +3594,15 @@ def cmd_loupe(a):
     lc = _lc()
     if a.action == "ensure":
         ok = lc.ensure()
-        out({"ok": ok, "url": lc.base_url(), "note": "" if ok else "Loupe could not be started: python ~/.claude/loupe/loupe.py serve"}, 0 if ok else 1)
+        size = None
+        if ok:
+            try:
+                st, d = lc.call("GET", "/api/qc/samples?limit=1", key_name="qc", timeout=10)
+                size = d.get("library_size") if st == 200 and isinstance(d, dict) else None
+            except Exception:  # noqa: BLE001
+                size = None
+        out({"ok": ok, "url": lc.base_url(), "library_size": size,
+             "note": "" if ok else "Loupe could not be started: python ~/.claude/loupe/loupe.py serve"}, 0 if ok else 1)
     if a.action == "status":
         h = lc.health()
         out({"ok": bool(h), "url": lc.base_url(), "running": bool(h), **(h or {})})

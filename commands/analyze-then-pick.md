@@ -84,6 +84,7 @@ only what it needs and the context of a run does not rot. The skills are interco
    - read its `state.json` (`T state --run <run> get`);
    - summarise where it stopped (stage, next_step, videos done);
    - continue from `next_step`. Never re-ask a question that is answered in `state.json`.
+   Run `T loupe ensure` and update `loupe` in `state.json` (a run without the key counts as `up`; Loupe may have been stopped since).
    Then invoke the skill named by `next_skill` in `state.json`. A run made before this layout has none: take the phase from `stage` / `next_step` with the map below
    (for example `stage=analyzed next_step=count` → A5 in `atp-analyze-study`; videos in `videos[]` but not all done → `atp-analyze-produce`; Edit Mode → `atp-edit`).
 
