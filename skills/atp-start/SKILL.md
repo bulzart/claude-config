@@ -110,8 +110,8 @@ Only these section files for this phase, nothing else unless a step below says s
    - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]`;
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
-   - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples
-     the keeper is fed from), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
+   - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper
+     is fed from, and `keeper.state`: the keeper is booted or brought up to date there, so the first consult finds it current), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
      `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
    - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
 

@@ -275,3 +275,9 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   does not refuse sends an agent to wait for a signal that never comes.
 - **Hypotheses to test:** (1) with `ask`, a run whose agents stop at the same time asks their questions in one call, and a continued agent resumes at X7 without rereading its plan;
   (2) a run resumed while an agent waits shows the `qc_fix_permission` row in `videos[]` and asks again; (3) with `auto`, nothing changes from before.
+
+## 2026-10-19 · Loupe is started and recorded at the start of every run
+- **What changed:** run creation (`atg-start`) runs `T loupe ensure` and stores `state.json → loupe` (`up` or `down`); resume runs it again; the analyze-produce phase runs it before spawning the production agents and fills a "Loupe" line of the agent contract; the QC phase retries it once when `qc-consult` answers `mode: unavailable` on an `up` run and says in the verdict when no sample was consulted. `loupe ensure` prints `library_size` and boots the keeper or brings it up to date (`keeper.state`); Loupe's watcher keeps it current after the admin's later edits.
+- **Why:** Loupe started only as a side effect of the first flag, consult or hint call, so five agents could race to start it and a run never recorded whether samples were available.
+- **Checked:** the keeper was fed from the library through both toolkits (`library_size` 12, same samples returned by `qc-consult` of both), `keeper_sync.py` 39 offline and 13 live checks.
+- **Hypotheses to test:** (1) a run started with Loupe stopped shows `library_size` in the start line and `loupe=up`; (2) with Loupe unable to start, the run records `down`, QC verdicts say "no sample consulted: Loupe unavailable" and the flags appear in Loupe after it is started.

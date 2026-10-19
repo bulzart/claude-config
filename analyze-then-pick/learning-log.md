@@ -206,3 +206,9 @@ recurs after a logged change means that change failed: revise it, do not repeat 
   reported miss is written, generalised (what to achieve, what to avoid, the miss and its cause, the corrected wording, what worked), into the section that owns it, and only on the user's yes (`atp-feedback`,
   `atp-wrapup`); a flag whose rule is general or recurs is written the same way when the user asks. The dated sections above stay as the record of the four passes and of the retirement of the ledger.
 - **Not touched:** the run folders (their briefs and results keep the words they were written with), and the retired command's own file and build prompt, which stay on disk unused.
+
+## 2026-10-19 · Loupe is started and recorded at the start of every run
+- **What changed:** run creation (`atp-start`) runs `T loupe ensure` and stores `state.json → loupe` (`up` or `down`); resume runs it again; the analyze-produce phase runs it before spawning the production agents and fills a "Loupe" line of the agent contract; the QC phase retries it once when `qc-consult` answers `mode: unavailable` on an `up` run and says in the verdict when no sample was consulted. `loupe ensure` prints `library_size` and boots the keeper or brings it up to date (`keeper.state`); Loupe's watcher keeps it current after the admin's later edits.
+- **Why:** Loupe started only as a side effect of the first flag, consult or hint call, so five agents could race to start it and a run never recorded whether samples were available.
+- **Checked:** the keeper was fed from the library through both toolkits (`library_size` 12, same samples returned by `qc-consult` of both), `keeper_sync.py` 39 offline and 13 live checks.
+- **Hypotheses to test:** (1) a run started with Loupe stopped shows `library_size` in the start line and `loupe=up`; (2) with Loupe unable to start, the run records `down`, QC verdicts say "no sample consulted: Loupe unavailable" and the flags appear in Loupe after it is started.

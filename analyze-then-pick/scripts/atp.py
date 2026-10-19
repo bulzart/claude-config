@@ -3381,7 +3381,14 @@ def cmd_loupe(a):
                 size = d.get("library_size") if st == 200 and isinstance(d, dict) else None
             except Exception:  # noqa: BLE001
                 size = None
-        out({"ok": ok, "url": lc.base_url(), "library_size": size,
+        keeper = None
+        if ok and size:                      # the keeper boots, or re-reads the library, now: the first consult then finds it current
+            try:
+                st, d = lc.call("POST", "/api/qc/keeper/sync", {}, key_name="qc", timeout=170)
+                keeper = d if st == 200 and isinstance(d, dict) else {"state": "failed", "error": str(d)[:200]}
+            except Exception as e:  # noqa: BLE001
+                keeper = {"state": "failed", "error": str(e)[:200]}
+        out({"ok": ok, "url": lc.base_url(), "library_size": size, "keeper": keeper,
              "note": "" if ok else "Loupe could not be started: python ~/.claude/loupe/loupe.py serve"}, 0 if ok else 1)
     if a.action == "status":
         h = lc.health()

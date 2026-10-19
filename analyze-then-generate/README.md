@@ -74,7 +74,8 @@ past errors. The last version of that file is in git history (`git log --follow 
 
 ## The flag record and the QC samples (Loupe)
 Loupe is the pipeline's web app (`~/.claude/loupe`, run by `python loupe.py serve`, or started by `atg.py loupe ensure` when a command needs it; localhost only, admin passphrase for the person, API keys for agents).
-Its run browser lists the runs of every pipeline library under `~/.claude`. It holds two things:
+Its run browser lists the runs of every pipeline library under `~/.claude`. It is started explicitly when a run is created (and again on resume and before the production agents are spawned): `atg.py loupe ensure` starts it detached when it is down, prints `library_size` (the number of QC samples the keeper is fed from), boots the keeper or brings it up to date (`keeper.state`: `in_sync`, `booted`, `synced`, `empty` or `failed`; Loupe's own watcher keeps it current after later edits) and the run records `state.json → loupe` (`up` or `down`; none = up). If it cannot start, the run goes on: QC without samples (the verdict says so), flags wait in Loupe's outbox. The production agents' contract carries the same "Loupe" line.
+It holds two things:
 - **The flag record:** every prompt and video Higgsfield flagged, refused, withheld or rerouted. `atg.py caught-flag add` gathers the video, the request, every input with its file, thumbnail and file facts (sha1, size,
   dimensions, printed words), whether the same file went through earlier runs, and the raw answer the Higgsfield hook saved, and takes the agent's trigger, tags, asset, prompt words and video part. Loupe searches with
   `field:value` operators, groups by trigger, asset, video, kind, run, model, cause, status or month, and shows the evidence next to each flag. No step of a run and no agent reads it; what a flag teaches is written into
