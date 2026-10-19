@@ -3622,7 +3622,7 @@ def cmd_loupe(a):
 
 def _qc_ctx(a) -> dict:
     ctx = {"run": a.run or "", "video": a.video or "", "model": a.model or "", "mode": a.mode or "", "product": a.product or "",
-           "product_details": (getattr(a, "product_details", "") or "")[:600],
+           "product_details": (getattr(a, "product_details", "") or "")[:600], "note": (getattr(a, "note", "") or "")[:600],
            "kinds": [k.strip() for k in (a.kinds or "").split(",") if k.strip()]}
     rd = _cf_run_dir(a.run) if a.run else None
     if rd:
@@ -3663,6 +3663,10 @@ def cmd_qc_consult(a):
         out({"ok": True, "mode": "unavailable", "samples": [], "note": "no QC samples for this check: " + str((d or {}).get("error"))})
     rd = _cf_run_dir(a.run) if a.run else None
     d["saved"] = _qc_sample_files(d, rd, a.video)
+    if d.get("needs_unmet"):
+        d["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer by looking at your own video, or a file that does not "
+                           "exist): answer it from the video in words and ask again ONCE with --note '<what you saw>'; if it still has needs_unmet, go on without it "
+                           "and write in the verdict what was not answered")
     out(d)
 
 
@@ -7184,6 +7188,7 @@ def main():
         p.add_argument("--kinds", help="comma-separated kinds you suspect (counts, openings-use, permanence, scale-size, label-orientation, solidity, blend-paste, posture-place, identity, continuity …)")
         p.add_argument("--question", help="what you see or suspect in the video under QC, in words (needed for qc-consult)")
         p.add_argument("--checkpoint", action="append", help="a QC checkpoint of the plan to check against the samples; repeatable")
+        p.add_argument("--note", help="only when a first answer came back with needs_unmet: what you saw when you looked at your own video, in words (the keeper asked for it)")
         p.set_defaults(fn=cmd_qc_consult, cmd=_nm)
 
     p = sp.add_parser("plan-hints", help="first request of a video only (X2): ask the keeper which past misses could matter for the plan (text-only hints, usually none)")
