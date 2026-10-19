@@ -64,13 +64,7 @@ lw = [("router", ROUTER, "T loupe ensure"), ("atg-start", SKD / "atg-start" / "S
       ("atg-qc", SKD / "atg-qc" / "SKILL.md", "T loupe ensure"), ("production-agents §1", PA / "010_1_prepared-by-this-session-before.md", "`loupe`"),
       ("production-agents §2", PA / "020_2_spawning.md", "Loupe: <up|down>")]
 check(not [lbl for lbl, p, needle in lw if needle not in rd(p)], "the Loupe start step is written in every place that acts on it: " + ", ".join(lbl for lbl, p, needle in lw if needle not in rd(p)))
-check("loupe=up" in rd(SKD / "atg-start" / "SKILL.md") and "loupe" in cmds, "atg-start records state.json loupe and the toolkit has the loupe command")
-
-# --- Loupe is started and recorded at run creation, and the same key reaches resume, the agent contract and QC
-lw = [("router", ROUTER, "T loupe ensure"), ("atg-start", SKD / "atg-start" / "SKILL.md", "T loupe ensure"), ("atg-analyze-produce", SKD / "atg-analyze-produce" / "SKILL.md", "T loupe ensure"),
-      ("atg-qc", SKD / "atg-qc" / "SKILL.md", "T loupe ensure"), ("production-agents 1", PA / "010_1_prepared-by-this-session-before.md", "`loupe`"),
-      ("production-agents 2", PA / "020_2_spawning.md", "Loupe: <up|down>")]
-check(not [lbl for lbl, p, needle in lw if needle not in rd(p)], "the Loupe start step is written in every place that acts on it: " + ", ".join(lbl for lbl, p, needle in lw if needle not in rd(p)))
+check("needs_unmet" in rd(SKD / "atg-qc" / "SKILL.md") and "--note" in rd(SKD / "atg-qc" / "SKILL.md"), "the QC phase handles the keeper asking (needs_unmet, qc-consult --note)")
 check("loupe=up" in rd(SKD / "atg-start" / "SKILL.md") and "loupe" in cmds, "atg-start records state.json loupe and the toolkit has the loupe command")
 
 # --- what must not come back

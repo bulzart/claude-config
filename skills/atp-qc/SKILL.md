@@ -84,6 +84,9 @@ Only these section files for this phase, nothing else unless a step below says s
     A sample has a `sample_kind`: `pair` (a WRONG and a RIGHT frame), `miss-only` (`has_right: false`: no frame of it is called RIGHT, and a lone miss frame carries a grey NO RIGHT VERSION tag), or `scenario` (no frame is called WRONG: the admin's words only, or frames the admin called EXAMPLE (blue: something the admin keeps for you to understand and remember, neither a miss nor the right look); it carries `idea`, `better` and `missed`: what was meant to happen, what could have been better, what the AI agents missed or could not understand). A scenario is insight, not a visual pattern: compare the video with the idea and with what was missed, and never look for a match of the image. For a miss-only sample:
     it shows the wrong pattern to look for and nothing about what is right, so never infer a right look from it.
     A sample is a lead, never a verdict: a match is a regenerate reason only by this phase's own rules.
+    Always pass `--run` and `--video`: the keeper may ask Loupe for this video's plan, a frame, or the product's registry row, and Loupe reads them from the run.
+    When the answer has `needs_unmet` (a question only you can answer by looking at your own video, or a file that does not exist), answer it in words and ask
+    once more with `--note "<what you saw>"`; if it is still unmet, go on and write in the verdict what was not answered.
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
     every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan,
     then view the storyboard sheets and every dense sheet under `<dir>/dense/`.
