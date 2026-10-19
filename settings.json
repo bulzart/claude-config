@@ -89,7 +89,7 @@
       "effortLevel": "high"
     },
     "claude-sonnet-5-5": {
-      "effortLevel": "xhigh",
+      "effortLevel": "high",
       "autoCompactWindow": 850000
     }
   },
