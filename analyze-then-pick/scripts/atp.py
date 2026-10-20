@@ -107,22 +107,6 @@ PDF_EXT = {".pdf"}
 FONT_EXT = {".ttf", ".otf", ".woff", ".woff2"}
 VECTOR_EXT = {".svg", ".eps", ".ai"}
 
-# Filename / folder-name hints for USER-SUPPLIED assets only (non-authoritative; the command confirms
-# every role by looking at the asset). Never used to find assets inside a references folder.
-ASSET_HINTS = [
-    (r"canonical|template|master|source.?of.?truth|dieline|blueprint|dimension", "canonical-template?"),
-    (r"(^|[^a-z])front([^a-z]|$)", "view:front"), (r"(^|[^a-z])(back|rear)([^a-z]|$)", "view:back"),
-    (r"(^|[^a-z])(side|left|right|profile|three.?quarter|3.?4)([^a-z]|$)", "view:side"),
-    (r"(^|[^a-z])(top|overhead|bottom)([^a-z]|$)", "view:top/bottom"),
-    (r"variant|flavou?r|colou?rway|edition|version|sku", "variant?"),
-    (r"logo|wordmark|brandmark|monogram", "logo?"),
-    (r"character|avatar|mascot|talent|actor|actress|influencer|creator|person|face|headshot|turnaround|model.?sheet", "character?"),
-    (r"screen|screenshot|(^|[^a-z])ui([^a-z]|$)|interface|dashboard|app", "interface?"),
-    (r"environment|location|background|(^|[^a-z])set([^a-z]|$)|room|studio|scene", "environment?"),
-    (r"palette|brand.?guide|guideline|style.?guide|brandbook", "brand-guide?"),
-    (r"pack|packaging|box|label|wrapper", "packaging?"),
-    (r"voice|vo|narration", "voice?"), (r"music|track|song|bgm", "music?"),
-]
 DERIVED_DIRS = {"files_audio", "videos_without_audio"}      # created by split-audio inside the user's path
 FINAL_DIR = "final"                                          # approved Edit Mode results, inside the user's path
 FINAL_MARKER = ".atp-final"                                  # hidden marker: only OUR final folder is skipped
@@ -1479,11 +1463,6 @@ def _mark_final_dir(d: Path) -> None:
                 pass
 
 
-def _asset_hints(rel: str) -> list:
-    low = rel.lower().replace("\\", "/")
-    return sorted({hint for pat, hint in ASSET_HINTS if re.search(pat, low)})
-
-
 def cmd_inventory(a):
     """--as references : Analyze Mode reference material (everything is REFERENCE material, never a client asset)
        --as sources    : Edit Mode — only videos are edit sources; every other file is ignored
@@ -1520,8 +1499,7 @@ def cmd_inventory(a):
                 "ext": f.suffix.lower(), "size_bytes": f.stat().st_size,
                 "folder": str(Path(rel).parent) if str(Path(rel).parent) != "." else "."}
         if role == "assets":
-            item["group"] = item["folder"]           # sub-folders usually separate products / characters / sets
-            item["name_hints"] = _asset_hints(rel)   # hints only — roles are confirmed by viewing
+            item["group"] = item["folder"]           # the folder it came in (a fact); what the asset is, is decided by viewing it
         try:
             item["hash"] = quick_hash(f)
             if item["hash"] in seen:
@@ -1567,9 +1545,9 @@ def cmd_inventory(a):
         rows = by_kind.get(kind, [])
         if not rows:
             continue
-        extra_col = " group | name hints |" if role == "assets" else ""
+        extra_col = " group |" if role == "assets" else ""
         lines += [f"## {kind} ({len(rows)})", "", "| id | file | details |" + extra_col,
-                  "|---|---|---|" + ("---|---|" if role == "assets" else "")]
+                  "|---|---|---|" + ("---|" if role == "assets" else "")]
         for it in rows:
             if kind == "video":
                 det = (f"{it.get('duration_s')} s, {it.get('display_width')}x{it.get('display_height')} "
@@ -1586,7 +1564,7 @@ def cmd_inventory(a):
                 det += f" — PROBE ERROR: {it['probe_error'][:80]}"
             row = f"| {it['id']} | `{it['rel']}` | {det} |"
             if role == "assets":
-                row += f" {it.get('group')} | {', '.join(it.get('name_hints') or []) or '—'} |"
+                row += f" {it.get('group')} |"
             lines.append(row)
         lines.append("")
     ignored = [it for it in items if it.get("ignored")]
