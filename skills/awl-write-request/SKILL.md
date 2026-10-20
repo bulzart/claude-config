@@ -208,6 +208,10 @@ Only these section files for this phase, nothing else unless a step below says s
   miss's wrong behaviour in a prompt, never apply a hint to a beat its trigger does not match, and never apply more
   than two per video. Never paste a sentence of a sample's saved prompts (`T sample-prompts`) into a request, and never read a
   pair for a hint you do not apply.
+- Never use the flawed take (the clip QC rejected) for its regeneration: not as a video input, a start or end frame
+  or a reference, and never fix one frame of it or ask the model to edit it. The regeneration goes out with the
+  inputs of the first attempt (the original source video, when the video has one), and a whole request crafted again: the
+  diagnosed cause designed out in what the model should do, every part unrelated to the error kept.
 - Never apply generic prompting when a model guide exists.
 - Never let the video model render overlay text in Analyze Mode. Generate clean and place the text
   in CapCut. Never burn it in with `awl.py captions`, except as the stated fallback.

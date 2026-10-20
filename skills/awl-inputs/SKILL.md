@@ -90,6 +90,9 @@ Only these section files for this phase, nothing else unless a step below says s
   reference material, and may show other products or executions.
 - Never upload an original video with its audio to Higgsfield: use the `videos_without_audio` copy
   (or its prepared derivative).
+- Never upload the flawed take (a clip QC rejected) as an input of its regeneration: the retry reuses the
+  media ids of the first attempt (the original source video, when the video has one). Only an accepted clip goes back, as the input
+  of a native extension.
 
 ## Hand-off
 
