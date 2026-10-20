@@ -47,9 +47,10 @@
 7. **QC:**
    - The **generated plate** must be text-free:
      `awl.py qc --mode analyze --allowed-text "<printed words of every client asset visible>"`.
-     Anything else detected is pseudo-text or a copied artifact: fix the plate or regenerate. A garbled
-     ghost of the source caption at its old position is one (CE-045): restore the clean-plate lines and strip
-     the caption from the reference.
+     `qc` returns `planned_text` (what you allowed) beside `visible_text` (what its OCR saw); you compare the two
+     and read the storyboard. Anything visible that was not planned is pseudo-text or a copied artifact: fix the
+     plate or regenerate. A garbled ghost of the source caption at its old position is one (CE-045): restore the
+     clean-plate lines and strip the caption from the reference.
    - The **text** is checked on the CapCut preview (`capcut-assembly.md` §5): wording, timing,
      position, no emoji, and every overlay on exactly its visible frames.
 

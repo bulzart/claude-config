@@ -45,18 +45,21 @@ Plan everything before production, in allocation order, **without asking for con
 2. **Shared inputs, once:**
    - the Higgsfield project folder (X5: `list_workspaces` → `create_project`), stored with
      `T state --run RUN set higgsfield.folder_id=<id>`;
-   - every asset the asset plan uses, uploaded (X3), with media ids in `state.json → assets.uploads`;
+   - every asset the asset plan uses, uploaded (X3), with media ids in `state.json → assets.uploads` (every upload is recorded
+     with `T uploads set --run RUN --video NN --label "<as the request names it>" --media-id <id> --file <path>` and merged with
+     `T uploads merge --run RUN`: one schema, never a hand-written uploads file and never a hand edit of state.json; `T lint-run`
+     lists a file outside the schema);
    - Elements when the model uses them.
 3. **X5–X6 per video:** preflight its first request and print its brief. Then print the estimated
    total once, as information, against the balance.
 4. **The only question in this phase** is a long video's permission (A7b), when a plan newly pushes
    a video over 30 s.
-5. **The agent contract:** write `<RUN>/50-requests/agent-contract.md` from the prompt in
+5. **The agent contract:** generate `<RUN>/50-requests/agent-contract.md` with `T contract --run RUN [--notes "<run-specific notes>"]` from the prompt in
    `reference/production-agents.md` §2 (the canonical text: the recording rule, the checks, the size
    method, the deliverables), filling its paths; run-specific notes go in its last block. It is generated
    for every run and never copied from an earlier run's file. Before the first agent is spawned run `T loupe ensure` and update
    `state.json → loupe` (five agents must not race to start it); fill the contract's "Loupe" line from it (`up` when the run has none)
-   and its "Audio ingest" line from `state.json → audio_ingest` (item 24).
+   and its "Audio ingest" line from `state.json → audio_ingest` (item 24). Fill its "QC fixes" line from `state.json → qc_fixes` (`auto` when the run has none; item 27).
 
 ### A9b. Produce in parallel (production agents)
 - **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to
@@ -81,17 +84,18 @@ Plan everything before production, in allocation order, **without asking for con
     `state.json`; the README table (the agent's `readme-row.md` appended to `deliverables/README.md`);
     `video-NN-clean.mp4` and `video-NN-preview.mp4` in `deliverables/`; `result.json` complete, each
     check of the agent contract with an evidence path or "not checked: <why>"; the plan and brief files
-    with their attempts. A size verdict is never repeated or summarised before its frame was viewed
-    and its method (two estimates, a derived distance) is in the verdict; one assumed number is
-    provisional (CE-028);
+    with their attempts. A size reading is never repeated or summarised before its frame was viewed
+    and its method (two estimates, a derived distance) is in the verdict; a size from one assumed
+    number is provisional, the agent's own label (CE-028);
   - print one line: video, status, CapCut project, credits.
 - **Blockers come back from agents and are handled here:**
   - a permission is needed (A7b) → ask, then launch that video again;
+  - `qc_fix_permission` (only with QC fixes `ask`) → ask the user the fix question of item 27, then continue that agent with the answer;
   - CapCut was running → its project is pending until the wrap-up;
   - credits ran short → launch nothing more, report the shortfall; the run stays resumable;
   - a request failed twice → report it in the wrap-up.
-- **QC verdicts are autonomous** (X9); a video that still fails is reported in the wrap-up.
-- **Without the Agent tool**, run X3–X10 per video in this session, one video at a time.
+- **QC verdicts are the agent's** (X9); with QC fixes `ask` the fix generation waits for the user's yes (item 27); a video that still fails, or whose fix the user declined, is reported in the wrap-up.
+- **Without the Agent tool**, run X3–X10 per video in this session, one video at a time (with QC fixes `ask`, ask the fix question of item 27 yourself instead of writing a proposal).
 
 ### A10. Wrap-up
 See §6.
@@ -111,8 +115,10 @@ See §6.
      agents. Edit Mode uses no production agents.
 3. **Generation lanes.** Every video is a lane with **one job in flight at a time**:
    plan → preflight → brief → submit → wait → download → post-process → QC.
-   - The ledger enforces at most `production.max_parallel_jobs` (5) jobs in flight per run, across
-     the production agents.
+   - The ledger records every submission and reports what is already in flight; the agents keep to at
+     most `production.max_parallel_jobs` (5) jobs in flight per run, across the production agents
+     (`T ledger begin` reports the open submissions against that cap; whether to submit is the
+     agent's decision, X7).
    - Never use `generate_video_batch`, never submit twice in one lane, and never start an
      uncontrolled batch.
    - A multi-clip video runs **clip by clip** inside its lane: a clip is submitted only after the
@@ -120,9 +126,10 @@ See §6.
    - Edit Mode runs one video at a time.
 15. **Analyze Mode asks for permission in exactly one case:** a video **over 30 s that needs 2 or
     more generations** (A7b).
-    - Everything else runs without confirmation: no "Go" question, no cost pauses, no QC questions.
+    - Everything else runs without confirmation: no "Go" question, no cost pauses, no QC questions of its own
+      (the one fix question of item 27, asked only when the user chose `ask`, is the exception).
     - Blockers are reported, not asked: the balance can't cover the next video, or Higgsfield
-      itself demands a choice (`unlim_choice`, `recovery_tool`, §5 X7).
+      itself demands a choice (`unlim_choice`, `recovery_tool`, X7 in `awl-submit`).
     - The planning questions (mode, model, inputs, number of videos, directions) are not
       permissions and stay.
     - Edit Mode keeps its gates (E6, X9-R).
@@ -161,6 +168,29 @@ See §6.
     unrecorded. A flag whose rule is general or recurs is written into those references as a rule when the user asks for it; the entry stays as the record.
     The user opens Loupe to see the flags grouped by trigger, asset, video, kind, run or model and searched
     by field, with the evidence Loupe gathered next to each.
+26. **Pilot first.** With more than four videos to produce, spawn the first video's agent as soon as its plan, request, inputs and brief exist and let it run X7–X10 to its QC
+    before the remaining plans are finished and their agents are spawned (the planners go on meanwhile). What its QC finds (a recipe fault, a guide, a size, a seam) is written
+    into the other plans before they cost a generation; the user is told in one line when the pilot has passed. The user may say "no pilot" at the start.
+27. **QC fixes (Recreate and Create): the question.** With `state.json → qc_fixes = ask`, a production agent that found issues or anomalies only a new generation can fix writes
+    `result.json` with `blocker: qc_fix_permission` and a `fix_proposal` and stops (it never asks). When it reports, record it as for any report, then ask with AskUserQuestion
+    (header "QC fix"; one question per waiting video, up to four in one call): "Video NN: QC found <the findings in one line>. Fix generation: <what the corrected request changes>,
+    about <preflight credits> credits (<balance> left). Proceed?" with **"Fix it"** (`approved`), **"Keep this take"** (`declined`) and **"Fix it, and stop asking"** (`auto`: also
+    `T state --run RUN set qc_fixes=auto`, so no later video asks). Continue the stopped agent with the answer (SendMessage to that agent, its context intact; if it cannot be continued,
+    launch a fresh production agent for that video with the contract plus "resume at awl-submit X7 with <request file>, decision <…>"). The other videos keep running meanwhile; the next
+    queued video starts when an agent stops. With `auto`, nothing is asked: the agent submits its one diagnosed regeneration itself.
+28. **A stalled production agent.** An agent whose `result.json` does not exist and whose `60-outputs/video-NN/` has not changed for 20 minutes while a job of its lane is `submitted`
+    or `completed` in the ledger is stalled (a machine pause freezes every background agent at once). Do not relaunch it blindly: read the ledger (`T ledger show --run RUN --video NN`)
+    and `T status --run RUN`, then continue the same agent by its id with one line ("continue from the last ledger entry"); only if it cannot be continued launch a fresh agent with the
+    contract plus "resume at the ledger's last entry; never resubmit a job that is submitted or completed". The ledger's fingerprint is what makes a resume safe: a request already
+    submitted is found by `begin` as a conflict and is never paid twice.
+29. **A request is frozen once its agent is spawned.** After the spawn, `50-requests/video-NN*-request.json` and the uploads file are the agent's: the main session and the planners
+    never rewrite them (an identity, a prompt line or an input that must change goes to the agent as a message, and the agent makes the change through its own regeneration path,
+    `awl-write-request` → `awl-submit`). `T lint-run` lists a request file whose content no longer matches the fingerprint of its open ledger entry.
+30. **Planner forks (optional; X1–X2 of several videos in parallel).** A fork plans one video and writes only that video's files: `40-briefs/video-NN-plan.md`,
+    `video-NN-pattern.md`, `video-NN-brief.md`, `50-requests/video-NN-request.json`, its uploads through `T uploads set`, and a status note `40-briefs/video-NN-planner.md`
+    with three fixed headings (Done, Open, Risks: what it measured, what it could not settle, what the agent must check). It calls no generation tool, never touches
+    another video's files, writes state.json only through `T state … append`, and stops after `T lint-run --run RUN` shows its files clean. The main session reads the
+    status note and the files, not the fork's final message, and spawns the production agent only after that.
 
 ## Never (this phase)
 

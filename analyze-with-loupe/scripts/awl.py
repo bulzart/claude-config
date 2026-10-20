@@ -819,7 +819,7 @@ _OCR_LOCK = threading.Lock()
 
 
 def ocr_frames(frames: list) -> dict:
-    """RapidOCR over frame files -> detections + spans with a coarse kind hint. Thread-safe."""
+    """RapidOCR over frame files -> detections + spans with the numbers that describe them (frames seen, row, confidence, spelling facts). Thread-safe."""
     with _OCR_LOCK:
         return _ocr_frames_locked(frames)
 
@@ -849,51 +849,43 @@ def _ocr_frames_locked(frames: list) -> dict:
             continue
         n_frames += 1
         for box, text, score in (result or []):
-            if score < 0.6 or not text.strip():
+            if score < 0.6 or not text.strip():          # the engine's own confidence floor: a detection setting, not a judgement of the text
                 continue
             ys = [p[1] for p in box]
             dets.append({"t": fr["t"], "text": text.strip(), "score": round(float(score), 2),
                          "y_rel": round(sum(ys) / 4 / max(1, height), 3)})
-    # many different texts at one height over time = caption/subtitle track;
-    # the same text in most scanned frames = persistent overlay (title, handle, watermark).
+    # Numbers about what was seen, and no label on any of it. Whether a text is a caption, a persistent overlay, a watermark, a product label
+    # or noise is for the reader to judge from these numbers and the picture: a row of the frame (a "band") with many different texts over
+    # several frames reads like a caption track, a text seen in most scanned frames reads like a fixed overlay.
     bands = {}
     for d in dets:
         bands.setdefault(round(d["y_rel"] / 0.08), []).append(d)
-    band_kind = {}
-    for b, ds in bands.items():
-        texts = {re.sub(r"\W+", "", d["text"].lower()) for d in ds}
-        if len(texts) >= 3 and len({d["t"] for d in ds}) >= 3:
-            band_kind[b] = "caption/subtitle track"
+    band_stats = {b: {"y_rel": round(b * 0.08, 2), "detections": len(ds),
+                      "distinct_texts": len({re.sub(r"\W+", "", d["text"].lower()) for d in ds}),
+                      "frames": len({d["t"] for d in ds})} for b, ds in bands.items()}
     spans = {}
     for d in dets:
         key = re.sub(r"\W+", "", d["text"].lower())
         if len(key) < 2:
             continue
-        sp = spans.setdefault(key, {"text": d["text"], "first_t": d["t"], "last_t": d["t"], "hits": 0,
+        sp = spans.setdefault(key, {"text": d["text"], "first_t": d["t"], "last_t": d["t"], "hits": 0, "score_sum": 0.0,
                                     "y_rel": d["y_rel"], "band": round(d["y_rel"] / 0.08)})
         sp["first_t"], sp["last_t"] = min(sp["first_t"], d["t"]), max(sp["last_t"], d["t"])
         sp["hits"] += 1
+        sp["score_sum"] += d["score"]
     for sp in spans.values():
         tx = sp["text"]
-        if tx.startswith("@") or re.search(r"@\w{2,}", tx):
-            kind = "handle/username"
-        elif tx.startswith("#"):
-            kind = "hashtag"
-        elif re.search(r"(www\.|https?:|\.com\b|\.co\b|\.io\b)", tx, re.I):
-            kind = "url"
-        elif n_frames >= 4 and sp["hits"] >= max(3, 0.6 * n_frames):
-            kind = "persistent overlay (title, handle, watermark or fixed label)"
-        elif sp["band"] in band_kind:
-            kind = band_kind[sp["band"]]
-        elif len(tx.split()) >= 3:
-            kind = "caption/overlay-like"
-        else:
-            kind = "short text (logo, product label, UI or sign?)"
-        sp["kind_hint"] = kind
-        # one-frame, very short detections are usually OCR noise on texture; keep but flag them
-        sp["likely_noise"] = sp["hits"] == 1 and len(re.sub(r"\W+", "", tx)) <= 3
+        bs = band_stats[sp["band"]]
+        sp["score_mean"] = round(sp.pop("score_sum") / sp["hits"], 2)
+        sp["share_of_frames_scanned"] = round(sp["hits"] / n_frames, 2) if n_frames else None
+        sp["chars"] = len(re.sub(r"\W+", "", tx))
+        sp["words"] = len(tx.split())
+        sp["band_distinct_texts"], sp["band_frames"] = bs["distinct_texts"], bs["frames"]
+        sp["has_at_handle"] = bool(tx.startswith("@") or re.search(r"@\w{2,}", tx))        # spelling facts of the text itself
+        sp["has_hashtag"] = tx.startswith("#")
+        sp["has_url_pattern"] = bool(re.search(r"(www\.|https?:|\.com\b|\.co\b|\.io\b)", tx, re.I))
     return {"available": True, "frames_scanned": n_frames, "detections": dets,
-            "caption_bands_y_rel": sorted(round(b * 0.08, 2) for b in band_kind),
+            "bands": sorted(band_stats.values(), key=lambda b: b["y_rel"]),
             "spans": sorted(spans.values(), key=lambda s: (s["first_t"], -s["hits"]))}
 
 
@@ -1128,7 +1120,8 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
     if ocr.get("available"):
         L += ["", f"## On-screen text sample (OCR on {ocr.get('frames_scanned')} frames)", ""]
         for sp in (ocr.get("spans") or [])[:40]:
-            L.append(f"- {ts_label(sp['first_t'])}–{ts_label(sp['last_t'])} · {sp['kind_hint']} · \"{sp['text']}\" ×{sp['hits']}")
+            L.append(f"- {ts_label(sp['first_t'])}–{ts_label(sp['last_t'])} · seen in {sp['hits']} of {ocr.get('frames_scanned')} scanned frame(s) · "
+                     f"row y {sp['y_rel']} ({sp['band_distinct_texts']} different text(s) in that row) · \"{sp['text']}\"")
         if not ocr.get("spans"):
             L.append("- none detected")
     L += ["", f"Machine data in `{odir}`: video.json, frames.json, cuts.json, activity.json, audio.json, "
@@ -1837,6 +1830,9 @@ def cmd_status(a):
         try:
             h = _lc().health()
             loupe["running"] = bool(h)
+            if h:
+                st_, d_ = lc.call("GET", "/api/qc/keeper/state", key_name="qc", timeout=10)
+                loupe["keeper"] = {k: d_.get(k) for k in ("in_sync", "turns", "library", "model", "last_synced")} if st_ == 200 and isinstance(d_, dict) else {"note": "not readable: " + str((d_ or {}).get("error", st_))}
         except Exception as e:  # noqa: BLE001
             loupe["running"] = False
             loupe["error"] = str(e)[:120]
@@ -1945,7 +1941,8 @@ def cmd_doctor(a):
                 st_, d = lc.call("GET", "/api/qc/samples?limit=1", key_name="qc", timeout=10)
                 loupe["library_size"] = d.get("library_size") if st_ == 200 and isinstance(d, dict) else None
                 loupe["qc_key_ok"] = st_ == 200
-            loupe["keeper"] = "not readable with the qc key (Loupe's keeper page is admin-only; a sync call is not read-only)"
+            st_, d_ = lc.call("GET", "/api/qc/keeper/state", key_name="qc", timeout=10) if h else (0, {})
+            loupe["keeper"] = {k: d_.get(k) for k in ("in_sync", "turns", "library", "library_sig", "model", "last_synced", "claude_found")} if st_ == 200 and isinstance(d_, dict) else {"note": "not readable: " + str((d_ or {}).get("error", st_))}
         except Exception as e:  # noqa: BLE001
             loupe = {"running": False, "error": str(e)[:120]}
     docs = {"skipped": True}
@@ -2057,14 +2054,201 @@ def cmd_lint_run(a):
             preset_rows.append({"video": s.get("video"), "attempt": s.get("attempt"), "status": s.get("status")})
     contract = rd / "50-requests" / "agent-contract.md"
     ct = contract.read_text(encoding="utf-8", errors="replace") if contract.is_file() else ""
+    up_checked, up_bad = 0, []
+    for f in sorted((rd / "50-requests").glob("video-*-uploads.json")) if (rd / "50-requests").is_dir() else []:
+        up_checked += 1
+        try:
+            probs = _uploads_problems(json.loads(f.read_text(encoding="utf-8")))
+        except (OSError, ValueError) as e:
+            probs = ["not JSON: " + str(e)[:80]]
+        if probs:
+            up_bad.append({"file": f.name, "problems": probs[:6]})
+    fr_checked, fr_changed = 0, []
+    for sub in st.get("submissions") or []:
+        if not isinstance(sub, dict) or sub.get("status") not in (LEDGER_OPEN | LEDGER_DONE_OK) or not sub.get("request_file"):
+            continue
+        rf = Path(str(sub["request_file"]))
+        if not rf.is_file():
+            continue
+        fr_checked += 1
+        try:
+            fp_now = _fingerprint(json.loads(rf.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+        if fp_now != sub.get("fingerprint"):
+            fr_changed.append({"video": sub.get("video"), "attempt": sub.get("attempt"), "status": sub.get("status"), "file": rf.name,
+                               "ledger_fingerprint": sub.get("fingerprint"), "file_fingerprint_now": fp_now})
     out({"ok": True, "run": rd.name,
          "cited_paths": {"documents": len(docs), "checked": cited, "missing": missing[:40], "missing_total": len(missing)},
          "video_numbering": {"asset_plan_videos": len(plan_refs), "plans_whose_header_lacks_the_asset_plan_ref": numbering},
          "media_ids": {"known_from_uploads_and_higgsfield": len(known), "unknown_in_requests": unknown[:40], "unknown_total": len(unknown)},
          "prompts": prompts, "prompt_note": "the agent contract names 5000 characters as the service's limit; compare",
          "preset": {"declined_preset_id": (st.get("higgsfield") or {}).get("declined_preset_id"), "ledger_rows_mentioning_preset": preset_rows},
+         "uploads_files": {"checked": up_checked, "outside_the_schema": up_bad, "schema": "video-NN-uploads.json = {video, schema: 1, uploads: {label: {media_id, file, content_type?, url?, at?}}} (written by `uploads set`)"},
+         "request_freeze": {"checked": fr_checked, "changed_after_their_ledger_entry": fr_changed,
+                            "note": "a request file whose content no longer matches the fingerprint of its open or finished ledger entry was edited after the submission (item 29)"},
          "contract": {"exists": contract.is_file(), "names_this_run": rd.name in ct, "loupe_line": bool(re.search(r"^Loupe: (up|down)", ct, re.M)),
-                      "audio_line": bool(re.search(r"^Audio ingest: ", ct, re.M))}})
+                      "audio_line": bool(re.search(r"^Audio ingest: ", ct, re.M)), "qc_fixes_line": bool(re.search(r"^QC fixes: (ask|auto)", ct, re.M)),
+                      "unresolved_placeholders": sorted(set(re.findall(r"<(?:RUN|AWL|model id|guide path|recreate\|create|ask\|auto|up\|down|whisper\|frames-only)>", ct)))}})
+
+
+UPLOAD_KEYS = {"media_id", "file", "content_type", "url", "at", "role", "note"}
+
+
+def _uploads_problems(d) -> list:
+    """What does not fit the one shape of video-NN-uploads.json (facts, no repair): {video, schema: 1, uploads: {label: {media_id, file, ...}}}."""
+    probs = []
+    if not isinstance(d, dict):
+        return [f"the file is a {type(d).__name__}, not an object"]
+    if d.get("schema") != 1:
+        probs.append("schema is not 1")
+    if not isinstance(d.get("video"), str):
+        probs.append("video is not a string")
+    ups = d.get("uploads")
+    if not isinstance(ups, dict):
+        probs.append("uploads is not an object of label -> entry")
+        ups = {}
+    for k in sorted(set(d) - {"video", "schema", "uploads"}):
+        probs.append(f"unknown top-level key {k}")
+    for label, e in ups.items():
+        if not isinstance(e, dict):
+            probs.append(f"{label}: entry is not an object")
+            continue
+        if not re.fullmatch(r"[0-9a-f-]{20,60}", str(e.get("media_id") or "")):
+            probs.append(f"{label}: media_id is not an id")
+        if not isinstance(e.get("file"), str) or not e.get("file"):
+            probs.append(f"{label}: file is missing")
+        for k in sorted(set(e) - UPLOAD_KEYS):
+            probs.append(f"{label}: unknown key {k}")
+    return probs
+
+
+def _uploads_file(rd, video) -> Path:
+    return rd / "50-requests" / f"video-{_cf_nn(video)}-uploads.json"
+
+
+def cmd_uploads(a):
+    """One record per video of what was uploaded to Higgsfield for it (the planners and the agents wrote three shapes by hand in a real run,
+    and merging them polluted state.json). set: add or replace one entry {label -> media_id, file, content_type, url}; show: the entries of
+    one video or of every video, with any shape problem; merge: copy every well-formed entry's media id into state.json -> assets.uploads
+    (label -> media_id) under the state lock, listing the files it skipped and why. It records; it never decides which upload a request uses."""
+    rd, st = _state_of(a.run)
+    if a.action == "set":
+        if not (a.video and a.label and a.media_id and a.file):
+            fail("uploads set needs --video, --label, --media-id and --file", 2)
+        f = _uploads_file(rd, a.video)
+        f.parent.mkdir(parents=True, exist_ok=True)
+        d = {"video": _cf_nn(a.video), "schema": 1, "uploads": {}}
+        if f.is_file():
+            try:
+                old = json.loads(f.read_text(encoding="utf-8"))
+            except ValueError as e:
+                fail(f"{f.name} is not JSON ({e}); move it aside before writing", 1)
+            if _uploads_problems(old):
+                fail(f"{f.name} is not in the schema ({'; '.join(_uploads_problems(old)[:3])}); move it aside before writing", 1)
+            d = old
+        entry = {"media_id": a.media_id, "file": str(a.file), "at": now_iso()}
+        if a.content_type:
+            entry["content_type"] = a.content_type
+        if a.url:
+            entry["url"] = a.url
+        if a.role:
+            entry["role"] = a.role
+        replaced = a.label in d["uploads"]
+        d["uploads"][a.label] = entry
+        f.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+        out({"ok": True, "file": str(f), "label": a.label, "replaced": replaced, "entries": len(d["uploads"])})
+    if a.action == "show":
+        files = [_uploads_file(rd, a.video)] if a.video else sorted((rd / "50-requests").glob("video-*-uploads.json")) if (rd / "50-requests").is_dir() else []
+        rows = []
+        for f in files:
+            if not f.is_file():
+                rows.append({"file": f.name, "exists": False})
+                continue
+            try:
+                d = json.loads(f.read_text(encoding="utf-8"))
+            except ValueError as e:
+                rows.append({"file": f.name, "exists": True, "problems": ["not JSON: " + str(e)[:80]]})
+                continue
+            rows.append({"file": f.name, "exists": True, "video": d.get("video") if isinstance(d, dict) else None, "problems": _uploads_problems(d),
+                         "uploads": d.get("uploads") if isinstance(d, dict) and isinstance(d.get("uploads"), dict) else None})
+        out({"ok": True, "run": rd.name, "files": rows})
+    # merge
+    p_state = rd / "state.json"
+    merged, skipped = {}, []
+    for f in sorted((rd / "50-requests").glob("video-*-uploads.json")) if (rd / "50-requests").is_dir() else []:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except ValueError as e:
+            skipped.append({"file": f.name, "problems": ["not JSON: " + str(e)[:80]]})
+            continue
+        probs = _uploads_problems(d)
+        if probs:
+            skipped.append({"file": f.name, "problems": probs[:6]})
+            continue
+        for label, e in d["uploads"].items():
+            merged[label] = e["media_id"]
+    with FileLock(p_state.with_name("state.json.lock")):
+        st2 = json.loads(p_state.read_text(encoding="utf-8"))
+        assets = st2.setdefault("assets", {}) if isinstance(st2.get("assets"), dict) or "assets" not in st2 else None
+        if assets is None:
+            fail("state.json -> assets is not an object; nothing merged", 1)
+        ups = assets.setdefault("uploads", {})
+        if not isinstance(ups, dict):
+            fail("state.json -> assets.uploads is not an object; nothing merged", 1)
+        changed = {k: v for k, v in merged.items() if ups.get(k) != v}
+        ups.update(merged)
+        p_state.write_text(json.dumps(st2, ensure_ascii=False, indent=1), encoding="utf-8")
+    out({"ok": True, "run": rd.name, "merged": len(merged), "changed": sorted(changed), "skipped": skipped,
+         "note": "only label -> media_id reaches state.json; a file outside the schema is listed here and left alone (fix it with `uploads set`)"})
+
+
+CONTRACT_SUBS = (("<RUN>", "run"), ("<AWL>", "library"), ("<model id>", "model"), ("<guide path>", "guide path"), ("<recreate|create>", "analyze_submode"),
+                 ("<ask|auto>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"))
+
+
+def cmd_contract(a):
+    """Write 50-requests/agent-contract.md from the canonical prompt of production-agents section 2 and this run's state.json: the run and
+    library paths, the locked model and its guide path, the sub-mode, the QC-fixes, Loupe and audio-ingest lines. A placeholder whose value
+    state.json does not hold stays as it is and is listed (the agents must not be spawned with it). Run-specific notes go under their own
+    heading at the end, never into the rules. The previous file, when different, is kept beside it with a stamp."""
+    rd, st = _state_of(a.run)
+    tpl_p = AWL_HOME / "reference" / "production-agents" / "020_2_spawning.md"
+    if not tpl_p.is_file():            # a temp home (tests) holds no references: the library beside this script does
+        tpl_p = Path(__file__).resolve().parent.parent / "reference" / "production-agents" / "020_2_spawning.md"
+    tpl = tpl_p.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"```\n(.*?)\n```", tpl.replace("\r\n", "\n"), re.S)
+    if not m:
+        fail("no fenced prompt block in production-agents section 2", 1)
+    body = m.group(1)
+    model = str(st.get("model") or "")
+    guide = ""
+    try:
+        idx = json.loads((AWL_HOME / "models" / "index.json").read_text(encoding="utf-8"))
+        ent = (idx.get("models") if isinstance(idx.get("models"), dict) else idx).get(model) or {}
+        guide = str(ent.get("guide") or ent.get("guide_path") or ent.get("doc") or "")
+    except (OSError, ValueError, AttributeError):
+        guide = ""
+    values = {"run": str(rd), "library": str(AWL_HOME), "model": model, "guide path": guide, "analyze_submode": str(st.get("analyze_submode") or ""),
+              "qc_fixes": str(st.get("qc_fixes") or "auto"), "loupe": str(st.get("loupe") or "up"), "audio_ingest": str(st.get("audio_ingest") or "")}
+    substituted, unresolved = {}, []
+    for token, key in CONTRACT_SUBS:
+        if values[key]:
+            body = body.replace(token, values[key])
+            substituted[token] = values[key]
+        elif token in body:
+            unresolved.append(token)
+    if a.notes:
+        body += "\n\nRun-specific notes\n" + a.notes.strip() + "\n"
+    outp = Path(a.out) if a.out else rd / "50-requests" / "agent-contract.md"
+    outp.parent.mkdir(parents=True, exist_ok=True)
+    kept = None
+    if outp.is_file() and outp.read_text(encoding="utf-8", errors="replace") != body:
+        kept = outp.with_name(f"agent-contract.prev-{time.strftime('%Y%m%d-%H%M%S')}.md")
+        outp.replace(kept)
+    outp.write_text(body, encoding="utf-8")
+    out({"ok": True, "file": str(outp), "bytes": len(body.encode("utf-8")), "substituted": substituted, "unresolved_placeholders": unresolved,
+         "previous_kept_as": str(kept) if kept else None, "note": "spawn no agent while unresolved_placeholders is not empty (the audio and QC-fixes lines are the user's choices)"})
 
 
 def cmd_cost_report(a):
@@ -2126,12 +2310,41 @@ def cmd_frames(a):
     od = Path(a.out)
     pre = a.label or "f"
     res = extract_many(a.video, [(t, od / f"{pre}-{ts_name(t)}.jpg", {"kind": "extra"}) for t in ts], a.max_side)
+    grid = None
+    if a.grid:
+        from PIL import Image, ImageDraw
+        sw = info.get("display_width") or info.get("width") or 0
+        files = []
+        for r in res:
+            if not r["ok"]:
+                continue
+            with Image.open(r["file"]) as im:
+                im = im.convert("RGB")
+                sc = im.width / sw if sw else 1.0
+                d = ImageDraw.Draw(im)
+                step = a.grid * sc
+                x = 0.0
+                while x < im.width:
+                    d.line((x, 0, x, im.height), fill=(255, 255, 0), width=1)
+                    d.text((x + 2, 2), str(int(round(x / sc))), fill=(255, 255, 0))
+                    x += step
+                y = 0.0
+                while y < im.height:
+                    d.line((0, y, im.width, y), fill=(0, 255, 255), width=1)
+                    d.text((2, y + 2), str(int(round(y / sc))), fill=(0, 255, 255))
+                    y += step
+                d.text((4, im.height - 14), f"t={r['t']}", fill=(255, 0, 0))
+                gf = Path(r["file"]).with_name(Path(r["file"]).stem + "-grid.jpg")
+                im.save(gf, quality=90)
+            files.append(str(gf))
+        grid = {"step_px_in_source": a.grid, "scale_of_the_extracted_frame": round(sc, 4) if res else None, "files": files,
+                "note": "the labels are source pixel coordinates (x in yellow, y in cyan): read a crop box or a product base off them"}
     sheets = []
     if a.sheet:
         sheets = build_storyboard(res, od / f"sheet-{pre}", a.title or f"{Path(a.video).name} {pre}",
                                   info.get("orientation", "portrait"), dense=len(res) > 12)
     out({"ok": all(r["ok"] for r in res), "frames": [{"t": r["t"], "file": r["file"], "ok": r["ok"]} for r in res],
-         "sheets": sheets})
+         "sheets": sheets, **({"grid": grid} if grid else {})})
 
 
 # --------------------------------------------------------------------------- Higgsfield transfer helpers
@@ -2262,104 +2475,9 @@ def cmd_fetch_audio(a):
 
 
 def cmd_audio_profile(a):
-    """Sound-design profile of one reference for Analyze Create: what sits under and around the speech,
-    so the new video's soundtrack can be matched or reused. Measured with librosa (no listening):
-    - speech share (from the transcript);
-    - music bed likelihood (harmonic energy outside speech, beat strength);
-    - tempo and beat strength;
-    - energy per second and its arc;
-    - "hits" (strong transients: stings, booms, whooshes) and whether they land on a cut.
-    The ROLE (dramatic, comic, suspense, hype) is the agent's inference from these numbers plus the
-    visuals. Writes --out (JSON)."""
-    try:
-        import numpy as np
-        import librosa
-    except ImportError:
-        fail("librosa and numpy are required for audio-profile", 1)
-    src, dst = Path(a.audio), Path(a.out)
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    wav = dst.with_suffix(".22k.wav")
-    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-vn", "-ac", "1",
-              "-ar", "22050", str(wav)], timeout=900)
-    if cp.returncode != 0 or not wav.exists():
-        fail("could not decode the audio: " + cp.stderr[-400:])
-    y, sr = librosa.load(str(wav), sr=22050, mono=True)
-    wav.unlink(missing_ok=True)
-    dur = len(y) / sr if sr else 0
-    if dur < 0.5 or not np.any(y):
-        out({"ok": True, "file": str(src), "duration_s": round(dur, 2), "silent": True})
-    hop = 512
-    speech = []
-    speech_known = True
-    if a.transcript:
-        tp = Path(a.transcript)
-        if not tp.exists():
-            speech_known = False                 # frames only: no transcript file exists; the speech share is unknown, not zero
-        else:
-            tj = json.loads(tp.read_text(encoding="utf-8"))
-            if tj.get("ingested") is False:
-                speech_known = False
-            speech = [(float(s.get("start", 0)), float(s.get("end", 0))) for s in tj.get("segments", [])
-                      if s.get("end") is not None]
-    cuts = []
-    if a.cuts and Path(a.cuts).exists():
-        cuts = [float(c["t"]) for c in json.loads(Path(a.cuts).read_text(encoding="utf-8")).get("cuts", [])]
-    harm, perc = librosa.effects.hpss(y)
-    rms = librosa.feature.rms(y=y, hop_length=hop)[0]
-    rms_h = librosa.feature.rms(y=harm, hop_length=hop)[0]
-    t = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop)
-    in_speech = np.zeros(len(t), dtype=bool)
-    for s0, s1 in speech:
-        in_speech |= (t >= s0) & (t <= s1)
-    db = 20 * np.log10(np.maximum(rms, 1e-6))
-    audible = db > -45
-    non_speech = audible & ~in_speech
-    harm_ratio = float(np.median((rms_h[non_speech] / np.maximum(rms[non_speech], 1e-6)))) if non_speech.any() else None
-    onset = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop)
-    try:
-        tempo, _beats = librosa.beat.beat_track(onset_envelope=onset, sr=sr, hop_length=hop)
-        tempo = float(np.atleast_1d(tempo)[0])
-    except Exception:
-        tempo = float(np.atleast_1d(librosa.feature.tempo(onset_envelope=onset, sr=sr, hop_length=hop))[0])
-    ac = librosa.autocorrelate(onset - onset.mean())
-    lag = int(round(60.0 / tempo * sr / hop)) if tempo > 0 else 0
-    pulse = float(ac[lag] / ac[0]) if 0 < lag < len(ac) and ac[0] > 0 else 0.0
-    speech_share = (sum(max(0.0, min(e, dur) - max(s, 0.0)) for s, e in speech) / dur) if dur else 0.0
-    nonspeech_share = float(non_speech.mean()) if len(non_speech) else 0.0
-    if speech_share > 0.85 and (harm_ratio is None or nonspeech_share < 0.1):
-        music = "unknown: speech covers almost all of it"
-    elif ((harm_ratio or 0) >= 0.55 and nonspeech_share >= 0.15) or pulse >= 0.35:
-        music = "likely"
-    else:
-        music = "unlikely"
-    thr = onset.mean() + 2.5 * onset.std()
-    pk = librosa.util.peak_pick(onset, pre_max=8, post_max=8, pre_avg=40, post_avg=40, delta=float(onset.std()), wait=20)
-    hits = []
-    for i in pk:
-        if onset[i] < thr:
-            continue
-        ht = float(librosa.frames_to_time(i, sr=sr, hop_length=hop))
-        near = min(cuts, key=lambda c: abs(c - ht)) if cuts else None
-        hits.append({"t": round(ht, 2), "strength": round(float(onset[i] / (onset.max() or 1)), 2),
-                     "in_speech": bool(any(s0 <= ht <= s1 for s0, s1 in speech)),
-                     "on_cut": bool(near is not None and abs(near - ht) <= 0.25)})
-    per_s = [round(float(db[(t >= k) & (t < k + 1)].mean()), 1) for k in range(int(math.ceil(dur)))
-             if ((t >= k) & (t < k + 1)).any()]
-    q = max(1, len(per_s) // 3)
-    first, last = (statistics.mean(per_s[:q]), statistics.mean(per_s[-q:])) if per_s else (0, 0)
-    arc = "rising" if last - first > 3 else ("falling" if first - last > 3 else "steady")
-    centroid = float(np.median(librosa.feature.spectral_centroid(y=y, sr=sr, hop_length=hop)))
-    prof = {"ok": True, "file": str(src), "duration_s": round(dur, 2),
-            "speech_share": round(speech_share, 2) if speech_known else None, "non_speech_audible_share": round(nonspeech_share, 2),
-            "speech_note": None if speech_known else "audio not ingested (frames only): the speech share is not measured; the shares below treat every audible second as non-speech",
-            "music_bed": music if speech_known else "unknown: speech not separated (audio not ingested)", "harmonic_ratio_non_speech": None if harm_ratio is None else round(harm_ratio, 2),
-            "tempo_bpm": round(tempo, 1), "beat_strength": round(pulse, 2),
-            "energy_db_per_s": per_s, "energy_arc": arc,
-            "hits": sorted(hits, key=lambda h: -h["strength"])[:12], "brightness_hz": round(centroid),
-            "reusable_whole": bool(music == "likely" and speech_share < 0.1) if speech_known else None,
-            "note": "measured cues, not listening: infer the role (dramatic / comic / suspense / hype) from these "
-                    "numbers plus the visuals; 'reusable_whole' means no speech over it (rights still apply)"}
-    write_json(dst, prof)
+    prof, err = _audio_profile(Path(a.audio), Path(a.out), a.transcript, a.cuts)
+    if err:
+        fail(err, 1)
     out(prof)
 
 
@@ -2460,13 +2578,9 @@ def cmd_finalize(a):
     dest = Path(entry.get("final") or (Path(entry["root"]) / FINAL_DIR / Path(entry["rel"]).with_suffix(".mp4")))
     final_root = Path(entry["root"]) / FINAL_DIR
     info = media_summary(src)
-    ew, eh = [int(x) for x in a.expect_size.lower().split("x")]
-    checks = {"has_video": bool(info.get("has_video")),
-              "size_ok": (info.get("display_width"), info.get("display_height")) == (ew, eh),
-              "audio_matches_original": bool(info.get("has_audio")) == bool(entry.get("has_audio"))}
-    if not all(checks.values()) and not a.force:
-        fail("the approved file does not pass the final checks (fix it, or --force if the user insists)", 1,
-             checks=checks)
+    # the user approved this file; the facts are recorded beside it for the agent to read, nothing here refuses the user's approval
+    facts = {"has_video": bool(info.get("has_video")), "size": f"{info.get('display_width')}x{info.get('display_height')}", "expected_size": a.expect_size,
+             "has_audio": bool(info.get("has_audio")), "original_has_audio": bool(entry.get("has_audio"))}
     dest.parent.mkdir(parents=True, exist_ok=True)
     _mark_final_dir(final_root)
     replaced = None
@@ -2490,7 +2604,7 @@ def cmd_finalize(a):
             vids.append(rec)
         st["updated"] = now_iso()
         write_json(st_p, st)
-    out({"ok": True, "final": str(dest), "checks": checks,
+    out({"ok": True, "final": str(dest), "facts": facts,
          "replaced_previous_final": str(replaced) if replaced else None})
 
 
@@ -2549,21 +2663,17 @@ def cmd_restore_audio(a):
     if cp.returncode != 0:
         fail("mux failed: " + cp.stderr[-600:])
     f_info = media_summary(dst)
-    tol = max(1 / (f_info.get("fps") or 24), 0.10)
     short_by = round(want - g_dur, 3) if want and g_dur else 0.0
-    gates = {"has_video": bool(f_info.get("has_video")),
-             "audio_ok": bool(f_info.get("has_audio")) == bool(audio),
-             "duration_ok": abs((f_info.get("duration_s") or 0) - dur) <= tol}
+    facts = {"has_video": bool(f_info.get("has_video")), "has_audio": bool(f_info.get("has_audio")), "audio_was_available": bool(audio),
+             "duration_s": f_info.get("duration_s"), "requested_duration_s": dur,
+             "size": f"{f_info.get('display_width')}x{f_info.get('display_height')}"}
     if ref_info:
-        src_ar = ref_info["display_width"] / ref_info["display_height"]
-        out_ar = f_info["display_width"] / f_info["display_height"]
-        gates["aspect_ok"] = abs(out_ar - src_ar) / src_ar <= 0.015
-    ok = all(gates.values())
-    out({"ok": ok, "file": str(dst), "duration_s": f_info.get("duration_s"), "original_segment_s": want,
-         "generated_shorter_by_s": short_by if short_by > tol else 0.0,
-         "note": ("generated clip is shorter than the original segment; the original audio was cut at the "
-                  "generated length (start stays in sync)") if short_by > max(tol, 0.25) else None,
-         "gates": gates}, 0 if ok else 1)
+        facts["source_size"] = f"{ref_info['display_width']}x{ref_info['display_height']}"
+    out({"ok": True, "file": str(dst), "duration_s": f_info.get("duration_s"), "original_segment_s": want,
+         "generated_shorter_by_s": max(short_by, 0.0),
+         "note": ("the generated clip is shorter than the original segment; the original audio was cut at the "
+                  "generated length (start stays in sync)") if short_by > 0.0005 else None,
+         "facts": facts})
 
 
 def _motion_curve(video, start: float, dur, fps: float):
@@ -2614,11 +2724,12 @@ def _best_lag(a, b, max_k: int, i0: int = 0, i1: int | None = None, min_len: int
 
 
 def cmd_sync_check(a):
-    """Do the generated picture's actions happen at the same moments as the source's? The original audio
+    """Where do the generated picture's actions happen compared with the source's? The original audio
     is laid over the generated picture (restore-audio), so every action, mouth movement and impact must
-    land where its sound is. Compares per-frame motion energy of the source segment and the output:
-    global offset, per-window offsets (drift), duration difference, and a side-by-side sheet (source |
-    output at the same timestamps) for visual confirmation."""
+    land where its sound is. Measures per-frame motion energy of the source segment and the output:
+    global offset, per-window offsets (a steady offset can be fixed in post, a changing one cannot),
+    duration difference, and a side-by-side sheet (source | output at the same timestamps) for visual
+    confirmation. It reports numbers and never a verdict or a fix: the agent decides."""
     import numpy as np
     src, outv = Path(a.source), Path(a.output)
     for p in (src, outv):
@@ -2650,12 +2761,12 @@ def cmd_sync_check(a):
     for i0 in range(0, max(1, n - W + 1), hop):
         x = sc[i0:i0 + W]
         k, c = _best_lag(sc, oc, max_k, i0, i0 + W, min_len=max(8, W // 2))
-        moving = float(x.std()) >= 0.25 * s_std
-        reliable = bool(k is not None and moving and c >= 0.5)
         windows.append({"t": round((i0 + W / 2) / fps, 2),
                         "offset_s": None if k is None else round(k / fps, 3),
-                        "corr": None if k is None else round(c, 3), "reliable": reliable})
-    rel = [w for w in windows if w["reliable"]]
+                        "corr": None if k is None else round(c, 3),
+                        "motion_ratio": round(float(x.std()) / s_std, 2)})          # the window's motion against the whole segment's
+    # the summary below uses the windows that pass the two filters the caller names (--min-corr, --min-motion); every window is listed in sync-check.json
+    rel = [w for w in windows if w["offset_s"] is not None and w["corr"] >= a.min_corr and w["motion_ratio"] >= a.min_motion]
     lags = [w["offset_s"] for w in rel]
     drift = None
     if len(rel) >= 3:
@@ -2664,29 +2775,7 @@ def cmd_sync_check(a):
             drift = round(float(((ts - ts.mean()) * (ls - ls.mean())).mean() / ts.var()) * 10.0, 3)
     med = round(float(np.median(lags)), 3) if lags else g_off
     spread = round(max(lags) - min(lags), 3) if lags else None
-    bad = [w for w in rel if abs(w["offset_s"]) > tol]
-    if g_c is None or g_c < 0.3 or not rel:
-        verdict = "inconclusive"
-    elif not bad and abs(g_off) <= tol:
-        verdict = "in_sync"
-    elif spread is not None and spread <= 2 * tol:
-        verdict = "constant_offset"
-    elif drift is not None and abs(drift) * (span / 10.0) > tol:
-        verdict = "drift"
-    else:
-        verdict = "out_of_sync"
-    fix = None
-    if verdict == "constant_offset":
-        if med > 0:
-            fix = {"kind": "trim_head", "seconds": med,
-                   "how": "the output is late: T trim its head by this much, then restore-audio again"}
-        else:
-            fix = {"kind": "audio_start", "seconds": round(-med, 3),
-                   "how": "the output is early: re-run restore-audio with --start increased by this much"}
-    elif verdict in ("drift", "out_of_sync"):
-        fix = {"kind": "regenerate",
-               "how": "post-production cannot fix it: diagnose (duration, speed, added/skipped/reordered "
-                      "action) and regenerate with the timing lock (generation-system.md 5c)"}
+    bad = [w for w in rel if abs(w["offset_s"]) > tol]          # a list on request: the windows whose offset is beyond the --tol the caller gave
     # anchors for the side-by-side sheet, on the output timeline (source time = start + t)
     if a.at:
         anchors = sorted(float(x) for x in re.split(r"[,\s]+", a.at.strip()) if x)
@@ -2724,21 +2813,27 @@ def cmd_sync_check(a):
                         img.paste(im, (x0 + dx + (cw - im.width) // 2, y0 + 26 + (ch - im.height) // 2))
         sheet = od / "sync-sheet.jpg"
         img.save(sheet, quality=88)
-    res = {"ok": verdict == "in_sync", "verdict": verdict, "source": str(src), "output": str(outv),
+    res = {"ok": True, "source": str(src), "output": str(outv),
            "start_s": start, "compared_s": span, "source_segment_s": round(seg, 3), "output_s": o_dur,
-           "duration_diff_s": round(o_dur - seg, 3), "tolerance_s": tol,
+           "duration_diff_s": round(o_dur - seg, 3),
            "global_offset_s": g_off, "global_corr": None if g_c is None else round(g_c, 3),
+           "filters": {"min_corr": a.min_corr, "min_motion_ratio": a.min_motion},
+           "windows_used": len(rel), "windows_total": len(windows),
            "median_window_offset_s": med, "window_spread_s": spread, "drift_s_per_10s": drift,
-           "windows_reliable": len(rel), "windows_total": len(windows),
-           "off_windows": [{"t": w["t"], "offset_s": w["offset_s"]} for w in bad][:12],
-           "fix": fix, "anchors_s": anchors, "sheet": str(sheet) if sheet else None,
-           "note": "times are on the output timeline; positive offset = the output's action happens later "
-                   "than in the source (so after its sound)"}
+           "tolerance_s": tol, "windows_beyond_tolerance": [{"t": w["t"], "offset_s": w["offset_s"]} for w in bad][:12],
+           "windows": windows if len(windows) <= 60 else None,
+           "anchors_s": anchors, "sheet": str(sheet) if sheet else None,
+           "note": "measurements only, no verdict: whether the output is in sync, carries a steady offset (fixable by trimming its head or moving the audio start), "
+                   "drifts (the offset changes along the clip) or cannot be told is for the agent to read from these numbers and the side-by-side sheet. "
+                   "Times are on the output timeline; a positive offset = the output's action happens later than in the source (so after its sound)"}
     (od / "sync-check.json").write_text(json.dumps({**res, "windows": windows}, indent=1), encoding="utf-8")
-    out(res, 0 if res["ok"] else 1)
+    out(res)
 
 
 def cmd_qc(a):
+    """Storyboard and MEASUREMENTS of an output, beside what was expected: size, duration, aspect, audio, black and frozen stretches, and the
+    on-screen text the OCR saw (how often, where, how confident) beside the text that was planned. It reports numbers and lists and says nothing
+    about whether the video is good enough: reading the storyboard and these numbers against the mode's rules, and deciding, is the agent's job."""
     v = a.video
     info = media_summary(v)
     od = Path(a.out)
@@ -2769,57 +2864,40 @@ def cmd_qc(a):
                                    f"QC checkpoint {label} {st:.2f}-{en:.2f}s @{a.dense_fps:g} fps",
                                    info.get("orientation", "portrait"), dense=len(res) > 12)
         dense.append({"label": label, "start": st, "end": en, "fps": a.dense_fps, "frames": len(res),
-                      "ok": all(r["ok"] for r in res), "sheets": dsheets})
+                      "all_frames_extracted": all(r["ok"] for r in res), "sheets": dsheets})
     ff = find_tool("ffmpeg")
     cp = run([ff, "-hide_banner", "-nostdin", "-i", v, "-map", "0:v:0", "-vf",
               "blackdetect=d=0.2:pix_th=0.10,freezedetect=n=-60dB:d=0.6", "-an", "-f", "null", "-"], timeout=1800)
     blacks = [{"start": float(m.group(1)), "end": float(m.group(2))}
               for m in re.finditer(r"black_start:([0-9.]+)\s+black_end:([0-9.]+)", cp.stderr)]
     freezes = [float(m.group(1)) for m in re.finditer(r"freeze_start:\s*([0-9.]+)", cp.stderr)]
-    checks = {"duration_s": dur, "aspect": info.get("aspect"),
-              "resolution": f"{info.get('display_width')}x{info.get('display_height')}",
-              "has_audio": info.get("has_audio"), "black_spans": blacks, "freeze_starts": freezes}
+    ew, eh = [int(x) for x in a.expect_size.lower().split("x")]
+    checks = {"duration_s": dur, "aspect": info.get("aspect"), "size": f"{info.get('display_width')}x{info.get('display_height')}",
+              "has_audio": info.get("has_audio"), "black_spans": blacks, "freeze_starts": freezes,
+              "expected": {"size": a.expect_size, "aspect": a.expect_aspect, "duration_s": a.expect_duration}}
+    checks["size_delta_px"] = [(info.get("display_width") or 0) - ew, (info.get("display_height") or 0) - eh]
     if a.expect_duration:
         checks["duration_delta_s"] = round(dur - a.expect_duration, 3)
     if a.expect_aspect:
-        ew, eh = [float(x) for x in a.expect_aspect.split(":")]
+        xw, xh = [float(x) for x in a.expect_aspect.split(":")]
         ar = info["display_width"] / info["display_height"]
-        checks["aspect_error_pct"] = round(abs(ar - ew / eh) / (ew / eh) * 100, 2)
-    ew, eh = [int(x) for x in a.expect_size.lower().split("x")]
-    checks["size_ok"] = (info.get("display_width"), info.get("display_height")) == (ew, eh)
+        checks["aspect_error_pct"] = round(abs(ar - xw / xh) / (xw / xh) * 100, 2)
     text = {"available": False, "skipped": True}
     if not a.no_ocr and base:
         step = max(1, math.ceil(len(base) / 12))
         text = ocr_frames(base[::step][:11] + base[-1:])
-    spans = text.get("spans") or [] if text.get("available") else []
-    allowed = [_norm_word(x) for x in re.split(r"[|\n]", a.allowed_text or "") if _norm_word(x)]
-    def is_allowed(s):
-        k = _norm_word(s["text"])
-        return any(k and (k in al or al in k) for al in allowed)
-    unexpected = [f"{s['text']} @{s['first_t']:.2f}-{s['last_t']:.2f}s ({s['kind_hint']})" for s in spans
-                  if not is_allowed(s) and not s.get("likely_noise")]
-    checks["ocr_noise_ignored"] = [s["text"] for s in spans if s.get("likely_noise") and not is_allowed(s)]
-    checks["visible_text_detected"] = [f"{s['text']} @{s['first_t']:.2f}-{s['last_t']:.2f}s" for s in spans] if text.get("available") else None
-    checks["unexpected_text"] = unexpected if text.get("available") else None
-    checks["text_policy"] = ("edit: no source text may remain unless explicitly kept" if a.mode == "edit"
-                             else "analyze: only planned text may appear; anything else is pseudo-text or a copied artifact")
-    problems = []
-    if not checks["size_ok"]:
-        problems.append(f"size {checks['resolution']} != {a.expect_size}")
-    if unexpected:
-        problems.append(f"{len(unexpected)} unexpected text span(s) - inspect the storyboard")
-    if blacks:
-        problems.append("black frames")
-    if freezes:
-        problems.append("frozen stretches")
-    if a.expect_duration and abs(checks["duration_delta_s"]) > max(0.25, 0.05 * a.expect_duration):
-        problems.append(f"duration off by {checks['duration_delta_s']} s")
-    checks["problems"] = problems
+    spans = (text.get("spans") or []) if text.get("available") else []
+    checks["mode"] = a.mode
+    checks["planned_text"] = [x.strip() for x in re.split(r"[|\n]", a.allowed_text or "") if x.strip()]
+    checks["visible_text"] = ([{k: s.get(k) for k in ("text", "first_t", "last_t", "hits", "share_of_frames_scanned", "y_rel", "score_mean", "chars", "band_distinct_texts")}
+                               for s in spans] if text.get("available") else None)
+    checks["frames_scanned_for_text"] = text.get("frames_scanned") if text.get("available") else None
     checks["dense_checkpoints"] = [{"label": d["label"], "start": d["start"], "end": d["end"], "frames": d["frames"]}
                                    for d in dense]
     write_json(od / "qc.json", {"info": info, "checks": checks, "ocr": text, "sheets": sheets, "dense": dense})
-    out({"ok": True, "passed_automatic_checks": not problems, "qc_json": str(od / "qc.json"),
-         "sheets": sheets, "dense": dense, "checks": checks})
+    out({"ok": True, "qc_json": str(od / "qc.json"),
+         "sheets": sheets, "dense": dense, "checks": checks,
+         "note": "measurements beside the expectations, no verdict: compare planned_text with visible_text and read the storyboard yourself"})
 
 
 # --------------------------------------------------------------------------- output format: 9:16 720p
@@ -2829,17 +2907,18 @@ def _encode_args(crf: int = 18) -> list:
 
 
 def cmd_conform(a):
-    """Bring a clip to exactly WxH (default 720x1280) without stretching: scale-to-cover + focus crop.
-    Refuses when more than --max-crop of the picture would be lost (use Higgsfield `reframe` or
-    regenerate from a 9:16 start frame instead), unless --allow-large-crop or --mode pad."""
+    """Bring a clip to exactly WxH (default 720x1280) without stretching: scale-to-cover + focus crop (or --mode pad).
+    It reports `lost_fraction`, the share of the picture the crop removes, and never refuses a crop: --dry-run reports it
+    without writing anything, so that the agent can decide first (a large loss is a reason to use Higgsfield `reframe` or to
+    regenerate from a 9:16 start frame instead)."""
     src = Path(a.video)
     info = media_summary(src)
     W, H = a.width, a.height
     iw, ih = info["display_width"], info["display_height"]
     if (iw, ih) == (W, H) and info.get("rotation", 0) == 0:
-        if str(src.resolve()) != str(Path(a.out).resolve()):
+        if not a.dry_run and str(src.resolve()) != str(Path(a.out).resolve()):
             shutil.copyfile(src, a.out)
-        out({"ok": True, "file": a.out, "action": "none (already exact)", "lost_fraction": 0.0})
+        out({"ok": True, "file": a.out, "action": "none (already exact)", "lost_fraction": 0.0, **({"dry_run": True} if a.dry_run else {})})
     ff = find_tool("ffmpeg")
     if a.mode == "pad":
         s = min(W / iw, H / ih)
@@ -2853,22 +2932,19 @@ def cmd_conform(a):
         s = max(W / iw, H / ih)
         sw, sh = math.ceil(iw * s / 2) * 2, math.ceil(ih * s / 2) * 2
         lost = round(1 - (W * H) / (sw * sh), 4)
-        if lost > a.max_crop and not a.allow_large_crop:
-            fail(f"conform would crop {lost:.1%} of the picture (> {a.max_crop:.0%}); reframe with Higgsfield "
-                 f"`reframe` (aspect_ratio 9:16, resolution 720p), regenerate from a 9:16 start frame, or rerun "
-                 f"with --focus-x/--focus-y and --allow-large-crop after checking the subject stays in frame",
-                 1, lost_fraction=lost, input=f"{iw}x{ih}")
         cx = min(max(a.focus_x * sw - W / 2, 0), sw - W)
         cy = min(max(a.focus_y * sh - H / 2, 0), sh - H)
         vf = f"scale={sw}:{sh}:flags=lanczos,crop={W}:{H}:{int(cx)}:{int(cy)},setsar=1"
         action = f"scale-to-cover {iw}x{ih}->{sw}x{sh} + crop {W}x{H} at focus ({a.focus_x},{a.focus_y})"
         cmd = [ff, "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-vf", vf, "-map", "0:v:0",
                "-map", "0:a?", *_encode_args(a.crf), "-c:a", "aac", "-b:a", "192k", a.out]
+    if a.dry_run:
+        out({"ok": True, "dry_run": True, "action": action, "lost_fraction": lost, "input": f"{iw}x{ih}", "output_size": f"{W}x{H}"})
     cp = run(cmd, timeout=3600)
     if cp.returncode != 0:
         fail("ffmpeg failed: " + cp.stderr[-600:])
     o = media_summary(a.out)
-    ok = (o["display_width"], o["display_height"]) == (W, H)
+    ok = (o["display_width"], o["display_height"]) == (W, H)          # did the tool produce the size it was asked for
     out({"ok": ok, "file": a.out, "action": action, "lost_fraction": lost,
          "output": f"{o['display_width']}x{o['display_height']}", "duration_s": o.get("duration_s")}, 0 if ok else 1)
 
@@ -4014,23 +4090,22 @@ def _px_span(spec: str, what: str) -> float:
 
 
 def cmd_scale(a):
-    """Size reckoning for a product in a frame (anomaly-catalog.md §2.7).
+    """Size reckoning for a product in a frame (anomaly-catalog.md §2.7): arithmetic only, no verdict.
 
     Before generation (plan): `scale --product-cm 15.7 --distance 1.5 --lens 26` gives the fraction
     of the frame height and the pixel height the product should have at that depth, plus a table
     over the usual shot distances, so the prompt and a start frame can be built at the right size.
     After generation (QC): add `--product-px <y0-y1 | px>` measured on a full-resolution frame, and
     a neighbour of known size at (about) the same depth: `--ref-cm 22 --ref-px <y0-y1 | px>`
-    (`--depth-ratio` = product distance / neighbour distance when they differ). The verdict compares
-    the observed size with the expected one: within 15 % ok, 15-25 % a note, over 25 % regenerate.
+    (`--depth-ratio` = product distance / neighbour distance when they differ). It then gives the
+    observed size as a multiple of the expected one for each estimate that could be made (against the
+    neighbour, against the distance and the lens) and, when there are two, how far they are from each
+    other. What those numbers mean (within what deviation a size is acceptable, when two estimates agree
+    enough, whether a distance was assumed) is the agent's reading, guided by anomaly-catalog.md §2.7.
 
     The distance is never assumed (CE-028): derive it from the frame (the surface the product stands
     on, a same-plane neighbour of known size) and say how with `--distance-basis "<how d was
-    derived>"`. A verdict computed from --distance/--lens alone (no --ref-cm/--ref-px neighbour) is
-    PROVISIONAL: the JSON carries `"provisional": true` and `"provisional_reason"`, `verdict` reads
-    e.g. "regenerate (provisional: distance assumed)", `verdict_base` keeps the bare word, and the
-    human line starts with "PROVISIONAL (distance assumed)". Given both estimates, an oversize verdict
-    needs them to agree within --note-pct of each other; otherwise the verdict is "inconclusive".
+    derived>"`; the text is recorded with the numbers.
 
     Geometry (approximate, 9:16 portrait, 35 mm-equivalent focal length f): the frame height covers
     36·d/f metres at distance d, so a product of height H fills H·f/(36·d) of the frame height."""
@@ -4045,24 +4120,26 @@ def cmd_scale(a):
             frame_h = int(im["display_height"])
     res = {"ok": True, "product_cm": a.product_cm, "lens_mm_eq": f, "frame_h_px": frame_h,
            "label": a.label or "product", "notes": []}
+    frac = exp_ratio = None
     # 1. expected size from distance + lens
     if a.distance:
         frac = H * f / (36.0 * a.distance)
         res["distance_m"] = a.distance
         res["expected_fraction_of_frame_height"] = round(frac, 4)
         res["expected_px"] = round(frac * frame_h, 1)
+        res["distance_basis"] = a.distance_basis or None
     shots = [("extreme close-up", 0.4), ("close-up", 0.7), ("medium close-up", 1.0), ("medium", 1.5),
              ("medium-wide", 2.5), ("wide", 4.0)]
     res["table"] = [{"shot": s, "distance_m": d, "fraction": round(H * f / (36.0 * d), 4),
                      "px": round(H * f / (36.0 * d) * frame_h, 1)} for s, d in shots]
     # 2. expected ratio to a neighbour of known size
     if a.ref_cm:
-        ratio = (a.product_cm / a.ref_cm) / max(1e-6, a.depth_ratio)
+        ratio = exp_ratio = (a.product_cm / a.ref_cm) / max(1e-6, a.depth_ratio)
         res["neighbour_cm"] = a.ref_cm
         res["depth_ratio"] = a.depth_ratio
         res["expected_ratio_to_neighbour"] = round(ratio, 3)
-    # 3. observed
-    verdicts = []
+    # 3. observed, as a multiple of the expected size, per estimate
+    estimates = []
     if a.product_px:
         ppx = _px_span(a.product_px, "--product-px")
         res["observed_px"] = round(ppx, 1)
@@ -4072,73 +4149,24 @@ def cmd_scale(a):
             obs_ratio = ppx / max(1e-6, rpx)
             res["neighbour_px"] = round(rpx, 1)
             res["observed_ratio_to_neighbour"] = round(obs_ratio, 3)
-            dev = obs_ratio / res["expected_ratio_to_neighbour"] - 1.0
-            res["size_vs_neighbour"] = round(1.0 + dev, 3)
-            verdicts.append(("vs neighbour", dev))
+            res["size_vs_neighbour"] = round(obs_ratio / exp_ratio, 3)
+            estimates.append({"basis": "neighbour ratio", "size_factor": res["size_vs_neighbour"],
+                              "deviation_pct": round((res["size_vs_neighbour"] - 1.0) * 100.0, 1)})
         if a.distance:
-            dev = (ppx / frame_h) / res["expected_fraction_of_frame_height"] - 1.0
-            res["size_vs_distance"] = round(1.0 + dev, 3)
-            verdicts.append(("vs distance+lens", dev))
-        if not verdicts:
+            res["size_vs_distance"] = round((ppx / frame_h) / frac, 3)
+            estimates.append({"basis": "distance+lens fraction", "size_factor": res["size_vs_distance"],
+                              "deviation_pct": round((res["size_vs_distance"] - 1.0) * 100.0, 1)})
+        if not estimates:
             res["notes"].append("observed size given, but nothing to compare it with: add --ref-cm/--ref-px or --distance")
-    if verdicts:
-        worst = max(verdicts, key=lambda v: abs(v[1]))
-        dev = worst[1]
-        pct = abs(dev) * 100.0
-        if pct <= a.ok_pct:
-            verdict = "ok"
-        elif pct <= a.note_pct:
-            verdict = "note"
-        else:
-            verdict = "regenerate"
-        res["deviation_pct"] = round(dev * 100.0, 1)
-        res["deviation_basis"] = worst[0]
-        res["verdict"] = verdict
-        res["reading"] = (f"{res['label']} renders at {1 + dev:.2f}x its expected size "
-                          f"({'too big' if dev > 0 else 'too small'} by {pct:.0f} %, {worst[0]})")
-        if verdict == "regenerate":
-            res["notes"].append("size is a regenerate reason; no post-fix can resize a product in the scene")
-    # 4. provenance of the verdict (CE-028): a number from an assumed distance is provisional
-    have_nb = "size_vs_neighbour" in res
-    have_dist = "size_vs_distance" in res
-    if a.distance:
-        res["distance_basis"] = a.distance_basis or "not stated (assumed)"
-    res["estimates"] = [k for k, h in (("neighbour ratio", have_nb), ("distance+lens fraction", have_dist)) if h]
-    prov = None
-    if verdicts and have_dist and not have_nb:
-        prov = "distance assumed: no neighbour ratio (--ref-cm/--ref-px) to cross-check it"
-    elif verdicts and have_dist and have_nb:
-        lo, hi = sorted((res["size_vs_neighbour"], res["size_vs_distance"]))
-        spread = (hi / max(1e-6, lo) - 1.0) * 100.0
-        res["estimates_spread_pct"] = round(spread, 1)
-        if spread > a.note_pct:
-            res["verdict_base"] = res.get("verdict")
-            res["verdict"] = "inconclusive"
-            prov = (f"the two estimates disagree by {spread:.0f} % (neighbour {res['size_vs_neighbour']}x, "
-                    f"distance {res['size_vs_distance']}x): re-derive the distance and the neighbour on the frame")
-            res["notes"] = [n for n in res["notes"] if not n.startswith("size is a regenerate reason")]
-            res["notes"].append("no oversize verdict while the estimates disagree; view the full-resolution frame and re-measure")
-        elif not a.distance_basis:
-            res["notes"].append("state --distance-basis: how the distance was derived from the frame")
-    elif verdicts and have_nb and not have_dist:
-        res["notes"].append("one estimate only (neighbour ratio): cross-check it with a frame fraction from a distance derived "
-                            "from a different object or the surface (--distance --distance-basis)")
-    if prov:
-        res["provisional"] = True
-        res["provisional_reason"] = prov
-        if res.get("verdict") != "inconclusive":
-            res["verdict_base"] = res.get("verdict")
-            res["verdict"] = f"{res['verdict']} (provisional: distance assumed)"
-            res["notes"].append("PROVISIONAL: not a regenerate reason, not a RESIDUAL FAILURE and not to be repeated until a "
-                                "second estimate agrees; view the full-resolution frame first (anomaly-catalog.md 2.7)")
-            res["notes"] = [n for n in res["notes"] if not n.startswith("size is a regenerate reason")]
-        res["reading"] = f"PROVISIONAL ({prov}): " + res.get("reading", "")
-    elif verdicts:
-        res["provisional"] = False
-    if a.distance and not a.product_px and not a.distance_basis:
-        res["notes"].append("plan sketch only: the distance must be derived from the frame, not from the shot size (--distance-basis)")
-    if verdicts and res.get("reading"):
-        print(f"size: {res['reading']} -> {res['verdict']}", file=sys.stderr)
+    res["estimates"] = estimates
+    if len(estimates) == 2:
+        lo, hi = sorted(e["size_factor"] for e in estimates)
+        res["estimates_spread_pct"] = round((hi / max(1e-6, lo) - 1.0) * 100.0, 1)
+    if a.distance and not a.distance_basis:
+        res["notes"].append("--distance-basis not stated: say how the distance was derived from the frame")
+    if estimates:
+        line = "; ".join(f"{e['basis']}: {e['size_factor']}x ({e['deviation_pct']:+.1f} %)" for e in estimates)
+        print(f"size of {res['label']} as a multiple of the expected size - {line}", file=sys.stderr)
     if a.out:
         write_json(Path(a.out), res)
         res["file"] = a.out
@@ -4685,15 +4713,14 @@ def _lane(video) -> str:
 
 
 def cmd_ledger(a):
-    """Deterministic guard around every paid Higgsfield generation (generate_video, and generate_image for
-    start frames). state.json is written under a lock, because production agents run in parallel.
-    begin  : refuses (exit 3) when
-             - this video's lane already has an open submission (pending/submitted/unknown): one job in
-               flight per video;
-             - the run already has `production.max_parallel_jobs` open submissions (config, default 5;
-               `--max-open 1` restores strictly one job per run);
-             - this exact request already produced a completed/accepted job, or failed twice.
-             Otherwise it records a 'pending' entry. Call it immediately BEFORE the generation call.
+    """Record of every paid Higgsfield generation (generate_video, and generate_image for start frames), kept so that parallel production
+    agents can see each other. state.json is written under a lock. The ledger RECORDS and REPORTS; it never refuses and never decides: whether to
+    submit is the agent's decision, taken from the production rules of the mode.
+    begin  : records a 'pending' entry (call it immediately BEFORE the generation call) and reports what the ledger already holds that bears on
+             it, as facts: `conflicts` lists, with the entries involved, an open submission (pending/submitted/unknown) in this video's lane, the
+             number of open submissions in the run against `production.max_parallel_jobs` (config, default 5; `--max-open` overrides), the
+             number of times this exact request (the same fingerprint) failed, and a finished job (completed/accepted) of this exact request.
+             An agent that decides not to submit records that with `set --status superseded --note "why"`, which also frees the lane.
     set    : record the job id / outcome right AFTER the call and after polling
              (submitted | unknown | completed | failed | accepted | rejected | superseded).
     show   : list entries (optionally one video)."""
@@ -4719,31 +4746,30 @@ def _ledger_write(a, p: Path):
         lane = a.lane or _lane(a.video)
         open_all = [e for e in led if e["status"] in LEDGER_OPEN]
         open_lane = [e for e in open_all if (e.get("lane") or _lane(e["video"])) == lane]
-        if open_lane:
-            out({"ok": False, "blocked": "open submission in this video's lane", "open": open_lane,
-                 "action": "resolve it first: jobs_wait on its job_id, or for 'pending'/'unknown' without a "
-                           "job id check show_generations/transactions — never submit again blindly"}, 3)
         cap = a.max_open or int(cfg_get("production.max_parallel_jobs", 5))
-        if len(open_all) >= cap:
-            out({"ok": False, "blocked": "parallel cap", "open": open_all, "cap": cap,
-                 "action": f"{cap} jobs are already in flight in this run: wait (jobs_wait) until one finishes, "
-                           "then begin again — never submit past the cap"}, 3)
         failed = [e for e in led if e["fingerprint"] == fp and e["status"] == "failed"]
-        if len(failed) >= 2:
-            out({"ok": False, "blocked": "failed twice", "failed": failed,
-                 "action": "this exact request failed twice — diagnose and change it, or report the failure"}, 3)
         dup = [e for e in led if e["fingerprint"] == fp and e["status"] in LEDGER_DONE_OK]
-        if dup and not a.allow_repeat:
-            out({"ok": False, "blocked": "duplicate request", "existing": dup[-1],
-                 "action": "reuse that job's result; change the request (e.g. the user's revision) to make "
-                           "a new attempt, or pass --allow-repeat only on an explicit user request"}, 3)
+        conflicts = []
+        if open_lane:
+            conflicts.append({"what": "an open submission in this video's lane", "entries": open_lane})
+        if len(open_all) >= cap:
+            conflicts.append({"what": "submissions in flight in this run against the cap", "open": len(open_all), "cap": cap})
+        if failed:
+            conflicts.append({"what": "this exact request failed before", "times": len(failed), "entries": failed})
+        if dup:
+            conflicts.append({"what": "this exact request already produced a finished job", "entry": dup[-1]})
         entry = {"video": a.video, "lane": lane, "attempt": a.attempt, "fingerprint": fp, "status": "pending",
                  "job_id": None, "model": (req.get("params", req)).get("model"),
-                 "request_file": str(Path(a.request).resolve()), "created": now_iso(), "history": []}
+                 "request_file": str(Path(a.request).resolve()), "created": now_iso(), "history": [],
+                 "conflicts_seen": [c["what"] for c in conflicts]}
         led.append(entry)
         st["updated"] = now_iso()
         write_json(p, st)
-        out({"ok": True, "fingerprint": fp, "entry": entry})
+        out({"ok": True, "recorded": True, "fingerprint": fp, "entry": entry, "conflicts": conflicts,
+             "open_in_run": len(open_all) + 1, "cap": cap,
+             "note": "recorded as pending, nothing was refused: whether to submit is your decision from the conflicts listed, under the mode's production rules "
+                     "(one job in flight per video; not past the cap; not the same request again once it produced a finished job; diagnose before another attempt). "
+                     "If you decide not to submit, record it: ledger set --fingerprint ... --status superseded --note \"why\""})
     elif a.action == "set":
         if not a.fingerprint and not a.job:
             fail("set needs --fingerprint or --job", 2)
@@ -4806,8 +4832,8 @@ def _edit_fit(e: dict) -> str:
 
 def cmd_model_menu(a):
     """Print EVERY available video model as one numbered table (pinned models first), plus a JSON line
-    with the quick picks. Live catalog ids (from models_explore) mark availability and add models that
-    have no guide yet."""
+    with the numbering and the pinned ids. Live catalog ids (from models_explore) mark availability and add
+    models that have no guide yet. It does not pick a model: which ones to offer is the agent's decision."""
     idx = json.loads((AWL_HOME / "models" / "index.json").read_text(encoding="utf-8"))
     models = idx["models"]
     menu = idx.get("menu", {})
@@ -4855,13 +4881,7 @@ def cmd_model_menu(a):
     if unavailable:
         lines += ["", "Not in the live catalog right now: " + ", ".join(f"`{u}`" for u in unavailable)]
     print("\n".join(lines))
-    if mode == "edit":   # true video editors first, then motion transfer, then recreation
-        rank = {"✓": 0, "↔": 1, "≈": 2}
-        fit = sorted([r for r in rows if r["edit"][:1] in rank], key=lambda r: (rank[r["edit"][:1]], r["n"]))
-    else:
-        fit = [r for r in rows if r["analyze"] == "✓"]
-    quick = [r["id"] for r in rows if r["star"]] + [r["id"] for r in fit if not r["star"]]
-    out({"ok": True, "count": len(rows), "quick_picks": quick[:4],
+    out({"ok": True, "count": len(rows), "pinned": [r["id"] for r in rows if r["star"]],
          "numbers": {str(r["n"]): r["id"] for r in rows}, "unavailable": unavailable})
 
 
@@ -4881,6 +4901,122 @@ def cmd_model_entry(a):
 
 
 # --------------------------------------------------------------------------- CLI
+
+def _audio_profile(src: Path, dst: Path, transcript=None, cuts_path=None):
+    """Sound-design measurements of one reference: what sits under and around the speech, so that the sound can be understood and, in Create, matched or
+    reused. Measured with librosa (no listening), as NUMBERS and no verdict:
+    - speech share (from the transcript) and the audible share outside it;
+    - the harmonic share of the sound outside the speech (high = tonal, music-like; low = noise, percussion, ambience);
+    - tempo and beat strength;
+    - spectral flatness (tonal or noise-like) and the strongest frequency with how steady it is (one steady tone, such as a beep, or not);
+    - energy per second, and the mean of the first and the last third of it;
+    - "hits" (strong transients: stings, booms, whooshes) and whether they land on a cut.
+    Whether there is a music bed, what role the sound plays (dramatic, comic, suspense, hype) and whether it could be reused are the agent's judgement from
+    these numbers, the transcript and the picture. Writes dst (JSON).
+    Returns (profile | None, error | None)."""
+    try:
+        import numpy as np
+        import librosa
+    except ImportError:
+        return None, "librosa and numpy are required for audio-profile"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    wav = dst.with_suffix(".22k.wav")
+    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-vn", "-ac", "1",
+              "-ar", "22050", str(wav)], timeout=900)
+    if cp.returncode != 0 or not wav.exists():
+        return None, "could not decode the audio: " + cp.stderr[-400:]
+    y, sr = librosa.load(str(wav), sr=22050, mono=True)
+    wav.unlink(missing_ok=True)
+    dur = len(y) / sr if sr else 0
+    if dur < 0.5 or not np.any(y):
+        prof = {"ok": True, "format": 2, "file": str(src), "duration_s": round(dur, 2), "silent": True}
+        write_json(dst, prof)
+        return prof, None
+    hop = 512
+    speech = []
+    speech_known = bool(transcript)            # no transcript named: the caller did not ask for a speech share
+    if transcript:
+        tp = Path(transcript)
+        if not tp.exists():
+            speech_known = False               # frames only: no transcript file exists; the speech share is unknown, not zero
+        else:
+            tj = json.loads(tp.read_text(encoding="utf-8"))
+            if tj.get("ingested") is False:
+                speech_known = False
+            speech = [(float(s.get("start", 0)), float(s.get("end", 0))) for s in tj.get("segments", [])
+                      if s.get("end") is not None]
+    cuts = []
+    if cuts_path and Path(cuts_path).exists():
+        cuts = [float(c["t"]) for c in json.loads(Path(cuts_path).read_text(encoding="utf-8")).get("cuts", [])]
+    harm, perc = librosa.effects.hpss(y)
+    rms = librosa.feature.rms(y=y, hop_length=hop)[0]
+    rms_h = librosa.feature.rms(y=harm, hop_length=hop)[0]
+    t = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop)
+    in_speech = np.zeros(len(t), dtype=bool)
+    for s0, s1 in speech:
+        in_speech |= (t >= s0) & (t <= s1)
+    db = 20 * np.log10(np.maximum(rms, 1e-6))
+    audible = db > -45
+    non_speech = audible & ~in_speech
+    harm_ratio = float(np.median((rms_h[non_speech] / np.maximum(rms[non_speech], 1e-6)))) if non_speech.any() else None
+    onset = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop)
+    try:
+        tempo, _beats = librosa.beat.beat_track(onset_envelope=onset, sr=sr, hop_length=hop)
+        tempo = float(np.atleast_1d(tempo)[0])
+    except Exception:
+        tempo = float(np.atleast_1d(librosa.feature.tempo(onset_envelope=onset, sr=sr, hop_length=hop))[0])
+    ac = librosa.autocorrelate(onset - onset.mean())
+    lag = int(round(60.0 / tempo * sr / hop)) if tempo > 0 else 0
+    pulse = float(ac[lag] / ac[0]) if 0 < lag < len(ac) and ac[0] > 0 else 0.0
+    speech_share = (sum(max(0.0, min(e, dur) - max(s, 0.0)) for s, e in speech) / dur) if dur else 0.0
+    nonspeech_share = float(non_speech.mean()) if len(non_speech) else 0.0
+    thr = onset.mean() + 2.5 * onset.std()
+    pk = librosa.util.peak_pick(onset, pre_max=8, post_max=8, pre_avg=40, post_avg=40, delta=float(onset.std()), wait=20)
+    hits = []
+    for i in pk:
+        if onset[i] < thr:
+            continue
+        ht = float(librosa.frames_to_time(i, sr=sr, hop_length=hop))
+        near = min(cuts, key=lambda c: abs(c - ht)) if cuts else None
+        hits.append({"t": round(ht, 2), "strength": round(float(onset[i] / (onset.max() or 1)), 2),
+                     "in_speech": bool(any(s0 <= ht <= s1 for s0, s1 in speech)),
+                     "on_cut": bool(near is not None and abs(near - ht) <= 0.25)})
+    per_s = [round(float(db[(t >= k) & (t < k + 1)].mean()), 1) for k in range(int(math.ceil(dur)))
+             if ((t >= k) & (t < k + 1)).any()]
+    q = max(1, len(per_s) // 3)
+    first, last = (statistics.mean(per_s[:q]), statistics.mean(per_s[-q:])) if per_s else (None, None)
+    centroid = float(np.median(librosa.feature.spectral_centroid(y=y, sr=sr, hop_length=hop)))
+    # tonal or noisy, and is it one steady tone: the median spectral flatness (near 0 = tonal, near 1 = noise-like) and the median frequency of the
+    # strongest spectral peak with the share of audible frames within 3 % of it (a share near 1 = one steady tone, such as a beep)
+    S = np.abs(librosa.stft(y, n_fft=2048, hop_length=hop))
+    flat = librosa.feature.spectral_flatness(S=S)[0]
+    pk_hz = librosa.fft_frequencies(sr=sr, n_fft=2048)[np.argmax(S, axis=0)]
+    m_len = min(len(audible), flat.shape[0], pk_hz.shape[0])
+    sel = audible[:m_len]
+    if sel.any():
+        flat_med = float(np.median(flat[:m_len][sel]))
+        pk_med = float(np.median(pk_hz[:m_len][sel]))
+        pk_steady = float(np.mean(np.abs(pk_hz[:m_len][sel] - pk_med) <= 0.03 * max(pk_med, 1.0)))
+    else:
+        flat_med = pk_med = pk_steady = None
+    prof = {"ok": True, "format": 2, "file": str(src), "duration_s": round(dur, 2),
+            "speech_share": round(speech_share, 2) if speech_known else None, "non_speech_audible_share": round(nonspeech_share, 2),
+            "speech_note": None if speech_known else ("audio not ingested (frames only): the speech share is not measured; the shares below treat every audible second as non-speech"
+                                                      if transcript else "no transcript was given: the speech share is not measured"),
+            "harmonic_ratio_non_speech": None if harm_ratio is None else round(harm_ratio, 2),
+            "tempo_bpm": round(tempo, 1), "beat_strength": round(pulse, 2),
+            "energy_db_per_s": per_s, "energy_first_third_db": None if first is None else round(first, 1),
+            "energy_last_third_db": None if last is None else round(last, 1),
+            "energy_change_db": None if first is None else round(last - first, 1),
+            "hits": sorted(hits, key=lambda h: -h["strength"])[:12], "brightness_hz": round(centroid),
+            "spectral_flatness_median": None if flat_med is None else round(flat_med, 3),
+            "peak_frequency_hz_median": None if pk_med is None else round(pk_med),
+            "peak_frequency_steady_share": None if pk_steady is None else round(pk_steady, 2),
+            "note": "measured numbers, not listening, and no verdict: whether there is a music bed, what role the sound plays (dramatic, comic, suspense, hype ...) "
+                    "and whether it could be reused (rights still apply) are for the agent to decide from these numbers, the transcript and the picture"}
+    write_json(dst, prof)
+    return prof, None
+
 
 def main():
     ap = argparse.ArgumentParser(prog="awl.py", description=__doc__.split("\n\n")[0])
@@ -4910,10 +5046,10 @@ def main():
     p.add_argument("--request", help="the request JSON about to be submitted (begin)")
     p.add_argument("--fingerprint"); p.add_argument("--job")
     p.add_argument("--status", choices=["submitted", "unknown", "completed", "failed", "accepted", "rejected", "superseded"])
-    p.add_argument("--note"); p.add_argument("--allow-repeat", action="store_true")
+    p.add_argument("--note")
     p.add_argument("--flagged", action="store_true", help="set: mark this submission as flagged/refused by Higgsfield (then `caught-flag add`)")
     p.add_argument("--lane", help="lane override (default: the video number before any '-')")
-    p.add_argument("--max-open", type=int, help="open submissions allowed in the run (default production.max_parallel_jobs)")
+    p.add_argument("--max-open", type=int, help="the cap that begin reports the open submissions against (default production.max_parallel_jobs)")
     p.set_defaults(fn=cmd_ledger)
 
     p = sp.add_parser("open"); p.add_argument("--file", required=True); p.add_argument("--dry-run", action="store_true")
@@ -4956,6 +5092,7 @@ def main():
     p.add_argument("--at"); p.add_argument("--range", action="append")
     p.add_argument("--fps", type=float, default=15.0, help="rate for --range (default 15)")
     p.add_argument("--label"); p.add_argument("--title"); p.add_argument("--sheet", action="store_true")
+    p.add_argument("--grid", type=int, nargs="?", const=100, help="also write a gridded copy of each frame (lines every N source pixels, default 100, labelled in source coordinates)")
     p.add_argument("--max-side", type=int, default=1280); p.set_defaults(fn=cmd_frames)
 
     p = sp.add_parser("prep-image"); p.add_argument("image"); p.add_argument("--out", required=True)
@@ -4993,7 +5130,7 @@ def main():
     p = sp.add_parser("finalize"); p.add_argument("--run", required=True); p.add_argument("--file", required=True)
     p.add_argument("--original", required=True, help="the ORIGINAL video path (as in the inventory)")
     p.add_argument("--video", help="V id, for the run record"); p.add_argument("--expect-size", default="720x1280")
-    p.add_argument("--force", action="store_true"); p.set_defaults(fn=cmd_finalize)
+    p.set_defaults(fn=cmd_finalize)
 
     p = sp.add_parser("restore-audio"); p.add_argument("--generated", required=True)
     p.add_argument("--audio", help="original audio from files_audio (preferred)")
@@ -5009,7 +5146,10 @@ def main():
     p.add_argument("--start", type=float, default=0.0, help="segment start in the source timeline (same as restore-audio --start)")
     p.add_argument("--duration", type=float, help="limit the compared span")
     p.add_argument("--out", required=True, help="folder for sync-check.json and sync-sheet.jpg")
-    p.add_argument("--fps", type=float, default=30.0); p.add_argument("--tol", type=float, default=0.10, help="allowed offset in seconds")
+    p.add_argument("--fps", type=float, default=30.0)
+    p.add_argument("--tol", type=float, default=0.10, help="list the windows whose offset is beyond this many seconds (a list on request, not a verdict)")
+    p.add_argument("--min-corr", type=float, default=0.5, help="the summary uses only the windows whose correlation is at least this (all windows stay listed)")
+    p.add_argument("--min-motion", type=float, default=0.25, help="the summary uses only the windows whose motion is at least this share of the whole segment's")
     p.add_argument("--max-lag", type=float, default=1.5, help="largest offset searched, seconds")
     p.add_argument("--window", type=float, default=2.0, help="window for the per-window offsets, seconds")
     p.add_argument("--at", help="sheet timestamps on the output timeline, comma-separated (default: the source's strongest motion moments)")
@@ -5032,7 +5172,7 @@ def main():
     p.add_argument("--width", type=int, default=720); p.add_argument("--height", type=int, default=1280)
     p.add_argument("--mode", choices=["fill", "pad"], default="fill")
     p.add_argument("--focus-x", type=float, default=0.5); p.add_argument("--focus-y", type=float, default=0.5)
-    p.add_argument("--max-crop", type=float, default=0.12); p.add_argument("--allow-large-crop", action="store_true")
+    p.add_argument("--dry-run", action="store_true", help="report lost_fraction (the share of the picture a crop removes) and write nothing")
     p.add_argument("--crf", type=int, default=18); p.set_defaults(fn=cmd_conform)
 
     p = sp.add_parser("captions"); p.add_argument("--video", required=True); p.add_argument("--out", required=True)
@@ -5065,9 +5205,9 @@ def main():
 
     p = sp.add_parser("scale", help="size reckoning: expected vs observed product size (anomaly-catalog §2.7)")
     p.add_argument("--product-cm", type=float, required=True, help="the product's real height in cm (registry)")
-    p.add_argument("--label", help="product name for the verdict")
+    p.add_argument("--label", help="product name for the printed line")
     p.add_argument("--distance", type=float, help="camera-to-product distance in metres (from the shot size)")
-    p.add_argument("--distance-basis", help="how --distance was derived from the frame (surface, neighbour, depth order); recorded in the verdict")
+    p.add_argument("--distance-basis", help="how --distance was derived from the frame (surface, neighbour, depth order); recorded with the numbers")
     p.add_argument("--lens", type=float, default=26.0, help="35 mm-equivalent focal length (phone main lens ≈ 26)")
     p.add_argument("--frame-h", type=int, default=1280, help="frame height in px (default 1280 for 720×1280)")
     p.add_argument("--frame", help="a full-resolution frame; its height overrides --frame-h")
@@ -5075,7 +5215,6 @@ def main():
     p.add_argument("--ref-cm", type=float, help="a neighbour's real height in cm (hand, bottle, phone, mug …)")
     p.add_argument("--ref-px", help="the neighbour's observed height on the same frame: 'y0-y1' or px")
     p.add_argument("--depth-ratio", type=float, default=1.0, help="product distance / neighbour distance (1 = same depth)")
-    p.add_argument("--ok-pct", type=float, default=15.0); p.add_argument("--note-pct", type=float, default=25.0)
     p.add_argument("--out", help="write the result as JSON")
     p.set_defaults(fn=cmd_scale)
 
@@ -5162,6 +5301,17 @@ def main():
 
     p = sp.add_parser("lint-run", help="cross-checks of a run's files as facts (gather-only): cited paths that do not exist, video numbers vs asset_plan, media ids vs uploads, prompt lengths, preset bookkeeping, the contract")
     p.add_argument("--run", required=True); p.set_defaults(fn=cmd_lint_run)
+
+    p = sp.add_parser("uploads", help="one record per video of the uploads made for it (video-NN-uploads.json, one schema): set | show | merge into state.json -> assets.uploads")
+    p.add_argument("action", choices=["set", "show", "merge"]); p.add_argument("--run", required=True); p.add_argument("--video")
+    p.add_argument("--label", help="set: the input's label as the request names it (e.g. 'Image 2' or the asset id)")
+    p.add_argument("--media-id", help="set: the media id Higgsfield returned"); p.add_argument("--file", help="set: the local file that was uploaded")
+    p.add_argument("--content-type"); p.add_argument("--url", help="set: the public url Higgsfield returned"); p.add_argument("--role", help="set: the role the request gives it")
+    p.set_defaults(fn=cmd_uploads)
+
+    p = sp.add_parser("contract", help="write 50-requests/agent-contract.md from the canonical prompt (production-agents section 2) and state.json; lists the placeholders it could not fill")
+    p.add_argument("--run", required=True); p.add_argument("--notes", help="run-specific notes, appended under their own heading at the end")
+    p.add_argument("--out", help="write elsewhere than 50-requests/agent-contract.md"); p.set_defaults(fn=cmd_contract)
 
     p = sp.add_parser("cost-report", help="credits as the run recorded them (information, never a gate): credits_start, jobs from videos[], submissions, brief mentions, --balance")
     p.add_argument("--run", required=True); p.add_argument("--balance", type=float, help="the Higgsfield balance now (from the balance tool), to print start minus balance")

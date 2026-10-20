@@ -73,6 +73,6 @@ Text-to-video has no documented ratio [OFFICIAL silence]; third-party specs list
 
 Make the 9:16 still first (e.g. 1080×1920), then generate. If the output's short edge is below 720, regenerate at
 `"1080"` (6 s) rather than upscale [INFERRED]. Otherwise finish with `awl.py conform --video "<in>" --out "<out>"`
-(scale-to-cover + focus crop to exactly 720×1280, never stretched). If `conform` refuses (>12% loss), the frame ratio
+(scale-to-cover + focus crop to exactly 720×1280, never stretched). If `conform` reports a loss above about 12% (`lost_fraction`), the frame ratio
 was wrong — fix the frame and regenerate; never force a landscape text-to-video clip into 9:16 [INFERRED].
 

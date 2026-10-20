@@ -147,9 +147,9 @@ Only these section files for this phase, nothing else unless a step below says s
       placed in CapCut later and never generated;
     - the **sound plan** (Create, `capcut-assembly.md` §3b), placed in CapCut:
       - the generation carries only dialogue, action sounds and ambience, with no generated music;
-      - the soundtrack's role, mood, tempo and energy arc, from the references' sound profiles;
+      - the soundtrack's role, mood, tempo and how its energy moves, read from the references' sound-profile numbers;
       - its source: a supplied track, the reference's own speech-free sound (only when its profile measured the speech share: in a
-        frames-only run `reusable_whole` is null and the reference's sound is not reused whole), or a matching track to download;
+        frames-only run `speech_share` is null and the reference's sound is not reused whole), or a matching track to download;
       - the sound effects and their hit points on the new video's beats;
     - for a **multi-clip** video, the **clip plan** (`generation-system.md` §3b):
       - the seams, on the reference's cuts first;
@@ -322,7 +322,7 @@ Only these section files for this phase, nothing else unless a step below says s
   neighbour's ratio, the size ladder) in the plan and the prompt; never read a product's size off
   its own photo; never take the distance from an assumption (derive it from the frame, with two estimates
   that agree), and never flag, repeat or summarise a size verdict that rests on one assumed number or that
-  nobody viewed on a frame (it is provisional, CE-028); never accept a product over a quarter larger or
+  nobody viewed on a frame (it is provisional, your own word: the tool prints numbers, CE-028); never accept a product over a quarter larger or
   smaller than reckoned, one that
   changes size across a cut, or one larger than the hand that holds it (`anomaly-catalog.md` §2.7).
 - Never plan a product that is handled on screen without its affordance sheet in the registry

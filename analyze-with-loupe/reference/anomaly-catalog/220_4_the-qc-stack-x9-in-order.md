@@ -2,7 +2,12 @@
 
 1. `T qc --video <final> --out <dir> --mode <mode> --allowed-text "…" --dense "<label>:<a>-<b>" …`
    with every checkpoint of the plan: it writes a 30 fps sheet per checkpoint under `<dir>/dense/`
-   beside the 5 fps storyboard. View every sheet.
+   beside the 5 fps storyboard, and returns measurements beside the expected values (duration, aspect, size,
+   audio, black spans, freeze starts, and `planned_text` beside the `visible_text` its OCR saw), with no pass or
+   fail. View every sheet, read the numbers, and write the verdict yourself. Rules of thumb for the numbers: a
+   duration off by more than max(0.25 s, 5 %) is a duration problem; any black span or freeze needs a look at the
+   sheet; Edit Mode: no source text may remain unless the user kept it; Analyze Mode: only the planned text may
+   appear, anything else is pseudo-text or a copied artifact.
 2. **Count** every multiple at every checkpoint and write the numbers in the QC note
    ("capsules 3 / 3 / 3 / 1, two taken at 7.5 s").
 3. **Part and contact** on every use beat: the preparation step, the part used, the lips or hand on
@@ -18,9 +23,10 @@
    the product's pixel height against the named neighbour's at the product's own depth (A; `--depth-ratio` is
    read from the frame when the product stands in front of or behind that neighbour, a can on the near table
    strip against the person seated behind it, and is never left at 1; CE-014, CE-015) and against a distance derived from the
-   frame (B, `--distance-basis`), the two multiples agreeing before an oversize verdict, the observed
-   multiple of the expected size and the method written in the verdict, constancy across cuts; a
-   verdict from one assumed number is provisional and is viewed on the frame first (§2.7).
+   frame (B, `--distance-basis`), the two multiples agreeing (within 25 % of each other) before you call a size
+   oversize, the observed multiple of the expected size and the method written in the verdict, constancy across
+   cuts; a size from one assumed number is read as provisional and is viewed on the frame first (§2.7; the tool
+   returns numbers only).
 5e. **Identity match** on a full-resolution frame with the face and a hand or forearm: same skin tone, age
    and build as the kept body, the garment and every printed line of the kept clothing as planned (no costume
    change, no reversed or invented print), with the frame path in the verdict (§2.17; CE-029, CE-035,

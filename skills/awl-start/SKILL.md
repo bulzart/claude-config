@@ -70,9 +70,13 @@ Only these section files for this phase, nothing else unless a step below says s
         video, ↔ motion transfer, ≈ recreates, ✗ frames only.
    3. **Show the whole table in chat, verbatim, every row, however long.** Never shorten it to a
       top-N. The user wants to see all models.
-   4. Ask with AskUserQuestion (header "Model"). The options are the 4 `quick_picks` from the JSON
-      line (label = model name; description = its "what it can do" and mode fit). "Other" = any
-      number or name from the table; resolve numbers with the JSON `numbers` map.
+   4. Ask with AskUserQuestion (header "Model"). **You choose the 4 options** from the table (the
+      script offers no picks): the pinned models first (`pinned` in the JSON line), then the models
+      that fit the mode: for Edit Mode and Recreate the video editors (✓), then motion transfer (↔),
+      then recreation (≈); for Create the models that can analyze (the Analyze column). Label =
+      model name; description = its "what it can do" and what the mode column says. "Other" = any
+      number or name from the table; resolve numbers with the JSON `numbers` map (`unavailable`
+      lists any model of the index that is not live).
    5. Store it: after the run exists (step 6), `T state --run RUN set model=<id> model_locked=true`.
       Print its `index.json` entry now with `T model-entry --id <id>` (never Read `index.json` whole: it is 40 KB; capabilities, durations, 9:16/720p params, and
       `continuation`: the maximum per generation and how clips join), but not yet its guide.
@@ -100,6 +104,11 @@ Only these section files for this phase, nothing else unless a step below says s
      **Recreate** also needs the **characters** who replace the people in the references (face
      close-up + full body each). If none are supplied and the references show people, ask once at
      this step: add characters, or keep the people as they are.
+     **QC fixes (Recreate and Create; a choice, asked once the paths are validated, unless `$ARGUMENTS` has `qc-fixes ask|auto`).**
+     Ask with AskUserQuestion (header "QC fixes"), "If QC finds issues or anomalies in a generated video, how should the fix generation be decided?":
+     - **"Ask me first"**: "From the first video on, I show you what QC found, what the fix generation would change and cost, and wait for your yes or no before spending credits on it."
+     - **"QC agents fix on their own"**: "The QC agents regenerate a video with one diagnosed fix on their own, without asking, and ship the best take flagged if it still fails."
+     Store it once the run exists (step 6). Edit Mode is not asked (the user reviews every attempt, X9-R).
    - **Edit Mode** needs the video file(s) or folder to edit, and offers the optional **examples
      folder** (as above). Per-edit assets are asked later, per operation (E3).
    - Paths may arrive quoted, space-separated, dragged into the terminal, or one per line. If an
@@ -124,12 +133,13 @@ Only these section files for this phase, nothing else unless a step below says s
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
    - store the audio choice (step 5b): `T state --run RUN set audio_ingest=whisper` or `audio_ingest=frames-only`;
+   - Recreate and Create: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto`);
    - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper
      is fed from, and `keeper.state`: the keeper is booted or brought up to date there, so the first consult finds it current), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
      `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
    - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
 
-## Rules this phase owns (contract items 4, 11, 17, 24)
+## Rules this phase owns (contract items 4, 11, 17, 24, 27)
 
 4. **One model per run, picked at the start, then locked.**
    - The user picks the video model right after choosing the mode (§2.4), from a menu that lists
@@ -164,6 +174,12 @@ Only these section files for this phase, nothing else unless a step below says s
       - **No reference video, frame or clip is ever an input** to a generation; nothing is edited.
     - In both sub-modes, every video ends as a CapCut project (item 16), produced by its own agent
       (item 2).
+
+27. **QC fixes (Recreate and Create).** The user chooses at the start; the choice is stored in `state.json → qc_fixes` (a run without it is `auto`):
+    - **`ask`**: when QC finds issues or anomalies in a generated video, from the first video on, and only a new generation can fix them, the fix is not generated until the user answers yes:
+      the production agent prepares the corrected request and stops with a proposal, and the main session asks (`awl-analyze-produce`);
+    - **`auto`**: the QC agents correct on their own, without asking: one diagnosed regeneration per clip, then the best take ships flagged.
+    Never asked: local post-fixes, CapCut fixes, the retry of a job that failed with no output, and anything in Edit Mode (every attempt is reviewed, X9-R).
 
 Item 17's "§3 R-steps" are step A6r (`awl-recreate-plan`).
 

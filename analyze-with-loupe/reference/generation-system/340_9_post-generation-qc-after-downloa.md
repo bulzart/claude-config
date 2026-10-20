@@ -3,11 +3,13 @@
 1. `awl.py qc --video <final> --out <dir> --mode <analyze|edit> --allowed-text "<planned text>"
    --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan (`anomaly-catalog.md` §3
    step 8), then **view the 5 fps storyboard** sheets in order and every dense sheet under
-   `<dir>/dense/`.
+   `<dir>/dense/`. `qc` returns measurements beside the expected values (duration, aspect, size, audio, black
+   spans, freeze starts, `planned_text` beside the `visible_text` its OCR saw) and no pass or fail; you read them
+   with the sheets (`anomaly-catalog.md` §4 step 1 gives the rules of thumb) and write the verdict.
 2. Check against the plan: identity, asset geometry (compare with the canonical template), the ledger
    states, interactions (densify contact moments with `awl.py frames --range a-b --fps 15 --sheet`),
-   lighting, text (unexpected text or pseudo-text = fail), pacing (dead head/tail → `awl.py trim`),
-   and format (720×1280).
+   lighting, text (compare `planned_text` with `visible_text`: unexpected text or pseudo-text = fail), pacing
+   (dead head/tail → `awl.py trim`), and format (720×1280).
    - **Placement (§4b):** compare the item's spot and state across the sheets, and densify around
      cuts, pickups, set-downs and any move (a car driven in or away).
    - These count as a **regenerate** reason: the item missing, unrecognisable, duplicated, changing
@@ -29,16 +31,18 @@
      cause, a reversal, a slide without a cause, or a morphing label, badge or body is a
      **regenerate** reason (§5b).
    - **Action sync (§5c),** whenever the original audio comes back: `awl.py sync-check` and its
-     sheet, plus the sync anchors densified. Drift or a moved action is a **regenerate** reason;
-     a steady offset is a post-fix.
+     sheet, plus the sync anchors densified. You read its offsets against the 0.10 s tolerance (§5c.5): drift or
+     a moved action is a **regenerate** reason; a steady offset is a post-fix.
    - **Leftovers:** check against §9b. Only its **must-not-survive** list counts as a finding.
      Everything on its **fine** list is ignored: not reported, not asked about, not regenerated.
    - **Size** (`anomaly-catalog.md` §2.7): on a full-resolution frame at rest, one in use and the
      last, `awl.py scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1>`
      against the named neighbour at the product's own depth (`--depth-ratio` from the frame when the product
      stands in front of or behind it) and `--distance --distance-basis --lens` for the shot (the distance
-     derived from the frame); the two estimates must agree before an oversize verdict, a verdict from one
-     assumed number is provisional and viewed on the frame first, and the observed multiple of the
+     derived from the frame). The tool returns the observed size as a multiple of the expected size per
+     estimate (`size_factor`, `deviation_pct`) and no verdict; you read it: the two estimates should agree (within
+     25 % of each other) before an oversize verdict, a size from one assumed number is provisional and viewed on
+     the frame first, and the observed multiple of the
      expected size and the method go in the verdict. Over 25 %, a size that changes between shots, or a
      product larger than the hand that holds it is a **regenerate** reason with no post-fix;
      15–25 % is a note only for a static product with a readable label. On a model whose guide lists
@@ -58,7 +62,7 @@
      step, the original audio whole, no emoji in a text layer (CE-016, CE-024, CE-025, CE-026). Fixed in
      the CapCut project.
    - **Source surfaces** (§8): each printed surface that a guardrail or §9b names, at full resolution and
-     by `awl.py qc` OCR. A reproduced poster, livery, board or screen is a **regenerate** reason, and the
+     in the text `awl.py qc` lists from its OCR. A reproduced poster, livery, board or screen is a **regenerate** reason, and the
      retry replaces it with a named concrete thing instead of describing blankness.
    - **Label legibility** (`anomaly-catalog.md` §2.9, §4 step 5h): the wordmark and the variant tag
      (flavour, size or model) read exactly on a full-resolution frame at rest, word by word against the

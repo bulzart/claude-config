@@ -47,6 +47,6 @@ Preflight with `get_cost: true` [HF].
 | Start frame | same params + a 9:16 `start_image` | pixel count ≈ 720P tier, image ratio kept [OFFICIAL] → ≈720×1280 | verify |
 
 Finish with `awl.py conform --video "<in>" --out "<out>"` (scale-to-cover + focus crop to exactly 720×1280, never
-stretched; a no-op when already exact). If `conform` refuses (>12% loss), the frame ratio was wrong — fix the frame
-and regenerate [INFERRED]. Never crop to hide a watermark (§3.11e).
+stretched; a no-op when already exact). `conform` reports `lost_fraction`; a loss above about 12% means the frame ratio was wrong — fix the frame
+and regenerate rather than forcing the crop [INFERRED]. Never crop to hide a watermark (§3.11e).
 

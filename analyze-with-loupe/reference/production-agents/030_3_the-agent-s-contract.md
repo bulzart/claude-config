@@ -10,10 +10,12 @@
    - `T ledger begin` before and `T ledger set` after every `generate_video` / `generate_image`;
    - one job in flight in its lane;
    - never resubmit after an unknown outcome until it is resolved;
-   - at most one autonomous, diagnosed regeneration per clip;
+   - at most one diagnosed regeneration per clip (yours to submit with QC fixes `auto`; submitted only after the main session's `approved` or `auto` with `ask`);
    - a request that failed twice → stop and report.
-   The ledger also caps the whole run at 5 jobs in flight. On "parallel cap", wait with `jobs_wait`
-   on its own job, or simply retry `begin` after a short pause; never work around it.
+   The run keeps at most 5 jobs in flight (`production.max_parallel_jobs`): `begin` reports the number open
+   against that cap, and keeping to it is your call. When the cap is reached, record the entry you did not
+   follow as `superseded`, wait with `jobs_wait` on your own job (or pause briefly), then call `begin`
+   again; never submit past the cap.
 4. **Inputs.** Reuse the shared media ids and folder id from `state.json`. Upload only this video's
    own inputs: the Recreate source, hand-off frames, start frames.
 5. **State.** Write only through `T state` / `T ledger`; both are locked against the other agents.
@@ -40,12 +42,13 @@
 9. **Recreate: source fidelity** (command item 19). The first request already carries the fidelity
    lock: the source action script, the most preserving input and mode, the scoped change, the
    keep-list and the exclusions (`generation-system.md` §5c), checked at X4. The reference's own
-   audio comes back, so run `T sync-check` after the merge. Fix a steady offset in post; spend the
-   one diagnosed regeneration on drift or a moved action. Record the verdict in `result.json`
-   (`sync`).
+   audio comes back, so run `T sync-check` after the merge and read its numbers against the 0.10 s
+   tolerance (`generation-system.md` §5c.5; the tool gives no verdict). Fix a steady offset in post; spend the
+   one diagnosed regeneration on drift or a moved action. Record what you read and decided in
+   `result.json` (`sync`).
 10. **No questions.** On any blocker, write `result.json` with `"status":"blocked"` and `"blocker"`
-   set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `other`, plus one
-   line of detail. Then stop.
+   set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `qc_fix_permission` | `other`, plus one
+   line of detail (`qc_fix_permission` also carries `fix_proposal`, §4). Then stop.
 11. **Final message:** the content of `result.json`, as one JSON line.
 12. **Record.** Every regenerate reason and every flagged delivery (RESIDUAL FAILURE) is written at once in
    the video's brief as an attempt block (the failed request, the verdict with its numbers and frame paths,

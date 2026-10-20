@@ -90,7 +90,7 @@ Preflight any call with `get_cost: true` (no submission) [HF].
 
 Always post-process with `awl.py conform --video "<in>" --out "<out>"` (scale-to-cover + focus crop to exactly
 720×1280, never stretched). For a 768×1344 source it scales to 732×1280 and crops 12 px of width (~1.6% loss); use
-`--focus-x` if the subject is off-centre. `conform` refuses losses above 12% — that means a non-9:16 output:
+`--focus-x` if the subject is off-centre. `conform` reports `lost_fraction`; a loss above about 12% means a non-9:16 output:
 regenerate with 9:16 inputs [INFERRED]. Keep faces, products and any intentional text away from the extreme left/right
 edges [INFERRED].
 

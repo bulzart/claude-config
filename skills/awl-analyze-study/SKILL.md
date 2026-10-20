@@ -72,14 +72,23 @@ Only these section files for this phase, nothing else unless a step below says s
       verdict: pick-clean, pick-and-edit with the operations, or dismiss with the rule;
     - its **inserts**: memes or other clips that interrupt the reference, with their exact in and
       out on cut frames, video or still, and their sound;
-    - its **overlay text**: wording, role, centre position, in and out times, and style;
+    - its **overlay text**: wording, role, centre position, in and out times, and style. The OCR spans (`ocr.json`,
+      `video.json`, `video.md`, `timeline.md`) carry numbers and spelling facts only: `text`, `first_t`, `last_t`,
+      `hits`, `share_of_frames_scanned`, `y_rel`, `band`, `band_distinct_texts`, `band_frames`, `score_mean`, `chars`,
+      `words`, `has_at_handle`, `has_hashtag`, `has_url_pattern`, and `bands[]` per row of the frame. No script says
+      whether a text is a caption, a fixed overlay, a watermark, a handle, a label or noise: you decide that from the
+      numbers and the storyboard;
     - its **sound design** (Create):
       `T audio-profile --audio "<files_audio file>" --out 10-media/<V>/audio-profile.json --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json`.
-      It measures the music bed, tempo, beat strength, energy arc, and hits (and whether they land
-      on cuts), plus whether the sound is speech-free and so reusable whole. From those numbers and
-      the visuals, infer its role: dramatic, comic, suspense, hype or sound-effect-driven. In a frames-only run
-      (`state.json → audio_ingest`) the transcript file does not exist: the profile then reports `speech_share` and `reusable_whole`
-      as null and the music bed as unknown (speech was not separated); write `audio not ingested` for the speech, never `no speech`.
+      It returns numbers only: the speech share and the audible non-speech share, the harmonic share outside speech,
+      the tempo and beat strength, the spectral flatness (near 0 tonal, near 1 noise-like), the strongest frequency and
+      how steady it is (near 1 = one steady tone, such as a beep), the energy per second and from the first to the last
+      third, and the hits (each with whether it lands on a cut). From those numbers, the transcript and the visuals,
+      you decide whether there is a music bed, whether the sound is speech-free and so reusable whole, how its energy
+      moves, and its role: dramatic, comic, suspense, hype or sound-effect-driven. The card records that judgement. In a
+      frames-only run (`state.json → audio_ingest`) the transcript file does not exist: the profile then reports `speech_share`
+      as null with a `speech_note` (speech was not separated), the sound is not reused whole, and you write `audio not ingested`
+      for the speech, never `no speech`.
     Videos that have nothing to do with the client's product are kept and analysed like any other.
     Their mechanism is still useful, and the product is integrated into them later.
 - Delegate to 1–2 agents only per §7 of the protocol, with disjoint video lists. Give them the

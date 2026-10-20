@@ -14,7 +14,9 @@ stretched.
    - reframe the source (below).
 4. **A source video is not 9:16 in Edit Mode** → before the edit:
    - `awl.py conform --focus-x/--focus-y` when a crop keeps every important subject, prop and action
-     (the tool refuses more than 12 % loss unless `--allow-large-crop`; check the storyboard first);
+     (`--dry-run` reports `lost_fraction`, the share of the picture the crop removes, and writes nothing; the
+     tool never refuses a crop, so you decide: a loss above about 12 % is a reason to use Higgsfield `reframe` or
+     to regenerate from a 9:16 start frame; check the storyboard first);
    - otherwise Higgsfield `reframe` (`aspect_ratio:"9:16"`, `resolution:"720p"`, AI-expanded edges;
      preflight with `get_cost`);
    - otherwise regenerate with the source as a video reference in a 9:16 generation.

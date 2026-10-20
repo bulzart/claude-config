@@ -15,3 +15,5 @@ User, 2026-10-20, in steps: only /analyze-then-pick is edited, not /analyze-then
 **Why:** the user wants every improvement, but isolated in a new command so the stable pipeline (and the live run using it) is never deformed; the user decides later whether the new one replaces the old.
 
 **How to apply:** /analyze-then-pick and /analyze-then-generate are never edited from now on; Loupe, hooks and settings.json may change for the new command only if both old pipelines and the live run keep working and their tests stay green. Still the user's: credits and Higgsfield calls, live run folders, credentials, pushing, the product and brand rules in memory, the start-at-logon refusal. The Whisper work already built in /analyze-then-pick ([[atp-audio-ingest-question]]) is carried into the new command. Related: [[no-cross-pipeline-mentions]], [[atp-skills-architecture]], [[atp-build-prompt-sync]], [[loupe-web-app]].
+
+**Built 2026-10-20** by this session: see [[analyze-with-loupe-command]] for where it lives, what it keeps and what it changes; the report is `Documents/prompts/coupling-report-2026-10-20.md`.

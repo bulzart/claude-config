@@ -55,7 +55,9 @@ is one second of the sheets. Do not describe isolated frames. Answer:
     - any overlays the reference added on top of it.
     Inserts are cut from the reference later, never generated (`generation-system.md` §3c).
 11. **Overlay text:** every text event's wording, role, centre position (`x_rel`, `y_rel` from
-    `ocr.json` and the sheets), in and out times, and style. The new video is generated clean, and
+    `ocr.json` and the sheets), in and out times, and style. The OCR spans are numbers (times, frames seen,
+    row of the frame, confidence), not labels: whether a text is a caption, a fixed overlay, a handle, a
+    watermark or noise is your reading (`text-and-format.md` §2.1). The new video is generated clean, and
     the text is re-placed as CapCut layers (`text-and-format.md` §3).
 12. **Trend elements and cognitive triggers** (`creative-direction.md` §3–§4): the format's name
     and caption grammar; the structural mechanism that would outlive the trend; the surface

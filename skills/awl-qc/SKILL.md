@@ -75,7 +75,9 @@ Only these section files for this phase, nothing else unless a step below says s
     the product form, the beat, what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
     --product-details "<its shape, size, opening and natural posture, from its registry row>" --checkpoint "<a plan checkpoint>" …`
     (repeat `--checkpoint`). The JSON line has `relevant` (or `samples`
-    when `mode` is `fallback`): each with `composite_path`, `frames` (role, where it comes from, time), the miss in words and `advice`. **View every
+    when `mode` is `fallback` or `busy`, the brief's own ranking while no keeper answered): each with `composite_path`, `frames` (role, where it comes from, time),
+    the admin's words (`title`, and `details`, `correct_note`, `idea`, `better`, `missed` when given), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`),
+    the keeper's `why`, `check` and `wrong_pattern`, and `advice`. **View every
     `composite_path`**, add what each says to look for as extra `--dense` checkpoints, and write in the verdict
     which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
     empty list means no sample applies: QC goes on without them. On `mode: unavailable` while the contract's Loupe line (`state.json → loupe`,
@@ -90,7 +92,18 @@ Only these section files for this phase, nothing else unless a step below says s
     once more with `--note "<what you saw>"`; if it is still unmet, go on and write in the verdict what was not answered.
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
     every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan,
-    then view the storyboard sheets and every dense sheet under `<dir>/dense/`.
+    then view the storyboard sheets and every dense sheet under `<dir>/dense/`. It returns measurements
+    beside the expectations and no verdict: `checks` (`duration_s`, `aspect`, `size`, `has_audio`,
+    `black_spans`, `freeze_starts`, `expected`, `size_delta_px`, `duration_delta_s`, `aspect_error_pct`,
+    `mode`), `planned_text[]` (from `--allowed-text`), `visible_text[]` (every text the OCR saw, with its
+    `first_t`, `last_t`, `hits`, `share_of_frames_scanned`, height `y_rel`, `score_mean`, `chars` and
+    `band_distinct_texts`), `frames_scanned_for_text` and `dense_checkpoints`. **You** compare
+    `planned_text` with `visible_text`, read the sheets, and write the QC verdict (it goes into
+    `result.json` and the brief). Rules of thumb: a duration off by more than max(0.25 s, 5 %) is a duration
+    problem; any black span or freeze needs a look; in Edit Mode no source text may remain unless it was
+    explicitly kept; in Analyze Mode only the planned text may appear, and anything else is pseudo-text or a
+    copied artifact. Whether a visible text is a caption, a fixed overlay, a watermark, a label or noise is
+    your reading of those numbers and the picture.
   - Check identity, asset geometry against the canonical template, the ledger states, interactions
     (densify contact moments), lighting and reflections, text, pacing and dead space, and the format.
   - **Motion beats at 30 fps** (`generation-system.md` §5b): every motion beat (spins, tosses,
@@ -110,16 +123,20 @@ Only these section files for this phase, nothing else unless a step below says s
     last, measure the product's pixel height and the named neighbour's at the product's own depth (`--depth-ratio`
     from the frame when the product stands in front of or behind it, never 1 by default) and run
     `T scale --product-cm <H> --product-px <y0-y1> --ref-cm <h> --ref-px <y0-y1> [--depth-ratio r]
-    --distance d --distance-basis "<how d was derived from the frame>" --lens f`: two estimates, the
-    neighbour ratio (A) and the frame fraction at a distance derived from the surface or another object
-    (B), which must agree before an oversize verdict (`inconclusive` means re-derive). A verdict from one
-    assumed number is PROVISIONAL ("provisional: distance assumed"): never a regenerate reason or a
-    RESIDUAL FAILURE, and viewed on the full-resolution frame by whoever reports it before it is flagged,
-    repeated or summarised (CE-028). Write the multiple of the expected size with its method and distance
-    in the verdict and compare across cuts. Over 25 % on agreeing estimates, a size that changes between
-    shots, or a product larger than
-    the hand that holds it is a regenerate reason with no post-fix; 15–25 % is a note only for a
-    static product with a readable label. The retry changes the lever the guide names. For a model
+    --distance d --distance-basis "<how d was derived from the frame>" --lens f`. It returns numbers and no
+    verdict: `estimates[]`, two of them when both can be made, the neighbour ratio (A) and the frame
+    fraction at a distance derived from the surface or another object (B), each with its `size_factor` (the
+    observed size as a multiple of the expected size) and `deviation_pct`; also `size_vs_neighbour`,
+    `size_vs_distance`, `estimates_spread_pct` (when there are two), the expected and observed values and
+    `distance_basis` as you gave it. **You** read them under the guidance: within 15 % is fine; 15–25 % is a
+    note, only for a static product with a readable label; over 25 % on agreeing estimates, a size that
+    changes between shots, or a product larger than the hand that holds it is a regenerate reason with no
+    post-fix; two estimates more than 25 % apart are inconclusive, so re-derive the distance and measure
+    again on the full-resolution frame. A size read from one assumed number, with no neighbour estimate, is
+    PROVISIONAL (your own label, "provisional: distance assumed"): not a regenerate reason or a RESIDUAL
+    FAILURE until a second estimate agrees, and viewed on the full-resolution frame by whoever reports it
+    before it is flagged, repeated or summarised (CE-028). Write the multiple of the expected size with its
+    method and distance in the verdict and compare across cuts. The retry changes the lever the guide names. For a model
     whose guide lists size as a model limit (`wan3_0_prime`) it changes the lever: the size-and-place
     guide (`generation-system.md` §4b.6), the integration form (§4b.0) or the anchor class from the guide's
     passing list, never the sizing words (12 of 12 wording retries were re-rolls);
@@ -159,10 +176,10 @@ Only these section files for this phase, nothing else unless a step below says s
     references and the run's other videos (craft shared, subject not). A missing hook or payoff that
     the plan required is a narrative-gate failure and a regenerate reason; everything else is a
     note, never a question.
-  - **Action sync** (item 19; Edit Mode and Recreate): the X8 sync verdict and sheet. Every sync
-    anchor lands within ±0.1 s of its sound: words on mouth movements, impacts on contact, steps on
-    footfalls. Drift, or an action added, skipped or moved, is a regenerate reason; a steady offset
-    is a post-fix.
+  - **Action sync** (item 19; Edit Mode and Recreate): your sync reading from X8 (the numbers and the
+    sheet). Every sync anchor should land within ±0.1 s of its sound: words on mouth movements, impacts on
+    contact, steps on footfalls. Drift, or an action added, skipped or moved, is a regenerate reason; a
+    steady offset is a post-fix.
   - **Leftovers** (`generation-system.md` §9b): only the must-not-survive list counts, and it is
     fixed autonomously.
   - **Label legibility** (`anomaly-catalog.md` §2.9, §4 step 5h): on a full-resolution frame at rest the
@@ -196,7 +213,7 @@ Only these section files for this phase, nothing else unless a step below says s
       refuses, and the hits a client guardrail names.
     - Background decor, clothing logos, meme faces and all brand-dependent content that no
       guardrail names are fine. They are not reported, not asked about, never softened and never
-      cost a retry. In Analyze Mode no QC question ever goes to the user.
+      cost a retry. In Analyze Mode QC asks the user nothing itself; with QC fixes `ask` it hands a fix proposal to the main session (item 27).
   - For a placement, also check the product's spot across the sheets, densified around cuts and
     pickups. These are regenerate reasons:
     - it is missing or unrecognisable;
@@ -221,13 +238,19 @@ Only these section files for this phase, nothing else unless a step below says s
     - the preview shows the right order, sound and text.
     Fix in the project, not by regenerating.
   - Apply the post-fixes (`trim`, `conform`, `restore-audio`, a sync offset) that need no new generation.
-  - **Analyze Mode verdict** (autonomous):
+  - **Analyze Mode verdict** (the production agent's; item 27):
     - accept;
     - or **one** deliberate regeneration with a diagnosed, corrected request (a new ledger attempt;
-      the preflight cost is shown in its brief);
+      the preflight cost is shown in its brief). With QC fixes `auto` (the contract's "QC fixes" line, or `state.json → qc_fixes`; missing means `auto`) you submit it yourself.
+      With `ask` you prepare it the same way (the attempt block in the brief, the corrected request by the `awl-write-request` rewrite, new inputs by `awl-inputs`, the X5 preflight) but
+      do **not** submit it and do not call `T ledger begin`: write `result.json` with `"status":"blocked"`, `"blocker":"qc_fix_permission"` and a `fix_proposal`
+      (`production-agents` §4), then stop. The main session asks the user and continues you with `approved`, `declined` or `auto`; you never ask the user yourself.
+      `approved` or `auto`: go on at `awl-submit` (X7 with the prepared request, the next attempt number), then `awl-postprocess` and `awl-qc` as usual. `declined`: no further generation
+      for this video; finish this take as it is, flagged: `awl-postprocess` step 6 if the project is not built yet, the project checks here, then `awl-record`, with `qc` = "declined fix: <the findings>".
+      A second miss after an approved fix ships the best take flagged and asks nothing;
     - or report the failure honestly.
 
-## Rules this phase owns (contract items 14, 19, 21)
+## Rules this phase owns (contract items 14, 19, 21, 27)
 
 14. **Analyze Mode: the client's product is always in the video.** This applies when the supplied
     assets include a product or physical object of any size (a drink, a pack of gum, a car), or
@@ -288,9 +311,9 @@ Only these section files for this phase, nothing else unless a step below says s
       For models that rebuild the action (≈, ✗), the action script is also written out in order.
       The timing comes from the source video, never from timestamps in the prompt (§5c.3);
     - X4 checks the request against the action script before any credit is spent (§5c.4);
-    - after the merge, `T sync-check` measures the timing (X8 step 5). A steady offset is fixed in
-      post. Drift or a moved action is a regenerate reason in Recreate, or the first QC note in
-      Edit Mode.
+    - after the merge, `T sync-check` measures the timing and returns numbers, not a verdict (X8 step
+      5); you read them and the sheet. A steady offset is fixed in post. Drift or a moved action is a
+      regenerate reason in Recreate, or the first QC note in Edit Mode.
     Create is not affected: it makes new scenes, and its sound is built in CapCut on their own
     beats.
 21. **Brand guardrails decide what may be picked and what must be edited**
@@ -314,6 +337,9 @@ Only these section files for this phase, nothing else unless a step below says s
     floor (`generation-system.md` §9b rows 1–6) and the generation service's blocks apply;
     alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
     them, and nothing is blurred, softened or removed for taste.
+27. **QC fixes (Recreate and Create).** A regenerate reason found here is fixed by a new generation only as the user chose at the start (`state.json → qc_fixes`): `auto`: the agent submits the one
+    diagnosed regeneration itself; `ask`: the agent prepares it and stops with a `fix_proposal`, and nothing is submitted until the main session says `approved` or `auto` (the user's yes). Local post-fixes
+    (`trim`, `conform`, `restore-audio`, a sync offset, a local regrade) and CapCut fixes need no permission in either case. Edit Mode has no automatic regeneration.
 
 ## Never (this phase)
 
@@ -367,7 +393,7 @@ Only these section files for this phase, nothing else unless a step below says s
   neighbour's ratio, the size ladder) in the plan and the prompt; never read a product's size off
   its own photo; never take the distance from an assumption (derive it from the frame, with two estimates
   that agree), and never flag, repeat or summarise a size verdict that rests on one assumed number or that
-  nobody viewed on a frame (it is provisional, CE-028); never accept a product over a quarter larger or
+  nobody viewed on a frame (it is provisional, your own word: the tool prints numbers, CE-028); never accept a product over a quarter larger or
   smaller than reckoned, one that
   changes size across a cut, or one larger than the hand that holds it (`anomaly-catalog.md` §2.7).
 - Never plan a product that is handled on screen without its affordance sheet in the registry

@@ -58,9 +58,11 @@ Only these section files for this phase, nothing else unless a step below says s
     keeper session holds them. Ask it once, before the prompt is written, in text only: `T plan-hints --run RUN
     --video NN --beats "<one line per beat of the plan: what happens, the product's form and state, the camera>"
     --product "<form>" --product-details "<its shape, size, opening and natural posture, from its registry row>"`. A regeneration never asks: it works from its own diagnosed cause (`awl-qc`). The answer
-    has 0 to 3 hints, and 0 is the normal answer (`mode: empty` or `unavailable` also mean none: write the
+    has 0 to 3 hints, and 0 is the normal answer (`mode: empty`, `unavailable` or `busy` also mean none: write the
     request as always). Each hint has a `trigger` (the plan situation where that miss arises), a `right_outcome`,
-    a `lever` and a `caveat`.
+    a `lever` and a `caveat`, each a whole sentence or cut at a sentence end (an ellipsis marks a cut). `held_back` counts the
+    hints the keeper offered that Loupe set aside, and `held_back_why` says why for each (a universal wording, another model family,
+    an unknown sample, low confidence, beyond the cap): read it as information, never ask again for them.
     - A hint is a risk to check this plan against, never prompt text. Do not copy its words, do not name the wrong
       behaviour anywhere in the prompt or the reference notes (a thing that is named, even in a negative, is what
       comes back: `generation-system.md` §4, §5c.2b), and add no negative list beyond the product's one targeted
@@ -68,8 +70,8 @@ Only these section files for this phase, nothing else unless a step below says s
     - Apply a hint only if its `trigger` matches a beat of this plan and its `caveat` does not exclude it;
       otherwise change nothing. Apply it by the smallest change inside the prompting stack
       (`anomaly-catalog.md` §3): the restatement at that beat, the product's targeted exclusion, the reference
-      view, the beat written as start state, operation, result, or the anchor, written positively as the hint's
-      `right_outcome`. Touch only the matching beat: no new element, camera move or sentence elsewhere, nothing of
+      view, the beat written as start state, operation, result, or the anchor, written positively and in your own
+      words with the meaning of the hint's `right_outcome` (never its sentence). Touch only the matching beat: no new element, camera move or sentence elsewhere, nothing of
       the source's story, timing or the locked model changes, and any rule of this phase wins a conflict.
     - A hint that comes from a scenario (`sample_kind: scenario`: the admin's idea, what could be better, what the agents missed) states a situation to check the plan against; it carries no right outcome of its own beyond the admin's words, so apply it only as a plain restatement at the matching beat. A hint that comes from a miss example (the admin never had a right version for it) may carry no `right_outcome` of its own:
       apply it only when its lever is a plain restatement at the matching beat (the count, the state or the orientation the plan

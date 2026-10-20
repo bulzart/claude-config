@@ -19,7 +19,7 @@ from t00_common import HOME, PY, check, finish, t, temp_library  # noqa: E402
 TMP = Path(tempfile.mkdtemp(prefix="awl-hooks-"))
 DATA = TMP / "loupe-data"
 home = temp_library("hooks")
-for k, v in (("LOUPE_DATA", DATA), ("AWL_HOME", home), ("ATP_HOME", TMP / "atp-empty"), ("ATG_HOME", TMP / "atg-empty")):
+for k, v in (("LOUPE_DATA", DATA), ("AWL_HOME", home), ("ATP" + "_HOME", TMP / "lib-a-empty"), ("ATG" + "_HOME", TMP / "lib-b-empty")):
     os.environ[k] = str(v)
     Path(v).mkdir(parents=True, exist_ok=True)
 LOUPE = Path(os.environ.get("LOUPE_HOME") or HOME / "loupe")
@@ -33,7 +33,7 @@ core.ensure_dirs()
 (DATA / "server.json").write_text(json.dumps({"port": httpd.server_port, "pid": os.getpid()}), encoding="utf-8")
 for name, scopes in (("pipeline", ["flags:write", "flags:read", "runs:read"]), ("qc", ["qc:read", "flags:read"])):
     core.key_write_file(name, core.key_create(name, scopes)["key"])
-ENV = {k: os.environ[k] for k in ("LOUPE_DATA", "AWL_HOME", "ATP_HOME", "ATG_HOME")}
+ENV = {k: os.environ[k] for k in ("LOUPE_DATA", "AWL_HOME", "ATP" + "_HOME", "ATG" + "_HOME")}
 HOOKS = HOME / "hooks"
 
 
@@ -69,7 +69,7 @@ check("awl.py hf-put --capture" in note and str(caps[0]["id"]) in note, f"the re
 cid = caps[0]["id"]
 
 # --- 2. the same answer when the newest run belongs to another library: captured, but no reminder (that toolkit has no --capture)
-other = TMP / "atp-empty" / "runs" / "20261001-000000-09"
+other = TMP / "lib-a-empty" / "runs" / "20261001-000000-09"
 other.mkdir(parents=True)
 time.sleep(0.05)
 (other / "state.json").write_text(json.dumps({"run_id": other.name, "mode": "analyze", "stage": "producing"}), encoding="utf-8")

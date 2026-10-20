@@ -15,9 +15,8 @@ Hard rules:
 - Never reuse another edit's files unless the user says "same files as video K".
 - Never invent a client identity silently. If a concept needs something that was not supplied:
   1. **adapt the concept** to what was supplied (e.g. hands-only POV when no character was given);
-  2. otherwise ask once: drop the element, the user adds files, or a candidate reference is generated
-     for their approval (`generate_image`, e.g. `nano_banana_pro` / `gpt_image_2_5` / `soul_2` for
-     people), used only after they approve it.
+  2. otherwise ask once: drop the element, or the user adds files (`awl-asset-plan`). Nothing is generated
+     to fill the gap: client assets come only from the paths the user gives (contract item 11).
 
 What a well-prepared asset set looks like (share this only if the user asks):
 

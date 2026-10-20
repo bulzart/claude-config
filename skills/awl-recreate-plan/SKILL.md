@@ -129,7 +129,10 @@ Only these section files for this phase, nothing else unless a step below says s
   Every preparation below produces a silent file under `RUN/10-media/<V>/prepared/`. The user's
   folders keep only `files_audio` and `videos_without_audio`.
 - **9:16.** If the source is not 9:16, choose (per `text-and-format.md` §4.1):
-  - `T conform` with a focus point, when a crop keeps every important subject;
+  - `T conform` with a focus point, when a crop keeps every important subject: run it with `--dry-run`
+    first; it writes nothing and reports `lost_fraction`, the share of the picture the crop removes. It
+    never refuses a crop; the decision is yours, and the rule of thumb is that a loss above about 12 % is
+    a reason to use `reframe` or to regenerate from a 9:16 start frame (say what you chose and why);
   - Higgsfield `reframe` (9:16, 720p; preflight first);
   - regeneration with the source as a video reference.
 - **Length.** If the source exceeds the edit model's input range, split it at cuts with `T trim` into
@@ -181,9 +184,9 @@ In Recreate (Analyze Mode) the tool methods that `text-and-format` §2 lists for
       For models that rebuild the action (≈, ✗), the action script is also written out in order.
       The timing comes from the source video, never from timestamps in the prompt (§5c.3);
     - X4 checks the request against the action script before any credit is spent (§5c.4);
-    - after the merge, `T sync-check` measures the timing (X8 step 5). A steady offset is fixed in
-      post. Drift or a moved action is a regenerate reason in Recreate, or the first QC note in
-      Edit Mode.
+    - after the merge, `T sync-check` measures the timing and returns numbers, not a verdict (X8 step
+      5); you read them and the sheet. A steady offset is fixed in post. Drift or a moved action is a
+      regenerate reason in Recreate, or the first QC note in Edit Mode.
     Create is not affected: it makes new scenes, and its sound is built in CapCut on their own
     beats.
 

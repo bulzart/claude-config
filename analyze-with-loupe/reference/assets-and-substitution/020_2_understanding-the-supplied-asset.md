@@ -1,7 +1,8 @@
 ## 2. Understanding the supplied assets (autonomous)
 
 Inputs:
-- `30-assets/<scope>/asset-inventory.md`: ids, sub-folder groups, filename hints;
+- `30-assets/<scope>/asset-inventory.md`: ids, paths, kinds, sizes, sub-folder groups and `duplicate_of` for
+  identical files (facts only: the inventory guesses no role from a file name);
 - `asset-previews.md`;
 - `assets-sheet-*.jpg`: every supplied image, labelled with id and path;
 - `docs/`: extracted text of supplied documents. Rules found in them (brand books, dos and don'ts,
@@ -9,8 +10,9 @@ Inputs:
   which references may be picked and what must be edited in them (`brand-guardrails.md`).
 
 Steps:
-1. **Look at the contact sheet** (and full previews where detail matters). Filename hints are only
-   hints; the image decides.
+1. **Look at the contact sheet** (and full previews where detail matters). The inventory lists paths and
+   facts and guesses no role from a file name: you confirm every role (product, character, logo, contents
+   sample, ...) by looking at the asset; the image decides.
 2. **Group files into entities.** One entity per distinct product, object, character, interface,
    brand kit, environment or sound. Sub-folders usually separate entities, but verify visually:
    - two different products in one folder are two entities;

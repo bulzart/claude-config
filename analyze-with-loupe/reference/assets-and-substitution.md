@@ -10,8 +10,8 @@ Stored as section files in `assets-and-substitution/` (next to this file); **rea
 
 | § | Section | File | KB |
 |---|---|---|---|
-| 1 | Where client assets come from: only the user | `010_1_where-client-assets-come-from-on.md` | 4.0 |
-| 2 | Understanding the supplied assets (autonomous) | `020_2_understanding-the-supplied-asset.md` | 2.7 |
+| 1 | Where client assets come from: only the user | `010_1_where-client-assets-come-from-on.md` | 3.9 |
+| 2 | Understanding the supplied assets (autonomous) | `020_2_understanding-the-supplied-asset.md` | 2.9 |
 | 3 | Asset registry — `30-assets/registry.md` and `state.json → assets` | `030_3_asset-registry-30-assets-registr.md` | 1.5 |
 | 4 | Substitution map (per video) | `040_4_substitution-map-per-video.md` | 2.4 |
 | 5 | Getting references into the model (by capability) | `050_5_getting-references-into-the-mode.md` | 2.3 |

@@ -64,6 +64,21 @@ for p in [ROUTER] + SKILLS + sorted((LIB / "reference").rglob("*.md")):
     used |= set(re.findall(r"(?<!no )`T ([a-z][a-z-]+)(?= |`)", rd(p)))     # "no `T caught-error`" states a retirement, it is not a use
 missing = sorted(c for c in used if c not in cmds)
 check(not missing, "every `T <command>` in the router, the skills and the references is a command of awl.py: " + ", ".join(missing))
+# every `T <cmd> ... --flag` the texts cite is a flag of that command (from the command's own --help)
+flags_of = {}
+for c in sorted(cmds):
+    hc = subprocess.run([PY, "-X", "utf8", AWL, c, "-h"], capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
+    flags_of[c] = set(re.findall(r"(?m)^\s{2}(?:-\w, )?(--[a-z0-9\-]+)", hc)) | set(re.findall(r"\[(--[a-z0-9\-]+)", hc))
+bad_flags = set()
+for p in [ROUTER] + SKILLS + sorted((LIB / "reference").rglob("*.md")) + sorted((LIB / "higgsfield").rglob("*.md")):
+    for m in re.finditer(r"`T ([a-z][a-z-]+)((?:[^`\n])*)`", rd(p)):
+        c, rest = m.group(1), m.group(2)
+        if c not in flags_of:
+            continue
+        for f in re.findall(r"(--[a-z][a-z0-9\-]*)", rest):
+            if f not in flags_of[c] and f != "--help":
+                bad_flags.add(f"{p.parent.name if p.name == 'SKILL.md' else p.name}: T {c} {f}")
+check(not bad_flags, "every `T <command> --flag` the router, the skills and the references cite is a flag of that command: " + "; ".join(sorted(bad_flags)[:6]))
 for c in ("loupe", "qc-consult", "qc-brief", "plan-hints", "caught-flag", "status", "doctor", "lint-run", "cost-report", "seams", "strip-inserts", "doc-text"):
     check(c in cmds, f"awl.py has the {c} command")
 
@@ -98,6 +113,40 @@ check(OBSOLETE not in text, "no mention of the obsolete learning command in the 
 OTHER = "analyze-then-" + "generate"            # the other pipeline: never named here
 check(OTHER not in text, "the router, skills and README do not mention the other pipeline")
 check(not [p.name for p in sorted((LIB / "reference").rglob("*.md")) if OTHER in rd(p)], "no reference section mentions the other pipeline")
+# the library this command was born from is never named either (its name, its skill prefix, its toolkit, its home variable, its path alias)
+OLD = ["analyze-then-" + "pick", "atp" + "-", "atp" + ".py", "ATP" + "_HOME", "ATP" + "/", "`ATP" + "`"]
+everything = [ROUTER] + SKILLS + [LIB / "README.md", LIB / "learning-log.md", LIB / "config.json", LIB / "scripts" / "awl.py", LIB / "scripts" / "docs_tool.py"] + \
+    sorted((LIB / "reference").rglob("*.md")) + sorted((LIB / "models").rglob("*.md")) + sorted((LIB / "higgsfield").rglob("*.md")) + sorted((LIB / "pipeline").glob("*.md")) + \
+    sorted((LIB / "tests").glob("*.py")) + sorted((LIB / "scripts").glob("check*"))
+leaks = []
+for p in everything:
+    body = rd(p)
+    body = re.sub(r"C:/Users/Glaresquare1/\.claude/" + "analyze-then-" + "pick" + r"(?=[/`\s)])", "<path>", body)      # a file path may name the source library; nothing else may
+    for o in OLD:
+        if re.search(r"(?<![A-Za-z_])" + re.escape(o), body):
+            leaks.append(f"{p.name}: {o}")
+            break
+check(not leaks, "no file of this command names the library it was born from (only a file path may): " + "; ".join(leaks[:6]))
+# the QC-fixes choice (item 27): asked at the start, stored, carried by the contract, acted on in QC and by the main session
+check("27. **QC fixes" in router and "qc_fixes" in router, "the router has contract item 27 (QC fixes) and names the state key")
+check("header \"QC fixes\"" in st and "qc_fixes=ask|auto" in st, "awl-start asks the QC-fixes question and stores state.json -> qc_fixes")
+check("QC fixes: <ask|auto>" in rd(PA / "020_2_spawning.md") and "qc_fix_permission" in rd(PA / "030_3_the-agent-s-contract.md"), "the agent contract carries the QC-fixes line and the blocker")
+check("qc_fix_permission" in qc and "fix_proposal" in qc, "the QC phase stops with a fix proposal under ask")
+check("qc_fix_permission" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "header \"QC fix\"" in rd(SKD / "awl-analyze-produce" / "SKILL.md"), "the main session asks the fix question and continues the agent")
+check("25. **Scripts gather" in router and "26. **Pilot first" in router, "the router has the gather-only and pilot-first items")
+check("Pilot first" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "stalled" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "frozen once its agent is spawned" in rd(SKD / "awl-analyze-produce" / "SKILL.md"),
+      "the produce phase has the pilot, the stalled-agent recovery and the request freeze rules")
+# the keeper's answer: the QC phase knows the fields that carry the admin's words and the origin; the writer knows held_back_why and the sentence-safe fields
+check("`title`" in qc and "`run`" in qc and "`busy`" in qc, "the QC phase reads the sample's title and origin from the consult answer and knows the busy mode")
+wr = rd(SKD / "awl-write-request" / "SKILL.md")
+check("held_back_why" in wr and "in your own\n      words" in wr, "the writer reads held_back_why and applies a hint in its own words")
+# the preview is the 720x1280 burn, never the proxy; no product clause teaches a faded product
+check("never the 540×960 capcut-cli proxy" in rd(LIB / "reference" / "capcut-assembly" / "070_6_deliverables-analyze-mode.md") and "720×1280" in rd(SKD / "awl-record" / "SKILL.md"), "the preview is documented as the 720x1280 burn, never the proxy")
+faded = [str(p.relative_to(LIB)) for p in sorted((LIB / "reference").rglob("*.md")) if re.search(r"colours as muted as|no brighter than the room", rd(p))]
+check(not faded, "no reference teaches a faded product clause: " + ", ".join(faded))
+# the toolkit labels nothing: no verdict word in the toolkit's output keys of the converted commands (the code itself)
+tk = rd(LIB / "scripts" / "awl.py")
+check(not re.search(r'"(verdict|provisional|likely_noise|kind_hint|quick_picks|passed_automatic_checks)"\s*:', tk), "the toolkit prints no verdict, provisional, noise or pick key")
 LEDGER_A, LEDGER_B = "caught_" + "errors", "caught-" + "error"
 uses = [ln.strip() for ln in text.splitlines() if (LEDGER_A in ln or LEDGER_B in ln) and not re.search(r"There is no|no `|retired|git history|no error", ln)]
 check(not uses and LEDGER_B not in cmds, "the retired error ledger is not used by any step (only 'there is no ...' statements mention it): " + " | ".join(uses[:3]))

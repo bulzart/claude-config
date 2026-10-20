@@ -1,6 +1,6 @@
 ---
 name: awl-submit
-description: /analyze-with-loupe per-video steps X5/X7: ledger-guarded submit, wait, flags. Internal to that command.
+description: /analyze-with-loupe per-video steps X5/X7: ledger-recorded submit, wait, flags. Internal to that command.
 user-invocable: false
 ---
 
@@ -35,14 +35,23 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Step X7
 
-- **X7 — Submit and wait (ledger-guarded; no spam, no glitches).**
+- **X7 — Submit and wait (ledger-recorded; no spam, no glitches).** A fix generation after a QC finding (attempt K+1) with QC fixes `ask` starts here only after the main session said `approved` or `auto`; until then you stop after X5 with the fix proposal (`awl-qc`, item 27).
   1. `T ledger begin --run RUN --video NN --attempt K --request 50-requests/video-NN[-aK]-request.json`
      (a clip: `--video NN-cK` with its own request file).
-     - **Exit 3 means do not submit.** Follow its `action`:
+     - It **records a `pending` entry every time** and exits 0; it never refuses. It reports `conflicts[]`
+       as facts, with the entries involved: an open submission (pending / submitted / unknown) in this
+       video's lane; the submissions in flight in the run against the cap (`open_in_run`, `cap`); this
+       exact request failed before; this exact request already produced a finished job. **You decide
+       whether to submit**, under the production rules: one job in flight per video, none past
+       `production.max_parallel_jobs`, never the same request again once it produced a finished job, and a
+       diagnosis before another attempt. Act on what it shows:
        - an open job exists → resolve it with `jobs_wait`, or for `pending` / `unknown` via
          `show_generations {type:"video", only_completed:false, size:5}` and `transactions`;
        - the request is a duplicate of a finished job → reuse that job;
-       - the request failed twice → change it or report the failure.
+       - the request failed before → diagnose it first; one retry of the identical request is allowed,
+         and after a second failure change it or report the failure;
+       - if you decide **not** to submit, record that: `T ledger set --run RUN --fingerprint F --status
+         superseded --note "<why>"`, which frees the lane.
   2. Exactly **one** `generate_video {params}` call: `count` 1, no `get_cost`, never in parallel with
      anything, never twice in one turn, never inside a retry loop.
   3. Record the outcome at once:
@@ -58,8 +67,8 @@ Only these section files for this phase, nothing else unless a step below says s
      - Terminal → `T ledger set --job J --status completed|failed`.
      - Still running after ~25 min → tell the user, and keep waiting on that same job. Never
        resubmit because a job is slow.
-  5. A failed job is refunded. Diagnose it before any retry; the ledger allows at most one retry of
-     an identical request.
+  5. A failed job is refunded. Diagnose it before any retry; retry an identical request at most once
+     (`begin` reports a request that failed before, and the decision is yours).
   6. **A flag is recorded before the request changes** (item 23). When Higgsfield blocks, refuses,
      withholds or reroutes (a moderation or policy message; a job failed within seconds with no
      reason; an upload, video or Element marked `nsfw` / `ip_checking` / `failed`; an output
@@ -91,8 +100,10 @@ Only these section files for this phase, nothing else unless a step below says s
 
 3. **Generation lanes.** Every video is a lane with **one job in flight at a time**:
    plan → preflight → brief → submit → wait → download → post-process → QC.
-   - The ledger enforces at most `production.max_parallel_jobs` (5) jobs in flight per run, across
-     the production agents.
+   - The ledger records every submission and reports what is already in flight; the agents keep to at
+     most `production.max_parallel_jobs` (5) jobs in flight per run, across the production agents
+     (`T ledger begin` reports the open submissions against that cap; whether to submit is the
+     agent's decision, X7).
    - Never use `generate_video_batch`, never submit twice in one lane, and never start an
      uncontrolled batch.
    - A multi-clip video runs **clip by clip** inside its lane: a clip is submitted only after the
@@ -100,9 +111,9 @@ Only these section files for this phase, nothing else unless a step below says s
    - Edit Mode runs one video at a time.
 12. **Generation discipline: no spam, no glitches.**
     - Every paid Higgsfield generation (`generate_video`, and `generate_image` for start frames)
-      goes through the ledger (`T ledger begin` before, `T ledger set` after; §5 X7). There is at
-      most **one job in flight per video lane**, at most 5 per run, one generation call per turn
-      per agent, and never parallel calls inside a lane.
+      goes through the ledger (`T ledger begin` before, `T ledger set` after; X7: the ledger
+      records and reports, the agent decides). There is at most **one job in flight per video lane**, at
+      most 5 per run, one generation call per turn per agent, and never parallel calls inside a lane.
     - Never resubmit after a timeout or an unclear answer until the outcome has been checked, and
       never resubmit because a job is slow.
     - Never repeat an identical finished request.
@@ -152,7 +163,9 @@ Only these section files for this phase, nothing else unless a step below says s
   entry by hand, never mark one `cleared` before a changed request was accepted, never send a
   third identical request after two refunded flagged failures, and never re-upload a flagged
   asset or video unchanged (item 23).
-- Never call a generation tool outside the ledger (`T ledger begin` / `set`).
+- Never call a generation tool outside the ledger (`T ledger begin` / `set`), and never take the ledger's silence for
+  permission or its `conflicts[]` for a refusal: read them, decide, and when you do not submit record why
+  (`ledger set --status superseded --note`).
 - Never submit in parallel, never resubmit after an unknown outcome or a slow job, never repeat a
   finished request, never pass URLs or paths as media values, and never set `use_unlim` unasked.
 

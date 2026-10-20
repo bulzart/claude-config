@@ -14,6 +14,12 @@ The context of a run is its scarcest resource, so nothing is loaded before its s
   Their order is the chain `awl-start` → (Analyze) `awl-analyze-prepare` → `awl-analyze-study` → `awl-create-plan` | `awl-recreate-plan` → `awl-asset-plan` → `awl-analyze-produce`
   → `awl-wrapup`, or (Edit) `awl-start` → `awl-edit` → `awl-wrapup`; the per-video loop is `awl-plan-video` → `awl-write-request` → `awl-inputs` → `awl-precheck` → `awl-submit` →
   `awl-postprocess` → `awl-qc` → `awl-record`; `awl-feedback` and `awl-model-guide` are called when needed. `state.json → next_skill` makes every phase boundary resumable.
+- **Born from the library at `C:/Users/Glaresquare1/.claude/analyze-then-pick` on 2026-10-20** (a copy under new names, then changed; its log entries before that date are
+  inherited). What this command changes: the toolkit only gathers (contract item 25: `sync-check`, `scale`, `qc`, `conform`, `audio-profile`, the OCR spans, the ledger and the model
+  menu return numbers and facts, never a verdict, a label or a refusal; the rules of thumb sit in the references); the QC-fixes choice (item 27, `ask` or `auto`); pilot first (item
+  26); a stalled-agent recovery, a request freeze and a planner contract (produce items 28–30); one uploads schema (`T uploads`), the generated agent contract (`T contract`), gridded
+  frames (`T frames --grid`), `T hf-put --capture`; Loupe's answers carry the sample's title and origin, hint fields cut at a sentence, a busy fallback, the keeper's state readable by
+  `status` and `doctor`; the preview is the 720×1280 burn, and no product clause teaches a faded product.
 - **Section files.** Every long document (the references, the Higgsfield guide, every model guide) is an index file plus a folder of section files; the section numbers (`§4b.1c`,
   `§2.14`, `guide §3.14`) are unchanged. A skill reads the sections it names, never a whole document.
 - **Production agents** get a contract that invokes the per-video skills (`awl-inputs`, `awl-submit`, `awl-postprocess`, `awl-qc`, `awl-record`); they never read the command file.
@@ -44,9 +50,9 @@ analyze-with-loupe/
 │   ├── production-agents           Analyze Mode (Recreate / Create): one background agent per video (max 5 at once), its prompt (which invokes the per-video skills), contract and result.json
 │   └── assets-and-substitution     user-supplied assets only (analyze: dropped once; edit: per operation), contents samples, understanding + registry, substitution map, reference strategy per model
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
-├── scripts/awl.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), sync-check, locked ledger/state, CapCut name/prep/repair, model-menu / model-entry, transfers; doc-text extracts PDFs with pypdf and flags an image-only one; seams (the per-frame luma and frame difference around a cut point, also printed by strip-inserts); status, doctor, lint-run and cost-report (gather-only inspection of a run and of this machine); every `--run` takes a full path, a bare run name or a stamp prefix)
+├── scripts/awl.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), sync-check, locked ledger/state, CapCut name/prep/repair, model-menu / model-entry, transfers; doc-text extracts PDFs with pypdf and flags an image-only one; seams (the per-frame luma and frame difference around a cut point, also printed by strip-inserts); status, doctor, lint-run and cost-report (gather-only inspection of a run and of this machine; status and doctor read the keeper's state); uploads (one schema per video, a loud merge into state.json); contract (the agent contract from the canonical prompt and state.json); frames --grid (gridded copies in source pixel coordinates); hf-put --capture (upload from the hook's capture); every `--run` takes a full path, a bare run name or a stamp prefix)
 ├── scripts/check_all.py            every check in one table (`check-all.cmd` / `.ps1` / `.sh`): the suites below, `docs_tool.py check`, Loupe's own tests; exit 1 on a failure
-├── tests/                          the suites (`python tests/run_all.py`, `--real` adds the real-data suite): t01 the structure (docs check, skills, hand-offs, `T` commands, the Loupe and audio wiring, the forbidden names), t02 the toolkit on scratch fixtures, t03 the Loupe coupling against a Loupe server in the test process with a fake keeper, t04 real data read-only
+├── tests/                          the suites (`python tests/run_all.py`, `--real` adds the real-data suite): t01 the structure (docs check, skills, hand-offs, `T` commands, the Loupe and audio wiring, the forbidden names), t02 the toolkit on scratch fixtures, t03 the Loupe coupling against a Loupe server in the test process with a fake keeper, t04 real data read-only, t05 the three hooks and the upload capture; tests/rehearsal.py drives the whole golden path in a temp copy
 ├── scripts/docs_tool.py            the section tool: `split` / `join` / `index` for the documents, `check` (indexes, section files, skills, paths, § citations) and `budget` (what each skill and the command load)
 └── runs/<stamp>-<slug>/            one folder per run (state.json makes runs resumable: /analyze-with-loupe resume <run-dir>; `next_skill` names the phase to continue)
 
@@ -76,14 +82,27 @@ It holds two things:
 - **Generation misses:** the admin picks a run and a video in Loupe, marks the second of the miss with an arrow, circle or box and a note, then picks
   the fixed version and the same moment of it. Loupe saves one image: the miss on the left, the correct frame on the right, a zoom of the marked
   place below. Only the QC phase reads them: `awl.py qc-consult` asks the QC keeper (one separate read-only Claude session that holds the whole
-  sample library and never sees a run) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call.
+  sample library and never sees a run) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call. The answer's `relevant[]` carries
+  the sample's words (`title`, `details`, `correct_note`, `idea`, `better`, `missed`), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`), the composite's path and the
+  keeper's `why`, `check` and `wrong_pattern`, every field whole or cut at a sentence end; `needs_unmet` lists only what Loupe could not fetch; when another keeper call runs longer
+  than the lock wait the answer comes from the brief with `mode: busy`. `plan-hints` fields are cut the same way and `held_back_why` says why a hint was set aside. `status`
+  and `doctor` read the keeper's state (in sync, turns, library version) through the qc key.
   Agents can also reach the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`).
 
 Three hooks in `~/.claude/settings.json` support the pipeline without adding to any agent's context: `hooks/atp_flag_watch.py` (PostToolUse of the
-Higgsfield generation tools: saves a flag-like answer to Loupe as a capture the moment it returns and reminds the agent to record the flag first),
+Higgsfield generation tools and `media_upload`: saves a flag-like answer to Loupe as a capture the moment it returns and reminds the agent to record the flag first; every
+upload answer is kept as a capture too, so `awl.py hf-put --capture <id>` uploads without the presigned URL ever passing through the agent),
 `hooks/atp_resume_note.py` (SessionStart after a compaction or resume: names the run in progress and its `next_skill`) and `hooks/atp_read_guard.py`
 (PreToolUse of Read: refuses a whole-file read of `awl.py`, `models/index.json`, the catalog snapshot and the backups; a read with an offset/limit
 passes). Build prompt for the app: `Documents/prompts/loupe.txt`.
+
+## QC fixes (contract item 27), pilot first (26), the stalled agent, the request freeze and the planner contract (28–30)
+At the start of a Recreate or Create run the user chooses `ask` (from the first video on, a fix generation after a QC finding waits for the user's yes: the production agent
+prepares the corrected request and stops with a `fix_proposal`, the main session asks with one question per waiting video, `Fix it` / `Keep this take` / `Fix it, and stop asking`)
+or `auto` (the agent submits its one diagnosed regeneration itself); `state.json → qc_fixes`, the contract's "QC fixes" line. Local post-fixes and CapCut fixes never ask; Edit
+Mode reviews every attempt anyway. With more than four videos the first one runs through its QC before the rest are planned (26). A production agent whose output folder has not
+changed for 20 minutes while its lane holds a submitted job is continued by its id, never relaunched blindly (28); a request file is frozen once its agent is spawned and `T lint-run`
+reports one edited after its ledger entry (29); a planner fork writes only its own video's files and a status note (30).
 
 ## Audio ingest (contract item 24)
 At the start the user chooses, once per run, whether the videos' audio is processed as text: **Whisper speech-to-text** (faster-whisper `small`, int8 on the CPU, about real time per

@@ -25,7 +25,7 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | 3b.2 | · Join methods, by the locked model's capability (`continuation` in the in | `060_3b.2_join-methods-by-the-locked-model.md` | 3.2 |
 | 3b.3 | · Seam discipline | `070_3b.3_seam-discipline.md` | 2.4 |
 | 3b.4 | · Files and ledger | `080_3b.4_files-and-ledger.md` | 0.5 |
-| 3c | Reference inserts (memes): cut from the reference, never generated | `090_3c_reference-inserts-memes-cut-from.md` | 3.2 |
+| 3c | Reference inserts (memes): cut from the reference, never generated | `090_3c_reference-inserts-memes-cut-from.md` | 3.3 |
 | 4 | Replacement and insertion integration analysis | `100_4_replacement-and-insertion-integr.md` | 3.3 |
 | 4b | Natural placement and contents — when nothing in the reference is the sa | `110_4b_natural-placement-and-contents-w.md` | 1.2 |
 | 4b.0 | · Choose the integration form: the most suitable use and blend | `120_4b.0_choose-the-integration-form-the.md` | 4.1 |
@@ -40,17 +40,17 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | 5 | Logic, continuity and anti-slop gate | `210_5_logic-continuity-and-anti-slop-g.md` | 4.6 |
 | 5b | · Physical motion follows physics, above all when it has to land | `220_5b_physical-motion-follows-physics.md` | 2.9 |
 | 5c | · Source fidelity: the original's movements, actions, details and timing | `230_5c_source-fidelity-the-original-s-m.md` | 1.0 |
-| 5c.1 | · · The source action script (card, then plan) | `240_5c.1_the-source-action-script-card-th.md` | 1.2 |
+| 5c.1 | · · The source action script (card, then plan) | `240_5c.1_the-source-action-script-card-th.md` | 1.4 |
 | 5c.2 | · · The most preserving input and parameters | `250_5c.2_the-most-preserving-input-and-pa.md` | 2.4 |
 | 5c.2b | · · Prepare the source (before it rides as the video reference) | `260_5c.2b_prepare-the-source-before-it-rid.md` | 2.2 |
 | 5c.3 | · · The fidelity lock in the prompt | `270_5c.3_the-fidelity-lock-in-the-prompt.md` | 3.1 |
 | 5c.4 | · · Check before spending (X4) | `280_5c.4_check-before-spending-x4.md` | 0.5 |
-| 5c.5 | · · Measure it after the merge | `290_5c.5_measure-it-after-the-merge.md` | 1.3 |
+| 5c.5 | · · Measure it after the merge | `290_5c.5_measure-it-after-the-merge.md` | 2.3 |
 | 5d | · Counts, openings and object permanence | `300_5d_counts-openings-and-object-perma.md` | 1.7 |
-| 6 | Conflict resolution (resolve before sending) | `310_6_conflict-resolution-resolve-befo.md` | 3.7 |
+| 6 | Conflict resolution (resolve before sending) | `310_6_conflict-resolution-resolve-befo.md` | 4.3 |
 | 7 | Translating the plan into the selected model's language | `320_7_translating-the-plan-into-the-se.md` | 2.7 |
 | 8 | Pre-generation QC pass (mental render, first frame → last frame) | `330_8_pre-generation-qc-pass-mental-re.md` | 7.0 |
-| 9 | Post-generation QC (after download) | `340_9_post-generation-qc-after-downloa.md` | 8.0 |
+| 9 | Post-generation QC (after download) | `340_9_post-generation-qc-after-downloa.md` | 8.6 |
 | 9b | What must not survive, and what is fine (all modes) | `350_9b_what-must-not-survive-and-what-i.md` | 4.6 |
 | 10 | The short brief (printed at X6) | `360_10_the-short-brief-printed-at-x6.md` | 3.1 |
 <!-- sections:end -->

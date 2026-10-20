@@ -13,7 +13,7 @@ output_9x16_720p` holds the exact per-model parameters. Rules:
    - Supply a 9:16 start frame, generated or prepared at 720×1280.
    - Or bring the source video to 9:16 **before** editing:
      - `awl.py conform --focus-x/--focus-y` when a crop keeps every important subject; the tool
-       refuses to crop more than 12% unless told to;
+       reports `lost_fraction` and never refuses a crop, so a loss above about 12% is your call (a reason to prefer `reframe`);
      - otherwise Higgsfield `reframe` (AI expansion to 9:16, 720p, `get_cost` supported);
      - otherwise regenerate with the source as a video reference.
 4. **Verify.** `awl.py qc --expect-size 720x1280` on every final. Never deliver a stretched or

@@ -44,6 +44,7 @@ Then give:
   and that `T caught-flag open` shows them grouped and searchable,
   each persistent or open one with its video, the flagged prompt or video and what was tried;
   or "no flags this run";
+- the QC fixes (item 27, Recreate and Create): "N videos fixed after QC, M fixes you declined (kept as generated, flagged: V03 …)", or "no QC finding needed a fix";
 - any open issues.
 
 Both modes: reconcile the flags before the table. Run `T caught-flag reconcile --run RUN`; every
@@ -64,7 +65,7 @@ one folder; a with-inserts clean built from the pieces, the inserts and the orig
 overwritten by a generated-only clip) and a row in `deliverables/README.md`; the plan and brief files carry
 every attempt; no CapCut text layer of any project contains an emoji (the user's rule, strict); and every
 size figure in the table was viewed on a frame with its method (two estimates, a derived distance), never
-repeated from an agent's provisional number. What is missing is fixed before the table is shown.
+repeated from an agent's provisional reading (the agent's own word; the tool prints numbers). What is missing is fixed before the table is shown.
 
 Offer, in one line, the next useful step (more videos, a different direction, regenerate a flagged
 video). Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header

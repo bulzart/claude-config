@@ -1,0 +1,19 @@
+---
+name: analyze-with-loupe-command
+description: "/analyze-with-loupe exists since 2026-10-20: a copy of /analyze-then-pick under new names (awl-* skills, analyze-with-loupe/ with awl.py, AWL_HOME) plus every improvement of the coupling pass; the two old pipelines are read-only; how to run and test it"
+metadata:
+  node_type: memory
+  type: project
+  originSessionId: 057d420c-9626-4377-8209-3bfd075c6e3c
+  modified: 2026-10-20T15:54:44.959Z
+---
+
+Built 2026-10-20 (commits in `~/.claude` from bd7d840 on; Loupe commits bc320a7, 6323b5a and the docs commit after them). `/analyze-with-loupe` = the router `commands/analyze-with-loupe.md` + 19 skills `skills/awl-*` + the library `~/.claude/analyze-with-loupe/` (README, learning log, sectioned references, model guides, Higgsfield notes, `scripts/awl.py`, `scripts/docs_tool.py`, `scripts/check_all.py`, `tests/`) + the build prompt `Documents/prompts/analyze-with-loupe.txt`. Home variable `AWL_HOME`, path alias `AWL`, env `AWL_TRANSCRIBE_STUB`, `AWL_KEEPER_SYNC_WAIT`, `AWL_TEST_*`. Run it as `/analyze-with-loupe analyze <refs> assets <assets…> | edit <videos…> | resume <run>`; runs live in `analyze-with-loupe/runs/`.
+
+**What it keeps:** everything /analyze-then-pick does (every mode, the audio-ingest question of contract item 24, Loupe at run start, flags, qc-consult once per video, plan-hints). The same golden-path rehearsal (`tests/rehearsal.py`, 118 steps, Recreate, Create and Edit) ran on both.
+
+**What it changes (the report `Documents/prompts/coupling-report-2026-10-20.md` lists each with its evidence):** contract item 25 scripts gather, agents decide (`sync-check`, `ledger begin`, `conform`, `scale`, `qc`, `audio-profile`, the OCR spans, `restore-audio`, `finalize`, `model-menu` return numbers and facts, never a verdict, label or refusal; the rules of thumb sit in the references); item 27 QC fixes `ask` | `auto` (`state.json → qc_fixes`); item 26 pilot first; produce items 28–30 (stalled agent, request freeze with `lint-run`, planner contract); `T uploads set|show|merge` (one schema), `T contract --run RUN`, `T frames --grid`, `T hf-put --capture <id>`; the preview is the 720×1280 burn; no faded-product clause.
+
+**Shared infrastructure changed for it (the old pipelines keep working, their tests green):** Loupe `core.LIBS` has `awl` (`AWL_HOME`); consult answers carry `title`, `model`, `run`, `video`, `t_wrong`, `kinds`; every keeper field is cut at a sentence end; honest fetch reasons; `needs_unmet` only unmet; `held_back_why`; the keeper process group is ended on timeout and the lock is acquired with a timeout (`mode: busy`); `GET /api/qc/keeper/state` (qc key); `GET /api/misses/suggest-kinds` + the form button; the composite's legend and zoom rule. Hooks: the three hooks list the third library; `media_upload` answers are captured (the reminder names `awl.py hf-put --capture` only for a run of this library).
+
+**How to apply:** edit the owning skill or section, `python ~/.claude/analyze-with-loupe/scripts/docs_tool.py index <doc>.md` then `check`, run `python ~/.claude/analyze-with-loupe/tests/run_all.py` (t01 refuses the old names and checks every cited `T <cmd> --flag`), and `python ~/.claude/analyze-with-loupe/tests/rehearsal.py` for the functionality contract; update `Documents/prompts/analyze-with-loupe.txt` (CRLF, no headings, `.bak` first) after every change. Never edit /analyze-then-pick or /analyze-then-generate ([[analyze-with-loupe-new-command]]); never mention them in this command's files ([[no-cross-pipeline-mentions]]). Related: [[loupe-web-app]], [[atp-audio-ingest-question]], [[scripts-gather-agents-decide]], [[atg-qc-fixes-option]].

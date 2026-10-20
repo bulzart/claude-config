@@ -65,8 +65,9 @@
        the laptop", "parked at the curb behind them").
      A family whose references have nothing analogous is still a valid direction;
    - the assets it would need;
-   - a typical length. When that is over 30 s, or over the locked model's maximum per generation,
-     mark it "needs ≥2 generations". Such a video asks the user's permission before it is
-     generated (command A7b).
+   - a typical length. When that is over 30 s and needs ≥2 generations with the locked model,
+     mark it "needs ≥2 generations": such a video asks the user's permission before it is
+     generated (command A7b). A length of 30 s or less never asks, even when the model's shorter
+     maximum means several clips (the brief states the clip count).
    Write them to `20-analysis/directions.md`; they are what the user chooses from.
 

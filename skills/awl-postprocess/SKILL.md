@@ -39,9 +39,13 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
   1. **Edit Mode and Recreate — original audio back:**
      `T restore-audio --generated <raw or joined> --audio "<files_audio file>" --audio-offset <audio_offset> [--start <segment start>] --out <aK>/with-original-audio.mp4`.
      The picture is Higgsfield's and the sound is the original's. A clip that is slightly shorter
-     keeps sync from the start and cuts the audio at its end; the tool reports it. A source that had
-     no audio gives a silent final.
-  2. `T conform` → exactly 720×1280;
+     keeps sync from the start and cuts the audio at its end; the tool reports `generated_shorter_by_s`
+     (a plain difference) and a note. It returns `facts` (`has_video`, `has_audio`, `audio_was_available`,
+     `duration_s`, `requested_duration_s`, `size`, `source_size`): read them; `ok` only means ffmpeg
+     produced the file. A source that had no audio gives a silent final.
+  2. `T conform` → exactly 720×1280 (scale-to-cover plus a focus crop; it reports `lost_fraction` and never refuses a crop: a loss
+     above about 12 % means the frame ratio was wrong, a reason to regenerate with corrected inputs rather than force the crop,
+     `text-and-format.md` §4.1);
   3. `T trim` (generated dead head or tail);
   4. `T concat` (multi-clip videos):
      - each clip is downloaded to `60-outputs/video-NN/cK/aJ/raw.mp4`, conformed, trimmed and
@@ -53,16 +57,25 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
   5. **Sync check** (item 19; Edit Mode and Recreate), once the picture is final and the original
      audio is on it:
      `T sync-check --source <the prepared source; own-silent for a Recreate> --output <final> [--start <segment start>] --out <aK>/sync`.
-     View `sync-sheet.jpg` and the sync anchors densified (mouths on their words, contact on its
-     impacts). Then act on the verdict:
-     - `in_sync` (within ±0.1 s everywhere) → continue;
-     - `constant_offset` → apply its `fix`, with no new generation: trim the picture's head when the
-       output is late, or re-run `restore-audio` with `--start` increased when it is early. Then
-       merge and check again;
-     - `drift` or `out_of_sync` (faster, slower, or an action added, skipped or moved) → a
-       regenerate reason in X9;
-     - `inconclusive` (motion too different to measure, e.g. a heavy restyle) → judge it on the
-       sheet and the densified anchors.
+     It measures and returns numbers; it gives no verdict and no fix, and exits 0 whenever it measured:
+     `global_offset_s` and `global_corr`, `windows[]` (`t`, `offset_s`, `corr`, `motion_ratio`),
+     `windows_used` / `windows_total`, `median_window_offset_s`, `window_spread_s`, `drift_s_per_10s`,
+     `windows_beyond_tolerance` (listed against `--tol`, default 0.10 s), `duration_diff_s`, and the
+     side-by-side `sheet` (`--min-corr`, default 0.5, and `--min-motion`, default 0.25, only select the
+     windows the summary uses; every window stays listed). A positive offset means the output's action
+     happens later than the source's sound. View `sync-sheet.jpg` and the sync anchors densified (mouths on
+     their words, contact on its impacts), then **decide** with these rules of thumb and write the decision
+     and why in the verdict:
+     - in sync: the global offset and every used window within the tolerance (±0.10 s) → continue;
+     - a steady offset (the spread of the used windows at most twice the tolerance) is fixed in post, with
+       no new generation: when the output is late (positive), trim the picture's head by that much, then
+       run `restore-audio` again; when it is early (negative), run `restore-audio` again with `--start`
+       increased by that much. Then merge and check again;
+     - a drift (|`drift_s_per_10s`| × the compared span / 10 above the tolerance) or scattered offsets
+       cannot be fixed in post: diagnose (duration, speed, an action added, skipped or reordered) and
+       regenerate with the timing lock, a regenerate reason in X9;
+     - a global correlation below 0.3, or no used window, is inconclusive (motion too different to
+       measure, e.g. a heavy restyle) → judge it on the sheet and the densified anchors.
   6. **Analyze Mode:** the result is the **clean video** `60-outputs/video-NN/clean.mp4`: conformed,
      trimmed, joined, with no overlay text. After it passes X9, assemble its CapCut project
      (`reference/capcut-assembly.md` §2–§5):

@@ -3,6 +3,19 @@
 **Decision (2026-09-30):** all media inspection and processing for /analyze-with-loupe runs **locally
 and deterministically** through `scripts/awl.py`.
 
+**The rule (the user, 2026-10-12), for every mode and every command:** the scripts gather, extract, record,
+tabulate and calculate; they never evaluate or decide. They measure (durations, cuts, loudness, spectra), extract
+(frames, transcripts, OCR text with its numbers), fetch and probe, record the agents' facts and decisions with who
+and why, and calculate pure formulas. They hand out no verdict, status, flag or label derived from content, apply
+no threshold that refuses, caps or changes an answer, rank or pick nothing, compare no texts for sameness and
+count no words to decide anything; a command refuses only a bad argument, a missing file or tool, a damaged
+ledger, an unsafe web address or a failed ffmpeg run, and it keeps the user's own locks (CapCut closed while a
+project is written, the locked house text preset) and the user's audio choice (`prep-all` stops without it). The AI
+agent that runs the pipeline reads the numbers and tables, decides from the mode's specification (Recreate, Create
+and Edit alike) and records the decision with the reason. The numbers that used to be enforced (the 0.10 s sync
+tolerance, the 15 / 25 % size bands, the 12 % crop loss, ...) are rules of thumb in the reference documents,
+applied with judgement.
+
 | stage | tool | why this tool |
 |---|---|---|
 | Metadata | **ffprobe** (FFmpeg 9.0.2 full build, winget Gyan.FFmpeg) | Exact streams, rotation, SAR, fps, audio stream index. Rotation- and SAR-aware display size, following Higgsfield's own media-pipeline normalisation |
@@ -12,7 +25,7 @@ and deterministically** through `scripts/awl.py`.
 | Storyboards | **Pillow** | Labelled chronological contact sheets of **30 frames**, sized to Claude's vision limits (≤ 1.15 MP, ≤ 1568 px long side) so they are read at full size and no cell is shrunk |
 | Audio | **FFmpeg** (16 kHz mono WAV, `ebur128`, `silencedetect`, `astats` RMS per 0.5 s) | Deterministic loudness, silences and energy curve |
 | Speech | **faster-whisper** `small`, int8 CPU, local cache, word timestamps + VAD. Fallback: **FFmpeg's built-in whisper.cpp filter** (`ggml-base.en.bin`) | Word-level timing is a meaningful advantage over FFmpeg-only ASR (the fallback has segment timing only). Runs offline (`local_files_only`) |
-| On-screen text sample | **RapidOCR** (onnxruntime CPU) on ~12 frames per video | Detects captions, handles and watermarks precisely (feeds the text policy); caption-track and persistent-overlay heuristics |
+| On-screen text sample | **RapidOCR** (onnxruntime CPU) on ~12 frames per video | Extracts the on-screen text with the numbers that describe it (first and last time, frames it was seen in, share of the frames scanned, row of the frame, confidence, spelling facts such as an @ or a URL pattern); no label is put on any text: the agent decides what is a caption, a fixed overlay, a handle, a watermark or noise (feeds the text policy) |
 | Output format | **FFmpeg** (lanczos scale-to-cover + crop, or blurred pad on request) | Exact 720×1280 without stretching |
 | Overlay text | **CapCut text layers** through the capcut MCP (`reference/capcut-assembly.md`), over the clean generated video | Editable in the video's CapCut project; the generation itself never carries overlay text |
 | Deterministic text (fallback) | **FFmpeg + libass** (`subtitles` filter, fonts copied beside the `.ass`) | Only when the CapCut MCP is unavailable |
@@ -63,7 +76,7 @@ awl.py new-run --mode edit --source "<video path>" …                   (edit: 
 awl.py state --run "<run>" get [key] | set k=v … | append k=v …
 awl.py inventory "<refs folder>" --run "<run>" --as references         → 00-inventory/ (reference material only)
 awl.py inventory "<video paths>" --run "<run>" --as sources            → 00-inventory/ (edit: videos only, other files ignored)
-awl.py inventory "<asset paths>" --run "<run>" --as assets [--scope video-01]  → 30-assets/<scope>/asset-inventory.{json,md}
+awl.py inventory "<asset paths>" --run "<run>" --as assets [--scope video-01]  → 30-assets/<scope>/asset-inventory.{json,md} (paths, kinds, sizes, sub-folder, duplicate_of: facts only; no role is guessed from a file name, the agent confirms each by looking)
 awl.py inventory "<examples folder>" --run "<run>" --as examples     → 00-inventory/examples-inventory.{json,md} (study only; may be empty)
 awl.py prep-assets --run "<run>" [--scope video-01]                    → previews, docs, font names, assets-sheet-NN.jpg
 awl.py prep-all --run "<run>" [--jobs 2] [--only V01,V03] [--redo]     → 10-media/<V>/…, images/, docs/, index.md
@@ -75,11 +88,12 @@ awl.py doc-text "<file>" --out "<txt>"                                 (docx/ppt
 awl.py hf-put --file "<local>" --url "<upload_url>" --content-type "<exact type>"
 awl.py hf-get --url "<result_url>" --out "<file.mp4>"
 awl.py split-audio "<given video path>" --run "<run>" [--audio-only]   → <path>/files_audio/ (+ <path>/videos_without_audio/ unless --audio-only)
-awl.py audio-profile --audio "<files_audio file>" --out "<json>" [--transcript …] [--cuts …]   → music bed, BPM, energy arc, hits on cuts
+awl.py audio-profile --audio "<files_audio file>" --out "<json>" [--transcript …] [--cuts …]   → the sound design as numbers: speech share (null when the run did not ingest audio), harmonic ratio outside speech, tempo, beat strength, spectral flatness, steady-tone share, energy per second and its change, hits (with on_cut); no label
 awl.py fetch-audio --url "<direct audio url>" --page "<page>" --license "<license>" --out "<file>"   → download + <file>.source.json
-awl.py restore-audio --generated "<edit>" --audio "<path>/files_audio/<name>.m4a" --audio-offset <s> [--start <s>] --out "<file>"
-awl.py finalize --run "<run>" --video V01 --file "<approved.mp4>" --original "<original video>"   → <path>/final/<name>.mp4
-awl.py conform --video "<in>" --out "<out>" [--focus-x 0.5 --focus-y 0.5] [--mode fill|pad]
+awl.py restore-audio --generated "<edit>" --audio "<path>/files_audio/<name>.m4a" --audio-offset <s> [--start <s>] --out "<file>"   → the generated picture + the ORIGINAL audio; reports the facts of the result and how much shorter the generated clip was
+awl.py sync-check --source "<prepared source / own-silent.mp4>" --output "<final>" [--start <s>] --out "<dir>" [--tol 0.10] [--min-corr 0.5] [--min-motion 0.25]   → <dir>/sync-check.json + sync-sheet.jpg: global and per-window offsets, drift, duration difference, side-by-side sheet; numbers only, no verdict and no fix
+awl.py finalize --run "<run>" --video V01 --file "<approved.mp4>" --original "<original video>"   → <path>/final/<name>.mp4 (reports facts, refuses nothing)
+awl.py conform --video "<in>" --out "<out>" [--focus-x 0.5 --focus-y 0.5] [--mode fill|pad] [--dry-run]   → exact 720×1280; reports lost_fraction (the share of the picture a crop removes) and never refuses a crop; --dry-run writes nothing
 awl.py trim --video "<in>" --out "<out>" --start 0.4 [--end 7.6]
 awl.py concat --clips a.mp4 b.mp4 --out joined.mp4 [--seams cut|continuous,…]
 awl.py last-frame --video "<clip>" --out "<handoff.png>" [--back 0.3]    → exact last frame, lossless
@@ -90,10 +104,10 @@ awl.py capcut-text-style --draft "<store>/<name>" [--check | --learn [--text N] 
 awl.py strip-inserts --video "<reference>" --inserts 13.0-15.0 --out "<dir>"  → own.mp4, own-silent.mp4, map.json (split points)
 awl.py captions --video "<in>" --out "<out>" --spec captions.json | --from-speech [--script "…"]   (fallback only)
 awl.py clean --video "<in>" --out "<out>" --delogo "x,y,w,h@t0-t1" [--crop "x,y,w,h"]
-awl.py qc --video "<final>" --out "<dir>" --mode analyze|edit [--allowed-text "a|b"] [--expect-duration s] [--dense "label:a-b" …] [--dense-fps 30]
-awl.py scale --product-cm H [--distance d --lens f] [--frame img.png --product-px y0-y1 --ref-cm h --ref-px y0-y1 [--depth-ratio r]] [--out scale.json]   # size reckoning: expected size per shot; observed vs expected on a frame
-awl.py model-menu --mode analyze|edit --live-ids "<ids from models_explore>"   (every model, pinned first)
-awl.py ledger begin --run "<run>" --video NN --attempt K --request "<request.json>"   (exit 3 = do not submit)
+awl.py qc --video "<final>" --out "<dir>" --mode analyze|edit [--allowed-text "a|b"] [--expect-duration s] [--expect-aspect 9:16] [--expect-size WxH] [--dense "label:a-b" …] [--dense-fps 30]   → storyboard + measurements beside the expected values (size, duration, aspect, audio, black and frozen spans, the on-screen text its OCR saw beside the planned text), dense checkpoint sheets; no pass or fail
+awl.py scale --product-cm H [--distance d --distance-basis "<how d was derived>" --lens f] [--frame img.png --product-px y0-y1 --ref-cm h --ref-px y0-y1 [--depth-ratio r]] [--out scale.json]   # size reckoning, arithmetic only: expected size per shot; observed size as a multiple of the expected one, per estimate; no verdict
+awl.py model-menu --mode analyze|edit --live-ids "<ids from models_explore>"   (the numbered table of every model, pinned first; it picks nothing)
+awl.py ledger begin --run "<run>" --video NN --attempt K --request "<request.json>"   (records a pending entry and reports conflicts; it refuses nothing, the agent decides)
 awl.py ledger set --run "<run>" --fingerprint F --job J --status submitted|unknown|completed|failed|accepted|rejected
 awl.py open --file "<final.mp4>"                                       (Edit Mode review in the default player)
 ```

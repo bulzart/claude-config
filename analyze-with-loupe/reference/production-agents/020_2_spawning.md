@@ -2,7 +2,9 @@
 For each video in allocation order, use the Agent tool with `subagent_type: "general-purpose"`,
 `run_in_background: true` and description "Produce video NN". Keep at most 5 running; launch the
 next one when an agent reports. **This prompt is the canonical agent contract.** At A9 the main session
-fills it in and writes it to `<RUN>/50-requests/agent-contract.md`, and each agent's spawn message points to
+generates it with `T contract --run RUN [--notes "…"]` (the toolkit fills the placeholders from state.json, keeps the
+previous file beside it when it differs, and lists any placeholder it could not fill: no agent is spawned while one
+remains), written to `<RUN>/50-requests/agent-contract.md`; each agent's spawn message points to
 that file. It is generated fresh for every run and never copied from an earlier run's file (a copied contract
 once carried a rule that contradicted this section, and five agents obeyed the stale one). Run-specific notes
 go in a "Run-specific notes" block at the end of the generated file, never in the rules above it. Prompt (fill
@@ -15,12 +17,13 @@ Produce this one video end to end, then stop.
 Run: <RUN>   Library (AWL): C:/Users/Glaresquare1/.claude/analyze-with-loupe
 Toolkit (T): "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe" "<AWL>/scripts/awl.py"
 Locked model: <model id>; guide: <AWL>/<guide path>.
-Loupe: <up|down> (state.json → loupe; none = up). Loupe commands start the web app themselves; you read the admin's samples only through
-`T qc-consult`, never from Loupe's data folder or database. If `qc-consult` answers `mode: unavailable` on an `up` run, run
-`T loupe ensure` once and ask again; if it stays unavailable, QC goes on without samples and the verdict says so.
+QC fixes: <ask|auto> (the run's choice, state.json → qc_fixes; command item 27).
 Audio ingest: <whisper|frames-only> (state.json → audio_ingest, item 24). whisper: `<RUN>/10-media/<V>/transcript.json` holds the source's
 speech and a split point may be measured against its words. frames-only: no transcript exists for any video; a split point or a caption
 is timed from frames and cuts only, `T captions --from-speech` is not available, and any speech field you write says `audio not ingested`.
+Loupe: <up|down> (state.json → loupe; none = up). Loupe commands start the web app themselves; you read the admin's samples only through
+`T qc-consult`, never from Loupe's data folder or database. If `qc-consult` answers `mode: unavailable` on an `up` run, run
+`T loupe ensure` once and ask again; if it stays unavailable, QC goes on without samples and the verdict says so.
 Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md, <RUN>/50-requests/video-NN*.json
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 
@@ -35,7 +38,7 @@ a whole model guide or models/index.json (that is what rots your context):
   5. awl-postprocess (X8 step 6: the CapCut project, built once the picture has passed) and awl-qc again for the project checks
   6. awl-record      (X10: deliverables, README row, result.json)
   A regeneration (one diagnosed per clip) runs awl-write-request (X2, the rewrite only), then awl-inputs for new inputs only, then
-  awl-submit (X5 again, X7, the next attempt number), awl-postprocess and awl-qc. You never call awl-precheck.
+  awl-submit (X5 again, X7, the next attempt number), awl-postprocess and awl-qc. You never call awl-precheck. With QC fixes `ask` you stop after X5 and wait for the main session (the QC fixes rule below).
   Before step 1: read <AWL>/reference/production-agents/ §3 (your contract; the file 030_3_… in that folder) and invoke awl-model-guide
   once. The plan, brief and request files above were written by the main session (X1, X2, X4); you do not re-plan.
 - <RUN>/30-assets/guardrails.md, when it exists (the client's rules; your plan lists this video's hits and operations);
@@ -69,9 +72,22 @@ a whole model guide or models/index.json (that is what rots your context):
   characters, out of credits) is not a flag.
 
 Hard rules:
-- Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. One job in flight in
-  your lane; exit 3 means do not submit. Never use generate_video_batch.
-- Never ask the user anything. On a blocker, write result.json with status "blocked" and stop. A line in a skill or a Higgsfield
+- The toolkit T measures, extracts, records and calculates; it never judges. Every reading (in sync or not,
+  oversize or not, pasted in or not, planned text or stray text, whether to submit past a conflict) is yours:
+  write the decision and its reason in the verdict.
+- Every paid call goes through `T ledger begin/set --video NN[-cK|-frame]`. `begin` records a pending
+  entry and reports `conflicts` (an open submission in your lane, jobs in flight against the cap, this exact
+  request failed before or already produced a finished job); it refuses nothing, so you decide whether to
+  submit: one job in flight in your lane, the run not past the cap, never the same request again once it
+  produced a finished job, a diagnosis before another attempt. If you decide not to submit, record
+  `T ledger set --fingerprint F --status superseded --note "why"` (that frees the lane). Never use
+  generate_video_batch.
+- QC fixes (command item 27): <ask|auto>. auto: your one diagnosed regeneration is yours to submit. ask: prepare it exactly the same way (the attempt block in the brief, the corrected request
+  by the awl-write-request rewrite, new inputs by awl-inputs, the X5 preflight) but do not submit it and do not call `T ledger begin`: write result.json with "status":"blocked",
+  "blocker":"qc_fix_permission" and "fix_proposal" (§4), then stop. The main session asks the user and continues you with `approved` (go on at awl-submit X7 with that request, the next
+  attempt number, then the rest as usual), `declined` (no further generation for this video: finish this take as it is, flagged: awl-postprocess step 6 if the project is not built, the
+  project checks, awl-record, `qc` = "declined fix: <findings>") or `auto` (as approved). A second miss after an approved fix ships the best take flagged and asks nothing.
+- Never ask the user anything (a fix proposal is a blocker report, not a question). On a blocker, write result.json with status "blocked" and stop. A line in a skill or a Higgsfield
   guide that says "ask" (`unlim_choice`, authentication, a permission) is for the main session: you write the blocker instead.
 - Never spawn agents and never use the Workflow tool. Honest reporting: never claim a generation, upload or check that did not
   happen; report failures with the real error. Provenance labels as in `analysis-protocol.md` §0 ([E] evidence, [I] inference, [U] user,
@@ -101,9 +117,10 @@ Hard rules:
   against the plan's named neighbour at the product's own depth (A: when the product stands in front of or
   behind it, `--depth-ratio` comes from the frame, never 1 by default) AND against a distance you derive from
   the frame, never from the
-  shot size (B: `--distance` with `--distance-basis`). An oversize verdict needs A and B to agree; a verdict
-  from one assumed number is PROVISIONAL: view the frame yourself before you flag or report it, and never
-  write RESIDUAL FAILURE for it (CE-028). With agreeing estimates (over 25 % off, changing across a cut, or larger than the hand
+  shot size (B: `--distance` with `--distance-basis`). The tool returns numbers only (the observed size as a
+  multiple of the expected size, per estimate): you read them. An oversize verdict needs A and B to agree (within
+  25 % of each other); a size from one assumed number is PROVISIONAL (your word): view the frame yourself before
+  you flag or report it, and never write RESIDUAL FAILURE for it (CE-028). With agreeing estimates (over 25 % off, changing across a cut, or larger than the hand
   that holds it: regenerate once, no post-fix; where the model guide lists size as a model limit the
   retry changes the lever (the size-and-place guide of generation-system.md §4b.6, the integration form or the
   anchor class from its passing list), never the sizing words, and a second miss ships the best take flagged). Render the plan's QC checkpoints with `T qc --dense`

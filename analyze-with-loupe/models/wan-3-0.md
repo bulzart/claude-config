@@ -53,7 +53,7 @@ Stored as section files in `wan-3-0/` (next to this file); **read only the secti
 | 3.13 | · Product and object fidelity | `220_3.13_product-and-object-fidelity.md` | 0.6 |
 | 3.14 | · Integration and continuity | `230_3.14_integration-and-continuity.md` | 7.6 |
 | 4 | Prompt construction | `240_4_prompt-construction.md` | 0.0 |
-| 4.0 | · Official prompt examples and the patterns they teach | `250_4.0_official-prompt-examples-and-the.md` | 19.7 |
+| 4.0 | · Official prompt examples and the patterns they teach | `250_4.0_official-prompt-examples-and-the.md` | 20.1 |
 | 4.1 | · Text-to-video | `260_4.1_text-to-video.md` | 1.5 |
 | 4.2 | · Start frame (and end frame) to video | `270_4.2_start-frame-and-end-frame-to-vid.md` | 1.1 |
 | 4.3 | · Reference-to-video | `280_4.3_reference-to-video.md` | 1.9 |

@@ -87,7 +87,8 @@ Only these section files for this phase, nothing else unless a step below says s
 ### A2b. Understand the supplied assets (autonomous — no questions by default)
 - Load the `assets-and-substitution` sections named in Read now (not the whole reference).
 - View `30-assets/project/assets-sheet-*.jpg` and any preview that needs a closer look. Read
-  `asset-inventory.md` (sub-folder groups and name hints), then build the **asset registry**
+  `asset-inventory.md` (the paths grouped by sub-folder, and `duplicate_of` for identical files; file
+  names are not interpreted, so you confirm every role by looking at the asset), then build the **asset registry**
   (`30-assets/registry.md` and `state.json → assets`):
   - **Group into entities.** Each distinct product, object, character, interface, brand kit or
     environment is one entity, using sub-folders, names and what the images show. Several products,

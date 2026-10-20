@@ -65,7 +65,8 @@ Only these section files for this phase, nothing else unless a step below says s
     A prompt that was bent by a hint (a changed story beat, an extra element, a longer sentence than the pattern card calls for)
     is rewritten without it.
   - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning, its distance derived from the
-    frame and not assumed, is in the plan and in the prompt for every shot; a start frame passed `T scale`; the size ladder holds between products;
+    frame and not assumed, is in the plan and in the prompt for every shot; a start frame was measured
+    with `T scale` and its size factors read (X9 gives the bands); the size ladder holds between products;
     nothing in the prompt or the references invites a bigger product (a tight crop, "hero",
     "prominent", a packshot pose).
   - **Posture, support and place** (`generation-system.md` §4b.1b; `anomaly-catalog.md` §2.16): every
@@ -104,9 +105,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 12. **Generation discipline: no spam, no glitches.**
     - Every paid Higgsfield generation (`generate_video`, and `generate_image` for start frames)
-      goes through the ledger (`T ledger begin` before, `T ledger set` after; §5 X7). There is at
-      most **one job in flight per video lane**, at most 5 per run, one generation call per turn
-      per agent, and never parallel calls inside a lane.
+      goes through the ledger (`T ledger begin` before, `T ledger set` after; X7: the ledger
+      records and reports, the agent decides). There is at most **one job in flight per video lane**,
+      at most 5 per run, one generation call per turn per agent, and never parallel calls inside a lane.
     - Never resubmit after a timeout or an unclear answer until the outcome has been checked, and
       never resubmit because a job is slow.
     - Never repeat an identical finished request.

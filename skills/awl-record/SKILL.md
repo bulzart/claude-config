@@ -25,7 +25,9 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     the **`final` folder inside the given path**:
     `T finalize --run RUN --video NN --file <aK approved file> --original "<original video path>"`.
     - It is named after the original video (`<given path>/final/<name>.mp4`, sub-folders mirrored).
-    - It is checked: picture present, 720×1280, audio present exactly when the original had audio.
+    - It never refuses the user's approval. It returns `facts` (`has_video`, `size`, `expected_size`,
+      `has_audio`, `original_has_audio`): read them (picture present, 720×1280, audio present exactly
+      when the original had audio) and report any mismatch to the user.
     - The folder is marked so later scans skip it. A previously approved final of the same video is
       moved into the run folder, never overwritten silently.
     - Only approved videos are placed there.
@@ -34,7 +36,8 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     - `RUN/deliverables/video-NN-clean.mp4`: the same edit with its inserts and without text,
       assembled locally from the pieces, the inserts and (Recreate) the original audio, and never
       replaced by the generated-only `60-outputs/video-NN/clean.mp4` when the video has inserts;
-    - `RUN/deliverables/video-NN-preview.mp4`: the CapCut proxy with the text.
+    - `RUN/deliverables/video-NN-preview.mp4`: a 720×1280 ffmpeg burn of the CapCut text layer over the clean video
+      (never the 540×960 capcut-cli proxy; `capcut-assembly.md` §6).
   - Append a row to `RUN/deliverables/README.md` (an agent writes it to
     `60-outputs/video-NN/readme-row.md` and the main session appends it as the agent reports, A9b): direction, model, params, prompt file, assets, job
     id, attempt, credits, verdict, final path, notes. For a multi-clip video, list every clip's

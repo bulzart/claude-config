@@ -25,11 +25,11 @@ Stored as section files in `higgsfield-mcp/` (next to this file); **read only th
 |---|---|---|---|
 | 1 | Connection and conventions | `010_1_connection-and-conventions.md` | 1.5 |
 | 2 | Tool map (what the command uses) | `020_2_tool-map-what-the-command-uses.md` | 4.1 |
-| 3 | Standard execution sequence for one video | `030_3_standard-execution-sequence-for.md` | 3.9 |
+| 3 | Standard execution sequence for one video | `030_3_standard-execution-sequence-for.md` | 4.6 |
 | 4 | Local file upload (terminal path) | `040_4_local-file-upload-terminal-path.md` | 2.0 |
 | 5 | Media roles — how the catalog names them | `050_5_media-roles-how-the-catalog-name.md` | 1.7 |
 | 6 | Elements — reusable project assets | `060_6_elements-reusable-project-assets.md` | 1.3 |
-| 7 | Fixed output: vertical 9:16 at 720p | `070_7_fixed-output-vertical-9-16-at-72.md` | 1.8 |
+| 7 | Fixed output: vertical 9:16 at 720p | `070_7_fixed-output-vertical-9-16-at-72.md` | 1.9 |
 | 8 | Credits and cost | `080_8_credits-and-cost.md` | 1.1 |
 | 9 | Errors and recovery | `090_9_errors-and-recovery.md` | 2.5 |
 | 10 | Utility operations (on Higgsfield, only when the plan needs them) | `100_10_utility-operations-on-higgsfield.md` | 0.5 |

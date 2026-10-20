@@ -1,9 +1,15 @@
 ## 2. Edit Mode: removing source text
 
 ### 2.1 Inventory (before planning the edit)
-Sources: `10-media/<id>/ocr.json` (spans with `kind_hint`, `y_rel` and `caption_bands_y_rel`),
+Sources: `10-media/<id>/ocr.json` (spans with the numbers that describe each text: `first_t`, `last_t`, `hits`
+(frames it was seen in), `share_of_frames_scanned`, `y_rel` and `band`, `band_distinct_texts` and `band_frames`
+(how many different texts, in how many frames, sat in that row of the frame), `score_mean`, and the spelling
+facts `has_at_handle`, `has_hashtag`, `has_url_pattern`; plus `bands[]`, the rows of the frame with their counts),
 `timeline.md` (the text column per second), and the storyboard sheets (read every overlay by eye; OCR
-misses stylised text and stickers).
+misses stylised text and stickers). The tool labels nothing: whether a text is a caption, a fixed overlay, a
+handle, a watermark, a label or noise is your reading of these numbers and the picture. Rules of thumb: a row of
+the frame that held many different texts over several frames reads like a caption track; a text seen in most of
+the scanned frames reads like a fixed overlay; the spelling facts help to tell a handle or a URL from a caption.
 
 For each element record:
 
@@ -22,6 +28,9 @@ For each element record:
 | The user asked to keep specific text | Preserve exactly that element; name it in the prompt as preserved, and remove everything else |
 
 ### 2.3 Verify
-Run `awl.py qc --mode edit` (OCR) and view the storyboard. Any residual source text, ghosting or smear
-means the check fails: pick the next method in §2.2.
+Run `awl.py qc --mode edit` and view the storyboard. `qc` lists the text its OCR saw (`visible_text`, with
+times, frames seen and row) beside any text you planned to keep (`--allowed-text`) and says nothing about pass or
+fail: you read the list against the storyboard. In Edit Mode no source text may remain unless the user kept it
+explicitly, so any residual source text, ghosting or smear means the check fails (your verdict): pick the next
+method in §2.2.
 
