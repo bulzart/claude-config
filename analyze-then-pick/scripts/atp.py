@@ -2751,6 +2751,7 @@ def _count_frames(path) -> tuple[int, float]:
 # If Loupe cannot be reached a new flag is queued in loupe/data/outbox and recorded when it starts: nothing is lost.
 
 LOUPE_HOME = Path(os.environ.get("LOUPE_HOME") or (Path.home() / ".claude" / "loupe"))
+KEEPER_SYNC_WAIT = int(os.environ.get("ATP_KEEPER_SYNC_WAIT") or 25)   # seconds `loupe ensure` waits for the keeper sync before reporting `syncing`
 
 
 def _lc():
@@ -3483,8 +3484,16 @@ def cmd_loupe(a):
         keeper = None
         if ok and size:                      # the keeper boots, or re-reads the library, now: the first consult then finds it current
             try:
-                st, d = lc.call("POST", "/api/qc/keeper/sync", {}, key_name="qc", timeout=170)
-                keeper = d if st == 200 and isinstance(d, dict) else {"state": "failed", "error": str(d)[:200]}
+                st, d = lc.call("POST", "/api/qc/keeper/sync", {}, key_name="qc", timeout=KEEPER_SYNC_WAIT)
+                if st == 200 and isinstance(d, dict):
+                    keeper = d
+                elif st == 0 and "timed out" in str((d or {}).get("error", "")).lower():
+                    # Loupe goes on booting or re-feeding the keeper after this call gave up: the sync holds the keeper lock until it is
+                    # done and a consult waits on that same lock, so the first qc-consult or plan-hints still meets a current keeper
+                    keeper = {"state": "syncing", "waited_s": KEEPER_SYNC_WAIT,
+                              "note": "the keeper is being booted or brought up to date inside Loupe; the first consult waits for it"}
+                else:
+                    keeper = {"state": "failed", "error": str(d)[:200]}
             except Exception as e:  # noqa: BLE001
                 keeper = {"state": "failed", "error": str(e)[:200]}
         out({"ok": ok, "url": lc.base_url(), "library_size": size, "keeper": keeper,
