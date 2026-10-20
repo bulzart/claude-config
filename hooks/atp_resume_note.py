@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """SessionStart hook (matcher compact|resume): after a compaction or a resume, tell the agent which pipeline run is in
-progress (of /analyze-then-pick or /analyze-then-generate, whichever changed last) and which skill to re-invoke.  The skills' text may have been summarised away; the run's state.json still names the next one.
+progress (of /analyze-then-pick, /analyze-then-generate or /analyze-with-loupe, whichever changed last) and which skill to re-invoke.  The skills' text may have been summarised away; the run's state.json still names the next one.
 It reads one small file and prints one short note; with no run in progress it prints nothing."""
 import json
 import os
@@ -12,7 +12,7 @@ from pathlib import Path
 CLAUDE = Path(__file__).resolve().parent.parent
 FINISHED = {"done", "redo_delivered", "delivered", "complete", "completed", "closed"}
 # (library folder, environment override, slash command)
-LIBS = [("analyze-then-pick", "ATP_HOME", "/analyze-then-pick"), ("analyze-then-generate", "ATG_HOME", "/analyze-then-generate")]
+LIBS = [("analyze-then-pick", "ATP_HOME", "/analyze-then-pick"), ("analyze-then-generate", "ATG_HOME", "/analyze-then-generate"), ("analyze-with-loupe", "AWL_HOME", "/analyze-with-loupe")]
 
 
 def main():

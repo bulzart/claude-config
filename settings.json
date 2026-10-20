@@ -47,7 +47,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__higgsfield__generate_video|mcp__higgsfield__generate_image|mcp__higgsfield__generate_video_batch|mcp__higgsfield__generate_image_batch|mcp__higgsfield__jobs_wait|mcp__higgsfield__show_generations|mcp__higgsfield__show_generation_by_ids|mcp__higgsfield__media_confirm|mcp__higgsfield__media_import_url|mcp__higgsfield__manage_reference_elements|mcp__higgsfield__execute_preset",
+        "matcher": "mcp__higgsfield__generate_video|mcp__higgsfield__generate_image|mcp__higgsfield__generate_video_batch|mcp__higgsfield__generate_image_batch|mcp__higgsfield__jobs_wait|mcp__higgsfield__show_generations|mcp__higgsfield__show_generation_by_ids|mcp__higgsfield__media_confirm|mcp__higgsfield__media_import_url|mcp__higgsfield__manage_reference_elements|mcp__higgsfield__execute_preset|mcp__higgsfield__media_upload",
         "hooks": [
           {
             "type": "command",
@@ -59,7 +59,7 @@
     ],
     "PostToolUseFailure": [
       {
-        "matcher": "mcp__higgsfield__generate_video|mcp__higgsfield__generate_image|mcp__higgsfield__generate_video_batch|mcp__higgsfield__generate_image_batch|mcp__higgsfield__jobs_wait|mcp__higgsfield__show_generations|mcp__higgsfield__show_generation_by_ids|mcp__higgsfield__media_confirm|mcp__higgsfield__media_import_url|mcp__higgsfield__manage_reference_elements|mcp__higgsfield__execute_preset",
+        "matcher": "mcp__higgsfield__generate_video|mcp__higgsfield__generate_image|mcp__higgsfield__generate_video_batch|mcp__higgsfield__generate_image_batch|mcp__higgsfield__jobs_wait|mcp__higgsfield__show_generations|mcp__higgsfield__show_generation_by_ids|mcp__higgsfield__media_confirm|mcp__higgsfield__media_import_url|mcp__higgsfield__manage_reference_elements|mcp__higgsfield__execute_preset|mcp__higgsfield__media_upload",
         "hooks": [
           {
             "type": "command",

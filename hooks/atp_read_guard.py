@@ -7,13 +7,13 @@ import re
 import sys
 
 BIG = [
-    (r"/analyze-(then-pick|then-generate)/models/index\.json$",
+    (r"/analyze-(then-pick|then-generate|with-loupe)/models/index\.json$",
      "this is the 40 KB model index: use the toolkit's `model-entry --id <model>` for one model, or Read it with offset/limit."),
     (r"/higgsfield/catalog-snapshot-[^/]+\.json$",
      "this is a 33 KB catalog snapshot, only compared with `models_explore list` on drift: Grep it for the model, or Read with offset/limit."),
-    (r"/(analyze-then-pick|analyze-then-generate|analyze-stack)/scripts/(atp|atg|analyze_stack|stack)\.py$",
+    (r"/(analyze-then-pick|analyze-then-generate|analyze-with-loupe|analyze-stack)/scripts/(atp|atg|awl|analyze_stack|stack)\.py$",
      "this script is far too big to read whole: run it with `-h` / `<command> -h`, or Grep for the function and Read that range with offset/limit."),
-    (r"/(analyze-then-pick|analyze-then-generate|analyze-stack)/_backups/",
+    (r"/(analyze-then-pick|analyze-then-generate|analyze-with-loupe|analyze-stack)/_backups/",
      "backups are never read in a run: they are for `diff` by the person who made them. Read an excerpt with offset/limit if you really need one."),
     (r"/analyze-then-pick/caught_flags\.html$",
      "the old flag page is retired and was never to be read: flags live in Loupe (the toolkit's `caught-flag list`)."),

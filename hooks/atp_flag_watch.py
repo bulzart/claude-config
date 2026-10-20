@@ -29,7 +29,8 @@ UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 
 
 # (library folder, environment override, toolkit script)
-LIBS = [("analyze-then-pick", "ATP_HOME", "atp.py"), ("analyze-then-generate", "ATG_HOME", "atg.py")]
+LIBS = [("analyze-then-pick", "ATP_HOME", "atp.py"), ("analyze-then-generate", "ATG_HOME", "atg.py"), ("analyze-with-loupe", "AWL_HOME", "awl.py")]
+UPLOAD_TOOL = "mcp__higgsfield__media_upload"      # every answer of this tool is kept as a capture (signal "upload"): the presigned URL then travels as an id, not as text
 
 
 def active_run() -> tuple[str, str]:
@@ -94,6 +95,8 @@ def main():
         sig = (sig + soft) or ["tool-error"]
     else:
         sig = sig + soft
+        if tool == UPLOAD_TOOL and "upload_url" in text:
+            sig = ["upload"] + sig
         if not sig:
             return
     key = hashlib.sha1((tool + "|" + text[:6000]).encode("utf-8", "replace")).hexdigest()
@@ -123,6 +126,11 @@ def main():
         state.write_text(json.dumps((seen + [key])[-300:]), encoding="utf-8")
     except OSError:
         pass
+    if sig[0] == "upload":
+        if cid and script == "awl.py" and run:      # only the toolkit that knows --capture is told; the older pipelines keep their own path
+            note = f"Loupe kept this upload answer as capture {cid}: `{script} hf-put --capture {cid} --file <local path>` uploads without copying the presigned URL."
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": ev.get("hook_event_name") or "PostToolUse", "additionalContext": note}}))
+        return
     if run:
         where = f"capture {cid}" if cid else "queued capture"
         note = (f"Loupe saved Higgsfield's raw answer ({where}; signals: {', '.join(sig)}). If this is a flag of run {run}, record it with "

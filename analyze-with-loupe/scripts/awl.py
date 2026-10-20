@@ -2136,10 +2136,52 @@ def cmd_frames(a):
 
 # --------------------------------------------------------------------------- Higgsfield transfer helpers
 
+def _capture_slot(a, p: Path) -> tuple[str, str, str]:
+    """The upload slot (upload_url, content_type, media_id) of a hook capture: the one whose filename matches the file, else --slot (default 0)."""
+    s, d = _cf_api("GET", "/api/captures?full=1&limit=200")
+    if s != 200:
+        fail(f"Loupe did not answer for capture {a.capture}: " + str((d or {}).get("error", s)), 2)
+    cap = next((c for c in d.get("captures", []) if str(c.get("id")) == str(a.capture)), None)
+    if not cap:
+        fail(f"capture {a.capture} is not in Loupe (the hook keeps every media_upload answer; `caught-flag list` and Loupe's Flags page show the ids)", 2)
+    raw = (cap.get("payload") or {}).get("response", "")
+    try:
+        resp = json.loads(raw) if isinstance(raw, str) else raw
+    except ValueError:
+        resp = None
+    slots = []
+    if isinstance(resp, dict):
+        slots = resp.get("uploads") if isinstance(resp.get("uploads"), list) else ([resp] if resp.get("upload_url") else [])
+    elif isinstance(resp, list):
+        slots = [x for x in resp if isinstance(x, dict) and x.get("upload_url")]
+    if not slots:
+        for m in re.finditer(r'"upload_url"\s*:\s*"([^"]+)"', raw if isinstance(raw, str) else ""):
+            slots.append({"upload_url": m.group(1)})
+    if not slots:
+        fail(f"capture {a.capture} holds no upload_url (tool {cap.get('tool')}, signals {cap.get('signals')})", 2)
+    k = next((i for i, x in enumerate(slots) if str(x.get("filename") or "") == p.name), None)
+    if a.slot is not None:
+        k = a.slot
+    if k is None:
+        if len(slots) > 1:
+            fail(f"capture {a.capture} holds {len(slots)} upload slots and none is named {p.name}: give --slot N (0-based)", 2)
+        k = 0
+    if not 0 <= k < len(slots):
+        fail(f"--slot {k} is out of range: capture {a.capture} holds {len(slots)} slot(s)", 2)
+    x = slots[k]
+    return str(x.get("upload_url")), str(x.get("content_type") or ""), str(x.get("media_id") or "")
+
+
 def cmd_hf_put(a):
     p = Path(a.file)
     if not p.exists():
         fail(f"file not found: {p}", 2)
+    media_id = ""
+    if a.capture:
+        a.url, ct_cap, media_id = _capture_slot(a, p)
+        a.content_type = a.content_type or ct_cap
+    elif not a.url:
+        fail("give --url (the upload_url of the media_upload answer) or --capture <id> (the hook's capture of that answer)", 2)
     ct = a.content_type or CONTENT_TYPES.get(p.suffix.lower(), "application/octet-stream")
     last = None
     for attempt in range(a.retries):
@@ -2149,7 +2191,7 @@ def cmd_hf_put(a):
                 r = requests.put(a.url, data=f, headers={"Content-Type": ct}, timeout=a.timeout)
             if r.status_code == 200:
                 out({"ok": True, "status": 200, "bytes": p.stat().st_size, "content_type": ct,
-                     "etag": r.headers.get("ETag")})
+                     "etag": r.headers.get("ETag"), **({"media_id": media_id, "capture": a.capture} if a.capture else {})})
             last = f"HTTP {r.status_code}: {r.text[:300]}"
             if r.status_code in (400, 403):
                 break  # signature / content-type mismatch or expired slot: request a fresh media_upload slot
@@ -4923,7 +4965,10 @@ def main():
     p.add_argument("--images-out", help="PDF without a text layer: write its embedded page images into this folder (to view them one by one)")
     p.set_defaults(fn=cmd_doc_text)
 
-    p = sp.add_parser("hf-put"); p.add_argument("--file", required=True); p.add_argument("--url", required=True)
+    p = sp.add_parser("hf-put", help="upload a local file to a Higgsfield upload slot: --url (the presigned upload_url) or --capture (the hook's capture of the media_upload answer, so the URL is never copied by hand)")
+    p.add_argument("--file", required=True); p.add_argument("--url", help="the upload_url of the media_upload answer")
+    p.add_argument("--capture", help="the id of the hook capture that holds the media_upload answer (the hook prints it); the slot whose filename matches --file is used")
+    p.add_argument("--slot", type=int, help="with --capture: which upload slot of the answer (0-based) when the filenames do not tell")
     p.add_argument("--content-type"); p.add_argument("--retries", type=int, default=3)
     p.add_argument("--timeout", type=int, default=900); p.set_defaults(fn=cmd_hf_put)
 

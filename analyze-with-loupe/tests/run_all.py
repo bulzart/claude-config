@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SUITES = ["t01_library", "t02_toolkit", "t03_loupe"] + (["t04_real"] if "--real" in sys.argv else [])
+SUITES = ["t01_library", "t02_toolkit", "t03_loupe", "t05_hooks"] + (["t04_real"] if "--real" in sys.argv else [])
 bad = 0
 for s in SUITES:
     cp = subprocess.run([sys.executable, "-X", "utf8", str(HERE / f"{s}.py")], capture_output=True, text=True, encoding="utf-8", errors="replace")
