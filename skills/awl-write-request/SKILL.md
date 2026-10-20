@@ -50,6 +50,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Step X2
 
+**Free runs:** the requirement's intent for this video (its free-plan lines) is translated into the locked model's own prompting structure, recipes and official examples exactly as below; the user's sentences are never pasted as the prompt, and the model guide's structure wins where the two differ in form (the intent stays).
+
+
 - **X2 — Pattern card and request.**
   - From the selected guide's **§4.0 official examples**, write the pattern card
     (`50-requests/video-NN-pattern.md`).

@@ -82,6 +82,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Step X1
 
+**Free runs:** this video's kind (`state.json → videos_kind[NN]`; the plan header carries `Kind: recreate | create`) selects the Recreate or the Create branch of every step below and of X2–X10; its direction is its lines in `RUN/20-analysis/free-plan.md` (the user's requirement, [U]), which win over the family profile and the house approach wherever they speak, and its explicit wants and forbids become QC checkpoints.
+
+
 - **X1 — Plan (work backward).**
   - Write `40-briefs/video-NN-plan.md` with `generation-system.md` §2–§6:
     - intent (`generation-system.md` §2.1): the goal and the video's job, the audience, the one

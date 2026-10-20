@@ -50,18 +50,30 @@ Only these section files for this phase, nothing else unless a step below says s
    - **Edit Mode**: "Edit supplied videos one by one: replace, remove, insert, alter, restyle or
      recreate elements."
 
-   **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate` or `create`, use it. Otherwise ask
+   **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate`, `create` or `free`, use it. Otherwise ask
    with AskUserQuestion (header "Analyze as"):
    - **Recreate**: "Analyze the references, then recreate N of them with your product and
      characters: same scenario, faces and products swapped or blended. Fully autonomous."
    - **Create**: "Analyze the references, then create new videos in suggested style groups (one
      style or a mix), using your product. No reference video is used as input."
-   Store it with `T state --run RUN set analyze_submode=recreate|create` once the run exists.
+   - **Free**: "Say in your own words what the videos must achieve and how. With reference material analysed first, or from your
+     requirement alone. The pipeline plans to your requirement, keeps the model's official prompting, the QC stack and Loupe's samples
+     and misses, and asks you once to confirm its reading of the plan."
+   **Free → two more things, asked in the same message batch.** (a) Header "Free: references": **"With references"** ("Analyse a
+   folder of reference material first; the plan can follow, edit or avoid what they do") or **"Requirement only"** ("No references: the
+   plan comes from your requirement and your assets"); `$ARGUMENTS` with `free` and a references folder means with references, `free`
+   alone means requirement only. (b) Header "Your requirement": **"I write it now"** (the user writes it in the Other box: what the
+   videos must achieve, how many, what happens, the product and how it is used, references to edit or follow, length, text, sound,
+   anything they want or forbid) or **"It is in a file"** (the path in the Other box: a .txt, .md or .pdf; `T doc-text` reads it).
+   The words are kept verbatim, nothing is paraphrased or trimmed; a one-line requirement is accepted as it is (the free plan shows its
+   gaps as visible [I] lines). The requirement is written once the run exists (step 6).
+   Store it with `T state --run RUN set analyze_submode=recreate|create|free` once the run exists (Free also `free_references=yes|no`).
 3. **Higgsfield tools.** Load them (§1) and check that they are authenticated.
 4. **Model — picked now, locked for the run.**
    1. `models_explore {action:"list", type:"video", limit:100}`, then collect the returned ids.
    2. `T model-menu --mode <analyze|edit> --live-ids "<id,id,…>"`. Edit Mode and **Recreate** use
-      `--mode edit`, since their fit is the model's edit capability; **Create** uses
+      `--mode edit`, since their fit is the model's edit capability; **Free** uses `--mode edit` when the requirement says a reference is
+      to be edited and `--mode analyze` otherwise; **Create** uses
       `--mode analyze`.
       - It prints one numbered table of **every available video model**, with ★ Seedance 2.5 and
         ★ Wan 3.0 Prime pinned at the top and the rest in `index.json → menu.order`.
@@ -103,8 +115,9 @@ Only these section files for this phase, nothing else unless a step below says s
      needs none.
      **Recreate** also needs the **characters** who replace the people in the references (face
      close-up + full body each). If none are supplied and the references show people, ask once at
-     this step: add characters, or keep the people as they are.
-     **QC fixes (Recreate and Create; a choice, asked once the paths are validated, unless `$ARGUMENTS` has `qc-fixes ask|auto`).**
+     this step: add characters, or keep the people as they are. **Free** asks the same only when the requirement says people are replaced.
+     **Free with references** needs the references folder like Recreate and Create; **Free, requirement only** needs no references: the assets (and the optional examples) are its inputs.
+     **QC fixes (every Analyze sub-mode: Recreate, Create and Free; a choice, asked once the paths are validated, unless `$ARGUMENTS` has `qc-fixes ask|auto`).**
      Ask with AskUserQuestion (header "QC fixes"), "If QC finds issues or anomalies in a generated video, how should the fix generation be decided?":
      - **"Ask me first"**: "From the first video on, I show you what QC found, what the fix generation would change and cost, and wait for your yes or no before spending credits on it."
      - **"QC agents fix on their own"**: "The QC agents regenerate a video with one diagnosed fix on their own, without asking, and ship the best take flagged if it still fails."
@@ -129,11 +142,13 @@ Only these section files for this phase, nothing else unless a step below says s
    The answer is stored in step 6 (`state.json → audio_ingest`: `whisper` or `frames-only`) and is the only source of the choice:
    `T prep-all` stops when it is missing. A resume that finds it stored never re-asks; one that finds it missing asks here.
 6. Create the run:
-   - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]`;
+   - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]` (Free, requirement only: no `--source`);
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
    - store the audio choice (step 5b): `T state --run RUN set audio_ingest=whisper` or `audio_ingest=frames-only`;
-   - Recreate and Create: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto`);
+   - every Analyze sub-mode: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto`);
+   - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`
+     (first line `# Requirement (the user's words)`, then the text; a file the user named is copied, a PDF through `T doc-text`);
    - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper
      is fed from, and `keeper.state`: the keeper is booted or brought up to date there, so the first consult finds it current), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
      `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
@@ -160,7 +175,7 @@ Only these section files for this phase, nothing else unless a step below says s
       everything there is **reference material only**.
     - Never reuse one edit's assets for another edit unless the user says so.
     - The **examples folder** (item 18) is never a source of client assets either.
-17. **Analyze Mode has two sub-modes, chosen at the start (§2.2) and never mixed:**
+17. **Analyze Mode has three sub-modes, chosen at the start (§2.2) and never mixed:**
     - **Recreate.** The agents autonomously **edit the original reference videos** with the client's
       assets: the same scenario, with faces swapped to the supplied characters and the product
       swapped, filled into a vessel or placed (item 14).
@@ -172,10 +187,17 @@ Only these section files for this phase, nothing else unless a step below says s
       (style groups such as "Organic × skit × gym", "Anime × reaction × office").
       - The product is used in the new scenes.
       - **No reference video, frame or clip is ever an input** to a generation; nothing is edited.
-    - In both sub-modes, every video ends as a CapCut project (item 16), produced by its own agent
+    - **Free.** The user's own requirement, written at the start, decides what the videos achieve and how: how many, what happens,
+      the product and its use, references edited or re-made or only studied, length, text, sound. With references, the analysis
+      (A1–A5) runs first and the plan may follow, edit or avoid what they do; without references, the plan comes from the requirement
+      and the assets. The pipeline keeps the hard rules, the locked model's own prompting, the plan discipline, the QC stack, Loupe's
+      samples and misses (hints at X2, the consult at X9, the flags), the CapCut assembly and the deliverables; it asks once to confirm
+      its reading of the plan (A6f, `awl-free-plan`), then nothing. Every video carries its own kind, `recreate` or `create`
+      (`state.json → videos_kind`), and follows that kind's branch in every per-video step.
+    - In every sub-mode, every video ends as a CapCut project (item 16), produced by its own agent
       (item 2).
 
-27. **QC fixes (Recreate and Create).** The user chooses at the start; the choice is stored in `state.json → qc_fixes` (a run without it is `auto`):
+27. **QC fixes (every Analyze sub-mode: Recreate, Create and Free).** The user chooses at the start; the choice is stored in `state.json → qc_fixes` (a run without it is `auto`):
     - **`ask`**: when QC finds issues or anomalies in a generated video, from the first video on, and only a new generation can fix them, the fix is not generated until the user answers yes:
       the production agent prepares the corrected request and stops with a proposal, and the main session asks (`awl-analyze-produce`);
     - **`auto`**: the QC agents correct on their own, without asking: one diagnosed regeneration per clip, then the best take ships flagged.

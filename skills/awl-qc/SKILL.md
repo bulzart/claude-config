@@ -56,6 +56,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Step X9
 
+**Free runs:** besides the stack below, every explicit want and forbid of the requirement for this video (the free plan's lines, the plan's checkpoints) is checked and written in the verdict with what was seen; a miss on one of them is a finding like any other (regenerate reason or note by its weight), under the QC-fixes choice (item 27).
+
+
 - **X9 — QC.**
   - **Judge by reasoning, not by list** (`generation-system.md` §6). For every possible finding ask what the plan or source needed
     at that beat, what the product's real details allow (shape, size, opening, posture: its registry row) and what the scene offers.

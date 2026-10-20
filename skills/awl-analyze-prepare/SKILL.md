@@ -25,6 +25,8 @@ Only these section files for this phase, nothing else unless a step below says s
 ## 3. Analyze Mode
 
 ### A1. Inventory and preprocessing (deterministic, local)
+- **Free, requirement only** (`state.json → free_references = no`): there are no references; skip the references inventory, `prep-all` of the
+  references and `split-audio`, prepare the assets, the documents and the optional examples as below, and hand off to `awl-free-plan`.
 - `T inventory "<references folder>" --run RUN --as references`: everything in it is **reference
   material only**.
 - `T inventory "<asset path>" "<asset path>" … --run RUN --as assets` (scope `project`), then
@@ -34,7 +36,7 @@ Only these section files for this phase, nothing else unless a step below says s
   examples`. An empty folder gives 0 examples: carry on. An assets path that contains a folder named
   `examples` (any case) hands that folder over as the examples folder: inventory the assets without
   it (pass its siblings) and say so.
-- **Recreate only:** `T split-audio "<references folder>" --run RUN` writes `files_audio/` and
+- **Recreate only** (Free runs it in A6f for a video of kind `recreate`): `T split-audio "<references folder>" --run RUN` writes `files_audio/` and
   `videos_without_audio/` inside the references folder.
   - The references are Recreate's edit sources, so only the **silent copy** is uploaded.
   - The reference's own-content audio is restored onto the edited picture (A6r).
@@ -166,5 +168,6 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Hand-off
 
 `T state --run RUN set stage=prepared next_skill=awl-analyze-study`, then invoke Skill `awl-analyze-study` once `prep-all` has finished.
+Free, requirement only (no references): `T state --run RUN set stage=prepared next_skill=awl-free-plan`, then invoke Skill `awl-free-plan`.
 
 After a compaction, or on `resume`, re-invoke the skill named in `RUN/state.json → next_skill`: its text may have been summarised away.

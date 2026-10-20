@@ -62,6 +62,8 @@ Plan everything before production, in allocation order, **without asking for con
    and its "Audio ingest" line from `state.json → audio_ingest` (item 24). Fill its "QC fixes" line from `state.json → qc_fixes` (`auto` when the run has none; item 27).
 
 ### A9b. Produce in parallel (production agents)
+
+- **Free runs:** each agent's spawn message names its video's kind (`Video NN, kind recreate|create`, from `state.json → videos_kind`), and the contract's "Video kind" line says that the kind selects the Recreate or the Create branch of every per-video step.
 - **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to
   the run's contract file at A9; `subagent_type: general-purpose`, `run_in_background: true`).
   - At most `production.max_parallel_agents` (5) run at once; start the next queued video when one

@@ -123,9 +123,9 @@ and handle it before anything else (item 22).
 12. **Generation discipline.** Every paid call through `T ledger begin/set`; never resubmit after a timeout or unclear answer until checked; never repeat an identical finished request; preflight once per distinct request; no test or "just in case" calls. → `awl-submit`
 13. **Edit Mode review** after every attempt; changes re-apply to the original source; the next video starts only after approval. → `awl-edit`
 14. **Analyze Mode: the client's product is always in the video**: swap, contents or natural placement, physically and logically correct. → `awl-asset-plan`, `awl-plan-video`
-15. **Analyze Mode asks permission in exactly one case**: a video over 30 s needing 2+ generations (A7b); the one other question is the fix generation after a QC finding, and only when the user chose `ask` (item 27). Blockers are reported, not asked. → `awl-asset-plan`
+15. **Analyze Mode asks permission in exactly one case**: a video over 30 s needing 2+ generations (A7b); the other questions are the fix generation after a QC finding, only when the user chose `ask` (item 27), and in Free the one confirmation of the plan (A6f). Blockers are reported, not asked. → `awl-asset-plan`, `awl-free-plan`
 16. **Analyze Mode: reference inserts are cut, never generated; every video ends as a CapCut project** `DD_Mon_YYYY_vNN`. → `awl-recreate-plan`, `awl-plan-video`, `awl-postprocess`
-17. **Two Analyze sub-modes, chosen at the start, never mixed**: Recreate (edit the original references with the client's assets) and Create (new videos from the analysed patterns; no reference is ever an input). → `awl-start`
+17. **Three Analyze sub-modes, chosen at the start, never mixed**: Recreate (edit the original references with the client's assets), Create (new videos from the analysed patterns; no reference is ever an input) and Free (the user's own requirement decides what the videos achieve and how, with references analysed first or from the requirement alone; every video carries its own kind, `recreate` or `create`, and the pipeline keeps the hard rules, the locked model's own prompting, the QC stack and Loupe's samples; one confirmation of the plan, then no questions). → `awl-start`, `awl-free-plan`
 18. **Examples** (the user's own finished videos, optional, both modes) are study material for the house approach; never assets. → `awl-analyze-prepare`, `awl-analyze-study`
 19. **Source fidelity** (Edit Mode, Recreate): only the planned operations change; the original audio goes back under the new picture; a sync check confirms it. → `awl-recreate-plan`, `awl-write-request`, `awl-edit`
 20. **The pipeline is also the creative team** (`reference/creative-direction/`): goal, audience, trend read, scored concept seeds, sharpness gate, copy test. → `awl-analyze-study`, `awl-create-plan`
@@ -135,17 +135,18 @@ and handle it before anything else (item 22).
 24. **Audio ingest is the user's choice, once per run**: at the start the user picks Whisper speech-to-text of every video's audio or frames only; `state.json → audio_ingest` (`whisper` | `frames-only`) is the only source, no step picks a default (`T prep-all` stops without it), a frames-only run writes no transcript and every speech field says `audio not ingested`, never `no speech`; whatever needs the audio file itself (the original audio restored, loudness, the sound profile, the sync check) runs in both modes. → `awl-start`, `awl-analyze-prepare`, `awl-edit`
 25. **Scripts gather, agents decide.** The toolkit measures, extracts, records and calculates and never judges: no verdict, label, rank or gate comes from a script (`sync-check`, `scale`, `qc`, `conform`, `audio-profile`, the OCR spans and the ledger return numbers and facts; the model menu picks nothing). Every judgement is the agent's, written with its reason where the step records it; the numbers the references give are rules of thumb. → every skill, `pipeline/preprocessing.md`
 26. **Pilot first.** With more than four videos to produce, the first video goes through X7–X10 and its QC before the other plans are finished and the other agents are spawned: a recipe fault costs one generation, not twenty. → `awl-analyze-produce`
-27. **QC fixes** (Recreate, Create): at the start the user chooses `ask` or `auto` (`state.json → qc_fixes`) for the fix generation after a QC finding. `ask`: from the first video on, when QC finds issues or anomalies that only a new generation can fix, the production agent prepares the fix and stops with a proposal, the main session asks the user, and no credits are spent until the user says yes. `auto`: the QC agents regenerate once on their own and ship the best take flagged. Local post-fixes and CapCut fixes never ask. → `awl-start` (the question), `awl-qc`, `awl-analyze-produce`
+27. **QC fixes** (every Analyze sub-mode: Recreate, Create, Free): at the start the user chooses `ask` or `auto` (`state.json → qc_fixes`) for the fix generation after a QC finding. `ask`: from the first video on, when QC finds issues or anomalies that only a new generation can fix, the production agent prepares the fix and stops with a proposal, the main session asks the user, and no credits are spent until the user says yes. `auto`: the QC agents regenerate once on their own and ship the best take flagged. Local post-fixes and CapCut fixes never ask. → `awl-start` (the question), `awl-qc`, `awl-analyze-produce`
 
 ## Phases (the skills)
 
 | Phase | Skill | Mode | Next |
 |---|---|---|---|
 | Start: mode, sub-mode, model, inputs, run | `awl-start` | both | `awl-analyze-prepare` (Analyze) · `awl-edit` (Edit) |
-| A1–A2b inventory, preprocessing, documents, guardrails, asset registry | `awl-analyze-prepare` | Analyze | `awl-analyze-study` |
-| A3–A5 video analysis, synthesis, count | `awl-analyze-study` | Analyze | `awl-create-plan` (Create) · `awl-recreate-plan` (Recreate) |
+| A1–A2b inventory, preprocessing, documents, guardrails, asset registry | `awl-analyze-prepare` | Analyze | `awl-analyze-study` (`awl-free-plan` for Free without references) |
+| A3–A5 video analysis, synthesis, count | `awl-analyze-study` | Analyze | `awl-create-plan` (Create) · `awl-recreate-plan` (Recreate) · `awl-free-plan` (Free with references) |
 | A6 style groups, scored concepts | `awl-create-plan` | Create | `awl-asset-plan` |
 | A6r pick the references, plan the edits | `awl-recreate-plan` | Recreate | `awl-asset-plan` |
+| A6f the user's requirement becomes the plan, confirmed once | `awl-free-plan` | Free | `awl-asset-plan` |
 | A7–A7b asset plan, long-video permission | `awl-asset-plan` | Analyze | `awl-analyze-produce` |
 | A8–A10 prepare every video, production agents, reports | `awl-analyze-produce` | Analyze | `awl-wrapup` |
 | E1–E7, X9-R intake, operations, source, review | `awl-edit` | Edit | `awl-wrapup` |
@@ -159,7 +160,7 @@ each production agent then runs X3 → X7 → X8 → X9 → X10 for its own vide
 it). A regeneration or re-edit runs `awl-write-request` → (`awl-inputs` for new inputs) → `awl-submit` → `awl-postprocess` → `awl-qc`. Edit Mode runs the whole loop in this session, one video at a time.
 
 **Labels** (as cited in the skills and the references): §1 paths and §2 Start, items 4 · 11 · 17 → `awl-start` · A1, A2, A2b → `awl-analyze-prepare` · A3, A4, A5 → `awl-analyze-study` · A6 → `awl-create-plan` ·
-A6r (the "R-steps" of item 17; E4–E5 as Recreate uses them are repeated in it) → `awl-recreate-plan` · A7, A7b → `awl-asset-plan` · A8, A9, A9b, A10 → `awl-analyze-produce` · E1–E7, X9-R → `awl-edit` · X1 → `awl-plan-video` · X2 → `awl-write-request` · X3 → `awl-inputs` ·
+A6r (the "R-steps" of item 17; E4–E5 as Recreate uses them are repeated in it) → `awl-recreate-plan` · A6f → `awl-free-plan` · A7, A7b → `awl-asset-plan` · A8, A9, A9b, A10 → `awl-analyze-produce` · E1–E7, X9-R → `awl-edit` · X1 → `awl-plan-video` · X2 → `awl-write-request` · X3 → `awl-inputs` ·
 X4, X5, X6 → `awl-precheck` (X5 also in `awl-submit`) · X7 → `awl-submit` · X8 → `awl-postprocess` · X9 → `awl-qc` · X10 → `awl-record` · §6, §6b → `awl-wrapup` · item 22 → `awl-feedback` · item 23 → `awl-submit` · item 24 → `awl-start` (the question), `awl-analyze-prepare` and `awl-edit` (`prep-all`) · item 25 → every skill · item 26 → `awl-analyze-produce` · item 27 → `awl-start` (the question), `awl-qc` (the proposal), `awl-analyze-produce` (the fix question).
 A rule that two phases both act on is written in both skills.
 

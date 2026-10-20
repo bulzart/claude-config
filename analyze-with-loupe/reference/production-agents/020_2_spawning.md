@@ -13,6 +13,10 @@ the `<…>`):
 ```
 You are the production agent for video NN of a /analyze-with-loupe run (Analyze Mode, <recreate|create>).
 Produce this one video end to end, then stop.
+Video kind: your spawn message names it (a Free run: recreate or create, from state.json → videos_kind[NN]; a Recreate or Create run: the
+run's sub-mode). Wherever a skill says "Recreate:" or "Create:", follow the branch of your kind. In a Free run the user's requirement
+(<RUN>/00-inventory/requirement.md, [U]) and its lines for your video in <RUN>/20-analysis/free-plan.md decide what the video achieves; the
+hard rules, the locked model's own prompting, the QC stack and Loupe's samples stay as in every run.
 
 Run: <RUN>   Library (AWL): C:/Users/Glaresquare1/.claude/analyze-with-loupe
 Toolkit (T): "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe" "<AWL>/scripts/awl.py"

@@ -27,7 +27,7 @@ cp = subprocess.run([PY, "-X", "utf8", str(LIB / "scripts" / "docs_tool.py"), "c
 check(cp.returncode == 0 and " 0 errors" in cp.stdout, "docs_tool check reports 0 errors: " + (cp.stdout.strip().splitlines()[-1] if cp.stdout.strip() else "nothing printed"))
 
 # --- the router and the skills
-check(len(names) == 19, f"19 phase skills exist ({len(names)})")
+check(len(names) == 20, f"20 phase skills exist ({len(names)})")
 check(all(f"`{n}`" in router for n in names), "the router names every phase skill: " + ", ".join(n for n in names if f"`{n}`" not in router))
 check(all(b"\r" not in p.read_bytes() for p in SKILLS) and b"\r" not in ROUTER.read_bytes(), "the router and the skills use LF line endings (a CRLF frontmatter is not parsed)")
 check(all(rd(p).startswith("---\nname: " + p.parent.name + "\ndescription: ") and "\nuser-invocable: false\n---\n" in rd(p)[:600] for p in SKILLS),
@@ -134,6 +134,15 @@ check("QC fixes: <ask|auto>" in rd(PA / "020_2_spawning.md") and "qc_fix_permiss
 check("qc_fix_permission" in qc and "fix_proposal" in qc, "the QC phase stops with a fix proposal under ask")
 check("qc_fix_permission" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "header \"QC fix\"" in rd(SKD / "awl-analyze-produce" / "SKILL.md"), "the main session asks the fix question and continues the agent")
 check("25. **Scripts gather" in router and "26. **Pilot first" in router, "the router has the gather-only and pilot-first items")
+# the Free sub-mode (item 17, A6f): asked at the start, the requirement kept verbatim, its own planning skill, the kind per video, QC fixes for every sub-mode
+check("awl-free-plan" in names and "`awl-free-plan`" in router and "Three Analyze sub-modes" in router, "the router has the Free sub-mode and its skill")
+check("**Free**" in st and "free_references" in st and "requirement.md" in st and "analyze_submode=recreate|create|free" in st, "awl-start asks Free, with or without references, and keeps the requirement verbatim")
+fp = rd(SKD / "awl-free-plan" / "SKILL.md")
+check("requirement.md" in fp and "videos_kind" in fp and "T qc-brief" in fp and "free_plan_confirmed" in fp and "next_skill=awl-asset-plan" in fp, "the free plan reads the requirement, lists the past misses, is confirmed once, gives each video a kind and hands off to the asset plan")
+check("next_skill=awl-free-plan" in rd(SKD / "awl-analyze-prepare" / "SKILL.md") and "next_skill=awl-free-plan" in rd(SKD / "awl-analyze-study" / "SKILL.md"), "prepare (no references) and study (with references) hand off to the free plan")
+check("videos_kind" in rd(SKD / "awl-plan-video" / "SKILL.md") and "Video kind" in rd(PA / "020_2_spawning.md") and "Free" in rd(SKD / "awl-asset-plan" / "SKILL.md"), "the kind of a Free video reaches the plan step, the contract and the asset plan")
+check("every Analyze sub-mode" in router.split("27. **QC fixes")[1][:120] and "Recreate, Create and Free" in st, "the QC-fixes choice covers every Analyze sub-mode")
+
 check("Pilot first" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "stalled" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "frozen once its agent is spawned" in rd(SKD / "awl-analyze-produce" / "SKILL.md"),
       "the produce phase has the pilot, the stalled-agent recovery and the request freeze rules")
 # the keeper's answer: the QC phase knows the fields that carry the admin's words and the origin; the writer knows held_back_why and the sentence-safe fields

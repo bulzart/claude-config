@@ -48,6 +48,8 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Recreate:** from the reference card's client-entity fit.
   - **Create:** designed into the new concept, as the product's most natural use and blend in that
     scene.
+  - **Free:** as the free plan says for that video (`RUN/20-analysis/free-plan.md`, the user's requirement): a video of kind `recreate`
+    as Recreate, of kind `create` as Create, and the product, form and integration the requirement names win over this step's preferences.
   - **Contents** needs the chosen variant's contents sample (e.g. the liquid photo of that flavour).
   - **Contents comes first** whenever the scene gives the subject a vessel of the product's category
     (a glass on the café table): the vessel holds the product, and the package stands beside it.

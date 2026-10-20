@@ -156,38 +156,48 @@ for name, scopes in (("pipeline", ["flags:write", "flags:read", "runs:read"]), (
     core.key_write_file(name, core.key_create(name, scopes)["key"])
 
 # ======================================================================= Analyze Mode, Recreate then Create
-for submode in ("recreate", "create"):
+for submode in ("recreate", "create", "free-refs", "free-none"):
+    sub = "free" if submode.startswith("free") else submode
     print(f"\n--- Analyze / {submode} ---")
-    js = step(f"{submode}:new-run", "new-run", "--mode", "analyze", "--source", refs, "--assets", assets, "--examples", examples, "--slug", submode)
+    nr = ["new-run", "--mode", "analyze", "--assets", assets, "--examples", examples, "--slug", submode]
+    if submode != "free-none":
+        nr[3:3] = ["--source", refs]
+    js = step(f"{submode}:new-run", *nr)
     run = Path(js.get("run_dir") or js.get("run") or "")
     if not run.is_dir():
         FAILS.append(f"{submode}:new-run (no run_dir)")
         continue
-    step(f"{submode}:state-start", "state", "--run", run.name, "set", "model=wan3_0_prime", "model_locked=true", f"analyze_submode={submode}", "audio_ingest=frames-only",
+    step(f"{submode}:state-start", "state", "--run", run.name, "set", "model=wan3_0_prime", "model_locked=true", f"analyze_submode={sub}", *(["free_references=" + ("no" if submode == "free-none" else "yes")] if sub == "free" else []), "audio_ingest=frames-only",
          "qc_fixes=ask", "stage=started", f"next_skill={A.skill_prefix}analyze-prepare")
     step(f"{submode}:model-entry", "model-entry", "--id", "wan3_0_prime")
     step(f"{submode}:model-menu", "model-menu", "--mode", "analyze")
     step(f"{submode}:loupe-status", "loupe", "status")
     step(f"{submode}:loupe-ensure", "loupe", "ensure")
-    step(f"{submode}:inventory-refs", "inventory", "--run", run.name, "--as", "references", refs)
+    if sub == "free":
+        (run / "00-inventory").mkdir(exist_ok=True)
+        (run / "00-inventory" / "requirement.md").write_text("# Requirement (the user's words)\n\nOne 8 s video: the can stands on the desk, a hand picks it up, the label faces the lens.\n", encoding="utf-8")
+    if submode != "free-none":
+        step(f"{submode}:inventory-refs", "inventory", "--run", run.name, "--as", "references", refs)
     step(f"{submode}:inventory-examples", "inventory", "--run", run.name, "--as", "examples", examples)
     step(f"{submode}:inventory-assets", "inventory", "--run", run.name, "--as", "assets", assets)
     step(f"{submode}:prep-assets", "prep-assets", "--run", run.name)
-    step(f"{submode}:prep-all-refs", "prep-all", "--run", run.name, "--no-ocr", "--jobs", "1")
+    if submode != "free-none":
+        step(f"{submode}:prep-all-refs", "prep-all", "--run", run.name, "--no-ocr", "--jobs", "1")
     step(f"{submode}:prep-all-examples", "prep-all", "--run", run.name, "--set", "examples", "--no-ocr", "--jobs", "1")
     step(f"{submode}:doc-text", "doc-text", assets / "brand-rules.txt")
-    step(f"{submode}:state-prepared", "state", "--run", run.name, "set", "stage=prepared", f"next_skill={A.skill_prefix}analyze-study")
+    step(f"{submode}:state-prepared", "state", "--run", run.name, "set", "stage=prepared", f"next_skill={A.skill_prefix}" + ("free-plan" if submode == "free-none" else "analyze-study"))
     st = step(f"{submode}:status-prepared", "status", "--run", run.name, "--no-loupe")
     (run / "20-analysis" / "cards").mkdir(parents=True, exist_ok=True)
     (run / "20-analysis" / "cards" / "V01.md").write_text("# V01\n- hook: [E] a can on a desk\n", encoding="utf-8")
-    step(f"{submode}:state-analyzed", "state", "--run", run.name, "set", "stage=analyzed", "next_step=count")
-    nxt = f"{A.skill_prefix}recreate-plan" if submode == "recreate" else f"{A.skill_prefix}create-plan"
-    step(f"{submode}:state-counted", "state", "--run", run.name, "set", "stage=counted", "requested_videos=1", f"next_skill={nxt}")
+    nxt = A.skill_prefix + {"recreate": "recreate-plan", "create": "create-plan"}.get(submode, "free-plan")
+    if submode != "free-none":
+        step(f"{submode}:state-analyzed", "state", "--run", run.name, "set", "stage=analyzed", "next_step=count")
+        step(f"{submode}:state-counted", "state", "--run", run.name, "set", "stage=counted", "requested_videos=1", f"next_skill={nxt}")
     if submode == "recreate":
         m = step(f"{submode}:strip-inserts", "strip-inserts", "--video", refs / "ref-a.mp4", "--inserts", "1.0-1.2", "--out", run / "10-media" / "V01" / "own")
         step(f"{submode}:seams", "seams", "--video", refs / "ref-a.mp4", "--at", "1.0,1.2")
         step(f"{submode}:frames", "frames", refs / "ref-a.mp4", "--at", "0.5,1.5", "--out", run / "10-media" / "V01" / "targeted")
-    step(f"{submode}:state-planned", "state", "--run", run.name, "set", "stage=planned", f"next_skill={A.skill_prefix}asset-plan")
+    step(f"{submode}:state-planned", "state", "--run", run.name, "set", "stage=planned", f"next_skill={A.skill_prefix}asset-plan", *(['videos_kind={"01":"create"}', "free_plan_confirmed=true", 'directions=["one 8 s video: the can picked up"]'] if sub == "free" else []))
     (run / "30-assets").mkdir(exist_ok=True)
     (run / "30-assets" / "asset-plan.md").write_text("| video 01 | V01 | A1 slim can | placement |\n", encoding="utf-8")
     step(f"{submode}:state-asset-planned", "state", "--run", run.name, "set", "stage=asset_planned", f"next_skill={A.skill_prefix}analyze-produce",

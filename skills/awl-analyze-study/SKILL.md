@@ -141,6 +141,7 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   any number).
 - **Recreate:** ask (header "Recreate"), "How many reference videos should be recreated?", options
   "1", "3", "5" ("Other": any number up to the usable references).
+- **Free:** the count the requirement states (`RUN/00-inventory/requirement.md`), without a question; only when it states none, ask as for Create.
 - Store the answer in `requested_videos`.
 
 ## Rules this phase owns (contract items 18, 20, 21)
@@ -206,5 +207,6 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 After A5 is answered and stored (`requested_videos`):
 - Create: `T state --run RUN set stage=counted next_skill=awl-create-plan`, then invoke Skill `awl-create-plan`.
 - Recreate: `T state --run RUN set stage=counted next_skill=awl-recreate-plan`, then invoke Skill `awl-recreate-plan`.
+- Free (with references): `T state --run RUN set stage=counted next_skill=awl-free-plan`, then invoke Skill `awl-free-plan`.
 
 After a compaction, or on `resume`, re-invoke the skill named in `RUN/state.json → next_skill`: its text may have been summarised away.

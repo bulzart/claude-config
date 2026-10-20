@@ -4,14 +4,14 @@ The `/analyze-with-loupe` slash command lives at `~/.claude/commands/analyze-wit
 `disable-model-invocation: true`, the `Workflow` tool is disallowed, and it uses at most 2 analysis agents plus, in Analyze Mode, one
 production agent per video (at most 5 at once). Everything it loads at run time lives here or in the skills below.
 
-## How it is organised: a router, 19 phase skills, section files
+## How it is organised: a router, 20 phase skills, section files
 
 The context of a run is its scarcest resource, so nothing is loaded before its step:
 
 - **The command is a router** (about 13 KB): arguments, resume, the loading rules, one line per contract item, the phase map, the labels table and the global Never rules.
-- **Phase skills** `~/.claude/skills/awl-*/SKILL.md` (19, `user-invocable: false`, descriptions marked internal) hold the steps, the contract items and the Never rules of one phase
+- **Phase skills** `~/.claude/skills/awl-*/SKILL.md` (20, `user-invocable: false`, descriptions marked internal) hold the steps, the contract items and the Never rules of one phase
   each, moved verbatim from the old monolithic command, plus a "Read now" list of the exact section files the phase needs and a hand-off that names the next skill.
-  Their order is the chain `awl-start` → (Analyze) `awl-analyze-prepare` → `awl-analyze-study` → `awl-create-plan` | `awl-recreate-plan` → `awl-asset-plan` → `awl-analyze-produce`
+  Their order is the chain `awl-start` → (Analyze) `awl-analyze-prepare` → `awl-analyze-study` → `awl-create-plan` | `awl-recreate-plan` | `awl-free-plan` (Free; without references straight from `awl-analyze-prepare`) → `awl-asset-plan` → `awl-analyze-produce`
   → `awl-wrapup`, or (Edit) `awl-start` → `awl-edit` → `awl-wrapup`; the per-video loop is `awl-plan-video` → `awl-write-request` → `awl-inputs` → `awl-precheck` → `awl-submit` →
   `awl-postprocess` → `awl-qc` → `awl-record`; `awl-feedback` and `awl-model-guide` are called when needed. `state.json → next_skill` makes every phase boundary resumable.
 - **Born from the library at `C:/Users/Glaresquare1/.claude/analyze-then-pick` on 2026-10-20** (a copy under new names, then changed; its log entries before that date are
@@ -56,7 +56,7 @@ analyze-with-loupe/
 ├── scripts/docs_tool.py            the section tool: `split` / `join` / `index` for the documents, `check` (indexes, section files, skills, paths, § citations) and `budget` (what each skill and the command load)
 └── runs/<stamp>-<slug>/            one folder per run (state.json makes runs resumable: /analyze-with-loupe resume <run-dir>; `next_skill` names the phase to continue)
 
-~/.claude/skills/awl-*/SKILL.md     the 19 phase skills (see above)
+~/.claude/skills/awl-*/SKILL.md     the 20 phase skills (see above)
 ~/.claude/commands/analyze-with-loupe.md   the router
 ```
 
@@ -96,8 +96,16 @@ upload answer is kept as a capture too, so `awl.py hf-put --capture <id>` upload
 (PreToolUse of Read: refuses a whole-file read of `awl.py`, `models/index.json`, the catalog snapshot and the backups; a read with an offset/limit
 passes). Build prompt for the app: `Documents/prompts/loupe.txt`.
 
-## QC fixes (contract item 27), pilot first (26), the stalled agent, the request freeze and the planner contract (28–30)
-At the start of a Recreate or Create run the user chooses `ask` (from the first video on, a fix generation after a QC finding waits for the user's yes: the production agent
+## The Free sub-mode (contract item 17, A6f)
+The third Analyze sub-mode: the user's own requirement, written at the start and kept verbatim in `RUN/00-inventory/requirement.md`, decides what the videos achieve and
+how (how many, what happens, the product and its use, references edited or re-made or only studied, length, text, sound), with references analysed first (A1–A5, then
+`awl-free-plan`) or from the requirement and the assets alone (`awl-analyze-prepare` hands off straight to `awl-free-plan`). The free plan (`20-analysis/free-plan.md`)
+labels every line [U], [E] or [I], lists the past misses that touch the requirement (`T qc-brief` per product, no model call), is confirmed by the user once, and gives
+every video its kind (`state.json → videos_kind`, `recreate` or `create`), which selects the branch of every per-video step. The pipeline keeps the hard rules, the locked
+model's own prompting and official examples (X2), the plan discipline, the QC stack, Loupe's hints and consults, the CapCut assembly and the deliverables.
+
+## QC fixes (contract item 27, every Analyze sub-mode), pilot first (26), the stalled agent, the request freeze and the planner contract (28–30)
+At the start of a Recreate, Create or Free run the user chooses `ask` (from the first video on, a fix generation after a QC finding waits for the user's yes: the production agent
 prepares the corrected request and stops with a `fix_proposal`, the main session asks with one question per waiting video, `Fix it` / `Keep this take` / `Fix it, and stop asking`)
 or `auto` (the agent submits its one diagnosed regeneration itself); `state.json → qc_fixes`, the contract's "QC fixes" line. Local post-fixes and CapCut fixes never ask; Edit
 Mode reviews every attempt anyway. With more than four videos the first one runs through its QC before the rest are planned (26). A production agent whose output folder has not
