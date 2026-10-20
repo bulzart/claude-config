@@ -1723,6 +1723,334 @@ def cmd_prep_all(a):
         0 if not errors else 1)
 
 
+
+# --------------------------------------------------------------------------- run inspection (gather-only: facts for the agent, no verdict)
+
+_PATH_HINT = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\|/|(?:00-inventory|10-media|20-analysis|30-assets|40-briefs|50-requests|60-outputs|deliverables|logs)[\\/])")
+
+
+def _walk_paths(obj, run_dir, prefix="", out=None):
+    """Every string of a JSON document that looks like a file path (absolute, or a run sub-folder path), with the dotted key it sits under."""
+    out = [] if out is None else out
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            _walk_paths(v, run_dir, f"{prefix}.{k}" if prefix else str(k), out)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            _walk_paths(v, run_dir, f"{prefix}[{i}]", out)
+    elif isinstance(obj, str) and len(obj) < 400 and _PATH_HINT.match(obj) and "://" not in obj and "<" not in obj:
+        p = Path(obj)
+        if not p.is_absolute():
+            p = run_dir / obj
+        out.append((prefix, obj, p))
+    return out
+
+
+# what the skills' hand-offs have written by each stage (facts to compare with, not a gate): (state keys, run files)
+STAGE_EXPECTS = {
+    "created": (["run_id", "mode", "source"], []),
+    "started": (["model", "model_locked", "loupe"], []),
+    "prepared": (["model"], ["00-inventory/inventory.json", "10-media/index.md"]),
+    "analyzed": (["model"], ["20-analysis/cards"]),
+    "counted": (["requested_videos"], ["20-analysis/cards"]),
+    "planned": (["requested_videos"], ["20-analysis/cards"]),
+    "asset_planned": (["asset_plan"], ["30-assets/asset-plan.md"]),
+    "producing": (["asset_plan", "higgsfield.folder_id", "assets.uploads"], ["50-requests/agent-contract.md"]),
+    "produced": (["videos"], ["deliverables/README.md"]),
+    "editing": (["video"], ["00-inventory/inventory.json"]),
+    "edited": (["videos"], []),
+    "done": (["videos"], []),
+}
+
+
+def _state_of(run) -> tuple:
+    rd = resolve_run(run)
+    p = rd / "state.json"
+    if not p.is_file():
+        fail(f"state.json not found in {rd}", 2)
+    return rd, json.loads(p.read_text(encoding="utf-8"))
+
+
+def cmd_status(a):
+    """Where a run stands, from its files only: stage, next_skill, next_step, the current video, videos and submissions by status,
+    flagged rows (a count), credits recorded, the Loupe flag of the run (and whether Loupe answers now), the QC consults and hints
+    saved, and every file a state.json key points to that does not exist. Reads; writes nothing; decides nothing."""
+    rd, st = _state_of(a.run)
+    vids = [v for v in st.get("videos") or [] if isinstance(v, dict)]
+    subs = [s for s in st.get("submissions") or [] if isinstance(s, dict)]
+    by_v = {}
+    for v in vids:
+        by_v[str(v.get("status") or "?")] = by_v.get(str(v.get("status") or "?"), 0) + 1
+    by_s = {}
+    for s in subs:
+        by_s[str(s.get("status") or "?")] = by_s.get(str(s.get("status") or "?"), 0) + 1
+    missing = [{"key": k, "path": raw} for k, raw, p in _walk_paths(st, rd) if not p.exists()]
+    loupe = {"recorded": st.get("loupe") if "loupe" in st else "none (counts as up)"}
+    if not a.no_loupe:
+        try:
+            h = _lc().health()
+            loupe["running"] = bool(h)
+        except Exception as e:  # noqa: BLE001
+            loupe["running"] = False
+            loupe["error"] = str(e)[:120]
+    plans = sorted(p.name for p in (rd / "40-briefs").glob("video-*-plan.md")) if (rd / "40-briefs").is_dir() else []
+    briefs = sorted(p.name for p in (rd / "40-briefs").glob("video-*-brief.md")) if (rd / "40-briefs").is_dir() else []
+    reqs = sorted(p.name for p in (rd / "50-requests").glob("video-*request.json")) if (rd / "50-requests").is_dir() else []
+    out({"ok": True, "run": rd.name, "run_dir": str(rd), "mode": st.get("mode"), "analyze_submode": st.get("analyze_submode"),
+         "model": st.get("model"), "stage": st.get("stage"), "next_skill": st.get("next_skill"), "next_step": st.get("next_step"),
+         "video": st.get("video"), "updated": st.get("updated"), "requested_videos": st.get("requested_videos"),
+         "audio_ingest": st.get("audio_ingest"),
+         "videos": {"recorded": len(vids), "by_status": by_v, "done": [v.get("video") for v in vids if v.get("status") == "done"],
+                    "blocked": [{"video": v.get("video"), "blocker": v.get("blocker")} for v in vids if v.get("status") == "blocked"]},
+         "submissions": {"total": len(subs), "by_status": by_s, "open": sum(1 for s in subs if s.get("status") in LEDGER_OPEN),
+                         "flagged": sum(1 for s in subs if s.get("flagged"))},
+         "credits": {"start": st.get("credits_start"), "recorded_in_videos": round(sum(float(v.get("credits") or 0) for v in vids), 2)},
+         "loupe": loupe, "files": {"plans": len(plans), "briefs": len(briefs), "requests": len(reqs),
+                                   "qc_consults": len(list((rd / "60-outputs").glob("video-*/qc-consult.json"))) if (rd / "60-outputs").is_dir() else 0,
+                                   "hints": len(list((rd / "40-briefs").glob("video-*-hints.json"))) if (rd / "40-briefs").is_dir() else 0,
+                                   "agent_contract": (rd / "50-requests" / "agent-contract.md").is_file()},
+         "missing_files": missing[:40], "missing_files_total": len(missing)})
+
+
+def _git_dirty(paths: list) -> dict:
+    try:
+        cp = subprocess.run(["git", "-C", str(ATP_HOME.parent), "status", "--porcelain", "--", *paths], capture_output=True, text=True,
+                            encoding="utf-8", errors="replace", timeout=30)
+        head = subprocess.run(["git", "-C", str(ATP_HOME.parent), "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=30)
+        rows = [ln for ln in cp.stdout.splitlines() if ln.strip()]
+        return {"head": head.stdout.strip(), "dirty_paths": len(rows), "first": [r[:80] for r in rows[:5]]}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)[:120]}
+
+
+def cmd_doctor(a):
+    """What this machine and this library have, as facts on one JSON line: the interpreter, ffmpeg/ffprobe, the optional Python
+    modules, the cached speech models, the config paths, the MCP servers registered in ~/.claude.json (read only; nothing is called),
+    the hooks, Loupe (health and library size), the docs check, git (dirty paths of this library), free disk under the runs root; with
+    --run, the state keys and files the skills' hand-offs have written by the run's stage. Nothing here is a verdict."""
+    import importlib.util
+    import importlib.metadata as im
+    import platform
+
+    def mod(name, dist=None):
+        ok = importlib.util.find_spec(name) is not None
+        ver = None
+        if ok:
+            try:
+                ver = im.version(dist or name)
+            except Exception:  # noqa: BLE001
+                ver = "?"
+        return {"present": ok, "version": ver}
+
+    def tool(name):
+        try:
+            p = find_tool(name)
+        except Exception:  # noqa: BLE001
+            p = None
+        v = None
+        if p:
+            try:
+                cp = subprocess.run([p, "-version"], capture_output=True, text=True, timeout=10)
+                v = (cp.stdout or cp.stderr).splitlines()[0][:60] if (cp.stdout or cp.stderr) else None
+            except Exception:  # noqa: BLE001
+                v = None
+        return {"path": p, "version": v}
+
+    cfg = load_config()
+    cache = Path.home() / ".cache" / "huggingface" / "hub"
+    whisper_models = sorted(d.name.split("--")[-1] for d in cache.glob("models--*faster-whisper*")) if cache.is_dir() else []
+    drafts = Path(cfg_get("capcut.drafts_dir") or "")
+    cfg_facts = {"python_in_config_exists": Path(str(cfg.get("python") or "")).is_file(), "runs_root": str(runs_root()), "runs_root_exists": runs_root().is_dir(),
+                 "capcut_drafts_dir_exists": drafts.is_dir(), "capcut_template_exists": (drafts / str(cfg_get("capcut.template_draft") or "")).is_dir() if drafts.is_dir() else False,
+                 "text_style_learned": bool(cfg_get("capcut.text_style.learned")), "text_style_locked": bool(cfg_get("capcut.text_style.locked")),
+                 "whisper_model": cfg.get("whisper_model")}
+    try:
+        idx = json.loads((ATP_HOME / "models" / "index.json").read_text(encoding="utf-8"))
+        cfg_facts["models_in_index"] = len(idx.get("models", {}))
+    except Exception as e:  # noqa: BLE001
+        cfg_facts["models_index_error"] = str(e)[:100]
+    mcp = {}
+    try:
+        cj = json.loads((Path.home() / ".claude.json").read_text(encoding="utf-8"))
+        names = sorted((cj.get("mcpServers") or {}).keys())
+        mcp = {"registered": names, "higgsfield": "higgsfield" in names, "capcut": "capcut" in names}
+    except Exception as e:  # noqa: BLE001
+        mcp = {"error": str(e)[:100]}
+    hooks = {}
+    try:
+        sj = json.loads((ATP_HOME.parent / "settings.json").read_text(encoding="utf-8"))
+        for ev, groups in (sj.get("hooks") or {}).items():
+            for g in groups:
+                for h in g.get("hooks", []):
+                    m = re.search(r"([A-Za-z0-9_]+\.py)", str(h.get("command", "")))
+                    if m:
+                        hooks.setdefault(m.group(1), []).append(ev)
+        hooks = {k: {"events": sorted(set(v)), "exists": (ATP_HOME.parent / "hooks" / k).is_file()} for k, v in hooks.items()}
+    except Exception as e:  # noqa: BLE001
+        hooks = {"error": str(e)[:100]}
+    loupe = {"skipped": True}
+    if not a.no_loupe:
+        try:
+            lc = _lc()
+            h = lc.health()
+            loupe = {"running": bool(h), "url": lc.base_url()}
+            if h:
+                st_, d = lc.call("GET", "/api/qc/samples?limit=1", key_name="qc", timeout=10)
+                loupe["library_size"] = d.get("library_size") if st_ == 200 and isinstance(d, dict) else None
+                loupe["qc_key_ok"] = st_ == 200
+            loupe["keeper"] = "not readable with the qc key (Loupe's keeper page is admin-only; a sync call is not read-only)"
+        except Exception as e:  # noqa: BLE001
+            loupe = {"running": False, "error": str(e)[:120]}
+    docs = {"skipped": True}
+    if not a.no_docs:
+        try:
+            cp = subprocess.run([sys.executable, "-X", "utf8", str(ATP_HOME / "scripts" / "docs_tool.py"), "check"], capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=120)
+            last = [ln for ln in cp.stdout.splitlines() if ln.strip()]
+            docs = {"exit": cp.returncode, "summary": last[-1][:160] if last else None}
+        except Exception as e:  # noqa: BLE001
+            docs = {"error": str(e)[:120]}
+    try:
+        du = shutil.disk_usage(str(runs_root() if runs_root().is_dir() else ATP_HOME))
+        disk = {"free_gb": round(du.free / 1e9, 1), "total_gb": round(du.total / 1e9, 1)}
+    except Exception as e:  # noqa: BLE001
+        disk = {"error": str(e)[:100]}
+    res = {"ok": True, "python": {"executable": sys.executable, "version": platform.python_version()},
+           "tools": {"ffmpeg": tool("ffmpeg"), "ffprobe": tool("ffprobe"), "capcut_cli": shutil.which("capcut"), "claude_cli": shutil.which("claude") or shutil.which("claude.cmd")},
+           "modules": {"pypdf": mod("pypdf"), "PIL": mod("PIL", "Pillow"), "numpy": mod("numpy"), "faster_whisper": mod("faster_whisper", "faster-whisper"),
+                       "rapidocr": mod("rapidocr_onnxruntime", "rapidocr-onnxruntime"), "librosa": mod("librosa"), "requests": mod("requests")},
+           "whisper_models_cached": whisper_models, "config": cfg_facts, "mcp": mcp, "hooks": hooks, "loupe": loupe, "docs_check": docs,
+           "git": _git_dirty([str(ATP_HOME), str(ATP_HOME.parent / "commands" / "analyze-then-pick.md"), str(ATP_HOME.parent / "skills")]), "disk": disk}
+    if a.run:
+        rd, st = _state_of(a.run)
+        stage = str(st.get("stage") or "")
+        keys, files = STAGE_EXPECTS.get(stage, ([], []))
+        res["run"] = {"run": rd.name, "stage": stage, "next_skill": st.get("next_skill"),
+                      "keys_expected_by_stage": keys, "keys_missing": [k for k in keys if _get_dotted(st, k) in (None, "", [], {})],
+                      "files_expected_by_stage": files, "files_missing": [f for f in files if not (rd / f).exists()],
+                      "note": "expected = what the skills' hand-offs have written by this stage; a missing one is a fact to explain, not a verdict",
+                      "stage_known": stage in STAGE_EXPECTS}
+    out(res)
+
+
+_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+
+def _ids_in(obj, acc: set):
+    if isinstance(obj, dict):
+        for v in obj.values():
+            _ids_in(v, acc)
+    elif isinstance(obj, list):
+        for v in obj:
+            _ids_in(v, acc)
+    elif isinstance(obj, str):
+        for m in _UUID.finditer(obj):
+            acc.add(m.group(0))
+    return acc
+
+
+def cmd_lint_run(a):
+    """Cross-checks of a run's own files, as facts: run paths that a plan, pattern card, brief, request or the contract cites and that
+    do not exist (NN placeholders skipped); the reference id a plan's header names against state.json -> asset_plan for that video
+    number; media ids in a request that no uploads record of the run knows; the length of every request prompt; the preset notice
+    bookkeeping (ledger rows mentioning a preset against higgsfield.declined_preset_id); whether the agent contract exists and names
+    the run. The agent reads the lists and decides what, if anything, is wrong."""
+    rd, st = _state_of(a.run)
+    plan_refs = {str(r.get("video")): r.get("ref") for r in st.get("asset_plan") or [] if isinstance(r, dict)}
+    pat = re.compile(r"(?:<RUN>|\bRUN|[A-Za-z]:[\\/](?:[^\s`'\"<>|]+[\\/])*?" + re.escape(rd.name) + r")[\\/]([0-9A-Za-z_./\\-]+\.(?:md|json|mp4|png|jpg|jpeg|txt|wav|mka|m4a))")
+    cited, missing = 0, []
+    docs = []
+    for sub, glob_ in (("40-briefs", "*.md"), ("50-requests", "*.md"), ("50-requests", "*.txt")):
+        if (rd / sub).is_dir():
+            docs += sorted((rd / sub).glob(glob_))
+    for f in docs:
+        try:
+            t = f.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for m in pat.finditer(t):
+            rel = m.group(1).replace("\\", "/")
+            if "NN" in rel or "<" in rel:
+                continue
+            cited += 1
+            if not (rd / rel).exists():
+                missing.append({"file": f.name, "path": rel})
+    numbering = []
+    for f in sorted((rd / "40-briefs").glob("video-*-plan.md")) if (rd / "40-briefs").is_dir() else []:
+        nn = f.name.split("-")[1]
+        head = f.read_text(encoding="utf-8", errors="replace")[:600]
+        refs = sorted(set(re.findall(r"\bV\d{2}\b", head)))
+        want = plan_refs.get(nn)
+        if want and want not in refs:
+            numbering.append({"file": f.name, "video": nn, "asset_plan_ref": want, "refs_in_header": refs})
+    known = _ids_in(st.get("assets", {}).get("uploads") or {}, set()) | _ids_in(st.get("higgsfield") or {}, set())
+    for f in (rd / "50-requests").glob("video-*-uploads.json") if (rd / "50-requests").is_dir() else []:
+        try:
+            _ids_in(json.loads(f.read_text(encoding="utf-8")), known)
+        except (OSError, ValueError):
+            pass
+    unknown, prompts = [], []
+    for f in sorted((rd / "50-requests").glob("video-*request.json")) if (rd / "50-requests").is_dir() else []:
+        try:
+            j = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            unknown.append({"file": f.name, "error": str(e)[:80]})
+            continue
+        params = j.get("params") if isinstance(j.get("params"), dict) else j
+        ids = _ids_in(params, set())
+        for i in sorted(ids - known):
+            unknown.append({"file": f.name, "id": i})
+        pr = params.get("prompt") if isinstance(params, dict) else None
+        if isinstance(pr, str):
+            prompts.append({"file": f.name, "chars": len(pr)})
+    preset_rows = []
+    for s in st.get("submissions") or []:
+        notes = " ".join(str(h.get("note") or "") for h in (s.get("history") or []) if isinstance(h, dict))
+        if "preset" in notes.lower():
+            preset_rows.append({"video": s.get("video"), "attempt": s.get("attempt"), "status": s.get("status")})
+    contract = rd / "50-requests" / "agent-contract.md"
+    ct = contract.read_text(encoding="utf-8", errors="replace") if contract.is_file() else ""
+    out({"ok": True, "run": rd.name,
+         "cited_paths": {"documents": len(docs), "checked": cited, "missing": missing[:40], "missing_total": len(missing)},
+         "video_numbering": {"asset_plan_videos": len(plan_refs), "plans_whose_header_lacks_the_asset_plan_ref": numbering},
+         "media_ids": {"known_from_uploads_and_higgsfield": len(known), "unknown_in_requests": unknown[:40], "unknown_total": len(unknown)},
+         "prompts": prompts, "prompt_note": "the agent contract names 5000 characters as the service's limit; compare",
+         "preset": {"declined_preset_id": (st.get("higgsfield") or {}).get("declined_preset_id"), "ledger_rows_mentioning_preset": preset_rows},
+         "contract": {"exists": contract.is_file(), "names_this_run": rd.name in ct, "loupe_line": bool(re.search(r"^Loupe: (up|down)", ct, re.M)),
+                      "audio_line": bool(re.search(r"^Audio ingest: ", ct, re.M))}})
+
+
+def cmd_cost_report(a):
+    """Credits as the run recorded them, as information (never a gate): credits_start, every job's credits from videos[] (result.json
+    as appended by the main session), the submissions by status, the numbers each brief states beside the word 'credits' (as written,
+    not summed as truth), and, when --balance is given (the Higgsfield balance tool's answer), start minus balance."""
+    rd, st = _state_of(a.run)
+    vids = [v for v in st.get("videos") or [] if isinstance(v, dict)]
+    jobs = []
+    for v in vids:
+        for j in v.get("jobs") or []:
+            if isinstance(j, dict):
+                jobs.append({"video": v.get("video"), "clip": j.get("clip"), "job_id": j.get("job_id"), "credits": j.get("credits"), "attempts": j.get("attempts")})
+    subs = [s for s in st.get("submissions") or [] if isinstance(s, dict)]
+    by_s = {}
+    for s in subs:
+        by_s[str(s.get("status") or "?")] = by_s.get(str(s.get("status") or "?"), 0) + 1
+    briefs = {}
+    for f in sorted((rd / "40-briefs").glob("video-*-brief.md")) if (rd / "40-briefs").is_dir() else []:
+        t = f.read_text(encoding="utf-8", errors="replace")
+        nums = [float(m.group(1)) for m in re.finditer(r"(\d+(?:\.\d+)?)\s*credits?\b", t)]
+        if nums:
+            briefs[f.name.split("-")[1]] = nums[:12]
+    start = st.get("credits_start")
+    res = {"ok": True, "run": rd.name, "credits_start": start, "videos_recorded": len(vids),
+           "credits_in_videos": round(sum(float(v.get("credits") or 0) for v in vids), 2), "jobs": jobs,
+           "submissions": {"total": len(subs), "by_status": by_s},
+           "brief_credit_mentions": briefs, "balance": a.balance,
+           "spent_by_balance": round(float(start) - float(a.balance), 2) if a.balance is not None and isinstance(start, (int, float)) else None,
+           "note": "information only: the ledger records no cost; videos[].credits comes from each result.json; pass --balance <n> from the balance tool to see start minus balance"}
+    out(res)
+
+
 # --------------------------------------------------------------------------- targeted frames
 
 def _parse_times(s: str) -> list:
@@ -4715,6 +5043,21 @@ def main():
     p.add_argument("--product-details", help="its shape, size, opening and natural posture, from its registry row")
     p.add_argument("--beats", help="one line per beat of the plan: what happens, the product's form and state, the camera (2000 characters at most)")
     p.set_defaults(fn=cmd_plan_hints, kinds=None)
+
+    p = sp.add_parser("status", help="where a run stands, from its files (gather-only): stage, next_skill, videos and submissions by status, credits recorded, Loupe, missing files")
+    p.add_argument("--run", required=True); p.add_argument("--no-loupe", action="store_true", help="do not ask Loupe whether it is running")
+    p.set_defaults(fn=cmd_status)
+
+    p = sp.add_parser("doctor", help="what this machine and library have (read-only, one JSON line): python, ffmpeg, modules, config paths, MCP registration, hooks, Loupe, docs check, git, disk; --run adds the run's stage keys")
+    p.add_argument("--run"); p.add_argument("--no-loupe", action="store_true"); p.add_argument("--no-docs", action="store_true", help="skip docs_tool check")
+    p.set_defaults(fn=cmd_doctor)
+
+    p = sp.add_parser("lint-run", help="cross-checks of a run's files as facts (gather-only): cited paths that do not exist, video numbers vs asset_plan, media ids vs uploads, prompt lengths, preset bookkeeping, the contract")
+    p.add_argument("--run", required=True); p.set_defaults(fn=cmd_lint_run)
+
+    p = sp.add_parser("cost-report", help="credits as the run recorded them (information, never a gate): credits_start, jobs from videos[], submissions, brief mentions, --balance")
+    p.add_argument("--run", required=True); p.add_argument("--balance", type=float, help="the Higgsfield balance now (from the balance tool), to print start minus balance")
+    p.set_defaults(fn=cmd_cost_report)
 
     p = sp.add_parser("capcut-name"); p.add_argument("--video", required=True, help="the run's video number")
     p.add_argument("--date", help="YYYY-MM-DD (default: today)"); p.add_argument("--store", help="CapCut drafts dir")
