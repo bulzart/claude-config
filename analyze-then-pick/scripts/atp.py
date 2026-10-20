@@ -734,8 +734,31 @@ def audio_analysis(video: str, info: dict, workdir: Path) -> dict:
     return res
 
 
+AUDIO_INGEST = ("whisper", "frames-only")      # state.json -> audio_ingest: the user's choice at the start (contract item 24); no default anywhere
+AUDIO_INGEST_HELP = ("state.json -> audio_ingest is not set (whisper | frames-only): the user is asked once at the start (atp-start step 6, contract item 24); "
+                     "store the answer with `T state --run RUN set audio_ingest=whisper|frames-only`")
+
+
+def audio_ingest_of(run_dir: Path) -> str:
+    """The run's speech-to-text choice from its state.json; a missing or unknown value stops with the error that names the key."""
+    p = Path(run_dir) / "state.json"
+    try:
+        v = json.loads(p.read_text(encoding="utf-8")).get("audio_ingest")
+    except (OSError, ValueError):
+        v = None
+    if v not in AUDIO_INGEST:
+        fail(AUDIO_INGEST_HELP + (f" (found {v!r})" if v else ""), 2)
+    return v
+
+
 def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str = "auto") -> dict:
     res = {"engine": None, "has_speech": False, "segments": []}
+    if os.environ.get("ATP_TRANSCRIBE_STUB"):           # tests: no model is downloaded or run; the shape of a real answer
+        res.update({"engine": "stub", "model": "stub", "language": "en", "language_probability": 1.0,
+                    "segments": [{"start": 0.5, "end": 1.5, "text": "stub words here",
+                                  "words": [{"w": "stub", "s": 0.5, "e": 0.8, "p": 1.0}, {"w": "words", "s": 0.8, "e": 1.1, "p": 1.0}, {"w": "here", "s": 1.1, "e": 1.5, "p": 1.0}]}]})
+        res.update({"has_speech": True, "n_words": 3, "speech_seconds": 1.0, "wpm_speech_only": 180.0})
+        return res
     try:
         from faster_whisper import WhisperModel  # type: ignore
         model = None
@@ -927,12 +950,18 @@ def second_timeline(dur: float, shots: list, cuts: list, peaks: list, statics: l
 
 def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, dense_fps: float = 10.0,
                static_threshold: float = 2.5, whisper_model: str = "small", language: str = "auto",
-               do_transcript: bool = True, do_ocr: bool = True, ocr_budget: int = 12,
+               audio_ingest: str = None, do_ocr: bool = True, ocr_budget: int = 12,
                max_frames: int = 1800, hook_s: float = 3.0) -> dict:
     t0 = time.time()
+    if audio_ingest not in AUDIO_INGEST:
+        raise RuntimeError(AUDIO_INGEST_HELP)
+    whisper = audio_ingest == "whisper"
     odir.mkdir(parents=True, exist_ok=True)
-    for stale in ("frames", "sheets", "_work"):
-        shutil.rmtree(odir / stale, ignore_errors=True)
+    for stale in ("frames", "sheets", "_work", "transcript.json", "transcript.txt"):
+        if (odir / stale).is_dir():
+            shutil.rmtree(odir / stale, ignore_errors=True)
+        else:
+            (odir / stale).unlink(missing_ok=True)
     info = media_summary(video)
     if not info.get("has_video"):
         raise RuntimeError("no video stream")
@@ -1002,12 +1031,21 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
     t = time.time()
     aud = audio_analysis(video, info, odir / "audio")
     write_json(odir / "audio.json", aud)
-    trans = {"engine": None, "has_speech": False, "segments": [], "skipped": not do_transcript}
-    if do_transcript and aud.get("wav_16k"):
-        trans = transcribe(aud["wav_16k"], odir / "audio", whisper_model, language)
-    write_json(odir / "transcript.json", trans)
-    txt = [f"[{ts_label(s['start'])}-{ts_label(s['end'])}] {s['text']}" for s in trans.get("segments", [])]
-    write_text(odir / "transcript.txt", "\n".join(txt) if txt else "No speech detected.")
+    # speech-to-text only when the run chose it; frames only = no transcript file at all, and every reader is told 'audio not ingested'
+    if whisper:
+        trans = {"ingested": True, "mode": "whisper", "has_audio": bool(aud.get("wav_16k")), "engine": None, "has_speech": False, "segments": []}
+        if aud.get("wav_16k"):
+            trans.update(transcribe(aud["wav_16k"], odir / "audio", whisper_model, language))
+        else:
+            trans["note"] = "no audio stream in this video: nothing to transcribe"
+        write_json(odir / "transcript.json", trans)
+        txt = [f"[{ts_label(s['start'])}-{ts_label(s['end'])}] {s['text']}" for s in trans.get("segments", [])]
+        write_text(odir / "transcript.txt", "\n".join(txt) if txt else
+                   ("No audio stream in this video (nothing to transcribe)." if not aud.get("wav_16k") else
+                    f"No speech recognised: {trans.get('engine') or 'no speech engine ran (' + str(trans.get('faster_whisper_error', ''))[:120] + ')'} found 0 words."))
+    else:
+        trans = {"ingested": False, "mode": "frames-only", "has_audio": bool(aud.get("wav_16k")), "engine": None, "segments": []}
+        txt = []
     timings["audio"] = round(time.time() - t, 1)
 
     # on-screen text sample (feeds the no-visible-text rule and the source-artifact exclusion list)
@@ -1042,8 +1080,9 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
                         "speech_starts_s": first_word,
                         "mean_change_first_1s": round(statistics.fmean([w["mean_change"] for w in windows[:2]]), 4) if windows else None},
                "audio": {k: aud.get(k) for k in ("has_audio", "integrated_lufs", "lra_lu", "true_peak_dbfs", "note")},
-               "speech": {k: trans.get(k) for k in ("engine", "model", "language", "has_speech", "n_words",
-                                                    "speech_seconds", "wpm_speech_only")},
+               "speech": ({k: trans.get(k) for k in ("ingested", "mode", "has_audio", "engine", "model", "language", "has_speech", "n_words",
+                                                     "speech_seconds", "wpm_speech_only", "note")} if whisper
+                          else {"ingested": False, "mode": "frames-only", "has_audio": bool(aud.get("wav_16k")), "note": "audio not ingested (frames only): what was said is unknown, not absent"}),
                "loop_similarity_first_last": loop,
                "ocr_spans": (ocr.get("spans") or [])[:40] if ocr.get("available") else None,
                "sheets": sheets, "timings_s": timings, "elapsed_s": round(time.time() - t0, 1)}
@@ -1051,7 +1090,8 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
 
     # human-readable companions
     T = [f"# {vid} — per-second timeline (sheets + this table = one continuous sequence)", "",
-         "| sec | shot | events | speech in this second | audio max dB | on-screen text (OCR sample) |",
+         ("| sec | shot | events | speech in this second | audio max dB | on-screen text (OCR sample) |" if whisper else
+          "| sec | shot | events | speech (audio not ingested: frames only) | audio max dB | on-screen text (OCR sample) |"),
          "|---|---|---|---|---|---|"]
     for r in rows:
         T.append(f"| {r['sec']:>3} | S{r['shot']:02d} | {'; '.join(r['events'])} | {' '.join(r['words'])} | "
@@ -1067,8 +1107,9 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
          + (f" — NOTE: {fps_note}" if fps_note else ""),
          f"- **Pacing** (measured): {pacing['shots']} shots, {pacing['cuts']} cuts, median shot {pacing['median_shot_s']} s, "
          f"{pacing['cuts_per_10s']} cuts/10 s, first cut at {pacing['first_cut_s']} s, {pacing['cuts_in_first_3s']} cut(s) in the first 3 s",
-         f"- **Speech**: {trans.get('n_words', 0)} words via {trans.get('engine')} ({trans.get('language')}); "
-         f"speech starts at {first_word} s; {trans.get('wpm_speech_only')} wpm (speech-only)",
+         (f"- **Speech**: {trans.get('n_words', 0)} words via {trans.get('engine')} ({trans.get('language')}); "
+          f"speech starts at {first_word} s; {trans.get('wpm_speech_only')} wpm (speech-only)" + (f" — {trans['note']}" if trans.get('note') else "")) if whisper else
+         "- **Speech**: audio not ingested (frames only, `state.json → audio_ingest`): what is said is unknown, not absent; hook, address and sync anchors come from the frames, the cuts, the sound numbers and the on-screen text",
          f"- **Audio**: {aud.get('integrated_lufs')} LUFS integrated, LRA {aud.get('lra_lu')}, "
          f"{len(aud.get('silences') or [])} silence span(s) ≥0.4 s{(' — ' + aud['note']) if aud.get('note') else ''}",
          f"- **Loop similarity** (first vs last frame, 0–1): {loop}",
@@ -1079,8 +1120,11 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
     L += ["", "## Shots (heuristic cut detector — confirm on the storyboard)", "",
           "| shot | start | end | dur |", "|---|---|---|---|"]
     L += [f"| S{s['shot']:02d} | {s['start']:.2f} | {s['end']:.2f} | {s['dur']:.2f} |" for s in shots[:120]]
-    L += ["", "## Transcript (machine ASR — evidence to verify, not verbatim truth)", ""]
-    L += txt[:150] or ["No speech detected."]
+    if whisper:
+        L += ["", "## Transcript (machine ASR — evidence to verify, not verbatim truth)", ""]
+        L += txt[:150] or [("No audio stream in this video (nothing to transcribe)." if not aud.get("wav_16k") else "No speech recognised (the speech engine found 0 words).")]
+    else:
+        L += ["", "## Transcript: audio not ingested (frames only)", "", "No speech-to-text ran for this run; the speech column above is empty by choice. Never write 'no speech' or 'silent' for this video."]
     if ocr.get("available"):
         L += ["", f"## On-screen text sample (OCR on {ocr.get('frames_scanned')} frames)", ""]
         for sp in (ocr.get("spans") or [])[:40]:
@@ -1095,19 +1139,21 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
     return summary
 
 
-def _media_kwargs(a) -> dict:
+def _media_kwargs(a, audio_ingest: str) -> dict:
     return dict(base_fps=a.fps, dense_fps=a.dense_fps, static_threshold=a.static_threshold,
-                whisper_model=a.whisper_model, language=a.language, do_transcript=not a.no_transcript,
+                whisper_model=a.whisper_model, language=a.language, audio_ingest=audio_ingest,
                 do_ocr=not a.no_ocr, ocr_budget=a.ocr_frames, max_frames=a.max_frames)
 
 
 def cmd_prep_video(a):
+    if a.audio_ingest not in AUDIO_INGEST:
+        fail("prep-video needs --audio-ingest whisper|frames-only (the run's choice, state.json -> audio_ingest; prep-all reads it by itself)", 2)
     try:
-        s = prep_video(a.video, Path(a.out), a.id or "V", **_media_kwargs(a))
+        s = prep_video(a.video, Path(a.out), a.id or "V", **_media_kwargs(a, a.audio_ingest))
     except Exception as e:
         fail(f"{type(e).__name__}: {e}")
-    out({"ok": True, "summary_md": str(Path(a.out) / "video.md"), "timeline_md": str(Path(a.out) / "timeline.md"),
-         "sheets": s["sheets"], "sampling": s["sampling"], "elapsed_s": s["elapsed_s"]})
+    out({"ok": True, "audio_ingest": a.audio_ingest, "summary_md": str(Path(a.out) / "video.md"), "timeline_md": str(Path(a.out) / "timeline.md"),
+         "sheets": s["sheets"], "sampling": s["sampling"], "speech": s.get("speech"), "elapsed_s": s["elapsed_s"]})
 
 
 # --------------------------------------------------------------------------- other media
@@ -1669,7 +1715,8 @@ def cmd_prep_all(a):
     inv = json.loads(inv_p.read_text(encoding="utf-8"))
     only = set(x.strip() for x in a.only.split(",")) if a.only else None
     media = run_dir / "10-media"
-    kw = _media_kwargs(a)
+    audio_ingest = audio_ingest_of(run_dir)          # the user's choice; no default: a run without it stops here
+    kw = _media_kwargs(a, audio_ingest)
     lines, errors, done = {}, [], []
 
     def do_item(it):
@@ -1719,7 +1766,7 @@ def cmd_prep_all(a):
     index = media / ("examples-index.md" if examples else "index.md")
     write_text(index, ("# Examples index (study only)" if examples else "# Media index") + "\n\n" +
                "\n".join(lines[i] for i in order if i in lines))
-    out({"ok": not errors, "set": a.inv_set, "prepared": sorted(done), "errors": errors, "index": str(index)},
+    out({"ok": not errors, "set": a.inv_set, "audio_ingest": audio_ingest, "prepared": sorted(done), "errors": errors, "index": str(index)},
         0 if not errors else 1)
 
 
@@ -2047,7 +2094,7 @@ def cmd_cost_report(a):
            "submissions": {"total": len(subs), "by_status": by_s},
            "brief_credit_mentions": briefs, "balance": a.balance,
            "spent_by_balance": round(float(start) - float(a.balance), 2) if a.balance is not None and isinstance(start, (int, float)) else None,
-           "note": "information only: the ledger records no cost; videos[].credits comes from each result.json; pass --balance <n> from the balance tool to see start minus balance"}
+           "note": "information only, never a gate: the ledger records no cost; videos[].credits comes from each result.json; pass --balance <n> from the balance tool to see start minus balance"}
     out(res)
 
 
@@ -2201,10 +2248,17 @@ def cmd_audio_profile(a):
         out({"ok": True, "file": str(src), "duration_s": round(dur, 2), "silent": True})
     hop = 512
     speech = []
-    if a.transcript and Path(a.transcript).exists():
-        tj = json.loads(Path(a.transcript).read_text(encoding="utf-8"))
-        speech = [(float(s.get("start", 0)), float(s.get("end", 0))) for s in tj.get("segments", [])
-                  if s.get("end") is not None]
+    speech_known = True
+    if a.transcript:
+        tp = Path(a.transcript)
+        if not tp.exists():
+            speech_known = False                 # frames only: no transcript file exists; the speech share is unknown, not zero
+        else:
+            tj = json.loads(tp.read_text(encoding="utf-8"))
+            if tj.get("ingested") is False:
+                speech_known = False
+            speech = [(float(s.get("start", 0)), float(s.get("end", 0))) for s in tj.get("segments", [])
+                      if s.get("end") is not None]
     cuts = []
     if a.cuts and Path(a.cuts).exists():
         cuts = [float(c["t"]) for c in json.loads(Path(a.cuts).read_text(encoding="utf-8")).get("cuts", [])]
@@ -2254,12 +2308,13 @@ def cmd_audio_profile(a):
     arc = "rising" if last - first > 3 else ("falling" if first - last > 3 else "steady")
     centroid = float(np.median(librosa.feature.spectral_centroid(y=y, sr=sr, hop_length=hop)))
     prof = {"ok": True, "file": str(src), "duration_s": round(dur, 2),
-            "speech_share": round(speech_share, 2), "non_speech_audible_share": round(nonspeech_share, 2),
-            "music_bed": music, "harmonic_ratio_non_speech": None if harm_ratio is None else round(harm_ratio, 2),
+            "speech_share": round(speech_share, 2) if speech_known else None, "non_speech_audible_share": round(nonspeech_share, 2),
+            "speech_note": None if speech_known else "audio not ingested (frames only): the speech share is not measured; the shares below treat every audible second as non-speech",
+            "music_bed": music if speech_known else "unknown: speech not separated (audio not ingested)", "harmonic_ratio_non_speech": None if harm_ratio is None else round(harm_ratio, 2),
             "tempo_bpm": round(tempo, 1), "beat_strength": round(pulse, 2),
             "energy_db_per_s": per_s, "energy_arc": arc,
             "hits": sorted(hits, key=lambda h: -h["strength"])[:12], "brightness_hz": round(centroid),
-            "reusable_whole": bool(music == "likely" and speech_share < 0.1),
+            "reusable_whole": bool(music == "likely" and speech_share < 0.1) if speech_known else None,
             "note": "measured cues, not listening: infer the role (dramatic / comic / suspense / hype) from these "
                     "numbers plus the visuals; 'reusable_whole' means no speech over it (rights still apply)"}
     write_json(dst, prof)
@@ -2954,6 +3009,11 @@ def cmd_captions(a):
     work = Path(a.out).parent / (Path(a.out).stem + "-captions")
     work.mkdir(parents=True, exist_ok=True)
     if a.from_speech:
+        mode = audio_ingest_of(resolve_run(a.run)) if a.run else a.audio_ingest
+        if mode not in AUDIO_INGEST:
+            fail("--from-speech runs speech-to-text: name the run (--run RUN, reads state.json -> audio_ingest) or pass --audio-ingest whisper", 2)
+        if mode != "whisper":
+            fail("--from-speech runs speech-to-text and this run is frames-only (state.json -> audio_ingest): time the captions with --spec from the frames and the cuts", 2)
         aud = audio_analysis(str(video), info, work / "audio")
         if not aud.get("wav_16k"):
             fail("no audio stream to time captions against")
@@ -4835,12 +4895,13 @@ def main():
         p.add_argument("--max-frames", type=int, default=cfg_get("analysis.max_baseline_frames", 1800))
         p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"))
         p.add_argument("--language", default="auto")
-        p.add_argument("--no-transcript", action="store_true")
         p.add_argument("--no-ocr", action="store_true")
         p.add_argument("--ocr-frames", type=int, default=cfg_get("analysis.ocr_frames", 12))
 
     p = sp.add_parser("prep-video"); p.add_argument("video"); p.add_argument("--out", required=True)
-    p.add_argument("--id"); media_opts(p); p.set_defaults(fn=cmd_prep_video)
+    p.add_argument("--id")
+    p.add_argument("--audio-ingest", choices=list(AUDIO_INGEST), help="the run's choice (state.json -> audio_ingest): whisper transcribes the audio; frames-only writes no transcript and says 'audio not ingested'")
+    media_opts(p); p.set_defaults(fn=cmd_prep_video)
 
     p = sp.add_parser("prep-all"); p.add_argument("--run", required=True); p.add_argument("--only")
     p.add_argument("--set", dest="inv_set", choices=["references", "examples"], default="references",
@@ -4931,7 +4992,9 @@ def main():
 
     p = sp.add_parser("captions"); p.add_argument("--video", required=True); p.add_argument("--out", required=True)
     p.add_argument("--spec", help="JSON: {style, presets, safe_area, uppercase, animation, events:[{start,end,text,preset,pos,animation}]}")
-    p.add_argument("--from-speech", action="store_true", help="time captions to the clip's own speech")
+    p.add_argument("--from-speech", action="store_true", help="time captions to the clip's own speech (speech-to-text: only when the run chose whisper)")
+    p.add_argument("--run", help="the run (reads state.json -> audio_ingest for --from-speech)")
+    p.add_argument("--audio-ingest", choices=list(AUDIO_INGEST), help="without --run: the choice --from-speech must honour")
     p.add_argument("--script", help="intended spoken wording (forces correct text onto ASR timing)")
     p.add_argument("--script-file"); p.add_argument("--words-per-caption", type=int, default=3)
     p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small")); p.add_argument("--language", default="auto")
