@@ -4124,6 +4124,35 @@ def cmd_capcut_text_style(a):
     out({"ok": True, "draft": str(d), **res}, 1 if a.check and res["texts_off_style"] else 0)
 
 
+
+def seam_profile(video, at: float, fps: float, half: float = 0.5, size=(72, 128)) -> dict:
+    """Per-frame mean luma and frame-to-frame mean absolute difference of `video` from at-half to at+half, at the video's own frame
+    rate (frames downscaled to `size`, grey). Numbers for the agent to read before a cut is trusted: a flash, a dissolve or a held
+    frame shows as a luma ramp or a difference run; nothing is judged here. rows = [t, luma, diff]."""
+    ff = find_tool("ffmpeg")
+    W, H = size
+    t0 = max(0.0, at - half)
+    cp = subprocess.run([ff, "-v", "error", "-nostdin", "-ss", f"{t0:.4f}", "-to", f"{at + half:.4f}", "-i", str(video),
+                         "-vf", f"scale={W}:{H},format=gray", "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True, timeout=300)
+    raw = cp.stdout
+    n = len(raw) // (W * H)
+    rows, prev = [], None
+    for i in range(n):
+        fr = raw[i * W * H:(i + 1) * W * H]
+        luma = sum(fr) / (W * H)
+        diff = (sum(abs(x - y) for x, y in zip(fr, prev)) / (W * H)) if prev is not None else 0.0
+        rows.append([round(t0 + i / (fps or 30.0), 3), round(luma, 1), round(diff, 1)])
+        prev = fr
+    if not rows:
+        return {"at": at, "frames": 0, "error": cp.stderr.decode("utf-8", "replace")[-200:] or "no frames decoded"}
+    lum = [r[1] for r in rows]
+    dif = [r[2] for r in rows[1:]] or [0.0]
+    k = max(range(1, len(rows)), key=lambda j: rows[j][2]) if len(rows) > 1 else 0
+    return {"at": at, "frames": n, "from": rows[0][0], "to": rows[-1][0], "luma_min": min(lum), "luma_max": max(lum),
+            "luma_at_cut": next((r[1] for r in rows if r[0] >= at - 1e-6), rows[-1][1]), "diff_max": max(dif), "diff_max_at": rows[k][0],
+            "rows": rows}
+
+
 def cmd_strip_inserts(a):
     """The reference minus its inserts (memes, film/TV snippets, reaction images from other sources), in
     ONE pass at the original resolution and fps: <out>/own.mp4 (original audio kept), <out>/own-silent.mp4
@@ -4167,17 +4196,50 @@ def cmd_strip_inserts(a):
                         "duration": round(t1 - t0, 3), "split_at": round(t0 - removed, 3)})
         removed += t1 - t0
     o = media_summary(own)
+    fps = info.get("fps") or 30.0
+    seams = []
+    for ins in inserts:
+        for edge, t in (("in", ins["source_in"]), ("out", ins["source_out"])):
+            seams.append({"insert": ins["insert"], "edge": edge, **seam_profile(a.video, t, fps)})
     mp = {"source": str(a.video), "source_duration": round(dur, 3), "own_duration": o.get("duration_s"),
           "expected_own_duration": round(dur - removed, 3), "inserts": inserts,
-          "own": str(own), "own_silent": str(silent)}
+          "own": str(own), "own_silent": str(silent), "seams": seams,
+          "seams_note": "per cut point of the SOURCE, 0.5 s either side at its own frame rate: rows = [t, mean luma 0-255, mean abs frame difference]; "
+                        "a luma ramp or a difference run across the cut means the cut sits inside a flash, a dissolve or a held frame (read it, then decide)"}
     write_json(od / "map.json", mp)
-    out({"ok": True, **mp, "map": str(od / "map.json")})
+    out({"ok": True, **{k: v for k, v in mp.items() if k != "seams"}, "seams": [{k: v for k, v in s.items() if k != "rows"} for s in seams],
+         "seam_rows_in": str(od / "map.json"), "map": str(od / "map.json")})
 
 
 # --------------------------------------------------------------------------- submission ledger (anti-duplicate)
 
 LEDGER_OPEN = {"pending", "submitted", "unknown"}          # outcome not final yet → blocks new submissions
 LEDGER_DONE_OK = {"completed", "accepted"}                  # a finished, usable job for this exact request
+
+
+def cmd_seams(a):
+    """Seam profile of any video at the given times (or at the split points of a strip-inserts map.json): per-frame luma and frame
+    difference 0.5 s either side, numbers only. For a prepared source: `--map <own/map.json>` reads split_at (the own timeline) and,
+    with `--source`, source_in/source_out of the original."""
+    info = media_summary(a.video)
+    fps = info.get("fps") or 30.0
+    times = []
+    if a.at:
+        times += [("at", t) for t in _parse_times(a.at)]
+    if a.map:
+        mp = json.loads(Path(a.map).read_text(encoding="utf-8"))
+        for ins in mp.get("inserts", []):
+            if a.source:
+                times += [(f"insert {ins['insert']} in", ins["source_in"]), (f"insert {ins['insert']} out", ins["source_out"])]
+            else:
+                times.append((f"insert {ins['insert']} split", ins["split_at"]))
+    if not times:
+        fail("seams needs --at <seconds,…> or --map <map.json>", 2)
+    res = [{"label": lab, **seam_profile(a.video, t, fps, a.half)} for lab, t in times]
+    if a.out:
+        write_json(Path(a.out), {"video": str(a.video), "fps": fps, "seams": res})
+    out({"ok": True, "video": str(a.video), "fps": fps, "seams": [{k: v for k, v in s.items() if k != "rows" or a.rows} for s in res],
+         "out": a.out, "note": "rows = [t, mean luma 0-255, mean abs frame difference]; a luma ramp or a difference run across the cut means a flash, a dissolve or a held frame at the cut (read it, then decide)"})
 
 
 def _fingerprint(req: dict) -> str:
@@ -4677,6 +4739,14 @@ def main():
     p.add_argument("--inserts", required=True, help="in-out seconds, comma-separated, e.g. 13.0-15.0,20.4-21.2")
     p.add_argument("--out", required=True, help="output folder"); p.add_argument("--crf", type=int, default=18)
     p.set_defaults(fn=cmd_strip_inserts)
+
+    p = sp.add_parser("seams", help="per-frame luma and frame difference 0.5 s around cut points (numbers only): a flash or a dissolve at a cut shows here")
+    p.add_argument("--video", required=True); p.add_argument("--at", help="times in seconds, comma-separated")
+    p.add_argument("--map", help="a strip-inserts map.json: profile its split points (the own timeline), or with --source its source_in/out in the original")
+    p.add_argument("--source", action="store_true", help="with --map: --video is the ORIGINAL; profile source_in and source_out")
+    p.add_argument("--half", type=float, default=0.5, help="seconds either side of each point (default 0.5)")
+    p.add_argument("--rows", action="store_true", help="print every frame row (default: the summary; rows always go to --out)")
+    p.add_argument("--out", help="write the full profile as JSON"); p.set_defaults(fn=cmd_seams)
 
     p = sp.add_parser("clean"); p.add_argument("--video", required=True); p.add_argument("--out", required=True)
     p.add_argument("--delogo", action="append", help="x,y,w,h[@t0-t1] (0-1 fractions or pixels); repeatable")
