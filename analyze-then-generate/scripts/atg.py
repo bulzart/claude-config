@@ -121,7 +121,7 @@ try:
 except Exception:
     pass
 
-ATG_HOME = Path(__file__).resolve().parent.parent
+ATG_HOME = Path(os.environ.get("ATG_HOME") or Path(__file__).resolve().parent.parent)   # the library; the ATG_HOME variable points tests at a temp copy
 CONFIG_PATH = ATG_HOME / "config.json"
 
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".webm", ".mkv", ".avi", ".wmv", ".flv", ".mpg", ".mpeg",
@@ -1184,6 +1184,63 @@ def _xml_text(data: bytes, para_tag: str, text_tag: str) -> str:
     return "\n".join(lines)
 
 
+
+def pdf_text(path, images_dir=None, max_images: int = 40):
+    """(text, facts) of a PDF through pypdf: the text layer page by page, and facts about the file (pages, characters, whether it has
+    no text layer at all, i.e. scanned or image-only). With images_dir, the embedded page images of an image-only PDF are written there
+    so the pages can be viewed one by one (the Read tool renders at most 10 pages of a PDF on this machine). Nothing is judged here."""
+    p = Path(path)
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return ("[PDF: pypdf is not installed (pip install pypdf): view the pages with the Read tool, `pages` for long files]",
+                {"extractor": None, "pages": None, "chars": None, "image_only": None})
+    rd = PdfReader(str(p))
+    if rd.is_encrypted:
+        try:
+            rd.decrypt("")
+        except Exception:  # noqa: BLE001  a protected file: the pages below may still fail, and the facts say so
+            pass
+    pages, chars = [], 0
+    for i, pg in enumerate(rd.pages, 1):
+        try:
+            t = (pg.extract_text() or "").strip()
+        except Exception as e:  # noqa: BLE001  a damaged page
+            t = f"[page {i}: the text could not be extracted: {str(e)[:80]}]"
+        chars += len(t)
+        pages.append(f"--- page {i} ---\n{t}")
+    n = len(rd.pages)
+    facts = {"extractor": "pypdf", "pages": n, "chars": chars, "image_only": n > 0 and chars == 0}
+    if images_dir and facts["image_only"]:
+        d = Path(images_dir)
+        d.mkdir(parents=True, exist_ok=True)
+        written = []
+        for i, pg in enumerate(rd.pages, 1):
+            try:
+                imgs = list(pg.images)
+            except Exception:  # noqa: BLE001
+                imgs = []
+            for j, im in enumerate(imgs, 1):
+                if len(written) >= max_images:
+                    break
+                ext = Path(im.name).suffix.lower() or ".png"
+                dst = d / f"page-{i:03d}-{j:02d}{ext}"
+                try:
+                    dst.write_bytes(im.data)
+                    written.append(str(dst))
+                except Exception:  # noqa: BLE001
+                    pass
+        facts["images"] = written
+        facts["images_truncated"] = len(written) >= max_images
+        facts["images_dir"] = str(d)
+    if facts["image_only"]:
+        where = f"; its page images are in {facts.get('images_dir')}" if facts.get("images") else ""
+        text = f"[PDF with no text layer (image-only): {n} page(s){where}; view the pages as images (the Read tool renders at most 10 pages)]"
+    else:
+        text = "\n".join(pages)
+    return text, facts
+
+
 def doc_text(path: str) -> str:
     p = Path(path)
     ext = p.suffix.lower()
@@ -1239,21 +1296,54 @@ def doc_text(path: str) -> str:
                         outp.append("\t".join(vals))
             return "\n".join(outp)
     if ext == ".pdf":
-        return "[PDF — read it directly with the Read tool (pages parameter for long files).]"
+        return pdf_text(p)[0]
     return "[unsupported format for text extraction]"
 
 
 def cmd_doc_text(a):
+    facts = None
     try:
-        text = doc_text(a.file)
+        if Path(a.file).suffix.lower() == ".pdf":
+            text, facts = pdf_text(a.file, a.images_out)
+        else:
+            text = doc_text(a.file)
     except Exception as e:
         fail(str(e))
     if a.out:
         write_text(Path(a.out), text)
-    out({"ok": True, "chars": len(text), "out": a.out, **({} if a.out else {"text": text[:20000]})})
+    out({"ok": True, "chars": len(text), "out": a.out, **({"pdf": facts} if facts else {}), **({} if a.out else {"text": text[:20000]})})
 
 
 # --------------------------------------------------------------------------- run management
+
+def runs_root() -> Path:
+    """Where the runs live: config `runs_root`, else <library>/runs."""
+    return Path(cfg_get("runs_root") or (ATG_HOME / "runs")).expanduser()
+
+
+def resolve_run(run, must_exist: bool = True):
+    """The run folder named by --run: a full path, a bare run name (`20261019-235823-19`) or a stamp prefix (`20261019-235823`)
+    under the runs root. A prefix that matches several runs is refused with their names (the choice is the agent's). With
+    must_exist False, nothing matching gives None instead of an error."""
+    s = str(run or "").strip().strip('"')
+    if not s:
+        return None
+    p = Path(s).expanduser()
+    if p.is_dir():
+        return p.resolve()
+    root = runs_root()
+    if "/" not in s and "\\" not in s:
+        if (root / s).is_dir():
+            return (root / s).resolve()
+        hits = sorted(d for d in root.glob(s + "*") if d.is_dir()) if root.is_dir() else []
+        if len(hits) == 1:
+            return hits[0].resolve()
+        if len(hits) > 1:
+            fail(f"--run {s!r} matches {len(hits)} runs under {root}: " + ", ".join(d.name for d in hits[:8]) + " (name one)", 2)
+    if must_exist:
+        fail(f"run {s!r} not found: not a folder, and no run under {root} has that name or prefix", 2)
+    return None
+
 
 def cmd_new_run(a):
     root = Path(a.runs_root or cfg_get("runs_root") or (ATG_HOME / "runs")).expanduser()
@@ -1584,7 +1674,11 @@ def cmd_prep_assets(a):
                 write_text(dest, doc_text(it["path"]))
                 lines.append(f"- {aid} document `{name}` → `{dest}`")
             elif kind == "pdf":
-                lines.append(f"- {aid} PDF `{name}` → read directly with the Read tool")
+                dest = adir / "docs" / f"{aid}.txt"
+                txt, pf = pdf_text(it["path"], adir / "docs" / f"{aid}-pages")
+                write_text(dest, txt)
+                lines.append(f"- {aid} PDF `{name}` ({pf.get('pages')} page(s), {pf.get('chars')} characters of text) → `{dest}`"
+                             + (f" · no text layer: {len(pf.get('images') or [])} page image(s) in `{pf.get('images_dir')}` (view them)" if pf.get("image_only") else ""))
             elif kind == "font":
                 fam = None
                 try:
@@ -1648,7 +1742,12 @@ def cmd_prep_all(a):
             done.append(it["id"])
             return f"- {it['id']} document `{it['rel']}` → text `{dest}`"
         if it["kind"] == "pdf":
-            return f"- {it['id']} PDF `{it['rel']}` → read directly with the Read tool"
+            dest = media / "docs" / f"{it['id']}.txt"
+            txt, pf = pdf_text(it["path"], media / "docs" / f"{it['id']}-pages")
+            write_text(dest, txt)
+            done.append(it["id"])
+            return (f"- {it['id']} PDF `{it['rel']}` ({pf.get('pages')} page(s), {pf.get('chars')} characters of text) → text `{dest}`"
+                    + (f" · no text layer: {len(pf.get('images') or [])} page image(s) in `{pf.get('images_dir')}` (view them)" if pf.get("image_only") else ""))
         if it["kind"] == "audio":
             return f"- {it['id']} audio `{it['rel']}` ({it.get('duration_s')} s) → transcribe on demand"
         return f"- {it['id']} {it['kind']} `{it['rel']}` → not processed ({a.inv_set[:-1] if examples else 'reference material'})"
@@ -3013,12 +3112,7 @@ def _cf_save(entries: list):
 
 
 def _cf_run_dir(run):
-    if not run:
-        return None
-    rd = Path(str(run))
-    if not rd.exists():
-        rd = ATG_HOME / "runs" / str(run)
-    return rd if rd.exists() else None
+    return resolve_run(run, must_exist=False) if run else None
 
 
 def _cf_nn(video) -> str:
@@ -6999,7 +7093,9 @@ def main():
     p = sp.add_parser("prep-image"); p.add_argument("image"); p.add_argument("--out", required=True)
     p.add_argument("--max-side", type=int, default=1280); p.set_defaults(fn=cmd_prep_image)
 
-    p = sp.add_parser("doc-text"); p.add_argument("file"); p.add_argument("--out"); p.set_defaults(fn=cmd_doc_text)
+    p = sp.add_parser("doc-text"); p.add_argument("file"); p.add_argument("--out")
+    p.add_argument("--images-out", help="PDF without a text layer: write its embedded page images into this folder (to view them one by one)")
+    p.set_defaults(fn=cmd_doc_text)
 
     p = sp.add_parser("hf-put"); p.add_argument("--file", required=True); p.add_argument("--url", required=True)
     p.add_argument("--content-type"); p.add_argument("--retries", type=int, default=3)
@@ -7417,6 +7513,8 @@ def main():
     p.set_defaults(fn=cmd_econ)
 
     a = ap.parse_args()
+    if getattr(a, "run", None) and a.cmd not in ("caught-flag", "qc-consult", "qc-brief", "plan-hints"):
+        a.run = str(resolve_run(a.run))
     try:
         a.fn(a)
     except SystemExit:
