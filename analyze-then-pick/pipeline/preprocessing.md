@@ -98,7 +98,9 @@ atp.py ledger set --run "<run>" --fingerprint F --job J --status submitted|unkno
 atp.py open --file "<final.mp4>"                                       (Edit Mode review in the default player)
 ```
 
-PDFs are read directly with Claude's Read tool (`pages` for long files).
+PDFs: `prep-all`, `prep-assets` and `doc-text` extract the text layer with pypdf (layout mode) into `docs/<D>.txt`, and report `pages`,
+`chars` and `image_only`. A PDF with no text layer gets its embedded page images written to `docs/<D>-pages/` (at most 40), to be viewed one
+by one; the Read tool renders at most 10 pages of a PDF on this machine (no poppler).
 
 ## Measured performance (this machine, 2026-09-30, `prep-all --jobs 2`)
 

@@ -65,8 +65,10 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ### A2. Documents and instructions (authoritative)
 - Read every document:
-  - `10-media/docs/<D>.txt` for text and office files;
-  - PDFs directly with Read (use `pages` for long ones);
+  - `10-media/docs/<D>.txt` for text and office files, and for PDFs (`prep-all` extracts their text layer with pypdf; the media index
+    line gives the page and character counts);
+  - a PDF with no text layer (the index line says `no text layer`) is viewed page by page from the images `prep-all` wrote to
+    `10-media/docs/<D>-pages/`, or with Read and `pages` (at most 10 pages render on this machine);
   - spreadsheets as extracted text.
 - The same goes for documents among the supplied assets (`30-assets/project/docs/`), e.g. dimensions,
   brand rules and usage notes.

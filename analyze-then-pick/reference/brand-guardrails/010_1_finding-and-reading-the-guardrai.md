@@ -3,8 +3,8 @@
 - **Where:** any document among the supplied assets (`30-assets/project/docs/`), and any document
   in the references folder (`10-media/docs/`): PDF, docx, md, txt, spreadsheets, slides. Typical
   names: guidelines, guardrails, brand book, brand rules, dos and don'ts, legal, compliance,
-  claims, restrictions, usage, safety, ambassadors. Read every document anyway (`T doc-text`,
-  PDFs with Read); a rule can sit in a spec sheet's footer.
+  claims, restrictions, usage, safety, ambassadors. Read every document anyway (`T doc-text`, which
+  extracts PDFs too and flags one with no text layer); a rule can sit in a spec sheet's footer.
 - **Write `30-assets/guardrails.md`** (and `state.json → guardrails`): one rule per line,
   `G<n> · <quote> [E] · <source file> · <kind, §2> · <what it hits> · <default operation>`. Then
   the derived lists the rules imply, each marked [E] when named or [I] when inferred:
