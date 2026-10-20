@@ -1,6 +1,6 @@
 ---
 name: atp-start
-description: /analyze-then-pick phase 1: mode, Analyze sub-mode, the locked video model, inputs, create the run. Internal to that command.
+description: /analyze-then-pick phase 1: mode, Analyze sub-mode, the locked video model, inputs, the audio choice, create the run. Internal to that command.
 user-invocable: false
 ---
 
@@ -106,16 +106,30 @@ Only these section files for this phase, nothing else unless a step below says s
      image arrives only as a chat attachment without a file path, ask for its path or folder:
      Higgsfield needs the original file.
    - Validate every path (Glob/ls) and report any that don't exist.
+5b. **Audio.** Ask once, with AskUserQuestion (header "Audio ingest"), in the same message batch as the other start questions,
+   whether the videos' audio is processed as text for this run (contract item 24). Both modes ask it. Never pick for the user and
+   never mark one option as recommended; the two options, with these descriptions:
+   - **Whisper speech-to-text**: "Every video's audio is transcribed locally (faster-whisper `small`, int8 on the CPU): about real
+     time per video plus about 8 s to load the model once per batch (measured 2026-10-20 on this machine: a 15 s clip in 10 s, a 9 s
+     clip in 18 s including the load). The transcript feeds the cards (what is said, the spoken hook, the address), the sync anchors
+     of spoken lines, the caption timing of the text plan and the speech share of the sound profile."
+   - **Frames only**: "No speech-to-text runs and no transcript is written. Every speech field of the cards, plans and briefs reads
+     `audio not ingested` (what was said is unknown, not absent); the hook, the address and the sync anchors come from the frames,
+     the cuts, the sound numbers and the on-screen text. The audio file itself is still used: the original audio returns under the
+     picture, loudness and silences are measured, the sound profile runs without a speech share."
+   The answer is stored in step 6 (`state.json → audio_ingest`: `whisper` or `frames-only`) and is the only source of the choice:
+   `T prep-all` stops when it is missing. A resume that finds it stored never re-asks; one that finds it missing asks here.
 6. Create the run:
    - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]`;
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
+   - store the audio choice (step 5b): `T state --run RUN set audio_ingest=whisper` or `audio_ingest=frames-only`;
    - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper
      is fed from, and `keeper.state`: the keeper is booted or brought up to date there, so the first consult finds it current), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
      `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
    - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
 
-## Rules this phase owns (contract items 4, 11, 17)
+## Rules this phase owns (contract items 4, 11, 17, 24)
 
 4. **One model per run, picked at the start, then locked.**
    - The user picks the video model right after choosing the mode (§2.4), from a menu that lists
@@ -153,11 +167,20 @@ Only these section files for this phase, nothing else unless a step below says s
 
 Item 17's "§3 R-steps" are step A6r (`atp-recreate-plan`).
 
+24. **Audio ingest is the user's choice, once per run (step 5b).** `state.json → audio_ingest` is `whisper` (speech-to-text of every
+    video's audio, written once per video as `10-media/<V>/transcript.json` and `transcript.txt` by `T prep-all`) or `frames-only` (no
+    speech-to-text, no transcript file; every speech field of every card, plan and brief says `audio not ingested`, never `no speech`
+    or `silent`). No step, script or agent picks a default: `T prep-all` and `T prep-video` refuse without it and `T captions
+    --from-speech` refuses in a frames-only run. The choice is about speech-to-text and what is derived from it; whatever needs the
+    audio file itself (the original audio restored under the picture, loudness and silences, `T audio-profile`, `T sync-check`)
+    runs in both modes.
+
 ## Never (this phase)
 
 - Never re-ask for, switch, or suggest switching the model after it was picked at the start. Only an
   explicit user request changes it.
 - Never shorten the model menu. Every available model is always shown, with the pinned ones on top.
+- Never decide the audio choice for the user, never mark one of its options as recommended, and never write `no speech` for a run that did not ingest audio.
 - Never take client assets from the references folder or the edit-source folder: they are
   reference material, and may show other products or executions.
 

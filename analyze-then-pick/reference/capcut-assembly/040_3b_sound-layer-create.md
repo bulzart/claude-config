@@ -12,7 +12,8 @@ CapCut, shaped by the references' sound profiles (`10-media/<V>/audio-profile.js
 2. **Choose the source, in this order:**
    1. **A soundtrack the client supplied** (registry, audio entity).
    2. **The reference's own sound,** when its profile says `reusable_whole` (no speech over it, a
-      music bed present). Use the extracted `files_audio` track, at the in-point and length the new
+      music bed present). In a frames-only run the profile's `reusable_whole` is null (the speech share was not measured): the
+      reference's sound is then not reused whole; take source 1 or 3. Use the extracted `files_audio` track, at the in-point and length the new
       video needs.
       - It may be a commercial or trending song whose rights belong to its owner. Mark it in the
         brief and the README so the user decides before posting; brand accounts may only post

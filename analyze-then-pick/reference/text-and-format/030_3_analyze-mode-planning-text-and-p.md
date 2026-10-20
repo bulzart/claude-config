@@ -16,7 +16,8 @@
    - ≥ 0.4 s plus ~0.25 s per word on screen;
    - never overlapping itself;
    - captions follow the generated speech when there is speech: take the times from the clean
-     video's transcript (`atp.py prep-video`);
+     video's transcript (`atp.py prep-video --audio-ingest whisper`, in a run that ingests audio); in a frames-only run
+     (`state.json → audio_ingest`) time them from the clean video's frames and cuts and say so in the text plan;
    - the hook appears in the first 0–0.3 s when the family's hook is textual;
    - a caption that spans the whole reference spans the whole video;
    - text that plays on the product (a logo pun, a reveal) is timed to the moment the product

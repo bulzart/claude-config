@@ -77,7 +77,9 @@ Only these section files for this phase, nothing else unless a step below says s
       `T audio-profile --audio "<files_audio file>" --out 10-media/<V>/audio-profile.json --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json`.
       It measures the music bed, tempo, beat strength, energy arc, and hits (and whether they land
       on cuts), plus whether the sound is speech-free and so reusable whole. From those numbers and
-      the visuals, infer its role: dramatic, comic, suspense, hype or sound-effect-driven.
+      the visuals, infer its role: dramatic, comic, suspense, hype or sound-effect-driven. In a frames-only run
+      (`state.json → audio_ingest`) the transcript file does not exist: the profile then reports `speech_share` and `reusable_whole`
+      as null and the music bed as unknown (speech was not separated); write `audio not ingested` for the speech, never `no speech`.
     Videos that have nothing to do with the client's product are kept and analysed like any other.
     Their mechanism is still useful, and the product is integrated into them later.
 - Delegate to 1–2 agents only per §7 of the protocol, with disjoint video lists. Give them the

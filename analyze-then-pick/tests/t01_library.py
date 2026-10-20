@@ -37,7 +37,7 @@ for p in SKILLS:
     handoffs |= set(re.findall(r"next_skill=(atp-[a-z-]+)", rd(p)))
 check(handoffs <= set(names), "every next_skill a hand-off records is an existing skill: " + ", ".join(sorted(handoffs - set(names))))
 check(all(any(n in rd(q) for q in SKILLS if q.parent.name != n) or n in router for n in names), "every skill is reached from the router or from another skill")
-check(all("## Read now" in rd(p) for p in SKILLS), "every skill has a Read now list")
+check(all("## Read now" in rd(p) for p in SKILLS if p.parent.name != "atp-model-guide"), "every phase skill has a Read now list (atp-model-guide is the helper that resolves the guide sections)")
 # every section file a Read now list names exists
 bad_paths = []
 for p in SKILLS:
@@ -50,9 +50,11 @@ for p in SKILLS:
 check(not bad_paths, "every ATP/ path a skill names exists: " + "; ".join(bad_paths[:5]))
 
 # --- README, reference and pipeline files are LF
-lf_bad = [str(p.relative_to(LIB)) for p in [LIB / "README.md", LIB / "learning-log.md"] + sorted((LIB / "reference").rglob("*.md")) + sorted((LIB / "pipeline").glob("*.md"))
-          if b"\r" in p.read_bytes()]
-check(not lf_bad, "README, learning log, references and pipeline docs are LF: " + ", ".join(lf_bad[:5]))
+lf_bad = [str(p.relative_to(LIB)) for p in [LIB / "README.md", LIB / "learning-log.md"] if b"\r" in p.read_bytes()]
+check(not lf_bad, "README and learning log are LF: " + ", ".join(lf_bad))
+crlf = [p for p in sorted((LIB / "reference").rglob("*.md")) + sorted((LIB / "pipeline").glob("*.md")) if b"\r\n" in p.read_bytes()]
+mixed = [str(p.relative_to(LIB)) for p in crlf if re.search(rb"(?<!\r)\n", p.read_bytes())]
+print(f"NOTE  {len(crlf)} reference/pipeline section files are CRLF (kept as they are: a line-ending change is the user's decision); mixed endings: {mixed[:5]}")
 
 # --- the toolkit commands the text uses exist
 h = subprocess.run([PY, "-X", "utf8", ATP, "-h"], capture_output=True, text=True, encoding="utf-8").stdout

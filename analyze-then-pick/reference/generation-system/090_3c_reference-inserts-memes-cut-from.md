@@ -13,7 +13,7 @@ reference has 13 s of its own footage, a 2 s meme with a meme sound, then 12 s m
    - A sentence never runs across a split point.
 3. **Measure the real split on the output.** After generation, put each split on the generated
    clip's actual boundary within ±0.5 s of the plan: the pause after the line, or a planned cut.
-   Measure it with the transcript and cuts from `atp.py prep-video`, or a dense frame sheet.
+   Measure it with the cuts from `atp.py prep-video` (and its transcript when the run ingests audio), or a dense frame sheet.
 4. **Cut each insert from the original reference video, with its sound:**
    `atp.py trim --video "<reference original>" --start <t_in> --end <t_out> --out <run>/30-assets/inserts/<V>-iK.mp4`,
    with `t_in` / `t_out` on the cut frames from `cuts.json`, moved inward past any dissolve, flash or

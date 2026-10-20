@@ -47,15 +47,19 @@ Only these section files for this phase, nothing else unless a step below says s
   - So every reference gets a sound profile (A3), and every Create video gets a soundtrack /
     sound-effect layer in its CapCut project (`capcut-assembly.md` §3b). That layer is the
     reference's own sound when it is reusable, or a matching track found and downloaded.
-- **Both sub-modes fully process every video's picture and sound** for the analysis, inside the run
-  folder (`prep-all` below):
+- **Both sub-modes fully process every video's picture, and its sound as the user chose** (contract item 24,
+  `state.json → audio_ingest`), inside the run folder (`prep-all` below):
   - frames, storyboards and on-screen text;
-  - the transcript, loudness, silences, music and sound cues.
-  Spoken hooks, sounds and music are part of what made them work.
+  - loudness, silences, music and sound cues, from the audio file (both choices);
+  - the transcript, only when the choice is `whisper` (`10-media/<V>/transcript.json` and `.txt`); with `frames-only` no transcript
+    exists and `video.md`, `timeline.md` and every card say `audio not ingested` (what was said is unknown, not absent).
+  Spoken hooks, sounds and music are part of what made them work; a frames-only run reads the hook from the frames and the text.
 - Show the counts (references, assets, examples) in one line.
 - `T prep-all --run RUN --jobs 2`:
-  - it runs the 5 fps adaptive frame pipeline, storyboards, per-second timeline, audio, speech and
-    OCR sample for every video, plus image previews and document text;
+  - it runs the 5 fps adaptive frame pipeline, storyboards, per-second timeline, the audio measurements, speech-to-text when
+    `state.json → audio_ingest` is `whisper` (it reads the key itself and stops when the key is missing: ask the audio question then,
+    `atp-start` step 5b), and the OCR sample for every video, plus image previews and document text; its JSON says which
+    `audio_ingest` it ran;
   - with more than ~3 minutes of total video, run it with `run_in_background: true`, read the
     documents (A2) meanwhile, and wait for the completion notification before A3;
   - fix or report any per-item errors listed in its JSON.

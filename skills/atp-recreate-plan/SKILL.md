@@ -90,7 +90,12 @@ Only these section files for this phase, nothing else unless a step below says s
 - **Prepare each pick's source** as in Edit Mode E5, from its own content:
   - **With inserts:**
     `T strip-inserts --video "<original reference>" --inserts "<in-out,…>" --out <RUN>/10-media/<V>/own`
-    gives `own-silent.mp4`, and `map.json` with the split points.
+    gives `own-silent.mp4`, and `map.json` with the split points. Its JSON also prints a **seam profile** per cut point (`seams`:
+    the mean luma and the frame-to-frame difference 0.5 s either side at the source's own frame rate; the rows are in `map.json`):
+    a luma ramp or a difference run across a cut means the cut sits inside a flash, a dissolve or a held frame of the insert's
+    edge. Read it before the source is uploaded and move the cut yourself (`T seams --video <original> --at <t>` re-profiles any
+    time). The audio is cut on the same spans as the picture in one pass, so the pairing holds; a source cut again later by hand
+    must cut its audio on the same spans.
   - **Without inserts:** the silent copy from A1.
   - **Source flags** (the card's "Source preparation flags", `generation-system.md` §5c.2b): a mirrored
     selfie has its silent copy flipped (`hflip`) and its mirrored identity photos flipped too; burned-in

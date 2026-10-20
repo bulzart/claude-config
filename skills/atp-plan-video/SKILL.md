@@ -148,8 +148,8 @@ Only these section files for this phase, nothing else unless a step below says s
     - the **sound plan** (Create, `capcut-assembly.md` §3b), placed in CapCut:
       - the generation carries only dialogue, action sounds and ambience, with no generated music;
       - the soundtrack's role, mood, tempo and energy arc, from the references' sound profiles;
-      - its source: a supplied track, the reference's own speech-free sound, or a matching track
-        to download;
+      - its source: a supplied track, the reference's own speech-free sound (only when its profile measured the speech share: in a
+        frames-only run `reusable_whole` is null and the reference's sound is not reused whole), or a matching track to download;
       - the sound effects and their hit points on the new video's beats;
     - for a **multi-clip** video, the **clip plan** (`generation-system.md` §3b):
       - the seams, on the reference's cuts first;

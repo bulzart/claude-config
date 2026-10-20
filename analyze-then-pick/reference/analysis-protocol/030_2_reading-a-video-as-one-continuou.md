@@ -10,7 +10,10 @@ is one second of the sheets. Do not describe isolated frames. Answer:
 3. **Message:** what is communicated and how the viewer is addressed (direct to camera, voice-over,
    POV, silent demonstration, text-led, dialogue between characters).
 4. **Speech:** what is said (transcript, verified against the lips and timing), the delivery (pace,
-   tone), and where the words land relative to the visual beats.
+   tone), and where the words land relative to the visual beats. When `video.md` says `audio not ingested` (the run chose frames
+   only, contract item 24), write `audio not ingested` here and in every speech field of the card, never `no speech`, `silent` or
+   `no voice-over`: what was said is unknown, not absent. Read the address and the hook from the frames, the cuts, the loudness
+   numbers and the on-screen text, and say that is where they come from.
 5. **Evolution:** scene changes, state changes of objects, reveals, transformations.
 6. **Camera and edit:** shot sizes, movement, handheld or locked-off, cut rhythm (median shot length
    from `video.md`), why each cut happens, transitions and their motivation, speed changes.

@@ -42,7 +42,9 @@ Only these section files for this phase, nothing else unless a step below says s
     less chance of flagging.
   - The approved result gets the original audio from `files_audio` (X8), and then goes to a `final`
     folder in the same path (X10).
-- Then `T prep-all --run RUN --jobs 2`. The analysis uses the originals, with audio, for transcripts.
+- Then `T prep-all --run RUN --jobs 2`. The analysis uses the originals, with audio: with `state.json → audio_ingest` = `whisper` they are
+  transcribed; with `frames-only` no transcript exists and the card's speech fields say `audio not ingested` (`prep-all` stops when the
+  key is missing: ask the audio question then, `atp-start` step 5b, contract item 24).
 - **Examples, when given** (contract item 18): `T inventory "<examples folder>" --run RUN --as
   examples` and `T prep-all --run RUN --set examples`, then one card each and
   `20-analysis/house-approach.md` (protocol §9), once per run, before the first edit. Every edit
@@ -63,7 +65,9 @@ Only these section files for this phase, nothing else unless a step below says s
     marked keep or change once E3 has the operations;
   - its **sync anchors**: the beats whose sound is in the original audio (each spoken line and
     whose mouth says it, impacts, steps, pickups, sips, opens), with their times, from the
-    transcript, the storyboards and, when it helps, `T audio-profile` hits;
+    transcript (a run that ingests audio), the storyboards and, when it helps, `T audio-profile` hits; in a frames-only run the
+    anchors are the impacts, steps, pickups, sips and opens read from the frames and the loudness curve, and the card says so
+    (`audio not ingested`): no spoken-line anchor is invented from a moving mouth;
   - the **source-text inventory** (`text-and-format.md` §2.1);
   - when guardrails were supplied with the assets (`30-assets/guardrails.md`), the **guardrail
     audit** (`brand-guardrails.md` §3): every hit, core or peripheral, and the operation the rule

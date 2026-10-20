@@ -83,7 +83,7 @@ only what it needs and the context of a run does not rot. The skills are interco
 1. **Resume?** If `$ARGUMENTS` starts with `resume`, or names a run folder:
    - read its `state.json` (`T state --run <run> get`);
    - summarise where it stopped (stage, next_step, videos done);
-   - continue from `next_step`. Never re-ask a question that is answered in `state.json`.
+   - continue from `next_step`. Never re-ask a question that is answered in `state.json`. A run whose `state.json` has no `audio_ingest` is asked the audio question (`atp-start` step 5b, item 24) before any `prep-all`.
    Run `T loupe ensure` and update `loupe` in `state.json` (a run without the key counts as `up`; Loupe may have been stopped since).
    Then invoke the skill named by `next_skill` in `state.json`. A run made before this layout has none: take the phase from `stage` / `next_step` with the map below
    (for example `stage=analyzed next_step=count` → A5 in `atp-analyze-study`; videos in `videos[]` but not all done → `atp-analyze-produce`; Edit Mode → `atp-edit`).
@@ -132,6 +132,7 @@ and handle it before anything else (item 22).
 21. **Brand guardrails** from the client's documents decide what may be picked and what must be edited (core hit → dismiss; peripheral → edit). The pipeline has no content rules of its own. → `atp-analyze-prepare`, `atp-analyze-study`, `atp-plan-video`
 22. **No error ledger**: a video the user reports as wrong is diagnosed in pipeline terms in its brief, then fixed; a lesson the references do not hold is written, generalised, into the section that owns it (on the user's yes). → `atp-feedback`
 23. **Caught flags**: every prompt/video Higgsfield flags is recorded in Loupe before the request changes (`T caught-flag add`); the record is written, never read during a run, and only QC (`T qc-consult`) and the first request of a video (`T plan-hints`, a few text-only hints, usually none) consult Loupe's separate sample library. → `atp-submit`, `atp-qc`, `atp-write-request`
+24. **Audio ingest is the user's choice, once per run**: at the start the user picks Whisper speech-to-text of every video's audio or frames only; `state.json → audio_ingest` (`whisper` | `frames-only`) is the only source, no step picks a default (`T prep-all` stops without it), a frames-only run writes no transcript and every speech field says `audio not ingested`, never `no speech`; whatever needs the audio file itself (the original audio restored, loudness, the sound profile, the sync check) runs in both modes. → `atp-start`, `atp-analyze-prepare`, `atp-edit`
 
 ## Phases (the skills)
 
@@ -156,7 +157,7 @@ it). A regeneration or re-edit runs `atp-write-request` → (`atp-inputs` for ne
 
 **Labels** (as cited in the skills and the references): §1 paths and §2 Start, items 4 · 11 · 17 → `atp-start` · A1, A2, A2b → `atp-analyze-prepare` · A3, A4, A5 → `atp-analyze-study` · A6 → `atp-create-plan` ·
 A6r (the "R-steps" of item 17; E4–E5 as Recreate uses them are repeated in it) → `atp-recreate-plan` · A7, A7b → `atp-asset-plan` · A8, A9, A9b, A10 → `atp-analyze-produce` · E1–E7, X9-R → `atp-edit` · X1 → `atp-plan-video` · X2 → `atp-write-request` · X3 → `atp-inputs` ·
-X4, X5, X6 → `atp-precheck` (X5 also in `atp-submit`) · X7 → `atp-submit` · X8 → `atp-postprocess` · X9 → `atp-qc` · X10 → `atp-record` · §6, §6b → `atp-wrapup` · item 22 → `atp-feedback` · item 23 → `atp-submit`.
+X4, X5, X6 → `atp-precheck` (X5 also in `atp-submit`) · X7 → `atp-submit` · X8 → `atp-postprocess` · X9 → `atp-qc` · X10 → `atp-record` · §6, §6b → `atp-wrapup` · item 22 → `atp-feedback` · item 23 → `atp-submit` · item 24 → `atp-start` (the question), `atp-analyze-prepare` and `atp-edit` (`prep-all`).
 A rule that two phases both act on is written in both skills.
 
 ## Never (global; each skill carries the rest of the Never list for its own phase)
