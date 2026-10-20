@@ -4,11 +4,11 @@
     "github@anthropic-plugin-directory": [
       {
         "scope": "user",
-        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\github\\a0b04d9ddcca-0e62e4cb",
-        "version": "a0b04d9ddcca-0e62e4cb",
+        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\github\\e68e375d2286-0e62e4cb",
+        "version": "e68e375d2286-0e62e4cb",
         "installedAt": "2026-10-15T16:46:47.305Z",
-        "lastUpdated": "2026-10-19T23:47:44.473Z",
-        "gitCommitSha": "a0b04d9ddccaabe1976645f68b0eda50f74e7022",
+        "lastUpdated": "2026-10-20T20:42:02.746Z",
+        "gitCommitSha": "e68e375d22866ba36c1eb0b4cc46db96c65f6a4e",
         "directoryRepositoryKey": "github.com/anthropics/claude-plugins-official#external_plugins/github"
       }
     ],
