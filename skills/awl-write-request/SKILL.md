@@ -79,6 +79,13 @@ Only these section files for this phase, nothing else unless a step below says s
     - A hint that comes from a scenario (`sample_kind: scenario`: the admin's idea, what could be better, what the agents missed) states a situation to check the plan against; it carries no right outcome of its own beyond the admin's words, so apply it only as a plain restatement at the matching beat. A hint that comes from a miss example (the admin never had a right version for it) may carry no `right_outcome` of its own:
       apply it only when its lever is a plain restatement at the matching beat (the count, the state or the orientation the plan
       already intends, said once positively); otherwise leave it out. Never invent what a right version would look like.
+    - **A hint marked `prompts`** (`pair`, `wrong` or `fixed`) rests on a sample whose two prompts the admin kept: the one that produced the miss, the one of
+      the corrected take, and `prompt_note`, the admin's one line on what made the difference. The hint carries only the marker and the note. When you
+      apply that hint, `T sample-prompts --id <S..> --run RUN` writes both prompts whole to `RUN/40-briefs/samples/<id>-prompts.md`: Read it, judge
+      yourself what the corrected prompt did differently and whether that is the mechanism of the matching beat (nothing is compared or summarised for
+      you), and apply the mechanism at that beat in the locked model's own structure and your own words. Never a sentence of either prompt in the
+      request, never the wrong behaviour named, never the corrected prompt as a rule for another video; a hint you do not apply is not read, so at most
+      the two applied hints' pairs are read per video. Write in the "Sample hints" block which pair was read and what mechanism was taken from it.
     - At most two hints are applied per video. A hint whose application would reshape more than one clause of
       the prompt is over-applied: drop it. When the video is already planned correctly, applying nothing is right.
     - Write the decisions as a short "Sample hints" block at the end of the pattern card: per hint, its id,
@@ -199,7 +206,8 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - Never ask for sample hints on a regeneration or a re-edit, never copy a hint's words into a prompt, never name a past
   miss's wrong behaviour in a prompt, never apply a hint to a beat its trigger does not match, and never apply more
-  than two per video.
+  than two per video. Never paste a sentence of a sample's saved prompts (`T sample-prompts`) into a request, and never read a
+  pair for a hint you do not apply.
 - Never apply generic prompting when a model guide exists.
 - Never let the video model render overlay text in Analyze Mode. Generate clean and place the text
   in CapCut. Never burn it in with `awl.py captions`, except as the stated fallback.

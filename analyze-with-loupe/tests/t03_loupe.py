@@ -36,6 +36,7 @@ a2 = make_clip(run / "60-outputs" / "video-03" / "a2" / "raw.mp4", seconds=3.0, 
 m = misses.create({"run": run.name, "video": "03", "title": "the can shrinks after the cut", "model": "wan3_0_prime", "kinds": [], "wrong_path": str(a1), "fixed_path": str(a2)}, "test")
 mo = misses.add_moment(m["id"], {"frames": [{"src": "wrong", "role": "wrong", "t": 1.0}, {"src": "fixed", "role": "right", "t": 1.0}], "details": "the can is small here"}, "test")
 SID = f"S{mo['moment_id']}"
+misses.update(m["id"], {"wrong_prompt": "PROMPT-WRONG the can on the desk.", "fixed_prompt": "PROMPT-FIXED the can on the desk, as tall as the mug beside it.", "prompt_note": "the height was stated against the mug"}, "test")
 
 # --- the fake keeper: a boot that can be slow (to test the bounded wait), then JSON answers by question kind
 calls = []
@@ -102,6 +103,18 @@ js, _, _ = t("plan-hints", "--run", run.name, "--video", "03", "--beats", "Beat 
              "--product-details", "slim 355 ml can, upright", env=ENV)
 check(js.get("mode") == "keeper" and len(js["hints"]) == 1 and js["hints"][0]["id"] == SID and "rules" in js, "plan-hints returns the keeper's hint with the writer's rules")
 check((run / "40-briefs" / "video-03-hints.json").is_file(), "the hints are saved as 40-briefs/video-NN-hints.json")
+check(js["hints"][0].get("prompts") == "pair" and js["hints"][0].get("prompt_note", "").startswith("the height") and "wrong_prompt" not in js["hints"][0] and "sample-prompts" in js.get("prompts_rule", ""),
+      "a hint whose sample keeps the prompts of both takes carries the marker, the admin's note and the prompts rule, never the prompts")
+js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can looks smaller after the cut", "--note", "the can stays in frame", env=ENV)
+check(js["relevant"][0].get("prompts") == "pair" and "wrong_prompt" not in js["relevant"][0] and "sample-prompts" in js.get("prompts_rule", ""), "a relevant sample with saved prompts carries the marker and the prompts rule in the QC answer, never the prompts")
+js, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
+pf = run / "40-briefs" / "samples" / f"{SID}-prompts.md"
+ptxt = pf.read_text(encoding="utf-8") if pf.is_file() else ""
+check(js.get("ok") and js.get("prompts") == "pair" and js["chars"]["wrong"] > 0 and pf.is_file() and "PROMPT-WRONG the can" in ptxt and "PROMPT-FIXED the can" in ptxt and "the height was stated" in ptxt
+      and "## Prompt of the wrong take" in ptxt and "## Prompt of the corrected take" in ptxt, "sample-prompts writes both prompts whole and the admin's note to 40-briefs/samples/<id>-prompts.md")
+check("wrong_prompt" not in js and "diff" not in js and "prompt_change" not in js, "the JSON line carries sizes and the path, never the prompt texts or a diff (the agent reads the file and judges)")
+js, _, _ = t("sample-prompts", "--id", "S999", "--run", run.name, env=ENV)
+check(js.get("mode") == "unavailable" and js.get("prompts") == "", "an unknown sample id answers unavailable, no prompts, no failure")
 
 # --- the flag record: ledger --flagged, caught-flag add, set, reconcile
 js, _, _ = t("ledger", "set", "--run", run.name, "--job", "job-111", "--status", "failed", "--flagged", "--note", "moderation block", env=ENV)
