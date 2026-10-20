@@ -21,6 +21,7 @@
 !/scripts/
 !/analyze-then-pick/
 !/analyze-then-generate/
+!/analyze-with-loupe/
 !/analyze-stack/
 # plugin settings only (which plugins and marketplaces are installed); their downloaded code, caches and marketplace clones stay out
 !/plugins/
@@ -47,6 +48,8 @@ __pycache__/
 /analyze-then-pick/_backups/
 /analyze-then-generate/runs/
 /analyze-then-generate/_backups/
+/analyze-with-loupe/runs/
+/analyze-with-loupe/_backups/
 /analyze-stack/runs/
 /analyze-stack/samples/
 /loupe/data/
