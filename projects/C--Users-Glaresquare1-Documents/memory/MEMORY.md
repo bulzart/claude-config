@@ -36,3 +36,4 @@
 - [Fix = original + re-crafted prompt](fix-regeneration-original-plus-recrafted-prompt.md) — user 2026-10-20: a regeneration sends the ORIGINAL sample video + a fully rewritten prompt (error designed out positively, unrelated parts kept); never the flawed take, a one-frame fix or an "edit this / don't do X" prompt
 - [Never push to glare-factory](glare-factory-never-push.md) — user 2026-10-20: no push/branch push/PR to harperdogpound/ai-video-pipelines unless the user explicitly asks at that moment; pulling is fine
 - [Run 19oct: can realism regen](atp-run-19oct-can-realism-regen.md) — 2026-10-20: cans of videos 01-04, 07, 08 regenerated with photoreal guide plates; 05, 06, 09-20 still on old guides (ask first); lesson not yet in the references
+- [GitHub accounts](github-accounts.md) — new repos go under bulzart (private), not bulzartaliu50-lang; gh holds both, active = bulzartaliu50-lang
