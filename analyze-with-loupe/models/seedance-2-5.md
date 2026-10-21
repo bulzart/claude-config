@@ -47,14 +47,14 @@ Stored as section files in `seedance-2-5/` (next to this file); **read only the 
 | 3.4 | · Environment, lighting and style | `130_3.4_environment-lighting-and-style.md` | 0.6 |
 | 3.5 | · Chronology, timing and multi-shot structure | `140_3.5_chronology-timing-and-multi-shot.md` | 0.8 |
 | 3.6 | · Camera language and dedicated camera / motion controls | `150_3.6_camera-language-and-dedicated-ca.md` | 0.8 |
-| 3.7 | · References (image / video / audio): syntax, roles, what is inherited and | `160_3.7_references-image-video-audio-syn.md` | 1.1 |
+| 3.7 | · References (image / video / audio): syntax, roles, what is inherited and | `160_3.7_references-image-video-audio-syn.md` | 2.0 |
 | 3.8 | · Start and end frames | `170_3.8_start-and-end-frames.md` | 0.6 |
 | 3.9 | · Audio, dialogue and sound (if supported) | `180_3.9_audio-dialogue-and-sound-if-supp.md` | 0.9 |
 | 3.10 | · Negative constraints (is there a negative-prompt field on Higgsfield? ho | `190_3.10_negative-constraints-is-there-a.md` | 0.6 |
 | 3.11 | · Visible text | `200_3.11_visible-text.md` | 3.5 |
 | 3.12 | · Character / identity consistency | `210_3.12_character-identity-consistency.md` | 1.0 |
 | 3.13 | · Product and object fidelity (geometry, proportions, labels, scale, handl | `220_3.13_product-and-object-fidelity-geom.md` | 0.8 |
-| 3.14 | · Integration and continuity (scale, orientation, contact, grip, occlusion | `230_3.14_integration-and-continuity-scale.md` | 6.6 |
+| 3.14 | · Integration and continuity (scale, orientation, contact, grip, occlusion | `230_3.14_integration-and-continuity-scale.md` | 6.8 |
 | 4 | Prompt construction | `240_4_prompt-construction.md` | 0.0 |
 | 4.0 | · Official prompt examples and the patterns they teach | `250_4.0_official-prompt-examples-and-the.md` | 5.0 |
 | 4.1 | · Text-to-video | `260_4.1_text-to-video.md` | 2.3 |
@@ -65,7 +65,7 @@ Stored as section files in `seedance-2-5/` (next to this file); **read only the 
 | 4.4.2 | · · DETAILED (person identity replacement, multi-shot targets, or ≥3 change  | `310_4.4.2_detailed-person-identity-replace.md` | 2.6 |
 | 4.4.3 | · · Audio-only edit and dubbing [OFFICIAL S2, S7] | `320_4.4.3_audio-only-edit-and-dubbing-offi.md` | 0.6 |
 | 4.4.4 | · · Extension [OFFICIAL S7] | `330_4.4.4_extension-official-s7.md` | 2.0 |
-| 5 | Strengths, weaknesses and failure modes | `340_5_strengths-weaknesses-and-failure.md` | 6.6 |
+| 5 | Strengths, weaknesses and failure modes | `340_5_strengths-weaknesses-and-failure.md` | 6.7 |
 | 6 | Model-specific features and controls | `350_6_model-specific-features-and-cont.md` | 1.1 |
 | 7 | Model-specific pre-generation checklist | `360_7_model-specific-pre-generation-ch.md` | 2.5 |
 | 8 | Sources | `370_8_sources.md` | 3.9 |

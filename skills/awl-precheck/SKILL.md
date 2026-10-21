@@ -81,11 +81,12 @@ Only these section files for this phase, nothing else unless a step below says s
     --ref-cm <h> --ref-px <y0-y1>` agrees with the plan's reckoning and its sidecar shows two `--basis` estimates
     that agree within about 25 %; the product is shaded in the scene's perspective with a sharp printed label; the
     outline is thin and red; the label is legible at 720×1280 and covers no face, no key action and no hand's
-    path; nothing passes through the marker without a mask. In Recreate and Edit Mode the request binds Video 1, the
-    unmarked original reference, and Video 2, the marked placement preview, in that order: the same duration and
-    frame count (or the short-preview case of §4b.6 stated), together within the locked model's video-reference cap,
-    Video 1 bound for the scene and the keep-list, Video 2 for spot and size only, no exclusion of Video 1's content
-    that covers the marked product. The request carries
+    path; nothing passes through the marker without a mask. In Recreate and Edit Mode, whatever the model, the
+    request binds the unmarked original reference first, in the model's most preserving input, for the scene and
+    the keep-list, and the marked placement preview beside it in the form the plan named (§4b.6 (a)–(d): a second
+    video with the same duration and frame count, or labelled stills with their time spans, or the stated short
+    preview), for spot and size only, everything within the model's own limits (its guide §2.2, §2.5), and no
+    exclusion of the original's content covers the marked product. The request carries
     the marker sentence and the removal line, and holds no guide image cut from a source frame; a start or end
     frame carries no mark and passed the paste test. The wordmark's pixel height from the size reckoning is at
     least about 25 px, or the limit is written in the brief.

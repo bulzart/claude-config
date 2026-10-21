@@ -28,7 +28,7 @@ Stored as section files in `higgsfield-genjutsu/` (next to this file); **read on
 | § | Section | File | KB |
 |---|---|---|---|
 | 1 | At a glance | `010_1_at-a-glance.md` | 1.8 |
-| 2 | Higgsfield parameter surface | `020_2_higgsfield-parameter-surface.md` | 2.6 |
+| 2 | Higgsfield parameter surface | `020_2_higgsfield-parameter-surface.md` | 2.9 |
 | 3 | How the model reads a prompt | `030_3_how-the-model-reads-a-prompt.md` | 3.2 |
 | 4 | Prompt construction | `040_4_prompt-construction.md` | 2.9 |
 | 5 | Failure modes | `050_5_failure-modes.md` | 0.9 |

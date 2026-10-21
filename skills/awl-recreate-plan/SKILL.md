@@ -105,7 +105,11 @@ Only these section files for this phase, nothing else unless a step below says s
     patch, one named replace sentence carry them; a baked face effect is planned as flagged.
   - **The placement marker** (a placed product, `generation-system.md` §4b.6, §4b.7): this prepared silent copy is
     where the product is composited as the labelled marker, once X1 has reckoned its spot and size (two estimates
-    that agree); `T placeholder` builds it right after that reckoning, X3 uploads it, and that labelled copy is Video 1 of the request. No guide image
+    that agree); `T placeholder` builds it right after that reckoning and X3 uploads it. Whatever the model, the
+    request carries the unmarked original reference first (the original's `videos_without_audio` copy when nothing
+    was cut, flipped or padded, otherwise this unmarked prepared copy; same span, orientation and length) and that
+    labelled copy beside it as the placement preview, in the form the model's roles allow (§4b.6 (a)–(d)), all
+    within the model's own limits, else the clip plan of X1 splits the source. No guide image
     is ever cut from a source frame (a crop of the source with the performer blurred or scrubbed).
   - Then 9:16 (`T conform` / `reframe`). Split at cuts into the edit model's range when it is
     longer.
@@ -158,8 +162,10 @@ Only these section files for this phase, nothing else unless a step below says s
 - **Placement marker** (a product placed or added at a spot, `generation-system.md` §4b.6, §4b.7): the product is
   composited into this prepared silent copy as the labelled marker (a thin red outline and the label "asset
   sample, not the final look") with `T placeholder`, at the spot and height X1 reckons from two estimates that
-  agree, one `--window` per shot, punch-in or set-up; that labelled copy is the video the request binds (X3). No
-  guide image is ever cut from a source frame (a crop of the source with the performer blurred or scrubbed).
+  agree, one `--window` per shot, punch-in or set-up; that labelled copy is the request's placement preview,
+  bound beside the unmarked original reference of the same span in the form the model's roles allow (X3,
+  `generation-system.md` §4b.6). No guide image is ever cut from a source frame (a crop of the source with the performer blurred or
+  scrubbed).
 
 In Recreate (Analyze Mode) the tool methods that `text-and-format` §2 lists for removing source text (`--delogo`, `--crop`) are not used: a caption, a name or a patch is never removed by a tool, the prompt's clean-plate lines and the character-swap script carry it (see Never below).
 

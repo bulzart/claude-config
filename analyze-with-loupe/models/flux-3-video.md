@@ -45,7 +45,7 @@ Stored as section files in `flux-3-video/` (next to this file); **read only the 
 | 3.4 | · Environment, lighting and style | `070_3.4_environment-lighting-and-style.md` | 0.4 |
 | 3.5 | · Chronology, timing and multi-shot structure | `080_3.5_chronology-timing-and-multi-shot.md` | 0.5 |
 | 3.6 | · Camera language and dedicated camera / motion controls | `090_3.6_camera-language-and-dedicated-ca.md` | 0.4 |
-| 3.7 | · References (image / video / audio): syntax, roles, what is inherited and | `100_3.7_references-image-video-audio-syn.md` | 1.1 |
+| 3.7 | · References (image / video / audio): syntax, roles, what is inherited and | `100_3.7_references-image-video-audio-syn.md` | 1.5 |
 | 3.8 | · Start and end frames | `110_3.8_start-and-end-frames.md` | 0.5 |
 | 3.9 | · Audio, dialogue and sound (if supported) | `120_3.9_audio-dialogue-and-sound-if-supp.md` | 0.7 |
 | 3.10 | · Negative constraints (is there a negative-prompt field on Higgsfield? ho | `130_3.10_negative-constraints-is-there-a.md` | 0.6 |

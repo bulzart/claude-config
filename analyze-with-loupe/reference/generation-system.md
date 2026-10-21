@@ -36,7 +36,7 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | 4b.3 | · One anchor, persistent (ledger-tracked) | `170_4b.3_one-anchor-persistent-ledger-tra.md` | 3.0 |
 | 4b.4 | · Ambient integration: it must not read as an edit | `180_4b.4_ambient-integration-it-must-not.md` | 2.7 |
 | 4b.5 | · Expressing it to the model (with §7) | `190_4b.5_expressing-it-to-the-model-with.md` | 4.3 |
-| 4b.6 | · The placement marker (spot and size, labelled, in every placement refere | `200_4b.6_the-placement-marker-spot-and-si.md` | 8.1 |
+| 4b.6 | · The placement marker (spot and size, labelled, in every placement refere | `200_4b.6_the-placement-marker-spot-and-si.md` | 14.2 |
 | 4b.7 | · Reckoning the marker: real size, distance, perspective, occlusion | `205_4b.7_reckoning-the-marker-real-size-d.md` | 4.2 |
 | 5 | Logic, continuity and anti-slop gate | `210_5_logic-continuity-and-anti-slop-g.md` | 4.6 |
 | 5b | · Physical motion follows physics, above all when it has to land | `220_5b_physical-motion-follows-physics.md` | 2.9 |

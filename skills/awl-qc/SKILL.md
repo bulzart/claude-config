@@ -202,12 +202,12 @@ Only these section files for this phase, nothing else unless a step below says s
     carried the placement marker: the label's words are never in `--allowed-text`, so `T qc` OCR lists any of
     them it sees; look at the marker's spot at full resolution at rest and in every window of the marker (the
     sidecar's windows): no label text, no red outline, no box, no other mark; the product renders as a real object
-    in the scene (the paste test above, not the sample's flat look) at the reckoned size (`T scale`). With the two
-    videos of Recreate and Edit Mode, the product's spot and size follow Video 2 (measure its box against the
-    marker's box in the preview at the same time, from the sidecar) and everything else follows Video 1. A residue,
-    a pasted look, or a product off the marker's spot or size (over 25 %) is a regenerate reason; the retry keeps
-    the marker and strengthens the binding of the two videos, the marker sentence and the removal line in the
-    model's phrasing (never the sizing words alone).
+    in the scene (the paste test above, not the sample's flat look) at the reckoned size (`T scale`). In Recreate
+    and Edit Mode, whatever the model, the product's spot and size follow the placement preview (measure its box
+    against the marker's box at the same time, from the sidecar) and everything else follows the original
+    reference. A residue, a pasted look, or a product off the marker's spot or size (over 25 %) is a regenerate
+    reason; the retry keeps the marker and strengthens the binding of the original and the preview, the marker
+    sentence and the removal line in the model's phrasing (never the sizing words alone).
   - **Shot structure** (`anomaly-catalog.md` §4 step 5i; `generation-system.md` §3b.1 item 7; Recreate and
     Edit Mode with hard cuts): the output's cuts against the source's shot list: the same count at the same
     times, person-free cutaways still person-free, the placed product in every shot where its anchor is in

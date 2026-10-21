@@ -12,9 +12,11 @@
 - Per-shot length guidance conflicts (2–5 s vs 4–6 s); inconsistent "forward/backward" extension wording.
 - Quality parity of Prime vs standard beyond "aligned capabilities"; API page "preview" vs GA blog.
 - Size levers (§5 model limit): the old separate size-and-place guide image is proven (§4.0 items 13–14; 8 takes);
-  the labelled placement marker inside the prepared Video 1 that replaced it on 2026-10-22 is untested: whether Wan
-  removes the red outline and the label cleanly, renders a real object rather than the pasted sample, and keeps
-  the marker's size (`reference/generation-system.md` §4b.6). Still untested as well: (a) a
+  the labelled placement marker replaced it on 2026-10-22. Its one take as the ONLY video reference removed the red
+  outline and the label cleanly and rendered a real object, but at 1.86× and 87 px to the side (§5). Untested: the
+  two-video pair (Video 1 the unmarked original, Video 2 the marked preview), whether Wan then keeps the marker's
+  spot and size, and how a short preview behaves beside a longer original (`reference/generation-system.md`
+  §4b.6). Still untested as well: (a) a
   frames-only build, the source's first frame with the product composited at the reckoned height as `start_image`
   (§2.5 gotcha 9), which pins size and may cost motion and sync; (c) asking for 0.6× the reckoned size to cancel a
   ~1.5× bias; (e) pinning the depth with a scene landmark and a same-depth neighbour (V04 a4 reached about 0.086 of

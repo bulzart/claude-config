@@ -104,7 +104,13 @@ Only these section files for this phase, nothing else unless a step below says s
       perspective, the posture, the occlusion (a mask, or another spot, where something passes in front), one
       window per shot, punch-in or set-up, and the label's side, off the key action. Build the marker right after
       this reckoning, locally and without credit (`T placeholder`, the call in `awl-inputs`), and view its stills:
-      X2 binds it, X4 measures it and X3 uploads it;
+      X2 binds it, X4 measures it and X3 uploads it. In Recreate and Edit Mode, whatever the model, the request
+      carries the unmarked original reference first and the marked placement preview beside it; name the
+      preview's form from the locked model's roles (§4b.6: (a) a second video reference, (b) labelled stills as
+      image references, (c) words only, (d) a photoreal start frame), and plan the source span so that the
+      original and the preview fit the model's own limits together (its guide §2.2, §2.5); a longer source is
+      split into clips on its own cuts (the clip plan below), and a single uncut shot takes the stills (b) or a
+      short preview;
     - the **guardrail hits** of the source (Recreate, Edit Mode) with their operations and times,
       or the guardrail invariants of the concept (Create): the count limit in the ledger, no
       competitor objects, supplied characters only, the wording rules in the text plan
@@ -167,7 +173,9 @@ Only these section files for this phase, nothing else unless a step below says s
       - the seams, on the reference's cuts first;
       - the join method of each seam (from `index.json → continuation`);
       - the hand-off state of each seam;
-      - the clip durations;
+      - the clip durations; in Recreate and Edit Mode with a placement marker, each clip's original reference
+        and placement preview (of that clip's span) fit the locked model's limits together
+        (`generation-system.md` §4b.6);
     - the logic and anti-slop gate;
     - the **QC checkpoints** (`anomaly-catalog.md` §3 step 8): every use beat, exit and re-entry,
       occlusion, cut, hand-off, pour and seam, plus the first second (the product in frame at 0.0 s) and

@@ -89,8 +89,16 @@ m6 = flat(GS / "200_4b.6_the-placement-marker-spot-and-si.md")
 m7 = flat(GS / "205_4b.7_reckoning-the-marker-real-size-d.md")
 check("is never built, uploaded or bound in Recreate or Edit Mode" in m6 and "Start and end frames are the exception" in m6 and "T placeholder --image" in m6,
       "generation-system §4b.6: no source-crop guide image in Recreate/Edit, the start/end-frame exception, Create's marked texture")
-check("completely removes the red outline, the label and every auxiliary mark" in m6 and "not how the <product> looks" in m6 and "actual object in the scene" in m6,
+check("completely removes the red outline, the label and every auxiliary mark" in m6 and "not how the <product> looks" in m6 and "as an actual object in" in m6,
       "generation-system §4b.6 holds the marker sentence and the removal line")
+# the original reference rides first and the placement preview beside it, for every model ([U] 2026-10-22)
+check("The original reference, always, first" in m6 and all(f"**({k})" in m6 for k in "abcd") and "never the only picture of the scene" in m6,
+      "generation-system §4b.6: the unmarked original always first, the placement preview in forms (a)-(d), whatever the model")
+MD = LIB / "models"
+vid_guides = sorted({m["guide"] for m in json.loads(rd(MD / "index.json"))["models"].values()
+                     if {"video_refs", "video_edit", "object_replace", "motion_transfer"} & set(m.get("operations", []))})
+no_note = [g for g in vid_guides if "Placement preview" not in " ".join(rd(p) for p in (LIB / g[:-3]).glob("*.md"))]
+check(not no_note, "every guide of a model that takes a video says how its original and its placement preview bind: " + ", ".join(no_note))
 check("at least TWO neighbours" in m7 and "agree within about 25 %" in m7 and "--occlusion-mask" in m7 and "--window" in m7,
       "generation-system §4b.7 reckons the marker from two agreeing estimates, with occlusion and windows")
 wired = [("awl-inputs", SKD / "awl-inputs" / "SKILL.md", "T placeholder --video"), ("awl-inputs image", SKD / "awl-inputs" / "SKILL.md", "T placeholder --image"),

@@ -12,6 +12,7 @@ There are no duration, aspect, audio or genre parameters: the output follows the
 - The first-party recipe passes reference images with role **`image`** and **exactly one**
   source/driving video with role **`video`** [HF]. The server auto-coerces.
 - Order: the video first, then the images, in `@ImageN` order (Higgsfield edit convention [HF]).
+- Placement preview (Recreate and Edit Mode, every placed product; `reference/generation-system.md` §4b.6): exactly one video per call, so the unmarked original is that video, never the marked copy, and the labelled stills ride as `image` entries after the product view, each bound for spot and size only with its time span (form b) [INFERRED; untested].
 
 ### 2.3 Duration, resolution, audio
 - The duration equals the source's (4–30 s).

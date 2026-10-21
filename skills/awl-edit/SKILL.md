@@ -159,8 +159,10 @@ Only these section files for this phase, nothing else unless a step below says s
 - **Placement marker** (a product placed or added at a spot, `generation-system.md` §4b.6, §4b.7): the product is
   composited into this prepared silent copy as the labelled marker (a thin red outline and the label "asset
   sample, not the final look") with `T placeholder`, at the spot and height X1 reckons from two estimates that
-  agree, one `--window` per shot, punch-in or set-up; that labelled copy is the video the request binds (X3). No
-  guide image is ever cut from a source frame (a crop of the source with the performer blurred or scrubbed).
+  agree, one `--window` per shot, punch-in or set-up; that labelled copy is the request's placement preview,
+  bound beside the unmarked original reference of the same span in the form the model's roles allow (X3,
+  `generation-system.md` §4b.6). No guide image is ever cut from a source frame (a crop of the source with the performer blurred or
+  scrubbed).
 
 ### E6. Generate
 Run **X1–X10** (§5) for this video, as an edit. The source video is the unique master, and the plan
