@@ -138,8 +138,12 @@ Only these section files for this phase, nothing else unless a step below says s
       consequence, plus the solidity exclusion (`anomaly-catalog.md` §2.14).
     - The **marker sentences, the camera lock, the swap grammar, the empty surfaces and the prepared-source
       sentence**, where the plan has them, in the model's phrasing (`generation-system.md` §4, §4b.5, §4b.6, §5c.2b,
-      §5c.3): every reference that places the product (Video 1 with the marker in Recreate and Edit Mode, Create's
-      marked texture) is bound with the marker sentence of §4b.6 item 4 (a placement and size marker only, taken
+      §5c.3): in Recreate and Edit Mode the two videos are bound by purpose (§4b.6 item 4): Video 1 is the original
+      reference (the unmarked footage: performers, motion, camera, framing, timing, scene and light, the full
+      keep-list), Video 2 is a placement preview of Video 1 only (where the product stands and how big it is in
+      every frame; nothing else is taken from it), and an exclusion of Video 1's content ("do not inherit … branded
+      items of Video 1") never covers the marked product; every reference that places the product (Video 2 in
+      Recreate and Edit Mode, Create's marked texture) is bound with the marker sentence of §4b.6 item 4 (a placement and size marker only, taken
       from the client's asset sample, not how the product looks; at exactly that spot and size a real product
       rendered as an actual object in the scene: its material, the scene's light and shadows, real contact with its
       surface), the anchor sentence repeats the marker's spot and size, and the removal line ("The final footage

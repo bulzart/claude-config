@@ -100,7 +100,9 @@ Hard rules:
   along the whole path, outside every hand's lane, bare and wider than the product, not the nearest plane
   unless the user marked it). Every reference that places the product carries the labelled placement marker of
   §4b.6 at the size §4b.7 reckons (two estimates that agree): in Recreate and Edit Mode the product composited into
-  the prepared source with `T placeholder` (that labelled video is Video 1), in Create a neutral texture marked with
+  the prepared source with `T placeholder`, and the request binds two silent videos: Video 1 the unmarked original
+  reference (same span, orientation and length) and Video 2 that labelled placement preview (spot and size only),
+  within the model's video-reference cap; in Create a neutral texture marked with
   `T placeholder --image`. Never build, upload or bind a guide image cut from a source frame. The request carries
   the marker sentence (a placement and size marker only, taken from the asset sample; render a real product as an
   actual object in the scene: its material, the scene's light and shadows, real contact with its surface) and the

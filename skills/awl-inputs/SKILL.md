@@ -66,8 +66,16 @@ Only these section files for this phase, nothing else unless a step below says s
       render> --product-h-cm <H> --product-w-cm <W> --window "<t0-t1:base_x,base_y,height_px>" … --sample <x0,y0,x1,y1>
       --basis "<neighbour>: <cm> = <px> px at depth ratio <r>" …` (`--luma-ref` for a flash or a fade, `--skin` or
       `--occlusion-mask` where something passes in front, `--label-side` when the default side covers the action);
-      view every still it writes at full resolution, keep its sidecar with the plan, then upload that labelled
-      video as this video's source (Video 1) instead of the unmarked copy;
+      view every still it writes at full resolution, keep its sidecar with the plan, then upload TWO silent videos
+      (`generation-system.md` §4b.6, [U] 2026-10-22): **Video 1, the original reference** (the unmarked own
+      footage of exactly the preview's span, orientation and length: the original's silent copy
+      `<references folder>/videos_without_audio/<name>` when there are no inserts, flip or padding, otherwise
+      `own/own-silent.mp4` or the unmarked `prepared/source.mp4` that had the same flip or padding; uploaded once
+      per video and reused by every attempt) and **Video 2, the placement preview** (the labelled video, uploaded
+      for each marker build), in that order in `medias`; check that both have the same duration and frame count
+      (`ffprobe`) and that together they fit the locked model's video-reference cap (Wan: 15 s in total), else
+      the clip plan of X1 applies; record both with `T uploads set` ("Video 1: original reference",
+      "Video 2: placement preview");
     - Create: `T placeholder --image <neutral texture of the room's colour> --render … --base-x … --base-y …
       --height …`, bound as the last `image_references` entry, for spot and size only;
     - never a guide image cut from a source frame, and never a placement reference without its label. X4 checks
