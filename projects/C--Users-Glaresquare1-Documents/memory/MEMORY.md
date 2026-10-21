@@ -37,3 +37,4 @@
 - [Never push to glare-factory](glare-factory-never-push.md) — user 2026-10-20: no push/branch push/PR to harperdogpound/ai-video-pipelines unless the user explicitly asks at that moment; pulling is fine
 - [Run 19oct: can realism regen](atp-run-19oct-can-realism-regen.md) — 2026-10-20: cans of videos 01-04, 07, 08 regenerated with photoreal guide plates; 05, 06, 09-20 still on old guides (ask first); lesson not yet in the references
 - [GitHub accounts](github-accounts.md) — new repos go under bulzart (private), not bulzartaliu50-lang; gh holds both, active = bulzartaliu50-lang
+- [No Genjutsu, Wan 3.0 Prime](no-genjutsu-use-wan-prime.md) — user 2026-10-21 mid Celsius run: "all work has to be on wan 3.0 prime from now on, not use genjutsu anywhere"; Genjutsu pilot left the face unswapped, 24 fps squeeze, could not add the can
