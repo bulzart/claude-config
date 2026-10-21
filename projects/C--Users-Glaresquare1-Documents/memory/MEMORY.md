@@ -39,3 +39,4 @@
 - [GitHub accounts](github-accounts.md) — new repos go under bulzart (private), not bulzartaliu50-lang; gh holds both, active = bulzartaliu50-lang
 - [No Genjutsu, Wan 3.0 Prime](no-genjutsu-use-wan-prime.md) — user 2026-10-21 mid Celsius run: "all work has to be on wan 3.0 prime from now on, not use genjutsu anywhere"; Genjutsu pilot left the face unswapped, 24 fps squeeze, could not add the can
 - [Always full paths](always-full-paths.md) — user 2026-10-21: every file named to the user as a complete absolute path from the drive letter, never relative to a run folder
+- [AWL placement marker, no guide image](awl-placement-marker-no-guide-image.md) — user 2026-10-22: the product in a prepared video reference is a labelled 'placement/size marker, asset sample, not final look' at the reckoned size (two estimates vs the video's objects); the blurred source-crop guide image is never uploaded or used again
