@@ -79,8 +79,29 @@ for p in [ROUTER] + SKILLS + sorted((LIB / "reference").rglob("*.md")) + sorted(
             if f not in flags_of[c] and f != "--help":
                 bad_flags.add(f"{p.parent.name if p.name == 'SKILL.md' else p.name}: T {c} {f}")
 check(not bad_flags, "every `T <command> --flag` the router, the skills and the references cite is a flag of that command: " + "; ".join(sorted(bad_flags)[:6]))
-for c in ("loupe", "qc-consult", "qc-brief", "plan-hints", "caught-flag", "status", "doctor", "lint-run", "cost-report", "seams", "strip-inserts", "doc-text"):
+for c in ("loupe", "qc-consult", "qc-brief", "plan-hints", "caught-flag", "status", "doctor", "lint-run", "cost-report", "seams", "strip-inserts", "doc-text", "placeholder"):
     check(c in cmds, f"awl.py has the {c} command")
+
+# --- the placement marker (the user, 2026-10-22): every placement reference is labelled; no guide image cut from a source frame
+GS = LIB / "reference" / "generation-system"
+flat = lambda p: " ".join(rd(p).split())
+m6 = flat(GS / "200_4b.6_the-placement-marker-spot-and-si.md")
+m7 = flat(GS / "205_4b.7_reckoning-the-marker-real-size-d.md")
+check("is never built, uploaded or bound in Recreate or Edit Mode" in m6 and "Start and end frames are the exception" in m6 and "T placeholder --image" in m6,
+      "generation-system §4b.6: no source-crop guide image in Recreate/Edit, the start/end-frame exception, Create's marked texture")
+check("completely removes the red outline, the label and every auxiliary mark" in m6 and "not how the <product> looks" in m6 and "actual object in the scene" in m6,
+      "generation-system §4b.6 holds the marker sentence and the removal line")
+check("at least TWO neighbours" in m7 and "agree within about 25 %" in m7 and "--occlusion-mask" in m7 and "--window" in m7,
+      "generation-system §4b.7 reckons the marker from two agreeing estimates, with occlusion and windows")
+wired = [("awl-inputs", SKD / "awl-inputs" / "SKILL.md", "T placeholder --video"), ("awl-inputs image", SKD / "awl-inputs" / "SKILL.md", "T placeholder --image"),
+         ("awl-recreate-plan", SKD / "awl-recreate-plan" / "SKILL.md", "T placeholder"), ("awl-edit", SKD / "awl-edit" / "SKILL.md", "T placeholder"),
+         ("awl-plan-video", SKD / "awl-plan-video" / "SKILL.md", "placement marker"), ("awl-write-request", SKD / "awl-write-request" / "SKILL.md", "removal line"),
+         ("awl-precheck", SKD / "awl-precheck" / "SKILL.md", "Spot and marker"), ("awl-qc", SKD / "awl-qc" / "SKILL.md", "Marker residue"),
+         ("production-agents §2", PA / "020_2_spawning.md", "Spot and marker")]
+check(not [lbl for lbl, p, needle in wired if needle not in rd(p)], "the placement marker is wired into every step that builds, binds or checks it: " + ", ".join(lbl for lbl, p, needle in wired if needle not in rd(p)))
+old_way = [str(p.relative_to(HOME)) for p in SKILLS + sorted((LIB / "reference").rglob("*.md")) + sorted((LIB / "models").rglob("*.md"))
+           if re.search(r"(build|built) (it|the guide)? ?(locally )?from\s+the source's bare surface", " ".join(rd(p).split()))]
+check(not old_way, "no step builds a guide from the source's bare surface any more: " + ", ".join(old_way[:4]))
 
 # --- Loupe is started and recorded at run creation, and the same key reaches resume, the agent contract and QC
 lw = [("router resume", ROUTER, "T loupe ensure"), ("awl-start", SKD / "awl-start" / "SKILL.md", "T loupe ensure"),

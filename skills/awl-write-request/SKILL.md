@@ -17,30 +17,30 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §2.4 (call recipes), §2.6 (9:16/720p), §3.1–§3.7 (structure, subject and identity, action, environment and light, chronology, camera, references), §3.10–§3.14 (negatives, visible text, identity consistency, product fidelity, integration), §4.0 (official examples: the pattern card) and the §4.x of the request kind (4.1 text-to-video, 4.2 frames, 4.3 reference, 4.4 edit/extension); §3.8 when frames are used; §3.9 when audio is used; §6 when a model feature is planned
 - generation-system §4: `AWL/reference/generation-system/100_4_replacement-and-insertion-integr.md` (3.3 KB)
-- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
+- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
 - generation-system §5b: `AWL/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5c.3: `AWL/reference/generation-system/270_5c.3_the-fidelity-lock-in-the-prompt.md` (3.1 KB)
 - generation-system §7: `AWL/reference/generation-system/320_7_translating-the-plan-into-the-se.md` (2.7 KB)
-- generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (4.0 KB)
+- generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (4.3 KB)
 - *Edit Mode or Recreate:*
   - generation-system §5c.2: `AWL/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
-  - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.2 KB)
+  - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.6 KB)
 - *a placed or contents product (the spot):*
   - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
-- *the plan has a size-and-place guide, or a retry adds one:*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
-- anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.1 KB)
+- *a reference places the product (the placement marker), or a retry adds one:*
+  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (8.1 KB)
+- anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.4 KB)
 - *a product in use, prepared or counted:*
-  - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.5 KB)
-  - anomaly-catalog §2.2: `AWL/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (3.0 KB)
-  - anomaly-catalog §2.3: `AWL/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.7 KB)
+  - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
+  - anomaly-catalog §2.2: `AWL/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (2.8 KB)
+  - anomaly-catalog §2.3: `AWL/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.5 KB)
   - anomaly-catalog §2.5: `AWL/reference/anomaly-catalog/080_2.5_object-permanence-exits-occlusio.md` (1.5 KB)
 - *a placed or contents product (size words):*
-  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.1 KB)
+  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
 - *the video shows a throw/pass (solidity lines):*
-  - anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.9 KB)
+  - anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
 - *a placed or contents product (blend lines):*
-  - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (8.3 KB)
+  - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (9.6 KB)
 - *a person is swapped (the skin-tone sentence):*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
@@ -115,8 +115,9 @@ Only these section files for this phase, nothing else unless a step below says s
       the reckoned pixel height and measured with `T scale --frame … --product-px … --ref-cm …
       --ref-px …` before it is animated. Where the guide lists size as a model limit
       (`wan3_0_prime`), these words are a check, not a control: X1 chose the anchor class from the
-      guide's passing list or planned a size-and-place guide (§4b.6), and a start frame is out of reach
-      while the source rides as a video reference.
+      guide's passing list or planned the placement marker (§4b.6), and a start frame is out of reach
+      while the source rides as a video reference. A start frame carries no label or mark: its product is a
+      photoreal render that passed the paste test.
     - Every vessel's contents are stated from the contents sample; an unstated vessel comes back as
       water. A character photo's role is limited to the person (face, hair, build and clothing, not its
       props or background) unless the plan keeps its props as the product's contents
@@ -135,9 +136,16 @@ Only these section files for this phase, nothing else unless a step below says s
       later state than t=0 (`anomaly-catalog.md` §3). Every thrown, dropped, swung or passing thing
       has its path written relative to the product, past it on a named side or onto it with the
       consequence, plus the solidity exclusion (`anomaly-catalog.md` §2.14).
-    - The **guide, the camera lock, the swap grammar, the empty surfaces and the prepared-source sentence**,
-      where the plan has them, in the model's phrasing (`generation-system.md` §4, §4b.5, §4b.6, §5c.2b,
-      §5c.3): the guide bound as spot and size only; the camera lock as its own sentence; a swap written as a
+    - The **marker sentences, the camera lock, the swap grammar, the empty surfaces and the prepared-source
+      sentence**, where the plan has them, in the model's phrasing (`generation-system.md` §4, §4b.5, §4b.6, §5c.2b,
+      §5c.3): every reference that places the product (Video 1 with the marker in Recreate and Edit Mode, Create's
+      marked texture) is bound with the marker sentence of §4b.6 item 4 (a placement and size marker only, taken
+      from the client's asset sample, not how the product looks; at exactly that spot and size a real product
+      rendered as an actual object in the scene: its material, the scene's light and shadows, real contact with its
+      surface), the anchor sentence repeats the marker's spot and size, and the removal line ("The final footage
+      completely removes the red outline, the label and every auxiliary mark; no text or watermarks appear in the
+      frame", the product's own printed label carved out) stands with the clean-plate lines and is never cut; no
+      guide image cut from a source frame is bound; the camera lock as its own sentence; a swap written as a
       replacement; an empty surface written empty, per shot; "Video 1 is already in true orientation" after a
       flip; the one hand in frame named with the bare empty area; the clean-plate lines never cut to fit the
       length limit (`text-and-format.md` §1).
@@ -232,9 +240,10 @@ Only these section files for this phase, nothing else unless a step below says s
   (`anomaly-catalog.md` §2.14).
 - Never place a product at a spot that is hidden at the source's frame 0, leaves the frame along the camera
   path, lies in a hand's lane, is narrower than the product or is the nearest plane unless the user marked
-  it, and then only with a guide (`generation-system.md` §4b.1c); never build a size-and-place guide from an
-  unscrubbed source frame (performer, clothing or lettering still in it), a flat packshot paste or a
-  soft-labelled image (§4b.6); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
+  it, and then only with the placement marker (`generation-system.md` §4b.1c); never build, upload or bind a
+  guide image cut from a source frame, never let a placement reference ride without its label and its request
+  sentences, never put a label or mark on a start or end frame, and never mark with a flat packshot paste or a
+  soft-labelled render (§4b.6); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
   face effect, a burned-in caption or an identifying name without its prompt sentence (§5c.2b); never try to
   remove a caption, a name or a patch from a source with a tool in Analyze Mode (inpaint, delogo, crop): the
   clean-plate lines and the character-swap script carry it.

@@ -15,22 +15,23 @@ Callers. Edit Mode: X4, X5, X6 in sequence for the video. Analyze Mode, this ses
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
-- generation-system §8: `AWL/reference/generation-system/330_8_pre-generation-qc-pass-mental-re.md` (7.0 KB)
-- generation-system §10: `AWL/reference/generation-system/360_10_the-short-brief-printed-at-x6.md` (3.1 KB)
+- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
+- generation-system §8: `AWL/reference/generation-system/330_8_pre-generation-qc-pass-mental-re.md` (7.4 KB)
+- generation-system §10: `AWL/reference/generation-system/360_10_the-short-brief-printed-at-x6.md` (3.2 KB)
 - *Edit Mode or Recreate:*
   - generation-system §5c.2: `AWL/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
   - generation-system §5c.4: `AWL/reference/generation-system/280_5c.4_check-before-spending-x4.md` (0.5 KB)
 - *a contents or placement video:*
-  - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (3.1 KB)
+  - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (2.6 KB)
   - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
-- *the plan has a size-and-place guide:*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
-- anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.1 KB)
+- *a reference places the product (the placement marker):*
+  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (8.1 KB)
+  - generation-system §4b.7: `AWL/reference/generation-system/205_4b.7_reckoning-the-marker-real-size-d.md` (4.2 KB)
+- anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.4 KB)
 - *a placed or contents product (size, label, posture checks):*
-  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.1 KB)
-  - anomaly-catalog §2.9: `AWL/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.3 KB)
-  - anomaly-catalog §2.16: `AWL/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (4.3 KB)
+  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
+  - anomaly-catalog §2.9: `AWL/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.4 KB)
+  - anomaly-catalog §2.16: `AWL/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (3.9 KB)
 - higgsfield-mcp §8: `AWL/higgsfield/higgsfield-mcp/080_8_credits-and-cost.md` (1.1 KB)
 - higgsfield-mcp §9: `AWL/higgsfield/higgsfield-mcp/090_9_errors-and-recovery.md` (2.5 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §5 (failure table), §7 (pre-generation checklist)
@@ -72,12 +73,18 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Posture, support and place** (`generation-system.md` §4b.1b; `anomaly-catalog.md` §2.16): every
     anchor is a posture its shape allows, on a visible support, where a person would leave it, with
     its story reason; no lean on a prop the model has to invent, nothing on a thin sheet, no source
-    beat taken over. Where the guide lists size as a model limit, the anchor is from its passing list or a
-    size-and-place guide (§4b.6) carries spot and size.
-  - **Spot and guide** (`generation-system.md` §4b.1c, §4b.6; `anomaly-catalog.md` §2.9): the spot passes the
-    feasibility lines; a guide holds nothing of the performer, clothing or lettering, shows the product shaded in perspective with a
-    sharp label and fits the reckoned size (`T scale --frame`); the wordmark's pixel height from the size
-    reckoning is at least about 25 px, or the limit is written in the brief.
+    beat taken over. Where the guide lists size as a model limit, the anchor is from its passing list or the
+    placement marker (§4b.6) carries spot and size.
+  - **Spot and marker** (`generation-system.md` §4b.1c, §4b.6, §4b.7; `anomaly-catalog.md` §2.9): the spot passes the
+    feasibility lines. Every reference that places the product carries the placement marker: on a full-resolution
+    still of it (the stills `T placeholder` wrote), `T scale --frame <still> --product-cm <H> --product-px <y0-y1>
+    --ref-cm <h> --ref-px <y0-y1>` agrees with the plan's reckoning and its sidecar shows two `--basis` estimates
+    that agree within about 25 %; the product is shaded in the scene's perspective with a sharp printed label; the
+    outline is thin and red; the label is legible at 720×1280 and covers no face, no key action and no hand's
+    path; nothing passes through the marker without a mask. The request binds the marked video (or image), carries
+    the marker sentence and the removal line, and holds no guide image cut from a source frame; a start or end
+    frame carries no mark and passed the paste test. The wordmark's pixel height from the size reckoning is at
+    least about 25 px, or the limit is written in the brief.
   - **Source surfaces:** each printed surface a guardrail or §9b names is a "replace / remove only …
     reconstruct as <named content>" sentence, never a description of blankness, with the original in
     the exclusion line.

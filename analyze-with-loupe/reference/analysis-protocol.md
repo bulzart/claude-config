@@ -21,7 +21,7 @@ Stored as section files in `analysis-protocol/` (next to this file); **read only
 | 2 | Reading a video as one continuous sequence | `030_2_reading-a-video-as-one-continuou.md` | 5.6 |
 | 3 | Per-video card — `20-analysis/cards/<V>.md` | `040_3_per-video-card-20-analysis-cards.md` | 5.4 |
 | 4 | Effectiveness lenses (apply those the material supports; add new ones wh | `050_4_effectiveness-lenses-apply-those.md` | 2.1 |
-| 5 | Cross-video synthesis | `060_5_cross-video-synthesis.md` | 5.2 |
+| 5 | Cross-video synthesis | `060_5_cross-video-synthesis.md` | 5.3 |
 | 6 | Project inference — `20-analysis/project-profile.md` | `070_6_project-inference-20-analysis-pr.md` | 2.4 |
 | 7 | Scale and delegation (≤ 2 analysis agents, no Workflow) | `080_7_scale-and-delegation-2-analysis.md` | 3.2 |
 | 8 | Presenting results to the user | `090_8_presenting-results-to-the-user.md` | 0.2 |

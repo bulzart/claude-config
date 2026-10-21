@@ -1,6 +1,6 @@
 ---
 name: awl-inputs
-description: /analyze-with-loupe per-video step X3: upload inputs, hand-off frames, start frames, guides. Internal to that command.
+description: /analyze-with-loupe per-video step X3: upload inputs, hand-off frames, start frames, placement markers. Internal to that command.
 user-invocable: false
 ---
 
@@ -27,13 +27,14 @@ Only these section files for this phase, nothing else unless a step below says s
 - higgsfield-mcp §4: `AWL/higgsfield/higgsfield-mcp/040_4_local-file-upload-terminal-path.md` (2.0 KB)
 - higgsfield-mcp §5: `AWL/higgsfield/higgsfield-mcp/050_5_media-roles-how-the-catalog-name.md` (1.7 KB)
 - higgsfield-mcp §6: `AWL/higgsfield/higgsfield-mcp/060_6_elements-reusable-project-assets.md` (1.3 KB)
-- assets-and-substitution §5: `AWL/reference/assets-and-substitution/050_5_getting-references-into-the-mode.md` (2.3 KB)
+- assets-and-substitution §5: `AWL/reference/assets-and-substitution/050_5_getting-references-into-the-mode.md` (2.9 KB)
 - *a multi-clip video (hand-off inputs):*
   - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.4 KB)
-- *the plan has a size-and-place guide, or a retry adds one:*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
+- *a reference places the product (the placement marker), or a retry adds one:*
+  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (8.1 KB)
+  - generation-system §4b.7: `AWL/reference/generation-system/205_4b.7_reckoning-the-marker-real-size-d.md` (4.2 KB)
 - *a production agent (the `blocked` path and the QC `continuity` text are defined here):*
-  - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (0.9 KB)
+  - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (1.3 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §2.2 (media roles), §3.7 (references), §3.8 (frames)
 
 ## Step X3
@@ -58,16 +59,27 @@ Only these section files for this phase, nothing else unless a step below says s
     own first frame with the operations applied, and the end frame, when the model takes one, is
     its last frame with the same operations. The model then interpolates the source's own action.
   - Create Elements when the model supports them and assets recur.
-  - **The size-and-place guide** (`generation-system.md` §4b.6), when the plan has one: build it locally from
-    the source's bare surface scrubbed of performer, clothing and lettering (Create: neutral texture only),
-    check it at X4, upload it with this video's own inputs and bind it as the last `image_references`
-    entry, for spot and size only.
+  - **The placement marker** (`generation-system.md` §4b.6, §4b.7) on every reference that places the product,
+    built locally right after the X1 reckoning (here, when a retry adds one), at the spot and height the plan
+    reckoned:
+    - Recreate and Edit Mode: `T placeholder --video <RUN/10-media/<V>/prepared/ silent copy> --render <product
+      render> --product-h-cm <H> --product-w-cm <W> --window "<t0-t1:base_x,base_y,height_px>" … --sample <x0,y0,x1,y1>
+      --basis "<neighbour>: <cm> = <px> px at depth ratio <r>" …` (`--luma-ref` for a flash or a fade, `--skin` or
+      `--occlusion-mask` where something passes in front, `--label-side` when the default side covers the action);
+      view every still it writes at full resolution, keep its sidecar with the plan, then upload that labelled
+      video as this video's source (Video 1) instead of the unmarked copy;
+    - Create: `T placeholder --image <neutral texture of the room's colour> --render … --base-x … --base-y …
+      --height …`, bound as the last `image_references` entry, for spot and size only;
+    - never a guide image cut from a source frame, and never a placement reference without its label. X4 checks
+      the marker before anything is spent.
   - **Contents form:** upload the variant's contents sample with the product views, and bind it to
     the vessel's contents in the prompt ("the drink in the cup has the colour, clarity and bubbles
     of @ImageN", "the gum piece she takes has the shape and colour of @ImageN"). A start frame
     shows the vessel already holding it, and the opened package beside it.
   - For start-frame models, build and check the 9:16 start frame with an image model
-    (`assets-and-substitution.md` §5). It must match the canonical geometry before it is used.
+    (`assets-and-substitution.md` §5). It must match the canonical geometry before it is used. It is the literal
+    first frame, so it carries no placement label or mark: its product is a photoreal render that passes the paste
+    test (`generation-system.md` §4b.6).
     That `generate_image` call is paid, so it follows the same ledger discipline as X7: its own
     request file `50-requests/video-NN[-aK]-frame-request.json`, `ledger begin`, one call, `ledger set`,
     then `jobs_wait`.
@@ -90,6 +102,9 @@ Only these section files for this phase, nothing else unless a step below says s
   reference material, and may show other products or executions.
 - Never upload an original video with its audio to Higgsfield: use the `videos_without_audio` copy
   (or its prepared derivative).
+- Never build, upload or bind a guide image cut from a source frame; never upload a placement reference (a
+  prepared source with the product composited in, a layout or guide image) without the marker's outline and
+  label, and never put a label or mark on a start or end frame (`generation-system.md` §4b.6).
 - Never upload the flawed take (a clip QC rejected) as an input of its regeneration: the retry reuses the
   media ids of the first attempt (the original source video, when the video has one). Only an accepted clip goes back, as the input
   of a native extension.

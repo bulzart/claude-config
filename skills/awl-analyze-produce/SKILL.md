@@ -13,10 +13,10 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- production-agents §1: `AWL/reference/production-agents/010_1_prepared-by-this-session-before.md` (0.8 KB)
-- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (10.5 KB)
-- production-agents §3: `AWL/reference/production-agents/030_3_the-agent-s-contract.md` (7.8 KB)
-- production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.0 KB)
+- production-agents §1: `AWL/reference/production-agents/010_1_prepared-by-this-session-before.md` (1.3 KB)
+- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (15.4 KB)
+- production-agents §3: `AWL/reference/production-agents/030_3_the-agent-s-contract.md` (8.4 KB)
+- production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 - higgsfield-mcp §1: `AWL/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)
 - `models_explore {action:"get", model_id}` once (A8.2)
 
@@ -172,7 +172,7 @@ See §6.
     The user opens Loupe to see the flags grouped by trigger, asset, video, kind, run or model and searched
     by field, with the evidence Loupe gathered next to each.
 26. **Pilot first.** With more than four videos to produce, spawn the first video's agent as soon as its plan, request, inputs and brief exist and let it run X7–X10 to its QC
-    before the remaining plans are finished and their agents are spawned (the planners go on meanwhile). What its QC finds (a recipe fault, a guide, a size, a seam) is written
+    before the remaining plans are finished and their agents are spawned (the planners go on meanwhile). What its QC finds (a recipe fault, a marker, a size, a seam) is written
     into the other plans before they cost a generation; the user is told in one line when the pilot has passed. The user may say "no pilot" at the start.
 27. **QC fixes (Recreate and Create): the question.** With `state.json → qc_fixes = ask`, a production agent that found issues or anomalies only a new generation can fix writes
     `result.json` with `blocker: qc_fix_permission` and a `fix_proposal` and stops (it never asks). When it reports, record it as for any report, then ask with AskUserQuestion

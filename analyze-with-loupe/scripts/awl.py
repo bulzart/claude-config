@@ -51,8 +51,8 @@ Subcommands (python awl.py <cmd> -h):
   trim           frame-accurate trim (removes generated dead space at head/tail)
   concat         normalise clips to 720x1280 and join them in order (multi-clip videos; cut or continuous seams)
   last-frame     exact last frame of a clip as a lossless PNG: the hand-off start frame for the next clip
-  placeholder    the placement marker of a Recreate / Edit Mode source: a product render composited into the silent 9:16
-                 source at the spot and pixel height the agent gives (real cm proportions, tone match, contact shadow,
+  placeholder    the placement marker: a product render composited into a silent 9:16 source video (Recreate / Edit Mode)
+                 or a placement image (--image: a layout or guide image) at the spot and pixel height the agent gives (real cm proportions, tone match, contact shadow,
                  optional windows, luma-follow and occlusion), a thin red outline and a short label beside it, and a
                  JSON sidecar of the facts (boxes, sizes, the size-reckoning basis as given); it chooses nothing
   capcut-name    free CapCut project name DD_Mon_YYYY_vNN for an Analyze Mode video
@@ -4340,20 +4340,33 @@ def _frame_at(video: str, t: float, W: int, H: int):
 
 
 def cmd_placeholder(a):
-    """Composite a product render (RGBA PNG) into a silent 9:16 source at the spot and pixel height the agent supplies, and draw
-    the placement marker: a thin red outline around the product and a short label beside it saying it is a placement and size
-    marker taken from an asset sample, not the final look (generation-system.md §4b.6). Gather-only: the spot, the size, the
-    windows, the tone sample and the label side are the agent's (or, for the side, the room the frame leaves); the sidecar
-    records the inputs, the boxes and the size-reckoning basis lines as given, with arithmetic only."""
+    """Composite a product render (RGBA PNG) into a silent 9:16 source video (or into a placement image: a layout or guide
+    image) at the spot and pixel height the agent supplies, and draw the placement marker: a thin red outline around the
+    product and a short label beside it saying it is a placement and size marker taken from an asset sample, not the final
+    look (generation-system.md §4b.6). Gather-only: the spot, the size, the windows, the tone sample and the label side are
+    the agent's (or, for the side, the room the frame leaves); the sidecar records the inputs, the boxes and the
+    size-reckoning basis lines as given, with arithmetic only."""
     import numpy as np
-    from PIL import Image, ImageDraw, ImageFilter
+    from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
-    video, render, outp = Path(a.video), Path(a.render), Path(a.out)
-    for p, what in ((video, "--video"), (render, "--render")):
+    if bool(a.video) == bool(a.image):
+        fail("give exactly one of --video (a silent source video) or --image (a placement image: a layout or guide image)", 2)
+    is_image = bool(a.image)
+    srcp, render, outp = Path(a.image or a.video), Path(a.render), Path(a.out)
+    for p, what in ((srcp, "--image" if is_image else "--video"), (render, "--render")):
         if not p.is_file():
             fail(f"{what} not found: {p}", 2)
     if a.product_h_cm <= 0 or a.product_w_cm <= 0:
         fail("--product-h-cm and --product-w-cm are the product's real height and width in cm (registry, spec images, product sheets), both above 0", 2)
+    if is_image:
+        bad = [f for f, v in (("--window", a.window), ("--luma-ref", a.luma_ref), ("--luma-spans", a.luma_spans), ("--clean-t", a.clean_t),
+                              ("--sample-t", a.sample_t), ("--skin", a.skin)) if v]
+        if bad:
+            fail("with --image there is one frame: " + ", ".join(bad) + " apply to a video only", 2)
+        if outp.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+            fail("with --image, --out is an image file (.png recommended)", 2)
+    elif outp.suffix.lower() != ".mp4":
+        fail("with --video, --out is an .mp4 file", 2)
     if a.window and any(v is not None for v in (a.base_x, a.base_y, a.height)):
         fail("give either --window (one or more) or --base-x/--base-y/--height (one placement for the whole clip), not both", 2)
     if a.window:
@@ -4361,7 +4374,8 @@ def cmd_placeholder(a):
     else:
         if None in (a.base_x, a.base_y, a.height) or a.height <= 0:
             fail("without --window give --base-x, --base-y (the centre of the product's base in frame px) and --height (its drawn height in px)", 2)
-        wins = [{"t0": 0.0, "t1": float("inf"), "base_x": a.base_x, "base_y": a.base_y, "height_px": a.height, "spec": "whole clip"}]
+        wins = [{"t0": 0.0, "t1": float("inf"), "base_x": a.base_x, "base_y": a.base_y, "height_px": a.height,
+                 "spec": "the image" if is_image else "whole clip"}]
     nwin = len(wins)
     samples = [None if s is None else [int(round(v)) for v in _nums(s, 4, "--sample")] for s in _per_window(a.sample, nwin, "--sample")]
     sample_ts = _per_window(a.sample_t, nwin, "--sample-t")
@@ -4377,16 +4391,24 @@ def cmd_placeholder(a):
         if not any(luma_refs):
             fail("--luma-spans needs --luma-ref (the static region whose brightness the dips are read from)", 2)
 
-    info = media_summary(video)
-    if not info.get("has_video"):
-        fail(f"no video stream in {video}", 2)
-    W, H = int(info["display_width"]), int(info["display_height"])
-    vs = next((s for s in ffprobe_json(video).get("streams", []) if s.get("codec_type") == "video"), {})
-    fps_str = next((s for s in (vs.get("avg_frame_rate"), vs.get("r_frame_rate")) if s and _ratio(s)), "30")
-    fps = _ratio(fps_str) or 30.0
+    if is_image:
+        base_img = np.asarray(ImageOps.exif_transpose(Image.open(srcp)).convert("RGB"))
+        H, W = base_img.shape[:2]
+        info = {"kind": "image", "width": W, "height": H, "aspect": nearest_aspect(W, H)}
+        fps_str, fps = None, 1.0
+    else:
+        info = media_summary(srcp)
+        if not info.get("has_video"):
+            fail(f"no video stream in {srcp}", 2)
+        W, H = int(info["display_width"]), int(info["display_height"])
+        vs = next((s for s in ffprobe_json(srcp).get("streams", []) if s.get("codec_type") == "video"), {})
+        fps_str = next((s for s in (vs.get("avg_frame_rate"), vs.get("r_frame_rate")) if s and _ratio(s)), "30")
+        fps = _ratio(fps_str) or 30.0
+        info = {"kind": "video", "width": W, "height": H, "aspect": info.get("aspect"), "fps": fps_str,
+                "duration_s": info.get("duration_s"), "has_audio": info.get("has_audio")}
     for w in wins:
         if w["t1"] == float("inf"):
-            w["t1"] = float(info.get("duration_s") or 1e9) + 1.0 / fps
+            w["t1"] = 1.0 if is_image else float(info.get("duration_s") or 1e9) + 1.0 / fps
 
     # ---- the render: cropped to its opaque part, drawn at the real proportions (or the render's own, when asked)
     src = Image.open(render).convert("RGBA")
@@ -4413,15 +4435,15 @@ def cmd_placeholder(a):
         wb = np.ones(3, np.float32)
         sample_fact = None
         if smp:
-            t_s = st if st is not None else (w["t0"] + min(0.1, (w["t1"] - w["t0"]) / 2))
-            f0 = _frame_at(str(video), float(t_s), W, H)
+            t_s = None if is_image else (st if st is not None else (w["t0"] + min(0.1, (w["t1"] - w["t0"]) / 2)))
+            f0 = base_img if is_image else _frame_at(str(srcp), float(t_s), W, H)
             if f0 is not None:
                 x0, y0, x1, y1 = smp
                 reg = f0[max(0, y0):min(H, y1), max(0, x0):min(W, x1)].reshape(-1, 3).astype(np.float32)
                 if reg.size:
                     s = reg.mean(0)
                     wb = (s / max(1e-6, float(s.max()))).astype(np.float32)
-                    sample_fact = {"region": smp, "t": round(float(t_s), 3), "mean_rgb": [round(float(v), 1) for v in s]}
+                    sample_fact = {"region": smp, "t": None if t_s is None else round(float(t_s), 3), "mean_rgb": [round(float(v), 1) for v in s]}
         spr[..., :3] = spr[..., :3] * wb * a.gain
         if a.side_grad:
             u = np.linspace(0.0, 1.0, wd, dtype=np.float32)[None, :, None]
@@ -4500,7 +4522,7 @@ def cmd_placeholder(a):
             y0_, y1_, x0_, x1_ = int(ys.min()), int(ys.max()) + 1, int(xs.min()), int(xs.max()) + 1
             return (y0_, y1_, x0_, x1_, arr[y0_:y1_, x0_:x1_, :3].copy(), arr[y0_:y1_, x0_:x1_, 3:4] / 255.0)
         inter = bool(label_box and not (label_box[2] <= ob[0] or label_box[0] > ob[2] or label_box[3] <= ob[1] or label_box[1] > ob[3]))
-        windows.append({"window": k, "spec": w["spec"], "t0": round(w["t0"], 3), "t1": round(w["t1"], 3),
+        windows.append({"window": k, "spec": w["spec"], "t0": None if is_image else round(w["t0"], 3), "t1": None if is_image else round(w["t1"], 3),
                         "base_x": w["base_x"], "base_y": w["base_y"], "height_px": h, "width_px": wd,
                         "box": box, "box_inside_frame": bool(box[0] >= 0 and box[1] >= 0 and box[2] <= W and box[3] <= H),
                         "outline_box": ob if marker else None, "label_box": label_box, "label_side": side, "label_side_chosen_by": chosen_by,
@@ -4509,15 +4531,13 @@ def cmd_placeholder(a):
                         "_prod": crop_of(prod), "_lab": crop_of(lab)})
 
     # ---- per-frame facts that need the whole clip first: the dips (luma-follow) and the skin occluder plate
-    need_pass1 = any(luma_refs) or a.skin
-    n_frames_hint = int(round(float(info.get("duration_s") or 0) * fps)) + 2
     lum = [[] for _ in range(nwin)]
     skin_boxes, skin_crops = [], [[] for _ in range(nwin)]
     for w in windows:
         l, t_, r, b = w["box"]
         skin_boxes.append((max(0, t_ - 2), min(H, b + 8), max(0, l - 4), min(W, r + 4)))
-    if need_pass1:
-        for i, f in enumerate(_frames_of(str(video), W, H)):
+    if not is_image and (any(luma_refs) or a.skin):
+        for i, f in enumerate(_frames_of(str(srcp), W, H)):
             t = i / fps
             for k in range(nwin):
                 if luma_refs[k]:
@@ -4561,82 +4581,101 @@ def cmd_placeholder(a):
     mask_iter, mask_static, mask_files = None, None, None
     if a.occlusion_mask:
         mp = Path(a.occlusion_mask)
-        if mp.is_dir():
-            mask_files = sorted(q for q in mp.iterdir() if q.suffix.lower() in (".png", ".jpg", ".jpeg", ".bmp", ".webp"))
-        elif mp.is_file() and mp.suffix.lower() in IMAGE_EXT:
+        if mp.is_file() and mp.suffix.lower() in IMAGE_EXT:
             mask_static = np.asarray(Image.open(mp).convert("L").resize((W, H))).astype(np.float32) / 255.0
+        elif is_image:
+            fail("with --image, --occlusion-mask is one mask image", 2)
+        elif mp.is_dir():
+            mask_files = sorted(q for q in mp.iterdir() if q.suffix.lower() in (".png", ".jpg", ".jpeg", ".bmp", ".webp"))
         elif mp.is_file():
             mask_iter = _frames_of(str(mp), W, H, pix="gray")
         else:
             fail(f"--occlusion-mask not found: {mp}", 2)
 
-    enc = subprocess.Popen([find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
-                            "-s", f"{W}x{H}", "-r", fps_str, "-i", "-", "-an", "-c:v", "libx264", "-crf", str(a.crf), "-preset", "slow",
-                            "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(outp)], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-    written, occluded, composited = 0, [[] for _ in range(nwin)], [0] * nwin
-    try:
-        for i, f in enumerate(_frames_of(str(video), W, H)):
-            t = i / fps
-            frame = f.astype(np.float32)
-            mfull = None
-            if mask_iter is not None:
-                mf = next(mask_iter, None)
-                mfull = None if mf is None else mf.astype(np.float32) / 255.0
-            elif mask_files is not None:
-                mfull = (np.asarray(Image.open(mask_files[i]).convert("L").resize((W, H))).astype(np.float32) / 255.0) if i < len(mask_files) else None
-            elif mask_static is not None:
-                mfull = mask_static
-            for k, w in enumerate(windows):
-                if not (w["t0"] <= t < w["t1"]):
-                    continue
-                composited[k] += 1
-                fv, tg = fades[k].get(i, (0.0, 255.0))
-                skin = None
-                if a.skin and plates[k] is not None and fv < 0.3:
-                    y0, y1, x0, x1 = skin_boxes[k]
-                    bx = f[y0:y1, x0:x1].astype(np.float32)
-                    R, G, B = bx[..., 0], bx[..., 1], bx[..., 2]
-                    moving = np.abs(bx - plates[k]).mean(-1) > 35
-                    m = ((R > 110) & (R - G > 40) & ((R - B) / np.maximum(R, 1) > 0.35) & moving)
-                    if m.sum() > 20:
-                        mm = Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.GaussianBlur(1.5))
-                        skin = (y0, x0, np.asarray(mm).astype(np.float32) / 255.0)
-                for part in ("_prod", "_lab"):
-                    c = w[part]
-                    if c is None:
-                        continue
-                    y0, y1, x0, x1, rgb, al = c
-                    if part == "_prod":
-                        occ = np.zeros((y1 - y0, x1 - x0), np.float32)
-                        if mfull is not None:
-                            occ = np.maximum(occ, mfull[y0:y1, x0:x1])
-                        if skin is not None:
-                            sy, sx, sm = skin
-                            oy0, ox0 = max(y0, sy), max(x0, sx)
-                            oy1, ox1 = min(y1, sy + sm.shape[0]), min(x1, sx + sm.shape[1])
-                            if oy1 > oy0 and ox1 > ox0:
-                                occ[oy0 - y0:oy1 - y0, ox0 - x0:ox1 - x0] = np.maximum(occ[oy0 - y0:oy1 - y0, ox0 - x0:ox1 - x0],
-                                                                                    sm[oy0 - sy:oy1 - sy, ox0 - sx:ox1 - sx])
-                        bx0, by0, bx1, by1 = w["box"]
-                        inside = occ[max(0, by0 - y0):max(0, by1 - y0), max(0, bx0 - x0):max(0, bx1 - x0)]
-                        if inside.size and float((inside > 0.5).sum()) > 20:
-                            occluded[k].append(i)
-                        al = al * (1.0 - occ[..., None])
-                    col = rgb * (1.0 - fv) + tg * fv if fv > 0 else rgb
-                    reg = frame[y0:y1, x0:x1]
-                    frame[y0:y1, x0:x1] = reg * (1.0 - al) + col * al
-            enc.stdin.write(np.clip(frame, 0, 255).astype(np.uint8).tobytes())
-            written += 1
-    finally:
+    occluded, composited = [[] for _ in range(nwin)], [0] * nwin
+
+    def composite(frame, f, i, k, w, mfull):
+        """the window's product layer (occluded where something passes in front) and then its label, onto one frame."""
+        fv, tg = fades[k].get(i, (0.0, 255.0))
+        skin = None
+        if a.skin and plates[k] is not None and fv < 0.3:
+            y0, y1, x0, x1 = skin_boxes[k]
+            bx = f[y0:y1, x0:x1].astype(np.float32)
+            R, G, B = bx[..., 0], bx[..., 1], bx[..., 2]
+            moving = np.abs(bx - plates[k]).mean(-1) > 35
+            m = ((R > 110) & (R - G > 40) & ((R - B) / np.maximum(R, 1) > 0.35) & moving)
+            if m.sum() > 20:
+                mm = Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.GaussianBlur(1.5))
+                skin = (y0, x0, np.asarray(mm).astype(np.float32) / 255.0)
+        for part in ("_prod", "_lab"):
+            c = w[part]
+            if c is None:
+                continue
+            y0, y1, x0, x1, rgb, al = c
+            if part == "_prod":
+                occ = np.zeros((y1 - y0, x1 - x0), np.float32)
+                if mfull is not None:
+                    occ = np.maximum(occ, mfull[y0:y1, x0:x1])
+                if skin is not None:
+                    sy, sx, sm = skin
+                    oy0, ox0 = max(y0, sy), max(x0, sx)
+                    oy1, ox1 = min(y1, sy + sm.shape[0]), min(x1, sx + sm.shape[1])
+                    if oy1 > oy0 and ox1 > ox0:
+                        occ[oy0 - y0:oy1 - y0, ox0 - x0:ox1 - x0] = np.maximum(occ[oy0 - y0:oy1 - y0, ox0 - x0:ox1 - x0],
+                                                                            sm[oy0 - sy:oy1 - sy, ox0 - sx:ox1 - sx])
+                bx0, by0, bx1, by1 = w["box"]
+                inside = occ[max(0, by0 - y0):max(0, by1 - y0), max(0, bx0 - x0):max(0, bx1 - x0)]
+                if inside.size and float((inside > 0.5).sum()) > 20:
+                    occluded[k].append(i)
+                al = al * (1.0 - occ[..., None])
+            col = rgb * (1.0 - fv) + tg * fv if fv > 0 else rgb
+            reg = frame[y0:y1, x0:x1]
+            frame[y0:y1, x0:x1] = reg * (1.0 - al) + col * al
+
+    err, written = "", 0
+    if is_image:
+        frame = base_img.astype(np.float32)
+        for k, w in enumerate(windows):
+            composited[k] += 1
+            composite(frame, base_img, 0, k, w, mask_static)
+        outp.parent.mkdir(parents=True, exist_ok=True)
+        im = Image.fromarray(np.clip(frame, 0, 255).astype(np.uint8))
+        im.save(outp, **({"quality": 95} if outp.suffix.lower() in (".jpg", ".jpeg") else {}))
+        written = 1
+        ok = outp.is_file()
+    else:
+        outp.parent.mkdir(parents=True, exist_ok=True)
+        enc = subprocess.Popen([find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
+                                "-s", f"{W}x{H}", "-r", fps_str, "-i", "-", "-an", "-c:v", "libx264", "-crf", str(a.crf), "-preset", "slow",
+                                "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(outp)], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         try:
-            enc.stdin.close()
-        except Exception:
-            pass
-        err = enc.stderr.read().decode("utf-8", "replace") if enc.stderr else ""
-        enc.wait()
-        if mask_iter is not None:
-            mask_iter.close()
-    ok = enc.returncode == 0 and written > 0 and outp.is_file()
+            for i, f in enumerate(_frames_of(str(srcp), W, H)):
+                t = i / fps
+                frame = f.astype(np.float32)
+                mfull = None
+                if mask_iter is not None:
+                    mf = next(mask_iter, None)
+                    mfull = None if mf is None else mf.astype(np.float32) / 255.0
+                elif mask_files is not None:
+                    mfull = (np.asarray(Image.open(mask_files[i]).convert("L").resize((W, H))).astype(np.float32) / 255.0) if i < len(mask_files) else None
+                elif mask_static is not None:
+                    mfull = mask_static
+                for k, w in enumerate(windows):
+                    if w["t0"] <= t < w["t1"]:
+                        composited[k] += 1
+                        composite(frame, f, i, k, w, mfull)
+                enc.stdin.write(np.clip(frame, 0, 255).astype(np.uint8).tobytes())
+                written += 1
+        finally:
+            try:
+                enc.stdin.close()
+            except Exception:
+                pass
+            err = enc.stderr.read().decode("utf-8", "replace") if enc.stderr else ""
+            enc.wait()
+            if mask_iter is not None:
+                mask_iter.close()
+        ok = enc.returncode == 0 and written > 0 and outp.is_file()
 
     def spans_of(idx):
         out_, start, prev = [], None, None
@@ -4653,14 +4692,23 @@ def cmd_placeholder(a):
         return out_
 
     stills = []
-    for w in windows:
-        if ok:
-            tm = (w["t0"] + min(w["t1"], written / fps)) / 2
-            sp_ = outp.with_name(outp.stem + f"-w{w['window']}.png")
-            if extract_frame(str(outp), tm, sp_, max_side=max(W, H)):
-                stills.append(str(sp_))
-                w["still"] = str(sp_)
-                w["still_t"] = round(tm, 3)
+    for k, w in enumerate(windows):
+        if not ok:
+            continue
+        if is_image:
+            stills.append(str(outp))
+            w["still"] = str(outp)
+            continue
+        # the frame nearest the window's middle with no dip (a still inside a flash would show nothing of the marker)
+        j0, j1 = int(math.ceil(w["t0"] * fps - 1e-6)), min(written, int(math.ceil(w["t1"] * fps - 1e-6))) - 1
+        mid = (j0 + j1) / 2
+        cand = sorted((j for j in range(j0, j1 + 1) if fades[k].get(j, (0.0, 255.0))[0] == 0), key=lambda j: abs(j - mid))
+        tm = ((cand[0] if cand else round(mid)) + 0.5) / fps
+        sp_ = outp.with_name(outp.stem + f"-w{w['window']}.png")
+        if extract_frame(str(outp), tm, sp_, max_side=max(W, H)):
+            stills.append(str(sp_))
+            w["still"] = str(sp_)
+            w["still_t"] = round(tm, 3)
     for k, w in enumerate(windows):
         w.pop("_prod", None)
         w.pop("_lab", None)
@@ -4669,7 +4717,7 @@ def cmd_placeholder(a):
         w["luma_follow"] = None if not luma_refs[k] else {"ref": luma_refs[k], "base_luma": base_luma[k],
                                                           "fade_min_max": [round(min(fv), 3), round(max(fv), 3)] if fv else [0.0, 0.0],
                                                           "faded_spans_s": spans_of(sorted(j for j, v in fades[k].items() if v[0] > 0))}
-        w["occluded_spans_s"] = spans_of(occluded[k]) if (a.occlusion_mask or a.skin) else None
+        w["occluded_spans_s"] = (bool(occluded[k]) if is_image else spans_of(occluded[k])) if (a.occlusion_mask or a.skin) else None
 
     # ---- the size-reckoning basis as the agent gave it, with arithmetic only (implied product height per line)
     basis = []
@@ -4691,11 +4739,9 @@ def cmd_placeholder(a):
                        "expected_px": round(exp_px, 1),
                        "drawn_over_expected_per_window": [round(w["height_px"] / max(1e-6, exp_px), 3) for w in windows]}
     side = {"tool": "placeholder", "created": now_iso(), "ok": ok, "out": str(outp),
-            "inputs": {"video": str(video), "video_hash": quick_hash(video), "render": str(render), "render_hash": quick_hash(render),
-                       "args": {k: v for k, v in vars(a).items() if k not in ("fn",)}},
-            "source": {"width": W, "height": H, "aspect": info.get("aspect"), "fps": fps_str, "duration_s": info.get("duration_s"),
-                       "has_audio": info.get("has_audio")},
-            "frames_written": written, "silent_output": True,
+            "inputs": {"source": str(srcp), "source_kind": info["kind"], "source_hash": quick_hash(srcp), "render": str(render),
+                       "render_hash": quick_hash(render), "args": {k: v for k, v in vars(a).items() if k not in ("fn",)}},
+            "source": info, "frames_written": written, "silent_output": None if is_image else True,
             "product": {"real_h_cm": a.product_h_cm, "real_w_cm": a.product_w_cm, "real_aspect_w_over_h": round(real_aspect, 4),
                         "render_size": [src.width, src.height], "render_opaque_bbox": list(bbox),
                         "render_aspect_w_over_h": round(render_aspect, 4), "aspect_from": a.aspect_from,
@@ -4711,7 +4757,7 @@ def cmd_placeholder(a):
             "note": "facts only: the spot, the size, the windows and the tone sample are the agent's; the implied heights and ratios are arithmetic on the basis lines as given"}
     sidecar = outp.with_name(outp.stem + ".placeholder.json")
     write_json(sidecar, side)
-    out({"ok": ok, "out": str(outp), "layers": layers, "sidecar": str(sidecar), "stills": stills, "frames": written,
+    out({"ok": ok, "out": str(outp), "source_kind": info["kind"], "layers": layers, "sidecar": str(sidecar), "stills": stills, "frames": written,
          "boxes": [{"window": w["window"], "t0": w["t0"], "t1": w["t1"], "box": w["box"], "outline_box": w["outline_box"],
                     "label_box": w["label_box"], "label_side": w["label_side"], "height_px": w["height_px"], "width_px": w["width_px"]} for w in windows],
          "implied_spread_pct": side["implied_spread_pct"], "stderr": err[-400:]}, 0 if ok else 1)
@@ -5762,10 +5808,11 @@ def main():
     p.add_argument("--out", help="write the result as JSON")
     p.set_defaults(fn=cmd_scale)
 
-    p = sp.add_parser("placeholder", help="the placement marker: a product render composited into a silent 9:16 source at the spot and pixel height you give (real cm proportions, tone match, contact shadow, optional windows, luma-follow and occlusion), a thin red outline and a short label beside it, and a JSON sidecar of the facts; it chooses nothing")
+    p = sp.add_parser("placeholder", help="the placement marker: a product render composited into a silent 9:16 source video (or a placement image) at the spot and pixel height you give (real cm proportions, tone match, contact shadow, optional windows, luma-follow and occlusion), a thin red outline and a short label beside it, and a JSON sidecar of the facts; it chooses nothing")
     p.add_argument("--render", required=True, help="the product render, an RGBA PNG (cropped to its opaque part)")
-    p.add_argument("--video", required=True, help="the silent 9:16 source (the prepared copy under RUN/10-media/<V>/prepared/)")
-    p.add_argument("--out", required=True, help="the output .mp4 (silent); <stem>.placeholder.json (the sidecar), <stem>-layer-wK.png (the layers) and <stem>-wK.png (one still per window) go beside it")
+    p.add_argument("--video", help="the silent 9:16 source video (the prepared copy under RUN/10-media/<V>/prepared/)")
+    p.add_argument("--image", help="instead of --video: a placement image (a layout or guide image, Create's neutral texture); never a start or end frame")
+    p.add_argument("--out", required=True, help="the output: an .mp4 (silent) for --video, an image (.png) for --image; <stem>.placeholder.json (the sidecar), <stem>-layer-wK.png (the layers) and, for a video, <stem>-wK.png (one still per window) go beside it")
     p.add_argument("--product-h-cm", type=float, required=True, help="the product's real height in cm (registry, spec images, product sheets, product_properties.txt)")
     p.add_argument("--product-w-cm", type=float, required=True, help="the product's real width in cm as the render shows it (a can's diameter)")
     p.add_argument("--aspect-from", choices=["cm", "render"], default="cm",

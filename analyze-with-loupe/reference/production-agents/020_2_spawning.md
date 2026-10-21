@@ -96,12 +96,17 @@ Hard rules:
 - Never spawn agents and never use the Workflow tool. Honest reporting: never claim a generation, upload or check that did not
   happen; report failures with the real error. Provenance labels as in `analysis-protocol.md` §0 ([E] evidence, [I] inference, [U] user,
   [A] client asset, [M] model knowledge, [G] generation instruction).
-- Spot and guide: the plan's spot passed `generation-system.md` §4b.1c (visible at the source's frame 0 and
+- Spot and marker: the plan's spot passed `generation-system.md` §4b.1c (visible at the source's frame 0 and
   along the whole path, outside every hand's lane, bare and wider than the product, not the nearest plane
-  unless the user marked it); where the model guide lists size or place as a limit and no passing-list anchor
-  fits, and always for a near-plane spot the user marked, the request carries the size-and-place guide of
-  §4b.6, built from the source's bare surface scrubbed of performer, clothing and lettering (Create: neutral
-  texture only).
+  unless the user marked it). Every reference that places the product carries the labelled placement marker of
+  §4b.6 at the size §4b.7 reckons (two estimates that agree): in Recreate and Edit Mode the product composited into
+  the prepared source with `T placeholder` (that labelled video is Video 1), in Create a neutral texture marked with
+  `T placeholder --image`. Never build, upload or bind a guide image cut from a source frame. The request carries
+  the marker sentence (a placement and size marker only, taken from the asset sample; render a real product as an
+  actual object in the scene: its material, the scene's light and shadows, real contact with its surface) and the
+  removal line for the outline, the label and every mark. A start or end frame carries no mark: its product is
+  photoreal and passed the paste test. In QC, `T qc` OCR and a full-resolution look find no label, outline or box
+  in the output (a residue is a regenerate reason).
 - Label: read the wordmark and the variant tag (flavour, size or model) word by word on a full-resolution
   frame at rest; a wrong letter is a regenerate reason (`anomaly-catalog.md` §2.9, §4 step 5h).
 - Touch only video NN's files and its CapCut project. Reuse the media ids and the folder id in
@@ -126,7 +131,7 @@ Hard rules:
   25 % of each other); a size from one assumed number is PROVISIONAL (your word): view the frame yourself before
   you flag or report it, and never write RESIDUAL FAILURE for it (CE-028). With agreeing estimates (over 25 % off, changing across a cut, or larger than the hand
   that holds it: regenerate once, no post-fix; where the model guide lists size as a model limit the
-  retry changes the lever (the size-and-place guide of generation-system.md §4b.6, the integration form or the
+  retry changes the lever (the placement marker of generation-system.md §4b.6, the integration form or the
   anchor class from its passing list), never the sizing words, and a second miss ships the best take flagged). Render the plan's QC checkpoints with `T qc --dense`
   and count at each. A count or state
   that changes without a cause, or a use through the wrong or a closed part, is a regenerate reason.

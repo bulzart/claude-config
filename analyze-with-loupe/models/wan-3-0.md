@@ -35,7 +35,7 @@ Stored as section files in `wan-3-0/` (next to this file); **read only the secti
 | 2.2 | · Media roles | `040_2.2_media-roles.md` | 1.0 |
 | 2.3 | · Duration, resolution, aspect ratio, audio | `050_2.3_duration-resolution-aspect-ratio.md` | 0.7 |
 | 2.4 | · Call recipes | `060_2.4_call-recipes.md` | 1.7 |
-| 2.5 | · Parameter gotchas | `070_2.5_parameter-gotchas.md` | 2.4 |
+| 2.5 | · Parameter gotchas | `070_2.5_parameter-gotchas.md` | 3.2 |
 | 2.6 | · 9:16 / 720p mapping (fixed output format of /analyze-with-loupe) | `080_2.6_9-16-720p-mapping-fixed-output-f.md` | 1.1 |
 | 3 | How the model reads a prompt | `090_3_how-the-model-reads-a-prompt.md` | 0.0 |
 | 3.1 | · Recommended prompt structure | `100_3.1_recommended-prompt-structure.md` | 1.2 |
@@ -43,7 +43,7 @@ Stored as section files in `wan-3-0/` (next to this file); **read only the secti
 | 3.3 | · Action, motion and physical interaction | `120_3.3_action-motion-and-physical-inter.md` | 0.4 |
 | 3.4 | · Environment, lighting and style | `130_3.4_environment-lighting-and-style.md` | 0.4 |
 | 3.5 | · Chronology, timing and multi-shot structure | `140_3.5_chronology-timing-and-multi-shot.md` | 1.0 |
-| 3.6 | · Camera language and dedicated camera / motion controls | `150_3.6_camera-language-and-dedicated-ca.md` | 0.7 |
+| 3.6 | · Camera language and dedicated camera / motion controls | `150_3.6_camera-language-and-dedicated-ca.md` | 0.9 |
 | 3.7 | · References (image / video / audio) | `160_3.7_references-image-video-audio.md` | 1.3 |
 | 3.8 | · Start and end frames | `170_3.8_start-and-end-frames.md` | 0.4 |
 | 3.9 | · Audio, dialogue and sound | `180_3.9_audio-dialogue-and-sound.md` | 0.7 |
@@ -51,16 +51,16 @@ Stored as section files in `wan-3-0/` (next to this file); **read only the secti
 | 3.11 | · Visible text | `200_3.11_visible-text.md` | 4.1 |
 | 3.12 | · Character / identity consistency | `210_3.12_character-identity-consistency.md` | 1.4 |
 | 3.13 | · Product and object fidelity | `220_3.13_product-and-object-fidelity.md` | 0.6 |
-| 3.14 | · Integration and continuity | `230_3.14_integration-and-continuity.md` | 7.6 |
+| 3.14 | · Integration and continuity | `230_3.14_integration-and-continuity.md` | 8.4 |
 | 4 | Prompt construction | `240_4_prompt-construction.md` | 0.0 |
-| 4.0 | · Official prompt examples and the patterns they teach | `250_4.0_official-prompt-examples-and-the.md` | 20.1 |
+| 4.0 | · Official prompt examples and the patterns they teach | `250_4.0_official-prompt-examples-and-the.md` | 20.6 |
 | 4.1 | · Text-to-video | `260_4.1_text-to-video.md` | 1.5 |
 | 4.2 | · Start frame (and end frame) to video | `270_4.2_start-frame-and-end-frame-to-vid.md` | 1.1 |
 | 4.3 | · Reference-to-video | `280_4.3_reference-to-video.md` | 1.9 |
 | 4.4 | · Video edit / extension / motion transfer | `290_4.4_video-edit-extension-motion-tran.md` | 1.7 |
-| 5 | Strengths, weaknesses and failure modes | `300_5_strengths-weaknesses-and-failure.md` | 12.6 |
+| 5 | Strengths, weaknesses and failure modes | `300_5_strengths-weaknesses-and-failure.md` | 13.3 |
 | 6 | Model-specific features and controls | `310_6_model-specific-features-and-cont.md` | 0.5 |
-| 7 | Model-specific pre-generation checklist | `320_7_model-specific-pre-generation-ch.md` | 3.1 |
+| 7 | Model-specific pre-generation checklist | `320_7_model-specific-pre-generation-ch.md` | 3.3 |
 | 8 | Sources | `330_8_sources.md` | 2.7 |
-| 9 | Open questions / unverified behaviour | `340_9_open-questions-unverified-behavi.md` | 2.3 |
+| 9 | Open questions / unverified behaviour | `340_9_open-questions-unverified-behavi.md` | 2.6 |
 <!-- sections:end -->

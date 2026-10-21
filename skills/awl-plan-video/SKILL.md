@@ -24,41 +24,42 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §5: `AWL/reference/generation-system/210_5_logic-continuity-and-anti-slop-g.md` (4.6 KB)
 - generation-system §5b: `AWL/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5d: `AWL/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
-- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
-- generation-system §9b: `AWL/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.6 KB)
+- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
+- generation-system §9b: `AWL/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.8 KB)
 - *a contents or placement video:*
   - generation-system §4b: `AWL/reference/generation-system/110_4b_natural-placement-and-contents-w.md` (1.2 KB)
   - generation-system §4b.0: `AWL/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
   - generation-system §4b.1: `AWL/reference/generation-system/130_4b.1_choose-the-anchor-by-the-product.md` (2.4 KB)
-  - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (3.1 KB)
+  - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (2.6 KB)
   - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
   - generation-system §4b.2: `AWL/reference/generation-system/160_4b.2_prominence-noticed-not-featured.md` (2.5 KB)
   - generation-system §4b.3: `AWL/reference/generation-system/170_4b.3_one-anchor-persistent-ledger-tra.md` (3.0 KB)
   - generation-system §4b.4: `AWL/reference/generation-system/180_4b.4_ambient-integration-it-must-not.md` (2.7 KB)
-- *a size-and-place guide is needed (the model guide lists size or place as a limit, or the spot is near-plane):*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
+- *a placed product (every reference that places it carries the placement marker; Recreate and Edit Mode: in the prepared source):*
+  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (8.1 KB)
+  - generation-system §4b.7: `AWL/reference/generation-system/205_4b.7_reckoning-the-marker-real-size-d.md` (4.2 KB)
 - *Edit Mode or Recreate (the source action script):*
-  - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.2 KB)
+  - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
 - *a multi-clip video, or a Recreate/Edit source with hard cuts (item 7: separate clips on the source's own cuts):*
   - generation-system §3b: `AWL/reference/generation-system/040_3b_videos-longer-than-one-generatio.md` (0.8 KB)
   - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
 - *a video with inserts:*
-  - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.2 KB)
+  - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.3 KB)
 - anomaly-catalog §0: `AWL/reference/anomaly-catalog/010_0_four-questions-behind-every-anom.md` (1.5 KB)
 - anomaly-catalog §1: `AWL/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.6 KB)
-- anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.1 KB)
-- anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.9 KB)
-- anomaly-catalog §2.16: `AWL/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (4.3 KB)
-- anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.1 KB)
+- anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
+- anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
+- anomaly-catalog §2.16: `AWL/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (3.9 KB)
+- anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.4 KB)
 - *a product that is handled, prepared, used, poured or counted on screen:*
-  - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.5 KB)
-  - anomaly-catalog §2.2: `AWL/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (3.0 KB)
-  - anomaly-catalog §2.3: `AWL/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.7 KB)
-  - anomaly-catalog §2.4: `AWL/reference/anomaly-catalog/070_2.4_irreversible-and-persistent-stat.md` (1.4 KB)
+  - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
+  - anomaly-catalog §2.2: `AWL/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (2.8 KB)
+  - anomaly-catalog §2.3: `AWL/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.5 KB)
+  - anomaly-catalog §2.4: `AWL/reference/anomaly-catalog/070_2.4_irreversible-and-persistent-stat.md` (1.3 KB)
   - anomaly-catalog §2.5: `AWL/reference/anomaly-catalog/080_2.5_object-permanence-exits-occlusio.md` (1.5 KB)
-  - anomaly-catalog §2.6: `AWL/reference/anomaly-catalog/090_2.6_liquids-powders-and-materials.md` (1.9 KB)
+  - anomaly-catalog §2.6: `AWL/reference/anomaly-catalog/090_2.6_liquids-powders-and-materials.md` (1.8 KB)
   - anomaly-catalog §2.8: `AWL/reference/anomaly-catalog/110_2.8_body-mechanics-at-the-product.md` (1.5 KB)
-  - anomaly-catalog §2.9: `AWL/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.3 KB)
+  - anomaly-catalog §2.9: `AWL/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.4 KB)
 - *a person is swapped for a supplied character:*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - creative-direction §2: `AWL/reference/creative-direction/020_2_the-goal-model-written-into-20-a.md` (1.4 KB)
@@ -70,13 +71,13 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Edit Mode:*
   - creative-direction §9: `AWL/reference/creative-direction/120_9_edit-mode.md` (0.3 KB)
 - text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
-- text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (3.5 KB)
+- text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (3.8 KB)
 - *Edit Mode (the substitution map):*
   - assets-and-substitution §4: `AWL/reference/assets-and-substitution/040_4_substitution-map-per-video.md` (2.4 KB)
 - *guardrails supplied:*
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - *Create (the sound plan):*
-  - capcut-assembly §3b: `AWL/reference/capcut-assembly/040_3b_sound-layer-create.md` (3.9 KB)
+  - capcut-assembly §3b: `AWL/reference/capcut-assembly/040_3b_sound-layer-create.md` (4.8 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §1 at a glance, §3.14 integration and continuity, §5 failure modes (where the guide lists size or place as a limit), §6 features
 - the registry `RUN/30-assets/registry.md`, the card `RUN/20-analysis/cards/<V>.md`, `RUN/20-analysis/house-approach.md` when it exists
 
@@ -94,9 +95,16 @@ Only these section files for this phase, nothing else unless a step below says s
     - the **spot** (`generation-system.md` §4b.1c; from the source in Recreate and Edit Mode, from the
       blocking the plan asks for in Create): the hand-lane map, the region that is bare and in frame at 0,
       1, 2.5, 4 and 6 s, the strip's width against the product, the plane, the camera path and any spot the
-      user marked; and, where the model guide lists size or place as a limit and no passing-list anchor
-      fits (always for a near-plane spot the user marked), the **size-and-place guide** (§4b.6) with what it
-      is built from;
+      user marked; and the **placement marker** (§4b.6, §4b.7) on every reference that places the product
+      (Recreate and Edit Mode: inside the prepared source, never a guide image cut from a source frame; Create: a
+      marked neutral texture; a start frame carries none and its product is photoreal), the size control where the
+      model guide lists size or place as a limit and no passing-list anchor fits (always for a near-plane spot the
+      user marked): the real dimensions from the client assets, the surface and at least two neighbours of known
+      size with their depth ratios, the two estimates that agree within about 25 % and the drawn height, the
+      perspective, the posture, the occlusion (a mask, or another spot, where something passes in front), one
+      window per shot, punch-in or set-up, and the label's side, off the key action. Build the marker right after
+      this reckoning, locally and without credit (`T placeholder`, the call in `awl-inputs`), and view its stills:
+      X2 binds it, X4 measures it and X3 uploads it;
     - the **guardrail hits** of the source (Recreate, Edit Mode) with their operations and times,
       or the guardrail invariants of the concept (Create): the count limit in the ledger, no
       competitor objects, supplied characters only, the wording rules in the text plan
@@ -109,7 +117,8 @@ Only these section files for this phase, nothing else unless a step below says s
       the look implies, the expected fraction of the frame height (`T scale --product-cm H
       --distance d --lens f` prints it and a table over the usual shot distances), the one named
       neighbour at the same depth with the ratio in words, the size ladder when several products
-      show, and the size it keeps across motion, exits and cuts;
+      show, and the size it keeps across motion, exits and cuts; where a reference places the product, the
+      agreeing value is the placement marker's drawn height (`generation-system.md` §4b.7);
     - the per-second time budget from the family profile;
     - roles and assets;
     - the scene;
@@ -309,9 +318,10 @@ Only these section files for this phase, nothing else unless a step below says s
   over unplanned.
 - Never place a product at a spot that is hidden at the source's frame 0, leaves the frame along the camera
   path, lies in a hand's lane, is narrower than the product or is the nearest plane unless the user marked
-  it, and then only with a guide (`generation-system.md` §4b.1c); never build a size-and-place guide from an
-  unscrubbed source frame (performer, clothing or lettering still in it), a flat packshot paste or a
-  soft-labelled image (§4b.6); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
+  it, and then only with the placement marker (`generation-system.md` §4b.1c); never build, upload or bind a
+  guide image cut from a source frame, never let a placement reference ride without its label and its request
+  sentences, never put a label or mark on a start or end frame, and never mark with a flat packshot paste or a
+  soft-labelled render (§4b.6); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
   face effect, a burned-in caption or an identifying name without its prompt sentence (§5c.2b); never try to
   remove a caption, a name or a patch from a source with a tool in Analyze Mode (inpaint, delogo, crop): the
   clean-plate lines and the character-swap script carry it.

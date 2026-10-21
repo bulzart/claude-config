@@ -15,7 +15,7 @@ Main action & states: <start → key change → end>
 Counts & use: <every multiple with its number over time; each use beat's part and contact ("spout, cap flipped open, head level"); the QC checkpoints>
 Size: <per product and shot: real H cm; depth d m; lens f mm → ~N % of frame height (~px); neighbour and ratio ("2/3 of the bottle beside it"); size ladder across products; constancy> (anomaly-catalog.md §2.7)
 Guardrails: <none supplied | G<n> (rule) → operation and time, per hit, e.g. "G2 (two cans max) → third can removed, count 2 at every checkpoint; G3 (no competitors) → Monster can de-branded on the shelf; G4 (ambassador) → face swapped, voice remains in the original audio" | Create: the invariants applied> (brand-guardrails.md)
-Guide: <none | Image N: the spot, the size it fixes and what it was built from (scrubbed bare surface or neutral texture, product render, label crop)> (generation-system.md §4b.6)
+Marker: <none | Video 1 (the prepared source, awl.py placeholder) | Image N (a neutral texture, awl.py placeholder --image)>: the spot, the drawn height and the two agreeing estimates it rests on; start frames carry none (generation-system.md §4b.6, §4b.7)
 Style & camera: <look, lighting, camera behaviour>
 Text: <none | CapCut text layers in the house style: "…" (where, when) | real label, logo or badge text on the product>
 Inserts: <none | "<meme>" cut from <V> at <t_in–t_out>, placed at <split> s>

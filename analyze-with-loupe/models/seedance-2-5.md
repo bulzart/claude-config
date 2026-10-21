@@ -54,7 +54,7 @@ Stored as section files in `seedance-2-5/` (next to this file); **read only the 
 | 3.11 | · Visible text | `200_3.11_visible-text.md` | 3.5 |
 | 3.12 | · Character / identity consistency | `210_3.12_character-identity-consistency.md` | 1.0 |
 | 3.13 | · Product and object fidelity (geometry, proportions, labels, scale, handl | `220_3.13_product-and-object-fidelity-geom.md` | 0.8 |
-| 3.14 | · Integration and continuity (scale, orientation, contact, grip, occlusion | `230_3.14_integration-and-continuity-scale.md` | 6.2 |
+| 3.14 | · Integration and continuity (scale, orientation, contact, grip, occlusion | `230_3.14_integration-and-continuity-scale.md` | 6.6 |
 | 4 | Prompt construction | `240_4_prompt-construction.md` | 0.0 |
 | 4.0 | · Official prompt examples and the patterns they teach | `250_4.0_official-prompt-examples-and-the.md` | 5.0 |
 | 4.1 | · Text-to-video | `260_4.1_text-to-video.md` | 2.3 |
@@ -65,7 +65,7 @@ Stored as section files in `seedance-2-5/` (next to this file); **read only the 
 | 4.4.2 | · · DETAILED (person identity replacement, multi-shot targets, or ≥3 change  | `310_4.4.2_detailed-person-identity-replace.md` | 2.6 |
 | 4.4.3 | · · Audio-only edit and dubbing [OFFICIAL S2, S7] | `320_4.4.3_audio-only-edit-and-dubbing-offi.md` | 0.6 |
 | 4.4.4 | · · Extension [OFFICIAL S7] | `330_4.4.4_extension-official-s7.md` | 2.0 |
-| 5 | Strengths, weaknesses and failure modes | `340_5_strengths-weaknesses-and-failure.md` | 6.2 |
+| 5 | Strengths, weaknesses and failure modes | `340_5_strengths-weaknesses-and-failure.md` | 6.6 |
 | 6 | Model-specific features and controls | `350_6_model-specific-features-and-cont.md` | 1.1 |
 | 7 | Model-specific pre-generation checklist | `360_7_model-specific-pre-generation-ch.md` | 2.5 |
 | 8 | Sources | `370_8_sources.md` | 3.9 |

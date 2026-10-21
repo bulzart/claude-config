@@ -13,42 +13,42 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- anomaly-catalog §4: `AWL/reference/anomaly-catalog/220_4_the-qc-stack-x9-in-order.md` (6.2 KB)
-- anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.9 KB)
+- anomaly-catalog §4: `AWL/reference/anomaly-catalog/220_4_the-qc-stack-x9-in-order.md` (7.3 KB)
+- anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
 - *a product handled, prepared, used, poured or counted on screen:*
-  - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.5 KB)
-  - anomaly-catalog §2.2: `AWL/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (3.0 KB)
-  - anomaly-catalog §2.3: `AWL/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.7 KB)
-  - anomaly-catalog §2.4: `AWL/reference/anomaly-catalog/070_2.4_irreversible-and-persistent-stat.md` (1.4 KB)
+  - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
+  - anomaly-catalog §2.2: `AWL/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (2.8 KB)
+  - anomaly-catalog §2.3: `AWL/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.5 KB)
+  - anomaly-catalog §2.4: `AWL/reference/anomaly-catalog/070_2.4_irreversible-and-persistent-stat.md` (1.3 KB)
   - anomaly-catalog §2.5: `AWL/reference/anomaly-catalog/080_2.5_object-permanence-exits-occlusio.md` (1.5 KB)
-  - anomaly-catalog §2.6: `AWL/reference/anomaly-catalog/090_2.6_liquids-powders-and-materials.md` (1.9 KB)
+  - anomaly-catalog §2.6: `AWL/reference/anomaly-catalog/090_2.6_liquids-powders-and-materials.md` (1.8 KB)
   - anomaly-catalog §2.8: `AWL/reference/anomaly-catalog/110_2.8_body-mechanics-at-the-product.md` (1.5 KB)
 - *a placed or contents product (size, label, blend, posture checks):*
-  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.1 KB)
-  - anomaly-catalog §2.9: `AWL/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.3 KB)
-  - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (8.3 KB)
-  - anomaly-catalog §2.16: `AWL/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (4.3 KB)
+  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
+  - anomaly-catalog §2.9: `AWL/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.4 KB)
+  - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (9.6 KB)
+  - anomaly-catalog §2.16: `AWL/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (3.9 KB)
 - *a person is swapped (skin tone face vs hands):*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
-- generation-system §9: `AWL/reference/generation-system/340_9_post-generation-qc-after-downloa.md` (8.0 KB)
-- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (3.7 KB)
-- generation-system §9b: `AWL/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.6 KB)
+- generation-system §9: `AWL/reference/generation-system/340_9_post-generation-qc-after-downloa.md` (9.0 KB)
+- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
+- generation-system §9b: `AWL/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.8 KB)
 - generation-system §5b: `AWL/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5d: `AWL/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
 - *a contents video, or a vessel of the product's category:*
   - generation-system §4b.0: `AWL/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
 - *a placed product (posture):*
-  - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (3.1 KB)
-- *the plan has a size-and-place guide, or a size retry adds one:*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-size-and-place-guide-a-refer.md` (4.1 KB)
+  - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (2.6 KB)
+- *a reference carried the placement marker, or a size retry adds one:*
+  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (8.1 KB)
 - *Edit Mode or Recreate:*
-  - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.2 KB)
-  - generation-system §5c.5: `AWL/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (1.3 KB)
+  - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.6 KB)
+  - generation-system §5c.5: `AWL/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (2.3 KB)
 - *a multi-clip video, or a source with hard cuts (shot structure):*
   - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
   - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.4 KB)
 - creative-direction §8: `AWL/reference/creative-direction/110_8_creative-qc-x9-as-notes-the-narr.md` (0.9 KB)
-- brand-guardrails §5: `AWL/reference/brand-guardrails/050_5_qc-x9-and-the-wrap-up.md` (1.2 KB)
+- brand-guardrails §5: `AWL/reference/brand-guardrails/050_5_qc-x9-and-the-wrap-up.md` (1.3 KB)
 - *Analyze Mode (the CapCut project):*
   - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.2 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §5 (failure table); §9 when a retry is planned
@@ -145,8 +145,8 @@ Only these section files for this phase, nothing else unless a step below says s
     FAILURE until a second estimate agrees, and viewed on the full-resolution frame by whoever reports it
     before it is flagged, repeated or summarised (CE-028). Write the multiple of the expected size with its
     method and distance in the verdict and compare across cuts. The retry changes the lever the guide names. For a model
-    whose guide lists size as a model limit (`wan3_0_prime`) it changes the lever: the size-and-place
-    guide (`generation-system.md` §4b.6), the integration form (§4b.0) or the anchor class from the guide's
+    whose guide lists size as a model limit (`wan3_0_prime`) it changes the lever: the placement
+    marker (`generation-system.md` §4b.6), the integration form (§4b.0) or the anchor class from the guide's
     passing list, never the sizing words (12 of 12 wording retries were re-rolls);
     otherwise it names the neighbour and the ratio, the depth and the fraction of the frame, pads the
     reference and rebuilds any start frame. A second miss ships the best take flagged, both attempts written as blocks in the brief.
@@ -196,8 +196,15 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Hand lanes, camera path and orientation** (`anomaly-catalog.md` §2.16; `generation-system.md` §5c.5,
     §5c.2b): no hand covers, wraps or passes through the placed product in any beat; the product stays in
     frame wherever its anchor does; the camera and the performer's pose in the last third match the source;
-    every readable thing and handed object reads the right way round. A guide's artefacts copied into the
-    take (a soft label, a thick rim, a lid notch, the source's scene or person) are a regenerate reason.
+    every readable thing and handed object reads the right way round. A marker's or an old guide's artefacts copied into
+    the take (a soft label, a thick rim, a lid notch, the source's scene or person) are a regenerate reason.
+  - **Marker residue** (`generation-system.md` §4b.6; `anomaly-catalog.md` §4 step 5j), wherever a reference
+    carried the placement marker: the label's words are never in `--allowed-text`, so `T qc` OCR lists any of
+    them it sees; look at the marker's spot at full resolution at rest and in every window of the marker (the
+    sidecar's windows): no label text, no red outline, no box, no other mark; the product renders as a real object
+    in the scene (the paste test above, not the sample's flat look) at the reckoned size (`T scale`). A residue or a
+    pasted look is a regenerate reason; the retry keeps the marker and strengthens the marker sentence and the
+    removal line in the model's phrasing.
   - **Shot structure** (`anomaly-catalog.md` §4 step 5i; `generation-system.md` §3b.1 item 7; Recreate and
     Edit Mode with hard cuts): the output's cuts against the source's shot list: the same count at the same
     times, person-free cutaways still person-free, the placed product in every shot where its anchor is in

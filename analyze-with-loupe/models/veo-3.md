@@ -47,7 +47,7 @@ Stored as section files in `veo-3/` (next to this file); **read only the section
 | 3.11 | · Visible text | `140_3.11_visible-text.md` | 1.2 |
 | 3.12 | · Character / identity consistency | `150_3.12_character-identity-consistency.md` | 0.3 |
 | 3.13 | · Product and object fidelity (geometry, proportions, labels, scale, handl | `160_3.13_product-and-object-fidelity-geom.md` | 0.4 |
-| 3.14 | · Integration and continuity (scale, orientation, contact, grip, occlusion | `170_3.14_integration-and-continuity-scale.md` | 1.6 |
+| 3.14 | · Integration and continuity (scale, orientation, contact, grip, occlusion | `170_3.14_integration-and-continuity-scale.md` | 1.8 |
 | 4 | Prompt construction | `180_4_prompt-construction.md` | 5.3 |
 | 5 | Strengths, weaknesses and failure modes | `190_5_strengths-weaknesses-and-failure.md` | 1.3 |
 | 6 | Model-specific features and controls | `200_6_model-specific-features-and-cont.md` | 0.2 |
