@@ -1,6 +1,7 @@
 """Structure checks of the library: the router, the phase skills, the section files and the toolkit agree with each other (no model call,
 no run needed). The forbidden names (the retired ledger, the obsolete learning command, the other pipeline) are built in pieces so that
 this file itself does not carry them."""
+import json
 import re
 import subprocess
 import sys
