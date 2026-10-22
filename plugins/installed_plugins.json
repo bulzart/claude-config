@@ -4,22 +4,22 @@
     "github@anthropic-plugin-directory": [
       {
         "scope": "user",
-        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\github\\d1adba47161a-0e62e4cb",
-        "version": "d1adba47161a-0e62e4cb",
+        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\github\\af59ee3a1051-0e62e4cb",
+        "version": "af59ee3a1051-0e62e4cb",
         "installedAt": "2026-10-15T16:46:47.305Z",
-        "lastUpdated": "2026-10-21T17:53:40.540Z",
-        "gitCommitSha": "d1adba47161a271799de7b548225d929310046bd",
+        "lastUpdated": "2026-10-22T17:40:51.256Z",
+        "gitCommitSha": "af59ee3a1051a29dda4a2e7a2af221aa457ae08b",
         "directoryRepositoryKey": "github.com/anthropics/claude-plugins-official#external_plugins/github"
       }
     ],
     "context7@anthropic-plugin-directory": [
       {
         "scope": "user",
-        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\context7\\d1adba47161a-abb48b51",
-        "version": "d1adba47161a-abb48b51",
+        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\context7\\af59ee3a1051-abb48b51",
+        "version": "af59ee3a1051-abb48b51",
         "installedAt": "2026-10-15T16:47:07.704Z",
-        "lastUpdated": "2026-10-21T17:53:40.734Z",
-        "gitCommitSha": "d1adba47161a271799de7b548225d929310046bd",
+        "lastUpdated": "2026-10-22T17:40:50.848Z",
+        "gitCommitSha": "af59ee3a1051a29dda4a2e7a2af221aa457ae08b",
         "directoryRepositoryKey": "github.com/anthropics/claude-plugins-official#external_plugins/context7"
       }
     ]
