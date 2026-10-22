@@ -92,6 +92,12 @@ It holds two things:
   and the note, and `awl.py sample-prompts --id S12 --run RUN` writes both whole to `RUN/40-briefs/samples/S12-prompts.md` for a sample the agent judged relevant (X2 for an applied hint, QC for a
   diagnosed cause): the agent reads and judges what changed, nothing is compared in code, nothing of them is pasted. `status`
   and `doctor` read the keeper's state (in sync, turns, library version, how many samples have a current reading) through the qc key.
+  **Coupled with Loupe (since 2026-10-22):** `loupe ensure` reports `keeper.understanding` and a `reading_note` while new or changed samples are being read;
+  `plan-hints` passes on `held_back_why`, `library_read`, each hint's `reading_path` (read only when the trigger match is unclear) and the keeper's
+  `needs_unmet` with an `unmet_rule` (answer from the plan and ask once more with `--note`); `qc-consult` adds a `reading_rule` (each relevant sample's
+  `reading` and `reading_path`: view the picture first), a `not_read_rule` and a `gaps_rule`: what the library does not cover and any need still unmet go
+  to `result.json → keeper_gaps`, and the wrap-up reports them for the admin (Loupe's Keeper page lists them too). A declined preset notice is stored once
+  in `state.json → higgsfield.declined_preset_id`, so every request carries it and `lint-run` knows it.
   Agents can also reach the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`).
 
 Three hooks in `~/.claude/settings.json` support the pipeline without adding to any agent's context: `hooks/atp_flag_watch.py` (PostToolUse of the

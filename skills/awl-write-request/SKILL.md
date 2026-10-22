@@ -66,6 +66,16 @@ Only these section files for this phase, nothing else unless a step below says s
     a `lever` and a `caveat`, each a whole sentence or cut at a sentence end (an ellipsis marks a cut). `held_back` counts the
     hints the keeper offered that Loupe set aside, and `held_back_why` says why for each (a universal wording, another model family,
     an unknown sample, low confidence, beyond the cap): read it as information, never ask again for them.
+    - **When the keeper asks you something.** The keeper asks instead of guessing; Loupe fetches the plan, the request prompt,
+      the registry row or a sample's origin itself. What only you can answer comes back as `needs_unmet` with an `unmet_rule`:
+      answer it from your plan in words and ask once more with the same `--beats` plus `--note "<your answer>"`. If it is
+      still unmet, go on without it and write it as a keeper gap in the "Sample hints" block (one line: what it asked, why it
+      could not be answered), so the wrap-up can report it.
+    - **What the keeper saw.** Each hint carries `reading_path`, the keeper's reading of its sample's picture (made once by a
+      session that opened it: what each frame shows, the miss, the mechanism, when it recurs). Read it only when the hint alone
+      does not tell you whether its trigger matches a beat of your plan; it is evidence, never prompt text. `library_read`
+      says how much of the library the keeper holds from the pictures; a hint from a sample in its `not_read` list rests on
+      the admin's words alone, so weigh it with that in mind.
     - A hint is a risk to check this plan against, never prompt text. Do not copy its words, do not name the wrong
       behaviour anywhere in the prompt or the reference notes (a thing that is named, even in a negative, is what
       comes back: `generation-system.md` §4, §5c.2b), and add no negative list beyond the product's one targeted
@@ -89,8 +99,8 @@ Only these section files for this phase, nothing else unless a step below says s
     - At most two hints are applied per video. A hint whose application would reshape more than one clause of
       the prompt is over-applied: drop it. When the video is already planned correctly, applying nothing is right.
     - Write the decisions as a short "Sample hints" block at the end of the pattern card: per hint, its id,
-      applied to which beat with the change in one line, or not applied and why. X4 checks it and X6 copies it
-      into the brief. The hints themselves are in `40-briefs/video-NN-hints.json`; never paste them into the
+      applied to which beat with the change in one line, or not applied and why, and any keeper gap (a question
+      still unmet after the `--note`). X4 checks it and X6 copies it into the brief. The hints themselves are in `40-briefs/video-NN-hints.json`; never paste them into the
       brief or the prompt.
   - **Reason first** (`generation-system.md` §6). For every beat that places, moves or uses the product, derive what the plan or source
     needs there, what the product's own details allow (its registry row, affordance sheet and `product_properties.txt`) and what the

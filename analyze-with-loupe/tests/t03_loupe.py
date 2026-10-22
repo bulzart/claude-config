@@ -49,20 +49,33 @@ def fake_claude(prompt, sid, resume, model, timeout=150):
         time.sleep(SLOW["boot_s"])
         return {"result": "ready", "total_cost_usd": 0.0}
     if "PLANNING question" in prompt:
-        return {"result": json.dumps({"hints": [{"id": SID, "trigger": "the can is set down after a cut", "right_outcome": "the can keeps its size across the cut",
-                                                   "lever": "restate the size against the laptop at that beat", "caveat": "not for a hand-held can", "confidence": "high", "model_independent": False}],
-                                        "none_reason": ""}), "total_cost_usd": 0.0}
+        ans = {"hints": [{"id": SID, "trigger": "the can is set down after a cut", "right_outcome": "the can keeps its size across the cut",
+                          "lever": "restate the size against the laptop at that beat", "caveat": "not for a hand-held can", "confidence": "high", "model_independent": False}],
+               "none_reason": ""}
+        if "The prompt writer answers" not in prompt:       # the first planning ask: the keeper also asks the writer something only the plan can answer
+            ans["needs"] = [{"kind": "ask_agent", "question": "is the can on the same desk after the cut?", "why": "the beats do not say where it stands after the cut"}]
+        return {"result": json.dumps(ans), "total_cost_usd": 0.0}
     if "The QC agent adds" in prompt:
         return {"result": json.dumps({"relevant": [{"id": SID, "why": "same mechanism", "check": "the can's height before and after the cut", "wrong_pattern": "the can shrinks"}],
                                         "advice": "compare the can against the laptop", "not_covered": ""}), "total_cost_usd": 0.0}
     if "QC question" in prompt:
         return {"result": json.dumps({"relevant": [{"id": SID, "why": "same mechanism", "check": "the can's height before and after the cut", "wrong_pattern": "the can shrinks"}],
-                                        "advice": "compare the can against the laptop", "not_covered": "",
+                                        "advice": "compare the can against the laptop", "not_covered": "no sample shows the can carried through a doorway",
                                         "needs": [{"kind": "ask_agent", "question": "does the can leave the frame?", "why": "I cannot see the last second"}]}), "total_cost_usd": 0.0}
     return {"result": "ready", "total_cost_usd": 0.0}
 
 
 qc._run_claude = fake_claude
+read_calls = []
+
+
+def fake_extract(s, model):            # the picture reader, replaced too: a reading that says it opened the picture
+    read_calls.append(s["id"])
+    return {"reading": {"the_miss": "READ-MISS the can is smaller after the cut", "qc_check": "READ-CHECK compare its height with the laptop", "mechanism": "m",
+                        "frames_seen": [{"frame": "WRONG 0:01.00", "seen": "a small can"}]}, "cost": 0.0, "turns": 3, "images_read": True}
+
+
+qc._extract_one = fake_extract
 
 # --- a Loupe server on a free port, with the keys the toolkit reads from LOUPE_DATA/keys
 httpd = server.ThreadingHTTPServer((core.HOST, 0), server.Handler)
@@ -83,6 +96,11 @@ t0 = time.time()
 js, _, _ = t("loupe", "ensure", env={**ENV, "AWL_KEEPER_SYNC_WAIT": "1"})
 el = time.time() - t0
 check(js.get("ok") and js.get("library_size") == 1 and js["keeper"]["state"] == "syncing" and el < 3.5, f"loupe ensure waits at most AWL_KEEPER_SYNC_WAIT and reports keeper.state syncing ({el:.1f} s)")
+for _ in range(100):                   # the run start also started reading the unread sample's picture in the background
+    if (DATA / "keeper" / "understood" / f"{SID}.json").is_file():
+        break
+    time.sleep(0.1)
+check(read_calls == [SID], f"a run start (loupe ensure) has Loupe read the sample that has no reading of its picture yet, once, in the background ({read_calls})")
 js, _, _ = t("qc-brief", "--run", run.name, "--video", "03", "--product", "slim can", env=ENV)
 check(js.get("mode") == "brief" and js["library_size"] == 1 and js["samples"][0]["id"] == SID, "qc-brief returns the matching sample with no model call")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can looks smaller after the cut", "--kinds", "scale-size", "--product-details", "slim 355 ml can",
@@ -90,6 +108,11 @@ js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "th
 check(js.get("mode") == "keeper" and js["relevant"][0]["id"] == SID and js["relevant"][0]["composite_path"], "qc-consult reaches the keeper after the boot finished (the lock serialised it) and names the sample's composite")
 check(len([c for c in calls if c.startswith("LIBRARY (")]) == 1, "the keeper was booted exactly once (the bounded ensure did not make the consult boot it again)")
 check(js.get("needs_unmet") and js["needs_unmet"][0]["kind"] == "ask_agent" and "--note" in js.get("unmet_rule", ""), "what only the QC agent can answer comes back as needs_unmet with the --note rule")
+rel0 = js["relevant"][0]
+check(rel0.get("reading_path", "").endswith(f"{SID}.json") and (rel0.get("reading") or {}).get("the_miss", "").startswith("READ-MISS") and "reading_rule" in js,
+      "a relevant sample carries the keeper's reading of its picture (two short fields and the path of the whole one) with the rule to view the picture first")
+check(js.get("library_read", {}).get("understood") == 1 and js["library_read"]["not_read"] == [] and "not_read_rule" not in js, "the answer says the keeper holds the whole library from its pictures")
+check(js.get("not_covered", "").startswith("no sample shows") and "keeper_gaps" in js.get("gaps_rule", ""), "what the library does not cover comes with the rule to write it as keeper_gaps for the wrap-up")
 saved = run / "60-outputs" / "video-03" / "qc-consult.json"
 check(saved.is_file() and json.loads(saved.read_text(encoding="utf-8"))["relevant"][0]["id"] == SID, "the answer is saved as 60-outputs/video-NN/qc-consult.json")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can looks smaller after the cut", "--note", "the can stays in frame to the end", env=ENV)
@@ -97,11 +120,22 @@ check(js.get("mode") == "keeper" and not js.get("needs_unmet") and "The QC agent
 SLOW["boot_s"] = 0.0
 js, _, _ = t("loupe", "ensure", env=ENV)
 check(js["keeper"]["state"] == "in_sync", "a current keeper is left alone by loupe ensure (no model call)")
+js, _, _ = t("status", "--run", run.name, env=ENV)
+lp = js.get("loupe") or {}
+check(lp.get("running") is True and "error" not in lp and (lp.get("keeper") or {}).get("in_sync") is True and ((lp.get("keeper") or {}).get("understanding") or {}).get("understood") == 1,
+      "status sees Loupe running and reads the keeper's state, with how many samples it holds from their pictures")
 
 # --- plan-hints: the first request's sparse text-only hints, saved beside the plan
 js, _, _ = t("plan-hints", "--run", run.name, "--video", "03", "--beats", "Beat 1: he sets the can on the desk.\nBeat 2: a cut; the can is still there.", "--product", "slim can",
              "--product-details", "slim 355 ml can, upright", env=ENV)
 check(js.get("mode") == "keeper" and len(js["hints"]) == 1 and js["hints"][0]["id"] == SID and "rules" in js, "plan-hints returns the keeper's hint with the writer's rules")
+check(js.get("needs_unmet") and js["needs_unmet"][0]["kind"] == "ask_agent" and "--note" in js.get("unmet_rule", "") and "held_back_why" in js,
+      "what only the prompt writer can answer comes back from plan-hints as needs_unmet with the --note rule, and held_back_why is passed on")
+check(js["hints"][0].get("reading_path", "").endswith(f"{SID}.json") and "reading_rule" in js, "a hint carries the path of its sample's reading and the rule to read it only when the trigger match is unclear")
+js2, _, _ = t("plan-hints", "--run", run.name, "--video", "03", "--beats", "Beat 1: he sets the can on the desk.\nBeat 2: a cut; the can is still there.", "--product", "slim can",
+              "--note", "yes, the same desk, the same spot after the cut", env=ENV)
+check(js2.get("mode") == "keeper" and not js2.get("needs_unmet") and "The prompt writer answers" in calls[-1] and "the same desk" in calls[-1],
+      "a second plan-hints with --note reaches the keeper as the writer's answer from its plan, and nothing stays unmet")
 check((run / "40-briefs" / "video-03-hints.json").is_file(), "the hints are saved as 40-briefs/video-NN-hints.json")
 check(js["hints"][0].get("prompts") == "pair" and js["hints"][0].get("prompt_note", "").startswith("the height") and "wrong_prompt" not in js["hints"][0] and "sample-prompts" in js.get("prompts_rule", ""),
       "a hint whose sample keeps the prompts of both takes carries the marker, the admin's note and the prompts rule, never the prompts")

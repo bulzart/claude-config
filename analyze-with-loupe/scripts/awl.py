@@ -1832,7 +1832,8 @@ def cmd_status(a):
     loupe = {"recorded": st.get("loupe") if "loupe" in st else "none (counts as up)"}
     if not a.no_loupe:
         try:
-            h = _lc().health()
+            lc = _lc()
+            h = lc.health()
             loupe["running"] = bool(h)
             if h:
                 st_, d_ = lc.call("GET", "/api/qc/keeper/state", key_name="qc", timeout=10)
@@ -3975,6 +3976,10 @@ def cmd_loupe(a):
                 st, d = lc.call("POST", "/api/qc/keeper/sync", {}, key_name="qc", timeout=KEEPER_SYNC_WAIT)
                 if st == 200 and isinstance(d, dict):
                     keeper = d
+                    if d.get("reading_started"):
+                        u_ = d.get("understanding") or {}
+                        keeper["reading_note"] = (f"{len(u_.get('missing') or []) + len(u_.get('stale') or [])} new or changed sample(s) are being read from their pictures "
+                                                  "in the background; Loupe tells the keeper when they are done (until then it judges them from the admin's words)")
                 elif st == 0 and "timed out" in str((d or {}).get("error", "")).lower():
                     # Loupe goes on booting or re-feeding the keeper after this call gave up: the sync holds the keeper lock until it is
                     # done and a consult waits on that same lock, so the first qc-consult or plan-hints still meets a current keeper
@@ -4049,6 +4054,15 @@ def cmd_qc_consult(a):
         d["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer by looking at your own video, or a file that does not "
                            "exist): answer it from the video in words and ask again ONCE with --note '<what you saw>'; if it still has needs_unmet, go on without it "
                            "and write in the verdict what was not answered")
+    if any(x.get("reading_path") for x in (d.get("relevant") or []) if isinstance(x, dict)):
+        d["reading_rule"] = ("a relevant sample's reading (the_miss, qc_check) and reading_path are the keeper's reading of its picture, made once by a session that opened it: "
+                             "view the picture itself first; Read the whole reading only when the picture leaves the marked miss unclear; it is evidence, never a verdict")
+    if (d.get("library_read") or {}).get("not_read"):
+        d["not_read_rule"] = ("the samples in library_read.not_read have no reading of their picture yet (new or changed): the keeper judged them from the admin's words "
+                              "alone, so view the picture of any of them it named before you rely on it")
+    if d.get("not_covered") or d.get("needs_unmet"):
+        d["gaps_rule"] = ("write what the library does not cover (not_covered) and any need still unmet after your --note into result.json keeper_gaps, one line each: "
+                          "the main session reports them in the wrap-up so the admin can add a sample in Loupe")
     out(d)
 
 
@@ -4068,8 +4082,18 @@ def cmd_plan_hints(a):
     if s != 200:
         out({"ok": True, "mode": "unavailable", "hints": [], "note": "no sample hints: " + str((d or {}).get("error"))})
     rd = _cf_run_dir(a.run) if a.run else None
-    res = {"ok": True, "mode": d.get("mode"), "hints": d.get("hints", []), "held_back": d.get("held_back", 0), "none_reason": d.get("none_reason", ""),
-           "beats_cut": cut}
+    res = {"ok": True, "mode": d.get("mode"), "hints": d.get("hints", []), "held_back": d.get("held_back", 0), "held_back_why": d.get("held_back_why", []),
+           "none_reason": d.get("none_reason", ""), "beats_cut": cut}
+    for k in ("needs_asked", "needs_unmet", "library_read", "keeper_error"):
+        if d.get(k):
+            res[k] = d[k]
+    if d.get("needs_unmet"):
+        res["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer from your plan, or a file that does not exist): answer it "
+                             "from the plan in words and ask again ONCE with --note '<your answer>' (the same --beats); if it still has needs_unmet, go on without it and "
+                             "write it as a keeper gap in the 'Sample hints' block")
+    if any(h.get("reading_path") for h in res["hints"] if isinstance(h, dict)):
+        res["reading_rule"] = ("a hint's reading_path is the keeper's reading of its sample's picture (what each frame shows, the miss, the mechanism, when it recurs): "
+                               "Read it only when you cannot tell from the hint whether its trigger matches a beat of your plan; it is evidence, never prompt text")
     if res["hints"]:
         res["rules"] = ("Hints are risks to check the plan against, never prompt text: do not copy their words, do not name the wrong behaviour in the "
                         "prompt, add no negative list. Apply one only to the beat its trigger matches and only if its caveat does not exclude it, by the "
@@ -5924,6 +5948,7 @@ def main():
     p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
     p.add_argument("--product-details", help="its shape, size, opening and natural posture, from its registry row")
     p.add_argument("--beats", help="one line per beat of the plan: what happens, the product's form and state, the camera (2000 characters at most)")
+    p.add_argument("--note", help="only when a first answer came back with needs_unmet: your answer from the plan, in words (the keeper asked for it)")
     p.set_defaults(fn=cmd_plan_hints, kinds=None)
 
     p = sp.add_parser("sample-prompts", help="the prompts of the two takes of ONE sample (as the admin saved them in Loupe), written whole to RUN/40-briefs/samples/<id>-prompts.md for you to read and judge; only for a sample you judged relevant")

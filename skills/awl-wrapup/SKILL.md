@@ -45,6 +45,9 @@ Then give:
   each persistent or open one with its video, the flagged prompt or video and what was tried;
   or "no flags this run";
 - the QC fixes (item 27, Recreate and Create): "N videos fixed after QC, M fixes you declined (kept as generated, flagged: V03 …)", or "no QC finding needed a fix";
+- what the Loupe keeper was missing: every `result.json → keeper_gaps` line and every keeper gap in a pattern card's "Sample hints" block, grouped
+  ("not covered by the library: …", "asked and could not be answered: …", with the video), and that Loupe's Keeper page lists them under "What the
+  keeper is missing", so the admin can add a sample in Generation misses; or "the keeper had what it needed";
 - any open issues.
 
 Both modes: reconcile the flags before the table. Run `T caught-flag reconcile --run RUN`; every

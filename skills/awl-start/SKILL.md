@@ -150,7 +150,9 @@ Only these section files for this phase, nothing else unless a step below says s
    - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`
      (first line `# Requirement (the user's words)`, then the text; a file the user named is copied, a PDF through `T doc-text`);
    - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper
-     is fed from, and `keeper.state`: the keeper is booted or brought up to date there, so the first consult finds it current), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
+     is fed from, and `keeper.state`: the keeper is booted or brought up to date there, so the first consult finds it current; `keeper.understanding` says how many
+     samples it holds from their pictures, and `keeper.reading_note` appears when new or changed samples are being read in the background: nothing to do, Loupe
+     tells the keeper when they are done), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
      `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
    - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
 

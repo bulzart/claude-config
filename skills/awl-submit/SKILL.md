@@ -94,7 +94,11 @@ Only these section files for this phase, nothing else unless a step below says s
        persistent --note "<what was tried>"` and the video is reported in the wrap-up;
      - a flagged **input** (an asset or a reference video that came back marked) is recorded the
        same way with `--stage upload` and the file's path, and is replaced by another supplied
-       asset, never re-uploaded unchanged.
+       asset, never re-uploaded unchanged;
+     - a `preset_recommendation` notice is declined, never asked about: the retry carries
+       `declined_preset_id: <the notice's preset id>`, and the id is stored once for the run with
+       `T state --run RUN set higgsfield.declined_preset_id=<id>`, so every later request of the run
+       carries it and `T lint-run` knows it (an id it does not know is listed as an unknown media id).
 
 ## Rules this phase owns (contract items 3, 12, 23)
 

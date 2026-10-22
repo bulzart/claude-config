@@ -82,9 +82,12 @@ Only these section files for this phase, nothing else unless a step below says s
     (repeat `--checkpoint`). The JSON line has `relevant` (or `samples`
     when `mode` is `fallback` or `busy`, the brief's own ranking while no keeper answered): each with `composite_path`, `frames` (role, where it comes from, time),
     the admin's words (`title`, and `details`, `correct_note`, `idea`, `better`, `missed` when given), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`),
-    the keeper's `why`, `check` and `wrong_pattern`, and `advice`. **View every
+    the keeper's `why`, `check` and `wrong_pattern`, `reading` (the keeper's reading of that picture in two short fields, `the_miss` and `qc_check`, null when
+    the sample has none yet) with `reading_path` (the whole reading: what each frame shows, the right version, the prompts, what is open), and `advice`. **View every
     `composite_path`**, add what each says to look for as extra `--dense` checkpoints, and write in the verdict
-    which sample was compared and what was seen at the same place of this video. `mode: unavailable` or an
+    which sample was compared and what was seen at the same place of this video. Read a `reading_path` only when the picture leaves the marked miss
+    unclear; it is evidence, never a verdict. `library_read` says how much of the library the keeper holds from the pictures: a sample in its
+    `not_read` list was judged from the admin's words alone, so the picture you view decides for it. `mode: unavailable` or an
     empty list means no sample applies: QC goes on without them. On `mode: unavailable` while the contract's Loupe line (`state.json → loupe`,
     none = up) says `up`, run `T loupe ensure` once and ask again; if it stays unavailable the verdict says "no sample consulted: Loupe unavailable". The answer is also saved as
     `RUN/60-outputs/video-NN/qc-consult.json`. Ask the keeper **once per video**, on its first picture pass: the CapCut project pass and a
@@ -100,6 +103,9 @@ Only these section files for this phase, nothing else unless a step below says s
     Always pass `--run` and `--video`: the keeper may ask Loupe for this video's plan, a frame, or the product's registry row, and Loupe reads them from the run.
     When the answer has `needs_unmet` (a question only you can answer by looking at your own video, or a file that does not exist), answer it in words and ask
     once more with `--note "<what you saw>"`; if it is still unmet, go on and write in the verdict what was not answered.
+    **Keeper gaps reach the admin:** write the answer's `not_covered` (what the library does not cover for this video) and every need still unmet after
+    the `--note` into `result.json → keeper_gaps`, one line each (`production-agents.md` §4); the main session reports them in the wrap-up so the admin
+    can add a sample in Loupe, and Loupe's Keeper page lists them too. A gap is information for the library, never a regenerate reason by itself.
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
     every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan,
     then view the storyboard sheets and every dense sheet under `<dir>/dense/`. It returns measurements
