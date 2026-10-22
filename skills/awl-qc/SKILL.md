@@ -73,7 +73,9 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Samples first (Loupe, this phase only).** The admin keeps a library of generation misses in Loupe, each
     one image of the frames the admin chose (one to twelve), every frame tagged WRONG (red) or RIGHT (green) with its own time and carrying only the marks the admin
     drew on it (a RIGHT frame can come from the right version or from an earlier part of the same video), a zoom of each frame (a frame alone in its row is shown as its normal-range shot with its close range beside it), and the admin's words burned in at the bottom beside the product sample
-    the video used. A separate read-only keeper session holds that library and nothing else. Before the first
+    the video used. A separate read-only keeper session holds that library and nothing else, with a reading of every sample's picture (what each
+    frame shows, the miss, the mechanism, what QC checks, what the corrected prompt changed) that Loupe had a session make once by opening it; the
+    picture itself stays the evidence you view. Before the first
     sheet: `T qc-consult --run RUN --video NN --question "<what this video shows that a past miss looked like:
     the product form, the beat, what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
     --product-details "<its shape, size, opening and natural posture, from its registry row>" --checkpoint "<a plan checkpoint>" …`

@@ -1836,7 +1836,7 @@ def cmd_status(a):
             loupe["running"] = bool(h)
             if h:
                 st_, d_ = lc.call("GET", "/api/qc/keeper/state", key_name="qc", timeout=10)
-                loupe["keeper"] = {k: d_.get(k) for k in ("in_sync", "turns", "library", "model", "last_synced")} if st_ == 200 and isinstance(d_, dict) else {"note": "not readable: " + str((d_ or {}).get("error", st_))}
+                loupe["keeper"] = {k: d_.get(k) for k in ("in_sync", "turns", "library", "model", "last_synced", "understanding")} if st_ == 200 and isinstance(d_, dict) else {"note": "not readable: " + str((d_ or {}).get("error", st_))}
         except Exception as e:  # noqa: BLE001
             loupe["running"] = False
             loupe["error"] = str(e)[:120]
@@ -1946,7 +1946,7 @@ def cmd_doctor(a):
                 loupe["library_size"] = d.get("library_size") if st_ == 200 and isinstance(d, dict) else None
                 loupe["qc_key_ok"] = st_ == 200
             st_, d_ = lc.call("GET", "/api/qc/keeper/state", key_name="qc", timeout=10) if h else (0, {})
-            loupe["keeper"] = {k: d_.get(k) for k in ("in_sync", "turns", "library", "library_sig", "model", "last_synced", "claude_found")} if st_ == 200 and isinstance(d_, dict) else {"note": "not readable: " + str((d_ or {}).get("error", st_))}
+            loupe["keeper"] = {k: d_.get(k) for k in ("in_sync", "turns", "library", "library_sig", "model", "last_synced", "claude_found", "understanding")} if st_ == 200 and isinstance(d_, dict) else {"note": "not readable: " + str((d_ or {}).get("error", st_))}
         except Exception as e:  # noqa: BLE001
             loupe = {"running": False, "error": str(e)[:120]}
     docs = {"skipped": True}

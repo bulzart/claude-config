@@ -82,14 +82,15 @@ It holds two things:
 - **Generation misses:** the admin picks a run and a video in Loupe, marks the second of the miss with an arrow, circle or box and a note, then picks
   the fixed version and the same moment of it. Loupe saves one image: the miss on the left, the correct frame on the right, a zoom of the marked
   place below. Only the QC phase reads them: `awl.py qc-consult` asks the QC keeper (one separate read-only Claude session that holds the whole
-  sample library and never sees a run) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call. The answer's `relevant[]` carries
+  sample library and never sees a run, with a reading of every sample's picture that Loupe had a fresh session make once by opening it, kept as JSON in Loupe's data and
+  redone only for a new or changed sample) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call. The answer's `relevant[]` carries
   the sample's words (`title`, `details`, `correct_note`, `idea`, `better`, `missed`), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`), the composite's path and the
   keeper's `why`, `check` and `wrong_pattern`, every field whole or cut at a sentence end; `needs_unmet` lists only what Loupe could not fetch; when another keeper call runs longer
   than the lock wait the answer comes from the brief with `mode: busy`. `plan-hints` fields are cut the same way and `held_back_why` says why a hint was set aside. A sample marked `prompts`
   (`pair`, `wrong` or `fixed`) keeps in Loupe the prompt that produced the miss and the prompt of the corrected take with the admin's `prompt_note`; lists, answers and hints carry only the marker
   and the note, and `awl.py sample-prompts --id S12 --run RUN` writes both whole to `RUN/40-briefs/samples/S12-prompts.md` for a sample the agent judged relevant (X2 for an applied hint, QC for a
   diagnosed cause): the agent reads and judges what changed, nothing is compared in code, nothing of them is pasted. `status`
-  and `doctor` read the keeper's state (in sync, turns, library version) through the qc key.
+  and `doctor` read the keeper's state (in sync, turns, library version, how many samples have a current reading) through the qc key.
   Agents can also reach the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`).
 
 Three hooks in `~/.claude/settings.json` support the pipeline without adding to any agent's context: `hooks/atp_flag_watch.py` (PostToolUse of the
