@@ -1,1 +1,1 @@
-- [Digital products business](digital-products-business.md) — user's TikTok/IG slideshow → Shopify digital-product plan; no spreadsheets; must work on any device; leaning toward a journal web app (PWA) sold via Shopify
+- [Digital products business](digital-products-business.md) — user's TikTok/IG slideshow → Shopify digital-product plan; wants data-backed best sellers; rejected sheets and web app; current pick is a fitness program PDF
