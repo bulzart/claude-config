@@ -1,1 +1,1 @@
-- [Digital products business](digital-products-business.md) — user's TikTok/IG slideshow → Shopify digital-product plan; niche recommendation given 2026-10-25, not yet decided
+- [Digital products business](digital-products-business.md) — user's TikTok/IG slideshow → Shopify digital-product plan; doesn't want spreadsheet products; current pick is a guided prompt journal PDF, not yet decided
