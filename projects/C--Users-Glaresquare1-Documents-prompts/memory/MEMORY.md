@@ -1,1 +1,2 @@
 - [Digital products business](digital-products-business.md) — user's TikTok/IG slideshow → Shopify digital-product plan; wants data-backed best sellers; rejected sheets and web app; current pick is a fitness program PDF
+- [ElevenLabs setup](elevenlabs-setup.md) — local MCP with API key (user scope), free tier, Albanian unsupported officially, outputs under Desktop
