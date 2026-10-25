@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: c1639feb-dd77-47ca-950d-178277c7920f
-  modified: 2026-10-25T22:49:46.649Z
+  modified: 2026-10-25T23:00:36.852Z
 ---
 
 As of 2026-10-25 the user is planning to sell digital products (PDFs, e-books, templates — nothing physical) by posting TikTok and Instagram slideshow carousels that drive traffic to their own Shopify store. They asked for the best niche to start with.
@@ -19,6 +19,13 @@ Then a key requirement: the product must be easy to use on any device, and the u
 The user rejected the web app too ("no i dont like it") and asked for the data-backed best seller instead: "just identify whats the most selling e-product on 2026 and then we'll build and market it on social media slides, no matter the niche or complexity low or high i will invest on it". So they want data-driven picks, not opinion-led ideas. Research findings: Stan 2025 had 2.2M digital downloads sold vs 300K courses; on Gumroad (modeled), Business & Money is the top non-software category by total revenue, but Fitness & Health earns more per product with far fewer products. Recommendation: a 12-week women's strength program PDF (phone-first, linked demo videos, $29–39, written or checked by a hired certified coach), with a Hyrox race-prep plan as the alternative. Waiting on the user's go-ahead as of 2026-10-25.
 
 The user then asked for a ranked top-10 list with a brief for each. Given 2026-10-25: 1 women's strength program, 2 guided journal, 3 high-protein meal plan, 4 "start a side business" playbook, 5 Christian devotional/Bible study, 6 Hyrox race-prep plan, 7 Canva template packs for one trade, 8 wedding planning kit, 9 kids' printable activity packs, 10 crochet/cross-stitch patterns. Suggested #1+#3 as a bundle, or #2 for the fastest build. Waiting for the user to pick 1–3.
+
+The user then dropped every constraint, physical products included: "forget any limits that i gave you, including e-products and other type of things that are being sold in 2026 whats the best selling categories in 2026". Answered 2026-10-25 with market data:
+- Grocery is projected as the #1 US online category in 2026.
+- Food & beverage and health & beauty grew fastest online in 2025.
+- On TikTok Shop US in Sep 2026, Beauty & Personal Care led, then Womenswear, Sports & Outdoor, Fashion Accessories and Collectibles.
+
+The best fits flagged for slides → Shopify were beauty/personal care and jewelry/fashion accessories (physical), or the fitness program (digital).
 
 **Why:** Gives continuity if the user returns to pick a niche, build the product, write slideshow scripts, or set up the Shopify store (Shopify MCP is connected in this environment).
 
