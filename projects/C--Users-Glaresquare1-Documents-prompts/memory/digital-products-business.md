@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: c1639feb-dd77-47ca-950d-178277c7920f
-  modified: 2026-10-25T22:43:07.730Z
+  modified: 2026-10-25T22:49:46.649Z
 ---
 
 As of 2026-10-25 the user is planning to sell digital products (PDFs, e-books, templates — nothing physical) by posting TikTok and Instagram slideshow carousels that drive traffic to their own Shopify store. They asked for the best niche to start with.
@@ -17,6 +17,8 @@ The user rejected spreadsheets: "i want something else, not sheets another digit
 Then a key requirement: the product must be easy to use on any device, and the user will put in extra time or development to get that ("i want something that people will find it easy to use no matter the device they use to open even if it takes me some tweaks or to invest more time or develop something in order to work"). Current direction: a mobile-first web app (PWA) version of the journal ("one question a day"), sold through Shopify with a personal access link emailed after purchase, entries stored on the device (local-first) plus backup/export, and a 3-free-days funnel. I offered to build a prototype first and connect Shopify afterwards.
 
 The user rejected the web app too ("no i dont like it") and asked for the data-backed best seller instead: "just identify whats the most selling e-product on 2026 and then we'll build and market it on social media slides, no matter the niche or complexity low or high i will invest on it". So they want data-driven picks, not opinion-led ideas. Research findings: Stan 2025 had 2.2M digital downloads sold vs 300K courses; on Gumroad (modeled), Business & Money is the top non-software category by total revenue, but Fitness & Health earns more per product with far fewer products. Recommendation: a 12-week women's strength program PDF (phone-first, linked demo videos, $29–39, written or checked by a hired certified coach), with a Hyrox race-prep plan as the alternative. Waiting on the user's go-ahead as of 2026-10-25.
+
+The user then asked for a ranked top-10 list with a brief for each. Given 2026-10-25: 1 women's strength program, 2 guided journal, 3 high-protein meal plan, 4 "start a side business" playbook, 5 Christian devotional/Bible study, 6 Hyrox race-prep plan, 7 Canva template packs for one trade, 8 wedding planning kit, 9 kids' printable activity packs, 10 crochet/cross-stitch patterns. Suggested #1+#3 as a bundle, or #2 for the fastest build. Waiting for the user to pick 1–3.
 
 **Why:** Gives continuity if the user returns to pick a niche, build the product, write slideshow scripts, or set up the Shopify store (Shopify MCP is connected in this environment).
 
