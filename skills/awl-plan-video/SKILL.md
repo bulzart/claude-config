@@ -78,8 +78,19 @@ Only these section files for this phase, nothing else unless a step below says s
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - *Create (the sound plan):*
   - capcut-assembly §3b: `AWL/reference/capcut-assembly/040_3b_sound-layer-create.md` (4.8 KB)
+- *an own voiceover (`state.json → voiceover.enabled` true and, in Free, this video in `voiceover.videos` when that key exists; item 31):*
+  - voiceover §3: `AWL/reference/voiceover/030_3_writing-the-lines-x1.md` (2.3 KB)
+  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.1 KB)
+  - voiceover §5: `AWL/reference/voiceover/050_5_on-camera-or-off-screen-and-whic.md` (1.1 KB)
+  - voiceover §6: `AWL/reference/voiceover/060_6_in-the-request-x2-by-what-the-lo.md` (3.1 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §1 at a glance, §3.14 integration and continuity, §5 failure modes (where the guide lists size or place as a limit), §6 features
 - the registry `RUN/30-assets/registry.md`, the card `RUN/20-analysis/cards/<V>.md`, `RUN/20-analysis/house-approach.md` when it exists
+
+### ElevenLabs tools (an own voiceover only, item 31)
+
+Deferred: load them before the first take of the run (the main session voices every take; production agents never call ElevenLabs):
+`ToolSearch "select:mcp__elevenlabs__text_to_speech,mcp__elevenlabs__get_voice,mcp__elevenlabs__check_subscription"`. None found, or the
+call fails: a blocker, reported with the real error (`voiceover.md` §4 step 8).
 
 ## Step X1
 
@@ -169,6 +180,24 @@ Only these section files for this phase, nothing else unless a step below says s
       - its source: a supplied track, the reference's own speech-free sound (only when its profile measured the speech share: in a
         frames-only run `speech_share` is null and the reference's sound is not reused whole), or a matching track to download;
       - the sound effects and their hit points on the new video's beats;
+      - with an own voiceover, the soundtrack sits under the voice (about 0.25) and no effect lands on a word;
+    - the **voiceover** (an own voiceover, item 31; `voiceover.md` §3–§6), written before the beats are final, in a "Voiceover" block of
+      the plan:
+      - the method (`voiceover.method`: native, lipsync or overlay), the speaker and the form under it (on-camera or off-screen, §5) with
+        the voice and the reason in one line; with lipsync, the sync pass as a planned second generation of the video (§6), named in the brief
+        with its cost once its clip exists; with native on Wan 2.7, the start frame (the speaker with the product at t=0) that X3 builds;
+      - the lines (§3) in the run's language, the preference's dialect or accent, the emotion tags, sized to the length budget; the text
+        as sent goes alone into `40-briefs/video-NN[-cK]-voiceover.txt`, and the plan quotes it with one English line when the language is
+        another;
+      - the take (§4): `T voiceover outdir --run RUN`, one `text_to_speech` call, then `T voiceover record --run RUN --video NN --attempt K --file "<the saved file>" --script <that .txt> --voice-id <id> --voice-name "<name>" --model <id> --language <iso> --preference "<words>" --mode on-camera`
+        (`--mode off-screen` for that form); read its phrases, pauses and speech end, and judge the fit (§4 step 4: native and lipsync take
+        the take as it is, so too long means a shorter script and a second take; overlay may speed it up to about 8 % with `--tempo` in
+        post); a video whose take is already recorded (`state.json → voiceover.files.NN`, a resume) is never voiced again;
+      - then **re-time the plan to the take** (§4 step 5): the beats on its phrases, the cuts and product beats in its pauses, the
+        generation's duration by the method (native: the take's whole length rounded up; lipsync: at least the take's length; overlay: its
+        speech end plus 0.3 to 0.6 s), in the model's whole seconds and within its audio limits (§6; native at most 15 s per generation, a
+        longer take split into clips, §4 step 6), and the QC checkpoints with dense ranges at three phrase starts and one pause;
+      - the user's own files (source `file`): §4 step 7 (no ElevenLabs call; the file's words, given or transcribed);
     - for a **multi-clip** video, the **clip plan** (`generation-system.md` §3b):
       - the seams, on the reference's cuts first;
       - the join method of each seam (from `index.json → continuation`);
@@ -186,7 +215,13 @@ Only these section files for this phase, nothing else unless a step below says s
   - Use the provenance labels.
   - Analyze Mode: rotate approved characters across videos when no assignment is given.
 
-## Rules this phase owns (contract items 6, 9, 14, 16, 18, 21)
+## Rules this phase owns (contract items 6, 9, 14, 16, 18, 21, 31)
+
+31. **Own voiceover: the take is the timing master** (`voiceover.md`). When the run has one (`state.json → voiceover.enabled`; Free: the
+    videos in `voiceover.videos`, or all), this session writes each video's lines, voices them once through the ElevenLabs MCP, records the
+    take with `T voiceover record`, and plans the video to the take's measured phrases under the user's method (native: the take drives the
+    generation; lipsync: the speaking scene, then the sync pass; overlay: no dialogue, the take placed over the picture); production agents
+    upload, bind, verify, sync or mix, place and check it, and never voice anything.
 
 6. **Text policy depends on the mode** (`reference/text-and-format.md`):
    - Edit Mode removes all source text unless the user keeps specific text.
@@ -348,6 +383,9 @@ Only these section files for this phase, nothing else unless a step below says s
   changes size across a cut, or one larger than the hand that holds it (`anomaly-catalog.md` §2.7).
 - Never plan a product that is handled on screen without its affordance sheet in the registry
   (§1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).
+- Never write a voiceover line a reference spoke, never plan a length that cuts a take's speech, never voice the same script twice or a
+  take that is already recorded, never leave a take unrecorded (`T voiceover record`), and never let the model's own voice stand in for a
+  take that failed (item 31).
 
 ## Hand-off
 

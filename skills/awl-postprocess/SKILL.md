@@ -29,8 +29,11 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.2 KB)
 - *Edit Mode or Recreate (the sync check):*
   - generation-system §5c.5: `AWL/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (1.3 KB)
+- *an own voiceover (the plan has a Voiceover block; item 31):*
+  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (2.8 KB)
+  - voiceover §9: `AWL/reference/voiceover/090_9_in-the-capcut-project.md` (1.0 KB)
 
-Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the edited pictures first, then run step 1 (restore the original audio) once over the joined picture. (2) Recreate: `--audio` is the reference's `files_audio` file and `--audio-offset` its inventory `audio_offset` (fields `audio_path` and `audio_offset` of `RUN/00-inventory/inventory.json`, linked by `T split-audio`); a reference with inserts uses `T restore-audio --generated <edit> --source <own.mp4>` as the plan says. (3) Analyze Mode: stop after step 5 (the clean video) and go to `awl-qc` for the picture checks; once the picture passes, come back here for step 6 (the CapCut project), then `awl-qc` again for the project checks.
+Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the edited pictures first, then run step 1 (restore the original audio) once over the joined picture. (2) Recreate: `--audio` is the reference's `files_audio` file and `--audio-offset` its inventory `audio_offset` (fields `audio_path` and `audio_offset` of `RUN/00-inventory/inventory.json`, linked by `T split-audio`); a reference with inserts uses `T restore-audio --generated <edit> --source <own.mp4>` as the plan says. (3) Analyze Mode: stop after step 5 (the clean video) and go to `awl-qc` for the picture checks; once the picture passes, come back here for step 6 (the CapCut project), then `awl-qc` again for the project checks. (4) An own voiceover (item 31): step 5b runs once the picture has passed its checks, then `awl-qc` checks the voice (the soundtrack, the lips, the mix facts) before step 6.
 
 ## Step X8
 
@@ -76,17 +79,36 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
        regenerate with the timing lock, a regenerate reason in X9;
      - a global correlation below 0.3, or no used window, is inconclusive (motion too different to
        measure, e.g. a heavy restyle) → judge it on the sheet and the densified anchors.
+  5b. **Own voiceover** (item 31; `voiceover.md` §8), by the run's method, on the clean picture once it passed its picture checks:
+     - **native:** `T voiceover align --generated <the clean picture> --voiceover <the take> --out <aK>/vo`; a soundtrack that is the take
+       (a correlation near 1 at an offset near 0) is kept as it is; one the model altered gets the exact take laid back with
+       `T voiceover mix --picture <clean> --voiceover <the take> --offset <global_offset_s> --bed mute --out 60-outputs/video-NN/with-voiceover.mp4`;
+     - **lipsync** (an on-camera video): the sync pass: write `50-requests/video-NN-sync-request.json` (§6: `sync_so` with the accepted
+       clip's job id as `input_video`, the take's media id as `input_audio`, `sync_mode` `silence`), run Skill `awl-submit` for it (X5, then
+       X7 with `T ledger begin --video NN-sync`), `T hf-get` it to `<aK>/synced.mp4`, `T conform` it, and align it against the take; the synced
+       file is the clean picture from here on;
+     - **overlay** (and an off-screen lipsync video): `T voiceover mix --picture <clean> --voiceover <the take> --offset <the voice's start> --bed keep --bed-gain 0.3 --out 60-outputs/video-NN/with-voiceover.mp4`
+       (`--tempo` for a take a little long), which also writes `with-voiceover.vo-track.wav` for the CapCut track;
+     - **the fallback**, only when a sync pass is refused, flagged or failed twice: §8 (the take aligned to the model's own speech and mixed
+       with `--bed mute`; the lips only as close as that speech), said in the brief and `result.json → voiceover`.
+     Read every `align` and `mix` answer (numbers and facts only) and write what you decided and why.
   6. **Analyze Mode:** the result is the **clean video** `60-outputs/video-NN/clean.mp4`: conformed,
-     trimmed, joined, with no overlay text. After it passes X9, assemble its CapCut project
+     trimmed, joined, with no overlay text (with an own voiceover, the file whose sound is the take: step 5b). After it passes X9, assemble its CapCut project
      (`reference/capcut-assembly.md` §2–§5):
      - `T capcut-name --video NN` → `capcut_clone_draft` (empty) → `T capcut-prep`;
      - the inserts cut from the reference (`generation-system.md` §3c);
      - the generation placed, split at each insert point, with each insert in its gap;
      - every overlay text as a text layer;
+     - with an own voiceover, the voice by method (`voiceover.md` §9: native and lipsync, the clip's own audio at 1.0, never re-timed or
+       duplicated; overlay, the take on its own track and the clip's sound at the bed volume), the soundtrack under it at about 0.25;
      - `capcut_validate` → `capcut_save` → the capcut-cli repair lines → the preview.
      If CapCut is running, keep going and assemble all pending projects at the wrap-up.
 
-## Rules this phase owns (contract items 6, 16)
+## Rules this phase owns (contract items 6, 16, 31)
+
+31. **Own voiceover: the delivered file carries the take** (`voiceover.md` §8). native: the generation's own sound is the take, kept as it
+    is or laid back exactly; lipsync: the sync pass's output, whose sound is the take; overlay: the take mixed over the picture, and on its
+    own CapCut track. The keep-or-lay-back reading, the sync pass and the mix are recorded in the brief and `result.json → voiceover`.
 
 6. **Text policy depends on the mode** (`reference/text-and-format.md`):
    - Edit Mode removes all source text unless the user keeps specific text.
@@ -148,6 +170,9 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
 - Never deliver a video that carries the original audio without its sync check (X8 step 5), and
   never leave drift or a moved action unreported. Never fix sync by stretching or looping the
   original audio.
+- With an own voiceover (item 31): never leave the model's own voice in the final sound (except the stated fallback of `voiceover.md`
+  §8), never re-time, cut or duplicate the voice of a native or lipsync clip in CapCut, never deliver a take whose speech is cut
+  (`vo_speech_cut_s` above 0), and never call ElevenLabs from a production agent: a take that must change is a `voiceover` blocker.
 
 ## Hand-off
 

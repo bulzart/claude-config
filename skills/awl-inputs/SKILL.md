@@ -36,6 +36,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a production agent (the `blocked` path and the QC `continuity` text are defined here):*
   - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (1.3 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §2.2 (media roles), §3.7 (references), §3.8 (frames)
+- *an own voiceover with the native or lipsync method (the plan's Voiceover block; item 31):*
+  - voiceover §7: `AWL/reference/voiceover/070_7_uploading-the-take-x3.md` (0.7 KB)
 
 ## Step X3
 
@@ -49,6 +51,14 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Every video sent to Higgsfield is silent:** the `videos_without_audio` copy, or its prepared
     derivative from E5. Never upload an original video with its audio. (A clip this run generated
     may go back with its generated audio, as the input of a native extension.)
+  - **Own voiceover** (item 31; `voiceover.md` §7): with the **native** or **lipsync** method the take is the one audio input (native: the
+    driving audio; lipsync: the sync pass's audio, and the voice reference when the model has the role):
+    `media_upload {files:[{filename:"<the take's file name>", content_type:"audio/mpeg"}]}` (a WAV: `audio/wav`) →
+    `T hf-put --capture <id> --file <the take>` → `media_confirm {type:"audio", …}` →
+    `T uploads set --run RUN --video NN --label "Audio 1" --role audio_references --media-id <id> --file <the take> --content-type audio/mpeg`.
+    The take is `state.json → voiceover.files.NN → file`; in a request it is the first `audio_references` entry of `medias`. A regeneration
+    or a sync pass reuses its media id; **overlay** never uploads it. Native on Wan 2.7 needs its start frame (the speaker with the product
+    at t=0): built as below for start-frame models.
   - **Multi-clip continuous seam:** the input comes from the **accepted** previous clip
     (`generation-system.md` §3b.3):
     - last-frame chain: `T last-frame --video <clip> --out <…/cK/handoff.png>`, view it, upload it,

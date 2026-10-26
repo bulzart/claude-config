@@ -53,7 +53,9 @@ CapCut, shaped by the references' sound profiles (`10-media/<V>/audio-profile.js
    - **Sound effects:** one `capcut_add_audio {file, atSec:<hit>, trackIndex:<sfx track>,
      volume:~0.8}` per hit, on the new video's cuts, reveals or punchlines, only where the plan
      puts them.
-   - The generated video's own audio (dialogue, actions) stays on its clips at full volume.
+   - The generated video's own audio (dialogue, actions) stays on its clips at full volume. With an own voiceover (item 31) the voice
+     comes first: native and lipsync clips carry it as their own audio, overlay puts it on its own track (`voiceover.md` §9), and the
+     soundtrack sits under it at about 0.25.
 4. **Check:**
    - `T audio-profile --audio <capcut-preview.mp4> --out <…/preview-audio.json>` measures the preview; you
      read its numbers (harmonic ratio, beat strength, `hits` with their times) to confirm that the bed is

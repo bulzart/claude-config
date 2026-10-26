@@ -35,6 +35,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - higgsfield-mcp §8: `AWL/higgsfield/higgsfield-mcp/080_8_credits-and-cost.md` (1.1 KB)
 - higgsfield-mcp §9: `AWL/higgsfield/higgsfield-mcp/090_9_errors-and-recovery.md` (2.5 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §5 (failure table), §7 (pre-generation checklist)
+- *an own voiceover (the plan has a Voiceover block; item 31):*
+  - voiceover §6: `AWL/reference/voiceover/060_6_in-the-request-x2-by-what-the-lo.md` (3.1 KB)
 - the plan, the pattern card and the request(s) of this video
 
 ## Steps X4, X5, X6
@@ -93,6 +95,14 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Source surfaces:** each printed surface a guardrail or §9b names is a "replace / remove only …
     reconstruct as <named content>" sentence, never a description of blankness, with the original in
     the exclusion line.
+  - **Own voiceover** (item 31; `voiceover.md` §6), by the run's method: the take is recorded (`state.json → voiceover.files.NN`, its
+    sidecar beside it). **native**: the take is the first `audio_references` entry ("Audio 1", the label its upload records), the prompt
+    says it is the whole soundtrack and who speaks it (or that it is off-screen), and writes no other dialogue; Wan 3.0 rides it with
+    `image_references` and no `start_image`, Wan 2.7 with its start frame; the duration is the take's whole length rounded up, at most 15 s.
+    **lipsync**: the dialogue line is the sidecar's `spoken_text` word for word in the take's language, the speaker named, the take as the
+    voice reference when the model has the role, native audio on, and the duration at least the take's length (the sync pass comes in
+    X8). **overlay** (and an off-screen lipsync video): the guide's no-dialogue line, no audio reference, the duration covering the take's
+    speech end plus at least 0.3 s. Nothing asks for music.
   - Fix any conflict in the plan and the request before continuing.
 - **X5 — Preflight.**
   - `generate_video {params:{…, get_cost:true}}` → cost and `adjustments`. **One** preflight per
@@ -108,6 +118,9 @@ Only these section files for this phase, nothing else unless a step below says s
     the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
   - When X2 asked for sample hints, the brief carries the pattern card's short "Sample hints" block (id, applied to which beat or
     not applied and why), so QC and a reported miss can be read against it.
+  - With an own voiceover (item 31) the brief names the method, the voice, the language, the preference, the form, the take's file and
+    length, the sync pass when the method is lipsync (its cost preflighted once its clip exists), and the risk that the lips depend on how
+    the model follows the take (untested on Higgsfield, `voiceover.md` §6; measured in X8).
   - Save it as `40-briefs/video-NN-brief.md`; each attempt or clip appends its own block under the first
     (the failed request, the verdict, what changed), so a reported problem can be read against what was
     planned and asked (item 22).

@@ -21,6 +21,10 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §4b.0: `AWL/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
 - *with references (`state.json → free_references = yes`):* `RUN/20-analysis/synthesis.md`, the cards the requirement names (`RUN/20-analysis/cards/`), and creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (4.7 KB)
 - *when a video will edit a reference (kind `recreate`, step 3):* the source-preparation steps E4–E5 of `C:/Users/Glaresquare1/.claude/skills/awl-recreate-plan/SKILL.md` (Read that file from its heading "Edit Mode's E4–E5, as Recreate uses them" to its end; nothing before it)
+- *only when the requirement asks for an own voiceover (step 2b; item 31):*
+  - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (2.1 KB)
+  - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)
+  - voiceover §5: `AWL/reference/voiceover/050_5_on-camera-or-off-screen-and-whic.md` (1.1 KB)
 
 ### A6f. Free: the requirement is the plan (Free only)
 
@@ -55,6 +59,18 @@ at X9, the flag record), the CapCut assembly and the deliverables. Nothing is as
    - The sharpness gate (§6) and the hook, payoff and share line (§7) are applied as checks of your reading, never to change what the
      user asked for: a weakness is written as a note in the plan and shown in step 4 for the user to decide.
    - **Guardrails** (`brand-guardrails.md` §4) hold as always.
+2b. **Own voiceover: only when the requirement asks for it** (item 31; `voiceover.md` §1, §2, §5). Read the requirement for one: ElevenLabs
+   named, an ElevenLabs voice by name or id, "my voiceover" or "my voice", a voice and a language for the spoken words, an accent or a dialect
+   for them, or voiceover files among the assets that the user names as such. When it asks, the plan gives those videos (all of them when it
+   does not say which) an own voiceover: the method ("drive the video with my voice" is native, which the locked model must allow: Wan 3.0,
+   Wan 3.0 Prime or Wan 2.7; "lip-synced" is lipsync; "over the video", "narration" or "voice-over" is overlay), per video its form
+   (on-camera or off-screen, §5) and its lines' idea, each line [U] or [I]; the method, the voice, the language and the preference come from
+   the requirement ([U]), and whatever it leaves open (the method, the voice, the language) is asked inside the confirmation of step 4, with
+   the voice list printed before it (§2 steps 3–5: the tools, the subscription, the models, the voices, then verify the answers; the method's
+   options are only those the locked model allows). A requirement that asks for native with a model that has no driving audio: say so in the
+   confirmation and offer the other two methods. A `recreate`-kind video keeps its source's own audio and mouths: a voice goes over it off-screen only when the
+   requirement says so, and its lips are never re-synced. When the requirement does not ask for an own voiceover, nothing about one is offered,
+   suggested, asked or written into the plan: the videos keep the model's own audio, as in every run.
 3. **Past misses that touch this requirement (Loupe, no model call):** for every product of the plan run
    `T qc-brief --run RUN --product "<form>" --product-details "<shape, size, opening, posture from its registry row>" --question "<the
    requirement's actions with that product, in one line>"` and write the matching samples (id and title; a sample marked `prompts` also keeps the prompts of its
@@ -66,14 +82,25 @@ at X9, the flag record), the CapCut assembly and the deliverables. Nothing is as
 4. **Confirm once.** Ask with AskUserQuestion (header "Your plan"): show one line per video (number, kind, length, product and its
    integration, the idea) plus every [I] line that fills a gap, every hard rule the requirement crossed, and any sharpness note; the
    options are **"Yes, produce it"** and **"Change it"** ("Other" takes the user's words: apply them to the plan, show it again, until
-   the user says yes). A change that asks for more generations than the plan priced is shown with its cost. Nothing else is asked in
+   the user says yes). A change that asks for more generations than the plan priced is shown with its cost. When step 2b turned an own
+   voiceover on and the requirement left the method, the voice or the language open, the same AskUserQuestion call also carries the open
+   ones: "Voiceover" (the method, `voiceover.md` §2 step 1, only the options the locked model allows), "Voice", "Language" and "Voice style"
+   (§2 step 4; the voice list printed above it): it is still the one confirmation. A user who
+   asks for an own voiceover in the "Change it" answer is handled the same way. The call holds at most four questions: when the method, the
+   voice and the language are all open, the language and the style share one question (`voiceover.md` §2, Free). Nothing else is asked in
    this phase, and the per-video loop asks nothing (item 15).
 5. **Store it:** `T state --run RUN set directions=<one line per video, JSON list> videos_kind=<{"NN": "recreate|create"} JSON>
-   free_plan_confirmed=true` (and `requested_videos` when the requirement set the count). The free plan file is the direction of every
+   free_plan_confirmed=true` (and `requested_videos` when the requirement set the count); with an own voiceover also the `voiceover` keys of
+   `voiceover.md` §1, as `awl-start` step 6 writes them, plus `voiceover.videos='["01","03"]'` when only some videos have one (a requirement
+   that asks for none writes no `voiceover` key). The free plan file is the direction of every
    video: X1 reads its video's lines as the plan's brief (`awl-plan-video`), X2 translates them into the locked model's own prompting
    structure, X9 checks the explicit wants and forbids as checkpoints.
 
-## Rules this phase owns (contract items 15, 17)
+## Rules this phase owns (contract items 15, 17, 31)
+
+31. **Own voiceover in Free: the user's decision, never the pipeline's suggestion.** Only the requirement (or the user's "Change it" answer)
+    turns it on (step 2b); the pipeline knows where to find it (`voiceover.md`, the ElevenLabs MCP, `T voiceover`) and runs it exactly as in
+    Create, but never offers, recommends or asks it on its own; what the requirement leaves open is asked inside the one confirmation.
 
 15. **One confirmation, then no questions.** Free adds exactly one question to Analyze Mode, the confirmation of the plan (step 4); the
     long-video permission (A7b) and the QC-fix question (item 27, when the user chose `ask`) are the only others. Blockers are reported,
@@ -93,6 +120,8 @@ at X9, the flag record), the CapCut assembly and the deliverables. Nothing is as
 - Never paste the requirement's sentences into a prompt as they are: X2 writes the request in the locked model's own structure
   (`awl-write-request`) and carries the requirement's intent.
 - Never read Loupe's data folder or its database; the samples reach this phase only through `T qc-brief` here and the keeper later.
+- Never offer, suggest or ask an own voiceover the requirement did not ask for (item 31), never pick its voice or language for the user
+  when the requirement leaves them open (they are asked in the confirmation), and never re-sync a `recreate`-kind video's lips to a new voice.
 
 ## Hand-off
 

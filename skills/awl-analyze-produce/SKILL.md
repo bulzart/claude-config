@@ -19,6 +19,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 - higgsfield-mcp §1: `AWL/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)
 - `models_explore {action:"get", model_id}` once (A8.2)
+- *an own voiceover (`state.json → voiceover.enabled` true; item 31; the takes in X1, a `voiceover` blocker):*
+  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.1 KB)
 
 ### A8. Load the locked model's documentation
 The model was picked at the start (§2.4) and does not change.
@@ -41,7 +43,9 @@ At the start of A9: `T state --run RUN set stage=producing next_skill=awl-analyz
 Plan everything before production, in allocation order, **without asking for confirmation**
 (contract item 15):
 1. **X1–X4 for every video:** plan, pattern card, request(s), pre-generation QC. Recreate plans
-   take the approach and source preparation from E4–E5.
+   take the approach and source preparation from E4–E5. With an own voiceover (item 31), X1 also writes, voices (one ElevenLabs call)
+   and records each video's take, and plans the video to it; before the first take, `check_subscription` shows whether the characters
+   left cover the run's scripts (a shortfall is a blocker, reported).
 2. **Shared inputs, once:**
    - the Higgsfield project folder (X5: `list_workspaces` → `create_project`), stored with
      `T state --run RUN set higgsfield.folder_id=<id>`;
@@ -60,6 +64,8 @@ Plan everything before production, in allocation order, **without asking for con
    for every run and never copied from an earlier run's file. Before the first agent is spawned run `T loupe ensure` and update
    `state.json → loupe` (five agents must not race to start it); fill the contract's "Loupe" line from it (`up` when the run has none)
    and its "Audio ingest" line from `state.json → audio_ingest` (item 24). Fill its "QC fixes" line from `state.json → qc_fixes` (`auto` when the run has none; item 27).
+   Its "Voiceover" line comes from `state.json → voiceover` (`off` when the run has none; item 31): `T contract` fills it with the method,
+   the voice, the language, the preference and where the takes are.
 
 ### A9b. Produce in parallel (production agents)
 
@@ -93,6 +99,9 @@ Plan everything before production, in allocation order, **without asking for con
 - **Blockers come back from agents and are handled here:**
   - a permission is needed (A7b) → ask, then launch that video again;
   - `qc_fix_permission` (only with QC fixes `ask`) → ask the user the fix question of item 27, then continue that agent with the answer;
+  - `voiceover` (a take that cannot fit the picture, or a line that must change; item 31) → make the new take here (`voiceover.md` §4: a
+    new attempt, recorded), update the plan, and continue the agent with it (the request change goes through its own regeneration path,
+    item 29);
   - CapCut was running → its project is pending until the wrap-up;
   - credits ran short → launch nothing more, report the shortfall; the run stays resumable;
   - a request failed twice → report it in the wrap-up.
@@ -132,8 +141,8 @@ See §6.
       (the one fix question of item 27, asked only when the user chose `ask`, is the exception).
     - Blockers are reported, not asked: the balance can't cover the next video, or Higgsfield
       itself demands a choice (`unlim_choice`, `recovery_tool`, X7 in `awl-submit`).
-    - The planning questions (mode, model, inputs, number of videos, directions) are not
-      permissions and stay.
+    - The planning questions (mode, model, inputs, number of videos, directions, the voiceover choice
+      of item 31) are not permissions and stay.
     - Edit Mode keeps its gates (E6, X9-R).
 23. **Caught flags: every prompt and video that Higgsfield flagged is recorded**
     (in Loupe, the pipeline's web app at `http://127.0.0.1:8787`: a database with a viewer that searches,
@@ -174,6 +183,8 @@ See §6.
 26. **Pilot first.** With more than four videos to produce, spawn the first video's agent as soon as its plan, request, inputs and brief exist and let it run X7–X10 to its QC
     before the remaining plans are finished and their agents are spawned (the planners go on meanwhile). What its QC finds (a recipe fault, a marker, a size, a seam) is written
     into the other plans before they cost a generation; the user is told in one line when the pilot has passed. The user may say "no pilot" at the start.
+    With an own voiceover (item 31) the pilot also shows how the method lands on Higgsfield (whether a driving audio comes back as the
+    soundtrack, the lips, a sync pass's face), and the other plans take what it showed.
 27. **QC fixes (Recreate and Create): the question.** With `state.json → qc_fixes = ask`, a production agent that found issues or anomalies only a new generation can fix writes
     `result.json` with `blocker: qc_fix_permission` and a `fix_proposal` and stops (it never asks). When it reports, record it as for any report, then ask with AskUserQuestion
     (header "QC fix"; one question per waiting video, up to four in one call): "Video NN: QC found <the findings in one line>. Fix generation: <what the corrected request changes>,

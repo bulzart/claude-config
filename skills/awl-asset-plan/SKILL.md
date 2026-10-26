@@ -22,13 +22,20 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Recreate (a person is swapped for a supplied character: choose the character by comparison, not by turn):*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - the locked model's `continuation` entry: `T model-entry --id <model>`
+- *an own voiceover (`state.json → voiceover.enabled` true; item 31):*
+  - voiceover §5: `AWL/reference/voiceover/050_5_on-camera-or-off-screen-and-whic.md` (1.1 KB)
 
 ### A7. Asset plan (autonomous — picks from the supplied assets only)
 - For every planned video, choose from the registry (A2b) the assets that fit its direction
   (Create) or its reference (Recreate):
   - which product or object entity, and which variant (with its contents sample when needed);
   - which character(s). Recreate: which character replaces which person;
-  - any interface, brand or environment asset.
+  - any interface, brand or environment asset;
+  - **with an own voiceover** (item 31; `voiceover.md` §5; Free: the videos in `voiceover.videos`, or all when the key is absent): the voice
+    and the form of every voiced video under the run's method (`voiceover.method`): the speaking character's own voice (`voiceover.voices`),
+    else the run's voice where it fits that character's registry row (apparent gender and age against the voice's labels), else the
+    off-screen form; on-camera or off-screen (overlay: always off-screen; lipsync: an on-camera video gets the sync pass, one without a
+    visible speaker takes the overlay form), with the reason in one line. The user's own files (source `file`): which file is which video's.
 - **Fit the brand to the scene first** (CE-020): a food, grill, party or sport scene suits a drink; a
   desk, class, meeting, work or commute scene suits a focus product. The plan states the tie in one
   line, and a reference with no tie for one brand goes to the other, whatever free surface it offers.
@@ -58,14 +65,17 @@ Only these section files for this phase, nothing else unless a step below says s
   prominence, how often the product is used, and the clip and text habits. Record which of its rules
   each video applies.
 - Give every video a **planned length**:
-  - **Create:** its direction's typical length, adapted to the concept;
+  - **Create:** its direction's typical length, adapted to the concept (with an own voiceover, long enough for its lines at about 2.3 to
+    2.8 spoken words per second plus 0.3 s before and 0.5 s after the speech, and with the native method at most 15 s of voice per
+    generation; the take itself sets the final length in X1);
   - **Recreate:** the reference's own length.
   Only the generated or edited part counts toward generations: inserts are cut, never generated.
 - Show the plan in one line per video and proceed; the user can change it by replying. Examples:
   - `Video 2 — D3 — ~12 s — product B (variant 2) via placement (in hand) + character "anna"`;
   - `Video 3 — D1 — ~45 s (2 generations) — product A via swap of the source can`;
   - `Video 4 — D2 — ~27 s (25 s generated + 2 s meme) — product A (peach) as contents: cup + open can`;
-  - `Video 5 — D4 — ~15 s — product C (the car, red) via placement: parked at the curb behind him`.
+  - `Video 5 — D4 — ~15 s — product C (the car, red) via placement: parked at the curb behind him`;
+  - `Video 6 — G2 — ~12 s — product A via placement (in hand) + character "anna", voiceover native: Sarah on-camera`.
 - **Never** fill a gap from the references folder. If a planned concept needs something that was not
   supplied, adapt the concept to the supplied assets, e.g. hands-only POV when no character was
   supplied. If no adaptation keeps the direction's mechanism, ask one question: drop the element, or
@@ -155,8 +165,8 @@ generated without the user's permission. Nothing else in Analyze Mode asks for p
       (the one fix question of item 27, asked only when the user chose `ask`, is the exception).
     - Blockers are reported, not asked: the balance can't cover the next video, or Higgsfield
       itself demands a choice (`unlim_choice`, `recovery_tool`, X7 in `awl-submit`).
-    - The planning questions (mode, model, inputs, number of videos, directions) are not
-      permissions and stay.
+    - The planning questions (mode, model, inputs, number of videos, directions, the voiceover choice
+      of item 31) are not permissions and stay.
     - Edit Mode keeps its gates (E6, X9-R).
 
 ## Never (this phase)

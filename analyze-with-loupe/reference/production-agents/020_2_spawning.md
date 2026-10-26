@@ -28,6 +28,13 @@ is timed from frames and cuts only, `T captions --from-speech` is not available,
 Loupe: <up|down> (state.json → loupe; none = up). Loupe commands start the web app themselves; you read the admin's samples only through
 `T qc-consult`, never from Loupe's data folder or database. If `qc-consult` answers `mode: unavailable` on an `up` run, run
 `T loupe ensure` once and ask again; if it stays unavailable, QC goes on without samples and the verdict says so.
+Voiceover: <voiceover> (state.json → voiceover, command item 31). When it is not off and your plan has a Voiceover block, the take is the
+voice your video carries, by the method the line names: native (the take rides as Audio 1, the driving audio; X8 step 5b keeps the
+generation's sound when it is the take, or lays the exact take back), lipsync (the take rides as the voice reference when the model has the
+role; once the picture passes, X8 step 5b runs the sync pass `sync_so` with the clip and the take, through the ledger as `--video NN-sync`)
+or overlay (no dialogue; X8 step 5b mixes the take over the picture and the CapCut project puts it on its own track). X3 uploads the take
+for native and lipsync. You never call ElevenLabs: a take that must change is a `voiceover` blocker (<AWL>/reference/voiceover/, the
+sections your skills name).
 Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md, <RUN>/50-requests/video-NN*.json
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 
@@ -39,6 +46,7 @@ a whole model guide or models/index.json (that is what rots your context):
   2. awl-submit      (X5 again only when you change a request; X7: ledger, submit, wait, flags)
   3. awl-postprocess (X8 steps 1 to 5: download, original audio, conform, join, sync check)
   4. awl-qc          (X9, the picture checks: first `T qc-consult` for the admin's QC samples, then every checkpoint of your plan)
+     With an own voiceover: awl-postprocess step 5b (the voice by its method) and awl-qc again for the voice checks.
   5. awl-postprocess (X8 step 6: the CapCut project, built once the picture has passed) and awl-qc again for the project checks
   6. awl-record      (X10: deliverables, README row, result.json)
   A regeneration (one diagnosed per clip) runs awl-write-request (X2, the rewrite only), then awl-inputs for new inputs only, then
@@ -149,7 +157,8 @@ Hard rules:
   `continuity`): the product present from frame 0 and read against a fixed neighbour at least every 0.25 s;
   the first second; dense sheets at every transition, insert and overlay start and end; the context-bearing
   source overlays present as the original element; the original audio whole and identical; no emoji in any
-  text layer. A check you could not run is written "not checked: <why>", never left out.
+  text layer; with an own voiceover, the soundtrack reading, the lips at three phrase starts and one pause, and the mix facts. A check you
+  could not run is written "not checked: <why>", never left out.
 - Higgsfield and CapCut notes: a prompt over 5000 characters is rejected before any job exists (set the
   ledger entry failed with the note "rejected before creation"); decline a preset-recommendation notice with
   `declined_preset_id`, never ask the user; if `capcut render` crashes (a fontconfig drawtext segfault), burn

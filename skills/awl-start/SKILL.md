@@ -1,6 +1,6 @@
 ---
 name: awl-start
-description: /analyze-with-loupe phase 1: mode, Analyze sub-mode, the locked video model, inputs, the audio choice, create the run. Internal to that command.
+description: /analyze-with-loupe phase 1: mode, Analyze sub-mode, the locked video model, inputs, the audio and voiceover choices, create the run. Internal to that command.
 user-invocable: false
 ---
 
@@ -15,7 +15,10 @@ Phase 1 of `/analyze-with-loupe`. The router (the command) sent you here and pas
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- *(nothing from the library: `T model-menu` and `T model-entry --id` print what is needed)*
+- *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
+- *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
+  - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (2.1 KB)
+  - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)
 
 ## 1. Paths and tools
 
@@ -28,7 +31,7 @@ Only these section files for this phase, nothing else unless a step below says s
 | Model guides | `AWL/models/<guide>.md` is an index; the sections are in `AWL/models/<guide>/`. Which sections each step reads: `awl-model-guide` |
 | Higgsfield guide | `AWL/higgsfield/higgsfield-mcp.md` (index) and `AWL/higgsfield/higgsfield-mcp/` (sections) |
 | Flag record | Loupe, `http://127.0.0.1:8787` (item 23), started by `T loupe ensure` at run creation and recorded in `state.json → loupe` (`up` or `down`; missing = up): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7 (`awl-submit`), reconciled in A9b and §6, never read during a run. The sample library is read only by `T qc-consult` (`awl-qc`) and, once per video at its first request, `T plan-hints` (`awl-write-request`) |
-| References | `AWL/reference/<name>/` section files (index: `AWL/reference/<name>.md`): `analysis-protocol`, `generation-system`, `anomaly-catalog`, `creative-direction`, `brand-guardrails`, `text-and-format`, `assets-and-substitution`, `capcut-assembly`, `production-agents`. Each phase skill lists the sections it needs under "Read now" |
+| References | `AWL/reference/<name>/` section files (index: `AWL/reference/<name>.md`): `analysis-protocol`, `generation-system`, `anomaly-catalog`, `creative-direction`, `brand-guardrails`, `text-and-format`, `assets-and-substitution`, `capcut-assembly`, `production-agents`, `voiceover`. Each phase skill lists the sections it needs under "Read now" |
 | CapCut | `capcut` MCP (drafts store and template in `AWL/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly/` (`awl-postprocess`) |
 | Run folder | created by `T new-run` under `AWL/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
 
@@ -40,6 +43,12 @@ Only these section files for this phase, nothing else unless a step below says s
 - If they are missing or only `authenticate` tools exist, ask the user to run `/mcp` → higgsfield →
   Authenticate, then continue.
 - Never call widget-only tools (`media_upload_widget`, `show_marketing_studio_v2`).
+
+### ElevenLabs tools (an own voiceover only, item 31)
+
+Deferred too, and loaded only when the user takes a voiceover method (step 5c):
+`ToolSearch "select:mcp__elevenlabs__search_voices,mcp__elevenlabs__search_voice_library,mcp__elevenlabs__get_voice,mcp__elevenlabs__list_models,mcp__elevenlabs__check_subscription,mcp__elevenlabs__text_to_speech"`.
+None found: `voiceover.md` §2 step 3 (say how it is connected, then ask once: continue without, or stop to connect it).
 
 ## 2. Start (steps 2–6; the router already handled `resume` and reported-video feedback)
 
@@ -68,6 +77,15 @@ Only these section files for this phase, nothing else unless a step below says s
    The words are kept verbatim, nothing is paraphrased or trimmed; a one-line requirement is accepted as it is (the free plan shows its
    gaps as visible [I] lines). The requirement is written once the run exists (step 6).
    Store it with `T state --run RUN set analyze_submode=recreate|create|free` once the run exists (Free also `free_references=yes|no`).
+2b. **Own voiceover: the method (Create only; item 31), before the model menu.** When the sub-mode is Create (asked right away when
+   `$ARGUMENTS` already says `create`, else right after the user picked Create), ask with AskUserQuestion (header "Voiceover") how the
+   videos' spoken words are made, with the four options and descriptions of `voiceover.md` §2 step 1: **"Native: drives the video"** (the
+   ElevenLabs voiceover is the generation's driving audio; Wan 3.0, Wan 3.0 Prime or Wan 2.7), **"Lip-synced pass"** (any model, then Sync
+   Lipsync 3 with the exact voiceover), **"Over the video"** (narration or a product review: no dialogue, the voiceover placed over the video
+   in CapCut; any model) and **"No, the model's own audio"**, none marked as recommended. `$ARGUMENTS` with `voiceover native|lipsync|overlay`
+   or `no-voiceover` answers it. Free never asks it (only its requirement can call for one, `awl-free-plan` step 2b); Recreate and Edit Mode
+   never ask it (their original audio returns, item 19). The method shapes the model menu (step 4.4); the voice, the language and the style
+   come after the paths (step 5c).
 3. **Higgsfield tools.** Load them (§1) and check that they are authenticated.
 4. **Model — picked now, locked for the run.**
    1. `models_explore {action:"list", type:"video", limit:100}`, then collect the returned ids.
@@ -89,6 +107,10 @@ Only these section files for this phase, nothing else unless a step below says s
       model name; description = its "what it can do" and what the mode column says. "Other" = any
       number or name from the table; resolve numbers with the JSON `numbers` map (`unavailable`
       lists any model of the index that is not live).
+      **With an own voiceover (step 2b):** print under the table the one line of facts of `voiceover.md` §2 step 2 (the models that take
+      a driving audio: Wan 3.0, Wan 3.0 Prime, Wan 2.7; the lip-synced pass and the overlay work with every model). With **native** the
+      driving models are the first options, each description saying "driven by your voiceover"; a model without driving audio picked
+      anyway: say so in one line and ask once which of the other two methods to use. Never suggest a model after the pick.
    5. Store it: after the run exists (step 6), `T state --run RUN set model=<id> model_locked=true`.
       Print its `index.json` entry now with `T model-entry --id <id>` (never Read `index.json` whole: it is 40 KB; capabilities, durations, 9:16/720p params, and
       `continuation`: the maximum per generation and how clips join), but not yet its guide.
@@ -141,12 +163,25 @@ Only these section files for this phase, nothing else unless a step below says s
      picture, loudness and silences are measured, the sound profile runs without a speech share."
    The answer is stored in step 6 (`state.json → audio_ingest`: `whisper` or `frames-only`) and is the only source of the choice:
    `T prep-all` stops when it is missing. A resume that finds it stored never re-asks; one that finds it missing asks here.
+5c. **Own voiceover: the voice, the language and the style (Create, when step 2b took a method; item 31).** Right after the QC-fixes and
+   audio questions, follow `voiceover.md` §2 steps 3–5: load the ElevenLabs tools (§1 above), read the subscription, the models and the
+   voices, print the whole voice list in chat (every row), then ask in **one** AskUserQuestion call: header "Voice" (three voices you choose
+   from the list and "My own voiceover files"; Other: a voice name or id from the list, the user's account or the Voice Library, or
+   `character = voice` pairs), header "Language" (English first, then up to three the conversation, the assets or the documents point to;
+   Other: any language) and header "Voice style" ("No extra preference", "Scottish accent", "Kosovar Albanian (Gheg dialect)"; Other: any
+   accent, dialect or delivery). Then resolve and verify the answers (§2 step 5: a name or id to a usable voice, the language to its ISO
+   code and whether it is official for the model, the files' paths when the user chose them). Stored in step 6.
 6. Create the run:
    - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]` (Free, requirement only: no `--source`);
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
    - store the audio choice (step 5b): `T state --run RUN set audio_ingest=whisper` or `audio_ingest=frames-only`;
    - every Analyze sub-mode: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto`);
+   - Create: store the voiceover choice (steps 2b and 5c; the keys of `voiceover.md` §1). "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`. A method:
+     `T state --run RUN set voiceover.enabled=true voiceover.method=native|lipsync|overlay voiceover.source=elevenlabs voiceover.model_id=<id> voiceover.voice_id=<id> "voiceover.voice_name=<name>" voiceover.language=<iso> "voiceover.language_name=<name>" voiceover.language_official=true|false "voiceover.preference=<the user's words>" voiceover.output_format=mp3_44100_128 voiceover.tier=<tier> voiceover.characters_left_at_start=<n>`,
+     plus `voiceover.settings='{"stability":0.5,"similarity_boost":0.75,"style":0,"speed":1.0,"use_speaker_boost":true}'`, `voiceover.voices='{"<character>":{"voice_id":"…","voice_name":"…"}}'`
+     for `character = voice` pairs, and `voiceover.preference=null` without a preference. The user's own files: `voiceover.source=file`, the
+     language keys, and no voice keys;
    - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`
      (first line `# Requirement (the user's words)`, then the text; a file the user named is copied, a PDF through `T doc-text`);
    - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper
@@ -156,7 +191,7 @@ Only these section files for this phase, nothing else unless a step below says s
      `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
    - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
 
-## Rules this phase owns (contract items 4, 11, 17, 24, 27)
+## Rules this phase owns (contract items 4, 11, 17, 24, 27, 31)
 
 4. **One model per run, picked at the start, then locked.**
    - The user picks the video model right after choosing the mode (§2.4), from a menu that lists
@@ -215,11 +250,22 @@ Item 17's "§3 R-steps" are step A6r (`awl-recreate-plan`).
     audio file itself (the original audio restored under the picture, loudness and silences, `T audio-profile`, `T sync-check`)
     runs in both modes.
 
+31. **Own voiceover (ElevenLabs): Create's choice at the start (steps 2b, 5c).** The user decides whether the videos' spoken words come from
+    their own ElevenLabs voiceover and how it meets the picture: **native** (the generation's driving audio: Wan 3.0, Wan 3.0 Prime or Wan
+    2.7; lips and action timing follow it and the generated file's sound is the voiceover), **lipsync** (any model, then Sync Lipsync 3 with
+    the exact voiceover) or **overlay** (narration or a product review: no dialogue, the voiceover placed over the video in CapCut; any model).
+    Then the voice (from the printed list, by name or voice id, per character, or their own finished files), the language and any accent,
+    dialect or delivery preference (a Scottish accent, Kosovar Albanian, …). `state.json → voiceover` (`voiceover.md` §1) is the only source
+    of the choice, and a run without the key has none. Free takes it only from its requirement (`awl-free-plan` step 2b), never offered or
+    suggested; Recreate and Edit Mode keep their original audio (item 19).
+
 ## Never (this phase)
 
 - Never re-ask for, switch, or suggest switching the model after it was picked at the start. Only an
   explicit user request changes it.
 - Never shorten the model menu. Every available model is always shown, with the pinned ones on top.
+- Never offer, suggest or ask the own voiceover outside Create's questions (steps 2b, 5c), never mark one of its options as recommended,
+  never shorten the voice list, and never pick the method, the voice, the language or the preference for the user.
 - Never decide the audio choice for the user, never mark one of its options as recommended, and never write `no speech` for a run that did not ingest audio.
 - Never take client assets from the references folder or the edit-source folder: they are
   reference material, and may show other products or executions.

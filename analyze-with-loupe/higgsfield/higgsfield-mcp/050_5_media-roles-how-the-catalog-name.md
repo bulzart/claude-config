@@ -9,6 +9,11 @@
 | `audio_references` | Voice, music or sound reference | Seedance 2.0/2.5, Wan 2.6 / 2.7 / 3.0, MiniMax H3, Grok 1.5 |
 | `input_video` / `input_audio` | Utility inputs | `sync_so` lipsync, `video_upscale`, `video_deflicker` |
 
+- **`sync_so` (Sync Lipsync 3)** re-syncs a video's mouth to an audio file: `input_video` (a completed job id or an uploaded video) and
+  `input_audio` (an uploaded audio's media id), `sync_mode` `bounce` | `loop` | `cut_off` | `silence` | `remap` for a length mismatch
+  (`models_explore get`, 2026-10-26). It is a utility (`index.json → not_selectable.utility`), never a run's model: the own voiceover's
+  lipsync method uses it as its second generation (`reference/voiceover/`, item 31), through the ledger like every paid call.
+
 - The server auto-coerces unambiguous roles. Higgsfield's own recipes pass `"video"` / `"image"`, and
   stored params show `"audio"` for an audio reference [VERIFIED]. Prefer the exact catalog role names.
 - **Order matters.** Prompt tags such as `@Image1`, `@Video1` and `@Audio1` count per media type in

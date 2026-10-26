@@ -46,7 +46,7 @@ Stored as section files in `wan-3-0/` (next to this file); **read only the secti
 | 3.6 | · Camera language and dedicated camera / motion controls | `150_3.6_camera-language-and-dedicated-ca.md` | 0.9 |
 | 3.7 | · References (image / video / audio) | `160_3.7_references-image-video-audio.md` | 1.6 |
 | 3.8 | · Start and end frames | `170_3.8_start-and-end-frames.md` | 0.4 |
-| 3.9 | · Audio, dialogue and sound | `180_3.9_audio-dialogue-and-sound.md` | 0.7 |
+| 3.9 | · Audio, dialogue and sound | `180_3.9_audio-dialogue-and-sound.md` | 1.2 |
 | 3.10 | · Negative constraints | `190_3.10_negative-constraints.md` | 0.7 |
 | 3.11 | · Visible text | `200_3.11_visible-text.md` | 4.1 |
 | 3.12 | · Character / identity consistency | `210_3.12_character-identity-consistency.md` | 1.4 |

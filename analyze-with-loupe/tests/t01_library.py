@@ -193,4 +193,27 @@ check(not (LIB / (LEDGER_A + ".md")).exists(), "the retired ledger file is gone"
 stale = [p.name for p in SKILLS + sorted((LIB / "reference").rglob("*.md")) + sorted((LIB / "pipeline").glob("*.md")) if "read directly with the Read tool" in rd(p) or "PDFs directly with Read" in rd(p)]
 check(not stale, "no skill or section says to read PDFs directly with Read: " + ", ".join(stale))
 
+# --- the own voiceover (item 31): Create asks the method before the model, then the voice, language and style; Free only from the requirement;
+#     every per-video step that acts on it names it; the agent contract carries it; the toolkit has the command
+VOD = LIB / "reference" / "voiceover"
+vo_files = sorted(p.name for p in VOD.glob("*.md")) if VOD.is_dir() else []
+check(len(vo_files) == 11 and (LIB / "reference" / "voiceover.md").is_file(), f"the voiceover reference has its index and 11 sections ({len(vo_files)})")
+vo_all = " ".join(rd(p) for p in VOD.glob("*.md"))
+check(all(k in vo_all for k in ("**native**", "**lipsync**", "**overlay**", "sync_so", "driving audio", "Scottish accent", "Kosovar Albanian", "no one listened") if k != "no one listened")
+      and "Never claim that a take was listened to" in vo_all, "the voiceover reference holds the three methods, the sync pass, the user's accent and dialect examples and the honesty rule")
+check("31. **Own voiceover" in router and "mcp__elevenlabs__search_voices" in router and "item 31 →" in router and "mcp__elevenlabs__text_to_speech" not in router.split("---")[1],
+      "the router has contract item 31 and its labels, and allows only the read-only ElevenLabs tools without asking (a paid take still asks)")
+check('header "Voiceover"' in st and 'header "Voice"' in st and 'header "Language"' in st and 'header "Voice style"' in st and "voiceover.method=native|lipsync|overlay" in st
+      and "2b. **Own voiceover" in st and st.index("2b. **Own voiceover") < st.index("4. **Model"), "awl-start asks the method before the model menu, then the voice, the language and the style, and stores state.json -> voiceover")
+check("2b. **Own voiceover: only when the requirement asks for it**" in fp and "never offers, recommends or asks it" in fp, "the free plan uses a voiceover only when the requirement asks and never suggests one")
+vo_wired = [("awl-plan-video", "T voiceover record"), ("awl-plan-video", "T voiceover outdir"), ("awl-write-request", "**native**"), ("awl-inputs", "audio/mpeg"),
+            ("awl-precheck", "Own voiceover"), ("awl-postprocess", "T voiceover align"), ("awl-postprocess", "T voiceover mix"), ("awl-postprocess", "sync_so"),
+            ("awl-submit", "--video NN-sync"), ("awl-qc", "Own voiceover"), ("awl-record", "pronunciation: not checked"), ("awl-wrapup", "Voiceover:"),
+            ("awl-analyze-produce", "`voiceover` (a take"), ("awl-create-plan", "voiceover.method"), ("awl-asset-plan", "voiceover.method")]
+vo_miss = [f"{s}: {n}" for s, n in vo_wired if n not in rd(SKD / s / "SKILL.md")]
+check(not vo_miss, "the own voiceover is wired into every step that acts on it: " + "; ".join(vo_miss))
+check("Voiceover: <voiceover>" in rd(PA / "020_2_spawning.md") and "`voiceover`" in rd(PA / "030_3_the-agent-s-contract.md") and '"voiceover"' in rd(PA / "040_4_60-outputs-video-nn-result-json.md"),
+      "the agent contract carries the Voiceover line, the voiceover blocker and the result field")
+check("voiceover" in cmds, "awl.py has the voiceover command")
+
 finish()

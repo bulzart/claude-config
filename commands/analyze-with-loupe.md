@@ -24,6 +24,11 @@ allowed-tools:
   - mcp__higgsfield__list_workspaces
   - mcp__higgsfield__list_projects
   - mcp__higgsfield__show_reference_elements
+  - mcp__elevenlabs__search_voices
+  - mcp__elevenlabs__search_voice_library
+  - mcp__elevenlabs__get_voice
+  - mcp__elevenlabs__list_models
+  - mcp__elevenlabs__check_subscription
   - WebSearch
   - WebFetch
   - "Bash(capcut *)"
@@ -84,6 +89,7 @@ only what it needs and the context of a run does not rot. The skills are interco
    - read its `state.json` (`T state --run <run> get`);
    - summarise where it stopped (stage, next_step, videos done);
    - continue from `next_step`. Never re-ask a question that is answered in `state.json`. A run whose `state.json` has no `audio_ingest` is asked the audio question (`awl-start` step 5b, item 24) before any `prep-all`.
+     A run whose `state.json` has no `voiceover` key has no own voiceover and is never asked it (item 31); one whose `voiceover.enabled` is true loads the ElevenLabs tools again (`voiceover.md` §2 step 3) before its next take.
    Run `T loupe ensure` and update `loupe` in `state.json` (a run without the key counts as `up`; Loupe may have been stopped since).
    Then invoke the skill named by `next_skill` in `state.json`. A run made before this layout has none: take the phase from `stage` / `next_step` with the map below
    (for example `stage=analyzed next_step=count` → A5 in `awl-analyze-study`; videos in `videos[]` but not all done → `awl-analyze-produce`; Edit Mode → `awl-edit`).
@@ -136,6 +142,7 @@ and handle it before anything else (item 22).
 25. **Scripts gather, agents decide.** The toolkit measures, extracts, records and calculates and never judges: no verdict, label, rank or gate comes from a script (`sync-check`, `scale`, `qc`, `conform`, `audio-profile`, the OCR spans and the ledger return numbers and facts; the model menu picks nothing). Every judgement is the agent's, written with its reason where the step records it; the numbers the references give are rules of thumb. → every skill, `pipeline/preprocessing.md`
 26. **Pilot first.** With more than four videos to produce, the first video goes through X7–X10 and its QC before the other plans are finished and the other agents are spawned: a recipe fault costs one generation, not twenty. → `awl-analyze-produce`
 27. **QC fixes** (every Analyze sub-mode: Recreate, Create, Free): at the start the user chooses `ask` or `auto` (`state.json → qc_fixes`) for the fix generation after a QC finding. `ask`: from the first video on, when QC finds issues or anomalies that only a new generation can fix, the production agent prepares the fix and stops with a proposal, the main session asks the user, and no credits are spent until the user says yes. `auto`: the QC agents regenerate once on their own and ship the best take flagged. Local post-fixes and CapCut fixes never ask. → `awl-start` (the question), `awl-qc`, `awl-analyze-produce`
+31. **Own voiceover (ElevenLabs).** Create asks before the model menu how the spoken words are made: **native** (the ElevenLabs take is the generation's driving audio: Wan 3.0, Wan 3.0 Prime or Wan 2.7; lips and action timing follow it, the generated file's sound is the take), **lipsync** (any model generates the speaking scene, then Sync Lipsync 3 `sync_so` puts the exact take on the lips), **overlay** (narration or a product review: no dialogue, the take placed over the video in CapCut and in the deliverable mix; any model), or the model's own audio; then the voice (from the printed list, by name or voice id, `character = voice` pairs, or their own finished files), the language and any accent, dialect or delivery preference (a Scottish accent, Kosovar Albanian, …). Free uses it only when the requirement asks for it, never offered or suggested; Recreate and Edit Mode keep the original audio. `state.json → voiceover`; each take is written, voiced and measured in X1 (`T voiceover record`), bound in the request by method, verified, synced or mixed in X8 (`T voiceover align`, `sync_so`, `T voiceover mix`) and checked in X9 (`voiceover.md`). → `awl-start`, `awl-free-plan`, `awl-plan-video`, `awl-postprocess`, `awl-qc`
 
 ## Phases (the skills)
 
@@ -161,7 +168,7 @@ it). A regeneration or re-edit runs `awl-write-request` → (`awl-inputs` for ne
 
 **Labels** (as cited in the skills and the references): §1 paths and §2 Start, items 4 · 11 · 17 → `awl-start` · A1, A2, A2b → `awl-analyze-prepare` · A3, A4, A5 → `awl-analyze-study` · A6 → `awl-create-plan` ·
 A6r (the "R-steps" of item 17; E4–E5 as Recreate uses them are repeated in it) → `awl-recreate-plan` · A6f → `awl-free-plan` · A7, A7b → `awl-asset-plan` · A8, A9, A9b, A10 → `awl-analyze-produce` · E1–E7, X9-R → `awl-edit` · X1 → `awl-plan-video` · X2 → `awl-write-request` · X3 → `awl-inputs` ·
-X4, X5, X6 → `awl-precheck` (X5 also in `awl-submit`) · X7 → `awl-submit` · X8 → `awl-postprocess` · X9 → `awl-qc` · X10 → `awl-record` · §6, §6b → `awl-wrapup` · item 22 → `awl-feedback` · item 23 → `awl-submit` · item 24 → `awl-start` (the question), `awl-analyze-prepare` and `awl-edit` (`prep-all`) · item 25 → every skill · item 26 → `awl-analyze-produce` · item 27 → `awl-start` (the question), `awl-qc` (the proposal), `awl-analyze-produce` (the fix question).
+X4, X5, X6 → `awl-precheck` (X5 also in `awl-submit`) · X7 → `awl-submit` · X8 → `awl-postprocess` · X9 → `awl-qc` · X10 → `awl-record` · §6, §6b → `awl-wrapup` · item 22 → `awl-feedback` · item 23 → `awl-submit` · item 24 → `awl-start` (the question), `awl-analyze-prepare` and `awl-edit` (`prep-all`) · item 25 → every skill · item 26 → `awl-analyze-produce` · item 27 → `awl-start` (the question), `awl-qc` (the proposal), `awl-analyze-produce` (the fix question) · item 31 → `awl-start` (the question), `awl-free-plan` (Free: only from the requirement), `awl-create-plan` (the lines in the seeds), `awl-asset-plan` (voice and form per video), `awl-plan-video` (the lines and the take), `awl-write-request`, `awl-inputs`, `awl-precheck`, `awl-postprocess`, `awl-qc`, `awl-record`, `awl-wrapup`, `awl-analyze-produce` (the contract line, the `voiceover` blocker).
 A rule that two phases both act on is written in both skills.
 
 ## Never (global; each skill carries the rest of the Never list for its own phase)

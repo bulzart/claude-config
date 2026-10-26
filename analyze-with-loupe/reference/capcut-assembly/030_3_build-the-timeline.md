@@ -59,6 +59,7 @@ Inputs:
 3. **Only what the reference does:** a transition only where the reference has one
    (`capcut_add_transition`, from the catalog), and a short fade on an insert's sound when it
    clicks (`capcut_add_audio_fade`).
-4. **Create:** the sound layer (§3b).
+4. **Create:** the sound layer (§3b) and, with an own voiceover (item 31), the voice as its method places it (`voiceover.md` §9: native
+   and lipsync keep the clip's own audio, which is the take, at 1.0; overlay puts the take on its own track over the clip's ambience).
 5. `capcut_validate` → `capcut_save`.
 

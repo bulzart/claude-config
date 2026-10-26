@@ -64,6 +64,9 @@ Subcommands (python awl.py <cmd> -h):
                  a locked preset is only replaced with --learn --replace)
   strip-inserts  a reference minus its inserts (memes) in one pass + silent copy + map of the split points
   qc             storyboard + checks (size, duration, black, freeze, mode-aware visible text) for an output
+  voiceover      own voiceover (contract item 31): outdir (the folder the ElevenLabs MCP may write to) | record (a take into the run,
+                 measured: phrases, pauses, spoken words; state.json -> voiceover.files) | align (where the model's own speech lies
+                 against the take) | mix (the take over the picture, plus a placed track for CapCut); facts, no verdict
 
 Every command prints one JSON object on its last stdout line. Exit codes: 0 ok, 1 failure,
 2 bad arguments.
@@ -1848,6 +1851,11 @@ def cmd_status(a):
          "model": st.get("model"), "stage": st.get("stage"), "next_skill": st.get("next_skill"), "next_step": st.get("next_step"),
          "video": st.get("video"), "updated": st.get("updated"), "requested_videos": st.get("requested_videos"),
          "audio_ingest": st.get("audio_ingest"),
+         "voiceover": ({"enabled": st["voiceover"].get("enabled"), "method": st["voiceover"].get("method"), "source": st["voiceover"].get("source"),
+                        "voice": st["voiceover"].get("voice_name"),
+                        "language": st["voiceover"].get("language"), "preference": st["voiceover"].get("preference"),
+                        "takes": sorted((st["voiceover"].get("files") or {}).keys()) if isinstance(st["voiceover"].get("files"), dict) else []}
+                       if isinstance(st.get("voiceover"), dict) else None),
          "videos": {"recorded": len(vids), "by_status": by_v, "done": [v.get("video") for v in vids if v.get("status") == "done"],
                     "blocked": [{"video": v.get("video"), "blocker": v.get("blocker")} for v in vids if v.get("status") == "blocked"]},
          "submissions": {"total": len(subs), "by_status": by_s, "open": sum(1 for s in subs if s.get("status") in LEDGER_OPEN),
@@ -2209,12 +2217,40 @@ def cmd_uploads(a):
 
 
 CONTRACT_SUBS = (("<RUN>", "run"), ("<AWL>", "library"), ("<model id>", "model"), ("<guide path>", "guide path"), ("<recreate|create>", "analyze_submode"),
-                 ("<ask|auto>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"))
+                 ("<ask|auto>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"))
+
+
+def _contract_voiceover(st: dict, rd: Path) -> str:
+    """The contract's Voiceover line from state.json -> voiceover (contract item 31): 'off' when the run has none."""
+    vo = st.get("voiceover")
+    if not isinstance(vo, dict) or vo.get("enabled") is not True:
+        return "off (this run has no own voiceover: the video model's own audio, as in every run)"
+    method = {"native": "native (the take is the generation's driving audio; its sound is the take)",
+              "lipsync": "lipsync (the speaking scene, then a sync_so pass with the exact take)",
+              "overlay": "overlay (no dialogue; the take is placed over the picture: mix and CapCut track)"}.get(vo.get("method"), f"{vo.get('method') or '?'}")
+    bits = [f"method {method}"]
+    if vo.get("source") == "file":
+        bits.append("the user's own voiceover files (source file)")
+    else:
+        bits.append(f"ElevenLabs voice {vo.get('voice_name') or '?'} ({vo.get('voice_id') or '?'}), model {vo.get('model_id') or 'eleven_v4'}")
+    lang = f"language {vo.get('language_name') or vo.get('language') or '?'} ({vo.get('language') or '?'})"
+    if vo.get("language_official") is False:
+        lang += ", outside the model's official list: pronunciation not checked"
+    bits.append(lang)
+    if vo.get("preference"):
+        bits.append(f"preference: {vo['preference']}")
+    if isinstance(vo.get("voices"), dict) and vo["voices"]:
+        bits.append("per character: " + ", ".join(f"{k} = {(v.get('voice_name') or v.get('voice_id')) if isinstance(v, dict) else v}"
+                                                  for k, v in vo["voices"].items()))
+    if isinstance(vo.get("videos"), list) and vo["videos"]:
+        bits.append("only videos " + ", ".join(str(x) for x in vo["videos"]))
+    return ("on: " + "; ".join(bits) + f". Your take: {rd}/30-assets/voiceover/video-NN*.* (state.json -> voiceover.files.NN; its .json sidecar "
+            "holds the script, the spoken words, the phrases and the pauses); your plan's Voiceover block says the form (on-camera or off-screen)")
 
 
 def cmd_contract(a):
     """Write 50-requests/agent-contract.md from the canonical prompt of production-agents section 2 and this run's state.json: the run and
-    library paths, the locked model and its guide path, the sub-mode, the QC-fixes, Loupe and audio-ingest lines. A placeholder whose value
+    library paths, the locked model and its guide path, the sub-mode, the QC-fixes, Loupe, audio-ingest and voiceover lines. A placeholder whose value
     state.json does not hold stays as it is and is listed (the agents must not be spawned with it). Run-specific notes go under their own
     heading at the end, never into the rules. The previous file, when different, is kept beside it with a stamp."""
     rd, st = _state_of(a.run)
@@ -2235,7 +2271,8 @@ def cmd_contract(a):
     except (OSError, ValueError, AttributeError):
         guide = ""
     values = {"run": str(rd), "library": str(AWL_HOME), "model": model, "guide path": guide, "analyze_submode": str(st.get("analyze_submode") or ""),
-              "qc_fixes": str(st.get("qc_fixes") or "auto"), "loupe": str(st.get("loupe") or "up"), "audio_ingest": str(st.get("audio_ingest") or "")}
+              "qc_fixes": str(st.get("qc_fixes") or "auto"), "loupe": str(st.get("loupe") or "up"), "audio_ingest": str(st.get("audio_ingest") or ""),
+              "voiceover": _contract_voiceover(st, rd)}
     substituted, unresolved = {}, []
     for token, key in CONTRACT_SUBS:
         if values[key]:
@@ -5632,6 +5669,343 @@ def _audio_profile(src: Path, dst: Path, transcript=None, cuts_path=None):
     return prof, None
 
 
+# --------------------------------------------------------------------------- own voiceover (contract item 31)
+
+VO_MODES = ("on-camera", "off-screen")
+VO_SOURCES = ("elevenlabs", "file")
+VO_RATE = 100                                       # loudness-curve frames per second (10 ms hop over 25 ms windows)
+_VO_TAG = re.compile(r"\[[^\[\]\n]{1,60}\]")        # an ElevenLabs audio tag: [excited], [Scottish accent], [laughs softly]
+
+
+def _vo_key(video) -> str:
+    """'1' -> '01', '01-c2' -> '01-c2'; anything else stops (exit 2)."""
+    m = re.match(r"^\s*(\d{1,3})(?:-(c\d+))?\s*$", str(video or ""))
+    if not m:
+        fail(f"--video must be NN or NN-cK, got {video!r}", 2)
+    return f"{int(m.group(1)):02d}" + (f"-{m.group(2)}" if m.group(2) else "")
+
+
+def _vo_curve(path):
+    """Loudness of a file's first audio stream, mono 16 kHz: (dBFS per 10 ms frame over 25 ms windows, as a numpy array; duration in s)."""
+    import numpy as np
+    cp = subprocess.run([find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-i", str(path), "-map", "0:a:0",
+                         "-ac", "1", "-ar", "16000", "-f", "f32le", "-"], capture_output=True, timeout=900)
+    if cp.returncode != 0:
+        raise RuntimeError(f"no decodable audio stream in {path}: {cp.stderr.decode('utf-8', 'replace')[-300:]}")
+    x = np.frombuffer(cp.stdout, dtype=np.float32).astype(np.float64)
+    hop, win = 16000 // VO_RATE, 400
+    n = (len(x) - win) // hop + 1 if len(x) >= win else 0
+    if n < 8:
+        raise RuntimeError(f"too little audio in {path} ({len(x) / 16000:.2f} s)")
+    cs = np.concatenate([[0.0], np.cumsum(x * x)])
+    st = np.arange(n) * hop
+    rms = np.sqrt(np.maximum(cs[st + win] - cs[st], 0.0) / win)
+    return 20.0 * np.log10(rms + 1e-9), round(len(x) / 16000.0, 3)
+
+
+def _vo_speech(curve, gap_s: float = 0.15, min_s: float = 0.08):
+    """Speech in a loudness curve, as facts: (threshold dBFS, phrases, pauses, speech start s, speech end s). A frame counts as speech when it is
+    louder than -50 dBFS and than the curve's loud level (its 95th percentile) minus 30 dB; a quieter gap shorter than gap_s joins two phrases,
+    and a phrase shorter than min_s is left out."""
+    import numpy as np
+    thr = max(-50.0, float(np.percentile(curve, 95)) - 30.0)
+    act = np.concatenate([[False], curve > thr, [False]])
+    edges = np.flatnonzero(np.diff(act.astype(np.int8)))
+    spans = [[int(edges[i]), int(edges[i + 1])] for i in range(0, len(edges) - 1, 2)]     # [first speech frame, last speech frame + 1)
+    merged = []
+    for s, e in spans:
+        if merged and (s - merged[-1][1]) / VO_RATE < gap_s:
+            merged[-1][1] = e
+        else:
+            merged.append([s, e])
+    merged = [(s, e) for s, e in merged if (e - s) / VO_RATE >= min_s]
+    phrases = [{"start": round(s / VO_RATE, 2), "end": round((e - 1) / VO_RATE + 0.025, 2)} for s, e in merged]
+    pauses = [{"start": phrases[k]["end"], "end": phrases[k + 1]["start"], "s": round(phrases[k + 1]["start"] - phrases[k]["end"], 2)}
+              for k in range(len(phrases) - 1)]
+    return round(thr, 1), phrases, pauses, (phrases[0]["start"] if phrases else None), (phrases[-1]["end"] if phrases else None)
+
+
+def _vo_shape(curve, thr: float):
+    """The loudness above (speech threshold - 10 dB), lightly smoothed: the syllable rhythm two voices saying the same words share."""
+    import numpy as np
+    y = np.maximum(curve, thr - 10.0) - (thr - 10.0)
+    return np.convolve(y, np.ones(3) / 3.0, mode="same")
+
+
+def _vo_lufs(path):
+    """Integrated loudness (LUFS) of a file's audio, by ffmpeg's ebur128 filter; None when it cannot be read."""
+    cp = run([find_tool("ffmpeg"), "-hide_banner", "-nostdin", "-i", str(path), "-map", "0:a:0", "-af", "ebur128", "-f", "null", "-"], timeout=900)
+    summ = cp.stderr[cp.stderr.rfind("Summary:"):] if "Summary:" in cp.stderr else ""
+    m = re.search(r"I:\s*(-?[0-9.]+)\s*LUFS", summ)
+    return float(m.group(1)) if m else None
+
+
+def _vo_text(v):
+    """--script: the text of an existing file, else the value itself (None when empty)."""
+    if not v:
+        return None
+    try:
+        if len(v) < 400 and Path(v).is_file():
+            return Path(v).read_text(encoding="utf-8-sig", errors="replace").strip() or None
+    except (OSError, ValueError):
+        pass
+    return v.strip() or None
+
+
+def _vo_plot(vc, gc, off_s: float, dest: Path):
+    """Two loudness curves on one time axis: the take (shifted by off_s) above, the generation's own sound below."""
+    import numpy as np
+    from PIL import Image, ImageDraw
+    W, H, padx = 1200, 320, 50
+    span = max(len(vc) / VO_RATE + max(off_s, 0.0), len(gc) / VO_RATE, 1.0)
+    img = Image.new("RGB", (W, H), (18, 18, 18))
+    d, fnt = ImageDraw.Draw(img), _font(14)
+    lane_h = (H - 40) // 2
+    lanes = ((vc, off_s, (90, 220, 120), f"the take, shifted by {off_s:+.2f} s"), (gc, 0.0, (240, 160, 60), "the generation's own sound"))
+    for li, (c, sh, col, lab) in enumerate(lanes):
+        y0 = 8 + li * lane_h
+        d.text((padx, y0), lab, fill=(230, 230, 230), font=fnt)
+        lo, hi = float(np.percentile(c, 5)), float(np.percentile(c, 99.5))
+        rng = max(hi - lo, 1e-6)
+        pts = []
+        for i in range(0, len(c), 2):
+            t = i / VO_RATE + sh
+            if 0.0 <= t <= span:
+                pts.append((padx + (W - 2 * padx) * t / span,
+                            y0 + lane_h - 6 - (lane_h - 30) * min(max((float(c[i]) - lo) / rng, 0.0), 1.0)))
+        if len(pts) > 1:
+            d.line(pts, fill=col, width=2)
+    for s in range(int(span) + 1):
+        x = padx + (W - 2 * padx) * s / span
+        d.line((x, H - 30, x, H - 24), fill=(160, 160, 160))
+        d.text((x - 4, H - 22), f"{s}s", fill=(160, 160, 160), font=fnt)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    img.save(dest)
+    return dest
+
+
+def _vo_outdir(a):
+    if not a.run:
+        fail("outdir needs --run", 2)
+    rd, _st = _state_of(a.run)
+    env = os.environ.get("ELEVENLABS_MCP_BASE_PATH")
+    base = Path(a.base) if a.base else (Path(env) if env else Path.home() / "Desktop")
+    d = base / "awl-voiceover" / rd.name
+    d.mkdir(parents=True, exist_ok=True)
+    out({"ok": True, "dir": str(d), "base": str(base),
+         "base_from": "--base" if a.base else ("ELEVENLABS_MCP_BASE_PATH" if env else "the default (~/Desktop)"),
+         "note": "pass this folder as text_to_speech's output_directory (the ElevenLabs MCP writes only under its base path), then copy each take "
+                 "into the run with `voiceover record`"})
+
+
+def _vo_record(a):
+    if not (a.run and a.video and a.file):
+        fail("record needs --run, --video and --file", 2)
+    rd, _st = _state_of(a.run)
+    key = _vo_key(a.video)
+    src = Path(a.file)
+    if not src.is_file():
+        fail(f"--file not found: {src}", 2)
+    if a.attempt < 1:
+        fail("--attempt starts at 1", 2)
+    settings = None
+    if a.settings:
+        try:
+            settings = json.loads(a.settings)
+        except ValueError as e:
+            fail(f"--settings is not JSON: {e}", 2)
+    vdir = rd / "30-assets" / "voiceover"
+    vdir.mkdir(parents=True, exist_ok=True)
+    dst = vdir / f"video-{key}-a{a.attempt}{(src.suffix or '.mp3').lower()}"
+    same = dst.exists() and dst.resolve() == src.resolve()
+    kept = None
+    if dst.exists() and not same and quick_hash(dst) != quick_hash(src):   # the same attempt recorded again from another file: the earlier one is kept beside it
+        kept = dst.with_name(f"{dst.stem}.prev-{time.strftime('%Y%m%d-%H%M%S')}{dst.suffix}")
+        dst.replace(kept)
+        if dst.with_suffix(".json").exists():
+            dst.with_suffix(".json").replace(kept.with_suffix(".json"))
+    if not same:
+        shutil.copy2(src, dst)
+    info = media_summary(dst)
+    if not info.get("has_audio"):
+        fail(f"no audio stream in {dst}", 2)
+    try:
+        curve, dur = _vo_curve(dst)
+    except RuntimeError as e:
+        fail(str(e), 1)
+    thr, phrases, pauses, s0, s1 = _vo_speech(curve)
+    script, script_source, transcript = _vo_text(a.script), None, None
+    if script:
+        script_source = "given"
+    elif a.transcribe:                      # a client's own voiceover file: its words, by local speech-to-text (not the references' audio, item 24)
+        work = vdir / f"_transcribe-{key}"
+        work.mkdir(parents=True, exist_ok=True)
+        wav = work / "take-16k.wav"
+        run([find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", str(dst), "-map", "0:a:0", "-ac", "1",
+             "-ar", "16000", "-c:a", "pcm_s16le", str(wav)], check=True, timeout=900)
+        transcript = transcribe(str(wav), work, a.whisper_model, a.language or "auto")
+        script = " ".join(s.get("text", "") for s in transcript.get("segments", [])).strip() or None
+        script_source = f"transcribed ({transcript.get('engine') or 'no engine'}{(' ' + str(transcript['model'])) if transcript.get('model') else ''})"
+        shutil.rmtree(work, ignore_errors=True)
+    spoken = " ".join(_VO_TAG.sub(" ", script).split()) if script else None
+    words = len(spoken.split()) if spoken else 0
+    speech_s = round(s1 - s0, 2) if s0 is not None else 0.0
+    side = {"ok": True, "video": key, "attempt": a.attempt, "source": a.source, "mode": a.mode, "file": str(dst), "source_file": str(src),
+            "sha1_16": quick_hash(dst), "duration_s": dur, "codec": info.get("audio_codec"), "sample_rate": info.get("audio_rate"),
+            "channels": info.get("audio_channels"), "speech_threshold_dbfs": thr, "speech_start_s": s0, "speech_end_s": s1, "speech_s": speech_s,
+            "trailing_quiet_s": round(dur - s1, 2) if s1 is not None else None, "phrases": phrases, "pauses": pauses,
+            "integrated_lufs": _vo_lufs(dst), "script": script, "script_source": script_source,
+            "tags": _VO_TAG.findall(script) if script else [], "spoken_text": spoken, "spoken_words": words,
+            "chars_sent": len(script) if (script and a.source == "elevenlabs") else None,
+            "words_per_speech_s": round(words / speech_s, 2) if words and speech_s > 0 else None,
+            "voice_id": a.voice_id, "voice_name": a.voice_name, "model": a.model, "language": a.language, "preference": a.preference,
+            "settings": settings, "recorded": now_iso(),
+            "note": "measured facts and the words as given or transcribed; whether the take fits the plan, sounds right or is pronounced right "
+                    "is not judged here (no one listened)"}
+    if transcript is not None:
+        side["transcript_segments"] = transcript.get("segments", [])
+    write_json(dst.with_suffix(".json"), side)
+    rec = {"file": str(dst), "sidecar": str(dst.with_suffix(".json")), "attempt": a.attempt, "source": a.source, "mode": a.mode,
+           "duration_s": dur, "speech_start_s": s0, "speech_end_s": s1, "phrases": len(phrases), "recorded": side["recorded"]}
+    p = rd / "state.json"
+    with FileLock(p.with_name("state.json.lock")):
+        st = json.loads(p.read_text(encoding="utf-8"))
+        vo = st.get("voiceover") if isinstance(st.get("voiceover"), dict) else {}
+        if not isinstance(vo.get("files"), dict):
+            vo["files"] = {}
+        vo["files"][key] = rec
+        st["voiceover"] = vo
+        st["updated"] = now_iso()
+        write_json(p, st)
+    res = {k: v for k, v in side.items() if k != "transcript_segments"}
+    res.update({"sidecar": str(dst.with_suffix(".json")), "state_key": f"voiceover.files.{key}", "previous_kept_as": str(kept) if kept else None,
+                "voiceover_enabled_in_state": vo.get("enabled")})
+    out(res)
+
+
+def _vo_align(a):
+    import numpy as np
+    if not (a.generated and a.voiceover and a.out):
+        fail("align needs --generated, --voiceover and --out", 2)
+    gen, vo = Path(a.generated), Path(a.voiceover)
+    for p in (gen, vo):
+        if not p.is_file():
+            fail(f"file not found: {p}", 2)
+    if not media_summary(gen).get("has_audio"):
+        fail("the generated file has no audio stream: there is no model speech to align the take against (an off-screen take needs no alignment)", 1)
+    try:
+        vc, vdur = _vo_curve(vo)
+        gc, gdur = _vo_curve(gen)
+    except RuntimeError as e:
+        fail(str(e), 1)
+    vthr, vph, _vpa, vs0, vs1 = _vo_speech(vc)
+    gthr, gph, _gpa, gs0, gs1 = _vo_speech(gc)
+    vx, gx = _vo_shape(vc, vthr), _vo_shape(gc, gthr)
+    max_k = max(1, int(round(a.max_lag * VO_RATE)))
+    g_k, g_c = _best_lag(vx, gx, max_k, min_len=VO_RATE)
+    g_off = round((g_k or 0) / VO_RATE, 3)
+    wn = max(8, int(round(a.window * VO_RATE)))
+    v_std = float(vx.std()) or 1e-6
+    windows = []
+    for i0 in range(0, max(1, len(vx) - wn + 1), VO_RATE):
+        seg = vx[i0:i0 + wn]
+        k, c = _best_lag(vx, gx, max_k, i0, i0 + wn, min_len=max(8, wn // 2))
+        windows.append({"t": round((i0 + wn / 2) / VO_RATE, 2), "offset_s": None if k is None else round(k / VO_RATE, 3),
+                        "corr": None if k is None else round(c, 3), "voice_ratio": round(float(seg.std()) / v_std, 2)})
+    # the summary uses the windows that pass the caller's two filters (--min-corr, --min-voice); every window is listed in vo-align.json
+    rel = [w for w in windows if w["offset_s"] is not None and w["corr"] >= a.min_corr and w["voice_ratio"] >= a.min_voice]
+    lags = [w["offset_s"] for w in rel]
+    drift = None
+    if len(rel) >= 3:
+        ts, ls = np.array([w["t"] for w in rel]), np.array(lags)
+        if float(ts.var()) > 0:
+            drift = round(float(((ts - ts.mean()) * (ls - ls.mean())).mean() / ts.var()) * 10.0, 3)
+    od = Path(a.out)
+    od.mkdir(parents=True, exist_ok=True)
+    png = _vo_plot(vc, gc, g_off, od / "vo-align.png")
+    end_on = round(vs1 + g_off, 2) if vs1 is not None else None
+    res = {"ok": True, "generated": str(gen), "voiceover": str(vo), "generated_s": gdur, "voiceover_s": vdur,
+           "global_offset_s": g_off, "global_corr": None if g_c is None else round(g_c, 3),
+           "filters": {"min_corr": a.min_corr, "min_voice_ratio": a.min_voice}, "windows_used": len(rel), "windows_total": len(windows),
+           "median_window_offset_s": round(float(np.median(lags)), 3) if lags else None,
+           "window_spread_s": round(max(lags) - min(lags), 3) if lags else None, "drift_s_per_10s": drift, "tolerance_s": a.tol,
+           "windows_off_global": [{"t": w["t"], "offset_s": w["offset_s"]} for w in rel if abs(w["offset_s"] - g_off) > a.tol][:12],
+           "voiceover_speech": {"start_s": vs0, "end_s": vs1, "phrases": len(vph)},
+           "generated_speech": {"start_s": gs0, "end_s": gs1, "phrases": len(gph)},
+           "voiceover_speech_end_on_generated_s": end_on,
+           "voiceover_overrun_s": round(max(0.0, end_on - gdur), 2) if end_on is not None else None,
+           "windows": windows if len(windows) <= 60 else None, "plot": str(png),
+           "note": "measurements only, no verdict: whether the model's speech follows the take at one steady offset, drifts, or cannot be told is "
+                   "the agent's reading of these numbers, the plot and the mouths on dense frames. A positive offset = the model's speech comes "
+                   "later than the take (the take is delayed by that much when mixed)"}
+    (od / "vo-align.json").write_text(json.dumps({**res, "windows": windows}, indent=1), encoding="utf-8")
+    out(res)
+
+
+def _vo_mix(a):
+    if not (a.picture and a.voiceover and a.out):
+        fail("mix needs --picture, --voiceover and --out", 2)
+    pic, vo, dst = Path(a.picture), Path(a.voiceover), Path(a.out)
+    for p in (pic, vo):
+        if not p.is_file():
+            fail(f"file not found: {p}", 2)
+    if not 0.5 <= a.tempo <= 2.0:
+        fail("--tempo must be between 0.5 and 2.0", 2)
+    pi = media_summary(pic)
+    if not pi.get("has_video"):
+        fail(f"no video stream in {pic}", 2)
+    dur = pi.get("duration_s") or 0.0
+    if dur <= 0:
+        fail(f"no duration for {pic}", 1)
+    try:
+        vc, vdur = _vo_curve(vo)
+    except RuntimeError as e:
+        fail(str(e), 1)
+    _thr, _ph, _pa, vs0, vs1 = _vo_speech(vc)
+    off = a.offset or 0.0
+    chain = [f"atempo={a.tempo:.4f}"] if abs(a.tempo - 1.0) > 1e-6 else []
+    if off > 0.0005:
+        chain.append(f"adelay={int(round(off * 1000))}:all=1")
+    elif off < -0.0005:
+        chain += [f"atrim=start={abs(off):.4f}", "asetpts=PTS-STARTPTS"]
+    chain += [f"volume={a.vo_gain:.3f}", f"apad=whole_dur={dur:.3f}", f"atrim=duration={dur:.3f}"]
+    vo_chain = ",".join(chain)
+    keep = a.bed == "keep" and bool(pi.get("has_audio"))
+    if keep:
+        fc = (f"[1:a:0]{vo_chain}[vo];[0:a:0]volume={a.bed_gain:.3f},apad=whole_dur={dur:.3f},atrim=duration={dur:.3f}[bed];"
+              f"[bed][vo]amix=inputs=2:duration=longest:normalize=0[mix]")
+        amap = "[mix]"
+    else:
+        fc, amap = f"[1:a:0]{vo_chain}[vo]", "[vo]"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    ff = find_tool("ffmpeg")
+    cp = run([ff, "-nostdin", "-y", "-loglevel", "error", "-i", str(pic), "-i", str(vo), "-filter_complex", fc, "-map", "0:v:0",
+              "-map", amap, "-t", f"{dur:.3f}", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-movflags", "+faststart", str(dst)], timeout=1800)
+    if cp.returncode != 0:
+        fail("mix failed: " + cp.stderr[-600:])
+    track = dst.with_name(dst.stem + ".vo-track.wav")
+    cp2 = run([ff, "-nostdin", "-y", "-loglevel", "error", "-i", str(vo), "-af", vo_chain, "-t", f"{dur:.3f}", "-ar", "48000",
+               "-c:a", "pcm_s16le", str(track)], timeout=900)
+    o = media_summary(dst)
+    sp_start = (vs0 / a.tempo + off) if vs0 is not None else None
+    sp_end = (vs1 / a.tempo + off) if vs1 is not None else None
+    facts = {"has_video": bool(o.get("has_video")), "has_audio": bool(o.get("has_audio")), "duration_s": o.get("duration_s"), "picture_s": dur,
+             "bed": "kept" if keep else ("muted" if a.bed == "mute" else "none: the picture has no audio stream"),
+             "bed_gain": a.bed_gain if keep else None, "vo_gain": a.vo_gain, "tempo": a.tempo, "offset_s": off, "vo_s": vdur,
+             "vo_start_on_picture_s": round(max(0.0, off), 3), "vo_end_on_picture_s": round(off + vdur / a.tempo, 3),
+             "vo_speech_start_on_picture_s": None if sp_start is None else round(sp_start, 3),
+             "vo_speech_end_on_picture_s": None if sp_end is None else round(sp_end, 3),
+             "vo_speech_head_cut_s": None if sp_start is None else round(max(0.0, -sp_start), 3),
+             "vo_speech_cut_s": None if sp_end is None else round(max(0.0, sp_end - dur), 3)}
+    out({"ok": True, "file": str(dst), "track": str(track) if cp2.returncode == 0 else None, "facts": facts,
+         "note": "facts of the mix, no verdict: whether the voice lands on the mouths and is heard whole is for the agent to check (X9)"})
+
+
+def cmd_voiceover(a):
+    """Own voiceover (contract item 31): outdir | record | align | mix. It measures, records and mixes; it never judges."""
+    {"outdir": _vo_outdir, "record": _vo_record, "align": _vo_align, "mix": _vo_mix}[a.action](a)
+
+
 def main():
     ap = argparse.ArgumentParser(prog="awl.py", description=__doc__.split("\n\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -5977,6 +6351,41 @@ def main():
     p = sp.add_parser("contract", help="write 50-requests/agent-contract.md from the canonical prompt (production-agents section 2) and state.json; lists the placeholders it could not fill")
     p.add_argument("--run", required=True); p.add_argument("--notes", help="run-specific notes, appended under their own heading at the end")
     p.add_argument("--out", help="write elsewhere than 50-requests/agent-contract.md"); p.set_defaults(fn=cmd_contract)
+
+    p = sp.add_parser("voiceover", help="own voiceover (contract item 31): outdir (the folder the ElevenLabs MCP may write to) | record (a take into the run, "
+                                        "measured; its sidecar; state.json -> voiceover.files) | align (where the model's own speech lies against the take) | "
+                                        "mix (the take over the picture, plus a placed track for CapCut); facts, no verdict")
+    p.add_argument("action", choices=["outdir", "record", "align", "mix"])
+    p.add_argument("--run", help="outdir, record: the run")
+    p.add_argument("--base", help="outdir: the ElevenLabs MCP's base path (default: ELEVENLABS_MCP_BASE_PATH, else ~/Desktop)")
+    p.add_argument("--video", help="record: the video, NN or NN-cK")
+    p.add_argument("--file", help="record: the take the ElevenLabs MCP saved, or the user's own voiceover file (source file)")
+    p.add_argument("--attempt", type=int, default=1, help="record: the take's number (a1, a2 ...)")
+    p.add_argument("--script", help="record: the text sent to ElevenLabs, tags included (a file path or the text); for a user's file, its words")
+    p.add_argument("--transcribe", action="store_true", help="record, a user's file without a script: its words by local speech-to-text (a client asset, not the references' audio)")
+    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"), help="record --transcribe: the faster-whisper model")
+    p.add_argument("--language", help="record: the take's ISO 639-1 code (also the speech-to-text hint)")
+    p.add_argument("--voice-id", help="record: the ElevenLabs voice id"); p.add_argument("--voice-name", help="record: the voice's name")
+    p.add_argument("--model", help="record: the ElevenLabs model id (eleven_v4 ...)")
+    p.add_argument("--preference", help="record: the accent, dialect or delivery preference the take follows")
+    p.add_argument("--settings", help="record: the voice settings sent, as JSON")
+    p.add_argument("--mode", choices=list(VO_MODES), help="record: on-camera (lip-synced) or off-screen")
+    p.add_argument("--source", choices=list(VO_SOURCES), default="elevenlabs", help="record: elevenlabs (voiced by the pipeline) or file (the user's own file)")
+    p.add_argument("--generated", help="align: the clean picture that still carries the generation's own sound (or a raw, trimmed or joined clip)")
+    p.add_argument("--voiceover", help="align, mix: the take")
+    p.add_argument("--out", help="align: a folder for vo-align.json and vo-align.png; mix: the output .mp4 (a .vo-track.wav goes beside it)")
+    p.add_argument("--max-lag", type=float, default=1.0, help="align: largest offset searched, seconds")
+    p.add_argument("--window", type=float, default=2.0, help="align: window for the per-window offsets, seconds")
+    p.add_argument("--tol", type=float, default=0.10, help="align: list the used windows whose offset differs from the global one by more than this (a list, not a verdict)")
+    p.add_argument("--min-corr", type=float, default=0.3, help="align: the summary uses the windows whose correlation is at least this")
+    p.add_argument("--min-voice", type=float, default=0.25, help="align: ... and whose loudness variation is at least this share of the whole take's (pauses are left out)")
+    p.add_argument("--picture", help="mix: the clean picture (720x1280) the take goes over")
+    p.add_argument("--offset", type=float, default=0.0, help="mix: where the take starts on the picture's timeline, seconds (negative: its head is cut)")
+    p.add_argument("--tempo", type=float, default=1.0, help="mix: the take's speed without a pitch change (atempo), e.g. 1.05")
+    p.add_argument("--bed", choices=["mute", "keep"], default="mute", help="mix: the picture's own sound: mute (on-camera: the model's voice never stays) or keep (off-screen: ambience under the voice)")
+    p.add_argument("--bed-gain", type=float, default=0.3, help="mix --bed keep: the picture's own sound level")
+    p.add_argument("--vo-gain", type=float, default=1.0, help="mix: the take's level")
+    p.set_defaults(fn=cmd_voiceover)
 
     p = sp.add_parser("cost-report", help="credits as the run recorded them (information, never a gate): credits_start, jobs from videos[], submissions, brief mentions, --balance")
     p.add_argument("--run", required=True); p.add_argument("--balance", type=float, help="the Higgsfield balance now (from the balance tool), to print start minus balance")

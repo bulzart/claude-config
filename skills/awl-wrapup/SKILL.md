@@ -14,6 +14,8 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - the run folder, `state.json`, the deliverables and the briefs are the sources
+- *an own voiceover (`state.json → voiceover.enabled` true; item 31):*
+  - voiceover §11: `AWL/reference/voiceover/110_11_credits-licence-and-honesty.md` (1.1 KB)
 - *Analyze Mode with CapCut projects still pending:*
   - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (1.9 KB)
   - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
@@ -45,6 +47,10 @@ Then give:
   each persistent or open one with its video, the flagged prompt or video and what was tried;
   or "no flags this run";
 - the QC fixes (item 27, Recreate and Create): "N videos fixed after QC, M fixes you declined (kept as generated, flagged: V03 …)", or "no QC finding needed a fix";
+- the own voiceover (item 31, `voiceover.md` §11): "Voiceover: <method>, ElevenLabs <voice> (<language>, <preference>), N takes, K sync
+  passes, about X ElevenLabs credits used" (`check_subscription` now against `voiceover.characters_left_at_start`), every video that used
+  the fallback of §8 or had its soundtrack laid back, "pronunciation not checked: listen" (naming a language outside the model's official
+  list), and the licence line when `voiceover.tier` is `free`; or "no own voiceover";
 - what the Loupe keeper was missing: every `result.json → keeper_gaps` line and every keeper gap in a pattern card's "Sample hints" block, grouped
   ("not covered by the library: …", "asked and could not be answered: …", with the video), and that Loupe's Keeper page lists them under "What the
   keeper is missing", so the admin can add a sample in Generation misses; or "the keeper had what it needed";

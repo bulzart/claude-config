@@ -42,7 +42,9 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     `60-outputs/video-NN/readme-row.md` and the main session appends it as the agent reports, A9b): direction, model, params, prompt file, assets, job
     id, attempt, credits, verdict, final path, notes. For a multi-clip video, list every clip's
     job id and the seam methods. Analyze Mode adds the CapCut project name, the inserts and the
-    text events.
+    text events. With an own voiceover (item 31): the method, the voice, the language, the preference, the form, the take's file and
+    attempt, the sync pass's job id (lipsync), whether the take was kept or laid back (native), the mix offset and tempo (overlay), and
+    "pronunciation: not checked (listen)"; `video-NN-clean.mp4` carries the voice.
   - Update `state.json` (`videos[]`, `next_step`), then move to the next video. In Edit Mode, only
     after the user said "Looks good".
 

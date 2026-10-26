@@ -20,6 +20,9 @@ Only these section files for this phase, nothing else unless a step below says s
 - creative-direction §7: `AWL/reference/creative-direction/100_7_hook-payoff-loop-text-and-sound.md` (1.1 KB)
 - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - generation-system §4b.0: `AWL/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
+- *an own voiceover (`state.json → voiceover.enabled` true; item 31):*
+  - voiceover §3: `AWL/reference/voiceover/030_3_writing-the-lines-x1.md` (2.3 KB)
+  - voiceover §5: `AWL/reference/voiceover/050_5_on-camera-or-off-screen-and-whic.md` (1.1 KB)
 
 ### A6. Create: style groups (Create only)
 - From the families and directions (A4), present numbered **style groups**:
@@ -47,6 +50,14 @@ Only these section files for this phase, nothing else unless a step below says s
     winner's share line and job, and run the sharpness gate (§6). Save them to
     `20-analysis/concepts.md` and show one line per video (seed, score, the reason it won). The
     user may swap a pick by replying; nothing is asked.
+  - **Own voiceover** (`state.json → voiceover.enabled` true; item 31; `voiceover.md` §3, §5): every seed carries the idea of its spoken
+    lines in the run's language (in the preference's dialect when it is one) and their form under the run's method (`voiceover.method`):
+    native or lipsync, an on-camera speaker (a supplied character the voice fits) or an off-screen voice; overlay, always narration over
+    the pictures (nobody on screen speaks the words, so seeds fit a narrated story, a product review, a voiced POV). The lines are scored
+    with the seed (they carry its hook and payoff), they pass the copy test
+    (no reference's lines) and the guardrails, and they fit the length budget of the video's slot; the winner's exact lines are written in
+    X1. The user's own voiceover files (source `file`): each file is one video's fixed words ([A]), and that video's seeds are built around
+    them.
   - Each one exploits the patterns that made the references go viral: hook type and timing,
     structure, pacing, content type, camera, humour, and payoff.
   - The client's product is blended into the concept (its most suitable use, `generation-system.md`

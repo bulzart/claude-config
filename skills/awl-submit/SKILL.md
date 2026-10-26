@@ -37,7 +37,8 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - **X7 — Submit and wait (ledger-recorded; no spam, no glitches).** A fix generation after a QC finding (attempt K+1) with QC fixes `ask` starts here only after the main session said `approved` or `auto`; until then you stop after X5 with the fix proposal (`awl-qc`, item 27).
   1. `T ledger begin --run RUN --video NN --attempt K --request 50-requests/video-NN[-aK]-request.json`
-     (a clip: `--video NN-cK` with its own request file).
+     (a clip: `--video NN-cK` with its own request file; the sync pass of an own voiceover: `--video NN-sync` with
+     `50-requests/video-NN-sync-request.json`, the same lane).
      - It **records a `pending` entry every time** and exits 0; it never refuses. It reports `conflicts[]`
        as facts, with the entries involved: an open submission (pending / submitted / unknown) in this
        video's lane; the submissions in flight in the run against the cap (`open_in_run`, `cap`); this
@@ -175,4 +176,5 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Hand-off
 
-When the job is terminal: invoke Skill `awl-postprocess` (X8; its first step downloads the result).
+When the job is terminal: invoke Skill `awl-postprocess` (X8; its first step downloads the result). A sync pass of an own voiceover
+(`--video NN-sync`, item 31) returns to `awl-postprocess` step 5b, which downloads it.

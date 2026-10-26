@@ -51,6 +51,9 @@ Only these section files for this phase, nothing else unless a step below says s
 - brand-guardrails §5: `AWL/reference/brand-guardrails/050_5_qc-x9-and-the-wrap-up.md` (1.3 KB)
 - *Analyze Mode (the CapCut project):*
   - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.2 KB)
+- *an own voiceover (the plan has a Voiceover block; item 31):*
+  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (2.8 KB) (the fix routes)
+  - voiceover §10: `AWL/reference/voiceover/100_10_qc-of-a-voiceover-x9.md` (1.4 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §5 (failure table); §9 when a retry is planned
 - the plan's QC checkpoints (`RUN/40-briefs/video-NN-plan.md`), the contract's checks (`AWL/reference/production-agents/` §3 item 13, for a production agent)
 
@@ -196,6 +199,13 @@ Only these section files for this phase, nothing else unless a step below says s
     sheet). Every sync anchor should land within ±0.1 s of its sound: words on mouth movements, impacts on
     contact, steps on footfalls. Drift, or an action added, skipped or moved, is a regenerate reason; a
     steady offset is a post-fix.
+  - **Own voiceover** (item 31; `voiceover.md` §10), by the run's method, once X8 step 5b ran: the soundtrack (native, lipsync: your reading
+    of `T voiceover align`, the delivered sound is the take or was laid back; overlay: the mix facts, `vo_speech_cut_s` 0); the lips of an
+    on-camera speaker on 30 fps dense ranges around three phrase starts and one pause (the mouth opens within about 0.1 s of each phrase
+    start, rests in the pause, no listener mouths the words); after a sync pass, the face unharmed around the mouth and jaw; off-screen and
+    overlay, nobody in the frame speaks; pronunciation "not checked (listen)". Lips off on a native clip: the fix is a sync pass (or one
+    regeneration) under the QC-fixes choice; on a lipsync clip, one more sync pass, then the fallback of §8. A take that cannot fit is a
+    `voiceover` blocker, never re-voiced here. The verdict goes to `result.json → voiceover`.
   - **Leftovers** (`generation-system.md` §9b): only the must-not-survive list counts, and it is
     fixed autonomously.
   - **Label legibility** (`anomaly-catalog.md` §2.9, §4 step 5h): on a full-resolution frame at rest the
@@ -260,6 +270,8 @@ Only these section files for this phase, nothing else unless a step below says s
     - the read-back timeline matches the plan (pieces, inserts, text times and positions);
     - overlays exist only on their visible frames and fade with the picture; a Recreate's original audio
       is one segment; no text layer contains an emoji;
+    - an own voiceover is audible at 1.0 as its method places it (native, lipsync: the clip's own audio; overlay: the voice track, the
+      clip's sound at the bed volume), the soundtrack under it, nothing muted by mistake (`voiceover.md` §10);
     - `capcut lint` reports 0 errors;
     - the preview shows the right order, sound and text.
     Fix in the project, not by regenerating.
