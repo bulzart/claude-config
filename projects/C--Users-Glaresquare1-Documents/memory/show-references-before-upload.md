@@ -1,15 +1,17 @@
 ---
 name: show-references-before-upload
-description: "Before uploading new references to Higgsfield after a pipeline/approach change, show the user what changed and the full path of every file that will be used as a reference, and wait for their go"
+description: "REVOKED 2026-10-27: do not ask the user to approve reference files before Higgsfield uploads, or anything else mid-run; continue autonomously (was: show paths and wait for the go, 2026-10-22)"
 metadata:
   node_type: memory
   type: feedback
-  originSessionId: fd23b3ce-bd75-4669-95d5-20d1bbdbcdef
-  modified: 2026-10-21T22:56:13.971Z
+  originSessionId: 5082ead0-b81c-4ac6-a9bb-d1526fddf08a
+  modified: 2026-10-26T23:50:56.767Z
 ---
 
-User 2026-10-22 (Celsius run 20261021-224049-21, after the placement-marker change): "when you're just about to upload references on higgsfield with the new updates let me see first what changed and give the paths for each file that will be used as a reference".
+User 2026-10-27 (Celsius Recreate run 20261026-222352-celsius-recreate, while the nine non-pilot plans were being reviewed): "no need to ask approvals from me on references just continue straight away no need for asks on my side at all".
 
-**Why:** the user wants to inspect the new reference material (marked sources, crops, can views) before it reaches the generation service.
+This replaces the 2026-10-22 rule (Celsius run 20261021-224049-21: "when you're just about to upload references on higgsfield with the new updates let me see first what changed and give the paths for each file that will be used as a reference").
 
-**How to apply:** before any new `media_upload` of a reference (main session or production agent): list each file with its full absolute path ([[always-full-paths]]), its role in the request (Video 1, Image N), and what changed versus the previous upload or approach; then wait for the user's go. Production agents stop with a blocker ("upload approval") instead of uploading; the main session relays. Already-uploaded media ids can be submitted as planned.
+**Why:** the user wants the runs to proceed without stopping for their sign-off.
+
+**How to apply:** build, upload and submit references without an approval step; production agents upload their own inputs (no "upload approval" blocker). Make the judgement calls yourself (a weak spot, a pick swap, a fix generation within the QC-fixes rule) and report them in the wrap-up with the reason. The pipeline's own fixed questions at a run's start (mode, model, inputs, count, QC fixes, audio) are not covered by this; mid-run asks are. Still name every file by its full path when reporting ([[always-full-paths]]). Related: [[references-built-per-generation]].
