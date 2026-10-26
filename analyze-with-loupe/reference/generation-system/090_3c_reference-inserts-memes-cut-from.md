@@ -4,6 +4,10 @@ An **insert** is footage that interrupts the reference's own scene: a meme clip,
 snippet, a reaction image, usually with its own sound (analysis card → "Inserts"). Example: a 27 s
 reference has 13 s of its own footage, a 2 s meme with a meme sound, then 12 s more footage.
 
+**Create: only with `state.json → memes = include`** (or no key; contract item 32). With `none` a Create video has no insert or
+meme sound of any kind: a reference's meme beat is played by the generated scene, never by a generated copy. Recreate keeps its
+references' own inserts; Free follows its requirement.
+
 1. **Generate only the reference's own content.** In the example that is one 25 s generation; the
    time budget (§2.2) covers those 25 s.
 2. **Split points.** Each insert k gets a split point in the generated timeline:

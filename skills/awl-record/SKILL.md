@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- capcut-assembly §6: `AWL/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (0.8 KB)
-- production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (0.9 KB)
+- capcut-assembly §6: `AWL/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (1.1 KB)
+- production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.1 KB)
 
 A production agent does not touch `state.json → videos[]` or `next_step`: it writes `result.json` and `readme-row.md`, and the main session appends `videos[]` as the agent reports (`production-agents` §5 item 1).
 
@@ -42,9 +42,8 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     `60-outputs/video-NN/readme-row.md` and the main session appends it as the agent reports, A9b): direction, model, params, prompt file, assets, job
     id, attempt, credits, verdict, final path, notes. For a multi-clip video, list every clip's
     job id and the seam methods. Analyze Mode adds the CapCut project name, the inserts and the
-    text events. With an own voiceover (item 31): the method, the voice, the language, the preference, the form, the take's file and
-    attempt, the sync pass's job id (lipsync), whether the take was kept or laid back (native), the mix offset and tempo (overlay), and
-    "pronunciation: not checked (listen)"; `video-NN-clean.mp4` carries the voice.
+    text events. With an own voiceover (item 31): its `result.json → voiceover` line ("pronunciation: not checked (listen)" included);
+    `video-NN-clean.mp4` carries the voice.
   - Update `state.json` (`videos[]`, `next_step`), then move to the next video. In Edit Mode, only
     after the user said "Looks good".
 

@@ -278,9 +278,24 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   `T contract` fills the Voiceover line (`off` for a run without the key, so the run in progress is untouched); `T status` reports the choice and the takes.
 - **Measured.** `eleven_v4`: 242 credits for a 240-character script (tags count). Albanian (`sq`) is in no official language list and still voiced well on
   2026-10-26. The MCP's `text_to_speech` writes only under its base path (another folder answers "not writeable"), and its file names hold brackets.
-- **Tests.** t01 +8 checks (the reference, the router item, the start questions and their order, the Free rule, the wiring of every step, the contract, the
-  command); t02 +23 checks on synthetic tone bursts (record: phrases, pauses, spoken words, the kept earlier take, the state key, a transcribed own file; align:
-  the built-in 0.25 s found at r=1.0; mix: the muted and the kept bed, the voice track, cut speech reported; the contract's Voiceover line on and off).
+- **Inspection of the whole chain** (the user asked for anything missed, skipped or disconnected). Fixed: `awl-qc` had no route back to
+  `awl-postprocess` step 5b once the picture passed (it went straight to the CapCut step) and a declined fix now applies the voice first;
+  a planner fork (produce item 30) calls no generation tool, so the main session writes the lines and records the take before the fork
+  plans the rest; `awl-feedback` handles a report about the voice (a new take, then by method) or the lips; the CapCut clip per method is
+  named (overlay: the clean picture plus the voice track, never `with-voiceover.mp4`, whose voice would double; inserts split the voice
+  track); a clip's sync pass is `NN-cK-sync`; a synced file whose sound is not the take gets it laid back; `result.json → clean` names the
+  voiced file; `awl-model-guide` names the guide's §2.2 and §3.9 for a voiceover request; QC reads the `result.json` schema it writes into.
+  Toolkit: `voiceover outdir` reads the server's own `ELEVENLABS_MCP_BASE_PATH` from `~/.claude.json` (the toolkit's shell never sees the
+  server's env, so a custom base path would have been refused as "not writeable"); `voiceover record --span` takes one clip's part of a
+  user's longer file; `lint-run` counts the ledger's job ids as known (a sync request names its clip's job) and reports the Voiceover line;
+  `doctor` reports the ElevenLabs MCP and its base path, never the key. Also refreshed: 40-odd Read-now sizes that had drifted since
+  2026-10-22 (generation-system §4b.6: 8.1 → 14.2 KB). The 26 citations `docs_tool.py coverage` still lists were read one by one: pointers
+  inside rule texts and misattributions (`higgsfield-mcp.md` §9 counted as generation-system §9), none a read a step needs.
+- **Tests.** t01 +8 checks (the reference, the router item, the start questions and their order, the Free rule, the wiring of 19 steps,
+  the contract, the command); t02 +29 checks on synthetic tone bursts (record: phrases, pauses, spoken words, the kept earlier take, the
+  state key, a transcribed own file, a clip's span; align: the built-in 0.25 s found at r=1.0; mix: the muted and the kept bed, the voice
+  track, cut speech reported; outdir from the server's config without printing its key; the sync pass's ledger lane and its ids in
+  lint-run; the contract's Voiceover line on and off). All suites: t01 78, t02 101, t03 30, t05 11; the rehearsal 211/211.
 - **Hypotheses to test** (the pilot video of the first voiced run measures them):
   1. native on Wan 3.0 / Prime: the generated file's sound is the take (`T voiceover align` near 1 at near 0) and the on-camera speaker's mouth opens within
      0.1 s of each phrase start; proven when 3 of 3 voiced videos need no lay-back and no sync pass.
@@ -289,3 +304,31 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   3. lipsync's first generation on Seedance speaks the verbatim words in an unofficial language closely enough for the sync pass to land; else write the
      dialogue in the take's language and report how close the mouths came.
   4. a language outside the official list (Albanian) keeps its pronunciation over a whole run: the user's ear is the only check (no agent listens).
+
+## 2026-10-26 · memes in Create (contract item 32), and the always-loaded text kept lean
+
+- **Why.** The user (2026-10-26): Create must offer "include meme" and "don't include meme". Without memes "there is not meme screen record,
+  video or any other type of meme or slip clip in the video, totally pure video generation content"; with memes, memes or other original
+  clips go in between the generated parts, as the pipeline did for every Create run (it cut a reference's meme into the final whenever the
+  style called for one, with no way for the user to say no). And: "make sure to avoid causing any memory context rot in pipeline agents".
+- **What.** `awl-start` step 2c asks it in the same call as the voiceover method (header "Memes", "Include memes" / "No memes: pure
+  generation", none recommended; `$ARGUMENTS` `memes` / `no-memes`); `state.json → memes` = `include` | `none`, a Create run without the key
+  includes them (the run in progress is untouched). With `none`: no insert or meme sound of any kind, a reference's meme beat played by the
+  generated scene, never by a generated copy; the choice wins over the house approach. Wired into `awl-create-plan` (the seeds),
+  `awl-asset-plan` (the whole length is generated and counts), `awl-plan-video` (the insert plan, the sound plan), `awl-precheck` (X4),
+  `awl-postprocess` (the CapCut project), `awl-qc` (an insert found is removed), `awl-free-plan` step 2c (the requirement decides; silent, an
+  insert only as a visible [I] line of the confirmation), `awl-analyze-produce` and the contract (`T contract` fills "Memes: n/a | none |
+  include | as your plan says"; `lint-run` reports the line; `status` prints `memes`); generation-system §3c, capcut-assembly §3, §3b, §5,
+  creative-direction §4, analysis-protocol §2 state the condition. Router item 32.
+- **Context budget.** Measured against the commit before items 31–32 (`e5ccec5`): the voiceover work had added about 11 KB to every
+  production agent's always-loaded text (the per-video skills, the contract and its rules), even in runs without a voiceover. The method
+  details now live only in `reference/voiceover/` sections that load when a run has one (the sync request and the durations moved into §8
+  and §6, the store line into §1); each step keeps a one- or two-line pointer; the contract's duty paragraph is said once (§2), not again in
+  §3; the contract lines are short; `T voiceover align` prints its summary and leaves every window in `vo-align.json`. Result: a production
+  agent +4.7 KB of 112 KB (+4 %), the main session for a Create run +13.8 KB (+8 %), both including the inspection fixes and item 32.
+- **Tests.** t01 +4 checks (item 32 in the router, the start question before the model menu, the wiring of eight skills, the contract line
+  and §3c), t02 +2 (the Memes line for none and for a Create run without the key; status) and the lint-run and align checks extended (the
+  Memes line; align's stdout without the window list). All suites: t01 82, t02 103, t03 30, t05 11.
+- **Hypotheses to test:** (1) a `none` Create run delivers videos whose read-back timelines hold generated pieces only, and no reference's
+  meme beat is replaced by a generated imitation; (2) a `none` run's longer generated length changes the 30 s permission count as planned;
+  (3) the production agents of a voiced run read the voiceover sections once each and stay within their context with five agents running.

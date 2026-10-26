@@ -36,7 +36,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §4b.3: `AWL/reference/generation-system/170_4b.3_one-anchor-persistent-ledger-tra.md` (3.0 KB)
   - generation-system §4b.4: `AWL/reference/generation-system/180_4b.4_ambient-integration-it-must-not.md` (2.7 KB)
 - *a placed product (every reference that places it carries the placement marker; Recreate and Edit Mode: in the prepared source):*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (8.1 KB)
+  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (14.2 KB)
   - generation-system §4b.7: `AWL/reference/generation-system/205_4b.7_reckoning-the-marker-real-size-d.md` (4.2 KB)
 - *Edit Mode or Recreate (the source action script):*
   - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
@@ -44,7 +44,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §3b: `AWL/reference/generation-system/040_3b_videos-longer-than-one-generatio.md` (0.8 KB)
   - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
 - *a video with inserts:*
-  - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.3 KB)
+  - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.6 KB)
 - anomaly-catalog §0: `AWL/reference/anomaly-catalog/010_0_four-questions-behind-every-anom.md` (1.5 KB)
 - anomaly-catalog §1: `AWL/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.6 KB)
 - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
@@ -64,7 +64,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - creative-direction §2: `AWL/reference/creative-direction/020_2_the-goal-model-written-into-20-a.md` (1.4 KB)
 - creative-direction §3: `AWL/reference/creative-direction/030_3_the-audience-model-mass-cognitio.md` (3.0 KB)
-- creative-direction §4: `AWL/reference/creative-direction/040_4_the-trend-read-written-into-20-a.md` (1.9 KB)
+- creative-direction §4: `AWL/reference/creative-direction/040_4_the-trend-read-written-into-20-a.md` (2.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *Create (the craft carried, the copy test):*
   - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (4.7 KB)
@@ -77,21 +77,20 @@ Only these section files for this phase, nothing else unless a step below says s
 - *guardrails supplied:*
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - *Create (the sound plan):*
-  - capcut-assembly §3b: `AWL/reference/capcut-assembly/040_3b_sound-layer-create.md` (4.8 KB)
+  - capcut-assembly §3b: `AWL/reference/capcut-assembly/040_3b_sound-layer-create.md` (5.1 KB)
 - *an own voiceover (`state.json → voiceover.enabled` true and, in Free, this video in `voiceover.videos` when that key exists; item 31):*
   - voiceover §3: `AWL/reference/voiceover/030_3_writing-the-lines-x1.md` (2.3 KB)
-  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.1 KB)
+  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.4 KB)
   - voiceover §5: `AWL/reference/voiceover/050_5_on-camera-or-off-screen-and-whic.md` (1.1 KB)
-  - voiceover §6: `AWL/reference/voiceover/060_6_in-the-request-x2-by-what-the-lo.md` (3.1 KB)
+  - voiceover §6: `AWL/reference/voiceover/060_6_in-the-request-x2-by-what-the-lo.md` (3.3 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §1 at a glance, §3.14 integration and continuity, §5 failure modes (where the guide lists size or place as a limit), §6 features
 - the registry `RUN/30-assets/registry.md`, the card `RUN/20-analysis/cards/<V>.md`, `RUN/20-analysis/house-approach.md` when it exists
 
 ### ElevenLabs tools (an own voiceover only, item 31)
 
-Deferred: load them before the first take of the run (the main session voices every take; a planner fork and the production agents never call
-ElevenLabs: with forks, this session writes the lines and records the take before the fork plans the rest, `awl-analyze-produce` item 30):
-`ToolSearch "select:mcp__elevenlabs__text_to_speech,mcp__elevenlabs__get_voice,mcp__elevenlabs__check_subscription"`. None found, or the
-call fails: a blocker, reported with the real error (`voiceover.md` §4 step 8).
+Load before the first take: `ToolSearch "select:mcp__elevenlabs__text_to_speech,mcp__elevenlabs__get_voice,mcp__elevenlabs__check_subscription"`.
+Only this session voices takes (never a planner fork, `awl-analyze-produce` item 30, or a production agent); none found, or a failed call:
+a blocker with the real error (`voiceover.md` §4 step 8).
 
 ## Step X1
 
@@ -168,7 +167,8 @@ call fails: a blocker, reported with the real error (`voiceover.md` §4 step 8).
       it is of the product's category, or excluded in the prompt. Nothing carries over by accident;
     - the **house approach** (when examples exist, `20-analysis/house-approach.md`): the rules this
       video applies, and how;
-    - for a video with **inserts**, the **insert plan** (`generation-system.md` §3c):
+    - for a video with **inserts** (Create: only with `memes=include`, item 32; with `none` its own beats carry a reference's meme beat),
+      the **insert plan** (`generation-system.md` §3c):
       - the generated length (the reference minus its inserts);
       - each split point as a planned beat boundary;
       - each insert's cut (in, out, video or still, sound, overlays to clean);
@@ -180,25 +180,13 @@ call fails: a blocker, reported with the real error (`voiceover.md` §4 step 8).
       - the soundtrack's role, mood, tempo and how its energy moves, read from the references' sound-profile numbers;
       - its source: a supplied track, the reference's own speech-free sound (only when its profile measured the speech share: in a
         frames-only run `speech_share` is null and the reference's sound is not reused whole), or a matching track to download;
-      - the sound effects and their hit points on the new video's beats;
+      - the sound effects and their hit points on the new video's beats (no meme sound with `memes=none`);
       - with an own voiceover, the soundtrack sits under the voice (about 0.25) and no effect lands on a word;
-    - the **voiceover** (an own voiceover, item 31; `voiceover.md` §3–§6), written before the beats are final, in a "Voiceover" block of
-      the plan:
-      - the method (`voiceover.method`: native, lipsync or overlay), the speaker and the form under it (on-camera or off-screen, §5) with
-        the voice and the reason in one line; with lipsync, the sync pass as a planned second generation of the video (§6), named in the brief
-        with its cost once its clip exists; with native on Wan 2.7, the start frame (the speaker with the product at t=0) that X3 builds;
-      - the lines (§3) in the run's language, the preference's dialect or accent, the emotion tags, sized to the length budget; the text
-        as sent goes alone into `40-briefs/video-NN[-cK]-voiceover.txt`, and the plan quotes it with one English line when the language is
-        another;
-      - the take (§4): `T voiceover outdir --run RUN`, one `text_to_speech` call, then `T voiceover record --run RUN --video NN --attempt K --file "<the saved file>" --script <that .txt> --voice-id <id> --voice-name "<name>" --model <id> --language <iso> --preference "<words>" --mode on-camera`
-        (`--mode off-screen` for that form); read its phrases, pauses and speech end, and judge the fit (§4 step 4: native and lipsync take
-        the take as it is, so too long means a shorter script and a second take; overlay may speed it up to about 8 % with `--tempo` in
-        post); a video whose take is already recorded (`state.json → voiceover.files.NN`, a resume) is never voiced again;
-      - then **re-time the plan to the take** (§4 step 5): the beats on its phrases, the cuts and product beats in its pauses, the
-        generation's duration by the method (native: the take's whole length rounded up; lipsync: at least the take's length; overlay: its
-        speech end plus 0.3 to 0.6 s), in the model's whole seconds and within its audio limits (§6; native at most 15 s per generation, a
-        longer take split into clips, §4 step 6), and the QC checkpoints with dense ranges at three phrase starts and one pause;
-      - the user's own files (source `file`): §4 step 7 (no ElevenLabs call; the file's words, given or transcribed);
+    - the **voiceover** (an own voiceover, item 31; `voiceover.md` §3–§6), a "Voiceover" block written before the beats are final: the
+      method and the form with the voice and its reason (§5); the lines (§3), the text as sent alone in `40-briefs/video-NN[-cK]-voiceover.txt`;
+      the take (§4 steps 1–3: `T voiceover outdir`, one `text_to_speech` call, `T voiceover record`; a recorded take is never voiced again);
+      its fit and the plan re-timed to it (§4 steps 4–6: the beats on its phrases, the duration by the method, three phrase starts and one
+      pause as QC checkpoints); lipsync names its sync pass, native on Wan 2.7 its start frame; the user's own files: §4 step 7;
     - for a **multi-clip** video, the **clip plan** (`generation-system.md` §3b):
       - the seams, on the reference's cuts first;
       - the join method of each seam (from `index.json → continuation`);
@@ -218,11 +206,8 @@ call fails: a blocker, reported with the real error (`voiceover.md` §4 step 8).
 
 ## Rules this phase owns (contract items 6, 9, 14, 16, 18, 21, 31)
 
-31. **Own voiceover: the take is the timing master** (`voiceover.md`). When the run has one (`state.json → voiceover.enabled`; Free: the
-    videos in `voiceover.videos`, or all), this session writes each video's lines, voices them once through the ElevenLabs MCP, records the
-    take with `T voiceover record`, and plans the video to the take's measured phrases under the user's method (native: the take drives the
-    generation; lipsync: the speaking scene, then the sync pass; overlay: no dialogue, the take placed over the picture); production agents
-    upload, bind, verify, sync or mix, place and check it, and never voice anything.
+31. **Own voiceover: the take is the timing master** (`voiceover.md`): this session writes, voices and records each voiced video's take
+    and plans the video to it; production agents upload, carry, check and record it, and never voice anything.
 
 6. **Text policy depends on the mode** (`reference/text-and-format.md`):
    - Edit Mode removes all source text unless the user keeps specific text.
@@ -295,6 +280,7 @@ call fails: a blocker, reported with the real error (`voiceover.md` §4 step 8).
     - A meme or other insert that interrupts the reference (e.g. 13 s of footage + a 2 s meme with
       its sound + 12 s of footage) is cut from the reference with its sound. A video meme is never
       screenshotted.
+    - Create uses inserts only when the user chose memes (`state.json → memes`, item 32).
     - Only the reference's own content is generated (Create) or edited (Recreate): 25 s in the
       example, with a beat boundary at the split.
     - Every video becomes its own CapCut project `DD_Mon_YYYY_vNN` (e.g. `01_Oct_2026_v03`). The
@@ -350,6 +336,7 @@ call fails: a blocker, reported with the real error (`voiceover.md` §4 step 8).
   only its height follows the reference.
 - Never generate a reference insert (meme, film snippet, reaction image). Cut it from the reference
   with its sound, and never reduce a video meme to a screenshot.
+- Never plan an insert or a meme sound in a Create video when `memes=none` (item 32), and never imitate the meme in the scene.
 - Never deform a client asset's canonical geometry or identity to fit a reference object.
 - Never leave the client's product out of an Analyze Mode video because the reference had nothing
   to swap. Integrate it instead, as contents or as a natural placement. Never force an unrelated
@@ -384,9 +371,8 @@ call fails: a blocker, reported with the real error (`voiceover.md` §4 step 8).
   changes size across a cut, or one larger than the hand that holds it (`anomaly-catalog.md` §2.7).
 - Never plan a product that is handled on screen without its affordance sheet in the registry
   (§1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).
-- Never write a voiceover line a reference spoke, never plan a length that cuts a take's speech, never voice the same script twice or a
-  take that is already recorded, never leave a take unrecorded (`T voiceover record`), and never let the model's own voice stand in for a
-  take that failed (item 31).
+- Never write a voiceover line a reference spoke, never voice a script twice or a recorded take again, never leave a take unrecorded,
+  and never let the model's own voice stand in for a take (item 31).
 
 ## Hand-off
 

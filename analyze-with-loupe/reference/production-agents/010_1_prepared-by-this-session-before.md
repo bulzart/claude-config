@@ -17,5 +17,6 @@
   - `long_videos.NN`: the permissions;
   - `analyze_submode` (`recreate`, `create` or `free`; a Free run also `free_references`, `videos_kind` per video and `free_plan_confirmed`), `model`, `qc_fixes` (`ask` or `auto`; the contract's "QC fixes" line), `loupe` (`up` or `down`; the contract's "Loupe" line),
     `audio_ingest` (`whisper` or `frames-only`; the contract's "Audio ingest" line), `voiceover` (the method, the voice, the language,
-    the preference and every take in `voiceover.files`, `30-assets/voiceover/`; the contract's "Voiceover" line, item 31).
+    the preference and every take in `voiceover.files`, `30-assets/voiceover/`; the contract's "Voiceover" line, item 31), `memes`
+    (Create: `include` or `none`, none set = `include`; the contract's "Memes" line, item 32).
 

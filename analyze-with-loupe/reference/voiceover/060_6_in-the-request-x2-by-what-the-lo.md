@@ -11,6 +11,8 @@ switched for the voiceover: the method was chosen with it.
 | **lipsync**, the sync pass | `{"model":"sync_so","medias":[{"role":"input_video","value":"<the accepted clip's job id>"},{"role":"input_audio","value":"<the take's media id>"}],"sync_mode":"silence"}` in `50-requests/video-NN-sync-request.json` (`silence` pads the voice to the clip's length; the other modes loop, bounce, cut or retime the picture) |
 | **overlay** | no dialogue: the guide's no-dialogue line ("no dialogue, mouths naturally closed, no narration; only the specified ambience and action sounds"); no audio reference; native audio on for the ambience, or off where the guide's mute is cleaner |
 
+- **The duration** (§4 step 5), in the model's whole seconds: native the take's whole length rounded up (at most 15 s per generation);
+  lipsync at least the take's length; overlay the speech end plus 0.3 to 0.6 s.
 - Written dialogue wins over an audio reference in Seedance and Wan, so in **lipsync** it is the take's `spoken_text` exactly, in the take's
   language, never a translation or a paraphrase.
 - Unverified on Higgsfield as of 2026-10-26: how faithfully a driving audio is kept as the soundtrack and followed by the lips (both Wan guides

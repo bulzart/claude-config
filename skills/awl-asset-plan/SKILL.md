@@ -31,11 +31,8 @@ Only these section files for this phase, nothing else unless a step below says s
   - which product or object entity, and which variant (with its contents sample when needed);
   - which character(s). Recreate: which character replaces which person;
   - any interface, brand or environment asset;
-  - **with an own voiceover** (item 31; `voiceover.md` §5; Free: the videos in `voiceover.videos`, or all when the key is absent): the voice
-    and the form of every voiced video under the run's method (`voiceover.method`): the speaking character's own voice (`voiceover.voices`),
-    else the run's voice where it fits that character's registry row (apparent gender and age against the voice's labels), else the
-    off-screen form; on-camera or off-screen (overlay: always off-screen; lipsync: an on-camera video gets the sync pass, one without a
-    visible speaker takes the overlay form), with the reason in one line. The user's own files (source `file`): which file is which video's.
+  - **with an own voiceover** (item 31; `voiceover.md` §5; Free: the videos in `voiceover.videos`, or all): the voice and the form of
+    every voiced video under `voiceover.method`, with the reason in one line; the user's own files: which file is which video's.
 - **Fit the brand to the scene first** (CE-020): a food, grill, party or sport scene suits a drink; a
   desk, class, meeting, work or commute scene suits a focus product. The plan states the tie in one
   line, and a reference with no tie for one brand goes to the other, whatever free surface it offers.
@@ -65,9 +62,8 @@ Only these section files for this phase, nothing else unless a step below says s
   prominence, how often the product is used, and the clip and text habits. Record which of its rules
   each video applies.
 - Give every video a **planned length**:
-  - **Create:** its direction's typical length, adapted to the concept (with an own voiceover, long enough for its lines at about 2.3 to
-    2.8 spoken words per second plus 0.3 s before and 0.5 s after the speech, and with the native method at most 15 s of voice per
-    generation; the take itself sets the final length in X1);
+  - **Create:** its direction's typical length, adapted to the concept (with an own voiceover, long enough for its lines at
+    about 2.5 spoken words per second, native at most 15 s of voice per generation; the take sets the final length in X1);
   - **Recreate:** the reference's own length.
   Only the generated or edited part counts toward generations: inserts are cut, never generated.
 - Show the plan in one line per video and proceed; the user can change it by replying. Examples:
@@ -76,6 +72,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - `Video 4 — D2 — ~27 s (25 s generated + 2 s meme) — product A (peach) as contents: cup + open can`;
   - `Video 5 — D4 — ~15 s — product C (the car, red) via placement: parked at the curb behind him`;
   - `Video 6 — G2 — ~12 s — product A via placement (in hand) + character "anna", voiceover native: Sarah on-camera`.
+  With `memes=none` (Create, item 32) no row carries a meme or another insert: every second is generated.
 - **Never** fill a gap from the references folder. If a planned concept needs something that was not
   supplied, adapt the concept to the supplied assets, e.g. hands-only POV when no character was
   supplied. If no adaptation keeps the direction's mechanism, ask one question: drop the element, or
@@ -107,7 +104,7 @@ generated without the user's permission. Nothing else in Analyze Mode asks for p
      (a model with a shorter maximum). Its brief states the clip count.
    - Only **generated** content counts: reference inserts (memes) are cut, not generated
      (`generation-system.md` §3c). Example: a 35 s reference with 6 s of memes is one 29 s
-     generation, so no question.
+     generation, so no question. A Create run with `memes=none` (item 32) has no inserts: its whole length is generated and counts.
 
 ## Rules this phase owns (contract items 11, 14, 15)
 

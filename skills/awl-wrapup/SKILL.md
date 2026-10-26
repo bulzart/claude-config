@@ -19,10 +19,10 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Analyze Mode with CapCut projects still pending:*
   - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (1.9 KB)
   - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
-  - capcut-assembly §3: `AWL/reference/capcut-assembly/030_3_build-the-timeline.md` (4.6 KB)
+  - capcut-assembly §3: `AWL/reference/capcut-assembly/030_3_build-the-timeline.md` (5.1 KB)
   - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (2.3 KB)
-  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.2 KB)
-  - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.0 KB)
+  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.3 KB)
+  - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 
 ## 6. Wrap-up (both modes)
 

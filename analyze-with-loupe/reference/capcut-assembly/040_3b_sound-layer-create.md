@@ -41,7 +41,7 @@ CapCut, shaped by the references' sound profiles (`10-media/<V>/audio-profile.js
         It holds whoosh, whoosh-cinematic, impact-bass, riser, glitch, pop, chime, click, ping,
         sparkle and more, under the Pixabay license (commercial use, no credit);
       - for a named meme sound the references use, a downloaded royalty-free equivalent
-        (`--role sfx:<name>`).
+        (`--role sfx:<name>`), only when the user chose memes (item 32): with `memes = none` no meme sound is used.
    - Never use audio whose license is unknown.
 3. **Place it on its own audio tracks** (`capcut_add_track type:"audio"` when needed):
    - **Soundtrack:** `capcut_add_audio {file, atSec:0, durSec:<video length>, srcStartSec:<in-point>,

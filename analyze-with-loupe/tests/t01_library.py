@@ -206,14 +206,28 @@ check("31. **Own voiceover" in router and "mcp__elevenlabs__search_voices" in ro
 check('header "Voiceover"' in st and 'header "Voice"' in st and 'header "Language"' in st and 'header "Voice style"' in st and "voiceover.method=native|lipsync|overlay" in st
       and "2b. **Own voiceover" in st and st.index("2b. **Own voiceover") < st.index("4. **Model"), "awl-start asks the method before the model menu, then the voice, the language and the style, and stores state.json -> voiceover")
 check("2b. **Own voiceover: only when the requirement asks for it**" in fp and "never offers, recommends or asks it" in fp, "the free plan uses a voiceover only when the requirement asks and never suggests one")
-vo_wired = [("awl-plan-video", "T voiceover record"), ("awl-plan-video", "T voiceover outdir"), ("awl-write-request", "**native**"), ("awl-inputs", "audio/mpeg"),
+vo_wired = [("awl-plan-video", "T voiceover record"), ("awl-plan-video", "T voiceover outdir"), ("awl-write-request", "**native**"), ("awl-inputs", "`voiceover.md` §7"),
             ("awl-precheck", "Own voiceover"), ("awl-postprocess", "T voiceover align"), ("awl-postprocess", "T voiceover mix"), ("awl-postprocess", "sync_so"),
             ("awl-submit", "--video NN-sync"), ("awl-qc", "Own voiceover"), ("awl-record", "pronunciation: not checked"), ("awl-wrapup", "Voiceover:"),
-            ("awl-analyze-produce", "`voiceover` (a take"), ("awl-create-plan", "voiceover.method"), ("awl-asset-plan", "voiceover.method")]
+            ("awl-analyze-produce", "`voiceover` (a take"), ("awl-create-plan", "voiceover.method"), ("awl-asset-plan", "voiceover.method"),
+            ("awl-qc", "X8 step 5b has not run yet"), ("awl-analyze-produce", "a fork never voices a"), ("awl-feedback", "**A voiced video (item 31).**"),
+            ("awl-postprocess", "never `with-voiceover.mp4`")]
 vo_miss = [f"{s}: {n}" for s, n in vo_wired if n not in rd(SKD / s / "SKILL.md")]
 check(not vo_miss, "the own voiceover is wired into every step that acts on it: " + "; ".join(vo_miss))
 check("Voiceover: <voiceover>" in rd(PA / "020_2_spawning.md") and "`voiceover`" in rd(PA / "030_3_the-agent-s-contract.md") and '"voiceover"' in rd(PA / "040_4_60-outputs-video-nn-result-json.md"),
       "the agent contract carries the Voiceover line, the voiceover blocker and the result field")
 check("voiceover" in cmds, "awl.py has the voiceover command")
+
+# --- memes in Create (item 32): asked at the start beside the voiceover method, stored, honoured wherever an insert is planned, placed or
+#     checked; the contract carries it; Free takes it from the requirement
+check("32. **Memes in Create" in router and "item 32 →" in router, "the router has contract item 32 and its labels")
+check('header "Memes"' in st and "memes=include" in st and "memes=none" in st and "2c. **Memes" in st and st.index("2c. **Memes") < st.index("4. **Model"),
+      "awl-start asks the memes choice in Create, before the model menu, and stores state.json -> memes")
+mm_wired = [("awl-create-plan", "`memes=include`"), ("awl-plan-video", "`memes=include`"), ("awl-postprocess", "`memes=include`"), ("awl-qc", "`memes=none`"),
+            ("awl-precheck", "`memes=none`"), ("awl-asset-plan", "`memes=none`"), ("awl-free-plan", "`memes=include`"), ("awl-analyze-produce", "\"Memes\" line")]
+mm_miss = [f"{s_}: {n}" for s_, n in mm_wired if n not in rd(SKD / s_ / "SKILL.md")]
+check(not mm_miss, "the memes choice is wired into every step that plans, places or checks an insert: " + "; ".join(mm_miss))
+check("Memes: <memes>" in rd(PA / "020_2_spawning.md") and "**Memes**" in rd(PA / "030_3_the-agent-s-contract.md")
+      and "memes = include" in rd(GS / "090_3c_reference-inserts-memes-cut-from.md"), "the contract carries the Memes line and its check; generation-system §3c states the Create condition")
 
 finish()

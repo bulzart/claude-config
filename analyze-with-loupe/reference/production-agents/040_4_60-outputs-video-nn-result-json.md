@@ -16,5 +16,6 @@
 `keeper_gaps` lists, one line each, what the Loupe keeper said the library does not cover for this video (`not_covered`) and every question of
 its still unmet after the `--note` re-ask (`qc-consult`, and `plan-hints` when the pattern card's "Sample hints" block names one): what was asked
 and why it could not be answered. Empty when the keeper had everything it needed. The main session reports them in the wrap-up for the admin.
+With an own voiceover (command item 31), `clean` names the file whose sound is the take (`reference/voiceover/` §8).
 `fix_proposal` is set only with `blocker: qc_fix_permission` (QC fixes `ask`): `{"findings": ["<expected, why, seen, frame paths>", …], "cause": "<the diagnosis>", "retry_changes": "<what the corrected request changes>", "request": "<path of the corrected request.json>", "credits_now": <n>, "preflight_credits": <n>}`.
 

@@ -24,15 +24,15 @@ Stored as section files in `voiceover/` (next to this file); **read only the sec
 
 | § | Section | File | KB |
 |---|---|---|---|
-| 1 | The state and the files | `010_1_the-state-and-the-files.md` | 2.1 |
+| 1 | The state and the files | `010_1_the-state-and-the-files.md` | 3.0 |
 | 2 | The choice at the start (Create; Free from the requirement) | `020_2_the-choice-at-the-start-create-f.md` | 5.5 |
 | 3 | Writing the lines (X1) | `030_3_writing-the-lines-x1.md` | 2.3 |
-| 4 | Generating and recording a take (X1) | `040_4_generating-and-recording-a-take.md` | 3.1 |
+| 4 | Generating and recording a take (X1) | `040_4_generating-and-recording-a-take.md` | 3.4 |
 | 5 | On-camera or off-screen, and which voice | `050_5_on-camera-or-off-screen-and-whic.md` | 1.1 |
-| 6 | In the request (X2), by what the locked model takes | `060_6_in-the-request-x2-by-what-the-lo.md` | 3.1 |
+| 6 | In the request (X2), by what the locked model takes | `060_6_in-the-request-x2-by-what-the-lo.md` | 3.3 |
 | 7 | Uploading the take (X3) | `070_7_uploading-the-take-x3.md` | 0.7 |
-| 8 | After the generation (X8), by method | `080_8_after-the-generation-x8-by-metho.md` | 2.8 |
-| 9 | In the CapCut project | `090_9_in-the-capcut-project.md` | 1.0 |
+| 8 | After the generation (X8), by method | `080_8_after-the-generation-x8-by-metho.md` | 3.3 |
+| 9 | In the CapCut project | `090_9_in-the-capcut-project.md` | 1.6 |
 | 10 | QC of a voiceover (X9) | `100_10_qc-of-a-voiceover-x9.md` | 1.4 |
 | 11 | Credits, licence and honesty | `110_11_credits-licence-and-honesty.md` | 1.1 |
 <!-- sections:end -->

@@ -17,6 +17,13 @@ resume never asks it again.
 | `videos` | Free only: the video numbers the requirement gives a voiceover (absent: every video) |
 | `files` | written by `T voiceover record`: one entry per video or clip (`01`, `02-c1`) with the current take's file, sidecar, length, speech span, form and attempt |
 
+**Store** (`awl-start` step 6, `awl-free-plan` step 5): `T state --run RUN set voiceover.enabled=true voiceover.method=native|lipsync|overlay
+voiceover.source=elevenlabs voiceover.model_id=<id> voiceover.voice_id=<id> "voiceover.voice_name=<name>" voiceover.language=<iso>
+"voiceover.language_name=<name>" voiceover.language_official=true|false "voiceover.preference=<the user's words>" voiceover.output_format=mp3_44100_128
+voiceover.tier=<tier> voiceover.characters_left_at_start=<n>`, plus `voiceover.settings='{"stability":0.5,"similarity_boost":0.75,"style":0,"speed":1.0,"use_speaker_boost":true}'`,
+`voiceover.voices='{"<character>":{"voice_id":"…","voice_name":"…"}}'` for `character = voice` pairs and `voiceover.preference=null` without a
+preference; the user's own files: `voiceover.source=file`, the language keys and no voice keys.
+
 Every take is kept in the run as `30-assets/voiceover/video-NN[-cK]-aK.<ext>` beside its sidecar `….json` (the script as sent, the spoken
 words, the voice, the settings, the measured phrases and pauses). The ElevenLabs MCP writes only under its own base path
 (`ELEVENLABS_MCP_BASE_PATH`, by default the Desktop): `T voiceover outdir` makes the run's folder there, and `T voiceover record` copies each

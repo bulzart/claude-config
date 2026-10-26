@@ -40,7 +40,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a placed product (posture):*
   - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (2.6 KB)
 - *a reference carried the placement marker, or a size retry adds one:*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (8.1 KB)
+  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (14.2 KB)
 - *Edit Mode or Recreate:*
   - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.6 KB)
   - generation-system §5c.5: `AWL/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (2.3 KB)
@@ -50,10 +50,12 @@ Only these section files for this phase, nothing else unless a step below says s
 - creative-direction §8: `AWL/reference/creative-direction/110_8_creative-qc-x9-as-notes-the-narr.md` (0.9 KB)
 - brand-guardrails §5: `AWL/reference/brand-guardrails/050_5_qc-x9-and-the-wrap-up.md` (1.3 KB)
 - *Analyze Mode (the CapCut project):*
-  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.2 KB)
+  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.3 KB)
 - *an own voiceover (the plan has a Voiceover block; item 31):*
-  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (2.8 KB) (the fix routes)
+  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.3 KB) (the fix routes)
   - voiceover §10: `AWL/reference/voiceover/100_10_qc-of-a-voiceover-x9.md` (1.4 KB)
+- *a `result.json` field this phase writes (a fix proposal under QC fixes `ask`, the keeper's gaps, the voiceover verdict):*
+  - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.1 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §5 (failure table); §9 when a retry is planned
 - the plan's QC checkpoints (`RUN/40-briefs/video-NN-plan.md`), the contract's checks (`AWL/reference/production-agents/` §3 item 13, for a production agent)
 
@@ -199,13 +201,8 @@ Only these section files for this phase, nothing else unless a step below says s
     sheet). Every sync anchor should land within ±0.1 s of its sound: words on mouth movements, impacts on
     contact, steps on footfalls. Drift, or an action added, skipped or moved, is a regenerate reason; a
     steady offset is a post-fix.
-  - **Own voiceover** (item 31; `voiceover.md` §10), by the run's method, once X8 step 5b ran: the soundtrack (native, lipsync: your reading
-    of `T voiceover align`, the delivered sound is the take or was laid back; overlay: the mix facts, `vo_speech_cut_s` 0); the lips of an
-    on-camera speaker on 30 fps dense ranges around three phrase starts and one pause (the mouth opens within about 0.1 s of each phrase
-    start, rests in the pause, no listener mouths the words); after a sync pass, the face unharmed around the mouth and jaw; off-screen and
-    overlay, nobody in the frame speaks; pronunciation "not checked (listen)". Lips off on a native clip: the fix is a sync pass (or one
-    regeneration) under the QC-fixes choice; on a lipsync clip, one more sync pass, then the fallback of §8. A take that cannot fit is a
-    `voiceover` blocker, never re-voiced here. The verdict goes to `result.json → voiceover`.
+  - **Own voiceover** (item 31), once X8 step 5b ran: the checks and fix routes of `voiceover.md` §10 (the soundtrack, the lips, the face
+    after a sync pass); a take that cannot fit is a `voiceover` blocker, never re-voiced here. The verdict goes to `result.json → voiceover`.
   - **Leftovers** (`generation-system.md` §9b): only the must-not-survive list counts, and it is
     fixed autonomously.
   - **Label legibility** (`anomaly-catalog.md` §2.9, §4 step 5h): on a full-resolution frame at rest the
@@ -265,13 +262,13 @@ Only these section files for this phase, nothing else unless a step below says s
       that seam.
   - **Inserts:** each split point lands on a real beat boundary of the output (within ±0.5 s of the
     plan). Each insert is cut on its exact frames, with its sound, and a video meme is never a
-    screenshot.
+    screenshot. With `memes=none` (Create, item 32) there is none: only generated pictures, text layers, the soundtrack and ordinary
+    sound effects, no meme of any kind (clip, still, screen recording, snippet or sound); one found is removed.
   - **CapCut project** (Analyze Mode, `capcut-assembly.md` §5):
-    - the read-back timeline matches the plan (pieces, inserts, text times and positions);
+    - the read-back timeline matches the plan (pieces, inserts, text times and positions; with `memes=none`, no insert at all);
     - overlays exist only on their visible frames and fade with the picture; a Recreate's original audio
       is one segment; no text layer contains an emoji;
-    - an own voiceover is audible at 1.0 as its method places it (native, lipsync: the clip's own audio; overlay: the voice track, the
-      clip's sound at the bed volume), the soundtrack under it, nothing muted by mistake (`voiceover.md` §10);
+    - an own voiceover is audible at 1.0 (native, lipsync: the clip's audio; overlay: its own track), nothing muted by mistake;
     - `capcut lint` reports 0 errors;
     - the preview shows the right order, sound and text.
     Fix in the project, not by regenerating.
@@ -443,7 +440,7 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Hand-off
 
 - Edit Mode: the findings become the QC notes of the review. Return to the review (X9-R) in `awl-edit` (re-invoke it if its text is no longer in context); there is no automatic regeneration.
-- Analyze Mode, an own voiceover (the plan has a Voiceover block; item 31), the picture passed and X8 step 5b has not run yet: go back to `awl-postprocess` step 5b (the align, the sync pass or the mix), then return here for the voice checks; once they pass, `awl-postprocess` step 6 as below.
+- Analyze Mode, an own voiceover (item 31), the picture passed and X8 step 5b has not run yet: `awl-postprocess` step 5b, then the voice checks here, then step 6 as below.
 - Analyze Mode, the picture passed but the CapCut project is not built yet: go back to `awl-postprocess` step 6, then return here for the project checks.
 - Analyze Mode, accepted (picture and project): invoke Skill `awl-record` (X10).
 - Analyze Mode, one diagnosed regeneration: `awl-write-request` (the rewritten request; the diagnosis is already written in the brief as an attempt block) → `awl-inputs` only for new inputs → `awl-submit` (X5 again, X7, next attempt number) → `awl-postprocess` → `awl-qc`.

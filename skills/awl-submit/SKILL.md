@@ -16,7 +16,7 @@ Changing a request (the one diagnosed retry of X7 step 5, or after a flag): invo
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- higgsfield-mcp §3: `AWL/higgsfield/higgsfield-mcp/030_3_standard-execution-sequence-for.md` (3.9 KB)
+- higgsfield-mcp §3: `AWL/higgsfield/higgsfield-mcp/030_3_standard-execution-sequence-for.md` (4.6 KB)
 - higgsfield-mcp §8: `AWL/higgsfield/higgsfield-mcp/080_8_credits-and-cost.md` (1.1 KB)
 - higgsfield-mcp §9: `AWL/higgsfield/higgsfield-mcp/090_9_errors-and-recovery.md` (2.5 KB)
 - *Edit Mode or Recreate (the moderation fallback after a refused request):*
@@ -38,7 +38,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - **X7 — Submit and wait (ledger-recorded; no spam, no glitches).** A fix generation after a QC finding (attempt K+1) with QC fixes `ask` starts here only after the main session said `approved` or `auto`; until then you stop after X5 with the fix proposal (`awl-qc`, item 27).
   1. `T ledger begin --run RUN --video NN --attempt K --request 50-requests/video-NN[-aK]-request.json`
      (a clip: `--video NN-cK` with its own request file; the sync pass of an own voiceover: `--video NN-sync` with
-     `50-requests/video-NN-sync-request.json`, the same lane).
+     `50-requests/video-NN-sync-request.json`, a clip's `--video NN-cK-sync`, the same lane).
      - It **records a `pending` entry every time** and exits 0; it never refuses. It reports `conflicts[]`
        as facts, with the entries involved: an open submission (pending / submitted / unknown) in this
        video's lane; the submissions in flight in the run against the cap (`open_in_run`, `cap`); this

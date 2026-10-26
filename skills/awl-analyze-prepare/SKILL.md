@@ -13,13 +13,13 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- assets-and-substitution §2: `AWL/reference/assets-and-substitution/020_2_understanding-the-supplied-asset.md` (2.7 KB)
+- assets-and-substitution §2: `AWL/reference/assets-and-substitution/020_2_understanding-the-supplied-asset.md` (2.9 KB)
 - assets-and-substitution §3: `AWL/reference/assets-and-substitution/030_3_asset-registry-30-assets-registr.md` (1.5 KB)
 - brand-guardrails §1: `AWL/reference/brand-guardrails/010_1_finding-and-reading-the-guardrai.md` (1.8 KB)
-- brand-guardrails §2: `AWL/reference/brand-guardrails/020_2_rule-kinds-and-what-each-does-to.md` (4.7 KB)
+- brand-guardrails §2: `AWL/reference/brand-guardrails/020_2_rule-kinds-and-what-each-does-to.md` (4.9 KB)
 - anomaly-catalog §1: `AWL/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.6 KB)
 - *only when a product has no supplied spec and its size must come from the standard-size table:*
-  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.1 KB)
+  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
 - `AWL/pipeline/preprocessing.md` — only when a prep step reports an error
 
 ## 3. Analyze Mode

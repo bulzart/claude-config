@@ -25,7 +25,7 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | 3b.2 | · Join methods, by the locked model's capability (`continuation` in the in | `060_3b.2_join-methods-by-the-locked-model.md` | 3.2 |
 | 3b.3 | · Seam discipline | `070_3b.3_seam-discipline.md` | 2.4 |
 | 3b.4 | · Files and ledger | `080_3b.4_files-and-ledger.md` | 0.5 |
-| 3c | Reference inserts (memes): cut from the reference, never generated | `090_3c_reference-inserts-memes-cut-from.md` | 3.3 |
+| 3c | Reference inserts (memes): cut from the reference, never generated | `090_3c_reference-inserts-memes-cut-from.md` | 3.6 |
 | 4 | Replacement and insertion integration analysis | `100_4_replacement-and-insertion-integr.md` | 3.3 |
 | 4b | Natural placement and contents — when nothing in the reference is the sa | `110_4b_natural-placement-and-contents-w.md` | 1.2 |
 | 4b.0 | · Choose the integration form: the most suitable use and blend | `120_4b.0_choose-the-integration-form-the.md` | 4.1 |

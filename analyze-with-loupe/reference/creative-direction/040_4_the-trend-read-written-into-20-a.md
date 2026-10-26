@@ -12,7 +12,9 @@ The references are the trend corpus. For each family and for the folder as a who
   (platform cues, dates in file names or documents, how many references still use it).
 - **Freshness policy:** reuse structural mechanisms freely; reuse a surface element only when it
   is still current and the family's language needs it (a meme insert is cut from the reference,
-  never generated, `generation-system.md` §3c); never build a video on a dated surface element.
+  never generated, `generation-system.md` §3c, and in Create only when the user chose memes, item 32: with `none` a meme-insert
+  format is carried by its mechanism, the interruption and the reaction played in the generated scene); never build a video on a
+  dated surface element.
 - **Adapt, never copy:** a Create video uses the mechanism in a new situation; it never remakes a
   reference's scene with the product swapped in (that is Recreate). Two videos in the run never
   share a situation or a joke. What may be taken from a reference and what may not is fixed by the

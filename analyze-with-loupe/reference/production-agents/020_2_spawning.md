@@ -28,13 +28,10 @@ is timed from frames and cuts only, `T captions --from-speech` is not available,
 Loupe: <up|down> (state.json → loupe; none = up). Loupe commands start the web app themselves; you read the admin's samples only through
 `T qc-consult`, never from Loupe's data folder or database. If `qc-consult` answers `mode: unavailable` on an `up` run, run
 `T loupe ensure` once and ask again; if it stays unavailable, QC goes on without samples and the verdict says so.
-Voiceover: <voiceover> (state.json → voiceover, command item 31). When it is not off and your plan has a Voiceover block, the take is the
-voice your video carries, by the method the line names: native (the take rides as Audio 1, the driving audio; X8 step 5b keeps the
-generation's sound when it is the take, or lays the exact take back), lipsync (the take rides as the voice reference when the model has the
-role; once the picture passes, X8 step 5b runs the sync pass `sync_so` with the clip and the take, through the ledger as `--video NN-sync`)
-or overlay (no dialogue; X8 step 5b mixes the take over the picture and the CapCut project puts it on its own track). X3 uploads the take
-for native and lipsync. You never call ElevenLabs: a take that must change is a `voiceover` blocker (<AWL>/reference/voiceover/, the
-sections your skills name).
+Voiceover: <voiceover> (state.json → voiceover, command item 31). Not off and your plan has a Voiceover block: the take is your video's
+voice (X3 uploads it, X8 step 5b carries it, X9 checks it and `result.json → voiceover` records it, as your skills' voiceover sections
+say); you never call ElevenLabs (a take that must change: blocker `voiceover`).
+Memes: <memes> (state.json → memes, command item 32).
 Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md, <RUN>/50-requests/video-NN*.json
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 

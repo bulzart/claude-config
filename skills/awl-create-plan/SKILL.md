@@ -50,14 +50,13 @@ Only these section files for this phase, nothing else unless a step below says s
     winner's share line and job, and run the sharpness gate (§6). Save them to
     `20-analysis/concepts.md` and show one line per video (seed, score, the reason it won). The
     user may swap a pick by replying; nothing is asked.
-  - **Own voiceover** (`state.json → voiceover.enabled` true; item 31; `voiceover.md` §3, §5): every seed carries the idea of its spoken
-    lines in the run's language (in the preference's dialect when it is one) and their form under the run's method (`voiceover.method`):
-    native or lipsync, an on-camera speaker (a supplied character the voice fits) or an off-screen voice; overlay, always narration over
-    the pictures (nobody on screen speaks the words, so seeds fit a narrated story, a product review, a voiced POV). The lines are scored
-    with the seed (they carry its hook and payoff), they pass the copy test
-    (no reference's lines) and the guardrails, and they fit the length budget of the video's slot; the winner's exact lines are written in
-    X1. The user's own voiceover files (source `file`): each file is one video's fixed words ([A]), and that video's seeds are built around
-    them.
+  - **Own voiceover** (`voiceover.enabled`; item 31; `voiceover.md` §3, §5): every seed carries the idea of its spoken lines, in the run's
+    language and dialect, in the form its method allows (`voiceover.method`: native or lipsync, an on-camera speaker or an off-screen voice;
+    overlay, narration over the pictures); the lines are scored with the seed, pass the copy test and fit the slot's length. A user's own
+    file is one video's fixed words, and that video's seeds are built around it.
+  - **Memes** (`state.json → memes`; item 32): `include` (or no key) allows a meme or another cut-in where the family's language needs it
+    (`generation-system.md` §3c); with `none` no seed uses one, and a reference's meme beat (a pause, a reaction, a punchline) is played by
+    the seed's own generated scene, never by a generated copy of the meme. The choice wins over the house approach.
   - Each one exploits the patterns that made the references go viral: hook type and timing,
     structure, pacing, content type, camera, humour, and payoff.
   - The client's product is blended into the concept (its most suitable use, `generation-system.md`
@@ -71,8 +70,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - **Create never uses a reference as input.**
   - No reference video, frame or clip is uploaded, edited or passed to a generation.
   - The analysis informs only the concept, structure, pacing, camera, product use and text role.
-  - A meme the style calls for may still be placed in CapCut: an insert cut from a reference, or a
-    supplied file.
+  - A meme the style calls for may still be placed in CapCut (an insert cut from a reference, or a supplied file), only with
+    `memes=include` (item 32).
 
 ## Rules this phase owns (contract items 16, 20)
 
@@ -80,6 +79,7 @@ Only these section files for this phase, nothing else unless a step below says s
     - A meme or other insert that interrupts the reference (e.g. 13 s of footage + a 2 s meme with
       its sound + 12 s of footage) is cut from the reference with its sound. A video meme is never
       screenshotted.
+    - Create uses inserts only when the user chose memes (`state.json → memes`, item 32).
     - Only the reference's own content is generated (Create) or edited (Recreate): 25 s in the
       example, with a beat boundary at the split.
     - Every video becomes its own CapCut project `DD_Mon_YYYY_vNN` (e.g. `01_Oct_2026_v03`). The
@@ -101,6 +101,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - Never generate a reference insert (meme, film snippet, reaction image). Cut it from the reference
   with its sound, and never reduce a video meme to a screenshot.
+- Never plan an insert when `memes=none` (item 32), and never stand a generated copy of a meme in for one.
 - Never plan a Create video from a single unscored idea, a generic "person enjoys product" beat,
   an explained joke or a dated surface element; never let two videos of a run share a situation or
   a joke; never let the creative layer override a hard rule (`creative-direction.md`).

@@ -53,7 +53,8 @@ is one second of the sheets. Do not describe isolated frames. Answer:
     - whether it is video or a still;
     - its sound;
     - any overlays the reference added on top of it.
-    Inserts are cut from the reference later, never generated (`generation-system.md` §3c).
+    Inserts are cut from the reference later, never generated (`generation-system.md` §3c); in Create only when the user chose
+    memes (item 32), else the card's inserts are craft to transfer, never footage to use.
 11. **Overlay text:** every text event's wording, role, centre position (`x_rel`, `y_rel` from
     `ocr.json` and the sheets), in and out times, and style. The OCR spans are numbers (times, frames seen,
     row of the frame, confidence), not labels: whether a text is a caption, a fixed overlay, a handle, a

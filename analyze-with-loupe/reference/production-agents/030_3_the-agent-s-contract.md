@@ -85,9 +85,8 @@
        every shot where its anchor is in frame, the closing emotion beat present (`anomaly-catalog.md` §4 step
        5i); a merged, dropped or dissolved shot regenerates once as separate clips on the source's own cuts
        (`generation-system.md` §3b.1 item 7).
-    10. **Own voiceover** (command item 31, when the contract's Voiceover line is not off): the soundtrack reading (`T voiceover align`:
-       the delivered sound is the take, or it was laid back), the lips of an on-camera speaker at three phrase starts and one pause on 30
-       fps sheets, the face after a sync pass, the mix facts (`vo_speech_cut_s` 0), and "pronunciation: not checked (listen)".
+    10. **Own voiceover** (command item 31, the Voiceover line not off): the voice checks of `reference/voiceover/` §10.
+    11. **Memes** (command item 32, the Memes line `none`): no insert, meme still or meme sound in the timeline or the deliverable.
 14. **Docs, before the final message:** the brief carries a block per attempt (every regenerate reason and
     flagged delivery included) and the final prompt; `result.json` complete; `readme-row.md` and the
     deliverables files written; the CF ids of any flag (item 15) listed in `result.json` → `notes`.
@@ -100,8 +99,4 @@
     was accepted (with the accepted request.json and job), else `persistent`. `result.json` → `notes` lists the
     CF ids, and `qc` names a video whose flag stayed. The main session reconciles them with `T caught-flag
     reconcile` (§5).
-16. **Own voiceover** (command item 31). The take is the main session's (X1, recorded in `state.json → voiceover.files`); the agent
-    uploads it for native and lipsync (X3), carries it by the method in X8 step 5b (native: keep or lay back; lipsync: the `sync_so` pass
-    through the ledger as `--video NN-sync`; overlay: the mix and the CapCut voice track), checks it (X9) and records it in `result.json →
-    voiceover`. It never calls ElevenLabs: a take that must change is the blocker `voiceover`.
 

@@ -1850,7 +1850,7 @@ def cmd_status(a):
     out({"ok": True, "run": rd.name, "run_dir": str(rd), "mode": st.get("mode"), "analyze_submode": st.get("analyze_submode"),
          "model": st.get("model"), "stage": st.get("stage"), "next_skill": st.get("next_skill"), "next_step": st.get("next_step"),
          "video": st.get("video"), "updated": st.get("updated"), "requested_videos": st.get("requested_videos"),
-         "audio_ingest": st.get("audio_ingest"),
+         "audio_ingest": st.get("audio_ingest"), "memes": st.get("memes"),
          "voiceover": ({"enabled": st["voiceover"].get("enabled"), "method": st["voiceover"].get("method"), "source": st["voiceover"].get("source"),
                         "voice": st["voiceover"].get("voice_name"),
                         "language": st["voiceover"].get("language"), "preference": st["voiceover"].get("preference"),
@@ -1929,7 +1929,10 @@ def cmd_doctor(a):
     try:
         cj = json.loads((Path.home() / ".claude.json").read_text(encoding="utf-8"))
         names = sorted((cj.get("mcpServers") or {}).keys())
-        mcp = {"registered": names, "higgsfield": "higgsfield" in names, "capcut": "capcut" in names}
+        mcp = {"registered": names, "higgsfield": "higgsfield" in names, "capcut": "capcut" in names, "elevenlabs": "elevenlabs" in names}
+        if "elevenlabs" in names:              # an own voiceover (item 31): only the base path is read from its env, never the key
+            env_ = (cj["mcpServers"]["elevenlabs"] or {}).get("env") or {}
+            mcp["elevenlabs_base_path"] = env_.get("ELEVENLABS_MCP_BASE_PATH") or "default: ~/Desktop"
     except Exception as e:  # noqa: BLE001
         mcp = {"error": str(e)[:100]}
     hooks = {}
@@ -2041,6 +2044,8 @@ def cmd_lint_run(a):
         if want and want not in refs:
             numbering.append({"file": f.name, "video": nn, "asset_plan_ref": want, "refs_in_header": refs})
     known = _ids_in(st.get("assets", {}).get("uploads") or {}, set()) | _ids_in(st.get("higgsfield") or {}, set())
+    ledger_jobs = _ids_in([s.get("job_id") for s in st.get("submissions") or [] if isinstance(s, dict)], set())   # a sync pass names its clip's job
+    known |= ledger_jobs
     for f in (rd / "50-requests").glob("video-*-uploads.json") if (rd / "50-requests").is_dir() else []:
         try:
             _ids_in(json.loads(f.read_text(encoding="utf-8")), known)
@@ -2094,7 +2099,8 @@ def cmd_lint_run(a):
     out({"ok": True, "run": rd.name,
          "cited_paths": {"documents": len(docs), "checked": cited, "missing": missing[:40], "missing_total": len(missing)},
          "video_numbering": {"asset_plan_videos": len(plan_refs), "plans_whose_header_lacks_the_asset_plan_ref": numbering},
-         "media_ids": {"known_from_uploads_and_higgsfield": len(known), "unknown_in_requests": unknown[:40], "unknown_total": len(unknown)},
+         "media_ids": {"known_from_uploads_and_higgsfield": len(known), "known_ledger_job_ids": len(ledger_jobs), "unknown_in_requests": unknown[:40],
+                       "unknown_total": len(unknown)},
          "prompts": prompts, "prompt_note": "the agent contract names 5000 characters as the service's limit; compare",
          "preset": {"declined_preset_id": (st.get("higgsfield") or {}).get("declined_preset_id"), "ledger_rows_mentioning_preset": preset_rows},
          "uploads_files": {"checked": up_checked, "outside_the_schema": up_bad, "schema": "video-NN-uploads.json = {video, schema: 1, uploads: {label: {media_id, file, content_type?, url?, at?}}} (written by `uploads set`)"},
@@ -2102,7 +2108,9 @@ def cmd_lint_run(a):
                             "note": "a request file whose content no longer matches the fingerprint of its open or finished ledger entry was edited after the submission (item 29)"},
          "contract": {"exists": contract.is_file(), "names_this_run": rd.name in ct, "loupe_line": bool(re.search(r"^Loupe: (up|down)", ct, re.M)),
                       "audio_line": bool(re.search(r"^Audio ingest: ", ct, re.M)), "qc_fixes_line": bool(re.search(r"^QC fixes: (ask|auto)", ct, re.M)),
-                      "unresolved_placeholders": sorted(set(re.findall(r"<(?:RUN|AWL|model id|guide path|recreate\|create|ask\|auto|up\|down|whisper\|frames-only)>", ct)))}})
+                      "voiceover_line": bool(re.search(r"^Voiceover: (off|on)", ct, re.M)),
+                      "memes_line": bool(re.search(r"^Memes: (n/a|none|include|as your plan)", ct, re.M)),
+                      "unresolved_placeholders": sorted(set(re.findall(r"<(?:RUN|AWL|model id|guide path|recreate\|create|ask\|auto|up\|down|whisper\|frames-only|voiceover|memes)>", ct)))}})
 
 
 UPLOAD_KEYS = {"media_id", "file", "content_type", "url", "at", "role", "note"}
@@ -2217,17 +2225,30 @@ def cmd_uploads(a):
 
 
 CONTRACT_SUBS = (("<RUN>", "run"), ("<AWL>", "library"), ("<model id>", "model"), ("<guide path>", "guide path"), ("<recreate|create>", "analyze_submode"),
-                 ("<ask|auto>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"))
+                 ("<ask|auto>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"),
+                 ("<memes>", "memes"))
+
+
+def _contract_memes(st: dict) -> str:
+    """The contract's Memes line from state.json -> memes (contract item 32): Create include | none (a Create run without the key includes
+    them, as its plans were made); Recreate keeps its references' own inserts; Free follows its plan."""
+    sub, m = str(st.get("analyze_submode") or ""), str(st.get("memes") or "")
+    if sub == "recreate":
+        return "n/a (Recreate keeps each reference's own inserts)"
+    if m == "none":
+        return "none (pure generation: no insert, meme still or meme sound of any kind)"
+    if m == "include" or (sub == "create" and not m):
+        return "include (only the inserts your plan names)"
+    return "as your plan says"
 
 
 def _contract_voiceover(st: dict, rd: Path) -> str:
     """The contract's Voiceover line from state.json -> voiceover (contract item 31): 'off' when the run has none."""
     vo = st.get("voiceover")
     if not isinstance(vo, dict) or vo.get("enabled") is not True:
-        return "off (this run has no own voiceover: the video model's own audio, as in every run)"
-    method = {"native": "native (the take is the generation's driving audio; its sound is the take)",
-              "lipsync": "lipsync (the speaking scene, then a sync_so pass with the exact take)",
-              "overlay": "overlay (no dialogue; the take is placed over the picture: mix and CapCut track)"}.get(vo.get("method"), f"{vo.get('method') or '?'}")
+        return "off"
+    method = {"native": "native (the take is the driving audio)", "lipsync": "lipsync (then a sync_so pass with the take)",
+              "overlay": "overlay (no dialogue; the take over the picture)"}.get(vo.get("method"), f"{vo.get('method') or '?'}")
     bits = [f"method {method}"]
     if vo.get("source") == "file":
         bits.append("the user's own voiceover files (source file)")
@@ -2244,8 +2265,7 @@ def _contract_voiceover(st: dict, rd: Path) -> str:
                                                   for k, v in vo["voices"].items()))
     if isinstance(vo.get("videos"), list) and vo["videos"]:
         bits.append("only videos " + ", ".join(str(x) for x in vo["videos"]))
-    return ("on: " + "; ".join(bits) + f". Your take: {rd}/30-assets/voiceover/video-NN*.* (state.json -> voiceover.files.NN; its .json sidecar "
-            "holds the script, the spoken words, the phrases and the pauses); your plan's Voiceover block says the form (on-camera or off-screen)")
+    return "on: " + "; ".join(bits) + f". Your take: {rd}/30-assets/voiceover/video-NN*.* (state.json -> voiceover.files.NN, with its .json sidecar)"
 
 
 def cmd_contract(a):
@@ -2272,7 +2292,7 @@ def cmd_contract(a):
         guide = ""
     values = {"run": str(rd), "library": str(AWL_HOME), "model": model, "guide path": guide, "analyze_submode": str(st.get("analyze_submode") or ""),
               "qc_fixes": str(st.get("qc_fixes") or "auto"), "loupe": str(st.get("loupe") or "up"), "audio_ingest": str(st.get("audio_ingest") or ""),
-              "voiceover": _contract_voiceover(st, rd)}
+              "voiceover": _contract_voiceover(st, rd), "memes": _contract_memes(st)}
     substituted, unresolved = {}, []
     for token, key in CONTRACT_SUBS:
         if values[key]:
@@ -5784,16 +5804,28 @@ def _vo_plot(vc, gc, off_s: float, dest: Path):
     return dest
 
 
+def _vo_mcp_base():
+    """ELEVENLABS_MCP_BASE_PATH as the ElevenLabs MCP server itself is configured (~/.claude.json -> mcpServers.elevenlabs.env), or None.
+    Only that one key is read; the API key beside it never is."""
+    try:
+        cj = json.loads((Path.home() / ".claude.json").read_text(encoding="utf-8"))
+        return ((((cj.get("mcpServers") or {}).get("elevenlabs") or {}).get("env") or {}).get("ELEVENLABS_MCP_BASE_PATH")) or None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
 def _vo_outdir(a):
     if not a.run:
         fail("outdir needs --run", 2)
     rd, _st = _state_of(a.run)
     env = os.environ.get("ELEVENLABS_MCP_BASE_PATH")
-    base = Path(a.base) if a.base else (Path(env) if env else Path.home() / "Desktop")
+    cfg = None if (a.base or env) else _vo_mcp_base()      # the server's own setting, when this shell has none
+    base = Path(a.base) if a.base else (Path(env) if env else (Path(cfg).expanduser() if cfg else Path.home() / "Desktop"))
     d = base / "awl-voiceover" / rd.name
     d.mkdir(parents=True, exist_ok=True)
     out({"ok": True, "dir": str(d), "base": str(base),
-         "base_from": "--base" if a.base else ("ELEVENLABS_MCP_BASE_PATH" if env else "the default (~/Desktop)"),
+         "base_from": "--base" if a.base else ("ELEVENLABS_MCP_BASE_PATH" if env else
+                                              ("the elevenlabs server's env in ~/.claude.json" if cfg else "the default (~/Desktop)")),
          "note": "pass this folder as text_to_speech's output_directory (the ElevenLabs MCP writes only under its base path), then copy each take "
                  "into the run with `voiceover record`"})
 
@@ -5814,17 +5846,32 @@ def _vo_record(a):
             settings = json.loads(a.settings)
         except ValueError as e:
             fail(f"--settings is not JSON: {e}", 2)
+    span = None
+    if a.span:                              # a clip's part of one longer file (a user's own file over several clips): cut losslessly to WAV
+        m = re.match(r"^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$", a.span)
+        if not m or float(m.group(1)) >= float(m.group(2)):
+            fail(f"--span must be START-END in seconds with START < END, got {a.span!r}", 2)
+        span = [float(m.group(1)), float(m.group(2))]
     vdir = rd / "30-assets" / "voiceover"
     vdir.mkdir(parents=True, exist_ok=True)
-    dst = vdir / f"video-{key}-a{a.attempt}{(src.suffix or '.mp3').lower()}"
-    same = dst.exists() and dst.resolve() == src.resolve()
+    dst = vdir / f"video-{key}-a{a.attempt}{'.wav' if span else (src.suffix or '.mp3').lower()}"
+    new = src
+    if span:
+        new = vdir / f"_span-{key}-a{a.attempt}.wav"
+        cp = run([find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", str(src), "-ss", f"{span[0]:.3f}",
+                  "-to", f"{span[1]:.3f}", "-map", "0:a:0", "-c:a", "pcm_s16le", str(new)], timeout=900)
+        if cp.returncode != 0 or not new.is_file():
+            fail("--span cut failed: " + cp.stderr[-400:], 1)
+    same = dst.exists() and dst.resolve() == new.resolve()
     kept = None
-    if dst.exists() and not same and quick_hash(dst) != quick_hash(src):   # the same attempt recorded again from another file: the earlier one is kept beside it
+    if dst.exists() and not same and quick_hash(dst) != quick_hash(new):   # the same attempt recorded again from another file: the earlier one is kept beside it
         kept = dst.with_name(f"{dst.stem}.prev-{time.strftime('%Y%m%d-%H%M%S')}{dst.suffix}")
         dst.replace(kept)
         if dst.with_suffix(".json").exists():
             dst.with_suffix(".json").replace(kept.with_suffix(".json"))
-    if not same:
+    if span:
+        new.replace(dst)
+    elif not same:
         shutil.copy2(src, dst)
     info = media_summary(dst)
     if not info.get("has_audio"):
@@ -5850,7 +5897,7 @@ def _vo_record(a):
     spoken = " ".join(_VO_TAG.sub(" ", script).split()) if script else None
     words = len(spoken.split()) if spoken else 0
     speech_s = round(s1 - s0, 2) if s0 is not None else 0.0
-    side = {"ok": True, "video": key, "attempt": a.attempt, "source": a.source, "mode": a.mode, "file": str(dst), "source_file": str(src),
+    side = {"ok": True, "video": key, "attempt": a.attempt, "source": a.source, "mode": a.mode, "file": str(dst), "source_file": str(src), "span_s": span,
             "sha1_16": quick_hash(dst), "duration_s": dur, "codec": info.get("audio_codec"), "sample_rate": info.get("audio_rate"),
             "channels": info.get("audio_channels"), "speech_threshold_dbfs": thr, "speech_start_s": s0, "speech_end_s": s1, "speech_s": speech_s,
             "trailing_quiet_s": round(dur - s1, 2) if s1 is not None else None, "phrases": phrases, "pauses": pauses,
@@ -5934,10 +5981,9 @@ def _vo_align(a):
            "generated_speech": {"start_s": gs0, "end_s": gs1, "phrases": len(gph)},
            "voiceover_speech_end_on_generated_s": end_on,
            "voiceover_overrun_s": round(max(0.0, end_on - gdur), 2) if end_on is not None else None,
-           "windows": windows if len(windows) <= 60 else None, "plot": str(png),
-           "note": "measurements only, no verdict: whether the model's speech follows the take at one steady offset, drifts, or cannot be told is "
-                   "the agent's reading of these numbers, the plot and the mouths on dense frames. A positive offset = the model's speech comes "
-                   "later than the take (the take is delayed by that much when mixed)"}
+           "plot": str(png), "windows_file": str(od / "vo-align.json"),
+           "note": "measurements only, no verdict (every window is in windows_file); a positive offset = the file's speech comes later than "
+                   "the take (delay the take by that much when mixing)"}
     (od / "vo-align.json").write_text(json.dumps({**res, "windows": windows}, indent=1), encoding="utf-8")
     out(res)
 
@@ -6361,6 +6407,7 @@ def main():
     p.add_argument("--video", help="record: the video, NN or NN-cK")
     p.add_argument("--file", help="record: the take the ElevenLabs MCP saved, or the user's own voiceover file (source file)")
     p.add_argument("--attempt", type=int, default=1, help="record: the take's number (a1, a2 ...)")
+    p.add_argument("--span", help="record: START-END seconds of --file to take (a clip's part of one longer file, cut at a pause; written as WAV)")
     p.add_argument("--script", help="record: the text sent to ElevenLabs, tags included (a file path or the text); for a user's file, its words")
     p.add_argument("--transcribe", action="store_true", help="record, a user's file without a script: its words by local speech-to-text (a client asset, not the references' audio)")
     p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"), help="record --transcribe: the faster-whisper model")

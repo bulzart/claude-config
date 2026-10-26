@@ -18,7 +18,7 @@ Stored as section files in `analysis-protocol/` (next to this file); **read only
 |---|---|---|---|
 | 0 | Provenance labels (use everywhere) | `010_0_provenance-labels-use-everywhere.md` | 0.6 |
 | 1 | Inputs per video (produced by `awl.py prep-all`) | `020_1_inputs-per-video-produced-by-awl.md` | 1.3 |
-| 2 | Reading a video as one continuous sequence | `030_2_reading-a-video-as-one-continuou.md` | 5.6 |
+| 2 | Reading a video as one continuous sequence | `030_2_reading-a-video-as-one-continuou.md` | 5.8 |
 | 3 | Per-video card — `20-analysis/cards/<V>.md` | `040_3_per-video-card-20-analysis-cards.md` | 5.4 |
 | 4 | Effectiveness lenses (apply those the material supports; add new ones wh | `050_4_effectiveness-lenses-apply-those.md` | 2.1 |
 | 5 | Cross-video synthesis | `060_5_cross-video-synthesis.md` | 5.3 |

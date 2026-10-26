@@ -28,7 +28,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a placed or contents product (the spot):*
   - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
 - *a reference places the product (the placement marker), or a retry adds one:*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (8.1 KB)
+  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (14.2 KB)
 - anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.4 KB)
 - *a product in use, prepared or counted:*
   - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
@@ -47,8 +47,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *guardrail operations in the plan:*
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - *an own voiceover (the plan has a Voiceover block; item 31):*
-  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.1 KB), step 5 (the duration by method)
-  - voiceover §6: `AWL/reference/voiceover/060_6_in-the-request-x2-by-what-the-lo.md` (3.1 KB); the locked guide's §2.2, §3.7 and §3.9 with it
+  - voiceover §6: `AWL/reference/voiceover/060_6_in-the-request-x2-by-what-the-lo.md` (3.3 KB); the locked guide's §2.2, §3.7 and §3.9 with it
 - the plan `RUN/40-briefs/video-NN-plan.md` (X1)
 
 ## Step X2
@@ -174,18 +173,9 @@ Only these section files for this phase, nothing else unless a step below says s
       excluded person. Never "blur", "pixelate" or "cover".
     - Analyze Mode prompts are always **clean plates**: no overlay text. The only lettering is the
       product's own label, logo or badge.
-    - **Own voiceover** (the plan's Voiceover block; item 31), by the run's method (`voiceover.method`) and what the locked model takes
-      (its guide's §2.2, §3.7 and §3.9; `voiceover.md` §6):
-      - **native** (Wan 3.0 / 3.0 Prime in reference mode, Wan 2.7 with its start frame): the take is the driving audio, the first
-        `audio_references` entry (`Audio 1`, the label its upload carries); the prompt says the take is the whole soundtrack, names who speaks
-        it to the camera lip-synced to it (or that it is an off-screen voice the actions follow), and writes the mouth, the gestures and the
-        delivery on the take's phrase times; the words are carried by the audio, not re-written as dialogue; native audio on;
-      - **lipsync**, the first generation: the speaker performs the take's `spoken_text` word for word (never a translation or a paraphrase)
-        in the guide's dialogue syntax, with the language and the accent or dialect words, listeners' mouths closed; with an
-        `audio_references` role the take rides too as the voice reference; native audio on. The sync pass is its own request
-        (`50-requests/video-NN-sync-request.json`, §6), written by the production agent in X8 once the clip exists;
-      - **overlay**, and every off-screen video of lipsync: the guide's no-dialogue line, no audio reference.
-      The duration follows the method (`voiceover.md` §4 step 5) within the model's audio limits; no music is asked for.
+    - **Own voiceover** (the plan's Voiceover block; item 31): build the request by the run's method (its guide's §2.2, §3.7 and §3.9;
+      the table of `voiceover.md` §6): **native** binds the take as the driving audio, **lipsync** writes its words verbatim as dialogue
+      (the sync pass is the agent's, in X8), **overlay** writes the no-dialogue line; the duration as §6 says; no music.
     - With inserts, the prompt covers only the generated content, and puts a natural beat boundary
       at each split point.
     - **Fidelity lock** (item 19; Edit Mode and Recreate), in the **first** request and every

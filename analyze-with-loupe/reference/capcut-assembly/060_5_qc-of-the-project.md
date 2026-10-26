@@ -1,6 +1,6 @@
 ## 5. QC of the project
 - Read the project back with `capcut_read_timeline`:
-  - the generated pieces are contiguous, and each insert sits exactly at its split;
+  - the generated pieces are contiguous, and each insert sits exactly at its split (Create with `memes = none`, item 32: no insert at all);
   - the total = generated length + the inserts;
   - every text event is at its planned time and position;
   - `T capcut-text-style --draft "<store>/<name>" --check` reports 0 texts off the house style;

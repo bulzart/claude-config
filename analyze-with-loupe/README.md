@@ -8,7 +8,7 @@ production agent per video (at most 5 at once). Everything it loads at run time 
 
 The context of a run is its scarcest resource, so nothing is loaded before its step:
 
-- **The command is a router** (about 13 KB): arguments, resume, the loading rules, one line per contract item, the phase map, the labels table and the global Never rules.
+- **The command is a router** (about 20 KB): arguments, resume, the loading rules, one line per contract item, the phase map, the labels table and the global Never rules.
 - **Phase skills** `~/.claude/skills/awl-*/SKILL.md` (20, `user-invocable: false`, descriptions marked internal) hold the steps, the contract items and the Never rules of one phase
   each, moved verbatim from the old monolithic command, plus a "Read now" list of the exact section files the phase needs and a hand-off that names the next skill.
   Their order is the chain `awl-start` → (Analyze) `awl-analyze-prepare` → `awl-analyze-study` → `awl-create-plan` | `awl-recreate-plan` | `awl-free-plan` (Free; without references straight from `awl-analyze-prepare`) → `awl-asset-plan` → `awl-analyze-produce`
@@ -160,6 +160,24 @@ at three phrase starts and one pause, and the face after a sync pass, and the wr
 No agent listens: pronunciation, accent and dialect are always "not checked (listen)", and a language outside the model's official list is named. Unverified
 on Higgsfield as of 2026-10-26: how faithfully a driving audio is kept and followed by the lips (both Wan guides list exact lip sync as a weakness) and whether
 `sync_so` keeps 720×1280 and the take as its soundtrack; the pilot video measures both, and X8 measures them for every video.
+
+## Memes in Create (contract item 32)
+At the start of a Create run, beside the voiceover method, the user picks **Include memes** (as the references do: a meme, a reaction clip, a
+film or TV snippet or another original clip the style calls for is cut from the references with its sound, or taken from the user's files,
+and placed between the generated parts in CapCut) or **No memes: pure generation** (every second of every video is generated: no meme clip,
+meme still, reaction clip, screen recording, snippet or meme sound of any kind; where a reference uses a meme, the new video plays that beat in
+its own generated scene, never with a generated copy of the meme). `state.json → memes` (`include` | `none`); a Create run without the key
+includes them, as its plans were made. The choice wins over the house approach and reaches the concept seeds, the asset plan (with `none` the
+whole length is generated and counts toward generations and the 30 s permission), the insert plan, X4, the CapCut project, QC (an insert found
+in a `none` video is removed) and the agent contract's "Memes" line. Recreate keeps its references' own inserts; Free takes the choice from
+its requirement (`awl-free-plan` step 2c).
+
+## Context budget
+What every run loads stays lean (the user, 2026-10-26: no context rot in the pipeline's agents). A feature that only some runs use keeps its
+details in a section that a skill's Read-now list names under a condition (the own voiceover: `reference/voiceover/`, read only by a run that
+has one); the always-loaded skills, the router and the agent contract carry a one- or two-line pointer. Toolkit answers print a summary and
+leave long lists in their JSON files (`T voiceover align` → `vo-align.json`). Measured against the commit before items 31–32: a production
+agent's always-loaded text grew by about 4 % (4.7 KB of 112 KB), the main session's for a Create run by about 8 % (13.8 KB).
 
 ## How a run uses the documentation
 1. The command invokes `awl-start`: it prints the model menu with `awl.py model-menu`. The menu lists **every** available model: `models/index.json` merged with the

@@ -316,6 +316,13 @@ run_v = Path(t("new-run", "--mode", "analyze", "--source", str(vo_fx), "--slug",
 js, _, _ = t("voiceover", "outdir", "--run", run_v.name, "--base", str(vo_fx / "desk"), env=ENV)
 check(js.get("ok") and Path(js["dir"]) == vo_fx / "desk" / "awl-voiceover" / run_v.name and Path(js["dir"]).is_dir() and js["base_from"] == "--base",
       "voiceover outdir makes <base>/awl-voiceover/<run>, the folder the ElevenLabs MCP may write to")
+fake_home = vo_fx / "home"
+fake_home.mkdir()
+(fake_home / ".claude.json").write_text(json.dumps({"mcpServers": {"elevenlabs": {"env": {"ELEVENLABS_API_KEY": "sk_fake_never_printed",
+                                                                                        "ELEVENLABS_MCP_BASE_PATH": str(vo_fx / "mcp-base")}}}}), encoding="utf-8")
+js, _, out_txt = t("voiceover", "outdir", "--run", run_v.name, env={**ENV, "USERPROFILE": str(fake_home), "HOME": str(fake_home), "ELEVENLABS_MCP_BASE_PATH": ""})
+check(Path(js["dir"]) == vo_fx / "mcp-base" / "awl-voiceover" / run_v.name and "claude.json" in js["base_from"] and "sk_fake" not in out_txt,
+      "without --base or the variable, outdir uses the ElevenLabs server's own base path from ~/.claude.json and never prints its key")
 script = "[excited] Okay, you need this serum. [sighs] My skin looked tired… [laughs softly] Link in bio."
 js, code, _ = t("voiceover", "record", "--run", run_v.name, "--video", "1", "--file", str(take_src), "--script", script, "--voice-id", "FGY2WhTYpPnrIDTdsKH5",
                 "--voice-name", "Laura", "--model", "eleven_v4", "--language", "en", "--mode", "on-camera", "--settings", '{"stability": 0.5}', env=ENV)
@@ -342,11 +349,17 @@ js, _, _ = t("voiceover", "record", "--run", run_v.name, "--video", "02-c1", "--
 check(js["spoken_text"] == "stub words here" and js["script_source"].startswith("transcribed (stub") and js["chars_sent"] is None and js["state_key"] == "voiceover.files.02-c1",
       "the user's own file (source file) without a script: its words by local speech-to-text, no characters sent, a clip key NN-cK")
 
+js, code, _ = t("voiceover", "record", "--run", run_v.name, "--video", "03-c2", "--file", str(take_src), "--source", "file", "--span", "1.3-3.8", env=ENV)
+check(code == 0 and js["file"].endswith("video-03-c2-a1.wav") and js["span_s"] == [1.3, 3.8] and abs(js["duration_s"] - 2.5) <= 0.05 and len(js["phrases"]) == 3
+      and abs(js["phrases"][0]["start"] - 0.2) <= 0.05, "record --span takes one clip's part of a longer own file (cut at a pause, as WAV) and measures it from the cut")
+js, code, _ = t("voiceover", "record", "--run", run_v.name, "--video", "03-c2", "--file", str(take_src), "--span", "3.8-1.3", env=ENV, ok=False)
+check(code == 2 and "--span" in js.get("error", ""), "record refuses a span whose start is not before its end (exit 2)")
 js, code, _ = t("voiceover", "align", "--generated", str(vo_fx / "gen.mp4"), "--voiceover", str(take), "--out", str(vo_fx / "align"), env=ENV)
 check(code == 0 and abs(js["global_offset_s"] - 0.25) <= 0.02 and js["global_corr"] >= 0.9 and js["voiceover_speech"]["phrases"] == 5 and js["generated_speech"]["phrases"] == 5,
       f"voiceover align finds where the model's speech lies against the take ({js.get('global_offset_s')} s at r={js.get('global_corr')}; 0.25 s built in)")
-check(Path(js["plot"]).is_file() and (vo_fx / "align" / "vo-align.json").is_file() and "verdict" not in js and "no verdict" in js["note"],
-      "align writes vo-align.png and vo-align.json and prints measurements with no verdict")
+check(Path(js["plot"]).is_file() and (vo_fx / "align" / "vo-align.json").is_file() and "verdict" not in js and "no verdict" in js["note"]
+      and "windows" not in js and len(json.loads(Path(js["windows_file"]).read_text(encoding="utf-8"))["windows"]) >= 2,
+      "align writes vo-align.png and vo-align.json (every window) and prints only the summary, no verdict (the agent's context stays small)")
 off = js["global_offset_s"]
 mute_clip = make_clip(vo_fx / "mute.mp4", seconds=3.0, flash=None, audio=False)
 js, code, _ = t("voiceover", "align", "--generated", str(mute_clip), "--voiceover", str(take), "--out", str(vo_fx / "align-mute"), env=ENV, ok=False)
@@ -367,28 +380,56 @@ js, code, _ = t("voiceover", "mix", "--picture", str(vo_fx / "gen.mp4"), "--voic
 check(code == 2 and "--tempo" in js.get("error", ""), "mix refuses a tempo outside 0.5-2.0 (exit 2)")
 
 js, _, _ = t("status", "--run", run_v.name, "--no-loupe", env=ENV)
-check(js["voiceover"]["takes"] == ["01", "02-c1"] and js["voiceover"]["enabled"] is None, "status lists the recorded takes before the choice is stored")
+check(js["voiceover"]["takes"] == ["01", "02-c1", "03-c2"] and js["voiceover"]["enabled"] is None, "status lists the recorded takes before the choice is stored")
 t("state", "--run", run_v.name, "set", "voiceover.enabled=true", "voiceover.method=overlay", "voiceover.voice_name=Laura", env=ENV)
 js, _, _ = t("status", "--run", run_v.name, "--no-loupe", env=ENV)
-check(js["voiceover"]["enabled"] is True and js["voiceover"]["method"] == "overlay" and js["voiceover"]["takes"] == ["01", "02-c1"],
+check(js["voiceover"]["enabled"] is True and js["voiceover"]["method"] == "overlay" and js["voiceover"]["takes"] == ["01", "02-c1", "03-c2"],
       "dotted state keys set the choice without touching the recorded takes; status reports them")
 
 ct = (run_u / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
-check("Voiceover: off (this run has no own voiceover" in ct, "the contract of a run without state.json -> voiceover says Voiceover: off")
+check("Voiceover: off (state.json" in ct and "Memes: n/a (Recreate" in ct, "the contract of a run without state.json -> voiceover says Voiceover: off; a Recreate run's Memes line is n/a")
 t("state", "--run", run_u.name, "set", 'voiceover={"enabled": true, "method": "native", "source": "elevenlabs", "voice_id": "abc123", "voice_name": "Sarah", '
   '"model_id": "eleven_v4", "language": "sq", "language_name": "Albanian", "language_official": false, "preference": "Kosovar Albanian (Gheg dialect)"}', env=ENV)
 js, _, _ = t("contract", "--run", run_u.name, "--notes", "the pilot is video 01", env=ENV)
 ct = (run_u / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
-check(js["unresolved_placeholders"] == [] and "Voiceover: on: method native (the take is the generation's driving audio" in ct and "ElevenLabs voice Sarah (abc123), model eleven_v4" in ct
+check(js["unresolved_placeholders"] == [] and "Voiceover: on: method native (the take is the driving audio)" in ct and "ElevenLabs voice Sarah (abc123), model eleven_v4" in ct
       and "language Albanian (sq), outside the model's official list: pronunciation not checked" in ct and "preference: Kosovar Albanian (Gheg dialect)" in ct
       and f"{run_u.name}/30-assets/voiceover/video-NN*.*" in ct.replace("\\", "/"),
       "the contract fills the Voiceover line from state.json: the method, the voice, the language (unofficial: not checked), the preference and where the take is")
 t("state", "--run", run_u.name, "set", "voiceover.method=overlay", "voiceover.source=file", env=ENV)
 t("contract", "--run", run_u.name, env=ENV)
 ct = (run_u / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
-check("method overlay (no dialogue; the take is placed over the picture" in ct and "the user's own voiceover files (source file)" in ct and "ElevenLabs voice" not in ct.split("Voiceover:")[1][:400],
+check("method overlay (no dialogue; the take over the picture)" in ct and "the user's own voiceover files (source file)" in ct and "ElevenLabs voice" not in ct.split("Voiceover:")[1][:400],
       "an overlay run of the user's own files says so in the contract, with no ElevenLabs voice")
+t("state", "--run", run_u.name, "set", "analyze_submode=create", "memes=none", env=ENV)
+t("contract", "--run", run_u.name, env=ENV)
+ct = (run_u / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
+js, _, _ = t("status", "--run", run_u.name, "--no-loupe", env=ENV)
+check("Memes: none (pure generation" in ct and js["memes"] == "none", "a Create run with memes=none says so in its contract and in status")
+t("state", "--run", run_u.name, "set", "memes=", env=ENV)
+t("contract", "--run", run_u.name, env=ENV)
+ct = (run_u / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
+check("Memes: include (only the inserts your plan names)" in ct, "a Create run without the memes key includes them (its plans were made that way)")
 js, _, _ = t("lint-run", "--run", run_u.name, env=ENV)
-check(js["contract"]["unresolved_placeholders"] == [], "lint-run finds no unresolved placeholder in a contract with a voiceover")
+check(js["contract"]["unresolved_placeholders"] == [] and js["contract"]["voiceover_line"] is True and js["contract"]["memes_line"] is True,
+      "lint-run finds the Voiceover and Memes lines and no unresolved placeholder in the contract")
+# the sync pass (lipsync): its request names the accepted clip's job and the take's upload; both are known to lint-run, and its ledger lane is the video's
+(run_v / "50-requests").mkdir(exist_ok=True)
+clip_req = run_v / "50-requests" / "video-01-request.json"
+clip_req.write_text(json.dumps({"params": {"prompt": "she says the lines to the camera", "model": "seedance_2_5"}}), encoding="utf-8")
+clip_job, take_media = "aaaaaaaa-1111-2222-3333-444444444444", "bbbbbbbb-1111-2222-3333-444444444444"
+lg = t("ledger", "begin", "--run", run_v.name, "--video", "01", "--attempt", "1", "--request", str(clip_req), env=ENV)[0]
+t("ledger", "set", "--run", run_v.name, "--fingerprint", lg["fingerprint"], "--status", "completed", "--job", clip_job, env=ENV)
+t("uploads", "set", "--run", run_v.name, "--video", "01", "--label", "Audio 1", "--role", "audio_references", "--media-id", take_media, "--file", str(take),
+  "--content-type", "audio/mpeg", env=ENV)
+sync_req = run_v / "50-requests" / "video-01-sync-request.json"
+sync_req.write_text(json.dumps({"model": "sync_so", "medias": [{"role": "input_video", "value": clip_job}, {"role": "input_audio", "value": take_media}],
+                                "sync_mode": "silence"}), encoding="utf-8")
+js, code, _ = t("ledger", "begin", "--run", run_v.name, "--video", "01-sync", "--attempt", "1", "--request", str(sync_req), env=ENV)
+check(code == 0 and js.get("recorded") and not js.get("conflicts"), "the sync pass is recorded in the video's lane (--video 01-sync) with no conflict once the clip's job is finished")
+js, _, _ = t("lint-run", "--run", run_v.name, env=ENV)
+check(js["media_ids"]["unknown_total"] == 0 and js["media_ids"]["known_ledger_job_ids"] == 1, "lint-run knows the clip's job id (from the ledger) and the take's media id (from the uploads) that the sync request names")
+js, _, _ = t("doctor", "--no-loupe", "--no-docs", env=ENV)
+check("elevenlabs" in js["mcp"] or "error" in js["mcp"], "doctor reports whether the ElevenLabs MCP is registered")
 
 finish()

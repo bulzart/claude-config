@@ -13,14 +13,14 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- production-agents §1: `AWL/reference/production-agents/010_1_prepared-by-this-session-before.md` (1.3 KB)
-- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (15.4 KB)
-- production-agents §3: `AWL/reference/production-agents/030_3_the-agent-s-contract.md` (8.4 KB)
+- production-agents §1: `AWL/reference/production-agents/010_1_prepared-by-this-session-before.md` (1.9 KB)
+- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (16.4 KB)
+- production-agents §3: `AWL/reference/production-agents/030_3_the-agent-s-contract.md` (8.6 KB)
 - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 - higgsfield-mcp §1: `AWL/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)
 - `models_explore {action:"get", model_id}` once (A8.2)
 - *an own voiceover (`state.json → voiceover.enabled` true; item 31; the takes in X1, a `voiceover` blocker):*
-  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.1 KB)
+  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.4 KB)
 
 ### A8. Load the locked model's documentation
 The model was picked at the start (§2.4) and does not change.
@@ -43,9 +43,8 @@ At the start of A9: `T state --run RUN set stage=producing next_skill=awl-analyz
 Plan everything before production, in allocation order, **without asking for confirmation**
 (contract item 15):
 1. **X1–X4 for every video:** plan, pattern card, request(s), pre-generation QC. Recreate plans
-   take the approach and source preparation from E4–E5. With an own voiceover (item 31), X1 also writes, voices (one ElevenLabs call)
-   and records each video's take, and plans the video to it; before the first take, `check_subscription` shows whether the characters
-   left cover the run's scripts (a shortfall is a blocker, reported). The takes are made in this session, never in a planner fork (item 30).
+   take the approach and source preparation from E4–E5. With an own voiceover (item 31), X1 also writes, voices and records each video's
+   take in this session (never in a planner fork, item 30), after one `check_subscription` (characters short of the scripts: a blocker).
 2. **Shared inputs, once:**
    - the Higgsfield project folder (X5: `list_workspaces` → `create_project`), stored with
      `T state --run RUN set higgsfield.folder_id=<id>`;
@@ -64,8 +63,8 @@ Plan everything before production, in allocation order, **without asking for con
    for every run and never copied from an earlier run's file. Before the first agent is spawned run `T loupe ensure` and update
    `state.json → loupe` (five agents must not race to start it); fill the contract's "Loupe" line from it (`up` when the run has none)
    and its "Audio ingest" line from `state.json → audio_ingest` (item 24). Fill its "QC fixes" line from `state.json → qc_fixes` (`auto` when the run has none; item 27).
-   Its "Voiceover" line comes from `state.json → voiceover` (`off` when the run has none; item 31): `T contract` fills it with the method,
-   the voice, the language, the preference and where the takes are.
+   `T contract` also fills its "Voiceover" line (`state.json → voiceover`, `off` without it; item 31) and its "Memes" line
+   (`state.json → memes`; item 32).
 
 ### A9b. Produce in parallel (production agents)
 
@@ -142,7 +141,7 @@ See §6.
     - Blockers are reported, not asked: the balance can't cover the next video, or Higgsfield
       itself demands a choice (`unlim_choice`, `recovery_tool`, X7 in `awl-submit`).
     - The planning questions (mode, model, inputs, number of videos, directions, the voiceover choice
-      of item 31) are not permissions and stay.
+      of item 31, the memes choice of item 32) are not permissions and stay.
     - Edit Mode keeps its gates (E6, X9-R).
 23. **Caught flags: every prompt and video that Higgsfield flagged is recorded**
     (in Loupe, the pipeline's web app at `http://127.0.0.1:8787`: a database with a viewer that searches,
@@ -205,9 +204,8 @@ See §6.
     with three fixed headings (Done, Open, Risks: what it measured, what it could not settle, what the agent must check). It calls no generation tool, never touches
     another video's files, writes state.json only through `T state … append`, and stops after `T lint-run --run RUN` shows its files clean. The main session reads the
     status note and the files, not the fork's final message, and spawns the production agent only after that. With an own voiceover (item 31) a fork never voices a
-    take (a paid call that asks the user): this session writes the video's lines and its script file, makes and records the take (`awl-plan-video`, the Voiceover
-    block up to `T voiceover record`) before the fork starts, and the fork plans the rest of X1–X2 to the recorded take (`state.json → voiceover.files.NN`); a take
-    the fork finds unfit goes under Open, and this session makes the second take.
+    take (a paid call that asks the user): this session records the video's take first, and the fork plans the rest to it (an unfit take
+    goes under Open).
 
 ## Never (this phase)
 
