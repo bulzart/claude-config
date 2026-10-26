@@ -250,3 +250,42 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
 
 - **Why.** The user (2026-10-22, the Celsius run's V09 pilot, on the prepared source with the can composited into it): a composited asset sample can be read by the model as the product's final look; next to the product the reference must say it is only a placement and size reference from the client's asset sample, and the generated video must show a real product rendered in the scene, not the pasted sample. Its size must be calculated (proportions, dimensions, distance) against the original video's objects of known size, with the real dimensions from the client assets. The blurred source-crop guide image: "never upload or use it ever again". Extended the same day: the rule covers every reference that places the product (a video reference, a layout or guide image, Create's neutral-texture guide, any placement image), each paired in the request with the placement-only sentence and the removal of the label and marks; a start or end frame is the literal first or last frame, so it carries no label and its product is photoreal and paste-tested.
 - **What.** `T placeholder` (new, gather-only): a product render composited into a silent 9:16 source video (one or more `--window`s for cuts, punch-ins and set-ups) or into a placement image (`--image`), drawn at the real cm proportions, tone-matched to a sample, with a contact shadow, blur and grain, optional luma-follow (`--luma-ref`, `--luma-spans`) and occlusion (`--occlusion-mask`, `--skin`), a thin red outline and a short label beside it (Wan's convention for auxiliary marks); the sidecar records the boxes, the drawn size and the `--basis` lines with their arithmetic, and nothing is chosen by the tool. `generation-system.md` §4b.6 rewritten (the placement marker, the request sentences, the removal line, Create's marked texture, the start/end-frame exception, the old guide's evidence kept as history) and §4b.7 added (real dimensions from the assets, the distance from at least two neighbours of known size with their depth ratios, two estimates that agree within about 25 % before the marker is built, perspective, posture, occlusion, windows, the label). Pointed to it: generation-system §4b.1b, §4b.1c, §4b.2, §4b.3, §4b.5, §5c.2b, §6, §8, §9 (marker residue), §9b (a must-not-survive row), §10 (the brief's Marker line); anomaly-catalog §2.7, §2.9, §2.15, §2.16, §3, §4 (step 5j), §4.1, §5; analysis-protocol §5; assets-and-substitution §5; production-agents §2 ("Spot and marker"); the wan-3-0 guide (§2.5 gotcha 10, §3.6, §3.14, §4.0 items 10, 13, 14, §5, §7, §9), seedance-2-5 (§3.14, §5) and the start-frame notes of grok-video, minimax-hailuo, veo-3 and veo-3-1; the skills `awl-recreate-plan`, `awl-edit`, `awl-plan-video`, `awl-write-request`, `awl-inputs`, `awl-precheck`, `awl-qc`, `awl-analyze-produce`. Unverified: whether the locked model removes the outline and the label cleanly; X9 reads every take for residue. Tests: t01 +6 checks, t02 +8 checks, the rehearsal +3 steps.
+
+## 2026-10-26 · the own voiceover (contract item 31): native driving audio, a lip-sync pass, or the voice over the video
+
+- **Why.** The user (2026-10-26), after voicing a Kosovar-Albanian skincare ad with ElevenLabs: Analyze → Create must be able to use the user's own ElevenLabs
+  voiceover in the generations (Free too, but only on the user's own decision: the pipeline must know where to find it and what to do, never suggest it); the
+  user picks the voice (from the list, or by name or id) and the language, with an extra preference such as a Scottish accent or Kosovar Albanian. Then: the
+  voiceover must be in the generated video natively, the generation using the audio and syncing the movements and lips to it, not placed in CapCut, where that
+  is possible, and else the most accurate syncing approach. Then: native driving with Wan 3.0 as one option, and also the voice only placed over the video in
+  CapCut (narration, a product review), selectable with every model.
+- **What the guides say.** Seedance 2.5's `audio_references` carry timbre, accent and emotion only, and written dialogue wins over them: not a driving audio.
+  A driving audio exists only in Wan 3.0 and Wan 3.0 Prime (reference mode: `image_references` + `audio_references`, never with `start_image`; ≤5 clips, ≤15 s)
+  and Wan 2.7 (`start_image` + one audio as `driving_audio`, 2–30 s, cut at the duration; a shorter audio leaves silence). Higgsfield's `sync_so` (Sync Lipsync 3:
+  `input_video` + `input_audio`, `sync_mode`) re-syncs any clip's mouth to an audio; it sits in `index.json → not_selectable.utility`, so it never enters the menu.
+- **What changed.** Three methods the user picks at the start, before the model menu (`state.json → voiceover.method`): **native** (the take is the driving
+  audio; the driving models lead the menu), **lipsync** (any model speaks the take's words verbatim, then a `sync_so` pass with the exact take, through the ledger
+  as `--video NN-sync`), **overlay** (no dialogue; `T voiceover mix` lays the take over the picture and the CapCut project carries it on its own track).
+  `reference/voiceover.md` (11 sections); the router's item 31, its labels row and the read-only ElevenLabs tools in allowed-tools (a paid take still asks);
+  `awl-start` steps 2b (the method), 4 (the facts line, native options first), 5c (the voice list printed whole, then Voice, Language and Voice style in one call)
+  and 6 (the keys); `awl-free-plan` step 2b (only from the requirement; open items inside the one confirmation, at most four questions); `awl-create-plan`,
+  `awl-asset-plan` (lines and form under the method; native ≤15 s per generation); `awl-plan-video` (the X1 Voiceover block: the take, the fit, the durations by
+  method); `awl-write-request`, `awl-inputs`, `awl-precheck`; `awl-postprocess` step 5b (once the picture passed: align, keep or lay back, the sync pass, the mix,
+  the fallback) and step 6 (the voice by method); `awl-submit` (the sync pass's ledger lane); `awl-qc` (soundtrack, lips at three phrase starts and one pause,
+  the face after a sync pass; the hand-off back to step 5b); `awl-record`, `awl-wrapup`, `awl-analyze-produce` (the contract line, the `voiceover` blocker, the
+  pilot); production-agents §1–§4 (the "Voiceover: <voiceover>" line, the blocker, `result.json → voiceover`); capcut-assembly §3, §3b; higgsfield-mcp §5; the
+  guides wan-3-0, wan-2-7 and seedance-2-5 §3.9. `T voiceover outdir | record | align | mix` (gather-only: it measures, records and mixes, never judges) and
+  `T contract` fills the Voiceover line (`off` for a run without the key, so the run in progress is untouched); `T status` reports the choice and the takes.
+- **Measured.** `eleven_v4`: 242 credits for a 240-character script (tags count). Albanian (`sq`) is in no official language list and still voiced well on
+  2026-10-26. The MCP's `text_to_speech` writes only under its base path (another folder answers "not writeable"), and its file names hold brackets.
+- **Tests.** t01 +8 checks (the reference, the router item, the start questions and their order, the Free rule, the wiring of every step, the contract, the
+  command); t02 +23 checks on synthetic tone bursts (record: phrases, pauses, spoken words, the kept earlier take, the state key, a transcribed own file; align:
+  the built-in 0.25 s found at r=1.0; mix: the muted and the kept bed, the voice track, cut speech reported; the contract's Voiceover line on and off).
+- **Hypotheses to test** (the pilot video of the first voiced run measures them):
+  1. native on Wan 3.0 / Prime: the generated file's sound is the take (`T voiceover align` near 1 at near 0) and the on-camera speaker's mouth opens within
+     0.1 s of each phrase start; proven when 3 of 3 voiced videos need no lay-back and no sync pass.
+  2. `sync_so` keeps 720×1280 and the take as its soundtrack, and leaves the face unharmed (no blur, smear or doubled teeth around the mouth); its cost is read
+     with `get_cost` on the first pass.
+  3. lipsync's first generation on Seedance speaks the verbatim words in an unofficial language closely enough for the sync pass to land; else write the
+     dialogue in the take's language and report how close the mouths came.
+  4. a language outside the official list (Albanian) keeps its pronunciation over a whole run: the user's ear is the only check (no agent listens).

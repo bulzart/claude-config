@@ -45,7 +45,7 @@ Plan everything before production, in allocation order, **without asking for con
 1. **X1–X4 for every video:** plan, pattern card, request(s), pre-generation QC. Recreate plans
    take the approach and source preparation from E4–E5. With an own voiceover (item 31), X1 also writes, voices (one ElevenLabs call)
    and records each video's take, and plans the video to it; before the first take, `check_subscription` shows whether the characters
-   left cover the run's scripts (a shortfall is a blocker, reported).
+   left cover the run's scripts (a shortfall is a blocker, reported). The takes are made in this session, never in a planner fork (item 30).
 2. **Shared inputs, once:**
    - the Higgsfield project folder (X5: `list_workspaces` → `create_project`), stored with
      `T state --run RUN set higgsfield.folder_id=<id>`;
@@ -204,7 +204,10 @@ See §6.
     `video-NN-pattern.md`, `video-NN-brief.md`, `50-requests/video-NN-request.json`, its uploads through `T uploads set`, and a status note `40-briefs/video-NN-planner.md`
     with three fixed headings (Done, Open, Risks: what it measured, what it could not settle, what the agent must check). It calls no generation tool, never touches
     another video's files, writes state.json only through `T state … append`, and stops after `T lint-run --run RUN` shows its files clean. The main session reads the
-    status note and the files, not the fork's final message, and spawns the production agent only after that.
+    status note and the files, not the fork's final message, and spawns the production agent only after that. With an own voiceover (item 31) a fork never voices a
+    take (a paid call that asks the user): this session writes the video's lines and its script file, makes and records the take (`awl-plan-video`, the Voiceover
+    block up to `T voiceover record`) before the fork starts, and the fork plans the rest of X1–X2 to the recorded take (`state.json → voiceover.files.NN`); a take
+    the fork finds unfit goes under Open, and this session makes the second take.
 
 ## Never (this phase)
 

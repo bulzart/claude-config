@@ -47,10 +47,11 @@ analyze-with-loupe/
 │   ├── brand-guardrails            the client's rules from the assets folder (no gore, count limits, no competitor brands, no ambassador likeness, claims, disclaimers): extraction, rule kinds, the per-reference guardrail audit (core → dismiss; peripheral → pick and edit: count reduced, competitor marks removed never blurred, faces swapped, captions rewritten), Create invariants, Edit Mode hits, QC
 │   ├── text-and-format             mode-dependent text policy (Analyze: clean plate + CapCut text layers), text removal, fixed 9:16 / 720p rules
 │   ├── capcut-assembly             Analyze Mode's editable master: one CapCut project per video (DD_Mon_YYYY_vNN) with the inserts and text layers (house text style: System, size 10, the user's locked preset); save, repair, preview
-│   ├── production-agents           Analyze Mode (Recreate / Create): one background agent per video (max 5 at once), its prompt (which invokes the per-video skills), contract and result.json
-│   └── assets-and-substitution     user-supplied assets only (analyze: dropped once; edit: per operation), contents samples, understanding + registry, substitution map, reference strategy per model
+│   ├── production-agents           Analyze Mode (Recreate / Create / Free): one background agent per video (max 5 at once), its prompt (which invokes the per-video skills), contract and result.json
+│   ├── assets-and-substitution     user-supplied assets only (analyze: dropped once; edit: per operation), contents samples, understanding + registry, substitution map, reference strategy per model
+│   └── voiceover                   the own voiceover (item 31): the state and the take files, the choice at the start (method, voice, language, style), writing the lines, generating and recording a take, on-camera or off-screen, the request by method (native driving audio, the lipsync scene and its `sync_so` pass, overlay), the upload, after the generation (align, mix, sync pass, the fallback), the CapCut voice track, QC, credits and honesty
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
-├── scripts/awl.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), placeholder (the placement marker: a product render composited into a prepared source video or a placement image at the spot and height the agent gives, with a red outline, a short label and a JSON sidecar of the facts), sync-check, locked ledger/state, CapCut name/prep/repair, model-menu / model-entry, transfers; doc-text extracts PDFs with pypdf and flags an image-only one; seams (the per-frame luma and frame difference around a cut point, also printed by strip-inserts); status, doctor, lint-run and cost-report (gather-only inspection of a run and of this machine; status and doctor read the keeper's state); uploads (one schema per video, a loud merge into state.json); contract (the agent contract from the canonical prompt and state.json); frames --grid (gridded copies in source pixel coordinates); hf-put --capture (upload from the hook's capture); every `--run` takes a full path, a bare run name or a stamp prefix)
+├── scripts/awl.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), placeholder (the placement marker: a product render composited into a prepared source video or a placement image at the spot and height the agent gives, with a red outline, a short label and a JSON sidecar of the facts), sync-check, locked ledger/state, CapCut name/prep/repair, model-menu / model-entry, transfers; doc-text extracts PDFs with pypdf and flags an image-only one; seams (the per-frame luma and frame difference around a cut point, also printed by strip-inserts); status, doctor, lint-run and cost-report (gather-only inspection of a run and of this machine; status and doctor read the keeper's state); uploads (one schema per video, a loud merge into state.json); contract (the agent contract from the canonical prompt and state.json); frames --grid (gridded copies in source pixel coordinates); hf-put --capture (upload from the hook's capture); voiceover (outdir: the run's folder the ElevenLabs MCP may write to; record: a take into the run with its measured phrases, pauses and spoken words; align: where a take lies in a file's sound, with a plot; mix: the take laid over a picture, with the CapCut voice track); every `--run` takes a full path, a bare run name or a stamp prefix)
 ├── scripts/check_all.py            every check in one table (`check-all.cmd` / `.ps1` / `.sh`): the suites below, `docs_tool.py check`, Loupe's own tests; exit 1 on a failure
 ├── tests/                          the suites (`python tests/run_all.py`, `--real` adds the real-data suite): t01 the structure (docs check, skills, hand-offs, `T` commands, the Loupe and audio wiring, the forbidden names), t02 the toolkit on scratch fixtures, t03 the Loupe coupling against a Loupe server in the test process with a fake keeper, t04 real data read-only, t05 the three hooks and the upload capture; tests/rehearsal.py drives the whole golden path in a temp copy
 ├── scripts/docs_tool.py            the section tool: `split` / `join` / `index` for the documents, `check` (indexes, section files, skills, paths, § citations) and `budget` (what each skill and the command load)
@@ -131,6 +132,35 @@ ingested`, never `no speech`: what was said is unknown, not absent). The answer 
 script or skill picks a default, `T prep-all` stops without it, `T prep-video` takes `--audio-ingest`, `T captions --from-speech` refuses in a frames-only run. Whatever needs the
 audio file itself (the original audio restored under the picture, loudness and silences, `T audio-profile`, `T sync-check`) runs in both modes.
 
+## Own voiceover (contract item 31)
+In **Create**, before the model menu, the user picks whether the videos speak with their own ElevenLabs voiceover and how the take meets the picture (the
+**method**, `state.json → voiceover.method`):
+- **native**: the take is the generation's driving audio. Wan 3.0 and Wan 3.0 Prime (reference mode: the character and product images plus the take as Audio 1)
+  and Wan 2.7 (a start frame plus the take) build the video around it; the lips and the action timing follow it, and the generated file's sound is the take.
+  Up to 15 s of voice per generation; one generation, nothing edited afterwards.
+- **lipsync**: any model generates the speaking scene (the take's words verbatim as dialogue), then Higgsfield's Sync Lipsync 3 (`sync_so`, the clip plus the
+  take, `sync_mode: silence`) re-syncs the mouth to the exact take: one extra generation per voiced video, through the ledger as `--video NN-sync`.
+- **overlay**: any model generates the video without dialogue (narration, a product review, a story told over the pictures); `T voiceover mix` lays the take
+  over the picture for the deliverable and the CapCut project carries it on its own track.
+- or "No, the model's own audio", as in every run.
+
+With native the driving models lead the model menu; the model is still locked for the run and never suggested after the pick. After the paths, the
+ElevenLabs tools are loaded, the subscription and the models are read, the user's whole voice library is printed, and one question asks the **voice** (three
+from the list, the user's own voiceover files, or any name, voice id or `character = voice` pairs), the **language** and an extra **preference** for accent,
+dialect or delivery (the user's examples: a Scottish accent, Kosovar Albanian in the Gheg dialect). **Free** uses one only when the user's requirement asks for
+it (the pipeline never offers it); what the requirement leaves open is asked inside the free plan's one confirmation. Never in Recreate or Edit Mode, whose
+original audio returns (item 19).
+
+Per video: X1 writes the lines (the dialect in the words, an accent tag, emotion tags, the length budget) and makes one take per script with the MCP's
+`text_to_speech` into the folder `T voiceover outdir` prints (the MCP writes only under `ELEVENLABS_MCP_BASE_PATH`, by default the Desktop); `T voiceover record`
+copies it into the run (`30-assets/voiceover/video-NN[-cK]-aK.mp3` with a sidecar: the script as sent, the spoken words, the phrases and pauses), and the beats
+and the duration are re-timed to it. X2 builds the request by method (`voiceover.md` §6), X3 uploads the take (native, lipsync), X8 runs step 5b once the
+picture passed (`T voiceover align`: near 1 at near 0 means the file's sound is the take; the sync pass; `T voiceover mix`), X9 checks the soundtrack, the lips
+at three phrase starts and one pause, and the face after a sync pass, and the wrap-up reports the method, the voice, the takes, the sync passes and the credits.
+No agent listens: pronunciation, accent and dialect are always "not checked (listen)", and a language outside the model's official list is named. Unverified
+on Higgsfield as of 2026-10-26: how faithfully a driving audio is kept and followed by the lips (both Wan guides list exact lip sync as a weakness) and whether
+`sync_so` keeps 720×1280 and the take as its soundtrack; the pilot video measures both, and X8 measures them for every video.
+
 ## How a run uses the documentation
 1. The command invokes `awl-start`: it prints the model menu with `awl.py model-menu`. The menu lists **every** available model: `models/index.json` merged with the
    live `models_explore` catalog. Pinned models come first (`menu.pinned`: Seedance 2.5, Wan 3.0 Prime), then `menu.order`. Change the pins or the order there; the command needs no change.
@@ -170,7 +200,10 @@ audio file itself (the original audio restored under the picture, loudness and s
 - FFmpeg / ffprobe 9.x (winget Gyan.FFmpeg).
 - Python 3.12 with Pillow, NumPy and requests; faster-whisper (models cached: small, base, tiny) and
   rapidocr-onnxruntime are optional but used.
-- The Higgsfield MCP server `higgsfield` (OAuth via `/mcp`).
+- The Higgsfield MCP server `higgsfield` (OAuth via `/mcp`); the lipsync method uses its `sync_so` model (Sync Lipsync 3), which the model menu never lists.
+- For an own voiceover (item 31): the ElevenLabs MCP server `elevenlabs` (the local `elevenlabs-mcp` through `uvx`, user scope, `ELEVENLABS_API_KEY` in its
+  environment; `claude mcp add elevenlabs -s user -e ELEVENLABS_API_KEY=<key> -- uvx elevenlabs-mcp`, then a restart). It writes files only under
+  `ELEVENLABS_MCP_BASE_PATH` (default: the Desktop). A free ElevenLabs plan carries no commercial licence for the audio.
 - CapCut desktop (9.x), the `capcut` MCP server (installed with analyze-stack:
   `~/.claude/analyze-stack/tools/mcp/capcut-mcp`, template draft `_analyze-stack-template`), and
   capcut-cli 0.25 (`capcut` on PATH via npm) for registration, timeline sync, lint and proxy

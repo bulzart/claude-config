@@ -14,6 +14,7 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - nothing up front: read the run's brief, final prompt and QC verdict named below, and only the one reference section that owns the rule
+- *a report about an own voiceover (the run's `state.json → voiceover`; item 31):* voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.1 KB) and §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (2.8 KB)
 
 ## Feedback first
 
@@ -25,6 +26,12 @@ Only these section files for this phase, nothing else unless a step below says s
    the prompt they used. Say in two lines which stage made the miss and which reference section holds the
    rule, then offer the fix (a re-edit or a regeneration of that video in its mode) in one line, and
    continue only if the user wants it.
+   **A voiced video (item 31).** A report about the voice itself (a word said wrong, the accent or the dialect, the register, a rushed
+   read) is the take's miss (X1, `voiceover.md` §3–§4; no agent listens, so QC could not have caught it): the fix is a new take with the
+   user's correction (the word respelled the way it is said, the dialect forms or the tag changed, or another voice), recorded as the next
+   attempt, then by method: **overlay** a new mix and voice track (no generation); **lipsync** a new sync pass on the same accepted clip;
+   **native** a sync pass with the new take on the delivered clip (the picture kept) or a regeneration driven by it (offer both, with their
+   cost). A report about the lips is X8/X9's (`voiceover.md` §8: a sync pass, or one regeneration).
 
 ## Rules this phase owns (contract items 22)
 
@@ -54,4 +61,4 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Hand-off
 
-Continue only if the user wants the fix (a re-edit or a regeneration of that video in its mode): re-enter the per-video loop at `awl-write-request` with the diagnosis. A miss that is a kind the references do not hold: offer to write the rule into the section that owns it (on the user's yes).
+Continue only if the user wants the fix (a re-edit or a regeneration of that video in its mode): re-enter the per-video loop at `awl-write-request` with the diagnosis; a voice fix (item 31) re-enters at the take (`awl-plan-video`, the Voiceover block), then `awl-postprocess` step 5b (a sync pass through `awl-submit`), or `awl-write-request` for a native regeneration. A miss that is a kind the references do not hold: offer to write the rule into the section that owns it (on the user's yes).

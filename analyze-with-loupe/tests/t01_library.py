@@ -199,8 +199,8 @@ VOD = LIB / "reference" / "voiceover"
 vo_files = sorted(p.name for p in VOD.glob("*.md")) if VOD.is_dir() else []
 check(len(vo_files) == 11 and (LIB / "reference" / "voiceover.md").is_file(), f"the voiceover reference has its index and 11 sections ({len(vo_files)})")
 vo_all = " ".join(rd(p) for p in VOD.glob("*.md"))
-check(all(k in vo_all for k in ("**native**", "**lipsync**", "**overlay**", "sync_so", "driving audio", "Scottish accent", "Kosovar Albanian", "no one listened") if k != "no one listened")
-      and "Never claim that a take was listened to" in vo_all, "the voiceover reference holds the three methods, the sync pass, the user's accent and dialect examples and the honesty rule")
+check(all(k in vo_all for k in ("**native**", "**lipsync**", "**overlay**", "sync_so", "driving audio", "Scottish accent", "Kosovar Albanian", "Never claim that a take was listened to")),
+      "the voiceover reference holds the three methods, the sync pass, the user's accent and dialect examples and the honesty rule")
 check("31. **Own voiceover" in router and "mcp__elevenlabs__search_voices" in router and "item 31 →" in router and "mcp__elevenlabs__text_to_speech" not in router.split("---")[1],
       "the router has contract item 31 and its labels, and allows only the read-only ElevenLabs tools without asking (a paid take still asks)")
 check('header "Voiceover"' in st and 'header "Voice"' in st and 'header "Language"' in st and 'header "Voice style"' in st and "voiceover.method=native|lipsync|overlay" in st

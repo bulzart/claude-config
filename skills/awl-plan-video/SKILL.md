@@ -88,7 +88,8 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ### ElevenLabs tools (an own voiceover only, item 31)
 
-Deferred: load them before the first take of the run (the main session voices every take; production agents never call ElevenLabs):
+Deferred: load them before the first take of the run (the main session voices every take; a planner fork and the production agents never call
+ElevenLabs: with forks, this session writes the lines and records the take before the fork plans the rest, `awl-analyze-produce` item 30):
 `ToolSearch "select:mcp__elevenlabs__text_to_speech,mcp__elevenlabs__get_voice,mcp__elevenlabs__check_subscription"`. None found, or the
 call fails: a blocker, reported with the real error (`voiceover.md` §4 step 8).
 

@@ -284,7 +284,7 @@ Only these section files for this phase, nothing else unless a step below says s
       do **not** submit it and do not call `T ledger begin`: write `result.json` with `"status":"blocked"`, `"blocker":"qc_fix_permission"` and a `fix_proposal`
       (`production-agents` §4), then stop. The main session asks the user and continues you with `approved`, `declined` or `auto`; you never ask the user yourself.
       `approved` or `auto`: go on at `awl-submit` (X7 with the prepared request, the next attempt number), then `awl-postprocess` and `awl-qc` as usual. `declined`: no further generation
-      for this video; finish this take as it is, flagged: `awl-postprocess` step 6 if the project is not built yet, the project checks here, then `awl-record`, with `qc` = "declined fix: <the findings>".
+      for this video; finish this take as it is, flagged: `awl-postprocess` step 5b first when an own voiceover has not been applied yet (item 31), step 6 if the project is not built yet, the project checks here, then `awl-record`, with `qc` = "declined fix: <the findings>".
       A second miss after an approved fix ships the best take flagged and asks nothing;
     - or report the failure honestly.
 
@@ -443,6 +443,7 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Hand-off
 
 - Edit Mode: the findings become the QC notes of the review. Return to the review (X9-R) in `awl-edit` (re-invoke it if its text is no longer in context); there is no automatic regeneration.
+- Analyze Mode, an own voiceover (the plan has a Voiceover block; item 31), the picture passed and X8 step 5b has not run yet: go back to `awl-postprocess` step 5b (the align, the sync pass or the mix), then return here for the voice checks; once they pass, `awl-postprocess` step 6 as below.
 - Analyze Mode, the picture passed but the CapCut project is not built yet: go back to `awl-postprocess` step 6, then return here for the project checks.
 - Analyze Mode, accepted (picture and project): invoke Skill `awl-record` (X10).
 - Analyze Mode, one diagnosed regeneration: `awl-write-request` (the rewritten request; the diagnosis is already written in the brief as an attempt block) → `awl-inputs` only for new inputs → `awl-submit` (X5 again, X7, next attempt number) → `awl-postprocess` → `awl-qc`.
