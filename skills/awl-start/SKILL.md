@@ -160,15 +160,17 @@ Only these section files for this phase, nothing else unless a step below says s
    audio questions, `voiceover.md` §2 steps 3–5: load the ElevenLabs tools (§2 step 3), read the subscription, the models and the voices,
    print the whole voice list, then one AskUserQuestion call with header "Voice", header "Language" and header "Voice style" (§2 step 4),
    then resolve and verify the answers. Stored in step 6.
-5d. **Effort** (both modes; item 33). In the same AskUserQuestion call as the QC-fixes and audio questions, the question of `effort.md`
-   §1 (its table and line first, its four options and Other for XHigh, none recommended; `$ARGUMENTS` with `effort low|medium|high|xhigh|max`
-   answers it). Stored in step 6.
+5d. **Effort** (both modes; item 33). After the start's question dialogs (QC fixes, audio, and step 5c's voice), in plain chat, never
+   with AskUserQuestion (a dialog holds four options and hides the text printed above it): the question of `effort.md` §1, all five
+   levels numbered, none recommended, as a message of its own and the last thing in the turn; then stop and wait for the reply.
+   `$ARGUMENTS` with `effort low|medium|high|xhigh|max` answers it. Stored in step 6.
 6. Create the run:
    - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]` (Free, requirement only: no `--source`);
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
    - store the audio choice (step 5b): `T state --run RUN set audio_ingest=whisper` or `audio_ingest=frames-only`;
-   - store the effort level (step 5d): `T effort --run RUN --level <level>` plus the user's own numbers as its options (`effort.md` §1);
+   - store the effort level (step 5d): `T effort --run RUN --level <level>` plus the user's own numbers as its options (`effort.md` §1;
+     `T new-run` leaves it empty, and `T prep-all` stops until it is stored);
    - every Analyze sub-mode: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto`);
    - Create: store the voiceover choice (steps 2b, 5c) with the store line of `voiceover.md` §1 (`T state --run RUN set voiceover.enabled=true
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;
@@ -176,7 +178,8 @@ Only these section files for this phase, nothing else unless a step below says s
    - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`
      (first line `# Requirement (the user's words)`, then the text; a file the user named is copied, a PDF through `T doc-text`);
    - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper
-     is fed from, and `keeper.state`: the keeper is booted or brought up to date there, so the first consult finds it current; `keeper.understanding` says how many
+     is fed from, and `keeper.state`: the keeper is booted or brought up to date there, so the first consult finds it current (`busy`: another keeper call held
+     it, and the first consult brings it up to date; an empty library has no keeper, `keeper: null`); `keeper.understanding` says how many
      samples it holds from their pictures, and `keeper.reading_note` appears when new or changed samples are being read in the background: nothing to do, Loupe
      tells the keeper when they are done), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
      `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
@@ -249,9 +252,11 @@ Item 17's "§3 R-steps" are step A6r (`awl-recreate-plan`).
     `none`: pure generation, no insert or meme sound of any kind, a reference's meme beat played by the
     generated scene, never by a generated copy. It wins over the house approach. `state.json → memes`; a Create run without the key
     includes them.
-33. **Effort level: the user's choice (step 5d).** It sets how densely the references are sampled, the agents at once and the
-    pilot threshold (`state.json → effort`; `T prep-all` and the produce phase read it); coverage and the floors never change, and QC
-    and Loupe are never part of it (`reference/effort.md`). A run without it keeps its old rates and is never asked.
+33. **Effort level: the user's choice (step 5d), from all five levels.** It sets how densely the references are sampled, the agents
+    at once and the pilot threshold (`state.json → effort`; `T prep-all` and the produce phase read it); coverage and the floors never
+    change, and QC and Loupe are never part of it (`reference/effort.md`). Asked in plain chat, the five levels numbered (a question
+    dialog holds four). A new run's level is empty until stored, and `T prep-all` and `T effort` stop on it; a run made before item 33
+    has no key, keeps its old rates and is never asked.
 
 ## Never (this phase)
 
@@ -262,7 +267,8 @@ Item 17's "§3 R-steps" are step A6r (`awl-recreate-plan`).
   never shorten the voice list, and never pick the method, the voice, the language or the preference for the user.
 - Never decide the audio choice for the user, never mark one of its options as recommended, and never write `no speech` for a run that did not ingest audio.
 - Never pick the memes choice for the user or mark one of its options as recommended (item 32).
-- Never pick the effort level for the user, mark one as recommended, or set a rate below its floor (item 33).
+- Never pick the effort level for the user, mark one as recommended, offer fewer than its five levels, or set a rate below its floor
+  (item 33).
 - Never take client assets from the references folder or the edit-source folder: they are
   reference material, and may show other products or executions.
 

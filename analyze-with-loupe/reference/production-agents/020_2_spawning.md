@@ -118,7 +118,8 @@ Hard rules:
 - Label: read the wordmark and the variant tag (flavour, size or model) word by word on a full-resolution
   frame at rest; a wrong letter is a regenerate reason (`anomaly-catalog.md` §2.9, §4 step 5h).
 - Touch only video NN's files and its CapCut project. Reuse the media ids and the folder id in
-  state.json.
+  state.json. The user's folders (references, assets, examples, edit sources) are read-only: a file you need from them is copied,
+  never moved, renamed or deleted (item 34).
 - Never capcut_save with force:true.
 - Text layers: fontSize 10, no colour; capcut-repair applies the house text style (the user's locked
   preset in config capcut.text_style.learned). Never restyle text, and never run

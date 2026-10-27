@@ -45,8 +45,8 @@ Only these section files for this phase, nothing else unless a step below says s
   - Take the assets only from this video's registry: scope `project` (Analyze Mode asset plan) or
     scope `video-NN` (Edit Mode files for this edit).
   - Upload the files this video needs, once per run: `media_upload` → `T hf-put --capture <id> --file <path>` (the hook keeps every
-    `media_upload` answer in Loupe as a capture and prints its id; the presigned URL is never copied by hand; `--url` only when no
-    capture exists) → `media_confirm` → `T uploads set --run RUN --video NN --label "<as the request names it>" --media-id <id>
+    `media_upload` answer in Loupe as a capture and prints its id when this library's run is the newest changed one; the presigned URL is
+    never copied by hand; `--url` only when no capture id was printed) → `media_confirm` → `T uploads set --run RUN --video NN --label "<as the request names it>" --media-id <id>
     --file <path>` (one schema; the main session merges the records with `T uploads merge`). Reuse media ids recorded in `state.json`.
   - **Every video sent to Higgsfield is silent:** the `videos_without_audio` copy, or its prepared
     derivative from E5. Never upload an original video with its audio. (A clip this run generated

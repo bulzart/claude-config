@@ -65,9 +65,9 @@ Only these section files for this phase, nothing else unless a step below says s
     --product "<form>" --product-details "<its shape, size, opening and natural posture, from its registry row>"`. A regeneration never asks: it works from its own diagnosed cause (`awl-qc`). The answer
     has 0 to 3 hints, and 0 is the normal answer (`mode: empty`, `unavailable` or `busy` also mean none: write the
     request as always). Each hint has a `trigger` (the plan situation where that miss arises), a `right_outcome`,
-    a `lever` and a `caveat`, each a whole sentence or cut at a sentence end (an ellipsis marks a cut). `held_back` counts the
+    a `lever` and a `caveat`, each a whole sentence or cut at a sentence or word end (an ellipsis marks a cut). `held_back` counts the
     hints the keeper offered that Loupe set aside, and `held_back_why` says why for each (a universal wording, another model family,
-    an unknown sample, low confidence, beyond the cap): read it as information, never ask again for them.
+    an unknown sample, low confidence, no trigger or no lever, beyond the cap): read it as information, never ask again for them.
     - **When the keeper asks you something.** The keeper asks instead of guessing; Loupe fetches the plan, the request prompt,
       the registry row or a sample's origin itself. What only you can answer comes back as `needs_unmet` with an `unmet_rule`:
       answer it from your plan in words and ask once more with the same `--beats` plus `--note "<your answer>"`. If it is

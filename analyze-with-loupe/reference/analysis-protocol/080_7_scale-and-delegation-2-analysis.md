@@ -28,7 +28,7 @@ hatchback, about 4 m long">.
 Your examples (if any): <E01, …> (prepared under <RUN>/10-media/<E>/): the user's own finished
 videos. For each, write <RUN>/20-analysis/examples/<E>.md with the §9.2 template (§9.1 says what to read).
 Rules: do not call Higgsfield or CapCut tools, do not spawn agents, do not use the Workflow tool, do not ask
-questions, write only your card files. Every product, person or brand you see in these videos
+questions, write only your card files, and never move, rename or delete a file of the references folder (it is read-only). Every product, person or brand you see in these videos
 belongs to the references; client assets come only from the user's supplied asset registry, which you
 do not need. Done means: one card file per video with every §3 field present (a field you could not judge says
 unknown and why, never a guess), every claim labelled [E] or [I] with the sheet or frame it rests on, and a
