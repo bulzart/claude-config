@@ -671,7 +671,8 @@ def densify_plan(cuts: list, peaks: list, dur: float, native_fps: float, base_fp
         want.append((ct - 0.75 * eps, f"c{i + 1:02d}<", "pre_cut"))
         want.append((ct + 0.25 * eps, f"c{i + 1:02d}>", "post_cut"))
     for i, p in enumerate(peaks):
-        for k in range(-5, 6):
+        half = max(1, int(round(0.5 * dense_fps)))      # +-0.5 s around a peak at every level (5 frames each side at 10 fps)
+        for k in range(-half, half + 1):
             want.append((p["t"] + k / dense_fps, f"m{i + 1}", "peak"))
     for k in range(int(round(hook_dense_s * dense_fps))):
         want.append((k / dense_fps, "hook", "hook"))
@@ -765,16 +766,21 @@ def audio_ingest_of(run_dir: Path) -> str:
 # is dense, and the frame-exact checks run at the video's own frame rate (qc "@full"). The floors are where a check would lose what it
 # needs (0.25 s between storyboard frames for the anchor track; 1/15 s for the 0.1 s sync and contact tolerances); the ceilings keep a typo
 # from flooding a run. None = no cap.
-EFFORT_KEYS = ("analysis_fps", "analysis_dense_fps", "densify_ranges", "qc_storyboard_fps", "qc_dense_fps", "qc_frames")
+EFFORT_KEYS = ("analysis_fps", "analysis_dense_fps", "motion_peaks", "densify_ranges", "qc_storyboard_fps", "qc_dense_fps", "qc_frames",
+               "qc_samples", "max_agents", "pilot_from")
+_EL = lambda af, adf, mp, dr, qs, qd, qf, smp, ag, pf: {"analysis_fps": af, "analysis_dense_fps": adf, "motion_peaks": mp, "densify_ranges": dr,
+                                                     "qc_storyboard_fps": qs, "qc_dense_fps": qd, "qc_frames": qf, "qc_samples": smp,
+                                                     "max_agents": ag, "pilot_from": pf}
 EFFORT_LEVELS = {             # max = the pipeline's rates before item 33, and what a run without the key keeps
-    "low":    {"analysis_fps": 2.0, "analysis_dense_fps": 6.0,  "densify_ranges": 2,    "qc_storyboard_fps": 4.0, "qc_dense_fps": 15.0, "qc_frames": 4},
-    "medium": {"analysis_fps": 3.0, "analysis_dense_fps": 8.0,  "densify_ranges": 4,    "qc_storyboard_fps": 4.0, "qc_dense_fps": 20.0, "qc_frames": 8},
-    "high":   {"analysis_fps": 4.0, "analysis_dense_fps": 10.0, "densify_ranges": 6,    "qc_storyboard_fps": 5.0, "qc_dense_fps": 24.0, "qc_frames": 12},
-    "xhigh":  {"analysis_fps": 5.0, "analysis_dense_fps": 10.0, "densify_ranges": 8,    "qc_storyboard_fps": 5.0, "qc_dense_fps": 30.0, "qc_frames": 16},
-    "max":    {"analysis_fps": 5.0, "analysis_dense_fps": 10.0, "densify_ranges": None, "qc_storyboard_fps": 5.0, "qc_dense_fps": 30.0, "qc_frames": None},
+    "low":    _EL(2.0, 6.0, 4, 2, 4.0, 15.0, 4, 3, 2, 2),
+    "medium": _EL(3.0, 8.0, 5, 4, 4.0, 20.0, 8, 4, 3, 3),
+    "high":   _EL(4.0, 10.0, 6, 6, 5.0, 24.0, 12, 6, 4, 5),
+    "xhigh":  _EL(5.0, 10.0, 8, 8, 5.0, 30.0, 16, 8, 5, 5),
+    "max":    _EL(5.0, 10.0, 8, None, 5.0, 30.0, None, None, 5, 5),
 }
-EFFORT_BOUNDS = {"analysis_fps": (2.0, 10.0), "analysis_dense_fps": (6.0, 30.0), "densify_ranges": (2, 50),
-                 "qc_storyboard_fps": (4.0, 10.0), "qc_dense_fps": (15.0, 60.0), "qc_frames": (4, 200)}
+EFFORT_BOUNDS = {"analysis_fps": (2.0, 10.0), "analysis_dense_fps": (6.0, 30.0), "motion_peaks": (4, 8), "densify_ranges": (2, 50),
+                 "qc_storyboard_fps": (4.0, 10.0), "qc_dense_fps": (15.0, 60.0), "qc_frames": (4, 200), "qc_samples": (3, 50),
+                 "max_agents": (1, 5), "pilot_from": (2, 5)}
 EFFORT_LEGACY = {"level": "max", **EFFORT_LEVELS["max"], "note": "no effort key: the rates before contract item 33 (max)"}
 
 
@@ -1002,7 +1008,7 @@ def second_timeline(dur: float, shots: list, cuts: list, peaks: list, statics: l
 def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, dense_fps: float = 10.0,
                static_threshold: float = 2.5, whisper_model: str = "small", language: str = "auto",
                audio_ingest: str = None, do_ocr: bool = True, ocr_budget: int = 12,
-               max_frames: int = 1800, hook_s: float = 3.0) -> dict:
+               max_frames: int = 1800, hook_s: float = 3.0, peaks_max: int = 8) -> dict:
     t0 = time.time()
     if audio_ingest not in AUDIO_INGEST:
         raise RuntimeError(AUDIO_INGEST_HELP)
@@ -1038,7 +1044,7 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
               "first_cut_s": round(cuts[0][0], 2) if cuts else None,
               "cuts_in_first_3s": sum(1 for c in cuts if c[0] <= hook_s)}
     windows = activity_windows(scores, cuts, dur)
-    peaks = activity_peaks(windows, k=min(8, max(2, math.ceil(dur / 5))))
+    peaks = activity_peaks(windows, k=min(int(peaks_max), max(2, math.ceil(dur / 5))))
     write_json(odir / "cuts.json", {"detector": "ffmpeg select scene score on 192 px frames; cut = score>=0.30 "
                                                 "or local peak >=4x neighbourhood median (>=0.14); NMS 0.25 s",
                                     "cuts": [{"t": round(c[0], 3), "score": round(c[1], 3)} for c in cuts],
@@ -1197,7 +1203,8 @@ def _media_kwargs(a, audio_ingest: str, eff: dict | None = None) -> dict:
     dense = a.dense_fps if a.dense_fps is not None else (eff["analysis_dense_fps"] if eff else cfg_get("analysis.dense_fps", 10.0))
     return dict(base_fps=float(base), dense_fps=float(max(dense, base)), static_threshold=a.static_threshold,
                 whisper_model=a.whisper_model, language=a.language, audio_ingest=audio_ingest,
-                do_ocr=not a.no_ocr, ocr_budget=a.ocr_frames, max_frames=a.max_frames)
+                do_ocr=not a.no_ocr, ocr_budget=a.ocr_frames, max_frames=a.max_frames,
+                peaks_max=int(eff["motion_peaks"]) if eff and eff.get("motion_peaks") else 8)
 
 
 def cmd_prep_video(a):
@@ -1823,7 +1830,7 @@ def cmd_prep_all(a):
     write_text(index, ("# Examples index (study only)" if examples else "# Media index") + "\n\n" +
                "\n".join(lines[i] for i in order if i in lines))
     out({"ok": not errors, "set": a.inv_set, "audio_ingest": audio_ingest,
-         "sampling": {"effort": eff["level"], "baseline_fps": kw["base_fps"], "dense_fps": kw["dense_fps"]},
+         "sampling": {"effort": eff["level"], "baseline_fps": kw["base_fps"], "dense_fps": kw["dense_fps"], "motion_peaks": kw["peaks_max"]},
          "prepared": sorted(done), "errors": errors, "index": str(index)}, 0 if not errors else 1)
 
 
@@ -2291,8 +2298,9 @@ def _contract_effort(st: dict) -> str:
     """The contract's Effort line (contract item 33): the level and the rates `T qc --run` uses, and the single-frame budget."""
     e = effort_of_state(st)
     budget = "no cap" if e.get("qc_frames") is None else f"at most {e['qc_frames']} per QC pass"
+    samples = "all" if e.get("qc_samples") is None else f"the first {e['qc_samples']}"
     return (f"{e['level']} (QC storyboard {e['qc_storyboard_fps']:g} fps, checkpoint sheets {e['qc_dense_fps']:g} fps; single "
-            f"full-resolution frames beyond the label and size checks: {budget})")
+            f"full-resolution frames beyond the label and size checks: {budget}; Loupe sample images viewed: {samples})")
 
 
 def _contract_memes(st: dict) -> str:
@@ -6547,6 +6555,10 @@ def main():
     p.add_argument("--qc-storyboard-fps", type=float, help="QC storyboard of an output (floor 4: the anchor is read every 0.25 s)")
     p.add_argument("--qc-dense-fps", type=float, help="QC checkpoint sheets (floor 15); @full checkpoints always take every frame")
     p.add_argument("--qc-frames", type=int, help="single full-resolution frames per QC pass beyond the label and size checks (floor 4)")
+    p.add_argument("--motion-peaks", type=int, help="references: motion peaks densified per video, +-0.5 s each (floor 4)")
+    p.add_argument("--qc-samples", type=int, help="Loupe sample images viewed per QC consult, in the answer's order (floor 3)")
+    p.add_argument("--max-agents", type=int, help="production agents at once (1 to 5)")
+    p.add_argument("--pilot-from", type=int, help="the pilot runs first from this many videos (2 to 5)")
     p.set_defaults(fn=cmd_effort)
 
     p = sp.add_parser("cost-report", help="credits as the run recorded them (information, never a gate): credits_start, jobs from videos[], submissions, brief mentions, --balance")
