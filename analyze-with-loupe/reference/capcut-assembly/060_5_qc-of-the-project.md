@@ -5,7 +5,7 @@
   - every text event is at its planned time and position;
   - `T capcut-text-style --draft "<store>/<name>" --check` reports 0 texts off the house style;
   - no text layer contains an emoji.
-- On the preview (`awl.py qc --video <capcut-preview.mp4> --out <dir> --expect-size 540x960`, plus
+- On the preview (`awl.py qc --run RUN --video <capcut-preview.mp4> --out <dir> --expect-size 540x960`, insert and transition edges `@full`, plus
   its storyboard), check:
   - the cut into and out of every insert, and the sound;
   - text presence and timing;

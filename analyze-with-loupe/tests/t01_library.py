@@ -230,4 +230,19 @@ check(not mm_miss, "the memes choice is wired into every step that plans, places
 check("Memes: <memes>" in rd(PA / "020_2_spawning.md") and "**Memes**" in rd(PA / "030_3_the-agent-s-contract.md")
       and "memes = include" in rd(GS / "090_3c_reference-inserts-memes-cut-from.md"), "the contract carries the Memes line and its check; generation-system §3c states the Create condition")
 
+
+# --- effort level (item 33): asked at the start in both modes, stored by T effort, read by prep-all and qc --run; the frame-exact rule and the
+#     frame budget live once, in the QC stack section every QC pass reads; the analysts' densify budget in the protocol section they read
+EF = LIB / "reference" / "effort"
+ef_all = " ".join(rd(p_) for p_ in EF.glob("*.md")) if EF.is_dir() else ""
+check((LIB / "reference" / "effort.md").is_file() and len(list(EF.glob("*.md"))) == 2 and all(k in ef_all for k in ('header "Effort"', "**\"Low\"**", "**\"Max\"**", "| Medium |", "| XHigh |", "XHigh, or your own numbers", "@full", "Coverage", "never skips a check")),
+      "the effort reference holds the five levels' table, the question (XHigh through Other), the floors and the never-skip rule")
+check("33. **Effort level" in router and "item 33 →" in router and "5d. **Effort**" in st and "T effort --run RUN --level" in st and "effort §1" in st,
+      "the router has item 33; awl-start asks the effort question (step 5d), reads effort section 1 and stores it with T effort")
+qc_stack = rd(LIB / "reference" / "anomaly-catalog" / "220_4_the-qc-stack-x9-in-order.md")
+check("T qc --run RUN" in qc_stack and "@full" in qc_stack and "Effort budget" in qc_stack and "T qc --run RUN" in qc,
+      "the QC stack runs qc with the run (its effort rates), gives @full to the frame-exact checks and keeps the frame budget once")
+check("densify_ranges" in rd(LIB / "reference" / "analysis-protocol" / "020_1_inputs-per-video-produced-by-awl.md") and "<densify_ranges>" in rd(LIB / "reference" / "analysis-protocol" / "080_7_scale-and-delegation-2-analysis.md")
+      and "Effort: <effort>" in rd(PA / "020_2_spawning.md") and "effort" in cmds, "the analysts get the densify budget, the contract the Effort line, and awl.py the effort command")
+
 finish()

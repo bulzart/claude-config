@@ -332,3 +332,34 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
 - **Hypotheses to test:** (1) a `none` Create run delivers videos whose read-back timelines hold generated pieces only, and no reference's
   meme beat is replaced by a generated imitation; (2) a `none` run's longer generated length changes the 30 s permission count as planned;
   (3) the production agents of a voiced run read the voiceover sections once each and stay within their context with five agents running.
+
+## 2026-10-27 · the effort level (contract item 33): fewer frames where they are redundant, never where a check needs them
+
+- **Why.** The user (2026-10-26): the pipeline takes too many resources and generates too many frames and samples to inspect, which drains
+  tokens; ask at the start how much fps and other resources to analyse, as an effort level, without lowering anything the accuracy needs
+  ("for example making it skip one second of the video ... and then losing data that needs to be processed from the source"), and without
+  context rot between the agents. Then (2026-10-27): five levels, low, medium, high, xhigh and max, max being the rates before the change.
+- **Where the frames went** (the files of run `20261021-224049-21`, 16 references, 10 videos): 50 reference storyboard sheets and 33
+  close-up sheets at analysis; per produced video 146 to 738 images under `60-outputs/`, mostly QC checkpoint frames rendered at 30 fps
+  (one second makes 31 frames, two sheets) and 30 to 49 single full-resolution frames per QC pass, repeated for every attempt.
+- **What.** `awl-start` step 5d asks the level in the same call as the QC-fixes and audio questions (both modes; `effort.md` §1, read
+  once): the five levels as a table (references 2, 3, 4, 5, 5 fps; QC checkpoints 15, 20, 24, 30, 30 fps; budgets growing to none at
+  max), four buttons and Other for XHigh or the user's numbers (a question holds at most four options). `T effort` stores the level's table in `state.json → effort` (custom numbers held to the floors and reported); `T prep-all` reads
+  the reference rates and `T qc --run` the storyboard and checkpoint rates by themselves, and a checkpoint may ask for every frame
+  (`label:a-b@full`). The two budgets live once each in the sections their readers already load: the analysts' close-ups in
+  analysis-protocol §1 (and the §7 agent prompt), the QC frames and the `@full` rule in anomaly-catalog §4 step 1. The contract carries a
+  one-line "Effort" line; `status` and `lint-run` report it.
+- **What never changes** (`effort.md` §2): coverage (every second sampled, at least 2 fps; every cut's last and first frame; the first
+  second and the motion peaks dense), the floors (2 and 6 fps references, 2 close-ups, 4 fps QC storyboards for the 0.25 s anchor track,
+  15 fps checkpoints inside the 0.1 s tolerances, 4 extra frames), every frame for the first second and every insert, seam and cut edge,
+  the X1 densification of a produced video's own source, every checkpoint, a full QC pass per attempt, the label and size frames, the
+  sync check, the Loupe consult; and a budget never skips a check.
+- **Context.** Against the last push (`c96a742`): +0.8 KB per production agent, +0.3 KB per analysis agent, +1.8 KB in the main
+  session plus effort §1 (1.9 KB) read once at the start; the frames saved at Low or Standard outweigh it by far.
+- **Tests.** t01 +4 checks (the reference, the start question and store, the QC stack rule, the budgets and the contract line), t02 +9
+  (legacy rates for a run without the key, the level table, the floors and the ceiling, prep-all reading the level, every second sampled
+  at the lowest level, fewer frames at a lower level, qc --run with @full, a malformed checkpoint, the contract, lint-run and status). All
+  suites: t01 86, t02 112, t03 30, t05 11; the rehearsal 211/211 (runs without the key keep their rates).
+- **Hypotheses to test:** (1) a Medium run reads about 40 % fewer reference storyboard cells and about half the checkpoint sheets of a
+  Max run, with no QC miss the High run would have caught; (2) the single-frame budget holds without a check taking extra frames more
+  than once per video; (3) Low still catches a one-frame flaw at an insert edge (the `@full` ranges).

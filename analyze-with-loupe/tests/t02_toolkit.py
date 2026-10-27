@@ -432,4 +432,52 @@ check(js["media_ids"]["unknown_total"] == 0 and js["media_ids"]["known_ledger_jo
 js, _, _ = t("doctor", "--no-loupe", "--no-docs", env=ENV)
 check("elevenlabs" in js["mcp"] or "error" in js["mcp"], "doctor reports whether the ElevenLabs MCP is registered")
 
+# --- effort (item 33): the run's level sets the sampling; custom values are held to the floors; coverage never drops; @full keeps every frame
+ef_src = home.parent / "effort-src"
+make_clip(ef_src / "clip-e.mp4", seconds=6.0, flash=(3.0, 3.4), audio=True, size="360x640")
+run_f = Path(t("new-run", "--mode", "analyze", "--source", str(ef_src), "--slug", "effort", env=ENV)[0]["run_dir"])
+t("inventory", str(ef_src), "--run", str(run_f), "--as", "references", env=ENV)
+t("state", "--run", run_f.name, "set", "audio_ingest=frames-only", "analyze_submode=create", env=ENV)
+js, _, _ = t("effort", "--run", run_f.name, env=ENV)
+check(js["effort"]["level"] == "max" and js["effort"]["analysis_fps"] == 5.0 and js["effort"]["analysis_dense_fps"] == 10.0 and js["effort"]["qc_dense_fps"] == 30.0
+      and js["effort"]["qc_frames"] is None and js["effort"]["densify_ranges"] is None and sorted(js["levels"]) == ["high", "low", "max", "medium", "xhigh"],
+      "five levels; a run without one keeps the pipeline's earlier rates, which are max (5 fps references, 10 around motion, 30 fps checkpoints, no budgets)")
+js, _, _ = t("effort", "--run", run_f.name, "--level", "low", env=ENV)
+check(js["effort"]["level"] == "low" and js["effort"]["analysis_fps"] == 2.0 and js["effort"]["qc_dense_fps"] == 15.0 and js["effort"]["densify_ranges"] == 2,
+      "effort --level low stores the level's table in state.json -> effort")
+js, _, _ = t("effort", "--run", run_f.name, "--analysis-fps", "1", "--qc-dense-fps", "8", "--qc-storyboard-fps", "2", "--qc-frames", "999", env=ENV)
+held = {h["key"]: h for h in js["held_to_bounds"]}
+check(js["effort"]["analysis_fps"] == 2.0 and js["effort"]["qc_dense_fps"] == 15.0 and js["effort"]["qc_storyboard_fps"] == 4.0 and js["effort"]["qc_frames"] == 200
+      and held["analysis_fps"]["held_to"] == "floor" and held["qc_frames"]["held_to"] == "ceiling" and js["effort"]["level"] == "low",
+      "custom values below a floor are raised to it (2 fps references, 15 fps checkpoints, 4 fps storyboard) and reported; a huge budget meets its ceiling")
+js, _, _ = t("prep-all", "--run", run_f.name, "--jobs", "1", "--no-ocr", env=ENV)
+vj = json.loads((run_f / "10-media" / "V01" / "video.json").read_text(encoding="utf-8"))
+times = sorted(f["t"] for f in json.loads((run_f / "10-media" / "V01" / "frames.json").read_text(encoding="utf-8"))["frames"] if f.get("kind") == "base")
+gaps = [b - a for a, b in zip(times, times[1:])]
+check(js["sampling"] == {"effort": "low", "baseline_fps": 2.0, "dense_fps": 6.0} and vj["sampling"]["baseline_fps"] == 2.0,
+      "prep-all reads the run's level by itself (2 fps baseline, 6 fps around peaks and in the first second)")
+check(times and times[0] <= 0.01 and times[-1] >= 5.0 and max(gaps) <= 1.01, f"at the lowest level every second of the source is still sampled (largest gap {max(gaps):.2f} s)")
+cells_low = vj["sampling"]["storyboard_cells"]
+t("effort", "--run", run_f.name, "--level", "max", env=ENV)
+t("prep-all", "--run", run_f.name, "--jobs", "1", "--no-ocr", "--redo", env=ENV)
+cells_high = json.loads((run_f / "10-media" / "V01" / "video.json").read_text(encoding="utf-8"))["sampling"]["storyboard_cells"]
+check(cells_low < cells_high, f"a lower level samples fewer frames ({cells_low} storyboard cells at low, {cells_high} at max)")
+t("effort", "--run", run_f.name, "--level", "medium", env=ENV)
+js, _, _ = t("qc", "--video", str(ef_src / "clip-e.mp4"), "--out", str(home.parent / "qc-effort"), "--run", run_f.name, "--mode", "analyze", "--no-ocr",
+             "--dense", "first:0-1@full", "--dense", "mid:2-3", env=ENV)
+d = {c["label"]: c for c in js["checks"]["dense_checkpoints"]}
+check(js["sampling"]["effort"] == "medium" and js["sampling"]["storyboard_fps"] == 4.0 and d["mid"]["fps"] == 20.0 and d["mid"]["frames"] == 21
+      and d["first"]["full"] is True and d["first"]["fps"] == 30.0 and d["first"]["frames"] >= 30,
+      "qc --run takes the level's rates (4 fps storyboard, 20 fps checkpoints) and @full renders every frame of its range")
+js, code, _ = t("qc", "--video", str(ef_src / "clip-e.mp4"), "--out", str(home.parent / "qc-effort2"), "--mode", "analyze", "--no-ocr", "--dense", "x:1-2@full@3", env=ENV, ok=False)
+check(code == 2 and "@full" in js.get("error", ""), "a malformed checkpoint is refused with the syntax (exit 2)")
+t("state", "--run", run_f.name, "set", "model=wan3_0_prime", "qc_fixes=auto", "loupe=up", env=ENV)
+t("contract", "--run", run_f.name, env=ENV)
+ct = (run_f / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
+js, _, _ = t("lint-run", "--run", run_f.name, env=ENV)
+st_js, _, _ = t("status", "--run", run_f.name, "--no-loupe", env=ENV)
+check("Effort: medium (QC storyboard 4 fps, checkpoint sheets 20 fps; single full-resolution frames beyond the label and size checks: at most 8 per QC pass)" in ct
+      and js["contract"]["effort_line"] is True and st_js["effort"]["level"] == "medium",
+      "the contract's Effort line, lint-run and status carry the run's level")
+
 finish()

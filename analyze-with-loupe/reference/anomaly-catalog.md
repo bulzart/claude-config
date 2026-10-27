@@ -52,7 +52,7 @@ Stored as section files in `anomaly-catalog/` (next to this file); **read only t
 | 2.16 | · Posture, support and place | `190_2.16_posture-support-and-place.md` | 3.9 |
 | 2.17 | · Identity: the swapped face matches the kept body (skin tone, build, age) | `200_2.17_identity-the-swapped-face-matche.md` | 3.2 |
 | 3 | The prompting stack (in order, per video) | `210_3_the-prompting-stack-in-order-per.md` | 2.4 |
-| 4 | The QC stack (X9, in order) | `220_4_the-qc-stack-x9-in-order.md` | 7.3 |
+| 4 | The QC stack (X9, in order) | `220_4_the-qc-stack-x9-in-order.md` | 7.8 |
 | 4.1 | · How the verdict is written (examples) | `230_4.1_how-the-verdict-is-written-examp.md` | 5.4 |
 | 5 | Quick reference | `240_5_quick-reference.md` | 7.7 |
 <!-- sections:end -->

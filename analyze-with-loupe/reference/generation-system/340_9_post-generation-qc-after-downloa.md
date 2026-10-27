@@ -1,8 +1,8 @@
 ## 9. Post-generation QC (after download)
 
-1. `awl.py qc --video <final> --out <dir> --mode <analyze|edit> --allowed-text "<planned text>"
+1. `awl.py qc --run RUN --video <final> --out <dir> --mode <analyze|edit> --allowed-text "<planned text>"
    --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan (`anomaly-catalog.md` §3
-   step 8), then **view the 5 fps storyboard** sheets in order and every dense sheet under
+   step 8; the effort rates and `@full` as its §4 step 1 says), then **view the storyboard** sheets in order and every dense sheet under
    `<dir>/dense/`. `qc` returns measurements beside the expected values (duration, aspect, size, audio, black
    spans, freeze starts, `planned_text` beside the `visible_text` its OCR saw) and no pass or fail; you read them
    with the sheets (`anomaly-catalog.md` §4 step 1 gives the rules of thumb) and write the verdict.

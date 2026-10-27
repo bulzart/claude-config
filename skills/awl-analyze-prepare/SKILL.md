@@ -58,7 +58,7 @@ Only these section files for this phase, nothing else unless a step below says s
   Spoken hooks, sounds and music are part of what made them work; a frames-only run reads the hook from the frames and the text.
 - Show the counts (references, assets, examples) in one line.
 - `T prep-all --run RUN --jobs 2`:
-  - it runs the 5 fps adaptive frame pipeline, storyboards, per-second timeline, the audio measurements, speech-to-text when
+  - it runs the adaptive frame pipeline at the run's effort level (`state.json → effort`, item 33), storyboards, per-second timeline, the audio measurements, speech-to-text when
     `state.json → audio_ingest` is `whisper` (it reads the key itself and stops when the key is missing: ask the audio question then,
     `awl-start` step 5b), and the OCR sample for every video, plus image previews and document text; its JSON says which
     `audio_ingest` it ran;

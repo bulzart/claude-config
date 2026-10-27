@@ -14,13 +14,13 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - analysis-protocol §0: `AWL/reference/analysis-protocol/010_0_provenance-labels-use-everywhere.md` (0.6 KB)
-- analysis-protocol §1: `AWL/reference/analysis-protocol/020_1_inputs-per-video-produced-by-awl.md` (1.3 KB)
+- analysis-protocol §1: `AWL/reference/analysis-protocol/020_1_inputs-per-video-produced-by-awl.md` (1.6 KB)
 - analysis-protocol §2: `AWL/reference/analysis-protocol/030_2_reading-a-video-as-one-continuou.md` (5.8 KB)
 - analysis-protocol §3: `AWL/reference/analysis-protocol/040_3_per-video-card-20-analysis-cards.md` (5.4 KB)
 - analysis-protocol §4: `AWL/reference/analysis-protocol/050_4_effectiveness-lenses-apply-those.md` (2.1 KB)
 - analysis-protocol §5: `AWL/reference/analysis-protocol/060_5_cross-video-synthesis.md` (5.3 KB)
 - analysis-protocol §6: `AWL/reference/analysis-protocol/070_6_project-inference-20-analysis-pr.md` (2.4 KB)
-- analysis-protocol §7: `AWL/reference/analysis-protocol/080_7_scale-and-delegation-2-analysis.md` (3.2 KB)
+- analysis-protocol §7: `AWL/reference/analysis-protocol/080_7_scale-and-delegation-2-analysis.md` (3.3 KB)
 - analysis-protocol §8: `AWL/reference/analysis-protocol/090_8_presenting-results-to-the-user.md` (0.2 KB)
 - analysis-protocol §9: `AWL/reference/analysis-protocol/100_9_examples-the-user-s-own-videos-t.md` (3.1 KB)
 - creative-direction §1: `AWL/reference/creative-direction/010_1_the-roles.md` (1.8 KB)
@@ -92,7 +92,7 @@ Only these section files for this phase, nothing else unless a step below says s
     Videos that have nothing to do with the client's product are kept and analysed like any other.
     Their mechanism is still useful, and the product is integrated into them later.
 - Delegate to 1–2 agents only per §7 of the protocol, with disjoint video lists. Give them the
-  one-line client-entity summary from the registry.
+  one-line client-entity summary from the registry and the run's densify budget (`T effort --run RUN` → `densify_ranges`; item 33).
 - Images and other files in the references folder are also **reference material**: other products,
   samples, thumbnails and executions. Analyse them as references and never treat them as client
   assets.

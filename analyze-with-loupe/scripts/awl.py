@@ -67,6 +67,8 @@ Subcommands (python awl.py <cmd> -h):
   voiceover      own voiceover (contract item 31): outdir (the folder the ElevenLabs MCP may write to) | record (a take into the run,
                  measured: phrases, pauses, spoken words; state.json -> voiceover.files) | align (where the model's own speech lies
                  against the take) | mix (the take over the picture, plus a placed track for CapCut); facts, no verdict
+  effort         the run's effort level (contract item 33): low | medium | high | xhigh | max, custom values held to the floors;
+                 prep-all and qc --run read it from state.json -> effort
 
 Every command prints one JSON object on its last stdout line. Exit codes: 0 ok, 1 failure,
 2 bad arguments.
@@ -758,6 +760,56 @@ def audio_ingest_of(run_dir: Path) -> str:
     return v
 
 
+# The run's effort level (contract item 33, reference/effort.md): how densely the references are sampled and how densely QC renders its
+# checkpoints. Coverage never drops: every second of every video is sampled, every cut keeps its last and first frame, the first second
+# is dense, and the frame-exact checks run at the video's own frame rate (qc "@full"). The floors are where a check would lose what it
+# needs (0.25 s between storyboard frames for the anchor track; 1/15 s for the 0.1 s sync and contact tolerances); the ceilings keep a typo
+# from flooding a run. None = no cap.
+EFFORT_KEYS = ("analysis_fps", "analysis_dense_fps", "densify_ranges", "qc_storyboard_fps", "qc_dense_fps", "qc_frames")
+EFFORT_LEVELS = {             # max = the pipeline's rates before item 33, and what a run without the key keeps
+    "low":    {"analysis_fps": 2.0, "analysis_dense_fps": 6.0,  "densify_ranges": 2,    "qc_storyboard_fps": 4.0, "qc_dense_fps": 15.0, "qc_frames": 4},
+    "medium": {"analysis_fps": 3.0, "analysis_dense_fps": 8.0,  "densify_ranges": 4,    "qc_storyboard_fps": 4.0, "qc_dense_fps": 20.0, "qc_frames": 8},
+    "high":   {"analysis_fps": 4.0, "analysis_dense_fps": 10.0, "densify_ranges": 6,    "qc_storyboard_fps": 5.0, "qc_dense_fps": 24.0, "qc_frames": 12},
+    "xhigh":  {"analysis_fps": 5.0, "analysis_dense_fps": 10.0, "densify_ranges": 8,    "qc_storyboard_fps": 5.0, "qc_dense_fps": 30.0, "qc_frames": 16},
+    "max":    {"analysis_fps": 5.0, "analysis_dense_fps": 10.0, "densify_ranges": None, "qc_storyboard_fps": 5.0, "qc_dense_fps": 30.0, "qc_frames": None},
+}
+EFFORT_BOUNDS = {"analysis_fps": (2.0, 10.0), "analysis_dense_fps": (6.0, 30.0), "densify_ranges": (2, 50),
+                 "qc_storyboard_fps": (4.0, 10.0), "qc_dense_fps": (15.0, 60.0), "qc_frames": (4, 200)}
+EFFORT_LEGACY = {"level": "max", **EFFORT_LEVELS["max"], "note": "no effort key: the rates before contract item 33 (max)"}
+
+
+def effort_of_state(st: dict) -> dict:
+    """The run's effort settings: state.json -> effort, or the rates of a run made before item 33."""
+    e = st.get("effort") if isinstance(st, dict) else None
+    if isinstance(e, dict) and e.get("level"):
+        base = dict(EFFORT_LEVELS.get(e["level"], EFFORT_LEVELS["max"]))
+        base.update({k: e[k] for k in EFFORT_KEYS if k in e})
+        base["level"] = e["level"]
+        return base
+    return dict(EFFORT_LEGACY)
+
+
+def effort_of(run_dir) -> dict:
+    try:
+        st = json.loads((Path(run_dir) / "state.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        st = {}
+    return effort_of_state(st)
+
+
+def _effort_clamp(key: str, value):
+    """(value held to the key's floor and ceiling, 'floor' | 'ceiling' | None). None stays None (no cap) where the level allows it."""
+    if value is None:
+        return None, None
+    lo, hi = EFFORT_BOUNDS[key]
+    v = int(value) if isinstance(lo, int) else float(value)
+    if v < lo:
+        return lo, "floor"
+    if v > hi:
+        return hi, "ceiling"
+    return v, None
+
+
 def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str = "auto") -> dict:
     res = {"engine": None, "has_speech": False, "segments": []}
     if os.environ.get("AWL_TRANSCRIBE_STUB"):           # tests: no model is downloaded or run; the shape of a real answer
@@ -1139,8 +1191,11 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
     return summary
 
 
-def _media_kwargs(a, audio_ingest: str) -> dict:
-    return dict(base_fps=a.fps, dense_fps=a.dense_fps, static_threshold=a.static_threshold,
+def _media_kwargs(a, audio_ingest: str, eff: dict | None = None) -> dict:
+    """The sampling rates: the command line's when given, else the run's effort level (prep-all), else the config's defaults."""
+    base = a.fps if a.fps is not None else (eff["analysis_fps"] if eff else cfg_get("analysis.baseline_fps", 5.0))
+    dense = a.dense_fps if a.dense_fps is not None else (eff["analysis_dense_fps"] if eff else cfg_get("analysis.dense_fps", 10.0))
+    return dict(base_fps=float(base), dense_fps=float(max(dense, base)), static_threshold=a.static_threshold,
                 whisper_model=a.whisper_model, language=a.language, audio_ingest=audio_ingest,
                 do_ocr=not a.no_ocr, ocr_budget=a.ocr_frames, max_frames=a.max_frames)
 
@@ -1716,7 +1771,8 @@ def cmd_prep_all(a):
     only = set(x.strip() for x in a.only.split(",")) if a.only else None
     media = run_dir / "10-media"
     audio_ingest = audio_ingest_of(run_dir)          # the user's choice; no default: a run without it stops here
-    kw = _media_kwargs(a, audio_ingest)
+    eff = effort_of(run_dir)                         # the user's effort level (item 33); a run made before it keeps its old rates
+    kw = _media_kwargs(a, audio_ingest, eff)
     lines, errors, done = {}, [], []
 
     def do_item(it):
@@ -1766,8 +1822,9 @@ def cmd_prep_all(a):
     index = media / ("examples-index.md" if examples else "index.md")
     write_text(index, ("# Examples index (study only)" if examples else "# Media index") + "\n\n" +
                "\n".join(lines[i] for i in order if i in lines))
-    out({"ok": not errors, "set": a.inv_set, "audio_ingest": audio_ingest, "prepared": sorted(done), "errors": errors, "index": str(index)},
-        0 if not errors else 1)
+    out({"ok": not errors, "set": a.inv_set, "audio_ingest": audio_ingest,
+         "sampling": {"effort": eff["level"], "baseline_fps": kw["base_fps"], "dense_fps": kw["dense_fps"]},
+         "prepared": sorted(done), "errors": errors, "index": str(index)}, 0 if not errors else 1)
 
 
 
@@ -1850,7 +1907,7 @@ def cmd_status(a):
     out({"ok": True, "run": rd.name, "run_dir": str(rd), "mode": st.get("mode"), "analyze_submode": st.get("analyze_submode"),
          "model": st.get("model"), "stage": st.get("stage"), "next_skill": st.get("next_skill"), "next_step": st.get("next_step"),
          "video": st.get("video"), "updated": st.get("updated"), "requested_videos": st.get("requested_videos"),
-         "audio_ingest": st.get("audio_ingest"), "memes": st.get("memes"),
+         "audio_ingest": st.get("audio_ingest"), "memes": st.get("memes"), "effort": effort_of_state(st),
          "voiceover": ({"enabled": st["voiceover"].get("enabled"), "method": st["voiceover"].get("method"), "source": st["voiceover"].get("source"),
                         "voice": st["voiceover"].get("voice_name"),
                         "language": st["voiceover"].get("language"), "preference": st["voiceover"].get("preference"),
@@ -2110,7 +2167,8 @@ def cmd_lint_run(a):
                       "audio_line": bool(re.search(r"^Audio ingest: ", ct, re.M)), "qc_fixes_line": bool(re.search(r"^QC fixes: (ask|auto)", ct, re.M)),
                       "voiceover_line": bool(re.search(r"^Voiceover: (off|on)", ct, re.M)),
                       "memes_line": bool(re.search(r"^Memes: (n/a|none|include|as your plan)", ct, re.M)),
-                      "unresolved_placeholders": sorted(set(re.findall(r"<(?:RUN|AWL|model id|guide path|recreate\|create|ask\|auto|up\|down|whisper\|frames-only|voiceover|memes)>", ct)))}})
+                      "effort_line": bool(re.search(r"^Effort: (low|medium|high|xhigh|max)", ct, re.M)),
+                      "unresolved_placeholders": sorted(set(re.findall(r"<(?:RUN|AWL|model id|guide path|recreate\|create|ask\|auto|up\|down|whisper\|frames-only|voiceover|memes|effort)>", ct)))}})
 
 
 UPLOAD_KEYS = {"media_id", "file", "content_type", "url", "at", "role", "note"}
@@ -2226,7 +2284,15 @@ def cmd_uploads(a):
 
 CONTRACT_SUBS = (("<RUN>", "run"), ("<AWL>", "library"), ("<model id>", "model"), ("<guide path>", "guide path"), ("<recreate|create>", "analyze_submode"),
                  ("<ask|auto>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"),
-                 ("<memes>", "memes"))
+                 ("<memes>", "memes"), ("<effort>", "effort"))
+
+
+def _contract_effort(st: dict) -> str:
+    """The contract's Effort line (contract item 33): the level and the rates `T qc --run` uses, and the single-frame budget."""
+    e = effort_of_state(st)
+    budget = "no cap" if e.get("qc_frames") is None else f"at most {e['qc_frames']} per QC pass"
+    return (f"{e['level']} (QC storyboard {e['qc_storyboard_fps']:g} fps, checkpoint sheets {e['qc_dense_fps']:g} fps; single "
+            f"full-resolution frames beyond the label and size checks: {budget})")
 
 
 def _contract_memes(st: dict) -> str:
@@ -2292,7 +2358,7 @@ def cmd_contract(a):
         guide = ""
     values = {"run": str(rd), "library": str(AWL_HOME), "model": model, "guide path": guide, "analyze_submode": str(st.get("analyze_submode") or ""),
               "qc_fixes": str(st.get("qc_fixes") or "auto"), "loupe": str(st.get("loupe") or "up"), "audio_ingest": str(st.get("audio_ingest") or ""),
-              "voiceover": _contract_voiceover(st, rd), "memes": _contract_memes(st)}
+              "voiceover": _contract_voiceover(st, rd), "memes": _contract_memes(st), "effort": _contract_effort(st)}
     substituted, unresolved = {}, []
     for token, key in CONTRACT_SUBS:
         if values[key]:
@@ -2902,6 +2968,10 @@ def cmd_qc(a):
     shutil.rmtree(od / "frames", ignore_errors=True)
     od.mkdir(parents=True, exist_ok=True)
     dur = info.get("duration_s") or 0
+    effort = effort_of(a.run) if a.run else None     # the run's level (item 33): the storyboard and checkpoint rates when not given
+    a.fps = float(a.fps if a.fps is not None else (effort["qc_storyboard_fps"] if effort else cfg_get("analysis.baseline_fps", 5.0)))
+    a.dense_fps = float(a.dense_fps if a.dense_fps is not None else (effort["qc_dense_fps"] if effort else 30.0))
+    native = float(info.get("fps") or 30.0)
     base, eff, _ = extract_baseline(v, a.fps, od / "frames", dur, max_side=720)
     sheets = build_storyboard(base, od / "qc-storyboard", f"QC {Path(v).name}", info.get("orientation", "portrait"))
     # QC checkpoints at the full frame rate (reference/anomaly-catalog.md §4): use beats, exits and
@@ -2910,22 +2980,23 @@ def cmd_qc(a):
     shutil.rmtree(od / "dense", ignore_errors=True)
     tmax = max(0.0, dur - 1.5 / (info.get("fps") or 24))
     for i, spec in enumerate(a.dense or [], 1):
-        m = re.match(r"^\s*(?:(.*?)\s*:)?\s*([0-9.]+)\s*-\s*([0-9.]+)\s*$", spec)
+        m = re.match(r"^\s*(?:(.*?)\s*:)?\s*([0-9.]+)\s*-\s*([0-9.]+)\s*(?:@\s*(full|[0-9.]+))?\s*$", spec)
         if not m:
-            fail(f"bad --dense {spec!r}; use label:start-end in seconds (e.g. sip:3.5-5.6)", 2)
+            fail(f"bad --dense {spec!r}; use label:start-end in seconds, optionally @full or @fps (e.g. sip:3.5-5.6, first:0-1.2@full)", 2)
         label = slugify(m.group(1) or f"cp{i}", 24) or f"cp{i}"
         st, en = sorted((float(m.group(2)), float(m.group(3))))
+        rate = min(native, 60.0) if m.group(4) == "full" else (float(m.group(4)) if m.group(4) else a.dense_fps)
         ts, k = [], 0
-        while st + k / a.dense_fps <= en + 1e-6:
-            ts.append(round(min(tmax, max(0.0, st + k / a.dense_fps)), 3))
+        while st + k / rate <= en + 1e-6:
+            ts.append(round(min(tmax, max(0.0, st + k / rate)), 3))
             k += 1
         ts = sorted(set(ts))
         pre = f"{i:02d}-{label}"
         res = extract_many(v, [(t, od / "dense" / f"{pre}-{ts_name(t)}.jpg", {"kind": "extra"}) for t in ts], 1280)
         dsheets = build_storyboard(res, od / "dense" / f"sheet-{pre}",
-                                   f"QC checkpoint {label} {st:.2f}-{en:.2f}s @{a.dense_fps:g} fps",
+                                   f"QC checkpoint {label} {st:.2f}-{en:.2f}s @{rate:g} fps",
                                    info.get("orientation", "portrait"), dense=len(res) > 12)
-        dense.append({"label": label, "start": st, "end": en, "fps": a.dense_fps, "frames": len(res),
+        dense.append({"label": label, "start": st, "end": en, "fps": round(rate, 3), "full": m.group(4) == "full", "frames": len(res),
                       "all_frames_extracted": all(r["ok"] for r in res), "sheets": dsheets})
     ff = find_tool("ffmpeg")
     cp = run([ff, "-hide_banner", "-nostdin", "-i", v, "-map", "0:v:0", "-vf",
@@ -2934,6 +3005,7 @@ def cmd_qc(a):
               for m in re.finditer(r"black_start:([0-9.]+)\s+black_end:([0-9.]+)", cp.stderr)]
     freezes = [float(m.group(1)) for m in re.finditer(r"freeze_start:\s*([0-9.]+)", cp.stderr)]
     ew, eh = [int(x) for x in a.expect_size.lower().split("x")]
+    sampling = {"effort": effort["level"] if effort else None, "storyboard_fps": a.fps, "dense_fps": a.dense_fps, "native_fps": native}
     checks = {"duration_s": dur, "aspect": info.get("aspect"), "size": f"{info.get('display_width')}x{info.get('display_height')}",
               "has_audio": info.get("has_audio"), "black_spans": blacks, "freeze_starts": freezes,
               "expected": {"size": a.expect_size, "aspect": a.expect_aspect, "duration_s": a.expect_duration}}
@@ -2954,10 +3026,10 @@ def cmd_qc(a):
     checks["visible_text"] = ([{k: s.get(k) for k in ("text", "first_t", "last_t", "hits", "share_of_frames_scanned", "y_rel", "score_mean", "chars", "band_distinct_texts")}
                                for s in spans] if text.get("available") else None)
     checks["frames_scanned_for_text"] = text.get("frames_scanned") if text.get("available") else None
-    checks["dense_checkpoints"] = [{"label": d["label"], "start": d["start"], "end": d["end"], "frames": d["frames"]}
+    checks["dense_checkpoints"] = [{"label": d["label"], "start": d["start"], "end": d["end"], "fps": d["fps"], "full": d["full"], "frames": d["frames"]}
                                    for d in dense]
-    write_json(od / "qc.json", {"info": info, "checks": checks, "ocr": text, "sheets": sheets, "dense": dense})
-    out({"ok": True, "qc_json": str(od / "qc.json"),
+    write_json(od / "qc.json", {"info": info, "sampling": sampling, "checks": checks, "ocr": text, "sheets": sheets, "dense": dense})
+    out({"ok": True, "qc_json": str(od / "qc.json"), "sampling": sampling,
          "sheets": sheets, "dense": dense, "checks": checks,
          "note": "measurements beside the expectations, no verdict: compare planned_text with visible_text and read the storyboard yourself"})
 
@@ -6047,6 +6119,37 @@ def _vo_mix(a):
          "note": "facts of the mix, no verdict: whether the voice lands on the mouths and is heard whole is for the agent to check (X9)"})
 
 
+def cmd_effort(a):
+    """Show or set the run's effort level (contract item 33). --level takes the level's table; custom values replace single settings
+    and are held to the floors (a check would lose what it needs below them) and the ceilings; nothing else is decided here."""
+    rd, st = _state_of(a.run)
+    custom = {k: getattr(a, k) for k in EFFORT_KEYS if getattr(a, k, None) is not None}
+    if not a.level and not custom:
+        out({"ok": True, "run": rd.name, "effort": effort_of_state(st), "levels": EFFORT_LEVELS, "bounds": EFFORT_BOUNDS})
+    cur = effort_of_state(st)
+    level = a.level or (cur["level"] if cur["level"] in EFFORT_LEVELS else "max")
+    eff = dict(EFFORT_LEVELS[level]) if a.level else {k: cur[k] for k in EFFORT_KEYS}
+    held = []
+    for k, v in custom.items():
+        nv, why = _effort_clamp(k, v)
+        if why:
+            held.append({"key": k, "asked": v, "set": nv, "held_to": why})
+        eff[k] = nv
+    if eff["analysis_dense_fps"] < eff["analysis_fps"]:
+        eff["analysis_dense_fps"] = eff["analysis_fps"]
+    eff["level"] = level
+    eff["custom"] = sorted(custom) or None
+    eff["set_at"] = now_iso()
+    p = rd / "state.json"
+    with FileLock(p.with_name("state.json.lock")):
+        st = json.loads(p.read_text(encoding="utf-8"))
+        st["effort"] = eff
+        st["updated"] = now_iso()
+        write_json(p, st)
+    out({"ok": True, "run": rd.name, "effort": eff, "held_to_bounds": held,
+         "note": "prep-all and qc --run read these rates; the floors and the checks that never change are in reference/effort.md"})
+
+
 def cmd_voiceover(a):
     """Own voiceover (contract item 31): outdir | record | align | mix. It measures, records and mixes; it never judges."""
     {"outdir": _vo_outdir, "record": _vo_record, "align": _vo_align, "mix": _vo_mix}[a.action](a)
@@ -6098,10 +6201,10 @@ def main():
     p.set_defaults(fn=cmd_model_entry)
 
     def media_opts(p):
-        p.add_argument("--fps", type=float, default=cfg_get("analysis.baseline_fps", 5.0),
-                       help="baseline sampling rate (default 5)")
-        p.add_argument("--dense-fps", type=float, default=cfg_get("analysis.dense_fps", 10.0),
-                       help="rate used around motion peaks and in the first second (default 10)")
+        p.add_argument("--fps", type=float, default=None,
+                       help="baseline sampling rate (default: prep-all the run's effort level, state.json -> effort; else 5)")
+        p.add_argument("--dense-fps", type=float, default=None,
+                       help="rate around motion peaks and in the first second (default: the run's effort level; else 10)")
         p.add_argument("--static-threshold", type=float, default=cfg_get("analysis.static_threshold", 2.5),
                        help="mean abs grey difference (0-255) below which a frame counts as a static duplicate; 0 disables thinning")
         p.add_argument("--max-frames", type=int, default=cfg_get("analysis.max_baseline_frames", 1800))
@@ -6191,15 +6294,16 @@ def main():
     p.set_defaults(fn=cmd_sync_check)
 
     p = sp.add_parser("qc"); p.add_argument("--video", required=True); p.add_argument("--out", required=True)
-    p.add_argument("--fps", type=float, default=cfg_get("analysis.baseline_fps", 5.0))
+    p.add_argument("--run", help="the run: its effort level (state.json -> effort) gives the storyboard and checkpoint rates not given here")
+    p.add_argument("--fps", type=float, default=None, help="storyboard rate (default: the run's effort level; else 5)")
     p.add_argument("--expect-duration", type=float); p.add_argument("--expect-aspect", default="9:16")
     p.add_argument("--expect-size", default=cfg_get("output.size", "720x1280"))
     p.add_argument("--mode", choices=["analyze", "edit"], default="analyze")
     p.add_argument("--allowed-text", help="planned/kept text, '|' separated (captions you burned in, real label text)")
-    p.add_argument("--dense", action="append", metavar="LABEL:START-END",
-                   help="QC checkpoint rendered at the full frame rate (seconds), e.g. sip:3.5-5.6 — a use beat, "
-                        "exit/re-entry, occlusion, cut, hand-off, pour or seam (anomaly-catalog.md §4); repeatable")
-    p.add_argument("--dense-fps", type=float, default=30.0, help="rate for --dense sheets (default 30)")
+    p.add_argument("--dense", action="append", metavar="LABEL:START-END[@full|@FPS]",
+                   help="QC checkpoint sheet (seconds), e.g. sip:3.5-5.6 — a use beat, exit/re-entry, occlusion, cut, hand-off, pour or "
+                        "seam (anomaly-catalog.md §4); @full renders every frame (the first second, insert, seam and cut edges); repeatable")
+    p.add_argument("--dense-fps", type=float, default=None, help="rate for --dense sheets (default: the run's effort level; else 30)")
     p.add_argument("--no-ocr", action="store_true"); p.set_defaults(fn=cmd_qc)
 
     p = sp.add_parser("conform"); p.add_argument("--video", required=True); p.add_argument("--out", required=True)
@@ -6433,6 +6537,17 @@ def main():
     p.add_argument("--bed-gain", type=float, default=0.3, help="mix --bed keep: the picture's own sound level")
     p.add_argument("--vo-gain", type=float, default=1.0, help="mix: the take's level")
     p.set_defaults(fn=cmd_voiceover)
+
+    p = sp.add_parser("effort", help="the run's effort level (contract item 33): show it, or set --level low|medium|high|xhigh|max and custom "
+                                     "values (held to the floors); prep-all and qc --run read it from state.json -> effort")
+    p.add_argument("--run", required=True); p.add_argument("--level", choices=list(EFFORT_LEVELS))
+    p.add_argument("--analysis-fps", type=float, help="references: baseline frames per second (floor 2)")
+    p.add_argument("--analysis-dense-fps", type=float, help="references: around motion peaks and in the first second (floor 6)")
+    p.add_argument("--densify-ranges", type=int, help="references: densified ranges per video at analysis time (floor 2)")
+    p.add_argument("--qc-storyboard-fps", type=float, help="QC storyboard of an output (floor 4: the anchor is read every 0.25 s)")
+    p.add_argument("--qc-dense-fps", type=float, help="QC checkpoint sheets (floor 15); @full checkpoints always take every frame")
+    p.add_argument("--qc-frames", type=int, help="single full-resolution frames per QC pass beyond the label and size checks (floor 4)")
+    p.set_defaults(fn=cmd_effort)
 
     p = sp.add_parser("cost-report", help="credits as the run recorded them (information, never a gate): credits_start, jobs from videos[], submissions, brief mentions, --balance")
     p.add_argument("--run", required=True); p.add_argument("--balance", type=float, help="the Higgsfield balance now (from the balance tool), to print start minus balance")

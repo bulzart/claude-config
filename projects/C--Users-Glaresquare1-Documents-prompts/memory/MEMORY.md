@@ -2,3 +2,4 @@
 - [ElevenLabs setup](elevenlabs-setup.md) — local MCP with API key (user scope), free tier, Albanian unsupported officially, outputs under Desktop
 - [/analyze-with-loupe voiceover & memes](awl-voiceover-memes-design.md) — items 31 (native/lipsync/overlay; native most preferred) and 32 (memes include/none in Create); untested parts
 - [Pipeline context budget](pipeline-context-budget.md) — keep router/skills/contract lean; details in conditional sections; measure vs git baseline
+- [/analyze-with-loupe effort level](awl-effort-level.md) — item 33: five levels low→max (max = old rates) save frames; coverage and frame-exact checks never drop

@@ -17,13 +17,13 @@ Stored as section files in `analysis-protocol/` (next to this file); **read only
 | § | Section | File | KB |
 |---|---|---|---|
 | 0 | Provenance labels (use everywhere) | `010_0_provenance-labels-use-everywhere.md` | 0.6 |
-| 1 | Inputs per video (produced by `awl.py prep-all`) | `020_1_inputs-per-video-produced-by-awl.md` | 1.3 |
+| 1 | Inputs per video (produced by `awl.py prep-all`) | `020_1_inputs-per-video-produced-by-awl.md` | 1.6 |
 | 2 | Reading a video as one continuous sequence | `030_2_reading-a-video-as-one-continuou.md` | 5.8 |
 | 3 | Per-video card — `20-analysis/cards/<V>.md` | `040_3_per-video-card-20-analysis-cards.md` | 5.4 |
 | 4 | Effectiveness lenses (apply those the material supports; add new ones wh | `050_4_effectiveness-lenses-apply-those.md` | 2.1 |
 | 5 | Cross-video synthesis | `060_5_cross-video-synthesis.md` | 5.3 |
 | 6 | Project inference — `20-analysis/project-profile.md` | `070_6_project-inference-20-analysis-pr.md` | 2.4 |
-| 7 | Scale and delegation (≤ 2 analysis agents, no Workflow) | `080_7_scale-and-delegation-2-analysis.md` | 3.2 |
+| 7 | Scale and delegation (≤ 2 analysis agents, no Workflow) | `080_7_scale-and-delegation-2-analysis.md` | 3.3 |
 | 8 | Presenting results to the user | `090_8_presenting-results-to-the-user.md` | 0.2 |
 | 9 | Examples: the user's own videos → the house approach | `100_9_examples-the-user-s-own-videos-t.md` | 3.1 |
 <!-- sections:end -->

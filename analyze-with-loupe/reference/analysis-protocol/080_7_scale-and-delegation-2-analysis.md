@@ -20,7 +20,7 @@ opportunities, source preparation flags), anomaly-catalog/ §2.1, §2.2, §2.5 a
 `python <AWL>/scripts/awl.py audio-profile` (sound design). Never read a whole reference or models/index.json.
 Run dir: <RUN>. Your videos: <V01, V04, …> (prepared under <RUN>/10-media/<V>/).
 For each video: read video.md and timeline.md, view every storyboard sheet in order, densify with
-`python <AWL>/scripts/awl.py frames …` where §1 says so, then write <RUN>/20-analysis/cards/<V>.md
+`python <AWL>/scripts/awl.py frames …` where §1 says so (budget: <densify_ranges> ranges per video), then write <RUN>/20-analysis/cards/<V>.md
 using the §3 template with provenance labels. Project context so far: <2–4 lines>.
 Client's placeable entities (for the "Client-entity fit" line only): <type, category, real size —
 e.g. "slim 355 ml aluminium drink can", "palm-sized pack of 10 gum pellets", "compact five-door

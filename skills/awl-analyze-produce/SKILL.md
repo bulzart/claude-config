@@ -14,7 +14,7 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - production-agents §1: `AWL/reference/production-agents/010_1_prepared-by-this-session-before.md` (1.9 KB)
-- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (16.4 KB)
+- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (16.5 KB)
 - production-agents §3: `AWL/reference/production-agents/030_3_the-agent-s-contract.md` (8.6 KB)
 - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 - higgsfield-mcp §1: `AWL/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)
@@ -64,7 +64,7 @@ Plan everything before production, in allocation order, **without asking for con
    `state.json → loupe` (five agents must not race to start it); fill the contract's "Loupe" line from it (`up` when the run has none)
    and its "Audio ingest" line from `state.json → audio_ingest` (item 24). Fill its "QC fixes" line from `state.json → qc_fixes` (`auto` when the run has none; item 27).
    `T contract` also fills its "Voiceover" line (`state.json → voiceover`, `off` without it; item 31) and its "Memes" line
-   (`state.json → memes`; item 32).
+   (`state.json → memes`; item 32), and its "Effort" line (`state.json → effort`; item 33).
 
 ### A9b. Produce in parallel (production agents)
 

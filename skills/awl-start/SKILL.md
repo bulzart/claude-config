@@ -1,6 +1,6 @@
 ---
 name: awl-start
-description: /analyze-with-loupe phase 1: mode, Analyze sub-mode, the locked video model, inputs, the audio, voiceover and memes choices, create the run. Internal to that command.
+description: /analyze-with-loupe phase 1: mode, Analyze sub-mode, the locked video model, inputs, the audio, voiceover, memes and effort choices, create the run. Internal to that command.
 user-invocable: false
 ---
 
@@ -16,6 +16,7 @@ Phase 1 of `/analyze-with-loupe`. The router (the command) sent you here and pas
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
+- effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (2.1 KB) (every run, step 5d)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
   - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)
@@ -159,11 +160,15 @@ Only these section files for this phase, nothing else unless a step below says s
    audio questions, `voiceover.md` §2 steps 3–5: load the ElevenLabs tools (§2 step 3), read the subscription, the models and the voices,
    print the whole voice list, then one AskUserQuestion call with header "Voice", header "Language" and header "Voice style" (§2 step 4),
    then resolve and verify the answers. Stored in step 6.
+5d. **Effort** (both modes; item 33). In the same AskUserQuestion call as the QC-fixes and audio questions, the question of `effort.md`
+   §1 (its table and line first, its four options and Other for XHigh, none recommended; `$ARGUMENTS` with `effort low|medium|high|xhigh|max`
+   answers it). Stored in step 6.
 6. Create the run:
    - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]` (Free, requirement only: no `--source`);
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);
    - store the audio choice (step 5b): `T state --run RUN set audio_ingest=whisper` or `audio_ingest=frames-only`;
+   - store the effort level (step 5d): `T effort --run RUN --level <level>` plus the user's own numbers as its options (`effort.md` §1);
    - every Analyze sub-mode: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto`);
    - Create: store the voiceover choice (steps 2b, 5c) with the store line of `voiceover.md` §1 (`T state --run RUN set voiceover.enabled=true
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;
@@ -177,7 +182,7 @@ Only these section files for this phase, nothing else unless a step below says s
      `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
    - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
 
-## Rules this phase owns (contract items 4, 11, 17, 24, 27, 31, 32)
+## Rules this phase owns (contract items 4, 11, 17, 24, 27, 31, 32, 33)
 
 4. **One model per run, picked at the start, then locked.**
    - The user picks the video model right after choosing the mode (§2.4), from a menu that lists
@@ -244,6 +249,9 @@ Item 17's "§3 R-steps" are step A6r (`awl-recreate-plan`).
     `none`: pure generation, no insert or meme sound of any kind, a reference's meme beat played by the
     generated scene, never by a generated copy. It wins over the house approach. `state.json → memes`; a Create run without the key
     includes them.
+33. **Effort level: the user's choice (step 5d).** It sets how densely the references are sampled and QC renders its
+    checkpoints (`state.json → effort`; `T prep-all` and `T qc --run` read it); coverage, the floors and the frame-exact checks never
+    change (`reference/effort.md`). A run without it keeps its old rates and is never asked.
 
 ## Never (this phase)
 
@@ -254,6 +262,7 @@ Item 17's "§3 R-steps" are step A6r (`awl-recreate-plan`).
   never shorten the voice list, and never pick the method, the voice, the language or the preference for the user.
 - Never decide the audio choice for the user, never mark one of its options as recommended, and never write `no speech` for a run that did not ingest audio.
 - Never pick the memes choice for the user or mark one of its options as recommended (item 32).
+- Never pick the effort level for the user, mark one as recommended, or set a rate below its floor (item 33).
 - Never take client assets from the references folder or the edit-source folder: they are
   reference material, and may show other products or executions.
 
