@@ -15,11 +15,11 @@
     "context7@anthropic-plugin-directory": [
       {
         "scope": "user",
-        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\context7\\1da406f428c2-abb48b51",
-        "version": "1da406f428c2-abb48b51",
+        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\context7\\41f619d61b99-abb48b51",
+        "version": "41f619d61b99-abb48b51",
         "installedAt": "2026-10-15T16:47:07.704Z",
-        "lastUpdated": "2026-10-27T00:52:26.961Z",
-        "gitCommitSha": "1da406f428c285c701a1033a3aef368a9ab865dc",
+        "lastUpdated": "2026-10-27T21:44:18.566Z",
+        "gitCommitSha": "41f619d61b999adec1a1c8deb97d1a5b6ac35bb6",
         "directoryRepositoryKey": "github.com/anthropics/claude-plugins-official#external_plugins/context7"
       }
     ]
