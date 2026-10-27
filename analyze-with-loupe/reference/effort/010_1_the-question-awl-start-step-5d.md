@@ -14,8 +14,8 @@ every row, the line under it and the numbered levels; then stop and wait for the
 | production agents at once | 2 | 3 | 4 | 5 | 5 |
 | pilot video first, from this many videos | 2 | 3 | 5 | 5 | 5 |
 
-"At every level every second of every video is sampled, every cut keeps its last and first frame, the first second is dense, no frame or
-video is made smaller, and QC and Loupe check every video exactly as always."
+"At every level every second of every video is sampled, every cut keeps its last and first frame, the first second is dense,
+no frame or video is made smaller, and QC and Loupe check every video exactly as always."
 
 **Effort level for this run? Reply with its number or its name, or with your own numbers ("references 4 fps, 3 agents").**
 

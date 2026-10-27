@@ -171,6 +171,7 @@ for submode in ("recreate", "create", "free-refs", "free-none"):
         continue
     step(f"{submode}:state-start", "state", "--run", run.name, "set", "model=wan3_0_prime", "model_locked=true", f"analyze_submode={sub}", *(["free_references=" + ("no" if submode == "free-none" else "yes")] if sub == "free" else []), "audio_ingest=frames-only",
          "qc_fixes=ask", "stage=started", f"next_skill={A.skill_prefix}analyze-prepare")
+    step(f"{submode}:effort", "effort", "--run", run.name, "--level", {"recreate": "medium", "create": "high", "free-refs": "xhigh", "free-none": "low"}[submode])
     step(f"{submode}:model-entry", "model-entry", "--id", "wan3_0_prime")
     step(f"{submode}:model-menu", "model-menu", "--mode", "analyze")
     step(f"{submode}:loupe-status", "loupe", "status")
@@ -264,6 +265,7 @@ js = step("edit:new-run", "new-run", "--mode", "edit", "--source", sources / "ed
 run = Path(js.get("run_dir") or "")
 if run.is_dir():
     step("edit:state-start", "state", "--run", run.name, "set", "model=wan3_0_prime", "model_locked=true", "audio_ingest=frames-only", "stage=started", f"next_skill={A.skill_prefix}edit", "loupe=up")
+    step("edit:effort", "effort", "--run", run.name, "--level", "max")
     step("edit:inventory-sources", "inventory", "--run", run.name, "--as", "sources", sources / "edit-me.mp4")
     step("edit:inventory-assets", "inventory", "--run", run.name, "--as", "assets", "--scope", "video-01", assets)
     step("edit:prep-assets", "prep-assets", "--run", run.name, "--scope", "video-01")

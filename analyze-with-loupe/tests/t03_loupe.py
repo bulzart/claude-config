@@ -166,5 +166,73 @@ check(js.get("ok") and js.get("status") == "cleared", "caught-flag set clears th
 js, _, _ = t("caught-flag", "list", "--run", run.name[:8], env=ENV)
 check(js.get("count") == 1, "caught-flag list filters by a run name prefix as text")
 
+# --- the coupling in step with Loupe (2026-10-28): a consult may outlast the old 190 s; reconcile lists the flag captures and only counts the
+#     upload answers kept for hf-put; a capture is found at any age; a queued flag stays findable after Loupe's ingest
+import re as _re  # noqa: E402
+from http.server import BaseHTTPRequestHandler, HTTPServer  # noqa: E402
+from loupe_app import flags as lflags  # noqa: E402
+src = Path(os.environ.get("AWL_UNDER_TEST") or (HOME / "analyze-with-loupe" / "scripts" / "awl.py")).read_text(encoding="utf-8")
+m = _re.search(r'CONSULT_TIMEOUT = float\(os\.environ\.get\("AWL_CONSULT_TIMEOUT"\) or (\d+)\)', src)
+check(bool(m) and int(m.group(1)) >= qc.LOCK_WAIT + 3 * 150 and src.count("timeout=CONSULT_TIMEOUT") == 2,
+      "qc-consult and plan-hints wait as long as Loupe's own limits allow (its lock wait plus three keeper calls)")
+old_cap = lflags.capture_add({"tool": "mcp__higgsfield__generate_video", "job": "job-old-777", "run": run.name, "summary": "signals: moderation, blocked | ids: job-old-777",
+                              "signals": ["moderation", "blocked"], "response": "{\"status\": \"nsfw\", \"job\": \"job-old-777\"}"})
+for k in range(230):
+    lflags.capture_add({"tool": "mcp__higgsfield__media_upload", "job": "", "summary": "signals: upload", "signals": ["upload"],
+                        "response": json.dumps({"upload_url": f"https://up.example/slot/{k}", "media_id": f"m{k}"})})
+js, _, _ = t("caught-flag", "reconcile", "--run", run.name, env=ENV)
+check(old_cap in [c["id"] for c in js.get("unclaimed_captures", [])] and js.get("unclaimed_upload_answers", 0) >= 230,
+      f"reconcile lists a flag capture behind {js.get('unclaimed_upload_answers')} newer upload answers, which it only counts")
+js, _, _ = t("caught-flag", "add", "--run", run.name, "--video", "03", "--attempt", "a2", "--title", "an old capture attached", "--kind", "moderation-block",
+             "--tool", "generate_video", "--stage", "job", "--response", "nsfw", "--trigger", "[I] the desk shot", "--tags", "prompt-wording",
+             "--capture", str(old_cap), "--no-thumbs", "--no-facts", env=ENV)
+cf2 = js.get("id")
+check(((lflags.get(cf2) or {}).get("captured") or {}).get("id") == old_cap, f"caught-flag add --capture attaches a capture that has 230 newer ones ({cf2})")
+
+
+class Stub(BaseHTTPRequestHandler):
+    """A Loupe that answers its health and listings but fails every write with a 500."""
+    def _send(self, code, d):
+        b = json.dumps(d).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(b)))
+        self.end_headers()
+        self.wfile.write(b)
+
+    def do_GET(self):
+        self._send(200, {"ok": True, "app": "loupe", "entries": [], "captures": []})
+
+    def do_POST(self):
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        self._send(500, {"ok": False, "error": "stub: internal error"})
+
+    def log_message(self, *a):
+        pass
+
+
+stub = HTTPServer(("127.0.0.1", 0), Stub)
+threading.Thread(target=stub.serve_forever, daemon=True).start()
+sj = DATA / "server.json"
+real_sj = sj.read_text(encoding="utf-8")
+sj.write_text(json.dumps({"port": stub.server_port, "pid": os.getpid()}), encoding="utf-8")
+try:
+    js, _, _ = t("caught-flag", "add", "--run", run.name, "--video", "03", "--attempt", "a1", "--title", "queued while Loupe failed", "--kind", "other",
+                 "--tool", "generate_video", "--stage", "submit", "--response", "none given", "--trigger", "[I] unknown", "--tags", "unknown-trigger",
+                 "--no-thumbs", "--no-facts", env=ENV)
+finally:
+    sj.write_text(real_sj, encoding="utf-8")
+    stub.shutdown()
+q = str(js.get("id", ""))
+queued = [json.loads(f.read_text(encoding="utf-8"))["doc"] for f in (DATA / "outbox").glob("*.json")]
+doc_q = next((d for d in queued if d.get("id") == q), {})
+check(q.startswith("CF-Q") and any(q in str(n.get("note")) and "answered 500" in str(n.get("note")) for n in doc_q.get("log") or []),
+      f"a flag Loupe answers 500 to is queued as {q}, its log noting the provisional id and what Loupe answered")
+lflags.ingest_outbox()
+js, code, _ = t("caught-flag", "set", "--id", q, "--status", "cleared", "--cleared-prompt", str(run / "50-requests" / "video-03-request.json"), "--cleared-job", "job-333", env=ENV, ok=False)
+same = [e for e in lflags.search("queued while loupe failed")[1] if e.get("title") == "queued while Loupe failed"]
+check(code == 0 and len(same) == 1 and same[0]["status"] == "cleared" and same[0]["id"] != q,
+      f"after Loupe recorded it as {same[0]['id'] if same else '?'}, `caught-flag set --id {q}` still finds it (one flag, now cleared)")
+
 httpd.shutdown()
 finish()

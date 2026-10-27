@@ -236,12 +236,21 @@ check("Memes: <memes>" in rd(PA / "020_2_spawning.md") and "**Memes**" in rd(PA 
 #     phase (agents at once, the pilot); the analysts' close-up budget lives in the protocol section they read. QC and Loupe are never part of it
 EF = LIB / "reference" / "effort"
 ef_all = " ".join(rd(p_) for p_ in EF.glob("*.md")) if EF.is_dir() else ""
-check((LIB / "reference" / "effort.md").is_file() and len(list(EF.glob("*.md"))) == 2 and all(k in ef_all for k in ('header "Effort"', "**\"Low\"**", "**\"Max\"**",
-      "| setting | Low | Medium | High | XHigh | Max |", "motion peaks densified", "production agents at once", "pilot video first", "XHigh, or your own numbers",
-      "no frame or video is made smaller", "**The judges.**", "Coverage", "never skips what a card needs")),
-      "the effort reference holds the five levels' table, the question (XHigh through Other), the judges rule, the floors and the never-skip rule")
-check("33. **Effort level" in router and "item 33 →" in router and "5d. **Effort**" in st and "T effort --run RUN --level" in st and "effort §1" in st,
-      "the router has item 33; awl-start asks the effort question (step 5d), reads effort section 1 and stores it with T effort")
+check((LIB / "reference" / "effort.md").is_file() and len(list(EF.glob("*.md"))) == 2 and all(k in ef_all for k in ("never with AskUserQuestion",
+      "1. **Low**", "2. **Medium**", "3. **High**", "4. **XHigh**", "5. **Max**", "| setting | Low | Medium | High | XHigh | Max |", "motion peaks densified",
+      "production agents at once", "pilot video first", "your own numbers", "`T new-run` writes", "no frame or video is made smaller", "**The judges.**",
+      "Coverage", "never skips what a card needs")) and "four options (" not in ef_all and "through Other" not in ef_all,
+      "the effort reference offers all five levels, numbered, in plain chat (never a four-option dialog), with the table, the judges rule, the floors, "
+      "the never-skip rule and the level empty until stored")
+check("33. **Effort level" in router and "all five offered in plain chat" in router and "item 33 →" in router and "5d. **Effort**" in st and "plain chat" in st
+      and "from all five levels" in st and "four options and Other" not in st and "T effort --run RUN --level" in st and "effort §1" in st and "fewer than its five levels" in st,
+      "the router has item 33; awl-start asks the effort question in plain chat with all five levels (step 5d), reads effort section 1 and stores it with T effort")
+settings = json.loads((HOME / "settings.json").read_text(encoding="utf-8"))
+guards = [e for e in (settings.get("hooks") or {}).get("PreToolUse", []) if any("awl_input_guard.py" in h.get("command", "") for h in e.get("hooks", []))]
+check("34. **The user's folders are read-only**" in router and "item 34 →" in router and "(item 34)" in rd(PA / "020_2_spawning.md")
+      and "references folder (it is read-only)" in rd(LIB / "reference" / "analysis-protocol" / "080_7_scale-and-delegation-2-analysis.md")
+      and (HOME / "hooks" / "awl_input_guard.py").is_file() and len(guards) == 1 and all(x in guards[0].get("matcher", "") for x in ("Bash", "PowerShell", "Write", "Edit")),
+      "item 34 (the user's folders are read-only) is in the router, the production agents' contract and the analysis agents' prompt, and its hook is registered for Bash, PowerShell, Write and Edit")
 check("effort.max_agents" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "effort.pilot_from" in rd(SKD / "awl-analyze-produce" / "SKILL.md")
       and "Upload without asking" in rd(SKD / "awl-inputs" / "SKILL.md") and "no reference review" in router,
       "the produce phase takes the agents at once and the pilot threshold from the level; no approval stop before uploads or generations")

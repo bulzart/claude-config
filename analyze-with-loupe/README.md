@@ -52,9 +52,9 @@ analyze-with-loupe/
 │   ├── effort                      the effort level (item 33): the start question with the five levels, and what never changes (the judges, coverage, the floors)
 │   └── voiceover                   the own voiceover (item 31): the state and the take files, the choice at the start (method, voice, language, style), writing the lines, generating and recording a take, on-camera or off-screen, the request by method (native driving audio, the lipsync scene and its `sync_so` pass, overlay), the upload, after the generation (align, mix, sync pass, the fallback), the CapCut voice track, QC, credits and honesty
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
-├── scripts/awl.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), placeholder (the placement marker: a product render composited into a prepared source video or a placement image at the spot and height the agent gives, with a red outline, a short label and a JSON sidecar of the facts), sync-check, locked ledger/state, CapCut name/prep/repair, model-menu / model-entry, transfers; doc-text extracts PDFs with pypdf and flags an image-only one; seams (the per-frame luma and frame difference around a cut point, also printed by strip-inserts); status, doctor, lint-run and cost-report (gather-only inspection of a run and of this machine; status and doctor read the keeper's state); uploads (one schema per video, a loud merge into state.json); contract (the agent contract from the canonical prompt and state.json); frames --grid (gridded copies in source pixel coordinates); hf-put --capture (upload from the hook's capture); voiceover (outdir: the run's folder the ElevenLabs MCP may write to; record: a take into the run with its measured phrases, pauses and spoken words; align: where a take lies in a file's sound, with a plot; mix: the take laid over a picture, with the CapCut voice track); effort (the run's effort level: show it or set a level and custom values held to the floors; prep-all and the produce phase read it, never QC); every `--run` takes a full path, a bare run name or a stamp prefix)
+├── scripts/awl.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), placeholder (the placement marker: a product render composited into a prepared source video or a placement image at the spot and height the agent gives, with a red outline, a short label and a JSON sidecar of the facts), sync-check, locked ledger/state, CapCut name/prep/repair, model-menu / model-entry, transfers; doc-text extracts PDFs with pypdf and flags an image-only one; seams (the per-frame luma and frame difference around a cut point, also printed by strip-inserts); status, doctor, lint-run and cost-report (gather-only inspection of a run and of this machine; status and doctor read the keeper's state); uploads (one schema per video, a loud merge into state.json); contract (the agent contract from the canonical prompt and state.json); frames --grid (gridded copies in source pixel coordinates); hf-put --capture (upload from the hook's capture); voiceover (outdir: the run's folder the ElevenLabs MCP may write to; record: a take into the run with its measured phrases, pauses and spoken words; align: where a take lies in a file's sound, with a plot; mix: the take laid over a picture, with the CapCut voice track); effort (the run's effort level: show it or set a level and custom values held to the floors; prep-all and the produce phase read it, never QC; a new run's level is empty until stored, and effort and prep-all stop on it); every `--run` takes a full path, a bare run name or a stamp prefix)
 ├── scripts/check_all.py            every check in one table (`check-all.cmd` / `.ps1` / `.sh`): the suites below, `docs_tool.py check`, Loupe's own tests; exit 1 on a failure
-├── tests/                          the suites (`python tests/run_all.py`, `--real` adds the real-data suite): t01 the structure (docs check, skills, hand-offs, `T` commands, the Loupe and audio wiring, the forbidden names), t02 the toolkit on scratch fixtures, t03 the Loupe coupling against a Loupe server in the test process with a fake keeper, t04 real data read-only, t05 the three hooks and the upload capture; tests/rehearsal.py drives the whole golden path in a temp copy
+├── tests/                          the suites (`python tests/run_all.py`, `--real` adds the real-data suite): t01 the structure (docs check, skills, hand-offs, `T` commands, the Loupe and audio wiring, the forbidden names), t02 the toolkit on scratch fixtures, t03 the Loupe coupling against a Loupe server in the test process with a fake keeper, t04 real data read-only, t05 the four hooks (the input guard too) and the upload capture; tests/rehearsal.py drives the whole golden path in a temp copy
 ├── scripts/docs_tool.py            the section tool: `split` / `join` / `index` for the documents, `check` (indexes, section files, skills, paths, § citations) and `budget` (what each skill and the command load)
 └── runs/<stamp>-<slug>/            one folder per run (state.json makes runs resumable: /analyze-with-loupe resume <run-dir>; `next_skill` names the phase to continue)
 
@@ -103,12 +103,20 @@ It holds two things:
   in `state.json → higgsfield.declined_preset_id`, so every request carries it and `lint-run` knows it.
   Loupe also ships the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`); that server is not registered in `~/.claude.json`, so the pipeline's agents reach the library only through `awl.py qc-consult`, `qc-brief` and `plan-hints`.
 
-Three hooks in `~/.claude/settings.json` support the pipeline without adding to any agent's context: `hooks/atp_flag_watch.py` (PostToolUse of the
+Kept in step with Loupe (2026-10-28): `qc-consult` and `plan-hints` wait up to 600 s (`AWL_CONSULT_TIMEOUT`), since Loupe may wait 120 s
+for a running keeper call and then make keeper calls of up to 150 s each (a 209 s consult was cut at the old 190 s and its answer lost);
+`caught-flag reconcile` lists the unclaimed flag captures and only counts the `media_upload` answers the hook keeps for `hf-put`
+(`unclaimed_upload_answers`: 29 of the newest 30 captures were uploads, which hid older flags); `--capture` finds a capture at any age (the
+old lookup saw the newest 200); a flag queued while Loupe failed carries a log note with its provisional `CF-Q…` id, so `caught-flag set --id
+CF-Q…` still finds it after Loupe records it under its own number.
+
+Four hooks in `~/.claude/settings.json` support the pipeline without adding to any agent's context: `hooks/atp_flag_watch.py` (PostToolUse of the
 Higgsfield generation tools and `media_upload`: saves a flag-like answer to Loupe as a capture the moment it returns and reminds the agent to record the flag first; every
 upload answer is kept as a capture too, so `awl.py hf-put --capture <id>` uploads without the presigned URL ever passing through the agent),
 `hooks/atp_resume_note.py` (SessionStart after a compaction or resume: names the run in progress and its `next_skill`) and `hooks/atp_read_guard.py`
 (PreToolUse of Read: refuses a whole-file read of `awl.py`, `models/index.json`, the catalog snapshot and the backups; a read with an offset/limit
-passes). Build prompt for the app: `Documents/prompts/loupe.txt`.
+passes) and `hooks/awl_input_guard.py` (PreToolUse of Bash, PowerShell, Write and Edit: an open run's references, edit sources and examples
+stay read-only, item 34). Build prompt for the app: `Documents/prompts/loupe.txt`.
 
 ## The Free sub-mode (contract item 17, A6f)
 The third Analyze sub-mode: the user's own requirement, written at the start and kept verbatim in `RUN/00-inventory/requirement.md`, decides what the videos achieve and
@@ -179,12 +187,25 @@ At the start of every run, in both modes, the user picks **Low**, **Medium**, **
 sets how densely the references are sampled at analysis (2, 3, 4, 5, 5 frames per second; 6, 8, 10, 10, 10 around motion and in the first
 second; 4, 5, 6, 8, 8 motion peaks of ±0.5 s each; 2, 4, 6, 8 or no cap close-ups per reference), how many production agents run at once
 (2, 3, 4, 5, 5) and from how many videos the pilot runs first (2, 3, 5, 5, 5). Max is the pipeline's settings before the choice existed,
-and a run without the key keeps them. The question shows all five in a table and offers four buttons (XHigh and custom numbers go through
-Other, as the model menu does). `T effort` stores it in `state.json → effort` and holds custom values to the floors; `T prep-all` and the
-produce phase read it. **QC and Loupe are never part of it** (the user, 2026-10-27: the judges stay stable): QC renders, views and consults
+and a run without the key keeps them. The question is asked in plain chat with all five levels numbered (the user, 2026-10-27: "they need
+to be 5"; a question dialog holds at most four options and hid XHigh behind Other). `T new-run` writes the level empty (`null`), and
+`T effort` and `T prep-all` stop until the user's answer is stored, so a skipped question never runs at rates nobody picked; a run made
+before item 33 has no key and keeps Max without being asked. `T effort` stores it in `state.json → effort` and holds custom values to the
+floors; `T prep-all` and the produce phase read it. **QC and Loupe are never part of it** (the user, 2026-10-27: the judges stay stable): QC renders, views and consults
 exactly as always, at every level. What never changes (`reference/effort.md` §2): every second of every reference is sampled, every cut keeps
 its last and first frame, the first second and the motion peaks are dense, no frame or video is made smaller, and a produced video's own
 source is densified in X1 as always.
+
+## The user's folders are read-only (contract item 34)
+Nothing in the references, assets, examples or edit-source folders is moved, renamed, deleted or overwritten, by the main session or any
+agent (the user, 2026-10-27, after the 15 videos of a references folder went to the Recycle Bin in one batch while two runs were reading
+it): a file needed in the run folder or anywhere else is copied. Only the toolkit adds its own derived folders there, as before
+(`files_audio/` and `videos_without_audio/` from `T split-audio`, Edit Mode's `final/`). `hooks/awl_input_guard.py` (PreToolUse of Bash,
+PowerShell, Write, Edit, MultiEdit and NotebookEdit) refuses a move, rename or delete (`rm`, `mv`, `Remove-Item`, `Move-Item`,
+`Rename-Item`, `del`, `find -delete`, a .NET or Recycle Bin delete, `shutil.move`, `os.remove` and the like, in a command, a heredoc or a
+script it runs) and a Write or Edit inside the references, edit-source or examples folders of every run of the library that is not done or
+abandoned; copies, reads, the toolkit's own calls and the run folder pass. The assets folders stay open to the user's own curation. The
+hook fails open, and the refusal tells the agent to copy instead.
 
 ## Orientation
 The output keeps the original's perspective (the user, 2026-10-27): a source is never flipped, in any mode. A front-camera selfie keeps its

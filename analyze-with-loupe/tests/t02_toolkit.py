@@ -65,6 +65,9 @@ check("name hints" not in (run_a / "30-assets" / "project" / "asset-inventory.md
 js, code, out = t("prep-all", "--run", run_a.name, "--jobs", "1", "--no-ocr", env=ENV, ok=False)
 check(code == 2 and "audio_ingest" in js.get("error", ""), "prep-all without state.json -> audio_ingest stops with an error that names the key and says the user is to be asked")
 t("state", "--run", run_a.name, "set", "audio_ingest=frames-only", env=ENV)
+js, code, out = t("prep-all", "--run", run_a.name, "--jobs", "1", "--no-ocr", env=ENV, ok=False)
+check(code == 2 and "effort" in js.get("error", ""), "prep-all on a new run whose effort level is not stored stops with an error that says the user is asked (item 33)")
+t("effort", "--run", run_a.name, "--level", "max", env=ENV)
 js, _, _ = t("prep-all", "--run", run_a.name, "--jobs", "1", "--no-ocr", env=ENV)
 check(js.get("ok") and js.get("audio_ingest") == "frames-only" and "V01" in js.get("prepared", []), "prep-all runs in frames-only mode and says so")
 v1 = run_a / "10-media" / "V01"
@@ -432,22 +435,70 @@ check(js["media_ids"]["unknown_total"] == 0 and js["media_ids"]["known_ledger_jo
 js, _, _ = t("doctor", "--no-loupe", "--no-docs", env=ENV)
 check("elevenlabs" in js["mcp"] or "error" in js["mcp"], "doctor reports whether the ElevenLabs MCP is registered")
 
-# --- effort (item 33): the run's level sets the reference sampling and the pacing; custom values are held to the bounds; coverage never
-#     drops; QC is untouched (the judges stay stable)
+# --- effort (item 33): a new run's level is empty until the user's answer is stored (new-run writes null; `effort` and prep-all stop on
+#     it); a run made before item 33 keeps max; each of the five levels stores its whole column, the same as effort.md §1's table, and sets
+#     prep-all's sampling; custom values are held to the bounds; coverage never drops; QC is untouched (the judges stay stable)
+from t00_common import LIB  # noqa: E402
 ef_src = home.parent / "effort-src"
-make_clip(ef_src / "clip-e.mp4", seconds=6.0, flash=(3.0, 3.4), audio=True, size="360x640")
+ef_src.mkdir(parents=True, exist_ok=True)
+burst = ef_src / "bursts.mp4"           # a still frame with a moving box in the first second of every 5 s: 8 motion bursts in 40 s
+subprocess.run([ffmpeg(), "-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=gray:s=240x426:r=30:d=40", "-f", "lavfi", "-i", "testsrc2=s=96x96:r=30:d=40",
+                "-filter_complex", "[0][1]overlay=x='mod(t*300,144)':y=160:enable='lt(mod(t,5),1)',format=yuv420p", "-t", "40", str(burst)], check=True)
 run_f = Path(t("new-run", "--mode", "analyze", "--source", str(ef_src), "--slug", "effort", env=ENV)[0]["run_dir"])
 t("inventory", str(ef_src), "--run", str(run_f), "--as", "references", env=ENV)
 t("state", "--run", run_f.name, "set", "audio_ingest=frames-only", "analyze_submode=create", env=ENV)
-js, _, _ = t("effort", "--run", run_f.name, env=ENV)
-e = js["effort"]
-check(e["level"] == "max" and e["analysis_fps"] == 5.0 and e["analysis_dense_fps"] == 10.0 and e["motion_peaks"] == 8 and e["densify_ranges"] is None
-      and e["max_agents"] == 5 and e["pilot_from"] == 5 and sorted(js["levels"]) == ["high", "low", "max", "medium", "xhigh"] and not any(k.startswith("qc") for k in e),
-      "five levels; a run without one keeps the earlier settings (max); no level holds a QC setting")
-js, _, _ = t("effort", "--run", run_f.name, "--level", "low", env=ENV)
-e = js["effort"]
-check(e["level"] == "low" and e["analysis_fps"] == 2.0 and e["analysis_dense_fps"] == 6.0 and e["motion_peaks"] == 4 and e["densify_ranges"] == 2
-      and e["max_agents"] == 2 and e["pilot_from"] == 2, "effort --level low stores the level's table in state.json -> effort")
+check(json.loads((run_f / "state.json").read_text(encoding="utf-8")).get("effort", "missing") is None,
+      "new-run writes state.json -> effort empty (null) until the start stores the user's level")
+js, code, _ = t("effort", "--run", run_f.name, env=ENV, ok=False)
+check(code == 2 and "five" in js.get("error", "") and "--level" in js.get("error", ""), "`effort` on a run whose level is not stored stops and says the user is asked, from all five levels")
+js, code, _ = t("prep-all", "--run", run_f.name, "--jobs", "1", "--no-ocr", env=ENV, ok=False)
+check(code == 2 and "effort" in js.get("error", ""), "prep-all stops before it samples a reference at a level the user did not pick")
+js, code, _ = t("effort", "--run", run_f.name, "--max-agents", "3", env=ENV, ok=False)
+check(code == 2 and "--level" in js.get("error", ""), "custom numbers on a run without a level need the nearest level with them")
+check(t("status", "--run", run_f.name, "--no-loupe", env=ENV)[0]["effort"].get("pending") is True, "status reports the level as pending")
+run_l = Path(t("new-run", "--mode", "analyze", "--source", str(ef_src), "--slug", "legacy", env=ENV)[0]["run_dir"])
+st_l = json.loads((run_l / "state.json").read_text(encoding="utf-8"))
+st_l.pop("effort", None)
+(run_l / "state.json").write_text(json.dumps(st_l), encoding="utf-8")
+js, _, _ = t("effort", "--run", run_l.name, env=ENV)
+check(js["effort"]["level"] == "max" and "no effort key" in js["effort"].get("note", ""), "a run made before item 33 (no key) keeps max and is never asked")
+# the five levels: the toolkit's columns are effort.md §1's table, and prep-all samples at each one
+doc = (LIB / "reference" / "effort" / "010_1_the-question-awl-start-step-5d.md").read_text(encoding="utf-8")
+rows = {r[0].strip(): [c.strip() for c in r[1:]] for r in (ln.strip().strip("|").split("|") for ln in doc.splitlines() if ln.startswith("| ") and "---" not in ln)}
+cols = ["low", "medium", "high", "xhigh", "max"]
+num = lambda v: None if v == "no cap" else float(v)  # noqa: E731
+DOC = {c: {"analysis_fps": num(rows["references, frames per second"][i]), "analysis_dense_fps": num(rows["around motion and in the first second"][i]),
+           "motion_peaks": num(rows["motion peaks densified per reference (±0.5 s each)"][i]), "densify_ranges": num(rows["close-ups an analyst may add per reference"][i]),
+           "max_agents": num(rows["production agents at once"][i]), "pilot_from": num(rows["pilot video first, from this many videos"][i])} for i, c in enumerate(cols)}
+check(rows.get("setting") == ["Low", "Medium", "High", "XHigh", "Max"] and all(f"{k}. **{n}**" in doc for k, n in enumerate(["Low", "Medium", "High", "XHigh", "Max"], 1)),
+      "effort.md §1 offers the five levels: the table's columns and the numbered list Low, Medium, High, XHigh, Max")
+t("effort", "--run", run_f.name, "--level", "low", env=ENV)
+lv = t("effort", "--run", run_f.name, env=ENV)[0]["levels"]
+fl = lambda v: None if v is None else float(v)  # noqa: E731
+check(sorted(lv) == sorted(cols) and all({k: fl(v) for k, v in lv[c].items()} == DOC[c] for c in cols), "the toolkit's five levels are effort.md §1's table, column for column")
+cells = {}
+for c in cols:
+    t("effort", "--run", run_f.name, "--level", c, env=ENV)
+    stored = json.loads((run_f / "state.json").read_text(encoding="utf-8"))["effort"]
+    js, _, _ = t("prep-all", "--run", run_f.name, "--jobs", "1", "--no-ocr", "--redo", env=ENV)
+    v = run_f / "10-media" / "V01"
+    vj = json.loads((v / "video.json").read_text(encoding="utf-8"))
+    fr = json.loads((v / "frames.json").read_text(encoding="utf-8"))["frames"]
+    base = sorted(f["t"] for f in fr if f.get("kind") == "base")
+    pk = sorted({round(f["t"], 4) for f in fr if f.get("why") == "peak"})
+    gaps = [b - a for a, b in zip(pk, pk[1:]) if b - a > 1e-3]
+    act = json.loads((v / "activity.json").read_text(encoding="utf-8"))["peaks"]
+    want = DOC[c]
+    cells[c] = vj["sampling"]["storyboard_cells"]
+    check(all(fl(stored[k]) == want[k] for k in want) and stored["level"] == c
+          and js["sampling"] == {"effort": c, "baseline_fps": want["analysis_fps"], "dense_fps": want["analysis_dense_fps"], "motion_peaks": int(want["motion_peaks"])}
+          and abs(vj["sampling"]["baseline_frames"] - 40 * want["analysis_fps"]) <= 2
+          and bool(gaps) and abs(min(gaps) - 1 / want["analysis_dense_fps"]) < 0.02
+          and 0 < len(act) <= want["motion_peaks"] and max(b - a for a, b in zip(base, base[1:])) <= 1.01,
+          f"{c}: the column is stored; prep-all samples {want['analysis_fps']:g} fps ({vj['sampling']['baseline_frames']} baseline frames in 40 s), "
+          f"{want['analysis_dense_fps']:g} fps around motion (closest {min(gaps) if gaps else 0:.3f} s), {len(act)} of at most {want['motion_peaks']:g} peaks, every second covered")
+check(cells["low"] < cells["medium"] < cells["high"] < cells["xhigh"] and cells["xhigh"] == cells["max"],
+      f"the storyboard grows with the level ({cells}); XHigh and Max sample alike and differ only in the analysts' close-ups")
 js, _, _ = t("effort", "--run", run_f.name, "--analysis-fps", "1", "--analysis-dense-fps", "3", "--motion-peaks", "1", "--densify-ranges", "0",
              "--max-agents", "0", "--pilot-from", "9", env=ENV)
 held = {h["key"]: h["held_to"] for h in js["held_to_bounds"]}
@@ -456,19 +507,6 @@ check(js["effort"]["analysis_fps"] == 2.0 and js["effort"]["analysis_dense_fps"]
       "custom values are held to the bounds (2 fps, 6 around motion, 4 peaks, 2 close-ups, 1 agent, a pilot from 5 videos at the latest)")
 js, code, _ = t("effort", "--run", run_f.name, "--qc-dense-fps", "15", env=ENV, ok=False)
 check(code == 2, "effort has no QC option: the judges are not part of the level")
-t("effort", "--run", run_f.name, "--level", "low", env=ENV)
-js, _, _ = t("prep-all", "--run", run_f.name, "--jobs", "1", "--no-ocr", env=ENV)
-vj = json.loads((run_f / "10-media" / "V01" / "video.json").read_text(encoding="utf-8"))
-times = sorted(f["t"] for f in json.loads((run_f / "10-media" / "V01" / "frames.json").read_text(encoding="utf-8"))["frames"] if f.get("kind") == "base")
-gaps = [b - a for a, b in zip(times, times[1:])]
-check(js["sampling"] == {"effort": "low", "baseline_fps": 2.0, "dense_fps": 6.0, "motion_peaks": 4} and vj["sampling"]["baseline_fps"] == 2.0,
-      "prep-all reads the run's level by itself (2 fps baseline, 6 fps around peaks and in the first second, 4 motion peaks)")
-check(times and times[0] <= 0.01 and times[-1] >= 5.0 and max(gaps) <= 1.01, f"at the lowest level every second of the source is still sampled (largest gap {max(gaps):.2f} s)")
-cells_low = vj["sampling"]["storyboard_cells"]
-t("effort", "--run", run_f.name, "--level", "max", env=ENV)
-t("prep-all", "--run", run_f.name, "--jobs", "1", "--no-ocr", "--redo", env=ENV)
-cells_max = json.loads((run_f / "10-media" / "V01" / "video.json").read_text(encoding="utf-8"))["sampling"]["storyboard_cells"]
-check(cells_low < cells_max, f"a lower level samples fewer frames ({cells_low} storyboard cells at low, {cells_max} at max)")
 # a moving source has motion peaks: their window stays +-0.5 s at a low dense rate
 mv = ef_src.parent / "motion" / "moving.mp4"
 mv.parent.mkdir(parents=True, exist_ok=True)
@@ -478,12 +516,14 @@ act = json.loads((mv.parent / "V" / "activity.json").read_text(encoding="utf-8")
 pk = [f for f in json.loads((mv.parent / "V" / "frames.json").read_text(encoding="utf-8"))["frames"] if f.get("why") == "peak"]
 check(act and pk and all(min(abs(f["t"] - q["t"]) for q in act) <= 0.51 for f in pk),
       f"each motion peak keeps its ±0.5 s window at a low dense rate ({len(act)} peaks, {len(pk)} peak frames)")
-js, _, _ = t("qc", "--video", str(ef_src / "clip-e.mp4"), "--out", str(home.parent / "qc-stable"), "--mode", "analyze", "--no-ocr", "--dense", "mid:2-3", env=ENV)
+qc_clip = make_clip(ef_src.parent / "qc-src" / "clip-q.mp4", seconds=6.0, flash=(3.0, 3.4), audio=True, size="360x640")
+js, _, _ = t("qc", "--video", str(qc_clip), "--out", str(home.parent / "qc-stable"), "--mode", "analyze", "--no-ocr", "--dense", "mid:2-3", env=ENV)
 check("sampling" not in js and js["dense"][0]["fps"] == 30.0 and js["dense"][0]["frames"] == 31, "qc is unchanged: its checkpoint sheets at 30 fps, no effort in its answer")
 t("state", "--run", run_f.name, "set", "model=wan3_0_prime", "qc_fixes=auto", "loupe=up", env=ENV)
 t("contract", "--run", run_f.name, env=ENV)
 ct = (run_f / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
 st_js, _, _ = t("status", "--run", run_f.name, "--no-loupe", env=ENV)
-check("Effort" not in ct and st_js["effort"]["level"] == "max", "the agent contract carries no effort line; status reports the run's level")
+check("Effort" not in ct and "item 34" in ct and st_js["effort"]["level"] == "max",
+      "the agent contract carries no effort line and does carry the read-only folders (item 34); status reports the run's level")
 
 finish()
