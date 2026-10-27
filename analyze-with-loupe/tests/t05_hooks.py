@@ -203,6 +203,49 @@ cases = [
 for tool, cmd, want, label in cases:
     got = denied(tool, cmd)
     check(got == want, f"input guard: {label} is {'refused' if want else 'let through'}")
+# the review of 2026-10-28: ways around the guard it must close, and everyday commands it must not refuse
+EX, EXF = str(ex_g), str(ex_g).replace("\\", "/")
+GF = str(G).replace("\\", "/")
+rel_home = str(ex_g.resolve()).replace("\\", "/")[len(str(Path.home().resolve()).replace("\\", "/")):]
+cleaner2 = G / "cleaner2.py"
+cleaner2.write_text('import os, shutil, sys\nsrc = sys.argv[1]\ntmp = os.path.join(os.environ.get("TEMP", "."), "x-awl")\nos.makedirs(tmp, exist_ok=True)\n'
+                    'shutil.copy2(os.path.join(src, "a.mp4"), tmp)\nshutil.rmtree(tmp, ignore_errors=True)\n', encoding="utf-8")
+cases2 = [
+    ("Bash", f'SRC="{RF}"; rm "$SRC"/a.mp4', True, "rm through a shell variable"),
+    ("Bash", f'for f in "{RF}"/*; do mv "$f" "{RUNF}/"; done', True, "mv in a for loop over the references"),
+    ("PowerShell", f'$refs = "{R}"; Get-ChildItem $refs | ForEach-Object {{ Remove-Item $_.FullName }}', True, "Remove-Item through a PowerShell variable and ForEach-Object"),
+    ("Bash", f"bash -c \"rm '{RF}/a.mp4'\"", True, "rm inside bash -c"),
+    ("Bash", f'cmd /c "del {EX}\\e.mp4"', True, "del inside cmd /c"),
+    ("Bash", f"powershell -Command \"Remove-Item '{R}\\a.mp4'\"", True, "Remove-Item inside powershell -Command"),
+    ("Bash", f"python -c \"import os; os.system('rm {EXF}/e.mp4')\"", True, "rm inside os.system in python -c"),
+    ("Bash", f'rm \\\n  "{RF}/a.mp4"', True, "rm across a line continuation"),
+    ("Bash", f'rm "{GF}/x/../My Refs 27.10/a.mp4"', True, "rm through a path with .."),
+    ("Bash", f'rm "$USERPROFILE{rel_home}/e.mp4"', True, "rm through $USERPROFILE"),
+    ("Bash", f'rm -rf "{GF}"', True, "rm -rf of the folder that holds the references"),
+    ("Bash", f'cd "{GF}" && rm -rf *', True, "rm -rf * in the folder that holds the references"),
+    ("Bash", f'cd "{GF}" && rm -f *.tmp', False, "rm *.tmp beside the references (the pattern cannot match them)"),
+    ("Bash", f'cp -f "{RUNF}/x.mp4" "{RF}/a.mp4"', True, "cp over a reference"),
+    ("Bash", f'echo hi > "{RF}/notes.txt"', True, "a redirection into the references"),
+    ("PowerShell", f'Set-Content -Path "{R}\\notes.txt" -Value x', True, "Set-Content into the references"),
+    ("Bash", f'ffmpeg -y -i "{RUNF}/x.mp4" "{RF}/out.mp4"', True, "ffmpeg writing into the references"),
+    ("PowerShell", f'Copy-Item "{RUN}\\x.mp4" -Destination "{R}"', True, "Copy-Item into the references"),
+    ("Bash", f'python - <<\'EOF\'\nimport shutil\nsrc = r"{R}"\nshutil.move(src + "/a.mp4", r"{RUN}/a.mp4")\nEOF', True, "a python heredoc that moves through a variable"),
+    ("Bash", f'python - <<\'EOF\'\nimport shutil\nsrc = r"{R}"\ntmp = r"{RUN}\\tmp"\nshutil.copy2(src + "/a.mp4", r"{RUN}/a.mp4")\nshutil.rmtree(tmp)\nEOF', False,
+     "a python heredoc that copies a reference and removes its own temp folder"),
+    ("Bash", f'cat > "{RUNF}/note.md" <<\'EOF\'\n{RF}/a.mp4: the hands move fast\nrm {RF}/a.mp4 is never done\nEOF', False, "a note that names a reference and says move and rm"),
+    ("Bash", f'"$PY" "$AWL/scripts/awl.py" caught-flag add --run X --tags rename --flagged-video "{RF}/a.mp4"', False, "the toolkit with --tags rename and a reference path"),
+    ("Bash", f'ffmpeg -y -i "{RF}/a.mp4" -t 1 "{RUNF}/clip.mp4"', False, "ffmpeg reading a reference into the run folder"),
+    ("PowerShell", f'Copy-Item "{R}\\a.mp4" -Destination "{RUN}"', False, "Copy-Item from the references into the run folder"),
+    ("Bash", f'ls "{RF}" | head; find "{RF}" -name "*.mp4"', False, "listing and finding in the references"),
+    ("Bash", f"python -c \"import pandas as pd; df = pd.read_csv(r'{RUN}\\x.csv'); df.rename(columns={{'a': 'b'}})\"", False, "a pandas rename on a run file"),
+    ("Bash", f'python "{cleaner2}" "{RF}"', False, "a script given the references that removes its own temp folder"),
+    ("Bash", f'cd "{RF}" && python -c "import os; os.remove(r\'{RUN}\\tmp.txt\')"', False, "os.remove of a run file while the references are the working folder"),
+    ("Bash", f'mv "$TMPFILE" "$OUT"', False, "a mv whose targets are unset variables"),
+    ("Bash", f'rm -rf "{RUNF}/10-media/V01/_work" 2>&1 | tail -2', False, "an rm in the run folder with a redirection of its errors"),
+]
+for tool, cmd, want, label in cases2:
+    got = denied(tool, cmd, cwd=str(Path.home() / "Documents"))
+    check(got == want, f"input guard: {label} is {'refused' if want else 'let through'}")
 check(denied("Bash", "rm *.mp4", cwd=R), "input guard: rm by wildcard with the references as the working folder is refused")
 check(denied("Write", file_path=f"{R}\\notes.txt", content="x"), "input guard: a Write into the references is refused")
 check(denied("Edit", file_path=f"{RF}/a.mp4", old_string="x", new_string="y"), "input guard: an Edit inside the references is refused")

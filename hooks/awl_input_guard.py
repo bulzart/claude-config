@@ -9,8 +9,9 @@ or abandoned and whose state.json changed in the last 7 days.  The assets folder
 
 What it reads in a command: delete, move and rename verbs and write targets (a copy's destination, a redirection, an encoder's output) at
 command position, through shell variables, `for` loops, nested shells (`bash -c`, `cmd /c`, `powershell -Command`) and line continuations;
-in Python (a heredoc, `-c`, or a script it runs) a delete, move or write call aimed at a protected path or at a name that holds one.  It
-fails open: any error lets the call through."""
+in Python (a heredoc or here-string fed to an interpreter, `-c`, or a script it runs) a delete, move or write call aimed at a protected path
+or at a name that holds one.  A heredoc that is only data (a note written with cat) is never read as commands.  A verb whose target it
+cannot read (an unset variable) is let through.  It fails open: any error lets the call through."""
 import fnmatch
 import json
 import os
@@ -34,12 +35,16 @@ CD = {"cd", "chdir", "set-location", "sl", "pushd", "push-location"}
 PREFIX = {"sudo", "env", "nohup", "time", "command", "exec", "then", "do", "else", "elif", "{", "(", "&", "!", "%", "foreach-object", "call"}
 NESTED = {"-c", "-command", "/c", "/k", "-commandwithargs"}
 PY_DEL = re.compile(r"\b(?:os\.(?:remove|unlink|rmdir|removedirs|rename|renames|replace)|shutil\.(?:move|rmtree)|send2trash(?:\.send2trash)?)\s*\(|"
-                    r"\.(?:unlink|rmdir|rename|replace)\s*\(|\bfs\.(?:unlink|rm|rmdir|rename)(?:sync)?\s*\(", re.I)
+                    r"\.(?:unlink|rmdir|rename)\s*\(|\bfs\.(?:unlink|rm|rmdir|rename)(?:sync)?\s*\(", re.I)      # never .replace(: str.replace is everywhere
 NET_DEL = re.compile(r"\[(?:system\.)?io\.(?:file|directory)\]::(?:delete|move)\s*\(|filesystem\]::(?:deletefile|deletedirectory|movefile|movedirectory)\s*\("
                      r"|\.delete\s*\(\s*\)|\.moveto\s*\(|invokeverb\s*\(\s*['\"]delete|\.movehere\s*\(", re.I)
 PY_WRITE = re.compile(r"\bopen\s*\(\s*(?P<a>[^,)]+?)\s*,\s*(?:mode\s*=\s*)?['\"][^'\"]*[wax+]|(?P<b>[\w.\[\]\"'/ ()]+?)\.write_(?:text|bytes)\s*\("
                       r"|shutil\.copy(?:file|2|tree)?\s*\(\s*[^,]+,\s*(?P<c>[^)]+)\)|\[(?:system\.)?io\.file\]::(?:writeall\w*|copy)\s*\((?P<d>[^)]*)\)", re.I)
+INTERP_PY = re.compile(r"(?:^|[\\/\s\"'&])(?:python[\d.]*(?:\.exe)?|pythonw(?:\.exe)?|py|node(?:\.exe)?|\$\{?py\}?)(?=$|[\s\"'])", re.I)
+INTERP_SH = re.compile(r"(?:^|[\\/\s\"'&])(?:bash|sh|zsh|pwsh|powershell)(?:\.exe)?(?=$|[\s\"'])", re.I)
+HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_]\w*)\1")
 PATH = r"(?<![\w.])(?:[a-zA-Z]:/|/(?:mnt/)?[a-zA-Z]/)"
+QMARK = "\x01"            # an escaped quote, kept out of the quote tracking
 
 
 def read_shared(p) -> str:
@@ -178,16 +183,16 @@ def segments(cmd: str) -> list:
 
 
 def tokens(seg: str) -> list:
-    return [a or b or c for a, b, c in re.findall(r'"([^"]*)"|\'([^\']*)\'|(\S+)', seg)]
+    return [(a or b or c).replace(QMARK, '"') for a, b, c in re.findall(r'"([^"]*)"|\'([^\']*)\'|(\S+)', seg)]
 
 
 def quoted(seg: str) -> list:
-    return [a or b for a, b in re.findall(r'"([^"]*)"|\'([^\']*)\'', seg)]
+    return [(a or b).replace(QMARK, '"') for a, b in re.findall(r'"([^"]*)"|\'([^\']*)\'', seg)]
 
 
 def abs_paths(text: str) -> list:
     """Every absolute Windows or Git Bash path in a text, normalised: inside quotes a path may hold spaces, outside it ends at one."""
-    t = text.replace("\\", "/")
+    t = text.replace(QMARK, '"').replace("\\", "/")
     res = []
 
     def grab(s, spaces):
@@ -262,7 +267,7 @@ def write_targets(word: str, args: list) -> list:
 
 def redirections(seg: str) -> list:
     body = re.sub(r'"[^"]*"|\'[^\']*\'', lambda m: m.group(0)[0] + " " * (len(m.group(0)) - 2) + m.group(0)[-1], seg)     # a > inside quotes is no redirection
-    return [seg[m.start(1):m.end(1)] for m in re.finditer(r"(?<![<>&\d-])\d?>>?\s*(\"[^\"]+\"|'[^']+'|[^\s;|&()]+)", body)
+    return [seg[m.start(1):m.end(1)] for m in re.finditer(r"(?<![<>&\d=-])\d?>>?\s*(\"[^\"]+\"|'[^']+'|[^\s;|&()]+)", body)
             if not re.fullmatch(r"&\d|/dev/null|nul|\$null", seg[m.start(1):m.end(1)].strip("\"'").lower())]
 
 
@@ -288,51 +293,95 @@ def hit(paths, prot, ancestors=False, globs=False):
 
 
 def python_check(code: str, prot: list, cwd: str):
-    """A delete, move or write call in Python aimed at a protected path, or at a name that holds one (names are followed through assignments
-    and for loops in order)."""
+    """A delete, move or write call in Python (or a .NET call) aimed at a protected path, or at a name that holds one (names are followed
+    through assignments and for loops in order). Answers (the protected entry, what) or None."""
     tainted = set()
 
-    def bad(expr: str) -> bool:
-        return bool(hit(abs_paths(expr), prot)) or any(re.search(r"(?<![\w.])" + re.escape(n) + r"(?![\w])", expr) for n in tainted)
+    def bad(expr: str):
+        h = hit(abs_paths(expr), prot)
+        if h:
+            return h
+        for n, hh in tainted_hits.items():
+            if re.search(r"(?<![\w.])" + re.escape(n) + r"(?![\w])", expr):
+                return hh
+        return None
+    tainted_hits = {}
     lines = []
     for ln in code.splitlines():
         lines += split_outside_quotes(ln, (";",))
     for ln in lines:
-        m = re.match(r"^\s*for\s+([A-Za-z_][\w, ]*?)\s+in\s+(.+?):?\s*$", ln)
-        if m and bad(m.group(2)):
-            tainted.update(x.strip() for x in m.group(1).split(",") if x.strip())
-        m = re.match(r"^\s*(?:with\s+.+\s+as\s+)?([A-Za-z_][\w, ]*?)\s*(?::[^=]+)?=(?!=)\s*(.+)$", ln)
-        if m and bad(m.group(2)):
-            tainted.update(x.strip() for x in m.group(1).split(",") if x.strip())
+        for rx in (r"^\s*for\s+([A-Za-z_][\w, ]*?)\s+in\s+(.+?):?\s*$", r"^\s*(?:with\s+.+\s+as\s+)?([A-Za-z_][\w, ]*?)\s*(?::[^=]+)?=(?!=)\s*(.+)$"):
+            m = re.match(rx, ln)
+            h = bad(m.group(2)) if m else None
+            if h:
+                for x in m.group(1).split(","):
+                    if x.strip():
+                        tainted.add(x.strip())
+                        tainted_hits[x.strip()] = h
         if PY_DEL.search(ln) or NET_DEL.search(ln):
-            if bad(ln) or (not abs_paths(ln) and not tainted and cwd and hit([cwd], prot) and re.search(r"['\"][^'\"]+['\"]", ln)):
-                return "a delete or move call"
+            h = bad(ln)
+            if not h and not abs_paths(ln) and cwd and re.search(r"['\"][^'\"]+['\"]", ln):
+                h = hit([cwd], prot)              # a relative file name, in a working folder that is protected
+            if h:
+                return h, "a delete or move call"
         for m in PY_WRITE.finditer(ln):
             target = next((g for g in m.groups() if g), "")
-            if target and bad(target):
-                return "a write call"
+            h = bad(target) if target else None
+            if h:
+                return h, "a write call"
     return None
 
 
-def _own_code() -> list:
-    return [norm(str(HOME / ".claude" / d)) for d in ("analyze-with-loupe/scripts", "loupe", "hooks")]
+def split_heredocs(text: str):
+    """(the command without heredoc and here-string bodies, [(the line that feeds it, its body)])."""
+    docs = []
+
+    def here(m):
+        docs.append((text[max(0, m.start() - 200):m.start()] + text[m.end():m.end() + 200], m.group(2)))
+        return "@HERESTRING@"
+    text = re.sub(r"@(['\"])\r?\n(.*?)\r?\n\1@", here, text, flags=re.S)       # a PowerShell here-string
+    lines, keep, i = text.split("\n"), [], 0
+    while i < len(lines):
+        ln = lines[i]
+        keep.append(ln)
+        i += 1
+        m = HEREDOC.search(ln)
+        if m:
+            tag, body = m.group(2), []
+            while i < len(lines) and lines[i].strip() != tag:
+                body.append(lines[i])
+                i += 1
+            i += 1
+            docs.append((ln, "\n".join(body)))
+    return "\n".join(keep), docs
 
 
-def check_command(cmd: str, cwd: str, prot: list, depth: int = 0):
+def check_command(cmd: str, cwd: str, prot: list, depth: int = 0, shell: str = "Bash"):
     if depth > 3:
         return None
-    text = expand_home(re.sub(r"(?:\\|`)\r?\n", " ", cmd))       # line continuations
+    text = cmd.replace('\\"', QMARK) if shell == "Bash" else cmd.replace('`"', QMARK)
+    text = expand_home(re.sub(r"(?:\\|`)\r?\n", " ", text))       # line continuations
     cwd = norm(cwd) if cwd else ""
-    env, loopvars = {}, set()
+    text, docs = split_heredocs(text)
+    for feeder, body in docs:                                     # a heredoc is read only when it feeds an interpreter
+        if INTERP_PY.search(feeder):
+            found = python_check(expand_home(body), prot, cwd)
+            if found:
+                return found
+        elif INTERP_SH.search(feeder):
+            found = check_command(body, cwd, prot, depth + 1)
+            if found:
+                return found
+    env, loopvars = {}, {}
 
     def subst(seg: str) -> str:
         def rep(m):
             name = m.group(1) or m.group(2) or m.group(3)
-            return env.get(name, env.get(name.lower(), m.group(0)))
+            v = env.get(name, env.get(name.lower()))
+            if v is None:
+                return m.group(0)
+            return v if " " not in v or m.start() > 0 and seg[m.start() - 1] in "\"'" else '"' + v + '"'      # a path with spaces stays one word
         return re.sub(r"\$\{(\w+)\}|\$(?:env:)?(\w+)|%(\w+)%", rep, seg)
-    what = python_check(text, prot, cwd)
-    if what:
-        return (hit(abs_paths(text), prot) or hit([cwd], prot) or (prot[0][2], prot[0][1])), what
     for raw in segments(text):
         seg = subst(raw)
         toks = tokens(seg)
@@ -345,17 +394,28 @@ def check_command(cmd: str, cwd: str, prot: list, depth: int = 0):
             env[m.group(1).lower()] = val
             continue
         m = re.match(r"^for\s+(\w+)\s+in\s+(.+)$", seg) or re.match(r"^foreach\s*\(\s*\$(\w+)\s+in\s+(.+?)\)", seg, re.I)
-        if m and (hit(abs_paths(m.group(2)), prot) or (cwd and hit([cwd], prot))):
-            loopvars.update((m.group(1), m.group(1).lower()))
+        if m:
+            h = hit(abs_paths(m.group(2)), prot) or (hit([cwd], prot) if cwd and "*" in m.group(2) and not abs_paths(m.group(2)) else None)
+            if h:
+                loopvars[m.group(1)] = h
+                loopvars[m.group(1).lower()] = h
         if toks[0].lower().strip("({&") in CD:
             cwd = next((r for r in (resolve(x, cwd) for x in toks[1:]) if r), cwd)
             continue
+        if NET_DEL.search(seg):                                # a .NET delete or move (PowerShell), its variables already read
+            h = hit(abs_paths(seg), prot)
+            if h:
+                return h, "a .NET delete or move"
         for k, t in enumerate(toks[:-1]):                     # a nested shell: bash -c "...", cmd /c "...", powershell -Command "..."
             if t.lower() in NESTED:
+                if t.lower() == "-c" and any(INTERP_PY.search(" " + x) for x in toks[:k]):
+                    found = python_check(toks[k + 1], prot, cwd)       # python -c: the code itself
+                    if found:
+                        return found
                 inner = check_command(toks[k + 1], cwd, prot, depth + 1)
                 if inner:
                     return inner
-        for q in quoted(seg):                                  # a command inside quotes (os.system('rm ...'), a -c body)
+        for q in quoted(seg):                                  # a command inside quotes (os.system('rm ...'))
             if " " in q.strip() and q.strip() != seg.strip():
                 inner = check_command(q, cwd, prot, depth + 1)
                 if inner:
@@ -364,23 +424,19 @@ def check_command(cmd: str, cwd: str, prot: list, depth: int = 0):
             if not t.lower().endswith(SCRIPT_EXT):
                 continue
             p = resolve(t, cwd)
-            if not p or any(inside(p, o) for o in _own_code()):
+            if not p or any(inside(p, norm(str(HOME / ".claude" / d))) for d in ("analyze-with-loupe/scripts", "loupe", "hooks")):
                 continue
             try:
                 f = Path(p)
                 scr = f.read_text(encoding="utf-8", errors="replace") if f.is_file() and f.stat().st_size < 1_000_000 else ""
             except OSError:
                 scr = ""
-            if not scr:
-                continue
-            what = python_check(expand_home(scr), prot, cwd) if p.endswith(".py") else None
-            if what:
-                return (hit(abs_paths(expand_home(scr)) + abs_paths(seg), prot) or hit([cwd], prot) or (prot[0][2], prot[0][1])), "a script with " + what
-            if not p.endswith(".py"):
-                inner = check_command(scr, cwd, prot, depth + 1)
-                if inner:
-                    return inner
-        for part in split_outside_quotes(seg, ("|",)):
+            if scr:
+                found = python_check(expand_home(scr), prot, cwd) if p.endswith((".py", ".js", ".mjs", ".cjs")) else check_command(scr, cwd, prot, depth + 1)
+                if found:
+                    return found[0], "a script with " + found[1] if not str(found[1]).startswith("a script") else found[1]
+        parts = split_outside_quotes(seg, ("|",))
+        for idx, part in enumerate(parts):
             ptoks = tokens(part)
             for i, w in command_words(ptoks):
                 args = ptoks[i + 1:]
@@ -388,13 +444,18 @@ def check_command(cmd: str, cwd: str, prot: list, depth: int = 0):
                 deleting = w in VERBS or (w == "find" and "-delete" in low) or (w == "robocopy" and ("/mov" in low or "/move" in low)) \
                     or (w == "rsync" and "--remove-source-files" in low)
                 if deleting:
-                    if loopvars and any(re.search(r"\$\{?(?:" + "|".join(map(re.escape, loopvars)) + r")\b", a) for a in args):
-                        h = hit([r for r in abs_paths(text)], prot) or (prot[0][2], prot[0][1])
-                        return h, f"`{w}` on the files of a loop over a protected folder"
-                    cands = [r for r in (resolve(a, cwd) for a in args) if r] + abs_paths(part)
-                    if i == 0 or not cands:
-                        cands += abs_paths(seg)                # a pipeline: the files come from the part before
-                    h = hit(cands or [cwd], prot, ancestors=True, globs=True)
+                    for a in args:
+                        mv_ = re.search(r"\$\{?(\w+)\}?", a)
+                        if mv_ and mv_.group(1) in loopvars:
+                            return loopvars[mv_.group(1)], f"`{w}` on the files of a loop over a protected folder"
+                    explicit = [r for r in (resolve(a, cwd) for a in args) if r]
+                    upstream = abs_paths(" ".join(parts[:idx])) if idx > 0 else []
+                    if explicit or upstream:
+                        h = hit(explicit + upstream, prot, ancestors=True, globs=True)
+                    elif not any(a.startswith(("$", "%")) for a in args) and cwd:
+                        h = hit([cwd], prot)           # a bare verb works on the working folder
+                    else:
+                        h = None                       # a target it cannot read (an unset variable)
                     if h:
                         return h, f"`{w}`"
                 h = hit([r for r in (resolve(a, cwd) for a in write_targets(w, args)) if r], prot, globs=True)
@@ -414,7 +475,7 @@ def main():
         return
     found = None
     if tool in ("Bash", "PowerShell"):
-        found = check_command(str(ti.get("command") or ""), str(ev.get("cwd") or ""), prot)
+        found = check_command(str(ti.get("command") or ""), str(ev.get("cwd") or ""), prot, shell=tool)
     elif tool in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
         p = norm(str(ti.get("file_path") or ti.get("notebook_path") or ""))
         h = hit([p], prot) if p else None
