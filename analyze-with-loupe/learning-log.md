@@ -387,3 +387,24 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   it in the miss sample frame"): this command writes each input's meaning on the input itself in `params.medias` and keeps its registry in
   `state.json → assets.product` with variants, and Loupe read only a `medias_meaning` table and `assets.products`. Loupe now reads both forms,
   names the product in the request's own words and fills a new report's product field with it; nothing in this command changed.
+
+## 2026-10-28 · all five effort levels, never skipped; the user's folders read-only (item 34); the Loupe coupling in step
+- **Reported:** the effort question offered four levels (Low, Medium, High, Max; XHigh only by typing it into Other), and a parallel run of
+  another command never asked (that command has no effort level; the user: only this command matters). The user wants all five, every run,
+  and each one adjusting what it should. Separately, all 15 videos of `Documents.10` went to the Recycle Bin at 23:30:59 in one batch while
+  run `20261027-224009-27` was reading the folder (copied back from Downloads at 23:39:04; run `20261027-233328-27`, started at 23:33,
+  inventoried an empty folder). The user: agents never remove or move reference files; what they need elsewhere they copy.
+- **Causes:** AskUserQuestion holds at most four options, and its dialog hides the table printed above it. A level that was never stored
+  ran silently at Max. Static thinning counted a still stretch only from 3 duplicate frames, which a still second never reaches at 2 or 3 fps,
+  so Low and Medium kept every frame of a still shot and Medium could cost more than High. Nothing kept a session or an agent from deleting
+  or moving a reference; who sent the 15 videos to the Recycle Bin is not on record (no session transcript was read). The Loupe audit found
+  the consult timeout (190 s) shorter than Loupe's own limits (a 209 s consult lost its paid answer), reconcile reading only the newest 30
+  captures (29 were upload answers), `--capture` seeing only the newest 200, and a queued flag's `CF-Q…` id lost once Loupe recorded it.
+- **Changes:** effort §1 and awl-start 5d, step 6, rule 33 and never-line: asked in plain chat, the five levels numbered, never a question
+  dialog; `T new-run` writes `effort: null` and `T prep-all` and `T effort` stop until the answer is stored (no key = a run made before item
+  33, kept at Max); the router's item 33 and resume line. Still-stretch thinning: 3 duplicates at 4 fps and up, as before; below 4 fps a
+  whole still second counts (QC never uses it). Item 34 in the router, a line in the production agents' contract and in the analysis
+  agents' prompt, and `hooks/awl_input_guard.py` registered for Bash, PowerShell, Write, Edit, MultiEdit and NotebookEdit. awl.py:
+  `CONSULT_TIMEOUT` (600 s, `AWL_CONSULT_TIMEOUT`), reconcile lists the flag captures and counts the upload answers, `_capture_full`, the
+  queued flag's log note and its resolution (`caught-flag set --id CF-Q…` after Loupe recorded it). Wording kept in step with Loupe in
+  awl-start, awl-write-request, awl-inputs and the README. Unchanged: Loupe, the QC skill, the `qc` command, the judges' rules.

@@ -778,16 +778,22 @@ EFFORT_LEVELS = {             # max = the pipeline's settings before item 33, an
 EFFORT_BOUNDS = {"analysis_fps": (2.0, 10.0), "analysis_dense_fps": (6.0, 30.0), "motion_peaks": (4, 8), "densify_ranges": (2, 50),
                  "max_agents": (1, 5), "pilot_from": (2, 5)}
 EFFORT_LEGACY = {"level": "max", **EFFORT_LEVELS["max"], "note": "no effort key: the rates before contract item 33 (max)"}
+EFFORT_HELP = ("state.json -> effort is empty: the user's effort level is not stored yet. The user picks it once at the start, from all five "
+               "levels in plain chat (awl-start step 5d, reference/effort.md §1); store the answer with "
+               "`T effort --run RUN --level low|medium|high|xhigh|max`")
 
 
 def effort_of_state(st: dict) -> dict:
-    """The run's effort settings: state.json -> effort, or the rates of a run made before item 33."""
+    """The run's effort settings: state.json -> effort. A run made before item 33 has no key and keeps its rates (max); new-run writes the
+    key empty (null) until the user's answer is stored, and such a run is pending: what needs the level stops on it."""
     e = st.get("effort") if isinstance(st, dict) else None
     if isinstance(e, dict) and e.get("level"):
         base = dict(EFFORT_LEVELS.get(e["level"], EFFORT_LEVELS["max"]))
         base.update({k: e[k] for k in EFFORT_KEYS if k in e})
         base["level"] = e["level"]
         return base
+    if isinstance(st, dict) and "effort" in st:
+        return {"level": None, "pending": True, "note": EFFORT_HELP}
     return dict(EFFORT_LEGACY)
 
 
@@ -797,6 +803,14 @@ def effort_of(run_dir) -> dict:
     except (OSError, ValueError):
         st = {}
     return effort_of_state(st)
+
+
+def effort_required(run_dir) -> dict:
+    """The run's effort settings for a step that uses them: a pending level stops here, with the error that says the user is asked."""
+    eff = effort_of(run_dir)
+    if eff.get("pending"):
+        fail(EFFORT_HELP, 2)
+    return eff
 
 
 def _effort_clamp(key: str, value):
@@ -1052,7 +1066,9 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
     t = time.time()
     fr_dir = odir / "frames"
     base, eff_fps, fps_note = extract_baseline(video, base_fps, fr_dir / "base", dur, max_frames=max_frames)
-    statics = thin_static(base, static_threshold)
+    # a still stretch counts from 3 duplicates in a row at 4 fps and up (the rates before item 33); below that a whole still second counts,
+    # so a lower effort level never keeps more frames of a still shot than a higher one (at least 1 frame per second stays at every rate)
+    statics = thin_static(base, static_threshold, min_run=3 if base_fps >= 4 else max(1, int(round(base_fps)) - 1))
     plan = densify_plan(cuts, peaks, dur, fps, eff_fps, dense_fps)
     extra = extract_many(video, [(tt, fr_dir / "extra" / f"x-{ts_name(tt)}.jpg", {"kind": "extra", "tag": tag, "why": why})
                                  for tt, tag, why in plan], max_side=720)
@@ -1434,7 +1450,8 @@ def cmd_new_run(a):
              "assets_paths": assets,        # user-supplied client assets (analyze: whole project, given up front)
              "examples_paths": examples,    # optional: the user's own finished videos (study only, never inputs)
              "created": now_iso(), "updated": now_iso(), "stage": "created", "next_step": "inventory",
-             "model": None, "requested_videos": None, "directions": [], "assets": {}, "videos": [], "notes": []}
+             "model": None, "requested_videos": None, "directions": [], "assets": {}, "videos": [], "notes": [],
+             "effort": None}                # the user's effort level (item 33): empty until the start stores it; prep-all stops on empty
     write_json(run_dir / "state.json", state)
     out({"ok": True, "run_dir": str(run_dir), "state": str(run_dir / "state.json"),
          "sources": sources, "assets_paths": assets, "examples_paths": examples})
@@ -1774,7 +1791,7 @@ def cmd_prep_all(a):
     only = set(x.strip() for x in a.only.split(",")) if a.only else None
     media = run_dir / "10-media"
     audio_ingest = audio_ingest_of(run_dir)          # the user's choice; no default: a run without it stops here
-    eff = effort_of(run_dir)                         # the user's effort level (item 33); a run made before it keeps its old rates
+    eff = effort_required(run_dir)                   # the user's effort level (item 33): stops while empty; a run made before it keeps its old rates
     kw = _media_kwargs(a, audio_ingest, eff)
     lines, errors, done = {}, [], []
 
@@ -2471,12 +2488,36 @@ def cmd_frames(a):
 
 # --------------------------------------------------------------------------- Higgsfield transfer helpers
 
+def _capture_full(cid) -> tuple:
+    """(status, answer, capture) for one hook capture by id, with its payload. Loupe lists captures newest first and has no route for one id:
+    the row is found in the plain list (no payloads, any age), then its payload comes from the listing of its job, or from the shortest
+    newest-first listing that holds it."""
+    import urllib.parse
+    s, d = _cf_api("GET", "/api/captures?limit=1000000")
+    if s != 200:
+        return s, d or {}, None
+    rows = d.get("captures", [])
+    k = next((i for i, c in enumerate(rows) if str(c.get("id")) == str(cid)), None)
+    if k is None:
+        return 200, d, None
+
+    def pick(dd):
+        return next((c for c in (dd.get("captures", []) if isinstance(dd, dict) else []) if str(c.get("id")) == str(cid)), None)
+    job = str(rows[k].get("job") or "").strip()
+    if job:
+        s2, d2 = _cf_api("GET", "/api/captures?full=1&limit=100&job=" + urllib.parse.quote(job))
+        cap = pick(d2) if s2 == 200 else None
+        if cap:
+            return 200, d2, cap
+    s3, d3 = _cf_api("GET", f"/api/captures?full=1&limit={k + 51}")      # + 51: captures that arrived since the first listing
+    return s3, d3 or {}, (pick(d3) if s3 == 200 else None)
+
+
 def _capture_slot(a, p: Path) -> tuple[str, str, str]:
     """The upload slot (upload_url, content_type, media_id) of a hook capture: the one whose filename matches the file, else --slot (default 0)."""
-    s, d = _cf_api("GET", "/api/captures?full=1&limit=200")
+    s, d, cap = _capture_full(a.capture)
     if s != 200:
         fail(f"Loupe did not answer for capture {a.capture}: " + str((d or {}).get("error", s)), 2)
-    cap = next((c for c in d.get("captures", []) if str(c.get("id")) == str(a.capture)), None)
     if not cap:
         fail(f"capture {a.capture} is not in Loupe (the hook keeps every media_upload answer; `caught-flag list` and Loupe's Flags page show the ids)", 2)
     raw = (cap.get("payload") or {}).get("response", "")
@@ -2493,7 +2534,7 @@ def _capture_slot(a, p: Path) -> tuple[str, str, str]:
         for m in re.finditer(r'"upload_url"\s*:\s*"([^"]+)"', raw if isinstance(raw, str) else ""):
             slots.append({"upload_url": m.group(1)})
     if not slots:
-        fail(f"capture {a.capture} holds no upload_url (tool {cap.get('tool')}, signals {cap.get('signals')})", 2)
+        fail(f"capture {a.capture} holds no upload_url (tool {cap.get('tool')}, signals {(cap.get('payload') or {}).get('signals')})", 2)
     k = next((i for i, x in enumerate(slots) if str(x.get("filename") or "") == p.name), None)
     if a.slot is not None:
         k = a.slot
@@ -3367,6 +3408,12 @@ def _lc():
     return loupe_client
 
 
+# How long a consult (QC or plan) may take: Loupe waits up to 120 s for a running keeper call (its LOCK_WAIT), then makes keeper calls of up to
+# 150 s each (a boot, the question, up to two rounds of the keeper's requests); a consult of 209 s was cut at the old 190 s and its answer lost.
+CONSULT_TIMEOUT = float(os.environ.get("AWL_CONSULT_TIMEOUT") or 600)
+UPLOAD_ONLY_CAPTURE = re.compile(r"^signals: upload( \||$)")    # a media_upload answer the hook keeps for `hf-put --capture`, never a flag
+
+
 def _cf_api(method, path, body=None, key="pipeline", timeout=60):
     lc = _lc()
     if not lc.ensure():
@@ -3455,14 +3502,20 @@ def _cf_load(eid=None, q="") -> list:
     if eid:
         if str(eid).startswith("CF-Q"):
             p, j = _cf_outbox_find(eid)
-            if not j:
-                fail(f"{eid} not found", 1)
-            _CF_SNAP[eid] = json.dumps(j["doc"], sort_keys=True)
-            return [j["doc"]]
-        s, d = _cf_api("GET", f"/api/flags/{eid}")
-        if s != 200:
-            fail(f"{eid}: {d.get('error', 'not found')}", 1)
-        ents = [d["entry"]]
+            if j:
+                _CF_SNAP[eid] = json.dumps(j["doc"], sort_keys=True)
+                return [j["doc"]]
+            # Loupe has ingested the queued flag and given it its own number; the queue note in its log names the provisional id
+            s, d = _cf_api("GET", "/api/flags?limit=50&q=" + urllib.parse.quote(str(eid)))
+            ents = [e for e in (d.get("entries", []) if s == 200 else [])
+                    if any(str(eid).lower() in str(n.get("note", "")).lower() for n in e.get("log") or [])][:1]
+            if not ents:
+                fail(f"{eid} not found: it is not in Loupe's outbox, and no recorded flag names it in its log", 1)
+        else:
+            s, d = _cf_api("GET", f"/api/flags/{eid}")
+            if s != 200:
+                fail(f"{eid}: {d.get('error', 'not found')}", 1)
+            ents = [d["entry"]]
     else:
         s, d = _cf_api("GET", "/api/flags?limit=5000&q=" + urllib.parse.quote(q or ""))
         if s != 200:
@@ -3484,9 +3537,15 @@ def _cf_save(entries: list):
                 continue
             if str(eid).startswith("CF-Q"):
                 p, j = _cf_outbox_find(eid)
-                if p:
+                try:
+                    if not p:
+                        raise FileNotFoundError(eid)
                     j["doc"] = e
-                    p.write_text(json.dumps(j, ensure_ascii=False), encoding="utf-8")
+                    with open(p, "r+b") as fh:          # the queued file itself only: one Loupe has just ingested is never written again (a duplicate)
+                        fh.write(json.dumps(j, ensure_ascii=False).encode("utf-8"))
+                        fh.truncate()
+                except OSError:
+                    fail(f"{eid} was recorded by Loupe while this change was saved: run the same command again (it finds the flag under its new number)", 1)
                 continue
             s, d = _cf_api("PUT", f"/api/flags/{eid}", e)
             if s != 200:
@@ -3498,8 +3557,12 @@ def _cf_save(entries: list):
             else:
                 e["id"] = "CF-Q" + os.urandom(4).hex()
                 e["queued"] = True
+                why = "could not be reached" if s == 0 else f"answered {s}"
+                # Loupe gives a queued flag its own number when it ingests it; this note keeps the provisional id findable (`caught-flag set --id CF-Q…`)
+                e.setdefault("log", []).append({"at": now_iso(), "note": f"queued as {e['id']} (Loupe {why})", "by": "pipeline"})
                 lc.queue("add", e)
-                print(f"WARNING: Loupe could not be reached ({d.get('error')}); the flag is queued as {e['id']} and will be recorded when Loupe starts.", file=sys.stderr)
+                print(f"WARNING: Loupe {why} ({(d or {}).get('error')}); the flag is queued as {e['id']} and recorded from Loupe's outbox "
+                      f"(about 20 s while Loupe runs, else when it starts); `caught-flag set --id {e['id']}` finds it before and after.", file=sys.stderr)
         _CF_SNAP[e["id"]] = json.dumps(e, sort_keys=True)
 
 
@@ -3881,18 +3944,21 @@ def cmd_caught_flag(a):
                 marked.append(row)
             elif e["status"] == "failed" and (not e.get("job_id") or any(CF_TERMS.search(n) for n in notes)):
                 check.append(row)
-        _s, _cd = _cf_api("GET", "/api/captures?unclaimed=1&limit=30")
-        caps = [{"id": c["id"], "at": c["ts"], "tool": c["tool"].replace("mcp__higgsfield__", ""), "job": c["job"], "summary": c["summary"][:200]}
-                for c in (_cd.get("captures", []) if _s == 200 else [])]
+        _s, _cd = _cf_api("GET", "/api/captures?unclaimed=1&limit=1000000")
+        _rows = _cd.get("captures", []) if _s == 200 else []
+        _uploads = [c for c in _rows if UPLOAD_ONLY_CAPTURE.match(str(c.get("summary") or ""))]
+        caps = [{"id": c["id"], "at": c["ts"], "tool": str(c.get("tool") or "").replace("mcp__higgsfield__", ""), "job": c.get("job"),
+                 "summary": str(c.get("summary") or "")[:200]} for c in _rows if c not in _uploads][:50]
         out({"ok": True, "run": rd.name, "entries_for_run": [c["id"] for c in ents],
-             "unclaimed_captures": caps,
+             "unclaimed_captures": caps, "unclaimed_upload_answers": len(_uploads),
              "flagged_unrecorded": [r for r in marked if not r["entry"]],
              "flagged_recorded": [r for r in marked if r["entry"]],
              "failed_to_judge": [r for r in check if not r["entry"]],
              "note": "flagged_unrecorded must each get `caught-flag add`; failed_to_judge rows are the agent's call "
                      "(a flag or a validation/credit error); mark a row's ledger entry with `ledger set --flagged`. "
                      "unclaimed_captures are raw Higgsfield responses the hook saved that no flag claimed yet: one that is a flag of this run gets "
-                     "`caught-flag add ... --capture <id>`; the others are for the admin to dismiss in Loupe."})
+                     "`caught-flag add ... --capture <id>`; the others are for the admin to dismiss in Loupe. The media_upload answers the hook keeps for "
+                     "`hf-put --capture` are only counted (unclaimed_upload_answers): they are never a flag."})
     if a.action == "list":
         qs = " ".join(x for x in ((f"status:{a.status}" if a.status else ""), (f"run:{a.run}" if a.run else ""), (f"video:{a.video}" if a.video else ""),
                                   (f"model:{a.model}" if a.model else ""), (f"kind:{a.kind}" if a.kind else "")) if x)
@@ -3918,6 +3984,8 @@ def cmd_caught_flag(a):
         with lock:
             entries = _cf_load(a.id)
             e = next((x for x in entries if x.get("id") == a.id), None)
+            if e is None and str(a.id).startswith("CF-Q") and len(entries) == 1:
+                e = entries[0]                     # a queued flag Loupe has since recorded under its own number (its log names the CF-Q id)
             if e is None:
                 fail(f"{a.id} not found", 1)
             if a.status == "cleared" and not (a.cleared_prompt or a.cleared_job):
@@ -3971,7 +4039,8 @@ def cmd_caught_flag(a):
                 e["trigger"].pop("part", None)
             e["updated"] = now_iso()
             _cf_save(entries)
-        out({"ok": True, "id": a.id, "status": e.get("status"), "url": _lc().base_url() + f"/#/flags/{a.id}"})
+        out({"ok": True, "id": e.get("id") or a.id, **({"queued_as": a.id} if e.get("id") and e.get("id") != a.id else {}), "status": e.get("status"),
+             "url": _lc().base_url() + f"/#/flags/{e.get('id') or a.id}"})
     # add
     need = ("title", "kind", "response", "trigger")
     missing = [k for k in need if not getattr(a, k)]
@@ -4044,8 +4113,9 @@ def cmd_caught_flag(a):
         _cap = None
         _jobs = [j for j in re.split(r"[,\s]+", str(entry.get("job") or "")) if j]
         if a.capture:
-            _s, _d = _cf_api("GET", f"/api/captures?full=1&limit=200")
-            _cap = next((c for c in (_d.get("captures", []) if _s == 200 else []) if str(c["id"]) == str(a.capture)), None)
+            _s, _d, _cap = _capture_full(a.capture)
+            if not _cap:
+                print(f"WARNING: capture {a.capture} is not in Loupe ({(_d or {}).get('error') or 'no such id'}); the flag is recorded without it.", file=sys.stderr)
         elif _jobs:
             _s, _d = _cf_api("GET", "/api/captures?full=1&limit=10&job=" + _jobs[0])
             _cap = next(iter(_d.get("captures", []) if _s == 200 else []), None)
@@ -4154,7 +4224,7 @@ def cmd_qc_consult(a):
     if a.cmd == "qc-consult":
         if not a.question:
             fail("qc-consult needs --question (what you see or suspect in the video under QC)", 2)
-        s, d = _cf_api("POST", "/api/qc/consult", {**ctx, "question": a.question, "checkpoints": a.checkpoint or []}, key="qc", timeout=190)
+        s, d = _cf_api("POST", "/api/qc/consult", {**ctx, "question": a.question, "checkpoints": a.checkpoint or []}, key="qc", timeout=CONSULT_TIMEOUT)
     else:
         s, d = _cf_api("POST", "/api/qc/brief", ctx, key="qc", timeout=60)
     if s != 200:
@@ -4195,7 +4265,7 @@ def cmd_plan_hints(a):
         fail("plan-hints needs --beats (one line per beat of the plan: what happens, the product's form and state, the camera)", 2)
     cut = len(beats) > 2000
     beats = beats[:2000]
-    s, d = _cf_api("POST", "/api/qc/consult", {**ctx, "purpose": "plan", "question": beats}, key="qc", timeout=190)
+    s, d = _cf_api("POST", "/api/qc/consult", {**ctx, "purpose": "plan", "question": beats}, key="qc", timeout=CONSULT_TIMEOUT)
     if s != 200:
         out({"ok": True, "mode": "unavailable", "hints": [], "note": "no sample hints: " + str((d or {}).get("error"))})
     rd = _cf_run_dir(a.run) if a.run else None
@@ -6112,9 +6182,13 @@ def cmd_effort(a):
     and are held to the floors (a check would lose what it needs below them) and the ceilings; nothing else is decided here."""
     rd, st = _state_of(a.run)
     custom = {k: getattr(a, k) for k in EFFORT_KEYS if getattr(a, k, None) is not None}
-    if not a.level and not custom:
-        out({"ok": True, "run": rd.name, "effort": effort_of_state(st), "levels": EFFORT_LEVELS, "bounds": EFFORT_BOUNDS})
     cur = effort_of_state(st)
+    if not a.level and not custom:
+        if cur.get("pending"):
+            fail(EFFORT_HELP, 2)
+        out({"ok": True, "run": rd.name, "effort": cur, "levels": EFFORT_LEVELS, "bounds": EFFORT_BOUNDS})
+    if cur.get("pending") and not a.level:
+        fail("this run has no effort level yet: give --level (the level nearest the user's numbers) with the custom values", 2)
     level = a.level or (cur["level"] if cur["level"] in EFFORT_LEVELS else "max")
     eff = dict(EFFORT_LEVELS[level]) if a.level else {k: cur[k] for k in EFFORT_KEYS}
     held = []

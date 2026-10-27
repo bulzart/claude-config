@@ -231,8 +231,9 @@ check(q.startswith("CF-Q") and any(q in str(n.get("note")) and "answered 500" in
 lflags.ingest_outbox()
 js, code, _ = t("caught-flag", "set", "--id", q, "--status", "cleared", "--cleared-prompt", str(run / "50-requests" / "video-03-request.json"), "--cleared-job", "job-333", env=ENV, ok=False)
 same = [e for e in lflags.search("queued while loupe failed")[1] if e.get("title") == "queued while Loupe failed"]
-check(code == 0 and len(same) == 1 and same[0]["status"] == "cleared" and same[0]["id"] != q,
-      f"after Loupe recorded it as {same[0]['id'] if same else '?'}, `caught-flag set --id {q}` still finds it (one flag, now cleared)")
+check(code == 0 and len(same) == 1 and same[0]["status"] == "cleared" and same[0]["id"] != q and js.get("id") == same[0]["id"] and js.get("queued_as") == q,
+      f"after Loupe recorded it as {same[0]['id'] if same else '?'}, `caught-flag set --id {q}` still finds it (one flag, now cleared)"
+      + ("" if code == 0 and len(same) == 1 and same[0]["status"] == "cleared" else f" [code {code}, {len(same)} flag(s), status {[e.get('status') for e in same]}, answer {json.dumps(js)[:300]}]"))
 
 httpd.shutdown()
 finish()
