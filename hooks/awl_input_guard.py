@@ -22,6 +22,7 @@ API = re.compile(r"\[(system\.)?io\.(file|directory)\]::(delete|move)\s*\(|files
                  r"|\.delete\s*\(\s*\)|\.moveto\s*\(|invokeverb\s*\(\s*['\"]delete|\.movehere\s*\("
                  r"|\b(os\.(remove|unlink|rmdir|removedirs|rename|renames|replace)|shutil\.(move|rmtree)|send2trash)\s*\("
                  r"|\.(unlink|rmdir|rename)\s*\(|\bfs\.(unlink|rm|rmdir|rename)(sync)?\s*\(")
+PATH = r"(?<![\w.])(?:[a-zA-Z]:/|/(?:mnt/)?[a-zA-Z]/)"
 
 
 def _short(p: str) -> str:
@@ -97,9 +98,9 @@ def protected() -> list:
             if n.count("/") < 2 or inside(lib, n):         # a drive, a top folder or a folder holding the library itself: never guarded
                 continue
             res.append((n, sp.parent.name))
-            s = norm(_short(p)) if _short(p) else ""
-            if s and s != n:
-                res.append((s, sp.parent.name))
+            sh = _short(p)
+            if sh and norm(sh) != n:
+                res.append((norm(sh), sp.parent.name))
     return res
 
 
@@ -128,21 +129,22 @@ def segments(cmd: str) -> list:
 
 
 def tokens(seg: str) -> list:
-    return [a if a is not None and a != "" else (b if b is not None and b != "" else c)
-            for a, b, c in re.findall(r'"([^"]*)"|\'([^\']*)\'|(\S+)', seg)]
+    return [a or b or c for a, b, c in re.findall(r'"([^"]*)"|\'([^\']*)\'|(\S+)', seg)]
 
 
 def abs_paths(text: str) -> list:
-    """Every absolute Windows or Git Bash path in a text, normalised."""
+    """Every absolute Windows or Git Bash path in a text, normalised: inside quotes a path may hold spaces, outside it ends at one."""
     t = text.replace("\\", "/")
-    found = re.findall(r"(?<![\w])(?:[a-zA-Z]:/|/(?:mnt/)?[a-zA-Z]/)[^\"'\n\r;|&<>`]*", t)
     res = []
-    for f in found:
-        f = re.split(r"\s+-{1,2}[a-zA-Z]", f)[0].rstrip(" ),")    # a quoted path may hold spaces; an option after it ends it
-        res.append(norm(f))
-        first = f.split(" ")[0]
-        if first != f:
-            res.append(norm(first))
+
+    def grab(s, spaces):
+        tail = r"[^\"'\n\r`;|&<>]*" if spaces else r"[^\s\"'`;|&<>()]*"
+        for f in re.findall(PATH + tail, s):
+            res.append(norm(f.rstrip(" ),")))
+    for a, b in re.findall(r'"([^"]*)"|\'([^\']*)\'', t):
+        grab(a or b, True)
+        grab(a or b, False)
+    grab(re.sub(r'"[^"]*"|\'[^\']*\'', " ", t), False)
     return res
 
 
@@ -162,7 +164,7 @@ def verb_of(toks: list):
 
 def resolve(tok: str, cwd: str) -> str:
     t = tok.strip().strip("\"'")
-    if not t or t.startswith(("-", "$", "%")) or "=" in t or re.match(r"^/[a-zA-Z?]{1,3}$", t):
+    if not t or t.startswith(("-", "$", "%", "|")) or "=" in t or re.match(r"^/[a-zA-Z?]{1,3}$", t):
         return ""
     if re.match(r"^([a-zA-Z]:[\\/]|/)", t):
         return norm(t)
@@ -198,20 +200,17 @@ def hit(paths, prot):
 def check_command(cmd: str, cwd: str, prot: list):
     text = expand(cmd)
     cwd = norm(cwd) if cwd else ""
-    every = abs_paths(text)
     # a delete or move written as a call (a Python heredoc or -c, .NET, Node): anywhere in the command, with a guarded path anywhere in it
     if API.search(text.lower()):
-        h = hit(every, prot) or (hit([cwd], prot) if cwd else None)
+        h = hit(abs_paths(text), prot) or (hit([cwd], prot) if cwd else None)
         if h:
             return h, "a delete or move call"
     for seg in segments(text):
         toks = tokens(seg)
         if not toks:
             continue
-        w = toks[0].lower().strip("(){}&@;,")
-        if w in CD and len(toks) > 1:
-            nxt = resolve(toks[1], cwd)
-            cwd = nxt or cwd
+        if toks[0].lower().strip("(){}&@;,") in CD:
+            cwd = next((r for r in (resolve(x, cwd) for x in toks[1:]) if r), cwd)
             continue
         scr = script_text(toks, cwd)
         if scr and (API.search(scr.lower()) or any(verb_of(tokens(line)) is not None for line in segments(scr))):
@@ -222,7 +221,7 @@ def check_command(cmd: str, cwd: str, prot: list):
         if i is None:
             continue
         cands = abs_paths(seg) + [r for r in (resolve(t, cwd) for t in toks[i + 1:]) if r]
-        h = hit(cands, prot)
+        h = hit(cands or [cwd], prot)
         if h:
             return h, f"`{toks[i]}`"
     return None
