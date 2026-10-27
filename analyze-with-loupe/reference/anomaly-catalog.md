@@ -54,5 +54,5 @@ Stored as section files in `anomaly-catalog/` (next to this file); **read only t
 | 3 | The prompting stack (in order, per video) | `210_3_the-prompting-stack-in-order-per.md` | 2.4 |
 | 4 | The QC stack (X9, in order) | `220_4_the-qc-stack-x9-in-order.md` | 7.3 |
 | 4.1 | · How the verdict is written (examples) | `230_4.1_how-the-verdict-is-written-examp.md` | 5.4 |
-| 5 | Quick reference | `240_5_quick-reference.md` | 7.7 |
+| 5 | Quick reference | `240_5_quick-reference.md` | 7.8 |
 <!-- sections:end -->

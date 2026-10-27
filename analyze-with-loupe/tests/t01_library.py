@@ -255,4 +255,11 @@ judge_texts = {"awl-qc": qc, "anomaly-catalog §4": rd(LIB / "reference" / "anom
 leak = [k for k, v in judge_texts.items() if re.search(r"(?i)effort|@full|qc --run", v)]
 check(not leak, "no effort setting reaches QC, its Loupe consult or the agent contract: " + ", ".join(leak))
 
+# --- orientation (the user, 2026-10-27): the output keeps the original's perspective; no text tells a step to flip a source
+sp = " ".join(rd(GS / "260_5c.2b_prepare-the-source-before-it-rid.md").split())
+flip_texts = [p_.name for p_ in sorted((LIB / "reference").rglob("*.md")) + sorted((LIB / "models").rglob("*.md")) + SKILLS
+              if re.search(r"(?i)(source|copy|video 1)[^.\n]{0,40}(is |are )?flipped (horizontally )?(in|before) (the )?(preparation|upload)|the prepared (copy|source) flipped", rd(p_))]
+check("**Orientation: never flipped.**" in sp and "original perspective" in sp and not flip_texts,
+      "the source is never flipped (generation-system §5c.2b) and no text tells a step to flip one: " + ", ".join(flip_texts))
+
 finish()

@@ -41,7 +41,7 @@
        an in-hand product (CE-055, CE-061, CE-073, CE-082);
      - cut structure and source flags: a reference with many hard cuts, one that alternates a person with
        person-free close-ups, or one with a face effect baked in ranks low (`generation-system.md` §3b.1 item
-       7, §5c.2b; CE-051, CE-079, CE-083, CE-086); a mirrored source ranks normally and is flipped in the
+       7, §5c.2b; CE-051, CE-079, CE-083, CE-086); a mirrored source ranks normally and keeps its orientation in the
        prepared copy (CE-030);
      - the number of people against the supplied characters;
      - the own-content length after inserts, against the locked model's edit range;

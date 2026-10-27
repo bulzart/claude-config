@@ -333,33 +333,35 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   meme beat is replaced by a generated imitation; (2) a `none` run's longer generated length changes the 30 s permission count as planned;
   (3) the production agents of a voiced run read the voiceover sections once each and stay within their context with five agents running.
 
-## 2026-10-27 · the effort level (contract item 33): fewer frames where they are redundant, never where a check needs them
+## 2026-10-27 · the effort level (contract item 33), no approval stops, and the original perspective
 
-- **Why.** The user (2026-10-26): the pipeline takes too many resources and generates too many frames and samples to inspect, which drains
-  tokens; ask at the start how much fps and other resources to analyse, as an effort level, without lowering anything the accuracy needs
-  ("for example making it skip one second of the video ... and then losing data that needs to be processed from the source"), and without
-  context rot between the agents. Then (2026-10-27): five levels, low, medium, high, xhigh and max, max being the rates before the change.
-- **Where the frames went** (the files of run `20261021-224049-21`, 16 references, 10 videos): 50 reference storyboard sheets and 33
-  close-up sheets at analysis; per produced video 146 to 738 images under `60-outputs/`, mostly QC checkpoint frames rendered at 30 fps
-  (one second makes 31 frames, two sheets) and 30 to 49 single full-resolution frames per QC pass, repeated for every attempt.
-- **What.** `awl-start` step 5d asks the level in the same call as the QC-fixes and audio questions (both modes; `effort.md` §1, read
-  once): the five levels as a table (references 2, 3, 4, 5, 5 fps; QC checkpoints 15, 20, 24, 30, 30 fps; budgets growing to none at
-  max), four buttons and Other for XHigh or the user's numbers (a question holds at most four options). `T effort` stores the level's table in `state.json → effort` (custom numbers held to the floors and reported); `T prep-all` reads
-  the reference rates and `T qc --run` the storyboard and checkpoint rates by themselves, and a checkpoint may ask for every frame
-  (`label:a-b@full`). The two budgets live once each in the sections their readers already load: the analysts' close-ups in
-  analysis-protocol §1 (and the §7 agent prompt), the QC frames and the `@full` rule in anomaly-catalog §4 step 1. The contract carries a
-  one-line "Effort" line; `status` and `lint-run` report it.
-- **What never changes** (`effort.md` §2): coverage (every second sampled, at least 2 fps; every cut's last and first frame; the first
-  second and the motion peaks dense), the floors (2 and 6 fps references, 2 close-ups, 4 fps QC storyboards for the 0.25 s anchor track,
-  15 fps checkpoints inside the 0.1 s tolerances, 4 extra frames), every frame for the first second and every insert, seam and cut edge,
-  the X1 densification of a produced video's own source, every checkpoint, a full QC pass per attempt, the label and size frames, the
-  sync check, the Loupe consult; and a budget never skips a check.
-- **Context.** Against the last push (`c96a742`): +0.8 KB per production agent, +0.3 KB per analysis agent, +1.8 KB in the main
-  session plus effort §1 (1.9 KB) read once at the start; the frames saved at Low or Standard outweigh it by far.
-- **Tests.** t01 +4 checks (the reference, the start question and store, the QC stack rule, the budgets and the contract line), t02 +9
-  (legacy rates for a run without the key, the level table, the floors and the ceiling, prep-all reading the level, every second sampled
-  at the lowest level, fewer frames at a lower level, qc --run with @full, a malformed checkpoint, the contract, lint-run and status). All
-  suites: t01 86, t02 112, t03 30, t05 11; the rehearsal 211/211 (runs without the key keep their rates).
-- **Hypotheses to test:** (1) a Medium run reads about 40 % fewer reference storyboard cells and about half the checkpoint sheets of a
-  Max run, with no QC miss the High run would have caught; (2) the single-frame budget holds without a check taking extra frames more
-  than once per video; (3) Low still catches a one-frame flaw at an insert edge (the `@full` ranges).
+- **Why.** The user (2026-10-26 and 27): the pipeline takes too many resources and frames, which drains tokens; ask at the start how much
+  to analyse, as an effort level of five steps (low, medium, high, xhigh, max = the earlier settings), without lowering anything the
+  accuracy needs ("making it skip one second of the video ... losing data that needs to be processed from the source") and without context
+  rot; "no change should be made on the loupe or its agents whether on qc agents or others because the judge agents should always be
+  stable"; "no more questions like these" (an upload approval, a "go for uploading and generating?"); and "video should be in the original
+  perspective not reverted/mirrored".
+- **Where the frames went** (run `20261021-224049-21`): reference storyboards and close-ups at analysis (766 baseline frames, 291 motion-peak
+  frames, 33 close-up sheets for 16 references), and above all QC (30 fps checkpoint sheets and 30 to 49 single frames per pass). QC was
+  then kept out of the level at the user's word, so the level saves at analysis and spreads the spending.
+- **What.** `awl-start` step 5d asks the level in the same call as the QC-fixes and audio questions (`effort.md` §1, read once: the five
+  levels as a table, four buttons, XHigh and custom numbers through Other). `T effort` stores it in `state.json → effort` (custom values
+  held to the floors); `T prep-all` reads the reference sampling (fps, the dense rate, the motion peaks, their ±0.5 s window kept at every
+  level), the analysts keep the close-up budget (analysis-protocol §1 and the §7 prompt), and the produce phase takes the agents at once and
+  the pilot threshold. QC, its Loupe consult, the `qc` command and the agent contract are exactly as at the last push (`c96a742`; the `qc`
+  code is restored byte for byte; t01 guards that no effort setting reaches them). No pixel size changes at any level.
+- **No approval stops.** The upload-approval stops came from a standing note of 2026-10-22, already revoked in the user's memory and in
+  the live runs' contracts on 2026-10-27; the router (item 15), the produce phase and X3 now say it themselves: no reference review and no
+  "Go" before an upload or a generation. The long-video permission (A7b) and the QC-fix question (only with `ask`) stay as designed.
+- **Orientation.** `generation-system.md` §5c.2b flipped a front-camera selfie source before upload (CE-030, on the client's "maybe flip
+  video, then add bag"), so those outputs came out mirrored against the original. Now a source is never flipped in any mode: a selfie keeps
+  its reversed print as the original shows it, the product label reads correctly, and only a mirrored identity photo is turned true. The
+  same rule in §5c.3, §8, analysis-protocol §3 and §5, anomaly-catalog §4.1 and §5, and the wan-3-0 guide (§4.0 note, §5, §7). Live runs
+  prepared from flipped sources before this (the Celsius run's videos 01 and 08, run `20261026-222435-26` video 04) are left to their
+  session.
+- **Tests.** t01 87 (the effort reference and wiring, the no-approval lines, the guard that no effort setting reaches QC or the contract),
+  t02 113 (the five levels, the bounds, prep-all reading the level, every second sampled at the lowest level, the ±0.5 s peak window on a
+  moving source, qc unchanged, no Effort line in the contract), t03 30, t05 11; the rehearsal 211/211.
+- **Hypotheses to test:** (1) a Medium run reads about 40 % fewer reference storyboard cells than a Max run with the same cards; (2) two
+  agents at once keep a long run under the usage limit without changing any verdict; (3) a selfie source kept in its own orientation is
+  accepted by the user with its reversed print beside the correctly read label.

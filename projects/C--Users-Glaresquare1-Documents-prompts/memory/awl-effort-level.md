@@ -1,21 +1,17 @@
 ---
 name: awl-effort-level
-description: "/analyze-with-loupe item 33: the user picks one of five effort levels (low, medium, high, xhigh, max = the old rates) that lowers redundant sampling, never coverage or frame-exact checks"
+description: "/analyze-with-loupe item 33: five effort levels (low…max = the old settings) scale reference analysis and pacing only; QC and Loupe never change"
 metadata:
   type: project
 ---
 
-On 2026-10-26 the user said the pipeline burned too many tokens on frames and samples. They asked for an effort level at the start of
-every run (or their own fps numbers): on 2026-10-27 they fixed it at five, low, medium, high, xhigh and max, that saves frames without "making it dumb": never skip a second of the
-source, never lose data a check needs.
+On 2026-10-26 and 27 the user asked for a start-of-run effort level to cut token use. It has five steps, low, medium, high, xhigh and max,
+where max equals the pipeline's earlier settings. The level adjusts only the reference analysis (fps, the dense rate, motion peaks, close-ups),
+the production agents running at once, and the pilot threshold. `T effort` stores it in `state.json → effort`; `T prep-all` and the produce
+phase read it. Coverage never drops (every second sampled, cut frames kept), and no frame or video is made smaller.
 
-It is item 33 of /analyze-with-loupe. `T effort` stores the level in `state.json → effort`, and `T prep-all` and `T qc --run` read it
-themselves. Max equals the rates the pipeline used before (5 fps references, 10 around motion, 30 fps checkpoints, no budgets); a run without the key keeps them. The start question shows all five as a table with four buttons; XHigh goes through Other. The floors and the never-changed list are
-in `reference/effort.md` §2: every second is sampled at ≥ 2 fps, cut frames are always kept, and the first second plus every insert, seam
-and cut edge are checked on every frame (`@full`).
+**Why:** the user first wanted QC scaled too, then ruled that the judges must stay stable ([[judges-stable]]). The QC frame rates, the sample
+images and the agent contract were therefore restored exactly. In run `20261021-224049-21`, QC was where most frames were spent, so the
+savings come from analysis and pacing.
 
-**Why:** the measured run (`20261021-224049-21`) spent most of its frames on 30 fps QC checkpoint sheets and on 30–49 single
-full-resolution frames per QC pass.
-
-**How to apply:** when tuning cost, lower the level's numbers, never the coverage or the `@full` checks. Keep the rules in the sections their
-readers already load ([[pipeline-context-budget]]). Related: [[awl-voiceover-memes-design]].
+**How to apply:** tune cost through the level's analysis and pacing numbers, never through QC. Related: [[pipeline-context-budget]], [[awl-voiceover-memes-design]].

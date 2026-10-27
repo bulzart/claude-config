@@ -68,7 +68,7 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       perspective, its printed label sharp, the outline and the label legible and off the key action, measured
       with `awl.py scale --frame` on a still; the request carries the marker sentence and the removal line. A start
       or end frame carries no mark: its product is photoreal and passed the paste test.
-- [ ] Source prepared (§5c.2b): orientation (a mirrored selfie flipped, the identity photo too); burned-in
+- [ ] Source prepared (§5c.2b): orientation (the original's, never flipped; only a mirrored identity photo is turned true); burned-in
       text, identifying names and marks covered by prompt sentences (clean-plate lines first, never trimmed;
       no tool removes them); a baked face effect planned for; left and right of every beat read on the
       prepared frames.

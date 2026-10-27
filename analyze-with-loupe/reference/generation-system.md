@@ -43,7 +43,7 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | 5c | · Source fidelity: the original's movements, actions, details and timing | `230_5c_source-fidelity-the-original-s-m.md` | 1.0 |
 | 5c.1 | · · The source action script (card, then plan) | `240_5c.1_the-source-action-script-card-th.md` | 1.4 |
 | 5c.2 | · · The most preserving input and parameters | `250_5c.2_the-most-preserving-input-and-pa.md` | 2.4 |
-| 5c.2b | · · Prepare the source (before it rides as the video reference) | `260_5c.2b_prepare-the-source-before-it-rid.md` | 2.6 |
+| 5c.2b | · · Prepare the source (before it rides as the video reference) | `260_5c.2b_prepare-the-source-before-it-rid.md` | 2.5 |
 | 5c.3 | · · The fidelity lock in the prompt | `270_5c.3_the-fidelity-lock-in-the-prompt.md` | 3.1 |
 | 5c.4 | · · Check before spending (X4) | `280_5c.4_check-before-spending-x4.md` | 0.5 |
 | 5c.5 | · · Measure it after the merge | `290_5c.5_measure-it-after-the-merge.md` | 2.3 |

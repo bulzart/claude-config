@@ -2,4 +2,6 @@
 - [ElevenLabs setup](elevenlabs-setup.md) — local MCP with API key (user scope), free tier, Albanian unsupported officially, outputs under Desktop
 - [/analyze-with-loupe voiceover & memes](awl-voiceover-memes-design.md) — items 31 (native/lipsync/overlay; native most preferred) and 32 (memes include/none in Create); untested parts
 - [Pipeline context budget](pipeline-context-budget.md) — keep router/skills/contract lean; details in conditional sections; measure vs git baseline
-- [/analyze-with-loupe effort level](awl-effort-level.md) — item 33: five levels low→max (max = old rates) save frames; coverage and frame-exact checks never drop
+- [/analyze-with-loupe effort level](awl-effort-level.md) — item 33: five levels (max = old settings) scale analysis and pacing only; QC/Loupe never
+- [Judges stay stable](judges-stable.md) — never change Loupe, QC agents, the keeper or the QC consult; no setting may vary them
+- [Original perspective](original-perspective.md) — never flip/mirror a source; selfie print stays as original, product label reads correctly
