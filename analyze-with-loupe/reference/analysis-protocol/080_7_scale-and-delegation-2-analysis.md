@@ -20,7 +20,7 @@ opportunities, source preparation flags), anomaly-catalog/ §2.1, §2.2, §2.5 a
 `python <AWL>/scripts/awl.py audio-profile` (sound design). Never read a whole reference or models/index.json.
 Run dir: <RUN>. Your videos: <V01, V04, …> (prepared under <RUN>/10-media/<V>/).
 For each video: read video.md and timeline.md, view every storyboard sheet in order, densify with
-`python <AWL>/scripts/awl.py frames …` where §1 says so (budget: <densify_ranges> ranges per video), then write <RUN>/20-analysis/cards/<V>.md
+`python <AWL>/scripts/awl.py frames …` where §1 says so (budget: <densify_ranges> ranges per video, or no cap), then write <RUN>/20-analysis/cards/<V>.md
 using the §3 template with provenance labels. Project context so far: <2–4 lines>.
 Client's placeable entities (for the "Client-entity fit" line only): <type, category, real size —
 e.g. "slim 355 ml aluminium drink can", "palm-sized pack of 10 gum pellets", "compact five-door
@@ -28,7 +28,7 @@ hatchback, about 4 m long">.
 Your examples (if any): <E01, …> (prepared under <RUN>/10-media/<E>/): the user's own finished
 videos. For each, write <RUN>/20-analysis/examples/<E>.md with the §9.2 template (§9.1 says what to read).
 Rules: do not call Higgsfield or CapCut tools, do not spawn agents, do not use the Workflow tool, do not ask
-questions, write only your card files, and never move, rename or delete a file of the references folder (it is read-only). Every product, person or brand you see in these videos
+questions, write only your card files, and never move, rename or delete a file of the references or examples folders (they are read-only). Every product, person or brand you see in these videos
 belongs to the references; client assets come only from the user's supplied asset registry, which you
 do not need. Done means: one card file per video with every §3 field present (a field you could not judge says
 unknown and why, never a guess), every claim labelled [E] or [I] with the sheet or frame it rests on, and a

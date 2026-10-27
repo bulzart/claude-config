@@ -92,7 +92,7 @@ Only these section files for this phase, nothing else unless a step below says s
     Videos that have nothing to do with the client's product are kept and analysed like any other.
     Their mechanism is still useful, and the product is integrated into them later.
 - Delegate to 1–2 agents only per §7 of the protocol, with disjoint video lists. Give them the
-  one-line client-entity summary from the registry and the run's densify budget (`T effort --run RUN` → `densify_ranges`; item 33).
+  one-line client-entity summary from the registry and the run's densify budget (`T effort --run RUN` → `densify_ranges`; null: write 'no cap'; item 33).
 - Images and other files in the references folder are also **reference material**: other products,
   samples, thumbnails and executions. Analyse them as references and never treat them as client
   assets.

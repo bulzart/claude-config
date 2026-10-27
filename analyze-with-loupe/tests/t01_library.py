@@ -248,7 +248,7 @@ check("33. **Effort level" in router and "all five offered in plain chat" in rou
 settings = json.loads((HOME / "settings.json").read_text(encoding="utf-8"))
 guards = [e for e in (settings.get("hooks") or {}).get("PreToolUse", []) if any("awl_input_guard.py" in h.get("command", "") for h in e.get("hooks", []))]
 check("34. **The user's folders are read-only**" in router and "item 34 →" in router and "(item 34)" in rd(PA / "020_2_spawning.md")
-      and "references folder (it is read-only)" in rd(LIB / "reference" / "analysis-protocol" / "080_7_scale-and-delegation-2-analysis.md")
+      and "references or examples folders (they are read-only)" in rd(LIB / "reference" / "analysis-protocol" / "080_7_scale-and-delegation-2-analysis.md")
       and (HOME / "hooks" / "awl_input_guard.py").is_file() and len(guards) == 1 and all(x in guards[0].get("matcher", "") for x in ("Bash", "PowerShell", "Write", "Edit")),
       "item 34 (the user's folders are read-only) is in the router, the production agents' contract and the analysis agents' prompt, and its hook is registered for Bash, PowerShell, Write and Edit")
 check("effort.max_agents" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "effort.pilot_from" in rd(SKD / "awl-analyze-produce" / "SKILL.md")

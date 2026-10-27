@@ -60,7 +60,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - `T prep-all --run RUN --jobs 2`:
   - it runs the adaptive frame pipeline at the run's effort level (`state.json → effort`, item 33), storyboards, per-second timeline, the audio measurements, speech-to-text when
     `state.json → audio_ingest` is `whisper` (it reads the key itself and stops when the key is missing: ask the audio question then,
-    `awl-start` step 5b), and the OCR sample for every video, plus image previews and document text; its JSON says which
+    `awl-start` step 5b; it stops the same way while `state.json → effort` is empty: ask `effort.md` §1, `awl-start` step 5d), and the
+    OCR sample for every video, plus image previews and document text; its JSON says which
     `audio_ingest` it ran;
   - with more than ~3 minutes of total video, run it with `run_in_background: true`, read the
     documents (A2) meanwhile, and wait for the completion notification before A3;

@@ -47,7 +47,8 @@ Only these section files for this phase, nothing else unless a step below says s
     folder in the same path (X10).
 - Then `T prep-all --run RUN --jobs 2`. The analysis uses the originals, with audio: with `state.json → audio_ingest` = `whisper` they are
   transcribed; with `frames-only` no transcript exists and the card's speech fields say `audio not ingested` (`prep-all` stops when the
-  key is missing: ask the audio question then, `awl-start` step 5b, contract item 24).
+  key is missing: ask the audio question then, `awl-start` step 5b, contract item 24; and while the effort level is empty: ask it,
+  step 5d, item 33).
 - **Examples, when given** (contract item 18): `T inventory "<examples folder>" --run RUN --as
   examples` and `T prep-all --run RUN --set examples`, then one card each and
   `20-analysis/house-approach.md` (protocol §9), once per run, before the first edit. Every edit
