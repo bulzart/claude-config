@@ -179,18 +179,31 @@ def ts_name(t: float) -> str:
     return f"{int(m):02d}m{s:05.2f}s"
 
 
+def _replace(tmp: Path, path: Path) -> None:
+    """os.replace that waits out a reader: on Windows a file another process holds open without FILE_SHARE_DELETE (a hook, Loupe, an editor
+    reading it) refuses to be replaced for as long as it is held; short retries let the write through instead of failing the step."""
+    for i in range(60):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if i == 59:
+                raise
+            time.sleep(0.05)
+
+
 def write_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-    os.replace(tmp, path)
+    _replace(tmp, path)
 
 
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
+    _replace(tmp, path)
 
 
 def find_tool(name: str) -> str:
@@ -1066,9 +1079,9 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
     t = time.time()
     fr_dir = odir / "frames"
     base, eff_fps, fps_note = extract_baseline(video, base_fps, fr_dir / "base", dur, max_frames=max_frames)
-    # a still stretch counts from 3 duplicates in a row at 4 fps and up (the rates before item 33); below that a whole still second counts,
-    # so a lower effort level never keeps more frames of a still shot than a higher one (at least 1 frame per second stays at every rate)
-    statics = thin_static(base, static_threshold, min_run=3 if base_fps >= 4 else max(1, int(round(base_fps)) - 1))
+    # a still stretch counts from 3 duplicates in a row at 4 fps and up (the rates before item 33); at 3 fps from the 2 a still second holds,
+    # so Medium never keeps more frames of a still shot than High; at 2 fps a still second holds 1, and thinning it would save no cell
+    statics = thin_static(base, static_threshold, min_run=max(2, min(3, math.ceil(base_fps) - 1)))
     plan = densify_plan(cuts, peaks, dur, fps, eff_fps, dense_fps)
     extra = extract_many(video, [(tt, fr_dir / "extra" / f"x-{ts_name(tt)}.jpg", {"kind": "extra", "tag": tag, "why": why})
                                  for tt, tag, why in plan], max_side=720)
@@ -1460,7 +1473,9 @@ def cmd_new_run(a):
 def _set_dotted(d: dict, key: str, value):
     parts = key.split(".")
     for p in parts[:-1]:
-        d = d.setdefault(p, {})
+        if d.get(p) is None:            # missing, or kept empty until set (effort: null)
+            d[p] = {}
+        d = d[p]
     d[parts[-1]] = value
 
 
@@ -2296,7 +2311,7 @@ def cmd_uploads(a):
             fail("state.json -> assets.uploads is not an object; nothing merged", 1)
         changed = {k: v for k, v in merged.items() if ups.get(k) != v}
         ups.update(merged)
-        p_state.write_text(json.dumps(st2, ensure_ascii=False, indent=1), encoding="utf-8")
+        write_json(p_state, st2)
     out({"ok": True, "run": rd.name, "merged": len(merged), "changed": sorted(changed), "skipped": skipped,
          "note": "only label -> media_id reaches state.json; a file outside the schema is listed here and left alone (fix it with `uploads set`)"})
 
@@ -3409,8 +3424,9 @@ def _lc():
 
 
 # How long a consult (QC or plan) may take: Loupe waits up to 120 s for a running keeper call (its LOCK_WAIT), then makes keeper calls of up to
-# 150 s each (a boot, the question, up to two rounds of the keeper's requests); a consult of 209 s was cut at the old 190 s and its answer lost.
-CONSULT_TIMEOUT = float(os.environ.get("AWL_CONSULT_TIMEOUT") or 600)
+# 150 s each (a boot, the question, up to two rounds of the keeper's requests: 720 s at worst); a consult of 209 s was cut at the old 190 s and its
+# answer lost. A Bash call that outlasts its own timeout goes on in the background, so the agent still gets the answer.
+CONSULT_TIMEOUT = float(os.environ.get("AWL_CONSULT_TIMEOUT") or 780)
 UPLOAD_ONLY_CAPTURE = re.compile(r"^signals: upload( \||$)")    # a media_upload answer the hook keeps for `hf-put --capture`, never a flag
 
 
