@@ -249,9 +249,9 @@ Item 17's "§3 R-steps" are step A6r (`awl-recreate-plan`).
     `none`: pure generation, no insert or meme sound of any kind, a reference's meme beat played by the
     generated scene, never by a generated copy. It wins over the house approach. `state.json → memes`; a Create run without the key
     includes them.
-33. **Effort level: the user's choice (step 5d).** It sets how densely the references are sampled and QC renders its
-    checkpoints (`state.json → effort`; `T prep-all` and `T qc --run` read it); coverage, the floors and the frame-exact checks never
-    change (`reference/effort.md`). A run without it keeps its old rates and is never asked.
+33. **Effort level: the user's choice (step 5d).** It sets how densely the references are sampled, the agents at once and the
+    pilot threshold (`state.json → effort`; `T prep-all` and the produce phase read it); coverage and the floors never change, and QC
+    and Loupe are never part of it (`reference/effort.md`). A run without it keeps its old rates and is never asked.
 
 ## Never (this phase)
 

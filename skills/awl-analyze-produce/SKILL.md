@@ -14,7 +14,7 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - production-agents §1: `AWL/reference/production-agents/010_1_prepared-by-this-session-before.md` (1.9 KB)
-- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (16.5 KB)
+- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (16.4 KB)
 - production-agents §3: `AWL/reference/production-agents/030_3_the-agent-s-contract.md` (8.6 KB)
 - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 - higgsfield-mcp §1: `AWL/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)
@@ -64,14 +64,14 @@ Plan everything before production, in allocation order, **without asking for con
    `state.json → loupe` (five agents must not race to start it); fill the contract's "Loupe" line from it (`up` when the run has none)
    and its "Audio ingest" line from `state.json → audio_ingest` (item 24). Fill its "QC fixes" line from `state.json → qc_fixes` (`auto` when the run has none; item 27).
    `T contract` also fills its "Voiceover" line (`state.json → voiceover`, `off` without it; item 31) and its "Memes" line
-   (`state.json → memes`; item 32), and its "Effort" line (`state.json → effort`; item 33).
+   (`state.json → memes`; item 32).
 
 ### A9b. Produce in parallel (production agents)
 
 - **Free runs:** each agent's spawn message names its video's kind (`Video NN, kind recreate|create`, from `state.json → videos_kind`), and the contract's "Video kind" line says that the kind selects the Recreate or the Create branch of every per-video step.
 - **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to
   the run's contract file at A9; `subagent_type: general-purpose`, `run_in_background: true`).
-  - At most `production.max_parallel_agents` (5) run at once; start the next queued video when one
+  - At most the run's `effort.max_agents` run at once (`T effort --run RUN`; 5 without a level); start the next queued video when one
     finishes.
   - Each agent runs X3 (its own inputs) → X7 → X8 → X9 → X10 for its video, ending with its CapCut
     project, and returns one JSON line. It runs X5 again for any request it changes.
@@ -116,7 +116,7 @@ See §6.
    - **Analysis agents:** 0 by default; **1** when there are many videos, **2** only when the folder
      is large (`reference/analysis-protocol.md` §7). They never call Higgsfield or CapCut.
    - **Production agents** (Analyze Mode, Recreate and Create):
-     - **one agent per video**, at most **5 at once** (`config.json → production`);
+     - **one agent per video**, at most the effort level's count at once (5 without one, `config.json → production`);
      - after this session has planned and prepared every video, each agent produces its own video
        end to end: Higgsfield generation → QC → CapCut project;
      - the contract and prompt are in `reference/production-agents.md`;
@@ -137,7 +137,8 @@ See §6.
 15. **Analyze Mode asks for permission in exactly one case:** a video **over 30 s that needs 2 or
     more generations** (A7b).
     - Everything else runs without confirmation: no "Go" question, no cost pauses, no QC questions of its own
-      (the one fix question of item 27, asked only when the user chose `ask`, is the exception).
+      (the one fix question of item 27, asked only when the user chose `ask`, is the exception), and no reference review before an
+      upload or a generation (the user, 2026-10-27; an older note asking for one is retired).
     - Blockers are reported, not asked: the balance can't cover the next video, or Higgsfield
       itself demands a choice (`unlim_choice`, `recovery_tool`, X7 in `awl-submit`).
     - The planning questions (mode, model, inputs, number of videos, directions, the voiceover choice
@@ -179,7 +180,7 @@ See §6.
     unrecorded. A flag whose rule is general or recurs is written into those references as a rule when the user asks for it; the entry stays as the record.
     The user opens Loupe to see the flags grouped by trigger, asset, video, kind, run or model and searched
     by field, with the evidence Loupe gathered next to each.
-26. **Pilot first.** With more than four videos to produce, spawn the first video's agent as soon as its plan, request, inputs and brief exist and let it run X7–X10 to its QC
+26. **Pilot first.** With at least the run's `effort.pilot_from` videos to produce (5 without a level), spawn the first video's agent as soon as its plan, request, inputs and brief exist and let it run X7–X10 to its QC
     before the remaining plans are finished and their agents are spawned (the planners go on meanwhile). What its QC finds (a recipe fault, a marker, a size, a seam) is written
     into the other plans before they cost a generation; the user is told in one line when the pilot has passed. The user may say "no pilot" at the start.
     With an own voiceover (item 31) the pilot also shows how the method lands on Higgsfield (whether a driving audio comes back as the

@@ -177,8 +177,10 @@ its requirement (`awl-free-plan` step 2c).
 At the start of every run, in both modes, the user picks **Low**, **Medium**, **High**, **XHigh** or **Max** (or their own numbers). The level
 sets how densely the references are sampled (2, 3, 4, 5, 5 frames per second; 6, 8, 10, 10, 10 around motion and in the first second), how
 many close-ups an analyst may add per reference (2, 4, 6, 8, no cap), and how densely QC renders an output (storyboards at 4, 4, 5, 5, 5 fps;
-checkpoint sheets at 15, 20, 24, 30, 30 fps; extra full-resolution frames per QC pass: 4, 8, 12, 16, no cap). Max is the pipeline's rates
-before the choice existed, and a run without the key keeps them. The question shows all five in a table and offers four buttons (XHigh and
+checkpoint sheets at 15, 20, 24, 30, 30 fps; extra full-resolution frames per QC pass: 4, 8, 12, 16, no cap), how many motion peaks of a
+reference are densified (4, 5, 6, 8, 8; ±0.5 s each), how many Loupe sample images QC views (3, 4, 6, 8, all; every sample's words are
+read), how many production agents run at once (2, 3, 4, 5, 5) and from how many videos the pilot runs first (2, 3, 5, 5, 5). No level
+makes a frame or a video smaller. Max is the pipeline's settings before the choice existed, and a run without the key keeps them. The question shows all five in a table and offers four buttons (XHigh and
 custom numbers go through Other, as the model menu does). `T effort` stores it in `state.json → effort` and holds custom values to the floors;
 `T prep-all` and `T qc --run` read it by themselves. What never changes (`reference/effort.md` §2): every second of every video is sampled,
 every cut keeps its last and first frame, the first second and the motion peaks are dense, the first second and every insert, seam and cut

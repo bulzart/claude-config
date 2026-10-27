@@ -1,11 +1,8 @@
 ## 4. The QC stack (X9, in order)
 
-1. `T qc --run RUN --video <final> --out <dir> --mode <mode> --allowed-text "…" --dense "<label>:<a>-<b>" …`
-   with every checkpoint of the plan: it writes a sheet per checkpoint under `<dir>/dense/` beside the
-   storyboard, at the rates of the run's effort level (item 33; `sampling` in its answer). The first second and every insert,
-   seam and cut edge take `@full` (`first:0-1.2@full`: every frame, where one frame is the failure). Single full-resolution frames
-   (`T frames --at`): the label and size checks always take theirs; beyond them at most the contract's Effort budget per pass, other
-   looks go through sheets (`T frames --range … --sheet`), and a check that still needs a frame takes it and says so. It returns measurements beside the expected values (duration, aspect, size,
+1. `T qc --video <final> --out <dir> --mode <mode> --allowed-text "…" --dense "<label>:<a>-<b>" …`
+   with every checkpoint of the plan: it writes a 30 fps sheet per checkpoint under `<dir>/dense/`
+   beside the 5 fps storyboard, and returns measurements beside the expected values (duration, aspect, size,
    audio, black spans, freeze starts, and `planned_text` beside the `visible_text` its OCR saw), with no pass or
    fail. View every sheet, read the numbers, and write the verdict yourself. Rules of thumb for the numbers: a
    duration off by more than max(0.25 s, 5 %) is a duration problem; any black span or freeze needs a look at the

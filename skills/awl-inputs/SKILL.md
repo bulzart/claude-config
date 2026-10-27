@@ -41,7 +41,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Step X3
 
-- **X3 — Inputs.**
+- **X3 — Inputs.** Upload without asking: no approval stop before a `media_upload` or a generation (item 15).
   - Take the assets only from this video's registry: scope `project` (Analyze Mode asset plan) or
     scope `video-NN` (Edit Mode files for this edit).
   - Upload the files this video needs, once per run: `media_upload` → `T hf-put --capture <id> --file <path>` (the hook keeps every

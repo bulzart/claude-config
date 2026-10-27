@@ -32,7 +32,6 @@ Voiceover: <voiceover> (state.json → voiceover, command item 31). Not off and 
 voice (X3 uploads it, X8 step 5b carries it, X9 checks it and `result.json → voiceover` records it, as your skills' voiceover sections
 say); you never call ElevenLabs (a take that must change: blocker `voiceover`).
 Memes: <memes> (state.json → memes, command item 32).
-Effort: <effort> (state.json → effort, command item 33; `T qc --run <RUN>` takes these rates).
 Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md, <RUN>/50-requests/video-NN*.json
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 

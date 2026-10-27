@@ -231,18 +231,28 @@ check("Memes: <memes>" in rd(PA / "020_2_spawning.md") and "**Memes**" in rd(PA 
       and "memes = include" in rd(GS / "090_3c_reference-inserts-memes-cut-from.md"), "the contract carries the Memes line and its check; generation-system §3c states the Create condition")
 
 
-# --- effort level (item 33): asked at the start in both modes, stored by T effort, read by prep-all and qc --run; the frame-exact rule and the
-#     frame budget live once, in the QC stack section every QC pass reads; the analysts' densify budget in the protocol section they read
+# --- effort level (item 33): asked at the start in both modes, stored by T effort, read by prep-all (the reference sampling) and the produce
+#     phase (agents at once, the pilot); the analysts' close-up budget lives in the protocol section they read. QC and Loupe are never part of it
 EF = LIB / "reference" / "effort"
 ef_all = " ".join(rd(p_) for p_ in EF.glob("*.md")) if EF.is_dir() else ""
-check((LIB / "reference" / "effort.md").is_file() and len(list(EF.glob("*.md"))) == 2 and all(k in ef_all for k in ('header "Effort"', "**\"Low\"**", "**\"Max\"**", "| Medium |", "| XHigh |", "XHigh, or your own numbers", "@full", "Coverage", "never skips a check")),
-      "the effort reference holds the five levels' table, the question (XHigh through Other), the floors and the never-skip rule")
+check((LIB / "reference" / "effort.md").is_file() and len(list(EF.glob("*.md"))) == 2 and all(k in ef_all for k in ('header "Effort"', "**\"Low\"**", "**\"Max\"**",
+      "| setting | Low | Medium | High | XHigh | Max |", "motion peaks densified", "production agents at once", "pilot video first", "XHigh, or your own numbers",
+      "no frame or video is made smaller", "**The judges.**", "Coverage", "never skips what a card needs")),
+      "the effort reference holds the five levels' table, the question (XHigh through Other), the judges rule, the floors and the never-skip rule")
 check("33. **Effort level" in router and "item 33 →" in router and "5d. **Effort**" in st and "T effort --run RUN --level" in st and "effort §1" in st,
       "the router has item 33; awl-start asks the effort question (step 5d), reads effort section 1 and stores it with T effort")
-qc_stack = rd(LIB / "reference" / "anomaly-catalog" / "220_4_the-qc-stack-x9-in-order.md")
-check("T qc --run RUN" in qc_stack and "@full" in qc_stack and "Effort budget" in qc_stack and "T qc --run RUN" in qc,
-      "the QC stack runs qc with the run (its effort rates), gives @full to the frame-exact checks and keeps the frame budget once")
-check("densify_ranges" in rd(LIB / "reference" / "analysis-protocol" / "020_1_inputs-per-video-produced-by-awl.md") and "<densify_ranges>" in rd(LIB / "reference" / "analysis-protocol" / "080_7_scale-and-delegation-2-analysis.md")
-      and "Effort: <effort>" in rd(PA / "020_2_spawning.md") and "effort" in cmds, "the analysts get the densify budget, the contract the Effort line, and awl.py the effort command")
+check("effort.max_agents" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "effort.pilot_from" in rd(SKD / "awl-analyze-produce" / "SKILL.md")
+      and "Upload without asking" in rd(SKD / "awl-inputs" / "SKILL.md") and "no reference review" in router,
+      "the produce phase takes the agents at once and the pilot threshold from the level; no approval stop before uploads or generations")
+check("densify_ranges" in rd(LIB / "reference" / "analysis-protocol" / "020_1_inputs-per-video-produced-by-awl.md")
+      and "<densify_ranges>" in rd(LIB / "reference" / "analysis-protocol" / "080_7_scale-and-delegation-2-analysis.md") and "effort" in cmds,
+      "the analysts get the close-up budget, and awl.py has the effort command")
+# the judges stay stable (the user, 2026-10-27): no effort setting reaches QC, its Loupe consult or the production agents' contract
+judge_texts = {"awl-qc": qc, "anomaly-catalog §4": rd(LIB / "reference" / "anomaly-catalog" / "220_4_the-qc-stack-x9-in-order.md"),
+               "generation-system §9": rd(LIB / "reference" / "generation-system" / "340_9_post-generation-qc-after-downloa.md"),
+               "capcut-assembly §5": rd(LIB / "reference" / "capcut-assembly" / "060_5_qc-of-the-project.md"),
+               "the contract prompt": rd(PA / "020_2_spawning.md")}
+leak = [k for k, v in judge_texts.items() if re.search(r"(?i)effort|@full|qc --run", v)]
+check(not leak, "no effort setting reaches QC, its Loupe consult or the agent contract: " + ", ".join(leak))
 
 finish()

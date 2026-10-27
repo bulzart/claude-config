@@ -47,7 +47,7 @@ Then give:
   each persistent or open one with its video, the flagged prompt or video and what was tried;
   or "no flags this run";
 - the QC fixes (item 27, Recreate and Create): "N videos fixed after QC, M fixes you declined (kept as generated, flagged: V03 …)", or "no QC finding needed a fix";
-- the effort level (item 33): its name and, when it lowered a rate, one line on what it sampled (`T effort --run RUN`);
+- the effort level (item 33): its name and, when it lowered a setting, one line on what it changed (`T effort --run RUN`);
 - the own voiceover (item 31, `voiceover.md` §11): "Voiceover: <method>, ElevenLabs <voice> (<language>, <preference>), N takes, K sync
   passes, about X ElevenLabs credits used" (`check_subscription` now against `voiceover.characters_left_at_start`), every video that used
   the fallback of §8 or had its soundtrack laid back, "pronunciation not checked: listen" (naming a language outside the model's official

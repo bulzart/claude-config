@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- anomaly-catalog §4: `AWL/reference/anomaly-catalog/220_4_the-qc-stack-x9-in-order.md` (7.8 KB)
+- anomaly-catalog §4: `AWL/reference/anomaly-catalog/220_4_the-qc-stack-x9-in-order.md` (7.3 KB)
 - anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
 - *a product handled, prepared, used, poured or counted on screen:*
   - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
@@ -111,9 +111,8 @@ Only these section files for this phase, nothing else unless a step below says s
     **Keeper gaps reach the admin:** write the answer's `not_covered` (what the library does not cover for this video) and every need still unmet after
     the `--note` into `result.json → keeper_gaps`, one line each (`production-agents.md` §4); the main session reports them in the wrap-up so the admin
     can add a sample in Loupe, and Loupe's Keeper page lists them too. A gap is information for the library, never a regenerate reason by itself.
-  - `T qc --run RUN --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
-    every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan (effort rates, `@full` and the frame
-    budget: `anomaly-catalog.md` §4 step 1),
+  - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
+    every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan,
     then view the storyboard sheets and every dense sheet under `<dir>/dense/`. It returns measurements
     beside the expectations and no verdict: `checks` (`duration_s`, `aspect`, `size`, `has_audio`,
     `black_spans`, `freeze_starts`, `expected`, `size_delta_px`, `duration_delta_s`, `aspect_error_pct`,
