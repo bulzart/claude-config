@@ -383,3 +383,7 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   guards the skill's wording. The QC procedure is unchanged (the judges stay stable): `qc-consult`, `qc-brief`, `plan-hints`,
   `sample-prompts`, the agent contract and every step of a run are as before, and the consult's `frames` already carried each frame's source.
 - **Tests.** t01 89, t02 113, t03 30, t05 11; Loupe: selftest 147, keeper_sync 91, page_smoke, transport_check and flags_smoke pass.
+- **The product sample (same day).** On a report of this command's runs Loupe found no product sample ("i cannot see the product can nor include
+  it in the miss sample frame"): this command writes each input's meaning on the input itself in `params.medias` and keeps its registry in
+  `state.json → assets.product` with variants, and Loupe read only a `medias_meaning` table and `assets.products`. Loupe now reads both forms,
+  names the product in the request's own words and fills a new report's product field with it; nothing in this command changed.
