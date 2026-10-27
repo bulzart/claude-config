@@ -408,3 +408,8 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   `CONSULT_TIMEOUT` (600 s, `AWL_CONSULT_TIMEOUT`), reconcile lists the flag captures and counts the upload answers, `_capture_full`, the
   queued flag's log note and its resolution (`caught-flag set --id CF-Q…` after Loupe recorded it). Wording kept in step with Loupe in
   awl-start, awl-write-request, awl-inputs and the README. Unchanged: Loupe, the QC skill, the `qc` command, the judges' rules.
+- **Verified:** t01 90, t02 123, t03 35, t05 43 checks and the rehearsal's 216 steps pass. t02 runs every level on a 40 s clip of eight motion
+  bursts: the stored column equals effort §1's table and prep-all samples it (2/3/4/5/5 fps, 6/8/10/10/10 around motion, at most 4/5/6/8/8
+  peaks, every second covered; storyboard cells 112 < 135 < 152 < 197 = 197). The real runs agree: `20261027-224009-27` (Medium) sampled at
+  3 fps, 8 around motion, at most 5 peaks; `20261027-233328-27` (High) at 4 fps, 10 around motion, at most 6. The guard hook refuses
+  `Remove-Item` in `Documents.10` and an `rm` in `Documents.10` and lets a copy into a run through (about 0.1 s per shell call).
