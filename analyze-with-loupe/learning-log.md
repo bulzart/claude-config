@@ -365,3 +365,21 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
 - **Hypotheses to test:** (1) a Medium run reads about 40 % fewer reference storyboard cells than a Max run with the same cards; (2) two
   agents at once keep a long run under the usage limit without changing any verdict; (3) a selfie source kept in its own orientation is
   accepted by the user with its reversed print beside the correctly read label.
+
+## 2026-10-27 · Loupe: a zoom only under a marked frame; either side of a miss can be the original or another generation
+
+- **Why.** The user (2026-10-27): "when there is no circel,arrow or square in a frame no need for the bottom zoom frame example at all"; Video A
+  ("the version as generated") "can also pick the original video too or even from other generations on both sides wrong and right/correct"; and
+  this command stays in step with the change.
+- **What (Loupe).** A frame gets a zoom only when the admin marked it with a circle, an arrow or a box, cut around its own marks (none for an
+  unmarked frame or a text label alone, none when its own marks cover most of it). Either side of a report can be the video's original, read
+  from the run's own records only (the source clip the requests or `state.json` name, as the inventory holds it, and the source as each
+  generation sent it: `source_prepared`, the first video input, the video's uploads record), a take of another video of the run, or a take of
+  another run's video. Each frame's tag names its source (`as generated`, `correct version`, `original video`, plus `· video NN` or
+  `· run R video NN`), the image's legend says the same, the words are kept with each frame of the moment, and the keeper's role and the brief
+  carry them. The prompt fill and the product sample of a take of another video read that video's own request; the original fills no prompt.
+- **What (here).** `awl-qc` (Samples first) describes the source tags and the zoom rule, so a QC agent never takes a frame tagged
+  `original video` for a generated one; README (Generation misses), the `qc-consult` docstring and the build prompt say the same, and t01
+  guards the skill's wording. The QC procedure is unchanged (the judges stay stable): `qc-consult`, `qc-brief`, `plan-hints`,
+  `sample-prompts`, the agent contract and every step of a run are as before, and the consult's `frames` already carried each frame's source.
+- **Tests.** t01 89, t02 113, t03 30, t05 11; Loupe: selftest 147, keeper_sync 91, page_smoke, transport_check and flags_smoke pass.

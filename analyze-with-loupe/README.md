@@ -82,8 +82,9 @@ It holds two things:
   `field:value` operators, groups by trigger, asset, video, kind, run, model, cause, status or month, and shows the evidence next to each flag.
   No step of a run and no agent reads it; what a flag teaches is written into the references as a rule when the user asks for it.
 - **Generation misses:** the admin picks a run and a video in Loupe, marks the second of the miss with an arrow, circle or box and a note, then picks
-  the fixed version and the same moment of it. Loupe saves one image: the miss on the left, the correct frame on the right, a zoom of the marked
-  place below. Only the QC phase reads them: `awl.py qc-consult` asks the QC keeper (one separate read-only Claude session that holds the whole
+  the fixed version (either side can also be the original video the generation was made from, or a take of another video or run) and the same
+  moment of it. Loupe saves one image: the frames side by side, each tagged with its source, and a zoom below each frame marked with a circle,
+  arrow or box. Only the QC phase reads them: `awl.py qc-consult` asks the QC keeper (one separate read-only Claude session that holds the whole
   sample library and never sees a run, with a short reading of every sample's picture that Loupe had a fresh session make once by opening it, the full reading kept as JSON in
   Loupe's data and redone only for a new or changed sample; its context is kept small: after a session starts only changed lines are sent, and a session
   is replaced after 30 turns or 150 000 characters) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call. The answer's `relevant[]` carries
