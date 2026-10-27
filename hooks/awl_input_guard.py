@@ -79,7 +79,7 @@ def runs_root() -> Path:
 
 
 def protected() -> list:
-    """[(folder or file, run name)] of the open runs, each in its long and its 8.3 form."""
+    """[(folder or file, run name, the path as the run stores it)] of the open runs, each in its long and its 8.3 form."""
     lib = norm(str(AWL_HOME))
     res = []
     for sp in runs_root().glob("*/state.json"):
@@ -97,10 +97,10 @@ def protected() -> list:
             n = norm(p)
             if n.count("/") < 2 or inside(lib, n):         # a drive, a top folder or a folder holding the library itself: never guarded
                 continue
-            res.append((n, sp.parent.name))
+            res.append((n, sp.parent.name, p))
             sh = _short(p)
             if sh and norm(sh) != n:
-                res.append((norm(sh), sp.parent.name))
+                res.append((norm(sh), sp.parent.name, p))
     return res
 
 
@@ -191,9 +191,9 @@ def script_text(toks: list, cwd: str) -> str:
 
 def hit(paths, prot):
     for p in paths:
-        for folder, run in prot:
+        for folder, run, shown in prot:
             if inside(p, folder):
-                return folder, run
+                return shown, run
     return None
 
 
