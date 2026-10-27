@@ -44,3 +44,4 @@
 - [References built per generation](references-built-per-generation.md) — user 2026-10-22: each generation builds and uploads its own reference files in RUN/55-references/video-NN/aK/ (by role) so the user sees what goes in; run-level so far
 - [AWL: user folders read-only](awl-user-folders-read-only.md) — item 34: never move/delete reference, example or edit-source files, copy instead; hooks/awl_input_guard.py refuses it for open runs
 - [Never ask mid-run, decide yourself](awl-never-ask-decide-autonomously.md) — user 2026-10-28: "you decide for every turn, dont ask me anything"; pipeline runs make every mid-run choice autonomously and report it after
+- [Reload Loupe before generating](loupe-reload-before-generating.md) — user 2026-10-28: after they change the Loupe platform, restart the :8787 server + loupe ensure + keeper understand before generating, and again right before a run's first generation
