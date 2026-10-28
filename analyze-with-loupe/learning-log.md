@@ -452,3 +452,18 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   they stand, the product sample ticked from every image the generation used, and frames that survive a take the browser cannot play.
 - **Verified:** t01, t02, t03 and t05 pass and the rehearsal runs 220 steps (`prompt-template` included); Loupe's selftest 168, keeper_sync 91,
   transport, page and flags smoke tests pass.
+
+## 2026-10-28 · X4b: the judge writes the final prompt after X1–X4, and nothing deforms it
+- **Reported:** the pre-generation check (X4) ran after the request was crafted from the judge's template and could change it. The user: X4 must
+  know the prompt is the judge's and not deform it, at most mix in something carefully and only if needed, best not tweak it at all; better, run
+  X1 to X4 first, then pass the full brief to the judge, and run on the judge's template.
+- **Changed:** X2 writes the pipeline's own request as the checked draft, with a "Must carry" block and `40-briefs/video-NN-musts.md` (the
+  sentences the prompt must carry word for word); X4 checks the draft and those lines; X4b (`awl-precheck`) sends the judge the whole checked brief
+  (`T prompt-template`: the judge brief, the draft's prompt, parameters and inputs, the must-carry lines, the pattern card, the video model) and
+  `T template-apply` puts the judge's final prompt in the request word for word (the draft kept as `video-NN-request.draft.json`; facts reported:
+  must-carry lines missing, slots left, length against 5000). Nothing rewrites it: a missing line or a length over the limit is asked of the judge
+  once more, only then `--add-must` (word for word, at the end) or `--use-draft`. A regeneration takes the judge's `template_fix`. Loupe's role
+  says the template is the final prompt, built on the checked draft, every must-carry line word for word. The QC consult says when the prompt used
+  is the judge's, its slots filled.
+- **Verified:** t01, t02 (template-apply), t03 (the whole brief reaches the judge; the prompt applied; QC knows it), t05 pass; the rehearsal runs
+  224 steps; Loupe's selftest 171, keeper_sync 91 and the page test pass.
