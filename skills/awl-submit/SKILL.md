@@ -35,7 +35,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Step X7
 
-- **X7 — Submit and wait (ledger-recorded; no spam, no glitches).** A fix generation after a QC finding (attempt K+1) with QC fixes `ask` starts here only after the main session said `approved` or `auto`; until then you stop after X5 with the fix proposal (`awl-qc`, item 27).
+- **X7 — Submit and wait (ledger-recorded; no spam, no glitches).** A fix generation after a QC finding (attempt K+1) with QC fixes `ask` starts here only after the main session said `approved` or `auto`; until then you stop after X5 with the fix proposal (`awl-qc`, item 27). With QC fixes `off` there is no fix generation: X7 submits the first attempt, and a new attempt only when a job failed with no output, was flagged or was rejected.
   1. `T ledger begin --run RUN --video NN --attempt K --request 50-requests/video-NN[-aK]-request.json`
      (a clip: `--video NN-cK` with its own request file; the sync pass of an own voiceover: `--video NN-sync` with
      `50-requests/video-NN-sync-request.json`, a clip's `--video NN-cK-sync`, the same lane).

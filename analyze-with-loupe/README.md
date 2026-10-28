@@ -146,7 +146,9 @@ model's own prompting and official examples (X2), the plan discipline, the QC st
 ## QC fixes (contract item 27, every Analyze sub-mode), pilot first (26), the stalled agent, the request freeze and the planner contract (28–30)
 At the start of a Recreate, Create or Free run the user chooses `ask` (from the first video on, a fix generation after a QC finding waits for the user's yes: the production agent
 prepares the corrected request and stops with a `fix_proposal`, the main session asks with one question per waiting video, `Fix it` / `Keep this take` / `Fix it, and stop asking`)
-or `auto` (the agent submits its one diagnosed regeneration itself); `state.json → qc_fixes`, the contract's "QC fixes" line. Local post-fixes and CapCut fixes never ask; Edit
+or `auto` (the agent submits its one diagnosed regeneration itself) or `off` (the user, 2026-10-28: no QC agent after a video's first generation at all; each video is
+generated once, assembled and delivered unchecked, the pilot shows only its technical outcome, and the user says what to fix after the wrap-up through its feedback
+question); `state.json → qc_fixes`, the contract's "QC fixes" line. Local post-fixes and CapCut fixes never ask; Edit
 Mode reviews every attempt anyway. With more than four videos the first one runs through its QC before the rest are planned (26). A production agent whose output folder has not
 changed for 20 minutes while its lane holds a submitted job is continued by its id, never relaunched blindly (28); a request file is frozen once its agent is spawned and `T lint-run`
 reports one edited after its ledger entry (29); a planner fork writes only its own video's files and a status note (30).

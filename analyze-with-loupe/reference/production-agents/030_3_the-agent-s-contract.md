@@ -10,7 +10,7 @@
    - `T ledger begin` before and `T ledger set` after every `generate_video` / `generate_image`;
    - one job in flight in its lane;
    - never resubmit after an unknown outcome until it is resolved;
-   - at most one diagnosed regeneration per clip (yours to submit with QC fixes `auto`; submitted only after the main session's `approved` or `auto` with `ask`);
+   - at most one diagnosed regeneration per clip (yours to submit with QC fixes `auto`; submitted only after the main session's `approved` or `auto` with `ask`; none with `off`);
    - a request that failed twice → stop and report.
    The run keeps at most 5 jobs in flight (`production.max_parallel_jobs`): `begin` reports the number open
    against that cap, and keeping to it is your call. When the cap is reached, record the entry you did not

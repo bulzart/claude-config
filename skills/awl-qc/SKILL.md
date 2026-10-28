@@ -379,7 +379,9 @@ Only these section files for this phase, nothing else unless a step below says s
     them, and nothing is blurred, softened or removed for taste.
 27. **QC fixes (Recreate and Create).** A regenerate reason found here is fixed by a new generation only as the user chose at the start (`state.json → qc_fixes`): `auto`: the agent submits the one
     diagnosed regeneration itself; `ask`: the agent prepares it and stops with a `fix_proposal`, and nothing is submitted until the main session says `approved` or `auto` (the user's yes). Local post-fixes
-    (`trim`, `conform`, `restore-audio`, a sync offset, a local regrade) and CapCut fixes need no permission in either case. Edit Mode has no automatic regeneration.
+    (`trim`, `conform`, `restore-audio`, a sync offset, a local regrade) and CapCut fixes need no permission in either case. `off`: this phase does not run at all (the
+    production agent goes from X8 to X10; `awl-postprocess` hand-off): no check, no consult, no regeneration, and the user says what to fix after everything is delivered.
+    Edit Mode has no automatic regeneration.
 
 ## Never (this phase)
 

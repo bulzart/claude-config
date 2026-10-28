@@ -52,7 +52,7 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
   3. `T trim` (generated dead head or tail);
   4. `T concat` (multi-clip videos):
      - each clip is downloaded to `60-outputs/video-NN/cK/aJ/raw.mp4`, conformed, trimmed and
-       QC'd (X9) **before** the next clip is submitted;
+       QC'd (X9) **before** the next clip is submitted (with QC fixes `off`: no X9, the next clip follows once this one is conformed and trimmed);
      - after the last clip:
        `T concat --clips <c1> <c2> … --seams <cut|continuous,…> --out 60-outputs/video-NN/joined.mp4`.
        Seams are `cut` on planned cuts and `continuous` on chained or extended joins. Edit Mode
@@ -83,7 +83,7 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
      (native: `T voiceover align`, keep or lay back; lipsync: the `sync_so` pass through `awl-submit`; overlay: `T voiceover mix` and its
      voice track), and write what you read and decided.
   6. **Analyze Mode:** the result is the **clean video** `60-outputs/video-NN/clean.mp4`: conformed,
-     trimmed, joined, with no overlay text (with an own voiceover, the file whose sound is the take: step 5b). After it passes X9, assemble its CapCut project
+     trimmed, joined, with no overlay text (with an own voiceover, the file whose sound is the take: step 5b). After it passes X9 (with QC fixes `off`: at once, no X9), assemble its CapCut project
      (`reference/capcut-assembly.md` §2–§5):
      - `T capcut-name --video NN` → `capcut_clone_draft` (empty) → `T capcut-prep`;
      - the inserts cut from the reference (`generation-system.md` §3c; in Create only with `memes=include`, item 32);
@@ -165,3 +165,4 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
 ## Hand-off
 
 Invoke Skill `awl-qc` (X9) on the final picture. In Analyze Mode, when `awl-qc` returns you here for step 6, assemble the CapCut project and invoke `awl-qc` again for the project checks.
+With QC fixes `off` (the contract's "QC fixes" line; item 27) there is no X9: assemble the CapCut project (step 6) now and invoke Skill `awl-record` (X10).

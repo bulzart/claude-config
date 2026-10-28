@@ -97,7 +97,7 @@ Plan everything before production, in allocation order, **without asking for con
   - print one line: video, status, CapCut project, credits.
 - **Blockers come back from agents and are handled here:**
   - a permission is needed (A7b) → ask, then launch that video again;
-  - `qc_fix_permission` (only with QC fixes `ask`) → ask the user the fix question of item 27, then continue that agent with the answer;
+  - `qc_fix_permission` (only with QC fixes `ask`; never with `auto` or `off`) → ask the user the fix question of item 27, then continue that agent with the answer;
   - `voiceover` (a take that cannot fit the picture, or a line that must change; item 31) → make the new take here (`voiceover.md` §4: a
     new attempt, recorded), update the plan, and continue the agent with it (the request change goes through its own regeneration path,
     item 29);
@@ -105,7 +105,8 @@ Plan everything before production, in allocation order, **without asking for con
   - credits ran short → launch nothing more, report the shortfall; the run stays resumable;
   - a request failed twice → report it in the wrap-up.
 - **QC verdicts are the agent's** (X9); with QC fixes `ask` the fix generation waits for the user's yes (item 27); a video that still fails, or whose fix the user declined, is reported in the wrap-up.
-- **Without the Agent tool**, run X3–X10 per video in this session, one video at a time (with QC fixes `ask`, ask the fix question of item 27 yourself instead of writing a proposal).
+  With QC fixes `off` no agent runs X9: each report's `qc` says off, and the wrap-up's feedback question collects what the user wants fixed.
+- **Without the Agent tool**, run X3–X10 per video in this session, one video at a time (with QC fixes `ask`, ask the fix question of item 27 yourself instead of writing a proposal; with `off`, skip X9).
 
 ### A10. Wrap-up
 See §6.
@@ -183,6 +184,8 @@ See §6.
 26. **Pilot first.** With at least the run's `effort.pilot_from` videos to produce (5 for a run made before item 33), spawn the first video's agent as soon as its plan, request, inputs and brief exist and let it run X7–X10 to its QC
     before the remaining plans are finished and their agents are spawned (the planners go on meanwhile). What its QC finds (a recipe fault, a marker, a size, a seam) is written
     into the other plans before they cost a generation; the user is told in one line when the pilot has passed. The user may say "no pilot" at the start.
+    With QC fixes `off` the pilot still goes first, through X7–X10 without QC: what it shows is technical only (the job completed, the recipe was accepted, the
+    conformed file, its cost), that goes into the other plans, and the user is told in one line that the pilot went through.
     With an own voiceover (item 31) the pilot also shows how the method lands on Higgsfield (whether a driving audio comes back as the
     soundtrack, the lips, a sync pass's face), and the other plans take what it showed.
 27. **QC fixes (Recreate and Create): the question.** With `state.json → qc_fixes = ask`, a production agent that found issues or anomalies only a new generation can fix writes
@@ -191,7 +194,8 @@ See §6.
     about <preflight credits> credits (<balance> left). Proceed?" with **"Fix it"** (`approved`), **"Keep this take"** (`declined`) and **"Fix it, and stop asking"** (`auto`: also
     `T state --run RUN set qc_fixes=auto`, so no later video asks). Continue the stopped agent with the answer (SendMessage to that agent, its context intact; if it cannot be continued,
     launch a fresh production agent for that video with the contract plus "resume at awl-submit X7 with <request file>, decision <…>"). The other videos keep running meanwhile; the next
-    queued video starts when an agent stops. With `auto`, nothing is asked: the agent submits its one diagnosed regeneration itself.
+    queued video starts when an agent stops. With `auto`, nothing is asked: the agent submits its one diagnosed regeneration itself. With `off`, nothing is asked and no
+    QC runs: each video is generated once and delivered, and the wrap-up's feedback question collects what to fix (item 22).
 28. **A stalled production agent.** An agent whose `result.json` does not exist and whose `60-outputs/video-NN/` has not changed for 20 minutes while a job of its lane is `submitted`
     or `completed` in the ledger is stalled (a machine pause freezes every background agent at once). Do not relaunch it blindly: read the ledger (`T ledger show --run RUN --video NN`)
     and `T status --run RUN`, then continue the same agent by its id with one line ("continue from the last ledger entry"); only if it cannot be continued launch a fresh agent with the

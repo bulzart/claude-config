@@ -169,8 +169,12 @@ for p in everything:
 check(not leaks, "no file of this command names the library it was born from (only a file path may): " + "; ".join(leaks[:6]))
 # the QC-fixes choice (item 27): asked at the start, stored, carried by the contract, acted on in QC and by the main session
 check("27. **QC fixes" in router and "qc_fixes" in router, "the router has contract item 27 (QC fixes) and names the state key")
-check("header \"QC fixes\"" in st and "qc_fixes=ask|auto" in st, "awl-start asks the QC-fixes question and stores state.json -> qc_fixes")
-check("QC fixes: <ask|auto>" in rd(PA / "020_2_spawning.md") and "qc_fix_permission" in rd(PA / "030_3_the-agent-s-contract.md"), "the agent contract carries the QC-fixes line and the blocker")
+check("header \"QC fixes\"" in st and "qc_fixes=ask|auto|off" in st and "No QC, I review at the end" in st,
+      "awl-start asks the QC-fixes question with its third option (no QC after the first generation) and stores state.json -> qc_fixes")
+check("`off`" in router.split("27. **QC fixes")[1][:900] and "no awl-qc at all" in rd(PA / "020_2_spawning.md") and "QC fixes `off`" in rd(SKD / "awl-postprocess" / "SKILL.md")
+      and "QC fixes `off`" in rd(SKD / "awl-wrapup" / "SKILL.md") and "none with `off`" in rd(PA / "030_3_the-agent-s-contract.md"),
+      "QC fixes off reaches the router, the contract (no awl-qc at all), X8's hand-off, the wrap-up and the regeneration rule")
+check("QC fixes: <ask|auto|off>" in rd(PA / "020_2_spawning.md") and "qc_fix_permission" in rd(PA / "030_3_the-agent-s-contract.md"), "the agent contract carries the QC-fixes line and the blocker")
 check("qc_fix_permission" in qc and "fix_proposal" in qc, "the QC phase stops with a fix proposal under ask")
 check("qc_fix_permission" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "header \"QC fix\"" in rd(SKD / "awl-analyze-produce" / "SKILL.md"), "the main session asks the fix question and continues the agent")
 check("25. **Scripts gather" in router and "26. **Pilot first" in router, "the router has the gather-only and pilot-first items")

@@ -46,7 +46,8 @@ Then give:
   and that `T caught-flag open` shows them grouped and searchable,
   each persistent or open one with its video, the flagged prompt or video and what was tried;
   or "no flags this run";
-- the QC fixes (item 27, Recreate and Create): "N videos fixed after QC, M fixes you declined (kept as generated, flagged: V03 …)", or "no QC finding needed a fix";
+- the QC fixes (item 27, every Analyze sub-mode): "N videos fixed after QC, M fixes you declined (kept as generated, flagged: V03 …)", or "no QC finding needed a fix";
+  with QC fixes `off`: "QC was off: every video was generated once and delivered unchecked; tell me what to fix" (the feedback question below collects it);
 - the effort level (item 33): its name and, when it lowered a setting, one line on what it changed (`T effort --run RUN`);
 - the own voiceover (item 31, `voiceover.md` §11): "Voiceover: <method>, ElevenLabs <voice> (<language>, <preference>), N takes, K sync
   passes, about X ElevenLabs credits used" (`check_subscription` now against `voiceover.characters_left_at_start`), every video that used
@@ -78,7 +79,7 @@ size figure in the table was viewed on a frame with its method (two estimates, a
 repeated from an agent's provisional reading (the agent's own word; the tool prints numbers). What is missing is fixed before the table is shown.
 
 Offer, in one line, the next useful step (more videos, a different direction, regenerate a flagged
-video). Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header
+video). With QC fixes `off` (item 27) the feedback question is the review: say first, in one line, that no video was checked. Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header
 "Feedback"), "Watch the videos: is any of them not right?": **"All good"**; **"I'll watch them
 later"** (any later message about them is handled as item 22 says); **"Some need fixes"** → ask in plain
 chat which video and what is wrong, disliked or illogical. "Other" lets the user type it

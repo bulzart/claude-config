@@ -2201,10 +2201,10 @@ def cmd_lint_run(a):
          "request_freeze": {"checked": fr_checked, "changed_after_their_ledger_entry": fr_changed,
                             "note": "a request file whose content no longer matches the fingerprint of its open or finished ledger entry was edited after the submission (item 29)"},
          "contract": {"exists": contract.is_file(), "names_this_run": rd.name in ct, "loupe_line": bool(re.search(r"^Loupe: (up|down)", ct, re.M)),
-                      "audio_line": bool(re.search(r"^Audio ingest: ", ct, re.M)), "qc_fixes_line": bool(re.search(r"^QC fixes: (ask|auto)", ct, re.M)),
+                      "audio_line": bool(re.search(r"^Audio ingest: ", ct, re.M)), "qc_fixes_line": bool(re.search(r"^QC fixes: (ask|auto|off)", ct, re.M)),
                       "voiceover_line": bool(re.search(r"^Voiceover: (off|on)", ct, re.M)),
                       "memes_line": bool(re.search(r"^Memes: (n/a|none|include|as your plan)", ct, re.M)),
-                      "unresolved_placeholders": sorted(set(re.findall(r"<(?:RUN|AWL|model id|guide path|recreate\|create|ask\|auto|up\|down|whisper\|frames-only|voiceover|memes)>", ct)))}})
+                      "unresolved_placeholders": sorted(set(re.findall(r"<(?:RUN|AWL|model id|guide path|recreate\|create|ask\|auto\|off|ask\|auto|up\|down|whisper\|frames-only|voiceover|memes)>", ct)))}})
 
 
 UPLOAD_KEYS = {"media_id", "file", "content_type", "url", "at", "role", "note"}
@@ -2319,7 +2319,7 @@ def cmd_uploads(a):
 
 
 CONTRACT_SUBS = (("<RUN>", "run"), ("<AWL>", "library"), ("<model id>", "model"), ("<guide path>", "guide path"), ("<recreate|create>", "analyze_submode"),
-                 ("<ask|auto>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"),
+                 ("<ask|auto|off>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"),
                  ("<memes>", "memes"))
 
 

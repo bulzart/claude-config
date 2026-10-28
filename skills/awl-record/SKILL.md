@@ -40,7 +40,7 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
       (never the 540×960 capcut-cli proxy; `capcut-assembly.md` §6).
   - Append a row to `RUN/deliverables/README.md` (an agent writes it to
     `60-outputs/video-NN/readme-row.md` and the main session appends it as the agent reports, A9b): direction, model, params, prompt file, assets, job
-    id, attempt, credits, verdict, final path, notes. For a multi-clip video, list every clip's
+    id, attempt, credits, verdict (with QC fixes `off`: "not checked (QC off)", and `result.json → qc` = "off: not checked (the user reviews at the end)"), final path, notes. For a multi-clip video, list every clip's
     job id and the seam methods. Analyze Mode adds the CapCut project name, the inserts and the
     text events. With an own voiceover (item 31): its `result.json → voiceover` line ("pronunciation: not checked (listen)" included);
     `video-NN-clean.mp4` carries the voice.

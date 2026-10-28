@@ -21,7 +21,7 @@ hard rules, the locked model's own prompting, the QC stack and Loupe's samples s
 Run: <RUN>   Library (AWL): C:/Users/Glaresquare1/.claude/analyze-with-loupe
 Toolkit (T): "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe" "<AWL>/scripts/awl.py"
 Locked model: <model id>; guide: <AWL>/<guide path>.
-QC fixes: <ask|auto> (the run's choice, state.json → qc_fixes; command item 27).
+QC fixes: <ask|auto|off> (the run's choice, state.json → qc_fixes; command item 27).
 Audio ingest: <whisper|frames-only> (state.json → audio_ingest, item 24). whisper: `<RUN>/10-media/<V>/transcript.json` holds the source's
 speech and a split point may be measured against its words. frames-only: no transcript exists for any video; a split point or a caption
 is timed from frames and cuts only, `T captions --from-speech` is not available, and any speech field you write says `audio not ingested`.
@@ -48,6 +48,10 @@ a whole model guide or models/index.json (that is what rots your context):
   6. awl-record      (X10: deliverables, README row, result.json)
   A regeneration (one diagnosed per clip) runs awl-write-request (X2, the rewrite only), then awl-inputs for new inputs only, then
   awl-submit (X5 again, X7, the next attempt number), awl-postprocess and awl-qc. You never call awl-precheck. With QC fixes `ask` you stop after X5 and wait for the main session (the QC fixes rule below).
+  With QC fixes `off` (the user's choice: no QC agent after a video's first generation at all) there is no awl-qc at all: after X8 steps 1 to 5
+  (and 5b), build the CapCut project at once (X8 step 6), then awl-record; no `T qc`, no `T qc-consult`, no regeneration, no fix proposal.
+  result.json: `qc` = "off: not checked (the user reviews at the end)", `continuity` = "not checked: QC off". A job that failed with no output,
+  a flag or a rejected request is still handled by awl-submit as always: that is getting the first generation, not a QC fix.
   Before step 1: read <AWL>/reference/production-agents/ §3 (your contract; the file 030_3_… in that folder) and invoke awl-model-guide
   once. The plan, brief and request files above were written by the main session (X1, X2, X4); you do not re-plan.
 - <RUN>/30-assets/guardrails.md, when it exists (the client's rules; your plan lists this video's hits and operations);
@@ -91,7 +95,8 @@ Hard rules:
   produced a finished job, a diagnosis before another attempt. If you decide not to submit, record
   `T ledger set --fingerprint F --status superseded --note "why"` (that frees the lane). Never use
   generate_video_batch.
-- QC fixes (command item 27): <ask|auto>. auto: your one diagnosed regeneration is yours to submit. ask: prepare it exactly the same way (the attempt block in the brief, the corrected request
+- QC fixes (command item 27): <ask|auto|off>. off: no QC after the first generation (the skills list above): every check and regenerate reason below that
+  belongs to QC (X9) is not run, and X8's facts (the conform, the sync check's numbers) still go into result.json. auto: your one diagnosed regeneration is yours to submit. ask: prepare it exactly the same way (the attempt block in the brief, the corrected request
   by the awl-write-request rewrite, new inputs by awl-inputs, the X5 preflight) but do not submit it and do not call `T ledger begin`: write result.json with "status":"blocked",
   "blocker":"qc_fix_permission" and "fix_proposal" (§4), then stop. The main session asks the user and continues you with `approved` (go on at awl-submit X7 with that request, the next
   attempt number, then the rest as usual), `declined` (no further generation for this video: finish this take as it is, flagged: awl-postprocess step 6 if the project is not built, the
@@ -151,7 +156,7 @@ Hard rules:
 - Printed surfaces of the source that the card or a guardrail names are replaced by a named concrete
   thing in the model's edit grammar, with the original in the exclusion line; check them at full
   resolution (brand-guardrails.md §4).
-- Checks you never skip (details in §3 item 13; write each one's evidence path in result.json
+- Checks you never skip unless QC fixes is `off` (details in §3 item 13; write each one's evidence path in result.json
   `continuity`): the product present from frame 0 and read against a fixed neighbour at least every 0.25 s;
   the first second; dense sheets at every transition, insert and overlay start and end; the context-bearing
   source overlays present as the original element; the original audio whole and identical; no emoji in any

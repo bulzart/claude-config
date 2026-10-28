@@ -200,6 +200,13 @@ js, _, _ = t("contract", "--run", run_u.name, "--notes", "the pilot is video 01"
 ct = (run_u / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
 check(js.get("ok") and js["unresolved_placeholders"] == [] and run_u.name in ct and "QC fixes: ask" in ct and "Audio ingest: frames-only" in ct and "Loupe: up" in ct and "wan3_0_prime" in ct and ct.rstrip().endswith("the pilot is video 01") and "<RUN>" not in ct,
       f"contract fills the canonical prompt from state.json (substituted {len(js.get('substituted', {}))} placeholders) and appends the notes")
+run_q = Path(t("new-run", "--mode", "analyze", "--source", str(home.parent / "refs-c"), "--slug", "qc-off", env=ENV)[0]["run_dir"])
+t("state", "--run", run_q.name, "set", "model=wan3_0_prime", "model_locked=true", "analyze_submode=create", "audio_ingest=whisper", "qc_fixes=off", "loupe=up", env=ENV)
+jq, _, _ = t("contract", "--run", run_q.name, env=ENV)
+ct_q = (run_q / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
+lq, _, _ = t("lint-run", "--run", run_q.name, env=ENV)
+check(jq.get("ok") and jq["unresolved_placeholders"] == [] and "QC fixes: off" in ct_q and "no awl-qc at all" in ct_q and (lq.get("contract") or {}).get("qc_fixes_line") is True,
+      "QC fixes off: the contract says so and tells the agent to skip awl-qc, and lint-run reads the line")
 t("state", "--run", run_u.name, "set", "audio_ingest=", env=ENV)
 js, _, _ = t("contract", "--run", run_u.name, env=ENV)
 check("<whisper|frames-only>" in js.get("unresolved_placeholders", []) and js.get("previous_kept_as"), "contract leaves the audio placeholder when the run has no audio choice, lists it, and keeps the previous file")

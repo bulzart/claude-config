@@ -132,10 +132,12 @@ Only these section files for this phase, nothing else unless a step below says s
      close-up + full body each). If none are supplied and the references show people, ask once at
      this step: add characters, or keep the people as they are. **Free** asks the same only when the requirement says people are replaced.
      **Free with references** needs the references folder like Recreate and Create; **Free, requirement only** needs no references: the assets (and the optional examples) are its inputs.
-     **QC fixes (every Analyze sub-mode: Recreate, Create and Free; a choice, asked once the paths are validated, unless `$ARGUMENTS` has `qc-fixes ask|auto`).**
-     Ask with AskUserQuestion (header "QC fixes"), "If QC finds issues or anomalies in a generated video, how should the fix generation be decided?":
+     **QC fixes (every Analyze sub-mode: Recreate, Create and Free; a choice, asked once the paths are validated, unless `$ARGUMENTS` has `qc-fixes ask|auto|off`).**
+     Ask with AskUserQuestion (header "QC fixes"), "After a video's first generation, how should QC and its fixes run?" (three options, none recommended):
      - **"Ask me first"**: "From the first video on, I show you what QC found, what the fix generation would change and cost, and wait for your yes or no before spending credits on it."
      - **"QC agents fix on their own"**: "The QC agents regenerate a video with one diagnosed fix on their own, without asking, and ship the best take flagged if it still fails."
+     - **"No QC, I review at the end"**: "No QC agent runs after a video's first generation: each video is generated once, assembled and delivered unchecked, with no
+       regeneration. Once everything is delivered you tell me what to fix."
      Store it once the run exists (step 6). Edit Mode is not asked (the user reviews every attempt, X9-R).
    - **Edit Mode** needs the video file(s) or folder to edit, and offers the optional **examples
      folder** (as above). Per-edit assets are asked later, per operation (E3).
@@ -171,7 +173,7 @@ Only these section files for this phase, nothing else unless a step below says s
    - store the audio choice (step 5b): `T state --run RUN set audio_ingest=whisper` or `audio_ingest=frames-only`;
    - store the effort level (step 5d): `T effort --run RUN --level <level>` plus the user's own numbers as its options (`effort.md` §1;
      `T new-run` leaves it empty, and `T prep-all` stops until it is stored);
-   - every Analyze sub-mode: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto`);
+   - every Analyze sub-mode: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto|off`);
    - Create: store the voiceover choice (steps 2b, 5c) with the store line of `voiceover.md` §1 (`T state --run RUN set voiceover.enabled=true
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;
    - Create: store the memes choice (step 2c): `T state --run RUN set memes=include` or `memes=none`;
@@ -231,7 +233,9 @@ Only these section files for this phase, nothing else unless a step below says s
 27. **QC fixes (every Analyze sub-mode: Recreate, Create and Free).** The user chooses at the start; the choice is stored in `state.json → qc_fixes` (a run without it is `auto`):
     - **`ask`**: when QC finds issues or anomalies in a generated video, from the first video on, and only a new generation can fix them, the fix is not generated until the user answers yes:
       the production agent prepares the corrected request and stops with a proposal, and the main session asks (`awl-analyze-produce`);
-    - **`auto`**: the QC agents correct on their own, without asking: one diagnosed regeneration per clip, then the best take ships flagged.
+    - **`auto`**: the QC agents correct on their own, without asking: one diagnosed regeneration per clip, then the best take ships flagged;
+    - **`off`**: no QC agent after a video's first generation at all: no QC check, no consult, no regeneration; each video is generated once, assembled
+      and delivered unchecked, and the user says what to fix after everything is delivered (the wrap-up's feedback question, item 22).
     Never asked: local post-fixes, CapCut fixes, the retry of a job that failed with no output, and anything in Edit Mode (every attempt is reviewed, X9-R).
 
 Item 17's "§3 R-steps" are step A6r (`awl-recreate-plan`).
