@@ -4258,8 +4258,9 @@ def cmd_qc_consult(a):
                            "exist): answer it from the video in words and ask again ONCE with --note '<what you saw>'; if it still has needs_unmet, go on without it "
                            "and write in the verdict what was not answered")
     if any(x.get("reading_path") for x in (d.get("relevant") or []) if isinstance(x, dict)):
-        d["reading_rule"] = ("a relevant sample's reading (the_miss, qc_check) and reading_path are the keeper's reading of its picture, made once by a session that opened it: "
-                             "view the picture itself first; Read the whole reading only when the picture leaves the marked miss unclear; it is evidence, never a verdict")
+        d["reading_rule"] = ("a relevant sample's reading (marked, right_version) and reading_path are what a data collector saw in its picture, collected once by a session "
+                             "that opened it and gave no verdict: view the picture itself first; Read the whole collection only when the picture leaves the marked place "
+                             "unclear; the judgement (what went wrong, what to check) is the keeper's and yours, never the collector's")
     if (d.get("library_read") or {}).get("not_read"):
         d["not_read_rule"] = ("the samples in library_read.not_read have no reading of their picture yet (new or changed): the keeper judged them from the admin's words "
                               "alone, so view the picture of any of them it named before you rely on it")
@@ -4295,8 +4296,9 @@ def cmd_plan_hints(a):
                              "from the plan in words and ask again ONCE with --note '<your answer>' (the same --beats); if it still has needs_unmet, go on without it and "
                              "write it as a keeper gap in the 'Sample hints' block")
     if any(h.get("reading_path") for h in res["hints"] if isinstance(h, dict)):
-        res["reading_rule"] = ("a hint's reading_path is the keeper's reading of its sample's picture (what each frame shows, the miss, the mechanism, when it recurs): "
-                               "Read it only when you cannot tell from the hint whether its trigger matches a beat of your plan; it is evidence, never prompt text")
+        res["reading_rule"] = ("a hint's reading_path is what a data collector saw in its sample's picture (what each frame shows, what the marks point at, the product "
+                               "and scene; no verdict): Read it only when you cannot tell from the hint whether its trigger matches a beat of your plan; it is "
+                               "evidence, never prompt text")
     if res["hints"]:
         res["rules"] = ("Hints are risks to check the plan against, never prompt text: do not copy their words, do not name the wrong behaviour in the "
                         "prompt, add no negative list. Apply one only to the beat its trigger matches and only if its caveat does not exclude it, by the "

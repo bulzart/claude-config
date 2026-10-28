@@ -70,7 +70,7 @@ Plan everything before production, in allocation order, **without asking for con
 
 - **Free runs:** each agent's spawn message names its video's kind (`Video NN, kind recreate|create`, from `state.json → videos_kind`), and the contract's "Video kind" line says that the kind selects the Recreate or the Create branch of every per-video step.
 - **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to
-  the run's contract file at A9; `subagent_type: general-purpose`, `run_in_background: true`).
+  the run's contract file at A9; `subagent_type: general-purpose`, `model: "opus"` (they run QC and judge: Opus 5.5), `run_in_background: true`).
   - At most the run's `effort.max_agents` run at once (`T effort --run RUN`; 5 for a run made before item 33; an empty level stops it: ask `effort.md` §1 first); start the next queued video when one
     finishes.
   - Each agent runs X3 (its own inputs) → X7 → X8 → X9 → X10 for its video, ending with its CapCut

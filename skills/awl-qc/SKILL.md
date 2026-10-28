@@ -87,11 +87,12 @@ Only these section files for this phase, nothing else unless a step below says s
     (repeat `--checkpoint`). The JSON line has `relevant` (or `samples`
     when `mode` is `fallback` or `busy`, the brief's own ranking while no keeper answered): each with `composite_path`, `frames` (role, where it comes from, time),
     the admin's words (`title`, and `details`, `correct_note`, `idea`, `better`, `missed` when given), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`),
-    the keeper's `why`, `check` and `wrong_pattern`, `reading` (the keeper's reading of that picture in two short fields, `the_miss` and `qc_check`, null when
-    the sample has none yet) with `reading_path` (the whole reading: what each frame shows, the right version, the prompts, what is open), and `advice`. **View every
+    the keeper's `why`, `check` and `wrong_pattern`, `reading` (what a data collector saw in that picture, in two short fields, `marked` and `right_version`,
+    no verdict, null when the sample has none yet) with `reading_path` (the whole collection: what each frame shows, the product and scene, the admin's words,
+    what was unclear), and `advice`. **View every
     `composite_path`**, add what each says to look for as extra `--dense` checkpoints, and write in the verdict
-    which sample was compared and what was seen at the same place of this video. Read a `reading_path` only when the picture leaves the marked miss
-    unclear; it is evidence, never a verdict. `library_read` says how much of the library the keeper holds from the pictures: a sample in its
+    which sample was compared and what was seen at the same place of this video. Read a `reading_path` only when the picture leaves the marked place
+    unclear; it is the collector's description, never a verdict: the judgement is the keeper's and yours. `library_read` says how much of the library the keeper holds from the pictures: a sample in its
     `not_read` list was judged from the admin's words alone, so the picture you view decides for it. `mode: unavailable` or an
     empty list means no sample applies: QC goes on without them. On `mode: unavailable` while the contract's Loupe line (`state.json → loupe`,
     none = up) says `up`, run `T loupe ensure` once and ask again; if it stays unavailable the verdict says "no sample consulted: Loupe unavailable". The answer is also saved as

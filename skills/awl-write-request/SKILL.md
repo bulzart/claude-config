@@ -73,8 +73,8 @@ Only these section files for this phase, nothing else unless a step below says s
       answer it from your plan in words and ask once more with the same `--beats` plus `--note "<your answer>"`. If it is
       still unmet, go on without it and write it as a keeper gap in the "Sample hints" block (one line: what it asked, why it
       could not be answered), so the wrap-up can report it.
-    - **What the keeper saw.** Each hint carries `reading_path`, the keeper's reading of its sample's picture (made once by a
-      session that opened it: what each frame shows, the miss, the mechanism, when it recurs). Read it only when the hint alone
+    - **What the collector saw.** Each hint carries `reading_path`, what a data collector saw in its sample's picture (collected
+      once by a session that opened it and gave no verdict: what each frame shows, what the marks point at, the product and scene). Read it only when the hint alone
       does not tell you whether its trigger matches a beat of your plan; it is evidence, never prompt text. `library_read`
       says how much of the library the keeper holds from the pictures; a hint from a sample in its `not_read` list rests on
       the admin's words alone, so weigh it with that in mind.
