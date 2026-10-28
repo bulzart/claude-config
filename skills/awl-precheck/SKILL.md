@@ -62,11 +62,11 @@ Only these section files for this phase, nothing else unless a step below says s
     opposite things of the same beat, no "never" or "always" stands outside the product's one targeted exclusion and the fidelity
     lock's scoped "only", and every placement, posture and use line follows from the product's own details and what the source scene
     offers, not from an example. A line that fights another is dropped by the §6 order of authority, with its reason in the brief.
-  - **Sample hints** (only if X2 asked for them): the pattern card's "Sample hints" block exists; the prompt and the reference
-    notes carry none of a hint's wrong-behaviour wording and no negative list that was not already the product's one targeted
-    exclusion; at most two hints were applied, each only on the beat its trigger matched, each as one small positive change.
-    A prompt that was bent by a hint (a changed story beat, an extra element, a longer sentence than the pattern card calls for)
-    is rewritten without it.
+  - **Judge's template** (the first request of a video): the pattern card's "Judge's template" block exists; the request keeps
+    the template's structure, order and wording wherever no rule of X2 changed a part (each change is in the block with its rule),
+    every `[SLOT: …]` is filled and none is left in the prompt, and the prompt and the reference notes name none of a past miss's
+    wrong behaviour and carry no other video's sentences. A part that a rule changed without a line in the block is restored or
+    recorded; a request written without a template says why ("no template: …").
   - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning, its distance derived from the
     frame and not assumed, is in the plan and in the prompt for every shot; a start frame was measured
     with `T scale` and its size factors read (X9 gives the bands); the size ladder holds between products;
@@ -111,8 +111,8 @@ Only these section files for this phase, nothing else unless a step below says s
     characters/assets, substitutions, main action and states, style/camera, text plan, model /
     operation / duration / 9:16 720p, cost, adaptation logic. In Edit Mode and Recreate it also names
     the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
-  - When X2 asked for sample hints, the brief carries the pattern card's short "Sample hints" block (id, applied to which beat or
-    not applied and why), so QC and a reported miss can be read against it.
+  - The brief carries the pattern card's short "Judge's template" block (the template's file or why there was none, the slots,
+    the changes applied, the parts a rule changed), so QC and a reported miss can be read against it.
   - With an own voiceover (item 31) the brief names the method, the voice, the language, the form, the take and its length, the lipsync
     sync pass, and the untested lip risk (`voiceover.md` §6).
   - Save it as `40-briefs/video-NN-brief.md`; each attempt or clip appends its own block under the first

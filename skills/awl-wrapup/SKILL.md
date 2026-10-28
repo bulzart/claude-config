@@ -52,7 +52,7 @@ Then give:
   passes, about X ElevenLabs credits used" (`check_subscription` now against `voiceover.characters_left_at_start`), every video that used
   the fallback of §8 or had its soundtrack laid back, "pronunciation not checked: listen" (naming a language outside the model's official
   list), and the licence line when `voiceover.tier` is `free`; or "no own voiceover";
-- what the Loupe keeper was missing: every `result.json → keeper_gaps` line and every keeper gap in a pattern card's "Sample hints" block, grouped
+- what the Loupe keeper was missing: every `result.json → keeper_gaps` line and every judge gap in a pattern card's "Judge's template" block, grouped
   ("not covered by the library: …", "asked and could not be answered: …", with the video), and that Loupe's Keeper page lists them under "What the
   keeper is missing", so the admin can add a sample in Generation misses; or "the keeper had what it needed";
 - any open issues.

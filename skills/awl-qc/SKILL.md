@@ -80,23 +80,26 @@ Only these section files for this phase, nothing else unless a step below says s
     drew on it (a RIGHT frame can come from the right version or from an earlier part of the same video), a zoom under each frame the admin marked with a circle, arrow or box (none under an unmarked frame; a frame alone in its row is shown as its normal-range shot with its close range beside it), and the admin's words burned in at the bottom beside the product sample
     the video used. A frame's source on its tag is `as generated`, `correct version` or `original video` (the source clip the generation was made from: what the source held, never a generated frame), with `· video NN` or `· run R video NN` when the admin took it from another video or run; the image's legend says the same. A separate read-only keeper session holds that library and nothing else, with a short reading of every sample's picture (the miss, the
     mechanism, when it recurs, what QC checks; the full reading on file) that Loupe had a session make once by opening it; the picture itself stays
-    the evidence you view. Before the first
-    sheet: `T qc-consult --run RUN --video NN --question "<what this video shows that a past miss looked like:
-    the product form, the beat, what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
+    the evidence you view. The judge (that keeper, on Opus) is consulted once your first pass over the sheets (the `T qc` bullet below)
+    has caught what it caught: `T qc-consult --run RUN --video NN --attempt aK --question "<the errors you caught: what, where (time), at
+    which beat or checkpoint; or none caught, with the product form, the beat and what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
     --product-details "<its shape, size, opening and natural posture, from its registry row>" --checkpoint "<a plan checkpoint>" …`
-    (repeat `--checkpoint`). The JSON line has `relevant` (or `samples`
+    (repeat `--checkpoint`). The consult carries by itself what the judge needs to judge an error accurately: the prompt this video was
+    generated from (the request of `--attempt`, the newest otherwise), the template the judge gave at X2 and your X2 brief (`evidence_sent`
+    says which). The answer adds `cause` (which part of the prompt or of the template let the error happen) and `template_fix` (that part
+    rewritten): both go into the verdict and `result.json → judge`, for the user's review at the end. The JSON line has `relevant` (or `samples`
     when `mode` is `fallback` or `busy`, the brief's own ranking while no keeper answered): each with `composite_path`, `frames` (role, where it comes from, time),
     the admin's words (`title`, and `details`, `correct_note`, `idea`, `better`, `missed` when given), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`),
     the keeper's `why`, `check` and `wrong_pattern`, `reading` (what a data collector saw in that picture, in two short fields, `marked` and `right_version`,
     no verdict, null when the sample has none yet) with `reading_path` (the whole collection: what each frame shows, the product and scene, the admin's words,
     what was unclear), and `advice`. **View every
-    `composite_path`**, add what each says to look for as extra `--dense` checkpoints, and write in the verdict
+    `composite_path`**, add what each says to look for as extra `--dense` checkpoints (a second `T qc` run for them), and write in the verdict
     which sample was compared and what was seen at the same place of this video. Read a `reading_path` only when the picture leaves the marked place
     unclear; it is the collector's description, never a verdict: the judgement is the keeper's and yours. `library_read` says how much of the library the keeper holds from the pictures: a sample in its
     `not_read` list was judged from the admin's words alone, so the picture you view decides for it. `mode: unavailable` or an
     empty list means no sample applies: QC goes on without them. On `mode: unavailable` while the contract's Loupe line (`state.json → loupe`,
     none = up) says `up`, run `T loupe ensure` once and ask again; if it stays unavailable the verdict says "no sample consulted: Loupe unavailable". The answer is also saved as
-    `RUN/60-outputs/video-NN/qc-consult.json`. Ask the keeper **once per video**, on its first picture pass: the CapCut project pass and a
+    `RUN/60-outputs/video-NN/qc-consult.json`. Ask the keeper **once per video**, after its first picture pass: the CapCut project pass and a
     regenerated take read the saved file again; ask again only when the product form, the beat or the plan's checkpoints changed. `T qc-brief` takes the same arguments with no model call.
     A sample has a `sample_kind`: `pair` (a WRONG and a RIGHT frame), `miss-only` (`has_right: false`: no frame of it is called RIGHT, and a lone miss frame carries a grey NO RIGHT VERSION tag), or `scenario` (no frame is called WRONG: the admin's words only, or frames the admin called EXAMPLE (blue: something the admin keeps for you to understand and remember, neither a miss nor the right look); it carries `idea`, `better` and `missed`: what was meant to happen, what could have been better, what the AI agents missed or could not understand). A scenario is insight, not a visual pattern: compare the video with the idea and with what was missed, and never look for a match of the image. For a miss-only sample:
     it shows the wrong pattern to look for and nothing about what is right, so never infer a right look from it.
@@ -107,7 +110,7 @@ Only these section files for this phase, nothing else unless a step below says s
     cause of a regenerate and for the corrected request (the `awl-write-request` rules: the mechanism in the model's own structure and your words, never a sentence pasted, never the
     wrong behaviour named), never a verdict on the video, and never read for a sample you did not judge relevant.
     A sample is a lead, never a verdict: a match is a regenerate reason only by this phase's own rules.
-    Always pass `--run` and `--video`: the keeper may ask Loupe for this video's plan, a frame, or the product's registry row, and Loupe reads them from the run.
+    Always pass `--run`, `--video` and `--attempt`: the keeper may ask Loupe for this video's plan, a frame, or the product's registry row, and Loupe reads them from the run.
     When the answer has `needs_unmet` (a question only you can answer by looking at your own video, or a file that does not exist), answer it in words and ask
     once more with `--note "<what you saw>"`; if it is still unmet, go on and write in the verdict what was not answered.
     **Keeper gaps reach the admin:** write the answer's `not_covered` (what the library does not cover for this video) and every need still unmet after

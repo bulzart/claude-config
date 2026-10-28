@@ -31,7 +31,7 @@ Only these section files for this phase, nothing else unless a step below says s
 The user chose Free because the other sub-modes decide the shape of the videos for them. Here the user's requirement decides: what the
 videos must achieve, how many, what happens in them, which product and how, whether references are edited, re-made or only studied, the
 length, the text, the sound. The pipeline brings what the user did not decide: the locked model's own prompting (its official examples and
-recipes, X2), the plan discipline (X1), the pre-generation check, the QC stack and Loupe's samples and misses (plan-hints at X2, the consult
+recipes, X2), the plan discipline (X1), the pre-generation check, the QC stack and Loupe's samples and misses (the judge's prompt template at X2, the consult
 at X9, the flag record), the CapCut assembly and the deliverables. Nothing is asked twice; one confirmation closes the plan.
 
 1. **Read the requirement whole** (`RUN/00-inventory/requirement.md`). Every sentence of it is [U]. Where it is silent, the pipeline's own

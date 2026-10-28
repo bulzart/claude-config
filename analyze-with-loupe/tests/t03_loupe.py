@@ -45,6 +45,15 @@ SLOW = {"boot_s": 0.0}
 
 def fake_claude(prompt, sid, resume, model, timeout=150):
     calls.append(prompt)
+    if "TEMPLATE REQUEST" in prompt:                      # step 1 of a template request: the judge names the samples whose prompts it needs
+        return {"result": json.dumps({"read": [SID, "S999"]}), "total_cost_usd": 0.0}
+    if "Step 2 of the template request" in prompt:
+        return {"result": json.dumps({"template": "TEMPLATE-MARK Shot 1: the slim can stands on the desk, as tall as the mug beside it. [SLOT: the can's upload tag]",
+                                      "basis": [{"id": SID, "worked": "the height stated against the mug", "failed": "no size stated", "where": "shot 1"}],
+                                      "notes": "keep the mug line", "changes": [{"what": "beat 2's hard cut", "why": "the can shrank after a cut", "id": SID}],
+                                      "not_covered": ""}), "total_cost_usd": 0.0}
+    if "rests on samples whose two prompts" in prompt:    # the round that hands the judge the prompts of the samples it cites: the first answer stays
+        return {"result": "ready", "total_cost_usd": 0.0}
     if prompt.startswith("LIBRARY ("):
         time.sleep(SLOW["boot_s"])
         return {"result": "ready", "total_cost_usd": 0.0}
@@ -61,6 +70,8 @@ def fake_claude(prompt, sid, resume, model, timeout=150):
     if "QC question" in prompt:
         return {"result": json.dumps({"relevant": [{"id": SID, "why": "same mechanism", "check": "the can's height before and after the cut", "wrong_pattern": "the can shrinks"}],
                                         "advice": "compare the can against the laptop", "not_covered": "no sample shows the can carried through a doorway",
+                                        "cause": "CAUSE-MARK shot 1 states no size" if "The prompt this video was generated from" in prompt else "",
+                                        "template_fix": "the slim can as tall as the mug" if "The prompt this video was generated from" in prompt else "",
                                         "needs": [{"kind": "ask_agent", "question": "does the can leave the frame?", "why": "I cannot see the last second"}]}), "total_cost_usd": 0.0}
     return {"result": "ready", "total_cost_usd": 0.0}
 
@@ -117,7 +128,8 @@ check(js.get("not_covered", "").startswith("no sample shows") and "keeper_gaps" 
 saved = run / "60-outputs" / "video-03" / "qc-consult.json"
 check(saved.is_file() and json.loads(saved.read_text(encoding="utf-8"))["relevant"][0]["id"] == SID, "the answer is saved as 60-outputs/video-NN/qc-consult.json")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can looks smaller after the cut", "--note", "the can stays in frame to the end", env=ENV)
-check(js.get("mode") == "keeper" and not js.get("needs_unmet") and "The QC agent adds" in calls[-1], "a second ask with --note reaches the keeper with the agent's words and nothing stays unmet")
+asked = lambda: [c for c in calls if "rests on samples whose two prompts" not in c][-1]      # noqa: E731  (the last question, not the prompts round)
+check(js.get("mode") == "keeper" and not js.get("needs_unmet") and "The QC agent adds" in asked(), "a second ask with --note reaches the keeper with the agent's words and nothing stays unmet")
 SLOW["boot_s"] = 0.0
 js, _, _ = t("loupe", "ensure", env=ENV)
 check(js["keeper"]["state"] == "in_sync", "a current keeper is left alone by loupe ensure (no model call)")
@@ -135,13 +147,44 @@ check(js.get("needs_unmet") and js["needs_unmet"][0]["kind"] == "ask_agent" and 
 check(js["hints"][0].get("reading_path", "").endswith(f"{SID}.json") and "reading_rule" in js, "a hint carries the path of its sample's reading and the rule to read it only when the trigger match is unclear")
 js2, _, _ = t("plan-hints", "--run", run.name, "--video", "03", "--beats", "Beat 1: he sets the can on the desk.\nBeat 2: a cut; the can is still there.", "--product", "slim can",
               "--note", "yes, the same desk, the same spot after the cut", env=ENV)
-check(js2.get("mode") == "keeper" and not js2.get("needs_unmet") and "The prompt writer answers" in calls[-1] and "the same desk" in calls[-1],
+check(js2.get("mode") == "keeper" and not js2.get("needs_unmet") and "The prompt writer answers" in asked() and "the same desk" in asked(),
       "a second plan-hints with --note reaches the keeper as the writer's answer from its plan, and nothing stays unmet")
 check((run / "40-briefs" / "video-03-hints.json").is_file(), "the hints are saved as 40-briefs/video-NN-hints.json")
-check(js["hints"][0].get("prompts") == "pair" and js["hints"][0].get("prompt_note", "").startswith("the height") and "wrong_prompt" not in js["hints"][0] and "sample-prompts" in js.get("prompts_rule", ""),
-      "a hint whose sample keeps the prompts of both takes carries the marker, the admin's note and the prompts rule, never the prompts")
+check(js["hints"][0].get("prompts") == "pair" and js["hints"][0].get("prompt_note", "").startswith("the height") and "wrong_prompt" not in js["hints"][0] and "prompts_files" in js.get("prompts_rule", "")
+      and js.get("prompts_judged") == [SID] and "PROMPT-WRONG" in (Path(js.get("prompts_files", {}).get(SID, "")).read_text(encoding="utf-8") if js.get("prompts_files", {}).get(SID) else ""),
+      "a hint whose sample keeps the prompts of both takes carries the marker and the note, the judge read both before hinting, and both are written for the agent, never in the line")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can looks smaller after the cut", "--note", "the can stays in frame", env=ENV)
-check(js["relevant"][0].get("prompts") == "pair" and "wrong_prompt" not in js["relevant"][0] and "sample-prompts" in js.get("prompts_rule", ""), "a relevant sample with saved prompts carries the marker and the prompts rule in the QC answer, never the prompts")
+check(js["relevant"][0].get("prompts") == "pair" and "wrong_prompt" not in js["relevant"][0] and "prompts_files" in js.get("prompts_rule", "") and js.get("prompts_judged") == [SID]
+      and Path(js.get("prompts_files", {}).get(SID, "-")).is_file(), "a relevant sample with saved prompts: the judge read both before its answer was final and both are written for the QC agent, never in the line")
+rounds = [c for c in calls if "rests on samples whose two prompts" in c]
+check(rounds and "PROMPT-WRONG the can on the desk." in rounds[-1] and "PROMPT-FIXED the can on the desk, as tall as the mug beside it." in rounds[-1]
+      and "no other session has read or judged them" in rounds[-1], "the prompts round hands the judge both prompts whole from Loupe's record")
+
+# --- X2: the judge's template, briefed by the agent; then QC carries the prompt used, the template and the brief
+(run / "50-requests" / "video-03-pattern.md").write_text("STRUCTURE-MARK Shot 1: subject, action, setting. Shot 2: ...", encoding="utf-8")
+(run / "40-briefs" / "video-03-judge-brief.md").write_text("BRIEF-MARK video 03: he sets the slim can on the desk; the goal is the can's true size after the cut.", encoding="utf-8")
+n0 = len(calls)
+js, _, _ = t("prompt-template", "--run", run.name, "--video", "03", "--brief-file", str(run / "40-briefs" / "video-03-judge-brief.md"),
+             "--structure-file", str(run / "50-requests" / "video-03-pattern.md"), "--product", "slim can", "--product-details", "slim 355 ml can, upright", env=ENV)
+new = calls[n0:]
+step1 = next((c for c in new if "TEMPLATE REQUEST" in c), "")
+step2 = next((c for c in new if "Step 2 of the template request" in c), "")
+check(js.get("mode") == "keeper" and js.get("template", "").startswith("TEMPLATE-MARK") and [b["id"] for b in js.get("basis", [])] == [SID] and js.get("read") == [SID]
+      and js.get("changes") and "rules" in js, "prompt-template returns the judge's template, its basis, the samples it read, its changes and the rules to craft from it")
+check("BRIEF-MARK" in step1 and "STRUCTURE-MARK" in step1 and "PROMPT-WRONG the can on the desk." in step2 and "PROMPT-FIXED" in step2 and "Not sent: S999" in step2
+      and not any("rests on samples whose two prompts" in c for c in new), "the judge gets the agent's brief and the model's structure, then both prompts of the samples it chose, whole (none sent twice)")
+tj, tm = run / "40-briefs" / "video-03-template.json", run / "40-briefs" / "video-03-template.md"
+check(tj.is_file() and json.loads(tj.read_text(encoding="utf-8")).get("brief", "").startswith("BRIEF-MARK") and tm.is_file() and tm.read_text(encoding="utf-8").startswith("TEMPLATE-MARK")
+      and Path(js.get("prompts_files", {}).get(SID, "-")).is_file(), "the template is saved with the brief, as JSON and as text, and the basis sample's prompts are written for the agent")
+_, code, _ = t("prompt-template", "--run", run.name, "--video", "03", env=ENV, ok=False)
+check(code == 2, "prompt-template without a brief stops (code 2)")
+js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--attempt", "a1", "--question", "the can is smaller than the mug after the cut", env=ENV)
+q = [c for c in calls if "QC question" in c][-1]
+check("Show the can on the desk. Keep the camera still." in q and "TEMPLATE-MARK" in q and "BRIEF-MARK" in q
+      and js.get("evidence_sent", {}).get("request_prompt") == "video-03-request.json" and js["evidence_sent"].get("template") == "video-03-template.json",
+      "after generation the QC consult carries the prompt the video was generated from, the judge's template and the brief, and says which files")
+check(js.get("cause", "").startswith("CAUSE-MARK") and js.get("template_fix") and "result.json judge" in js.get("judge_rule", ""),
+      "the judge's answer names the cause in the prompt or template and the part rewritten, with the rule to record them for the user's review")
 js, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
 pf = run / "40-briefs" / "samples" / f"{SID}-prompts.md"
 ptxt = pf.read_text(encoding="utf-8") if pf.is_file() else ""
@@ -174,8 +217,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer  # noqa: E402
 from loupe_app import flags as lflags  # noqa: E402
 src = Path(os.environ.get("AWL_UNDER_TEST") or (HOME / "analyze-with-loupe" / "scripts" / "awl.py")).read_text(encoding="utf-8")
 m = _re.search(r'CONSULT_TIMEOUT = float\(os\.environ\.get\("AWL_CONSULT_TIMEOUT"\) or (\d+)\)', src)
-check(bool(m) and int(m.group(1)) >= qc.LOCK_WAIT + 4 * 150 and src.count("timeout=CONSULT_TIMEOUT") == 2,
-      "qc-consult and plan-hints wait as long as Loupe's own limits allow (its lock wait plus four keeper calls)")
+check(bool(m) and int(m.group(1)) >= qc.LOCK_WAIT + 6 * 150 and src.count("timeout=CONSULT_TIMEOUT") == 3,
+      "qc-consult, plan-hints and prompt-template wait as long as Loupe's own limits allow (its lock wait plus six keeper calls)")
 old_cap = lflags.capture_add({"tool": "mcp__higgsfield__generate_video", "job": "job-old-777", "run": run.name, "summary": "signals: moderation, blocked | ids: job-old-777",
                               "signals": ["moderation", "blocked"], "response": "{\"status\": \"nsfw\", \"job\": \"job-old-777\"}"})
 for k in range(230):

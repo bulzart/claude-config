@@ -151,7 +151,7 @@ Only these section files for this phase, nothing else unless a step below says s
     `persistent` and the video is planned another way or reported). **The record is written, never
     read during a run:** no step of a run (A1, E1, a plan, X4) and no agent contract lists, searches or opens it,
     and no digest or copy of it is made, because a growing record read at every run start rots the agents'
-    context. (Only the sample library is read: by QC through `T qc-consult` and by the first request of a video through `T plan-hints`; never the flags.) What a flag
+    context. (Only the sample library is read: by QC through `T qc-consult` and by the first request of a video through `T prompt-template`; never the flags.) What a flag
     teaches is held as a general rule in the references (`generation-system.md` §5c.2, the model guides'
     failure tables, `higgsfield/higgsfield-mcp.md` §9), and X4 tests the plan against those rules. The
     main session runs `T caught-flag reconcile --run RUN` as each agent reports and in the wrap-up; it

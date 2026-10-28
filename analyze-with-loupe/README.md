@@ -103,9 +103,23 @@ It holds two things:
   in `state.json → higgsfield.declined_preset_id`, so every request carries it and `lint-run` knows it.
   Loupe also ships the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`); that server is not registered in `~/.claude.json`, so the pipeline's agents reach the library only through `awl.py qc-consult`, `qc-brief` and `plan-hints`.
 
-Kept in step with Loupe (2026-10-28): `qc-consult` and `plan-hints` wait up to 780 s (`AWL_CONSULT_TIMEOUT`), since Loupe may wait 120 s
-for a running keeper call and then make four keeper calls of up to 150 s each (a 209 s consult was cut at the old 190 s and its answer
-lost; a Bash call that outlasts its own timeout goes on in the background);
+The judge writes the prompt template (the user, 2026-10-28). Loupe's keeper is the judge and runs on Opus 5.5; a Haiku data collector only
+describes each sample's picture once and gives no verdict. At X2, before the first request of a video is written, the production agent briefs the
+judge (`awl.py prompt-template --brief-file RUN/40-briefs/video-NN-judge-brief.md --structure-file RUN/50-requests/video-NN-pattern.md`: what it is
+working on, what the video is about, what it wants to achieve, and the locked model's structure from the pattern card); the judge names the samples
+whose saved prompts it needs, Loupe sends both prompts of each whole from its record, and the judge answers the whole prompt template (with
+`[SLOT: …]` where only the agent knows the specifics), its basis (what worked, what failed, where the template carries it), notes and changes. The
+agent crafts its request from the template within X2's own rules (each part a rule changed is recorded in the pattern card's "Judge's template"
+block, which X4 checks) and generates; the judge is not asked again before generation. A template asked while another keeper call runs is asked
+again up to 3 times (`AWL_TEMPLATE_BUSY_RETRIES`). After generation QC consults the judge once its first pass has caught what it caught, and the
+consult carries by itself the prompt the video was generated from (`--attempt` picks the request), the template and the brief (`evidence_sent`);
+the answer adds `cause` and `template_fix`, kept in `result.json → judge` for the user's review. Before any QC or planning answer is final Loupe also
+hands the judge both prompts of every sample it cites (`prompts_judged`), and `qc-consult` writes them for the agent (`prompts_files`).
+`plan-hints` stays for older runs; X2 no longer calls it.
+
+Kept in step with Loupe (2026-10-28): `qc-consult`, `prompt-template` and `plan-hints` wait up to 1080 s (`AWL_CONSULT_TIMEOUT`), since Loupe may
+wait 120 s for a running keeper call and then make up to six keeper calls of up to 150 s each (a 209 s consult was cut at the old 190 s and its
+answer lost; a Bash call that outlasts its own timeout goes on in the background);
 `caught-flag reconcile` lists the unclaimed flag captures and only counts the `media_upload` answers the hook keeps for `hf-put`
 (`unclaimed_upload_answers`: 29 of the newest 30 captures were uploads, which hid older flags); `--capture` finds a capture at any age (the
 old lookup saw the newest 200); a flag queued while Loupe failed carries a log note with its provisional `CF-Q…` id, so `caught-flag set --id

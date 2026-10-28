@@ -27,7 +27,8 @@ Subcommands (python awl.py <cmd> -h):
   loupe          ensure | status | open: the Loupe web app (flags, generation misses, QC samples)
   qc-consult     QC phase only: ask the QC keeper which samples (generation misses) apply to the video under QC
   qc-brief       QC phase only: the matching samples as a plain brief (no model call)
-  plan-hints     first request of a video only (X2): ask the keeper which past misses could matter for the plan, as a few text-only hints (usually none)
+  prompt-template first request of a video (X2): brief the judge (Loupe's keeper); it answers the prompt template, from what worked and failed before
+  plan-hints     (older runs; X2 now uses prompt-template) the keeper's few text-only hints for a plan
   open           open a finished video in the default player for the user's review
   prep-video     probe, cuts, activity, 5 fps adaptive frames, storyboard sheets, audio, transcript,
                  OCR sample, per-second timeline, summary
@@ -1956,6 +1957,7 @@ def cmd_status(a):
          "loupe": loupe, "files": {"plans": len(plans), "briefs": len(briefs), "requests": len(reqs),
                                    "qc_consults": len(list((rd / "60-outputs").glob("video-*/qc-consult.json"))) if (rd / "60-outputs").is_dir() else 0,
                                    "hints": len(list((rd / "40-briefs").glob("video-*-hints.json"))) if (rd / "40-briefs").is_dir() else 0,
+                                   "templates": len(list((rd / "40-briefs").glob("video-*-template.json"))) if (rd / "40-briefs").is_dir() else 0,
                                    "agent_contract": (rd / "50-requests" / "agent-contract.md").is_file()},
          "missing_files": missing[:40], "missing_files_total": len(missing)})
 
@@ -3423,10 +3425,14 @@ def _lc():
     return loupe_client
 
 
-# How long a consult (QC or plan) may take: Loupe waits up to 120 s for a running keeper call (its LOCK_WAIT), then makes keeper calls of up to
-# 150 s each (a boot, the question, up to two rounds of the keeper's requests: 720 s at worst); a consult of 209 s was cut at the old 190 s and its
-# answer lost. A Bash call that outlasts its own timeout goes on in the background, so the agent still gets the answer.
-CONSULT_TIMEOUT = float(os.environ.get("AWL_CONSULT_TIMEOUT") or 780)
+# How long a consult (QC, plan or template) may take: Loupe waits up to 120 s for a running keeper call (its LOCK_WAIT), then makes keeper calls of up
+# to 150 s each (a boot, the question, the template's second step, up to two rounds of the keeper's requests, the round that hands it the prompts of the
+# samples it cites: 900 s at worst); a consult of 209 s was cut at the old 190 s and its answer lost. A Bash call that outlasts its own timeout goes on in
+# the background, so the agent still gets the answer.
+CONSULT_TIMEOUT = float(os.environ.get("AWL_CONSULT_TIMEOUT") or 1080)
+TEMPLATE_BUSY_RETRIES = int(os.environ.get("AWL_TEMPLATE_BUSY_RETRIES") or 3)   # a template asked while another keeper call holds the lock is asked again
+BRIEF_CHARS = 8000          # the agent's brief to the judge
+STRUCTURE_CHARS = 12000     # the locked model's request structure sent with it
 UPLOAD_ONLY_CAPTURE = re.compile(r"^signals: upload( \||$)")    # a media_upload answer the hook keeps for `hf-put --capture`, never a flag
 
 
@@ -4237,14 +4243,21 @@ def cmd_qc_consult(a):
     place in the video under QC. Loupe unreachable: the answer says so and the QC goes on without samples."""
     ctx = _qc_ctx(a)
     ctx["q"] = a.question or ""
+    sent = {}
     if a.cmd == "qc-consult":
         if not a.question:
-            fail("qc-consult needs --question (what you see or suspect in the video under QC)", 2)
-        s, d = _cf_api("POST", "/api/qc/consult", {**ctx, "question": a.question, "checkpoints": a.checkpoint or []}, key="qc", timeout=CONSULT_TIMEOUT)
+            fail("qc-consult needs --question (the errors you caught in the video under QC: what, where, at which beat; or none caught)", 2)
+        ev, sent = _qc_evidence(a, ctx)
+        s, d = _cf_api("POST", "/api/qc/consult", {**ctx, **ev, "question": a.question, "checkpoints": a.checkpoint or []}, key="qc", timeout=CONSULT_TIMEOUT)
     else:
         s, d = _cf_api("POST", "/api/qc/brief", ctx, key="qc", timeout=60)
     if s != 200:
         out({"ok": True, "mode": "unavailable", "samples": [], "note": "no QC samples for this check: " + str((d or {}).get("error"))})
+    if a.cmd == "qc-consult":
+        d["evidence_sent"] = sent
+        if d.get("cause") or d.get("template_fix"):
+            d["judge_rule"] = ("cause (which part of the prompt or of the judge's template let the error happen) and template_fix (that part rewritten) are the "
+                               "judge's: write both into the verdict and result.json judge, for the user's review at the end")
     rd = _cf_run_dir(a.run) if a.run else None
     d["saved"] = _qc_sample_files(d, rd, a.video)
     if any(x.get("prompts") for x in (d.get("relevant") or d.get("samples") or []) if isinstance(x, dict)):
@@ -4319,6 +4332,122 @@ def cmd_plan_hints(a):
             f.parent.mkdir(parents=True, exist_ok=True)
             f.write_text(json.dumps({**res, "beats": beats}, ensure_ascii=False, indent=1), encoding="utf-8")
             res["saved"] = str(f)
+    except OSError:
+        pass
+    out(res)
+
+
+def _video_request_prompt(rd, video, attempt, model) -> tuple[str, str]:
+    """The prompt the video under QC was generated from: the newest request of the video (of the attempt when given) made for the locked video model,
+    else the newest one with a prompt that is no start frame, plate, guide or marker. (prompt, file name), or ("", "")."""
+    d = rd / "50-requests" if rd else None
+    if not d or not d.is_dir() or not video:
+        return "", ""
+    nn = _cf_nn(video)
+    reqs = sorted(d.glob(f"video-{nn}*-request.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    tok = re.sub(r"[^a-z0-9]+", "-", str(attempt or "").lower()).strip("-")
+    if tok:
+        tok = "a" + tok if tok.isdigit() else tok
+        reqs = [p for p in reqs if f"-{tok}-" in p.name.lower() or (tok == "a1" and p.name.lower() == f"video-{nn}-request.json")] or reqs
+    found = []
+    for p in reqs:
+        j = _cf_request_json(p)
+        prm = j.get("params") if isinstance(j.get("params"), dict) else j
+        pr = str((prm or {}).get("prompt") or "").strip()
+        if pr:
+            found.append((p, str((prm or {}).get("model") or ""), pr))
+    for p, m, pr in found:
+        if model and m == model:
+            return pr, p.name
+    for p, m, pr in found:
+        if not re.search(r"frame|plate|guide|marker|-g\d", p.name.lower()):
+            return pr, p.name
+    return "", ""
+
+
+def _qc_evidence(a, ctx) -> tuple[dict, dict]:
+    """What the judge needs to judge an error accurately (the user, 2026-10-28), read from the run's own files: the prompt the video under QC was
+    generated from, the template the judge gave at X2 and the agent's brief then. ({fields sent}, {where each came from})."""
+    rd = _cf_run_dir(a.run) if a.run else None
+    ev, sent = {}, {}
+    if not (rd and a.video):
+        return ev, sent
+    pr, name = _video_request_prompt(rd, a.video, getattr(a, "attempt", None), ctx.get("model"))
+    if pr:
+        ev["request_prompt"], sent["request_prompt"] = pr, name
+    tj = rd / "40-briefs" / f"video-{_cf_nn(a.video)}-template.json"
+    try:
+        t = json.loads(tj.read_text(encoding="utf-8")) if tj.is_file() else {}
+    except (OSError, ValueError):
+        t = {}
+    for k in ("template", "brief"):
+        if isinstance(t, dict) and str(t.get(k) or "").strip():
+            ev[k], sent[k] = str(t[k]), tj.name
+    return ev, sent
+
+
+def cmd_prompt_template(a):
+    """X2, before the first request of a video is written (the user, 2026-10-28). The agent's brief (what it is working on, what the video is about, what it
+    wants to achieve) goes to the judge (Loupe's keeper, one separate Opus session that holds the samples of earlier generations) with the locked model's
+    request structure; the judge chooses which samples' saved prompts to read, Loupe sends both whole, and the answer is a prompt template built from what
+    worked and what failed before. The agent crafts its request from it; the judge is not asked again before generation. Saved beside the plan; no template
+    (empty library, Loupe or the keeper unavailable) means the request is written as always."""
+    ctx = _qc_ctx(a)
+    brief = (a.brief or "").strip()
+    for f, what in ((a.brief_file, "--brief-file"), (a.structure_file, "--structure-file")):
+        if f and not Path(f).is_file():
+            fail(f"{what} {f} is not a file", 2)
+    if a.brief_file:
+        brief = (brief + "\n\n" if brief else "") + Path(a.brief_file).read_text(encoding="utf-8", errors="replace").strip()
+    if not brief:
+        fail("prompt-template needs --brief or --brief-file (what you are working on, what the video is about, what it wants to achieve, one line per beat)", 2)
+    structure = Path(a.structure_file).read_text(encoding="utf-8", errors="replace").strip() if a.structure_file else ""
+    body = {**ctx, "purpose": "template", "question": brief[:BRIEF_CHARS], "structure": structure[:STRUCTURE_CHARS]}
+    tries = 0
+    while True:
+        s, d = _cf_api("POST", "/api/qc/consult", body, key="qc", timeout=CONSULT_TIMEOUT)
+        if not (s == 200 and (d or {}).get("mode") == "busy") or tries >= TEMPLATE_BUSY_RETRIES:
+            break
+        tries += 1
+    if s != 200:
+        out({"ok": True, "mode": "unavailable", "template": "", "basis": [], "note": "no template: " + str((d or {}).get("error") or f"HTTP {s}"),
+             "none_rule": "write the request as always from the pattern card and the steps of X2, and write 'no template: Loupe unavailable' in the pattern card"})
+    rd = _cf_run_dir(a.run) if a.run else None
+    res = {"ok": True, "mode": d.get("mode"), "template": d.get("template", ""), "template_cut": bool(d.get("template_cut")), "basis": d.get("basis", []),
+           "notes": d.get("notes", ""), "changes": d.get("changes", []), "read": d.get("read", []), "not_covered": d.get("not_covered", ""),
+           "none_reason": d.get("none_reason", ""), "brief_cut": len(brief) > BRIEF_CHARS, "structure_cut": len(structure) > STRUCTURE_CHARS,
+           "busy_retries": tries}
+    for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error", "library_size"):
+        if d.get(k):
+            res[k] = d[k]
+    if res["template"]:
+        res["rules"] = ("Craft the request from this template: keep its structure, order and wording at every part it covers, fill each [SLOT: ...] with this "
+                        "video's specifics and apply each of changes where the plan allows it. The rules of X2 still apply on top (the steps of X2, the "
+                        "guardrails, the model guide's limits, the source's story and timing, the fidelity lock): where one conflicts with a part of the "
+                        "template, that rule wins and the part changes only as much as the rule needs. Record it all in the pattern card's \"Judge's "
+                        "template\" block. The judge is not asked again before generation; QC consults it after generation with the prompt you used.")
+    else:
+        res["none_rule"] = ("no template (" + (res["none_reason"] or res.get("keeper_error") or str(res["mode"])) + "): write the request as always from the "
+                            "pattern card and the steps of X2, and write 'no template: <why>' in the pattern card's \"Judge's template\" block")
+    if d.get("needs_unmet"):
+        res["unmet_rule"] = ("the judge asked for something Loupe cannot fetch (a question only you can answer from your plan, or a file that does not exist): "
+                             "answer it from the plan in words and ask again ONCE with --note '<your answer>' (the same brief); if it is still unmet, go on "
+                             "and write it as a judge gap in the \"Judge's template\" block")
+    try:
+        if rd and a.video:
+            nn = _cf_nn(a.video)
+            j = rd / "40-briefs" / f"video-{nn}-template.json"
+            write_json(j, {**res, "brief": brief[:BRIEF_CHARS], "structure_file": a.structure_file or "", "at": now_iso()})
+            res["saved"] = str(j)
+            if res["template"]:
+                t = rd / "40-briefs" / f"video-{nn}-template.md"
+                write_text(t, res["template"] + "\n")
+                res["template_file"] = str(t)
+            pf = _prompts_files(res["basis"], rd)
+            if pf:
+                res["prompts_files"] = pf
+                res["prompts_rule"] = ("both prompts of each basis sample, whole from Loupe's record, for a part of the template that is unclear to you; the "
+                                       "template already carries what worked, adapted to this video: never paste another video's sentences into the request")
     except OSError:
         pass
     out(res)
@@ -6561,7 +6690,18 @@ def main():
         p.add_argument("--question", help="what you see or suspect in the video under QC, in words (needed for qc-consult)")
         p.add_argument("--checkpoint", action="append", help="a QC checkpoint of the plan to check against the samples; repeatable")
         p.add_argument("--note", help="only when a first answer came back with needs_unmet: what you saw when you looked at your own video, in words (the keeper asked for it)")
+        p.add_argument("--attempt", help="qc-consult: the take under QC (a1, a2, c2-a1 ...): picks the request whose prompt is sent to the judge (the newest otherwise)")
         p.set_defaults(fn=cmd_qc_consult, cmd=_nm)
+
+    p = sp.add_parser("prompt-template", help="first request of a video (X2): brief the judge (Loupe's keeper, Opus) on what you are working on, what the video is about and what it wants to achieve; it reads the saved prompts of the samples it chooses and answers the prompt template you craft the request from")
+    p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
+    p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
+    p.add_argument("--product-details", help="its shape, size, opening and natural posture, from its registry row")
+    p.add_argument("--brief", help="the brief, in words (or --brief-file)")
+    p.add_argument("--brief-file", help="the brief as a file: RUN/40-briefs/video-NN-judge-brief.md (what you are working on, what the video is about, what it wants to achieve, one line per beat)")
+    p.add_argument("--structure-file", help="the locked model's request structure: the pattern card RUN/50-requests/video-NN-pattern.md")
+    p.add_argument("--note", help="only when a first answer came back with needs_unmet: your answer from the plan, in words (the judge asked for it)")
+    p.set_defaults(fn=cmd_prompt_template, kinds=None)
 
     p = sp.add_parser("plan-hints", help="first request of a video only (X2): ask the keeper which past misses could matter for the plan (text-only hints, usually none)")
     p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
@@ -6687,7 +6827,7 @@ def main():
     p.add_argument("--crf", type=int, default=18); p.set_defaults(fn=cmd_clean)
 
     a = ap.parse_args()
-    if getattr(a, "run", None) and a.cmd not in ("caught-flag", "qc-consult", "qc-brief", "plan-hints"):
+    if getattr(a, "run", None) and a.cmd not in ("caught-flag", "qc-consult", "qc-brief", "plan-hints", "prompt-template"):
         a.run = str(resolve_run(a.run))     # a bare run name or a stamp prefix becomes the run folder (caught-flag list keeps the text filter)
     try:
         a.fn(a)

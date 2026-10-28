@@ -59,52 +59,32 @@ Only these section files for this phase, nothing else unless a step below says s
   - From the selected guide's **§4.0 official examples**, write the pattern card
     (`50-requests/video-NN-pattern.md`).
   - Decide the channel for everything: parameters vs. references vs. prompt vs. post-production.
-  - **Sample hints (the first request of a video only).** The admin keeps past misses in Loupe; one separate
-    keeper session holds them. Ask it once, before the prompt is written, in text only: `T plan-hints --run RUN
-    --video NN --beats "<one line per beat of the plan: what happens, the product's form and state, the camera>"
-    --product "<form>" --product-details "<its shape, size, opening and natural posture, from its registry row>"`. A regeneration never asks: it works from its own diagnosed cause (`awl-qc`). The answer
-    has 0 to 3 hints, and 0 is the normal answer (`mode: empty`, `unavailable` or `busy` also mean none: write the
-    request as always). Each hint has a `trigger` (the plan situation where that miss arises), a `right_outcome`,
-    a `lever` and a `caveat`, each a whole sentence or cut at a sentence or word end (an ellipsis marks a cut). `held_back` counts the
-    hints the keeper offered that Loupe set aside, and `held_back_why` says why for each (a universal wording, another model family,
-    an unknown sample, low confidence, no trigger or no lever, beyond the cap): read it as information, never ask again for them.
-    - **When the keeper asks you something.** The keeper asks instead of guessing; Loupe fetches the plan, the request prompt,
-      the registry row or a sample's origin itself. What only you can answer comes back as `needs_unmet` with an `unmet_rule`:
-      answer it from your plan in words and ask once more with the same `--beats` plus `--note "<your answer>"`. If it is
-      still unmet, go on without it and write it as a keeper gap in the "Sample hints" block (one line: what it asked, why it
-      could not be answered), so the wrap-up can report it.
-    - **What the collector saw.** Each hint carries `reading_path`, what a data collector saw in its sample's picture (collected
-      once by a session that opened it and gave no verdict: what each frame shows, what the marks point at, the product and scene). Read it only when the hint alone
-      does not tell you whether its trigger matches a beat of your plan; it is evidence, never prompt text. `library_read`
-      says how much of the library the keeper holds from the pictures; a hint from a sample in its `not_read` list rests on
-      the admin's words alone, so weigh it with that in mind.
-    - A hint is a risk to check this plan against, never prompt text. Do not copy its words, do not name the wrong
-      behaviour anywhere in the prompt or the reference notes (a thing that is named, even in a negative, is what
-      comes back: `generation-system.md` §4, §5c.2b), and add no negative list beyond the product's one targeted
-      exclusion.
-    - Apply a hint only if its `trigger` matches a beat of this plan and its `caveat` does not exclude it;
-      otherwise change nothing. Apply it by the smallest change inside the prompting stack
-      (`anomaly-catalog.md` §3): the restatement at that beat, the product's targeted exclusion, the reference
-      view, the beat written as start state, operation, result, or the anchor, written positively and in your own
-      words with the meaning of the hint's `right_outcome` (never its sentence). Touch only the matching beat: no new element, camera move or sentence elsewhere, nothing of
-      the source's story, timing or the locked model changes, and any rule of this phase wins a conflict.
-    - A hint that comes from a scenario (`sample_kind: scenario`: the admin's idea, what could be better, what the agents missed) states a situation to check the plan against; it carries no right outcome of its own beyond the admin's words, so apply it only as a plain restatement at the matching beat. A hint that comes from a miss example (the admin never had a right version for it) may carry no `right_outcome` of its own:
-      apply it only when its lever is a plain restatement at the matching beat (the count, the state or the orientation the plan
-      already intends, said once positively); otherwise leave it out. Never invent what a right version would look like.
-    - **A hint marked `prompts`** (`pair`, `wrong` or `fixed`) rests on a sample whose two prompts the admin kept: the one that produced the miss, the one of
-      the corrected take, and `prompt_note`, the admin's one line on what made the difference. The keeper read both whole before hinting
-      (`prompts_judged`), and `plan-hints` writes both whole at `prompts_files[<id>]` (`RUN/40-briefs/samples/<id>-prompts.md`). When you
-      apply that hint, Read that file, judge
-      yourself what the corrected prompt did differently and whether that is the mechanism of the matching beat (nothing is compared or summarised for
-      you), and apply the mechanism at that beat in the locked model's own structure and your own words. Never a sentence of either prompt in the
-      request, never the wrong behaviour named, never the corrected prompt as a rule for another video; a hint you do not apply is not read, so at most
-      the two applied hints' pairs are read per video. Write in the "Sample hints" block which pair was read and what mechanism was taken from it.
-    - At most two hints are applied per video. A hint whose application would reshape more than one clause of
-      the prompt is over-applied: drop it. When the video is already planned correctly, applying nothing is right.
-    - Write the decisions as a short "Sample hints" block at the end of the pattern card: per hint, its id,
-      applied to which beat with the change in one line, or not applied and why, and any keeper gap (a question
-      still unmet after the `--note`). X4 checks it and X6 copies it into the brief. The hints themselves are in `40-briefs/video-NN-hints.json`; never paste them into the
-      brief or the prompt.
+  - **The judge's template (the first request of a video).** Before the prompt is written, brief the judge: Loupe's keeper, one separate
+    Opus session that holds the admin's samples of earlier generations (the miss, the right version and, for many, the prompt of the wrong take
+    and of the corrected one). Write the brief to `RUN/40-briefs/video-NN-judge-brief.md`: what you are working on (run, video, mode, the
+    locked model, the request kind and its inputs), what the video is about (one line per beat of the plan: what happens, the product's form and
+    state, the camera) and what it wants to achieve (the goal, the moment that must land, what it keeps of the source). Then `T prompt-template
+    --run RUN --video NN --brief-file RUN/40-briefs/video-NN-judge-brief.md --structure-file RUN/50-requests/video-NN-pattern.md --product
+    "<form>" --product-details "<its shape, size, opening and natural posture, from its registry row>"`. The judge chooses which samples' saved
+    prompts to read, Loupe sends both whole, and the answer has `template` (the whole prompt in the locked model's structure, written from what
+    worked and what failed before, with `[SLOT: …]` where only you know the specifics), `basis` (per sample: what worked, what failed, which part
+    of the template carries it), `notes`, `changes` (parts of your brief earlier generations say should change) and `not_covered`. It is saved as
+    `RUN/40-briefs/video-NN-template.json` (with your brief) and `video-NN-template.md`, both prompts of each basis sample at `prompts_files[<id>]`.
+    A regeneration or a re-edit never asks again: it works from the saved template and its own diagnosed cause.
+    - **Craft the request from it.** Keep the template's structure, order and wording at every part it covers, fill each slot with this video's
+      specifics and apply each of `changes` where the plan allows it. The steps below and the rules of this phase still apply on top (the guardrails,
+      the model guide's limits, the source's story and timing, the fidelity lock): where one of them conflicts with a part of the template, that rule
+      wins and the part changes only as much as the rule needs. Read a basis sample's prompts file only when a part of the template is unclear to you.
+    - **When the judge asks you something.** What only you can answer comes back as `needs_unmet` with an `unmet_rule`: answer it from your plan in
+      words and ask once more with the same arguments plus `--note "<your answer>"`; if it is still unmet, go on with what you have and write the
+      gap in the block below.
+    - **No template** (`mode: empty`, `unavailable`, `busy` after the toolkit's retries, or an empty `template` with `none_reason`): write the request
+      as always from the pattern card and the steps below.
+    - The judge is not asked again before generation. After the video is generated, QC consults it with the prompt you used, the template and this
+      brief (`awl-qc`).
+    - Write a short "Judge's template" block at the end of the pattern card: the template's file (or "no template: <why>"), each slot filled with
+      what, each of `changes` applied or not and why, each part changed by a rule of this phase (which rule, the change in one line), and any judge
+      gap (a question still unmet after the `--note`). X4 checks it and X6 copies it into the brief.
   - **Reason first** (`generation-system.md` §6). For every beat that places, moves or uses the product, derive what the plan or source
     needs there, what the product's own details allow (its registry row, affordance sheet and `product_properties.txt`) and what the
     source scene offers, then write the one state all three allow, once, in positive words. The rules below are checks on that result,
@@ -234,10 +214,10 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Never (this phase)
 
-- Never ask for sample hints on a regeneration or a re-edit, never copy a hint's words into a prompt, never name a past
-  miss's wrong behaviour in a prompt, never apply a hint to a beat its trigger does not match, and never apply more
-  than two per video. Never paste a sentence of a sample's saved prompts (`T sample-prompts`) into a request, and never read a
-  pair for a hint you do not apply.
+- Never ask the judge for a template on a regeneration or a re-edit, and never ask it again between the template and the
+  generation. Never name a past miss's wrong behaviour in a prompt, and never paste another video's sentences (a basis
+  sample's prompts file, `T sample-prompts`) into a request: the judge's template already carries what worked, adapted to
+  this video.
 - Never use the flawed take (the clip QC rejected) for its regeneration: not as a video input, a start or end frame
   or a reference, and never fix one frame of it or ask the model to edit it. The regeneration goes out with the
   inputs of the first attempt (the original source video, when the video has one), and a whole request crafted again: the
