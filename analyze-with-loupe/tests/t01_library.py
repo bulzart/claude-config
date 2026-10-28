@@ -123,7 +123,16 @@ check("needs_unmet" in qc and "--note" in qc, "the QC phase handles the keeper a
 check("once per video" in qc, "the QC phase asks the keeper once per video")
 check("T qc-consult" in qc and "composite_path" in qc and "qc-consult.json" in qc, "the QC phase consults the keeper, views every composite and names the saved answer")
 check("`original video`" in qc and "circle, arrow or box" in qc, "the QC phase reads a sample's source tags (an original video is never a generated frame) and knows a zoom is drawn only under a marked frame, as Loupe draws them")
-check("T plan-hints" in rd(SKD / "awl-write-request" / "SKILL.md"), "the first request asks for sample hints (plan-hints)")
+wr1 = re.sub(r"\s+", " ", rd(SKD / "awl-write-request" / "SKILL.md"))
+check("T prompt-template" in wr1 and "video-NN-judge-brief.md" in wr1 and "T plan-hints" not in wr1,
+      "the first request briefs the judge and asks for its prompt template (prompt-template), no longer for sample hints")
+check("The judge is not asked again before generation" in wr1 and "Judge's template" in rd(SKD / "awl-precheck" / "SKILL.md"),
+      "the judge is not asked again before generation, and X4 checks the pattern card's Judge's template block")
+qc1 = re.sub(r"\s+", " ", rd(SKD / "awl-qc" / "SKILL.md"))
+check("has caught what it caught" in qc1 and "evidence_sent" in qc1 and "--attempt aK" in qc1 and "result.json → judge" in qc1,
+      "QC consults the judge after its first pass; the consult carries the prompt used, the template and the brief, and the cause is kept in result.json judge")
+check('"judge": {"template"' in rd(LIB / "reference" / "production-agents" / "040_4_60-outputs-video-nn-result-json.md")
+      and "T prompt-template" in rd(HOME / "commands" / "analyze-with-loupe.md"), "result.json has the judge field and contract item 23 names prompt-template")
 sub = rd(SKD / "awl-submit" / "SKILL.md")
 check("T caught-flag add" in sub and "--flagged" in sub, "a flag is recorded in X7 before the request changes")
 check("T caught-flag reconcile" in rd(SKD / "awl-wrapup" / "SKILL.md") and "T caught-flag reconcile" in rd(SKD / "awl-analyze-produce" / "SKILL.md"), "the flags are reconciled as agents report and in the wrap-up")
@@ -179,7 +188,9 @@ check("Pilot first" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "stalled
 # the keeper's answer: the QC phase knows the fields that carry the admin's words and the origin; the writer knows held_back_why and the sentence-safe fields
 check("`title`" in qc and "`run`" in qc and "`busy`" in qc, "the QC phase reads the sample's title and origin from the consult answer and knows the busy mode")
 wr = rd(SKD / "awl-write-request" / "SKILL.md")
-check("held_back_why" in wr and "in your own\n      words" in wr, "the writer reads held_back_why and applies a hint in its own words")
+wrn = re.sub(r"\s+", " ", wr)
+check("Craft the request from it" in wrn and "[SLOT: …]" in wrn and "that rule wins and the part changes only as much as the rule needs" in wrn and "needs_unmet" in wrn,
+      "the writer crafts the request from the judge's template, fills its slots, answers what the judge asks, and a rule of X2 wins a conflict")
 # the preview is the 720x1280 burn, never the proxy; no product clause teaches a faded product
 check("never the 540×960 capcut-cli proxy" in rd(LIB / "reference" / "capcut-assembly" / "070_6_deliverables-analyze-mode.md") and "720×1280" in rd(SKD / "awl-record" / "SKILL.md"), "the preview is documented as the 720x1280 burn, never the proxy")
 faded = [str(p.relative_to(LIB)) for p in sorted((LIB / "reference").rglob("*.md")) if re.search(r"colours as muted as|no brighter than the room", rd(p))]
