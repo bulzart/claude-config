@@ -507,3 +507,12 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   responsible for Frame 1 (WRONG, 0:03.00) and Frame 3 (WRONG, 0:05.20) of this sample: it generated second 0 to second 6.1 of Video A (generation 1 of 2 ·
   clip c1 · request)". `awl.py sample-prompts` writes the same line under each `Generation k of n` heading.
 - **Verified:** t03 passes; Loupe's selftest 186, keeper_sync 91, page_smoke, transport_check and flags_smoke pass.
+
+## 2026-10-28 · Example prompts: prompts behind Example frames are never wrong or corrected
+- **Reported:** a report may have only Example frames; its filled prompts must be marked Example, not wrong and not right or corrected, "so that it
+  doesnt cause any ambiguity on the qc judge or keeper".
+- **Changed (Loupe):** a side's prompt is an Example prompt when its field speaks only for Example frames, or when every frame of the sample is an
+  Example (`prompt_roles`). The judge's text, the digest, the brief, the form's labels, the samples page and the reports list name it the example take
+  of Video A or B. `awl.py sample-prompts` heads it `## Prompt of the example take of Video A` and returns `prompt_roles`; a sample of Examples only
+  gets a closing note that neither prompt is a wrong or a corrected one.
+- **Verified:** t03 (a sample of Example frames only) passes; Loupe's selftest 191, keeper_sync 91, page_smoke pass.
