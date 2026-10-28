@@ -4624,7 +4624,7 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     kind = str(smp.get("prompts") or "")
     wrong, fixed, note = str(smp.get("wrong_prompt") or ""), str(smp.get("fixed_prompt") or ""), str(smp.get("prompt_note") or "")
     res = {"ok": True, "id": sid, "prompts": kind, "title": smp.get("title", ""), "model": smp.get("model", ""), "run": smp.get("run", ""), "video": smp.get("video", ""),
-           "prompt_note": note, "chars": {"wrong": len(wrong), "fixed": len(fixed)},
+           "prompt_note": note, "chars": {"wrong": len(wrong), "fixed": len(fixed)}, "prompt_roles": smp.get("prompt_roles") or {},
            "generations": {side: max([int(x.get("of") or 0) for x in smp.get(f"{side}_segments") or [] if isinstance(x, dict)] or [1 if txt else 0])
                            for side, txt in (("wrong", wrong), ("fixed", fixed))}}
     if not kind:
@@ -4638,8 +4638,12 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     video_name = {"wrong": "Video A", "fixed": "Video B"}
     secs = lambda x: f"{float(x or 0):.3f}".rstrip("0").rstrip(".")  # noqa: E731
     mmss = lambda t: f"{int(float(t or 0) // 60)}:{float(t or 0) - int(float(t or 0) // 60) * 60:05.2f}"  # noqa: E731
-    for side, text, title, none in (("wrong", wrong, "the wrong take (as generated)", "_not saved by the admin_"),
-                                    ("fixed", fixed, "the corrected take", "_not saved by the admin (a miss example: nothing was corrected)_")):
+    roles = smp.get("prompt_roles") or {}        # a side that speaks only for Example frames (or a sample of Examples only) has an Example prompt
+    ex_title = "the example take of {v} (its frames are called EXAMPLE: neither the wrong take nor the corrected one)"
+    for side, text, title, none in (("wrong", wrong, ex_title.format(v="Video A") if roles.get("wrong") == "example" else "the wrong take (as generated)",
+                                     "_not saved by the admin_"),
+                                    ("fixed", fixed, ex_title.format(v="Video B") if roles.get("fixed") == "example" else "the corrected take",
+                                     "_not saved by the admin_" if roles.get("fixed") == "example" else "_not saved by the admin (a miss example: nothing was corrected)_")):
         segs = [x for x in (smp.get(f"{side}_segments") or []) if isinstance(x, dict)]
         if segs:          # a take made of several generations (clips joined): Loupe gives the prompt of each generation this sample's frames come from
             of = max(int(x.get("of") or 0) for x in segs) or len(segs)
@@ -4658,9 +4662,15 @@ def _sample_prompts_file(sid: str, rd) -> dict:
             lines += ["", f"## Prompt of {title}", "", text]
         else:
             lines += ["", f"## Prompt of {title.split(' (')[0]}", "", none]
-    lines += ["", "_Read both and judge what the corrected prompt did differently and whether that is the mechanism of the beat you are writing or checking. Apply the "
-              "mechanism in the locked model's own structure and in your own words; never paste a sentence of either prompt, never name the wrong behaviour in a prompt, "
-              "never take the corrected prompt as a rule for another video._", ""]
+    if smp.get("examples_only"):
+        lines += ["", "_This sample's frames are all Examples: these prompts made frames the admin keeps as examples, neither a miss nor the corrected look. Read "
+                  "them with the admin's words for what the example shows; never take either as a wrong or a corrected prompt, never paste a sentence of either, "
+                  "never take one as a rule for another video._", ""]
+    else:
+        lines += ["", "_Read both and judge what the corrected prompt did differently and whether that is the mechanism of the beat you are writing or checking. Apply the "
+                  "mechanism in the locked model's own structure and in your own words; never paste a sentence of either prompt, never name the wrong behaviour in a prompt, "
+                  "never take the corrected prompt as a rule for another video._" + (" A prompt named an example take made frames the admin keeps as examples: read it as "
+                                                                                    "one, never as the wrong or the corrected prompt." if "example" in roles.values() else ""), ""]
     f = Path(rd) / "40-briefs" / "samples" / f"{sid}-prompts.md"
     f.parent.mkdir(parents=True, exist_ok=True)
     write_text(f, "\n".join(lines))
