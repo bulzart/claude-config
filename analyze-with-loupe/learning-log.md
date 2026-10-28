@@ -533,3 +533,12 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   an Example is, and every description (Loupe's roles, judge text, digest, brief, form; this library's prompts file, consult and hint rules, the QC and
   pre-check skills, the README) says a suggestion of what could have changed or how one thing could have been done another way, neither a bad generation nor a correct one.
 - **Verified:** t01, t02, t03, t05 pass; Loupe's selftest 197, keeper_sync 91, page_smoke pass.
+
+## 2026-10-29 · An Examples sample has one prompt box, its one video's
+- **Reported:** "examples -> one fill from prompt box since we will only use one video for examples (but there could by many generations in one video all generations prompts should be filled there in that box with information which prompt is from which second until which, as we already do), and then there's right or wrong who have two input boxes for prompt fillings".
+- **Changed:** Loupe's form gives an Examples sample one box, the video its frames come from, filled with the prompt of every generation of that video
+  under the seconds it made; the other box is never filled. Example frames from two videos are warned about and refused. The judge's text, the
+  `?prompts=1` answer (`prompt_sides`), the digest marker and the brief give only the boxes a sample speaks through. `sample-prompts` writes the one box
+  alone, headed as the prompt of the example video, and returns `prompt_sides`; the consult and hint rules, the command's help and the QC skill say an
+  Examples sample keeps one prompt.
+- **Verified:** t01, t02, t03 (50), t05 pass; Loupe's selftest 201, keeper_sync 91, page_smoke, transport_check, flags_smoke pass.
