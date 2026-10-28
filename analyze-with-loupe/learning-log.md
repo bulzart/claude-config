@@ -467,3 +467,17 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   is the judge's, its slots filled.
 - **Verified:** t01, t02 (template-apply), t03 (the whole brief reaches the judge; the prompt applied; QC knows it), t05 pass; the rehearsal runs
   224 steps; Loupe's selftest 171, keeper_sync 91 and the page test pass.
+
+## 2026-10-28 · A take made of several generations: one prompt field per side, each generation's prompt under its seconds
+- **Reported:** some clips have more than one generation (video-02 of the Neuro run is c1 0–6.1 s and c2 6.1–12.433 s). When a miss's frames
+  come from different generations, the prompt of each must be saved, with the seconds it is responsible for, so the judge knows which frames
+  each prompt made. The user then gave the form: one field per side. The Wrong frames' prompts go in "Prompt of Video A (as generated)"; two
+  Wrong frames from different generations put both prompts in that one field, each under "This is the prompt responsible for frames generated
+  from second 0 to x" and the like. The same goes for the Right frames. No multiple prompt boxes.
+- **Changed (Loupe b05bcf2):** Loupe reads a joined take as one generation per clip, with its request, prompt and seconds. The form writes
+  the prompts of the generations the frames come from into the side's one field, each under that line, and the field follows the frames until
+  the admin types in it. The take's generations are saved beside the field, so the judge gets, sample by sample, the prompt of each generation
+  that sample's frames come from. `awl.py sample-prompts` writes the same into `40-briefs/samples/<id>-prompts.md`, under one heading per
+  generation (`Generation k of n · clip · request`). Each heading carries the line with its seconds and the sample's frames from it.
+- **Verified:** t03 (the generation of the sample's WRONG frame alone; the second generation alone when the frame falls in it) passes;
+  Loupe's selftest 183, keeper_sync 91, page_smoke and transport_check pass.

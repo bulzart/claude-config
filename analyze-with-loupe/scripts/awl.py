@@ -4629,7 +4629,8 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     wrong, fixed, note = str(smp.get("wrong_prompt") or ""), str(smp.get("fixed_prompt") or ""), str(smp.get("prompt_note") or "")
     res = {"ok": True, "id": sid, "prompts": kind, "title": smp.get("title", ""), "model": smp.get("model", ""), "run": smp.get("run", ""), "video": smp.get("video", ""),
            "prompt_note": note, "chars": {"wrong": len(wrong), "fixed": len(fixed)},
-           "generations": {side: len(smp.get(f"{side}_segments") or []) or (1 if txt else 0) for side, txt in (("wrong", wrong), ("fixed", fixed))}}
+           "generations": {side: max([int(x.get("of") or 0) for x in smp.get(f"{side}_segments") or [] if isinstance(x, dict)] or [1 if txt else 0])
+                           for side, txt in (("wrong", wrong), ("fixed", fixed))}}
     if not kind:
         res["note"] = "the admin saved no prompt for this sample"
         return res
@@ -4638,16 +4639,20 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     if note:
         lines += ["", "## The admin's note on the prompt", "", note]
     role_word = {"wrong": "WRONG", "right": "RIGHT", "example": "EXAMPLE"}
+    video_name = {"wrong": "Video A", "fixed": "Video B"}
+    secs = lambda x: f"{float(x or 0):.3f}".rstrip("0").rstrip(".")  # noqa: E731
     for side, text, title, none in (("wrong", wrong, "the wrong take (as generated)", "_not saved by the admin_"),
                                     ("fixed", fixed, "the corrected take", "_not saved by the admin (a miss example: nothing was corrected)_")):
         segs = [x for x in (smp.get(f"{side}_segments") or []) if isinstance(x, dict)]
-        if len(segs) >= 2:          # a take made of several generations (clips joined): each prompt, the seconds it made, this sample's frames from it
-            lines += ["", f"## Prompts of {title}: {len(segs)} generations, one prompt each"]
+        if segs:          # a take made of several generations (clips joined): Loupe gives the prompt of each generation this sample's frames come from
+            of = max(int(x.get("of") or 0) for x in segs) or len(segs)
+            lines += ["", f"## Prompts of {title}: made of {of} generations; "
+                      + ("the prompt of each generation this sample's frames come from" if len(segs) < of else "the prompt of each")]
             for k, sg in enumerate(segs, 1):
                 fr = ", ".join(f"Frame {f.get('n')} ({role_word.get(f.get('role'), str(f.get('role')).upper())} at {float(f.get('t') or 0):.2f} s)" for f in sg.get("frames") or [])
-                lines += ["", f"### Prompt {k} of {len(segs)} · clip {sg.get('clip') or '-'} · {sg.get('request') or 'request not named'}",
-                          f"_Responsible for everything from {float(sg.get('t_from') or 0):.3f} s up to {float(sg.get('t_to') or 0):.3f} s of that video; this sample's frames "
-                          f"from it: {fr or 'none'}._", "", str(sg.get("prompt") or "").strip() or "_not saved_"]
+                lines += ["", f"### Generation {sg.get('gen') or k} of {of} · clip {sg.get('clip') or '-'} · {sg.get('request') or 'request not named'}",
+                          f"_This is the prompt responsible for the frames generated from second {secs(sg.get('t_from'))} to second {secs(sg.get('t_to'))} of "
+                          f"{video_name.get(sg.get('src'), 'that video')}; the frames of this sample from it: {fr or 'none'}._", "", str(sg.get("prompt") or "").strip() or "_not saved_"]
         elif text:
             lines += ["", f"## Prompt of {title}", "", text]
         else:

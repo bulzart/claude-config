@@ -223,14 +223,23 @@ check(js.get("ok") and js.get("status") == "cleared", "caught-flag set clears th
 js, _, _ = t("caught-flag", "list", "--run", run.name[:8], env=ENV)
 check(js.get("count") == 1, "caught-flag list filters by a run name prefix as text")
 
-# --- a take made of two generations: the prompts file shows each prompt with the seconds it made and this sample's frames from it
-misses.update(m["id"], {"wrong_segments": [{"clip": "c1", "attempt": 1, "request": "video-03-c1-request.json", "t_from": 0, "t_to": 1.5, "prompt": "SEG-ONE the can on the desk."},
-                                           {"clip": "c2", "attempt": 1, "request": "video-03-c2-request.json", "t_from": 1.5, "t_to": 3.0, "prompt": "SEG-TWO the lights go off."}]}, "test")
-js, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
-ptxt2 = Path(js.get("saved", "-")).read_text(encoding="utf-8") if js.get("saved") else ""
-check(js.get("generations", {}).get("wrong") == 2 and "### Prompt 1 of 2 · clip c1" in ptxt2 and "up to 1.500 s" in ptxt2 and "Frame 1 (WRONG at 1.00 s)" in ptxt2
-      and "### Prompt 2 of 2 · clip c2" in ptxt2 and "from 1.500 s up to 3.000 s" in ptxt2 and ptxt2.index("SEG-ONE") < ptxt2.index("SEG-TWO"),
-      "a take made of two generations: the prompts file shows each prompt with the seconds it made and the sample's frames from it")
+# --- a take made of two generations: the prompts file gives the prompt of each generation this sample's frames come from, under the seconds it made
+def _two_gens(cut):
+    misses.update(m["id"], {"wrong_segments": [{"clip": "c1", "attempt": 1, "request": "video-03-c1-request.json", "t_from": 0, "t_to": cut, "prompt": "SEG-ONE the can on the desk."},
+                                               {"clip": "c2", "attempt": 1, "request": "video-03-c2-request.json", "t_from": cut, "t_to": 3.0, "prompt": "SEG-TWO the lights go off."}]}, "test")
+    js2, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
+    return js2, (Path(js2.get("saved", "-")).read_text(encoding="utf-8") if js2.get("saved") else "")
+
+
+js, ptxt2 = _two_gens(1.5)
+check(js.get("generations", {}).get("wrong") == 2 and "made of 2 generations; the prompt of each generation this sample's frames come from" in ptxt2
+      and "### Generation 1 of 2 · clip c1 · video-03-c1-request.json" in ptxt2
+      and "_This is the prompt responsible for the frames generated from second 0 to second 1.5 of Video A; the frames of this sample from it: Frame 1 (WRONG at 1.00 s)._" in ptxt2
+      and "SEG-ONE" in ptxt2 and "SEG-TWO" not in ptxt2,
+      "a take made of two generations: the prompts file gives the prompt of the generation the sample's WRONG frame comes from, under the seconds it made")
+js, ptxt3 = _two_gens(0.5)
+check("### Generation 2 of 2 · clip c2" in ptxt3 and "from second 0.5 to second 3 of Video A" in ptxt3 and "SEG-TWO" in ptxt3 and "SEG-ONE" not in ptxt3,
+      "when that frame comes from the second generation, only the second generation's prompt")
 misses.update(m["id"], {"wrong_segments": [], "wrong_prompt": "PROMPT-WRONG the can on the desk."}, "test")
 
 # --- the coupling in step with Loupe (2026-10-28): a consult may outlast the old 190 s; reconcile lists the flag captures and only counts the
