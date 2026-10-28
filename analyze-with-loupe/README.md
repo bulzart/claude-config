@@ -103,8 +103,9 @@ It holds two things:
   in `state.json → higgsfield.declined_preset_id`, so every request carries it and `lint-run` knows it.
   Loupe also ships the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`); that server is not registered in `~/.claude.json`, so the pipeline's agents reach the library only through `awl.py qc-consult`, `qc-brief` and `plan-hints`.
 
-Kept in step with Loupe (2026-10-28): `qc-consult` and `plan-hints` wait up to 600 s (`AWL_CONSULT_TIMEOUT`), since Loupe may wait 120 s
-for a running keeper call and then make keeper calls of up to 150 s each (a 209 s consult was cut at the old 190 s and its answer lost);
+Kept in step with Loupe (2026-10-28): `qc-consult` and `plan-hints` wait up to 780 s (`AWL_CONSULT_TIMEOUT`), since Loupe may wait 120 s
+for a running keeper call and then make four keeper calls of up to 150 s each (a 209 s consult was cut at the old 190 s and its answer
+lost; a Bash call that outlasts its own timeout goes on in the background);
 `caught-flag reconcile` lists the unclaimed flag captures and only counts the `media_upload` answers the hook keeps for `hf-put`
 (`unclaimed_upload_answers`: 29 of the newest 30 captures were uploads, which hid older flags); `--capture` finds a capture at any age (the
 old lookup saw the newest 200); a flag queued while Loupe failed carries a log note with its provisional `CF-Q…` id, so `caught-flag set --id
@@ -201,11 +202,17 @@ Nothing in the references, assets, examples or edit-source folders is moved, ren
 agent (the user, 2026-10-27, after the 15 videos of a references folder went to the Recycle Bin in one batch while two runs were reading
 it): a file needed in the run folder or anywhere else is copied. Only the toolkit adds its own derived folders there, as before
 (`files_audio/` and `videos_without_audio/` from `T split-audio`, Edit Mode's `final/`). `hooks/awl_input_guard.py` (PreToolUse of Bash,
-PowerShell, Write, Edit, MultiEdit and NotebookEdit) refuses a move, rename or delete (`rm`, `mv`, `Remove-Item`, `Move-Item`,
-`Rename-Item`, `del`, `find -delete`, a .NET or Recycle Bin delete, `shutil.move`, `os.remove` and the like, in a command, a heredoc or a
-script it runs) and a Write or Edit inside the references, edit-source or examples folders of every run of the library that is not done or
-abandoned; copies, reads, the toolkit's own calls and the run folder pass. The assets folders stay open to the user's own curation. The
-hook fails open, and the refusal tells the agent to copy instead.
+PowerShell, Write, Edit, MultiEdit and NotebookEdit) refuses a move, rename, delete or write (`rm`, `mv`, `Remove-Item`, `Move-Item`,
+`Rename-Item`, `del`, `find -delete`, a .NET or Recycle Bin delete, `shutil.move`, `os.remove`; a copy, redirection, `Set-Content` or
+encoder output landing there; a delete of a folder that holds one) inside the references, edit-source or examples folders of every run of
+the library that is not done or abandoned and changed in the last 7 days. It reads verbs at command position only, through shell and
+PowerShell variables, `for` loops, nested shells (`bash -c`, `cmd /c`, `powershell -Command`) and line continuations; in Python (a
+heredoc or here-string fed to an interpreter, `-c`, a script it runs) a delete, move or write call aimed at a reference path or at a name
+that holds one. A heredoc that is only data (a note written with `cat`) is never read as commands, and a verb whose target is an unset
+variable passes. Copies, reads, the toolkit's own calls and the run folder pass; the assets folders stay open to the user's own curation.
+It fails open, and the refusal tells the agent to copy instead. It reads the runs' `state.json` with FILE_SHARE_DELETE, and the toolkit's
+writes retry an atomic replace a reader held (on Windows a reader can make `os.replace` fail: measured 145 of 300 without the retry, 0 with
+it).
 
 ## Orientation
 The output keeps the original's perspective (the user, 2026-10-27): a source is never flipped, in any mode. A front-camera selfie keeps its

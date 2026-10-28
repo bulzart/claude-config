@@ -413,3 +413,18 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   peaks, every second covered; storyboard cells 112 < 135 < 152 < 197 = 197). The real runs agree: `20261027-224009-27` (Medium) sampled at
   3 fps, 8 around motion, at most 5 peaks; `20261027-233328-27` (High) at 4 fps, 10 around motion, at most 6. The guard hook refuses
   `Remove-Item` in `Documents.10` and an `rm` in `Documents.10` and lets a copy into a run through (about 0.1 s per shell call).
+- **Independent review (same day), and what it changed:** the guard hook read every open run's `state.json` on every shell call, and on
+  Windows a reader makes the toolkit's `os.replace` fail (measured 145 of 300 with three readers; the hook's own shared read still 61):
+  `write_json`/`write_text` now retry a blocked replace (0 of 300) and the uploads merge writes atomically too. The guard was rewritten:
+  verbs at command position only (a note saying "move" passes), variables, loops, nested shells, line continuations, `..`, a parent
+  folder's delete, overwrites (copy, redirection, Set-Content, ffmpeg output), heredoc data never read as commands, a verb on an unset
+  variable let through, Python checked call by call with the names that hold a reference path (str.replace is no file replace), and a run
+  idle for 7 days releases its folders. Still stretches at 2 fps are left unthinned again (thinning saved no cell there); 3 fps thins from
+  2 duplicates. The consult waits 780 s (Loupe's worst case 720 s). `T state set effort.x=…` works on the empty level. Wording: "5 for a
+  run made before item 33" (an empty level stops), the close-up budget's no cap, the examples folder read-only in the analysts' prompt,
+  Edit Mode and the prepare step name the effort stop. A known edge left as it is: a `caught-flag set` that lands while Loupe is in the
+  middle of ingesting that queued flag can be lost (Loupe saves the copy it read).
+- **Verified after the review:** t01 90, t02 123, t03 35, t05 73 checks and the rehearsal's 216 steps pass; the guard, dry-run on the real
+  open runs, lets the pipeline's own commands through (split-audio, inventory, strip-inserts, frames, copies into 55-references, ffmpeg
+  reads, python heredocs that read the references, cleanups in the run folder) and refuses `rm` and `Get-ChildItem | Remove-Item` in
+  `Documents\27.10`.
