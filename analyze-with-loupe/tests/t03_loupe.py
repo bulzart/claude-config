@@ -242,14 +242,21 @@ check("### Generation 2 of 2 · clip c2" in ptxt3 and "responsible for Frame 1 (
       "when that frame comes from the second generation, only the second generation's prompt")
 misses.update(m["id"], {"wrong_segments": [], "wrong_prompt": "PROMPT-WRONG the can on the desk."}, "test")
 
-# --- Example frames only: the prompts file names both prompts as example takes, never the wrong or the corrected one (the user, 2026-10-28)
-mo_ex = misses.add_moment(m["id"], {"frames": [{"src": "wrong", "role": "example", "t": 1.0}, {"src": "fixed", "role": "example", "t": 1.0}], "details": "kept as an example"}, "test")
+# --- Example frames only (the user, 2026-10-28 and 2026-10-29): an Examples sample takes all its frames from one video and has one prompt box, that
+#     video's; the prompts file gives that prompt alone, named an example take, never the flawed or the correct one; Loupe refuses Examples from two videos
+mo_ex = misses.add_moment(m["id"], {"frames": [{"src": "wrong", "role": "example", "t": 1.0}, {"src": "wrong", "role": "example", "t": 1.5}], "details": "kept as an example"}, "test")
 SID_EX = mo_ex["id"] if isinstance(mo_ex, dict) and "id" in mo_ex else f"S{mo_ex['moment_id']}"
 js, _, _ = t("sample-prompts", "--id", SID_EX, "--run", run.name, env=ENV)
 ptx = Path(js.get("saved", "-")).read_text(encoding="utf-8") if js.get("saved") else ""
-check(js.get("prompt_roles") == {"wrong": "example", "fixed": "example"} and "## Prompt of the example take of Video A" in ptx and "## Prompt of the example take of Video B" in ptx
-      and "## Prompt of the flawed take" not in ptx and "This sample's frames are all Examples" in ptx,
-      "a sample of Example frames only: the prompts file names both prompts as example takes, never the wrong or the corrected take")
+check(js.get("prompt_roles") == {"wrong": "example", "fixed": "example"} and js.get("prompt_sides") == ["wrong"] and "## Prompt of the example take of Video A" in ptx
+      and "of Video B" not in ptx and "## Prompt of the flawed take" not in ptx and "This sample's frames are all Examples" in ptx and "the prompt of the example video (Video A" in ptx,
+      "a sample of Example frames only: the prompts file gives the one box of its one video, named an example take, never the flawed or the correct take")
+try:
+    misses.add_moment(m["id"], {"frames": [{"src": "wrong", "role": "example", "t": 1.0}, {"src": "fixed", "role": "example", "t": 1.0}]}, "test")
+    two_refused = False
+except ValueError as e:
+    two_refused = "one video" in str(e)
+check(two_refused, "Loupe refuses an Examples sample whose frames come from two videos")
 misses.delete_moment(mo_ex["moment_id"], "test") if hasattr(misses, "delete_moment") else None
 
 # --- the coupling in step with Loupe (2026-10-28): a consult may outlast the old 190 s; reconcile lists the flag captures and only counts the

@@ -4260,7 +4260,7 @@ def cmd_qc_consult(a):
     if any(x.get("prompts") for x in (d.get("relevant") or d.get("samples") or []) if isinstance(x, dict)):
         d["prompts_files"] = _prompts_files(d.get("relevant") or d.get("samples"), rd)
         d["prompts_rule"] = ("a sample marked prompts (pair, wrong or fixed) keeps the prompt that generated the flawed version (Video A) and the prompt of the correct take "
-                             "(Video B), or, where its prompt_roles says example, an example take's prompt: a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one (prompt_note: the admin's "
+                             "(Video B), or, where its prompt_roles says example, an example take's prompt: a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one; an Examples sample keeps one prompt, its one video's, every generation of it (prompt_note: the admin's "
                              "one line on what made the difference); when the keeper answered, it read both whole first (prompts_judged), and both are written whole for you at "
                              "prompts_files[<id>], from Loupe's record, compared or judged by no one. For a sample you judged relevant to THIS video, read that file and judge "
                              "yourself what the correct take's prompt did differently from the flawed take's. It is a lead for the diagnosed cause and the corrected request, written in the model's own "
@@ -4319,7 +4319,7 @@ def cmd_plan_hints(a):
         if any(h.get("prompts") for h in res["hints"] if isinstance(h, dict)):
             res["prompts_files"] = _prompts_files(res["hints"], rd)
             res["prompts_rule"] = ("a hint marked prompts (pair, wrong or fixed) rests on a sample whose two prompts the admin kept (the one that generated the flawed version, the "
-                                   "one of the correct take, or an example take's where prompt_roles says example: a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one; and prompt_note, the "
+                                   "one of the correct take, or an example take's where prompt_roles says example: a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one, an Examples sample keeping one, its one video's; and prompt_note, the "
                                    "admin's one line on what made the difference); the keeper read both whole before hinting (prompts_judged), "
                                    "and both are written whole for you at prompts_files[<id>], from Loupe's record, compared or judged by no one. When you apply that hint, read "
                                    "that file, judge yourself what the correct take's prompt did differently from the flawed take's and whether that is the mechanism of the matching beat, and apply the mechanism at "
@@ -4617,8 +4617,9 @@ def cmd_template_apply(a):
 
 
 def _sample_prompts_file(sid: str, rd) -> dict:
-    """Both prompts of one sample, whole from Loupe's record, written to RUN/40-briefs/samples/<id>-prompts.md; {saved} or {note} (nothing saved,
-    Loupe unreachable). Nothing is compared, cut or summarised."""
+    """The prompts of one sample, whole from Loupe's record, written to RUN/40-briefs/samples/<id>-prompts.md; {saved} or {note} (nothing saved,
+    Loupe unreachable): both takes' for a miss with its correct take, the one box of an Examples sample (its one video's prompt, every generation of it:
+    prompt_sides). Nothing is compared, cut or summarised."""
     s, d = _cf_api("GET", f"/api/qc/samples/{sid}?prompts=1", key="qc", timeout=30)
     if s != 200:
         return {"ok": True, "mode": "unavailable", "id": sid, "prompts": "", "note": "no prompts: " + str((d or {}).get("error") or f"HTTP {s}")}
@@ -4627,12 +4628,16 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     wrong, fixed, note = str(smp.get("wrong_prompt") or ""), str(smp.get("fixed_prompt") or ""), str(smp.get("prompt_note") or "")
     res = {"ok": True, "id": sid, "prompts": kind, "title": smp.get("title", ""), "model": smp.get("model", ""), "run": smp.get("run", ""), "video": smp.get("video", ""),
            "prompt_note": note, "chars": {"wrong": len(wrong), "fixed": len(fixed)}, "prompt_roles": smp.get("prompt_roles") or {},
+           "prompt_sides": [x for x in (smp.get("prompt_sides") or ["wrong", "fixed"]) if x in ("wrong", "fixed")],
            "generations": {side: max([int(x.get("of") or 0) for x in smp.get(f"{side}_segments") or [] if isinstance(x, dict)] or [1 if txt else 0])
                            for side, txt in (("wrong", wrong), ("fixed", fixed))}}
     if not kind:
         res["note"] = "the admin saved no prompt for this sample"
         return res
-    lines = [f"# {sid} · the prompts of the two takes", "", f"Title: {smp.get('title', '')}",
+    sides = res["prompt_sides"]          # an Examples sample takes all its frames from one video and has one prompt box, that video's
+    one_box = bool(smp.get("examples_only")) and len(sides) == 1
+    lines = [f"# {sid} · " + (f"the prompt of the example video ({'Video A' if sides[0] == 'wrong' else 'Video B'}: an Examples sample has one prompt box)" if one_box
+                              else "the prompts of the two takes"), "", f"Title: {smp.get('title', '')}",
              f"Model: {smp.get('model') or 'any'} · from run {smp.get('run') or '-'} video {smp.get('video') or '-'} · kinds: {', '.join(smp.get('kinds') or []) or '-'}"]
     if note:
         lines += ["", "## The admin's note on the prompt", "", note]
@@ -4646,8 +4651,10 @@ def _sample_prompts_file(sid: str, rd) -> dict:
                                      "_not saved by the admin_"),
                                     ("fixed", fixed, ex_title.format(v="Video B") if roles.get("fixed") == "example" else "the correct take (Video B)",
                                      "_not saved by the admin_" if roles.get("fixed") == "example" else "_not saved by the admin (a miss example: nothing was corrected)_")):
+        if side not in sides:
+            continue          # the other box of an Examples sample: never this sample's prompt
         segs = [x for x in (smp.get(f"{side}_segments") or []) if isinstance(x, dict)]
-        if segs:          # a take made of several generations (clips joined): Loupe gives the prompt of each generation this sample's frames come from
+        if segs:          # a take made of several generations (clips joined): Loupe gives the prompt of each generation this sample's frames come from (every one, in an Examples sample's one box)
             of = max(int(x.get("of") or 0) for x in segs) or len(segs)
             lines += ["", f"## Prompts of {title}: made of {of} generations; "
                       + ("the prompt of each generation this sample's frames come from" if len(segs) < of else "the prompt of each")]
@@ -4664,7 +4671,12 @@ def _sample_prompts_file(sid: str, rd) -> dict:
             lines += ["", f"## Prompt of {title}", "", text]
         else:
             lines += ["", f"## Prompt of {title.split(' (')[0]}", "", none]
-    if smp.get("examples_only"):
+    if one_box:
+        lines += ["", "_This sample's frames are all Examples, each a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one; "
+                  "an Examples sample takes all its frames from one video and keeps that one video's prompt, every generation of it under the seconds it made. Read it "
+                  "with the admin's words for what the example suggests; never take it as a flawed or a correct prompt, never paste a sentence of it, "
+                  "never take it as a rule for another video._", ""]
+    elif smp.get("examples_only"):
         lines += ["", "_This sample's frames are all Examples, each a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one. Read these prompts "
                   "with the admin's words for what the example suggests; never take either as a flawed or a correct prompt, never paste a sentence of either, "
                   "never take one as a rule for another video._", ""]
@@ -4693,8 +4705,8 @@ def _prompts_files(items, rd) -> dict:
 
 
 def cmd_sample_prompts(a):
-    """The prompts of the two takes of ONE sample (the prompt that generated the flawed version, the prompt of the correct take, or an example take's, a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one;
-    and the admin's note on what made the
+    """The prompts of the two takes of ONE sample (the prompt that generated the flawed version, the prompt of the correct take, or an example take's, a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one,
+    an Examples sample's one box; and the admin's note on what made the
     difference, as the admin saved them in Loupe), fetched whole and written to a file of the run (qc-consult and plan-hints write them by themselves for
     every sample they cite). Nothing is compared, cut or summarised here: read the file and judge what the correct take's prompt did differently from the flawed take's."""
     sid = (a.id or "").strip().upper()
@@ -6341,7 +6353,7 @@ def main():
     p.add_argument("--note", help="only when a first answer came back with needs_unmet: your answer from the plan, in words (the keeper asked for it)")
     p.set_defaults(fn=cmd_plan_hints, kinds=None)
 
-    p = sp.add_parser("sample-prompts", help="the prompts of the two takes of ONE sample (as the admin saved them in Loupe), written whole to RUN/40-briefs/samples/<id>-prompts.md for you to read and judge; only for a sample you judged relevant")
+    p = sp.add_parser("sample-prompts", help="the prompts of ONE sample (both takes' for a miss with its correct take, the one box of an Examples sample; as the admin saved them in Loupe), written whole to RUN/40-briefs/samples/<id>-prompts.md for you to read and judge; only for a sample you judged relevant")
     p.add_argument("--id", required=True, help="the sample id (S12) from qc-consult, qc-brief or plan-hints")
     p.add_argument("--run", required=True, help="run id or folder: the file is written under its 40-briefs/samples/")
     p.set_defaults(fn=cmd_sample_prompts)
