@@ -498,3 +498,12 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   retry levers are the integration form, the spot or the anchor class. §9b's marker-residue row went too, which puts its row numbers back.
 - **Verified:** `docs_tool.py check` 0 errors; t01 now guards that no step, section, guide or the README speaks of a placement marker or
   preview and that no `placeholder` command exists; t01, t02, t03, t05 and the rehearsal pass.
+
+## 2026-10-28 · A frame ties back to the prompt that made it
+- **Reported:** the prompt line named Video A, but nothing in the sample's image tied a frame to it ("no Video A placeholder or something else that would
+  tie the frame back to the prompt"); the line should also say which frames it is responsible for ("frame 1,3,4 or similar").
+- **Changed (Loupe):** each frame's tag in the image has two lines: `FRAME n · WRONG · m:ss.ss`, and under it `VIDEO A · as generated · generation k of n ·
+  clip cK (from–to s)`. meta.json, the keeper's digest and the brief name each frame the same way. The prompt line leads with the frames: "This is the prompt
+  responsible for Frame 1 (WRONG, 0:03.00) and Frame 3 (WRONG, 0:05.20) of this sample: it generated second 0 to second 6.1 of Video A (generation 1 of 2 ·
+  clip c1 · request)". `awl.py sample-prompts` writes the same line under each `Generation k of n` heading.
+- **Verified:** t03 passes; Loupe's selftest 186, keeper_sync 91, page_smoke, transport_check and flags_smoke pass.

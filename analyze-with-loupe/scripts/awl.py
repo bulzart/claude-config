@@ -4637,6 +4637,7 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     role_word = {"wrong": "WRONG", "right": "RIGHT", "example": "EXAMPLE"}
     video_name = {"wrong": "Video A", "fixed": "Video B"}
     secs = lambda x: f"{float(x or 0):.3f}".rstrip("0").rstrip(".")  # noqa: E731
+    mmss = lambda t: f"{int(float(t or 0) // 60)}:{float(t or 0) - int(float(t or 0) // 60) * 60:05.2f}"  # noqa: E731
     for side, text, title, none in (("wrong", wrong, "the wrong take (as generated)", "_not saved by the admin_"),
                                     ("fixed", fixed, "the corrected take", "_not saved by the admin (a miss example: nothing was corrected)_")):
         segs = [x for x in (smp.get(f"{side}_segments") or []) if isinstance(x, dict)]
@@ -4645,10 +4646,14 @@ def _sample_prompts_file(sid: str, rd) -> dict:
             lines += ["", f"## Prompts of {title}: made of {of} generations; "
                       + ("the prompt of each generation this sample's frames come from" if len(segs) < of else "the prompt of each")]
             for k, sg in enumerate(segs, 1):
-                fr = ", ".join(f"Frame {f.get('n')} ({role_word.get(f.get('role'), str(f.get('role')).upper())} at {float(f.get('t') or 0):.2f} s)" for f in sg.get("frames") or [])
+                # the frames as the sample's image tags them (FRAME n, the role, the time; VIDEO A or B and the generation under it)
+                fl = [f"Frame {f.get('n')} ({role_word.get(f.get('role'), str(f.get('role')).upper())}, {mmss(f.get('t'))})" for f in sg.get("frames") or []]
+                fr = fl[0] if len(fl) == 1 else ", ".join(fl[:-1]) + " and " + fl[-1] if fl else ""
+                where = f"second {secs(sg.get('t_from'))} to second {secs(sg.get('t_to'))} of {video_name.get(sg.get('src'), 'that video')}"
                 lines += ["", f"### Generation {sg.get('gen') or k} of {of} · clip {sg.get('clip') or '-'} · {sg.get('request') or 'request not named'}",
-                          f"_This is the prompt responsible for the frames generated from second {secs(sg.get('t_from'))} to second {secs(sg.get('t_to'))} of "
-                          f"{video_name.get(sg.get('src'), 'that video')}; the frames of this sample from it: {fr or 'none'}._", "", str(sg.get("prompt") or "").strip() or "_not saved_"]
+                          (f"_This is the prompt responsible for {fr} of this sample: it generated {where}._" if fr
+                           else f"_This is the prompt that generated {where}; no frame of this sample comes from it._"),
+                          "", str(sg.get("prompt") or "").strip() or "_not saved_"]
         elif text:
             lines += ["", f"## Prompt of {title}", "", text]
         else:

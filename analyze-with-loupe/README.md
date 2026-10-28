@@ -94,7 +94,7 @@ It holds two things:
   (`pair`, `wrong` or `fixed`) keeps in Loupe the prompt that produced the miss and the prompt of the corrected take with the admin's `prompt_note`; lists, answers and hints carry only the marker
   and the note, and `awl.py sample-prompts --id S12 --run RUN` writes both whole to `RUN/40-briefs/samples/S12-prompts.md` for a sample the agent judged relevant (X2 for an applied hint, QC for a
   diagnosed cause; a take joined from several generations gives the prompt of each generation the sample's frames come from, each under
-  `Generation k of n · clip · request` and the line with the seconds of the video it is responsible for and those frames): the agent reads and judges what changed, nothing is compared in code, nothing of them is pasted. `status`
+  `Generation k of n · clip · request` and the line naming the frames it is responsible for, as the sample's image tags them, and the seconds it generated): the agent reads and judges what changed, nothing is compared in code, nothing of them is pasted. `status`
   and `doctor` read the keeper's state (in sync, turns, library version, how many samples have a current reading) through the qc key.
   **Coupled with Loupe (since 2026-10-22):** `loupe ensure` reports `keeper.understanding` and a `reading_note` while new or changed samples are being read;
   `plan-hints` passes on `held_back_why`, `library_read`, each hint's `reading_path` (read only when the trigger match is unclear) and the keeper's
