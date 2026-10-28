@@ -71,7 +71,7 @@ read_calls = []
 
 def fake_extract(s, model):            # the picture reader, replaced too: a reading that says it opened the picture
     read_calls.append(s["id"])
-    return {"reading": {"the_miss": "READ-MISS the can is smaller after the cut", "qc_check": "READ-CHECK compare its height with the laptop", "mechanism": "m",
+    return {"reading": {"marked": "READ-MARKED the arrow points at the can after the cut", "right_version": "READ-RIGHT the can as tall as the laptop's screen", "product_and_scene": "p",
                         "frames_seen": [{"frame": "WRONG 0:01.00", "seen": "a small can"}]}, "cost": 0.0, "turns": 3, "images_read": True}
 
 
@@ -109,8 +109,9 @@ check(js.get("mode") == "keeper" and js["relevant"][0]["id"] == SID and js["rele
 check(len([c for c in calls if c.startswith("LIBRARY (")]) == 1, "the keeper was booted exactly once (the bounded ensure did not make the consult boot it again)")
 check(js.get("needs_unmet") and js["needs_unmet"][0]["kind"] == "ask_agent" and "--note" in js.get("unmet_rule", ""), "what only the QC agent can answer comes back as needs_unmet with the --note rule")
 rel0 = js["relevant"][0]
-check(rel0.get("reading_path", "").endswith(f"{SID}.json") and (rel0.get("reading") or {}).get("the_miss", "").startswith("READ-MISS") and "reading_rule" in js,
-      "a relevant sample carries the keeper's reading of its picture (two short fields and the path of the whole one) with the rule to view the picture first")
+check(rel0.get("reading_path", "").endswith(f"{SID}.json") and (rel0.get("reading") or {}).get("marked", "").startswith("READ-MARKED") and "reading_rule" in js
+      and "no verdict" in js["reading_rule"], "a relevant sample carries what the collector saw in its picture (two short fields and the path of the whole collection), "
+      "with the rule to view the picture first and that the judgement is not the collector's")
 check(js.get("library_read", {}).get("understood") == 1 and js["library_read"]["not_read"] == [] and "not_read_rule" not in js, "the answer says the keeper holds the whole library from its pictures")
 check(js.get("not_covered", "").startswith("no sample shows") and "keeper_gaps" in js.get("gaps_rule", ""), "what the library does not cover comes with the rule to write it as keeper_gaps for the wrap-up")
 saved = run / "60-outputs" / "video-03" / "qc-consult.json"
