@@ -65,7 +65,8 @@ Only these section files for this phase, nothing else unless a step below says s
     locked model, the request kind and its inputs), what the video is about (one line per beat of the plan: what happens, the product's form and
     state, the camera) and what it wants to achieve (the goal, the moment that must land, what it keeps of the source). Then `T prompt-template
     --run RUN --video NN --brief-file RUN/40-briefs/video-NN-judge-brief.md --structure-file RUN/50-requests/video-NN-pattern.md --product
-    "<form>" --product-details "<its shape, size, opening and natural posture, from its registry row>"`. The judge chooses which samples' saved
+    "<form>" --product-details "<its shape, size, opening and natural posture, from its registry row>"` (the toolkit adds the locked video
+    model from `state.json` with its entry of the model index, so the judge writes for that model). The judge chooses which samples' saved
     prompts to read, Loupe sends both whole, and the answer has `template` (the whole prompt in the locked model's structure, written from what
     worked and what failed before, with `[SLOT: …]` where only you know the specifics), `basis` (per sample: what worked, what failed, which part
     of the template carries it), `notes`, `changes` (parts of your brief earlier generations say should change) and `not_covered`. It is saved as

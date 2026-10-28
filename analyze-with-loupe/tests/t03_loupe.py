@@ -171,6 +171,7 @@ step1 = next((c for c in new if "TEMPLATE REQUEST" in c), "")
 step2 = next((c for c in new if "Step 2 of the template request" in c), "")
 check(js.get("mode") == "keeper" and js.get("template", "").startswith("TEMPLATE-MARK") and [b["id"] for b in js.get("basis", [])] == [SID] and js.get("read") == [SID]
       and js.get("changes") and "rules" in js, "prompt-template returns the judge's template, its basis, the samples it read, its changes and the rules to craft from it")
+check("Wan 3.0 Prime" in step1 and js.get("video_model") == "wan3_0_prime", "the template request names the generation video model with its entry of the model index")
 check("BRIEF-MARK" in step1 and "STRUCTURE-MARK" in step1 and "PROMPT-WRONG the can on the desk." in step2 and "PROMPT-FIXED" in step2 and "Not sent: S999" in step2
       and not any("rests on samples whose two prompts" in c for c in new), "the judge gets the agent's brief and the model's structure, then both prompts of the samples it chose, whole (none sent twice)")
 tj, tm = run / "40-briefs" / "video-03-template.json", run / "40-briefs" / "video-03-template.md"
@@ -181,7 +182,8 @@ check(code == 2, "prompt-template without a brief stops (code 2)")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--attempt", "a1", "--question", "the can is smaller than the mug after the cut", env=ENV)
 q = [c for c in calls if "QC question" in c][-1]
 check("Show the can on the desk. Keep the camera still." in q and "TEMPLATE-MARK" in q and "BRIEF-MARK" in q
-      and js.get("evidence_sent", {}).get("request_prompt") == "video-03-request.json" and js["evidence_sent"].get("template") == "video-03-template.json",
+      and js.get("evidence_sent", {}).get("request_prompt") == "video-03-request.json" and js["evidence_sent"].get("template") == "video-03-template.json"
+      and js["evidence_sent"].get("video_model") == "wan3_0_prime" and "The video model and parameters of that request" in q and "Wan 3.0 Prime" in q,
       "after generation the QC consult carries the prompt the video was generated from, the judge's template and the brief, and says which files")
 check(js.get("cause", "").startswith("CAUSE-MARK") and js.get("template_fix") and "result.json judge" in js.get("judge_rule", ""),
       "the judge's answer names the cause in the prompt or template and the part rewritten, with the rule to record them for the user's review")

@@ -4337,12 +4337,26 @@ def cmd_plan_hints(a):
     out(res)
 
 
-def _video_request_prompt(rd, video, attempt, model) -> tuple[str, str]:
+VIDEO_MODEL_KEYS = ("name", "provider", "guide", "operations", "edit_kind", "duration_s", "text_rendering", "best_for", "avoid_for")
+
+
+def _video_model_info(model: str) -> dict:
+    """The generation video model as the judge needs it: its id and its entry of models/index.json (name, provider, guide, operations, limits)."""
+    if not model:
+        return {}
+    try:
+        e = json.loads((AWL_HOME / "models" / "index.json").read_text(encoding="utf-8"))["models"].get(model) or {}
+    except (OSError, ValueError, KeyError):
+        e = {}
+    return {"id": model, **{k: e[k] for k in VIDEO_MODEL_KEYS if e.get(k) not in (None, "", [])}}
+
+
+def _video_request_prompt(rd, video, attempt, model) -> tuple[str, str, dict]:
     """The prompt the video under QC was generated from: the newest request of the video (of the attempt when given) made for the locked video model,
-    else the newest one with a prompt that is no start frame, plate, guide or marker. (prompt, file name), or ("", "")."""
+    else the newest one with a prompt that is no start frame, plate, guide or marker. (prompt, file name, its model and parameters), or ("", "", {})."""
     d = rd / "50-requests" if rd else None
     if not d or not d.is_dir() or not video:
-        return "", ""
+        return "", "", {}
     nn = _cf_nn(video)
     reqs = sorted(d.glob(f"video-{nn}*-request.json"), key=lambda p: p.stat().st_mtime, reverse=True)
     tok = re.sub(r"[^a-z0-9]+", "-", str(attempt or "").lower()).strip("-")
@@ -4355,26 +4369,35 @@ def _video_request_prompt(rd, video, attempt, model) -> tuple[str, str]:
         prm = j.get("params") if isinstance(j.get("params"), dict) else j
         pr = str((prm or {}).get("prompt") or "").strip()
         if pr:
-            found.append((p, str((prm or {}).get("model") or ""), pr))
-    for p, m, pr in found:
+            found.append((p, str((prm or {}).get("model") or ""), pr, _cf_params_dict(j)))
+    for p, m, pr, prm in found:
         if model and m == model:
-            return pr, p.name
-    for p, m, pr in found:
+            return pr, p.name, prm
+    for p, m, pr, prm in found:
         if not re.search(r"frame|plate|guide|marker|-g\d", p.name.lower()):
-            return pr, p.name
-    return "", ""
+            return pr, p.name, prm
+    return "", "", {}
 
 
 def _qc_evidence(a, ctx) -> tuple[dict, dict]:
     """What the judge needs to judge an error accurately (the user, 2026-10-28), read from the run's own files: the prompt the video under QC was
-    generated from, the template the judge gave at X2 and the agent's brief then. ({fields sent}, {where each came from})."""
+    generated from with that request's video model and parameters, the model's entry of the index, the template the judge gave at X2 and the agent's brief
+    then. ({fields sent}, {where each came from})."""
     rd = _cf_run_dir(a.run) if a.run else None
     ev, sent = {}, {}
     if not (rd and a.video):
+        vm = _video_model_info(ctx.get("model"))
+        if vm:
+            ev["video_model"], sent["video_model"] = vm, vm["id"]
         return ev, sent
-    pr, name = _video_request_prompt(rd, a.video, getattr(a, "attempt", None), ctx.get("model"))
+    pr, name, prm = _video_request_prompt(rd, a.video, getattr(a, "attempt", None), ctx.get("model"))
     if pr:
         ev["request_prompt"], sent["request_prompt"] = pr, name
+    if prm:
+        ev["request_params"], sent["request_params"] = prm, name
+    vm = _video_model_info(prm.get("model") or ctx.get("model"))
+    if vm:
+        ev["video_model"], sent["video_model"] = vm, vm["id"]
     tj = rd / "40-briefs" / f"video-{_cf_nn(a.video)}-template.json"
     try:
         t = json.loads(tj.read_text(encoding="utf-8")) if tj.is_file() else {}
@@ -4402,7 +4425,8 @@ def cmd_prompt_template(a):
     if not brief:
         fail("prompt-template needs --brief or --brief-file (what you are working on, what the video is about, what it wants to achieve, one line per beat)", 2)
     structure = Path(a.structure_file).read_text(encoding="utf-8", errors="replace").strip() if a.structure_file else ""
-    body = {**ctx, "purpose": "template", "question": brief[:BRIEF_CHARS], "structure": structure[:STRUCTURE_CHARS]}
+    vm = _video_model_info(ctx.get("model"))
+    body = {**ctx, "purpose": "template", "question": brief[:BRIEF_CHARS], "structure": structure[:STRUCTURE_CHARS], "video_model": vm}
     tries = 0
     while True:
         s, d = _cf_api("POST", "/api/qc/consult", body, key="qc", timeout=CONSULT_TIMEOUT)
@@ -4416,7 +4440,7 @@ def cmd_prompt_template(a):
     res = {"ok": True, "mode": d.get("mode"), "template": d.get("template", ""), "template_cut": bool(d.get("template_cut")), "basis": d.get("basis", []),
            "notes": d.get("notes", ""), "changes": d.get("changes", []), "read": d.get("read", []), "not_covered": d.get("not_covered", ""),
            "none_reason": d.get("none_reason", ""), "brief_cut": len(brief) > BRIEF_CHARS, "structure_cut": len(structure) > STRUCTURE_CHARS,
-           "busy_retries": tries}
+           "video_model": vm.get("id", ""), "busy_retries": tries}
     for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error", "library_size"):
         if d.get(k):
             res[k] = d[k]

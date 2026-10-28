@@ -112,7 +112,9 @@ whose saved prompts it needs, Loupe sends both prompts of each whole from its re
 agent crafts its request from the template within X2's own rules (each part a rule changed is recorded in the pattern card's "Judge's template"
 block, which X4 checks) and generates; the judge is not asked again before generation. A template asked while another keeper call runs is asked
 again up to 3 times (`AWL_TEMPLATE_BUSY_RETRIES`). After generation QC consults the judge once its first pass has caught what it caught, and the
-consult carries by itself the prompt the video was generated from (`--attempt` picks the request), the template and the brief (`evidence_sent`);
+consult carries by itself the prompt the video was generated from (`--attempt` picks the request) with that request's video model and parameters,
+the template and the brief (`evidence_sent`); both kinds of consult send the generation video model's entry of `models/index.json`, and the judge
+weighs each sample by the model that generated it;
 the answer adds `cause` and `template_fix`, kept in `result.json → judge` for the user's review. Before any QC or planning answer is final Loupe also
 hands the judge both prompts of every sample it cites (`prompts_judged`), and `qc-consult` writes them for the agent (`prompts_files`).
 `plan-hints` stays for older runs; X2 no longer calls it.
