@@ -45,3 +45,4 @@
 - [AWL: user folders read-only](awl-user-folders-read-only.md) — item 34: never move/delete reference, example or edit-source files, copy instead; hooks/awl_input_guard.py refuses it for open runs
 - [Never ask mid-run, decide yourself](awl-never-ask-decide-autonomously.md) — user 2026-10-28: "you decide for every turn, dont ask me anything"; pipeline runs make every mid-run choice autonomously and report it after
 - [Reload Loupe before generating](loupe-reload-before-generating.md) — user 2026-10-28: after they change the Loupe platform, restart the :8787 server + loupe ensure + keeper understand before generating, and again right before a run's first generation
+- [No QC regeneration, user reviews at the end](no-qc-regeneration-user-reviews-end.md) — user 2026-10-28: "don't do any second generation from QC agents"; each clip once, findings shipped flagged, the user decides after the run
