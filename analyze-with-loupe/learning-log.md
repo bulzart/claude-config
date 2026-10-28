@@ -525,3 +525,11 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   `qc-consult` and `plan-hints` say it in their prompts rules, `sample-prompts` heads them `## Prompt of the flawed take (Video A: its prompt
   generated the flawed version)` and `## Prompt of the correct take (Video B)`, and the QC and pre-check skills and the README use the same words.
 - **Verified:** t01, t02, t03, t05 pass; Loupe's selftest 195, keeper_sync 91, page_smoke pass.
+
+## 2026-10-29 · What an Example is: a suggestion, never mixed with a miss in one sample
+- **Reported (2026-10-28):** an Example is not a bad generation nor a correct one; it is what could have changed, how one thing could have been done another
+  way, a suggestion. A sample with Wrong or Right frames has no Examples, and a sample with Examples has only Examples.
+- **Changed:** Loupe refuses a sample that mixes them, and its form warns and does not save one. Images with Example frames carry a legend line that says what
+  an Example is, and every description (Loupe's roles, judge text, digest, brief, form; this library's prompts file, consult and hint rules, the QC and
+  pre-check skills, the README) says a suggestion of what could have changed or how one thing could have been done another way, neither a bad generation nor a correct one.
+- **Verified:** t01, t02, t03, t05 pass; Loupe's selftest 197, keeper_sync 91, page_smoke pass.
