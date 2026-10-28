@@ -428,3 +428,27 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   open runs, lets the pipeline's own commands through (split-audio, inventory, strip-inserts, frames, copies into 55-references, ffmpeg
   reads, python heredocs that read the references, cleanups in the run folder) and refuses `rm` and `Get-ChildItem | Remove-Item` in
   `Documents\27.10`.
+
+## 2026-10-28 · the judge writes the prompt template; the judge on Opus, a collector with no verdict; QC fixes off
+- **Reported:** a sample's collection (`S32.json`) showed the session that read its picture concluding about the two prompts itself, while the
+  judge never saw both prompts whole. The user: the judge is an Opus 5.5 agent, the Haiku agent on Loupe only collects data and gives no verdict,
+  and the QC, keeper and judge agents on Opus decide, pass flags or ask for more. Then: the judge must not only inspect a prompt the pipeline
+  wrote; the agent working on a video briefs the judge (what it works on, what the video is about, what it wants to achieve), the judge gives a
+  prompt template from what worked and what failed before, the agent crafts its prompt from it and generates, and the judge is consulted again
+  only after the generation, when QC has caught errors, with enough details to answer accurately; the generation video model goes to the judge
+  too. And a third QC-fixes choice: no QC agent after the first generation at all; the user instructs fixes once everything is delivered.
+- **Causes:** the reader was given the prompts and asked for a mechanism, so it judged; the keeper defaulted to Haiku and fetched the prompts
+  only on request (cut at 4000 characters); X2 only asked for at most three text hints; the QC consult went in before QC had looked and carried
+  no prompt, template or brief.
+- **Changed:** Loupe: the keeper (the judge) runs on Opus 5.5, the collector on Haiku with no verdict and no prompts (marked, right_version,
+  product_and_scene, admin_words, unclear); every cited sample's prompts reach the judge whole before an answer is final (`prompts_judged`); a
+  template purpose (step 1 the samples it needs, step 2 both prompts whole, then the template, basis, notes, changes); a QC question carries the
+  request prompt, its params, the video model, the template and the brief, and the answer adds `cause` and `template_fix`. Here: `T
+  prompt-template` at X2 (the brief file, the pattern card as the structure, the video model's index entry; busy retried three times; saved as
+  `40-briefs/video-NN-template.json` and `.md`), the "Judge's template" block that X4 checks and X6 copies, QC's consult after its first pass
+  with `--attempt` and `evidence_sent`, `result.json → judge`, `prompts_files` written by every consult, the consult timeout 1080 s, the
+  production agents spawned on Opus, and QC fixes `off` (the start question, the contract's line and its skip of awl-qc, X8's hand-off to X10,
+  the pilot's technical outcome, the wrap-up's feedback question as the review). Loupe's miss screens: a report and its samples edited where
+  they stand, the product sample ticked from every image the generation used, and frames that survive a take the browser cannot play.
+- **Verified:** t01, t02, t03 and t05 pass and the rehearsal runs 220 steps (`prompt-template` included); Loupe's selftest 168, keeper_sync 91,
+  transport, page and flags smoke tests pass.
