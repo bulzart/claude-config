@@ -56,7 +56,6 @@ frame, source reframed to 9:16 first). Never stretch.
 ### 3.5 Chronology, timing and multi-shot structure
 ### 3.6 Camera language and dedicated camera / motion controls
 ### 3.7 References (image / video / audio): syntax, roles, what is inherited and what must be excluded
-<!-- Include a "Placement preview" note (`reference/generation-system.md` §4b.6): where the unmarked original rides and in which form the labelled placement preview rides beside it on this model (a: a second video reference within the video limits; b: labelled stills as image references when one video only; c: words only; d: a photoreal start frame on a frames-only model), in this model's reference syntax. -->
 ### 3.8 Start and end frames
 ### 3.9 Audio, dialogue and sound (if supported)
 ### 3.10 Negative constraints (is there a negative-prompt field on Higgsfield? how to phrase exclusions)

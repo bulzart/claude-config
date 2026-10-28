@@ -61,14 +61,11 @@
    anchor is in frame; the closing emotion beat (a laugh, a reaction) is there. A merged, dropped or dissolved
    shot is a **regenerate** reason; the retry follows `generation-system.md` §3b.1 item 7 (separate clips on
    the reference's own cuts). The shot list and the evidence path go in the verdict and in `result.json`.
-5j. **Marker residue** (wherever a reference carried the placement marker, `generation-system.md` §4b.6): `awl.py
-   qc` OCR, with the label's words never in `--allowed-text`, and a full-resolution look at the spot in every window:
-   no label text, no red outline, no box, no other mark; the product a real object in the scene (step 5c), not the
-   pasted sample, at the reckoned size (step 5d). A residue is a **regenerate** reason.
+
 6. **Scale**: the product against a hand or face on two or three sheets.
 7. **Ownership** after every hand-off; who uses what.
 8. **Verdict** (`generation-system.md` §9): **regenerate** on any break in §2.1–§2.5, §2.8–§2.10,
-   §2.14, §2.15, §2.16, §2.17, on a failed step 5j (marker residue), on a failed step 5f (an anchor missing in the opening seconds or moving without a
+   §2.14, §2.15, §2.16, §2.17, on a failed step 5f (an anchor missing in the opening seconds or moving without a
    cause; a step 5g break is fixed in the CapCut project, not by regeneration) and on physics breaks in
    §2.6, §2.11, §2.12; **post-fix** only in the cases each class names (an
    untouched static anchor's pixel hold, a one-frame trim, a recolour in a locked shot, a punch-in);

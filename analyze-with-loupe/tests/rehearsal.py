@@ -105,8 +105,6 @@ clip(sources / "edit-me.mp4", 3.0, colour="0x404040")
 gen = TMP / "gen"
 clip(gen / "a1.mp4", 3.0, size="544x960", audio=False)
 clip(gen / "a2.mp4", 2.0, size="544x960", audio=False, colour="0x224422")
-ffm("-f", "lavfi", "-i", "color=c=0xc8beaf:s=720x1280:d=0.1", "-frames:v", "1", str(TMP / "texture.png"))
-HAS_PH = '"placeholder"' in TK.read_text(encoding="utf-8")      # the placement marker; a library without it skips these steps
 
 # ---- the skills: every hand-off transition and every "Read now" path
 skills = sorted(d for d in SKILLS.glob(A.skill_prefix + "*") if d.is_dir())
@@ -200,13 +198,6 @@ for submode in ("recreate", "create", "free-refs", "free-none"):
         m = step(f"{submode}:strip-inserts", "strip-inserts", "--video", refs / "ref-a.mp4", "--inserts", "1.0-1.2", "--out", run / "10-media" / "V01" / "own")
         step(f"{submode}:seams", "seams", "--video", refs / "ref-a.mp4", "--at", "1.0,1.2")
         step(f"{submode}:frames", "frames", refs / "ref-a.mp4", "--at", "0.5,1.5", "--out", run / "10-media" / "V01" / "targeted")
-        if HAS_PH:
-            step(f"{submode}:placeholder", "placeholder", "--render", assets / "can-front.png", "--video", refs / "ref-a.mp4", "--out", run / "10-media" / "V01" / "prepared" / "source-marked.mp4",
-                 "--product-h-cm", "15.5", "--product-w-cm", "5.3", "--window", "0-1.5:400,1000,160", "--window", "1.5-3:420,1010,180", "--luma-ref", "40,40,120,120",
-                 "--basis", "the box: 30 = 380 px at depth ratio 1", "--basis", "the panel: 25 = 320 px at depth ratio 1")
-    elif submode == "create" and HAS_PH:
-        step(f"{submode}:placeholder-image", "placeholder", "--render", assets / "can-front.png", "--image", TMP / "texture.png", "--out", run / "30-assets" / "guides" / "V01-marker.png",
-             "--product-h-cm", "15.5", "--product-w-cm", "5.3", "--base-x", "360", "--base-y", "900", "--height", "150")
     step(f"{submode}:state-planned", "state", "--run", run.name, "set", "stage=planned", f"next_skill={A.skill_prefix}asset-plan", *(['videos_kind={"01":"create"}', "free_plan_confirmed=true", 'directions=["one 8 s video: the can picked up"]'] if sub == "free" else []))
     (run / "30-assets").mkdir(exist_ok=True)
     (run / "30-assets" / "asset-plan.md").write_text("| video 01 | V01 | A1 slim can | placement |\n", encoding="utf-8")
@@ -276,9 +267,6 @@ if run.is_dir():
     step("edit:prep-assets", "prep-assets", "--run", run.name, "--scope", "video-01")
     step("edit:prep-all", "prep-all", "--run", run.name, "--no-ocr", "--jobs", "1")
     step("edit:split-audio", "split-audio", "--run", run.name, sources / "edit-me.mp4")
-    if HAS_PH:
-        step("edit:placeholder", "placeholder", "--render", assets / "can-front.png", "--video", sources / "edit-me.mp4", "--out", run / "10-media" / "V01" / "prepared" / "source-marked.mp4",
-             "--product-h-cm", "15.5", "--product-w-cm", "5.3", "--base-x", "360", "--base-y", "1000", "--height", "160", "--sample", "300,1100,400,1200")
     step("edit:audio-profile", "audio-profile", "--audio", sources / "edit-me.mp4", "--out", run / "10-media" / "audio-profile")
     step("edit:state-editing", "state", "--run", run.name, "set", "stage=editing", "video=01", f"next_skill={A.skill_prefix}edit")
     (run / "50-requests").mkdir(exist_ok=True)

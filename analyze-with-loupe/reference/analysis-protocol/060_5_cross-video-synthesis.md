@@ -32,7 +32,7 @@
        brand ranks for the other (command A7);
      - for a placement, the anchor class the locked model renders at size: where its guide lists size as
        a model limit (`wan3_0_prime`, `wan-3-0.md` §5), an in-hand, swap or large same-plane-neighbour
-       anchor (the last only where `generation-system.md` §4b.1c holds, and with the placement marker, §4b.6) ranks above a
+       anchor (the last only where `generation-system.md` §4b.1c holds, with the size risk in the brief) ranks above a
        surface anchor that only paper, a notebook or a head can size;
      - placement feasibility (`generation-system.md` §4b.1c): a spot that is bare at frame 0, stays in frame
        along the whole path, lies outside every hand's lane and is wider than the product. A reference with none

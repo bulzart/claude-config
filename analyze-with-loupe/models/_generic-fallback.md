@@ -41,7 +41,7 @@ syntax, length) to `<run>/50-requests/<model>-pattern.md`. Label anything uncert
 - References: state the role of each attached input ("the first image defines the character's face
   and outfit; the second defines the product's exact shape and label").
 - Exclusions in one short sentence ("No on-screen text, captions or watermarks.").
-- A placed product in Recreate or Edit Mode (`reference/generation-system.md` §4b.6): the unmarked original rides first in the most preserving input the live roles offer, and the labelled placement preview beside it in the form those roles allow (a second video reference within the limits; else the labelled stills as image references; else words only; a frames-only model takes a photoreal start frame without a mark), bound as a placement and size marker only, with the removal line.
+- A placed product in Recreate or Edit Mode (`reference/generation-system.md` §4b.5): the original's silent, unmarked footage is the only video reference, in the most preserving input the live roles offer and within their video limits (a longer source split on its own cuts, `reference/generation-system.md` §3b.1); nothing that places the product rides beside it, and the spot and size ride in the prompt with the padded product views; a frames-only model takes a photoreal start frame that passes the paste test (`reference/anomaly-catalog.md` §2.15).
 - Physical and continuity anchors from `reference/generation-system.md` §3–§4 (states, contact,
   scale, light inheritance).
 - Counts, openings and permanence from `reference/anomaly-catalog.md` §3: every multiple with its

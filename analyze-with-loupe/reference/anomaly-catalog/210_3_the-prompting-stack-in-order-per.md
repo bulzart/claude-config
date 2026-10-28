@@ -18,10 +18,8 @@
    "exactly three capsules; none appears or disappears"), in the model's exclusion syntax. A generic list
    never replaces it, and the lines a section mandates by name (`generation-system.md` §6) are not counted against it.
 7. **References**: when the model takes images, one view that shows the part in its ready state;
-   never a view that shows a later state than t=0 (an open tab for a can cracked on screen); tight
-   product crops padded small; the labelled placement marker on every reference that places the product, the size
-   control where the model lists size or place as a limit (`generation-system.md` §4b.6, §4b.7; never a guide
-   image cut from a source frame; a start frame carries no mark); identity images cropped to the face (§2.17).
+   never a view that shows a later state than t=0 (an open tab for a can cracked on screen); tight product crops padded small; no image that places the product, and never a guide image cut from a source
+   frame (`generation-system.md` §4b.5); identity images cropped to the face (§2.17).
 8. **QC checkpoints** listed in the plan: every use beat, exit and re-entry, occlusion, cut,
    hand-off, pour and seam, plus the first and last second, each with its time range and the counts
    and states expected there. They become the `--dense` arguments of X9.

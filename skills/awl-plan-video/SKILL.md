@@ -35,9 +35,8 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §4b.2: `AWL/reference/generation-system/160_4b.2_prominence-noticed-not-featured.md` (2.5 KB)
   - generation-system §4b.3: `AWL/reference/generation-system/170_4b.3_one-anchor-persistent-ledger-tra.md` (3.0 KB)
   - generation-system §4b.4: `AWL/reference/generation-system/180_4b.4_ambient-integration-it-must-not.md` (2.7 KB)
-- *a placed product (every reference that places it carries the placement marker; Recreate and Edit Mode: in the prepared source):*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (14.2 KB)
-  - generation-system §4b.7: `AWL/reference/generation-system/205_4b.7_reckoning-the-marker-real-size-d.md` (4.2 KB)
+- *a placed product (spot and size in the prompt; Recreate and Edit Mode: the original is the only video reference):*
+  - generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
 - *Edit Mode or Recreate (the source action script):*
   - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
 - *a multi-clip video, or a Recreate/Edit source with hard cuts (item 7: separate clips on the source's own cuts):*
@@ -106,22 +105,12 @@ a blocker with the real error (`voiceover.md` §4 step 8).
     - the **spot** (`generation-system.md` §4b.1c; from the source in Recreate and Edit Mode, from the
       blocking the plan asks for in Create): the hand-lane map, the region that is bare and in frame at 0,
       1, 2.5, 4 and 6 s, the strip's width against the product, the plane, the camera path and any spot the
-      user marked; and the **placement marker** (§4b.6, §4b.7) on every reference that places the product
-      (Recreate and Edit Mode: inside the prepared source, never a guide image cut from a source frame; Create: a
-      marked neutral texture; a start frame carries none and its product is photoreal), the size control where the
-      model guide lists size or place as a limit and no passing-list anchor fits (always for a near-plane spot the
-      user marked): the real dimensions from the client assets, the surface and at least two neighbours of known
-      size with their depth ratios, the two estimates that agree within about 25 % and the drawn height, the
-      perspective, the posture, the occlusion (a mask, or another spot, where something passes in front), one
-      window per shot, punch-in or set-up, and the label's side, off the key action. Build the marker right after
-      this reckoning, locally and without credit (`T placeholder`, the call in `awl-inputs`), and view its stills:
-      X2 binds it, X4 measures it and X3 uploads it. In Recreate and Edit Mode, whatever the model, the request
-      carries the unmarked original reference first and the marked placement preview beside it; name the
-      preview's form from the locked model's roles (§4b.6: (a) a second video reference, (b) labelled stills as
-      image references, (c) words only, (d) a photoreal start frame), and plan the source span so that the
-      original and the preview fit the model's own limits together (its guide §2.2, §2.5); a longer source is
-      split into clips on its own cuts (the clip plan below), and a single uncut shot takes the stills (b) or a
-      short preview;
+      user marked; in Recreate and Edit Mode the **original reference** is the only video reference and the prompt
+      carries the spot (pinned to a fixed neighbour) and the size (against a named neighbour, §4b.5), with the
+      product's padded views; where the model guide lists size or place as a limit and no passing-list anchor fits
+      (always for a near-plane spot the user marked), the size risk goes in the brief; plan the source span so that
+      the original fits the model's own limits (its guide §2.2, §2.5); a longer source is split into clips on its
+      own cuts (the clip plan below);
     - the **guardrail hits** of the source (Recreate, Edit Mode) with their operations and times,
       or the guardrail invariants of the concept (Create): the count limit in the ledger, no
       competitor objects, supplied characters only, the wording rules in the text plan
@@ -134,8 +123,7 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       the look implies, the expected fraction of the frame height (`T scale --product-cm H
       --distance d --lens f` prints it and a table over the usual shot distances), the one named
       neighbour at the same depth with the ratio in words, the size ladder when several products
-      show, and the size it keeps across motion, exits and cuts; where a reference places the product, the
-      agreeing value is the placement marker's drawn height (`generation-system.md` §4b.7);
+      show, and the size it keeps across motion, exits and cuts;
     - the per-second time budget from the family profile;
     - roles and assets;
     - the scene;
@@ -191,9 +179,8 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       - the seams, on the reference's cuts first;
       - the join method of each seam (from `index.json → continuation`);
       - the hand-off state of each seam;
-      - the clip durations; in Recreate and Edit Mode with a placement marker, each clip's original reference
-        and placement preview (of that clip's span) fit the locked model's limits together
-        (`generation-system.md` §4b.6);
+      - the clip durations; in Recreate and Edit Mode each clip's original reference (of that clip's span) fits the
+        locked model's limits (its guide §2.2, §2.5);
     - the logic and anti-slop gate;
     - the **QC checkpoints** (`anomaly-catalog.md` §3 step 8): every use beat, exit and re-entry,
       occlusion, cut, hand-off, pour and seam, plus the first second (the product in frame at 0.0 s) and
@@ -349,10 +336,8 @@ a blocker with the real error (`voiceover.md` §4 step 8).
   over unplanned.
 - Never place a product at a spot that is hidden at the source's frame 0, leaves the frame along the camera
   path, lies in a hand's lane, is narrower than the product or is the nearest plane unless the user marked
-  it, and then only with the placement marker (`generation-system.md` §4b.1c); never build, upload or bind a
-  guide image cut from a source frame, never let a placement reference ride without its label and its request
-  sentences, never put a label or mark on a start or end frame, and never mark with a flat packshot paste or a
-  soft-labelled render (§4b.6); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
+  it (`generation-system.md` §4b.1c); never build, upload or bind a guide image cut from a source frame, or any
+  placement image beside the original (§4b.5); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
   face effect, a burned-in caption or an identifying name without its prompt sentence (§5c.2b); never try to
   remove a caption, a name or a patch from a source with a tool in Analyze Mode (inpaint, delogo, crop): the
   clean-plate lines and the character-swap script carry it.

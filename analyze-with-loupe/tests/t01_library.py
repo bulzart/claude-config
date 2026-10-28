@@ -80,34 +80,23 @@ for p in [ROUTER] + SKILLS + sorted((LIB / "reference").rglob("*.md")) + sorted(
             if f not in flags_of[c] and f != "--help":
                 bad_flags.add(f"{p.parent.name if p.name == 'SKILL.md' else p.name}: T {c} {f}")
 check(not bad_flags, "every `T <command> --flag` the router, the skills and the references cite is a flag of that command: " + "; ".join(sorted(bad_flags)[:6]))
-for c in ("loupe", "qc-consult", "qc-brief", "plan-hints", "caught-flag", "status", "doctor", "lint-run", "cost-report", "seams", "strip-inserts", "doc-text", "placeholder"):
+for c in ("loupe", "qc-consult", "qc-brief", "plan-hints", "caught-flag", "status", "doctor", "lint-run", "cost-report", "seams", "strip-inserts", "doc-text"):
     check(c in cmds, f"awl.py has the {c} command")
 
-# --- the placement marker (the user, 2026-10-22): every placement reference is labelled; no guide image cut from a source frame
+# --- no placement marker (the user, 2026-10-28: "remove the reference placement from the analyze-with-loupe totally ... just let the original
+#     video as a reference, i believe prompts,images and instructions suffice"): the original's silent footage is the only video reference, and no
+#     command, step, section, guide or the README builds, binds or checks a placement preview; no guide image cut from a source frame either
 GS = LIB / "reference" / "generation-system"
-flat = lambda p: " ".join(rd(p).split())
-m6 = flat(GS / "200_4b.6_the-placement-marker-spot-and-si.md")
-m7 = flat(GS / "205_4b.7_reckoning-the-marker-real-size-d.md")
-check("is never built, uploaded or bound in Recreate or Edit Mode" in m6 and "Start and end frames are the exception" in m6 and "T placeholder --image" in m6,
-      "generation-system §4b.6: no source-crop guide image in Recreate/Edit, the start/end-frame exception, Create's marked texture")
-check("completely removes the red outline, the label and every auxiliary mark" in m6 and "not how the <product> looks" in m6 and "as an actual object in" in m6,
-      "generation-system §4b.6 holds the marker sentence and the removal line")
-# the original reference rides first and the placement preview beside it, for every model ([U] 2026-10-22)
-check("The original reference, always, first" in m6 and all(f"**({k})" in m6 for k in "abcd") and "never the only picture of the scene" in m6,
-      "generation-system §4b.6: the unmarked original always first, the placement preview in forms (a)-(d), whatever the model")
-MD = LIB / "models"
-vid_guides = sorted({m["guide"] for m in json.loads(rd(MD / "index.json"))["models"].values()
-                     if {"video_refs", "video_edit", "object_replace", "motion_transfer"} & set(m.get("operations", []))})
-no_note = [g for g in vid_guides if "Placement preview" not in " ".join(rd(p) for p in (LIB / g[:-3]).glob("*.md"))]
-check(not no_note, "every guide of a model that takes a video says how its original and its placement preview bind: " + ", ".join(no_note))
-check("at least TWO neighbours" in m7 and "agree within about 25 %" in m7 and "--occlusion-mask" in m7 and "--window" in m7,
-      "generation-system §4b.7 reckons the marker from two agreeing estimates, with occlusion and windows")
-wired = [("awl-inputs", SKD / "awl-inputs" / "SKILL.md", "T placeholder --video"), ("awl-inputs image", SKD / "awl-inputs" / "SKILL.md", "T placeholder --image"),
-         ("awl-recreate-plan", SKD / "awl-recreate-plan" / "SKILL.md", "T placeholder"), ("awl-edit", SKD / "awl-edit" / "SKILL.md", "T placeholder"),
-         ("awl-plan-video", SKD / "awl-plan-video" / "SKILL.md", "placement marker"), ("awl-write-request", SKD / "awl-write-request" / "SKILL.md", "removal line"),
-         ("awl-precheck", SKD / "awl-precheck" / "SKILL.md", "Spot and marker"), ("awl-qc", SKD / "awl-qc" / "SKILL.md", "Marker residue"),
-         ("production-agents §2", PA / "020_2_spawning.md", "Spot and marker")]
-check(not [lbl for lbl, p, needle in wired if needle not in rd(p)], "the placement marker is wired into every step that builds, binds or checks it: " + ", ".join(lbl for lbl, p, needle in wired if needle not in rd(p)))
+flat = lambda p: " ".join(rd(p).split())  # noqa: E731
+check("placeholder" not in cmds, "awl.py has no placeholder command any more")
+check(not list(GS.glob("*placement-marker*")) and not list(GS.glob("*reckoning-the-marker*")), "the placement-marker sections of the generation system are gone")
+gone = re.compile(r"placement marker|placement preview|placement still|T placeholder|awl\.py placeholder|§4b\.[67]\b|removal line|Marker residue|Spot and marker", re.I)
+left = [f"{p.relative_to(HOME)}: {m.group(0)}" for p in [ROUTER] + SKILLS + sorted((LIB / "reference").rglob("*.md")) + sorted((LIB / "models").rglob("*.md"))
+        + [LIB / "README.md", LIB / "pipeline" / "preprocessing.md"] for m in [gone.search(flat(p))] if m]
+check(not left, "no step, section, guide or the README speaks of a placement marker or preview any more: " + "; ".join(left[:6]))
+four = flat(GS / "190_4b.5_expressing-it-to-the-model-with.md")
+check("The original reference" in four and "is never built, uploaded or bound" in four and "the literal first frame" in four,
+      "generation-system §4b.5: the original's silent footage is the only video reference, no source-crop guide image, start frames photoreal")
 old_way = [str(p.relative_to(HOME)) for p in SKILLS + sorted((LIB / "reference").rglob("*.md")) + sorted((LIB / "models").rglob("*.md"))
            if re.search(r"(build|built) (it|the guide)? ?(locally )?from\s+the source's bare surface", " ".join(rd(p).split()))]
 check(not old_way, "no step builds a guide from the source's bare surface any more: " + ", ".join(old_way[:4]))

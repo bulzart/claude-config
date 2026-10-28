@@ -13,8 +13,8 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
       holds when several products show (`anomaly-catalog.md` §2.7).
 - [ ] Anchor class (§4b.1b): the posture, the visible support, the place and its story reason are in the plan
       and the prompt; no lean on a prop the model has to invent; nothing on a thin sheet; no source beat
-      taken over. Where the guide lists size as a model limit, the anchor is from its passing list or the placement
-      marker (§4b.6) carries spot and size, and no sizing words are relied on.
+      taken over. Where the guide lists size as a model limit, the anchor is from its passing list or the size risk
+      is written in the brief, and no sizing words are relied on.
 - [ ] Source surfaces: every printed surface of the source that a guardrail or §9b names (a poster, a
       livery, a gate board, a monitor page, a shirt print, a patch or logo on the kept garment) is an explicit
       "replace / remove only … and reconstruct it as <named concrete content>" sentence in the model's
@@ -58,16 +58,12 @@ Walk through the planned video in 0.5–1 s steps and confirm each of these, or 
 - [ ] Every object state matches the ledger at every checkpoint.
 - [ ] Spot (§4b.1c): visible in the source's first frame and along the whole camera path, outside every
       hand's lane over every beat, bare and wider than the product, not the nearest plane (a near-plane spot
-      the user marked stays, with the placement marker), not "in front of" a neighbour it would sit on, fully inside the
+      the user marked stays, with its size risk in the brief), not "in front of" a neighbour it would sit on, fully inside the
       frame; the user's marked spot is used.
-- [ ] Placement marker (§4b.6, §4b.7), on every reference that places the product, and as the size control
-      when the model lists size or place as a limit and no passing-list anchor fits (always for a near-plane spot
-      the user marked): Recreate and Edit Mode, built with `awl.py placeholder` into the prepared source (Video 1);
-      Create, a neutral texture marked with `awl.py placeholder --image`; never a guide image cut from a source
-      frame. Its size from two estimates that agree within about 25 %, the product shaded in the scene's
-      perspective, its printed label sharp, the outline and the label legible and off the key action, measured
-      with `awl.py scale --frame` on a still; the request carries the marker sentence and the removal line. A start
-      or end frame carries no mark: its product is photoreal and passed the paste test.
+- [ ] Original reference (§4b.5), Recreate and Edit Mode: the original's silent, unmarked footage is the only
+      video reference, in the model's most preserving input, within its limits (the guide's §2.2, §2.5); nothing
+      that places the product rides beside it, in any mode; never a guide image cut from a source frame. A start
+      or end frame's product is photoreal and passed the paste test and `awl.py scale --frame`.
 - [ ] Source prepared (§5c.2b): orientation (the original's, never flipped; only a mirrored identity photo is turned true); burned-in
       text, identifying names and marks covered by prompt sentences (clean-plate lines first, never trimmed;
       no tool removes them); a baked face effect planned for; left and right of every beat read on the

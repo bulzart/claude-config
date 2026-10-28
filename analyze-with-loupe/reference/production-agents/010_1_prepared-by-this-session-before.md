@@ -3,12 +3,10 @@
   - the plan `40-briefs/video-NN-plan.md` and the brief `40-briefs/video-NN-brief.md`;
   - the pattern card and request(s) `50-requests/video-NN[-cK]-request.json`, preflighted once.
 - **Recreate only:** the pick's prepared source in `10-media/<V>/own/`, from `T strip-inserts`.
-  `map.json` there holds the split points, and the folder also holds the 9:16 copy. A placed product's labelled
-  placement marker copy is in `10-media/<V>/prepared/` with its `.placeholder.json` sidecar (`T placeholder`,
-  `generation-system.md` §4b.6): whatever the model, the unmarked original reference of the same span (the
-  original's `videos_without_audio` copy, or the unmarked prepared copy when it was cut, flipped or padded) is
-  uploaded silent and rides first, and that labelled copy rides beside it as the placement preview, as a video or
-  as its labelled stills, in the form the plan named from the model's roles.
+  `map.json` there holds the split points, and the folder also holds the 9:16 copy. Whatever the model, the original
+  reference (the original's `videos_without_audio` copy, or the prepared copy when it was cut, flipped or padded;
+  `generation-system.md` §4b.5) is uploaded silent and is the only video reference: nothing that places the
+  product rides beside it.
 - **The run's agent contract:** `50-requests/agent-contract.md`, generated from the §2 prompt at A9
   (never copied from an earlier run).
 - **Shared, in `state.json`:**

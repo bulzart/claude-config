@@ -21,9 +21,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
 - generation-system §5c.2: `AWL/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
 - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.5 KB)
-- *an insert or replacement placed at a spot (the placement marker in the prepared source):*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (14.2 KB)
-  - generation-system §4b.7: `AWL/reference/generation-system/205_4b.7_reckoning-the-marker-real-size-d.md` (4.2 KB)
+- *an insert or replacement placed at a spot (spot and size in the prompt):*
+  - generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
 - anomaly-catalog §1: `AWL/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.6 KB)
 - assets-and-substitution §4: `AWL/reference/assets-and-substitution/040_4_substitution-map-per-video.md` (2.4 KB)
 - creative-direction §9: `AWL/reference/creative-direction/120_9_edit-mode.md` (0.3 KB)
@@ -157,13 +156,11 @@ Only these section files for this phase, nothing else unless a step below says s
   face effect; burned-in text, names and patches are written as the edit prompt's remove or replace
   operations, never removed by a tool; a mirrored selfie is flipped only when the user asks (E3), since only
   the planned operations change.
-- **Placement marker** (a product placed or added at a spot, `generation-system.md` §4b.6, §4b.7): the product is
-  composited into this prepared silent copy as the labelled marker (a thin red outline and the label "asset
-  sample, not the final look") with `T placeholder`, at the spot and height X1 reckons from two estimates that
-  agree, one `--window` per shot, punch-in or set-up; that labelled copy is the request's placement preview,
-  bound beside the unmarked original reference of the same span in the form the model's roles allow (X3,
-  `generation-system.md` §4b.6). No guide image is ever cut from a source frame (a crop of the source with the performer blurred or
-  scrubbed).
+- **A product placed or added at a spot** (`generation-system.md` §4b.1c, §4b.5): this prepared silent copy stays
+  unmarked and is the only video reference (or the original's `videos_without_audio` copy when nothing was cut,
+  flipped or padded); the spot (pinned to a fixed neighbour) and the size (against a named neighbour, from the X1
+  reckoning) are the prompt's (X2). No guide image is ever cut from a source frame (a crop of the source with the
+  performer blurred or scrubbed).
 
 ### E6. Generate
 Run **X1–X10** (§5) for this video, as an edit. The source video is the unique master, and the plan

@@ -46,13 +46,9 @@
      expected size and the method go in the verdict. Over 25 %, a size that changes between shots, or a
      product larger than the hand that holds it is a **regenerate** reason with no post-fix;
      15–25 % is a note only for a static product with a readable label. On a model whose guide lists
-     size as a model limit, the retry changes the lever (the placement marker, §4b.6, the integration
-     form of §4b.0 or the anchor class from the guide's passing list), never the sizing words; a second miss
+     size as a model limit, the retry changes the lever (the integration form of §4b.0, the spot of §4b.1c
+     or the anchor class from the guide's passing list), never the sizing words; a second miss
      ships the best take flagged, and both attempts are written as blocks in the brief.
-   - **Marker residue** (§4b.6): wherever a reference carried the placement marker, `awl.py qc` OCR (its words
-     never in `--allowed-text`) and a full-resolution look at the spot in every window: no label text, no red
-     outline, no box, no mark; the product renders as a real object in the scene (the paste test), not the
-     pasted sample. A residue or a pasted look is a **regenerate** reason.
    - **Posture, support and place** (`anomaly-catalog.md` §2.16): at 30 fps on every rest and every pass
      of a hand or sheet. A lean against nothing, a posture the shape cannot take, a pack touching a
      working hand or arm, a doubled or warped sheet, or a source beat taken over is a **regenerate**

@@ -481,3 +481,20 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   generation (`Generation k of n · clip · request`). Each heading carries the line with its seconds and the sample's frames from it.
 - **Verified:** t03 (the generation of the sample's WRONG frame alone; the second generation alone when the frame falls in it) passes;
   Loupe's selftest 183, keeper_sync 91, page_smoke and transport_check pass.
+
+## 2026-10-28 · The placement marker removed: the original video is the only reference
+- **Reported:** video-02 of the Neuro run was generated in two parts because of Wan 3.0 Prime's 15 s limit on reference video per request.
+  Each request sent the original span plus the placement preview (the same span with the pack's spot and size marked), so a pair for the full
+  12.4 s would have been about 25 s, and the source was split on its own cut at 6.10 s. The user: "remove the reference placement from the
+  analyze-with-loupe totally ... just let the original video as a reference, i believe prompts,images and instructions suffice".
+- **Changed:** the `placeholder` command is gone from `awl.py`, with its tests. `generation-system.md` §4b.6 (the placement marker) and
+  §4b.7 (reckoning the marker) are deleted; their general rules moved to §4b.5. These are: the original reference as the only video reference
+  (the silent footage of the plan's span, in the model's most preserving input, within the model's own limit, a longer source split on its own
+  cuts); no placement image of any kind, in any mode, and never a guide image cut from a source frame; padded product views; the one hand named
+  with the bare empty area; start and end frames photoreal and paste-tested. The skills, the X4 and X9 checks, the agent contract, the brief and
+  the model guides lost the marker. The guides' halved limits ("up to 7.5 s" for the pair) went back to each model's own limit. Size: the prompt
+  carries the spot (pinned to a fixed neighbour) and the size (against a named neighbour). Where a guide lists size as a model limit, the
+  anchor class or the integration form is the lever, and otherwise the size risk is written in the brief; QC measures it with `T scale`. The
+  retry levers are the integration form, the spot or the anchor class. §9b's marker-residue row went too, which puts its row numbers back.
+- **Verified:** `docs_tool.py check` 0 errors; t01 now guards that no step, section, guide or the README speaks of a placement marker or
+  preview and that no `placeholder` command exists; t01, t02, t03, t05 and the rehearsal pass.

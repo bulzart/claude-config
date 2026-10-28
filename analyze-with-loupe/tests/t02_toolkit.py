@@ -253,68 +253,10 @@ js, _, _ = t("frames", str(home.parent / "wide.mp4"), "--at", "0.5", "--out", st
 check(js.get("ok") and js.get("grid") and len(js["grid"]["files"]) == 1 and Path(js["grid"]["files"][0]).is_file() and js["grid"]["step_px_in_source"] == 100 and 0 < js["grid"]["scale_of_the_extracted_frame"] <= 1,
       "frames --grid writes a gridded copy of the frame labelled in source pixel coordinates")
 
-# --- placeholder: the placement marker (gather-only) on a 720x1280 clip with a white flash, in two windows; the image mode; --no-marker
 import re
 import subprocess
 import numpy as np
-from PIL import Image, ImageDraw
 from t00_common import ffmpeg
-
-
-def frame_at(video, t, W=720, H=1280):
-    cp = subprocess.run([ffmpeg(), "-v", "error", "-ss", f"{t:.3f}", "-i", str(video), "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True)
-    return np.frombuffer(cp.stdout[:W * H * 3], np.uint8).reshape(H, W, 3).astype(int)
-
-
-ph = home.parent / "ph"
-src_ph = make_clip(ph / "src.mp4", seconds=3.0, flash=(2.0, 2.3), audio=True, size="720x1280")
-rimg = Image.new("RGBA", (300, 900), (0, 0, 0, 0))
-ImageDraw.Draw(rimg).rectangle((40, 60, 260, 840), fill=(30, 140, 200, 255))
-rimg.save(ph / "render.png")
-js, code, _ = t("placeholder", "--render", ph / "render.png", "--video", src_ph, "--out", ph / "marked.mp4", "--product-h-cm", "15.7", "--product-w-cm", "5.8",
-                "--window", "0-1.5:300,840,120", "--window", "1.5-3:330,860,150", "--luma-ref", "600,100,680,180",
-                "--basis", "her head: 23 cm = 250 px at depth ratio 1.4", "--basis", "the laptop: 22 = 160 px at depth ratio 0.95",
-                "--distance-m", "1.2", "--distance-basis", "the desk edge", "--lens", "26", env=ENV)
-side = json.loads(Path(js["sidecar"]).read_text(encoding="utf-8"))
-b1, b2 = js["boxes"]
-check(code == 0 and js.get("ok") and js["frames"] == 90 and (b1["height_px"], b1["width_px"], b2["width_px"]) == (120, 44, 55) and side["product"]["real_aspect_w_over_h"] == 0.3694,
-      f"placeholder draws each window at the height given and the width from the real cm (120x{b1['width_px']}, 150x{b2['width_px']}), every frame written")
-rows = {r["neighbour"]: r for r in side["size_basis"]}
-check(rows["her head"]["implied_product_px"] == 121.9 and rows["the laptop"]["implied_product_px"] == 120.2 and side["implied_spread_pct"] == 1.4
-      and side["at_distance"]["expected_px"] == 120.9 and side["at_distance"]["distance_basis"] == "the desk edge",
-      "placeholder records the basis lines with their arithmetic (implied heights, spread, expected px at the distance)")
-check(not re.search(r'"(verdict|provisional|acceptable|passed|too_big|too_small|agree)"\s*:', json.dumps(side)) and "facts only" in side["note"],
-      "placeholder prints and records facts, no verdict key")
-f05 = frame_at(ph / "marked.mp4", 0.5)
-ob = b1["outline_box"]
-col = f05[ob[1] + 4:ob[3] - 4, ob[0]:ob[0] + 2]
-red = ((col[..., 0] - col[..., 1]) > 60).mean()
-lb = b1["label_box"]
-lab = f05[lb[1] + 2:lb[3] - 2, lb[0] + 2:lb[2] - 2]
-check(red > 0.8 and np.median(lab) < 30 and lab.max() > 200 and 0 <= lb[0] and lb[2] <= 720 and b1["label_side"] in ("left", "right"),
-      f"the output shows the red outline ({red:.2f} of its edge red) and the dark label box with white text beside the product, inside the frame")
-cx, cy = (b2["box"][0] + b2["box"][2]) // 2, (b2["box"][1] + b2["box"][3]) // 2
-in_flash, before = frame_at(ph / "marked.mp4", 2.15)[cy, cx], frame_at(ph / "marked.mp4", 1.8)[cy, cx]
-w2 = side["windows"][1]
-check(in_flash.min() > 225 and before[2] > before[0] + 60 and w2["luma_follow"]["faded_spans_s"] and not (2.0 <= w2["still_t"] <= 2.33),
-      f"the composite dips with the white flash ({in_flash.tolist()} vs {before.tolist()} before it), and the window's still is taken outside the dip ({w2['still_t']} s)")
-js, code, _ = t("placeholder", "--render", ph / "render.png", "--video", src_ph, "--out", ph / "bare.mp4", "--product-h-cm", "15.7", "--product-w-cm", "5.8",
-                "--base-x", "300", "--base-y", "840", "--height", "120", "--no-marker", env=ENV)
-fb = frame_at(ph / "bare.mp4", 0.5)
-check(code == 0 and js["boxes"][0]["label_box"] is None and ((fb[..., 0] - fb[..., 1]) > 60).sum() == 0, "--no-marker draws neither the outline nor the label (debugging only)")
-Image.new("RGB", (720, 1280), (200, 190, 175)).save(ph / "texture.png")
-mk = Image.new("L", (720, 1280), 0)
-ImageDraw.Draw(mk).rectangle((0, 700, 719, 800), fill=255)
-mk.save(ph / "mask.png")
-js, code, _ = t("placeholder", "--render", ph / "render.png", "--image", ph / "texture.png", "--out", ph / "guide.png", "--product-h-cm", "15.7", "--product-w-cm", "5.8",
-                "--base-x", "360", "--base-y", "900", "--height", "140", "--occlusion-mask", ph / "mask.png", env=ENV)
-g = np.asarray(Image.open(ph / "guide.png").convert("RGB")).astype(int)
-check(code == 0 and js["source_kind"] == "image" and js["stills"] == [js["out"]] and abs(g[780, 360] - [200, 190, 175]).max() <= 2 and g[860, 360][2] > g[860, 360][0] + 60
-      and json.loads(Path(js["sidecar"]).read_text(encoding="utf-8"))["windows"][0]["occluded_spans_s"] is True,
-      "placeholder --image marks a placement image; an occlusion mask keeps the occluder in front of the product")
-js, code, _ = t("placeholder", "--render", ph / "render.png", "--image", ph / "texture.png", "--out", ph / "guide2.png", "--product-h-cm", "15.7", "--product-w-cm", "5.8",
-                "--window", "0-1:1,1,10", env=ENV, ok=False)
-check(code == 2 and "video only" in js.get("error", ""), "placeholder --image refuses video-only options with a clear error (exit 2)")
 
 # --- voiceover (item 31): outdir, record, align and mix measure, record and mix, never judge; the contract carries the Voiceover line
 import wave

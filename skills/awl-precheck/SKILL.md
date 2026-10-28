@@ -24,9 +24,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a contents or placement video:*
   - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (2.6 KB)
   - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
-- *a reference places the product (the placement marker):*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (14.2 KB)
-  - generation-system §4b.7: `AWL/reference/generation-system/205_4b.7_reckoning-the-marker-real-size-d.md` (4.2 KB)
+- *a placed product (the original is the only video reference):*
+  - generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
 - anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.4 KB)
 - *a placed or contents product (size, label, posture checks):*
   - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
@@ -63,8 +62,7 @@ Only these section files for this phase, nothing else unless a step below says s
     lock's scoped "only", and every placement, posture and use line follows from the product's own details and what the source scene
     offers, not from an example. A line that fights another is dropped by the §6 order of authority, with its reason in the brief.
   - **Must carry** (the first request of a video): the pattern card's "Must carry" block and `RUN/40-briefs/video-NN-musts.md`
-    hold, word for word and one per line, every sentence the prompt must carry exactly (the fidelity lock, the marker sentence, the
-    removal and clean-plate lines, the camera lock, the targeted exclusion, a guardrail operation, the voiceover line), and the
+    hold, word for word and one per line, every sentence the prompt must carry exactly (the fidelity lock, the clean-plate lines, the camera lock, the targeted exclusion, a guardrail operation, the voiceover line), and the
     draft carries each of them. The judge builds the final prompt on this checked draft and these lines (X4b).
   - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning, its distance derived from the
     frame and not assumed, is in the plan and in the prompt for every shot; a start frame was measured
@@ -75,22 +73,15 @@ Only these section files for this phase, nothing else unless a step below says s
     anchor is a posture its shape allows, on a visible support, where a person would leave it, with
     its story reason; no lean on a prop the model has to invent, nothing on a thin sheet, no source
     beat taken over. Where the guide lists size as a model limit, the anchor is from its passing list or the
-    placement marker (§4b.6) carries spot and size.
-  - **Spot and marker** (`generation-system.md` §4b.1c, §4b.6, §4b.7; `anomaly-catalog.md` §2.9): the spot passes the
-    feasibility lines. Every reference that places the product carries the placement marker: on a full-resolution
-    still of it (the stills `T placeholder` wrote), `T scale --frame <still> --product-cm <H> --product-px <y0-y1>
-    --ref-cm <h> --ref-px <y0-y1>` agrees with the plan's reckoning and its sidecar shows two `--basis` estimates
-    that agree within about 25 %; the product is shaded in the scene's perspective with a sharp printed label; the
-    outline is thin and red; the label is legible at 720×1280 and covers no face, no key action and no hand's
-    path; nothing passes through the marker without a mask. In Recreate and Edit Mode, whatever the model, the
-    request binds the unmarked original reference first, in the model's most preserving input, for the scene and
-    the keep-list, and the marked placement preview beside it in the form the plan named (§4b.6 (a)–(d): a second
-    video with the same duration and frame count, or labelled stills with their time spans, or the stated short
-    preview), for spot and size only, everything within the model's own limits (its guide §2.2, §2.5), and no
-    exclusion of the original's content covers the marked product. The request carries
-    the marker sentence and the removal line, and holds no guide image cut from a source frame; a start or end
-    frame carries no mark and passed the paste test. The wordmark's pixel height from the size reckoning is at
-    least about 25 px, or the limit is written in the brief.
+    size risk is written in the brief.
+  - **Spot** (`generation-system.md` §4b.1c, §4b.5; `anomaly-catalog.md` §2.9): the spot passes the feasibility
+    lines and the prompt pins it to a fixed neighbour. In Recreate and Edit Mode, whatever the model, the request
+    binds the original reference (silent, unmarked, the plan's span) in the model's most preserving input, for
+    the scene and the keep-list, as its only video reference, within the model's own limits (its guide §2.2,
+    §2.5); nothing that places the product rides beside it, no exclusion of the original's content covers the
+    product, and no guide image cut from a source frame is in the request. A start or end frame's product is
+    photoreal and passed the paste test. The wordmark's pixel height from the size reckoning is at least about
+    25 px, or the limit is written in the brief.
   - **Source surfaces:** each printed surface a guardrail or §9b names is a "replace / remove only …
     reconstruct as <named content>" sentence, never a description of blankness, with the original in
     the exclusion line.

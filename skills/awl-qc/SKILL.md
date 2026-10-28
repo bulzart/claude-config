@@ -39,8 +39,6 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §4b.0: `AWL/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
 - *a placed product (posture):*
   - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (2.6 KB)
-- *a reference carried the placement marker, or a size retry adds one:*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (14.2 KB)
 - *Edit Mode or Recreate:*
   - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.5 KB)
   - generation-system §5c.5: `AWL/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (2.3 KB)
@@ -164,8 +162,8 @@ Only these section files for this phase, nothing else unless a step below says s
     FAILURE until a second estimate agrees, and viewed on the full-resolution frame by whoever reports it
     before it is flagged, repeated or summarised (CE-028). Write the multiple of the expected size with its
     method and distance in the verdict and compare across cuts. The retry changes the lever the guide names. For a model
-    whose guide lists size as a model limit (`wan3_0_prime`) it changes the lever: the placement
-    marker (`generation-system.md` §4b.6), the integration form (§4b.0) or the anchor class from the guide's
+    whose guide lists size as a model limit (`wan3_0_prime`) it changes the lever: the integration
+    form (`generation-system.md` §4b.0), the spot (§4b.1c) or the anchor class from the guide's
     passing list, never the sizing words (12 of 12 wording retries were re-rolls);
     otherwise it names the neighbour and the ratio, the depth and the fraction of the frame, pads the
     reference and rebuilds any start frame. A second miss ships the best take flagged, both attempts written as blocks in the brief.
@@ -217,18 +215,8 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Hand lanes, camera path and orientation** (`anomaly-catalog.md` §2.16; `generation-system.md` §5c.5,
     §5c.2b): no hand covers, wraps or passes through the placed product in any beat; the product stays in
     frame wherever its anchor does; the camera and the performer's pose in the last third match the source;
-    every readable thing and handed object reads the right way round. A marker's or an old guide's artefacts copied into
+    every readable thing and handed object reads the right way round. A reference image's artefacts copied into
     the take (a soft label, a thick rim, a lid notch, the source's scene or person) are a regenerate reason.
-  - **Marker residue** (`generation-system.md` §4b.6; `anomaly-catalog.md` §4 step 5j), wherever a reference
-    carried the placement marker: the label's words are never in `--allowed-text`, so `T qc` OCR lists any of
-    them it sees; look at the marker's spot at full resolution at rest and in every window of the marker (the
-    sidecar's windows): no label text, no red outline, no box, no other mark; the product renders as a real object
-    in the scene (the paste test above, not the sample's flat look) at the reckoned size (`T scale`). In Recreate
-    and Edit Mode, whatever the model, the product's spot and size follow the placement preview (measure its box
-    against the marker's box at the same time, from the sidecar) and everything else follows the original
-    reference. A residue, a pasted look, or a product off the marker's spot or size (over 25 %) is a regenerate
-    reason; the retry keeps the marker and strengthens the binding of the original and the preview, the marker
-    sentence and the removal line in the model's phrasing (never the sizing words alone).
   - **Shot structure** (`anomaly-catalog.md` §4 step 5i; `generation-system.md` §3b.1 item 7; Recreate and
     Edit Mode with hard cuts): the output's cuts against the source's shot list: the same count at the same
     times, person-free cutaways still person-free, the placed product in every shot where its anchor is in

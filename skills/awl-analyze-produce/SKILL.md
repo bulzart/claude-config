@@ -182,7 +182,7 @@ See §6.
     The user opens Loupe to see the flags grouped by trigger, asset, video, kind, run or model and searched
     by field, with the evidence Loupe gathered next to each.
 26. **Pilot first.** With at least the run's `effort.pilot_from` videos to produce (5 for a run made before item 33), spawn the first video's agent as soon as its plan, request, inputs and brief exist and let it run X7–X10 to its QC
-    before the remaining plans are finished and their agents are spawned (the planners go on meanwhile). What its QC finds (a recipe fault, a marker, a size, a seam) is written
+    before the remaining plans are finished and their agents are spawned (the planners go on meanwhile). What its QC finds (a recipe fault, a spot, a size, a seam) is written
     into the other plans before they cost a generation; the user is told in one line when the pilot has passed. The user may say "no pilot" at the start.
     With QC fixes `off` the pilot still goes first, through X7–X10 without QC: what it shows is technical only (the job completed, the recipe was accepted, the
     conformed file, its cost), that goes into the other plans, and the user is told in one line that the pilot went through.

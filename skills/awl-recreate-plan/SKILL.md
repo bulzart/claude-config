@@ -21,8 +21,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
 - generation-system §5c.2: `AWL/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
 - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.5 KB)
-- *a placed product (the placement marker in the prepared source):*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (14.2 KB)
+- *a placed product (the original is the only video reference; spot and size in the prompt):*
+  - generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
 - *a source with many hard cuts (item 7: separate clips on its own cuts):*
   - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
 - creative-direction §5.2: `AWL/reference/creative-direction/080_5.2_the-best-approach-both-sub-modes.md` (1.0 KB)
@@ -38,7 +38,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - the integration form available for the product (swap / contents / placement);
   - for a placement, the anchor class the locked model renders at size: where its guide lists size
     as a model limit (`wan3_0_prime`, `wan-3-0.md` §5), an in-hand, swap or large same-plane
-    neighbour anchor (the last only where `generation-system.md` §4b.1c holds, and with the placement marker) ranks
+    neighbour anchor (the last only where `generation-system.md` §4b.1c holds, with the size risk in the brief) ranks
     above a surface anchor that only paper, a notebook or a head can size;
   - the placement's feasibility and the source's flags (`generation-system.md` §4b.1c, §5c.2b; protocol
     §5): a spot that is bare at frame 0, stays in frame along the path, lies outside every hand's lane and
@@ -103,14 +103,12 @@ Only these section files for this phase, nothing else unless a step below says s
     selfie has its silent copy flipped (`hflip`) and its mirrored identity photos flipped too; burned-in
     text, names and patches are never removed by a tool: the prompt's clean-plate lines and, for a name or a
     patch, one named replace sentence carry them; a baked face effect is planned as flagged.
-  - **The placement marker** (a placed product, `generation-system.md` §4b.6, §4b.7): this prepared silent copy is
-    where the product is composited as the labelled marker, once X1 has reckoned its spot and size (two estimates
-    that agree); `T placeholder` builds it right after that reckoning and X3 uploads it. Whatever the model, the
-    request carries the unmarked original reference first (the original's `videos_without_audio` copy when nothing
-    was cut, flipped or padded, otherwise this unmarked prepared copy; same span, orientation and length) and that
-    labelled copy beside it as the placement preview, in the form the model's roles allow (§4b.6 (a)–(d)), all
-    within the model's own limits, else the clip plan of X1 splits the source. No guide image
-    is ever cut from a source frame (a crop of the source with the performer blurred or scrubbed).
+  - **The original reference** (a placed product, `generation-system.md` §4b.5): the request carries the
+    original's silent footage as its only video reference (the original's `videos_without_audio` copy when nothing
+    was cut, flipped or padded, otherwise this prepared copy; same span, orientation and length), within the
+    model's own limits, else the clip plan of X1 splits the source; nothing is composited into it and no placement
+    image rides beside it: the spot and the size are the prompt's (X2). No guide image is ever cut from a source
+    frame (a crop of the source with the performer blurred or scrubbed).
   - Then 9:16 (`T conform` / `reframe`). Split at cuts into the edit model's range when it is
     longer.
 
@@ -159,13 +157,11 @@ Only these section files for this phase, nothing else unless a step below says s
   face effect; burned-in text, names and patches are written as the edit prompt's remove or replace
   operations, never removed by a tool; a mirrored selfie is flipped only when the user asks (E3), since only
   the planned operations change.
-- **Placement marker** (a product placed or added at a spot, `generation-system.md` §4b.6, §4b.7): the product is
-  composited into this prepared silent copy as the labelled marker (a thin red outline and the label "asset
-  sample, not the final look") with `T placeholder`, at the spot and height X1 reckons from two estimates that
-  agree, one `--window` per shot, punch-in or set-up; that labelled copy is the request's placement preview,
-  bound beside the unmarked original reference of the same span in the form the model's roles allow (X3,
-  `generation-system.md` §4b.6). No guide image is ever cut from a source frame (a crop of the source with the performer blurred or
-  scrubbed).
+- **A product placed or added at a spot** (`generation-system.md` §4b.1c, §4b.5): this prepared silent copy stays
+  unmarked and is the only video reference (or the original's `videos_without_audio` copy when nothing was cut,
+  flipped or padded); the spot (pinned to a fixed neighbour) and the size (against a named neighbour, from the X1
+  reckoning) are the prompt's (X2). No guide image is ever cut from a source frame (a crop of the source with the
+  performer blurred or scrubbed).
 
 In Recreate (Analyze Mode) the tool methods that `text-and-format` §2 lists for removing source text (`--delogo`, `--crop`) are not used: a caption, a name or a patch is never removed by a tool, the prompt's clean-plate lines and the character-swap script carry it (see Never below).
 
@@ -215,10 +211,8 @@ Item 21 (brand guardrails) is applied through the audit and operations above; it
   with its sound, and never reduce a video meme to a screenshot.
 - Never place a product at a spot that is hidden at the source's frame 0, leaves the frame along the camera
   path, lies in a hand's lane, is narrower than the product or is the nearest plane unless the user marked
-  it, and then only with the placement marker (`generation-system.md` §4b.1c); never build, upload or bind a
-  guide image cut from a source frame, never let a placement reference ride without its label and its request
-  sentences, never put a label or mark on a start or end frame, and never mark with a flat packshot paste or a
-  soft-labelled render (§4b.6); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
+  it (`generation-system.md` §4b.1c); never build, upload or bind a guide image cut from a source frame, or any
+  placement image beside the original (§4b.5); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
   face effect, a burned-in caption or an identifying name without its prompt sentence (§5c.2b); never try to
   remove a caption, a name or a patch from a source with a tool in Analyze Mode (inpaint, delogo, crop): the
   clean-plate lines and the character-swap script carry it.

@@ -27,8 +27,6 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.5 KB)
 - *a placed or contents product (the spot):*
   - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
-- *a reference places the product (the placement marker), or a retry adds one:*
-  - generation-system §4b.6: `AWL/reference/generation-system/200_4b.6_the-placement-marker-spot-and-si.md` (14.2 KB)
 - anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.4 KB)
 - *a product in use, prepared or counted:*
   - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
@@ -62,7 +60,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - **The judge writes the final prompt after X4 (the first request of a video; the user, 2026-10-28).** X2 writes the pipeline's own request
     by every step below, as always: it is the **checked draft** (X4 checks it next). Write with it the pattern card's **"Must carry"** block and
     the same lines in `RUN/40-briefs/video-NN-musts.md`, one per line, word for word: every sentence the prompt must carry exactly (the fidelity
-    lock, the marker sentence, the removal and clean-plate lines, the camera lock, the product's targeted exclusion, a guardrail operation, the
+    lock, the clean-plate lines, the camera lock, the product's targeted exclusion, a guardrail operation, the
     voiceover's dialogue or no-dialogue line). X2 never asks the judge: after X4, `awl-precheck` X4b hands the judge the whole checked brief
     (the plan's beats and goal, this draft, its must-carry lines, the model's structure) and the judge's answer becomes the request's prompt,
     word for word (`T template-apply`).
@@ -92,9 +90,9 @@ Only these section files for this phase, nothing else unless a step below says s
       the reckoned pixel height and measured with `T scale --frame … --product-px … --ref-cm …
       --ref-px …` before it is animated. Where the guide lists size as a model limit
       (`wan3_0_prime`), these words are a check, not a control: X1 chose the anchor class from the
-      guide's passing list or planned the placement marker (§4b.6), and a start frame is out of reach
-      while the source rides as a video reference. A start frame carries no label or mark: its product is a
-      photoreal render that passed the paste test.
+      guide's passing list or wrote the size risk in the brief, and a start frame is out of reach
+      while the source rides as a video reference. A start frame's product is a photoreal render that
+      passed the paste test.
     - Every vessel's contents are stated from the contents sample; an unstated vessel comes back as
       water. A character photo's role is limited to the person (face, hair, build and clothing, not its
       props or background) unless the plan keeps its props as the product's contents
@@ -113,22 +111,16 @@ Only these section files for this phase, nothing else unless a step below says s
       later state than t=0 (`anomaly-catalog.md` §3). Every thrown, dropped, swung or passing thing
       has its path written relative to the product, past it on a named side or onto it with the
       consequence, plus the solidity exclusion (`anomaly-catalog.md` §2.14).
-    - The **marker sentences, the camera lock, the swap grammar, the empty surfaces and the prepared-source
-      sentence**, where the plan has them, in the model's phrasing (`generation-system.md` §4, §4b.5, §4b.6, §5c.2b,
-      §5c.3): in Recreate and Edit Mode, whatever the model, the original and the preview are bound by purpose in
-      the model's own reference syntax (§4b.6 item 4; the guide's §3.7): the original reference (the unmarked
-      footage in the model's most preserving input: performers, motion, camera, framing, timing, scene and light,
-      the full keep-list) and the placement preview of it only (its second video or its labelled stills: where the
-      product stands and how big it is in every frame; nothing else is taken from it), and an exclusion of the
-      original's content ("do not inherit … branded items of Video 1") never covers the marked product; the
-      product's own views ride padded, never a tight packshot; every reference that places the product (the
-      preview in Recreate and Edit Mode, Create's marked texture) is bound with the marker sentence of §4b.6 item 4 (a placement and size marker only, taken
-      from the client's asset sample, not how the product looks; at exactly that spot and size a real product
-      rendered as an actual object in the scene: its material, the scene's light and shadows, real contact with its
-      surface), the anchor sentence repeats the marker's spot and size, and the removal line ("The final footage
-      completely removes the red outline, the label and every auxiliary mark; no text or watermarks appear in the
-      frame", the product's own printed label carved out) stands with the clean-plate lines and is never cut; no
-      guide image cut from a source frame is bound; the camera lock as its own sentence; a swap written as a
+    - The **camera lock, the swap grammar, the empty surfaces and the prepared-source sentence**, where the plan
+      has them, in the model's phrasing (`generation-system.md` §4, §4b.5, §5c.2b, §5c.3): in Recreate and Edit
+      Mode, whatever the model, the original reference is bound by purpose in the model's own reference syntax
+      (the guide's §3.7): the silent footage in the model's most preserving input, for the performers, motion,
+      camera, framing, timing, scene and light, the full keep-list; it is the only video reference, and an
+      exclusion of the original's content ("do not inherit … branded items of Video 1") never covers the product
+      the request places; the product's own views ride padded, never a tight packshot; the anchor sentence writes
+      the spot (pinned to a fixed neighbour) and the size (against a named neighbour), and asks for a real object
+      in the scene (its material, the scene's light and shadows, real contact with its surface); no guide image
+      cut from a source frame is bound; the camera lock as its own sentence; a swap written as a
       replacement; an empty surface written empty, per shot; "Video 1 is already in true orientation" after a
       flip; the one hand in frame named with the bare empty area; the clean-plate lines never cut to fit the
       length limit (`text-and-format.md` §1).
@@ -226,10 +218,8 @@ Only these section files for this phase, nothing else unless a step below says s
   (`anomaly-catalog.md` §2.14).
 - Never place a product at a spot that is hidden at the source's frame 0, leaves the frame along the camera
   path, lies in a hand's lane, is narrower than the product or is the nearest plane unless the user marked
-  it, and then only with the placement marker (`generation-system.md` §4b.1c); never build, upload or bind a
-  guide image cut from a source frame, never let a placement reference ride without its label and its request
-  sentences, never put a label or mark on a start or end frame, and never mark with a flat packshot paste or a
-  soft-labelled render (§4b.6); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
+  it (`generation-system.md` §4b.1c); never build, upload or bind a guide image cut from a source frame, or any
+  placement image beside the original (§4b.5); never upload a mirrored selfie source un-flipped in Recreate, or leave a baked
   face effect, a burned-in caption or an identifying name without its prompt sentence (§5c.2b); never try to
   remove a caption, a name or a patch from a source with a tool in Analyze Mode (inpaint, delogo, crop): the
   clean-plate lines and the character-swap script carry it.
