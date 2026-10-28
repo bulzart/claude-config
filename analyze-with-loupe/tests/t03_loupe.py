@@ -163,6 +163,7 @@ check(rounds and "PROMPT-WRONG the can on the desk." in rounds[-1] and "PROMPT-F
 # --- X2: the judge's template, briefed by the agent; then QC carries the prompt used, the template and the brief
 (run / "50-requests" / "video-03-pattern.md").write_text("STRUCTURE-MARK Shot 1: subject, action, setting. Shot 2: ...", encoding="utf-8")
 (run / "40-briefs" / "video-03-judge-brief.md").write_text("BRIEF-MARK video 03: he sets the slim can on the desk; the goal is the can's true size after the cut.", encoding="utf-8")
+(run / "40-briefs" / "video-03-musts.md").write_text("- Keep the camera still.\n", encoding="utf-8")
 n0 = len(calls)
 js, _, _ = t("prompt-template", "--run", run.name, "--video", "03", "--brief-file", str(run / "40-briefs" / "video-03-judge-brief.md"),
              "--structure-file", str(run / "50-requests" / "video-03-pattern.md"), "--product", "slim can", "--product-details", "slim 355 ml can, upright", env=ENV)
@@ -172,13 +173,15 @@ step2 = next((c for c in new if "Step 2 of the template request" in c), "")
 check(js.get("mode") == "keeper" and js.get("template", "").startswith("TEMPLATE-MARK") and [b["id"] for b in js.get("basis", [])] == [SID] and js.get("read") == [SID]
       and js.get("changes") and "rules" in js, "prompt-template returns the judge's template, its basis, the samples it read, its changes and the rules to craft from it")
 check("Wan 3.0 Prime" in step1 and js.get("video_model") == "wan3_0_prime", "the template request names the generation video model with its entry of the model index")
+check("Show the can on the desk. Keep the camera still." in step1 and "Lines the prompt must carry, word for word" in step1 and "- Keep the camera still." in step1
+      and "5000 characters" in step1 and js.get("musts") == 1, "the judge gets the whole checked brief: the draft request's prompt, its must-carry lines and the service's limit")
 check("BRIEF-MARK" in step1 and "STRUCTURE-MARK" in step1 and "PROMPT-WRONG the can on the desk." in step2 and "PROMPT-FIXED" in step2 and "Not sent: S999" in step2
       and not any("rests on samples whose two prompts" in c for c in new), "the judge gets the agent's brief and the model's structure, then both prompts of the samples it chose, whole (none sent twice)")
 tj, tm = run / "40-briefs" / "video-03-template.json", run / "40-briefs" / "video-03-template.md"
 check(tj.is_file() and json.loads(tj.read_text(encoding="utf-8")).get("brief", "").startswith("BRIEF-MARK") and tm.is_file() and tm.read_text(encoding="utf-8").startswith("TEMPLATE-MARK")
       and Path(js.get("prompts_files", {}).get(SID, "-")).is_file(), "the template is saved with the brief, as JSON and as text, and the basis sample's prompts are written for the agent")
-_, code, _ = t("prompt-template", "--run", run.name, "--video", "03", env=ENV, ok=False)
-check(code == 2, "prompt-template without a brief stops (code 2)")
+_, code, _ = t("prompt-template", "--run", run.name, "--video", "07", env=ENV, ok=False)
+check(code == 2, "prompt-template without a brief (no --brief, no judge brief file) stops (code 2)")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--attempt", "a1", "--question", "the can is smaller than the mug after the cut", env=ENV)
 q = [c for c in calls if "QC question" in c][-1]
 check("Show the can on the desk. Keep the camera still." in q and "TEMPLATE-MARK" in q and "BRIEF-MARK" in q
@@ -187,6 +190,14 @@ check("Show the can on the desk. Keep the camera still." in q and "TEMPLATE-MARK
       "after generation the QC consult carries the prompt the video was generated from, the judge's template and the brief, and says which files")
 check(js.get("cause", "").startswith("CAUSE-MARK") and js.get("template_fix") and "result.json judge" in js.get("judge_rule", ""),
       "the judge's answer names the cause in the prompt or template and the part rewritten, with the rule to record them for the user's review")
+js, code, _ = t("template-apply", "--run", run.name, "--video", "03", "--slot", "the can's upload tag=Image 1", env=ENV)
+rq3 = json.loads((run / "50-requests" / "video-03-request.json").read_text(encoding="utf-8"))
+check(code == 0 and rq3["params"]["prompt"].startswith("TEMPLATE-MARK") and "[SLOT" not in rq3["params"]["prompt"] and "Image 1" in rq3["params"]["prompt"]
+      and js.get("musts_missing") == ["Keep the camera still."], "template-apply puts the judge's prompt in the request word for word and reports the must-carry line it lacks")
+js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can is smaller again", env=ENV)
+q = [c for c in calls if "QC question" in c][-1]
+check("TEMPLATE-MARK" in q and "the same, word for word" in q and js.get("evidence_sent", {}).get("request_prompt") == "video-03-request.json",
+      "the QC consult then sends the judge's prompt as the prompt used (the kept draft is never taken for it) and says the template is the same")
 js, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
 pf = run / "40-briefs" / "samples" / f"{SID}-prompts.md"
 ptxt = pf.read_text(encoding="utf-8") if pf.is_file() else ""

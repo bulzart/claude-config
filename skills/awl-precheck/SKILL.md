@@ -62,11 +62,10 @@ Only these section files for this phase, nothing else unless a step below says s
     opposite things of the same beat, no "never" or "always" stands outside the product's one targeted exclusion and the fidelity
     lock's scoped "only", and every placement, posture and use line follows from the product's own details and what the source scene
     offers, not from an example. A line that fights another is dropped by the §6 order of authority, with its reason in the brief.
-  - **Judge's template** (the first request of a video): the pattern card's "Judge's template" block exists; the request keeps
-    the template's structure, order and wording wherever no rule of X2 changed a part (each change is in the block with its rule),
-    every `[SLOT: …]` is filled and none is left in the prompt, and the prompt and the reference notes name none of a past miss's
-    wrong behaviour and carry no other video's sentences. A part that a rule changed without a line in the block is restored or
-    recorded; a request written without a template says why ("no template: …").
+  - **Must carry** (the first request of a video): the pattern card's "Must carry" block and `RUN/40-briefs/video-NN-musts.md`
+    hold, word for word and one per line, every sentence the prompt must carry exactly (the fidelity lock, the marker sentence, the
+    removal and clean-plate lines, the camera lock, the targeted exclusion, a guardrail operation, the voiceover line), and the
+    draft carries each of them. The judge builds the final prompt on this checked draft and these lines (X4b).
   - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning, its distance derived from the
     frame and not assumed, is in the plan and in the prompt for every shot; a start frame was measured
     with `T scale` and its size factors read (X9 gives the bands); the size ladder holds between products;
@@ -99,6 +98,34 @@ Only these section files for this phase, nothing else unless a step below says s
     exactly as `voiceover.md` §6 says (the audio role, the dialogue or no-dialogue line, the duration); nothing asks for music.
   - **Memes** (Create, item 32): with `memes=none`, no insert, split point or meme sound in the plan or the request, and no imitated meme.
   - Fix any conflict in the plan and the request before continuing.
+- **X4b — The judge writes the final prompt (the first request of a video; the user, 2026-10-28).** X1–X4 are done: the plan, the
+  pattern card, the checked draft request and its must-carry lines. Now the whole brief goes to the judge (Loupe's keeper, one separate
+  Opus session that holds the admin's samples of earlier generations, many with the prompt of the wrong take and of the corrected one),
+  and the judge's answer is the prompt this video is generated from. The prompt is the judge's: nothing after X4b improves it.
+  1. Write the judge brief `RUN/40-briefs/video-NN-judge-brief.md`: what you are working on (run, video, mode, the locked model, the
+     request kind and its inputs with their roles), what the video is about (one line per beat of the plan: what happens, the product's
+     form and state, the camera), what it wants to achieve (the goal, the moment that must land, what it keeps of the source), and what
+     X4 found the prompt must respect (a size, a count, a fallback).
+  2. `T prompt-template --run RUN --video NN --structure-file RUN/50-requests/video-NN-pattern.md --product "<form>" --product-details
+     "<its shape, size, opening and natural posture, from its registry row>"` (a clip: `--clip cK`). The toolkit sends that brief, the
+     checked draft's prompt, parameters and inputs, the must-carry lines and the video model's entry of the model index. The judge reads the
+     saved prompts of the samples it chooses and answers `template`: the final prompt in the locked model's structure, built on the checked
+     draft and on what worked and what failed before, every must-carry line word for word.
+  3. `T template-apply --run RUN --video NN [--slot "<slot words>=<value>" …]` puts it in the request word for word (the draft is kept as
+     `video-NN-request.draft.json`) and reports, as facts, the must-carry lines it does not hold word for word, the slots left and its
+     length against the service's 5000 characters.
+  4. **Never rewrite, trim, reorder or improve the judge's prompt**, and X4 does not run again on its wording (it ran on the draft). Fill a
+     `[SLOT: …]` only with what the plan already decided. A must-carry line missing, a slot that cannot be filled or a length over the
+     limit: ask the judge once more with the same arguments plus `--note "<what is missing or too long>"` and apply its new answer. Only if
+     it is still missing, add that must-carry line word for word (`--add-must`) and nothing else; still over the limit, or no usable answer:
+     the checked draft stays the request (`--use-draft`).
+  5. What only you can answer comes back as `needs_unmet` with an `unmet_rule`: answer it from the plan in words and ask once more with
+     `--note`. No answer at all (`mode: empty`, `unavailable`, `busy` after the toolkit's retries, an empty `template`): the checked draft is
+     the request, as always (`T template-apply --use-draft`).
+  6. Write the pattern card's "Judge's template" block: the prompt's file (or "no template: <why>"), the slots filled with what, each
+     must-carry line added and why, a `--note` re-ask and its reason, the judge's `changes` (parts of the plan earlier generations say should
+     change; its prompt already carries them: add one line per change to the plan so QC checks the same), and any judge gap. X6 copies it.
+  The judge is not asked again before the generation; after it, QC consults the judge with the prompt used and this brief (`awl-qc`).
 - **X5 — Preflight.**
   - `generate_video {params:{…, get_cost:true}}` → cost and `adjustments`. **One** preflight per
     distinct request. Preflight again only after the request changed.
@@ -111,8 +138,8 @@ Only these section files for this phase, nothing else unless a step below says s
     characters/assets, substitutions, main action and states, style/camera, text plan, model /
     operation / duration / 9:16 720p, cost, adaptation logic. In Edit Mode and Recreate it also names
     the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
-  - The brief carries the pattern card's short "Judge's template" block (the template's file or why there was none, the slots,
-    the changes applied, the parts a rule changed), so QC and a reported miss can be read against it.
+  - The brief carries the pattern card's short "Judge's template" block (the judge's prompt's file or why there was none, the slots
+    filled, any must-carry line added, any re-ask, the judge's changes), so QC and a reported miss can be read against it.
   - With an own voiceover (item 31) the brief names the method, the voice, the language, the form, the take and its length, the lipsync
     sync pass, and the untested lip risk (`voiceover.md` §6).
   - Save it as `40-briefs/video-NN-brief.md`; each attempt or clip appends its own block under the first
@@ -147,5 +174,5 @@ Only these section files for this phase, nothing else unless a step below says s
 ## Hand-off
 
 - Edit Mode: show the "Go" gate (E6) for the first video, then invoke Skill `awl-submit` (X7).
-- Analyze Mode, A9 step 1 (X4): next video's X1; when every video has its plan, request and X4, continue A9 step 2 in `awl-analyze-produce` (shared uploads via `awl-inputs`).
+- Analyze Mode, A9 step 1 (X4 and X4b): next video's X1; when every video has its plan, its request with the judge's prompt (or the checked draft) and X4, continue A9 step 2 in `awl-analyze-produce` (shared uploads via `awl-inputs`).
 - Analyze Mode, A9 step 3 (X5–X6 of every video): continue A9 steps 4–5 in `awl-analyze-produce`.

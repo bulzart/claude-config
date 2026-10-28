@@ -27,7 +27,8 @@ Subcommands (python awl.py <cmd> -h):
   loupe          ensure | status | open: the Loupe web app (flags, generation misses, QC samples)
   qc-consult     QC phase only: ask the QC keeper which samples (generation misses) apply to the video under QC
   qc-brief       QC phase only: the matching samples as a plain brief (no model call)
-  prompt-template first request of a video (X2): brief the judge (Loupe's keeper); it answers the prompt template, from what worked and failed before
+  prompt-template first request of a video (X4b, after X1-X4): the whole checked brief to the judge; it answers the final prompt
+  template-apply X4b: the judge's prompt into the request word for word (draft kept); reports must-carry lines missing, slots left, length
   plan-hints     (older runs; X2 now uses prompt-template) the keeper's few text-only hints for a plan
   open           open a finished video in the default player for the user's review
   prep-video     probe, cuts, activity, 5 fps adaptive frames, storyboard sheets, audio, transcript,
@@ -3431,7 +3432,7 @@ def _lc():
 # the background, so the agent still gets the answer.
 CONSULT_TIMEOUT = float(os.environ.get("AWL_CONSULT_TIMEOUT") or 1080)
 TEMPLATE_BUSY_RETRIES = int(os.environ.get("AWL_TEMPLATE_BUSY_RETRIES") or 3)   # a template asked while another keeper call holds the lock is asked again
-BRIEF_CHARS = 8000          # the agent's brief to the judge
+BRIEF_CHARS = 20000         # the whole brief to the judge: the agent's words, the checked draft request and its must-carry lines
 STRUCTURE_CHARS = 12000     # the locked model's request structure sent with it
 UPLOAD_ONLY_CAPTURE = re.compile(r"^signals: upload( \||$)")    # a media_upload answer the hook keeps for `hf-put --capture`, never a flag
 
@@ -4398,35 +4399,102 @@ def _qc_evidence(a, ctx) -> tuple[dict, dict]:
     vm = _video_model_info(prm.get("model") or ctx.get("model"))
     if vm:
         ev["video_model"], sent["video_model"] = vm, vm["id"]
-    tj = rd / "40-briefs" / f"video-{_cf_nn(a.video)}-template.json"
-    try:
-        t = json.loads(tj.read_text(encoding="utf-8")) if tj.is_file() else {}
-    except (OSError, ValueError):
-        t = {}
-    for k in ("template", "brief"):
-        if isinstance(t, dict) and str(t.get(k) or "").strip():
-            ev[k], sent[k] = str(t[k]), tj.name
+    nn = _cf_nn(a.video)
+    tjs = [p for p in [rd / "40-briefs" / f"video-{nn}-template.json"] + sorted((rd / "40-briefs").glob(f"video-{nn}-c*-template.json")) if p.is_file()]
+    got = {"template": [], "brief": []}
+    for tj in tjs:
+        try:
+            t = json.loads(tj.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for k in got:
+            if isinstance(t, dict) and str(t.get(k) or "").strip():
+                got[k].append((tj.name, str(t[k])))
+    for k, items in got.items():
+        if items:
+            text = "\n\n".join((f"{name.replace('-template.json', '')}:\n" if len(items) > 1 else "") + v for name, v in items)
+            if k == "template" and _norm_ws(text) == _norm_ws(ev.get("request_prompt", "")):
+                text = "(the same, word for word, as the prompt this video was generated from)"
+            ev[k], sent[k] = text, ", ".join(name for name, _v in items)
     return ev, sent
 
 
+PROMPT_LIMIT = 5000         # the service refuses a prompt over 5000 characters before any job exists (the agent contract)
+
+
+def _tpl_files(rd, video, clip="") -> dict:
+    """The files of one video's (or clip's) judge's prompt, by name."""
+    tag = f"video-{_cf_nn(video)}" + (f"-{str(clip).strip().lower()}" if clip else "")
+    b, r = rd / "40-briefs", rd / "50-requests"
+    return {"json": b / f"{tag}-template.json", "md": b / f"{tag}-template.md", "brief": b / f"{tag}-judge-brief.md", "musts": b / f"{tag}-musts.md",
+            "request": r / f"{tag}-request.json", "draft": r / f"{tag}-request.draft.json"}
+
+
+def _musts_of(path) -> list[str]:
+    """The lines a prompt must carry word for word: one per line of the file (a list marker is dropped, a heading line is left out)."""
+    try:
+        text = Path(path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    out_ = []
+    for ln in text.splitlines():
+        t = re.sub(r"^\s*(?:[-*•]|\d+[.)])\s+", "", ln).strip()
+        if t and not t.startswith("#"):
+            out_.append(t)
+    return out_
+
+
+def _norm_ws(s: str) -> str:
+    return re.sub(r"\s+", " ", str(s or "")).strip()
+
+
+def _draft_section(path) -> tuple[str, str]:
+    """The checked draft request as the judge reads it: its prompt, its parameters and its inputs with what each is. (text, prompt)."""
+    j = _cf_request_json(path)
+    prm = j.get("params") if isinstance(j.get("params"), dict) else j
+    prompt = str((prm or {}).get("prompt") or j.get("prompt") or "")
+    mm = j.get("medias_meaning") or j.get("media_meaning")
+    meaning = dict(mm) if isinstance(mm, dict) else {}
+    counts, inputs = {}, []
+    for m in (prm or {}).get("medias") or []:
+        if isinstance(m, dict):
+            role = str(m.get("role") or "?")
+            counts[role] = counts.get(role, 0) + 1
+            lab = f"{({'image_references': 'Image', 'video_references': 'Video', 'audio_references': 'Audio'}).get(role, role)} {counts[role]}"
+            inputs.append(f"{lab} ({role}): {m.get('meaning') or meaning.get(lab) or '-'}")
+    params = ", ".join(f"{k}={v}" for k, v in _cf_params_dict(j).items() if k != "medias")
+    return (f"The checked draft request ({Path(path).name}; written by the pipeline's rules and checked at X4):\nPrompt:\n{prompt}\n"
+            f"Parameters: {params or '-'}\nInputs: {'; '.join(inputs) or '-'}"), prompt
+
+
 def cmd_prompt_template(a):
-    """X2, before the first request of a video is written (the user, 2026-10-28). The agent's brief (what it is working on, what the video is about, what it
-    wants to achieve) goes to the judge (Loupe's keeper, one separate Opus session that holds the samples of earlier generations) with the locked model's
-    request structure; the judge chooses which samples' saved prompts to read, Loupe sends both whole, and the answer is a prompt template built from what
-    worked and what failed before. The agent crafts its request from it; the judge is not asked again before generation. Saved beside the plan; no template
-    (empty library, Loupe or the keeper unavailable) means the request is written as always."""
+    """X4b, after X1-X4 of the first request of a video (the user, 2026-10-28). The whole checked brief goes to the judge (Loupe's keeper, one separate Opus
+    session that holds the samples of earlier generations): the agent's brief (what it is working on, what the video is about, what it wants to achieve),
+    the checked draft request (its prompt, parameters and inputs), the lines the prompt must carry word for word, the locked model's request structure and
+    the video model's entry of the model index. The judge chooses which samples' saved prompts to read, Loupe sends both whole, and the answer is the final
+    prompt, which `template-apply` puts in the request word for word. Saved beside the plan; no template (empty library, Loupe or the keeper unavailable)
+    means the checked draft is the request."""
     ctx = _qc_ctx(a)
-    brief = (a.brief or "").strip()
-    for f, what in ((a.brief_file, "--brief-file"), (a.structure_file, "--structure-file")):
+    rd = _cf_run_dir(a.run) if a.run else None
+    tf = _tpl_files(rd, a.video, a.clip) if (rd and a.video) else {}
+    brief_file = a.brief_file or (str(tf["brief"]) if tf and not a.brief and tf["brief"].is_file() else "")
+    draft_file = a.draft_file or (str(tf["draft"]) if tf and tf["draft"].is_file() else (str(tf["request"]) if tf and tf["request"].is_file() else ""))
+    musts_file = a.musts_file or (str(tf["musts"]) if tf and tf["musts"].is_file() else "")
+    for f, what in ((brief_file, "--brief-file"), (a.structure_file, "--structure-file"), (draft_file, "--draft-file"), (musts_file, "--musts-file")):
         if f and not Path(f).is_file():
             fail(f"{what} {f} is not a file", 2)
-    if a.brief_file:
-        brief = (brief + "\n\n" if brief else "") + Path(a.brief_file).read_text(encoding="utf-8", errors="replace").strip()
+    brief = (a.brief or "").strip()
+    if brief_file:
+        brief = (brief + "\n\n" if brief else "") + Path(brief_file).read_text(encoding="utf-8", errors="replace").strip()
     if not brief:
         fail("prompt-template needs --brief or --brief-file (what you are working on, what the video is about, what it wants to achieve, one line per beat)", 2)
+    draft_text, draft_prompt = _draft_section(draft_file) if draft_file else ("", "")
+    musts = _musts_of(musts_file) if musts_file else []
+    question = "\n\n".join(x for x in (brief, draft_text, ("Lines the prompt must carry, word for word (checked at X4):\n" + "\n".join(f"- {m}" for m in musts)) if musts else "",
+                                       f"The service refuses a prompt over {PROMPT_LIMIT} characters.") if x)
     structure = Path(a.structure_file).read_text(encoding="utf-8", errors="replace").strip() if a.structure_file else ""
     vm = _video_model_info(ctx.get("model"))
-    body = {**ctx, "purpose": "template", "question": brief[:BRIEF_CHARS], "structure": structure[:STRUCTURE_CHARS], "video_model": vm}
+    body = {**ctx, "purpose": "template", "question": question[:BRIEF_CHARS], "structure": structure[:STRUCTURE_CHARS], "video_model": vm}
     tries = 0
     while True:
         s, d = _cf_api("POST", "/api/qc/consult", body, key="qc", timeout=CONSULT_TIMEOUT)
@@ -4435,46 +4503,99 @@ def cmd_prompt_template(a):
         tries += 1
     if s != 200:
         out({"ok": True, "mode": "unavailable", "template": "", "basis": [], "note": "no template: " + str((d or {}).get("error") or f"HTTP {s}"),
-             "none_rule": "write the request as always from the pattern card and the steps of X2, and write 'no template: Loupe unavailable' in the pattern card"})
-    rd = _cf_run_dir(a.run) if a.run else None
+             "none_rule": "the checked draft is the request, as always: record it with `T template-apply --use-draft` and write 'no template: Loupe unavailable' in the pattern card"})
     res = {"ok": True, "mode": d.get("mode"), "template": d.get("template", ""), "template_cut": bool(d.get("template_cut")), "basis": d.get("basis", []),
            "notes": d.get("notes", ""), "changes": d.get("changes", []), "read": d.get("read", []), "not_covered": d.get("not_covered", ""),
-           "none_reason": d.get("none_reason", ""), "brief_cut": len(brief) > BRIEF_CHARS, "structure_cut": len(structure) > STRUCTURE_CHARS,
-           "video_model": vm.get("id", ""), "busy_retries": tries}
+           "none_reason": d.get("none_reason", ""), "brief_cut": len(question) > BRIEF_CHARS, "structure_cut": len(structure) > STRUCTURE_CHARS,
+           "video_model": vm.get("id", ""), "draft_file": draft_file, "musts": len(musts), "clip": a.clip or "", "busy_retries": tries}
     for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error", "library_size"):
         if d.get(k):
             res[k] = d[k]
+    clip_arg = f" --clip {a.clip}" if a.clip else ""
     if res["template"]:
-        res["rules"] = ("Craft the request from this template: keep its structure, order and wording at every part it covers, fill each [SLOT: ...] with this "
-                        "video's specifics and apply each of changes where the plan allows it. The rules of X2 still apply on top (the steps of X2, the "
-                        "guardrails, the model guide's limits, the source's story and timing, the fidelity lock): where one conflicts with a part of the "
-                        "template, that rule wins and the part changes only as much as the rule needs. Record it all in the pattern card's \"Judge's "
-                        "template\" block. The judge is not asked again before generation; QC consults it after generation with the prompt you used.")
+        res["rules"] = ("This is the judge's final prompt. Put it in the request word for word: `T template-apply --run RUN --video NN" + clip_arg + "` (fill a "
+                        "[SLOT: ...] only with what the plan already decided, --slot). Never rewrite, trim, reorder or improve it; X4 does not run again on its "
+                        "wording. When template-apply reports a must-carry line missing, a slot left or a length over the limit, ask the judge once more with "
+                        "--note; only then add a missing must-carry line word for word (--add-must) or keep the checked draft (--use-draft). Record it in the "
+                        "pattern card's \"Judge's template\" block. The judge is not asked again before the generation.")
     else:
-        res["none_rule"] = ("no template (" + (res["none_reason"] or res.get("keeper_error") or str(res["mode"])) + "): write the request as always from the "
-                            "pattern card and the steps of X2, and write 'no template: <why>' in the pattern card's \"Judge's template\" block")
+        res["none_rule"] = ("no template (" + (res["none_reason"] or res.get("keeper_error") or str(res["mode"])) + "): the checked draft is the request, as "
+                            "always; record it with `T template-apply --use-draft" + clip_arg + "` and write 'no template: <why>' in the pattern card's \"Judge's template\" block")
     if d.get("needs_unmet"):
         res["unmet_rule"] = ("the judge asked for something Loupe cannot fetch (a question only you can answer from your plan, or a file that does not exist): "
-                             "answer it from the plan in words and ask again ONCE with --note '<your answer>' (the same brief); if it is still unmet, go on "
+                             "answer it from the plan in words and ask again ONCE with --note '<your answer>' (the same files); if it is still unmet, go on "
                              "and write it as a judge gap in the \"Judge's template\" block")
     try:
-        if rd and a.video:
-            nn = _cf_nn(a.video)
-            j = rd / "40-briefs" / f"video-{nn}-template.json"
-            write_json(j, {**res, "brief": brief[:BRIEF_CHARS], "structure_file": a.structure_file or "", "at": now_iso()})
-            res["saved"] = str(j)
+        if tf:
+            write_json(tf["json"], {**res, "brief": brief[:BRIEF_CHARS], "draft_prompt": draft_prompt, "musts_list": musts,
+                                    "structure_file": a.structure_file or "", "at": now_iso()})
+            res["saved"] = str(tf["json"])
             if res["template"]:
-                t = rd / "40-briefs" / f"video-{nn}-template.md"
-                write_text(t, res["template"] + "\n")
-                res["template_file"] = str(t)
+                write_text(tf["md"], res["template"] + "\n")
+                res["template_file"] = str(tf["md"])
             pf = _prompts_files(res["basis"], rd)
             if pf:
                 res["prompts_files"] = pf
-                res["prompts_rule"] = ("both prompts of each basis sample, whole from Loupe's record, for a part of the template that is unclear to you; the "
-                                       "template already carries what worked, adapted to this video: never paste another video's sentences into the request")
+                res["prompts_rule"] = ("both prompts of each basis sample, whole from Loupe's record, to read only when a part of the judge's prompt is unclear "
+                                       "to you; its prompt already carries what worked, adapted to this video")
     except OSError:
         pass
     out(res)
+
+
+def cmd_template_apply(a):
+    """X4b: the judge's prompt becomes the request's prompt word for word (the user, 2026-10-28: nothing after the judge deforms its prompt). The checked
+    draft is kept as <request>.draft.json the first time and is the base of every apply: only its prompt is replaced. --slot "<slot words>=<value>" fills
+    [SLOT: <slot words>] with a value the plan already decided; --add-must "<line>" adds, word for word at the end, a must-carry line the judge left out
+    after it was asked again; --use-draft puts the checked draft back (no usable template). Reports facts, decides nothing: the must-carry lines the
+    prompt does not hold word for word, the slots left, the length against the service's limit."""
+    rd, _st = _state_of(a.run)
+    tf = _tpl_files(rd, a.video, a.clip)
+    req_p = Path(a.request) if a.request else tf["request"]
+    if not req_p.is_file():
+        fail(f"no request file {req_p}", 2)
+    draft_p = req_p.with_name(req_p.stem + ".draft.json")
+    if not draft_p.is_file():
+        j0 = _cf_request_json(req_p)
+        if not j0:
+            fail(f"{req_p.name} is not a request JSON", 2)
+        write_json(draft_p, j0)                  # the checked draft, kept as X4 left it
+    draft = _cf_request_json(draft_p)
+    dprm = draft.get("params") if isinstance(draft.get("params"), dict) else draft
+    filled, added = [], []
+    if a.use_draft:
+        final, source = str((dprm or {}).get("prompt") or ""), "draft"
+    else:
+        try:
+            t = json.loads(tf["json"].read_text(encoding="utf-8")) if tf["json"].is_file() else {}
+        except (OSError, ValueError):
+            t = {}
+        final = str((t or {}).get("template") or "").strip()
+        if not final:
+            fail("no judge's prompt for this video (prompt-template answered none, or was not asked): the checked draft stays the request; record it with --use-draft", 2)
+        source = "judge"
+        for sv in a.slot or []:
+            k, sep, v = sv.partition("=")
+            if not sep or not k.strip():
+                fail('--slot takes "<slot words>=<value>"', 2)
+            final, n = re.subn(r"\[SLOT:\s*" + re.escape(k.strip()) + r"\s*\]", lambda _m, v=v.strip(): v, final)
+            filled.append({"slot": k.strip(), "filled": n})
+        for m in a.add_must or []:
+            final = final.rstrip() + ("\n" if "\n" in final else " ") + m.strip()
+            added.append(m.strip())
+    musts = _musts_of(a.musts_file) if a.musts_file else (_musts_of(tf["musts"]) if tf["musts"].is_file() else [])
+    nf = _norm_ws(final)
+    missing = [m for m in musts if _norm_ws(m) not in nf]
+    newj = json.loads(json.dumps(draft))
+    tgt = newj["params"] if isinstance(newj.get("params"), dict) else newj
+    tgt["prompt"] = final
+    newj["prompt_source"] = source + (" + must-carry lines added: " + " | ".join(added) if added else "")
+    write_json(req_p, newj)
+    out({"ok": True, "request": str(req_p), "draft": str(draft_p), "prompt_source": newj["prompt_source"], "chars": len(final), "limit": PROMPT_LIMIT,
+         "over_limit": len(final) > PROMPT_LIMIT, "musts_checked": len(musts), "musts_missing": missing,
+         "slots_left": re.findall(r"\[SLOT:[^\]]*\]", final), "slots_filled": filled, "musts_added": added,
+         "note": "facts only: a must-carry line missing, a slot left or a length over the limit is asked of the judge once more (prompt-template --note); "
+                 "only then --add-must or --use-draft"})
 
 
 def _sample_prompts_file(sid: str, rd) -> dict:
@@ -6717,15 +6838,28 @@ def main():
         p.add_argument("--attempt", help="qc-consult: the take under QC (a1, a2, c2-a1 ...): picks the request whose prompt is sent to the judge (the newest otherwise)")
         p.set_defaults(fn=cmd_qc_consult, cmd=_nm)
 
-    p = sp.add_parser("prompt-template", help="first request of a video (X2): brief the judge (Loupe's keeper, Opus) on what you are working on, what the video is about and what it wants to achieve; it reads the saved prompts of the samples it chooses and answers the prompt template you craft the request from")
+    p = sp.add_parser("prompt-template", help="first request of a video (X4b, after X1-X4): the whole checked brief (your words, the checked draft request, its must-carry lines, the model's structure) to the judge (Loupe's keeper, Opus); it reads the saved prompts of the samples it chooses and answers the final prompt")
     p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
     p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
     p.add_argument("--product-details", help="its shape, size, opening and natural posture, from its registry row")
     p.add_argument("--brief", help="the brief, in words (or --brief-file)")
-    p.add_argument("--brief-file", help="the brief as a file: RUN/40-briefs/video-NN-judge-brief.md (what you are working on, what the video is about, what it wants to achieve, one line per beat)")
+    p.add_argument("--brief-file", help="the brief as a file (default RUN/40-briefs/video-NN[-cK]-judge-brief.md): what you are working on, what the video is about, what it wants to achieve, one line per beat")
+    p.add_argument("--clip", help="a clip of a multi-clip video (c1, c2 ...): its own draft, must-carry lines and prompt")
+    p.add_argument("--draft-file", help="the checked draft request (default RUN/50-requests/video-NN[-cK]-request.draft.json, else the request)")
+    p.add_argument("--musts-file", help="the lines the prompt must carry word for word, one per line (default RUN/40-briefs/video-NN[-cK]-musts.md)")
     p.add_argument("--structure-file", help="the locked model's request structure: the pattern card RUN/50-requests/video-NN-pattern.md")
     p.add_argument("--note", help="only when a first answer came back with needs_unmet: your answer from the plan, in words (the judge asked for it)")
     p.set_defaults(fn=cmd_prompt_template, kinds=None)
+
+    p = sp.add_parser("template-apply", help="X4b: the judge's final prompt into the request word for word (the checked draft kept beside it); fills slots; reports the must-carry lines missing, the slots left and the length")
+    p.add_argument("--run", required=True); p.add_argument("--video", required=True)
+    p.add_argument("--clip", help="a clip of a multi-clip video (c1, c2 ...)")
+    p.add_argument("--request", help="the request file (default RUN/50-requests/video-NN[-cK]-request.json)")
+    p.add_argument("--musts-file", help="the must-carry lines (default RUN/40-briefs/video-NN[-cK]-musts.md)")
+    p.add_argument("--slot", action="append", help='"<slot words>=<value>": fills [SLOT: <slot words>] with a value the plan already decided; repeatable')
+    p.add_argument("--add-must", action="append", help="a must-carry line the judge left out after being asked again: added word for word at the end; repeatable")
+    p.add_argument("--use-draft", action="store_true", help="put the checked draft back as the request (no usable judge's prompt)")
+    p.set_defaults(fn=cmd_template_apply)
 
     p = sp.add_parser("plan-hints", help="first request of a video only (X2): ask the keeper which past misses could matter for the plan (text-only hints, usually none)")
     p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")

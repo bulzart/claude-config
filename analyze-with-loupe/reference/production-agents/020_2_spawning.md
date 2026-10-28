@@ -53,7 +53,8 @@ a whole model guide or models/index.json (that is what rots your context):
   result.json: `qc` = "off: not checked (the user reviews at the end)", `continuity` = "not checked: QC off". A job that failed with no output,
   a flag or a rejected request is still handled by awl-submit as always: that is getting the first generation, not a QC fix.
   Before step 1: read <AWL>/reference/production-agents/ §3 (your contract; the file 030_3_… in that folder) and invoke awl-model-guide
-  once. The plan, brief and request files above were written by the main session (X1, X2, X4); you do not re-plan.
+  once. The plan, brief and request files above were written by the main session (X1, X2, X4, X4b: the request's prompt is the judge's,
+  word for word); you do not re-plan, and you never rewrite that prompt except by a regeneration's `template_fix` (awl-write-request).
 - <RUN>/30-assets/guardrails.md, when it exists (the client's rules; your plan lists this video's hits and operations);
 - <RUN>/20-analysis/house-approach.md, when it exists (the user's house approach; your plan says
   which of its rules this video applies);

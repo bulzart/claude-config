@@ -86,8 +86,9 @@ Only these section files for this phase, nothing else unless a step below says s
     --product-details "<its shape, size, opening and natural posture, from its registry row>" --checkpoint "<a plan checkpoint>" …`
     (repeat `--checkpoint`). The consult carries by itself what the judge needs to judge an error accurately: the prompt this video was
     generated from (the request of `--attempt`, the newest otherwise) with that request's video model and parameters and the model's entry
-    of the model index, the template the judge gave at X2 and your X2 brief (`evidence_sent` says which). The answer adds `cause` (which part of the prompt or of the template let the error happen) and `template_fix` (that part
-    rewritten): both go into the verdict and `result.json → judge`, for the user's review at the end. The JSON line has `relevant` (or `samples`
+    of the model index, and the brief the judge got at X4b (`evidence_sent` says which; the request's prompt is the judge's, word for word). The answer adds `cause` (which part of the prompt or of the template let the error happen) and `template_fix` (that part
+    rewritten): both go into the verdict and `result.json → judge`, for the user's review at the end. A regeneration (QC fixes `ask` or
+    `auto`) takes `template_fix` in place of the part it names, every other part of the judge's prompt word for word (`awl-write-request`). The JSON line has `relevant` (or `samples`
     when `mode` is `fallback` or `busy`, the brief's own ranking while no keeper answered): each with `composite_path`, `frames` (role, where it comes from, time),
     the admin's words (`title`, and `details`, `correct_note`, `idea`, `better`, `missed` when given), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`),
     the keeper's `why`, `check` and `wrong_pattern`, `reading` (what a data collector saw in that picture, in two short fields, `marked` and `right_version`,

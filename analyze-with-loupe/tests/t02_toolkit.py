@@ -207,6 +207,33 @@ ct_q = (run_q / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
 lq, _, _ = t("lint-run", "--run", run_q.name, env=ENV)
 check(jq.get("ok") and jq["unresolved_placeholders"] == [] and "QC fixes: off" in ct_q and "no awl-qc at all" in ct_q and (lq.get("contract") or {}).get("qc_fixes_line") is True,
       "QC fixes off: the contract says so and tells the agent to skip awl-qc, and lint-run reads the line")
+# --- X4b: the judge's prompt into the request word for word (template-apply); the checked draft kept; facts only
+run_t = Path(t("new-run", "--mode", "analyze", "--source", str(home.parent / "refs-c"), "--slug", "x4b", env=ENV)[0]["run_dir"])
+(run_t / "50-requests").mkdir(exist_ok=True)
+(run_t / "40-briefs").mkdir(exist_ok=True)
+draft_req = {"params": {"model": "wan3_0_prime", "prompt": "DRAFT the can stands on the desk. Keep the camera still.", "duration": 5,
+                        "medias": [{"role": "image_references", "value": "m1", "meaning": "the can"}]}}
+(run_t / "50-requests" / "video-01-request.json").write_text(json.dumps(draft_req), encoding="utf-8")
+(run_t / "40-briefs" / "video-01-musts.md").write_text("- Keep the camera still.\n- The final footage completely removes the red outline.\n", encoding="utf-8")
+(run_t / "40-briefs" / "video-01-template.json").write_text(json.dumps({"template": "JUDGE the slim can stands on the desk, as tall as the mug. [SLOT: the can's role tag] Keep the camera still."}), encoding="utf-8")
+rq_p = run_t / "50-requests" / "video-01-request.json"
+js, code, _ = t("template-apply", "--run", run_t.name, "--video", "01", "--slot", "the can's role tag=Image 1", env=ENV)
+rq = json.loads(rq_p.read_text(encoding="utf-8"))
+check(code == 0 and rq["params"]["prompt"] == "JUDGE the slim can stands on the desk, as tall as the mug. Image 1 Keep the camera still." and rq["params"]["duration"] == 5
+      and rq["prompt_source"] == "judge" and (run_t / "50-requests" / "video-01-request.draft.json").is_file(),
+      "template-apply puts the judge's prompt in the request word for word, fills the slot, keeps the draft beside it and the draft's parameters")
+check(js.get("musts_missing") == ["The final footage completely removes the red outline."] and js.get("slots_left") == [] and js.get("over_limit") is False and js.get("chars") == len(rq["params"]["prompt"]),
+      "template-apply reports the must-carry line the judge's prompt does not hold, as a fact, and changes nothing else")
+js, _, _ = t("template-apply", "--run", run_t.name, "--video", "01", "--slot", "the can's role tag=Image 1", "--add-must", "The final footage completely removes the red outline.", env=ENV)
+rq = json.loads(rq_p.read_text(encoding="utf-8"))
+check(js.get("musts_missing") == [] and rq["params"]["prompt"].endswith("Keep the camera still. The final footage completely removes the red outline.") and "must-carry lines added" in rq["prompt_source"],
+      "a must-carry line the judge left out (after it was asked again) is added word for word at the end, and the request says so")
+js, _, _ = t("template-apply", "--run", run_t.name, "--video", "01", "--use-draft", env=ENV)
+rq = json.loads(rq_p.read_text(encoding="utf-8"))
+check(rq["params"]["prompt"] == draft_req["params"]["prompt"] and rq["prompt_source"] == "draft", "--use-draft puts the checked draft back (the draft file is never overwritten)")
+(run_t / "40-briefs" / "video-01-template.json").unlink()
+_, code, _ = t("template-apply", "--run", run_t.name, "--video", "01", env=ENV, ok=False)
+check(code == 2, "template-apply without a judge's prompt stops and names --use-draft (code 2)")
 t("state", "--run", run_u.name, "set", "audio_ingest=", env=ENV)
 js, _, _ = t("contract", "--run", run_u.name, env=ENV)
 check("<whisper|frames-only>" in js.get("unresolved_placeholders", []) and js.get("previous_kept_as"), "contract leaves the audio placeholder when the run has no audio choice, lists it, and keeps the previous file")

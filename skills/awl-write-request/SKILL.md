@@ -59,33 +59,16 @@ Only these section files for this phase, nothing else unless a step below says s
   - From the selected guide's **§4.0 official examples**, write the pattern card
     (`50-requests/video-NN-pattern.md`).
   - Decide the channel for everything: parameters vs. references vs. prompt vs. post-production.
-  - **The judge's template (the first request of a video).** Before the prompt is written, brief the judge: Loupe's keeper, one separate
-    Opus session that holds the admin's samples of earlier generations (the miss, the right version and, for many, the prompt of the wrong take
-    and of the corrected one). Write the brief to `RUN/40-briefs/video-NN-judge-brief.md`: what you are working on (run, video, mode, the
-    locked model, the request kind and its inputs), what the video is about (one line per beat of the plan: what happens, the product's form and
-    state, the camera) and what it wants to achieve (the goal, the moment that must land, what it keeps of the source). Then `T prompt-template
-    --run RUN --video NN --brief-file RUN/40-briefs/video-NN-judge-brief.md --structure-file RUN/50-requests/video-NN-pattern.md --product
-    "<form>" --product-details "<its shape, size, opening and natural posture, from its registry row>"` (the toolkit adds the locked video
-    model from `state.json` with its entry of the model index, so the judge writes for that model). The judge chooses which samples' saved
-    prompts to read, Loupe sends both whole, and the answer has `template` (the whole prompt in the locked model's structure, written from what
-    worked and what failed before, with `[SLOT: …]` where only you know the specifics), `basis` (per sample: what worked, what failed, which part
-    of the template carries it), `notes`, `changes` (parts of your brief earlier generations say should change) and `not_covered`. It is saved as
-    `RUN/40-briefs/video-NN-template.json` (with your brief) and `video-NN-template.md`, both prompts of each basis sample at `prompts_files[<id>]`.
-    A regeneration or a re-edit never asks again: it works from the saved template and its own diagnosed cause.
-    - **Craft the request from it.** Keep the template's structure, order and wording at every part it covers, fill each slot with this video's
-      specifics and apply each of `changes` where the plan allows it. The steps below and the rules of this phase still apply on top (the guardrails,
-      the model guide's limits, the source's story and timing, the fidelity lock): where one of them conflicts with a part of the template, that rule
-      wins and the part changes only as much as the rule needs. Read a basis sample's prompts file only when a part of the template is unclear to you.
-    - **When the judge asks you something.** What only you can answer comes back as `needs_unmet` with an `unmet_rule`: answer it from your plan in
-      words and ask once more with the same arguments plus `--note "<your answer>"`; if it is still unmet, go on with what you have and write the
-      gap in the block below.
-    - **No template** (`mode: empty`, `unavailable`, `busy` after the toolkit's retries, or an empty `template` with `none_reason`): write the request
-      as always from the pattern card and the steps below.
-    - The judge is not asked again before generation. After the video is generated, QC consults it with the prompt you used, the template and this
-      brief (`awl-qc`).
-    - Write a short "Judge's template" block at the end of the pattern card: the template's file (or "no template: <why>"), each slot filled with
-      what, each of `changes` applied or not and why, each part changed by a rule of this phase (which rule, the change in one line), and any judge
-      gap (a question still unmet after the `--note`). X4 checks it and X6 copies it into the brief.
+  - **The judge writes the final prompt after X4 (the first request of a video; the user, 2026-10-28).** X2 writes the pipeline's own request
+    by every step below, as always: it is the **checked draft** (X4 checks it next). Write with it the pattern card's **"Must carry"** block and
+    the same lines in `RUN/40-briefs/video-NN-musts.md`, one per line, word for word: every sentence the prompt must carry exactly (the fidelity
+    lock, the marker sentence, the removal and clean-plate lines, the camera lock, the product's targeted exclusion, a guardrail operation, the
+    voiceover's dialogue or no-dialogue line). X2 never asks the judge: after X4, `awl-precheck` X4b hands the judge the whole checked brief
+    (the plan's beats and goal, this draft, its must-carry lines, the model's structure) and the judge's answer becomes the request's prompt,
+    word for word (`T template-apply`).
+  - **A regeneration or a re-edit** never asks the judge for a new prompt: the corrected prompt is the request's prompt (the judge's) with the
+    judge's `template_fix` from the QC consult in place of the part it names (`awl-qc`), every other part word for word; with no `template_fix`,
+    only the part that let the error happen is crafted again by the steps below, every unrelated part kept.
   - **Reason first** (`generation-system.md` §6). For every beat that places, moves or uses the product, derive what the plan or source
     needs there, what the product's own details allow (its registry row, affordance sheet and `product_properties.txt`) and what the
     source scene offers, then write the one state all three allow, once, in positive words. The rules below are checks on that result,
@@ -215,10 +198,10 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Never (this phase)
 
-- Never ask the judge for a template on a regeneration or a re-edit, and never ask it again between the template and the
-  generation. Never name a past miss's wrong behaviour in a prompt, and never paste another video's sentences (a basis
-  sample's prompts file, `T sample-prompts`) into a request: the judge's template already carries what worked, adapted to
-  this video.
+- Never ask the judge in X2 (it is asked once, after X4: `awl-precheck` X4b), never on a regeneration or a re-edit, and never
+  rewrite, trim or reorder its prompt. Never name a past miss's wrong behaviour in a prompt, and never paste another video's
+  sentences (a basis sample's prompts file, `T sample-prompts`) into a request: the judge's prompt already carries what
+  worked, adapted to this video.
 - Never use the flawed take (the clip QC rejected) for its regeneration: not as a video input, a start or end frame
   or a reference, and never fix one frame of it or ask the model to edit it. The regeneration goes out with the
   inputs of the first attempt (the original source video, when the video has one), and a whole request crafted again: the

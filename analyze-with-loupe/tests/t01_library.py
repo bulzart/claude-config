@@ -124,10 +124,12 @@ check("once per video" in qc, "the QC phase asks the keeper once per video")
 check("T qc-consult" in qc and "composite_path" in qc and "qc-consult.json" in qc, "the QC phase consults the keeper, views every composite and names the saved answer")
 check("`original video`" in qc and "circle, arrow or box" in qc, "the QC phase reads a sample's source tags (an original video is never a generated frame) and knows a zoom is drawn only under a marked frame, as Loupe draws them")
 wr1 = re.sub(r"\s+", " ", rd(SKD / "awl-write-request" / "SKILL.md"))
-check("T prompt-template" in wr1 and "video-NN-judge-brief.md" in wr1 and "T plan-hints" not in wr1,
-      "the first request briefs the judge and asks for its prompt template (prompt-template), no longer for sample hints")
-check("The judge is not asked again before generation" in wr1 and "Judge's template" in rd(SKD / "awl-precheck" / "SKILL.md"),
-      "the judge is not asked again before generation, and X4 checks the pattern card's Judge's template block")
+pc1 = re.sub(r"\s+", " ", rd(SKD / "awl-precheck" / "SKILL.md"))
+check("X4b" in pc1 and "T prompt-template" in pc1 and "T template-apply" in pc1 and "video-NN-judge-brief.md" in pc1 and "T plan-hints" not in wr1
+      and "Never rewrite, trim, reorder or improve the judge's prompt" in pc1,
+      "after X1-X4 the whole checked brief goes to the judge (X4b: prompt-template), its prompt goes into the request word for word (template-apply), never improved")
+check("Must carry" in wr1 and "video-NN-musts.md" in wr1 and "T prompt-template" not in wr1 and "Must carry" in pc1 and "X4 and X4b only" in rd(SKD / "awl-analyze-produce" / "SKILL.md"),
+      "X2 writes the checked draft and its must-carry lines and never asks the judge; X4 checks them; A9 runs X4b after X4")
 qc1 = re.sub(r"\s+", " ", rd(SKD / "awl-qc" / "SKILL.md"))
 check("has caught what it caught" in qc1 and "evidence_sent" in qc1 and "--attempt aK" in qc1 and "result.json → judge" in qc1,
       "QC consults the judge after its first pass; the consult carries the prompt used, the template and the brief, and the cause is kept in result.json judge")
@@ -193,8 +195,8 @@ check("Pilot first" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "stalled
 check("`title`" in qc and "`run`" in qc and "`busy`" in qc, "the QC phase reads the sample's title and origin from the consult answer and knows the busy mode")
 wr = rd(SKD / "awl-write-request" / "SKILL.md")
 wrn = re.sub(r"\s+", " ", wr)
-check("Craft the request from it" in wrn and "[SLOT: …]" in wrn and "that rule wins and the part changes only as much as the rule needs" in wrn and "needs_unmet" in wrn,
-      "the writer crafts the request from the judge's template, fills its slots, answers what the judge asks, and a rule of X2 wins a conflict")
+check("template_fix" in wrn and "every other part word for word" in wrn and "needs_unmet" in pc1 and "--add-must" in pc1 and "--use-draft" in pc1,
+      "a regeneration takes the judge's template_fix and keeps the rest word for word; X4b re-asks the judge before it adds a line or keeps the draft")
 # the preview is the 720x1280 burn, never the proxy; no product clause teaches a faded product
 check("never the 540×960 capcut-cli proxy" in rd(LIB / "reference" / "capcut-assembly" / "070_6_deliverables-analyze-mode.md") and "720×1280" in rd(SKD / "awl-record" / "SKILL.md"), "the preview is documented as the 720x1280 burn, never the proxy")
 faded = [str(p.relative_to(LIB)) for p in sorted((LIB / "reference").rglob("*.md")) if re.search(r"colours as muted as|no brighter than the room", rd(p))]

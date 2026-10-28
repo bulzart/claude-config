@@ -104,13 +104,15 @@ It holds two things:
   Loupe also ships the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`); that server is not registered in `~/.claude.json`, so the pipeline's agents reach the library only through `awl.py qc-consult`, `qc-brief` and `plan-hints`.
 
 The judge writes the prompt template (the user, 2026-10-28). Loupe's keeper is the judge and runs on Opus 5.5; a Haiku data collector only
-describes each sample's picture once and gives no verdict. At X2, before the first request of a video is written, the production agent briefs the
-judge (`awl.py prompt-template --brief-file RUN/40-briefs/video-NN-judge-brief.md --structure-file RUN/50-requests/video-NN-pattern.md`: what it is
-working on, what the video is about, what it wants to achieve, and the locked model's structure from the pattern card); the judge names the samples
-whose saved prompts it needs, Loupe sends both prompts of each whole from its record, and the judge answers the whole prompt template (with
-`[SLOT: …]` where only the agent knows the specifics), its basis (what worked, what failed, where the template carries it), notes and changes. The
-agent crafts its request from the template within X2's own rules (each part a rule changed is recorded in the pattern card's "Judge's template"
-block, which X4 checks) and generates; the judge is not asked again before generation. A template asked while another keeper call runs is asked
+describes each sample's picture once and gives no verdict. X1–X4 come first: the plan, the pattern card, the pipeline's own request
+(the checked draft, with its must-carry lines in `40-briefs/video-NN-musts.md`) and the pre-generation check. Then, at X4b, the whole checked brief
+goes to the judge (`awl.py prompt-template --structure-file RUN/50-requests/video-NN-pattern.md`: the judge brief `40-briefs/video-NN-judge-brief.md`,
+the draft's prompt, parameters and inputs, the must-carry lines and the video model's entry); the judge names the samples whose saved prompts it needs,
+Loupe sends both prompts of each whole from its record, and the judge answers the final prompt with its basis (what worked, what failed, where it
+carries it), notes and changes. `awl.py template-apply` puts that prompt in the request word for word (the draft kept as `video-NN-request.draft.json`)
+and reports the must-carry lines missing, the slots left and the length; nothing rewrites the judge's prompt: a missing line or a length over the
+limit is asked of the judge once more, and only then is a line added word for word or the checked draft kept. The judge is not asked again before
+generation, and a regeneration takes the judge's `template_fix` in place of the part it names. A template asked while another keeper call runs is asked
 again up to 3 times (`AWL_TEMPLATE_BUSY_RETRIES`). After generation QC consults the judge once its first pass has caught what it caught, and the
 consult carries by itself the prompt the video was generated from (`--attempt` picks the request) with that request's video model and parameters,
 the template and the brief (`evidence_sent`); both kinds of consult send the generation video model's entry of `models/index.json`, and the judge

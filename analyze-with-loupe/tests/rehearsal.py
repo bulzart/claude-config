@@ -218,11 +218,13 @@ for submode in ("recreate", "create", "free-refs", "free-none"):
     (run / "40-briefs" / "video-01-plan.md").write_text("# plan video 01 (V01)\nBeat 1: the can stands on the desk.\nBeat 2: a cut; the can is still there.\n", encoding="utf-8")
     (run / "50-requests" / "video-01-pattern.md").write_text("# pattern card video 01\nShot 1: subject, action, setting.\nJudge's template: no template: Loupe unavailable.\n", encoding="utf-8")
     (run / "40-briefs" / "video-01-judge-brief.md").write_text("Video 01 of a rehearsal: the slim can stands on the desk; the goal is its true size.\n", encoding="utf-8")
+    (run / "40-briefs" / "video-01-musts.md").write_text("- Keep the camera still.\n", encoding="utf-8")
     (run / "50-requests" / "video-01-request.json").write_text(json.dumps({"params": {"model": "wan3_0_prime", "prompt": "The can stands on the desk. Keep the camera still.", "aspect_ratio": "9:16", "resolution": "720p"}}), encoding="utf-8")
     (run / "40-briefs" / "video-01-brief.md").write_text("# brief video 01\n- request: 50-requests/video-01-request.json\n- credits: 20\n", encoding="utf-8")
     (run / "50-requests" / "agent-contract.md").write_text(f"# contract {run.name}\nRun: {run.name}\nLoupe: up\nAudio ingest: frames-only\nQC fixes: ask\n", encoding="utf-8")
-    step(f"{submode}:prompt-template", "prompt-template", "--run", run.name, "--video", "01", "--brief-file", run / "40-briefs" / "video-01-judge-brief.md",
-         "--structure-file", run / "50-requests" / "video-01-pattern.md", "--product", "slim can")
+    step(f"{submode}:prompt-template", "prompt-template", "--run", run.name, "--video", "01", "--structure-file", run / "50-requests" / "video-01-pattern.md",
+         "--product", "slim can")
+    step(f"{submode}:template-apply-draft", "template-apply", "--run", run.name, "--video", "01", "--use-draft")
     step(f"{submode}:plan-hints", "plan-hints", "--run", run.name, "--video", "01", "--beats", "Beat 1: the can stands on the desk.\nBeat 2: a cut.", "--product", "slim can")
     step(f"{submode}:scale", "scale", "--product-cm", "15.5", "--product-px", "100-300", "--ref-cm", "30", "--ref-px", "50-450")
     step(f"{submode}:lint-run", "lint-run", "--run", run.name)
