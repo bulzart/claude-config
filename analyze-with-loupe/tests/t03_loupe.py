@@ -202,7 +202,7 @@ js, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
 pf = run / "40-briefs" / "samples" / f"{SID}-prompts.md"
 ptxt = pf.read_text(encoding="utf-8") if pf.is_file() else ""
 check(js.get("ok") and js.get("prompts") == "pair" and js["chars"]["wrong"] > 0 and pf.is_file() and "PROMPT-WRONG the can" in ptxt and "PROMPT-FIXED the can" in ptxt and "the height was stated" in ptxt
-      and "## Prompt of the wrong take" in ptxt and "## Prompt of the corrected take" in ptxt, "sample-prompts writes both prompts whole and the admin's note to 40-briefs/samples/<id>-prompts.md")
+      and "## Prompt of the flawed take (Video A: its prompt generated the flawed version)" in ptxt and "## Prompt of the correct take (Video B)" in ptxt, "sample-prompts writes both prompts whole and the admin's note to 40-briefs/samples/<id>-prompts.md")
 check("wrong_prompt" not in js and "diff" not in js and "prompt_change" not in js, "the JSON line carries sizes and the path, never the prompt texts or a diff (the agent reads the file and judges)")
 js, _, _ = t("sample-prompts", "--id", "S999", "--run", run.name, env=ENV)
 check(js.get("mode") == "unavailable" and js.get("prompts") == "", "an unknown sample id answers unavailable, no prompts, no failure")
@@ -248,7 +248,7 @@ SID_EX = mo_ex["id"] if isinstance(mo_ex, dict) and "id" in mo_ex else f"S{mo_ex
 js, _, _ = t("sample-prompts", "--id", SID_EX, "--run", run.name, env=ENV)
 ptx = Path(js.get("saved", "-")).read_text(encoding="utf-8") if js.get("saved") else ""
 check(js.get("prompt_roles") == {"wrong": "example", "fixed": "example"} and "## Prompt of the example take of Video A" in ptx and "## Prompt of the example take of Video B" in ptx
-      and "## Prompt of the wrong take" not in ptx and "This sample's frames are all Examples" in ptx,
+      and "## Prompt of the flawed take" not in ptx and "This sample's frames are all Examples" in ptx,
       "a sample of Example frames only: the prompts file names both prompts as example takes, never the wrong or the corrected take")
 misses.delete_moment(mo_ex["moment_id"], "test") if hasattr(misses, "delete_moment") else None
 
