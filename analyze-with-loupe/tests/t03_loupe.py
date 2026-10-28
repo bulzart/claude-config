@@ -196,7 +196,7 @@ check(code == 0 and rq3["params"]["prompt"].startswith("TEMPLATE-MARK") and "[SL
       and js.get("musts_missing") == ["Keep the camera still."], "template-apply puts the judge's prompt in the request word for word and reports the must-carry line it lacks")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can is smaller again", env=ENV)
 q = [c for c in calls if "QC question" in c][-1]
-check("TEMPLATE-MARK" in q and "the same, word for word" in q and js.get("evidence_sent", {}).get("request_prompt") == "video-03-request.json",
+check("TEMPLATE-MARK" in q and "(the same as the prompt this video was generated from, its slots filled)" in q and js.get("evidence_sent", {}).get("request_prompt") == "video-03-request.json",
       "the QC consult then sends the judge's prompt as the prompt used (the kept draft is never taken for it) and says the template is the same")
 js, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
 pf = run / "40-briefs" / "samples" / f"{SID}-prompts.md"

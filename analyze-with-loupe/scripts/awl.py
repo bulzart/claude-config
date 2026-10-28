@@ -4380,6 +4380,26 @@ def _video_request_prompt(rd, video, attempt, model) -> tuple[str, str, dict]:
     return "", "", {}
 
 
+def _same_prompt(template: str, prompt: str) -> bool:
+    """Whether a prompt is the judge's template word for word, its [SLOT: ...] markers filled and nothing added before, between or after."""
+    tn, pn = _norm_ws(template), _norm_ws(prompt)
+    if not tn or not pn:
+        return False
+    parts = [x.strip() for x in re.split(r"\[SLOT:[^\]]*\]", tn)]
+    if len(parts) == 1:
+        return tn == pn
+    if not (pn.startswith(parts[0]) and pn.endswith(parts[-1])):
+        return False
+    pos = 0
+    for part in parts:
+        if part:
+            k = pn.find(part, pos)
+            if k < 0:
+                return False
+            pos = k + len(part)
+    return True
+
+
 def _qc_evidence(a, ctx) -> tuple[dict, dict]:
     """What the judge needs to judge an error accurately (the user, 2026-10-28), read from the run's own files: the prompt the video under QC was
     generated from with that request's video model and parameters, the model's entry of the index, the template the judge gave at X2 and the agent's brief
@@ -4413,8 +4433,8 @@ def _qc_evidence(a, ctx) -> tuple[dict, dict]:
     for k, items in got.items():
         if items:
             text = "\n\n".join((f"{name.replace('-template.json', '')}:\n" if len(items) > 1 else "") + v for name, v in items)
-            if k == "template" and _norm_ws(text) == _norm_ws(ev.get("request_prompt", "")):
-                text = "(the same, word for word, as the prompt this video was generated from)"
+            if k == "template" and len(items) == 1 and _same_prompt(text, ev.get("request_prompt", "")):
+                text = "(the same as the prompt this video was generated from" + (", its slots filled)" if "[SLOT:" in text else ", word for word)")
             ev[k], sent[k] = text, ", ".join(name for name, _v in items)
     return ev, sent
 
