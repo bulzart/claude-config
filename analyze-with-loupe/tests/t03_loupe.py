@@ -223,6 +223,16 @@ check(js.get("ok") and js.get("status") == "cleared", "caught-flag set clears th
 js, _, _ = t("caught-flag", "list", "--run", run.name[:8], env=ENV)
 check(js.get("count") == 1, "caught-flag list filters by a run name prefix as text")
 
+# --- a take made of two generations: the prompts file shows each prompt with the seconds it made and this sample's frames from it
+misses.update(m["id"], {"wrong_segments": [{"clip": "c1", "attempt": 1, "request": "video-03-c1-request.json", "t_from": 0, "t_to": 1.5, "prompt": "SEG-ONE the can on the desk."},
+                                           {"clip": "c2", "attempt": 1, "request": "video-03-c2-request.json", "t_from": 1.5, "t_to": 3.0, "prompt": "SEG-TWO the lights go off."}]}, "test")
+js, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
+ptxt2 = Path(js.get("saved", "-")).read_text(encoding="utf-8") if js.get("saved") else ""
+check(js.get("generations", {}).get("wrong") == 2 and "### Prompt 1 of 2 · clip c1" in ptxt2 and "up to 1.500 s" in ptxt2 and "Frame 1 (WRONG at 1.00 s)" in ptxt2
+      and "### Prompt 2 of 2 · clip c2" in ptxt2 and "from 1.500 s up to 3.000 s" in ptxt2 and ptxt2.index("SEG-ONE") < ptxt2.index("SEG-TWO"),
+      "a take made of two generations: the prompts file shows each prompt with the seconds it made and the sample's frames from it")
+misses.update(m["id"], {"wrong_segments": [], "wrong_prompt": "PROMPT-WRONG the can on the desk."}, "test")
+
 # --- the coupling in step with Loupe (2026-10-28): a consult may outlast the old 190 s; reconcile lists the flag captures and only counts the
 #     upload answers kept for hf-put; a capture is found at any age; a queued flag stays findable after Loupe's ingest
 import re as _re  # noqa: E402

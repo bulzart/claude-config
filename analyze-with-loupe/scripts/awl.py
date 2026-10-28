@@ -4628,7 +4628,8 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     kind = str(smp.get("prompts") or "")
     wrong, fixed, note = str(smp.get("wrong_prompt") or ""), str(smp.get("fixed_prompt") or ""), str(smp.get("prompt_note") or "")
     res = {"ok": True, "id": sid, "prompts": kind, "title": smp.get("title", ""), "model": smp.get("model", ""), "run": smp.get("run", ""), "video": smp.get("video", ""),
-           "prompt_note": note, "chars": {"wrong": len(wrong), "fixed": len(fixed)}}
+           "prompt_note": note, "chars": {"wrong": len(wrong), "fixed": len(fixed)},
+           "generations": {side: len(smp.get(f"{side}_segments") or []) or (1 if txt else 0) for side, txt in (("wrong", wrong), ("fixed", fixed))}}
     if not kind:
         res["note"] = "the admin saved no prompt for this sample"
         return res
@@ -4636,14 +4637,21 @@ def _sample_prompts_file(sid: str, rd) -> dict:
              f"Model: {smp.get('model') or 'any'} · from run {smp.get('run') or '-'} video {smp.get('video') or '-'} · kinds: {', '.join(smp.get('kinds') or []) or '-'}"]
     if note:
         lines += ["", "## The admin's note on the prompt", "", note]
-    if wrong:
-        lines += ["", "## Prompt of the wrong take (as generated)", "", wrong]
-    else:
-        lines += ["", "## Prompt of the wrong take", "", "_not saved by the admin_"]
-    if fixed:
-        lines += ["", "## Prompt of the corrected take", "", fixed]
-    else:
-        lines += ["", "## Prompt of the corrected take", "", "_not saved by the admin (a miss example: nothing was corrected)_"]
+    role_word = {"wrong": "WRONG", "right": "RIGHT", "example": "EXAMPLE"}
+    for side, text, title, none in (("wrong", wrong, "the wrong take (as generated)", "_not saved by the admin_"),
+                                    ("fixed", fixed, "the corrected take", "_not saved by the admin (a miss example: nothing was corrected)_")):
+        segs = [x for x in (smp.get(f"{side}_segments") or []) if isinstance(x, dict)]
+        if len(segs) >= 2:          # a take made of several generations (clips joined): each prompt, the seconds it made, this sample's frames from it
+            lines += ["", f"## Prompts of {title}: {len(segs)} generations, one prompt each"]
+            for k, sg in enumerate(segs, 1):
+                fr = ", ".join(f"Frame {f.get('n')} ({role_word.get(f.get('role'), str(f.get('role')).upper())} at {float(f.get('t') or 0):.2f} s)" for f in sg.get("frames") or [])
+                lines += ["", f"### Prompt {k} of {len(segs)} · clip {sg.get('clip') or '-'} · {sg.get('request') or 'request not named'}",
+                          f"_Responsible for everything from {float(sg.get('t_from') or 0):.3f} s up to {float(sg.get('t_to') or 0):.3f} s of that video; this sample's frames "
+                          f"from it: {fr or 'none'}._", "", str(sg.get("prompt") or "").strip() or "_not saved_"]
+        elif text:
+            lines += ["", f"## Prompt of {title}", "", text]
+        else:
+            lines += ["", f"## Prompt of {title.split(' (')[0]}", "", none]
     lines += ["", "_Read both and judge what the corrected prompt did differently and whether that is the mechanism of the beat you are writing or checking. Apply the "
               "mechanism in the locked model's own structure and in your own words; never paste a sentence of either prompt, never name the wrong behaviour in a prompt, "
               "never take the corrected prompt as a rule for another video._", ""]
