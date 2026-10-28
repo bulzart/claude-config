@@ -101,8 +101,9 @@ Only these section files for this phase, nothing else unless a step below says s
     A sample has a `sample_kind`: `pair` (a WRONG and a RIGHT frame), `miss-only` (`has_right: false`: no frame of it is called RIGHT, and a lone miss frame carries a grey NO RIGHT VERSION tag), or `scenario` (no frame is called WRONG: the admin's words only, or frames the admin called EXAMPLE (blue: something the admin keeps for you to understand and remember, neither a miss nor the right look); it carries `idea`, `better` and `missed`: what was meant to happen, what could have been better, what the AI agents missed or could not understand). A scenario is insight, not a visual pattern: compare the video with the idea and with what was missed, and never look for a match of the image. For a miss-only sample:
     it shows the wrong pattern to look for and nothing about what is right, so never infer a right look from it.
     A sample marked `prompts` (`pair`, `wrong` or `fixed`) keeps the prompt that produced the miss and the prompt of the corrected take, with `prompt_note` (the admin's one line on what made the
-    difference); the answer carries only the marker and the note. For a sample you judged relevant to this video, `T sample-prompts --id <S..> --run RUN` writes both whole to
-    `RUN/40-briefs/samples/<id>-prompts.md`: Read it and judge yourself what the corrected prompt did differently (nothing is compared for you). It is a lead for the diagnosed
+    difference); the keeper read both whole before it answered (`prompts_judged`), and `qc-consult` writes both whole for you at `prompts_files[<id>]`
+    (`RUN/40-briefs/samples/<id>-prompts.md`, from Loupe's record). For a sample you judged relevant to this video, Read that file and judge yourself what the corrected
+    prompt did differently (nothing is compared or judged for you; `T sample-prompts` fetches any other sample). It is a lead for the diagnosed
     cause of a regenerate and for the corrected request (the `awl-write-request` rules: the mechanism in the model's own structure and your words, never a sentence pasted, never the
     wrong behaviour named), never a verdict on the video, and never read for a sample you did not judge relevant.
     A sample is a lead, never a verdict: a match is a regenerate reason only by this phase's own rules.

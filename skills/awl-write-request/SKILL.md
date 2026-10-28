@@ -92,8 +92,9 @@ Only these section files for this phase, nothing else unless a step below says s
       apply it only when its lever is a plain restatement at the matching beat (the count, the state or the orientation the plan
       already intends, said once positively); otherwise leave it out. Never invent what a right version would look like.
     - **A hint marked `prompts`** (`pair`, `wrong` or `fixed`) rests on a sample whose two prompts the admin kept: the one that produced the miss, the one of
-      the corrected take, and `prompt_note`, the admin's one line on what made the difference. The hint carries only the marker and the note. When you
-      apply that hint, `T sample-prompts --id <S..> --run RUN` writes both prompts whole to `RUN/40-briefs/samples/<id>-prompts.md`: Read it, judge
+      the corrected take, and `prompt_note`, the admin's one line on what made the difference. The keeper read both whole before hinting
+      (`prompts_judged`), and `plan-hints` writes both whole at `prompts_files[<id>]` (`RUN/40-briefs/samples/<id>-prompts.md`). When you
+      apply that hint, Read that file, judge
       yourself what the corrected prompt did differently and whether that is the mechanism of the matching beat (nothing is compared or summarised for
       you), and apply the mechanism at that beat in the locked model's own structure and your own words. Never a sentence of either prompt in the
       request, never the wrong behaviour named, never the corrected prompt as a rule for another video; a hint you do not apply is not read, so at most

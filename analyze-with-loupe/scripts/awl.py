@@ -4248,10 +4248,11 @@ def cmd_qc_consult(a):
     rd = _cf_run_dir(a.run) if a.run else None
     d["saved"] = _qc_sample_files(d, rd, a.video)
     if any(x.get("prompts") for x in (d.get("relevant") or d.get("samples") or []) if isinstance(x, dict)):
+        d["prompts_files"] = _prompts_files(d.get("relevant") or d.get("samples"), rd)
         d["prompts_rule"] = ("a sample marked prompts (pair, wrong or fixed) keeps the prompt that produced the miss and the prompt of the corrected take (prompt_note: the admin's "
-                             "one line on what made the difference); this answer carries only the marker and the note. For a sample you judged relevant to THIS video, "
-                             "`T sample-prompts --id <S..> --run RUN` writes both whole to RUN/40-briefs/samples/<id>-prompts.md: read it and judge yourself what the corrected "
-                             "prompt did differently (nothing is compared for you). It is a lead for the diagnosed cause and the corrected request, written in the model's own "
+                             "one line on what made the difference); when the keeper answered, it read both whole first (prompts_judged), and both are written whole for you at "
+                             "prompts_files[<id>], from Loupe's record, compared or judged by no one. For a sample you judged relevant to THIS video, read that file and judge "
+                             "yourself what the corrected prompt did differently. It is a lead for the diagnosed cause and the corrected request, written in the model's own "
                              "structure and your words, never a sentence to paste, never a verdict on the video, and not read for a sample you did not judge relevant.")
     if d.get("needs_unmet"):
         d["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer by looking at your own video, or a file that does not "
@@ -4288,7 +4289,7 @@ def cmd_plan_hints(a):
     rd = _cf_run_dir(a.run) if a.run else None
     res = {"ok": True, "mode": d.get("mode"), "hints": d.get("hints", []), "held_back": d.get("held_back", 0), "held_back_why": d.get("held_back_why", []),
            "none_reason": d.get("none_reason", ""), "beats_cut": cut}
-    for k in ("needs_asked", "needs_unmet", "library_read", "keeper_error"):
+    for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error"):
         if d.get(k):
             res[k] = d[k]
     if d.get("needs_unmet"):
@@ -4305,10 +4306,11 @@ def cmd_plan_hints(a):
                         "smallest change inside the existing prompting stack, written positively as its right_outcome. At most two per video. "
                         "Record each (applied to which beat, or why not) under 'Sample hints' in the brief.")
         if any(h.get("prompts") for h in res["hints"] if isinstance(h, dict)):
+            res["prompts_files"] = _prompts_files(res["hints"], rd)
             res["prompts_rule"] = ("a hint marked prompts (pair, wrong or fixed) rests on a sample whose two prompts the admin kept (the one that produced the miss, the one of the "
-                                   "corrected take, and prompt_note, the admin's one line on what made the difference); the hint carries only the marker and the note. When you apply "
-                                   "that hint, `T sample-prompts --id <S..> --run RUN` writes both whole to RUN/40-briefs/samples/<id>-prompts.md: read it, judge yourself what the "
-                                   "corrected prompt did differently and whether that is the mechanism of the matching beat (nothing is compared for you), and apply the mechanism at "
+                                   "corrected take, and prompt_note, the admin's one line on what made the difference); the keeper read both whole before hinting (prompts_judged), "
+                                   "and both are written whole for you at prompts_files[<id>], from Loupe's record, compared or judged by no one. When you apply that hint, read "
+                                   "that file, judge yourself what the corrected prompt did differently and whether that is the mechanism of the matching beat, and apply the mechanism at "
                                    "that beat in the locked model's own structure and your own words. Never a sentence of either prompt in the request, never the wrong behaviour "
                                    "named, never the corrected prompt as a rule for another video; a hint you do not apply is not read.")
     try:
@@ -4322,17 +4324,12 @@ def cmd_plan_hints(a):
     out(res)
 
 
-def cmd_sample_prompts(a):
-    """The prompts of the two takes of ONE sample (the prompt that produced the miss, the prompt of the corrected take and the admin's note on what made the
-    difference, as the admin saved them in Loupe), fetched whole for a sample you judged relevant and written to a file of the run. Nothing is compared,
-    cut or summarised here: read the file and judge what the corrected prompt did differently. The sample lists, the consult answer and the hints never
-    carry these texts, only the marker `prompts` and the note, so nothing reaches an agent's context before it decided to read it."""
-    sid = (a.id or "").strip().upper()
-    if not re.fullmatch(r"S\d+", sid):
-        fail("sample-prompts needs --id S<number> (a sample id from qc-consult, qc-brief or plan-hints)", 2)
+def _sample_prompts_file(sid: str, rd) -> dict:
+    """Both prompts of one sample, whole from Loupe's record, written to RUN/40-briefs/samples/<id>-prompts.md; {saved} or {note} (nothing saved,
+    Loupe unreachable). Nothing is compared, cut or summarised."""
     s, d = _cf_api("GET", f"/api/qc/samples/{sid}?prompts=1", key="qc", timeout=30)
     if s != 200:
-        out({"ok": True, "mode": "unavailable", "id": sid, "prompts": "", "note": "no prompts: " + str((d or {}).get("error") or f"HTTP {s}")})
+        return {"ok": True, "mode": "unavailable", "id": sid, "prompts": "", "note": "no prompts: " + str((d or {}).get("error") or f"HTTP {s}")}
     smp = d.get("sample") or {}
     kind = str(smp.get("prompts") or "")
     wrong, fixed, note = str(smp.get("wrong_prompt") or ""), str(smp.get("fixed_prompt") or ""), str(smp.get("prompt_note") or "")
@@ -4340,7 +4337,7 @@ def cmd_sample_prompts(a):
            "prompt_note": note, "chars": {"wrong": len(wrong), "fixed": len(fixed)}}
     if not kind:
         res["note"] = "the admin saved no prompt for this sample"
-        out(res)
+        return res
     lines = [f"# {sid} · the prompts of the two takes", "", f"Title: {smp.get('title', '')}",
              f"Model: {smp.get('model') or 'any'} · from run {smp.get('run') or '-'} video {smp.get('video') or '-'} · kinds: {', '.join(smp.get('kinds') or []) or '-'}"]
     if note:
@@ -4356,13 +4353,33 @@ def cmd_sample_prompts(a):
     lines += ["", "_Read both and judge what the corrected prompt did differently and whether that is the mechanism of the beat you are writing or checking. Apply the "
               "mechanism in the locked model's own structure and in your own words; never paste a sentence of either prompt, never name the wrong behaviour in a prompt, "
               "never take the corrected prompt as a rule for another video._", ""]
-    rd = _cf_run_dir(a.run)
     f = Path(rd) / "40-briefs" / "samples" / f"{sid}-prompts.md"
     f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text("\n".join(lines), encoding="utf-8")
+    write_text(f, "\n".join(lines))
     res["saved"] = str(f)
     res["rule"] = "read the file only for a sample you judged relevant to this video; judge what changed yourself; the mechanism goes into the request in the model's structure and your words, never a sentence of either prompt"
-    out(res)
+    return res
+
+
+def _prompts_files(items, rd) -> dict:
+    """For every cited sample marked `prompts`, both prompts written whole for the agent: {S..: path}. The answer itself never carries their text."""
+    res = {}
+    for x in items or []:
+        if isinstance(x, dict) and x.get("prompts") and x.get("id") and rd:
+            r = _sample_prompts_file(str(x["id"]), rd)
+            if r.get("saved"):
+                res[str(x["id"])] = r["saved"]
+    return res
+
+
+def cmd_sample_prompts(a):
+    """The prompts of the two takes of ONE sample (the prompt that produced the miss, the prompt of the corrected take and the admin's note on what made the
+    difference, as the admin saved them in Loupe), fetched whole and written to a file of the run (qc-consult and plan-hints write them by themselves for
+    every sample they cite). Nothing is compared, cut or summarised here: read the file and judge what the corrected prompt did differently."""
+    sid = (a.id or "").strip().upper()
+    if not re.fullmatch(r"S\d+", sid):
+        fail("sample-prompts needs --id S<number> (a sample id from qc-consult, qc-brief or plan-hints)", 2)
+    out(_sample_prompts_file(sid, _cf_run_dir(a.run)))
 
 
 def _px_span(spec: str, what: str) -> float:
