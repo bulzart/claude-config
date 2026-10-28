@@ -45,7 +45,7 @@ Stored as section files in `minimax-hailuo/` (next to this file); **read only th
 | 3.11 | · Visible text | `140_3.11_visible-text.md` | 1.6 |
 | 3.12 | · Character / identity consistency | `150_3.12_character-identity-consistency.md` | 0.3 |
 | 3.13 | · Product and object fidelity | `160_3.13_product-and-object-fidelity.md` | 0.5 |
-| 3.14 | · Integration and continuity | `170_3.14_integration-and-continuity.md` | 1.8 |
+| 3.14 | · Integration and continuity | `170_3.14_integration-and-continuity.md` | 1.7 |
 | 4 | Prompt construction | `180_4_prompt-construction.md` | 3.8 |
 | 5 | Strengths, weaknesses and failure modes | `190_5_strengths-weaknesses-and-failure.md` | 1.8 |
 | 6 | Model-specific features and controls | `200_6_model-specific-features-and-cont.md` | 0.6 |
