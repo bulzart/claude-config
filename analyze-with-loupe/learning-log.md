@@ -516,3 +516,12 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   of Video A or B. `awl.py sample-prompts` heads it `## Prompt of the example take of Video A` and returns `prompt_roles`; a sample of Examples only
   gets a closing note that neither prompt is a wrong or a corrected one.
 - **Verified:** t03 (a sample of Example frames only) passes; Loupe's selftest 191, keeper_sync 91, page_smoke pass.
+
+## 2026-10-28 · What each sample prompt is: the flawed version's, the correct take's, or just an example
+- **Reported:** it must be known in the database and by every agent fed with the prompts that an Example's prompt is just an example (neither bad
+  nor right). Otherwise Video A's prompt is the one that generated the flawed version, and Video B's is the correct take's.
+- **Changed (Loupe):** the report keeps `wrong_prompt_role` (flawed | example) and `fixed_prompt_role` (correct | example), written on every save.
+  The judge's text, the digest, the brief, the keeper's roles, the template request and the form name the prompts so. In this library,
+  `qc-consult` and `plan-hints` say it in their prompts rules, `sample-prompts` heads them `## Prompt of the flawed take (Video A: its prompt
+  generated the flawed version)` and `## Prompt of the correct take (Video B)`, and the QC and pre-check skills and the README use the same words.
+- **Verified:** t01, t02, t03, t05 pass; Loupe's selftest 195, keeper_sync 91, page_smoke pass.
