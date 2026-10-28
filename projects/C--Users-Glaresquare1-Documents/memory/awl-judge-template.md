@@ -1,0 +1,12 @@
+---
+name: awl-judge-template
+description: "User 2026-10-28: in /analyze-with-loupe the agent briefs the Opus judge, the judge gives a prompt template from what worked/failed before, the agent crafts the prompt and generates; the judge is consulted again only after generation (QC, with the prompt used, template, brief, video model)"
+metadata:
+  type: feedback
+---
+
+The user, 2026-10-28, after seeing a collector draw its own conclusion about a sample's two prompts (`loupe/data/keeper/understood/S32.json`): "do not make the judge only revise and inspect the prompt, but ask the judge to give a template before generating the prompt at all ... the judge and other agents should be the ones to generate a accurate prompt based on what already worked and what not from prior video generations". Then: "agent working on a video gives judge a brief of what he is working and what the video about and what it wants to achieve then the judge gives him a prompt template, and then the working agent crafts the video prompt based on judges response and other details and continues on the video generation judge doesnt have no work here no more, only after the video is generated then the qc catches errors then the judge is consulted again with enough details and data so it gives accurate response". And: "the generation video model should be passsed to the judge for better accuracy".
+
+**Why:** the prompt should start from the admin's corrected examples (both prompts, judged by the judge), not from the pipeline alone; no review loop between template and generation; the post-generation consult needs the prompt used, the template, the brief and the model to name a real cause.
+
+**How to apply:** X2 = `T prompt-template --brief-file RUN/40-briefs/video-NN-judge-brief.md --structure-file RUN/50-requests/video-NN-pattern.md` (the toolkit adds the model's index entry; saved as `video-NN-template.json/.md`); the request keeps the template's structure and wording, fills `[SLOT: ...]`, and the rules of X2 win conflicts (recorded in the pattern card's "Judge's template" block). Never add a judge review step before generation. QC consults once after its first pass (`--attempt aK`); the toolkit attaches the evidence; `cause`/`template_fix` go to `result.json -> judge` for the user. The judge = the Loupe keeper on Opus 5.5; the Haiku collector never judges ([[loupe-web-app]]). plan-hints stays only for older runs. Related: [[analyze-with-loupe-command]], [[fix-regeneration-original-plus-recrafted-prompt]].
