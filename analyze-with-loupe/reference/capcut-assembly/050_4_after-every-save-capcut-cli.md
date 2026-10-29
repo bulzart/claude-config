@@ -3,8 +3,9 @@
 T capcut-repair --draft "<store>/<name>" --preview "<run>/60-outputs/video-NN/capcut-preview.mp4"
 ```
 It first applies the **house text style** to every text layer (`T capcut-text-style`, root and
-nested timeline copies), then runs these capcut-cli steps, the first three under one machine-wide
-lock:
+nested timeline copies), at one size for the whole video: 10, or 11 when the video has only a
+little text (§3; its `sizing` gives the words on screen at once and the widest line at 11). Then it
+runs these capcut-cli steps, the first three under one machine-wide lock:
 ```
 capcut register "<store>/<name>" --apply --materials
 capcut sync-timelines "<store>/<name>" --nested --apply

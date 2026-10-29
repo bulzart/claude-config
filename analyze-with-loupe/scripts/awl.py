@@ -57,7 +57,8 @@ Subcommands (python awl.py <cmd> -h):
   capcut-prep    after capcut_clone_draft: set aside the template's identity/layout so `capcut register` rebuilds them
   capcut-repair  after capcut_save: house text style + register + sync-timelines + lint (one machine-wide lock),
                  then a proxy preview
-  capcut-text-style  every CapCut text layer → the user's locked house preset (config capcut.text_style.learned)
+  capcut-text-style  every CapCut text layer → the user's locked house preset (config capcut.text_style.learned),
+                 size 10, or 11 when the video has only a little text (capcut.text_style.short_text)
                  (--check reports; --learn copies the exact preset from a text styled once in CapCut;
                  a locked preset is only replaced with --learn --replace)
   strip-inserts  a reference minus its inserts (memes) in one pass + silent copy + map of the split points
@@ -5044,7 +5045,13 @@ def cmd_capcut_repair(a):
 # --------------------------------------------------------------------------- CapCut house text style
 
 HOUSE_TEXT_DEFAULT = {"font": "System", "size": 10, "fill": "#FFFFFF",
-                      "stroke": {"color": "#000000", "width": 0.08}}
+                      "stroke": {"color": "#000000", "width": 0.08},
+                      # the user, 2026-10-29: "our standard text size is 10 but when there's only few text to be placed then use
+                      # font size 11" (one size per video; config capcut.text_style.short_text, null turns it off)
+                      "short_text": {"size": 11, "max_words_at_once": 5, "max_line_width": 0.82}}
+# CapCut draws a size-s text with a font of CAPCUT_FONT_PER_SIZE * s * (canvas width) px. Measured on the covers CapCut itself
+# rendered with its System font: 03_Oct_2026_v09 (size 10, lines 956 and 942 px wide on 1080) and 06_Oct_2026_v14 (size 9, 954 px).
+CAPCUT_FONT_PER_SIZE = 0.00575
 # material-level keys that a CapCut font / preset choice sets (copied by --learn from a text the user styled)
 _TEXT_STYLE_KEY = re.compile(r"^(font_|fonts$|text_color$|text_alpha$|has_border$|border_|has_shadow$|shadow_|"
                              r"background_|bold_width$|italic_degree$|underline|letter_spacing$|line_spacing$|"
@@ -5053,8 +5060,11 @@ _TEXT_STYLE_KEY = re.compile(r"^(font_|fonts$|text_color$|text_alpha$|has_border
 
 
 def _house_text_style() -> dict:
-    st = {**HOUSE_TEXT_DEFAULT, **(cfg_get("capcut.text_style") or {})}
+    cfg = cfg_get("capcut.text_style") or {}
+    st = {**HOUSE_TEXT_DEFAULT, **cfg}
     st["stroke"] = {**HOUSE_TEXT_DEFAULT["stroke"], **(st.get("stroke") or {})}
+    off = "short_text" in cfg and not cfg["short_text"]
+    st["short_text"] = None if off else {**HOUSE_TEXT_DEFAULT["short_text"], **(cfg.get("short_text") or {})}
     return st
 
 
@@ -5085,11 +5095,11 @@ def _hex_rgb(h: str) -> list:
     return [round(int(h[i:i + 2], 16) / 255, 6) for i in (0, 2, 4)]
 
 
-def _house_text_material(m: dict, st: dict, font_path: str) -> bool:
-    """Rewrite one text material to the house style; True when it changed. The text, its ranges, position
-    and timing stay; font, size, fill, outline, shadow, background and preset fields become the house ones."""
+def _house_text_material(m: dict, st: dict, font_path: str, size: float) -> bool:
+    """Rewrite one text material to the house style at `size` (the video's, _house_text_size); True when it changed. The text,
+    its ranges, position and timing stay; font, size, fill, outline, shadow, background and preset fields become the house ones."""
     before = json.dumps(m, sort_keys=True)
-    size = float(st["size"])
+    size = float(size)
     learned = st.get("learned") or {}
     lmat, lsty = learned.get("material") or {}, learned.get("style")
     if lmat:
@@ -5134,22 +5144,96 @@ def _draft_contents(d: Path) -> list:
     return [p for p in [d / "draft_content.json", *sorted((d / "Timelines").glob("*/draft_content.json"))] if p.is_file()]
 
 
+def _timeline_texts(content: dict) -> list:
+    """The text events a timeline shows: every segment that uses a text material, with its text, in and out (s) and scale."""
+    mats = {m.get("id"): m for m in content.get("materials", {}).get("texts", [])}
+    out = []
+    for tr in content.get("tracks", []):
+        for seg in tr.get("segments", []):
+            m = mats.get(seg.get("material_id"))
+            r = seg.get("target_timerange") or {}
+            start, dur = int(r.get("start") or 0), int(r.get("duration") or 0)
+            if m is None or dur <= 0:
+                continue
+            try:
+                text = json.loads(m.get("content") or "{}").get("text", "")
+            except Exception:
+                text = ""
+            scale = ((seg.get("clip") or {}).get("scale") or {}).get("x")
+            out.append({"text": text, "start": start / 1e6, "end": (start + dur) / 1e6, "scale": float(scale or 1.0)})
+    return out
+
+
+_FONT100 = {}
+
+
+def _line_width_frac(text: str, size: float, font_path: str, scale: float = 1.0) -> float:
+    """The widest line of `text` at CapCut `size`, as a fraction of the canvas width (the font's ink extent, CAPCUT_FONT_PER_SIZE)."""
+    if font_path not in _FONT100:
+        from PIL import ImageFont
+        _FONT100[font_path] = ImageFont.truetype(font_path, 100)
+    f, widest = _FONT100[font_path], 0
+    for line in text.split("\n"):
+        if line.strip():
+            left, _, right, _ = f.getbbox(line)
+            widest = max(widest, right - left)
+    return widest / 100 * CAPCUT_FONT_PER_SIZE * float(size) * float(scale or 1.0)
+
+
+def _house_text_size(events: list, st: dict, font_path: str) -> dict:
+    """One size for every text of a video: the house size (10), or short_text.size (11) when the video has only a little text,
+    that is at no moment more than short_text.max_words_at_once words on screen (every text shown at that moment counted, so a
+    caption split into two layers counts whole) and, at that size, every line within short_text.max_line_width of the frame
+    width. Counted and measured from the timeline (the user, 2026-10-29)."""
+    base = float(st["size"])
+    rule = st.get("short_text")
+    res = {"size": base, "base_size": base, "texts_on_timeline": len(events)}
+    if not rule:
+        res["short_text"] = "off (config capcut.text_style.short_text is null)"
+        return res
+    short, max_words, max_width = float(rule["size"]), int(rule["max_words_at_once"]), float(rule["max_line_width"])
+    res["short_text"] = {"size": short, "max_words_at_once": max_words, "max_line_width": max_width}
+    if not events:
+        return res
+    peak, at = 0, 0.0
+    for e in events:
+        n = sum(len(x["text"].split()) for x in events if x["start"] <= e["start"] < x["end"])
+        if n > peak:
+            peak, at = n, e["start"]
+    try:
+        widest = max(((_line_width_frac(e["text"], short, font_path, e["scale"]), e["text"]) for e in events), key=lambda w: w[0])
+    except Exception as ex:   # the font cannot be measured: the house size stays
+        res.update({"words_at_once_max": peak, "measure_error": str(ex)[:200]})
+        return res
+    little, fits = peak <= max_words, widest[0] <= max_width
+    res.update({"size": short if little and fits else base, "words_at_once_max": peak, "words_at_once_max_at_s": round(at, 2),
+                "widest_line_at_short_size": round(widest[0], 3), "widest_text": widest[1],
+                "why": (f"{peak} word(s) at most on screen at once ({'<=' if little else '>'} {max_words}); widest line "
+                        f"{widest[0]:.0%} of the frame width at size {short:g} ({'<=' if fits else '>'} {max_width:.0%})")})
+    return res
+
+
 def _text_style_pass(d: Path, write: bool) -> dict:
     st = _house_text_style()
     font = _capcut_system_font() or (st.get("learned") or {}).get("font_path") or ""
     if not font:
         fail("CapCut's System font was not found (<LOCALAPPDATA>/CapCut/Apps/<version>/Resources/Font/SystemFont/en.ttf)", 1)
+    paths = _draft_contents(d)
+    contents = {p: json.loads(p.read_text(encoding="utf-8")) for p in paths}
+    newest = max(paths, key=lambda p: p.stat().st_mtime)   # the copy written last (the save, or CapCut) holds the timeline
+    sizing = _house_text_size(_timeline_texts(contents[newest]), st, font)
     files, changed_ids = [], set()
-    for p in _draft_contents(d):
-        content = json.loads(p.read_text(encoding="utf-8"))
+    for p in paths:
+        content = contents[p]
         changed = [m.get("id") for m in content.get("materials", {}).get("texts", [])
-                   if _house_text_material(m, st, font)]
+                   if _house_text_material(m, st, font, sizing["size"])]
         changed_ids.update(changed)
         if changed and write:
             shutil.copyfile(p, p.with_name(p.name + ".textstyle.bak"))
             write_text(p, json.dumps(content, ensure_ascii=False))
         files.append({"file": str(p), "texts_off_style": len(changed)})
-    return {"font": font, "size": st["size"], "preset": "learned" if st.get("learned") else "default (not calibrated)",
+    return {"font": font, "size": sizing["size"], "sizing": sizing,
+            "preset": "learned" if st.get("learned") else "default (not calibrated)",
             "files": files, "texts_off_style": len(changed_ids), "written": bool(write and changed_ids)}
 
 
@@ -5216,10 +5300,12 @@ def _learn_text_style(d: Path, which, replace: bool = False) -> dict:
 
 
 def cmd_capcut_text_style(a):
-    """House style for every CapCut text layer: font System, size 10, and the user's chosen preset, stored in
-    config.json (capcut.text_style.learned; locked). Rewrites every text material of the draft (root and nested
-    timeline copies); capcut-repair runs it before register/sync. --check only reports. --learn copies the
-    exact preset fields from a text the user styled once in CapCut; a locked preset needs --replace."""
+    """House style for every CapCut text layer: font System, size 10 (11 when the video has only a little text: at most
+    short_text.max_words_at_once words on screen at once and every line within short_text.max_line_width of the frame at
+    11; one size per video, reported in `sizing`), and the user's chosen preset, stored in config.json
+    (capcut.text_style.learned; locked). Rewrites every text material of the draft (root and nested timeline copies);
+    capcut-repair runs it before register/sync. --check only reports. --learn copies the exact preset fields from a
+    text the user styled once in CapCut; a locked preset needs --replace."""
     d = Path(a.draft)
     if not (d / "draft_content.json").is_file():
         fail(f"not a CapCut draft (no draft_content.json): {d}", 2)

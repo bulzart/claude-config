@@ -501,5 +501,70 @@ ct = (run_f / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
 st_js, _, _ = t("status", "--run", run_f.name, "--no-loupe", env=ENV)
 check("Effort" not in ct and "item 34" in ct and st_js["effort"]["level"] == "max",
       "the agent contract carries no effort line and does carry the read-only folders (item 34); status reports the run's level")
+check("the house size: 10, or 11 when the video has only a little text" in " ".join(ct.split()),
+      "the agent contract states the house size: 10, or 11 when the video has only a little text (the user, 2026-10-29)")
+
+# --- the house text size (the user, 2026-10-29: "our standard text size is 10 but when there's only few text to be placed then use
+# font size 11"): one size per video, 11 when at no moment more than 5 words are on screen and every line fits at 11
+import glob as _glob
+
+
+def _draft(name, events):
+    """A minimal CapCut draft: one text material per event (text, in s, out s, track)."""
+    d = home.parent / "capcut" / name
+    d.mkdir(parents=True, exist_ok=True)
+    mats, tracks = [], {}
+    for i, (text, a, b, tr) in enumerate(events):
+        mats.append({"id": f"T{i}", "font_size": 10.0,
+                     "content": json.dumps({"text": text, "styles": [{"range": [0, len(text)], "size": 10.0}]})})
+        tracks.setdefault(tr, []).append({"material_id": f"T{i}", "target_timerange": {"start": int(a * 1e6), "duration": int((b - a) * 1e6)},
+                                          "clip": {"scale": {"x": 1.0, "y": 1.0}, "transform": {"x": 0.0, "y": 0.5}}})
+    (d / "draft_content.json").write_text(json.dumps({"canvas_config": {"width": 1080, "height": 1920}, "materials": {"texts": mats},
+                                                      "tracks": [{"type": "text", "segments": s} for s in tracks.values()]}), encoding="utf-8")
+    return d
+
+
+if not _glob.glob(os.path.join(os.environ.get("LOCALAPPDATA", ""), "CapCut", "Apps", "*", "Resources", "Font", "SystemFont", "en.ttf")):
+    print("SKIP  the house text size: CapCut's System font is not installed on this machine")
+else:
+    sizes = {}
+    for name, events in (("short", [("Who decided that?", 0, 4, 1), ("Hero vs villain", 4, 8, 1)]),
+                         ("split", [("Professor: if u are not", 0, 5, 1), ("interested u can leave", 0, 5, 2)]),
+                         ("wide", [("POV: YOU WORK IN SALES", 0, 5, 1)]),
+                         ("long", [("POV: You picked option C\nthree times in a row and the\nnext answer is option C", 0, 6, 1)]),
+                         ("paired", [("What I think I look like\nafter one sip:", 0, 4, 1), ("What I actually look like:", 4, 8, 1)])):
+        js, code, _ = t("capcut-text-style", "--draft", str(_draft(name, events)), "--check", env=ENV, ok=False)
+        sizes[name] = js.get("sizing") or {}
+        sizes[name]["exit"] = code
+    s = sizes["short"]
+    check(s.get("size") == 11.0 and s.get("words_at_once_max") == 3 and s.get("widest_line_at_short_size", 1) <= 0.82 and s["exit"] == 1,
+          f"two short texts one after the other: size 11 for the video ({s.get('why')}); --check reports them off style (exit 1)")
+    check(sizes["split"].get("size") == 10.0 and sizes["split"].get("words_at_once_max") == 9,
+          f"a caption split into two layers shown together counts whole: 9 words at once, size 10 ({sizes['split'].get('why')})")
+    check(sizes["wide"].get("size") == 10.0 and sizes["wide"].get("words_at_once_max") == 5 and sizes["wide"].get("widest_line_at_short_size", 0) > 0.82,
+          f"5 words that would be wider than 82% of the frame at 11 keep size 10 ({sizes['wide'].get('why')})")
+    check(sizes["long"].get("size") == 10.0, f"a three-line hook keeps size 10 ({sizes['long'].get('why')})")
+    check(sizes["paired"].get("size") == 10.0 and sizes["paired"].get("texts_on_timeline") == 2,
+          "one size per video: the short second line of a pair stays at 10 beside its 9-word first line")
+    d_short = home.parent / "capcut" / "short"
+    js, code, _ = t("capcut-text-style", "--draft", str(d_short), env=ENV, ok=False)
+    if code == 3 and "CapCut is running" in js.get("error", ""):
+        check(not (d_short / "draft_content.json.textstyle.bak").exists(), "CapCut open: the write is refused and nothing is written")
+    else:
+        c = json.loads((d_short / "draft_content.json").read_text(encoding="utf-8"))
+        got = [(m["font_size"], [st["size"] for st in json.loads(m["content"])["styles"]]) for m in c["materials"]["texts"]]
+        js2, code2, _ = t("capcut-text-style", "--draft", str(d_short), "--check", env=ENV, ok=False)
+        check(code == 0 and js.get("written") and got == [(11.0, [11.0]), (11.0, [11.0])] and (d_short / "draft_content.json.textstyle.bak").exists()
+              and code2 == 0 and js2.get("texts_off_style") == 0,
+              "the write sets font_size 11 and every style range to 11, keeps a .textstyle.bak, and --check then reports 0 off style")
+    cfg_p = home / "config.json"
+    cfg_txt = cfg_p.read_text(encoding="utf-8")
+    cfg_off = json.loads(cfg_txt)
+    cfg_off["capcut"]["text_style"]["short_text"] = None
+    cfg_p.write_text(json.dumps(cfg_off), encoding="utf-8")
+    js_s, _, _ = t("capcut-text-style", "--draft", str(_draft("short-off", [("Who decided that?", 0, 4, 1)])), "--check", env=ENV, ok=False)
+    cfg_p.write_text(cfg_txt, encoding="utf-8")
+    check(js_s.get("size") == 10.0 and str((js_s.get("sizing") or {}).get("short_text", "")).startswith("off"),
+          "short_text set to null in config turns the rule off: size 10 for a short text")
 
 finish()

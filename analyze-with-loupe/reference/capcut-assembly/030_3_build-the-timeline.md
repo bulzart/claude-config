@@ -46,6 +46,13 @@ Inputs:
      no `color`. `T capcut-repair` (§4) then rewrites every text layer to exactly that style (font,
      size, fill, outline and the preset's fields). Never another font, size, colour or preset unless
      the user asks for it in the run;
+   - **size 11 when the video has only a little text** (the user, 2026-10-29: "when there's only few
+     text to be placed then use font size 11"): at no moment more than 5 words on screen (every text
+     layer shown at that moment counted, so a caption split into two layers counts whole), and at
+     size 11 every line stays within 82% of the frame width. One size for the whole video, so its
+     texts always match: a short line beside or after a longer text stays at 10. `T capcut-repair`
+     counts and measures it and sets it (`config.json → capcut.text_style.short_text`; its output's
+     `sizing` gives the words at once and the widest line); still pass `fontSize:10`;
    - never over the face, the product or the key action; inside the platform-safe area
      (`text-and-format.md` §3);
    - no emoji in any text layer (the user's rule, strict).

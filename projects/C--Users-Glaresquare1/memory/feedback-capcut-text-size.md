@@ -1,0 +1,20 @@
+---
+name: feedback-capcut-text-size
+description: "CapCut overlay text size — standard 10, but 11 when a video has only a little text (≤5 words on screen at once); one size per video"
+metadata:
+  node_type: memory
+  type: feedback
+  originSessionId: c1639feb-dd77-47ca-950d-178277c7920f
+  modified: 2026-10-29T20:29:29.086Z
+---
+
+Given 2026-10-29: "our standard text size is 10 but when there's only few text to be placed then use font size 11" (CapCut edits).
+
+Implemented in /analyze-with-loupe as part of the house text style: `awl.py capcut-text-style` (run by `capcut-repair`)
+sets one size per video — 11 when at no moment more than 5 words are on screen (texts shown together counted together)
+and every line fits within 82% of the frame width at 11, else 10. Thresholds in `config.json → capcut.text_style.short_text`.
+Calibration: CapCut draws size s with a font of ~0.00575·s × frame width (System font), measured on CapCut's own covers.
+
+**Why:** at size 10 a short line looks small on a 9:16 frame; long multi-line hooks need 10 to fit.
+**How to apply:** any CapCut text placement for this user (any pipeline or a manual edit): 10 by default, 11 for a video
+whose text is only a few words; keep one size across a video's texts. Related: [[feedback-pipeline-rules]].

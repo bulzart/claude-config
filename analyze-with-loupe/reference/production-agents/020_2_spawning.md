@@ -122,8 +122,10 @@ Hard rules:
   never moved, renamed or deleted (item 34).
 - Never capcut_save with force:true.
 - Text layers: fontSize 10, no colour; capcut-repair applies the house text style (the user's locked
-  preset in config capcut.text_style.learned). Never restyle text, and never run
-  `capcut-text-style --learn` / `--replace`.
+  preset in config capcut.text_style.learned) and the house size: 10, or 11 when the video has only a
+  little text (at most 5 words on screen at once, every line within 82% of the frame width at 11; one
+  size for the whole video, reported as `sizing` in its output). Never restyle or resize text, and
+  never run `capcut-text-style --learn` / `--replace`.
 - Text layers are always horizontally centred: posX 0 on every layer; only posY follows the
   reference. If centred text would cover the product, a face or an insert, move it up or down,
   never sideways (CE-010). No text layer contains an emoji.

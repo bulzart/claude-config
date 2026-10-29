@@ -217,6 +217,9 @@ a blocker with the real error (`voiceover.md` §4 step 8).
      `config.json → capcut.text_style.learned` (white text, black outline). `T capcut-repair` applies
      it to every text layer after each save (`reference/capcut-assembly.md` §3). Never re-learn or
      replace it unless the user explicitly asks for a different preset.
+     - **Size 11 when the video has only a little text** (the user, 2026-10-29): at no moment more
+       than 5 words on screen at once, and every line within 82% of the frame width at 11. One size
+       for the whole video; `T capcut-repair` counts, measures and sets it.
 9. **One interconnected system.** Every generation is planned with `reference/generation-system.md`:
    - work backward from the finished video;
    - keep the entity state ledger;
@@ -317,8 +320,8 @@ a blocker with the real error (`voiceover.md` §4 step 8).
   keeps (CE-027), never change a caption's subject to clear a guardrail (CE-022), and never give a brand a
   scene it has no tie to when the other brand fits (CE-020).
 - Never give a CapCut text layer another font, size, colour or preset than the house text style
-  (font System, size 10, the user's locked preset in `capcut.text_style.learned`), unless the user
-  asks for it in the run. Never re-learn or replace that preset (`--learn --replace`) unless the
+  (font System, size 10 or 11 when the video has only a little text, the user's locked preset in
+  `capcut.text_style.learned`), unless the user asks for it in the run. Never re-learn or replace that preset (`--learn --replace`) unless the
   user explicitly asks for a new one. Never place a text layer off-centre horizontally (posX ≠ 0):
   only its height follows the reference.
 - Never generate a reference insert (meme, film snippet, reaction image). Cut it from the reference

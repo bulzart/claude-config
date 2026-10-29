@@ -120,6 +120,9 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
      `config.json → capcut.text_style.learned` (white text, black outline). `T capcut-repair` applies
      it to every text layer after each save (`reference/capcut-assembly.md` §3). Never re-learn or
      replace it unless the user explicitly asks for a different preset.
+     - **Size 11 when the video has only a little text** (the user, 2026-10-29): at no moment more
+       than 5 words on screen at once, and every line within 82% of the frame width at 11. One size
+       for the whole video; `T capcut-repair` counts, measures and sets it (its `sizing` says why).
 16. **Analyze Mode: reference inserts are cut, never generated, and every video ends in CapCut.**
     - A meme or other insert that interrupts the reference (e.g. 13 s of footage + a 2 s meme with
       its sound + 12 s of footage) is cut from the reference with its sound. A video meme is never
@@ -142,8 +145,8 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
 - Never let the video model render overlay text in Analyze Mode. Generate clean and place the text
   in CapCut. Never burn it in with `awl.py captions`, except as the stated fallback.
 - Never give a CapCut text layer another font, size, colour or preset than the house text style
-  (font System, size 10, the user's locked preset in `capcut.text_style.learned`), unless the user
-  asks for it in the run. Never re-learn or replace that preset (`--learn --replace`) unless the
+  (font System, size 10 or 11 when the video has only a little text, the user's locked preset in
+  `capcut.text_style.learned`), unless the user asks for it in the run. Never re-learn or replace that preset (`--learn --replace`) unless the
   user explicitly asks for a new one. Never place a text layer off-centre horizontally (posX ≠ 0):
   only its height follows the reference.
 - Never generate a reference insert (meme, film snippet, reaction image). Cut it from the reference

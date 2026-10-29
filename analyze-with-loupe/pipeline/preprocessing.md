@@ -100,7 +100,7 @@ awl.py last-frame --video "<clip>" --out "<handoff.png>" [--back 0.3]    → exa
 awl.py capcut-name --video 3                                              → 01_Oct_2026_v03 (free name)
 awl.py capcut-prep --draft "<store>/<name>"                               → right after capcut_clone_draft
 awl.py capcut-repair --draft "<store>/<name>" --preview "<preview.mp4>"  → after every capcut_save (house text style + register + sync + lint, locked)
-awl.py capcut-text-style --draft "<store>/<name>" [--check | --learn [--text N] [--replace]]   → font System, size 10, the user's locked preset (config capcut.text_style.learned)
+awl.py capcut-text-style --draft "<store>/<name>" [--check | --learn [--text N] [--replace]]   → font System, size 10 (11 when the video has only a little text: ≤ 5 words on screen at once, every line ≤ 82% of the width at 11; config capcut.text_style.short_text), the user's locked preset (config capcut.text_style.learned)
 awl.py strip-inserts --video "<reference>" --inserts 13.0-15.0 --out "<dir>"  → own.mp4, own-silent.mp4, map.json (split points)
 awl.py captions --video "<in>" --out "<out>" --spec captions.json | --from-speech [--script "…"]   (fallback only)
 awl.py clean --video "<in>" --out "<out>" --delogo "x,y,w,h@t0-t1" [--crop "x,y,w,h"]

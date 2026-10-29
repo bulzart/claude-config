@@ -3,7 +3,8 @@
   - the generated pieces are contiguous, and each insert sits exactly at its split (Create with `memes = none`, item 32: no insert at all);
   - the total = generated length + the inserts;
   - every text event is at its planned time and position;
-  - `T capcut-text-style --draft "<store>/<name>" --check` reports 0 texts off the house style;
+  - `T capcut-text-style --draft "<store>/<name>" --check` reports 0 texts off the house style
+    (its `size` is the video's: 10, or 11 when the video has only a little text, §3);
   - no text layer contains an emoji.
 - On the preview (`awl.py qc --video <capcut-preview.mp4> --out <dir> --expect-size 540x960`, plus
   its storyboard), check:

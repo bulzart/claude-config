@@ -35,6 +35,9 @@
 5. **Style: the house text style, always** (`capcut-assembly.md` §3): font System, size 10, and the
    user's chosen preset, locked in `config.json → capcut.text_style.learned` (white text, black
    outline), on every text of every video.
+   - **Size 11 when the video has only a little text** (the user, 2026-10-29): at no moment more
+     than 5 words on screen at once, and every line within 82% of the frame width at 11. One size
+     for the whole video; `T capcut-repair` sets it (`capcut-assembly.md` §3).
    - The reference decides only the wording, its case convention and its height, never the font,
      size, colour or preset.
    - Supplied brand fonts and colours are not used for overlay text unless the user asks for them
