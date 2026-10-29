@@ -113,7 +113,8 @@ Only these section files for this phase, nothing else unless a step below says s
     When the answer has `needs_unmet` (a question only you can answer by looking at your own video, or a file that does not exist), answer it in words and ask
     once more with `--note "<what you saw>"`; if it is still unmet, go on and write in the verdict what was not answered.
     **Keeper gaps reach the admin:** write the answer's `not_covered` (what the library does not cover for this video) and every need still unmet after
-    the `--note` into `result.json → keeper_gaps`, one line each (`production-agents.md` §4); the main session reports them in the wrap-up so the admin
+    the `--note`, and every flag of the judge (`flags`: what is missing, contradictory or ambiguous in a sample's record, as `flag S12: <what>`), into
+    `result.json → keeper_gaps`, one line each (`production-agents.md` §4); the main session reports them in the wrap-up so the admin
     can add a sample in Loupe, and Loupe's Keeper page lists them too. A gap is information for the library, never a regenerate reason by itself.
   - `T qc --video <final> --out <dir> --mode <mode> --allowed-text "<planned text>|<printed words of
     every visible client asset>" --dense "<label>:<a>-<b>" …` with every QC checkpoint of the plan,

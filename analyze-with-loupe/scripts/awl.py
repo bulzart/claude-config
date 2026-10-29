@@ -3428,8 +3428,8 @@ def _lc():
 # the background, so the agent still gets the answer.
 CONSULT_TIMEOUT = float(os.environ.get("AWL_CONSULT_TIMEOUT") or 1080)
 TEMPLATE_BUSY_RETRIES = int(os.environ.get("AWL_TEMPLATE_BUSY_RETRIES") or 3)   # a template asked while another keeper call holds the lock is asked again
-BRIEF_CHARS = 20000         # the whole brief to the judge: the agent's words, the checked draft request and its must-carry lines
-STRUCTURE_CHARS = 12000     # the locked model's request structure sent with it
+# The brief to the judge (the agent's words, the checked draft request's prompt and its must-carry lines) and the locked model's request structure go
+# whole: a video generation prompt is never cut (the user, 2026-10-29).
 UPLOAD_ONLY_CAPTURE = re.compile(r"^signals: upload( \||$)")    # a media_upload answer the hook keeps for `hf-put --capture`, never a flag
 
 
@@ -3896,18 +3896,12 @@ def _cf_part(a, existing, rd, req, output, thumbs: bool = True):
 
 
 def _cf_compact(e: dict, full: bool = False) -> dict:
-    """An entry without thumbnails (and with long texts cut, unless full) for the terminal."""
+    """An entry without thumbnails for the terminal; its prompts (the flagged request's and the cleared one's) and the diff stay whole, never cut
+    (the user, 2026-10-29: a video generation prompt is never trimmed)."""
     c = json.loads(json.dumps(e, ensure_ascii=False))
     for i in c.get("inputs", []):
         i.pop("thumb", None)
     (c.get("trigger", {}).get("part") or {}).pop("frame", None)
-    if not full:
-        if len(c.get("prompt", "")) > 400:
-            c["prompt"] = c["prompt"][:399] + "…"
-        cl = c.get("cleared") or {}
-        for k in ("prompt", "diff"):
-            if len(cl.get(k, "")) > 400:
-                cl[k] = cl[k][:399] + "…"
     return c
 
 
@@ -4276,6 +4270,10 @@ def cmd_qc_consult(a):
     if (d.get("library_read") or {}).get("not_read"):
         d["not_read_rule"] = ("the samples in library_read.not_read have no reading of their picture yet (new or changed): the keeper judged them from the admin's words "
                               "alone, so view the picture of any of them it named before you rely on it")
+    if d.get("flags"):
+        d["flags_rule"] = ("flags are what the judge found missing, contradictory or ambiguous in the records of the samples it used (id, what, effect): weigh "
+                           "its answer by them, never settle one by guessing, and write each into result.json keeper_gaps, one line ('flag S12: <what>'), for "
+                           "the admin at the wrap-up")
     if d.get("not_covered") or d.get("needs_unmet"):
         d["gaps_rule"] = ("write what the library does not cover (not_covered) and any need still unmet after your --note into result.json keeper_gaps, one line each: "
                           "the main session reports them in the wrap-up so the admin can add a sample in Loupe")
@@ -4300,9 +4298,12 @@ def cmd_plan_hints(a):
     rd = _cf_run_dir(a.run) if a.run else None
     res = {"ok": True, "mode": d.get("mode"), "hints": d.get("hints", []), "held_back": d.get("held_back", 0), "held_back_why": d.get("held_back_why", []),
            "none_reason": d.get("none_reason", ""), "beats_cut": cut}
-    for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error"):
+    for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error", "flags"):
         if d.get(k):
             res[k] = d[k]
+    if res.get("flags"):
+        res["flags_rule"] = ("flags are what the judge found missing, contradictory or ambiguous in the records of the samples it used (id, what, effect): weigh "
+                             "its hints by them, never settle one by guessing, and write each as a keeper gap in the 'Sample hints' block ('flag S12: <what>')")
     if d.get("needs_unmet"):
         res["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer from your plan, or a file that does not exist): answer it "
                              "from the plan in words and ask again ONCE with --note '<your answer>' (the same --beats); if it still has needs_unmet, go on without it and "
@@ -4512,7 +4513,7 @@ def cmd_prompt_template(a):
                                        f"The service refuses a prompt over {PROMPT_LIMIT} characters.") if x)
     structure = Path(a.structure_file).read_text(encoding="utf-8", errors="replace").strip() if a.structure_file else ""
     vm = _video_model_info(ctx.get("model"))
-    body = {**ctx, "purpose": "template", "question": question[:BRIEF_CHARS], "structure": structure[:STRUCTURE_CHARS], "video_model": vm}
+    body = {**ctx, "purpose": "template", "question": question, "structure": structure, "video_model": vm}
     tries = 0
     while True:
         s, d = _cf_api("POST", "/api/qc/consult", body, key="qc", timeout=CONSULT_TIMEOUT)
@@ -4522,13 +4523,16 @@ def cmd_prompt_template(a):
     if s != 200:
         out({"ok": True, "mode": "unavailable", "template": "", "basis": [], "note": "no template: " + str((d or {}).get("error") or f"HTTP {s}"),
              "none_rule": "the checked draft is the request, as always: record it with `T template-apply --use-draft` and write 'no template: Loupe unavailable' in the pattern card"})
-    res = {"ok": True, "mode": d.get("mode"), "template": d.get("template", ""), "template_cut": bool(d.get("template_cut")), "basis": d.get("basis", []),
+    res = {"ok": True, "mode": d.get("mode"), "template": d.get("template", ""), "basis": d.get("basis", []),
            "notes": d.get("notes", ""), "changes": d.get("changes", []), "read": d.get("read", []), "not_covered": d.get("not_covered", ""),
-           "none_reason": d.get("none_reason", ""), "brief_cut": len(question) > BRIEF_CHARS, "structure_cut": len(structure) > STRUCTURE_CHARS,
+           "none_reason": d.get("none_reason", ""),
            "video_model": vm.get("id", ""), "draft_file": draft_file, "musts": len(musts), "clip": a.clip or "", "busy_retries": tries}
-    for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error", "library_size"):
+    for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error", "library_size", "flags"):
         if d.get(k):
             res[k] = d[k]
+    if res.get("flags"):
+        res["flags_rule"] = ("flags are what the judge found missing, contradictory or ambiguous in the records of the samples it used (id, what, effect): "
+                             "its prompt already weighs them; write each as a judge gap in the \"Judge's template\" block ('flag S12: <what>')")
     clip_arg = f" --clip {a.clip}" if a.clip else ""
     if res["template"]:
         res["rules"] = ("This is the judge's final prompt. Put it in the request word for word: `T template-apply --run RUN --video NN" + clip_arg + "` (fill a "
@@ -4545,7 +4549,7 @@ def cmd_prompt_template(a):
                              "and write it as a judge gap in the \"Judge's template\" block")
     try:
         if tf:
-            write_json(tf["json"], {**res, "brief": brief[:BRIEF_CHARS], "draft_prompt": draft_prompt, "musts_list": musts,
+            write_json(tf["json"], {**res, "brief": brief, "draft_prompt": draft_prompt, "musts_list": musts,
                                     "structure_file": a.structure_file or "", "at": now_iso()})
             res["saved"] = str(tf["json"])
             if res["template"]:
@@ -4629,6 +4633,7 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     res = {"ok": True, "id": sid, "prompts": kind, "title": smp.get("title", ""), "model": smp.get("model", ""), "run": smp.get("run", ""), "video": smp.get("video", ""),
            "prompt_note": note, "chars": {"wrong": len(wrong), "fixed": len(fixed)}, "prompt_roles": smp.get("prompt_roles") or {},
            "prompt_sides": [x for x in (smp.get("prompt_sides") or ["wrong", "fixed"]) if x in ("wrong", "fixed")],
+           "miss_id": smp.get("miss_id"), "record": bool(smp.get("record")),
            "generations": {side: max([int(x.get("of") or 0) for x in smp.get(f"{side}_segments") or [] if isinstance(x, dict)] or [1 if txt else 0])
                            for side, txt in (("wrong", wrong), ("fixed", fixed))}}
     if not kind:
@@ -4671,6 +4676,11 @@ def _sample_prompts_file(sid: str, rd) -> dict:
             lines += ["", f"## Prompt of {title}", "", text]
         else:
             lines += ["", f"## Prompt of {title.split(' (')[0]}", "", none]
+    rec = str(smp.get("record") or "")
+    if rec:          # Loupe's whole record of the sample: its generation miss, the admin's words, its frames with the prompt that made each, every prompt under its label
+        lines = [lines[0] + f" · its whole record from Loupe (generation miss R{smp.get('miss_id') or '?'})", "",
+                 f"_Everything from the record's === SAMPLE line to its === END OF SAMPLE line belongs to {sid} alone: its generation miss, the admin's words, "
+                 f"its frames and every prompt, each prompt under its label ({sid}-P1 ...) with the frames it made._", "", rec]
     if one_box:
         lines += ["", "_This sample's frames are all Examples, each a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one; "
                   "an Examples sample takes all its frames from one video and keeps that one video's prompt, every generation of it under the seconds it made. Read it "

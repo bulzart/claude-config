@@ -100,7 +100,7 @@ It holds two things:
   `plan-hints` passes on `held_back_why`, `library_read`, each hint's `reading_path` (read only when the trigger match is unclear) and the keeper's
   `needs_unmet` with an `unmet_rule` (answer from the plan and ask once more with `--note`); `qc-consult` adds a `reading_rule` (each relevant sample's
   `reading` and `reading_path`: view the picture first), a `not_read_rule` and a `gaps_rule`: what the library does not cover and any need still unmet go
-  to `result.json → keeper_gaps`, and the wrap-up reports them for the admin (Loupe's Keeper page lists them too). A declined preset notice is stored once
+  to `result.json → keeper_gaps`, and the wrap-up reports them for the admin (Loupe's Keeper page lists them too). The judge's `flags` (what is missing, contradictory or ambiguous in a sample's record) come with a `flags_rule`: QC writes each into `keeper_gaps` (`flag S12: ...`), planning into the Sample hints block, the template step into the Judge's template block. A prompts file is the sample's whole record from Loupe: its generation miss, the admin's words tied to the frames, every frame with its video, generation, marks and the prompt label that made it, every prompt under its label. A declined preset notice is stored once
   in `state.json → higgsfield.declined_preset_id`, so every request carries it and `lint-run` knows it.
   Loupe also ships the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`); that server is not registered in `~/.claude.json`, so the pipeline's agents reach the library only through `awl.py qc-consult`, `qc-brief` and `plan-hints`.
 

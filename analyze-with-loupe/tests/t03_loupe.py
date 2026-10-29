@@ -52,7 +52,7 @@ def fake_claude(prompt, sid, resume, model, timeout=150):
                                       "basis": [{"id": SID, "worked": "the height stated against the mug", "failed": "no size stated", "where": "shot 1"}],
                                       "notes": "keep the mug line", "changes": [{"what": "beat 2's hard cut", "why": "the can shrank after a cut", "id": SID}],
                                       "not_covered": ""}), "total_cost_usd": 0.0}
-    if "rests on samples whose two prompts" in prompt:    # the round that hands the judge the prompts of the samples it cites: the first answer stays
+    if "rests on samples whose prompts" in prompt:    # the round that hands the judge the prompts of the samples it cites: the first answer stays
         return {"result": "ready", "total_cost_usd": 0.0}
     if prompt.startswith("LIBRARY ("):
         time.sleep(SLOW["boot_s"])
@@ -70,6 +70,8 @@ def fake_claude(prompt, sid, resume, model, timeout=150):
     if "QC question" in prompt:
         return {"result": json.dumps({"relevant": [{"id": SID, "why": "same mechanism", "check": "the can's height before and after the cut", "wrong_pattern": "the can shrinks"}],
                                         "advice": "compare the can against the laptop", "not_covered": "no sample shows the can carried through a doorway",
+                                        "flags": [{"id": SID, "what": "FLAG-MARK the right frame's prompt box holds one text", "effect": "the cause rests on one prompt"},
+                                                  {"id": "S999", "what": "a sample that does not exist"}],
                                         "cause": "CAUSE-MARK shot 1 states no size" if "The prompt this video was generated from" in prompt else "",
                                         "template_fix": "the slim can as tall as the mug" if "The prompt this video was generated from" in prompt else "",
                                         "needs": [{"kind": "ask_agent", "question": "does the can leave the frame?", "why": "I cannot see the last second"}]}), "total_cost_usd": 0.0}
@@ -127,8 +129,10 @@ check(js.get("library_read", {}).get("understood") == 1 and js["library_read"]["
 check(js.get("not_covered", "").startswith("no sample shows") and "keeper_gaps" in js.get("gaps_rule", ""), "what the library does not cover comes with the rule to write it as keeper_gaps for the wrap-up")
 saved = run / "60-outputs" / "video-03" / "qc-consult.json"
 check(saved.is_file() and json.loads(saved.read_text(encoding="utf-8"))["relevant"][0]["id"] == SID, "the answer is saved as 60-outputs/video-NN/qc-consult.json")
+check(js.get("flags") == [{"id": SID, "what": "FLAG-MARK the right frame's prompt box holds one text", "effect": "the cause rests on one prompt"}]
+      and "keeper_gaps" in js.get("flags_rule", ""), "the judge's flags on a sample's record reach the QC agent (a flag on a sample that does not exist is dropped) with the rule to report them")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can looks smaller after the cut", "--note", "the can stays in frame to the end", env=ENV)
-asked = lambda: [c for c in calls if "rests on samples whose two prompts" not in c][-1]      # noqa: E731  (the last question, not the prompts round)
+asked = lambda: [c for c in calls if "rests on samples whose prompts" not in c][-1]      # noqa: E731  (the last question, not the prompts round)
 check(js.get("mode") == "keeper" and not js.get("needs_unmet") and "The QC agent adds" in asked(), "a second ask with --note reaches the keeper with the agent's words and nothing stays unmet")
 SLOW["boot_s"] = 0.0
 js, _, _ = t("loupe", "ensure", env=ENV)
@@ -156,13 +160,14 @@ check(js["hints"][0].get("prompts") == "pair" and js["hints"][0].get("prompt_not
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can looks smaller after the cut", "--note", "the can stays in frame", env=ENV)
 check(js["relevant"][0].get("prompts") == "pair" and "wrong_prompt" not in js["relevant"][0] and "prompts_files" in js.get("prompts_rule", "") and js.get("prompts_judged") == [SID]
       and Path(js.get("prompts_files", {}).get(SID, "-")).is_file(), "a relevant sample with saved prompts: the judge read both before its answer was final and both are written for the QC agent, never in the line")
-rounds = [c for c in calls if "rests on samples whose two prompts" in c]
+rounds = [c for c in calls if "rests on samples whose prompts" in c]
 check(rounds and "PROMPT-WRONG the can on the desk." in rounds[-1] and "PROMPT-FIXED the can on the desk, as tall as the mug beside it." in rounds[-1]
       and "no other session has read or judged them" in rounds[-1], "the prompts round hands the judge both prompts whole from Loupe's record")
 
 # --- X2: the judge's template, briefed by the agent; then QC carries the prompt used, the template and the brief
 (run / "50-requests" / "video-03-pattern.md").write_text("STRUCTURE-MARK Shot 1: subject, action, setting. Shot 2: ...", encoding="utf-8")
-(run / "40-briefs" / "video-03-judge-brief.md").write_text("BRIEF-MARK video 03: he sets the slim can on the desk; the goal is the can's true size after the cut.", encoding="utf-8")
+(run / "40-briefs" / "video-03-judge-brief.md").write_text("BRIEF-MARK video 03: he sets the slim can on the desk; the goal is the can's true size after the cut. "
+                                                            + "The slim can stays upright on the desk in every shot. " * 600 + "BRIEF-END-MARK", encoding="utf-8")
 (run / "40-briefs" / "video-03-musts.md").write_text("- Keep the camera still.\n", encoding="utf-8")
 n0 = len(calls)
 js, _, _ = t("prompt-template", "--run", run.name, "--video", "03", "--brief-file", str(run / "40-briefs" / "video-03-judge-brief.md"),
@@ -173,10 +178,11 @@ step2 = next((c for c in new if "Step 2 of the template request" in c), "")
 check(js.get("mode") == "keeper" and js.get("template", "").startswith("TEMPLATE-MARK") and [b["id"] for b in js.get("basis", [])] == [SID] and js.get("read") == [SID]
       and js.get("changes") and "rules" in js, "prompt-template returns the judge's template, its basis, the samples it read, its changes and the rules to craft from it")
 check("Wan 3.0 Prime" in step1 and js.get("video_model") == "wan3_0_prime", "the template request names the generation video model with its entry of the model index")
+check("BRIEF-END-MARK" in step1 and "brief_cut" not in js, "a brief of over 30000 characters reaches the judge whole (no video generation prompt is cut)")
 check("Show the can on the desk. Keep the camera still." in step1 and "Lines the prompt must carry, word for word" in step1 and "- Keep the camera still." in step1
       and "5000 characters" in step1 and js.get("musts") == 1, "the judge gets the whole checked brief: the draft request's prompt, its must-carry lines and the service's limit")
 check("BRIEF-MARK" in step1 and "STRUCTURE-MARK" in step1 and "PROMPT-WRONG the can on the desk." in step2 and "PROMPT-FIXED" in step2 and "Not sent: S999" in step2
-      and not any("rests on samples whose two prompts" in c for c in new), "the judge gets the agent's brief and the model's structure, then both prompts of the samples it chose, whole (none sent twice)")
+      and not any("rests on samples whose prompts" in c for c in new), "the judge gets the agent's brief and the model's structure, then both prompts of the samples it chose, whole (none sent twice)")
 tj, tm = run / "40-briefs" / "video-03-template.json", run / "40-briefs" / "video-03-template.md"
 check(tj.is_file() and json.loads(tj.read_text(encoding="utf-8")).get("brief", "").startswith("BRIEF-MARK") and tm.is_file() and tm.read_text(encoding="utf-8").startswith("TEMPLATE-MARK")
       and Path(js.get("prompts_files", {}).get(SID, "-")).is_file(), "the template is saved with the brief, as JSON and as text, and the basis sample's prompts are written for the agent")
@@ -202,7 +208,11 @@ js, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
 pf = run / "40-briefs" / "samples" / f"{SID}-prompts.md"
 ptxt = pf.read_text(encoding="utf-8") if pf.is_file() else ""
 check(js.get("ok") and js.get("prompts") == "pair" and js["chars"]["wrong"] > 0 and pf.is_file() and "PROMPT-WRONG the can" in ptxt and "PROMPT-FIXED the can" in ptxt and "the height was stated" in ptxt
-      and "## Prompt of the flawed take (Video A: its prompt generated the flawed version)" in ptxt and "## Prompt of the correct take (Video B)" in ptxt, "sample-prompts writes both prompts whole and the admin's note to 40-briefs/samples/<id>-prompts.md")
+      and f"--- {SID}-P1 (sample {SID}, generation miss R{m['id']}) · Video A's prompt box: the prompt that generated the flawed version ---" in ptxt
+      and f"--- {SID}-P2 (sample {SID}, generation miss R{m['id']}) · Video B's prompt box: the prompt of the correct take ---" in ptxt
+      and f"--- end of {SID}-P1 (sample {SID}) ---" in ptxt and f"  {SID} · Frame 1 WRONG 0:01.00, Video A" in ptxt and f"=== SAMPLE {SID} · generation miss R{m['id']}" in ptxt
+      and f"=== END OF SAMPLE {SID} ===" in ptxt and f"made by {SID}-P1" in ptxt and f"made by {SID}-P2" in ptxt
+      and "wrong here (what is wrong at the marked place of Frame 1 (WRONG, 0:01.00), called WRONG): the can is small here" in ptxt, "sample-prompts writes both prompts whole and the admin's note to 40-briefs/samples/<id>-prompts.md")
 check("wrong_prompt" not in js and "diff" not in js and "prompt_change" not in js, "the JSON line carries sizes and the path, never the prompt texts or a diff (the agent reads the file and judges)")
 js, _, _ = t("sample-prompts", "--id", "S999", "--run", run.name, env=ENV)
 check(js.get("mode") == "unavailable" and js.get("prompts") == "", "an unknown sample id answers unavailable, no prompts, no failure")
@@ -232,13 +242,13 @@ def _two_gens(cut):
 
 
 js, ptxt2 = _two_gens(1.5)
-check(js.get("generations", {}).get("wrong") == 2 and "made of 2 generations; the prompt of each generation this sample's frames come from" in ptxt2
-      and "### Generation 1 of 2 · clip c1 · video-03-c1-request.json" in ptxt2
-      and "_This is the prompt responsible for Frame 1 (WRONG, 0:01.00) of this sample: it generated second 0 to second 1.5 of Video A._" in ptxt2
-      and "SEG-ONE" in ptxt2 and "SEG-TWO" not in ptxt2,
+check(js.get("generations", {}).get("wrong") == 2 and "the flawed take was made of 2 generations" in ptxt2
+      and f"--- {SID}-P1 (sample {SID}, generation miss R{m['id']}) · Video A's prompt box: the prompt that generated the flawed version ---" in ptxt2
+      and "This is the prompt responsible for Frame 1 (WRONG, 0:01.00) of this sample: it generated second 0 to second 1.5 of Video A (generation 1 of 2 · clip c1 · video-03-c1-request.json)." in ptxt2
+      and f"made by {SID}-P1" in ptxt2 and "SEG-ONE" in ptxt2 and "SEG-TWO" not in ptxt2,
       "a take made of two generations: the prompts file gives the prompt of the generation the sample's WRONG frame comes from, under the seconds it made")
 js, ptxt3 = _two_gens(0.5)
-check("### Generation 2 of 2 · clip c2" in ptxt3 and "responsible for Frame 1 (WRONG, 0:01.00) of this sample: it generated second 0.5 to second 3 of Video A" in ptxt3 and "SEG-TWO" in ptxt3 and "SEG-ONE" not in ptxt3,
+check("(generation 2 of 2 · clip c2 · video-03-c2-request.json)." in ptxt3 and "responsible for Frame 1 (WRONG, 0:01.00) of this sample: it generated second 0.5 to second 3 of Video A" in ptxt3 and "SEG-TWO" in ptxt3 and "SEG-ONE" not in ptxt3,
       "when that frame comes from the second generation, only the second generation's prompt")
 misses.update(m["id"], {"wrong_segments": [], "wrong_prompt": "PROMPT-WRONG the can on the desk."}, "test")
 
@@ -248,7 +258,7 @@ mo_ex = misses.add_moment(m["id"], {"frames": [{"src": "wrong", "role": "example
 SID_EX = mo_ex["id"] if isinstance(mo_ex, dict) and "id" in mo_ex else f"S{mo_ex['moment_id']}"
 js, _, _ = t("sample-prompts", "--id", SID_EX, "--run", run.name, env=ENV)
 ptx = Path(js.get("saved", "-")).read_text(encoding="utf-8") if js.get("saved") else ""
-check(js.get("prompt_roles") == {"wrong": "example", "fixed": "example"} and js.get("prompt_sides") == ["wrong"] and "## Prompt of the example take of Video A" in ptx
+check(js.get("prompt_roles") == {"wrong": "example", "fixed": "example"} and js.get("prompt_sides") == ["wrong"] and f"--- {SID_EX}-P1 (sample {SID_EX}, generation miss R{m['id']}) · the one prompt box of this Examples sample, Video A's: an example take" in ptx
       and "of Video B" not in ptx and "## Prompt of the flawed take" not in ptx and "This sample's frames are all Examples" in ptx and "the prompt of the example video (Video A" in ptx,
       "a sample of Example frames only: the prompts file gives the one box of its one video, named an example take, never the flawed or the correct take")
 try:

@@ -542,3 +542,18 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   alone, headed as the prompt of the example video, and returns `prompt_sides`; the consult and hint rules, the command's help and the QC skill say an
   Examples sample keeps one prompt.
 - **Verified:** t01, t02, t03 (50), t05 pass; Loupe's selftest 201, keeper_sync 91, page_smoke, transport_check, flags_smoke pass.
+
+## 2026-10-29 · One record per sample, the judge's flags, a lean digest
+- **Reported:** "when the loupe qc keeper, judge or any other ai agent processes the generation misses it need them to be tied and fed in accordance ... for sample 1 these are the prompts,frames, user feedback and other stuff, and then so on for the other samples ... even if all the samples are tossed to the agents in one go then separate them clearly so that they can easily be differentiated what caused what, everything needs to be connected and known in which "generation miss" it corresponds to"; then "the agents are to be able to see all samples, but just be able to differentiate between them and be able to know which prompt,video,frame,feedback and verdict corresponds to which sample ... but also be able to pass flags, or ask for something if something's missing or causing ambiguity, also make sure to avoid memory context rot, also make sure everything is coupled and in sync".
+- **Changed:** Loupe hands every sample as one record between `=== SAMPLE S12 · generation miss R7 ... ===` and `=== END OF SAMPLE S12 ===`: the
+  admin's words tied to the frames, every frame with its video, generation, marks and the label of the prompt that made it (`made by S12-P1`), every
+  prompt under its label. The keeper's digest keeps its records lean (each part explained once); the judge can pass `flags` beside `needs`.
+  `sample-prompts` writes the sample's whole record; qc-consult, plan-hints and prompt-template pass the flags on with a `flags_rule`.
+- **Verified:** t01, t02, t03, t05 pass; Loupe's selftest 208, keeper_sync 92, page_smoke pass.
+
+## 2026-10-29 · Video generation prompts whole; every part of a sample's record names its sample
+- **Reported:** "make sure to not trim the video generation prompts at all without any exception because we need them fully,and also make sure to give enough separation context for each sample or its elements even if it makes each sample a bit more bigger in bytes".
+- **Changed:** nothing cuts a video generation prompt any more: `prompt-template` sends the brief and the structure whole (no `BRIEF_CHARS`,
+  `STRUCTURE_CHARS`, `brief_cut`, `structure_cut`, `template_cut`), the caught-flag listing keeps the prompts whole; Loupe keeps every prompt,
+  template, template_fix and request prompt whole. A sample's record names its sample on every line (`S12 · ...`, `S12-P1`, headings with the id).
+- **Verified:** t01, t02, t03, t05 pass; Loupe's selftest and keeper_sync pass.
