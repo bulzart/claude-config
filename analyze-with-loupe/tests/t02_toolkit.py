@@ -567,4 +567,34 @@ else:
     check(js_s.get("size") == 10.0 and str((js_s.get("sizing") or {}).get("short_text", "")).startswith("off"),
           "short_text set to null in config turns the rule off: size 10 for a short text")
 
+# --- the join record (the user, 2026-10-29: a frame of a joined video is tied to the generation that made it, so a Loupe prompt box holds only the
+# prompts of the generations its frames come from): concat writes <out>.join.json, and a command that keeps or trims the timeline carries it
+import hashlib as _hl
+jv = home.parent / "joinrec" / "runs" / "R" / "60-outputs" / "video-02"
+jp = [(jv / "c1" / "a2" / "c1a.mp4", 1.0), (jv / "c2" / "a1" / "c2.mp4", 1.5), (jv / "c1" / "a2" / "c1b.mp4", 2.0)]      # c1 cut around c2
+for jpath, jsecs in jp:
+    make_clip(jpath, seconds=jsecs, flash=None, audio=True, size="720x1280")
+js, _, _ = t("concat", "--clips", *[str(x) for x, _ in jp], "--out", str(jv / "joined.mp4"), env=ENV)
+jrec = json.loads((jv / "joined.mp4.join.json").read_text(encoding="utf-8")) if (jv / "joined.mp4.join.json").is_file() else {}
+check([(x["clip"], x["attempt"], x["t_from"], x["t_to"]) for x in jrec.get("pieces") or []] == [("c1", 2, 0.0, 1.0), ("c2", 1, 1.0, 2.5), ("c1", 2, 2.5, 4.5)]
+      and jrec.get("sha1") == _hl.sha1((jv / "joined.mp4").read_bytes()).hexdigest() and js.get("join_record"),
+      f"concat writes the join record: every piece with its clip, attempt and seconds of the output, and the output's sha1 ({jrec.get('pieces')})")
+js, _, _ = t("trim", "--video", str(jv / "joined.mp4"), "--out", str(jv / "trimmed.mp4"), "--start", "0.5", "--end", "4.0", env=ENV)
+trec = json.loads((jv / "trimmed.mp4.join.json").read_text(encoding="utf-8")) if (jv / "trimmed.mp4.join.json").is_file() else {}
+check([(x["clip"], x["t_from"], x["t_to"]) for x in trec.get("pieces") or []] == [("c1", 0.0, 0.5), ("c2", 0.5, 2.0), ("c1", 2.0, 3.5)]
+      and trec.get("sha1") == _hl.sha1((jv / "trimmed.mp4").read_bytes()).hexdigest() and trec.get("made_from", "").endswith("joined.mp4"),
+      f"trim carries the join record, shifted to its own seconds ({trec.get('pieces')})")
+js, _, _ = t("conform", "--video", str(jv / "joined.mp4"), "--out", str(jv / "conformed.mp4"), env=ENV)
+crec = json.loads((jv / "conformed.mp4.join.json").read_text(encoding="utf-8")) if (jv / "conformed.mp4.join.json").is_file() else {}
+check(len(crec.get("pieces") or []) == 3 and crec.get("sha1") == _hl.sha1((jv / "conformed.mp4").read_bytes()).hexdigest(),
+      "conform keeps the timeline and carries the join record with the new file's own sha1")
+# a with-inserts clean: the joined video cut at its split point, an insert between the two pieces, joined again
+t("trim", "--video", str(jv / "joined.mp4"), "--out", str(jv / "part1.mp4"), "--start", "0", "--end", "1.5", env=ENV)
+t("trim", "--video", str(jv / "joined.mp4"), "--out", str(jv / "part2.mp4"), "--start", "1.5", env=ENV)
+make_clip(jv / "inserts" / "meme.mp4", seconds=1.0, flash=None, audio=True, size="720x1280")
+t("concat", "--clips", str(jv / "part1.mp4"), str(jv / "inserts" / "meme.mp4"), str(jv / "part2.mp4"), "--out", str(jv / "with-inserts.mp4"), env=ENV)
+wrec = json.loads((jv / "with-inserts.mp4.join.json").read_text(encoding="utf-8")) if (jv / "with-inserts.mp4.join.json").is_file() else {}
+check([(x["clip"], x["t_from"], x["t_to"]) for x in wrec.get("pieces") or []] == [("c1", 0.0, 1.0), ("c2", 1.0, 1.5), ("", 1.5, 2.5), ("c2", 2.5, 3.5), ("c1", 3.5, 5.5)],
+      f"a join of pieces that are joins themselves keeps their generations, and an insert is a piece of no clip ({[(x['clip'], x['t_from'], x['t_to']) for x in wrec.get('pieces') or []]})")
+
 finish()

@@ -95,7 +95,7 @@ awl.py sync-check --source "<prepared source / own-silent.mp4>" --output "<final
 awl.py finalize --run "<run>" --video V01 --file "<approved.mp4>" --original "<original video>"   → <path>/final/<name>.mp4 (reports facts, refuses nothing)
 awl.py conform --video "<in>" --out "<out>" [--focus-x 0.5 --focus-y 0.5] [--mode fill|pad] [--dry-run]   → exact 720×1280; reports lost_fraction (the share of the picture a crop removes) and never refuses a crop; --dry-run writes nothing
 awl.py trim --video "<in>" --out "<out>" --start 0.4 [--end 7.6]
-awl.py concat --clips a.mp4 b.mp4 --out joined.mp4 [--seams cut|continuous,…]
+awl.py concat --clips a.mp4 b.mp4 --out joined.mp4 [--seams cut|continuous,…]   → + joined.mp4.join.json (each piece's clip, attempt and seconds; restore-audio, conform, clean, captions and trim carry it)
 awl.py last-frame --video "<clip>" --out "<handoff.png>" [--back 0.3]    → exact last frame, lossless
 awl.py capcut-name --video 3                                              → 01_Oct_2026_v03 (free name)
 awl.py capcut-prep --draft "<store>/<name>"                               → right after capcut_clone_draft

@@ -23,7 +23,7 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | 3b | Videos longer than one generation | `040_3b_videos-longer-than-one-generatio.md` | 0.8 |
 | 3b.1 | · Plan the clips (in the video plan, before any request) | `050_3b.1_plan-the-clips-in-the-video-plan.md` | 2.3 |
 | 3b.2 | · Join methods, by the locked model's capability (`continuation` in the in | `060_3b.2_join-methods-by-the-locked-model.md` | 3.2 |
-| 3b.3 | · Seam discipline | `070_3b.3_seam-discipline.md` | 2.4 |
+| 3b.3 | · Seam discipline | `070_3b.3_seam-discipline.md` | 2.5 |
 | 3b.4 | · Files and ledger | `080_3b.4_files-and-ledger.md` | 0.5 |
 | 3c | Reference inserts (memes): cut from the reference, never generated | `090_3c_reference-inserts-memes-cut-from.md` | 3.6 |
 | 4 | Replacement and insertion integration analysis | `100_4_replacement-and-insertion-integr.md` | 3.3 |

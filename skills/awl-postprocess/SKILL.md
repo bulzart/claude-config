@@ -57,6 +57,14 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
        `T concat --clips <c1> <c2> … --seams <cut|continuous,…> --out 60-outputs/video-NN/joined.mp4`.
        Seams are `cut` on planned cuts and `continuous` on chained or extended joins. Edit Mode
        segments (E5) are always `cut`;
+     - every join goes through `T concat`, never a hand-made ffmpeg list: it writes
+       `joined.mp4.join.json` (which seconds each piece fills, with the clip and attempt it sits in,
+       and the file's sha1), and `T restore-audio`, `conform`, `clean`, `captions` and `trim` carry it to
+       their output. Loupe reads it to tie each frame of a report to the generation that made it (a
+       prompt box holds only the prompts of the generations its frames come from). A clip cut around
+       another one goes in as its pieces: `T trim` c1 into c1a and c1b, then
+       `T concat --clips <c1a> <c2> <c1b>`; a with-inserts clean joins the trimmed pieces and the inserts
+       the same way (an insert is a piece of no clip);
   5. **Sync check** (item 19; Edit Mode and Recreate), once the picture is final and the original
      audio is on it:
      `T sync-check --source <the prepared source; own-silent for a Recreate> --output <final> [--start <segment start>] --out <aK>/sync`.

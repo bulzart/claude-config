@@ -208,8 +208,9 @@ js, _, _ = t("sample-prompts", "--id", SID, "--run", run.name, env=ENV)
 pf = run / "40-briefs" / "samples" / f"{SID}-prompts.md"
 ptxt = pf.read_text(encoding="utf-8") if pf.is_file() else ""
 check(js.get("ok") and js.get("prompts") == "pair" and js["chars"]["wrong"] > 0 and pf.is_file() and "PROMPT-WRONG the can" in ptxt and "PROMPT-FIXED the can" in ptxt and "the height was stated" in ptxt
-      and f"--- {SID}-P1 (sample {SID}, generation miss R{m['id']}) · Video A's prompt box: the prompt that generated the flawed version ---" in ptxt
-      and f"--- {SID}-P2 (sample {SID}, generation miss R{m['id']}) · Video B's prompt box: the prompt of the correct take ---" in ptxt
+      and f"--- {SID}-P1 (sample {SID}, generation miss R{m['id']}) · the flawed version's prompt box: the prompts of the generations the frames called WRONG come from, which generated the flawed version ---" in ptxt
+      and f"--- {SID}-P2 (sample {SID}, generation miss R{m['id']}) · the correct version's prompt box: the prompts of the generations the frames called RIGHT come from, which generated the correct version ---" in ptxt
+      and "the flawed version's prompt and the correct version's prompt" in ptxt
       and f"--- end of {SID}-P1 (sample {SID}) ---" in ptxt and f"  {SID} · Frame 1 WRONG 0:01.00, Video A" in ptxt and f"=== SAMPLE {SID} · generation miss R{m['id']}" in ptxt
       and f"=== END OF SAMPLE {SID} ===" in ptxt and f"made by {SID}-P1" in ptxt and f"made by {SID}-P2" in ptxt
       and "wrong here (what is wrong at the marked place of Frame 1 (WRONG, 0:01.00), called WRONG): the can is small here" in ptxt, "sample-prompts writes both prompts whole and the admin's note to 40-briefs/samples/<id>-prompts.md")
@@ -242,13 +243,15 @@ def _two_gens(cut):
 
 
 js, ptxt2 = _two_gens(1.5)
-check(js.get("generations", {}).get("wrong") == 2 and "the flawed take was made of 2 generations" in ptxt2
-      and f"--- {SID}-P1 (sample {SID}, generation miss R{m['id']}) · Video A's prompt box: the prompt that generated the flawed version ---" in ptxt2
-      and "This is the prompt responsible for Frame 1 (WRONG, 0:01.00) of this sample: it generated second 0 to second 1.5 of Video A (generation 1 of 2 · clip c1 · video-03-c1-request.json)." in ptxt2
-      and f"made by {SID}-P1" in ptxt2 and "SEG-ONE" in ptxt2 and "SEG-TWO" not in ptxt2,
+check(js.get("generations", {}).get("wrong") == 2 and "the flawed version's prompt box holds generations of a take made of 2" in ptxt2
+      and f"--- {SID}-P1 (sample {SID}, generation miss R{m['id']}) · the flawed version's prompt box: the prompts of the generations the frames called WRONG come from" in ptxt2
+      and ("This is a prompt of the flawed version (the generation the frames called WRONG come from): it generated second 0 to second 1.5 of Video A "
+           "(generation 1 of 2 · clip c1 · video-03-c1-request.json), and made Frame 1 (WRONG, 0:01.00) of this sample.") in ptxt2
+      and f"made by {SID}-P1 (the flawed version's prompt box)" in ptxt2 and "SEG-ONE" in ptxt2 and "SEG-TWO" not in ptxt2,
       "a take made of two generations: the prompts file gives the prompt of the generation the sample's WRONG frame comes from, under the seconds it made")
 js, ptxt3 = _two_gens(0.5)
-check("(generation 2 of 2 · clip c2 · video-03-c2-request.json)." in ptxt3 and "responsible for Frame 1 (WRONG, 0:01.00) of this sample: it generated second 0.5 to second 3 of Video A" in ptxt3 and "SEG-TWO" in ptxt3 and "SEG-ONE" not in ptxt3,
+check("it generated second 0.5 to second 3 of Video A (generation 2 of 2 · clip c2 · video-03-c2-request.json), and made Frame 1 (WRONG, 0:01.00) of this sample." in ptxt3
+      and "SEG-TWO" in ptxt3 and "SEG-ONE" not in ptxt3,
       "when that frame comes from the second generation, only the second generation's prompt")
 misses.update(m["id"], {"wrong_segments": [], "wrong_prompt": "PROMPT-WRONG the can on the desk."}, "test")
 
@@ -258,8 +261,10 @@ mo_ex = misses.add_moment(m["id"], {"frames": [{"src": "wrong", "role": "example
 SID_EX = mo_ex["id"] if isinstance(mo_ex, dict) and "id" in mo_ex else f"S{mo_ex['moment_id']}"
 js, _, _ = t("sample-prompts", "--id", SID_EX, "--run", run.name, env=ENV)
 ptx = Path(js.get("saved", "-")).read_text(encoding="utf-8") if js.get("saved") else ""
-check(js.get("prompt_roles") == {"wrong": "example", "fixed": "example"} and js.get("prompt_sides") == ["wrong"] and f"--- {SID_EX}-P1 (sample {SID_EX}, generation miss R{m['id']}) · the one prompt box of this Examples sample, Video A's: an example take" in ptx
-      and "of Video B" not in ptx and "## Prompt of the flawed take" not in ptx and "This sample's frames are all Examples" in ptx and "the prompt of the example video (Video A" in ptx,
+check(js.get("prompt_roles") == {"wrong": "example", "fixed": "example"} and js.get("prompt_sides") == ["wrong"]
+      and f"--- {SID_EX}-P1 (sample {SID_EX}, generation miss R{m['id']}) · the example prompt box of Video A, this Examples sample's one box: the prompts of the generations of Video A its Example frames come from, an example" in ptx
+      and "of Video B" not in ptx and "flawed version's prompt box" not in ptx and "This sample's frames are all Examples" in ptx
+      and "the example prompt of Video A (an Examples sample has one prompt box" in ptx,
       "a sample of Example frames only: the prompts file gives the one box of its one video, named an example take, never the flawed or the correct take")
 try:
     misses.add_moment(m["id"], {"frames": [{"src": "wrong", "role": "example", "t": 1.0}, {"src": "fixed", "role": "example", "t": 1.0}]}, "test")

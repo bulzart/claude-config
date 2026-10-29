@@ -51,7 +51,8 @@ Subcommands (python awl.py <cmd> -h):
   captions       burn exact, frame-consistent text with libass (explicit events or speech-timed)
   clean          local Edit-Mode clean-up: delogo small static overlays, crop away static text bands
   trim           frame-accurate trim (removes generated dead space at head/tail)
-  concat         normalise clips to 720x1280 and join them in order (multi-clip videos; cut or continuous seams)
+  concat         normalise clips to 720x1280 and join them in order (multi-clip videos; cut or continuous seams; pieces cut from a
+                 clip, e.g. c1a c2 c1b, are fine) + <out>.join.json: which seconds each piece (its clip and attempt) fills, for Loupe
   last-frame     exact last frame of a clip as a lossless PNG: the hand-off start frame for the next clip
   capcut-name    free CapCut project name DD_Mon_YYYY_vNN for an Analyze Mode video
   capcut-prep    after capcut_clone_draft: set aside the template's identity/layout so `capcut register` rebuilds them
@@ -2847,6 +2848,8 @@ def cmd_restore_audio(a):
              "size": f"{f_info.get('display_width')}x{f_info.get('display_height')}"}
     if ref_info:
         facts["source_size"] = f"{ref_info['display_width']}x{ref_info['display_height']}"
+    if _carry_join(gen, dst, end=f_info.get("duration_s")):          # the picture's timeline is kept: so is its join record
+        facts["join_record"] = str(dst) + JOIN_SUFFIX
     out({"ok": True, "file": str(dst), "duration_s": f_info.get("duration_s"), "original_segment_s": want,
          "generated_shorter_by_s": max(short_by, 0.0),
          "note": ("the generated clip is shorter than the original segment; the original audio was cut at the "
@@ -3096,6 +3099,7 @@ def cmd_conform(a):
     if (iw, ih) == (W, H) and info.get("rotation", 0) == 0:
         if not a.dry_run and str(src.resolve()) != str(Path(a.out).resolve()):
             shutil.copyfile(src, a.out)
+            _carry_join(src, a.out)
         out({"ok": True, "file": a.out, "action": "none (already exact)", "lost_fraction": 0.0, **({"dry_run": True} if a.dry_run else {})})
     ff = find_tool("ffmpeg")
     if a.mode == "pad":
@@ -3123,6 +3127,7 @@ def cmd_conform(a):
         fail("ffmpeg failed: " + cp.stderr[-600:])
     o = media_summary(a.out)
     ok = (o["display_width"], o["display_height"]) == (W, H)          # did the tool produce the size it was asked for
+    _carry_join(src, a.out)          # the timeline is kept: so is the join record
     out({"ok": ok, "file": a.out, "action": action, "lost_fraction": lost,
          "output": f"{o['display_width']}x{o['display_height']}", "duration_s": o.get("duration_s")}, 0 if ok else 1)
 
@@ -3330,6 +3335,7 @@ def cmd_captions(a):
               *_encode_args(a.crf), "-c:a", "copy", str(Path(a.out).resolve())], cwd=str(work), timeout=3600)
     if cp.returncode != 0:
         fail("burn-in failed: " + cp.stderr[-800:])
+    _carry_join(a.video, a.out)          # the timeline is kept: so is the join record
     out({"ok": True, "file": a.out, "events": len(spec["events"]), "ass": str(ass_path),
          "events_json": str(work / "caption-events.json")})
 
@@ -3372,10 +3378,67 @@ def cmd_clean(a):
     if cp.returncode != 0:
         fail("ffmpeg failed: " + cp.stderr[-600:])
     o = media_summary(a.out)
+    _carry_join(a.video, a.out)          # the timeline is kept: so is the join record
     out({"ok": True, "file": a.out, "filters": filters, "output": f"{o['display_width']}x{o['display_height']}"})
 
 
 # --------------------------------------------------------------------------- trim / concat
+
+# The join record (the user, 2026-10-29: a frame of a joined video is tied to the generation that made it, and a Loupe prompt box holds only the prompts
+# of the generations its frames come from). `concat` writes <output>.join.json beside what it joins: the output's sha1 and every piece in order with
+# the clip and attempt it sits in (60-outputs/video-NN/c1/a2/...) and the seconds of the output it fills. A command that keeps the timeline of a joined
+# file (restore-audio, conform, clean, captions) or trims it (trim, shifted) writes one for its output too, so the clean video and its copies carry it.
+# Loupe reads it by the file's own bytes; it is a fact of the join, nothing judged.
+JOIN_SUFFIX = ".join.json"
+
+
+def _file_sha1(p: Path) -> str:
+    h = hashlib.sha1()
+    with open(p, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _clip_of_path(p) -> tuple[str, int]:
+    """The clip (c1 ...) and attempt (2 for a2 ...) a file of a video's output folder sits in: .../video-NN/c1/a2/c1a.mp4 is ('c1', 2); ('', 0) for a
+    file outside every clip folder (an insert, another joined file)."""
+    parts = Path(p).resolve().parts
+    vi = next((i for i, x in enumerate(parts) if re.fullmatch(r"video-\d+", x)), None)
+    rest = parts[vi + 1:-1] if vi is not None else ()
+    clip = next((x for x in rest if re.fullmatch(r"c\d+", x)), "")
+    att = next((int(x[1:]) for x in rest[rest.index(clip) + 1:] if re.fullmatch(r"a\d+", x)), 0) if clip else 0
+    return clip, att
+
+
+def _join_record_of(p: Path) -> dict | None:
+    """The join record beside a file (<file>.join.json) when it is that file's (same sha1)."""
+    rec = Path(str(p) + JOIN_SUFFIX)
+    try:
+        j = json.loads(rec.read_text(encoding="utf-8"))
+        return j if isinstance(j, dict) and j.get("sha1") == _file_sha1(Path(p)) else None
+    except (OSError, ValueError):
+        return None
+
+
+def _carry_join(src, out, shift: float = 0.0, end: float | None = None) -> bool:
+    """A video made from a joined one with its timeline kept (shifted by `shift` and cut at `end` for a trim) keeps the join record: <out>.join.json with
+    the output's own sha1 and the same pieces.  False when the source has none."""
+    j = _join_record_of(Path(src))
+    if not j or not Path(out).is_file():
+        return False
+    pieces = []
+    for x in j.get("pieces") or []:
+        a, b = float(x["t_from"]) - shift, float(x["t_to"]) - shift
+        if end is not None:
+            b = min(b, end - shift)
+        a = max(a, 0.0)
+        if b > a + 1e-6:
+            pieces.append({**x, "t_from": round(a, 3), "t_to": round(b, 3)})
+    write_text(Path(str(out) + JOIN_SUFFIX), json.dumps({**j, "file": Path(out).name, "sha1": _file_sha1(Path(out)), "made_from": str(Path(src).resolve()),
+                                                         "written": now_iso(), "pieces": pieces}, ensure_ascii=False, indent=1))
+    return True
+
 
 def cmd_trim(a):
     """Frame-accurate trim (re-encode) — removes generated dead space at the head or tail."""
@@ -3389,7 +3452,8 @@ def cmd_trim(a):
     if cp.returncode != 0:
         fail("ffmpeg failed: " + cp.stderr[-600:])
     o = media_summary(a.out)
-    out({"ok": True, "file": a.out, "duration_s": o.get("duration_s")})
+    carried = _carry_join(a.video, a.out, shift=a.start, end=end)
+    out({"ok": True, "file": a.out, "duration_s": o.get("duration_s"), **({"join_record": a.out + JOIN_SUFFIX} if carried else {})})
 
 
 def _count_frames(path) -> tuple[int, float]:
@@ -3414,6 +3478,15 @@ def _count_frames(path) -> tuple[int, float]:
 
 LOUPE_HOME = Path(os.environ.get("LOUPE_HOME") or (Path.home() / ".claude" / "loupe"))
 KEEPER_SYNC_WAIT = int(os.environ.get("AWL_KEEPER_SYNC_WAIT") or 25)   # seconds `loupe ensure` waits for the keeper sync before reporting `syncing`
+# How a sample's prompts are named wherever the pipeline hands them on (the user, 2026-10-29: every agent, the QC, the keeper and the judge understand
+# which prompt is wrong, which is correct and which is just an example): Loupe's boxes, as its record names them.
+LOUPE_PROMPTS_WORDS = ("a sample marked prompts (pair, wrong or fixed) keeps, each named by what it is: the flawed version's prompt (the prompt of each generation the "
+                       "frames called WRONG come from: they generated the flawed version) and the correct version's prompt (the prompt of each generation the frames "
+                       "called RIGHT come from, from either video: they generated the correct version), only the boxes it has frames for (frames called RIGHT only: "
+                       "the correct version's prompt alone; frames called WRONG only: the flawed version's alone); an Examples sample keeps one box, the example "
+                       "prompt of each generation of its one video its Example frames come from (where prompt_roles says example: a suggestion of what could have "
+                       "changed or how it could have been done another way, neither a bad generation nor a correct one); a box holds no other generation, and each "
+                       "prompt in it sits under the line that says what it is, the seconds of which video it generated and the frames it made (S12-P1 in the record)")
 
 
 def _lc():
@@ -4254,11 +4327,10 @@ def cmd_qc_consult(a):
     d["saved"] = _qc_sample_files(d, rd, a.video)
     if any(x.get("prompts") for x in (d.get("relevant") or d.get("samples") or []) if isinstance(x, dict)):
         d["prompts_files"] = _prompts_files(d.get("relevant") or d.get("samples"), rd)
-        d["prompts_rule"] = ("a sample marked prompts (pair, wrong or fixed) keeps the prompt that generated the flawed version (Video A) and the prompt of the correct take "
-                             "(Video B), or, where its prompt_roles says example, an example take's prompt: a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one; an Examples sample keeps one prompt, its one video's, every generation of it (prompt_note: the admin's "
-                             "one line on what made the difference); when the keeper answered, it read both whole first (prompts_judged), and both are written whole for you at "
-                             "prompts_files[<id>], from Loupe's record, compared or judged by no one. For a sample you judged relevant to THIS video, read that file and judge "
-                             "yourself what the correct take's prompt did differently from the flawed take's. It is a lead for the diagnosed cause and the corrected request, written in the model's own "
+        d["prompts_rule"] = (LOUPE_PROMPTS_WORDS + " (prompt_note: the admin's one line on what made the difference); when the keeper answered, it read them whole "
+                             "first (prompts_judged), and they are written whole for you at prompts_files[<id>], from Loupe's record, compared or judged by no one. For a "
+                             "sample you judged relevant to THIS video, read that file and judge yourself what the correct version's prompt did differently from the flawed "
+                             "version's at the frames each made. It is a lead for the diagnosed cause and the corrected request, written in the model's own "
                              "structure and your words, never a sentence to paste, never a verdict on the video, and not read for a sample you did not judge relevant.")
     if d.get("needs_unmet"):
         d["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer by looking at your own video, or a file that does not "
@@ -4320,13 +4392,12 @@ def cmd_plan_hints(a):
                         "Record each (applied to which beat, or why not) under 'Sample hints' in the brief.")
         if any(h.get("prompts") for h in res["hints"] if isinstance(h, dict)):
             res["prompts_files"] = _prompts_files(res["hints"], rd)
-            res["prompts_rule"] = ("a hint marked prompts (pair, wrong or fixed) rests on a sample whose two prompts the admin kept (the one that generated the flawed version, the "
-                                   "one of the correct take, or an example take's where prompt_roles says example: a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one, an Examples sample keeping one, its one video's; and prompt_note, the "
-                                   "admin's one line on what made the difference); the keeper read both whole before hinting (prompts_judged), "
-                                   "and both are written whole for you at prompts_files[<id>], from Loupe's record, compared or judged by no one. When you apply that hint, read "
-                                   "that file, judge yourself what the correct take's prompt did differently from the flawed take's and whether that is the mechanism of the matching beat, and apply the mechanism at "
-                                   "that beat in the locked model's own structure and your own words. Never a sentence of either prompt in the request, never the wrong behaviour "
-                                   "named, never the correct take's prompt as a rule for another video; a hint you do not apply is not read.")
+            res["prompts_rule"] = ("a hint marked prompts rests on a sample whose prompts the admin kept: " + LOUPE_PROMPTS_WORDS + " (and prompt_note, the admin's one "
+                                   "line on what made the difference); the keeper read them whole before hinting (prompts_judged), "
+                                   "and they are written whole for you at prompts_files[<id>], from Loupe's record, compared or judged by no one. When you apply that hint, read "
+                                   "that file, judge yourself what the correct version's prompt did differently from the flawed version's and whether that is the mechanism of the matching beat, and apply the mechanism at "
+                                   "that beat in the locked model's own structure and your own words. Never a sentence of any of those prompts in the request, never the wrong behaviour "
+                                   "named, never the correct version's prompt as a rule for another video; a hint you do not apply is not read.")
     try:
         if rd and a.video:
             f = rd / "40-briefs" / f"video-{_cf_nn(a.video)}-hints.json"
@@ -4623,8 +4694,9 @@ def cmd_template_apply(a):
 
 def _sample_prompts_file(sid: str, rd) -> dict:
     """The prompts of one sample, whole from Loupe's record, written to RUN/40-briefs/samples/<id>-prompts.md; {saved} or {note} (nothing saved,
-    Loupe unreachable): both takes' for a miss with its correct take, the one box of an Examples sample (its one video's prompt, every generation of it:
-    prompt_sides). Nothing is compared, cut or summarised."""
+    Loupe unreachable): the boxes the sample has frames for (prompt_sides), each named by what it is (LOUPE_PROMPTS_WORDS): the flawed version's prompt,
+    the correct version's, or an Examples sample's one example box, each holding only the generations the sample's frames come from. Nothing is
+    compared, cut or summarised."""
     s, d = _cf_api("GET", f"/api/qc/samples/{sid}?prompts=1", key="qc", timeout=30)
     if s != 200:
         return {"ok": True, "mode": "unavailable", "id": sid, "prompts": "", "note": "no prompts: " + str((d or {}).get("error") or f"HTTP {s}")}
@@ -4640,10 +4712,13 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     if not kind:
         res["note"] = "the admin saved no prompt for this sample"
         return res
-    sides = res["prompt_sides"]          # an Examples sample takes all its frames from one video and has one prompt box, that video's
+    sides = res["prompt_sides"]          # the boxes the sample has frames for: an Examples sample's one box, the flawed / correct version's
     one_box = bool(smp.get("examples_only")) and len(sides) == 1
-    lines = [f"# {sid} · " + (f"the prompt of the example video ({'Video A' if sides[0] == 'wrong' else 'Video B'}: an Examples sample has one prompt box)" if one_box
-                              else "the prompts of the two takes"), "", f"Title: {smp.get('title', '')}",
+    head = (f"the example prompt of {'Video A' if sides[0] == 'wrong' else 'Video B'} (an Examples sample has one prompt box: the generations its Example frames come from)" if one_box
+            else "the flawed version's prompt and the correct version's prompt" if sides == ["wrong", "fixed"]
+            else "the correct version's prompt alone (none of its frames is called WRONG: no flawed version's prompt)" if sides == ["fixed"]
+            else "the flawed version's prompt alone (none of its frames is called RIGHT: no correct version's prompt)")
+    lines = [f"# {sid} · " + head, "", f"Title: {smp.get('title', '')}",
              f"Model: {smp.get('model') or 'any'} · from run {smp.get('run') or '-'} video {smp.get('video') or '-'} · kinds: {', '.join(smp.get('kinds') or []) or '-'}"]
     if note:
         lines += ["", "## The admin's note on the prompt", "", note]
@@ -4652,25 +4727,28 @@ def _sample_prompts_file(sid: str, rd) -> dict:
     secs = lambda x: f"{float(x or 0):.3f}".rstrip("0").rstrip(".")  # noqa: E731
     mmss = lambda t: f"{int(float(t or 0) // 60)}:{float(t or 0) - int(float(t or 0) // 60) * 60:05.2f}"  # noqa: E731
     roles = smp.get("prompt_roles") or {}        # a side that speaks only for Example frames (or a sample of Examples only) has an Example prompt
-    ex_title = "the example take of {v} (its frames are called EXAMPLE: a suggestion of what could have changed or been done another way, neither a bad generation nor a correct one)"
-    for side, text, title, none in (("wrong", wrong, ex_title.format(v="Video A") if roles.get("wrong") == "example" else "the flawed take (Video A: its prompt generated the flawed version)",
+    ex_title = "the example prompt of {v} (its frames are called EXAMPLE: a suggestion of what could have changed or been done another way, neither a bad generation nor a correct one)"
+    what_of = {"wrong": "a prompt of the flawed version", "right": "a prompt of the correct version", "example": "an example prompt"}
+    for side, text, title, none in (("wrong", wrong, ex_title.format(v="Video A") if roles.get("wrong") == "example" else "the flawed version (the generations the frames called WRONG come from)",
                                      "_not saved by the admin_"),
-                                    ("fixed", fixed, ex_title.format(v="Video B") if roles.get("fixed") == "example" else "the correct take (Video B)",
-                                     "_not saved by the admin_" if roles.get("fixed") == "example" else "_not saved by the admin (a miss example: nothing was corrected)_")):
+                                    ("fixed", fixed, ex_title.format(v="Video B") if roles.get("fixed") == "example" else "the correct version (the generations the frames called RIGHT come from)",
+                                     "_not saved by the admin_")):
         if side not in sides:
-            continue          # the other box of an Examples sample: never this sample's prompt
+            continue          # a box this sample has no frame for: never this sample's prompt
         segs = [x for x in (smp.get(f"{side}_segments") or []) if isinstance(x, dict)]
-        if segs:          # a take made of several generations (clips joined): Loupe gives the prompt of each generation this sample's frames come from (every one, in an Examples sample's one box)
+        if segs:          # a take made of several generations (clips joined): Loupe gives the prompt of each generation this sample's frames come from, and no other
             of = max(int(x.get("of") or 0) for x in segs) or len(segs)
-            lines += ["", f"## Prompts of {title}: made of {of} generations; "
-                      + ("the prompt of each generation this sample's frames come from" if len(segs) < of else "the prompt of each")]
+            lines += ["", f"## Prompts of {title}: the prompt of each generation this sample's frames come from ({len(segs)} of the {of} its take was made of)"]
             for k, sg in enumerate(segs, 1):
                 # the frames as the sample's image tags them (FRAME n, the role, the time; VIDEO A or B and the generation under it)
                 fl = [f"Frame {f.get('n')} ({role_word.get(f.get('role'), str(f.get('role')).upper())}, {mmss(f.get('t'))})" for f in sg.get("frames") or []]
                 fr = fl[0] if len(fl) == 1 else ", ".join(fl[:-1]) + " and " + fl[-1] if fl else ""
-                where = f"second {secs(sg.get('t_from'))} to second {secs(sg.get('t_to'))} of {video_name.get(sg.get('src'), 'that video')}"
+                spans = sg.get("spans") or [[sg.get("t_from"), sg.get("t_to")]]
+                where = " and ".join(f"second {secs(a)} to second {secs(b)}" for a, b in spans) + f" of {video_name.get(sg.get('src'), 'that video')}"
+                kinds = list(dict.fromkeys(f.get("role") for f in sg.get("frames") or []))
+                what = " and ".join(what_of[x] for x in kinds if x in what_of) or "the prompt"
                 lines += ["", f"### Generation {sg.get('gen') or k} of {of} · clip {sg.get('clip') or '-'} · {sg.get('request') or 'request not named'}",
-                          (f"_This is the prompt responsible for {fr} of this sample: it generated {where}._" if fr
+                          (f"_This is {what}: it generated {where}, and made {fr} of this sample._" if fr
                            else f"_This is the prompt that generated {where}; no frame of this sample comes from it._"),
                           "", str(sg.get("prompt") or "").strip() or "_not saved_"]
         elif text:
@@ -4684,7 +4762,7 @@ def _sample_prompts_file(sid: str, rd) -> dict:
                  f"its frames and every prompt, each prompt under its label ({sid}-P1 ...) with the frames it made._", "", rec]
     if one_box:
         lines += ["", "_This sample's frames are all Examples, each a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one; "
-                  "an Examples sample takes all its frames from one video and keeps that one video's prompt, every generation of it under the seconds it made. Read it "
+                  "an Examples sample takes all its frames from one video and keeps one box: the example prompt of each generation its Example frames come from, under the seconds it made. Read it "
                   "with the admin's words for what the example suggests; never take it as a flawed or a correct prompt, never paste a sentence of it, "
                   "never take it as a rule for another video._", ""]
     elif smp.get("examples_only"):
@@ -4692,10 +4770,13 @@ def _sample_prompts_file(sid: str, rd) -> dict:
                   "with the admin's words for what the example suggests; never take either as a flawed or a correct prompt, never paste a sentence of either, "
                   "never take one as a rule for another video._", ""]
     else:
-        lines += ["", "_Read both and judge what the correct take's prompt did differently from the flawed take's and whether that is the mechanism of the beat you are writing or checking. Apply the "
-                  "mechanism in the locked model's own structure and in your own words; never paste a sentence of either prompt, never name the wrong behaviour in a prompt, "
-                  "never take the correct take's prompt as a rule for another video._" + (" A prompt named an example take made frames the admin keeps as Examples: a "
-                                                                                       "suggestion, read it as one, never as the flawed or the correct prompt." if "example" in roles.values() else ""), ""]
+        lines += ["", ("_Read both and judge what the correct version's prompt did differently from the flawed version's at the frames each made" if sides == ["wrong", "fixed"]
+                       else "_Read it for what " + ("the correct version's prompt secured at the frames it made (this sample shows the correct version only)" if sides == ["fixed"]
+                                                    else "the flawed version's prompt let happen at the frames it made (nothing of this sample shows the correct version)"))
+                  + " and whether that is the mechanism of the beat you are writing or checking. Apply the "
+                  "mechanism in the locked model's own structure and in your own words; never paste a sentence of any prompt, never name the wrong behaviour in a prompt, "
+                  "never take the correct version's prompt as a rule for another video._" + (" A prompt named an example made frames the admin keeps as Examples: a "
+                                                                                          "suggestion, read it as one, never as the flawed or the correct prompt." if "example" in roles.values() else ""), ""]
     f = Path(rd) / "40-briefs" / "samples" / f"{sid}-prompts.md"
     f.parent.mkdir(parents=True, exist_ok=True)
     write_text(f, "\n".join(lines))
@@ -4716,10 +4797,11 @@ def _prompts_files(items, rd) -> dict:
 
 
 def cmd_sample_prompts(a):
-    """The prompts of the two takes of ONE sample (the prompt that generated the flawed version, the prompt of the correct take, or an example take's, a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one,
-    an Examples sample's one box; and the admin's note on what made the
+    """The prompts of ONE sample, each named by what it is (the flawed version's prompt: the generations its frames called WRONG come from; the correct
+    version's: those its frames called RIGHT come from; an Examples sample's one example box, a suggestion of what could have changed or how it could have
+    been done another way, neither a bad generation nor a correct one; only the boxes it has frames for; and the admin's note on what made the
     difference, as the admin saved them in Loupe), fetched whole and written to a file of the run (qc-consult and plan-hints write them by themselves for
-    every sample they cite). Nothing is compared, cut or summarised here: read the file and judge what the correct take's prompt did differently from the flawed take's."""
+    every sample they cite). Nothing is compared, cut or summarised here: read the file and judge what the correct version's prompt did differently from the flawed version's."""
     sid = (a.id or "").strip().upper()
     if not re.fullmatch(r"S\d+", sid):
         fail("sample-prompts needs --id S<number> (a sample id from qc-consult, qc-brief or plan-hints)", 2)
@@ -4874,7 +4956,7 @@ def cmd_concat(a):
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True, exist_ok=True)
     ff = find_tool("ffmpeg")
-    parts = []
+    parts, heads = [], []
     for i, c in enumerate(a.clips):
         info = infos[i]
         if (info["display_width"], info["display_height"]) != (W, H):
@@ -4886,6 +4968,7 @@ def cmd_concat(a):
         before_cont = i < joins and seams[i] == "continuous"
         head = a.seam_trim_frames if after_cont else 0
         t0 = head / (info.get("fps") or fps)
+        heads.append(t0)          # the seconds dropped from this part's head (the join record shifts its pieces by them)
         vf = (f"trim=start_frame={head},setpts=PTS-STARTPTS," if head else "") + \
              f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},setsar=1,fps={fps}"
         afl, d = [], a.audio_seam_fade_ms / 1000.0
@@ -4915,9 +4998,26 @@ def cmd_concat(a):
     if cp.returncode != 0:
         fail("concat failed: " + cp.stderr[-500:])
     o = media_summary(a.out)
+    pieces, t = [], 0.0          # the join record: which seconds of the output each piece fills, with the clip and attempt it sits in
+    for c, p, t0 in zip(a.clips, parts, heads):
+        secs = float(media_summary(p).get("duration_s") or 0)
+        sub = _join_record_of(Path(c))          # an input that is itself a join (a piece cut from the clean video): its own pieces, in this output's seconds
+        if sub and sub.get("pieces"):
+            for x in sub["pieces"]:
+                a0, b0 = max(float(x["t_from"]) - t0, 0.0), min(float(x["t_to"]) - t0, secs)
+                if b0 > a0 + 1e-6:
+                    pieces.append({**x, "t_from": round(t + a0, 3), "t_to": round(t + b0, 3)})
+        else:
+            clip, att = _clip_of_path(c)
+            pieces.append({"file": str(Path(c).resolve()), "clip": clip, "attempt": att, "t_from": round(t, 3), "t_to": round(t + secs, 3)})
+        t += secs
     shutil.rmtree(work, ignore_errors=True)
+    rec = Path(str(a.out) + JOIN_SUFFIX)
+    write_text(rec, json.dumps({"file": Path(a.out).name, "sha1": _file_sha1(Path(a.out)), "duration_s": o.get("duration_s"), "written": now_iso(),
+                                "by": "awl.py concat", "seams": seams, "pieces": pieces}, ensure_ascii=False, indent=1))
     out({"ok": True, "file": a.out, "duration_s": o.get("duration_s"), "size": f"{o['display_width']}x{o['display_height']}",
-         "fps": o.get("fps"), "seams": seams})
+         "fps": o.get("fps"), "seams": seams, "join_record": str(rec),
+         "pieces": [{k: x[k] for k in ("clip", "attempt", "t_from", "t_to")} for x in pieces]})
 
 
 # --------------------------------------------------------------------------- CapCut project helpers (Analyze Mode)
@@ -6449,7 +6549,7 @@ def main():
     p.add_argument("--note", help="only when a first answer came back with needs_unmet: your answer from the plan, in words (the keeper asked for it)")
     p.set_defaults(fn=cmd_plan_hints, kinds=None)
 
-    p = sp.add_parser("sample-prompts", help="the prompts of ONE sample (both takes' for a miss with its correct take, the one box of an Examples sample; as the admin saved them in Loupe), written whole to RUN/40-briefs/samples/<id>-prompts.md for you to read and judge; only for a sample you judged relevant")
+    p = sp.add_parser("sample-prompts", help="the prompts of ONE sample, each named by what it is (the flawed version's, the correct version's, or an Examples sample's one example box; only the boxes and generations its frames come from; as the admin saved them in Loupe), written whole to RUN/40-briefs/samples/<id>-prompts.md for you to read and judge; only for a sample you judged relevant")
     p.add_argument("--id", required=True, help="the sample id (S12) from qc-consult, qc-brief or plan-hints")
     p.add_argument("--run", required=True, help="run id or folder: the file is written under its 40-briefs/samples/")
     p.set_defaults(fn=cmd_sample_prompts)

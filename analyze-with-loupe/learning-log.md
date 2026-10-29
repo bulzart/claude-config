@@ -572,3 +572,26 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   SALES", 84% of the width at 11) stay at 10. No project was rewritten: a project takes the rule at its next repair.
 - **Verified:** t02 adds 8 checks (sizes, the split caption, the too-wide line, the pair, the write, the off switch, the contract); t01, t02,
   t03, t05 pass; `docs_tool.py check` 0 errors.
+
+## 2026-10-29 · A Loupe prompt box holds only the generations its frames come from; every join is recorded
+- **Reported:** Fill on a report of run `20261028-202809-recreate-neurogum-celsius` video 02 warned "They differ (inserts between the clips, or another
+  cut)": its clean video is c1 0-1.9 s, c2 1.9-3.4 s, c1 again to 5.867 s, read as c1 0-5 s and c2 5-7 s. Then: "if two or more samples are from one video
+  generation only make sure to only include that generation prompts in the prompt filler not more, but if the frames used as wrong,right or examples are
+  from more than a single generation ... then in the prompt fill of flawed versions include the video prompts of the generations whom's frames turned out
+  wrong ..., and in the right/correct prompt filler box put the prompts that generated the correct version ..., but if there's only 3 right frames or 3
+  wrong frames, or 3 examples then only fill in one prompt ... make sure that thats how they get read from judges and keepers ... nothing should be left out
+  of sync or unchecked and in accordance with both analyze-with-loupe command and loupe app too! and then in the end update cases in loupe generation misses
+  that all frames have the same type of sample"; "make sure that video generation prompts from the samples are not trimmed in any way"; "also make sure to
+  avoid memory contex rot to agents whatever function they do but video prompts should not be trimmed no matter what".
+- **Root cause:** joins were not recorded (`concat` deleted its list; hand-made ffmpeg lists were the only trace), so Loupe assumed clip order and each
+  clip's full length, and took a clip's attempt from the number of attempts made (a clip that shipped its first attempt after a failed second got the
+  second's prompt); a box held every generation of a take, or the whole take when no frame of its kind existed.
+- **Changed:** `concat` writes `<out>.join.json` (each piece's clip, attempt and seconds; the output's sha1; a piece that is a join keeps its generations,
+  an insert is a piece of no clip); `restore-audio`, `conform`, `clean`, `captions` and `trim` carry it (trim shifted). Loupe reads the join (that record,
+  the CapCut project of a render, the list of the attempt folder a copy came from, a render of the clean video, the clips' pieces, their trimmed files;
+  never assumed) and gives each box only the generations its frames come from, every sample of the report counted, a box no frame feeds empty, each prompt
+  under the line that says what it is. The qc-consult and plan-hints rules share `LOUPE_PROMPTS_WORDS`; `sample-prompts` heads a sample by its boxes and
+  each generation by every span. Docs: awl-postprocess (every join through `T concat`), seam discipline, deliverables, preprocessing, README, awl-qc,
+  awl-precheck, the tests README, the build prompt.
+- **Verified:** t02 adds 4 join-record checks, t03 checks the prompts file by role; t01, t02, t03, t05 pass; Loupe's selftest 225, keeper_sync 92,
+  page_smoke, transport_check, flags_smoke pass.

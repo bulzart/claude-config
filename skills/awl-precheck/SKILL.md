@@ -91,7 +91,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - Fix any conflict in the plan and the request before continuing.
 - **X4b — The judge writes the final prompt (the first request of a video; the user, 2026-10-28).** X1–X4 are done: the plan, the
   pattern card, the checked draft request and its must-carry lines. Now the whole brief goes to the judge (Loupe's keeper, one separate
-  Opus session that holds the admin's samples of earlier generations, many with the prompt that generated the flawed version and the prompt of the correct take; an example take's prompt is a suggestion, neither bad nor correct),
+  Opus session that holds the admin's samples of earlier generations, many with the flawed version's prompt and the correct version's prompt, each holding only the generations its frames come from; an example prompt is a suggestion, neither bad nor correct),
   and the judge's answer is the prompt this video is generated from. The prompt is the judge's: nothing after X4b improves it.
   1. Write the judge brief `RUN/40-briefs/video-NN-judge-brief.md`: what you are working on (run, video, mode, the locked model, the
      request kind and its inputs with their roles), what the video is about (one line per beat of the plan: what happens, the product's
