@@ -557,3 +557,18 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   `STRUCTURE_CHARS`, `brief_cut`, `structure_cut`, `template_cut`), the caught-flag listing keeps the prompts whole; Loupe keeps every prompt,
   template, template_fix and request prompt whole. A sample's record names its sample on every line (`S12 · ...`, `S12-P1`, headings with the id).
 - **Verified:** t01, t02, t03, t05 pass; Loupe's selftest and keeper_sync pass.
+
+## 2026-10-29 · Text size 11 when a video has only a little text
+- **Reported:** "when there's little text to place over the video in capcut edits and our standard text size is 10 but whent there's only few text to be placed then use font size 11"; then "but standard size yet 10 right?" (yes).
+- **Changed:** the house text size is one per video: 10, or 11 when at no moment more than 5 words are on screen (every text shown at that
+  moment counted, so a caption split into two layers counts whole) and, at 11, every line stays within 82% of the frame width
+  (`config.json → capcut.text_style.short_text`; null turns it off). `capcut-text-style`, run by `capcut-repair`, counts the words on the
+  timeline, measures each line with CapCut's System font and reports both as `sizing`. CapCut draws size s with a font of about 0.00575·s of the
+  frame width, measured on the covers CapCut itself rendered of `03_Oct_2026_v09` (size 10) and `06_Oct_2026_v14` (size 9). Agents still pass
+  `fontSize:10`. In step: capcut-assembly §3, §4, §5; text-and-format §3 step 5; production-agents §2 (the contract); awl-plan-video;
+  awl-postprocess; preprocessing; README; the build prompt.
+- **On the store (read only):** 13 of the 229 projects would get 11 ("Hero vs villain", "Who decided that?", the day labels under "life as
+  student", "first day as an assassin"); `20_Oct_2026_v03` (two layers shown together, 10 words) and `28_Oct_2026_v10` ("POV: YOU WORK IN
+  SALES", 84% of the width at 11) stay at 10. No project was rewritten: a project takes the rule at its next repair.
+- **Verified:** t02 adds 8 checks (sizes, the split caption, the too-wide line, the pair, the write, the off switch, the contract); t01, t02,
+  t03, t05 pass; `docs_tool.py check` 0 errors.
