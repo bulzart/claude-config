@@ -47,6 +47,11 @@ Only these section files for this phase, nothing else unless a step below says s
     `media_upload` answer in Loupe as a capture and prints its id when this library's run is the newest changed one; the presigned URL is
     never copied by hand; `--url` only when no capture id was printed) → `media_confirm` → `T uploads set --run RUN --video NN --label "<as the request names it>" --media-id <id>
     --file <path>` (one schema; the main session merges the records with `T uploads merge`). Reuse media ids recorded in `state.json`.
+  - **An image the judge added** (its `value` is the placeholder `<X3: prepare <file> for Image N>`: `T template-apply` wrote it at X4b,
+    `T product-images` for a regeneration): prepare its file from `source.original` as `source.prepared` says (empty: the way this run
+    prepared the product's other views, padded the same), save it with the request's other prepared inputs
+    (`RUN/55-references/video-NN/<attempt>/imageN-product-<view>-padded.png`), view it, write its path in the input's `file`, upload it
+    as above and put the media id in its `value`. Nothing else of the request changes, and its `source` stays.
   - **Every video sent to Higgsfield is silent:** the `videos_without_audio` copy, or its prepared
     derivative from E5. Never upload an original video with its audio. (A clip this run generated
     may go back with its generated audio, as the input of a native extension.)

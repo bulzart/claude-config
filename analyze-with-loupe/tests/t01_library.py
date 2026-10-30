@@ -186,6 +186,17 @@ wr = rd(SKD / "awl-write-request" / "SKILL.md")
 wrn = re.sub(r"\s+", " ", wr)
 check("template_fix" in wrn and "every other part word for word" in wrn and "needs_unmet" in pc1 and "--add-must" in pc1 and "--use-draft" in pc1,
       "a regeneration takes the judge's template_fix and keeps the rest word for word; X4b re-asks the judge before it adds a line or keeps the draft")
+# the judge decides the product images (the admin, 2026-10-30): X2 records each input's original and puts the product images last, X4b applies the
+# judge's choice, X3 prepares an image it added (by the placeholder the toolkit writes), QC sends the inputs and a regeneration takes the QC answer's
+tk_src = rd(AWL)
+ins = re.sub(r"\s+", " ", rd(SKD / "awl-inputs" / "SKILL.md"))
+check("product-images" in cmds and '"<X3: prepare {name} for {lab}>"' in tk_src.replace("f\"<X3", "\"<X3") and "<X3: prepare <file> for Image N>" in ins
+      and '"source": {"original"' in wrn and "ride last" in wrn and "T product-images" in wrn and "inputs.without_a_recorded_source" in wrn
+      and "product_images" in pc1 and "musts_renumbered" in pc1 and "product_images_problems" in pc1 and "T product-images" in qc1
+      and "product_images" in rd(LIB / "reference" / "production-agents" / "040_4_60-outputs-video-nn-result-json.md")
+      and "T product-images" in rd(HOME / "commands" / "analyze-with-loupe.md"),
+      "X2 records each input's original and puts the product images last, X4b applies the judge's product images, X3 prepares one it added by the "
+      "placeholder the toolkit writes, QC and a regeneration take the QC answer's (T product-images), result.json keeps them")
 # the preview is the 720x1280 burn, never the proxy; no product clause teaches a faded product
 check("never the 540×960 capcut-cli proxy" in rd(LIB / "reference" / "capcut-assembly" / "070_6_deliverables-analyze-mode.md") and "720×1280" in rd(SKD / "awl-record" / "SKILL.md"), "the preview is documented as the 720x1280 burn, never the proxy")
 faded = [str(p.relative_to(LIB)) for p in sorted((LIB / "reference").rglob("*.md")) if re.search(r"colours as muted as|no brighter than the room", rd(p))]

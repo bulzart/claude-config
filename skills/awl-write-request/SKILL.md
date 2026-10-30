@@ -67,6 +67,11 @@ Only these section files for this phase, nothing else unless a step below says s
   - **A regeneration or a re-edit** never asks the judge for a new prompt: the corrected prompt is the request's prompt (the judge's) with the
     judge's `template_fix` from the QC consult in place of the part it names (`awl-qc`), every other part word for word; with no `template_fix`,
     only the part that let the error happen is crafted again by the steps below, every unrelated part kept.
+    When the QC answer lists `product_images` (the judge's choice of the product images the regeneration carries, which and how many),
+    the request keeps the first attempt's inputs and `T product-images --run RUN --video NN --request <this request> --apply` puts them
+    in: images are only added after the last one or the last ones left out, never both, so every image the prompt names keeps its
+    number; an image it adds has a placeholder `value` and its `source` (prepared and uploaded in X3, `awl-inputs`); a problem it
+    reports keeps the request's product images as they were (a judge gap, written in the verdict).
   - **Reason first** (`generation-system.md` §6). For every beat that places, moves or uses the product, derive what the plan or source
     needs there, what the product's own details allow (its registry row, affordance sheet and `product_properties.txt`) and what the
     source scene offers, then write the one state all three allow, once, in positive words. The rules below are checks on that result,
@@ -152,6 +157,17 @@ Only these section files for this phase, nothing else unless a step below says s
         (E5). The timing comes from the source video, never from timestamps in the prompt.
   - Assemble the params from the guide's §2.4 recipe and the index's `output_9x16_720p`, then save
     `50-requests/video-NN-request.json`.
+  - **Every input names the client's original it was made from** (the admin, 2026-10-30: "the names are far better to be told as they
+    were in their original files ... so the upcoming runs know which assets samples to use or how much of them"). Each `params.medias[]`
+    input prepared from a client file carries `"source": {"original": "<that file's full path, as the asset inventory has it>",
+    "asset_id": "A82", "prepared": "<how its file was made from it: padded to 9:16 on light grey, a head-and-neck crop on grey; empty
+    for a byte copy>", "kind": "product|contents|character|prop"}` (`product`: a view of the product itself), read from
+    `RUN/30-assets/project/asset-inventory.json` and the registry row, never guessed; a start frame, a hand-off frame and the original
+    reference have none. Loupe names every image by it (its input, its asset id and the original file's name, never a folder) and the
+    judge reads it. **The product images ride last** among the image inputs, in the order the prompt names them; the character, the
+    contents sample and every other image come first, so the judge can choose which product images the request carries and how many
+    (X4b) without moving another input's number. `T lint-run` lists an input without a source (`inputs.without_a_recorded_source`) and a
+    request whose product images are not last (`inputs.product_images_not_last`).
   - Multi-clip: one request per clip, `50-requests/video-NN-cK-request.json`. A continuation clip
     uses the guide's extension or "Across clips" wording and restates the seam's hand-off state.
   - Edit Mode: include the model's no-audio setting when it has one (`generate_audio:false`,
@@ -199,6 +215,8 @@ Only these section files for this phase, nothing else unless a step below says s
   inputs of the first attempt (the original source video, when the video has one), and a whole request crafted again: the
   diagnosed cause designed out in what the model should do, every part unrelated to the error kept.
 - Never apply generic prompting when a model guide exists.
+- Never write an input prepared from a client file without its `source` (the original's path, asset id, preparation and kind), never
+  guess one, and never put a product image before another image input: the product images ride last, so the judge can change them alone.
 - Never let the video model render overlay text in Analyze Mode. Generate clean and place the text
   in CapCut. Never burn it in with `awl.py captions`, except as the stated fallback.
 - Never keep source text in Edit Mode unless the user kept that specific text.

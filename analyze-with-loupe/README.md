@@ -118,13 +118,31 @@ and reports the must-carry lines missing, the slots left and the length; nothing
 limit is asked of the judge once more, and only then is a line added word for word or the checked draft kept. The judge is not asked again before
 generation, and a regeneration takes the judge's `template_fix` in place of the part it names. A template asked while another keeper call runs is asked
 again up to 3 times (`AWL_TEMPLATE_BUSY_RETRIES`). After generation QC consults the judge once its first pass has caught what it caught, and the
-consult carries by itself the prompt the video was generated from (`--attempt` picks the request) with that request's video model and parameters,
+consult carries by itself the prompt the video was generated from (`--attempt` picks the request) with that request's video model, parameters and
+inputs (each with the client's original it was made from, `request_inputs`),
 the template and the brief (`evidence_sent`); both kinds of consult send the generation video model's entry of `models/index.json`, and the judge
 weighs each sample by the model that generated it;
 the answer adds `cause` and `template_fix`, kept in `result.json → judge` for the user's review. Before any QC or planning answer is final Loupe also
 hands the judge the saved prompts of the samples it cites (up to ten, in the order cited: `prompts_judged` names every cited sample whose prompts it read,
 `prompts_unread` any it did not), and `qc-consult` writes them for the agent (`prompts_files`).
 `plan-hints` stays for older runs; X2 no longer calls it.
+
+Product images (the admin, 2026-10-30: "the names are far better to be told as they were in their original files ... so the upcoming runs know
+which assets samples to use or how much of them, also the judge should be able to tell and decide to how many asset sample references should be
+used in the generation"; then "just the exact file/image name"). X2 records, for every input prepared from a client file, the original it was
+made from (`params.medias[].source`: `original`, `asset_id`, `prepared`, `kind`) and puts the product images last among the image inputs. The
+judge reads each input with its asset id and the original's file name (never a folder) and the client's images of that product (its registry
+row and the inventory), and answers `product_images`: which of them the request carries and how many, in its order, each `{asset, file,
+prepare, why}`. `template-apply` applies them at X4b: the other inputs keep their numbers and the product images follow; a must-carry line that
+names a product image is checked in its new number (`musts_renumbered`) or is no longer the request's (`musts_superseded`); an image the
+inventory does not hold, or product images that are not last, apply nothing (`product_images_problems`). A regeneration takes the QC answer's
+with `product-images --run RUN --video NN --request <it> --apply` (images only added after the last one or the last ones left out, never both, so the
+numbers the prompt names never move; a request the ledger holds is refused; the request is kept once as `<request>.pre-product-images.json`).
+An image the judge adds carries a placeholder value (`<X3: prepare <file> for Image N>`) and its source, and X3 prepares and uploads it.
+Older requests are read as Loupe reads them (`_pi_source` = Loupe's `runs._source_of`, checked alike in t03): a `source` record, else the
+client's file in `source`, `source_file` or `from` with its `prepare` words, else a `build` note ("from <file> (A82): <how>"), else the one
+asset id or original file name the input's words name; never guessed. `lint-run` lists inputs without a recorded source and requests whose
+product images are not last (`inputs`).
 
 Kept in step with Loupe (2026-10-28): `qc-consult`, `prompt-template` and `plan-hints` wait up to 1620 s (`AWL_CONSULT_TIMEOUT`), since Loupe may
 wait 120 s for a running keeper call and then make up to six keeper calls of up to 240 s each (a 209 s consult was cut at the old 190 s and its

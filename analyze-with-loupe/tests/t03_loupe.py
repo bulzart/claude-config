@@ -41,12 +41,16 @@ misses.update(m["id"], {"wrong_prompt": "PROMPT-WRONG the can on the desk.", "fi
 # --- the fake keeper: a boot that can be slow (to test the bounded wait), then JSON answers by question kind
 calls = []
 SLOW = {"boot_s": 0.0}
+PIM = {"tpl_text": "", "tpl": None, "qc": None}     # the judge's product images in a template answer and in a QC answer (none until a test sets them)
 
 
 def fake_claude(prompt, sid, resume, model, timeout=150):
     calls.append(prompt)
     if "TEMPLATE REQUEST" in prompt:                      # step 1 of a template request: the judge names the samples whose prompts it needs
         return {"result": json.dumps({"read": [SID, "S999"]}), "total_cost_usd": 0.0}
+    if "Step 2 of the template request" in prompt and PIM["tpl_text"]:      # a template answer that names the product images
+        return {"result": json.dumps({"template": PIM["tpl_text"], "basis": [{"id": SID, "worked": "two views of the carton", "failed": "one view", "where": "shot 1"}],
+                                      "notes": "", "changes": [], "not_covered": "", "product_images": PIM["tpl"] or []}), "total_cost_usd": 0.0}
     if "Step 2 of the template request" in prompt:
         return {"result": json.dumps({"template": "TEMPLATE-MARK Shot 1: the slim can stands on the desk, as tall as the mug beside it. [SLOT: the can's upload tag]",
                                       "basis": [{"id": SID, "worked": "the height stated against the mug", "failed": "no size stated", "where": "shot 1"}],
@@ -74,7 +78,8 @@ def fake_claude(prompt, sid, resume, model, timeout=150):
                                                   {"id": "S999", "what": "a sample that does not exist"}],
                                         "cause": "CAUSE-MARK shot 1 states no size" if "The prompt this video was generated from" in prompt else "",
                                         "template_fix": "the slim can as tall as the mug" if "The prompt this video was generated from" in prompt else "",
-                                        "needs": [{"kind": "ask_agent", "question": "does the can leave the frame?", "why": "I cannot see the last second"}]}), "total_cost_usd": 0.0}
+                                        "needs": [{"kind": "ask_agent", "question": "does the can leave the frame?", "why": "I cannot see the last second"}],
+                                        **({"product_images": PIM["qc"]} if PIM["qc"] else {})}), "total_cost_usd": 0.0}
     return {"result": "ready", "total_cost_usd": 0.0}
 
 
@@ -348,6 +353,106 @@ same = [e for e in lflags.search("queued while loupe failed")[1] if e.get("title
 check(code == 0 and len(same) == 1 and same[0]["status"] == "cleared" and same[0]["id"] != q and js.get("id") == same[0]["id"] and js.get("queued_as") == q,
       f"after Loupe recorded it as {same[0]['id'] if same else '?'}, `caught-flag set --id {q}` still finds it (one flag, now cleared)"
       + ("" if code == 0 and len(same) == 1 and same[0]["status"] == "cleared" else f" [code {code}, {len(same)} flag(s), status {[e.get('status') for e in same]}, answer {json.dumps(js)[:300]}]"))
+
+# --- product images (the admin, 2026-10-30): the judge decides which of the client's images of the product a request carries and how many; each input
+#     records the client's original it was made from, named by its file name alone (never its folder), on the way to the judge and back
+import importlib.util as _ilu  # noqa: E402
+from loupe_app import runs as lruns  # noqa: E402
+from t00_common import AWL  # noqa: E402
+assets = TMP / "client" / "assets"
+inv5 = [{"id": "A47", "path": str(assets / "people" / "face-47.jpg")}, {"id": "A82", "path": str(assets / "carton" / "Carton-Front.png")},
+        {"id": "A83", "path": str(assets / "carton" / "Carton-Back.png")}, {"id": "A273", "path": str(assets / "photos" / "IMG_6917.jpg")}]
+(run / "30-assets" / "project").mkdir(parents=True, exist_ok=True)
+(run / "30-assets" / "project" / "asset-inventory.json").write_text(json.dumps({"items": inv5}), encoding="utf-8")
+(run / "30-assets" / "registry.md").write_text("| id | what | assets |\n|---|---|---|\n| P-CARTON | the product, a carton | A82, A83, A273 |\n", encoding="utf-8")
+req5 = {"params": {"model": "wan3_0_prime", "prompt": "DRAFT-5 the man of Image 1 holds the carton. The printed label exactly as in Image 2. Keep the camera still.",
+                   "medias": [{"role": "image_references", "value": "<X3: image1-character-face.jpg>", "label": "Image 1 = image1-character-face",
+                               "source": {"original": inv5[0]["path"], "asset_id": "A47", "prepared": "cropped to the face", "kind": "character"}},
+                              {"role": "image_references", "value": "<X3: image2-product-front.png>", "label": "Image 2 = image2-product-front",
+                               "source": {"original": inv5[1]["path"], "asset_id": "A82", "prepared": "padded to 9:16 on white", "kind": "product"}}]}}
+(run / "50-requests" / "video-05-request.json").write_text(json.dumps(req5), encoding="utf-8")
+(run / "40-briefs" / "video-05-judge-brief.md").write_text("BRIEF-5 video 05: he holds the carton to the camera; the goal is the label read true.", encoding="utf-8")
+(run / "40-briefs" / "video-05-musts.md").write_text("- The printed label exactly as in Image 2.\n- Keep the camera still.\n", encoding="utf-8")
+PIM.update(tpl_text="TPL-5 the man of Image 1 holds the carton. The printed label exactly as in Image 2. Image 3 shows the back of the carton. Keep the camera still.",
+           tpl=[{"asset": "A82", "file": "client/assets/carton/Carton-Front.png", "prepare": "", "why": f"{SID}: one view left the thinness wrong"},
+                {"file": "carton\\Carton-Back.png", "prepare": "padded to 9:16 on white like the front", "why": f"{SID}: a second view held it"}])
+n0 = len(calls)
+js, _, _ = t("prompt-template", "--run", run.name, "--video", "05", "--product", "carton", env=ENV)
+step1 = next((c for c in calls[n0:] if "TEMPLATE REQUEST" in c), "")
+check("- Image 1 (image_references; character; made from A47 · face-47.jpg, prepared: cropped to the face)" in step1
+      and "- Image 2 (image_references; a product image; made from A82 · Carton-Front.png, prepared: padded to 9:16 on white)" in step1
+      and "Product images (yours to decide, see PRODUCT IMAGES): Image 2 (A82 · Carton-Front.png); they are the last image inputs" in step1
+      and "The client's images of P-CARTON (the run's registry row and asset inventory): A82 Carton-Front.png, A83 Carton-Back.png, A273 IMG_6917.jpg" in step1
+      and str(assets) not in step1 and "carton/Carton-Front.png" not in step1,
+      "the template request lists each input with the client's original it was made from, by its file name alone (never a folder), the draft's product "
+      "images and the client's images of that product")
+pim5 = js.get("product_images") or []
+check([(x.get("asset"), x.get("file"), x.get("prepare")) for x in pim5] == [("A82", "Carton-Front.png", ""), ("", "Carton-Back.png", "padded to 9:16 on white like the front")]
+      and "template-apply" in js.get("product_images_rule", "") and "upload it at X3 before X5" in js.get("product_images_rule", ""),
+      f"the judge's product images come back from Loupe in its order, named by file name alone (the folders it wrote are cut), with the rule to apply them ({pim5})")
+t5 = json.loads((run / "40-briefs" / "video-05-template.json").read_text(encoding="utf-8"))
+check(t5.get("product_images") == pim5, "the judge's product images are kept in the saved template")
+js, code, _ = t("template-apply", "--run", run.name, "--video", "05", env=ENV)
+rq5 = json.loads((run / "50-requests" / "video-05-request.json").read_text(encoding="utf-8"))
+med5 = [x for x in rq5["params"]["medias"] if x.get("role") == "image_references"]
+check(code == 0 and rq5["params"]["prompt"].startswith("TPL-5") and len(med5) == 3 and med5[:2] == req5["params"]["medias"]
+      and med5[2].get("value") == "<X3: prepare Carton-Back.png for Image 3>"
+      and med5[2].get("source") == {"original": inv5[2]["path"], "asset_id": "A83", "prepared": "padded to 9:16 on white like the front", "kind": "product"}
+      and [a["asset"] for a in (js.get("product_images") or {}).get("added", [])] == ["A83"] and js.get("musts_missing") == []
+      and js.get("prompt_names_images_beyond_the_inputs") == [] and (rq5.get("product_images") or {}).get("by") == "the judge (X4b)",
+      "template-apply carries them into the request: the character and the front view keep Image 1 and 2; the back view, named by its file name alone, "
+      "is found in the inventory (A83) and added as Image 3 with the source to prepare it from")
+PIM.update(qc=[{"asset": "A82", "file": "Carton-Front.png", "prepare": "", "why": "kept"}, {"asset": "A83", "file": "Carton-Back.png", "prepare": "", "why": "kept"},
+               {"asset": "A273", "file": "photos/IMG_6917.jpg", "prepare": "cropped to the carton", "why": f"{SID}: a real photo held the label"}])
+js, _, _ = t("qc-consult", "--run", run.name, "--video", "05", "--question", "the label reads wrong in shot 2", env=ENV)
+q5 = [c for c in calls if "QC question" in c][-1]
+check("The inputs of that request (what each is and the client's original file it was made from) and its product images" in q5
+      and "- Image 3 (image_references; a product image; made from A83 · Carton-Back.png, prepared: padded to 9:16 on white like the front)" in q5
+      and "Product images (yours to decide, see PRODUCT IMAGES): Image 2 (A82 · Carton-Front.png), Image 3 (A83 · Carton-Back.png)" in q5
+      and str(assets) not in q5 and js.get("evidence_sent", {}).get("request_inputs") == "video-05-request.json",
+      "the QC judge is told which inputs the video was given, each with the client's original by its file name alone, and its product images")
+saved5 = run / "60-outputs" / "video-05" / "qc-consult.json"
+check([(x["asset"], x["file"]) for x in js.get("product_images") or []] == [("A82", "Carton-Front.png"), ("A83", "Carton-Back.png"), ("A273", "IMG_6917.jpg")]
+      and "T product-images" in js.get("product_images_rule", "")
+      and saved5.is_file() and json.loads(saved5.read_text(encoding="utf-8")).get("product_images") == js.get("product_images"),
+      "a QC answer's product images for the regeneration reach the QC agent with the rule to apply them, and are saved with the answer")
+r2p = run / "50-requests" / "video-05-a2-request.json"
+r2p.write_text(json.dumps({**rq5, "params": {**rq5["params"], "prompt": rq5["params"]["prompt"] + " REGEN-MARK"}}), encoding="utf-8")
+js, _, _ = t("product-images", "--run", run.name, "--video", "05", "--request", str(r2p), "--apply", env=ENV)
+img2 = [x for x in json.loads(r2p.read_text(encoding="utf-8"))["params"]["medias"] if x.get("role") == "image_references"]
+check(js.get("applied") and [a["image"] for a in js.get("added", [])] == ["Image 4"] and len(img2) == 4 and img2[:3] == med5
+      and img2[3]["source"]["asset_id"] == "A273" and img2[3]["source"]["original"] == inv5[3]["path"] and img2[3]["value"] == "<X3: prepare IMG_6917.jpg for Image 4>"
+      and r2p.with_name("video-05-a2-request.pre-product-images.json").is_file(),
+      "product-images puts the QC judge's choice in the regeneration's request: the images its prompt names keep their numbers and the photo is added as Image 4")
+
+# Loupe (its records, the samples' PRODUCT IMAGES) and the toolkit (the judge's inputs, the plan) read an input's source by the same rules
+_spec = _ilu.spec_from_file_location("awl_under_test", AWL)
+_awl = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_awl)
+l_inv, l_names = lruns._inventory(run)
+a_inv, a_names = _awl._pi_inventory(run)
+cases = [{"source": {"original": inv5[1]["path"], "asset_id": "A82", "prepared": "padded", "kind": "product"}},
+         {"build": f"from {inv5[2]['path']} (A83): padded to 9:16 on white"},
+         {"build": f"byte copy of {inv5[0]['path']} (A47) (the original bytes)"},
+         {"meaning": "the carton's back view, A83"},
+         {"label": "Image 2 = IMG_6917.jpg as given"},
+         {"meaning": "A82 or A83"},
+         {"meaning": "the man"},
+         {"source": {"original": inv5[3]["path"]}},
+         {"source": inv5[1]["path"], "prepare": "padded to 9:16 on white"},
+         {"source_file": inv5[2]["path"], "prepare": "same preparation as Image 2"},
+         {"from": inv5[3]["path"]},
+         {"build": f"from {inv5[1]['path']} (A82, closed carton, flap shut): the carton upright, padded"},
+         {"from": "A83", "label": "Image 3 = the back view"}]
+pairs = [(lruns._source_of(c, "", {}, l_inv, l_names), _awl._pi_source(c, "", a_inv, a_names, set())) for c in cases]
+check(lruns.BUILD_NOTE.pattern == _awl.PI_BUILD_NOTE.pattern and lruns.A_ID.pattern == _awl.PI_A_ID.pattern and all(lo == aw for lo, aw in pairs)
+      and [lo.get("recorded", "") for lo, _aw in pairs] == ["source", "build", "build", "named", "named", "", "", "source", "source", "source", "source", "build", "named"]
+      and [lo.get("asset_id") for lo, _aw in pairs[8:]] == ["A82", "A83", "A273", "A82", "A83"]
+      and (pairs[8][0].get("prepared"), pairs[11][0].get("prepared")) == ("padded to 9:16 on white", "the carton upright, padded")
+      and pairs[7][0].get("asset_id") == "A273" and pairs[2][0].get("prepared") == "a byte copy (the original bytes)",
+      "Loupe and the toolkit read an input's source the same way: the source record, the client's file in source, source_file or from (the forms runs "
+      "wrote before it), a build note (its asset id in its parenthetical), one asset id or one original file name named; "
+      "two ids or none named is no record (never a guess)" + ("" if all(lo == aw for lo, aw in pairs) else f" {[p for p in pairs if p[0] != p[1]]}"))
 
 httpd.shutdown()
 finish()

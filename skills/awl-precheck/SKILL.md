@@ -99,12 +99,21 @@ Only these section files for this phase, nothing else unless a step below says s
      X4 found the prompt must respect (a size, a count, a fallback).
   2. `T prompt-template --run RUN --video NN --structure-file RUN/50-requests/video-NN-pattern.md --product "<form>" --product-details
      "<its shape, size, opening and natural posture, from its registry row>"` (a clip: `--clip cK`). The toolkit sends that brief, the
-     checked draft's prompt, parameters and inputs, the must-carry lines and the video model's entry of the model index. The judge reads the
-     saved prompts of the samples it chooses and answers `template`: the final prompt in the locked model's structure, built on the checked
-     draft and on what worked and what failed before, every must-carry line word for word.
+     checked draft's prompt, parameters and inputs (each with the client's original it was made from: its asset id, its file name and how
+     it was prepared), the client's images of the product (its registry row), the must-carry lines and the video model's entry of the model
+     index. The judge reads the saved prompts of the samples it chooses and answers `template`: the final prompt in the locked model's
+     structure, built on the checked draft and on what worked and what failed before, every must-carry line word for word. It also decides
+     which of the product's images the request carries and how many (`product_images`, the admin 2026-10-30; empty keeps the draft's).
   3. `T template-apply --run RUN --video NN [--slot "<slot words>=<value>" …]` puts it in the request word for word (the draft is kept as
      `video-NN-request.draft.json`) and reports, as facts, the must-carry lines it does not hold word for word, the slots left and its
-     length against the service's 5000 characters.
+     length against the service's 5000 characters. With the judge's `product_images` it also puts them in the request: the inputs that are
+     not product images keep their numbers and its product images follow in its order (`product_images`: `final`, `kept`, `added`,
+     `dropped`, `renumbered`); a must-carry line naming a product image is checked in its new number (`musts_renumbered`; `--add-must`
+     takes that form) and one naming an image the judge left out is no longer the request's (`musts_superseded`).
+     `product_images_problems` (an image the run's inventory does not hold, product images that are not the last inputs) applies none of
+     them, and `prompt_names_images_beyond_the_inputs` lists an image the prompt names that the request does not carry: both are asked of
+     the judge once more (step 4). An image it adds is prepared and uploaded in X3 (`awl-inputs`): in Analyze Mode with the shared uploads
+     of A9 step 2, in Edit Mode now, before X5.
   4. **Never rewrite, trim, reorder or improve the judge's prompt**, and X4 does not run again on its wording (it ran on the draft). Fill a
      `[SLOT: …]` only with what the plan already decided. A must-carry line missing, a slot that cannot be filled or a length over the
      limit: ask the judge once more with the same arguments plus `--note "<what is missing or too long>"` and apply its new answer. Only if
@@ -114,7 +123,8 @@ Only these section files for this phase, nothing else unless a step below says s
      `--note`. No answer at all (`mode: empty`, `unavailable`, `busy` after the toolkit's retries, an empty `template`): the checked draft is
      the request, as always (`T template-apply --use-draft`).
   6. Write the pattern card's "Judge's template" block: the prompt's file (or "no template: <why>"), the slots filled with what, each
-     must-carry line added and why, a `--note` re-ask and its reason, the judge's `changes` (parts of the plan earlier generations say should
+     must-carry line added and why, a `--note` re-ask and its reason, the product images (each by its asset id and original file name;
+     any the judge added, left out or renumbered, with its why), the judge's `changes` (parts of the plan earlier generations say should
      change; its prompt already carries them: add one line per change to the plan so QC checks the same), and any judge gap. X6 copies it.
   The judge is not asked again before the generation; after it, QC consults the judge with the prompt used and this brief (`awl-qc`).
 - **X5 — Preflight.**
@@ -130,7 +140,7 @@ Only these section files for this phase, nothing else unless a step below says s
     operation / duration / 9:16 720p, cost, adaptation logic. In Edit Mode and Recreate it also names
     the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
   - The brief carries the pattern card's short "Judge's template" block (the judge's prompt's file or why there was none, the slots
-    filled, any must-carry line added, any re-ask, the judge's changes), so QC and a reported miss can be read against it.
+    filled, any must-carry line added, any re-ask, the product images, the judge's changes), so QC and a reported miss can be read against it.
   - With an own voiceover (item 31) the brief names the method, the voice, the language, the form, the take and its length, the lipsync
     sync pass, and the untested lip risk (`voiceover.md` §6).
   - Save it as `40-briefs/video-NN-brief.md`; each attempt or clip appends its own block under the first

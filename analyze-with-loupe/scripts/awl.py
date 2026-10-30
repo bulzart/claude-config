@@ -4361,7 +4361,7 @@ def cmd_qc_consult(a):
         d["product_images_rule"] = ("product_images is the judge's choice of the product images the regeneration carries, which and how many (the character, "
                                     "the original reference and every other input stay): write the regeneration's request as awl-write-request says "
                                     "(template_fix in place of the part it names), then `T product-images --run RUN --video NN --request <that request> "
-                                    "--apply` puts them in it (only after the last image or by leaving out the last ones: the images the prompt names keep "
+                                    "--apply` puts them in it (only after the last image or by leaving out the last ones, never both: the images the prompt names keep "
                                     "their numbers); prepare and upload an image it adds (awl-inputs) before X5; record them in result.json judge")
     if d.get("needs_unmet"):
         d["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer by looking at your own video, or a file that does not "
@@ -4506,8 +4506,8 @@ def _same_prompt(template: str, prompt: str) -> bool:
 
 def _qc_evidence(a, ctx) -> tuple[dict, dict]:
     """What the judge needs to judge an error accurately (the user, 2026-10-28), read from the run's own files: the prompt the video under QC was
-    generated from with that request's video model and parameters, the model's entry of the index, the template the judge gave at X2 and the agent's brief
-    then. ({fields sent}, {where each came from})."""
+    generated from with that request's video model and parameters, its inputs (each with the client's original it was made from) and product images,
+    the model's entry of the index, the template the judge gave at X2 and the agent's brief then. ({fields sent}, {where each came from})."""
     rd = _cf_run_dir(a.run) if a.run else None
     ev, sent = {}, {}
     if not (rd and a.video):
@@ -4520,6 +4520,11 @@ def _qc_evidence(a, ctx) -> tuple[dict, dict]:
         ev["request_prompt"], sent["request_prompt"] = pr, name
     if prm:
         ev["request_params"], sent["request_params"] = prm, name
+    jq = _cf_request_json(rd / "50-requests" / name) if name else {}
+    itext = _pi_inputs_text(jq, rd) if jq else ""
+    if itext:          # which inputs the video was given, each with the client's original it was made from, and its product images (the admin, 2026-10-30)
+        ptext = _pi_product_text(jq, rd)
+        ev["request_inputs"], sent["request_inputs"] = itext + (f"\n{ptext}" if ptext else ""), name
     vm = _video_model_info(prm.get("model") or ctx.get("model"))
     if vm:
         ev["video_model"], sent["video_model"] = vm, vm["id"]
@@ -4582,6 +4587,7 @@ def _norm_ws(s: str) -> str:
 PI_BUILD_NOTE = re.compile(r"^\s*(byte copy of|from)\s+(.+?\.(?:png|jpe?g|webp|bmp|tiff?|gif|mp4|mov|m4v|webm|mkv))\s*(?:\((A\d{1,4})\))?\s*(?:\(([^)]*)\))?\s*:?\s*(.*)$",
                            re.I | re.S)
 PI_A_ID = re.compile(r"\bA\d{2,4}\b")
+PI_MEDIA_FILE = re.compile(r"\.(?:png|jpe?g|webp|bmp|tiff?|gif|mp4|mov|m4v|webm|mkv)$", re.I)      # a value that names a file
 PI_IMAGE_REF = re.compile(r"(@?)\bImage( ?)(\d+)\b")
 PI_ROLE = {"image_references": "Image", "video_references": "Video", "audio_references": "Audio"}
 PI_PRODUCT_NAME = re.compile(r"(?:^|[\s=/\\_-])product(?:[\s._-]|$)", re.I)      # 'image2-product-EF6-PM-front-padded.png': the pipeline names a product view so
@@ -4620,16 +4626,20 @@ def _pi_source(m: dict, said: str, inv: dict, names: dict, prod_ids: set) -> dic
     """What a request's records say one input was made from: {original, name, asset_id, prepared, kind, recorded}; {} when no record names it."""
     s = m.get("source") if isinstance(m.get("source"), dict) else None
     orig = aid = prep = kind = how = ""
+    said_path = next((str(m[k]).strip() for k in ("source", "source_file", "from") if isinstance(m.get(k), str) and PI_MEDIA_FILE.search(str(m[k]).strip())), "")
     if s and str(s.get("original") or "").strip():
         orig, aid, how = str(s["original"]).strip(), str(s.get("asset_id") or "").strip(), "source"
         prep, kind = str(s.get("prepared") or "").strip(), str(s.get("kind") or "").strip()
+    elif said_path:          # the forms runs wrote before the source record: the client's file in source, source_file or from, its prepare words
+        orig, how, prep = said_path, "source", str(m.get("prepare") or "").strip()
     else:
         b = PI_BUILD_NOTE.match(str(m.get("build") or ""))
         if b:
-            orig, aid, how = b.group(2).strip(), b.group(3) or "", "build"
+            orig, aid, how = b.group(2).strip(), b.group(3) or next(iter(PI_A_ID.findall(b.group(4) or "")), ""), "build"
             prep = ("a byte copy" + (f" ({b.group(4)})" if b.group(4) else "")) if b.group(1).lower().startswith("byte") else (b.group(5) or b.group(4) or "").strip()
         else:
-            text = " ".join(str(x or "") for x in (m.get("meaning"), said, m.get("label")))
+            text = " ".join(str(x or "") for x in (m.get("meaning"), said, m.get("label"), m.get("source") if isinstance(m.get("source"), str) else "",
+                                                   m.get("source_file"), m.get("from")))
             ids = list(dict.fromkeys(a for a in PI_A_ID.findall(text) if a in inv))
             hit = inv[ids[0]] if len(ids) == 1 else None
             if not ids:
@@ -4960,7 +4970,7 @@ def cmd_prompt_template(a):
 def cmd_product_images(a):
     """A regeneration takes the judge's product images from its QC answer (the admin, 2026-10-30: the judge decides which product images and how many).
     The judge's list (60-outputs/video-NN/qc-consult.json product_images, or --answer) is planned against the regeneration's request: the images its prompt
-    names keep their numbers, so images are only added after the last one or the last ones left out; an added image gets a placeholder value and the source
+    names keep their numbers, so images are only added after the last one or the last ones left out, never both; an added image gets a placeholder value and the source
     to prepare it from. Prints the plan as facts; --apply writes it (the request as it was kept beside it once, .pre-product-images.json). Refuses a request
     the ledger already holds."""
     rd, st = _state_of(a.run)
@@ -6926,7 +6936,7 @@ def main():
     p.add_argument("--use-draft", action="store_true", help="put the checked draft back as the request (no usable judge's prompt)")
     p.set_defaults(fn=cmd_template_apply)
 
-    p = sp.add_parser("product-images", help="a regeneration (QC fix): the judge's product images from its QC answer into the regeneration's request (images added after the last one or the last ones left out; facts first, --apply writes)")
+    p = sp.add_parser("product-images", help="a regeneration (QC fix): the judge's product images from its QC answer into the regeneration's request (images added after the last one or the last ones left out, never both; facts first, --apply writes)")
     p.add_argument("--run", required=True); p.add_argument("--video", required=True)
     p.add_argument("--request", required=True, help="the regeneration's own request file (never one the ledger holds)")
     p.add_argument("--answer", help="the QC answer with the judge's product_images (default RUN/60-outputs/video-NN/qc-consult.json)")
