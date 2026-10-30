@@ -616,7 +616,7 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   video's `qc-consult.json` and claimed a keeper had read its prompts (now `qc-brief.json`, no prompts files, honest wording, also for a busy or
   fallback consult); the collector's reading was described as a verdict; the README and the start and free-plan skills still put the judge at X2
   hints; `prompt_sides` and the brief's fields were missing from the answers; a caught flag's diff was cut at 300 characters and 14 lines; the
-  README described the prompts file's old headings; Loupe's key table named only atp.py and atg.py; a build-prompt paragraph was split by an
+  README described the prompts file's old headings; Loupe's key table did not name this toolkit; a build-prompt paragraph was split by an
   inserted passage.
 - **Verified:** t01 (91), t02 (134), t03 (53), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 229, keeper_sync 94, page_smoke,
   transport_check, flags_smoke pass; after the restart Loupe's live check passes.

@@ -88,7 +88,7 @@ It holds two things:
   and `awl.py qc-consult` at X9, which asks the QC keeper (one separate read-only Claude session that holds the whole
   sample library and never sees a run, with what a data collector saw in every sample's picture, collected once by a fresh session that opened it and gave no
   verdict, the full collection kept as JSON in Loupe's data and redone only for a new or changed sample; its context is kept small: after a session starts only changed lines are sent, and a session
-  is replaced after 30 turns or 150 000 characters, or when it was told an older library header) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call (kept as `qc-brief.json` with `--video`, never over the consult; no prompts files). The answer's `relevant[]` carries
+  is replaced after 30 turns or 250 000 characters, or when it was told an older library header) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call (kept as `qc-brief.json` with `--video`, never over the consult; no prompts files). The answer's `relevant[]` carries
   the sample's words (`title`, `details`, `correct_note`, `idea`, `better`, `missed`), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`), the composite's path and the
   keeper's `why`, `check` and `wrong_pattern`, every field whole or cut at a sentence or word end; `needs_unmet` lists what Loupe could not fetch and, as `kind: more`, requests left over after the two rounds; when another keeper call runs longer
   than the lock wait the answer comes from the brief with `mode: busy`. `plan-hints` fields are cut the same way and `held_back_why` says why a hint was set aside. A sample marked `prompts`
@@ -122,12 +122,12 @@ consult carries by itself the prompt the video was generated from (`--attempt` p
 the template and the brief (`evidence_sent`); both kinds of consult send the generation video model's entry of `models/index.json`, and the judge
 weighs each sample by the model that generated it;
 the answer adds `cause` and `template_fix`, kept in `result.json → judge` for the user's review. Before any QC or planning answer is final Loupe also
-hands the judge the saved prompts of the samples it cites (up to six, in the order cited: `prompts_judged` names every cited sample whose prompts it read,
+hands the judge the saved prompts of the samples it cites (up to ten, in the order cited: `prompts_judged` names every cited sample whose prompts it read,
 `prompts_unread` any it did not), and `qc-consult` writes them for the agent (`prompts_files`).
 `plan-hints` stays for older runs; X2 no longer calls it.
 
-Kept in step with Loupe (2026-10-28): `qc-consult`, `prompt-template` and `plan-hints` wait up to 1080 s (`AWL_CONSULT_TIMEOUT`), since Loupe may
-wait 120 s for a running keeper call and then make up to six keeper calls of up to 150 s each (a 209 s consult was cut at the old 190 s and its
+Kept in step with Loupe (2026-10-28): `qc-consult`, `prompt-template` and `plan-hints` wait up to 1620 s (`AWL_CONSULT_TIMEOUT`), since Loupe may
+wait 120 s for a running keeper call and then make up to six keeper calls of up to 240 s each (a 209 s consult was cut at the old 190 s and its
 answer lost; a Bash call that outlasts its own timeout goes on in the background);
 `caught-flag reconcile` lists the unclaimed flag captures and only counts the `media_upload` answers the hook keeps for `hf-put`
 (`unclaimed_upload_answers`: 29 of the newest 30 captures were uploads, which hid older flags); `--capture` finds a capture at any age (the

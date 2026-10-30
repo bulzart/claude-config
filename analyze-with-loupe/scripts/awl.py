@@ -3497,10 +3497,10 @@ def _lc():
 
 
 # How long a consult (QC, plan or template) may take: Loupe waits up to 120 s for a running keeper call (its LOCK_WAIT), then makes keeper calls of up
-# to 150 s each (a boot, the question, the template's second step, up to two rounds of the keeper's requests, the round that hands it the prompts of the
-# samples it cites: 900 s at worst); a consult of 209 s was cut at the old 190 s and its answer lost. A Bash call that outlasts its own timeout goes on in
-# the background, so the agent still gets the answer.
-CONSULT_TIMEOUT = float(os.environ.get("AWL_CONSULT_TIMEOUT") or 1080)
+# to 240 s each (KEEPER_CALL_TIMEOUT, the admin, 2026-10-30; 150 s before: a boot, the question, the template's second step, up to two rounds of the
+# keeper's requests, the round that hands it the prompts of the samples it cites: 1440 s at worst), plus a margin of 60 s; a consult of 209 s was cut
+# at the old 190 s and its answer lost. A Bash call that outlasts its own timeout goes on in the background, so the agent still gets the answer.
+CONSULT_TIMEOUT = float(os.environ.get("AWL_CONSULT_TIMEOUT") or 1620)
 TEMPLATE_BUSY_RETRIES = int(os.environ.get("AWL_TEMPLATE_BUSY_RETRIES") or 3)   # a template asked while another keeper call holds the lock is asked again
 # The brief to the judge (the agent's words, the checked draft request's prompt and its must-carry lines) and the locked model's request structure go
 # whole: a video generation prompt is never cut (the user, 2026-10-29).
@@ -4333,7 +4333,7 @@ def cmd_qc_consult(a):
     elif any(x.get("prompts") for x in items if isinstance(x, dict)):
         d["prompts_files"] = _prompts_files(items, rd)
         who = (("the keeper read whole, before it answered, the prompts of the samples in prompts_judged"
-                + (" and not those in prompts_unread (it reads the prompts of at most six cited samples per answer): weigh those as unjudged"
+                + (" and not those in prompts_unread (it reads the prompts of at most ten cited samples per answer): weigh those as unjudged"
                    if d.get("prompts_unread") else ""))
                if d.get("mode") == "keeper" else f"no keeper read or judged them (mode {d.get('mode')}: Loupe's brief answered)")
         d["prompts_rule"] = (LOUPE_PROMPTS_WORDS + " (prompt_note: the admin's one line on what made the difference); " + who + "; "

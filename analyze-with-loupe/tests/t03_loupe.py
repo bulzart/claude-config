@@ -287,7 +287,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer  # noqa: E402
 from loupe_app import flags as lflags  # noqa: E402
 src = Path(os.environ.get("AWL_UNDER_TEST") or (HOME / "analyze-with-loupe" / "scripts" / "awl.py")).read_text(encoding="utf-8")
 m = _re.search(r'CONSULT_TIMEOUT = float\(os\.environ\.get\("AWL_CONSULT_TIMEOUT"\) or (\d+)\)', src)
-check(bool(m) and int(m.group(1)) >= qc.LOCK_WAIT + 6 * 150 and src.count("timeout=CONSULT_TIMEOUT") == 3,
+check(bool(m) and int(m.group(1)) >= qc.LOCK_WAIT + 6 * qc.KEEPER_CALL_TIMEOUT and src.count("timeout=CONSULT_TIMEOUT") == 3,
       "qc-consult, plan-hints and prompt-template wait as long as Loupe's own limits allow (its lock wait plus six keeper calls)")
 old_cap = lflags.capture_add({"tool": "mcp__higgsfield__generate_video", "job": "job-old-777", "run": run.name, "summary": "signals: moderation, blocked | ids: job-old-777",
                               "signals": ["moderation", "blocked"], "response": "{\"status\": \"nsfw\", \"job\": \"job-old-777\"}"})
