@@ -1,6 +1,6 @@
 ---
 name: celsius-no-orange-flavor
-description: "Celsius videos never use the Orange flavour; rotate Cherry Cola, Peach Vibe and Watermelon instead"
+description: "Celsius videos never use the Orange flavour (rotate Cherry Cola, Peach Vibe, Watermelon); the can top (lid, rim) is BLACK, never silver"
 metadata:
   node_type: memory
   type: feedback
@@ -17,3 +17,5 @@ For CELSIUS videos (assets in `Documents/celsius/celsius_assets`), never use the
 - The Orange product sheet (A09/A12) still defines the can's **shape**. Only the label art comes from the chosen flavour's render.
 - Orange's liquid sample is unused. Contents pours use Watermelon (coral-red, A389) or Cherry Cola (dark cola over ice, A20).
 - Related: [[neurogum-package-forms]], [[capcut-text-preset-locked]].
+
+**Can top colour (user 2026-10-30, AWL run 20261029-231113):** "celsius can/tins have black color at the top not gray/silver" — the lid and rim of every Celsius can are BLACK. Never write "silver lid/top" (video 01's prompt did and the can came back with a silver top); write "black lid" wherever the top is named. Already generated videos are not redone for it.
