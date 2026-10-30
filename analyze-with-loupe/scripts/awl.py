@@ -4562,7 +4562,7 @@ def cmd_prompt_template(a):
     """X4b, after X1-X4 of the first request of a video (the user, 2026-10-28). The whole checked brief goes to the judge (Loupe's keeper, one separate Opus
     session that holds the samples of earlier generations): the agent's brief (what it is working on, what the video is about, what it wants to achieve),
     the checked draft request (its prompt, parameters and inputs), the lines the prompt must carry word for word, the locked model's request structure and
-    the video model's entry of the model index. The judge chooses which samples' saved prompts to read, Loupe sends both whole, and the answer is the final
+    the video model's entry of the model index. The judge chooses which samples' saved prompts to read, Loupe sends each one's saved prompts whole, and the answer is the final
     prompt, which `template-apply` puts in the request word for word. Saved beside the plan; no template (empty library, Loupe or the keeper unavailable)
     means the checked draft is the request."""
     ctx = _qc_ctx(a)
@@ -4630,7 +4630,7 @@ def cmd_prompt_template(a):
             pf = _prompts_files(res["basis"], rd)
             if pf:
                 res["prompts_files"] = pf
-                res["prompts_rule"] = ("both prompts of each basis sample, whole from Loupe's record, to read only when a part of the judge's prompt is unclear "
+                res["prompts_rule"] = ("the saved prompts of each basis sample (every box its frames speak through, named flawed, correct or example), whole from Loupe's record, to read only when a part of the judge's prompt is unclear "
                                        "to you; its prompt already carries what worked, adapted to this video")
     except OSError:
         pass
@@ -4786,7 +4786,7 @@ def _sample_prompts_file(sid: str, rd) -> dict:
 
 
 def _prompts_files(items, rd) -> dict:
-    """For every cited sample marked `prompts`, both prompts written whole for the agent: {S..: path}. The answer itself never carries their text."""
+    """For every cited sample marked `prompts`, its saved prompts (every box its frames speak through) written whole for the agent: {S..: path}. The answer itself never carries their text."""
     res = {}
     for x in items or []:
         if isinstance(x, dict) and x.get("prompts") and x.get("id") and rd:

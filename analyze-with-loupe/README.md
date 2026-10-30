@@ -92,7 +92,7 @@ It holds two things:
   keeper's `why`, `check` and `wrong_pattern`, every field whole or cut at a sentence or word end; `needs_unmet` lists what Loupe could not fetch and, as `kind: more`, requests left over after the two rounds; when another keeper call runs longer
   than the lock wait the answer comes from the brief with `mode: busy`. `plan-hints` fields are cut the same way and `held_back_why` says why a hint was set aside. A sample marked `prompts`
   (`pair`, `wrong` or `fixed`) keeps in Loupe, each named by what it is, the flawed version's prompt (the prompt of each generation its frames called WRONG come from) and the correct version's prompt (each generation its frames called RIGHT come from, from either video), only the boxes it has frames for (frames called RIGHT only: the correct version's alone), or an Examples sample's one example box (the generations of its one video its Example frames come from; a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one: `prompt_roles`, `prompt_sides`); a box holds no other generation, and which generation made a frame is read from the join record `awl.py concat` writes (`<out>.join.json`); with the admin's `prompt_note`; lists, answers and hints carry only the marker
-  and the note, and `awl.py sample-prompts --id S12 --run RUN` writes both whole to `RUN/40-briefs/samples/S12-prompts.md` for a sample the agent judged relevant (X2 for an applied hint, QC for a
+  and the note, and `awl.py sample-prompts --id S12 --run RUN` writes them whole to `RUN/40-briefs/samples/S12-prompts.md` for a sample the agent judged relevant (X2 for an applied hint, QC for a
   diagnosed cause; a take joined from several generations gives the prompt of each generation the sample's frames come from, each under
   `Generation k of n · clip · request` and the line naming the frames it is responsible for, as the sample's image tags them, and the seconds it generated): the agent reads and judges what changed, nothing is compared in code, nothing of them is pasted. `status`
   and `doctor` read the keeper's state (in sync, turns, library version, how many samples have a current reading) through the qc key.
@@ -109,7 +109,7 @@ describes each sample's picture once and gives no verdict. X1–X4 come first: t
 (the checked draft, with its must-carry lines in `40-briefs/video-NN-musts.md`) and the pre-generation check. Then, at X4b, the whole checked brief
 goes to the judge (`awl.py prompt-template --structure-file RUN/50-requests/video-NN-pattern.md`: the judge brief `40-briefs/video-NN-judge-brief.md`,
 the draft's prompt, parameters and inputs, the must-carry lines and the video model's entry); the judge names the samples whose saved prompts it needs,
-Loupe sends both prompts of each whole from its record, and the judge answers the final prompt with its basis (what worked, what failed, where it
+Loupe sends the saved prompts of each (every box its frames speak through) whole from its record, and the judge answers the final prompt with its basis (what worked, what failed, where it
 carries it), notes and changes. `awl.py template-apply` puts that prompt in the request word for word (the draft kept as `video-NN-request.draft.json`)
 and reports the must-carry lines missing, the slots left and the length; nothing rewrites the judge's prompt: a missing line or a length over the
 limit is asked of the judge once more, and only then is a line added word for word or the checked draft kept. The judge is not asked again before
@@ -119,7 +119,7 @@ consult carries by itself the prompt the video was generated from (`--attempt` p
 the template and the brief (`evidence_sent`); both kinds of consult send the generation video model's entry of `models/index.json`, and the judge
 weighs each sample by the model that generated it;
 the answer adds `cause` and `template_fix`, kept in `result.json → judge` for the user's review. Before any QC or planning answer is final Loupe also
-hands the judge both prompts of every sample it cites (`prompts_judged`), and `qc-consult` writes them for the agent (`prompts_files`).
+hands the judge the saved prompts of every sample it cites (`prompts_judged`), and `qc-consult` writes them for the agent (`prompts_files`).
 `plan-hints` stays for older runs; X2 no longer calls it.
 
 Kept in step with Loupe (2026-10-28): `qc-consult`, `prompt-template` and `plan-hints` wait up to 1080 s (`AWL_CONSULT_TIMEOUT`), since Loupe may

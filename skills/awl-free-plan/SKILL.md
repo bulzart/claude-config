@@ -70,8 +70,8 @@ at X9, the flag record), the CapCut assembly and the deliverables. Nothing is as
    `recreate`-kind video keeps its reference's own inserts; when the requirement forbids memes for one, step 4 says so in one line.
 3. **Past misses that touch this requirement (Loupe, no model call):** for every product of the plan run
    `T qc-brief --run RUN --product "<form>" --product-details "<shape, size, opening, posture from its registry row>" --question "<the
-   requirement's actions with that product, in one line>"` and write the matching samples (id and title; a sample marked `prompts` also keeps the prompts of its
-   two takes, which X2 reads with `T sample-prompts` only for a hint it applies, never this phase) under "Past misses that touch
+   requirement's actions with that product, in one line>"` and write the matching samples (id and title; a sample marked `prompts` also keeps the prompts of the
+   generations its frames come from, which X2 reads with `T sample-prompts` only for a hint it applies, never this phase) under "Past misses that touch
    this requirement" in the free plan, as leads for X1 and QC. They are information: nothing of them goes into a prompt as a negative
    (`generation-system.md` §4, §5c.2b); X2 asks the keeper for hints as always and X9 consults it once per video. A `recreate` video
    also needs its prepared source: `T split-audio "<references folder>" --run RUN` once, then the E4–E5 steps of `awl-recreate-plan` for
