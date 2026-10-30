@@ -2145,6 +2145,7 @@ def cmd_lint_run(a):
         except (OSError, ValueError):
             pass
     unknown, prompts = [], []
+    in_checked, no_source, not_last = 0, [], []
     for f in sorted((rd / "50-requests").glob("video-*request.json")) if (rd / "50-requests").is_dir() else []:
         try:
             j = json.loads(f.read_text(encoding="utf-8"))
@@ -2155,6 +2156,15 @@ def cmd_lint_run(a):
         ids = _ids_in(params, set())
         for i in sorted(ids - known):
             unknown.append({"file": f.name, "id": i})
+        if ".draft." not in f.name and "frame-request" not in f.name:
+            imgs = _pi_images(j, rd)
+            in_checked += len(imgs)
+            for x in imgs:
+                if not x["source"]:
+                    no_source.append({"file": f.name, "image": x["label"]})
+            pl = [k for k, x in enumerate(imgs) if x["product"]]
+            if pl and pl != list(range(len(imgs) - len(pl), len(imgs))):
+                not_last.append({"file": f.name, "order": "".join("P" if x["product"] else "-" for x in imgs)})
         pr = params.get("prompt") if isinstance(params, dict) else None
         if isinstance(pr, str):
             prompts.append({"file": f.name, "chars": len(pr)})
@@ -2197,6 +2207,10 @@ def cmd_lint_run(a):
          "prompts": prompts, "prompt_note": "the agent contract names 5000 characters as the service's limit; compare",
          "preset": {"declined_preset_id": (st.get("higgsfield") or {}).get("declined_preset_id"), "ledger_rows_mentioning_preset": preset_rows},
          "uploads_files": {"checked": up_checked, "outside_the_schema": up_bad, "schema": "video-NN-uploads.json = {video, schema: 1, uploads: {label: {media_id, file, content_type?, url?, at?}}} (written by `uploads set`)"},
+         "inputs": {"image_inputs_checked": in_checked, "without_a_recorded_source": no_source[:40], "without_source_total": len(no_source),
+                    "product_images_not_last": not_last[:40],
+                    "note": "X2 records where each input came from (params.medias[].source: original, asset_id, prepared, kind) and puts the product images "
+                            "last among the image inputs, so the judge can choose them (the admin, 2026-10-30)"},
          "request_freeze": {"checked": fr_checked, "changed_after_their_ledger_entry": fr_changed,
                             "note": "a request file whose content no longer matches the fingerprint of its open or finished ledger entry was edited after the submission (item 29)"},
          "contract": {"exists": contract.is_file(), "names_this_run": rd.name in ct, "loupe_line": bool(re.search(r"^Loupe: (up|down)", ct, re.M)),
@@ -4343,6 +4357,12 @@ def cmd_qc_consult(a):
                              "example prompt: what it suggests, never a flawed or a correct prompt). It is a lead for the diagnosed cause and the corrected "
                              "request, written in the model's own "
                              "structure and your words, never a sentence to paste, never a verdict on the video, and not read for a sample you did not judge relevant.")
+    if a.cmd == "qc-consult" and d.get("product_images"):
+        d["product_images_rule"] = ("product_images is the judge's choice of the product images the regeneration carries, which and how many (the character, "
+                                    "the original reference and every other input stay): write the regeneration's request as awl-write-request says "
+                                    "(template_fix in place of the part it names), then `T product-images --run RUN --video NN --request <that request> "
+                                    "--apply` puts them in it (only after the last image or by leaving out the last ones: the images the prompt names keep "
+                                    "their numbers); prepare and upload an image it adds (awl-inputs) before X5; record them in result.json judge")
     if d.get("needs_unmet"):
         d["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer by looking at your own video, or a file that does not "
                            "exist): answer it from the video in words and ask again ONCE with --note '<what you saw>'; if it still has needs_unmet, go on without it "
@@ -4552,8 +4572,283 @@ def _norm_ws(s: str) -> str:
     return re.sub(r"\s+", " ", str(s or "")).strip()
 
 
+# ------------------------------------------------------------------ product images (the admin, 2026-10-30)
+# "the judge should be able to tell and decide to how many asset sample references should be used in the generation based on what it thinks the best use
+# is ... (i am talking only for the product ...)", and the names "as they were in their original files ... just the exact file/image name".  Every input
+# of a request records the client's original it was made from: params.medias[].source {original, asset_id, prepared, kind} (X2 writes it).  The product
+# images ride last among the image inputs, so the judge can choose which and how many without renumbering any other input.  An input's source is read as
+# Loupe reads it (runs._source_of): the source record, else a 'build' note ("from <file> (A82): <how it was prepared>"), else the one asset id or the one
+# original file name what the request says of the input names; never guessed.
+PI_BUILD_NOTE = re.compile(r"^\s*(byte copy of|from)\s+(.+?\.(?:png|jpe?g|webp|bmp|tiff?|gif|mp4|mov|m4v|webm|mkv))\s*(?:\((A\d{1,4})\))?\s*(?:\(([^)]*)\))?\s*:?\s*(.*)$",
+                           re.I | re.S)
+PI_A_ID = re.compile(r"\bA\d{2,4}\b")
+PI_IMAGE_REF = re.compile(r"(@?)\bImage( ?)(\d+)\b")
+PI_ROLE = {"image_references": "Image", "video_references": "Video", "audio_references": "Audio"}
+PI_PRODUCT_NAME = re.compile(r"(?:^|[\s=/\\_-])product(?:[\s._-]|$)", re.I)      # 'image2-product-EF6-PM-front-padded.png': the pipeline names a product view so
+
+
+def _pi_inventory(rd) -> tuple[dict, dict]:
+    """The run's asset inventory by asset id, and by lower-cased file name (a name two items share names neither)."""
+    try:
+        j = json.loads((Path(rd) / "30-assets" / "project" / "asset-inventory.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        j = {}
+    items = [it for it in (j.get("items") or [] if isinstance(j, dict) else []) if isinstance(it, dict) and it.get("id")]
+    names: dict = {}
+    for it in items:
+        n = Path(str(it.get("path") or it.get("rel") or "").replace("\\", "/")).name.lower()
+        if n:
+            names.setdefault(n, []).append(it)
+    return {str(it["id"]): it for it in items}, {n: v[0] for n, v in names.items() if len(v) == 1}
+
+
+def _pi_registry_rows(rd) -> list[tuple[str, str, list]]:
+    """The product rows of the run's asset registry (30-assets/registry.md, a row whose id starts with P-): (id, the row's text, its asset ids)."""
+    try:
+        text = (Path(rd) / "30-assets" / "registry.md").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    rows = []
+    for ln in text.splitlines():
+        m = re.match(r"^\|\s*(P-[\w-]+)\s*\|", ln)
+        if m:
+            rows.append((m.group(1), ln.strip(), list(dict.fromkeys(PI_A_ID.findall(ln)))))
+    return rows
+
+
+def _pi_source(m: dict, said: str, inv: dict, names: dict, prod_ids: set) -> dict:
+    """What a request's records say one input was made from: {original, name, asset_id, prepared, kind, recorded}; {} when no record names it."""
+    s = m.get("source") if isinstance(m.get("source"), dict) else None
+    orig = aid = prep = kind = how = ""
+    if s and str(s.get("original") or "").strip():
+        orig, aid, how = str(s["original"]).strip(), str(s.get("asset_id") or "").strip(), "source"
+        prep, kind = str(s.get("prepared") or "").strip(), str(s.get("kind") or "").strip()
+    else:
+        b = PI_BUILD_NOTE.match(str(m.get("build") or ""))
+        if b:
+            orig, aid, how = b.group(2).strip(), b.group(3) or "", "build"
+            prep = ("a byte copy" + (f" ({b.group(4)})" if b.group(4) else "")) if b.group(1).lower().startswith("byte") else (b.group(5) or b.group(4) or "").strip()
+        else:
+            text = " ".join(str(x or "") for x in (m.get("meaning"), said, m.get("label")))
+            ids = list(dict.fromkeys(a for a in PI_A_ID.findall(text) if a in inv))
+            hit = inv[ids[0]] if len(ids) == 1 else None
+            if not ids:
+                tl = text.lower()
+                found = [n for n in names if n in tl]
+                found = [n for n in found if not any(n != o and n in o for o in found)]
+                hit = names[found[0]] if len(found) == 1 else None
+            if hit:
+                orig, aid, how = str(hit.get("path") or ""), str(hit.get("id") or ""), "named"
+                prep = str(m.get("meaning") or said or "").strip()
+    if not orig:
+        return {}
+    if not aid:
+        key = os.path.normcase(os.path.normpath(orig))
+        aid = next((k for k, it in inv.items() if it.get("path") and os.path.normcase(os.path.normpath(str(it["path"]))) == key), "")
+    if not kind and aid and aid in prod_ids:
+        kind = "product"
+    return {"original": orig, "name": Path(orig.replace("\\", "/")).name, "asset_id": aid, "prepared": prep, "kind": kind, "recorded": how}
+
+
+def _pi_media_names(m: dict) -> set:
+    """The names a request gives one input's file: the file it names, its placeholder ('<X3: image2-product-...png>') and its label's name after '='."""
+    out = set()
+    for v in (m.get("file"), m.get("value")):
+        v = str(v or "").strip().strip("<>")
+        v = v.split(":", 1)[1].strip() if v.lower().startswith("x3:") else v
+        if v:
+            out.add(Path(v.replace("\\", "/")).name.lower())
+    lab = str(m.get("label") or "")
+    if "=" in lab:
+        out.add(lab.split("=", 1)[1].strip().split(" (")[0].lower())
+    return {x for x in out if x}
+
+
+def _pi_images(j: dict, rd) -> list[dict]:
+    """The image inputs of a request in order: [{label ('Image 2'), media, source, product, names}]; a product image is one its source calls a product,
+    else one whose asset id sits in a product row of the run's registry, else one whose own file name or label names it so (the pipeline's
+    'imageN-product-...' names)."""
+    prm = j.get("params") if isinstance(j.get("params"), dict) else j
+    inv, names = _pi_inventory(rd) if rd else ({}, {})
+    prod_ids = {a for _id, _row, ids in (_pi_registry_rows(rd) if rd else []) for a in ids}
+    mm = j.get("medias_meaning") or j.get("media_meaning")
+    meaning = dict(mm) if isinstance(mm, dict) else {}
+    out, k = [], 0
+    for m in (prm or {}).get("medias") or []:
+        if isinstance(m, dict) and m.get("role") == "image_references":
+            k += 1
+            lab = f"Image {k}"
+            src = _pi_source(m, str(meaning.get(lab) or ""), inv, names, prod_ids)
+            own = _pi_media_names(m)
+            kind = src.get("kind") or ("product" if any(PI_PRODUCT_NAME.search(x) for x in own | {str(m.get("label") or "").lower()}) else "")
+            out.append({"label": lab, "media": m, "source": src, "product": kind == "product", "names": own})
+    return out
+
+
+def _pi_inputs_text(j: dict, rd) -> str:
+    """Every input of a request as the judge reads it: its label and role, what the request says of it, and where it came from."""
+    prm = j.get("params") if isinstance(j.get("params"), dict) else j
+    mm = j.get("medias_meaning") or j.get("media_meaning")
+    meaning = dict(mm) if isinstance(mm, dict) else {}
+    inv, names = _pi_inventory(rd) if rd else ({}, {})
+    prod_ids = {a for _id, _row, ids in (_pi_registry_rows(rd) if rd else []) for a in ids}
+    counts, lines = {}, []
+    for m in (prm or {}).get("medias") or []:
+        if not isinstance(m, dict):
+            continue
+        role = str(m.get("role") or "?")
+        counts[role] = counts.get(role, 0) + 1
+        lab = f"{PI_ROLE.get(role, role)} {counts[role]}"
+        src = _pi_source(m, str(meaning.get(lab) or ""), inv, names, prod_ids)
+        what = str(m.get("meaning") or meaning.get(lab) or "").strip()
+        if role == "image_references" and not src.get("kind") and any(PI_PRODUCT_NAME.search(x) for x in _pi_media_names(m) | {str(m.get("label") or "").lower()}):
+            src = {**src, "kind": "product"} if src else src
+        made = (f"; {'a product image; ' if src.get('kind') == 'product' else (src['kind'] + '; ' if src.get('kind') else '')}made from "
+                + " · ".join(x for x in (src.get("asset_id"), src.get("name")) if x) + (f", prepared: {src['prepared']}" if src.get("prepared") else "")) if src else "; its original is not recorded"
+        lines.append(f"- {lab} ({role}{made})" + (f": {what}" if what else ""))
+    return "\n".join(lines)
+
+
+def _pi_product_text(j: dict, rd) -> str:
+    """The product images of a request and the client's images of that product (its registry row and the inventory's file names), for the judge."""
+    imgs = _pi_images(j, rd) if rd else []
+    prod = [x for x in imgs if x["product"]]
+    if not imgs:
+        return ""
+    if not prod:
+        return ("Product images: no image input of this draft records that it is a product image, so the product images cannot be changed here: keep "
+                "them as they are (product_images empty).")
+    last = imgs.index(prod[0]) >= len(imgs) - len(prod) and all(x["product"] for x in imgs[imgs.index(prod[0]):])
+    head = ("Product images (yours to decide, see PRODUCT IMAGES): " + ", ".join(f"{x['label']} ({x['source'].get('asset_id') or '?'} · {x['source'].get('name') or '?'})" for x in prod)
+            + ("; they are the last image inputs, so the inputs before them keep their numbers." if last else
+               "; they are NOT the last image inputs of this draft, so they cannot be changed here: keep them as they are (product_images empty)."))
+    inv, _names = _pi_inventory(rd)
+    used = {x["source"].get("asset_id") for x in prod if x["source"].get("asset_id")}
+    rows = [(rid, ids) for rid, _row, ids in _pi_registry_rows(rd) if used & set(ids)]
+    lines = [head]
+    for rid, ids in rows:
+        lines.append(f"The client's images of {rid} (the run's registry row and asset inventory): "
+                     + ", ".join(f"{a} {Path(str(inv.get(a, {}).get('path') or inv.get(a, {}).get('rel') or '?').replace(chr(92), '/')).name}" for a in ids))
+    return "\n".join(lines)
+
+
+def _pi_renumber(text: str, mapping: dict) -> str:
+    """A text with each 'Image N' (or '@ImageN') the mapping moves given its new number, all at once."""
+    def f(mm):
+        old = f"Image {mm.group(3)}"
+        if old not in mapping:
+            return mm.group(0)
+        return f"{mm.group(1)}Image{mm.group(2)}{mapping[old].split()[-1]}"
+    return PI_IMAGE_REF.sub(f, str(text or ""))
+
+
+def _pi_named(text: str) -> set:
+    """The image numbers a text names ('Image 2', '@Image3')."""
+    return {int(g) for _a, _s, g in PI_IMAGE_REF.findall(str(text or ""))}
+
+
+def _product_plan(rd, j: dict, judge: list, musts=None, fixed: bool = False) -> dict:
+    """What the judge's product images do to a request, as facts, before anything is written: the image inputs now and after, the product images kept,
+    added (with the source to prepare them from) and left out, the numbers that change, the must-carry lines that name a product image (renumbered, or no
+    longer the request's), the medias to write; and the problems that stop it (then nothing is applied).  fixed (a regeneration): the images its prompt
+    names keep their numbers, so only images after the last one may be added or the last ones left out."""
+    prm = j.get("params") if isinstance(j.get("params"), dict) else j
+    medias = list((prm or {}).get("medias") or [])
+    imgs = _pi_images(j, rd)
+    inv, names = _pi_inventory(rd)
+    res = {"ok": True, "problems": [], "changed": False, "medias": medias, "kept": [], "added": [], "dropped": [], "renumbered": {},
+           "musts_renumbered": [], "musts_superseded": [],
+           "now": [{"image": x["label"], "product": x["product"], "asset": x["source"].get("asset_id", ""), "file": x["source"].get("name", ""),
+                    "recorded": bool(x["source"])} for x in imgs]}
+    if not judge:
+        res["final"] = res["now"]
+        return res
+    want = []
+    for e in judge:
+        aid, fname = str(e.get("asset") or "").strip(), Path(str(e.get("file") or "").replace("\\", "/")).name.strip()
+        it = inv.get(aid) if aid else None
+        if not it and fname:
+            it = names.get(fname.lower())
+        cur = next((x for x in imgs if (x["source"] and ((aid and x["source"].get("asset_id") == aid)
+                                                         or (fname and x["source"].get("name", "").lower() == fname.lower())))
+                    or (fname and fname.lower() in x["names"])), None)
+        if not it and not cur:
+            res["problems"].append(f"the judge named {(aid + ' ' + fname).strip()}: no image of the run's asset inventory and no input of this request is that file")
+            continue
+        if cur is not None and any(w["cur"] is cur for w in want):
+            res["problems"].append(f"the judge named {cur['label']} twice")
+            continue
+        wid = aid or str((it or {}).get("id") or "") or (cur["source"].get("asset_id", "") if cur is not None else "")
+        want.append({"e": e, "item": it, "cur": cur, "aid": wid})
+    prod = [x for x in imgs if x["product"] or any(w["cur"] is x for w in want)]
+    non = [x for x in imgs if not any(x is p for p in prod)]
+    if prod and non and imgs.index(prod[0]) < max(imgs.index(x) for x in non):
+        res["problems"].append("the product images (" + ", ".join(x["label"] for x in prod) + ") are not the last image inputs ("
+                               + ", ".join(x["label"] for x in non) + " come after one): X2 puts the product images last; until then the judge's product images "
+                               "cannot be applied")
+    if res["problems"]:
+        res["ok"] = False
+        res["final"] = res["now"]
+        return res
+    final_media, final = [x["media"] for x in non], [dict(r) for r in res["now"] if not r["product"] and r["image"] in {x["label"] for x in non}]
+    for k, w in enumerate(want, len(non) + 1):
+        lab, e, cur = f"Image {k}", w["e"], w["cur"]
+        if cur is not None and not str(e.get("prepare") or "").strip():
+            m = dict(cur["media"])
+            if cur["label"] != lab:
+                res["renumbered"][cur["label"]] = lab
+                if isinstance(m.get("label"), str):
+                    m["label"] = re.sub(r"^\s*Image ?\d+", lab, m["label"])
+            res["kept"].append({"image": lab, "was": cur["label"], "asset": cur["source"].get("asset_id", ""), "file": cur["source"].get("name", "")})
+            final.append({"image": lab, "product": True, "asset": cur["source"].get("asset_id", ""), "file": cur["source"].get("name", ""), "recorded": True})
+        else:
+            orig = str((w["item"] or {}).get("path") or (cur["source"].get("original") if cur else "") or "")
+            name = Path(orig.replace("\\", "/")).name
+            prep = str(e.get("prepare") or "").strip()
+            m = {"role": "image_references", "value": f"<X3: prepare {name} for {lab}>", "label": f"{lab} = {name} (the judge's product image, to prepare)",
+                 "meaning": str(e.get("why") or "").strip(), "source": {"original": orig, "asset_id": w["aid"], "prepared": prep, "kind": "product"}}
+            res["added"].append({"image": lab, "asset": w["aid"], "file": name, "original": orig, "prepare": prep, "why": str(e.get("why") or ""),
+                                 "replaces": cur["label"] if cur is not None else ""})
+            if cur is not None and cur["label"] != lab:
+                res["renumbered"][cur["label"]] = lab
+            final.append({"image": lab, "product": True, "asset": w["aid"], "file": name, "recorded": True})
+        final_media.append(m)
+    res["dropped"] = [x["label"] for x in prod if not any(w["cur"] is x for w in want)]
+    res["final"] = final
+    if fixed:          # a regeneration: what each image number means in its prompt stays; re-preparing an image in its place is fine
+        new = [a for a in res["added"] if not a["replaces"]]
+        if res["renumbered"] or (new and res["dropped"]):
+            res["problems"].append("a regeneration keeps what each image number its prompt names means: add product images after the last one, or leave "
+                                   "out the last ones, never both and never moving one ("
+                                   + (", ".join(f"{o} would become {n}" for o, n in res["renumbered"].items()) or
+                                      f"{', '.join(res['dropped'])} left out while " + ", ".join(f"{a['asset'] or a['file']} would take {a['image']}" for a in new)) + ")")
+            res["ok"] = False
+            res["final"] = res["now"]
+            return res
+    for line in musts or []:
+        nums = {f"Image {n}" for n in _pi_named(line)}
+        if nums & set(res["dropped"]):
+            res["musts_superseded"].append(line)
+        elif nums & set(res["renumbered"]):
+            res["musts_renumbered"].append({"line": line, "as": _pi_renumber(line, res["renumbered"])})
+    out_m, placed = [], False
+    for m in medias:
+        if isinstance(m, dict) and m.get("role") == "image_references":
+            if not placed:
+                out_m.extend(final_media)
+                placed = True
+            continue
+        out_m.append(m)
+    if not placed:
+        out_m.extend(final_media)
+    res["medias"] = out_m
+    res["changed"] = out_m != medias
+    return res
+
+
 def _draft_section(path) -> tuple[str, str]:
-    """The checked draft request as the judge reads it: its prompt, its parameters and its inputs with what each is. (text, prompt)."""
+    """The checked draft request as the judge reads it: its prompt, its parameters and its inputs with what each is and where it came from (the
+    client's asset id and original file name, how it was prepared), its product images and the client's images of that product. (text, prompt)."""
     j = _cf_request_json(path)
     prm = j.get("params") if isinstance(j.get("params"), dict) else j
     prompt = str((prm or {}).get("prompt") or j.get("prompt") or "")
@@ -4567,8 +4862,12 @@ def _draft_section(path) -> tuple[str, str]:
             lab = f"{({'image_references': 'Image', 'video_references': 'Video', 'audio_references': 'Audio'}).get(role, role)} {counts[role]}"
             inputs.append(f"{lab} ({role}): {m.get('meaning') or meaning.get(lab) or '-'}")
     params = ", ".join(f"{k}={v}" for k, v in _cf_params_dict(j).items() if k != "medias")
+    rd = Path(path).resolve().parent.parent
+    rd = rd if (rd / "state.json").is_file() else None
+    inputs_text = _pi_inputs_text(j, rd) if rd else "; ".join(inputs)
+    prod_text = _pi_product_text(j, rd) if rd else ""
     return (f"The checked draft request ({Path(path).name}; written by the pipeline's rules and checked at X4):\nPrompt:\n{prompt}\n"
-            f"Parameters: {params or '-'}\nInputs: {'; '.join(inputs) or '-'}"), prompt
+            f"Parameters: {params or '-'}\nInputs:\n{inputs_text or '-'}" + (f"\n{prod_text}" if prod_text else "")), prompt
 
 
 def cmd_prompt_template(a):
@@ -4610,8 +4909,15 @@ def cmd_prompt_template(a):
              "none_rule": "the checked draft is the request, as always: record it with `T template-apply --use-draft` and write 'no template: Loupe unavailable' in the pattern card"})
     res = {"ok": True, "mode": d.get("mode"), "template": d.get("template", ""), "basis": d.get("basis", []),
            "notes": d.get("notes", ""), "changes": d.get("changes", []), "read": d.get("read", []), "not_covered": d.get("not_covered", ""),
-           "none_reason": d.get("none_reason", ""),
+           "none_reason": d.get("none_reason", ""), "product_images": d.get("product_images") or [],
            "video_model": vm.get("id", ""), "draft_file": draft_file, "musts": len(musts), "clip": a.clip or "", "busy_retries": tries}
+    if res["product_images"]:
+        res["product_images_rule"] = ("product_images is the judge's choice of the product images this request carries, which and how many (the "
+                                      "character, the original reference and every other input stay): `T template-apply` puts them in the request with its "
+                                      "prompt (the inputs before them keep their numbers; an image it adds gets a placeholder value and its source: prepare it "
+                                      "from that original as source.prepared says, else as the pipeline prepares product views, and upload it at X3 before X5); "
+                                      "a problem it reports (an image not in the run's inventory, product images that are not the last inputs) is asked of "
+                                      "the judge once more with --note. Record the product images in the pattern card's \"Judge's template\" block.")
     for k in ("needs_asked", "needs_unmet", "prompts_judged", "prompts_unread", "library_read", "keeper_error", "library_size", "flags"):
         if d.get(k):
             res[k] = d[k]
@@ -4648,6 +4954,53 @@ def cmd_prompt_template(a):
                                        "what worked, adapted to this video")
     except OSError:
         pass
+    out(res)
+
+
+def cmd_product_images(a):
+    """A regeneration takes the judge's product images from its QC answer (the admin, 2026-10-30: the judge decides which product images and how many).
+    The judge's list (60-outputs/video-NN/qc-consult.json product_images, or --answer) is planned against the regeneration's request: the images its prompt
+    names keep their numbers, so images are only added after the last one or the last ones left out; an added image gets a placeholder value and the source
+    to prepare it from. Prints the plan as facts; --apply writes it (the request as it was kept beside it once, .pre-product-images.json). Refuses a request
+    the ledger already holds."""
+    rd, st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    req_p = Path(a.request)
+    j = _cf_request_json(req_p)
+    if not j:
+        fail(f"{req_p} is not a request JSON", 2)
+    ans_p = Path(a.answer) if a.answer else rd / "60-outputs" / f"video-{nn}" / "qc-consult.json"
+    try:
+        ans = json.loads(ans_p.read_text(encoding="utf-8")) if ans_p.is_file() else {}
+    except (OSError, ValueError):
+        ans = {}
+    pims = list(ans.get("product_images") or []) if isinstance(ans, dict) else []
+    if not pims:
+        out({"ok": True, "changed": False, "answer": str(ans_p), "note": "the judge's answer lists no product images: the regeneration keeps the product images it has"})
+    held = [s for s in st.get("submissions") or [] if isinstance(s, dict) and s.get("request_file")
+            and os.path.normcase(os.path.abspath(str(s["request_file"]))) == os.path.normcase(os.path.abspath(str(req_p)))]
+    if held:
+        out({"ok": False, "changed": False, "problems": [f"{req_p.name} is in the ledger ({held[0].get('status')}): a regeneration writes its own request; this one stays as submitted"]})
+    musts = _musts_of(a.musts_file) if a.musts_file else []
+    plan = _product_plan(rd, j, pims, musts, fixed=True)
+    prm = j.get("params") if isinstance(j.get("params"), dict) else j
+    res = {"ok": plan["ok"], "request": str(req_p), "answer": str(ans_p), "applied": False, "problems": plan["problems"],
+           **{k: plan[k] for k in ("now", "final", "kept", "added", "dropped", "renumbered", "musts_superseded", "musts_renumbered")}}
+    n_img = sum(1 for m in plan["medias"] if isinstance(m, dict) and m.get("role") == "image_references")
+    res["prompt_names_images_beyond_the_inputs"] = [f"Image {n}" for n in sorted(_pi_named(str((prm or {}).get("prompt") or ""))) if n > n_img]
+    if a.apply and plan["ok"] and plan["changed"]:
+        keep = req_p.with_name(req_p.stem + ".pre-product-images.json")
+        if not keep.is_file():
+            write_json(keep, j)
+        tgt = j["params"] if isinstance(j.get("params"), dict) else j
+        tgt["medias"] = plan["medias"]
+        j["product_images"] = {"by": "the judge (QC, for this regeneration)", "final": plan["final"], "kept": plan["kept"], "added": plan["added"],
+                               "dropped": plan["dropped"], "at": now_iso()}
+        write_json(req_p, j)
+        res.update({"applied": True, "kept_as": str(keep)})
+    res["note"] = ("facts only: an image added has a placeholder value and its source (prepare it from that original as source.prepared says, else as the "
+                   "pipeline prepares product views, and upload it at X3 before X5); an image the prompt names that the request does not carry, or a problem, "
+                   "means the regeneration keeps the product images it had: record it as a judge gap")
     out(res)
 
 
@@ -4692,18 +5045,36 @@ def cmd_template_apply(a):
             final = final.rstrip() + ("\n" if "\n" in final else " ") + m.strip()
             added.append(m.strip())
     musts = _musts_of(a.musts_file) if a.musts_file else (_musts_of(tf["musts"]) if tf["musts"].is_file() else [])
-    nf = _norm_ws(final)
-    missing = [m for m in musts if _norm_ws(m) not in nf]
+    pims = [] if a.use_draft else list((t or {}).get("product_images") or [])      # the judge's product images (the admin, 2026-10-30)
+    plan = _product_plan(rd, draft, pims, musts) if pims else None
     newj = json.loads(json.dumps(draft))
     tgt = newj["params"] if isinstance(newj.get("params"), dict) else newj
     tgt["prompt"] = final
+    expect = musts
+    if plan and plan["ok"]:
+        tgt["medias"] = plan["medias"]
+        newj["product_images"] = {"by": "the judge (X4b)", "final": plan["final"], "kept": plan["kept"], "added": plan["added"],
+                                  "dropped": plan["dropped"], "renumbered": plan["renumbered"], "at": now_iso()}
+        renum = {r["line"]: r["as"] for r in plan["musts_renumbered"]}
+        expect = [renum.get(m, m) for m in musts if m not in set(plan["musts_superseded"])]
+    nf = _norm_ws(final)
+    missing = [m for m in expect if _norm_ws(m) not in nf]
+    n_img = sum(1 for m in (tgt.get("medias") or []) if isinstance(m, dict) and m.get("role") == "image_references")
+    beyond = sorted(n for n in _pi_named(final) if n > n_img)
     newj["prompt_source"] = source + (" + must-carry lines added: " + " | ".join(added) if added else "")
     write_json(req_p, newj)
     out({"ok": True, "request": str(req_p), "draft": str(draft_p), "prompt_source": newj["prompt_source"], "chars": len(final), "limit": PROMPT_LIMIT,
-         "over_limit": len(final) > PROMPT_LIMIT, "musts_checked": len(musts), "musts_missing": missing,
+         "over_limit": len(final) > PROMPT_LIMIT, "musts_checked": len(expect), "musts_missing": missing,
          "slots_left": re.findall(r"\[SLOT:[^\]]*\]", final), "slots_filled": filled, "musts_added": added,
-         "note": "facts only: a must-carry line missing, a slot left or a length over the limit is asked of the judge once more (prompt-template --note); "
-                 "only then --add-must or --use-draft"})
+         "product_images": ({k: plan[k] for k in ("final", "kept", "added", "dropped", "renumbered")} if plan and plan["ok"] else None),
+         "product_images_problems": (plan["problems"] if plan and not plan["ok"] else []),
+         "musts_renumbered": (plan["musts_renumbered"] if plan and plan["ok"] else []),
+         "musts_superseded": (plan["musts_superseded"] if plan and plan["ok"] else []),
+         "prompt_names_images_beyond_the_inputs": [f"Image {n}" for n in beyond],
+         "note": "facts only: a must-carry line missing, a slot left, a length over the limit, a product-images problem or an image the prompt names that "
+                 "the request does not carry is asked of the judge once more (prompt-template --note); only then --add-must or --use-draft. A must-carry "
+                 "line that names a product image is checked in the numbers of the judge's product images (musts_renumbered; --add-must takes that "
+                 "form); one that names an image the judge left out is no longer the request's (musts_superseded)"})
 
 
 def _sample_prompts_file(sid: str, rd) -> dict:
@@ -6554,6 +6925,14 @@ def main():
     p.add_argument("--add-must", action="append", help="a must-carry line the judge left out after being asked again: added word for word at the end; repeatable")
     p.add_argument("--use-draft", action="store_true", help="put the checked draft back as the request (no usable judge's prompt)")
     p.set_defaults(fn=cmd_template_apply)
+
+    p = sp.add_parser("product-images", help="a regeneration (QC fix): the judge's product images from its QC answer into the regeneration's request (images added after the last one or the last ones left out; facts first, --apply writes)")
+    p.add_argument("--run", required=True); p.add_argument("--video", required=True)
+    p.add_argument("--request", required=True, help="the regeneration's own request file (never one the ledger holds)")
+    p.add_argument("--answer", help="the QC answer with the judge's product_images (default RUN/60-outputs/video-NN/qc-consult.json)")
+    p.add_argument("--musts-file", help="the must-carry lines, to see which name a product image")
+    p.add_argument("--apply", action="store_true", help="write the plan into the request (the request as it was is kept beside it once)")
+    p.set_defaults(fn=cmd_product_images)
 
     p = sp.add_parser("plan-hints", help="first request of a video only (X2): ask the keeper which past misses could matter for the plan (text-only hints, usually none)")
     p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")

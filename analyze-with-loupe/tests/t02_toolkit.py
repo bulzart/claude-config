@@ -234,6 +234,120 @@ check(rq["params"]["prompt"] == draft_req["params"]["prompt"] and rq["prompt_sou
 (run_t / "40-briefs" / "video-01-template.json").unlink()
 _, code, _ = t("template-apply", "--run", run_t.name, "--video", "01", env=ENV, ok=False)
 check(code == 2, "template-apply without a judge's prompt stops and names --use-draft (code 2)")
+
+# --- the judge decides the product images (the admin, 2026-10-30): each input records its source; template-apply (X4b) and product-images (a QC
+#     regeneration) apply the judge's list through one plan; the inputs before the product images keep their numbers; facts first
+run_p = Path(t("new-run", "--mode", "analyze", "--source", str(home.parent / "refs-c"), "--slug", "x4b-products", env=ENV)[0]["run_dir"])
+for sub in ("50-requests", "40-briefs", "30-assets/project", "60-outputs/video-01"):
+    (run_p / sub).mkdir(parents=True, exist_ok=True)
+assets_root = home.parent / "client-x" / "assets"
+inv_items = [{"id": "A47", "kind": "image", "path": str(assets_root / "face-47.jpg")}, {"id": "A82", "kind": "image", "path": str(assets_root / "carton" / "Carton-Front.png")},
+             {"id": "A81", "kind": "image", "path": str(assets_root / "carton" / "Carton-Front-Angled.png")},
+             {"id": "A273", "kind": "image", "path": str(assets_root / "photos" / "IMG_6917.jpg")}]
+(run_p / "30-assets" / "project" / "asset-inventory.json").write_text(json.dumps({"items": inv_items}), encoding="utf-8")
+(run_p / "30-assets" / "registry.md").write_text("| id | what | files |\n|---|---|---|\n| P-X-CARTON | product | A82 `Carton-Front.png` (template), A81 Front-Angled |\n| C-X-01 | character | A47 |\n", encoding="utf-8")
+
+
+def src(aid, path, prep, kind):
+    return {"original": str(path), "asset_id": aid, "prepared": prep, "kind": kind}
+
+
+p_draft = {"params": {"model": "wan3_0_prime", "duration": 5, "prompt": "DRAFT the man (Image 1) holds the carton of Image 2 and Image 3.",
+                      "medias": [{"role": "video_references", "value": "v1", "label": "Video 1"},
+                                 {"role": "image_references", "value": "<X3: image1-character-face.jpg>", "label": "Image 1", "source": src("A47", inv_items[0]["path"], "face crop", "character")},
+                                 {"role": "image_references", "value": "<X3: image2-product-front.png>", "label": "Image 2 = image2-product-front", "source": src("A82", inv_items[1]["path"], "padded on grey", "product")},
+                                 {"role": "image_references", "value": "<X3: image3-product-flat.png>", "label": "Image 3 = image3-product-flat", "source": src("A273", inv_items[3]["path"], "cut out, soft shadow", "product")}]}}
+rq_pp = run_p / "50-requests" / "video-01-request.json"
+rq_pp.write_text(json.dumps(p_draft), encoding="utf-8")
+(run_p / "40-briefs" / "video-01-musts.md").write_text("- The printed label exactly as in Image 2.\n- The carton lies as flat as in Image 3.\n- Keep the camera still.\n", encoding="utf-8")
+tpl_p = run_p / "40-briefs" / "video-01-template.json"
+
+
+def tpl(prompt, pims):
+    tpl_p.write_text(json.dumps({"template": prompt, "product_images": pims}), encoding="utf-8")
+
+
+tpl("JUDGE the man of Image 1 holds the carton: the printed label exactly as in Image 2. The carton lies as flat as in Image 3. Image 4 shows its angle. Keep the camera still.",
+    [{"asset": "A82"}, {"asset": "A273"}, {"asset": "A81", "why": "the angled view gave the thickness in S40"}])
+js, code, _ = t("template-apply", "--run", run_p.name, "--video", "01", env=ENV)
+rq = json.loads(rq_pp.read_text(encoding="utf-8"))
+imgs = [m for m in rq["params"]["medias"] if m["role"] == "image_references"]
+check(code == 0 and len(imgs) == 4 and imgs[3]["source"]["asset_id"] == "A81" and imgs[3]["source"]["kind"] == "product" and imgs[3]["value"].startswith("<X3: prepare Carton-Front-Angled.png")
+      and [m["value"] for m in imgs[:3]] == [m["value"] for m in p_draft["params"]["medias"][1:]] and rq["params"]["medias"][0]["role"] == "video_references"
+      and rq["product_images"]["added"][0]["image"] == "Image 4" and js["product_images"]["added"][0]["asset"] == "A81" and js["musts_missing"] == []
+      and js["prompt_names_images_beyond_the_inputs"] == [],
+      "template-apply adds the judge's product image after the last one (Image 4, a placeholder with its source to prepare), keeps every other input and its number, and records it")
+tpl("JUDGE the man of Image 1 holds the carton: the printed label exactly as in Image 3. The carton lies as flat as in Image 2. Keep the camera still.",
+    [{"asset": "A273"}, {"asset": "A82"}])
+js, _, _ = t("template-apply", "--run", run_p.name, "--video", "01", env=ENV)
+rq = json.loads(rq_pp.read_text(encoding="utf-8"))
+imgs = [m for m in rq["params"]["medias"] if m["role"] == "image_references"]
+check([m["source"]["asset_id"] for m in imgs] == ["A47", "A273", "A82"] and imgs[1]["label"].startswith("Image 2 =") and js["musts_missing"] == []
+      and sorted(r["as"] for r in js["musts_renumbered"]) == ["The carton lies as flat as in Image 2.", "The printed label exactly as in Image 3."]
+      and js["product_images"]["renumbered"] == {"Image 3": "Image 2", "Image 2": "Image 3"},
+      "the judge's order renumbers only the product images, and a must-carry line naming one is checked in its new number")
+tpl("JUDGE the man of Image 1 holds the carton: the printed label exactly as in Image 2. Keep the camera still.", [{"asset": "A82"}])
+js, _, _ = t("template-apply", "--run", run_p.name, "--video", "01", env=ENV)
+rq = json.loads(rq_pp.read_text(encoding="utf-8"))
+check(len([m for m in rq["params"]["medias"] if m["role"] == "image_references"]) == 2 and js["product_images"]["dropped"] == ["Image 3"]
+      and js["musts_superseded"] == ["The carton lies as flat as in Image 3."] and js["musts_missing"] == [],
+      "a product image the judge leaves out leaves the request, and the must-carry line naming it is reported as no longer the request's, never as missing")
+tpl("JUDGE the carton of Image 2 and Image 5. The printed label exactly as in Image 2. The carton lies as flat as in Image 3. Keep the camera still.", [{"file": "no-such.png"}])
+js, _, _ = t("template-apply", "--run", run_p.name, "--video", "01", env=ENV)
+rq = json.loads(rq_pp.read_text(encoding="utf-8"))
+check(js["product_images"] is None and js["product_images_problems"] and "no-such.png" in js["product_images_problems"][0]
+      and [m["value"] for m in rq["params"]["medias"]] == [m["value"] for m in p_draft["params"]["medias"]] and js["prompt_names_images_beyond_the_inputs"] == ["Image 5"],
+      "a product image the run does not have is a problem: the draft's inputs stay, and an image the prompt names that the request does not carry is reported")
+js, _, _ = t("template-apply", "--run", run_p.name, "--video", "01", "--use-draft", env=ENV)
+rq = json.loads(rq_pp.read_text(encoding="utf-8"))
+check(rq["params"]["medias"] == p_draft["params"]["medias"] and "product_images" not in rq, "--use-draft keeps the draft's inputs as they are")
+# product images that are not the last image inputs: nothing applied
+bad_draft = json.loads(json.dumps(p_draft))
+bm = bad_draft["params"]["medias"]
+bm[1], bm[2] = bm[2], bm[1]
+(run_p / "50-requests" / "video-01-request.draft.json").write_text(json.dumps(bad_draft), encoding="utf-8")
+tpl("JUDGE.", [{"asset": "A82"}, {"asset": "A81"}])
+js, _, _ = t("template-apply", "--run", run_p.name, "--video", "01", env=ENV)
+check(js["product_images"] is None and any("not the last image inputs" in x for x in js["product_images_problems"]),
+      "product images that are not the last image inputs are reported and left as they are")
+(run_p / "50-requests" / "video-01-request.draft.json").write_text(json.dumps(p_draft), encoding="utf-8")
+lint_p, _, _ = t("lint-run", "--run", run_p.name, env=ENV)
+rq_noso = json.loads(json.dumps(p_draft))
+rq_noso["params"]["medias"][1].pop("source")
+(run_p / "50-requests" / "video-02-request.json").write_text(json.dumps(bad_draft), encoding="utf-8")
+(run_p / "50-requests" / "video-03-request.json").write_text(json.dumps(rq_noso), encoding="utf-8")
+lint_p, _, _ = t("lint-run", "--run", run_p.name, env=ENV)
+check({"file": "video-03-request.json", "image": "Image 1"} in lint_p["inputs"]["without_a_recorded_source"]
+      and any(x["file"] == "video-02-request.json" and x["order"] == "-P-P"[1:] or x["file"] == "video-02-request.json" for x in lint_p["inputs"]["product_images_not_last"])
+      and not any(x["file"] == "video-01-request.json" for x in lint_p["inputs"]["product_images_not_last"]),
+      "lint-run lists an image input with no recorded source and a request whose product images are not the last image inputs")
+# a regeneration takes the judge's product images from its QC answer (product-images), keeping what each number its prompt names means
+regen = json.loads(json.dumps(p_draft))
+regen["params"]["prompt"] = "REGEN the man (Image 1) holds the carton of Image 2 and Image 3."
+rg_p = run_p / "50-requests" / "video-01-a2-request.json"
+rg_p.write_text(json.dumps(regen), encoding="utf-8")
+qc_p = run_p / "60-outputs" / "video-01" / "qc-consult.json"
+qc_p.write_text(json.dumps({"product_images": [{"asset": "A82"}, {"asset": "A273"}, {"asset": "A81", "prepare": "padded on grey", "why": "the angle"}]}), encoding="utf-8")
+js, _, _ = t("product-images", "--run", run_p.name, "--video", "01", "--request", str(rg_p), env=ENV)
+check(js["ok"] and not js["applied"] and json.loads(rg_p.read_text(encoding="utf-8")) == regen and js["added"][0]["image"] == "Image 4",
+      "product-images prints the plan as facts and writes nothing without --apply")
+js, _, _ = t("product-images", "--run", run_p.name, "--video", "01", "--request", str(rg_p), "--apply", env=ENV)
+rg = json.loads(rg_p.read_text(encoding="utf-8"))
+check(js["applied"] and len([m for m in rg["params"]["medias"] if m["role"] == "image_references"]) == 4 and rg["product_images"]["by"].startswith("the judge (QC")
+      and Path(js["kept_as"]).is_file() and rg["params"]["prompt"] == regen["params"]["prompt"],
+      "with --apply the regeneration's request takes the added product image after the last one, its prompt untouched, the request as it was kept beside it")
+qc_p.write_text(json.dumps({"product_images": [{"asset": "A273"}, {"asset": "A82"}]}), encoding="utf-8")
+rg_p.write_text(json.dumps(regen), encoding="utf-8")
+js, _, _ = t("product-images", "--run", run_p.name, "--video", "01", "--request", str(rg_p), "--apply", env=ENV)
+check(not js["ok"] and not js["applied"] and "keeps what each image number" in js["problems"][0] and json.loads(rg_p.read_text(encoding="utf-8")) == regen,
+      "a regeneration never moves an image its prompt names: the judge's reorder is refused and nothing is written")
+st_p = json.loads((run_p / "state.json").read_text(encoding="utf-8"))
+st_p.setdefault("submissions", []).append({"video": "01", "attempt": 2, "status": "submitted", "request_file": str(rg_p)})
+(run_p / "state.json").write_text(json.dumps(st_p), encoding="utf-8")
+qc_p.write_text(json.dumps({"product_images": [{"asset": "A82"}, {"asset": "A273"}, {"asset": "A81"}]}), encoding="utf-8")
+js, _, _ = t("product-images", "--run", run_p.name, "--video", "01", "--request", str(rg_p), "--apply", env=ENV)
+check(not js["ok"] and "in the ledger" in js["problems"][0] and json.loads(rg_p.read_text(encoding="utf-8")) == regen,
+      "a request the ledger holds is never changed: a regeneration writes its own request")
 t("state", "--run", run_u.name, "set", "audio_ingest=", env=ENV)
 js, _, _ = t("contract", "--run", run_u.name, env=ENV)
 check("<whisper|frames-only>" in js.get("unresolved_placeholders", []) and js.get("previous_kept_as"), "contract leaves the audio placeholder when the run has no audio choice, lists it, and keeps the previous file")
