@@ -267,7 +267,7 @@ def tpl(prompt, pims):
     tpl_p.write_text(json.dumps({"template": prompt, "product_images": pims}), encoding="utf-8")
 
 
-tpl("JUDGE the man of Image 1 holds the carton: the printed label exactly as in Image 2. The carton lies as flat as in Image 3. Image 4 shows its angle. Keep the camera still.",
+tpl("JUDGE the man of Image 1 holds the carton. The printed label exactly as in Image 2. The carton lies as flat as in Image 3. Image 4 shows its angle. Keep the camera still.",
     [{"asset": "A82"}, {"asset": "A273"}, {"asset": "A81", "why": "the angled view gave the thickness in S40"}])
 js, code, _ = t("template-apply", "--run", run_p.name, "--video", "01", env=ENV)
 rq = json.loads(rq_pp.read_text(encoding="utf-8"))
@@ -277,7 +277,7 @@ check(code == 0 and len(imgs) == 4 and imgs[3]["source"]["asset_id"] == "A81" an
       and rq["product_images"]["added"][0]["image"] == "Image 4" and js["product_images"]["added"][0]["asset"] == "A81" and js["musts_missing"] == []
       and js["prompt_names_images_beyond_the_inputs"] == [],
       "template-apply adds the judge's product image after the last one (Image 4, a placeholder with its source to prepare), keeps every other input and its number, and records it")
-tpl("JUDGE the man of Image 1 holds the carton: the printed label exactly as in Image 3. The carton lies as flat as in Image 2. Keep the camera still.",
+tpl("JUDGE the man of Image 1 holds the carton. The printed label exactly as in Image 3. The carton lies as flat as in Image 2. Keep the camera still.",
     [{"asset": "A273"}, {"asset": "A82"}])
 js, _, _ = t("template-apply", "--run", run_p.name, "--video", "01", env=ENV)
 rq = json.loads(rq_pp.read_text(encoding="utf-8"))
@@ -286,7 +286,7 @@ check([m["source"]["asset_id"] for m in imgs] == ["A47", "A273", "A82"] and imgs
       and sorted(r["as"] for r in js["musts_renumbered"]) == ["The carton lies as flat as in Image 2.", "The printed label exactly as in Image 3."]
       and js["product_images"]["renumbered"] == {"Image 3": "Image 2", "Image 2": "Image 3"},
       "the judge's order renumbers only the product images, and a must-carry line naming one is checked in its new number")
-tpl("JUDGE the man of Image 1 holds the carton: the printed label exactly as in Image 2. Keep the camera still.", [{"asset": "A82"}])
+tpl("JUDGE the man of Image 1 holds the carton. The printed label exactly as in Image 2. Keep the camera still.", [{"asset": "A82"}])
 js, _, _ = t("template-apply", "--run", run_p.name, "--video", "01", env=ENV)
 rq = json.loads(rq_pp.read_text(encoding="utf-8"))
 check(len([m for m in rq["params"]["medias"] if m["role"] == "image_references"]) == 2 and js["product_images"]["dropped"] == ["Image 3"]
@@ -311,14 +311,14 @@ js, _, _ = t("template-apply", "--run", run_p.name, "--video", "01", env=ENV)
 check(js["product_images"] is None and any("not the last image inputs" in x for x in js["product_images_problems"]),
       "product images that are not the last image inputs are reported and left as they are")
 (run_p / "50-requests" / "video-01-request.draft.json").write_text(json.dumps(p_draft), encoding="utf-8")
-lint_p, _, _ = t("lint-run", "--run", run_p.name, env=ENV)
+t("template-apply", "--run", run_p.name, "--video", "01", "--use-draft", env=ENV)
 rq_noso = json.loads(json.dumps(p_draft))
 rq_noso["params"]["medias"][1].pop("source")
 (run_p / "50-requests" / "video-02-request.json").write_text(json.dumps(bad_draft), encoding="utf-8")
 (run_p / "50-requests" / "video-03-request.json").write_text(json.dumps(rq_noso), encoding="utf-8")
 lint_p, _, _ = t("lint-run", "--run", run_p.name, env=ENV)
 check({"file": "video-03-request.json", "image": "Image 1"} in lint_p["inputs"]["without_a_recorded_source"]
-      and any(x["file"] == "video-02-request.json" and x["order"] == "-P-P"[1:] or x["file"] == "video-02-request.json" for x in lint_p["inputs"]["product_images_not_last"])
+      and {"file": "video-02-request.json", "order": "P-P"} in lint_p["inputs"]["product_images_not_last"]
       and not any(x["file"] == "video-01-request.json" for x in lint_p["inputs"]["product_images_not_last"]),
       "lint-run lists an image input with no recorded source and a request whose product images are not the last image inputs")
 # a regeneration takes the judge's product images from its QC answer (product-images), keeping what each number its prompt names means
