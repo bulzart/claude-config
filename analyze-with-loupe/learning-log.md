@@ -625,3 +625,33 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   against Loupe's `KEEPER_CALL_TIMEOUT`.
 - **Verified:** t01 (91), t02 (134), t03 (53), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 230, keeper_sync 94, page_smoke,
   transport_check, flags_smoke pass; after the restart Loupe's live check passes.
+
+## 2026-10-30 · The judge decides the product images; every input names the client's original file
+
+- **Reported:** the admin, on a sample whose product band showed prepared names (`Image 2 · = image2-product-…-front-padded`) and no count:
+  "actually the names are far better to be told as they were in their original files ... so the upcoming runs know which assets samples to use or
+  how much of them, also the judge should be able to tell and decide to how many asset sample references should be used in the generation based on
+  what it thinks the best use is ... (i am talking only for the product ...)"; then "no need to say the exact folder ..., just the exact file/image
+  name", and "use as many resources and test as much as we need, just don't let anything out of sync".
+- **Root cause:** a request recorded where an input came from only as free text, in forms the agents made up (a `build` note, `from`, `source_file`
+  or a plain `source` path with `prepare`, words in `meaning`; the live run alone used five), and the product images sat anywhere among the image
+  inputs, so neither Loupe nor the judge could tell which client file an image was, and nothing let the judge choose them. At QC the judge saw only a
+  count of the inputs (`image_references×3`).
+- **Changed:** X2 records `params.medias[].source` {`original`, `asset_id`, `prepared`, `kind`} for every input prepared from a client file and puts
+  the product images last (awl-write-request); `prompt-template` hands the judge each input with its asset id and original file name and the client's
+  images of that product (registry row and inventory); the judge answers `product_images`; `template-apply` applies them at X4b (`musts_renumbered`,
+  `musts_superseded`, `product_images_problems`, `prompt_names_images_beyond_the_inputs`); `product-images --apply` takes a QC answer's for a
+  regeneration (only added after the last image or the last ones left out, never both; a request the ledger holds is refused; the request kept once as
+  `.pre-product-images.json`); `qc-consult` sends the request's inputs (`request_inputs`); X3 prepares and uploads an image the judge added (its
+  placeholder `value`, `<X3: prepare <file> for Image N>`); `lint-run` lists inputs without a recorded source and requests whose product images are
+  not last; `result.json → judge.product_images`; the production agent's spawn text and contract item 23 say it. Older requests are read exactly as
+  Loupe reads them (`_pi_source` = `runs._source_of`; two ids named is no record, never a guess). In Loupe: the band says how many product images
+  and shows each whole name, `Image 2 · A82 · <original file name>`; the records' PRODUCT IMAGES section; the role's PRODUCT IMAGES paragraph (a
+  regeneration: never both at once, never another file in an image's place); `request_inputs` in the QC question; the ten existing samples with
+  product images rebuilt (backup `~/.claude/backups/loupe-20261030-063326-before-product-names`).
+- **Found on the way:** comments that quoted the client's folder and file names (Loupe allows no product names in code: neutral stand-ins now); the
+  judge's product list was cut to six before malformed entries were dropped; the automatic pick lost its input number; the sample meta cache was keyed
+  by time alone; old prompt words in Loupe's own test headers and one fixture.
+- **Verified:** t01 (92), t02 (145), t03 (61), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 243, keeper_sync 98, page_smoke,
+  transport_check, flags_smoke pass; on the real runs (read-only) Loupe and the toolkit read every image input alike (0 disagreements; the live run
+  resolves 49 of its 58 product images, the rest name no file or two).
