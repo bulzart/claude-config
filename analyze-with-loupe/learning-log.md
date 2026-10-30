@@ -618,5 +618,10 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   hints; `prompt_sides` and the brief's fields were missing from the answers; a caught flag's diff was cut at 300 characters and 14 lines; the
   README described the prompts file's old headings; Loupe's key table did not name this toolkit; a build-prompt paragraph was split by an
   inserted passage.
-- **Verified:** t01 (91), t02 (134), t03 (53), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 229, keeper_sync 94, page_smoke,
+- **Limits raised (the admin, the same day):** "make it up to 10 instead of 6, and raise 150second judge call timeout to 240, and raise the 150k
+  characters to 250k". Loupe: the judge reads the saved prompts of up to ten samples (a template request's read and an answer's final prompts
+  round), a keeper call may run 240 s, a keeper session is replaced after 250 000 characters (Loupe's own point for a fresh session, not a limit
+  of Claude Code). Here: `AWL_CONSULT_TIMEOUT` 1620 s (120 s of lock wait, six keeper calls of 240 s, 60 s of margin); t03 checks the wait
+  against Loupe's `KEEPER_CALL_TIMEOUT`.
+- **Verified:** t01 (91), t02 (134), t03 (53), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 230, keeper_sync 94, page_smoke,
   transport_check, flags_smoke pass; after the restart Loupe's live check passes.
