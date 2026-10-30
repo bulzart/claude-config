@@ -87,7 +87,7 @@ It holds two things:
   arrow or box. Only the QC phase reads them: `awl.py qc-consult` asks the QC keeper (one separate read-only Claude session that holds the whole
   sample library and never sees a run, with a short reading of every sample's picture that Loupe had a fresh session make once by opening it, the full reading kept as JSON in
   Loupe's data and redone only for a new or changed sample; its context is kept small: after a session starts only changed lines are sent, and a session
-  is replaced after 30 turns or 150 000 characters) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call. The answer's `relevant[]` carries
+  is replaced after 30 turns or 150 000 characters, or when it was told an older library header) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call. The answer's `relevant[]` carries
   the sample's words (`title`, `details`, `correct_note`, `idea`, `better`, `missed`), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`), the composite's path and the
   keeper's `why`, `check` and `wrong_pattern`, every field whole or cut at a sentence or word end; `needs_unmet` lists what Loupe could not fetch and, as `kind: more`, requests left over after the two rounds; when another keeper call runs longer
   than the lock wait the answer comes from the brief with `mode: busy`. `plan-hints` fields are cut the same way and `held_back_why` says why a hint was set aside. A sample marked `prompts`
