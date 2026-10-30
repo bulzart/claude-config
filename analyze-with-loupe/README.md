@@ -141,7 +141,9 @@ numbers the prompt names never move; a request the ledger holds is refused; the 
 An image the judge adds carries a placeholder value (`<X3: prepare <file> for Image N>`) and its source, and X3 prepares and uploads it.
 Older requests are read as Loupe reads them (`_pi_source` = Loupe's `runs._source_of`, checked alike in t03): a `source` record, else the
 client's file in `source`, `source_file` or `from` with its `prepare` words, else a `build` note ("from <file> (A82): <how>"), else the one
-asset id or original file name the input's words name; never guessed. `lint-run` lists inputs without a recorded source and requests whose
+asset id or original file name the input's words name; never guessed. A product view is told by its name with Loupe's own pattern
+(`PI_PRODUCT_NAME` = `runs.PRODUCT_FILE`, also checked in t03: the pipeline's `imageN-product-…` name, a product folder or key, the word
+before a number, never inside another word). `lint-run` lists inputs without a recorded source and requests whose
 product images are not last (`inputs`).
 
 Kept in step with Loupe (2026-10-28): `qc-consult`, `prompt-template` and `plan-hints` wait up to 1620 s (`AWL_CONSULT_TIMEOUT`), since Loupe may

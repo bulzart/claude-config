@@ -656,3 +656,18 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   transport_check, flags_smoke pass; on the real runs (read-only) Loupe and the toolkit read every image input alike (0 disagreements; the live run
   resolves 49 of its 58 product images, the rest name no file or two).
 - **The same day, later (the admin):** "make it so that the product samples that alredy been used in that generation will automatically be included, but only the verified assets that were directly used to higgsfield for that specific generation ... even if they characters or other attachment check them by default, just don't show client's original or as the upload records ... if it isnt directly used as a reference in that video generation ... then don't show it, and then if i want to exclude some or add more i'll do it myself". Loupe's picker now offers only the images sent with the take's generation, verified from the run's records, every one ticked (Loupe's change). Here the registry's product rows are read in either form runs write (an id starting with P-, or a type cell that says product: run 20261028-202809 wrote `| NG-EF6-SPE | product | … |`), as Loupe reads them (`_pi_registry_rows` = `runs._registry_product_rows`, a t03 parity check), and an input whose label or file name carries a product row's id counts as a product view (`_pi_names_product`, also in the judge's inputs text).
+- **The same day, later still (the admin):** "also update the generation miss samples on Loupe, let them all have their verified used video generation
+  assets/resources to be in saved moments", then "i only meant for moments we already saved" and "make sure everything is in sync between command
+  pipeline and loupe, we're not in rush". Loupe now reads every form older runs recorded what a generation was sent in (uploads in `state.json` under
+  `file`, `local` or `path`; a plain asset-id map giving the run's one copy of that asset, never a look preview; a request's `media_files` and
+  `media_map`; a guide only the request's own words name), reads a take from its file (letter clips, `delivered_attempt`; an attempt it cannot tell
+  gives nothing) and shows one tile per picture, named with every clip that sent it; every saved sample was rebuilt with what its generation was
+  sent (Loupe 31129bc and the library rebuild). The toolkit: `PI_PRODUCT_NAME` takes Loupe's widened `runs.PRODUCT_FILE` pattern (the word also
+  before a folder separator, a colon or a number, never inside another word), a t03 parity check beside the registry-row and source checks.
+- **Read alike on the real runs:** of 573 image inputs both read (every submitted request of every run), Loupe and the toolkit name the same
+  source for all; Loupe had called 4 inputs in pass folders (`a3/p1/`) product images by the folder's name, fixed so a code is read only in an
+  input's own names, as the toolkit reads it. The 36 left differ only where Loupe reads an older run's `state.json` product registry or uploads
+  record, forms the current pipeline no longer writes and the toolkit never reads again (its runs are finished).
+- **Verified:** t01 (92), t02 (146), t03 (63), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 255, keeper_sync 100, page_smoke,
+  transport_check, flags_smoke pass; every image of the 19 saved samples is the file Higgsfield stored under its media id (size and MD5 from a
+  header request, 63 of 63), and each of the 23 jobs lists exactly those media ids as its image inputs (its job record, 23 of 23).
