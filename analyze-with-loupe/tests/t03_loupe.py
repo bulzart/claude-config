@@ -425,6 +425,18 @@ check(js.get("applied") and [a["image"] for a in js.get("added", [])] == ["Image
       and r2p.with_name("video-05-a2-request.pre-product-images.json").is_file(),
       "product-images puts the QC judge's choice in the regeneration's request: the images its prompt names keep their numbers and the photo is added as Image 4")
 
+reg_text = ("| id | type | role | files |\n|---|---|---|---|\n| NG-EF6-SPE | product | the carton | A44, A45 front-angled |\n"
+            "| CH12 | character | the employee | A16 |\n| P-CARTON | the product, a carton | A82, A83, A273 |\n")
+reg_keep = (run / "30-assets" / "registry.md").read_text(encoding="utf-8")
+(run / "30-assets" / "registry.md").write_text(reg_text, encoding="utf-8")
+_spec_r = _ilu.spec_from_file_location("awl_rows", AWL)
+_awl_r = _ilu.module_from_spec(_spec_r)
+_spec_r.loader.exec_module(_awl_r)
+rows_l, rows_a = lruns._registry_product_rows(run), [(rid, ids) for rid, _row, ids in _awl_r._pi_registry_rows(run)]
+(run / "30-assets" / "registry.md").write_text(reg_keep, encoding="utf-8")
+rows_ok = rows_l == rows_a == [("NG-EF6-SPE", ["A44", "A45"]), ("P-CARTON", ["A82", "A83", "A273"])]
+check(rows_ok, "Loupe and the toolkit find the same product rows in a registry of either form (an id starting with P-, a type cell that says product)"
+      + ("" if rows_ok else f" {rows_l} {rows_a}"))
 # Loupe (its records, the samples' PRODUCT IMAGES) and the toolkit (the judge's inputs, the plan) read an input's source by the same rules
 _spec = _ilu.spec_from_file_location("awl_under_test", AWL)
 _awl = _ilu.module_from_spec(_spec)

@@ -724,4 +724,18 @@ _d = _awl._cf_sentence_diff(_old, _new).splitlines()
 check(len(_d) == 40 and all(len(x) > 400 for x in _d) and not any("more changed" in x for x in _d),
       f"a caught flag's diff keeps every changed sentence whole and all of them ({len(_d)} lines, the shortest {min(map(len, _d)) if _d else 0} characters)")
 
+# --- a registry row in either form (the admin's run 20261028-202809 wrote '| NG-EF6-SPE | product | ... |'): its asset ids, or its id in an input's
+#     label, make a product view; a character's row does not
+import tempfile as _tf  # noqa: E402
+_rd = Path(_tf.mkdtemp(prefix="awl-reg-"))
+(_rd / "30-assets").mkdir(parents=True)
+(_rd / "30-assets" / "registry.md").write_text("| id | type | role |\n|---|---|---|\n| NG-EF6-SPE | product | the carton (A44) |\n| CH12 | character | the employee (A16) |\n",
+                                              encoding="utf-8")
+_req = {"params": {"medias": [{"role": "image_references", "value": "m1", "label": "identity CH12"},
+                              {"role": "image_references", "value": "m2", "label": "NG-EF6-SPE-angled"}]}}
+_imgs = _awl._pi_images(_req, _rd)
+_txt = _awl._pi_inputs_text(_req, _rd)
+check([x["product"] for x in _imgs] == [False, True] and [r[0] for r in _awl._pi_registry_rows(_rd)] == ["NG-EF6-SPE"] and "Image 1 (image_references; its original" in _txt,
+      "a registry row whose type cell says product is a product row (a character's is not), and an input labelled with its id is a product view")
+
 finish()

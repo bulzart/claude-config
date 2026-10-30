@@ -4609,17 +4609,28 @@ def _pi_inventory(rd) -> tuple[dict, dict]:
 
 
 def _pi_registry_rows(rd) -> list[tuple[str, str, list]]:
-    """The product rows of the run's asset registry (30-assets/registry.md, a row whose id starts with P-): (id, the row's text, its asset ids)."""
+    """The product rows of the run's asset registry (30-assets/registry.md, in either form runs write: a table row whose id starts with P-, or whose
+    type cell says product): (id, the row's text, its asset ids).  Loupe reads them the same way (runs._registry_product_rows)."""
     try:
         text = (Path(rd) / "30-assets" / "registry.md").read_text(encoding="utf-8", errors="replace")
     except OSError:
         return []
     rows = []
     for ln in text.splitlines():
-        m = re.match(r"^\|\s*(P-[\w-]+)\s*\|", ln)
-        if m:
-            rows.append((m.group(1), ln.strip(), list(dict.fromkeys(PI_A_ID.findall(ln)))))
+        cells = [c.strip().strip("`").strip() for c in ln.strip().strip("|").split("|")] if ln.lstrip().startswith("|") else []
+        if not cells or not re.fullmatch(r"[A-Za-z][\w-]*", cells[0]) or cells[0].lower() == "id":
+            continue
+        if cells[0].startswith("P-") or any(c.lower() == "product" for c in cells[1:3]):
+            rows.append((cells[0], ln.strip(), list(dict.fromkeys(PI_A_ID.findall(ln)))))
     return rows
+
+
+def _pi_names_product(m: dict, codes) -> bool:
+    """Whether an input's own file name or label names it a product view: the pipeline's 'imageN-product-...' names, or a product row's id of the
+    run's registry in it ('NG-EF6-SPE-angled')."""
+    own = _pi_media_names(m) | {str(m.get("label") or "").lower()}
+    return any(PI_PRODUCT_NAME.search(x) for x in own) or any(re.search(r"(?<![a-z0-9])" + re.escape(str(c).lower()) + r"(?![a-z0-9])", x)
+                                                              for c in codes for x in own)
 
 
 def _pi_source(m: dict, said: str, inv: dict, names: dict, prod_ids: set) -> dict:
@@ -4677,10 +4688,11 @@ def _pi_media_names(m: dict) -> set:
 def _pi_images(j: dict, rd) -> list[dict]:
     """The image inputs of a request in order: [{label ('Image 2'), media, source, product, names}]; a product image is one its source calls a product,
     else one whose asset id sits in a product row of the run's registry, else one whose own file name or label names it so (the pipeline's
-    'imageN-product-...' names)."""
+    'imageN-product-...' names, or a product row's id)."""
     prm = j.get("params") if isinstance(j.get("params"), dict) else j
     inv, names = _pi_inventory(rd) if rd else ({}, {})
-    prod_ids = {a for _id, _row, ids in (_pi_registry_rows(rd) if rd else []) for a in ids}
+    rows = _pi_registry_rows(rd) if rd else []
+    prod_ids, codes = {a for _id, _row, ids in rows for a in ids}, [rid for rid, _row, _ids in rows]
     mm = j.get("medias_meaning") or j.get("media_meaning")
     meaning = dict(mm) if isinstance(mm, dict) else {}
     out, k = [], 0
@@ -4690,7 +4702,7 @@ def _pi_images(j: dict, rd) -> list[dict]:
             lab = f"Image {k}"
             src = _pi_source(m, str(meaning.get(lab) or ""), inv, names, prod_ids)
             own = _pi_media_names(m)
-            kind = src.get("kind") or ("product" if any(PI_PRODUCT_NAME.search(x) for x in own | {str(m.get("label") or "").lower()}) else "")
+            kind = src.get("kind") or ("product" if _pi_names_product(m, codes) else "")
             out.append({"label": lab, "media": m, "source": src, "product": kind == "product", "names": own})
     return out
 
@@ -4701,7 +4713,8 @@ def _pi_inputs_text(j: dict, rd) -> str:
     mm = j.get("medias_meaning") or j.get("media_meaning")
     meaning = dict(mm) if isinstance(mm, dict) else {}
     inv, names = _pi_inventory(rd) if rd else ({}, {})
-    prod_ids = {a for _id, _row, ids in (_pi_registry_rows(rd) if rd else []) for a in ids}
+    rows = _pi_registry_rows(rd) if rd else []
+    prod_ids, codes = {a for _id, _row, ids in rows for a in ids}, [rid for rid, _row, _ids in rows]
     counts, lines = {}, []
     for m in (prm or {}).get("medias") or []:
         if not isinstance(m, dict):
@@ -4711,7 +4724,7 @@ def _pi_inputs_text(j: dict, rd) -> str:
         lab = f"{PI_ROLE.get(role, role)} {counts[role]}"
         src = _pi_source(m, str(meaning.get(lab) or ""), inv, names, prod_ids)
         what = str(m.get("meaning") or meaning.get(lab) or "").strip()
-        if role == "image_references" and not src.get("kind") and any(PI_PRODUCT_NAME.search(x) for x in _pi_media_names(m) | {str(m.get("label") or "").lower()}):
+        if role == "image_references" and not src.get("kind") and _pi_names_product(m, codes):
             src = {**src, "kind": "product"} if src else src
         made = (f"; {'a product image; ' if src.get('kind') == 'product' else (src['kind'] + '; ' if src.get('kind') else '')}made from "
                 + " · ".join(x for x in (src.get("asset_id"), src.get("name")) if x) + (f", prepared: {src['prepared']}" if src.get("prepared") else "")) if src else "; its original is not recorded"

@@ -132,7 +132,7 @@ which assets samples to use or how much of them, also the judge should be able t
 used in the generation"; then "just the exact file/image name"). X2 records, for every input prepared from a client file, the original it was
 made from (`params.medias[].source`: `original`, `asset_id`, `prepared`, `kind`) and puts the product images last among the image inputs. The
 judge reads each input with its asset id and the original's file name (never a folder) and the client's images of that product (its registry
-row and the inventory), and answers `product_images`: which of them the request carries and how many, in its order, each `{asset, file,
+row, read in either form runs write: an id starting with P-, or a type cell that says product, as Loupe reads it; and the inventory), and answers `product_images`: which of them the request carries and how many, in its order, each `{asset, file,
 prepare, why}`. `template-apply` applies them at X4b: the other inputs keep their numbers and the product images follow; a must-carry line that
 names a product image is checked in its new number (`musts_renumbered`) or is no longer the request's (`musts_superseded`); an image the
 inventory does not hold, or product images that are not last, apply nothing (`product_images_problems`). A regeneration takes the QC answer's
