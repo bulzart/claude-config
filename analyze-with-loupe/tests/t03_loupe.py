@@ -156,7 +156,7 @@ check(js2.get("mode") == "keeper" and not js2.get("needs_unmet") and "The prompt
 check((run / "40-briefs" / "video-03-hints.json").is_file(), "the hints are saved as 40-briefs/video-NN-hints.json")
 check(js["hints"][0].get("prompts") == "pair" and js["hints"][0].get("prompt_note", "").startswith("the height") and "wrong_prompt" not in js["hints"][0] and "prompts_files" in js.get("prompts_rule", "")
       and js.get("prompts_judged") == [SID] and "PROMPT-WRONG" in (Path(js.get("prompts_files", {}).get(SID, "")).read_text(encoding="utf-8") if js.get("prompts_files", {}).get(SID) else ""),
-      "a hint whose sample keeps the prompts of both takes carries the marker and the note, the judge read both before hinting, and both are written for the agent, never in the line")
+      "a hint whose sample keeps the prompts of both boxes carries the marker and the note, the judge read both before hinting, and both are written for the agent, never in the line")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can looks smaller after the cut", "--note", "the can stays in frame", env=ENV)
 check(js["relevant"][0].get("prompts") == "pair" and "wrong_prompt" not in js["relevant"][0] and "prompts_files" in js.get("prompts_rule", "") and js.get("prompts_judged") == [SID]
       and Path(js.get("prompts_files", {}).get(SID, "-")).is_file(), "a relevant sample with saved prompts: the judge read both before its answer was final and both are written for the QC agent, never in the line")
@@ -256,7 +256,7 @@ check("it generated second 0.5 to second 3 of Video A (generation 2 of 2 · clip
 misses.update(m["id"], {"wrong_segments": [], "wrong_prompt": "PROMPT-WRONG the can on the desk."}, "test")
 
 # --- Example frames only (the user, 2026-10-28 and 2026-10-29): an Examples sample takes all its frames from one video and has one prompt box, that
-#     video's; the prompts file gives that prompt alone, named an example take, never the flawed or the correct one; Loupe refuses Examples from two videos
+#     video's; the prompts file gives that prompt alone, named an example prompt, never the flawed or the correct one; Loupe refuses Examples from two videos
 mo_ex = misses.add_moment(m["id"], {"frames": [{"src": "wrong", "role": "example", "t": 1.0}, {"src": "wrong", "role": "example", "t": 1.5}], "details": "kept as an example"}, "test")
 SID_EX = mo_ex["id"] if isinstance(mo_ex, dict) and "id" in mo_ex else f"S{mo_ex['moment_id']}"
 js, _, _ = t("sample-prompts", "--id", SID_EX, "--run", run.name, env=ENV)
@@ -265,7 +265,7 @@ check(js.get("prompt_roles") == {"wrong": "example", "fixed": "example"} and js.
       and f"--- {SID_EX}-P1 (sample {SID_EX}, generation miss R{m['id']}) · the example prompt box of Video A, this Examples sample's one box: the prompts of the generations of Video A its Example frames come from, an example" in ptx
       and "of Video B" not in ptx and "flawed version's prompt box" not in ptx and "This sample's frames are all Examples" in ptx
       and "the example prompt of Video A (an Examples sample has one prompt box" in ptx,
-      "a sample of Example frames only: the prompts file gives the one box of its one video, named an example take, never the flawed or the correct take")
+      "a sample of Example frames only: the prompts file gives the one box of its one video, named an example prompt, never the flawed or the correct version's")
 try:
     misses.add_moment(m["id"], {"frames": [{"src": "wrong", "role": "example", "t": 1.0}, {"src": "fixed", "role": "example", "t": 1.0}]}, "test")
     two_refused = False
