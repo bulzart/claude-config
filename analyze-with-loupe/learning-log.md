@@ -595,3 +595,21 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   awl-precheck, the tests README, the build prompt.
 - **Verified:** t02 adds 4 join-record checks, t03 checks the prompts file by role; t01, t02, t03, t05 pass; Loupe's selftest 225, keeper_sync 92,
   page_smoke, transport_check, flags_smoke pass.
+
+## 2026-10-30 · One set of names for a sample's prompts, in Loupe and here; a keeper told a new header starts fresh
+- **Reported:** after the box rule of 2026-10-29 the judge's ASK rule in Loupe still asked for "the prompts of its two takes". The user: "but did we
+  not get told to not tell you to not let nothing out of sync ... yes do it right now, and also check for other outdated and similar in sync issues
+  between the two".
+- **Root cause:** the box rule named the boxes by what they hold (the flawed version's prompt, the correct version's, an example prompt), but the words
+  of before (the two takes, both prompts, the correct take, Video A's prompt for the frames called Wrong and Video B's for those called Right) stayed in
+  Loupe's role and record kinds, the collector's role, the form's placeholders and labels, the chips, comments and docstrings, both READMEs, both build
+  prompts and three of this toolkit's texts, and no test looked for them. Loupe's library header reaches a keeper session only when it boots, so a
+  change to it never reached a running session.
+- **Changed:** here, `prompt-template`'s docstring and `prompts_rule`, the prompts files' writer, the README, the command's rule 23 and awl-free-plan
+  name the prompts as Loupe does; the qc-consult and plan-hints rules also say how to read a sample with one box (what that prompt secured, or let
+  happen, at the frames it made) and an example prompt (what it suggests). In Loupe every such text, comment and docstring was renamed (A MISS WITH ITS
+  CORRECT VERSION; `box_words`, `EXAMPLE_PROMPT`; `_with_frames` lost its unused `every`), the keeper's state keeps the header it was told
+  (`HEADER_SIG`) and a session told another one is booted fresh, and its selftest and page_smoke fail on any old word. "Flawed take" stays in
+  awl-inputs and awl-write-request, where it means a clip QC rejected. The entries of 2026-10-20 and 2026-10-28 keep the words of their day.
+- **Verified:** t01, t02, t03, t05 pass; `docs_tool.py check` 0 errors; Loupe's selftest 227, keeper_sync 94, page_smoke, transport_check,
+  flags_smoke pass.
