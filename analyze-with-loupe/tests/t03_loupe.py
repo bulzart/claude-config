@@ -116,6 +116,12 @@ for _ in range(100):                   # the run start also started reading the 
 check(read_calls == [SID], f"a run start (loupe ensure) has Loupe read the sample that has no reading of its picture yet, once, in the background ({read_calls})")
 js, _, _ = t("qc-brief", "--run", run.name, "--video", "03", "--product", "slim can", env=ENV)
 check(js.get("mode") == "brief" and js["library_size"] == 1 and js["samples"][0]["id"] == SID, "qc-brief returns the matching sample with no model call")
+vdir3 = run / "60-outputs" / "video-03"
+check((vdir3 / "qc-brief.json").is_file() and not (vdir3 / "qc-consult.json").exists() and "prompts_files" not in js
+      and ("prompts_rule" not in js or "no keeper read or judged" in js["prompts_rule"])
+      and all(k in js["samples"][0] for k in ("run", "video", "t_wrong", "prompt_roles", "prompt_sides", "reading", "reading_path")),
+      "qc-brief keeps its answer as qc-brief.json (never as the video's consult), writes no prompts files, says no keeper judged a prompt, "
+      "and gives each sample its origin, its prompt boxes and what the collector saw")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--question", "the can looks smaller after the cut", "--kinds", "scale-size", "--product-details", "slim 355 ml can",
              "--checkpoint", "cut 1.0-1.2", env=ENV)
 check(js.get("mode") == "keeper" and js["relevant"][0]["id"] == SID and js["relevant"][0]["composite_path"], "qc-consult reaches the keeper after the boot finished (the lock serialised it) and names the sample's composite")

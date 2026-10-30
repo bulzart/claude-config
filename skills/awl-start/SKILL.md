@@ -31,7 +31,7 @@ Only these section files for this phase, nothing else unless a step below says s
 | Model index | `AWL/models/index.json` (model id → guide, capabilities, 9:16/720p params). **Never Read it whole** (40 KB): `T model-menu` builds the menu, `T model-entry --id <id>` prints one model's entry and its guide path |
 | Model guides | `AWL/models/<guide>.md` is an index; the sections are in `AWL/models/<guide>/`. Which sections each step reads: `awl-model-guide` |
 | Higgsfield guide | `AWL/higgsfield/higgsfield-mcp.md` (index) and `AWL/higgsfield/higgsfield-mcp/` (sections) |
-| Flag record | Loupe, `http://127.0.0.1:8787` (item 23), started by `T loupe ensure` at run creation and recorded in `state.json → loupe` (`up` or `down`; missing = up): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7 (`awl-submit`), reconciled in A9b and §6, never read during a run. The sample library is read only by `T qc-consult` (`awl-qc`) and, once per video at its first request, `T plan-hints` (`awl-write-request`) |
+| Flag record | Loupe, `http://127.0.0.1:8787` (item 23), started by `T loupe ensure` at run creation and recorded in `state.json → loupe` (`up` or `down`; missing = up): `T caught-flag add, set, reconcile, open` and `T ledger set --flagged`; written in X7 (`awl-submit`), reconciled in A9b and §6, never read during a run. The sample library is read only by `T prompt-template` once per video at X4b (`awl-precheck`), `T qc-consult` at X9 (`awl-qc`) and `T qc-brief` in the free plan (`awl-free-plan`) |
 | References | `AWL/reference/<name>/` section files (index: `AWL/reference/<name>.md`): `analysis-protocol`, `generation-system`, `anomaly-catalog`, `creative-direction`, `brand-guardrails`, `text-and-format`, `assets-and-substitution`, `capcut-assembly`, `production-agents`, `voiceover`. Each phase skill lists the sections it needs under "Read now" |
 | CapCut | `capcut` MCP (drafts store and template in `AWL/config.json → capcut`) + capcut-cli `capcut` on PATH. Tool list and steps: `reference/capcut-assembly/` (`awl-postprocess`) |
 | Run folder | created by `T new-run` under `AWL/runs/<stamp>-<slug>/` (00-inventory, 10-media, 20-analysis, 30-assets, 40-briefs, 50-requests, 60-outputs, logs, state.json) |
@@ -224,7 +224,7 @@ Only these section files for this phase, nothing else unless a step below says s
       the product and its use, references edited or re-made or only studied, length, text, sound. With references, the analysis
       (A1–A5) runs first and the plan may follow, edit or avoid what they do; without references, the plan comes from the requirement
       and the assets. The pipeline keeps the hard rules, the locked model's own prompting, the plan discipline, the QC stack, Loupe's
-      samples and misses (hints at X2, the consult at X9, the flags), the CapCut assembly and the deliverables; it asks once to confirm
+      samples and misses (the judge's prompt template at X4b, the consult at X9, the flags), the CapCut assembly and the deliverables; it asks once to confirm
       its reading of the plan (A6f, `awl-free-plan`), then nothing. Every video carries its own kind, `recreate` or `create`
       (`state.json → videos_kind`), and follows that kind's branch in every per-video step.
     - In every sub-mode, every video ends as a CapCut project (item 16), produced by its own agent

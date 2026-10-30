@@ -3549,8 +3549,9 @@ def _cf_text_or_file(v):
     return str(v)
 
 
-def _cf_sentence_diff(old: str, new: str, cap: int = 14) -> str:
-    """What changed between the failed and the accepted prompt, sentence by sentence (- removed, + added)."""
+def _cf_sentence_diff(old: str, new: str) -> str:
+    """What changed between the failed and the accepted prompt, sentence by sentence (- removed, + added), every changed sentence whole and all of
+    them (the user, 2026-10-29: a video generation prompt is never trimmed)."""
     import difflib
     def sp(t):
         return [s.strip() for s in re.split(r"(?<=[.;!?])\s+|\n+", t or "") if s.strip()]
@@ -3558,11 +3559,9 @@ def _cf_sentence_diff(old: str, new: str, cap: int = 14) -> str:
     lines = []
     for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a_, b_, autojunk=False).get_opcodes():
         if op in ("replace", "delete"):
-            lines += ["- " + s[:300] for s in a_[i1:i2]]
+            lines += ["- " + s for s in a_[i1:i2]]
         if op in ("replace", "insert"):
-            lines += ["+ " + s[:300] for s in b_[j1:j2]]
-    if len(lines) > cap:
-        lines = lines[:cap] + [f"… {len(lines) - cap} more changed sentences"]
+            lines += ["+ " + s for s in b_[j1:j2]]
     return "\n".join(lines)
 
 
@@ -4288,14 +4287,15 @@ def _qc_ctx(a) -> dict:
     return ctx
 
 
-def _qc_sample_files(res, rd, video):
-    """Where the answer is kept for the video's record (the agent reads it from the JSON line, the file is the audit)."""
+def _qc_sample_files(res, rd, video, name="qc-consult.json"):
+    """Where the answer is kept for the video's record (the agent reads it from the JSON line, the file is the audit): a consult as
+    qc-consult.json, a brief as qc-brief.json, so a brief never stands in for the video's consult."""
     try:
         if rd and video:
             d = rd / "60-outputs" / f"video-{_cf_nn(video)}"
             d.mkdir(parents=True, exist_ok=True)
-            (d / "qc-consult.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
-            return str(d / "qc-consult.json")
+            (d / name).write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+            return str(d / name)
     except OSError:
         pass
     return ""
@@ -4324,11 +4324,20 @@ def cmd_qc_consult(a):
             d["judge_rule"] = ("cause (which part of the prompt or of the judge's template let the error happen) and template_fix (that part rewritten) are the "
                                "judge's: write both into the verdict and result.json judge, for the user's review at the end")
     rd = _cf_run_dir(a.run) if a.run else None
-    d["saved"] = _qc_sample_files(d, rd, a.video)
-    if any(x.get("prompts") for x in (d.get("relevant") or d.get("samples") or []) if isinstance(x, dict)):
-        d["prompts_files"] = _prompts_files(d.get("relevant") or d.get("samples"), rd)
-        d["prompts_rule"] = (LOUPE_PROMPTS_WORDS + " (prompt_note: the admin's one line on what made the difference); when the keeper answered, it read them whole "
-                             "first (prompts_judged), and they are written whole for you at prompts_files[<id>], from Loupe's record, compared or judged by no one. For a "
+    d["saved"] = _qc_sample_files(d, rd, a.video, "qc-consult.json" if a.cmd == "qc-consult" else "qc-brief.json")
+    items = d.get("relevant") or d.get("samples") or []
+    if a.cmd == "qc-brief" and any(x.get("prompts") for x in items if isinstance(x, dict)):
+        d["prompts_rule"] = (LOUPE_PROMPTS_WORDS + " (prompt_note: the admin's one line on what made the difference). This is Loupe's brief, with no "
+                             "model call: no keeper read or judged these prompts and none is written for you; `T sample-prompts --id S.. --run RUN` "
+                             "writes a sample's whole record, its prompts included, when your phase reads one.")
+    elif any(x.get("prompts") for x in items if isinstance(x, dict)):
+        d["prompts_files"] = _prompts_files(items, rd)
+        who = (("the keeper read whole, before it answered, the prompts of the samples in prompts_judged"
+                + (" and not those in prompts_unread (it reads the prompts of at most six cited samples per answer): weigh those as unjudged"
+                   if d.get("prompts_unread") else ""))
+               if d.get("mode") == "keeper" else f"no keeper read or judged them (mode {d.get('mode')}: Loupe's brief answered)")
+        d["prompts_rule"] = (LOUPE_PROMPTS_WORDS + " (prompt_note: the admin's one line on what made the difference); " + who + "; "
+                             "they are written whole for you at prompts_files[<id>], from Loupe's record, compared or judged by no one. For a "
                              "sample you judged relevant to THIS video, read that file and judge yourself what the correct version's prompt did differently from the flawed "
                              "version's at the frames each made (a sample with one box: what that prompt secured, or let happen, at the frames it made; an "
                              "example prompt: what it suggests, never a flawed or a correct prompt). It is a lead for the diagnosed cause and the corrected "
@@ -4338,7 +4347,7 @@ def cmd_qc_consult(a):
         d["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer by looking at your own video, or a file that does not "
                            "exist): answer it from the video in words and ask again ONCE with --note '<what you saw>'; if it still has needs_unmet, go on without it "
                            "and write in the verdict what was not answered")
-    if any(x.get("reading_path") for x in (d.get("relevant") or []) if isinstance(x, dict)):
+    if any(x.get("reading_path") for x in items if isinstance(x, dict)):
         d["reading_rule"] = ("a relevant sample's reading (marked, right_version) and reading_path are what a data collector saw in its picture, collected once by a session "
                              "that opened it and gave no verdict: view the picture itself first; Read the whole collection only when the picture leaves the marked place "
                              "unclear; the judgement (what went wrong, what to check) is the keeper's and yours, never the collector's")
@@ -4373,7 +4382,7 @@ def cmd_plan_hints(a):
     rd = _cf_run_dir(a.run) if a.run else None
     res = {"ok": True, "mode": d.get("mode"), "hints": d.get("hints", []), "held_back": d.get("held_back", 0), "held_back_why": d.get("held_back_why", []),
            "none_reason": d.get("none_reason", ""), "beats_cut": cut}
-    for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error", "flags"):
+    for k in ("needs_asked", "needs_unmet", "prompts_judged", "prompts_unread", "library_read", "keeper_error", "flags"):
         if d.get(k):
             res[k] = d[k]
     if res.get("flags"):
@@ -4603,7 +4612,7 @@ def cmd_prompt_template(a):
            "notes": d.get("notes", ""), "changes": d.get("changes", []), "read": d.get("read", []), "not_covered": d.get("not_covered", ""),
            "none_reason": d.get("none_reason", ""),
            "video_model": vm.get("id", ""), "draft_file": draft_file, "musts": len(musts), "clip": a.clip or "", "busy_retries": tries}
-    for k in ("needs_asked", "needs_unmet", "prompts_judged", "library_read", "keeper_error", "library_size", "flags"):
+    for k in ("needs_asked", "needs_unmet", "prompts_judged", "prompts_unread", "library_read", "keeper_error", "library_size", "flags"):
         if d.get(k):
             res[k] = d[k]
     if res.get("flags"):

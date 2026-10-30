@@ -31,7 +31,7 @@ Only these section files for this phase, nothing else unless a step below says s
 The user chose Free because the other sub-modes decide the shape of the videos for them. Here the user's requirement decides: what the
 videos must achieve, how many, what happens in them, which product and how, whether references are edited, re-made or only studied, the
 length, the text, the sound. The pipeline brings what the user did not decide: the locked model's own prompting (its official examples and
-recipes, X2), the plan discipline (X1), the pre-generation check, the QC stack and Loupe's samples and misses (the judge's prompt template at X2, the consult
+recipes, X2), the plan discipline (X1), the pre-generation check, the QC stack and Loupe's samples and misses (the judge's prompt template at X4b, the consult
 at X9, the flag record), the CapCut assembly and the deliverables. Nothing is asked twice; one confirmation closes the plan.
 
 1. **Read the requirement whole** (`RUN/00-inventory/requirement.md`). Every sentence of it is [U]. Where it is silent, the pipeline's own
@@ -71,9 +71,9 @@ at X9, the flag record), the CapCut assembly and the deliverables. Nothing is as
 3. **Past misses that touch this requirement (Loupe, no model call):** for every product of the plan run
    `T qc-brief --run RUN --product "<form>" --product-details "<shape, size, opening, posture from its registry row>" --question "<the
    requirement's actions with that product, in one line>"` and write the matching samples (id and title; a sample marked `prompts` also keeps the prompts of the
-   generations its frames come from, which X2 reads with `T sample-prompts` only for a hint it applies, never this phase) under "Past misses that touch
+   generations its frames come from, which the judge reads at X4b and QC with `T sample-prompts` only for a sample it judged relevant, never this phase) under "Past misses that touch
    this requirement" in the free plan, as leads for X1 and QC. They are information: nothing of them goes into a prompt as a negative
-   (`generation-system.md` §4, §5c.2b); X2 asks the keeper for hints as always and X9 consults it once per video. A `recreate` video
+   (`generation-system.md` §4, §5c.2b); X4b asks the judge for the prompt as always and X9 consults it once per video. A `recreate` video
    also needs its prepared source: `T split-audio "<references folder>" --run RUN` once, then the E4–E5 steps of `awl-recreate-plan` for
    that reference (the own/ folder with `strip-inserts` and `seams`).
 4. **Confirm once.** Ask with AskUserQuestion (header "Your plan"): show one line per video (number, kind, length, product and its

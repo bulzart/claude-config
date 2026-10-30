@@ -82,19 +82,22 @@ It holds two things:
   `field:value` operators, groups by trigger, asset, video, kind, run, model, cause, status or month, and shows the evidence next to each flag.
   No step of a run and no agent reads it; what a flag teaches is written into the references as a rule when the user asks for it.
 - **Generation misses:** the admin picks a run and a video in Loupe, marks the second of the miss with an arrow, circle or box and a note, then picks
-  the fixed version (either side can also be the original video the generation was made from, or a take of another video or run) and the same
+  the right version (either side can also be the original video the generation was made from, or a take of another video or run) and the same
   moment of it. Loupe saves one image: the frames side by side, each tagged with its source, and a zoom below each frame marked with a circle,
-  arrow or box. Only the QC phase reads them: `awl.py qc-consult` asks the QC keeper (one separate read-only Claude session that holds the whole
-  sample library and never sees a run, with a short reading of every sample's picture that Loupe had a fresh session make once by opening it, the full reading kept as JSON in
-  Loupe's data and redone only for a new or changed sample; its context is kept small: after a session starts only changed lines are sent, and a session
-  is replaced after 30 turns or 150 000 characters, or when it was told an older library header) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call. The answer's `relevant[]` carries
+  arrow or box. The judge reads them twice per video: `awl.py prompt-template` at X4b (its prompt for the first request, from the samples it chooses)
+  and `awl.py qc-consult` at X9, which asks the QC keeper (one separate read-only Claude session that holds the whole
+  sample library and never sees a run, with what a data collector saw in every sample's picture, collected once by a fresh session that opened it and gave no
+  verdict, the full collection kept as JSON in Loupe's data and redone only for a new or changed sample; its context is kept small: after a session starts only changed lines are sent, and a session
+  is replaced after 30 turns or 150 000 characters, or when it was told an older library header) which samples apply to the video under QC; `qc-brief` returns the matching samples with no model call (kept as `qc-brief.json` with `--video`, never over the consult; no prompts files). The answer's `relevant[]` carries
   the sample's words (`title`, `details`, `correct_note`, `idea`, `better`, `missed`), where it came from (`model`, `run`, `video`, `t_wrong`, `kinds`), the composite's path and the
   keeper's `why`, `check` and `wrong_pattern`, every field whole or cut at a sentence or word end; `needs_unmet` lists what Loupe could not fetch and, as `kind: more`, requests left over after the two rounds; when another keeper call runs longer
   than the lock wait the answer comes from the brief with `mode: busy`. `plan-hints` fields are cut the same way and `held_back_why` says why a hint was set aside. A sample marked `prompts`
   (`pair`, `wrong` or `fixed`) keeps in Loupe, each named by what it is, the flawed version's prompt (the prompt of each generation its frames called WRONG come from) and the correct version's prompt (each generation its frames called RIGHT come from, from either video), only the boxes it has frames for (frames called RIGHT only: the correct version's alone), or an Examples sample's one example box (the generations of its one video its Example frames come from; a suggestion of what could have changed or how it could have been done another way, neither a bad generation nor a correct one: `prompt_roles`, `prompt_sides`); a box holds no other generation, and which generation made a frame is read from the join record `awl.py concat` writes (`<out>.join.json`); with the admin's `prompt_note`; lists, answers and hints carry only the marker
-  and the note, and `awl.py sample-prompts --id S12 --run RUN` writes them whole to `RUN/40-briefs/samples/S12-prompts.md` for a sample the agent judged relevant (X2 for an applied hint, QC for a
-  diagnosed cause; a take joined from several generations gives the prompt of each generation the sample's frames come from, each under
-  `Generation k of n · clip · request` and the line naming the frames it is responsible for, as the sample's image tags them, and the seconds it generated): the agent reads and judges what changed, nothing is compared in code, nothing of them is pasted. `status`
+  and the note, and `awl.py sample-prompts --id S12 --run RUN` writes them whole to `RUN/40-briefs/samples/S12-prompts.md` for a sample the agent judged relevant (X4b for a basis sample of the judge's prompt, QC for a
+  diagnosed cause; the file is the sample's whole record from Loupe: a take joined from several generations gives the prompt of each generation the sample's frames
+  come from, each between `--- S12-P1 (sample S12, generation miss R7) · <its box> ---` and `--- end of S12-P1 (sample S12) ---`, under the line that says what it is,
+  the seconds of which video it generated (generation k of n · clip · request) and the frames it made, as the sample's image tags them; the `### Generation k of n`
+  headings only when Loupe sends no record): the agent reads and judges what changed, nothing is compared in code, nothing of them is pasted. `status`
   and `doctor` read the keeper's state (in sync, turns, library version, how many samples have a current reading) through the qc key.
   **Coupled with Loupe (since 2026-10-22):** `loupe ensure` reports `keeper.understanding` and a `reading_note` while new or changed samples are being read;
   `plan-hints` passes on `held_back_why`, `library_read`, each hint's `reading_path` (read only when the trigger match is unclear) and the keeper's
@@ -102,7 +105,7 @@ It holds two things:
   `reading` and `reading_path`: view the picture first), a `not_read_rule` and a `gaps_rule`: what the library does not cover and any need still unmet go
   to `result.json → keeper_gaps`, and the wrap-up reports them for the admin (Loupe's Keeper page lists them too). The judge's `flags` (what is missing, contradictory or ambiguous in a sample's record) come with a `flags_rule`: QC writes each into `keeper_gaps` (`flag S12: ...`), planning into the Sample hints block, the template step into the Judge's template block. A prompts file is the sample's whole record from Loupe: its generation miss, the admin's words tied to the frames, every frame with its video, generation, marks and the prompt label that made it, every prompt under its label. A declined preset notice is stored once
   in `state.json → higgsfield.declined_preset_id`, so every request carries it and `lint-run` knows it.
-  Loupe also ships the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`); that server is not registered in `~/.claude.json`, so the pipeline's agents reach the library only through `awl.py qc-consult`, `qc-brief` and `plan-hints`.
+  Loupe also ships the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`); that server is not registered in `~/.claude.json`, so the pipeline's agents reach the library only through `awl.py prompt-template`, `qc-consult`, `qc-brief`, `sample-prompts` and, for older runs, `plan-hints`.
 
 The judge writes the prompt template (the user, 2026-10-28). Loupe's keeper is the judge and runs on Opus 5.5; a Haiku data collector only
 describes each sample's picture once and gives no verdict. X1–X4 come first: the plan, the pattern card, the pipeline's own request
@@ -119,7 +122,8 @@ consult carries by itself the prompt the video was generated from (`--attempt` p
 the template and the brief (`evidence_sent`); both kinds of consult send the generation video model's entry of `models/index.json`, and the judge
 weighs each sample by the model that generated it;
 the answer adds `cause` and `template_fix`, kept in `result.json → judge` for the user's review. Before any QC or planning answer is final Loupe also
-hands the judge the saved prompts of every sample it cites (`prompts_judged`), and `qc-consult` writes them for the agent (`prompts_files`).
+hands the judge the saved prompts of the samples it cites (up to six, in the order cited: `prompts_judged` names every cited sample whose prompts it read,
+`prompts_unread` any it did not), and `qc-consult` writes them for the agent (`prompts_files`).
 `plan-hints` stays for older runs; X2 no longer calls it.
 
 Kept in step with Loupe (2026-10-28): `qc-consult`, `prompt-template` and `plan-hints` wait up to 1080 s (`AWL_CONSULT_TIMEOUT`), since Loupe may
@@ -144,7 +148,7 @@ how (how many, what happens, the product and its use, references edited or re-ma
 `awl-free-plan`) or from the requirement and the assets alone (`awl-analyze-prepare` hands off straight to `awl-free-plan`). The free plan (`20-analysis/free-plan.md`)
 labels every line [U], [E] or [I], lists the past misses that touch the requirement (`T qc-brief` per product, no model call), is confirmed by the user once, and gives
 every video its kind (`state.json → videos_kind`, `recreate` or `create`), which selects the branch of every per-video step. The pipeline keeps the hard rules, the locked
-model's own prompting and official examples (X2), the plan discipline, the QC stack, Loupe's hints and consults, the CapCut assembly and the deliverables.
+model's own prompting and official examples (X2), the plan discipline, the QC stack, Loupe's judge (its prompt at X4b, its QC consult), the CapCut assembly and the deliverables.
 
 ## QC fixes (contract item 27, every Analyze sub-mode), pilot first (26), the stalled agent, the request freeze and the planner contract (28–30)
 At the start of a Recreate, Create or Free run the user chooses `ask` (from the first video on, a fix generation after a QC finding waits for the user's yes: the production agent

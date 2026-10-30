@@ -597,4 +597,16 @@ wrec = json.loads((jv / "with-inserts.mp4.join.json").read_text(encoding="utf-8"
 check([(x["clip"], x["t_from"], x["t_to"]) for x in wrec.get("pieces") or []] == [("c1", 0.0, 1.0), ("c2", 1.0, 1.5), ("", 1.5, 2.5), ("c2", 2.5, 3.5), ("c1", 3.5, 5.5)],
       f"a join of pieces that are joins themselves keeps their generations, and an insert is a piece of no clip ({[(x['clip'], x['t_from'], x['t_to']) for x in wrec.get('pieces') or []]})")
 
+
+# --- a caught flag's prompt diff is prompt text: every changed sentence whole and all of them (the user, 2026-10-29: never trimmed)
+import importlib.util as _ilu
+_spec = _ilu.spec_from_file_location("awl_under_test", AWL)
+_awl = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_awl)
+_old = " ".join(f"Sentence {i} " + "x" * 400 + "." for i in range(20))
+_new = " ".join(f"Sentence {i} " + "y" * 400 + "." for i in range(20))
+_d = _awl._cf_sentence_diff(_old, _new).splitlines()
+check(len(_d) == 40 and all(len(x) > 400 for x in _d) and not any("more changed" in x for x in _d),
+      f"a caught flag's diff keeps every changed sentence whole and all of them ({len(_d)} lines, the shortest {min(map(len, _d)) if _d else 0} characters)")
+
 finish()
