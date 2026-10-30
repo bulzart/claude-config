@@ -4590,7 +4590,7 @@ PI_A_ID = re.compile(r"\bA\d{2,4}\b")
 PI_MEDIA_FILE = re.compile(r"\.(?:png|jpe?g|webp|bmp|tiff?|gif|mp4|mov|m4v|webm|mkv)$", re.I)      # a value that names a file
 PI_IMAGE_REF = re.compile(r"(@?)\bImage( ?)(\d+)\b")
 PI_ROLE = {"image_references": "Image", "video_references": "Video", "audio_references": "Audio"}
-PI_PRODUCT_NAME = re.compile(r"(?:^|[\s=/\\_-])product(?:[\s._-]|$)", re.I)      # 'image2-product-EF6-PM-front-padded.png': the pipeline names a product view so
+PI_PRODUCT_NAME = re.compile(r"(?:^|[\s=/\\_:-])product(?:[\s._:/\\\d-]|$)", re.I)      # 'image2-product-EF6-PM-front-padded.png': the pipeline names a product view so (also product/..., key:product, product2...; Loupe's runs.PRODUCT_FILE is the same pattern)
 
 
 def _pi_inventory(rd) -> tuple[dict, dict]:

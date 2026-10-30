@@ -465,6 +465,12 @@ check(lruns.BUILD_NOTE.pattern == _awl.PI_BUILD_NOTE.pattern and lruns.A_ID.patt
       "Loupe and the toolkit read an input's source the same way: the source record, the client's file in source, source_file or from (the forms runs "
       "wrote before it), a build note (its asset id in its parenthetical), one asset id or one original file name named; "
       "two ids or none named is no record (never a guess)" + ("" if all(lo == aw for lo, aw in pairs) else f" {[p for p in pairs if p[0] != p[1]]}"))
+names_pn = ["image2-product-EF6-PM-front-padded.png", "product/P1-ref.png", "identity:product", "product2-front.png", "byproduct.png",
+            "products-sheet.png", "the product reference", "image1-character-CH01.jpg"]
+pn_l, pn_a = [bool(lruns.PRODUCT_FILE.search(x)) for x in names_pn], [bool(_awl.PI_PRODUCT_NAME.search(x)) for x in names_pn]
+check(lruns.PRODUCT_FILE.pattern == _awl.PI_PRODUCT_NAME.pattern and pn_l == pn_a == [True, True, True, True, False, False, True, False],
+      "Loupe and the toolkit tell a product view by its name the same way (the pipeline's imageN-product-... names, a product folder or key, the word "
+      "before a number; never inside another word)" + ("" if pn_l == pn_a else f" {pn_l} {pn_a}"))
 
 httpd.shutdown()
 finish()
