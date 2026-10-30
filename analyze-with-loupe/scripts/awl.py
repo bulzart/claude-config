@@ -4330,8 +4330,9 @@ def cmd_qc_consult(a):
         d["prompts_rule"] = (LOUPE_PROMPTS_WORDS + " (prompt_note: the admin's one line on what made the difference); when the keeper answered, it read them whole "
                              "first (prompts_judged), and they are written whole for you at prompts_files[<id>], from Loupe's record, compared or judged by no one. For a "
                              "sample you judged relevant to THIS video, read that file and judge yourself what the correct version's prompt did differently from the flawed "
-                             "version's at the frames each made (a sample with one box: what that prompt secured, or let happen, at th"
-                             "e frames it made; an example prompt: what it suggests, never a flawed or a correct prompt). It is a lead for the diagnosed cause and the corrected request, written in the model's own "
+                             "version's at the frames each made (a sample with one box: what that prompt secured, or let happen, at the frames it made; an "
+                             "example prompt: what it suggests, never a flawed or a correct prompt). It is a lead for the diagnosed cause and the corrected "
+                             "request, written in the model's own "
                              "structure and your words, never a sentence to paste, never a verdict on the video, and not read for a sample you did not judge relevant.")
     if d.get("needs_unmet"):
         d["unmet_rule"] = ("the keeper asked for something Loupe cannot fetch (a question only you can answer by looking at your own video, or a file that does not "
@@ -4396,8 +4397,9 @@ def cmd_plan_hints(a):
             res["prompts_rule"] = ("a hint marked prompts rests on a sample whose prompts the admin kept: " + LOUPE_PROMPTS_WORDS + " (and prompt_note, the admin's one "
                                    "line on what made the difference); the keeper read them whole before hinting (prompts_judged), "
                                    "and they are written whole for you at prompts_files[<id>], from Loupe's record, compared or judged by no one. When you apply that hint, read "
-                                   "that file, judge yourself what the correct version's prompt did differently from the flawed version's " + "(a sample with one box: what that prompt secured, or let happen at the frames it made; an example prompt: what it suggests, never a flawed or a correct prompt)"
-                                   " and whether that is the mechanism of the matching beat, and apply the mechanism at "
+                                   "that file, judge yourself what the correct version's prompt did differently from the flawed version's (a sample with one box: "
+                                   "what that prompt secured, or let happen, at the frames it made; an example prompt: what it suggests, never a flawed or a correct "
+                                   "prompt) and whether that is the mechanism of the matching beat, and apply the mechanism at "
                                    "that beat in the locked model's own structure and your own words. Never a sentence of any of those prompts in the request, never the wrong behaviour "
                                    "named, never the correct version's prompt as a rule for another video; a hint you do not apply is not read.")
     try:
