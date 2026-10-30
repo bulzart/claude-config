@@ -600,6 +600,7 @@ check([(x["clip"], x["t_from"], x["t_to"]) for x in wrec.get("pieces") or []] ==
 
 # --- a caught flag's prompt diff is prompt text: every changed sentence whole and all of them (the user, 2026-10-29: never trimmed)
 import importlib.util as _ilu
+from t00_common import AWL  # noqa: E402
 _spec = _ilu.spec_from_file_location("awl_under_test", AWL)
 _awl = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_awl)

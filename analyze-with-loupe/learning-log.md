@@ -611,5 +611,12 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   CORRECT VERSION; `box_words`, `EXAMPLE_PROMPT`; `_with_frames` lost its unused `every`), the keeper's state keeps the header it was told
   (`HEADER_SIG`) and a session told another one is booted fresh, and its selftest and page_smoke fail on any old word. "Flawed take" stays in
   awl-inputs and awl-write-request, where it means a clip QC rejected. The entries of 2026-10-20 and 2026-10-28 keep the words of their day.
-- **Verified:** t01, t02, t03, t05 pass; `docs_tool.py check` 0 errors; Loupe's selftest 228, keeper_sync 94, page_smoke, transport_check,
-  flags_smoke pass.
+- **Audit (read-only, the same day), each finding checked against the code:** the judge read the prompts of only three cited samples while
+  every text said every one (now up to six, `prompts_judged` complete, `prompts_unread` named, the rules say which); `qc-brief` overwrote the
+  video's `qc-consult.json` and claimed a keeper had read its prompts (now `qc-brief.json`, no prompts files, honest wording, also for a busy or
+  fallback consult); the collector's reading was described as a verdict; the README and the start and free-plan skills still put the judge at X2
+  hints; `prompt_sides` and the brief's fields were missing from the answers; a caught flag's diff was cut at 300 characters and 14 lines; the
+  README described the prompts file's old headings; Loupe's key table named only atp.py and atg.py; a build-prompt paragraph was split by an
+  inserted passage.
+- **Verified:** t01 (91), t02 (134), t03 (53), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 229, keeper_sync 94, page_smoke,
+  transport_check, flags_smoke pass; after the restart Loupe's live check passes.
