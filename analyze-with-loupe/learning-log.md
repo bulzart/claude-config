@@ -611,5 +611,5 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   CORRECT VERSION; `box_words`, `EXAMPLE_PROMPT`; `_with_frames` lost its unused `every`), the keeper's state keeps the header it was told
   (`HEADER_SIG`) and a session told another one is booted fresh, and its selftest and page_smoke fail on any old word. "Flawed take" stays in
   awl-inputs and awl-write-request, where it means a clip QC rejected. The entries of 2026-10-20 and 2026-10-28 keep the words of their day.
-- **Verified:** t01, t02, t03, t05 pass; `docs_tool.py check` 0 errors; Loupe's selftest 227, keeper_sync 94, page_smoke, transport_check,
+- **Verified:** t01, t02, t03, t05 pass; `docs_tool.py check` 0 errors; Loupe's selftest 228, keeper_sync 94, page_smoke, transport_check,
   flags_smoke pass.
