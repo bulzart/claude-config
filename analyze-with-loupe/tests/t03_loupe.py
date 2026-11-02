@@ -472,5 +472,29 @@ check(lruns.PRODUCT_FILE.pattern == _awl.PI_PRODUCT_NAME.pattern and pn_l == pn_
       "Loupe and the toolkit tell a product view by its name the same way (the pipeline's imageN-product-... names, a product folder or key, the word "
       "before a number; never inside another word)" + ("" if pn_l == pn_a else f" {pn_l} {pn_a}"))
 
+# the admin, 2026-11-02: a keeper whose saved conversation is gone is replaced inside Loupe by a fresh session, and the toolkit's answers say so
+LOST = {"sid": ""}
+
+
+def lost_then_fake(prompt, sid, resume, model, timeout=150):
+    if resume and sid == LOST["sid"]:
+        raise qc.SessionLost("keeper session failed: No conversation found with session ID: " + sid)
+    return fake_claude(prompt, sid, resume, model, timeout)
+
+
+qc._run_claude = lost_then_fake
+restarted = {}
+for cmd, args in (("qc-consult", ["--video", "05", "--question", "the label reads wrong in shot 2"]),
+                  ("plan-hints", ["--video", "03", "--beats", "Beat 1: he sets the can on the desk.\nBeat 2: a cut; the can is still there.", "--product", "slim can"]),
+                  ("prompt-template", ["--video", "05", "--product", "carton"])):
+    LOST["sid"] = (core.setting_get("keeper", {}) or {}).get("session_id", "")      # the session Loupe holds now is gone from the claude CLI
+    js, _, _ = t(cmd, "--run", run.name, *args, env=ENV)
+    restarted[cmd] = (js.get("mode"), "was not found by the claude CLI" in str(js.get("keeper_restarted", "")),
+                      bool(LOST["sid"]) and (core.setting_get("keeper", {}) or {}).get("session_id") != LOST["sid"])
+ok_r = all(v == ("keeper", True, True) for v in restarted.values())
+check(ok_r, "a keeper session that is gone is replaced inside Loupe by a fresh one: qc-consult, plan-hints and prompt-template each answer from it "
+            "and say so in keeper_restarted" + ("" if ok_r else f" {restarted}"))
+qc._run_claude = fake_claude
+
 httpd.shutdown()
 finish()
