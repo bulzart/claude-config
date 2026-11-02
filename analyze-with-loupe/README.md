@@ -84,7 +84,7 @@ It holds two things:
 - **Generation misses:** the admin picks a run and a video in Loupe, marks the second of the miss with an arrow, circle or box and a note, then picks
   the right version (either side can also be the original video the generation was made from, or a take of another video or run) and the same
   moment of it. Loupe saves one image: the frames side by side, each tagged with its source, and a zoom below each frame marked with a circle,
-  arrow or box. The judge reads them twice per video: `awl.py prompt-template` at X4b (its prompt for the first request, from the samples it chooses)
+  arrow or box, which carries that frame's marks while the frame above it stays clean (a frame without a zoom keeps its marks). The judge reads them twice per video: `awl.py prompt-template` at X4b (its prompt for the first request, from the samples it chooses)
   and `awl.py qc-consult` at X9, which asks the QC keeper (one separate read-only Claude session that holds the whole
   sample library and never sees a run, with what a data collector saw in every sample's picture, collected once by a fresh session that opened it and gave no
   verdict, the full collection kept as JSON in Loupe's data and redone only for a new or changed sample; its context is kept small: after a session starts only changed lines are sent, and a session

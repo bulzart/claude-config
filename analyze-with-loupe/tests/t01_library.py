@@ -112,6 +112,7 @@ check("needs_unmet" in qc and "--note" in qc, "the QC phase handles the keeper a
 check("once per video" in qc, "the QC phase asks the keeper once per video")
 check("T qc-consult" in qc and "composite_path" in qc and "qc-consult.json" in qc, "the QC phase consults the keeper, views every composite and names the saved answer")
 check("`original video`" in qc and "circle, arrow or box" in qc, "the QC phase reads a sample's source tags (an original video is never a generated frame) and knows a zoom is drawn only under a marked frame, as Loupe draws them")
+check("alone carries that frame's marks" in qc and "the frame above it left clean" in qc and "frame-N-marked.png" in qc, "the QC phase knows a marked frame's zoom alone carries its marks, the frame above it left clean, and where each frame is kept whole with its marks in place, as Loupe draws them (the admin, 2026-11-02)")
 wr1 = re.sub(r"\s+", " ", rd(SKD / "awl-write-request" / "SKILL.md"))
 pc1 = re.sub(r"\s+", " ", rd(SKD / "awl-precheck" / "SKILL.md"))
 check("X4b" in pc1 and "T prompt-template" in pc1 and "T template-apply" in pc1 and "video-NN-judge-brief.md" in pc1 and "T plan-hints" not in wr1
