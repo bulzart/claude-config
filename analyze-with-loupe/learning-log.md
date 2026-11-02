@@ -671,3 +671,30 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
 - **Verified:** t01 (92), t02 (146), t03 (63), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 255, keeper_sync 100, page_smoke,
   transport_check, flags_smoke pass; every image of the 19 saved samples is the file Higgsfield stored under its media id (size and MD5 from a
   header request, 63 of 63), and each of the 23 jobs lists exactly those media ids as its image inputs (its job record, 23 of 23).
+
+## 2026-11-02 · A Loupe sample's marks on its zoom only; every saved sample rebuilt; the two kept in step
+
+- **Reported (the admin):** "in our loupe app when we mark generation misses samples, can we make the up frames to not have the circle,box,arrow
+  just the bottom ones", then "also update the already generated samples moments and frames in the loupe app to mirror the changes,do a backup too,
+  and then push both repos claude-config and loupe, make sure we have both analyze-with-loupe and loupe app in sync, no rush we can take all the time
+  and resources".
+- **Changed in Loupe (5712e1b, b33b280 and the sync commit after them):** in a sample's image a frame that has a zoom (under its row, or its close
+  range beside it when it sits alone in its row) is shown clean and its marks are drawn on the zoom only; a frame without a zoom (a text label alone,
+  marks over most of it, the zoom switched off) keeps its marks; `frame-N-marked.png` keeps each frame whole with its marks in place. The library
+  header, the record's IMAGE line and the data collector's role say so: the judge started a fresh session and every picture was collected again (21
+  of 21, `COLLECTOR_VERSION` collector-2026-11-02). Every saved sample was rebuilt: 21 samples, 44 frames, 27 now clean above their zoom, 2 without a
+  zoom keeping their marks (S10), 15 never marked; outside the cleaned panels every image is pixel-identical to before, and no meta.json, frame file
+  or zoom file changed. Backups: `~/.claude/backups/loupe-20261102-220339-before-marks-on-zoom-only` and
+  `~/.claude/backups/loupe-20261102-221522-library-after-rebuild-before-awl-sync`. The unregistered MCP server's `qc_get_sample` description still
+  said the first two-panel layout (the miss with marks on the left, the correct frame on the right); it now says the frames and the zoom.
+- **Changed here:** awl-qc's "Samples first" paragraph says the zoom alone carries a frame's marks with the frame above it left clean, a frame
+  without a zoom keeps its marks, and `frame-N-marked.png` beside `composite_path` is each frame whole with its marks in place (for where a zoom sits
+  in its frame); the README's Generation misses paragraph says the same; t01 guards the wording. `qc-consult`, `qc-brief`, `prompt-template` and
+  `sample-prompts` are unchanged: they carry `composite_path` as before. The run folders keep what their agents were given (their
+  `S<id>-prompts.md` are text and point at Loupe's live images).
+- **Found on the way:** Loupe's live keeper checks (`selftest.py --keeper`) had failed since 2026-10-22, the code from before this change alike: the
+  fake-keeper sections above them booted sessions only the fake knew, and the real session then resumed one ("No conversation found with session
+  ID"); the live section now starts from a reset keeper.
+- **Verified:** t01 (93), t02 (146), t03 (63), t05 (73) pass, and t04 (10) with the live keeper (one real qc-consult, one real plan-hints); the
+  rehearsal 221/221 steps, no contract failure; `docs_tool.py check` 0 errors; Loupe's selftest 256 (261 with `--keeper`, the real session's checks
+  passing again), keeper_sync 105 and `--live` 13 (the keeper IN SYNC with the 21 samples), page_smoke, transport_check, flags_smoke pass.
