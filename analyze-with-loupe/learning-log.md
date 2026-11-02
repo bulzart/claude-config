@@ -698,3 +698,21 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
 - **Verified:** t01 (93), t02 (146), t03 (63), t05 (73) pass, and t04 (10) with the live keeper (one real qc-consult, one real plan-hints); the
   rehearsal 221/221 steps, no contract failure; `docs_tool.py check` 0 errors; Loupe's selftest 256 (261 with `--keeper`, the real session's checks
   passing again), keeper_sync 105 and `--live` 13 (the keeper IN SYNC with the 21 samples), page_smoke, transport_check, flags_smoke pass.
+
+## 2026-11-02 · A keeper whose saved conversation is gone starts a fresh session by itself
+
+- **Reported (the admin):** "yes fix the gap", to: if the keeper's saved conversation is ever lost, Loupe keeps failing until the keeper is reset
+  on the Keeper page.
+- **Root cause:** Loupe keeps the keeper's session id and resumes it (`claude --resume`). When the CLI no longer has that conversation (its
+  transcript removed or cleaned up) it answers "No conversation found with session ID", the call failed and the stored id stayed, so every later
+  consult answered from the brief (`mode: fallback`; `unavailable` for plan-hints and prompt-template) until the admin pressed Reset. The same
+  failure kept Loupe's live keeper tests red from 2026-10-22 until earlier today.
+- **Changed in Loupe:** that answer on a resume is `SessionLost`; a consult then boots a fresh session told the whole library and asks the same
+  question there (without the delta), a sync boots in place of the delta it could not send; the answer carries `keeper_restarted` (words naming
+  the lost session) and the audit log `keeper.session_lost`; a session the call has just started is never booted again (no loop).
+- **Changed here:** `plan-hints` and `prompt-template` pass `keeper_restarted` on (`qc-consult` and `loupe ensure` print Loupe's whole answer);
+  the README says so; t03 checks the three through the toolkit.
+- **Verified:** t01 (93), t02 (146), t03 (64), t05 (73) pass, and t03 against the toolkit of before fails for plan-hints and prompt-template
+  only; the rehearsal 221/221 steps, no contract failure; `docs_tool.py check` 0 errors; Loupe's keeper_sync 112, selftest 256 and 262 with
+  `--keeper` (a real claude session given an id it never saved is replaced and answers the same question), page_smoke, transport_check,
+  flags_smoke pass; the live Loupe restarted on the new code, the keeper in sync with the 21 samples.
