@@ -4402,7 +4402,7 @@ def cmd_plan_hints(a):
     rd = _cf_run_dir(a.run) if a.run else None
     res = {"ok": True, "mode": d.get("mode"), "hints": d.get("hints", []), "held_back": d.get("held_back", 0), "held_back_why": d.get("held_back_why", []),
            "none_reason": d.get("none_reason", ""), "beats_cut": cut}
-    for k in ("needs_asked", "needs_unmet", "prompts_judged", "prompts_unread", "library_read", "keeper_error", "flags"):
+    for k in ("needs_asked", "needs_unmet", "prompts_judged", "prompts_unread", "library_read", "keeper_error", "keeper_restarted", "flags"):
         if d.get(k):
             res[k] = d[k]
     if res.get("flags"):
@@ -4941,7 +4941,7 @@ def cmd_prompt_template(a):
                                       "from that original as source.prepared says, else as the pipeline prepares product views, and upload it at X3 before X5); "
                                       "a problem it reports (an image not in the run's inventory, product images that are not the last inputs) is asked of "
                                       "the judge once more with --note. Record the product images in the pattern card's \"Judge's template\" block.")
-    for k in ("needs_asked", "needs_unmet", "prompts_judged", "prompts_unread", "library_read", "keeper_error", "library_size", "flags"):
+    for k in ("needs_asked", "needs_unmet", "prompts_judged", "prompts_unread", "library_read", "keeper_error", "keeper_restarted", "library_size", "flags"):
         if d.get(k):
             res[k] = d[k]
     if res.get("flags"):
