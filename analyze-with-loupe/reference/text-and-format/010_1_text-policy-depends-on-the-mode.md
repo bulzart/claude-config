@@ -70,10 +70,14 @@ Text may be created when it improves the concept or matches the analyzed structu
     it (`generation-system.md` §5c.2b).
   - Only text that physically belongs to the scene stays in the generation: the client product's
     own printed label, logo or badge (below).
-  - **Create (command item 35): in-world text and symbols** the plan names because the scene needs them (a shop sign, a book's
-    title, a shirt's print, a display that belongs to the world) are scene content: written exactly in the prompt, carved out beside
-    the product's label ("…; the only lettering is the printed label on the <product> and the sign reading '<words>'"), and allowed
-    in QC; no other lettering is.
+  - **Create (command item 35) widens it: text and symbols that belong to the depicted world** are scene content too, of whatever
+    kind fits the scene (a sign, a screen or interface in use, packaging, a poster, a book, a print on clothing, a menu, a map,
+    graffiti: examples, not a list); only editorial text is kept out. The ones the story depends on are named in the plan, written
+    exactly in the prompt and allowed in QC; the rest appear as naturally as that world has them. A Create take's clean-plate line
+    forbids overlay text only: "No subtitles, captions, titles or other overlay text appear on screen; the only lettering is what
+    belongs to the scene itself, the printed label on the <product> exactly as in @ImageN". Whatever appears meets the rule above
+    (readable or naturally out of focus, the same across frames, no pseudo-text that draws the eye), the guardrails (no competitor or
+    featured third-party brand, `generation-system.md` §9b) and no emoji.
 - **The client asset's own label is not stray text.** A swapped or placed product keeps its real
   printed label, logo or badge exactly as in its reference image; that's what makes it
   recognisable.

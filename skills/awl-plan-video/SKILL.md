@@ -69,8 +69,8 @@ Only these section files for this phase, nothing else unless a step below says s
   - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - *Edit Mode:*
   - creative-direction §9: `AWL/reference/creative-direction/120_9_edit-mode.md` (0.3 KB)
-- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (6.8 KB)
-- text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (4.2 KB)
+- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (7.3 KB)
+- text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (4.3 KB)
 - *Edit Mode (the substitution map):*
   - assets-and-substitution §4: `AWL/reference/assets-and-substitution/040_4_substitution-map-per-video.md` (2.4 KB)
 - *guardrails supplied:*
@@ -342,8 +342,10 @@ a blocker with the real error (`voiceover.md` §4 step 8).
     - **Clean means no baked-in editorial addition; it never limits the genre, the art style or the imagination of the scene.** A take
       generates the scene: the characters, objects, environments, actions, interactions, camera work, light and visual storytelling; the
       magic, transformations, fantastical phenomena, exaggerated movement or other effects that belong to the depicted action or world; the
-      chosen art direction (linework, shading, textures, animation style, expressive visual language); and the text and symbols that belong
-      to the depicted world (a sign, a book, a clothing design, a display the scene needs), planned and written exactly.
+      chosen art direction (linework, shading, textures, animation style, expressive visual language); and any text or symbol that belongs
+      to the depicted world and fits it, of whatever kind (a sign, a screen in use, packaging, a poster, a book, a print on clothing, a
+      menu, a map: examples, not a list): the ones the story depends on are named in the plan and written exactly, the rest appear as
+      naturally as that world has them.
     - **Never in a take, always in the CapCut edit:** editorial captions, subtitles, titles, headlines, lower thirds, annotations, labels and
       animated typography; added arrows, badges, buttons, overlay logos, interface decorations, borders and graphic frames; editorial
       cuts, montages, fades, wipes, dissolves and transitions between shots; split screens, picture-in-picture, comparison panels,

@@ -774,6 +774,9 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   agents find the CapCut tools live (`ToolSearch +capcut`, the catalog tools, `capcut --help`); the named tools are suggestions;
   the router allows keyframes, masks, filters, transitions and their catalogs and segment delete, never the caption, transcript
   or raw-patch tools. No sticker or emoji, ever: item 6, every mode, in a generation and in the edit (a graphic or a text layer);
-  the sticker tool neither allowed nor named. In-world text the plan
-  names is carved out beside the product's label. The skills' Read-now sizes follow the refreshed index tables.
+  the sticker tool neither allowed nor named. Text and symbols that belong to
+  the depicted world may appear, of whatever kind fits it; the clean-plate line forbids overlay text only. The skills' Read-now sizes follow the refreshed index tables.
+- **Then (the user):** "do not make this too constrained ... everything that fits and is part of the video generation let it be without forcing or only allowing books": the in-world text had read as a closed list (signs, books, shirt prints, only when planned, "no other
+  lettering is"); it is open now: any text or symbol that belongs to the depicted world and fits it, the plan naming only what the
+  story depends on, QC accepting the rest when it reads as part of the world.
 - **Verified:** t01 (98, five new: item 35 in the router, its owners and the agents' contract; the whole item in its two owners; the CapCut section, the cards' edit layer, the take check and the clean originals; the live tool discovery and the router's tools; no sticker or emoji), t02 (146), t03 (69), t05 (73) pass; `docs_tool.py check` 0 errors.

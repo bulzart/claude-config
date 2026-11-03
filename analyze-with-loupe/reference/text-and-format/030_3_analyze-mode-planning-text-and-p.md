@@ -50,10 +50,10 @@
 7. **QC:**
    - The **generated plate** must be text-free:
      `awl.py qc --mode analyze --allowed-text "<printed words of every client asset visible>"` (Create: with the in-world text the
-     plan names, command item 35).
+     plan names, command item 35; other text that belongs to the world and reads as part of it is fine, §1).
      `qc` returns `planned_text` (what you allowed) beside `visible_text` (what its OCR saw); you compare the two
-     and read the storyboard. Anything visible that was not planned is pseudo-text or a copied artifact: fix the
-     plate or regenerate. A garbled ghost of the source caption at its old position is one (CE-045): restore the
+     and read the storyboard. Anything visible that was not planned is pseudo-text or a copied artifact (in Create, unless it
+     belongs to the depicted world and reads as part of it): fix the plate or regenerate. A garbled ghost of the source caption at its old position is one (CE-045): restore the
      clean-plate lines and strip the caption from the reference.
    - The **text** is checked on the CapCut preview (`capcut-assembly.md` §5): wording, timing,
      position, no emoji, and every overlay on exactly its visible frames.

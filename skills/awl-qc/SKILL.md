@@ -227,8 +227,9 @@ Only these section files for this phase, nothing else unless a step below says s
     inside a take is a regenerate reason, a fast in-world motion is not) and carries nothing editorial (a caption, title, label, sticker,
     emoji, arrow, badge, button, overlay logo, interface decoration, border, frame or panel divider, a split screen, picture-in-picture,
     grid or collage, a speed effect or a freeze, a decorative particle, glow, glitch or motion graphic): one found is a regenerate reason,
-    never covered in CapCut. The in-world text the plan names reads as planned (`T qc --allowed-text`), and the art direction, the
-    in-world effects and the continuity across takes hold as planned.
+    never covered in CapCut. The text the plan names reads as planned (`T qc --allowed-text`); other text that belongs to the world is
+    fine when it reads as part of it (no pseudo-text that draws the eye, no word that changes between frames, no competitor or featured
+    third-party brand, no emoji); and the art direction, the in-world effects and the continuity across takes hold as planned.
   - **Shot structure** (`anomaly-catalog.md` §4 step 5i; `generation-system.md` §3b.1 item 7; Recreate and
     Edit Mode with hard cuts): the output's cuts against the source's shot list: the same count at the same
     times, person-free cutaways still person-free, the placed product in every shot where its anchor is in

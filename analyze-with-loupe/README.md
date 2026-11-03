@@ -281,8 +281,9 @@ every Free video of kind `create`; Recreate (which edits the reference whole) an
   it, never one generation per shot;
   one camera setup and one continuous action each, framed and with trimming room for the edit, no divider, placeholder or layout guide).
 - **X2, X4, X4b** (`awl-write-request`, `awl-precheck`): a take's prompt is one continuous shot in the model's own single-take phrasing
-  (its guide §3.5, a must-carry line) and never a word of the edit; in-world text the plan names is written exactly and carved out beside
-  the product's label (text-and-format §1); the judge's brief says so.
+  (its guide §3.5, a must-carry line) and never a word of the edit; text and symbols that belong to the
+  depicted world may appear, of whatever kind fits it, the ones the story depends on named and written exactly, and the clean-plate
+  line forbids overlay text only (text-and-format §1); the judge's brief says so.
 - **X8** (`awl-postprocess`, capcut-assembly §3c): the timeline is built from the conformed takes by the edit plan: pieces (`srcStartSec`,
   `durSec`), speed, freeze frames (a still from `T frames --at`), keyframed punch-ins, pans, shake and animated crops, masks and layered
   tracks for layouts, transitions, filters, supplied graphics, then the inserts, text, sound and voice. The agents **find the CapCut tools

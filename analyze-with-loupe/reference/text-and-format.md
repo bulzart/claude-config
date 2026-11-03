@@ -9,8 +9,8 @@ Stored as section files in `text-and-format/` (next to this file); **read only t
 
 | § | Section | File | KB |
 |---|---|---|---|
-| 1 | Text policy depends on the mode | `010_1_text-policy-depends-on-the-mode.md` | 6.8 |
+| 1 | Text policy depends on the mode | `010_1_text-policy-depends-on-the-mode.md` | 7.3 |
 | 2 | Edit Mode: removing source text | `020_2_edit-mode-removing-source-text.md` | 3.3 |
-| 3 | Analyze Mode: planning text and placing it in CapCut | `030_3_analyze-mode-planning-text-and-p.md` | 4.2 |
+| 3 | Analyze Mode: planning text and placing it in CapCut | `030_3_analyze-mode-planning-text-and-p.md` | 4.3 |
 | 4 | Fixed output format: 9:16 at 720p (720×1280) | `040_4_fixed-output-format-9-16-at-720p.md` | 2.6 |
 <!-- sections:end -->

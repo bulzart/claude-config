@@ -62,8 +62,8 @@ Only these section files for this phase, nothing else unless a step below says s
     lock's scoped "only", and every placement, posture and use line follows from the product's own details and what the source scene
     offers, not from an example. A line that fights another is dropped by the §6 order of authority, with its reason in the brief.
   - **Clean take** (Create and Free `create`, item 35): the draft is one continuous shot in the model's single-take phrasing, with no word
-    of the edit (no cut, transition, caption, graphic, layout, speed effect or decorative effect), the in-world text named exactly and in
-    the carve-out, and every piece of the edit plan comes from this video's takes.
+    of the edit (no cut, transition, caption, graphic, layout, speed effect or decorative effect), the text the plan names written exactly,
+    a clean-plate line that forbids overlay text only, and every piece of the edit plan comes from this video's takes.
   - **Must carry** (the first request of a video): the pattern card's "Must carry" block and `RUN/40-briefs/video-NN-musts.md`
     hold, word for word and one per line, every sentence the prompt must carry exactly (the fidelity lock, the clean-plate lines, the camera lock, the targeted exclusion, a guardrail operation, the voiceover line, a Create take's single-take line), and the
     draft carries each of them. The judge builds the final prompt on this checked draft and these lines (X4b).
