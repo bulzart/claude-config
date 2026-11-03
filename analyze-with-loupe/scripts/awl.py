@@ -1938,7 +1938,7 @@ def cmd_status(a):
             loupe["error"] = str(e)[:120]
     plans = sorted(p.name for p in (rd / "40-briefs").glob("video-*-plan.md")) if (rd / "40-briefs").is_dir() else []
     briefs = sorted(p.name for p in (rd / "40-briefs").glob("video-*-brief.md")) if (rd / "40-briefs").is_dir() else []
-    reqs = sorted(p.name for p in (rd / "50-requests").glob("video-*request.json")) if (rd / "50-requests").is_dir() else []
+    reqs = [p.name for p in _cf_requests_named(rd / "50-requests", "video-")]
     out({"ok": True, "run": rd.name, "run_dir": str(rd), "mode": st.get("mode"), "analyze_submode": st.get("analyze_submode"),
          "model": st.get("model"), "stage": st.get("stage"), "next_skill": st.get("next_skill"), "next_step": st.get("next_step"),
          "video": st.get("video"), "updated": st.get("updated"), "requested_videos": st.get("requested_videos"),
@@ -2146,7 +2146,7 @@ def cmd_lint_run(a):
             pass
     unknown, prompts = [], []
     in_checked, no_source, not_last = 0, [], []
-    for f in sorted((rd / "50-requests").glob("video-*request.json")) if (rd / "50-requests").is_dir() else []:
+    for f in _cf_requests_named(rd / "50-requests", "video-"):
         try:
             j = json.loads(f.read_text(encoding="utf-8"))
         except (OSError, ValueError) as e:
@@ -3681,18 +3681,39 @@ def _cf_nn(video) -> str:
     return m.group(1).zfill(2) if m else str(video or "")
 
 
+CF_REQUEST_ATTEMPT_LAST = re.compile(r"^(?P<head>video-.+?)-request-(?P<att>a\d+)\.json$", re.I)
+
+
+def _cf_req_canon(name) -> str:
+    """A request file's name in the usual form: video-06-request-a2.json (the attempt last, as some runs wrote it) is read as
+    video-06-a2-request.json; the file keeps its own name. Loupe reads names the same way (runs.request_canon)."""
+    m = CF_REQUEST_ATTEMPT_LAST.match(str(name))
+    return f"{m.group('head')}-{m.group('att')}-request.json" if m else str(name)
+
+
+def _cf_requests_named(d, prefix: str) -> list:
+    """The request files of a folder whose name starts with `prefix`, in both forms (…-request.json and …-request-aN.json); a kept copy or a
+    draft is not one."""
+    d = Path(d)
+    if not d.is_dir():
+        return []
+    files = list(d.glob(f"{prefix}*request.json")) + [f for f in d.glob(f"{prefix}*request-a*.json") if CF_REQUEST_ATTEMPT_LAST.match(f.name)]
+    return sorted(set(files), key=lambda f: _cf_req_canon(f.name))
+
+
 def _cf_request_file(rd, video, attempt):
     """The request json of this video and attempt (the newest one when the attempt is not given or not found)."""
     d = rd / "50-requests" if rd else None
     if not d or not d.is_dir() or not video:
         return None
     nn = _cf_nn(video)
-    reqs = sorted(d.glob(f"video-{nn}*-request.json"), key=lambda p: p.stat().st_mtime)
+    reqs = sorted((p for p in _cf_requests_named(d, f"video-{nn}") if _cf_req_canon(p.name).endswith("-request.json")
+                   and _cf_req_canon(p.name) != f"video-{nn}request.json"), key=lambda p: p.stat().st_mtime)
     if not reqs:
         return None
     tok = re.sub(r"[^a-z0-9]+", "-", str(attempt or "").lower()).strip("-")
     if tok:
-        exact = [p for p in reqs if f"-{tok}-" in p.name.lower()]
+        exact = [p for p in reqs if f"-{tok}-" in _cf_req_canon(p.name).lower()]
         if exact:
             return exact[-1]
         if tok in ("a1", "1"):
@@ -4463,11 +4484,12 @@ def _video_request_prompt(rd, video, attempt, model) -> tuple[str, str, dict]:
     if not d or not d.is_dir() or not video:
         return "", "", {}
     nn = _cf_nn(video)
-    reqs = sorted(d.glob(f"video-{nn}*-request.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    reqs = sorted((p for p in _cf_requests_named(d, f"video-{nn}") if _cf_req_canon(p.name) != f"video-{nn}request.json"),
+                  key=lambda p: p.stat().st_mtime, reverse=True)
     tok = re.sub(r"[^a-z0-9]+", "-", str(attempt or "").lower()).strip("-")
     if tok:
         tok = "a" + tok if tok.isdigit() else tok
-        reqs = [p for p in reqs if f"-{tok}-" in p.name.lower() or (tok == "a1" and p.name.lower() == f"video-{nn}-request.json")] or reqs
+        reqs = [p for p in reqs if f"-{tok}-" in _cf_req_canon(p.name).lower() or (tok == "a1" and p.name.lower() == f"video-{nn}-request.json")] or reqs
     found = []
     for p in reqs:
         j = _cf_request_json(p)

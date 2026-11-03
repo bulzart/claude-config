@@ -548,5 +548,20 @@ check(ok_r, "a keeper session that is gone is replaced inside Loupe by a fresh o
             "and say so in keeper_restarted" + ("" if ok_r else f" {restarted}"))
 qc._run_claude = fake_claude
 
+# the admin, 2026-11-03: the toolkit reads a request written with the attempt last (video-06-request-a2.json) as the take a2's own, as Loupe does
+awl = _awl_r
+rq_n = run.parent / (run.name + "-attempt-last") / "50-requests"
+rq_n.mkdir(parents=True, exist_ok=True)
+for _n in ("video-06-request.json", "video-06-request-a2.json", "video-06-request-a2.pre-product-images.json"):
+    (rq_n / _n).write_text(json.dumps({"params": {"model": "wan3_0_prime", "prompt": _n}}), encoding="utf-8")
+from loupe_app import runs as _lr  # noqa: E402
+got_n = (getattr(awl._cf_request_file(rq_n.parent, "06", "a2"), "name", None), getattr(awl._cf_request_file(rq_n.parent, "06", "a1"), "name", None),
+         [p.name for p in awl._cf_requests_named(rq_n, "video-")],
+         all(awl._cf_req_canon(n) == _lr.request_canon(n) for n in ("video-06-request-a2.json", "video-04-c1-request-a2.json", "video-06-a2-request.json",
+                                                                    "video-06-request.json", "video-06-request-a2.pre-product-images.json")))
+check(got_n == ("video-06-request-a2.json", "video-06-request.json", ["video-06-request.json", "video-06-request-a2.json"], True),
+      "the toolkit reads a request named with the attempt last (video-06-request-a2.json) as the take a2's own, the same way Loupe does; a kept copy "
+      "is not a request" + ("" if got_n[3] and got_n[0] == "video-06-request-a2.json" else f" {got_n}"))
+
 httpd.shutdown()
 finish()
