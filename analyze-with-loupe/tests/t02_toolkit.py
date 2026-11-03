@@ -196,6 +196,19 @@ js, _, _ = t("uploads", "merge", "--run", run_u.name, env=ENV)
 st_u = json.loads((run_u / "state.json").read_text(encoding="utf-8"))
 check(js["merged"] == 1 and js["skipped"] and js["skipped"][0]["file"] == "video-02-uploads.json" and st_u["assets"]["uploads"] == {"Image 2": "11111111-2222-3333-4444-555555555556"} and "notes" not in st_u["assets"]["uploads"],
       "uploads merge copies only label -> media_id of well-formed files into state.json and lists the skipped file")
+# the admin, 2026-11-03: uploads named relative to the pipeline's home (runs/<run>/...) were found by no reader in the run: the file is recorded in full
+run_p = Path(t("new-run", "--mode", "analyze", "--source", str(home.parent / "refs-c"), "--slug", "up-paths", env=ENV)[0]["run_dir"])
+(run_p / "55-references" / "video-03" / "a2").mkdir(parents=True, exist_ok=True)
+(run_p / "55-references" / "video-03" / "a2" / "image1-man.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+t("uploads", "set", "--run", run_p.name, "--video", "03", "--label", "a2 Image 1", "--media-id", "33333333-2222-3333-4444-555555555555",
+  "--file", "55-references/video-03/a2/image1-man.png", env=ENV)
+t("uploads", "set", "--run", run_p.name, "--video", "03", "--label", "a2 Image 2", "--media-id", "33333333-2222-3333-4444-555555555556",
+  "--file", "nowhere/image2-gone.png", env=ENV)
+up_p = json.loads((run_p / "50-requests" / "video-03-uploads.json").read_text(encoding="utf-8"))["uploads"]
+check(up_p["a2 Image 1"]["file"] == str((run_p / "55-references" / "video-03" / "a2" / "image1-man.png").resolve())
+      and up_p["a2 Image 2"]["file"] == "nowhere/image2-gone.png",
+      "uploads set records a file named relative to the run (or to the folder it runs from) in full, the form every reader finds; one it cannot find "
+      "stays as given")
 js, _, _ = t("contract", "--run", run_u.name, "--notes", "the pilot is video 01", env=ENV)
 ct = (run_u / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
 check(js.get("ok") and js["unresolved_placeholders"] == [] and run_u.name in ct and "QC fixes: ask" in ct and "Audio ingest: frames-only" in ct and "Loupe: up" in ct and "wan3_0_prime" in ct and ct.rstrip().endswith("the pilot is video 01") and "<RUN>" not in ct,

@@ -563,5 +563,22 @@ check(got_n == ("video-06-request-a2.json", "video-06-request.json", ["video-06-
       "the toolkit reads a request named with the attempt last (video-06-request-a2.json) as the take a2's own, the same way Loupe does; a kept copy "
       "is not a request" + ("" if got_n[3] and got_n[0] == "video-06-request-a2.json" else f" {got_n}"))
 
+# the admin, 2026-11-03: a clip's first take (c2-a1) reads its own first request in the toolkit's lookups, as Loupe reads it; both read a request
+# name's generation the same way
+rq_c = run.parent / (run.name + "-clip-takes") / "50-requests"
+rq_c.mkdir(parents=True, exist_ok=True)
+for _i, _n in enumerate(("video-10-c1-request.json", "video-10-c2-request.json", "video-10-c1-a2-request.json", "video-10-c2-request-a3.json")):
+    (rq_c / _n).write_text(json.dumps({"params": {"model": "wan3_0_prime", "duration": 5, "prompt": _n}}), encoding="utf-8")
+    os.utime(rq_c / _n, (time.time() + _i, time.time() + _i))
+got_c = {att: (getattr(awl._cf_request_file(rq_c.parent, "10", att), "name", None), awl._video_request_prompt(rq_c.parent, "10", att, "wan3_0_prime")[1])
+         for att in ("c2-a1", "c1-a1", "c1-a2", "c2-a3")}
+tag_names = ["video-10-c2-request.json", "video-10-c1-a2-request.json", "video-10-c2-request-a3.json", "video-10-request.json", "video-10-request-a2.json",
+             "video-10-a2-frame-request.json", "video-10-sync-request.json", "video-10-cA-request.json"]
+ok_c = (got_c == {"c2-a1": ("video-10-c2-request.json",) * 2, "c1-a1": ("video-10-c1-request.json",) * 2,
+                  "c1-a2": ("video-10-c1-a2-request.json",) * 2, "c2-a3": ("video-10-c2-request-a3.json",) * 2}
+        and all(awl._cf_req_tag(_n, "10") == _lr._request_tag(_n, "10") for _n in tag_names))
+check(ok_c, "a clip's first take (c2-a1) reads its own first request (video-NN-c2-request.json) for a caught flag and for QC, as Loupe does, and the "
+            "toolkit reads every request name's generation as Loupe does" + ("" if ok_c else f" {got_c} {[(awl._cf_req_tag(_n, '10'), _lr._request_tag(_n, '10')) for _n in tag_names]}"))
+
 httpd.shutdown()
 finish()

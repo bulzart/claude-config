@@ -2257,7 +2257,7 @@ def _uploads_file(rd, video) -> Path:
 
 def cmd_uploads(a):
     """One record per video of what was uploaded to Higgsfield for it (the planners and the agents wrote three shapes by hand in a real run,
-    and merging them polluted state.json). set: add or replace one entry {label -> media_id, file, content_type, url}; show: the entries of
+    and merging them polluted state.json). set: add or replace one entry {label -> media_id, file (as a full path), content_type, url}; show: the entries of
     one video or of every video, with any shape problem; merge: copy every well-formed entry's media id into state.json -> assets.uploads
     (label -> media_id) under the state lock, listing the files it skipped and why. It records; it never decides which upload a request uses."""
     rd, st = _state_of(a.run)
@@ -2275,7 +2275,10 @@ def cmd_uploads(a):
             if _uploads_problems(old):
                 fail(f"{f.name} is not in the schema ({'; '.join(_uploads_problems(old)[:3])}); move it aside before writing", 1)
             d = old
-        entry = {"media_id": a.media_id, "file": str(a.file), "at": now_iso()}
+        fp, hit = Path(str(a.file)), None
+        if not fp.is_absolute():      # a full path, so every reader finds the file whatever folder it works from (Loupe reads the run's records so)
+            hit = next((b / fp for b in (Path.cwd(), rd) if (b / fp).is_file()), None)
+        entry = {"media_id": a.media_id, "file": str(hit.resolve()) if hit else str(a.file), "at": now_iso()}
         if a.content_type:
             entry["content_type"] = a.content_type
         if a.url:
@@ -3701,6 +3704,15 @@ def _cf_requests_named(d, prefix: str) -> list:
     return sorted(set(files), key=lambda f: _cf_req_canon(f.name))
 
 
+def _cf_req_tag(name, nn) -> str:
+    """The generation a request file is for, from its name, as Loupe reads it (runs._request_tag): video-03-c1-a2-request.json is c1-a2, and a name
+    with no attempt is the first (video-03-request.json is a1, video-03-c1-request.json c1-a1); a name with the attempt last reads the same."""
+    name = _cf_req_canon(name)
+    t = name[len(f"video-{nn}"):] if name.startswith(f"video-{nn}") else name
+    t = (t[:-len("request.json")] if t.endswith("request.json") else t).strip("-")
+    return t if re.search(r"(?:^|-)a\d+", t) else (t + "-a1" if t else "a1")
+
+
 def _cf_request_file(rd, video, attempt):
     """The request json of this video and attempt (the newest one when the attempt is not given or not found)."""
     d = rd / "50-requests" if rd else None
@@ -3712,8 +3724,10 @@ def _cf_request_file(rd, video, attempt):
     if not reqs:
         return None
     tok = re.sub(r"[^a-z0-9]+", "-", str(attempt or "").lower()).strip("-")
+    tok = "a" + tok if tok.isdigit() else tok
     if tok:
-        exact = [p for p in reqs if f"-{tok}-" in _cf_req_canon(p.name).lower()]
+        # the attempt's own request by its tag (a clip's first take, c2-a1, is video-NN-c2-request.json, as Loupe reads it), else a name holding it
+        exact = [p for p in reqs if _cf_req_tag(p.name.lower(), nn) == tok or f"-{tok}-" in _cf_req_canon(p.name).lower()]
         if exact:
             return exact[-1]
         if tok in ("a1", "1"):
@@ -4489,7 +4503,8 @@ def _video_request_prompt(rd, video, attempt, model) -> tuple[str, str, dict]:
     tok = re.sub(r"[^a-z0-9]+", "-", str(attempt or "").lower()).strip("-")
     if tok:
         tok = "a" + tok if tok.isdigit() else tok
-        reqs = [p for p in reqs if f"-{tok}-" in _cf_req_canon(p.name).lower() or (tok == "a1" and p.name.lower() == f"video-{nn}-request.json")] or reqs
+        reqs = [p for p in reqs if _cf_req_tag(p.name.lower(), nn) == tok or f"-{tok}-" in _cf_req_canon(p.name).lower()
+                or (tok == "a1" and p.name.lower() == f"video-{nn}-request.json")] or reqs
     found = []
     for p in reqs:
         j = _cf_request_json(p)

@@ -186,6 +186,8 @@ Only these section files for this phase, nothing else unless a step below says s
     request whose product images are not last (`inputs.product_images_not_last`).
   - Multi-clip: one request per clip, `50-requests/video-NN-cK-request.json`. A continuation clip
     uses the guide's extension or "Across clips" wording and restates the seam's hand-off state.
+  - A regeneration (attempt K, from 2) is a request of its own: `50-requests/video-NN-aK-request.json`, a clip's
+    `video-NN-cK-aK-request.json` (the attempt before `-request`); a request the ledger holds keeps its name.
   - Edit Mode: include the model's no-audio setting when it has one (`generate_audio:false`,
     `sound:"off"`). The original audio is merged in X8.
 
