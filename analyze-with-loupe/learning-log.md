@@ -807,3 +807,17 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   `_cf_requests_named` in the caught-flag and QC prompt lookups, `status` and `lint-run`; the files keep their names. Loupe selftest and t03
   check both forms.
 - **Verified:** Tests: Loupe selftest 265 (both name forms, a kept copy left out), transport_check and page_smoke all passed; /analyze-with-loupe t01 98, t02 146, t03 70 (the toolkit reads both forms as Loupe does), t05 73.
+
+## 2026-11-03 · The audit with Loupe: a clip's first take, uploads recorded in full, a regeneration's request name
+
+- **Asked (the user):** "take our time we are not in rush make sure everything works correctly or we didnt let anything aside,also make sure to
+  not let anything out of sync between loupe and analyze with loupe command".
+- **Found:** the caught-flag and QC lookups handed a clip's first take (`--attempt c2-a1`) the video's newest request, where Loupe reads
+  `video-NN-c2-request.json`; 54 uploads entries in four runs named their file relative to the pipeline's home (`runs/<run>/...`), which Loupe
+  read inside the run and missed (those takes offered no image); awl-write-request named no regeneration's request, so runs wrote
+  `video-NN-request-aK.json`.
+- **Changed:** `_cf_req_tag` (the same rule as Loupe's `runs._request_tag`) in `_cf_request_file` and `_video_request_prompt`; `uploads set`
+  records the file in full; awl-write-request names `video-NN-aK-request.json` and `video-NN-cK-aK-request.json`. In Loupe: `runs.run_file` for
+  every recorded file it reads; `sample_origin` hands the judge the sample's own product images (each video's); a new report's product field takes
+  Video A's product words.
+- **Verified:** t01 98, t02 147 (uploads set records a file in full), t03 71 (a clip's first take reads its own request; the toolkit reads every request name's generation as Loupe does), t05 73, docs_tool check 0 errors; Loupe: selftest 272 (a file an uploads record names from the pipeline's home found in the run; sample_origin hands the judge both videos' product images), keeper_sync 112, page_smoke 72 (a new report's product field takes Video A's product words), transport_check.
