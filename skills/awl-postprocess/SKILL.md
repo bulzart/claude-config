@@ -13,18 +13,19 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (1.9 KB)
+- capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.1 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
-- capcut-assembly §3: `AWL/reference/capcut-assembly/030_3_build-the-timeline.md` (5.1 KB)
-- capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (2.3 KB)
-- capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.3 KB)
-- capcut-assembly §6: `AWL/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (1.1 KB)
+- capcut-assembly §3: `AWL/reference/capcut-assembly/030_3_build-the-timeline.md` (5.9 KB)
+- capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (2.5 KB)
+- capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.8 KB)
+- capcut-assembly §6: `AWL/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (1.8 KB)
+- *Create and Free `create` (item 35):* capcut-assembly §3c: `AWL/reference/capcut-assembly/045_3c_the-create-edit-from-clean-takes.md` (3.2 KB)
 - *Create (the sound layer):*
   - capcut-assembly §3b: `AWL/reference/capcut-assembly/040_3b_sound-layer-create.md` (5.1 KB)
-- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
-- text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (3.8 KB)
+- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (6.8 KB)
+- text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (4.2 KB)
 - *a multi-clip video:*
-  - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.4 KB)
+  - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.5 KB)
 - *a video with inserts:*
   - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.6 KB)
 - *Edit Mode or Recreate (the sync check):*
@@ -51,6 +52,9 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
      `text-and-format.md` §4.1);
   3. `T trim` (generated dead head or tail);
   4. `T concat` (multi-clip videos):
+     - **Create (item 35):** the takes are not joined for the edit: each is conformed and checked as its clip, and the CapCut edit
+       (step 6) cuts them; `T concat` joins only one continuous action across two takes (`generation-system.md` §3b) and the clean
+       deliverable's pieces (`capcut-assembly.md` §6);
      - each clip is downloaded to `60-outputs/video-NN/cK/aJ/raw.mp4`, conformed, trimmed and
        QC'd (X9) **before** the next clip is submitted (with QC fixes `off`: no X9, the next clip follows once this one is conformed and trimmed);
      - after the last clip:
@@ -94,6 +98,10 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
      trimmed, joined, with no overlay text (with an own voiceover, the file whose sound is the take: step 5b). After it passes X9 (with QC fixes `off`: at once, no X9), assemble its CapCut project
      (`reference/capcut-assembly.md` §2–§5):
      - `T capcut-name --video NN` → `capcut_clone_draft` (empty) → `T capcut-prep`;
+     - **Create (item 35):** the timeline is the plan's edit plan, built from the conformed takes (`capcut-assembly.md` §3c) with the
+       CapCut tools found live (§1: an update may add or change them): the pieces in order with their speeds, punch-ins and crops, the
+       layouts, transitions, filters and graphics, then the inserts, the text, the sound and the voice as below; what no tool can place
+       (reverse playback or an effect from CapCut's library, when the live list offers none) goes in the README row as "to apply in CapCut";
      - the inserts cut from the reference (`generation-system.md` §3c; in Create only with `memes=include`, item 32);
      - the generation placed, split at each insert point, with each insert in its gap;
      - every overlay text as a text layer;
@@ -101,7 +109,7 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
      - `capcut_validate` → `capcut_save` → the capcut-cli repair lines → the preview.
      If CapCut is running, keep going and assemble all pending projects at the wrap-up.
 
-## Rules this phase owns (contract items 6, 16, 31)
+## Rules this phase owns (contract items 6, 16, 31, 35)
 
 31. **Own voiceover: the delivered file carries the take** (`voiceover.md` §8), never the model's own voice (but §8's fallback) and never a
     re-timed native or lipsync voice; what was kept, laid back, synced or mixed goes in the brief and `result.json → voiceover`; ElevenLabs is
@@ -123,6 +131,10 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
      - A source overlay that carries the joke's context (a notification, a message, a banner) is the
        original element reused as a picture overlay, not re-typed text (CE-017, CE-023).
      - No text layer contains an emoji (the user's rule, strict).
+   - **No sticker or emoji, ever** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant stickers
+     and emojis both, never use them ever, neither in video generation nor edits"): none is generated (no prompt asks for one, in-world screens and props
+     included) and none is placed in CapCut (as a graphic or in a text layer), in any mode; a source's sticker or emoji is removed (Edit
+     Mode) and a reference's is never re-made (Analyze Mode). One printed on the client's product is part of its label.
    - **Every CapCut text layer uses the house text style:** font System, size 10, and **the user's
      chosen preset**, learned from their project `03_Oct_2026_v09` on 2026-10-03 and locked in
      `config.json → capcut.text_style.learned` (white text, black outline). `T capcut-repair` applies
@@ -142,6 +154,9 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
       project holds the clean video, split at each insert point with the insert placed in the gap,
       plus the overlay text as text layers (`reference/capcut-assembly.md`;
       `generation-system.md` §3c).
+35. **Create: the whole edit in CapCut** (item 35, `awl-plan-video`): the takes are clean continuous takes, kept as the originals; this
+    step executes the plan's complete edit from them in CapCut (`capcut-assembly.md` §3c), with the tools it finds live, and never asks a
+    generation for what the edit makes.
 
 ## Never (this phase)
 
@@ -172,6 +187,9 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
 - Never deliver a video that carries the original audio without its sync check (X8 step 5), and
   never leave drift or a moved action unreported. Never fix sync by stretching or looping the
   original audio.
+- Never generate what the edit makes, never build a Create video's project from one joined take when its edit plan cuts the takes, and
+  never deliver it without its takes as the clean originals (item 35).
+- Never place a sticker or an emoji (a graphic, or in a text layer) in a CapCut project, in any mode, whatever tool offers one (item 6).
 
 ## Hand-off
 

@@ -11,7 +11,8 @@
 
 3b. **Craft sheet** (Create): write `20-analysis/craft-sheet.md`, one block per family (and per
    reference whose craft stands out), with two columns from the cards: **collected** (the
-   transferable craft: style, properties, approach, crafting, why it works) and **left behind**
+   transferable craft: style, properties, approach, crafting, why it works, and the edit layer's kinds
+   as the editing craft that the CapCut edit plan makes, command item 35) and **left behind**
    (the subject: premise, setting, characters, action sequence, joke content, lines, caption
    wording, props, first frame, ending image, the source product's beat, the sound). Create
    ideation reads only the first column for the how and invents the what

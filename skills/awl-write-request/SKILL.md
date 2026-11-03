@@ -17,11 +17,11 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §2.4 (call recipes), §2.6 (9:16/720p), §3.1–§3.7 (structure, subject and identity, action, environment and light, chronology, camera, references), §3.10–§3.14 (negatives, visible text, identity consistency, product fidelity, integration), §4.0 (official examples: the pattern card) and the §4.x of the request kind (4.1 text-to-video, 4.2 frames, 4.3 reference, 4.4 edit/extension); §3.8 when frames are used; §3.9 when audio is used; §6 when a model feature is planned
 - generation-system §4: `AWL/reference/generation-system/100_4_replacement-and-insertion-integr.md` (3.3 KB)
-- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
+- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.2 KB)
 - generation-system §5b: `AWL/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5c.3: `AWL/reference/generation-system/270_5c.3_the-fidelity-lock-in-the-prompt.md` (3.1 KB)
 - generation-system §7: `AWL/reference/generation-system/320_7_translating-the-plan-into-the-se.md` (2.7 KB)
-- generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (4.3 KB)
+- generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
 - *Edit Mode or Recreate:*
   - generation-system §5c.2: `AWL/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
   - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.5 KB)
@@ -41,7 +41,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (9.6 KB)
 - *a person is swapped (the skin-tone sentence):*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
-- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
+- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (6.8 KB)
 - *guardrail operations in the plan:*
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - *an own voiceover (the plan has a Voiceover block; item 31):*
@@ -61,7 +61,7 @@ Only these section files for this phase, nothing else unless a step below says s
     by every step below, as always: it is the **checked draft** (X4 checks it next). Write with it the pattern card's **"Must carry"** block and
     the same lines in `RUN/40-briefs/video-NN-musts.md`, one per line, word for word: every sentence the prompt must carry exactly (the fidelity
     lock, the clean-plate lines, the camera lock, the product's targeted exclusion, a guardrail operation, the
-    voiceover's dialogue or no-dialogue line). X2 never asks the judge: after X4, `awl-precheck` X4b hands the judge the whole checked brief
+    voiceover's dialogue or no-dialogue line, a Create take's single-take line: item 35). X2 never asks the judge: after X4, `awl-precheck` X4b hands the judge the whole checked brief
     (the plan's beats and goal, this draft, its must-carry lines, the model's structure) and the judge's answer becomes the request's prompt,
     word for word (`T template-apply`).
   - **A regeneration or a re-edit** never asks the judge for a new prompt: the corrected prompt is the request's prompt (the judge's) with the
@@ -135,6 +135,16 @@ Only these section files for this phase, nothing else unless a step below says s
       excluded person. Never "blur", "pixelate" or "cover".
     - Analyze Mode prompts are always **clean plates**: no overlay text. The only lettering is the
       product's own label, logo or badge.
+    - **A Create take (item 35; a Free `create` video too)** is one continuous shot of the scene, written in the locked model's own
+      single-take phrasing (its guide §3.5) with the take plan's one camera setup and continuous action. It generates what belongs to the
+      scene: the characters, objects, environment, action, interactions, camera work, light and storytelling; the magic,
+      transformations, fantastical phenomena and exaggerated movement that belong to the world; the chosen art direction (linework,
+      shading, textures, animation style). It never asks for, names or describes the edit: no cut, montage, fade, wipe, dissolve or
+      transition; no caption, title, label, sticker, emoji, arrow, badge, button, overlay logo, interface decoration, border or frame;
+      no split screen, picture-in-picture, grid or collage; no speed ramp, freeze frame, replay, reverse, punch-in, artificial shake or
+      animated crop; no decorative particle, glow, glitch or motion graphic; and no reference's overlay or layout. In-world text and
+      symbols the plan names (a sign, a book's title, a shirt's print, a display; never an emoji, item 6) are written exactly, beside the product's label in
+      the clean-plate carve-out, and join QC's `--allowed-text`. The single-take sentence is a must-carry line.
     - **Own voiceover** (the plan's Voiceover block; item 31): build the request by the run's method (its guide's §2.2, §3.7 and §3.9;
       the table of `voiceover.md` §6): **native** binds the take as the driving audio, **lipsync** writes its words verbatim as dialogue
       (the sync pass is the agent's, in X8), **overlay** writes the no-dialogue line; the duration as §6 says; no music.
@@ -173,7 +183,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - Edit Mode: include the model's no-audio setting when it has one (`generate_audio:false`,
     `sound:"off"`). The original audio is merged in X8.
 
-## Rules this phase owns (contract items 5, 19)
+## Rules this phase owns (contract items 5, 19, 35)
 
 5. **Fixed output: vertical 9:16 at 720p (720×1280)** for every generation in both modes. Never ask.
    Map it to each model's own parameters (`index.json → output_9x16_720p`) and conform
@@ -203,6 +213,8 @@ Only these section files for this phase, nothing else unless a step below says s
       Edit Mode.
     Create is not affected: it makes new scenes, and its sound is built in CapCut on their own
     beats.
+35. **A Create take is one clean continuous shot** (item 35, `awl-plan-video`): the scene and its visual language only, in the model's
+    single-take phrasing; the edit (cuts, transitions, text, graphics, layouts, speed effects, decorative effects) is CapCut's.
 
 ## Never (this phase)
 
@@ -252,6 +264,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - Never send an Edit Mode or Recreate request, the first one included, without the fidelity lock
   (item 19): the change scoped with "only", the full keep-list, the exclusions and, for models that
   rebuild the action, the source action script written out in order.
+- Never write a cut, a transition or any word of the edit into a Create take's prompt, and never describe a reference's overlay or
+  layout in it (item 35).
 
 ## Hand-off
 

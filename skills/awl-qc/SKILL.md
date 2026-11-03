@@ -30,9 +30,9 @@ Only these section files for this phase, nothing else unless a step below says s
   - anomaly-catalog §2.16: `AWL/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (3.9 KB)
 - *a person is swapped (skin tone face vs hands):*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
-- generation-system §9: `AWL/reference/generation-system/340_9_post-generation-qc-after-downloa.md` (9.0 KB)
-- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
-- generation-system §9b: `AWL/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.8 KB)
+- generation-system §9: `AWL/reference/generation-system/340_9_post-generation-qc-after-downloa.md` (8.6 KB)
+- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.2 KB)
+- generation-system §9b: `AWL/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.7 KB)
 - generation-system §5b: `AWL/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5d: `AWL/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
 - *a contents video, or a vessel of the product's category:*
@@ -43,17 +43,17 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.5 KB)
   - generation-system §5c.5: `AWL/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (2.3 KB)
 - *a multi-clip video, or a source with hard cuts (shot structure):*
-  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
-  - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.4 KB)
+  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.7 KB)
+  - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.5 KB)
 - creative-direction §8: `AWL/reference/creative-direction/110_8_creative-qc-x9-as-notes-the-narr.md` (0.9 KB)
 - brand-guardrails §5: `AWL/reference/brand-guardrails/050_5_qc-x9-and-the-wrap-up.md` (1.3 KB)
 - *Analyze Mode (the CapCut project):*
-  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.3 KB)
+  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.8 KB)
 - *an own voiceover (the plan has a Voiceover block; item 31):*
   - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.3 KB) (the fix routes)
   - voiceover §10: `AWL/reference/voiceover/100_10_qc-of-a-voiceover-x9.md` (1.4 KB)
 - *a `result.json` field this phase writes (a fix proposal under QC fixes `ask`, the keeper's gaps, the voiceover verdict):*
-  - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.1 KB)
+  - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.6 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §5 (failure table); §9 when a retry is planned
 - the plan's QC checkpoints (`RUN/40-briefs/video-NN-plan.md`), the contract's checks (`AWL/reference/production-agents/` §3 item 13, for a production agent)
 
@@ -222,6 +222,13 @@ Only these section files for this phase, nothing else unless a step below says s
     frame wherever its anchor does; the camera and the performer's pose in the last third match the source;
     every readable thing and handed object reads the right way round. A reference image's artefacts copied into
     the take (a soft label, a thick rim, a lid notch, the source's scene or person) are a regenerate reason.
+  - **Clean takes** (Create and Free `create`, item 35): every take, on its storyboard and at full resolution, is one continuous shot
+    (`capcut detect-scenes "<take>"` prints the cut points with their scores; you judge each: a real cut, montage, fade, wipe or dissolve
+    inside a take is a regenerate reason, a fast in-world motion is not) and carries nothing editorial (a caption, title, label, sticker,
+    emoji, arrow, badge, button, overlay logo, interface decoration, border, frame or panel divider, a split screen, picture-in-picture,
+    grid or collage, a speed effect or a freeze, a decorative particle, glow, glitch or motion graphic): one found is a regenerate reason,
+    never covered in CapCut. The in-world text the plan names reads as planned (`T qc --allowed-text`), and the art direction, the
+    in-world effects and the continuity across takes hold as planned.
   - **Shot structure** (`anomaly-catalog.md` §4 step 5i; `generation-system.md` §3b.1 item 7; Recreate and
     Edit Mode with hard cuts): the output's cuts against the source's shot list: the same count at the same
     times, person-free cutaways still person-free, the placed product in every shot where its anchor is in
@@ -266,10 +273,13 @@ Only these section files for this phase, nothing else unless a step below says s
   - **CapCut project** (Analyze Mode, `capcut-assembly.md` §5):
     - the read-back timeline matches the plan (pieces, inserts, text times and positions; with `memes=none`, no insert at all);
     - overlays exist only on their visible frames and fade with the picture; a Recreate's original audio
-      is one segment; no text layer contains an emoji;
+      is one segment; no sticker or emoji is anywhere in the project, as a graphic or in a text layer (item 6);
     - an own voiceover is audible at 1.0 (native, lipsync: the clip's audio; overlay: its own track), nothing muted by mistake;
     - `capcut lint` reports 0 errors;
-    - the preview shows the right order, sound and text.
+    - the preview shows the right order, sound and text;
+    - Create (item 35): the read-back timeline matches the edit plan: every piece (its take, in, out, speed and track) in order, every
+      keyframe, mask, transition, filter, graphic and text at its time, and what no tool could place listed in the README row (the
+      preview flattens the main track only).
     Fix in the project, not by regenerating.
   - Apply the post-fixes (`trim`, `conform`, `restore-audio`, a sync offset) that need no new generation.
   - **Analyze Mode verdict** (the production agent's; item 27):
@@ -284,7 +294,7 @@ Only these section files for this phase, nothing else unless a step below says s
       A second miss after an approved fix ships the best take flagged and asks nothing;
     - or report the failure honestly.
 
-## Rules this phase owns (contract items 14, 19, 21, 27)
+## Rules this phase owns (contract items 14, 19, 21, 27, 35)
 
 14. **Analyze Mode: the client's product is always in the video.** This applies when the supplied
     assets include a product or physical object of any size (a drink, a pack of gum, a car), or
@@ -376,6 +386,9 @@ Only these section files for this phase, nothing else unless a step below says s
     (`trim`, `conform`, `restore-audio`, a sync offset, a local regrade) and CapCut fixes need no permission in either case. `off`: this phase does not run at all (the
     production agent goes from X8 to X10; `awl-postprocess` hand-off): no check, no consult, no regeneration, and the user says what to fix after everything is delivered.
     Edit Mode has no automatic regeneration.
+35. **Create: clean takes, the edit in CapCut** (item 35, `awl-plan-video`): QC checks every take clean and continuous, then the finished
+    edit against the edit plan; a baked-in editorial element or a cut inside a take is a regenerate reason (by the QC-fix choice, item 27),
+    never something CapCut covers.
 
 ## Never (this phase)
 
@@ -437,6 +450,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - Never deliver a video that carries the original audio without its sync check (X8 step 5), and
   never leave drift or a moved action unreported. Never fix sync by stretching or looping the
   original audio.
+- Never accept a Create take with a cut, a transition or an editorial element inside it as fixable by covering it in CapCut (item 35).
 
 ## Hand-off
 

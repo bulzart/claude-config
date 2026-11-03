@@ -15,7 +15,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - brand-guardrails §3: `AWL/reference/brand-guardrails/030_3_the-guardrail-audit-per-referenc.md` (3.2 KB)
 - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
-- analysis-protocol §5: `AWL/reference/analysis-protocol/060_5_cross-video-synthesis.md` (5.3 KB)
+- analysis-protocol §5: `AWL/reference/analysis-protocol/060_5_cross-video-synthesis.md` (5.4 KB)
 - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.6 KB)
 - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
 - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
@@ -24,7 +24,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a placed product (the original is the only video reference; spot and size in the prompt):*
   - generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
 - *a source with many hard cuts (item 7: separate clips on its own cuts):*
-  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
+  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.7 KB)
 - creative-direction §5.2: `AWL/reference/creative-direction/080_5.2_the-best-approach-both-sub-modes.md` (1.0 KB)
 - text-and-format §2: `AWL/reference/text-and-format/020_2_edit-mode-removing-source-text.md` (3.3 KB)
 - text-and-format §4: `AWL/reference/text-and-format/040_4_fixed-output-format-9-16-at-720p.md` (2.6 KB)

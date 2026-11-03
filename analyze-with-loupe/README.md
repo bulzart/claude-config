@@ -267,6 +267,37 @@ It fails open, and the refusal tells the agent to copy instead. It reads the run
 writes retry an atomic replace a reader held (on Windows a reader can make `os.replace` fail: measured 145 of 300 without the retry, 0 with
 it).
 
+## Create: clean source takes, the whole edit in CapCut (contract item 35)
+The user, 2026-11-03, with their own rules for every Create video ("Generate clean source shots first, then assemble and finish the video through CapCut MCP"; "Clean" means free of baked-in editorial additions and never
+restricts the genre, art style or imagination of the scene), then, on how many generations: "we can do only 2 of 15seconds video generations and then split them across, insert, do cuts or whatever it takes to achieve similar video styles and edits like the references had, and do the editing with the capcut, no need to do 5 video generations of 6 seconds". It applies to every Create video and
+every Free video of kind `create`; Recreate (which edits the reference whole) and Edit Mode keep their own rules.
+- **A3** (`awl-analyze-study`, analysis-protocol §3): every card separates the reference's **edit layer** (cuts and shot lengths,
+  transitions, punch-ins, speed effects, layouts such as split screens and picture-in-picture, graphics, decorative VFX, finishing, each
+  with its times) from its **scene layer** (the art direction, the in-world text, symbols and effects); the craft sheet carries the edit
+  layer's kinds as the editing craft the CapCut edit makes (creative-direction §5.0).
+- **A6** (`awl-create-plan`): every seed says how its CapCut edit carries the family's editing and how few takes feed it.
+- **X1** (`awl-plan-video`): the **edit plan** (the final composition on the CapCut timeline, written first) and the **take plan** (as few
+  clean continuous takes as the locked model's longest duration allows, a 30 s video from two 15 s takes, never one generation per shot;
+  one camera setup and one continuous action each, framed and with trimming room for the edit, no divider, placeholder or layout guide).
+- **X2, X4, X4b** (`awl-write-request`, `awl-precheck`): a take's prompt is one continuous shot in the model's own single-take phrasing
+  (its guide §3.5, a must-carry line) and never a word of the edit; in-world text the plan names is written exactly and carved out beside
+  the product's label (text-and-format §1); the judge's brief says so.
+- **X8** (`awl-postprocess`, capcut-assembly §3c): the timeline is built from the conformed takes by the edit plan: pieces (`srcStartSec`,
+  `durSec`), speed, freeze frames (a still from `T frames --at`), keyframed punch-ins, pans, shake and animated crops, masks and layered
+  tracks for layouts, transitions, filters, supplied graphics, then the inserts, text, sound and voice. The agents **find the CapCut tools
+  live** (the user: "capcut may be updated and commands change so they should also try to figure out themself too"): `ToolSearch` with `+capcut` lists every tool the MCP offers now, the catalog tools what CapCut holds, and
+  `capcut --help` the CLI; the tools the sections name are suggestions. What no tool can place (reverse playback, CapCut's effect library,
+  when the live list offers none) goes in the README row "to apply in CapCut". The router allows the edit's tools (keyframes, masks,
+  filters, transitions and their catalogs, segment delete) and never the caption, transcript or raw-patch tools.
+- **X9** (`awl-qc`): every take is one continuous shot (`capcut detect-scenes` prints the cut points; the agent judges) with nothing
+  editorial in it, a regenerate reason when it is not; the project is read back against the edit plan (the preview flattens the main
+  track only).
+- **X10** (`awl-record`, capcut-assembly §6): the takes are delivered as the clean originals (`video-NN-take-K.mp4`); the clean deliverable
+  is the edit's main track cut together without text; the final is exported from CapCut.
+- **No sticker or emoji, ever** (the user: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant stickers and emojis both, never use them ever, neither in video generation nor edits"): item 6 for every mode, in a generation (no prompt asks for one) and
+  in the edit (as a graphic or in a text layer); the sticker tool is neither allowed nor named, a reference's sticker or emoji is never
+  re-made, and one printed on the client's product is its label.
+
 ## Orientation
 The output keeps the original's perspective (the user, 2026-10-27): a source is never flipped, in any mode. A front-camera selfie keeps its
 own reversed print and signs as the original shows them, while the client's product label reads correctly; only an identity photo that is

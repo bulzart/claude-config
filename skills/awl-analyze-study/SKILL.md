@@ -16,11 +16,11 @@ Only these section files for this phase, nothing else unless a step below says s
 - analysis-protocol §0: `AWL/reference/analysis-protocol/010_0_provenance-labels-use-everywhere.md` (0.6 KB)
 - analysis-protocol §1: `AWL/reference/analysis-protocol/020_1_inputs-per-video-produced-by-awl.md` (1.6 KB)
 - analysis-protocol §2: `AWL/reference/analysis-protocol/030_2_reading-a-video-as-one-continuou.md` (5.8 KB)
-- analysis-protocol §3: `AWL/reference/analysis-protocol/040_3_per-video-card-20-analysis-cards.md` (5.5 KB)
+- analysis-protocol §3: `AWL/reference/analysis-protocol/040_3_per-video-card-20-analysis-cards.md` (6.3 KB)
 - analysis-protocol §4: `AWL/reference/analysis-protocol/050_4_effectiveness-lenses-apply-those.md` (2.1 KB)
-- analysis-protocol §5: `AWL/reference/analysis-protocol/060_5_cross-video-synthesis.md` (5.3 KB)
+- analysis-protocol §5: `AWL/reference/analysis-protocol/060_5_cross-video-synthesis.md` (5.4 KB)
 - analysis-protocol §6: `AWL/reference/analysis-protocol/070_6_project-inference-20-analysis-pr.md` (2.4 KB)
-- analysis-protocol §7: `AWL/reference/analysis-protocol/080_7_scale-and-delegation-2-analysis.md` (3.3 KB)
+- analysis-protocol §7: `AWL/reference/analysis-protocol/080_7_scale-and-delegation-2-analysis.md` (3.4 KB)
 - analysis-protocol §8: `AWL/reference/analysis-protocol/090_8_presenting-results-to-the-user.md` (0.2 KB)
 - analysis-protocol §9: `AWL/reference/analysis-protocol/100_9_examples-the-user-s-own-videos-t.md` (3.1 KB)
 - creative-direction §1: `AWL/reference/creative-direction/010_1_the-roles.md` (1.8 KB)
@@ -28,7 +28,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - creative-direction §3: `AWL/reference/creative-direction/030_3_the-audience-model-mass-cognitio.md` (3.0 KB)
 - creative-direction §4: `AWL/reference/creative-direction/040_4_the-trend-read-written-into-20-a.md` (2.1 KB)
 - *Create only (the craft sheet):*
-  - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (4.7 KB)
+  - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - brand-guardrails §3: `AWL/reference/brand-guardrails/030_3_the-guardrail-audit-per-referenc.md` (3.2 KB)
 - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
 - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
@@ -66,6 +66,14 @@ Only these section files for this phase, nothing else unless a step below says s
       instances: style, properties, approach, crafting and why it works, kept apart from the
       subject lines (premise, setting, characters, actions, joke, lines, props, ending) that a
       Create video must not reuse;
+    - its **edit layer**, apart from its **scene layer** (Create and Free, item 35; protocol §3): everything the reference's edit adds,
+      each with its times (the cuts and shot lengths, transitions, punch-ins and animated crops, speed ramps, freeze frames, replays,
+      reverse playback, artificial shake, multi-view layouts and what fills each panel, stickers and emojis (read, never re-made: item 6), arrows, badges, buttons,
+      overlay logos, interface decorations, borders and frames, decorative particles, glows, glitches and motion graphics, the finishing
+      treatment), and what the frames show inside it: the art direction (live action, anime, cartoon or stylised: linework, shading,
+      textures, animation style), the in-world text and symbols and the in-world effects (magic, transformations, exaggerated motion).
+      The test, on lists that are not exhaustive: what belongs to the scene and its visual language is the scene layer; what labels,
+      decorates, arranges or repackages it is the edit layer;
     - its **guardrail audit** (protocol §2.13; `brand-guardrails.md` §3): every hit against
       `30-assets/guardrails.md` with its time, element, prominence and place (picture, caption,
       speech, insert, reflection), classified core or peripheral by the meaning test, and the
@@ -105,7 +113,8 @@ Write, following the protocol §5–§6:
 - `20-analysis/families.md`: dynamic content families with measured profiles;
 - **Create:** `20-analysis/craft-sheet.md` (protocol §5 step 3b): per family, what is
   **collected** (style, properties, approach, crafting, why it works) and what is **left behind**
-  (the subject). Ideation reads only the collected column;
+  (the subject). Ideation reads only the collected column, which carries the edit layer's kinds as the editing craft that the
+  CapCut edit plan makes (item 35);
 - in `20-analysis/project-profile.md`, the **goal**, the **audience model** and the **trend read**
   (`creative-direction.md` §2–§4; protocol §6);
 - `20-analysis/project-profile.md`: domain, objective, authoritative requirements, entities,
@@ -144,7 +153,7 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 - **Free:** the count the requirement states (`RUN/00-inventory/requirement.md`), without a question; only when it states none, ask as for Create.
 - Store the answer in `requested_videos`.
 
-## Rules this phase owns (contract items 18, 20, 21)
+## Rules this phase owns (contract items 18, 20, 21, 35)
 
 18. **Examples: the user's own finished videos (optional, both modes).** They are asked for with the
     other inputs (§2.5). The folder may be empty or absent; then nothing changes.
@@ -190,6 +199,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     floor (`generation-system.md` §9b rows 1–6) and the generation service's blocks apply;
     alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
     them, and nothing is blurred, softened or removed for taste.
+35. **Create: the scene layer and the edit layer** (item 35, `awl-plan-video`): every Create and Free card separates what a generation
+    makes (the scene, its art direction, its in-world text, symbols and effects) from what the reference's edit adds (cuts, transitions,
+    punch-ins, speed effects, layouts, graphics, decorative effects, finishing); the craft sheet carries the edit layer's kinds as the
+    editing craft that the CapCut edit plan makes, never a prompt.
 
 ## Never (this phase)
 

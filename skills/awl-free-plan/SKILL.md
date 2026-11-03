@@ -19,7 +19,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - creative-direction §7: `AWL/reference/creative-direction/100_7_hook-payoff-loop-text-and-sound.md` (1.1 KB)
 - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - generation-system §4b.0: `AWL/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
-- *with references (`state.json → free_references = yes`):* `RUN/20-analysis/synthesis.md`, the cards the requirement names (`RUN/20-analysis/cards/`), and creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (4.7 KB)
+- *with references (`state.json → free_references = yes`):* `RUN/20-analysis/synthesis.md`, the cards the requirement names (`RUN/20-analysis/cards/`), and creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - *when a video will edit a reference (kind `recreate`, step 3):* the source-preparation steps E4–E5 of `C:/Users/Glaresquare1/.claude/skills/awl-recreate-plan/SKILL.md` (Read that file from its heading "Edit Mode's E4–E5, as Recreate uses them" to its end; nothing before it)
 - *only when the requirement asks for an own voiceover (step 2b; item 31):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
@@ -103,7 +103,8 @@ at X9, the flag record), the CapCut assembly and the deliverables. Nothing is as
     achieve, how many, what happens, the product and its use, references edited or re-made or only studied, length, text, sound); the
     pipeline keeps the hard rules, the locked model's own prompting, the plan discipline, the QC stack, Loupe's samples and misses, the
     CapCut assembly and the deliverables. Every video carries its own kind (`state.json → videos_kind`): wherever a per-video skill says
-    "Recreate:" or "Create:", the video follows its kind's branch.
+    "Recreate:" or "Create:", the video follows its kind's branch. A `create` video follows item 35 (clean continuous takes, as few
+    as its length allows, and the whole edit in CapCut) as Create does; a `recreate` video keeps Recreate's rules.
 
 ## Never (this phase)
 

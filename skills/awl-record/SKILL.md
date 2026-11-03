@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- capcut-assembly §6: `AWL/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (1.1 KB)
-- production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.1 KB)
+- capcut-assembly §6: `AWL/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (1.8 KB)
+- production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.6 KB)
 
 A production agent does not touch `state.json → videos[]` or `next_step`: it writes `result.json` and `readme-row.md`, and the main session appends `videos[]` as the agent reports (`production-agents` §5 item 1).
 
@@ -37,7 +37,10 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
       assembled locally from the pieces, the inserts and (Recreate) the original audio, and never
       replaced by the generated-only `60-outputs/video-NN/clean.mp4` when the video has inserts;
     - `RUN/deliverables/video-NN-preview.mp4`: a 720×1280 ffmpeg burn of the CapCut text layer over the clean video
-      (never the 540×960 capcut-cli proxy; `capcut-assembly.md` §6).
+      (never the 540×960 capcut-cli proxy; `capcut-assembly.md` §6);
+    - Create and Free `create` (item 35): `RUN/deliverables/video-NN-take-K.mp4`, every take conformed and untouched by the edit (the
+      clean originals); the clean deliverable is the edit's main track cut together without text (`capcut-assembly.md` §6), and the
+      README row lists what is to be applied in CapCut by hand (reverse playback, an effect from CapCut's library) when no tool placed it.
   - Append a row to `RUN/deliverables/README.md` (an agent writes it to
     `60-outputs/video-NN/readme-row.md` and the main session appends it as the agent reports, A9b): direction, model, params, prompt file, assets, job
     id, attempt, credits, verdict (with QC fixes `off`: "not checked (QC off)", and `result.json → qc` = "off: not checked (the user reviews at the end)"), final path, notes. For a multi-clip video, list every clip's

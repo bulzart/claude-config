@@ -32,6 +32,9 @@ Voiceover: <voiceover> (state.json → voiceover, command item 31). Not off and 
 voice (X3 uploads it, X8 step 5b carries it, X9 checks it and `result.json → voiceover` records it, as your skills' voiceover sections
 say); you never call ElevenLabs (a take that must change: blocker `voiceover`).
 Memes: <memes> (state.json → memes, command item 32).
+Create edit: <yes for a Create video or a Free `create` video, else no> (command item 35). Yes: your takes are clean continuous takes;
+X8 step 6 builds your plan's whole edit in CapCut from them with the tools you find live (capcut-assembly §1, §3c), X9 checks every
+take clean and the project against the edit plan, and X10 delivers the takes as the clean originals.
 Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md, <RUN>/50-requests/video-NN*.json
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 

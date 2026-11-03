@@ -13,13 +13,14 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (4.7 KB)
+- creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §5.1: `AWL/reference/creative-direction/070_5.1_concept-seeds-scored-create-a6.md` (2.8 KB)
 - creative-direction §5.2: `AWL/reference/creative-direction/080_5.2_the-best-approach-both-sub-modes.md` (1.0 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - creative-direction §7: `AWL/reference/creative-direction/100_7_hook-payoff-loop-text-and-sound.md` (1.1 KB)
 - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - generation-system §4b.0: `AWL/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
+- capcut-assembly §3c: `AWL/reference/capcut-assembly/045_3c_the-create-edit-from-clean-takes.md` (3.2 KB)
 - *an own voiceover (`state.json → voiceover.enabled` true; item 31):*
   - voiceover §3: `AWL/reference/voiceover/030_3_writing-the-lines-x1.md` (2.3 KB)
   - voiceover §5: `AWL/reference/voiceover/050_5_on-camera-or-off-screen-and-whic.md` (1.1 KB)
@@ -57,6 +58,10 @@ Only these section files for this phase, nothing else unless a step below says s
   - **Memes** (`state.json → memes`; item 32): `include` (or no key) allows a meme or another cut-in where the family's language needs it
     (`generation-system.md` §3c); with `none` no seed uses one, and a reference's meme beat (a pause, a reaction, a punchline) is played by
     the seed's own generated scene, never by a generated copy of the meme. The choice wins over the house approach.
+  - **Its edit and its takes** (item 35): every seed says how its CapCut edit carries the family's editing craft (the edit layer of the
+    craft sheet: the cut rhythm, the layouts, the speed effects, the graphics, the finishing) and how few clean continuous takes feed that
+    edit within its length (the user: a 30 s video from two 15 s takes, never one generation per shot); a seed whose edit needs more takes
+    than its length allows is adapted or scores low on feasibility.
   - Each one exploits the patterns that made the references go viral: hook type and timing,
     structure, pacing, content type, camera, humour, and payoff.
   - The client's product is blended into the concept (its most suitable use, `generation-system.md`
@@ -73,7 +78,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - A meme the style calls for may still be placed in CapCut (an insert cut from a reference, or a supplied file), only with
     `memes=include` (item 32).
 
-## Rules this phase owns (contract items 16, 20)
+## Rules this phase owns (contract items 16, 20, 35)
 
 16. **Analyze Mode: reference inserts are cut, never generated, and every video ends in CapCut.**
     - A meme or other insert that interrupts the reference (e.g. 13 s of footage + a 2 s meme with
@@ -96,6 +101,38 @@ Only these section files for this phase, nothing else unless a step below says s
     why the video will work; and QC judges the hook, the payoff and the share line as notes. The
     creative layer never overrides the hard rules (items 6, 14, 15, 18, 19 and the anomaly
     catalog); it decides which references, mechanisms and concepts win inside them.
+35. **Create: clean source takes, the whole edit in CapCut** (the user, 2026-11-03: "Generate clean source shots first, then assemble and
+    finish the video through CapCut MCP", and "we can do only 2 of 15seconds video generations and then split them across, insert, do cuts or
+    whatever it takes to achieve similar video styles and edits like the references had, and do the editing with the capcut, no need to do 5
+    video generations of 6 seconds"). Every Create video and every Free video of kind `create`, whatever its genre (live action, animation,
+    anime, cartoon, stylised visuals, fictional or abstract worlds); Recreate and Edit Mode keep their own rules.
+    - **Clean means no baked-in editorial addition; it never limits the genre, the art style or the imagination of the scene.** A take
+      generates the scene: the characters, objects, environments, actions, interactions, camera work, light and visual storytelling; the
+      magic, transformations, fantastical phenomena, exaggerated movement or other effects that belong to the depicted action or world; the
+      chosen art direction (linework, shading, textures, animation style, expressive visual language); and the text and symbols that belong
+      to the depicted world (a sign, a book, a clothing design, a display the scene needs), planned and written exactly.
+    - **Never in a take, always in the CapCut edit:** editorial captions, subtitles, titles, headlines, lower thirds, annotations, labels and
+      animated typography; added arrows, badges, buttons, overlay logos, interface decorations, borders and graphic frames; editorial
+      cuts, montages, fades, wipes, dissolves and transitions between shots; split screens, picture-in-picture, comparison panels,
+      grids and collages; editorial speed ramps, freeze frames, replays, reverse playback, digital punch-ins, artificial shake and animated
+      cropping; decorative VFX, overlay particles, graphic glows, glitches, motion graphics and finishing treatments.
+    - **Stickers and emojis, never** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant stickers
+      and emojis both, never use them ever, neither in video generation nor edits"): none in a take and none in the
+      edit, as a graphic or in a text layer, whatever the live tool list offers (item 6); a reference's sticker or emoji is never re-made,
+      and a role it played goes to a text layer, a punch-in or a supplied graphic, or is dropped. One printed on the product is its label.
+    - **The edit is planned first** (X1; `capcut-assembly.md` §3c): the final composition, built from the family's edit layer, with the framing
+      and trimming room it needs and no divider, placeholder or layout guide in any take. The edit plan stays apart from every prompt, and no
+      reference's overlay or layout is reproduced in a generation.
+    - **As few takes as the length allows** (the user): a 30 s video comes from two 15 s takes that CapCut splits, cuts, reorders and inserts
+      to reach the references' editing style, never from one generation per shot. A take is one continuous shot (one camera setup, one
+      continuous action); another setup, angle or scene is its own take only when no punch-in or crop of a take gives it, and a multi-view
+      layout is composed in CapCut from independent clean takes. The takes keep character designs, object states, spatial relationships and
+      story continuity consistent by the depicted world's own rules.
+    - **Finished in CapCut** (X8–X10): the takes are inspected and corrected, the complete edit is executed with the CapCut tools found live
+      (`capcut-assembly.md` §1), the finished result is verified, the clean takes are kept as the originals, and the editable project is
+      delivered with the final exported from CapCut.
+    - The lists are not exhaustive: generate what belongs to the scene and its visual language; edit the additions that label, decorate,
+      arrange or repackage it.
 
 ## Never (this phase)
 
@@ -110,6 +147,8 @@ Only these section files for this phase, nothing else unless a step below says s
   reference's style, properties, approach, crafting and hook logic, and makes another video with a
   new subject and a new idea; a seed that fails the copy test is rewritten or dropped
   (`creative-direction.md` §5.0).
+- Never plan a Create video whose look depends on an editorial element baked into a generation (a caption, a sticker, a split screen,
+  a transition, a speed effect, a decorative effect), and never plan one generation per shot (item 35).
 
 ## Hand-off
 

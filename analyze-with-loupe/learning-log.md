@@ -755,3 +755,24 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   and S46's photo to this run's by its fingerprint ('IMG_6917 #846e6464': A273 in their run, A274 here, where A273 is IMG_6916.jpg) and kept
   the draft's product images; the morning's flags on the two ids and on S44's product field are gone. `_product_plan` on that draft turns
   'A273 IMG_6917.jpg #846e6464' into A274 (noted); the same without a fingerprint is a problem, nothing applied.
+
+## 2026-11-03 · Create: clean source takes, the whole edit in CapCut; no sticker or emoji, ever
+
+- **Reported (the user):** their rules for Create ("Generate clean source shots first, then assemble and finish the video through CapCut MCP"; clean means free of baked-in editorial additions, never a limit on the
+  genre, the art style or the imagination), "without losing anything that's in our current pipeline"; then, asked about one
+  generation per shot: "we can do only 2 of 15seconds video generations and then split them across, insert, do cuts or whatever it takes to achieve similar video styles and edits like the references had, and do the editing with the capcut, no need to do 5 video generations of 6 seconds"; then "capcut may be updated and commands change so they should also try to figure out themself too"; then "never use or apply stickers, ever, neither in the video generation nor in the edit", and "when i said stickers i meant stickers and emojis both, never use them ever, neither in video generation nor edits".
+- **What was there:** the clean plate held for text only (text-and-format §1: overlay text as CapCut layers); a generation could
+  hold several shots joined by hard cuts; the CapCut project was one joined clean video plus inserts, text and the reference's own
+  transitions; the CapCut tools were a fixed list.
+- **Changed:** contract item 35 (Create and Free `create`; Recreate and Edit Mode unchanged), owned by `awl-create-plan` and
+  `awl-plan-video`, carried by `awl-analyze-study` (the cards' edit layer apart from the scene layer), `awl-free-plan`,
+  `awl-write-request` (one continuous shot in the model's single-take phrasing, a must-carry line, never a word of the edit),
+  `awl-precheck`, `awl-postprocess` (the whole edit from the takes, capcut-assembly §3c, new), `awl-qc` (`capcut detect-scenes`;
+  the project against the edit plan), `awl-record` (the takes as the clean originals) and the production agents' contract. The
+  takes are as few as the locked model's longest duration allows (a 30 s video from two 15 s takes), never one per shot. The
+  agents find the CapCut tools live (`ToolSearch +capcut`, the catalog tools, `capcut --help`); the named tools are suggestions;
+  the router allows keyframes, masks, filters, transitions and their catalogs and segment delete, never the caption, transcript
+  or raw-patch tools. No sticker or emoji, ever: item 6, every mode, in a generation and in the edit (a graphic or a text layer);
+  the sticker tool neither allowed nor named. In-world text the plan
+  names is carved out beside the product's label. The skills' Read-now sizes follow the refreshed index tables.
+- **Verified:** t01 (98, five new: item 35 in the router, its owners and the agents' contract; the whole item in its two owners; the CapCut section, the cards' edit layer, the take check and the clean originals; the live tool discovery and the router's tools; no sticker or emoji), t02 (146), t03 (69), t05 (73) pass; `docs_tool.py check` 0 errors.

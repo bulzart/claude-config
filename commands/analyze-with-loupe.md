@@ -47,6 +47,14 @@ allowed-tools:
   - mcp__capcut__capcut_set_track_mute
   - mcp__capcut__capcut_add_audio_fade
   - mcp__capcut__capcut_add_transition
+  - mcp__capcut__capcut_list_transitions
+  - mcp__capcut__capcut_add_keyframe
+  - mcp__capcut__capcut_remove_keyframes
+  - mcp__capcut__capcut_add_mask
+  - mcp__capcut__capcut_list_masks
+  - mcp__capcut__capcut_add_filter
+  - mcp__capcut__capcut_list_filters
+  - mcp__capcut__capcut_delete_segment
   - mcp__capcut__capcut_validate
   - mcp__capcut__capcut_save
   - mcp__capcut__capcut_discard
@@ -109,7 +117,7 @@ and handle it before anything else (item 22).
 5. **Fixed output: vertical 9:16 at 720p (720×1280)** for every generation in both modes. Never ask.
    Map it to each model's own parameters (`index.json → output_9x16_720p`) and conform
    deterministically. Never stretch.
-6. **Text.** Edit Mode removes all source text unless the user keeps some. Analyze Mode generates clean plates and places all overlay text afterwards as CapCut layers in the house text style (horizontally centred, no emoji). → `awl-plan-video`, `awl-postprocess`
+6. **Text.** Edit Mode removes all source text unless the user keeps some. Analyze Mode generates clean plates and places all overlay text afterwards as CapCut layers in the house text style (horizontally centred, no emoji). **No sticker or emoji, ever** (the user, 2026-11-03): none is generated (no prompt asks for one) and none is placed in an edit (as a graphic or in a text layer), in any mode (one printed on the product is its label). → `awl-plan-video`, `awl-postprocess`
 7. **Client- and niche-agnostic.**
    - Never assume an industry, a product, a character swap, or a fixed template.
    - Infer the domain, the entities, what to preserve / replace / adapt / ignore, and the objective
@@ -146,6 +154,7 @@ and handle it before anything else (item 22).
 32. **Memes in Create (the user's choice).** Create asks beside the voiceover method: **include** (memes and other cut-in clips as the style calls for, item 16) or **none** (pure generation: no insert or meme sound of any kind; a reference's meme beat is played by the generated scene). It wins over the house approach; `state.json → memes`, none set = include. → `awl-start`, `awl-create-plan`, `awl-plan-video`, `awl-postprocess`, `awl-qc`
 33. **Effort level (the user's choice, both modes).** Low, Medium, High, XHigh or Max (the settings before this choice), all five offered in plain chat, sets how densely the references are sampled, the agents at once and the pilot threshold (`state.json → effort`, read by `T prep-all` and the produce phase; a new run's is empty until stored, and `T prep-all` stops on it); coverage and the floors never change, and QC and Loupe are never part of it (`reference/effort.md`). → `awl-start`, `awl-analyze-prepare`, `awl-analyze-produce`
 34. **The user's folders are read-only** (the user, 2026-10-27): nothing in the references, assets, examples or edit-source folders is moved, renamed, deleted or overwritten by this session or any agent; a file needed in the run folder or elsewhere is copied, never moved (only the toolkit adds its own derived folders there: `files_audio/`, `videos_without_audio/`, Edit Mode's `final/`). The `awl_input_guard` hook refuses a move, delete, Write or Edit inside the references, edit-source or examples folders of a run that is not done. → every skill
+35. **Create: clean source takes, the whole edit in CapCut** (the user, 2026-11-03; every Create video and every Free video of kind `create`; Recreate and Edit Mode keep their own rules). The analysis reads each reference's scene layer apart from its edit layer; the plan writes the CapCut edit first (the final composition), then the takes that feed it: as few generations as the length allows (a 30 s video is two 15 s takes, never one generation per shot), each one clean continuous take of the scene in its art style, with its in-world text, symbols and effects, and nothing editorial in it (no cut or transition, caption, title, label, sticker, emoji, arrow, badge, button, overlay logo, interface decoration, border or frame, split screen, picture-in-picture, grid or collage, speed effect or decorative VFX); CapCut makes the cuts, inserts, punch-ins, speed effects, layouts, graphics, effects and text from the takes (never a sticker or an emoji, item 6), with the tools the agent finds live in the CapCut MCP and capcut-cli (an update may add or change them); QC checks every take clean and the finished edit against the plan; the takes stay as the clean originals. → `awl-analyze-study`, `awl-create-plan`, `awl-free-plan`, `awl-plan-video`, `awl-write-request`, `awl-precheck`, `awl-postprocess`, `awl-qc`, `awl-record`
 
 ## Phases (the skills)
 
@@ -171,7 +180,7 @@ it). A regeneration or re-edit runs `awl-write-request` → (`awl-inputs` for ne
 
 **Labels** (as cited in the skills and the references): §1 paths and §2 Start, items 4 · 11 · 17 → `awl-start` · A1, A2, A2b → `awl-analyze-prepare` · A3, A4, A5 → `awl-analyze-study` · A6 → `awl-create-plan` ·
 A6r (the "R-steps" of item 17; E4–E5 as Recreate uses them are repeated in it) → `awl-recreate-plan` · A6f → `awl-free-plan` · A7, A7b → `awl-asset-plan` · A8, A9, A9b, A10 → `awl-analyze-produce` · E1–E7, X9-R → `awl-edit` · X1 → `awl-plan-video` · X2 → `awl-write-request` · X3 → `awl-inputs` ·
-X4, X5, X6 → `awl-precheck` (X5 also in `awl-submit`) · X7 → `awl-submit` · X8 → `awl-postprocess` · X9 → `awl-qc` · X10 → `awl-record` · §6, §6b → `awl-wrapup` · item 22 → `awl-feedback` · item 23 → `awl-submit` · item 24 → `awl-start` (the question), `awl-analyze-prepare` and `awl-edit` (`prep-all`) · item 25 → every skill · item 26 → `awl-analyze-produce` · item 27 → `awl-start` (the question), `awl-qc` (the proposal), `awl-analyze-produce` (the fix question) · item 31 → `awl-start`, the plan skills, every per-video skill, `awl-analyze-produce`, `awl-wrapup`, `awl-feedback` · item 32 → `awl-start`, `awl-free-plan`, `awl-create-plan`, `awl-asset-plan`, `awl-plan-video`, `awl-precheck`, `awl-postprocess`, `awl-qc`, `awl-analyze-produce` · item 33 → `awl-start`, `awl-analyze-prepare`, `awl-edit`, `awl-analyze-study`, `awl-analyze-produce`, `awl-wrapup` · item 34 → every skill and agent (the `awl_input_guard` hook).
+X4, X5, X6 → `awl-precheck` (X5 also in `awl-submit`) · X7 → `awl-submit` · X8 → `awl-postprocess` · X9 → `awl-qc` · X10 → `awl-record` · §6, §6b → `awl-wrapup` · item 22 → `awl-feedback` · item 23 → `awl-submit` · item 24 → `awl-start` (the question), `awl-analyze-prepare` and `awl-edit` (`prep-all`) · item 25 → every skill · item 26 → `awl-analyze-produce` · item 27 → `awl-start` (the question), `awl-qc` (the proposal), `awl-analyze-produce` (the fix question) · item 31 → `awl-start`, the plan skills, every per-video skill, `awl-analyze-produce`, `awl-wrapup`, `awl-feedback` · item 32 → `awl-start`, `awl-free-plan`, `awl-create-plan`, `awl-asset-plan`, `awl-plan-video`, `awl-precheck`, `awl-postprocess`, `awl-qc`, `awl-analyze-produce` · item 33 → `awl-start`, `awl-analyze-prepare`, `awl-edit`, `awl-analyze-study`, `awl-analyze-produce`, `awl-wrapup` · item 34 → every skill and agent (the `awl_input_guard` hook) · item 35 → `awl-analyze-study`, `awl-create-plan`, `awl-free-plan`, `awl-plan-video`, `awl-write-request`, `awl-precheck`, `awl-postprocess`, `awl-qc`, `awl-record` and the production agents' contract.
 A rule that two phases both act on is written in both skills.
 
 ## Never (global; each skill carries the rest of the Never list for its own phase)

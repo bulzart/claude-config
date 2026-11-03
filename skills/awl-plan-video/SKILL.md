@@ -18,21 +18,21 @@ Provenance labels: **[E]** evidence · **[I]** inference · **[U]** user instruc
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - generation-system §1: `AWL/reference/generation-system/010_1_the-dependency-chain.md` (1.2 KB)
-- generation-system §2: `AWL/reference/generation-system/020_2_work-backward-from-the-finished.md` (3.9 KB)
+- generation-system §2: `AWL/reference/generation-system/020_2_work-backward-from-the-finished.md` (4.0 KB)
 - generation-system §3: `AWL/reference/generation-system/030_3_entity-state-ledger-one-continuo.md` (3.8 KB)
 - generation-system §4: `AWL/reference/generation-system/100_4_replacement-and-insertion-integr.md` (3.3 KB)
 - generation-system §5: `AWL/reference/generation-system/210_5_logic-continuity-and-anti-slop-g.md` (4.6 KB)
 - generation-system §5b: `AWL/reference/generation-system/220_5b_physical-motion-follows-physics.md` (2.9 KB)
 - generation-system §5d: `AWL/reference/generation-system/300_5d_counts-openings-and-object-perma.md` (1.7 KB)
-- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
-- generation-system §9b: `AWL/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.8 KB)
+- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.2 KB)
+- generation-system §9b: `AWL/reference/generation-system/350_9b_what-must-not-survive-and-what-i.md` (4.7 KB)
 - *a contents or placement video:*
   - generation-system §4b: `AWL/reference/generation-system/110_4b_natural-placement-and-contents-w.md` (1.2 KB)
   - generation-system §4b.0: `AWL/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
   - generation-system §4b.1: `AWL/reference/generation-system/130_4b.1_choose-the-anchor-by-the-product.md` (2.4 KB)
   - generation-system §4b.1b: `AWL/reference/generation-system/140_4b.1b_posture-support-and-place-every.md` (2.6 KB)
   - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
-  - generation-system §4b.2: `AWL/reference/generation-system/160_4b.2_prominence-noticed-not-featured.md` (2.5 KB)
+  - generation-system §4b.2: `AWL/reference/generation-system/160_4b.2_prominence-noticed-not-featured.md` (2.4 KB)
   - generation-system §4b.3: `AWL/reference/generation-system/170_4b.3_one-anchor-persistent-ledger-tra.md` (3.0 KB)
   - generation-system §4b.4: `AWL/reference/generation-system/180_4b.4_ambient-integration-it-must-not.md` (2.7 KB)
 - *a placed product (spot and size in the prompt; Recreate and Edit Mode: the original is the only video reference):*
@@ -41,7 +41,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
 - *a multi-clip video, or a Recreate/Edit source with hard cuts (item 7: separate clips on the source's own cuts):*
   - generation-system §3b: `AWL/reference/generation-system/040_3b_videos-longer-than-one-generatio.md` (0.8 KB)
-  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.3 KB)
+  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.7 KB)
 - *a video with inserts:*
   - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.6 KB)
 - anomaly-catalog §0: `AWL/reference/anomaly-catalog/010_0_four-questions-behind-every-anom.md` (1.5 KB)
@@ -66,15 +66,17 @@ Only these section files for this phase, nothing else unless a step below says s
 - creative-direction §4: `AWL/reference/creative-direction/040_4_the-trend-read-written-into-20-a.md` (2.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *Create (the craft carried, the copy test):*
-  - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (4.7 KB)
+  - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - *Edit Mode:*
   - creative-direction §9: `AWL/reference/creative-direction/120_9_edit-mode.md` (0.3 KB)
-- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (5.7 KB)
-- text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (3.8 KB)
+- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (6.8 KB)
+- text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (4.2 KB)
 - *Edit Mode (the substitution map):*
   - assets-and-substitution §4: `AWL/reference/assets-and-substitution/040_4_substitution-map-per-video.md` (2.4 KB)
 - *guardrails supplied:*
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
+- *Create and Free `create` (the edit plan, item 35):*
+  - capcut-assembly §3c: `AWL/reference/capcut-assembly/045_3c_the-create-edit-from-clean-takes.md` (3.2 KB)
 - *Create (the sound plan):*
   - capcut-assembly §3b: `AWL/reference/capcut-assembly/040_3b_sound-layer-create.md` (5.1 KB)
 - *an own voiceover (`state.json → voiceover.enabled` true and, in Free, this video in `voiceover.videos` when that key exists; item 31):*
@@ -124,7 +126,8 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       --distance d --lens f` prints it and a table over the usual shot distances), the one named
       neighbour at the same depth with the ratio in words, the size ladder when several products
       show, and the size it keeps across motion, exits and cuts;
-    - the per-second time budget from the family profile;
+    - the per-second time budget from the family profile (Create, item 35: on the final timeline, each row naming the take and the
+      span it comes from);
     - roles and assets;
     - the scene;
     - Edit Mode and Recreate: the **source action script** with its keep / change marks and sync
@@ -160,6 +163,19 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       - the generated length (the reference minus its inserts);
       - each split point as a planned beat boundary;
       - each insert's cut (in, out, video or still, sound, overlays to clean);
+    - the **edit plan** (Create and Free `create`, item 35; `capcut-assembly.md` §3c), written before the takes: the final composition on
+      the CapCut timeline, from the family's edit layer (the craft sheet; the cards' "Edit layer"): every piece in order (its take, in and
+      out), the cut rhythm, the inserts (with `memes=include`), the punch-ins and animated crops, the speed ramps, freeze frames, replays
+      and any reverse playback, the artificial shake, the transitions, the multi-view layouts (the take that fills each panel, its crop,
+      position and sync), the graphics (never a sticker or an emoji, item 6), the decorative effects and the finishing treatment, each with its time; the text plan and the
+      sound plan below are part of it. Nothing of it is written into a prompt;
+    - the **take plan** (Create and Free `create`, item 35): the clean continuous takes that feed the edit, as few as the locked model's
+      longest duration allows (the user: a 30 s video from two 15 s takes, never one generation per shot); for each take its one camera
+      setup, its continuous action with the beats the edit's pieces take from it and their times inside the take, a little trimming room
+      at both ends, and the framing the edit needs (a panel's crop, a punch-in's target, the text bands kept clear), with no divider,
+      placeholder or layout guide in the picture; an extra take only for a setup, angle, scene or panel that no punch-in or crop of
+      another take gives; the takes share identities, wardrobe, light, props and the product's state and anchor (the ledger), so
+      pieces of different takes cut together;
     - the **text plan** (Analyze Mode, `text-and-format.md` §3): every overlay text event with its
       wording, final-timeline time and position, always in the house text style (item 6). It is
       placed in CapCut later and never generated;
@@ -175,7 +191,8 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       the take (§4 steps 1–3: `T voiceover outdir`, one `text_to_speech` call, `T voiceover record`; a recorded take is never voiced again);
       its fit and the plan re-timed to it (§4 steps 4–6: the beats on its phrases, the duration by the method, three phrase starts and one
       pause as QC checkpoints); lipsync names its sync pass, native on Wan 2.7 its start frame; the user's own files: §4 step 7;
-    - for a **multi-clip** video, the **clip plan** (`generation-system.md` §3b):
+    - for a **multi-clip** video, the **clip plan** (`generation-system.md` §3b; Create: the take plan above, where §3b's hand-off and
+      join stand only for one continuous action that spans two takes and every other join is a CapCut cut):
       - the seams, on the reference's cuts first;
       - the join method of each seam (from `index.json → continuation`);
       - the hand-off state of each seam;
@@ -186,12 +203,13 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       occlusion, cut, hand-off, pour and seam, plus the first second (the product in frame at 0.0 s) and
       the last, the product's position against a fixed neighbour at least every 0.25 s, and every
       transition, insert start and end and overlay start and end of the CapCut timeline, each with its time
-      range and the counts and states expected there. X9 renders them with `T qc --dense`;
+      range and the counts and states expected there; Create (item 35): each take's continuity (one shot, nothing editorial in it)
+      and every event of the edit plan. X9 renders them with `T qc --dense`;
     - conflict resolution.
   - Use the provenance labels.
   - Analyze Mode: rotate approved characters across videos when no assignment is given.
 
-## Rules this phase owns (contract items 6, 9, 14, 16, 18, 21, 31)
+## Rules this phase owns (contract items 6, 9, 14, 16, 18, 21, 31, 35)
 
 31. **Own voiceover: the take is the timing master** (`voiceover.md`): this session writes, voices and records each voiced video's take
     and plans the video to it; production agents upload, carry, check and record it, and never voice anything.
@@ -212,6 +230,10 @@ a blocker with the real error (`voiceover.md` §4 step 8).
      - A source overlay that carries the joke's context (a notification, a message, a banner) is the
        original element reused as a picture overlay, not re-typed text (CE-017, CE-023).
      - No text layer contains an emoji (the user's rule, strict).
+   - **No sticker or emoji, ever** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant stickers
+     and emojis both, never use them ever, neither in video generation nor edits"): none is generated (no prompt asks for one, in-world screens and props
+     included) and none is placed in CapCut (as a graphic or in a text layer), in any mode; a source's sticker or emoji is removed (Edit
+     Mode) and a reference's is never re-made (Analyze Mode). One printed on the client's product is part of its label.
    - **Every CapCut text layer uses the house text style:** font System, size 10, and **the user's
      chosen preset**, learned from their project `03_Oct_2026_v09` on 2026-10-03 and locked in
      `config.json → capcut.text_style.learned` (white text, black outline). `T capcut-repair` applies
@@ -311,6 +333,38 @@ a blocker with the real error (`voiceover.md` §4 step 8).
     floor (`generation-system.md` §9b rows 1–6) and the generation service's blocks apply;
     alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
     them, and nothing is blurred, softened or removed for taste.
+35. **Create: clean source takes, the whole edit in CapCut** (the user, 2026-11-03: "Generate clean source shots first, then assemble and
+    finish the video through CapCut MCP", and "we can do only 2 of 15seconds video generations and then split them across, insert, do cuts or
+    whatever it takes to achieve similar video styles and edits like the references had, and do the editing with the capcut, no need to do 5
+    video generations of 6 seconds"). Every Create video and every Free video of kind `create`, whatever its genre (live action, animation,
+    anime, cartoon, stylised visuals, fictional or abstract worlds); Recreate and Edit Mode keep their own rules.
+    - **Clean means no baked-in editorial addition; it never limits the genre, the art style or the imagination of the scene.** A take
+      generates the scene: the characters, objects, environments, actions, interactions, camera work, light and visual storytelling; the
+      magic, transformations, fantastical phenomena, exaggerated movement or other effects that belong to the depicted action or world; the
+      chosen art direction (linework, shading, textures, animation style, expressive visual language); and the text and symbols that belong
+      to the depicted world (a sign, a book, a clothing design, a display the scene needs), planned and written exactly.
+    - **Never in a take, always in the CapCut edit:** editorial captions, subtitles, titles, headlines, lower thirds, annotations, labels and
+      animated typography; added arrows, badges, buttons, overlay logos, interface decorations, borders and graphic frames; editorial
+      cuts, montages, fades, wipes, dissolves and transitions between shots; split screens, picture-in-picture, comparison panels,
+      grids and collages; editorial speed ramps, freeze frames, replays, reverse playback, digital punch-ins, artificial shake and animated
+      cropping; decorative VFX, overlay particles, graphic glows, glitches, motion graphics and finishing treatments.
+    - **Stickers and emojis, never** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant stickers
+      and emojis both, never use them ever, neither in video generation nor edits"): none in a take and none in the
+      edit, as a graphic or in a text layer, whatever the live tool list offers (item 6); a reference's sticker or emoji is never re-made,
+      and a role it played goes to a text layer, a punch-in or a supplied graphic, or is dropped. One printed on the product is its label.
+    - **The edit is planned first** (X1; `capcut-assembly.md` §3c): the final composition, built from the family's edit layer, with the framing
+      and trimming room it needs and no divider, placeholder or layout guide in any take. The edit plan stays apart from every prompt, and no
+      reference's overlay or layout is reproduced in a generation.
+    - **As few takes as the length allows** (the user): a 30 s video comes from two 15 s takes that CapCut splits, cuts, reorders and inserts
+      to reach the references' editing style, never from one generation per shot. A take is one continuous shot (one camera setup, one
+      continuous action); another setup, angle or scene is its own take only when no punch-in or crop of a take gives it, and a multi-view
+      layout is composed in CapCut from independent clean takes. The takes keep character designs, object states, spatial relationships and
+      story continuity consistent by the depicted world's own rules.
+    - **Finished in CapCut** (X8–X10): the takes are inspected and corrected, the complete edit is executed with the CapCut tools found live
+      (`capcut-assembly.md` §1), the finished result is verified, the clean takes are kept as the originals, and the editable project is
+      delivered with the final exported from CapCut.
+    - The lists are not exhaustive: generate what belongs to the scene and its visual language; edit the additions that label, decorate,
+      arrange or repackage it.
 
 ## Never (this phase)
 
@@ -361,6 +415,8 @@ a blocker with the real error (`voiceover.md` §4 step 8).
   (§1), and never run X9 without the plan's QC checkpoints rendered dense (`T qc --dense`).
 - Never write a voiceover line a reference spoke, never voice a script twice or a recorded take again, never leave a take unrecorded,
   and never let the model's own voice stand in for a take (item 31).
+- Never plan a Create take with a cut, a transition or any editorial addition inside it, never plan one generation per shot, and never
+  put the edit plan into a prompt (item 35).
 
 ## Hand-off
 

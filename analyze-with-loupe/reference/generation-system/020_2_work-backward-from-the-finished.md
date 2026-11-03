@@ -39,7 +39,8 @@ Rules:
 - The **duration** comes from the content family's typical length and the concept, and must be one
   the selected model supports. Too long for one generation → plan clips per §3b, with explicit
   hand-off states (§3), assembled with `awl.py concat`. Hard cuts only where the family's editing
-  style cuts.
+  style cuts (Create, command item 35: made in CapCut from clean continuous takes, never inside a
+  generation; §3b.1 item 8).
 - **Hook density, information density and payoff timing** follow the family profile from the
   analysis, not generic AI editing habits.
 - **Reference inserts** (memes, §3c) are not in the generated time budget. Their split points are

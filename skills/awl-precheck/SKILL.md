@@ -15,9 +15,9 @@ Callers. Edit Mode: X4, X5, X6 in sequence for the video. Analyze Mode, this ses
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.3 KB)
-- generation-system §8: `AWL/reference/generation-system/330_8_pre-generation-qc-pass-mental-re.md` (7.4 KB)
-- generation-system §10: `AWL/reference/generation-system/360_10_the-short-brief-printed-at-x6.md` (3.2 KB)
+- generation-system §6: `AWL/reference/generation-system/310_6_conflict-resolution-resolve-befo.md` (4.2 KB)
+- generation-system §8: `AWL/reference/generation-system/330_8_pre-generation-qc-pass-mental-re.md` (7.0 KB)
+- generation-system §10: `AWL/reference/generation-system/360_10_the-short-brief-printed-at-x6.md` (2.9 KB)
 - *Edit Mode or Recreate:*
   - generation-system §5c.2: `AWL/reference/generation-system/250_5c.2_the-most-preserving-input-and-pa.md` (2.4 KB)
   - generation-system §5c.4: `AWL/reference/generation-system/280_5c.4_check-before-spending-x4.md` (0.5 KB)
@@ -61,8 +61,11 @@ Only these section files for this phase, nothing else unless a step below says s
     opposite things of the same beat, no "never" or "always" stands outside the product's one targeted exclusion and the fidelity
     lock's scoped "only", and every placement, posture and use line follows from the product's own details and what the source scene
     offers, not from an example. A line that fights another is dropped by the §6 order of authority, with its reason in the brief.
+  - **Clean take** (Create and Free `create`, item 35): the draft is one continuous shot in the model's single-take phrasing, with no word
+    of the edit (no cut, transition, caption, graphic, layout, speed effect or decorative effect), the in-world text named exactly and in
+    the carve-out, and every piece of the edit plan comes from this video's takes.
   - **Must carry** (the first request of a video): the pattern card's "Must carry" block and `RUN/40-briefs/video-NN-musts.md`
-    hold, word for word and one per line, every sentence the prompt must carry exactly (the fidelity lock, the clean-plate lines, the camera lock, the targeted exclusion, a guardrail operation, the voiceover line), and the
+    hold, word for word and one per line, every sentence the prompt must carry exactly (the fidelity lock, the clean-plate lines, the camera lock, the targeted exclusion, a guardrail operation, the voiceover line, a Create take's single-take line), and the
     draft carries each of them. The judge builds the final prompt on this checked draft and these lines (X4b).
   - **Size** (`anomaly-catalog.md` §2.7): every product's reckoning, its distance derived from the
     frame and not assumed, is in the plan and in the prompt for every shot; a start frame was measured
@@ -96,7 +99,8 @@ Only these section files for this phase, nothing else unless a step below says s
   1. Write the judge brief `RUN/40-briefs/video-NN-judge-brief.md`: what you are working on (run, video, mode, the locked model, the
      request kind and its inputs with their roles), what the video is about (one line per beat of the plan: what happens, the product's
      form and state, the camera), what it wants to achieve (the goal, the moment that must land, what it keeps of the source), and what
-     X4 found the prompt must respect (a size, a count, a fallback).
+     X4 found the prompt must respect (a size, a count, a fallback). A Create take (item 35) says so: one clean continuous take that
+     the CapCut edit cuts, and no word of the edit in the prompt.
   2. `T prompt-template --run RUN --video NN --structure-file RUN/50-requests/video-NN-pattern.md --product "<form>" --product-details
      "<its shape, size, opening and natural posture, from its registry row>"` (a clip: `--clip cK`). The toolkit sends that brief, the
      checked draft's prompt, parameters and inputs (each with the client's original it was made from: its asset id, its file name and how
@@ -154,7 +158,7 @@ Only these section files for this phase, nothing else unless a step below says s
     planned and asked (item 22).
   - Analyze Mode: no gate; the brief is information (item 15). Edit Mode: the E6 gate.
 
-## Rules this phase owns (contract items 12)
+## Rules this phase owns (contract items 12, 35)
 
 12. **Generation discipline: no spam, no glitches.**
     - Every paid Higgsfield generation (`generate_video`, and `generate_image` for start frames)
@@ -166,6 +170,8 @@ Only these section files for this phase, nothing else unless a step below says s
     - Never repeat an identical finished request.
     - Preflight (`get_cost`) once per distinct request.
     - Never call generation tools to "test" or "retry just in case".
+35. **A Create take is checked clean before it is spent** (item 35, `awl-plan-video`): one continuous shot, no word of the edit, and the
+    judge told so in its brief.
 
 ## Never (this phase)
 

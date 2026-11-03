@@ -5,7 +5,10 @@
   - every text event is at its planned time and position;
   - `T capcut-text-style --draft "<store>/<name>" --check` reports 0 texts off the house style
     (its `size` is the video's: 10, or 11 when the video has only a little text, §3);
-  - no text layer contains an emoji.
+  - no sticker or emoji is anywhere in the project, as a graphic or in a text layer (command item 6);
+  - Create (command item 35): every piece of the edit plan (its take, in, out, speed and track) in order, and every keyframe,
+    mask, transition, filter, graphic and text at its time; what no tool could place is listed in the README row. The preview
+    flattens the main track only: the layouts, keyframes, masks, filters and graphics are checked here, on the timeline read back.
 - On the preview (`awl.py qc --video <capcut-preview.mp4> --out <dir> --expect-size 540x960`, plus
   its storyboard), check:
   - the cut into and out of every insert, and the sound;

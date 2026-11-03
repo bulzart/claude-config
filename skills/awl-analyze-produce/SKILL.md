@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- production-agents §1: `AWL/reference/production-agents/010_1_prepared-by-this-session-before.md` (1.9 KB)
-- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (16.4 KB)
+- production-agents §1: `AWL/reference/production-agents/010_1_prepared-by-this-session-before.md` (1.7 KB)
+- production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (17.5 KB)
 - production-agents §3: `AWL/reference/production-agents/030_3_the-agent-s-contract.md` (8.6 KB)
 - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 - higgsfield-mcp §1: `AWL/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)

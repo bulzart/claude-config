@@ -19,7 +19,7 @@ Stored as section files in `creative-direction/` (next to this file); **read onl
 | 3 | The audience model (mass cognition) | `030_3_the-audience-model-mass-cognitio.md` | 3.0 |
 | 4 | The trend read (written into `20-analysis/project-profile.md`, "Trend re | `040_4_the-trend-read-written-into-20-a.md` | 2.1 |
 | 5 | Ideation and selection (Create), and the best approach | `050_5_ideation-and-selection-create-an.md` | 0.1 |
-| 5.0 | · Transfer, not repetition: the craft sheet and the copy test (Create) | `060_5.0_transfer-not-repetition-the-craf.md` | 4.7 |
+| 5.0 | · Transfer, not repetition: the craft sheet and the copy test (Create) | `060_5.0_transfer-not-repetition-the-craf.md` | 5.1 |
 | 5.1 | · Concept seeds, scored (Create, A6) | `070_5.1_concept-seeds-scored-create-a6.md` | 2.8 |
 | 5.2 | · The best approach (both sub-modes) | `080_5.2_the-best-approach-both-sub-modes.md` | 1.0 |
 | 6 | The sharpness gate (before a concept enters a plan) | `090_6_the-sharpness-gate-before-a-conc.md` | 1.0 |

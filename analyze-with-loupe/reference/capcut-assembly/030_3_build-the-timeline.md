@@ -1,4 +1,6 @@
 ## 3. Build the timeline
+Create and Free `create` videos (command item 35) lay their main track from the takes by §3c; step 1 below is
+Recreate's, steps 2–5 apply to both.
 Inputs:
 - the accepted **clean video** `60-outputs/video-NN/clean.mp4`: the generation, joined if
   multi-clip, conformed and trimmed, without overlay text;

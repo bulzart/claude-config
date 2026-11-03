@@ -29,11 +29,11 @@ Only these section files for this phase, nothing else unless a step below says s
 - higgsfield-mcp §6: `AWL/higgsfield/higgsfield-mcp/060_6_elements-reusable-project-assets.md` (1.3 KB)
 - assets-and-substitution §5: `AWL/reference/assets-and-substitution/050_5_getting-references-into-the-mode.md` (2.9 KB)
 - *a multi-clip video (hand-off inputs):*
-  - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.4 KB)
+  - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.5 KB)
 - *a placed product (the original is the only video reference; spot and size in the prompt):*
   - generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
 - *a production agent (the `blocked` path and the QC `continuity` text are defined here):*
-  - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.1 KB)
+  - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.6 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §2.2 (media roles), §3.7 (references), §3.8 (frames)
 - *an own voiceover with the native or lipsync method (the plan's Voiceover block; item 31):*
   - voiceover §7: `AWL/reference/voiceover/070_7_uploading-the-take-x3.md` (0.7 KB)

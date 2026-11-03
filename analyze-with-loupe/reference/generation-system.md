@@ -18,10 +18,10 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | § | Section | File | KB |
 |---|---|---|---|
 | 1 | The dependency chain | `010_1_the-dependency-chain.md` | 1.2 |
-| 2 | Work backward from the finished video | `020_2_work-backward-from-the-finished.md` | 3.9 |
+| 2 | Work backward from the finished video | `020_2_work-backward-from-the-finished.md` | 4.0 |
 | 3 | Entity state ledger (one continuous evolving state) | `030_3_entity-state-ledger-one-continuo.md` | 3.8 |
 | 3b | Videos longer than one generation | `040_3b_videos-longer-than-one-generatio.md` | 0.8 |
-| 3b.1 | · Plan the clips (in the video plan, before any request) | `050_3b.1_plan-the-clips-in-the-video-plan.md` | 2.3 |
+| 3b.1 | · Plan the clips (in the video plan, before any request) | `050_3b.1_plan-the-clips-in-the-video-plan.md` | 2.7 |
 | 3b.2 | · Join methods, by the locked model's capability (`continuation` in the in | `060_3b.2_join-methods-by-the-locked-model.md` | 3.2 |
 | 3b.3 | · Seam discipline | `070_3b.3_seam-discipline.md` | 2.5 |
 | 3b.4 | · Files and ledger | `080_3b.4_files-and-ledger.md` | 0.5 |
