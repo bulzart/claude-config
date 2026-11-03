@@ -796,3 +796,14 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   §1 (the usual tools by name, a narrow search only for an operation they lack, the catalogs only when needed), §3c, §5; text-and-format §1
   (item 6: no sticker or emoji added); generation-system §3b.1.
 - **Verified:** t01 98 pass (the whole item 35 in awl-plan-video and the A6 part in awl-create-plan; the narrow CapCut tool search; no sticker or emoji added); t02 146, t03 69, t05 73 unchanged since the code did not change; `docs_tool.py check` 0 errors.
+
+## 2026-11-03 · Request files named with the attempt last are read like the usual form
+
+- **Reported (the user):** report 36 (run 20261102-233733-02, video 06): "it is the a2 generation that doesnt have any in its assets slot"; then
+  "yes fix it".
+- **Cause:** the run wrote the take's request as `video-06-request-a2.json`; Loupe and the toolkit only knew `video-06-a2-request.json`, so
+  the take had no request (no sent images, no prompt). Nine such files across two runs.
+- **Changed:** Loupe `runs.request_canon` and `request_files_named`, used by every request-name parser; `awl.py` `_cf_req_canon` and
+  `_cf_requests_named` in the caught-flag and QC prompt lookups, `status` and `lint-run`; the files keep their names. Loupe selftest and t03
+  check both forms.
+- **Verified:** Tests: Loupe selftest 265 (both name forms, a kept copy left out), transport_check and page_smoke all passed; /analyze-with-loupe t01 98, t02 146, t03 70 (the toolkit reads both forms as Loupe does), t05 73.
