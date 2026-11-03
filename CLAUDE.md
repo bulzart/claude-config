@@ -18,3 +18,27 @@ Keep, in this order:
 
 Drop only: greetings, repeated attempts that led nowhere, and raw tool output that is already summarised
 by its result.
+
+# Reporting a change
+
+When you change something for the user (code, a prompt, a command or skill, a rule, a setting, a document), report it
+this way, in plain everyday words and short sentences:
+
+- What you did: a few sentences on what changed, what it does now and how you checked it. No file-by-file log.
+- Then a numbered list of what the change might also do that the user may not want, and of the choices you made that
+  they might want differently. Look for: wording stricter or wider than meant (a title says "never" where the aim is
+  "as few as possible"); normal, wanted things it could now block, flag or reject (a real camera zoom read as an added
+  effect, old files a new check refuses); things it could push an agent to avoid, cram or score lower; cost or time it
+  adds (more generations or credits, a slower page); other places that use what changed and could now disagree with it
+  (another command, a doc, a test).
+- Each point: a short name, what could happen shown with one concrete example from the user's work, why it happens,
+  and "Fix:" with the smallest change that keeps the aim. One idea per point, a few short sentences. When only the
+  user can decide, end the point with a short question that names the options.
+- One closing line: "Tell me which numbers to change", plus the questions to answer.
+
+Limits: keep in view what the change is for; every fix keeps that aim, and a point that is not about it does not
+belong. List only what is likely in the user's real work, never padding; when there is nothing, say so in one line and
+ask nothing. Fix a plain mistake in your own work before you report instead of listing it. Apply no listed fix until
+the user picks it, unless they already asked you to fix what you find. No file paths, code names or jargon in the list
+unless the user needs them to find something. A pipeline run's videos and edits are reported by its own wrap-up and
+feedback questions, not by this list. A subagent reporting to another agent keeps its own format.
