@@ -726,3 +726,9 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   t03_loupe.py with CRLF endings (as the 3c33e1b auto-commit had); put back to LF before any commit.
 - **Verified:** t01 (93), t02 (146), t03 (66), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 260, keeper_sync 112, page_smoke,
   transport_check, flags_smoke pass.
+- **The live check (2026-11-03):** given the real brief of run 20261102-233733-02 video 15 c1 under the test name sync-check-20261103, the real
+  judge judged all 19 samples in 164 s (7 read and used, 4 designed out from their records, 8 set aside, none unjudged) with a 4927-character
+  prompt; the misses it designed out came from other products by mechanism (a pasted look, a distant product looking fake, the product's size
+  changing, something passing through the carton). It wrote each designed-out entry as one note (the miss, then 'Designed out by: ...'), so an
+  avoided entry is now `mechanism` (the miss and what this video shares with it) and `where` (the part of the prompt that designs it out), an
+  older answer's `why` read as its mechanism; and the judgement file names the draft's product images when the judge keeps them.

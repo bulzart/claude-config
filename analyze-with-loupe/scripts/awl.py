@@ -4894,11 +4894,12 @@ def _draft_section(path) -> tuple[str, str]:
             f"Parameters: {params or '-'}\nInputs:\n{inputs_text or '-'}" + (f"\n{prod_text}" if prod_text else "")), prompt
 
 
-def _judgement_md(run: str, video: str, clip: str, d: dict, model_id: str, note: str = "") -> str:
+def _judgement_md(run: str, video: str, clip: str, d: dict, model_id: str, note: str = "", kept: list | None = None) -> str:
     """The judge's whole judgement for one video's (or clip's) prompt, as the file the run keeps beside its template (the admin, 2026-11-03: "for each
     product answer what and why and decide judgement let it do a .md file that will be saved for each video", never in the chat): the samples whose
     prompts it read and what it took from each, every other sample whose miss could happen in this video and where its prompt designs it out, the
-    samples it set aside and why, the product images, its changes to the plan, its notes, what the library does not cover and its flags."""
+    samples it set aside and why, the product images (the draft's, named, when it keeps them: `kept`), its changes to the plan, its notes, what the
+    library does not cover and its flags."""
     head = f"# The judge's judgement: video {_cf_nn(video)}" + (f", clip {clip}" if clip else "") + f" of run {run}"
     meta = (f"{now_iso()} · video model {model_id or '?'} · {d.get('library_size', '?')} sample{'' if d.get('library_size') == 1 else 's'} in the library · prompts read: "
             f"{', '.join(d.get('read') or []) or 'none'}" + (f" · asked again with the note: {note}" if note else ""))
@@ -4913,14 +4914,14 @@ def _judgement_md(run: str, video: str, clip: str, d: dict, model_id: str, note:
     sect("Read and used (basis)", [entry(b, (("worked", "worked"), ("failed", "failed"), ("where", "where the prompt carries it")),
                                          " ".join(v for v in ((f"({b['model']})" if b.get("model") else ""), str(b.get("title") or "")) if v))
                                    for b in d.get("basis") or []])
-    sect("Designed out: misses that could happen in this video", [entry(x, (("mechanism", "mechanism"), ("why", "why it applies here"),
-                                                                           ("where", "where the prompt handles it"))) for x in d.get("avoided") or []])
+    sect("Designed out: misses that could happen in this video", [entry(x, (("mechanism", "what this video shares with it"), ("why", "why it applies here"),
+                                                                           ("where", "designed out in"))) for x in d.get("avoided") or []])
     sect("Set aside", [entry(x, (("why", "why it cannot happen here"),)) for x in d.get("set_aside") or []])
     if d.get("unjudged"):
         sect("Not judged (named in none of the three)", ["- " + ", ".join(str(x) for x in d["unjudged"])])
     sect("Product images", ["- " + " · ".join(str(v) for v in (p.get("asset"), p.get("file")) if v) + (f" (prepare: {p['prepare']})" if p.get("prepare") else "")
                             + (f": {p['why']}" if p.get("why") else "") for p in d.get("product_images") or [] if isinstance(p, dict)],
-         "- the draft's product images, as they are")
+         "\n".join(f"- kept from the draft: {k}" for k in kept) if kept else "- the draft's product images, as they are")
     sect("Changes to the plan", [f"- {c.get('what', '')}" + (f": {c['why']}" if c.get("why") else "") + (f" ({c['id']})" if c.get("id") else "")
                                  for c in d.get("changes") or [] if isinstance(c, dict)])
     for title, k in (("Notes", "notes"), ("Not covered by the library", "not_covered"), ("No template", "none_reason")):
@@ -5009,7 +5010,11 @@ def cmd_prompt_template(a):
                                     "brief": brief, "draft_prompt": draft_prompt, "musts_list": musts, "structure_file": a.structure_file or "", "at": now_iso()})
             res["saved"] = str(tf["json"])
             if d.get("mode") == "keeper":      # the judge's whole judgement, kept for this video and never printed into the conversation
-                write_text(tf["judgement"], _judgement_md(rd.name, a.video, a.clip or "", d, vm.get("id", ""), a.note or ""))
+                jd = _cf_request_json(Path(draft_file)) if draft_file and not res["product_images"] else {}
+                kept = [" · ".join(str(v) for v in (x["label"], (x.get("source") or {}).get("asset_id"),
+                                                     (x.get("source") or {}).get("name") or next(iter(sorted(x.get("names") or [])), "")) if v)
+                        for x in (_pi_images(jd, rd) if jd else []) if x.get("product")]
+                write_text(tf["judgement"], _judgement_md(rd.name, a.video, a.clip or "", d, vm.get("id", ""), a.note or "", kept))
                 res["judgement_file"] = str(tf["judgement"])
                 res["judgement_rule"] = ("judgement_file holds the judge's whole judgement for this video: the samples whose prompts it read and what it took "
                                          "from each, every other sample whose miss could happen here and where its prompt designs it out, and the samples it "

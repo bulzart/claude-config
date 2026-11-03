@@ -51,8 +51,8 @@ def fake_claude(prompt, sid, resume, model, timeout=150):
         return {"result": json.dumps({"read": [SID, "S999"]}), "total_cost_usd": 0.0}
     if "Step 2 of the template request" in prompt and JUDGE["avoid"]:
         return {"result": json.dumps({"template": "TEMPLATE-AVOID Shot 1: he holds the slim can in one hand and lifts the tab with the other.", "basis": [],
-                                      "avoided": [{"id": SID, "mechanism": "MECH-MARK a hand meets the rigid can", "why": "WHY-MARK he grips the can",
-                                                   "where": "WHERE-MARK shot 1"}], "set_aside": [], "notes": "", "changes": [], "not_covered": ""}),
+                                      "avoided": [{"id": SID, "mechanism": "MECH-MARK a hand meets the rigid can", "where": "WHERE-MARK shot 1"}],
+                                      "set_aside": [], "notes": "", "changes": [], "not_covered": ""}),
                 "total_cost_usd": 0.0}
     if "Step 2 of the template request" in prompt and PIM["tpl_text"]:      # a template answer that names the product images
         return {"result": json.dumps({"template": PIM["tpl_text"], "basis": [{"id": SID, "worked": "two views of the carton", "failed": "one view", "where": "shot 1"}],
@@ -216,9 +216,10 @@ jm6, tj6 = run / "40-briefs" / "video-06-judgement.md", run / "40-briefs" / "vid
 j6 = jm6.read_text(encoding="utf-8") if jm6.is_file() else ""
 t6 = json.loads(tj6.read_text(encoding="utf-8")) if tj6.is_file() else {}
 check(js6.get("judged") == {"basis": 0, "avoided": 1, "set_aside": 0, "unjudged": 0} and "## Designed out" in j6
-      and all(m in j6 for m in ("MECH-MARK", "WHY-MARK", "WHERE-MARK")) and "MECH-MARK" not in json.dumps(js6) and [x["id"] for x in t6.get("avoided") or []] == [SID],
-      "a miss the judge designs out from its record alone is written to the judgement file with its mechanism, why and where, kept in the saved "
-      "template, and never printed")
+      and all(m in j6 for m in ("what this video shares with it: MECH-MARK", "designed out in: WHERE-MARK")) and "MECH-MARK" not in json.dumps(js6)
+      and [x["id"] for x in t6.get("avoided") or []] == [SID],
+      "a miss the judge designs out from its record alone is written to the judgement file with what this video shares with it and where the prompt "
+      "designs it out, kept in the saved template, and never printed")
 _, code, _ = t("prompt-template", "--run", run.name, "--video", "07", env=ENV, ok=False)
 check(code == 2, "prompt-template without a brief (no --brief, no judge brief file) stops (code 2)")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--attempt", "a1", "--question", "the can is smaller than the mug after the cut", env=ENV)
