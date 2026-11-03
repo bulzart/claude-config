@@ -559,7 +559,7 @@ got_n = (getattr(awl._cf_request_file(rq_n.parent, "06", "a2"), "name", None), g
          [p.name for p in awl._cf_requests_named(rq_n, "video-")],
          all(awl._cf_req_canon(n) == _lr.request_canon(n) for n in ("video-06-request-a2.json", "video-04-c1-request-a2.json", "video-06-a2-request.json",
                                                                     "video-06-request.json", "video-06-request-a2.pre-product-images.json")))
-check(got_n == ("video-06-request-a2.json", "video-06-request.json", ["video-06-request.json", "video-06-request-a2.json"], True),
+check(got_n == ("video-06-request-a2.json", "video-06-request.json", ["video-06-request-a2.json", "video-06-request.json"], True),
       "the toolkit reads a request named with the attempt last (video-06-request-a2.json) as the take a2's own, the same way Loupe does; a kept copy "
       "is not a request" + ("" if got_n[3] and got_n[0] == "video-06-request-a2.json" else f" {got_n}"))
 
