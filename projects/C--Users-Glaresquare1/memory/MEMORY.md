@@ -2,3 +2,4 @@
 - [Feedback: pipeline rules](feedback-pipeline-rules.md) — no speech captions in edits; generate on Higgsfield via MCP; Seedance 2.5 edit approach; edit only if asked; editing in CapCut (MCP first); never a Workflow
 - [Feedback: CapCut text size](feedback-capcut-text-size.md) — overlay text size 10 standard, 11 when a video has only a little text (≤5 words at once); one size per video; AWL capcut-text-style sets it
 - [Project: analyze-stack build](project-analyze-stack.md) — stack home C:\Users\Glaresquare1\.claude\analyze-stack; single /analyze-stack command; read-only Seedance notes + director bundle (2026-09-19); capcut MCP (verified 2026-09-19) + capcut-cli 0.25
+- [Project: Loupe judge context](project-loupe-judge-context.md) — image fingerprints shipped 2026-11-03; Haiku reading reference images declined, don't re-propose
