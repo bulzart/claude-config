@@ -4594,6 +4594,43 @@ PI_ROLE = {"image_references": "Image", "video_references": "Video", "audio_refe
 PI_PRODUCT_NAME = re.compile(r"(?:^|[\s=/\\_:-])product(?:[\s._:/\\\d-]|$)", re.I)      # 'image2-product-EF6-PM-front-padded.png': the pipeline names a product view so (also product/..., key:product, product2...; Loupe's runs.PRODUCT_FILE is the same pattern)
 
 
+PI_FINGERPRINTS: dict = {}
+
+
+def _pi_fingerprint(path) -> str:
+    """A short fingerprint of a file's content, the first 8 hex digits of its SHA-1, so one photo is known as one file in every run whatever asset id a
+    run gave it (the admin, 2026-11-03: one run's A274 IMG_6917.jpg was another run's A273); '' when the file cannot be read. Loupe computes it the
+    same way (runs.file_fingerprint) and names each sample's images with it."""
+    if not path:
+        return ""
+    p = Path(str(path))
+    try:
+        stt = p.stat()
+        if not p.is_file():
+            return ""
+    except (OSError, ValueError):
+        return ""
+    key = (os.path.normcase(str(p)), stt.st_size, stt.st_mtime_ns)
+    if key not in PI_FINGERPRINTS:
+        try:
+            PI_FINGERPRINTS[key] = hashlib.sha1(p.read_bytes()).hexdigest()[:8]
+        except OSError:
+            return ""
+    return PI_FINGERPRINTS[key]
+
+
+def _pi_fp_tag(path) -> str:
+    """' #3f9a1c2b' after a file's name, or '' when the file cannot be read."""
+    mk = _pi_fingerprint(path)
+    return f" #{mk}" if mk else ""
+
+
+def _pi_by_fingerprint(inv: dict, mk: str, fname: str = ""):
+    """The inventory item whose file has the fingerprint mk (of two copies, the one of that file name, else the first), or None."""
+    hits = [it for it in inv.values() if it.get("path") and _pi_fingerprint(it["path"]) == mk]
+    return next((h for h in hits if fname and Path(str(h["path"]).replace("\\", "/")).name.lower() == fname.lower()), hits[0] if hits else None)
+
+
 def _pi_inventory(rd) -> tuple[dict, dict]:
     """The run's asset inventory by asset id, and by lower-cased file name (a name two items share names neither)."""
     try:
@@ -4728,13 +4765,15 @@ def _pi_inputs_text(j: dict, rd) -> str:
         if role == "image_references" and not src.get("kind") and _pi_names_product(m, codes):
             src = {**src, "kind": "product"} if src else src
         made = (f"; {'a product image; ' if src.get('kind') == 'product' else (src['kind'] + '; ' if src.get('kind') else '')}made from "
-                + " · ".join(x for x in (src.get("asset_id"), src.get("name")) if x) + (f", prepared: {src['prepared']}" if src.get("prepared") else "")) if src else "; its original is not recorded"
+                + " · ".join(x for x in (src.get("asset_id"), src.get("name")) if x) + _pi_fp_tag(src.get("original"))
+                + (f", prepared: {src['prepared']}" if src.get("prepared") else "")) if src else "; its original is not recorded"
         lines.append(f"- {lab} ({role}{made})" + (f": {what}" if what else ""))
     return "\n".join(lines)
 
 
 def _pi_product_text(j: dict, rd) -> str:
-    """The product images of a request and the client's images of that product (its registry row and the inventory's file names), for the judge."""
+    """The product images of a request and the client's images of that product (its registry row and the inventory's file names), for the judge;
+    each file's name is followed by the fingerprint of its content (#3f9a1c2b), the same for the same file in every run."""
     imgs = _pi_images(j, rd) if rd else []
     prod = [x for x in imgs if x["product"]]
     if not imgs:
@@ -4743,7 +4782,8 @@ def _pi_product_text(j: dict, rd) -> str:
         return ("Product images: no image input of this draft records that it is a product image, so the product images cannot be changed here: keep "
                 "them as they are (product_images empty).")
     last = imgs.index(prod[0]) >= len(imgs) - len(prod) and all(x["product"] for x in imgs[imgs.index(prod[0]):])
-    head = ("Product images (yours to decide, see PRODUCT IMAGES): " + ", ".join(f"{x['label']} ({x['source'].get('asset_id') or '?'} · {x['source'].get('name') or '?'})" for x in prod)
+    head = ("Product images (yours to decide, see PRODUCT IMAGES): "
+            + ", ".join(f"{x['label']} ({x['source'].get('asset_id') or '?'} · {x['source'].get('name') or '?'}{_pi_fp_tag(x['source'].get('original'))})" for x in prod)
             + ("; they are the last image inputs, so the inputs before them keep their numbers." if last else
                "; they are NOT the last image inputs of this draft, so they cannot be changed here: keep them as they are (product_images empty)."))
     inv, _names = _pi_inventory(rd)
@@ -4752,7 +4792,8 @@ def _pi_product_text(j: dict, rd) -> str:
     lines = [head]
     for rid, ids in rows:
         lines.append(f"The client's images of {rid} (the run's registry row and asset inventory): "
-                     + ", ".join(f"{a} {Path(str(inv.get(a, {}).get('path') or inv.get(a, {}).get('rel') or '?').replace(chr(92), '/')).name}" for a in ids))
+                     + ", ".join(f"{a} {Path(str(inv.get(a, {}).get('path') or inv.get(a, {}).get('rel') or '?').replace(chr(92), '/')).name}"
+                                 f"{_pi_fp_tag(inv.get(a, {}).get('path'))}" for a in ids))
     return "\n".join(lines)
 
 
@@ -4775,12 +4816,15 @@ def _product_plan(rd, j: dict, judge: list, musts=None, fixed: bool = False) -> 
     """What the judge's product images do to a request, as facts, before anything is written: the image inputs now and after, the product images kept,
     added (with the source to prepare them from) and left out, the numbers that change, the must-carry lines that name a product image (renumbered, or no
     longer the request's), the medias to write; and the problems that stop it (then nothing is applied).  fixed (a regeneration): the images its prompt
-    names keep their numbers, so only images after the last one may be added or the last ones left out."""
+    names keep their numbers, so only images after the last one may be added or the last ones left out.  An image the judge gives its fingerprint
+    (the 8 characters after # in what it read) is the file with that content: an asset id is the run's own number, and one copied from a
+    sample of another run can name another file here (the admin, 2026-11-03); notes say where the fingerprint decided.  Without one, an asset id and a
+    file name that name two different files of this run are a problem."""
     prm = j.get("params") if isinstance(j.get("params"), dict) else j
     medias = list((prm or {}).get("medias") or [])
     imgs = _pi_images(j, rd)
     inv, names = _pi_inventory(rd)
-    res = {"ok": True, "problems": [], "changed": False, "medias": medias, "kept": [], "added": [], "dropped": [], "renumbered": {},
+    res = {"ok": True, "problems": [], "notes": [], "changed": False, "medias": medias, "kept": [], "added": [], "dropped": [], "renumbered": {},
            "musts_renumbered": [], "musts_superseded": [],
            "now": [{"image": x["label"], "product": x["product"], "asset": x["source"].get("asset_id", ""), "file": x["source"].get("name", ""),
                     "recorded": bool(x["source"])} for x in imgs]}
@@ -4790,12 +4834,36 @@ def _product_plan(rd, j: dict, judge: list, musts=None, fixed: bool = False) -> 
     want = []
     for e in judge:
         aid, fname = str(e.get("asset") or "").strip(), Path(str(e.get("file") or "").replace("\\", "/")).name.strip()
+        mk = re.sub(r"[^0-9a-f]", "", str(e.get("fingerprint") or "").lower())
+        mk = mk if len(mk) == 8 else ""
+        named = (aid + " " + fname).strip()
         it = inv.get(aid) if aid else None
         if not it and fname:
             it = names.get(fname.lower())
-        cur = next((x for x in imgs if (x["source"] and ((aid and x["source"].get("asset_id") == aid)
-                                                         or (fname and x["source"].get("name", "").lower() == fname.lower())))
-                    or (fname and fname.lower() in x["names"])), None)
+        cur_m = next((x for x in imgs if mk and x["source"].get("original") and _pi_fingerprint(x["source"]["original"]) == mk), None)
+        sure = bool(mk) and it is not None and _pi_fingerprint(it.get("path")) == mk       # the file its id or name gives has that fingerprint
+        if mk and not sure:
+            hit = _pi_by_fingerprint(inv, mk, fname)
+            if hit is not None or cur_m is not None:
+                old = it
+                if hit is not None:
+                    it, aid, fname = hit, str(hit["id"]), Path(str(hit["path"]).replace("\\", "/")).name
+                else:
+                    it, aid, fname = None, cur_m["source"].get("asset_id", ""), cur_m["source"].get("name", "")
+                sure = True
+                res["notes"].append(f"the judge named {named} #{mk}: by its fingerprint it is {(aid + ' ' + fname).strip()} in this run"
+                                    + (f" ({old['id']} {Path(str(old.get('path') or '').replace(chr(92), '/')).name} here is another file)"
+                                       if old is not None and old is not it else ""))
+            else:
+                res["notes"].append(f"the judge named {named} #{mk}: no file of this run has that fingerprint, so its asset id and file name decide")
+        if not sure and aid and fname and inv.get(aid) is not None and names.get(fname.lower()) is not None and names[fname.lower()] is not inv[aid]:
+            res["problems"].append(f"the judge named {aid} {fname}, two files of this run ({aid} is "
+                                   f"{Path(str(inv[aid].get('path') or '').replace(chr(92), '/')).name}, {fname} is {names[fname.lower()]['id']}) and no "
+                                   "fingerprint to tell which: an asset id is the run's own number, so ask the judge again for the fingerprint of the one it means")
+            continue
+        cur = cur_m or next((x for x in imgs if (x["source"] and ((aid and x["source"].get("asset_id") == aid)
+                                                                  or (fname and x["source"].get("name", "").lower() == fname.lower())))
+                             or (fname and fname.lower() in x["names"])), None)
         if not it and not cur:
             res["problems"].append(f"the judge named {(aid + ' ' + fname).strip()}: no image of the run's asset inventory and no input of this request is that file")
             continue
@@ -4919,7 +4987,8 @@ def _judgement_md(run: str, video: str, clip: str, d: dict, model_id: str, note:
     sect("Set aside", [entry(x, (("why", "why it cannot happen here"),)) for x in d.get("set_aside") or []])
     if d.get("unjudged"):
         sect("Not judged (named in none of the three)", ["- " + ", ".join(str(x) for x in d["unjudged"])])
-    sect("Product images", ["- " + " · ".join(str(v) for v in (p.get("asset"), p.get("file")) if v) + (f" (prepare: {p['prepare']})" if p.get("prepare") else "")
+    sect("Product images", ["- " + " · ".join(str(v) for v in (p.get("asset"), p.get("file")) if v) + (f" #{p['fingerprint']}" if p.get("fingerprint") else "")
+                            + (f" (prepare: {p['prepare']})" if p.get("prepare") else "")
                             + (f": {p['why']}" if p.get("why") else "") for p in d.get("product_images") or [] if isinstance(p, dict)],
          "\n".join(f"- kept from the draft: {k}" for k in kept) if kept else "- the draft's product images, as they are")
     sect("Changes to the plan", [f"- {c.get('what', '')}" + (f": {c['why']}" if c.get("why") else "") + (f" ({c['id']})" if c.get("id") else "")
@@ -5061,7 +5130,7 @@ def cmd_product_images(a):
     musts = _musts_of(a.musts_file) if a.musts_file else []
     plan = _product_plan(rd, j, pims, musts, fixed=True)
     prm = j.get("params") if isinstance(j.get("params"), dict) else j
-    res = {"ok": plan["ok"], "request": str(req_p), "answer": str(ans_p), "applied": False, "problems": plan["problems"],
+    res = {"ok": plan["ok"], "request": str(req_p), "answer": str(ans_p), "applied": False, "problems": plan["problems"], "notes": plan["notes"],
            **{k: plan[k] for k in ("now", "final", "kept", "added", "dropped", "renumbered", "musts_superseded", "musts_renumbered")}}
     n_img = sum(1 for m in plan["medias"] if isinstance(m, dict) and m.get("role") == "image_references")
     res["prompt_names_images_beyond_the_inputs"] = [f"Image {n}" for n in sorted(_pi_named(str((prm or {}).get("prompt") or ""))) if n > n_img]
@@ -5145,6 +5214,7 @@ def cmd_template_apply(a):
          "slots_left": re.findall(r"\[SLOT:[^\]]*\]", final), "slots_filled": filled, "musts_added": added,
          "product_images": ({k: plan[k] for k in ("final", "kept", "added", "dropped", "renumbered")} if plan and plan["ok"] else None),
          "product_images_problems": (plan["problems"] if plan and not plan["ok"] else []),
+         "product_images_notes": (plan["notes"] if plan else []),
          "musts_renumbered": (plan["musts_renumbered"] if plan and plan["ok"] else []),
          "musts_superseded": (plan["musts_superseded"] if plan and plan["ok"] else []),
          "prompt_names_images_beyond_the_inputs": [f"Image {n}" for n in beyond],

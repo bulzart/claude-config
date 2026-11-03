@@ -115,8 +115,9 @@ Only these section files for this phase, nothing else unless a step below says s
      not product images keep their numbers and its product images follow in its order (`product_images`: `final`, `kept`, `added`,
      `dropped`, `renumbered`); a must-carry line naming a product image is checked in its new number (`musts_renumbered`; `--add-must`
      takes that form) and one naming an image the judge left out is no longer the request's (`musts_superseded`).
-     `product_images_problems` (an image the run's inventory does not hold, product images that are not the last inputs) applies none of
-     them, and `prompt_names_images_beyond_the_inputs` lists an image the prompt names that the request does not carry: both are asked of
+     `product_images_problems` (an image the run's inventory does not hold, product images that are not the last inputs, an asset id and a
+     file name that name two files of this run with no fingerprint to tell which) applies none of them; `product_images_notes` says where
+     a fingerprint (the 8 characters after # in what the judge read) decided which file an image is; and `prompt_names_images_beyond_the_inputs` lists an image the prompt names that the request does not carry: both are asked of
      the judge once more (step 4). An image it adds is prepared and uploaded in X3 (`awl-inputs`): in Analyze Mode with the shared uploads
      of A9 step 2, in Edit Mode now, before X5.
   4. **Never rewrite, trim, reorder or improve the judge's prompt**, and X4 does not run again on its wording (it ran on the draft). Fill a

@@ -385,6 +385,11 @@ from t00_common import AWL  # noqa: E402
 assets = TMP / "client" / "assets"
 inv5 = [{"id": "A47", "path": str(assets / "people" / "face-47.jpg")}, {"id": "A82", "path": str(assets / "carton" / "Carton-Front.png")},
         {"id": "A83", "path": str(assets / "carton" / "Carton-Back.png")}, {"id": "A273", "path": str(assets / "photos" / "IMG_6917.jpg")}]
+for _it5, _b5 in zip(inv5, (b"face 47", b"carton front", b"carton back", b"a phone photo, 6917")):      # the client's files, each its own content
+    Path(_it5["path"]).parent.mkdir(parents=True, exist_ok=True)
+    Path(_it5["path"]).write_bytes(_b5)
+import hashlib as _hl  # noqa: E402
+mk5 = {it["id"]: _hl.sha1(Path(it["path"]).read_bytes()).hexdigest()[:8] for it in inv5}      # each file's fingerprint
 (run / "30-assets" / "project").mkdir(parents=True, exist_ok=True)
 (run / "30-assets" / "project" / "asset-inventory.json").write_text(json.dumps({"items": inv5}), encoding="utf-8")
 (run / "30-assets" / "registry.md").write_text("| id | what | assets |\n|---|---|---|\n| P-CARTON | the product, a carton | A82, A83, A273 |\n", encoding="utf-8")
@@ -397,24 +402,28 @@ req5 = {"params": {"model": "wan3_0_prime", "prompt": "DRAFT-5 the man of Image 
 (run / "40-briefs" / "video-05-judge-brief.md").write_text("BRIEF-5 video 05: he holds the carton to the camera; the goal is the label read true.", encoding="utf-8")
 (run / "40-briefs" / "video-05-musts.md").write_text("- The printed label exactly as in Image 2.\n- Keep the camera still.\n", encoding="utf-8")
 PIM.update(tpl_text="TPL-5 the man of Image 1 holds the carton. The printed label exactly as in Image 2. Image 3 shows the back of the carton. Keep the camera still.",
-           tpl=[{"asset": "A82", "file": "client/assets/carton/Carton-Front.png", "prepare": "", "why": f"{SID}: one view left the thinness wrong"},
+           tpl=[{"asset": "A82", "file": "client/assets/carton/Carton-Front.png", "fingerprint": mk5["A82"], "prepare": "", "why": f"{SID}: one view left the thinness wrong"},
                 {"file": "carton\\Carton-Back.png", "prepare": "padded to 9:16 on white like the front", "why": f"{SID}: a second view held it"}])
 n0 = len(calls)
 js, _, _ = t("prompt-template", "--run", run.name, "--video", "05", "--product", "carton", env=ENV)
 step1 = next((c for c in calls[n0:] if "TEMPLATE REQUEST" in c), "")
-check("- Image 1 (image_references; character; made from A47 · face-47.jpg, prepared: cropped to the face)" in step1
-      and "- Image 2 (image_references; a product image; made from A82 · Carton-Front.png, prepared: padded to 9:16 on white)" in step1
-      and "Product images (yours to decide, see PRODUCT IMAGES): Image 2 (A82 · Carton-Front.png); they are the last image inputs" in step1
-      and "The client's images of P-CARTON (the run's registry row and asset inventory): A82 Carton-Front.png, A83 Carton-Back.png, A273 IMG_6917.jpg" in step1
+check(f"- Image 1 (image_references; character; made from A47 · face-47.jpg #{mk5['A47']}, prepared: cropped to the face)" in step1
+      and f"- Image 2 (image_references; a product image; made from A82 · Carton-Front.png #{mk5['A82']}, prepared: padded to 9:16 on white)" in step1
+      and f"Product images (yours to decide, see PRODUCT IMAGES): Image 2 (A82 · Carton-Front.png #{mk5['A82']}); they are the last image inputs" in step1
+      and (f"The client's images of P-CARTON (the run's registry row and asset inventory): A82 Carton-Front.png #{mk5['A82']}, A83 Carton-Back.png "
+           f"#{mk5['A83']}, A273 IMG_6917.jpg #{mk5['A273']}") in step1
       and str(assets) not in step1 and "carton/Carton-Front.png" not in step1,
-      "the template request lists each input with the client's original it was made from, by its file name alone (never a folder), the draft's product "
-      "images and the client's images of that product")
+      "the template request lists each input with the client's original it was made from, by its file name alone (never a folder) and the fingerprint "
+      "of its content, the draft's product images and the client's images of that product")
 pim5 = js.get("product_images") or []
 check([(x.get("asset"), x.get("file"), x.get("prepare")) for x in pim5] == [("A82", "Carton-Front.png", ""), ("", "Carton-Back.png", "padded to 9:16 on white like the front")]
       and "template-apply" in js.get("product_images_rule", "") and "upload it at X3 before X5" in js.get("product_images_rule", ""),
       f"the judge's product images come back from Loupe in its order, named by file name alone (the folders it wrote are cut), with the rule to apply them ({pim5})")
 t5 = json.loads((run / "40-briefs" / "video-05-template.json").read_text(encoding="utf-8"))
 check(t5.get("product_images") == pim5, "the judge's product images are kept in the saved template")
+jm5 = run / "40-briefs" / "video-05-judgement.md"
+check(pim5[0].get("fingerprint") == mk5["A82"] and jm5.is_file() and f"- A82 · Carton-Front.png #{mk5['A82']}: {SID}: one view left the thinness wrong" in jm5.read_text(encoding="utf-8"),
+      "the judge's product image keeps the fingerprint it gave, and the judgement file names it with it")
 js, code, _ = t("template-apply", "--run", run.name, "--video", "05", env=ENV)
 rq5 = json.loads((run / "50-requests" / "video-05-request.json").read_text(encoding="utf-8"))
 med5 = [x for x in rq5["params"]["medias"] if x.get("role") == "image_references"]
@@ -422,7 +431,8 @@ check(code == 0 and rq5["params"]["prompt"].startswith("TPL-5") and len(med5) ==
       and med5[2].get("value") == "<X3: prepare Carton-Back.png for Image 3>"
       and med5[2].get("source") == {"original": inv5[2]["path"], "asset_id": "A83", "prepared": "padded to 9:16 on white like the front", "kind": "product"}
       and [a["asset"] for a in (js.get("product_images") or {}).get("added", [])] == ["A83"] and js.get("musts_missing") == []
-      and js.get("prompt_names_images_beyond_the_inputs") == [] and (rq5.get("product_images") or {}).get("by") == "the judge (X4b)",
+      and js.get("prompt_names_images_beyond_the_inputs") == [] and (rq5.get("product_images") or {}).get("by") == "the judge (X4b)"
+      and js.get("product_images_notes") == [],
       "template-apply carries them into the request: the character and the front view keep Image 1 and 2; the back view, named by its file name alone, "
       "is found in the inventory (A83) and added as Image 3 with the source to prepare it from")
 PIM.update(qc=[{"asset": "A82", "file": "Carton-Front.png", "prepare": "", "why": "kept"}, {"asset": "A83", "file": "Carton-Back.png", "prepare": "", "why": "kept"},
@@ -430,8 +440,8 @@ PIM.update(qc=[{"asset": "A82", "file": "Carton-Front.png", "prepare": "", "why"
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "05", "--question", "the label reads wrong in shot 2", env=ENV)
 q5 = [c for c in calls if "QC question" in c][-1]
 check("The inputs of that request (what each is and the client's original file it was made from) and its product images" in q5
-      and "- Image 3 (image_references; a product image; made from A83 · Carton-Back.png, prepared: padded to 9:16 on white like the front)" in q5
-      and "Product images (yours to decide, see PRODUCT IMAGES): Image 2 (A82 · Carton-Front.png), Image 3 (A83 · Carton-Back.png)" in q5
+      and f"- Image 3 (image_references; a product image; made from A83 · Carton-Back.png #{mk5['A83']}, prepared: padded to 9:16 on white like the front)" in q5
+      and f"Product images (yours to decide, see PRODUCT IMAGES): Image 2 (A82 · Carton-Front.png #{mk5['A82']}), Image 3 (A83 · Carton-Back.png #{mk5['A83']})" in q5
       and str(assets) not in q5 and js.get("evidence_sent", {}).get("request_inputs") == "video-05-request.json",
       "the QC judge is told which inputs the video was given, each with the client's original by its file name alone, and its product images")
 saved5 = run / "60-outputs" / "video-05" / "qc-consult.json"
@@ -494,6 +504,25 @@ pn_l, pn_a = [bool(lruns.PRODUCT_FILE.search(x)) for x in names_pn], [bool(_awl.
 check(lruns.PRODUCT_FILE.pattern == _awl.PI_PRODUCT_NAME.pattern and pn_l == pn_a == [True, True, True, True, False, False, True, False],
       "Loupe and the toolkit tell a product view by its name the same way (the pipeline's imageN-product-... names, a product folder or key, the word "
       "before a number; never inside another word)" + ("" if pn_l == pn_a else f" {pn_l} {pn_a}"))
+# the admin, 2026-11-03: an asset id is the run's own number (one run's A274 IMG_6917.jpg was another's A273); the fingerprint of a file's content is the
+# same in every run, computed the same way by Loupe (its records of the samples) and the toolkit (what the judge reads of this run, the plan)
+fm_ok = (lruns.file_fingerprint(inv5[3]["path"]) == _awl._pi_fingerprint(inv5[3]["path"]) == mk5["A273"] and len(set(mk5.values())) == 4
+         and lruns.file_fingerprint(TMP / "no-such.png") == _awl._pi_fingerprint(TMP / "no-such.png") == "" and _awl._pi_fingerprint(assets) == "" and _awl._pi_fingerprint(None) == "")
+check(fm_ok, "Loupe and the toolkit give a file the same fingerprint, the first 8 hex digits of the SHA-1 of its content, and none to a file that "
+             "cannot be read")
+rq5n = json.loads((run / "50-requests" / "video-05-request.json").read_text(encoding="utf-8"))
+pl_m = _awl._product_plan(run, rq5n, [{"asset": "A82", "file": "Carton-Front.png"}, {"asset": "A83", "file": "IMG_6917.jpg", "fingerprint": "#" + mk5["A273"].upper()}])
+pl_x = _awl._product_plan(run, rq5n, [{"asset": "A83", "file": "IMG_6917.jpg"}])
+pl_u = _awl._product_plan(run, rq5n, [{"asset": "A82", "file": "Carton-Front.png", "fingerprint": "0badc0de"}])
+check(pl_m["ok"] and [(a["image"], a["asset"], a["file"]) for a in pl_m["added"]] == [("Image 3", "A273", "IMG_6917.jpg")] and pl_m["dropped"] == ["Image 3"]
+      and pl_m["notes"] == [f"the judge named A83 IMG_6917.jpg #{mk5['A273']}: by its fingerprint it is A273 IMG_6917.jpg in this run "
+                            "(A83 Carton-Back.png here is another file)"]
+      and not pl_x["ok"] and "the judge named A83 IMG_6917.jpg, two files of this run (A83 is Carton-Back.png, IMG_6917.jpg is A273)" in " ".join(pl_x["problems"])
+      and pl_u["ok"] and [k["asset"] for k in pl_u["kept"]] == ["A82"] and pl_u["problems"] == []
+      and pl_u["notes"] == ["the judge named A82 Carton-Front.png #0badc0de: no file of this run has that fingerprint, so its asset id and file name decide"],
+      "the judge's product image is the file its fingerprint names: an asset id copied from another run's sample that names another file here is set "
+      "right by it (and noted); without one, an id and a file name that name two files of this run are a problem; a fingerprint no file has leaves the "
+      "id and the name to decide (noted)" + ("" if pl_m["ok"] and not pl_x["ok"] and pl_u["ok"] else f" {pl_m['notes']} {pl_m['problems']} {pl_x['problems']} {pl_u['notes']}"))
 
 # the admin, 2026-11-02: a keeper whose saved conversation is gone is replaced inside Loupe by a fresh session, and the toolkit's answers say so
 LOST = {"sid": ""}

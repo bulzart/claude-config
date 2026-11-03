@@ -145,6 +145,14 @@ asset id or original file name the input's words name; never guessed. A product 
 (`PI_PRODUCT_NAME` = `runs.PRODUCT_FILE`, also checked in t03: the pipeline's `imageN-product-…` name, a product folder or key, the word
 before a number, never inside another word). `lint-run` lists inputs without a recorded source and requests whose
 product images are not last (`inputs`).
+Each client's file is named with the fingerprint of its content (the admin, 2026-11-03; one photo had been A274 in one run and A273 in another,
+since an asset id is the run's own number): `_pi_fingerprint` (the first 8 hex digits of its SHA-1, as Loupe's `runs.file_fingerprint`,
+checked alike in t03) follows each original's name in what the judge reads (`made from A82 · Carton-Front.png #3f9a1c2b`, the product images,
+the client's images of the product), and Loupe names every sample's images the same way. A judge's product image carries the `fingerprint` of
+the file it means, and `template-apply` and `product-images` apply the file with that content: an asset id copied from another run's sample
+that names another file here is set right (`product_images_notes` says so, as it says when no file has that fingerprint and the id and the name
+decide); without a fingerprint, an id and a file name that name two different files of this run are a problem (`product_images_problems`).
+The judgement file names each product image with its fingerprint.
 
 Kept in step with Loupe (2026-10-28): `qc-consult`, `prompt-template` and `plan-hints` wait up to 1620 s (`AWL_CONSULT_TIMEOUT`), since Loupe may
 wait 120 s for a running keeper call and then make up to six keeper calls of up to 240 s each (a 209 s consult was cut at the old 190 s and its

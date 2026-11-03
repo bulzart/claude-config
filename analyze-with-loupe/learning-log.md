@@ -732,3 +732,21 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   changing, something passing through the carton). It wrote each designed-out entry as one note (the miss, then 'Designed out by: ...'), so an
   avoided entry is now `mechanism` (the miss and what this video shares with it) and `where` (the part of the prompt that designs it out), an
   older answer's `why` read as its mechanism; and the judgement file names the draft's product images when the judge keeps them.
+
+## 2026-11-03 · One file, one fingerprint, in every run
+
+- **Reported (the admin):** "we have to add a little bit more context or whatever it may be for the qc keeper judge to have more accurate and less ambigous verdicts", after the live check's judge flagged one photo, IMG_6917.jpg, as A274 in one run and A273 in another,
+  and S44's product field "Celsius products" beside a Neuro carton.
+- **Root cause:** an asset id is the run's own number; the judge saw only ids and file names, so a sample's id from another run could name another
+  file of this run, and `_product_plan` took the id's file without a word. S44's product field was Loupe's pre-fill (the first heading of the
+  run's registry), never typed by the admin.
+- **Changed in Loupe:** `runs.file_fingerprint` (sha1[:8] of the content); each sample's `meta.json` keeps the original's and the file sent's;
+  the records, the fetches and the answers name each image `<name> #3f9a1c2b` (the file sent's where the original's cannot be had, never in its
+  place); `LIB_HEADER` and the role say an asset id is the run's own number and ask for the `fingerprint` of each product image (the header
+  changed, so the keeper starts fresh). A new report's product field is no longer pre-filled from a registry heading.
+- **Changed here:** `_pi_fingerprint` (the same as Loupe's); the inputs, the product images and the client's images in what the judge reads carry
+  it; `_product_plan` applies the file a fingerprint names (noted in `product_images_notes`) and makes an id and a file name that name two files
+  of this run a problem when there is no fingerprint; the judgement file shows it. The field is `fingerprint`, never `mark`, which the judge
+  already uses for the admin's drawings.
+- **Verified:** t01 (93), t02 (146), t03 (69), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 264, keeper_sync 112,
+  page_smoke, transport_check, flags_smoke pass.
