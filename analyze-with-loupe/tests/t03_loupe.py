@@ -42,12 +42,18 @@ misses.update(m["id"], {"wrong_prompt": "PROMPT-WRONG the can on the desk.", "fi
 calls = []
 SLOW = {"boot_s": 0.0}
 PIM = {"tpl_text": "", "tpl": None, "qc": None}     # the judge's product images in a template answer and in a QC answer (none until a test sets them)
+JUDGE = {"avoid": False}     # a template answer that designs the sample's miss out from its record alone (its prompts not used)
 
 
 def fake_claude(prompt, sid, resume, model, timeout=150):
     calls.append(prompt)
     if "TEMPLATE REQUEST" in prompt:                      # step 1 of a template request: the judge names the samples whose prompts it needs
         return {"result": json.dumps({"read": [SID, "S999"]}), "total_cost_usd": 0.0}
+    if "Step 2 of the template request" in prompt and JUDGE["avoid"]:
+        return {"result": json.dumps({"template": "TEMPLATE-AVOID Shot 1: he holds the slim can in one hand and lifts the tab with the other.", "basis": [],
+                                      "avoided": [{"id": SID, "mechanism": "MECH-MARK a hand meets the rigid can", "why": "WHY-MARK he grips the can",
+                                                   "where": "WHERE-MARK shot 1"}], "set_aside": [], "notes": "", "changes": [], "not_covered": ""}),
+                "total_cost_usd": 0.0}
     if "Step 2 of the template request" in prompt and PIM["tpl_text"]:      # a template answer that names the product images
         return {"result": json.dumps({"template": PIM["tpl_text"], "basis": [{"id": SID, "worked": "two views of the carton", "failed": "one view", "where": "shot 1"}],
                                       "notes": "", "changes": [], "not_covered": "", "product_images": PIM["tpl"] or []}), "total_cost_usd": 0.0}
@@ -197,6 +203,22 @@ check("BRIEF-MARK" in step1 and "STRUCTURE-MARK" in step1 and "PROMPT-WRONG the 
 tj, tm = run / "40-briefs" / "video-03-template.json", run / "40-briefs" / "video-03-template.md"
 check(tj.is_file() and json.loads(tj.read_text(encoding="utf-8")).get("brief", "").startswith("BRIEF-MARK") and tm.is_file() and tm.read_text(encoding="utf-8").startswith("TEMPLATE-MARK")
       and Path(js.get("prompts_files", {}).get(SID, "-")).is_file(), "the template is saved with the brief, as JSON and as text, and the basis sample's prompts are written for the agent")
+jm = run / "40-briefs" / "video-03-judgement.md"
+jtext = jm.read_text(encoding="utf-8") if jm.is_file() else ""
+check(jm.is_file() and Path(js.get("judgement_file") or "-").is_file() and Path(js["judgement_file"]).samefile(jm) and js.get("judged") == {"basis": 1, "avoided": 0, "set_aside": 0, "unjudged": 0} and "judgement_rule" in js
+      and "## Read and used (basis)" in jtext and f"**{SID}**" in jtext and "the height stated against the mug" in jtext
+      and "avoided" not in js and "set_aside" not in js,
+      "the judge's whole judgement for the video is written to video-NN-judgement.md; the answer prints only its counts and the file, never the judgement")
+JUDGE["avoid"] = True
+js6, _, _ = t("prompt-template", "--run", run.name, "--video", "06", "--brief", "BRIEF-AVOID video 06: he grips the slim can and opens it.", env=ENV)
+JUDGE["avoid"] = False
+jm6, tj6 = run / "40-briefs" / "video-06-judgement.md", run / "40-briefs" / "video-06-template.json"
+j6 = jm6.read_text(encoding="utf-8") if jm6.is_file() else ""
+t6 = json.loads(tj6.read_text(encoding="utf-8")) if tj6.is_file() else {}
+check(js6.get("judged") == {"basis": 0, "avoided": 1, "set_aside": 0, "unjudged": 0} and "## Designed out" in j6
+      and all(m in j6 for m in ("MECH-MARK", "WHY-MARK", "WHERE-MARK")) and "MECH-MARK" not in json.dumps(js6) and [x["id"] for x in t6.get("avoided") or []] == [SID],
+      "a miss the judge designs out from its record alone is written to the judgement file with its mechanism, why and where, kept in the saved "
+      "template, and never printed")
 _, code, _ = t("prompt-template", "--run", run.name, "--video", "07", env=ENV, ok=False)
 check(code == 2, "prompt-template without a brief (no --brief, no judge brief file) stops (code 2)")
 js, _, _ = t("qc-consult", "--run", run.name, "--video", "03", "--attempt", "a1", "--question", "the can is smaller than the mug after the cut", env=ENV)

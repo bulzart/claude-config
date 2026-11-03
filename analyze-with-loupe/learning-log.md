@@ -716,3 +716,13 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   only; the rehearsal 221/221 steps, no contract failure; `docs_tool.py check` 0 errors; Loupe's keeper_sync 112, selftest 256 and 262 with
   `--keeper` (a real claude session given an id it never saved is replaced and answers the same question), page_smoke, transport_check,
   flags_smoke pass; the live Loupe restarted on the new code, the keeper in sync with the 21 samples.
+- **Every sample of the library in each template, the judgement kept per video (the admin, 2026-11-03):** asked whether the judge reads its ten
+  prompts in a separate session, then: "along with the full 10 prompts that agent has to have context of what were previous missings even though it may not read the full prompts of them but it should be able to avoid them by the understanding it has for them", "fix gaps" and "don't make it say them in the chat window though because it will pollute it ... let it do a .md file that will be saved for each video". It
+  was already the same session (step 2 of a template request resumes the session that holds every sample's record). Now the role asks for it
+  outright: in step 2 the judge goes through every sample, read or not and whatever the product, designs out every miss that could happen in this
+  video through the same mechanism, and answers `avoided` and `set_aside` beside `basis` (Loupe keeps `basis` up to ten now; it had stayed at eight).
+  `prompt-template` writes the whole judgement to `40-briefs/video-NN[-cK]-judgement.md` and prints only `judged` and the file; `awl-precheck` X4b
+  tells the agent never to paste it into the chat. Caught on the way: a fix script that saved through Python's text mode wrote awl.py and
+  t03_loupe.py with CRLF endings (as the 3c33e1b auto-commit had); put back to LF before any commit.
+- **Verified:** t01 (93), t02 (146), t03 (66), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 260, keeper_sync 112, page_smoke,
+  transport_check, flags_smoke pass.

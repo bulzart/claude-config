@@ -104,6 +104,11 @@ Only these section files for this phase, nothing else unless a step below says s
      index. The judge reads the saved prompts of the samples it chooses and answers `template`: the final prompt in the locked model's
      structure, built on the checked draft and on what worked and what failed before, every must-carry line word for word. It also decides
      which of the product's images the request carries and how many (`product_images`, the admin 2026-10-30; empty keeps the draft's).
+     It also goes through every sample of its library, read or not and whatever the product, and designs out of its prompt every miss
+     that could happen in this video through the same mechanism (the admin, 2026-11-03). The toolkit writes that whole judgement (the
+     samples read, every miss designed out with its mechanism and where, the samples set aside and why) to
+     `RUN/40-briefs/video-NN[-cK]-judgement.md` and prints only its counts (`judged`) and the file. **Never paste the judgement into the
+     chat:** name the file; read it only when a part of the prompt is unclear to you.
   3. `T template-apply --run RUN --video NN [--slot "<slot words>=<value>" …]` puts it in the request word for word (the draft is kept as
      `video-NN-request.draft.json`) and reports, as facts, the must-carry lines it does not hold word for word, the slots left and its
      length against the service's 5000 characters. With the judge's `product_images` it also puts them in the request: the inputs that are
@@ -122,7 +127,7 @@ Only these section files for this phase, nothing else unless a step below says s
   5. What only you can answer comes back as `needs_unmet` with an `unmet_rule`: answer it from the plan in words and ask once more with
      `--note`. No answer at all (`mode: empty`, `unavailable`, `busy` after the toolkit's retries, an empty `template`): the checked draft is
      the request, as always (`T template-apply --use-draft`).
-  6. Write the pattern card's "Judge's template" block: the prompt's file (or "no template: <why>"), the slots filled with what, each
+  6. Write the pattern card's "Judge's template" block: the prompt's file (or "no template: <why>"), the judgement file, the slots filled with what, each
      must-carry line added and why, a `--note` re-ask and its reason, the product images (each by its asset id and original file name;
      any the judge added, left out or renumbered, with its why), the judge's `changes` (parts of the plan earlier generations say should
      change; its prompt already carries them: add one line per change to the plan so QC checks the same), and any judge gap. X6 copies it.
@@ -139,7 +144,7 @@ Only these section files for this phase, nothing else unless a step below says s
     characters/assets, substitutions, main action and states, style/camera, text plan, model /
     operation / duration / 9:16 720p, cost, adaptation logic. In Edit Mode and Recreate it also names
     the fidelity approach (input, mode, written-out script or not) and any risk to fidelity or sync.
-  - The brief carries the pattern card's short "Judge's template" block (the judge's prompt's file or why there was none, the slots
+  - The brief carries the pattern card's short "Judge's template" block (the judge's prompt's file or why there was none, the judgement file, the slots
     filled, any must-carry line added, any re-ask, the product images, the judge's changes), so QC and a reported miss can be read against it.
   - With an own voiceover (item 31) the brief names the method, the voice, the language, the form, the take and its length, the lipsync
     sync pass, and the untested lip risk (`voiceover.md` §6).
