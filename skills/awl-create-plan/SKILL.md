@@ -60,8 +60,8 @@ Only these section files for this phase, nothing else unless a step below says s
     the seed's own generated scene, never by a generated copy of the meme. The choice wins over the house approach.
   - **Its edit and its takes** (item 35): every seed says how its CapCut edit carries the family's editing craft (the edit layer of the
     craft sheet: the cut rhythm, the layouts, the speed effects, the graphics, the finishing) and how few clean continuous takes feed that
-    edit within its length (the user: a 30 s video from two 15 s takes, never one generation per shot); a seed whose edit needs more takes
-    than its length allows is adapted or scores low on feasibility.
+    edit (one when its length fits the locked model's longest duration, more only where that maximum forces it; never one generation per
+    shot); a seed whose edit needs more takes than that is adapted or scores low on feasibility.
   - Each one exploits the patterns that made the references go viral: hook type and timing,
     structure, pacing, content type, camera, humour, and payoff.
   - The client's product is blended into the concept (its most suitable use, `generation-system.md`
@@ -123,10 +123,14 @@ Only these section files for this phase, nothing else unless a step below says s
     - **The edit is planned first** (X1; `capcut-assembly.md` §3c): the final composition, built from the family's edit layer, with the framing
       and trimming room it needs and no divider, placeholder or layout guide in any take. The edit plan stays apart from every prompt, and no
       reference's overlay or layout is reproduced in a generation.
-    - **As few takes as the length allows** (the user): a 30 s video comes from two 15 s takes that CapCut splits, cuts, reorders and inserts
-      to reach the references' editing style, never from one generation per shot. A take is one continuous shot (one camera setup, one
-      continuous action); another setup, angle or scene is its own take only when no punch-in or crop of a take gives it, and a multi-view
-      layout is composed in CapCut from independent clean takes. The takes keep character designs, object states, spatial relationships and
+    - **One generation unless the model's maximum length forces more** (the user: "if 30s could've been done in one shot then why not, we
+      could've just edited it after the generation and do splits,cuts,vfx,insertions or whatever it takes"; their two 15 s takes were only
+      an example of a 15 s maximum): a video is as few takes as the locked model's longest duration allows, one when its length fits (a
+      30 s video is one 30 s take on a model that makes 30 s, two 15 s takes only where the maximum is 15 s), never more and never one
+      generation per shot; CapCut then splits, cuts, reorders, inserts and finishes them to reach the references' editing style. A take is
+      one continuous shot (one camera setup, one continuous action); another setup, angle or scene becomes its own take only when the edit
+      cannot make it from the takes (a punch-in, a crop, a reframe) and the plan says why, and a multi-view layout is composed in CapCut
+      from independent clean takes. The takes keep character designs, object states, spatial relationships and
       story continuity consistent by the depicted world's own rules.
     - **Finished in CapCut** (X8–X10): the takes are inspected and corrected, the complete edit is executed with the CapCut tools found live
       (`capcut-assembly.md` §1), the finished result is verified, the clean takes are kept as the originals, and the editable project is

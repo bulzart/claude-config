@@ -299,12 +299,12 @@ check("35. **Create: clean source takes, the whole edit in CapCut**" in router a
       and all(f"`{n}`" in router.split("35. **Create: clean source takes")[1].split(chr(10))[0] for n in owners35)
       and all("item 35" in rd(SKD / n / "SKILL.md") for n in owners35) and "(command item 35)" in rd(PA / "020_2_spawning.md"),
       "item 35 is in the router with its owners and labels, in every skill that acts on it and in the production agents' contract")
-full35 = [n for n in ("awl-create-plan", "awl-plan-video") if "never from one generation per shot" in rd(SKD / n / "SKILL.md")
+full35 = [n for n in ("awl-create-plan", "awl-plan-video") if "One generation unless the model's maximum length forces more" in rd(SKD / n / "SKILL.md")
           and "Clean means no baked-in editorial addition; it never limits the genre" in rd(SKD / n / "SKILL.md")
           and "edit the additions that label, decorate," + chr(10) + "      arrange or repackage it" in rd(SKD / n / "SKILL.md")]
 check(full35 == ["awl-create-plan", "awl-plan-video"],
-      "the whole item 35 (clean means no editorial addition, never a limit on the genre; as few takes as the length allows, never one generation "
-      "per shot; the non-exhaustive test) is in the two skills that own it: " + ", ".join(full35))
+      "the whole item 35 (clean means no editorial addition, never a limit on the genre; one generation unless the model's maximum length forces more, "
+      "never one per shot; the non-exhaustive test) is in the two skills that own it: " + ", ".join(full35))
 sec3c = CA / "045_3c_the-create-edit-from-clean-takes.md"
 check(sec3c.is_file() and "| 3c | The Create edit from clean takes (command item 35) |" in rd(LIB / "reference" / "capcut-assembly.md")
       and "045_3c_the-create-edit-from-clean-takes.md" in rd(SKD / "awl-plan-video" / "SKILL.md")

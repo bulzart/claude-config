@@ -269,7 +269,7 @@ it).
 
 ## Create: clean source takes, the whole edit in CapCut (contract item 35)
 The user, 2026-11-03, with their own rules for every Create video ("Generate clean source shots first, then assemble and finish the video through CapCut MCP"; "Clean" means free of baked-in editorial additions and never
-restricts the genre, art style or imagination of the scene), then, on how many generations: "we can do only 2 of 15seconds video generations and then split them across, insert, do cuts or whatever it takes to achieve similar video styles and edits like the references had, and do the editing with the capcut, no need to do 5 video generations of 6 seconds". It applies to every Create video and
+restricts the genre, art style or imagination of the scene), then, on how many generations: "we can do only 2 of 15seconds video generations and then split them across, insert, do cuts or whatever it takes to achieve similar video styles and edits like the references had, and do the editing with the capcut, no need to do 5 video generations of 6 seconds", and later: "i just took two generations per 30seconds video as an example because for example wan 3.0 prime only allows max 15s per generation not that i want to split the video into multiple generations, if 30s could've been done in one shot then why not, we could've just edited it after the generation and do splits,cuts,vfx,insertions or whatever it takes". It applies to every Create video and
 every Free video of kind `create`; Recreate (which edits the reference whole) and Edit Mode keep their own rules.
 - **A3** (`awl-analyze-study`, analysis-protocol §3): every card separates the reference's **edit layer** (cuts and shot lengths,
   transitions, punch-ins, speed effects, layouts such as split screens and picture-in-picture, graphics, decorative VFX, finishing, each
@@ -277,7 +277,8 @@ every Free video of kind `create`; Recreate (which edits the reference whole) an
   layer's kinds as the editing craft the CapCut edit makes (creative-direction §5.0).
 - **A6** (`awl-create-plan`): every seed says how its CapCut edit carries the family's editing and how few takes feed it.
 - **X1** (`awl-plan-video`): the **edit plan** (the final composition on the CapCut timeline, written first) and the **take plan** (as few
-  clean continuous takes as the locked model's longest duration allows, a 30 s video from two 15 s takes, never one generation per shot;
+  clean continuous takes as the locked model's longest duration allows: one when the length fits it, more only where that maximum forces
+  it, never one generation per shot;
   one camera setup and one continuous action each, framed and with trimming room for the edit, no divider, placeholder or layout guide).
 - **X2, X4, X4b** (`awl-write-request`, `awl-precheck`): a take's prompt is one continuous shot in the model's own single-take phrasing
   (its guide §3.5, a must-carry line) and never a word of the edit; in-world text the plan names is written exactly and carved out beside

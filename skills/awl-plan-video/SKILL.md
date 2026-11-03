@@ -41,7 +41,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
 - *a multi-clip video, or a Recreate/Edit source with hard cuts (item 7: separate clips on the source's own cuts):*
   - generation-system §3b: `AWL/reference/generation-system/040_3b_videos-longer-than-one-generatio.md` (0.8 KB)
-  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.7 KB)
+  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.8 KB)
 - *a video with inserts:*
   - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.6 KB)
 - anomaly-catalog §0: `AWL/reference/anomaly-catalog/010_0_four-questions-behind-every-anom.md` (1.5 KB)
@@ -170,7 +170,8 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       position and sync), the graphics (never a sticker or an emoji, item 6), the decorative effects and the finishing treatment, each with its time; the text plan and the
       sound plan below are part of it. Nothing of it is written into a prompt;
     - the **take plan** (Create and Free `create`, item 35): the clean continuous takes that feed the edit, as few as the locked model's
-      longest duration allows (the user: a 30 s video from two 15 s takes, never one generation per shot); for each take its one camera
+      longest duration allows (one when the length fits it, more only where that maximum forces it; never one generation per shot); for
+      each take its one camera
       setup, its continuous action with the beats the edit's pieces take from it and their times inside the take, a little trimming room
       at both ends, and the framing the edit needs (a panel's crop, a punch-in's target, the text bands kept clear), with no divider,
       placeholder or layout guide in the picture; an extra take only for a setup, angle, scene or panel that no punch-in or crop of
@@ -355,10 +356,14 @@ a blocker with the real error (`voiceover.md` §4 step 8).
     - **The edit is planned first** (X1; `capcut-assembly.md` §3c): the final composition, built from the family's edit layer, with the framing
       and trimming room it needs and no divider, placeholder or layout guide in any take. The edit plan stays apart from every prompt, and no
       reference's overlay or layout is reproduced in a generation.
-    - **As few takes as the length allows** (the user): a 30 s video comes from two 15 s takes that CapCut splits, cuts, reorders and inserts
-      to reach the references' editing style, never from one generation per shot. A take is one continuous shot (one camera setup, one
-      continuous action); another setup, angle or scene is its own take only when no punch-in or crop of a take gives it, and a multi-view
-      layout is composed in CapCut from independent clean takes. The takes keep character designs, object states, spatial relationships and
+    - **One generation unless the model's maximum length forces more** (the user: "if 30s could've been done in one shot then why not, we
+      could've just edited it after the generation and do splits,cuts,vfx,insertions or whatever it takes"; their two 15 s takes were only
+      an example of a 15 s maximum): a video is as few takes as the locked model's longest duration allows, one when its length fits (a
+      30 s video is one 30 s take on a model that makes 30 s, two 15 s takes only where the maximum is 15 s), never more and never one
+      generation per shot; CapCut then splits, cuts, reorders, inserts and finishes them to reach the references' editing style. A take is
+      one continuous shot (one camera setup, one continuous action); another setup, angle or scene becomes its own take only when the edit
+      cannot make it from the takes (a punch-in, a crop, a reframe) and the plan says why, and a multi-view layout is composed in CapCut
+      from independent clean takes. The takes keep character designs, object states, spatial relationships and
       story continuity consistent by the depicted world's own rules.
     - **Finished in CapCut** (X8–X10): the takes are inspected and corrected, the complete edit is executed with the CapCut tools found live
       (`capcut-assembly.md` §1), the finished result is verified, the clean takes are kept as the originals, and the editable project is

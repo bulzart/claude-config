@@ -24,7 +24,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *a placed product (the original is the only video reference; spot and size in the prompt):*
   - generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
 - *a source with many hard cuts (item 7: separate clips on its own cuts):*
-  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.7 KB)
+  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.8 KB)
 - creative-direction §5.2: `AWL/reference/creative-direction/080_5.2_the-best-approach-both-sub-modes.md` (1.0 KB)
 - text-and-format §2: `AWL/reference/text-and-format/020_2_edit-mode-removing-source-text.md` (3.3 KB)
 - text-and-format §4: `AWL/reference/text-and-format/040_4_fixed-output-format-9-16-at-720p.md` (2.6 KB)
