@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- analysis-protocol §3: `AWL/reference/analysis-protocol/040_3_per-video-card-20-analysis-cards.md` (6.3 KB)
+- analysis-protocol §3: `AWL/reference/analysis-protocol/040_3_per-video-card-20-analysis-cards.md` (6.4 KB)
 - analysis-protocol §9: `AWL/reference/analysis-protocol/100_9_examples-the-user-s-own-videos-t.md` (3.1 KB)
 - brand-guardrails §3: `AWL/reference/brand-guardrails/030_3_the-guardrail-audit-per-referenc.md` (3.2 KB)
 - text-and-format §2: `AWL/reference/text-and-format/020_2_edit-mode-removing-source-text.md` (3.3 KB)

@@ -41,7 +41,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
 - *a multi-clip video, or a Recreate/Edit source with hard cuts (item 7: separate clips on the source's own cuts):*
   - generation-system §3b: `AWL/reference/generation-system/040_3b_videos-longer-than-one-generatio.md` (0.8 KB)
-  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.8 KB)
+  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.9 KB)
 - *a video with inserts:*
   - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.6 KB)
 - anomaly-catalog §0: `AWL/reference/anomaly-catalog/010_0_four-questions-behind-every-anom.md` (1.5 KB)
@@ -69,14 +69,14 @@ Only these section files for this phase, nothing else unless a step below says s
   - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - *Edit Mode:*
   - creative-direction §9: `AWL/reference/creative-direction/120_9_edit-mode.md` (0.3 KB)
-- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (7.3 KB)
+- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (7.5 KB)
 - text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (4.3 KB)
 - *Edit Mode (the substitution map):*
   - assets-and-substitution §4: `AWL/reference/assets-and-substitution/040_4_substitution-map-per-video.md` (2.4 KB)
 - *guardrails supplied:*
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - *Create and Free `create` (the edit plan, item 35):*
-  - capcut-assembly §3c: `AWL/reference/capcut-assembly/045_3c_the-create-edit-from-clean-takes.md` (3.2 KB)
+  - capcut-assembly §3c: `AWL/reference/capcut-assembly/045_3c_the-create-edit-from-clean-takes.md` (3.5 KB)
 - *Create (the sound plan):*
   - capcut-assembly §3b: `AWL/reference/capcut-assembly/040_3b_sound-layer-create.md` (5.1 KB)
 - *an own voiceover (`state.json → voiceover.enabled` true and, in Free, this video in `voiceover.videos` when that key exists; item 31):*
@@ -127,7 +127,7 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       neighbour at the same depth with the ratio in words, the size ladder when several products
       show, and the size it keeps across motion, exits and cuts;
     - the per-second time budget from the family profile (Create, item 35: on the final timeline, each row naming the take and the
-      span it comes from);
+      beat it comes from; the edit times the cuts on the takes);
     - roles and assets;
     - the scene;
     - Edit Mode and Recreate: the **source action script** with its keep / change marks and sync
@@ -164,19 +164,21 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       - each split point as a planned beat boundary;
       - each insert's cut (in, out, video or still, sound, overlays to clean);
     - the **edit plan** (Create and Free `create`, item 35; `capcut-assembly.md` §3c), written before the takes: the final composition on
-      the CapCut timeline, from the family's edit layer (the craft sheet; the cards' "Edit layer"): every piece in order (its take, in and
-      out), the cut rhythm, the inserts (with `memes=include`), the punch-ins and animated crops, the speed ramps, freeze frames, replays
-      and any reverse playback, the artificial shake, the transitions, the multi-view layouts (the take that fills each panel, its crop,
-      position and sync), the graphics (never a sticker or an emoji, item 6), the decorative effects and the finishing treatment, each with its time; the text plan and the
-      sound plan below are part of it. Nothing of it is written into a prompt;
-    - the **take plan** (Create and Free `create`, item 35): the clean continuous takes that feed the edit, as few as the locked model's
-      longest duration allows (one when the length fits it, more only where that maximum forces it; never one generation per shot); for
-      each take its one camera
-      setup, its continuous action with the beats the edit's pieces take from it and their times inside the take, a little trimming room
-      at both ends, and the framing the edit needs (a panel's crop, a punch-in's target, the text bands kept clear), with no divider,
-      placeholder or layout guide in the picture; an extra take only for a setup, angle, scene or panel that no punch-in or crop of
-      another take gives; the takes share identities, wardrobe, light, props and the product's state and anchor (the ledger), so
-      pieces of different takes cut together;
+      the CapCut timeline, from the family's edit layer (the craft sheet; the cards' "Edit layer"): the pieces in order (the beat each shows
+      and the take it comes from; their exact in and out are set in CapCut on the generated takes, where each beat really lands), the cut
+      rhythm, the inserts (with `memes=include`), the digital punch-ins and animated crops, the speed ramps, freeze frames, replays and any
+      reverse playback, the shake added in the edit, the transitions, the multi-view layouts (the take that fills each panel, its crop,
+      position and sync), the graphics (never a sticker or an emoji, item 6), the effects pasted on top and the final finishing filter, each
+      at its moment; the text plan and the sound plan below are part of it. Nothing of it is written into a prompt;
+    - the **take plan** (Create and Free `create`, item 35): the clean continuous takes that feed the edit, as few as the video needs (one
+      when its length fits the locked model's longest duration and one continuous shot can show it; another for a new place, a jump in
+      time, an angle or framing the edit cannot make, a layout's panel or a length beyond the maximum, each with its reason; never one
+      generation per shot); for each take what it shows, as the agents decide from the analysis and the plan (its actions and beats, the
+      camera's angles and moves, the real camera work it films when that fits the scene and its realism: a push-in, a handheld feel, a
+      slow-motion shot), its light, colours and look, a little trimming room at both ends, and the framing the edit needs (a panel's crop, a
+      punch-in's target, and clear space only where the edit plan puts text, only as much as that text needs), with no divider, placeholder
+      or layout guide in the picture; the takes share identities, wardrobe, light, props and the product's state and anchor (the ledger),
+      so pieces of different takes cut together;
     - the **text plan** (Analyze Mode, `text-and-format.md` §3): every overlay text event with its
       wording, final-timeline time and position, always in the house text style (item 6). It is
       placed in CapCut later and never generated;
@@ -231,9 +233,10 @@ a blocker with the real error (`voiceover.md` §4 step 8).
      - A source overlay that carries the joke's context (a notification, a message, a banner) is the
        original element reused as a picture overlay, not re-typed text (CE-017, CE-023).
      - No text layer contains an emoji (the user's rule, strict).
-   - **No sticker or emoji, ever** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant stickers
-     and emojis both, never use them ever, neither in video generation nor edits"): none is generated (no prompt asks for one, in-world screens and props
-     included) and none is placed in CapCut (as a graphic or in a text layer), in any mode; a source's sticker or emoji is removed (Edit
+   - **No sticker or emoji added, ever** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit",
+     then "only no added ones if the video has emojis meanwhile someone is texting on phone thats natural, but not just place emojis or stickers as an adder"): none is added to a
+     generation as a decoration and none is placed in CapCut (as a graphic or in a text layer), in any mode; one that belongs naturally to
+     the scene (the emojis of a chat someone is typing on a phone) is scene content; a source's added sticker or emoji is removed (Edit
      Mode) and a reference's is never re-made (Analyze Mode). One printed on the client's product is part of its label.
    - **Every CapCut text layer uses the house text style:** font System, size 10, and **the user's
      chosen preset**, learned from their project `03_Oct_2026_v09` on 2026-10-03 and locked in
@@ -335,38 +338,50 @@ a blocker with the real error (`voiceover.md` §4 step 8).
     alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
     them, and nothing is blurred, softened or removed for taste.
 35. **Create: clean source takes, the whole edit in CapCut** (the user, 2026-11-03: "Generate clean source shots first, then assemble and
-    finish the video through CapCut MCP", and "we can do only 2 of 15seconds video generations and then split them across, insert, do cuts or
-    whatever it takes to achieve similar video styles and edits like the references had, and do the editing with the capcut, no need to do 5
-    video generations of 6 seconds"). Every Create video and every Free video of kind `create`, whatever its genre (live action, animation,
-    anime, cartoon, stylised visuals, fictional or abstract worlds); Recreate and Edit Mode keep their own rules.
-    - **Clean means no baked-in editorial addition; it never limits the genre, the art style or the imagination of the scene.** A take
-      generates the scene: the characters, objects, environments, actions, interactions, camera work, light and visual storytelling; the
-      magic, transformations, fantastical phenomena, exaggerated movement or other effects that belong to the depicted action or world; the
-      chosen art direction (linework, shading, textures, animation style, expressive visual language); and any text or symbol that belongs
-      to the depicted world and fits it, of whatever kind (a sign, a screen in use, packaging, a poster, a book, a print on clothing, a
-      menu, a map: examples, not a list): the ones the story depends on are named in the plan and written exactly, the rest appear as
-      naturally as that world has them.
-    - **Never in a take, always in the CapCut edit:** editorial captions, subtitles, titles, headlines, lower thirds, annotations, labels and
-      animated typography; added arrows, badges, buttons, overlay logos, interface decorations, borders and graphic frames; editorial
-      cuts, montages, fades, wipes, dissolves and transitions between shots; split screens, picture-in-picture, comparison panels,
-      grids and collages; editorial speed ramps, freeze frames, replays, reverse playback, digital punch-ins, artificial shake and animated
-      cropping; decorative VFX, overlay particles, graphic glows, glitches, motion graphics and finishing treatments.
-    - **Stickers and emojis, never** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant stickers
-      and emojis both, never use them ever, neither in video generation nor edits"): none in a take and none in the
-      edit, as a graphic or in a text layer, whatever the live tool list offers (item 6); a reference's sticker or emoji is never re-made,
-      and a role it played goes to a text layer, a punch-in or a supplied graphic, or is dropped. One printed on the product is its label.
-    - **The edit is planned first** (X1; `capcut-assembly.md` §3c): the final composition, built from the family's edit layer, with the framing
-      and trimming room it needs and no divider, placeholder or layout guide in any take. The edit plan stays apart from every prompt, and no
-      reference's overlay or layout is reproduced in a generation.
-    - **One generation unless the model's maximum length forces more** (the user: "if 30s could've been done in one shot then why not, we
-      could've just edited it after the generation and do splits,cuts,vfx,insertions or whatever it takes"; their two 15 s takes were only
-      an example of a 15 s maximum): a video is as few takes as the locked model's longest duration allows, one when its length fits (a
-      30 s video is one 30 s take on a model that makes 30 s, two 15 s takes only where the maximum is 15 s), never more and never one
-      generation per shot; CapCut then splits, cuts, reorders, inserts and finishes them to reach the references' editing style. A take is
-      one continuous shot (one camera setup, one continuous action); another setup, angle or scene becomes its own take only when the edit
-      cannot make it from the takes (a punch-in, a crop, a reframe) and the plan says why, and a multi-view layout is composed in CapCut
-      from independent clean takes. The takes keep character designs, object states, spatial relationships and
-      story continuity consistent by the depicted world's own rules.
+    finish the video through CapCut MCP"; then "if 30s could've been done in one shot then why not, we could've just edited it after the
+    generation and do splits,cuts,vfx,insertions or whatever it takes", and on the details "make it smart and dynamic"). Every Create video
+    and every Free video of kind `create`, whatever its genre (live action, animation, anime, cartoon, stylised visuals, fictional or
+    abstract worlds); Recreate and Edit Mode keep their own rules. The agents decide each case by its scene, its realism and the
+    references' craft; these are the limits they decide within.
+    - **Clean means nothing added on top of the scene; it never limits the genre, the art style or the imagination.** A take generates the
+      scene: the characters, objects, environments, actions, interactions, camera work, light, colours and visual storytelling; the magic,
+      transformations, fantastical phenomena, exaggerated movement or other effects that belong to the depicted action or world; the chosen
+      art direction (linework, shading, textures, animation style, expressive visual language); and any text or symbol that belongs to the
+      depicted world and fits it, of whatever kind (a sign, a screen in use with its own interface, packaging, a poster, a book, a print on
+      clothing, a menu, a map: examples, not a list): the ones the story depends on are named in the plan and written exactly, the rest
+      appear as naturally as that world has them.
+    - **Never in a take, always in the CapCut edit** (what is added on top of the scene): editorial captions, subtitles, titles, headlines,
+      lower thirds, annotations, labels and animated typography; arrows, badges, buttons, overlay logos, interface decorations, borders and
+      graphic frames added on top; editorial cuts, montages, fades, wipes, dissolves and transitions between shots; split screens,
+      picture-in-picture, comparison panels, grids and collages; speed ramps, freeze frames, replays and reverse playback applied in the
+      edit, digital punch-ins, shake added in the edit and animated cropping; VFX pasted on top (overlay particles, graphic glows, glitches,
+      motion graphics) and the final finishing filter or grain. The agents judge each element by what it is in the scene: an app's buttons
+      on a phone in use, a framed picture on a wall, a price label on a shelf or sparks from a magic spell belong to the scene; the same
+      shapes laid over the picture are the edit's.
+    - **Real camera work belongs to the take when it serves the scene** (the user: realism): a push-in or zoom of the camera, a handheld or
+      phone-held feel, a shot filmed in slow motion. The agents decide per shot whether it is filmed in the take (when it fits the scene and
+      makes it more real) or made in the edit, and never add it where it is not needed.
+    - **Stickers and emojis, never added** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit",
+      then "only no added ones if the video has emojis meanwhile someone is texting on phone thats natural, but not just place emojis or stickers as an adder"): none is added to a take as a decoration
+      and none is placed in the edit, as a graphic or in a text layer (item 6); one that belongs naturally to the scene (the emojis of a
+      chat someone is typing on a phone) is scene content; a reference's added sticker or emoji is never re-made, and a role it played goes
+      to another treatment of the edit or is dropped. One printed on the product is its label.
+    - **The edit is planned first, its cut times set on the takes** (X1, X8; `capcut-assembly.md` §3c): the plan writes the final
+      composition from the family's edit layer: the order of the pieces, the beat each shows and the take it comes from, the rhythm, the
+      effects, the layouts and the text, with the framing and trimming room they need and no divider, placeholder or layout guide in any
+      take; the exact in and out of every piece is set in CapCut on the generated takes, where each beat really lands. The edit plan stays
+      apart from every prompt, and no reference's overlay or layout is reproduced in a generation.
+    - **As few generations as the video needs, decided per video** (the user: their two 15 s takes were only an example of a 15 s
+      maximum): by default one take when the length fits the locked model's longest duration and one continuous shot can show it (a 30 s
+      video is one 30 s take on a model that makes 30 s), and CapCut splits, cuts, reorders, inserts and finishes it to reach the
+      references' editing style; never one generation per shot. Another take is planned whenever the video needs what one continuous shot
+      cannot give and the edit cannot make from it: a new place (a kitchen, then a gym), a jump in time, an angle or a framing no punch-in or
+      crop gives, a panel of a multi-view layout, or a length beyond the model's maximum. The plan says which and why, and an idea is never
+      scored lower for the takes its places or angles need; they weigh only as what they cost against what they bring. A take is a
+      continuous shot with no editorial cut inside it; what it shows (its actions, the camera's angles and moves, its style) is the agents'
+      decision from the analysis and the plan.
+    - The takes keep character designs, object states, spatial relationships and story continuity consistent by the depicted world's own
+      rules.
     - **Finished in CapCut** (X8–X10): the takes are inspected and corrected, the complete edit is executed with the CapCut tools found live
       (`capcut-assembly.md` §1), the finished result is verified, the clean takes are kept as the originals, and the editable project is
       delivered with the final exported from CapCut.

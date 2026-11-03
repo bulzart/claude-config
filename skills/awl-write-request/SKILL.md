@@ -41,7 +41,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (9.6 KB)
 - *a person is swapped (the skin-tone sentence):*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
-- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (7.3 KB)
+- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (7.5 KB)
 - *guardrail operations in the plan:*
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - *an own voiceover (the plan has a Voiceover block; item 31):*
@@ -136,17 +136,21 @@ Only these section files for this phase, nothing else unless a step below says s
     - Analyze Mode prompts are always **clean plates**: no overlay text. The only lettering is the
       product's own label, logo or badge (Create: and whatever text belongs to the depicted world, below).
     - **A Create take (item 35; a Free `create` video too)** is one continuous shot of the scene, written in the locked model's own
-      single-take phrasing (its guide §3.5) with the take plan's one camera setup and continuous action. It generates what belongs to the
-      scene: the characters, objects, environment, action, interactions, camera work, light and storytelling; the magic,
-      transformations, fantastical phenomena and exaggerated movement that belong to the world; the chosen art direction (linework,
-      shading, textures, animation style). It never asks for, names or describes the edit: no cut, montage, fade, wipe, dissolve or
-      transition; no caption, title, label, sticker, emoji, arrow, badge, button, overlay logo, interface decoration, border or frame;
-      no split screen, picture-in-picture, grid or collage; no speed ramp, freeze frame, replay, reverse, punch-in, artificial shake or
-      animated crop; no decorative particle, glow, glitch or motion graphic; and no reference's overlay or layout. Text and symbols
-      that belong to the depicted world are scene content, of whatever kind fits it (never an emoji, item 6): the ones the plan names are
-      written exactly and join QC's `--allowed-text`, the rest are left to the scene; the clean-plate line forbids only overlay text ("No
-      subtitles, captions, titles or other overlay text appear on screen; the only lettering is what belongs to the scene itself, the
-      printed label on the <product> exactly as in @ImageN"). The single-take sentence is a must-carry line.
+      single-take phrasing (its guide §3.5), showing what the take plan has it show (its actions and beats, the camera's angles and moves,
+      its style). It generates what belongs to the scene: the characters, objects, environment, action, interactions, camera work, light,
+      colours and storytelling; the magic, transformations, fantastical phenomena and exaggerated movement that belong to the world; the
+      chosen art direction and look (linework, shading, textures, animation style; CapCut adds only a final filter on top); and the real
+      camera work the take plan has (a push-in or zoom, a handheld feel, a shot filmed in slow motion). It never asks for, names or
+      describes what the edit adds: no cut, montage, fade, wipe, dissolve or transition; nothing laid on top of the scene (no caption,
+      title or label, no sticker or emoji added, no arrow, badge, button, overlay logo, interface decoration, border or frame over the
+      picture); no split screen, picture-in-picture, grid or collage; no speed ramp, freeze frame, replay or reverse applied as an edit, no
+      digital punch-in, shake added in the edit or animated crop; no particle, glow, glitch or motion graphic pasted on top; and no
+      reference's overlay or layout. You judge what belongs to the scene: an app's buttons on a phone in use, a framed picture on a wall, a
+      shelf's price labels, sparks from a spell and the emojis of a chat someone is typing are scene content. Text and symbols that belong
+      to the depicted world are scene content, of whatever kind fits it: the ones the plan names are written exactly and join QC's
+      `--allowed-text`, the rest are left to the scene; the clean-plate line forbids only overlay text ("No subtitles, captions, titles or
+      other overlay text appear on screen; the only lettering is what belongs to the scene itself, the printed label on the <product>
+      exactly as in @ImageN"). The single-take sentence is a must-carry line.
     - **Own voiceover** (the plan's Voiceover block; item 31): build the request by the run's method (its guide's §2.2, §3.7 and §3.9;
       the table of `voiceover.md` §6): **native** binds the take as the driving audio, **lipsync** writes its words verbatim as dialogue
       (the sync pass is the agent's, in X8), **overlay** writes the no-dialogue line; the duration as §6 says; no music.

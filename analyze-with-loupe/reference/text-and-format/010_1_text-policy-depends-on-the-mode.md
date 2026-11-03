@@ -46,11 +46,11 @@ Text may be created when it improves the concept or matches the analyzed structu
     brand removal. Text layers are for captions only.
   - **No emoji** in any text layer (the user's rule, strict): an emoji in a source caption is dropped and
     the rest of the wording kept.
-  - **No sticker or emoji, ever** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant stickers
-    and emojis both, never use them ever, neither in video generation nor edits"): in no mode is a sticker or an
-    emoji generated (no prompt asks for one, in-world screens and props included) or placed in CapCut (as a graphic or in a text layer);
-    a source's sticker or emoji is removed (Edit Mode, with the text above) and a reference's is never re-made. One printed on the
-    client's product is part of its label.
+  - **No sticker or emoji added, ever** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit",
+    then "only no added ones if the video has emojis meanwhile someone is texting on phone thats natural, but not just place emojis or stickers as an adder"): in no mode is a sticker
+    or an emoji added, to a generation as a decoration or in CapCut (as a graphic or in a text layer); one that belongs naturally to the
+    scene (the emojis of a chat someone is typing on a phone) is scene content; a source's added sticker or emoji is removed (Edit Mode,
+    with the text above) and a reference's is never re-made. One printed on the client's product is part of its label.
 - Text must be intentional, readable, contextually correct and consistent across frames. No
   pseudo-text, malformed letters, words that change between frames, duplicate captions, unreadable
   typography or stray lettering.
@@ -77,7 +77,7 @@ Text may be created when it improves the concept or matches the analyzed structu
     forbids overlay text only: "No subtitles, captions, titles or other overlay text appear on screen; the only lettering is what
     belongs to the scene itself, the printed label on the <product> exactly as in @ImageN". Whatever appears meets the rule above
     (readable or naturally out of focus, the same across frames, no pseudo-text that draws the eye), the guardrails (no competitor or
-    featured third-party brand, `generation-system.md` §9b) and no emoji.
+    featured third-party brand, `generation-system.md` §9b) and item 6 (no sticker or emoji added).
 - **The client asset's own label is not stray text.** A swapped or placed product keeps its real
   printed label, logo or badge exactly as in its reference image; that's what makes it
   recognisable.

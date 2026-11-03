@@ -1,6 +1,6 @@
 ---
 name: feedback-no-stickers
-description: "Never use stickers or emojis — not in a video generation (prompts, in-world screens), not in the CapCut edit (graphics or text layers), any pipeline or mode"
+description: "Never ADD stickers or emojis — no decorative one in a video generation, none in the CapCut edit (graphic or text layer); natural in-scene ones (a phone chat being typed) are fine"
 metadata:
   node_type: memory
   type: feedback
@@ -9,12 +9,14 @@ metadata:
 ---
 
 The user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant
-stickers and emojis both, never use them ever, neither in video generation nor edits".
+stickers and emojis both", then, narrowing it: "only no added ones if the video has emojis meanwhile someone is texting on phone thats
+natural, but not just place emojis or stickers as an adder".
 
-**Why:** the user's own rule, stated as absolute while adding the clean-source / CapCut-edit rules for /analyze-with-loupe Create mode
-(item 35 there); written into that pipeline's item 6, its CapCut sections, plan and QC, and the sticker tool removed from its allowed list.
+**Why:** the user's own rule; written into /analyze-with-loupe's item 6 (every mode), item 35, its CapCut sections, plan and QC, and the
+sticker tool removed from its allowed list.
 
-**How to apply:** no sticker and no emoji in any prompt, take or CapCut project (as a graphic or in a text layer; `capcut_add_sticker` stays unused, whatever the tool
-list offers); a reference's sticker or emoji is never re-made. One printed on the client's product is part of its label, not an editorial sticker.
-The /analyze-then-pick and /analyze-then-generate skills were not changed on 2026-11-03; apply the rule there too if working in them.
+**How to apply:** never add a sticker or an emoji: no prompt adds one as a decoration, and none goes into a CapCut project (as a graphic or
+in a text layer; `capcut_add_sticker` stays unused, whatever the tool list offers); a reference's added sticker or emoji is never re-made.
+One that belongs naturally to the scene (the emojis of a chat someone is typing on a phone) or is printed on the client's product is scene
+content. The /analyze-then-pick and /analyze-then-generate skills were not changed; apply the rule there too if working in them.
 Related: [[feedback-pipeline-rules]], [[feedback-capcut-text-size]].

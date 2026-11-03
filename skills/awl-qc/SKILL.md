@@ -43,12 +43,12 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.5 KB)
   - generation-system §5c.5: `AWL/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (2.3 KB)
 - *a multi-clip video, or a source with hard cuts (shot structure):*
-  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.8 KB)
+  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.9 KB)
   - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.5 KB)
 - creative-direction §8: `AWL/reference/creative-direction/110_8_creative-qc-x9-as-notes-the-narr.md` (0.9 KB)
 - brand-guardrails §5: `AWL/reference/brand-guardrails/050_5_qc-x9-and-the-wrap-up.md` (1.3 KB)
 - *Analyze Mode (the CapCut project):*
-  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.8 KB)
+  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.9 KB)
 - *an own voiceover (the plan has a Voiceover block; item 31):*
   - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.3 KB) (the fix routes)
   - voiceover §10: `AWL/reference/voiceover/100_10_qc-of-a-voiceover-x9.md` (1.4 KB)
@@ -224,12 +224,15 @@ Only these section files for this phase, nothing else unless a step below says s
     the take (a soft label, a thick rim, a lid notch, the source's scene or person) are a regenerate reason.
   - **Clean takes** (Create and Free `create`, item 35): every take, on its storyboard and at full resolution, is one continuous shot
     (`capcut detect-scenes "<take>"` prints the cut points with their scores; you judge each: a real cut, montage, fade, wipe or dissolve
-    inside a take is a regenerate reason, a fast in-world motion is not) and carries nothing editorial (a caption, title, label, sticker,
-    emoji, arrow, badge, button, overlay logo, interface decoration, border, frame or panel divider, a split screen, picture-in-picture,
-    grid or collage, a speed effect or a freeze, a decorative particle, glow, glitch or motion graphic): one found is a regenerate reason,
-    never covered in CapCut. The text the plan names reads as planned (`T qc --allowed-text`); other text that belongs to the world is
-    fine when it reads as part of it (no pseudo-text that draws the eye, no word that changes between frames, no competitor or featured
-    third-party brand, no emoji); and the art direction, the in-world effects and the continuity across takes hold as planned.
+    inside a take is a regenerate reason, a fast in-world motion or a camera move is not) and carries nothing added on top of the scene (a
+    caption, title or label, an added sticker or emoji, an arrow, badge, button, overlay logo, interface decoration, border, frame or panel
+    divider laid over the picture, a split screen, picture-in-picture, grid or collage, a speed ramp, freeze or replay applied as an edit,
+    a particle, glow, glitch or motion graphic pasted on top): one found is a regenerate reason, never covered in CapCut. You judge what
+    belongs to the scene (an app's buttons on a phone in use, a framed picture on a wall, a price label on a shelf, sparks from a spell,
+    the emojis of a chat someone is typing, a slow-motion shot the take plan has): that is scene content. The text the plan names reads as
+    planned (`T qc --allowed-text`); other text that belongs to the world is fine when it reads as part of it (no pseudo-text that draws
+    the eye, no word that changes between frames, no competitor or featured third-party brand, no sticker or emoji added for decoration);
+    and the art direction, the light and colours, the in-world effects and the continuity across takes hold as planned.
   - **Shot structure** (`anomaly-catalog.md` §4 step 5i; `generation-system.md` §3b.1 item 7; Recreate and
     Edit Mode with hard cuts): the output's cuts against the source's shot list: the same count at the same
     times, person-free cutaways still person-free, the placed product in every shot where its anchor is in
@@ -274,13 +277,14 @@ Only these section files for this phase, nothing else unless a step below says s
   - **CapCut project** (Analyze Mode, `capcut-assembly.md` §5):
     - the read-back timeline matches the plan (pieces, inserts, text times and positions; with `memes=none`, no insert at all);
     - overlays exist only on their visible frames and fade with the picture; a Recreate's original audio
-      is one segment; no sticker or emoji is anywhere in the project, as a graphic or in a text layer (item 6);
+      is one segment; no sticker or emoji is placed in the project, as a graphic or in a text layer (item 6);
     - an own voiceover is audible at 1.0 (native, lipsync: the clip's audio; overlay: its own track), nothing muted by mistake;
     - `capcut lint` reports 0 errors;
     - the preview shows the right order, sound and text;
-    - Create (item 35): the read-back timeline matches the edit plan: every piece (its take, in, out, speed and track) in order, every
-      keyframe, mask, transition, filter, graphic and text at its time, and what no tool could place listed in the README row (the
-      preview flattens the main track only).
+    - Create (item 35): the read-back timeline carries the edit plan: every piece in the plan's order, cut on the beat it is meant to
+      show (its in and out set on the take, not on the planned seconds), with its speed and track; every keyframe, mask, transition,
+      filter, graphic and text on its moment; and what no tool could place listed in the README row (the preview flattens the main track
+      only).
     Fix in the project, not by regenerating.
   - Apply the post-fixes (`trim`, `conform`, `restore-audio`, a sync offset) that need no new generation.
   - **Analyze Mode verdict** (the production agent's; item 27):

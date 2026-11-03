@@ -780,3 +780,19 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   lettering is"); it is open now: any text or symbol that belongs to the depicted world and fits it, the plan naming only what the
   story depends on, QC accepting the rest when it reads as part of the world.
 - **Verified:** t01 (98, five new: item 35 in the router, its owners and the agents' contract; the whole item in its two owners; the CapCut section, the cards' edit layer, the take check and the clean originals; the live tool discovery and the router's tools; no sticker or emoji), t02 (146), t03 (69), t05 (73) pass; `docs_tool.py check` 0 errors.
+
+## 2026-11-03 · Item 35 refined with the user: the agents decide within the limits; less to load
+
+- **Reported (the user):** answers to a list of wordings tighter than meant: cut times set after the generation; what a take shows is the
+  agents' decision; as few generations as the video needs ("make it smart and dynamic"; a new place is a reason for another); real camera
+  work filmed when it serves the realism ("make it smartly decide"); only effects pasted on top flagged; the take keeps its light and
+  colours; only buttons, frames and labels added on top banned ("smartly decided"); no change to when a flaw is regenerated; text space only
+  where text goes; "only no added ones" for stickers and emojis (a chat's emojis on a phone are natural); the edit layer as "a middle
+  ground"; then "we should aim to avoid memory context rot in our ai agents and pipeline as a whole and keep the current structure, only
+  call and what access to what needed".
+- **Changed:** item 35's whole text in `awl-plan-video`; `awl-create-plan` carries what A6 acts on and points there (16.1 → 11.2 KB); the
+  router's item 35 back to one short line (1926 → 831 characters); `awl-write-request`, `awl-precheck`, `awl-qc` (the take and project
+  checks), `awl-postprocess` (cuts timed on the takes), `awl-analyze-study` and the card (a pattern with its key moments); capcut-assembly
+  §1 (the usual tools by name, a narrow search only for an operation they lack, the catalogs only when needed), §3c, §5; text-and-format §1
+  (item 6: no sticker or emoji added); generation-system §3b.1.
+- **Verified:** t01 98 pass (the whole item 35 in awl-plan-video and the A6 part in awl-create-plan; the narrow CapCut tool search; no sticker or emoji added); t02 146, t03 69, t05 73 unchanged since the code did not change; `docs_tool.py check` 0 errors.

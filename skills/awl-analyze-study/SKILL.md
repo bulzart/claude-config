@@ -16,7 +16,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - analysis-protocol §0: `AWL/reference/analysis-protocol/010_0_provenance-labels-use-everywhere.md` (0.6 KB)
 - analysis-protocol §1: `AWL/reference/analysis-protocol/020_1_inputs-per-video-produced-by-awl.md` (1.6 KB)
 - analysis-protocol §2: `AWL/reference/analysis-protocol/030_2_reading-a-video-as-one-continuou.md` (5.8 KB)
-- analysis-protocol §3: `AWL/reference/analysis-protocol/040_3_per-video-card-20-analysis-cards.md` (6.3 KB)
+- analysis-protocol §3: `AWL/reference/analysis-protocol/040_3_per-video-card-20-analysis-cards.md` (6.4 KB)
 - analysis-protocol §4: `AWL/reference/analysis-protocol/050_4_effectiveness-lenses-apply-those.md` (2.1 KB)
 - analysis-protocol §5: `AWL/reference/analysis-protocol/060_5_cross-video-synthesis.md` (5.4 KB)
 - analysis-protocol §6: `AWL/reference/analysis-protocol/070_6_project-inference-20-analysis-pr.md` (2.4 KB)
@@ -66,11 +66,13 @@ Only these section files for this phase, nothing else unless a step below says s
       instances: style, properties, approach, crafting and why it works, kept apart from the
       subject lines (premise, setting, characters, actions, joke, lines, props, ending) that a
       Create video must not reuse;
-    - its **edit layer**, apart from its **scene layer** (Create and Free, item 35; protocol §3): everything the reference's edit adds,
-      each with its times (the cuts and shot lengths, transitions, punch-ins and animated crops, speed ramps, freeze frames, replays,
-      reverse playback, artificial shake, multi-view layouts and what fills each panel, stickers and emojis (read, never re-made: item 6), arrows, badges, buttons,
-      overlay logos, interface decorations, borders and frames, decorative particles, glows, glitches and motion graphics, the finishing
-      treatment), and what the frames show inside it: the art direction (live action, anime, cartoon or stylised: linework, shading,
+    - its **edit layer**, apart from its **scene layer** (Create and Free, item 35; protocol §3): everything the reference's edit adds
+      (the cuts and shot lengths, transitions, punch-ins and animated crops, speed ramps, freeze frames, replays, reverse playback,
+      artificial shake, multi-view layouts and what fills each panel, stickers and emojis laid on top (read, never re-made: item 6),
+      arrows, badges, buttons, overlay logos, interface decorations, borders and frames, decorative particles, glows, glitches and
+      motion graphics, the finishing treatment), as a pattern with its key moments: each kind with how often and how fast (the shot
+      lengths' median and range, where the rhythm changes) and the times of the moments that carry the video (the hook, the
+      punchline, a freeze, a layout switch), not every cut's time; and what the frames show inside it: the art direction (live action, anime, cartoon or stylised: linework, shading,
       textures, animation style), the in-world text and symbols and the in-world effects (magic, transformations, exaggerated motion).
       The test, on lists that are not exhaustive: what belongs to the scene and its visual language is the scene layer; what labels,
       decorates, arranges or repackages it is the edit layer;

@@ -13,16 +13,16 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.1 KB)
+- capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
 - capcut-assembly §3: `AWL/reference/capcut-assembly/030_3_build-the-timeline.md` (5.9 KB)
 - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (2.5 KB)
-- capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.8 KB)
+- capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.9 KB)
 - capcut-assembly §6: `AWL/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (1.8 KB)
-- *Create and Free `create` (item 35):* capcut-assembly §3c: `AWL/reference/capcut-assembly/045_3c_the-create-edit-from-clean-takes.md` (3.2 KB)
+- *Create and Free `create` (item 35):* capcut-assembly §3c: `AWL/reference/capcut-assembly/045_3c_the-create-edit-from-clean-takes.md` (3.5 KB)
 - *Create (the sound layer):*
   - capcut-assembly §3b: `AWL/reference/capcut-assembly/040_3b_sound-layer-create.md` (5.1 KB)
-- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (7.3 KB)
+- text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (7.5 KB)
 - text-and-format §3: `AWL/reference/text-and-format/030_3_analyze-mode-planning-text-and-p.md` (4.3 KB)
 - *a multi-clip video:*
   - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.5 KB)
@@ -98,8 +98,8 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
      trimmed, joined, with no overlay text (with an own voiceover, the file whose sound is the take: step 5b). After it passes X9 (with QC fixes `off`: at once, no X9), assemble its CapCut project
      (`reference/capcut-assembly.md` §2–§5):
      - `T capcut-name --video NN` → `capcut_clone_draft` (empty) → `T capcut-prep`;
-     - **Create (item 35):** the timeline is the plan's edit plan, built from the conformed takes (`capcut-assembly.md` §3c) with the
-       CapCut tools found live (§1: an update may add or change them): the pieces in order with their speeds, punch-ins and crops, the
+     - **Create (item 35):** the timeline is the plan's edit plan, built from the conformed takes, each cut timed where its beat really
+       lands in them (`capcut-assembly.md` §3c), with the CapCut tools found live (§1: an update may add or change them): the pieces in order with their speeds, punch-ins and crops, the
        layouts, transitions, filters and graphics, then the inserts, the text, the sound and the voice as below; what no tool can place
        (reverse playback or an effect from CapCut's library, when the live list offers none) goes in the README row as "to apply in CapCut";
      - the inserts cut from the reference (`generation-system.md` §3c; in Create only with `memes=include`, item 32);
@@ -131,9 +131,10 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
      - A source overlay that carries the joke's context (a notification, a message, a banner) is the
        original element reused as a picture overlay, not re-typed text (CE-017, CE-023).
      - No text layer contains an emoji (the user's rule, strict).
-   - **No sticker or emoji, ever** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit", then "when i said stickers i meant stickers
-     and emojis both, never use them ever, neither in video generation nor edits"): none is generated (no prompt asks for one, in-world screens and props
-     included) and none is placed in CapCut (as a graphic or in a text layer), in any mode; a source's sticker or emoji is removed (Edit
+   - **No sticker or emoji added, ever** (the user, 2026-11-03: "never use or apply stickers, ever, neither in the video generation nor in the edit",
+     then "only no added ones if the video has emojis meanwhile someone is texting on phone thats natural, but not just place emojis or stickers as an adder"): none is added to a
+     generation as a decoration and none is placed in CapCut (as a graphic or in a text layer), in any mode; one that belongs naturally to
+     the scene (the emojis of a chat someone is typing on a phone) is scene content; a source's added sticker or emoji is removed (Edit
      Mode) and a reference's is never re-made (Analyze Mode). One printed on the client's product is part of its label.
    - **Every CapCut text layer uses the house text style:** font System, size 10, and **the user's
      chosen preset**, learned from their project `03_Oct_2026_v09` on 2026-10-03 and locked in

@@ -299,12 +299,12 @@ check("35. **Create: clean source takes, the whole edit in CapCut**" in router a
       and all(f"`{n}`" in router.split("35. **Create: clean source takes")[1].split(chr(10))[0] for n in owners35)
       and all("item 35" in rd(SKD / n / "SKILL.md") for n in owners35) and "(command item 35)" in rd(PA / "020_2_spawning.md"),
       "item 35 is in the router with its owners and labels, in every skill that acts on it and in the production agents' contract")
-full35 = [n for n in ("awl-create-plan", "awl-plan-video") if "One generation unless the model's maximum length forces more" in rd(SKD / n / "SKILL.md")
-          and "Clean means no baked-in editorial addition; it never limits the genre" in rd(SKD / n / "SKILL.md")
+full35 = [n for n in ("awl-plan-video",) if "As few generations as the video needs, decided per video" in rd(SKD / n / "SKILL.md")
+          and "Clean means nothing added on top of the scene; it never limits the genre" in rd(SKD / n / "SKILL.md")
           and "edit the additions that label, decorate," + chr(10) + "      arrange or repackage it" in rd(SKD / n / "SKILL.md")]
-check(full35 == ["awl-create-plan", "awl-plan-video"],
-      "the whole item 35 (clean means no editorial addition, never a limit on the genre; one generation unless the model's maximum length forces more, "
-      "never one per shot; the non-exhaustive test) is in the two skills that own it: " + ", ".join(full35))
+check(full35 == ["awl-plan-video"] and "the whole rule is `awl-plan-video`'s item 35" in rd(SKD / "awl-create-plan" / "SKILL.md"),
+      "the whole item 35 (clean means no editorial addition, never a limit on the genre; as few generations as the video needs, decided per "
+      "video, never one per shot; the non-exhaustive test) is in awl-plan-video, and awl-create-plan carries what A6 acts on and points there: " + ", ".join(full35))
 sec3c = CA / "045_3c_the-create-edit-from-clean-takes.md"
 check(sec3c.is_file() and "| 3c | The Create edit from clean takes (command item 35) |" in rd(LIB / "reference" / "capcut-assembly.md")
       and "045_3c_the-create-edit-from-clean-takes.md" in rd(SKD / "awl-plan-video" / "SKILL.md")
@@ -315,16 +315,16 @@ check(sec3c.is_file() and "| 3c | The Create edit from clean takes (command item
       "every take and X10 the takes as the clean originals")
 tools = rd(CA / "010_1_tools-and-rules.md")
 check("`+capcut`" in tools and "suggestions for the usual operations" in tools and "`capcut --help`" in tools
-      and "suggestions for the usual operations" in rd(sec3c) and "look for one in the live list first" in rd(sec3c)
+      and "suggestions for the usual operations" in rd(sec3c) and "search for one first (§1)" in rd(sec3c) and "loading only what the project needs" in tools
       and all(f"mcp__capcut__capcut_{x}" in router for x in ("add_keyframe", "add_mask", "add_filter", "list_transitions", "delete_segment"))
       and not any(f"mcp__capcut__capcut_{x}" in router for x in ("add_captions", "transcribe", "clear_captions", "raw_patch")),
       "the agents find the CapCut tools live (ToolSearch +capcut, the catalog tools, capcut --help) and treat the named ones as suggestions; the "
       "router allows the edit's tools and never the caption, transcript or raw-patch tools")
-check("**No sticker or emoji, ever**" in router and "capcut_add_sticker" not in router and "capcut_add_sticker" not in tools
+check("**No sticker or emoji added, ever**" in router and "capcut_add_sticker" not in router and "capcut_add_sticker" not in tools
       and "capcut_add_sticker" not in rd(sec3c) and "Never a sticker or an emoji, as a graphic or in a text layer" in rd(sec3c)
-      and all("**No sticker or emoji, ever**" in rd(SKD / n / "SKILL.md") for n in ("awl-plan-video", "awl-postprocess"))
-      and "no sticker or emoji is anywhere in the project" in rd(SKD / "awl-qc" / "SKILL.md")
-      and "**No sticker or emoji, ever**" in rd(LIB / "reference" / "text-and-format" / "010_1_text-policy-depends-on-the-mode.md"),
+      and all("**No sticker or emoji added, ever**" in rd(SKD / n / "SKILL.md") for n in ("awl-plan-video", "awl-postprocess"))
+      and "no sticker or emoji is placed in the project" in rd(SKD / "awl-qc" / "SKILL.md")
+      and "**No sticker or emoji added, ever**" in rd(LIB / "reference" / "text-and-format" / "010_1_text-policy-depends-on-the-mode.md"),
       "no sticker or emoji, ever (the user, 2026-11-03): in the router's item 6, the text policy, the plan, X8, the CapCut sections and QC; the sticker "
       "tool is neither allowed nor named")
 

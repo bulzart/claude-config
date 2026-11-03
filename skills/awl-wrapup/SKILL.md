@@ -17,11 +17,11 @@ Only these section files for this phase, nothing else unless a step below says s
 - *an own voiceover (`state.json → voiceover.enabled` true; item 31):*
   - voiceover §11: `AWL/reference/voiceover/110_11_credits-licence-and-honesty.md` (1.1 KB)
 - *Analyze Mode with CapCut projects still pending:*
-  - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.1 KB)
+  - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
   - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
   - capcut-assembly §3: `AWL/reference/capcut-assembly/030_3_build-the-timeline.md` (5.9 KB)
   - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (2.5 KB)
-  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.8 KB)
+  - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.9 KB)
   - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 
 ## 6. Wrap-up (both modes)
