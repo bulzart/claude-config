@@ -750,3 +750,8 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   already uses for the admin's drawings.
 - **Verified:** t01 (93), t02 (146), t03 (69), t05 (73) pass; `docs_tool.py check` 0 errors; Loupe's selftest 264, keeper_sync 112,
   page_smoke, transport_check, flags_smoke pass.
+- **The live check (2026-11-03):** the morning's real brief again (run 20261102-233733-02 video 15 c1, under the test name sync-check-20261103):
+  the judge judged all 19 samples in 118 s (7 read and used, 6 designed out, 6 set aside, none unjudged; a 4940-character prompt), tied S44's
+  and S46's photo to this run's by its fingerprint ('IMG_6917 #846e6464': A273 in their run, A274 here, where A273 is IMG_6916.jpg) and kept
+  the draft's product images; the morning's flags on the two ids and on S44's product field are gone. `_product_plan` on that draft turns
+  'A273 IMG_6917.jpg #846e6464' into A274 (noted); the same without a fingerprint is a problem, nothing applied.
