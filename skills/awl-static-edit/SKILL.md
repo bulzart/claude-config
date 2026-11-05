@@ -44,7 +44,8 @@ Only these section files for this phase, nothing else unless a step below says s
      "RUN/60-outputs/video-NN/captions.srt" --font-size <size> --color <fill> --border-width <stroke_width> --border-color <stroke_color>
      --align 1 --y <1 − 2 × y_rel>` (plus `--shadow`, `--bg-color`/`--bg-alpha`, `--highlight-words … --keyword-color … --keyword-size …`
      as the look has them), the font with `T capcut-font --draft "<draft>" --font-file <font_file> --track subtitle`, an animation with
-     `capcut text-anim "<draft>" <id> --intro <animation>` on each caption, any other text with `capcut add-text` in its own look, then
+     `capcut text-anim "<draft>" <id> --intro <animation>` on each caption, any other text with `capcut add-text` in its own look (its font with
+     `T capcut-font --draft "<draft>" --font-file <file> --track text`), then
      `T capcut-repair --draft "<draft>" --keep-text --preview RUN/60-outputs/video-NN/capcut-preview.mp4` (register, lint; the text stays
      as you set it). capcut-assembly's house text style (§1, §4, §5) does not apply in Static.
    CapCut is open: blocker `capcut_running` (result.json).
