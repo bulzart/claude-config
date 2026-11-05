@@ -69,6 +69,13 @@ Subcommands (python awl.py <cmd> -h):
                  against the take) | mix (the take over the picture, plus a placed track for CapCut); facts, no verdict
   effort         the run's effort level (contract item 33): low | medium | high | xhigh | max, custom values held to the floors;
                  prep-all (the reference sampling) and the produce phase (agents at once, the pilot) read it; never QC
+  static         Static (contract item 36): check the setup on this PC (key present, image model, TTS, music, whisper, ffmpeg, capcut-cli)
+  image          Static stills: generate (OpenAI Images API, ledgered; the key only from OPENAI_API_KEY) | prompts (the file a user
+                 makes them from) | intake (the user's folder, copied in) | use (which attempt the edit takes)
+  tts            Static voice (Qwen3-TTS in its own environment): check | design (voice samples) | voice (the run's voice) | say (narration)
+  narration-words Static: a narration's timed words, caption cues, SRT and per-line differences from the script
+  music          Static bed (ACE-Step 1.5 in its own environment), only when planned: check | make
+  slideshow      Static: plan (timeline from the image plan and the narration) | render (clean and captioned preview mp4)
 
 Every command prints one JSON object on its last stdout line. Exit codes: 0 ok, 1 failure,
 2 bad arguments.
@@ -1031,7 +1038,7 @@ def second_timeline(dur: float, shots: list, cuts: list, peaks: list, statics: l
 def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, dense_fps: float = 10.0,
                static_threshold: float = 2.5, whisper_model: str = "small", language: str = "auto",
                audio_ingest: str = None, do_ocr: bool = True, ocr_budget: int = 12,
-               max_frames: int = 1800, hook_s: float = 3.0, peaks_max: int = 8) -> dict:
+               max_frames: int = 1800, hook_s: float = 3.0, peaks_max: int = 8, extras: bool = True) -> dict:
     t0 = time.time()
     if audio_ingest not in AUDIO_INGEST:
         raise RuntimeError(AUDIO_INGEST_HELP)
@@ -1082,7 +1089,7 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
     # a still stretch counts from 3 duplicates in a row at 4 fps and up (the rates before item 33); at 3 fps from the 2 a still second holds,
     # so Medium never keeps more frames of a still shot than High; at 2 fps a still second holds 1, and thinning it would save no cell
     statics = thin_static(base, static_threshold, min_run=max(2, min(3, math.ceil(base_fps) - 1)))
-    plan = densify_plan(cuts, peaks, dur, fps, eff_fps, dense_fps)
+    plan = densify_plan(cuts, peaks, dur, fps, eff_fps, dense_fps) if extras else []     # --no-extras: the baseline rate only (Static: 1 fps)
     extra = extract_many(video, [(tt, fr_dir / "extra" / f"x-{ts_name(tt)}.jpg", {"kind": "extra", "tag": tag, "why": why})
                                  for tt, tag, why in plan], max_side=720)
     shot_of = lambda tt: next((s["shot"] for s in shots if s["start"] <= tt < s["end"]), shots[-1]["shot"] if shots else 1)
@@ -1229,7 +1236,7 @@ def _media_kwargs(a, audio_ingest: str, eff: dict | None = None) -> dict:
     return dict(base_fps=float(base), dense_fps=float(max(dense, base)), static_threshold=a.static_threshold,
                 whisper_model=a.whisper_model, language=a.language, audio_ingest=audio_ingest,
                 do_ocr=not a.no_ocr, ocr_budget=a.ocr_frames, max_frames=a.max_frames,
-                peaks_max=int(eff["motion_peaks"]) if eff and eff.get("motion_peaks") else 8)
+                peaks_max=int(eff["motion_peaks"]) if eff and eff.get("motion_peaks") else 8, extras=not getattr(a, "no_extras", False))
 
 
 def cmd_prep_video(a):
@@ -1943,6 +1950,8 @@ def cmd_status(a):
          "model": st.get("model"), "stage": st.get("stage"), "next_skill": st.get("next_skill"), "next_step": st.get("next_step"),
          "video": st.get("video"), "updated": st.get("updated"), "requested_videos": st.get("requested_videos"),
          "audio_ingest": st.get("audio_ingest"), "memes": st.get("memes"), "effort": effort_of_state(st),
+         "static": ({"images": st.get("static_images"), "voice_sample": ((st.get("static") or {}).get("voice") or {}).get("sample"),
+                     "subjects": (st.get("static") or {}).get("subjects")} if st.get("analyze_submode") == "static" else None),
          "voiceover": ({"enabled": st["voiceover"].get("enabled"), "method": st["voiceover"].get("method"), "source": st["voiceover"].get("source"),
                         "voice": st["voiceover"].get("voice_name"),
                         "language": st["voiceover"].get("language"), "preference": st["voiceover"].get("preference"),
@@ -2213,11 +2222,11 @@ def cmd_lint_run(a):
                             "last among the image inputs, so the judge can choose them (the admin, 2026-10-30)"},
          "request_freeze": {"checked": fr_checked, "changed_after_their_ledger_entry": fr_changed,
                             "note": "a request file whose content no longer matches the fingerprint of its open or finished ledger entry was edited after the submission (item 29)"},
-         "contract": {"exists": contract.is_file(), "names_this_run": rd.name in ct, "loupe_line": bool(re.search(r"^Loupe: (up|down)", ct, re.M)),
+         "contract": {"exists": contract.is_file(), "names_this_run": rd.name in ct, "loupe_line": bool(re.search(r"^Loupe: (up|down|not used)", ct, re.M)),
                       "audio_line": bool(re.search(r"^Audio ingest: ", ct, re.M)), "qc_fixes_line": bool(re.search(r"^QC fixes: (ask|auto|off)", ct, re.M)),
                       "voiceover_line": bool(re.search(r"^Voiceover: (off|on)", ct, re.M)),
                       "memes_line": bool(re.search(r"^Memes: (n/a|none|include|as your plan)", ct, re.M)),
-                      "unresolved_placeholders": sorted(set(re.findall(r"<(?:RUN|AWL|model id|guide path|recreate\|create|ask\|auto\|off|ask\|auto|up\|down|whisper\|frames-only|voiceover|memes)>", ct)))}})
+                      "unresolved_placeholders": sorted(set(re.findall(r"<(?:RUN|AWL|model id|guide path|recreate\|create|ask\|auto\|off|ask\|auto|up\|down|whisper\|frames-only|voiceover|memes|api\|prompts)>", ct)))}})
 
 
 UPLOAD_KEYS = {"media_id", "file", "content_type", "url", "at", "role", "note"}
@@ -2336,7 +2345,7 @@ def cmd_uploads(a):
 
 CONTRACT_SUBS = (("<RUN>", "run"), ("<AWL>", "library"), ("<model id>", "model"), ("<guide path>", "guide path"), ("<recreate|create>", "analyze_submode"),
                  ("<ask|auto|off>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"),
-                 ("<memes>", "memes"))
+                 ("<memes>", "memes"), ("<api|prompts>", "static_images"))
 
 
 def _contract_memes(st: dict) -> str:
@@ -2345,6 +2354,8 @@ def _contract_memes(st: dict) -> str:
     sub, m = str(st.get("analyze_submode") or ""), str(st.get("memes") or "")
     if sub == "recreate":
         return "n/a (Recreate keeps each reference's own inserts)"
+    if sub == "static":
+        return "n/a (Static: no inserts)"
     if m == "none":
         return "none (pure generation: no insert, meme still or meme sound of any kind)"
     if m == "include" or (sub == "create" and not m):
@@ -2384,9 +2395,10 @@ def cmd_contract(a):
     state.json does not hold stays as it is and is listed (the agents must not be spawned with it). Run-specific notes go under their own
     heading at the end, never into the rules. The previous file, when different, is kept beside it with a stamp."""
     rd, st = _state_of(a.run)
-    tpl_p = AWL_HOME / "reference" / "production-agents" / "020_2_spawning.md"
+    tpl_name = "025_2s_spawning-static.md" if str(st.get("analyze_submode") or "") == "static" else "020_2_spawning.md"    # Static: its own block (item 36)
+    tpl_p = AWL_HOME / "reference" / "production-agents" / tpl_name
     if not tpl_p.is_file():            # a temp home (tests) holds no references: the library beside this script does
-        tpl_p = Path(__file__).resolve().parent.parent / "reference" / "production-agents" / "020_2_spawning.md"
+        tpl_p = Path(__file__).resolve().parent.parent / "reference" / "production-agents" / tpl_name
     tpl = tpl_p.read_text(encoding="utf-8", errors="replace")
     m = re.search(r"```\n(.*?)\n```", tpl.replace("\r\n", "\n"), re.S)
     if not m:
@@ -2402,7 +2414,7 @@ def cmd_contract(a):
         guide = ""
     values = {"run": str(rd), "library": str(AWL_HOME), "model": model, "guide path": guide, "analyze_submode": str(st.get("analyze_submode") or ""),
               "qc_fixes": str(st.get("qc_fixes") or "auto"), "loupe": str(st.get("loupe") or "up"), "audio_ingest": str(st.get("audio_ingest") or ""),
-              "voiceover": _contract_voiceover(st, rd), "memes": _contract_memes(st)}
+              "voiceover": _contract_voiceover(st, rd), "memes": _contract_memes(st), "static_images": str(st.get("static_images") or "")}
     substituted, unresolved = {}, []
     for token, key in CONTRACT_SUBS:
         if values[key]:
@@ -2670,10 +2682,59 @@ def cmd_fetch_audio(a):
     out({"ok": True, "bytes": n, **meta})
 
 
+def _voice_numbers(src: Path, transcript=None) -> dict:
+    """The narrator's voice as numbers (Static writes the voice description from them): pitch median and spread over the voiced frames of the
+    first 90 s, the voiced share, energy variation, and from a transcript the words per minute of speech and the pauses between words.
+    Measured, never listened to; no verdict."""
+    try:
+        import numpy as np
+        import librosa
+    except ImportError:
+        return {"error": "librosa and numpy are required"}
+    work = Path(os.environ.get("TEMP") or os.environ.get("TMP") or ".") / f"awl-voice-{os.getpid()}.wav"
+    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-t", "90", str(work)], timeout=600)
+    if cp.returncode != 0 or not work.exists():
+        return {"error": "could not decode the audio"}
+    try:
+        y, sr = librosa.load(str(work), sr=16000, mono=True)
+    finally:
+        work.unlink(missing_ok=True)
+    res = {"analysed_s": round(len(y) / sr, 1) if sr else 0}
+    if len(y) < sr:
+        return {**res, "error": "under one second of audio"}
+    f0, vflag, _p = librosa.pyin(y, fmin=65, fmax=400, sr=sr, frame_length=1024)
+    v = f0[~np.isnan(f0)]
+    res["voiced_share"] = round(float(np.mean(vflag)), 3) if len(vflag) else None
+    if len(v):
+        p10, p50, p90 = (float(np.percentile(v, q)) for q in (10, 50, 90))
+        res.update({"pitch_hz_median": round(p50, 1), "pitch_hz_p10": round(p10, 1), "pitch_hz_p90": round(p90, 1),
+                    "pitch_spread_semitones": round(12 * math.log2(p90 / p10), 2) if p10 > 0 else None})
+    rms = librosa.feature.rms(y=y)[0]
+    res["energy_cv"] = round(float(np.std(rms) / (np.mean(rms) + 1e-9)), 3)
+    if transcript:
+        try:
+            tr = json.loads(Path(transcript).read_text(encoding="utf-8"))
+            ws = [w for s in tr.get("segments", []) for w in s.get("words", [])]
+            if len(ws) >= 2:
+                span = ws[-1]["e"] - ws[0]["s"]
+                gaps = [ws[i]["s"] - ws[i - 1]["e"] for i in range(1, len(ws))]
+                pauses = [g for g in gaps if g >= 0.25]
+                res.update({"words": len(ws), "words_per_minute": round(len(ws) / (span / 60), 1) if span > 0 else None,
+                            "pauses_per_minute": round(len(pauses) / (span / 60), 1) if span > 0 else None,
+                            "pause_s_median": round(statistics.median(pauses), 2) if pauses else None,
+                            "pause_s_max": round(max(pauses), 2) if pauses else None})
+        except (OSError, ValueError, KeyError):
+            res["transcript_error"] = "not read"
+    return res
+
+
 def cmd_audio_profile(a):
     prof, err = _audio_profile(Path(a.audio), Path(a.out), a.transcript, a.cuts)
     if err:
         fail(err, 1)
+    if getattr(a, "voice", False):
+        prof["voice"] = _voice_numbers(Path(a.audio), a.transcript)
+        write_json(Path(a.out), prof)
     out(prof)
 
 
@@ -6820,6 +6881,949 @@ def cmd_voiceover(a):
     {"outdir": _vo_outdir, "record": _vo_record, "align": _vo_align, "mix": _vo_mix}[a.action](a)
 
 
+# --------------------------------------------------------------------------- Static (Analyze → Static, contract item 36)
+# Narrated still-image videos: stills from the OpenAI Images API (or the user's own files), the narration from a local Qwen3-TTS voice,
+# an optional bed from a local ACE-Step 1.5, all joined by ffmpeg and in CapCut. No Higgsfield call and no Loupe call anywhere here.
+# Every command gathers, records and measures; the agent decides (contract item 25). The OpenAI key comes only from the environment
+# (OPENAI_API_KEY): it is never printed, never written to a run, and scrubbed from every error text.
+
+STATIC_IMG_NAME = re.compile(r"(?i)(?:^|[^a-z0-9])v(\d{1,3})[-_ ]?i(\d{1,3})(?:[^0-9]|$)")
+STATIC_MOTIONS = ("zoom-in", "zoom-out", "pan-left", "pan-right", "pan-up", "pan-down", "none")
+STATIC_TRANSITIONS = {"cut": "fade", "fade": "fade", "dissolve": "dissolve", "fadeblack": "fadeblack", "fadewhite": "fadewhite",
+                      "slideleft": "slideleft", "slideright": "slideright", "slideup": "slideup", "slidedown": "slidedown",
+                      "smoothleft": "smoothleft", "smoothright": "smoothright", "circleopen": "circleopen", "zoomin": "zoomin"}
+STATIC_LANG_ISO = {"english": "en", "spanish": "es", "german": "de", "italian": "it", "portuguese": "pt", "french": "fr",
+                   "russian": "ru", "japanese": "ja", "korean": "ko", "chinese": "zh"}
+
+
+def _scfg(key: str, default=None):
+    return cfg_get(f"static.{key}", default)
+
+
+def _sha1_file(p: Path) -> str:
+    h = hashlib.sha1()
+    with open(p, "rb") as f:
+        for b in iter(lambda: f.read(1 << 20), b""):
+            h.update(b)
+    return h.hexdigest()
+
+
+def _oa_key() -> str:
+    return (os.environ.get("OPENAI_API_KEY") or "").strip()
+
+
+def _oa_base() -> str:
+    return (os.environ.get("AWL_OPENAI_BASE_URL") or _scfg("images.api_base") or "https://api.openai.com/v1").rstrip("/")
+
+
+def _scrub(text, key: str) -> str:
+    s = str(text or "")
+    return s.replace(key, "<OPENAI_API_KEY>") if key else s
+
+
+def _oa_call(method: str, path: str, body, key: str, timeout: float) -> tuple:
+    """(http status, parsed JSON or None, raw text with the key scrubbed) of one OpenAI API call. The key travels only in the
+    Authorization header. A timeout or a dropped connection raises (the caller records the outcome as unknown)."""
+    import urllib.error
+    import urllib.request
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(_oa_base() + path, data=data, method=method,
+                                 headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            status, raw = r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        status = e.code
+        try:
+            raw = e.read().decode("utf-8", "replace")
+        except Exception:  # noqa: BLE001
+            raw = ""
+    try:
+        js = json.loads(raw) if raw else None
+    except ValueError:
+        js = None
+    return status, js, _scrub(raw, key)[:2000]
+
+
+def _data_url(p: Path) -> str:
+    mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(p.suffix.lower(), "image/png")
+    return f"data:{mime};base64," + base64.b64encode(p.read_bytes()).decode("ascii")
+
+
+def _img_size(p: Path) -> list:
+    try:
+        from PIL import Image
+        with Image.open(p) as im:
+            return [im.width, im.height]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _img_cost(usage: dict) -> float | None:
+    """An ESTIMATE in USD from the token usage the API returned and the prices in config.json -> static.images.prices_usd_per_1m (dated)."""
+    if not isinstance(usage, dict) or not usage:
+        return None
+    pr = _scfg("images.prices_usd_per_1m", {}) or {}
+    det = usage.get("input_tokens_details") or {}
+    txt = det.get("text_tokens", usage.get("input_tokens", 0) if not det else 0) or 0
+    img = det.get("image_tokens", 0) or 0
+    outp = usage.get("output_tokens", 0) or 0
+    try:
+        return round(txt * float(pr.get("text_in", 0)) / 1e6 + img * float(pr.get("image_in", 0)) / 1e6
+                     + outp * float(pr.get("image_out", 0)) / 1e6, 4)
+    except (TypeError, ValueError):
+        return None
+
+
+def _img_where(rd: Path, nn: str, anchor: str | None) -> tuple:
+    """(folder of the files, the record file, the record's key of this image) for a video's image or a character anchor."""
+    if anchor:
+        d = rd / "30-assets" / "characters"
+        return d, d / "anchors.json"
+    d = rd / "60-outputs" / f"video-{nn}" / "images"
+    return d, d.parent / "images.json"
+
+
+def _img_record_add(rec_p: Path, key: str, attempt: dict | None = None, use: str | None = None) -> dict:
+    """Append an attempt to an image's record and/or set the file it uses, under a lock (images.json / anchors.json)."""
+    rec_p.parent.mkdir(parents=True, exist_ok=True)
+    with FileLock(rec_p.with_name(rec_p.name + ".lock")):
+        try:
+            rec = json.loads(rec_p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            rec = {"images": {}}
+        slot = rec.setdefault("images", {}).setdefault(key, {"attempts": []})
+        if attempt:
+            slot["attempts"].append(attempt)
+        if use:
+            slot["use"] = use
+        write_json(rec_p, rec)
+    return slot
+
+
+def _img_ledger(rd: Path, action: str, **kw) -> dict:
+    """The image calls in the run's ledger (state.json -> submissions), the same rows paid video generations keep, with kind 'image'
+    and provider 'openai'. Records and reports; it never refuses."""
+    p = rd / "state.json"
+    with FileLock(p.with_name("state.json.lock")):
+        st = json.loads(p.read_text(encoding="utf-8"))
+        led = st.setdefault("submissions", [])
+        if action == "begin":
+            e = {"video": kw["video"], "lane": _lane(kw["video"]), "attempt": kw["attempt"], "fingerprint": kw["fp"], "status": "pending",
+                 "job_id": None, "model": kw["model"], "request_file": kw["request_file"], "created": now_iso(), "history": [],
+                 "conflicts_seen": [], "kind": "image", "provider": "openai"}
+            led.append(e)
+        else:
+            hits = [e for e in led if e.get("fingerprint") == kw["fp"] and e.get("kind") == "image"]
+            if not hits:
+                return {}
+            e = hits[-1]
+            e["history"].append({"at": now_iso(), "from": e["status"], "to": kw["status"], "note": kw.get("note")})
+            e["status"] = kw["status"]
+            if kw.get("job"):
+                e["job_id"] = kw["job"]
+        st["updated"] = now_iso()
+        write_json(p, st)
+    return e
+
+
+def _img_generate(a):
+    rd, st = _state_of(a.run)
+    anchor = re.sub(r"[^A-Za-z0-9_-]+", "", a.anchor or "") or None
+    nn = "00" if anchor else _cf_nn(a.video)
+    if not anchor and (not a.video or not a.image):
+        fail("generate needs --video NN and --image K (or --anchor ID for a character's anchor image)", 2)
+    key_name = anchor or f"{int(a.image):02d}"
+    prompt = (Path(a.prompt_file).read_text(encoding="utf-8") if a.prompt_file else (a.prompt or "")).strip()
+    if not prompt:
+        fail("generate needs --prompt-file (or --prompt)", 2)
+    refs = [Path(r) for r in (a.ref or [])]
+    missing = [str(r) for r in refs if not r.is_file()]
+    if missing:
+        fail("reference image(s) not found: " + "; ".join(missing), 2)
+    if len(refs) > 16:
+        fail("the image API takes at most 16 reference images per request", 2)
+    key = _oa_key()
+    if not key:
+        fail("OPENAI_API_KEY is not set in this environment: set it once on this PC (reference/static §9). Nothing was sent.", 2)
+    model = a.model or _scfg("images.model", "gpt-image-2.5-sunburst")
+    size = a.size or _scfg("images.size", "1088x1920")
+    quality = a.quality or _scfg("images.quality", "high")
+    params = {"model": model, "prompt": prompt, "size": size, "quality": quality, "n": 1, "output_format": "png",
+              "refs": [{"file": str(r.resolve()), "sha1": _sha1_file(r)} for r in refs]}
+    fp = _fingerprint({"params": params})
+    folder, rec_p = _img_where(rd, nn, anchor)
+    try:
+        slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {"attempts": []}
+    except (OSError, ValueError):
+        slot = {"attempts": []}
+    done = [x for x in slot["attempts"] if x.get("fingerprint") == fp and x.get("status") == "completed" and Path(x.get("file") or "").is_file()]
+    if done and not a.again:
+        out({"ok": True, "reused": True, "file": done[-1]["file"], "attempt": done[-1]["attempt"], "fingerprint": fp,
+             "note": "this exact request already made this image: nothing was sent (--again asks for a new draw of the same request)"})
+    attempt = 1 + max([int(x.get("attempt") or 0) for x in slot["attempts"]] or [0])
+    tag = f"{anchor}-a{attempt}" if anchor else f"i{key_name}-a{attempt}"
+    reqf = rd / "50-requests" / (f"anchor-{anchor}-a{attempt}-image-request.json" if anchor else f"video-{nn}-i{key_name}-a{attempt}-image-request.json")
+    write_json(reqf, {"video": nn, "image": key_name, "attempt": attempt, "kind": "image", "provider": "openai",
+                      "endpoint": "edits" if refs else "generations", "params": params})
+    _img_ledger(rd, "begin", video=nn, attempt=tag, fp=fp, model=model, request_file=str(reqf))
+    body = {"model": model, "prompt": prompt, "size": size, "quality": quality, "n": 1, "output_format": "png"}
+    if refs:
+        body["images"] = [{"image_url": _data_url(r)} for r in refs]
+    timeout = float(a.timeout or _scfg("images.timeout_s", 300))
+    t0, tries, status, js, raw = time.time(), [], None, None, ""
+    for wait in (0, 5, 20):          # only rate limits and server errors are sent again, twice at most; a refusal never is
+        if wait:
+            time.sleep(wait)
+        try:
+            status, js, raw = _oa_call("POST", "/images/edits" if refs else "/images/generations", body, key, timeout)
+        except Exception as e:  # noqa: BLE001  (a timeout or a dropped connection: whether an image was made and billed is unknown)
+            _img_ledger(rd, "set", fp=fp, status="unknown", note=type(e).__name__)
+            _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "unknown", "fingerprint": fp, "at": now_iso(),
+                                              "request_file": str(reqf), "note": f"{type(e).__name__}: {_scrub(e, key)[:200]}"})
+            fail(f"no answer from the image API ({type(e).__name__} after {round(time.time() - t0)} s): the ledger says unknown, whether an image "
+                 "was made and billed is not known. Decide before sending it again (the same request: --again).", 1,
+                 timeout=True, fingerprint=fp, tries=tries)
+        tries.append(status)
+        if status not in (429, 500, 502, 503, 504):
+            break
+    data = (js or {}).get("data") if isinstance(js, dict) else None
+    b64 = (data or [{}])[0].get("b64_json") if isinstance(data, list) and data else None
+    if status != 200 or not b64:
+        err = (js or {}).get("error") if isinstance(js, dict) else None
+        err = err if isinstance(err, dict) else {}
+        code = err.get("code") or (f"http {status}" if status else "no image in the answer")
+        _img_ledger(rd, "set", fp=fp, status="failed", note=str(code))
+        _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "moderation_blocked" if code == "moderation_blocked" else "failed",
+                                          "fingerprint": fp, "at": now_iso(), "http": status, "request_file": str(reqf),
+                                          "error": _scrub(err.get("message") or raw[:300], key), "moderation": err.get("moderation_details")})
+        hint = ("the service refused the request (moderation_blocked): change the prompt or the reference images before any new attempt; "
+                "never send it again unchanged") if code == "moderation_blocked" else (
+               "the key was refused (401): check OPENAI_API_KEY on this PC" if status == 401 else
+               "the model or a parameter was refused: read the error" if status == 400 else
+               "rate limited or the service failed, after two retries" if status in (429, 500, 502, 503, 504) else "read the error")
+        fail(f"no image: {code}. {hint}", 1, http=status, error_code=code, error=_scrub(err.get("message") or raw[:300], key),
+             moderation=err.get("moderation_details"), tries=tries, fingerprint=fp)
+    folder.mkdir(parents=True, exist_ok=True)
+    f = folder / f"{tag}.png"
+    f.write_bytes(base64.b64decode(b64))
+    usage = js.get("usage") or {}
+    cost = _img_cost(usage)
+    wh = _img_size(f)
+    _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "completed", "source": "api", "file": str(f), "fingerprint": fp,
+                                      "at": now_iso(), "model": model, "size": wh, "quality": quality, "refs": [r["file"] for r in params["refs"]],
+                                      "request_file": str(reqf), "usage": usage, "cost_usd_estimate": cost}, use=f.name)
+    _img_ledger(rd, "set", fp=fp, status="completed", note=f.name, job=str(js.get("created") or ""))
+    out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "model": model, "quality": quality, "refs": len(refs),
+         "usage": usage, "cost_usd_estimate": cost, "elapsed_s": round(time.time() - t0, 1), "tries": tries, "fingerprint": fp,
+         "note": "view the image before you use it (the QC of reference/static §8); this attempt is now the one the edit uses"})
+
+
+def _img_plan(rd: Path, nn: str) -> dict:
+    p = rd / "40-briefs" / f"video-{nn}-images.json"
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _img_prompts(a):
+    """The prompts file a user generates the images from (Static, prompts mode): one prompt per image, the file name to save it as, the
+    character images to attach, the size, and how to hand the folder back."""
+    rd, _st = _state_of(a.run)
+    vids = [_cf_nn(a.video)] if a.video else sorted({p.name[6:-12] for p in (rd / "40-briefs").glob("video-*-images.json")})
+    if not vids:
+        fail("no image plan: write 40-briefs/video-NN-images.json first (reference/static §5)", 2)
+    files, total = [], 0
+    for nn in vids:
+        plan = _img_plan(rd, nn)
+        imgs = plan.get("images") or []
+        if not imgs:
+            fail(f"40-briefs/video-{nn}-images.json has no images", 2)
+        size = plan.get("size") or _scfg("images.size", "1088x1920")
+        L = [f"# Video {nn}: {len(imgs)} image prompts", "",
+             f"Make every image **vertical 9:16, {size}** (or the nearest vertical size your tool offers) with GPT Image 2.5 or the image tool "
+             f"you use. Save each image under the name in its heading (`v{nn}-iKK`, png, jpg or webp). When the images of every video are done, "
+             "put them all in ONE folder (sub-folders are fine) and send me its path: I copy them in and never move or change your files.", ""]
+        chars = plan.get("characters") or []
+        if chars:
+            L += ["## Characters (keep each one the same in every image)", ""]
+            for c in chars:
+                L.append(f"- **{c.get('id')}** {c.get('name') or ''}: " + (f"attach `{Path(c['photo']).name}` (`{c['photo']}`) to every image that shows "
+                         "them" if c.get("photo") else "no photo: make its sheet first from the prompt below, then attach that sheet to every image that shows them"))
+                if c.get("sheet_prompt") and not c.get("photo"):
+                    L += ["", f"### {c.get('id')} character sheet (save as `{c.get('id')}-sheet`)", "", "```", str(c["sheet_prompt"]).strip(), "```", ""]
+            L.append("")
+        for im in imgs:
+            kk = f"{int(im.get('image') or 0):02d}"
+            L += [f"## v{nn}-i{kk}" + (f"  ·  {ts_label(float(im['start']))}–{ts_label(float(im['end']))}" if im.get("start") is not None and im.get("end") is not None else ""), ""]
+            if im.get("line"):
+                L.append(f"Narration over it: “{str(im['line']).strip()}”")
+            if im.get("characters"):
+                L.append("Attach: " + ", ".join(str(c) for c in im["characters"]) + " (their photo or sheet, above)")
+            L += ["", "```", str(im.get("prompt") or "").strip(), "```", ""]
+        dest = rd / "deliverables" / "prompts" / f"video-{nn}-image-prompts.md"
+        write_text(dest, "\n".join(L))
+        files.append(str(dest))
+        total += len(imgs)
+    out({"ok": True, "files": files, "images": total, "naming": "vNN-iKK (png, jpg or webp), all in one folder; sub-folders fine",
+         "note": "give the user these files' paths and how to hand back the folder; `T image intake --folder <path>` copies them in"})
+
+
+def _img_intake(a):
+    """Copy the user's images (Static, prompts mode) into the run, by their names vNN-iKK; never moves or changes the user's files.
+    Reports, as facts, what each video's plan expects and does not have, what came in that no plan names, names seen twice, files whose
+    name holds no vNN-iKK, and each image's size and how far it is from 9:16."""
+    rd, _st = _state_of(a.run)
+    src = Path(a.folder)
+    if not src.is_dir():
+        fail(f"folder not found: {src}", 2)
+    found, unmatched = {}, []
+    for f in sorted(src.rglob("*")):
+        if f.is_file() and f.suffix.lower() in IMAGE_EXT:
+            m = STATIC_IMG_NAME.search(f.stem)
+            if m:
+                found.setdefault((f"{int(m.group(1)):02d}", f"{int(m.group(2)):02d}"), []).append(f)
+            else:
+                unmatched.append(str(f))
+    want = {}
+    for p in sorted((rd / "40-briefs").glob("video-*-images.json")):
+        nn = p.name[6:-12]
+        if a.video and nn != _cf_nn(a.video):
+            continue
+        want[nn] = {f"{int(im.get('image') or 0):02d}" for im in (_img_plan(rd, nn).get("images") or [])}
+    copied, dupes, extra = [], [], []
+    for (nn, kk), fs in sorted(found.items()):
+        if a.video and nn != _cf_nn(a.video):
+            continue
+        if kk not in want.get(nn, set()):
+            extra.append({"video": nn, "image": kk, "files": [str(x) for x in fs]})
+            continue
+        f = max(fs, key=lambda x: x.stat().st_mtime)
+        if len(fs) > 1:
+            dupes.append({"video": nn, "image": kk, "files": [str(x) for x in fs], "taken": str(f)})
+        folder, rec_p = _img_where(rd, nn, None)
+        folder.mkdir(parents=True, exist_ok=True)
+        dest = folder / f"i{kk}-user{f.suffix.lower()}"
+        shutil.copy2(f, dest)
+        wh = _img_size(dest)
+        aspect_off = round(abs((wh[0] / wh[1]) - 9 / 16) / (9 / 16), 3) if len(wh) == 2 and wh[1] else None
+        try:
+            prev = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(kk) or {}
+        except (OSError, ValueError):
+            prev = {}
+        att = 1 + max([int(x.get("attempt") or 0) for x in prev.get("attempts", [])] or [0])
+        _img_record_add(rec_p, kk, {"attempt": att, "status": "completed", "source": "user", "file": str(dest), "from": str(f),
+                                    "sha1": _sha1_file(dest), "at": now_iso(), "size": wh}, use=dest.name)
+        copied.append({"video": nn, "image": kk, "file": str(dest), "from": str(f), "size": wh, "off_9x16": aspect_off})
+    missing = [{"video": nn, "image": kk} for nn, ks in sorted(want.items()) for kk in sorted(ks) if (nn, kk) not in found]
+    out({"ok": True, "folder": str(src), "copied": copied, "missing": missing, "not_in_any_plan": extra, "named_twice": dupes,
+         "names_without_vNN_iKK": unmatched[:60], "unmatched_total": len(unmatched),
+         "note": "copies only (your folder is untouched); off_9x16 is the share the aspect differs from 9:16 (the edit crops to fill); view each image before the edit"})
+
+
+def _img_use(a):
+    rd, _st = _state_of(a.run)
+    anchor = re.sub(r"[^A-Za-z0-9_-]+", "", a.anchor or "") or None
+    nn = "00" if anchor else _cf_nn(a.video)
+    key_name = anchor or f"{int(a.image or 0):02d}"
+    folder, rec_p = _img_where(rd, nn, anchor)
+    try:
+        slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {}
+    except (OSError, ValueError):
+        slot = {}
+    pick = next((x for x in slot.get("attempts", []) if int(x.get("attempt") or 0) == int(a.attempt or 0) and Path(x.get("file") or "").is_file()), None)
+    if not pick:
+        fail(f"no finished attempt {a.attempt} of {key_name} with a file on disk", 2)
+    _img_record_add(rec_p, key_name, None, use=Path(pick["file"]).name)
+    out({"ok": True, "image": key_name, "uses": pick["file"]})
+
+
+def cmd_image(a):
+    """Static stills (contract item 36): generate (OpenAI Images API, ledgered) | prompts (the file a user makes them from) | intake (the
+    user's folder, copied in) | use (which attempt the edit takes). Facts only; the agent views and judges every image."""
+    {"generate": _img_generate, "prompts": _img_prompts, "intake": _img_intake, "use": _img_use}[a.action](a)
+
+
+# ---- the local workers (Qwen3-TTS, ACE-Step 1.5): each runs in its own Python, one model load per call, one JSON line back
+
+def _worker_python(kind: str) -> str:
+    env = {"tts": "AWL_TTS_PYTHON", "music": "AWL_MUSIC_PYTHON"}[kind]
+    return (os.environ.get(env) or _scfg(f"{kind}.python") or "").strip().strip('"')
+
+
+def _worker(kind: str, job: dict, timeout: float = 7200, cwd=None) -> dict:
+    """Run scripts/<kind>_worker.py with the job in the tool's own interpreter; its last stdout line is the answer."""
+    py = _worker_python(kind)
+    if not py or not Path(py).is_file():
+        env = {"tts": "AWL_TTS_PYTHON", "music": "AWL_MUSIC_PYTHON"}[kind]
+        return {"ok": False, "error": f"{env} is not set to an existing python.exe of the {kind} environment (reference/static §9)"}
+    script = Path(__file__).resolve().parent / f"{kind}_worker.py"
+    jf = runs_root() / ".workers" / f"{kind}-{os.getpid()}-{int(time.time() * 1000)}.json"
+    jf.parent.mkdir(parents=True, exist_ok=True)
+    jf.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
+    try:
+        cp = run([py, "-X", "utf8", str(script), str(jf)], cwd=cwd, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": f"the {kind} worker ran past {int(timeout)} s"}
+    finally:
+        jf.unlink(missing_ok=True)
+    last = [ln for ln in (cp.stdout or "").strip().splitlines() if ln.strip()]
+    try:
+        res = json.loads(last[-1]) if last else {}
+    except ValueError:
+        res = {}
+    if not res:
+        res = {"ok": False, "error": f"the {kind} worker gave no answer (exit {cp.returncode}): " + (cp.stderr or "")[-800:]}
+    return res
+
+
+def _gpu_lock():
+    """One local model on the GPU at a time (Qwen3-TTS and ACE-Step share it), across every agent of this library."""
+    return FileLock(runs_root() / ".gpu.lock", timeout=7200.0, stale=14400.0)
+
+
+def _tone(dest: Path, seconds: float, freq: int = 220, rate: int = 24000) -> float:
+    """Tests and dry runs (AWL_TTS_STUB / AWL_MUSIC_STUB): a plain tone stands in for a model's audio."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-f", "lavfi", "-i", f"sine=frequency={freq}:duration={seconds:.3f}",
+         "-ac", "1", "-ar", str(rate), "-c:a", "pcm_s16le", str(dest)], check=True, timeout=120)
+    return round(seconds, 3)
+
+
+def _voice_dir(rd: Path) -> Path:
+    return rd / "30-assets" / "voice"
+
+
+def _tts_job_base() -> dict:
+    return {"device": os.environ.get("AWL_TTS_DEVICE") or _scfg("tts.device", "cuda:0"), "dtype": _scfg("tts.dtype", "bfloat16"),
+            "attn": _scfg("tts.attn", "sdpa")}
+
+
+def _state_set(rd: Path, **pairs):
+    p = rd / "state.json"
+    with FileLock(p.with_name("state.json.lock")):
+        st = json.loads(p.read_text(encoding="utf-8"))
+        for k, v in pairs.items():
+            _set_dotted(st, k, v)
+        st["updated"] = now_iso()
+        write_json(p, st)
+
+
+def _tts_check(a):
+    if os.environ.get("AWL_TTS_STUB"):
+        out({"ok": True, "stub": True, "ready": True})
+    res = _worker("tts", {"op": "check", "models": [_scfg("tts.design_model"), _scfg("tts.clone_model")], **_tts_job_base()}, timeout=600)
+    out({"ok": bool(res.get("ok")), "ready": bool(res.get("ok")), **res})
+
+
+def _tts_design(a):
+    """Static voice samples: one VoiceDesign load, one short sample per --instruct (the voice described in words), all speaking --text."""
+    rd, _st = _state_of(a.run)
+    if not a.text or not a.instruct:
+        fail("design needs --text (the line every sample speaks) and one --instruct per sample (the voice in words)", 2)
+    vd = _voice_dir(rd)
+    lang = a.language or _scfg("tts.language", "english")
+    items = [{"n": i + 1, "text": a.text, "instruct": ins, "out": str(vd / f"sample-{i + 1}.wav")} for i, ins in enumerate(a.instruct)]
+    if os.environ.get("AWL_TTS_STUB"):
+        for it in items:
+            it["duration_s"] = _tone(Path(it["out"]), max(1.5, len(a.text.split()) / 2.6), 180 + 40 * it["n"])
+        res = {"ok": True, "items": items, "stub": True}
+    else:
+        with _gpu_lock():
+            res = _worker("tts", {"op": "design", "model": _scfg("tts.design_model"), "language": lang, "items": items, **_tts_job_base()})
+    if not res.get("ok"):
+        fail("voice design failed: " + str(res.get("error"))[:600], 1, worker=res)
+    write_json(vd / "samples.json", {"text": a.text, "language": lang, "samples": res.get("items") or items, "made": now_iso(),
+                                     "model": _scfg("tts.design_model")})
+    out({"ok": True, "samples": [{"n": it["n"], "file": it["out"], "instruct": it["instruct"], "duration_s": it.get("duration_s")}
+                                 for it in (res.get("items") or items)],
+         "note": "give the user the three files to listen to; their pick is stored with `T tts voice --sample K`"})
+
+
+def _tts_voice(a):
+    """The run's one voice (Static): the picked sample becomes the clone reference (Base model, design then clone), saved as a reusable
+    prompt; each --emotion NAME=TEXT adds a reference clip of the same voice speaking that line, and its own prompt."""
+    rd, _st = _state_of(a.run)
+    vd = _voice_dir(rd)
+    try:
+        samples = json.loads((vd / "samples.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail("no voice samples in this run: `T tts design` first", 2)
+    pick = next((s for s in samples.get("samples", []) if int(s.get("n") or 0) == int(a.sample or 0)), None)
+    if not pick or not Path(pick.get("out") or "").is_file():
+        fail(f"sample {a.sample} not found in 30-assets/voice/samples.json", 2)
+    ref = vd / "ref-neutral.wav"
+    shutil.copy2(pick["out"], ref)
+    write_text(vd / "ref-neutral.txt", samples["text"])
+    emotions = []
+    for e in a.emotion or []:
+        if "=" not in e:
+            fail(f"--emotion takes NAME=TEXT, got {e!r}", 2)
+        name, text = e.split("=", 1)
+        name = re.sub(r"[^a-z0-9]+", "-", name.strip().lower()).strip("-")
+        emotions.append({"name": name, "text": text.strip(), "out_wav": str(vd / f"ref-{name}.wav"), "out_prompt": str(vd / f"prompt-{name}.pt")})
+    lang = samples.get("language") or _scfg("tts.language", "english")
+    job = {"op": "voice", "model": _scfg("tts.clone_model"), "language": lang, "ref_audio": str(ref), "ref_text": samples["text"],
+           "out_prompt": str(vd / "prompt-neutral.pt"), "emotions": emotions, **_tts_job_base()}
+    if os.environ.get("AWL_TTS_STUB"):
+        Path(job["out_prompt"]).write_text("stub", encoding="utf-8")
+        for e in emotions:
+            _tone(Path(e["out_wav"]), max(1.2, len(e["text"].split()) / 2.6), 300)
+            Path(e["out_prompt"]).write_text("stub", encoding="utf-8")
+        res = {"ok": True, "stub": True}
+    else:
+        with _gpu_lock():
+            res = _worker("tts", job)
+    if not res.get("ok"):
+        fail("the voice could not be built: " + str(res.get("error"))[:600], 1, worker=res)
+    prompts = {"neutral": job["out_prompt"], **{e["name"]: e["out_prompt"] for e in emotions}}
+    _state_set(rd, **{"static.voice": {"sample": int(a.sample), "instruct": pick.get("instruct"), "ref_text": samples["text"], "language": lang,
+                                        "ref_audio": str(ref), "prompts": prompts, "design_model": _scfg("tts.design_model"),
+                                        "clone_model": _scfg("tts.clone_model"), "set_at": now_iso()}})
+    out({"ok": True, "voice": {"sample": int(a.sample), "prompts": prompts}, "emotion_clips": [e["out_wav"] for e in emotions],
+         "note": "every narration of this run uses this voice (state.json -> static.voice)"})
+
+
+def _wav_read(p: Path) -> tuple:
+    import wave
+    with wave.open(str(p), "rb") as w:
+        return w.getframerate(), w.getnchannels(), w.getsampwidth(), w.readframes(w.getnframes())
+
+
+def _ebur128(p: Path) -> float | None:
+    cp = run([find_tool("ffmpeg"), "-nostdin", "-hide_banner", "-i", str(p), "-af", "ebur128=framelog=quiet", "-f", "null", "-"], timeout=900)
+    m = re.findall(r"I:\s+(-?\d+(?:\.\d+)?)\s+LUFS", cp.stderr or "")
+    return float(m[-1]) if m else None
+
+
+def _tts_say(a):
+    """A video's narration (Static): every line in the run's voice (its emotion's reference clip when the line names one), joined with the
+    planned pauses, brought to the target loudness. The sidecar holds each line's exact start and end in the narration file."""
+    rd, st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    lines_p = Path(a.lines_file) if a.lines_file else rd / "40-briefs" / f"video-{nn}-narration.json"
+    try:
+        spec = json.loads(lines_p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"narration lines not found or not JSON: {lines_p} (reference/static §4)", 2)
+    voice = (st.get("static") or {}).get("voice") or {}
+    if not voice.get("prompts"):
+        fail("the run has no voice yet: `T tts voice --sample K` after the user picked one", 2)
+    lines = [ln for ln in spec.get("lines") or [] if str(ln.get("text") or "").strip()]
+    if not lines:
+        fail(f"{lines_p.name} has no lines", 2)
+    nd = rd / "30-assets" / "narration" / f"video-{nn}"
+    only = {int(x) for x in re.findall(r"\d+", a.only or "")}
+    todo = []
+    for i, ln in enumerate(lines, 1):
+        n = int(ln.get("n") or i)
+        ln["n"] = n
+        ln["file"] = str(nd / f"line-{n:02d}.wav")
+        if not only or n in only or not Path(ln["file"]).is_file():
+            todo.append({"n": n, "text": str(ln["text"]).strip(), "emotion": str(ln.get("emotion") or "neutral"), "out": ln["file"]})
+    lang = spec.get("language") or voice.get("language") or _scfg("tts.language", "english")
+    t0 = time.time()
+    if todo:
+        if os.environ.get("AWL_TTS_STUB"):
+            for it in todo:
+                _tone(Path(it["out"]), max(0.8, len(it["text"].split()) / 2.6), 200)
+            res = {"ok": True, "stub": True}
+        else:
+            with _gpu_lock():
+                res = _worker("tts", {"op": "say", "model": voice.get("clone_model") or _scfg("tts.clone_model"), "language": lang,
+                                      "prompts": voice["prompts"], "lines": todo, **_tts_job_base()})
+        if not res.get("ok"):
+            fail("narration failed: " + str(res.get("error"))[:600], 1, worker=res)
+    pause_default = float(_scfg("narration.pause_s", 0.35))
+    sr0, frames, rows, pos = None, bytearray(), [], 0.0
+    for ln in lines:
+        sr, ch, sw, data = _wav_read(Path(ln["file"]))
+        if sr0 is None:
+            sr0, ch0, sw0 = sr, ch, sw
+        if (sr, ch, sw) != (sr0, ch0, sw0):
+            fail(f"line {ln['n']} has another sample format ({sr} Hz, {ch} ch) than line 1 ({sr0} Hz): re-make it", 1)
+        dur = len(data) / (sr * ch * sw)
+        rows.append({"n": ln["n"], "text": ln["text"], "emotion": ln.get("emotion") or "neutral", "file": ln["file"],
+                     "start": round(pos, 3), "end": round(pos + dur, 3)})
+        frames += data
+        pos += dur
+        gap = float(ln.get("pause_after", pause_default) or 0) if ln is not lines[-1] else 0.0
+        frames += b"\x00" * (int(round(gap * sr)) * ch * sw)
+        pos += round(int(round(gap * sr)) / sr, 6)
+    import wave
+    raw = rd / "30-assets" / "narration" / f"video-{nn}.raw.wav"
+    with wave.open(str(raw), "wb") as w:
+        w.setnchannels(ch0)
+        w.setsampwidth(sw0)
+        w.setframerate(sr0)
+        w.writeframes(bytes(frames))
+    final = rd / "30-assets" / "narration" / f"video-{nn}.wav"
+    target = float(_scfg("narration.loudness_lufs", -14.0))
+    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(raw), "-af", f"loudnorm=I={target}:TP=-1.5:LRA=11",
+              "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", str(final)], timeout=900)
+    if cp.returncode != 0:
+        fail("loudness pass failed: " + cp.stderr[-400:])
+    side = {"video": nn, "file": str(final), "raw": str(raw), "duration_s": round(pos, 3), "language": lang, "lines": rows,
+            "voice": {"sample": voice.get("sample"), "instruct": voice.get("instruct")}, "loudness_lufs": _ebur128(final),
+            "made": now_iso(), "stub": bool(os.environ.get("AWL_TTS_STUB"))}
+    write_json(final.with_suffix(".json"), side)
+    out({"ok": True, "file": str(final), "sidecar": str(final.with_suffix(".json")), "duration_s": side["duration_s"], "lines": len(rows),
+         "made_now": [t["n"] for t in todo], "loudness_lufs": side["loudness_lufs"], "elapsed_s": round(time.time() - t0, 1),
+         "note": "next: `T narration-words` (the words, the cues and the check against the script)"})
+
+
+def cmd_tts(a):
+    """Static's voice (contract item 36): check | design (voice samples) | voice (the picked sample becomes the run's voice) | say (a video's
+    narration). Qwen3-TTS runs in its own environment (AWL_TTS_PYTHON); one GPU job at a time."""
+    if a.action != "check" and not a.run:
+        fail(f"tts {a.action} needs --run", 2)
+    {"check": _tts_check, "design": _tts_design, "voice": _tts_voice, "say": _tts_say}[a.action](a)
+
+
+def cmd_narration_words(a):
+    """The words of a video's narration with their times (speech-to-text timing, the script's wording), the caption cues and an SRT, and how
+    the heard words differ from the script per line (missing, extra, repeated): facts for the narration QC."""
+    import difflib
+    rd, _st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    side_p = rd / "30-assets" / "narration" / f"video-{nn}.json"
+    try:
+        side = json.loads(side_p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"no narration for video {nn}: `T tts say` first", 2)
+    work = rd / "30-assets" / "narration" / f"video-{nn}-words"
+    work.mkdir(parents=True, exist_ok=True)
+    wav16 = work / "narration-16k.wav"
+    run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", side["file"], "-ac", "1", "-ar", "16000", str(wav16)], check=True, timeout=600)
+    lang = STATIC_LANG_ISO.get(str(side.get("language") or "").lower(), "auto")
+    tr = transcribe(str(wav16), work, a.whisper_model, lang)
+    heard = [w for s in tr.get("segments", []) for w in s.get("words", [])]
+    script = " ".join(r["text"] for r in side["lines"])
+    timed = align_script(heard, script) if heard else []
+    per_line, k = [], 0
+    for r in side["lines"]:
+        hw = [_norm_word(w["w"]) for w in heard if r["start"] - 0.15 <= w["s"] <= r["end"] + 0.15]
+        sw = [_norm_word(x) for x in r["text"].split()]
+        sm = difflib.SequenceMatcher(a=sw, b=hw, autojunk=False)
+        miss = [x for tag, i1, i2, _j1, _j2 in sm.get_opcodes() if tag in ("delete", "replace") for x in sw[i1:i2]]
+        extra = [x for tag, _i1, _i2, j1, j2 in sm.get_opcodes() if tag in ("insert", "replace") for x in hw[j1:j2]]
+        rep = [w for i, w in enumerate(hw[1:], 1) if w and w == hw[i - 1]]
+        per_line.append({"n": r["n"], "script_words": len(sw), "heard_words": len(hw), "missing": miss[:12], "extra": extra[:12],
+                         "repeated": rep[:6], "match": round(sm.ratio(), 3)})
+        k += len(sw)
+    cues = chunk_words(timed, int(a.words or _scfg("captions.words", 3))) if timed else []
+    write_json(work.parent / f"video-{nn}.words.json", {"video": nn, "engine": tr.get("engine"), "words": timed, "heard": heard})
+    write_json(work.parent / f"video-{nn}.cues.json", cues)
+    srt = []
+    for i, c in enumerate(cues, 1):
+        srt += [str(i), f"{_srt_time(c['start'])} --> {_srt_time(c['end'])}", c["text"], ""]
+    write_text(work.parent / f"video-{nn}.srt", "\n".join(srt))
+    off = [x for x in per_line if x["match"] < float(a.min_match)]
+    out({"ok": True, "video": nn, "engine": tr.get("engine"), "words": len(timed), "cues": len(cues), "lines": per_line,
+         "lines_to_check": [x["n"] for x in off], "files": {"words": str(work.parent / f"video-{nn}.words.json"),
+                                                             "cues": str(work.parent / f"video-{nn}.cues.json"), "srt": str(work.parent / f"video-{nn}.srt")},
+         "note": "match is the share of a line's script words heard in its span (speech-to-text, not a verdict): listen to and judge the lines it lists; "
+                 "a line made again: `T tts say --only N`, then this again"})
+
+
+def _srt_time(t: float) -> str:
+    ms = int(round(max(0.0, t) * 1000))
+    h, ms = divmod(ms, 3600000)
+    m, ms = divmod(ms, 60000)
+    s, ms = divmod(ms, 1000)
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+
+def cmd_music(a):
+    """Static's bed (contract item 36), only when the plan calls for one: every track of --plan in one ACE-Step 1.5 load (instrumental, the
+    narration's length plus a tail, fades), saved as 30-assets/music/video-NN.wav with a sidecar."""
+    if a.action == "check":
+        if os.environ.get("AWL_MUSIC_STUB"):
+            out({"ok": True, "stub": True, "ready": True})
+        res = _worker("music", {"op": "check", "root": os.environ.get("AWL_MUSIC_ROOT") or _scfg("music.root"),
+                                "config": _scfg("music.config", "acestep-v15-turbo")}, timeout=600,
+                      cwd=os.environ.get("AWL_MUSIC_ROOT") or _scfg("music.root") or None)
+        out({"ok": bool(res.get("ok")), "ready": bool(res.get("ok")), **res})
+    if not a.run:
+        fail("music make needs --run", 2)
+    rd, _st = _state_of(a.run)
+    plan_p = Path(a.plan) if a.plan else rd / "40-briefs" / "music.json"
+    try:
+        plan = json.loads(plan_p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"music plan not found or not JSON: {plan_p} (reference/static §6)", 2)
+    md = rd / "30-assets" / "music"
+    tracks = []
+    for tr in plan.get("tracks") or []:
+        nn = _cf_nn(tr.get("video"))
+        if a.video and nn != _cf_nn(a.video):
+            continue
+        if not tr.get("caption") or not tr.get("duration"):
+            fail(f"track of video {nn} needs caption and duration", 2)
+        tracks.append({"video": nn, "caption": str(tr["caption"])[:500], "duration": float(tr["duration"]), "bpm": tr.get("bpm"),
+                       "seed": int(tr.get("seed") or 1234), "fade_in": float(tr.get("fade_in", _scfg("music.fade_in_s", 1.0))),
+                       "fade_out": float(tr.get("fade_out", _scfg("music.fade_out_s", 3.0))), "out": str(md / f"video-{nn}.wav")})
+    if not tracks:
+        fail("no track to make (the plan is empty, or --video names none of it)", 2)
+    if os.environ.get("AWL_MUSIC_STUB"):
+        for t_ in tracks:
+            _tone(Path(t_["out"]), t_["duration"], 110, 48000)
+        res = {"ok": True, "stub": True, "tracks": tracks}
+    else:
+        root = os.environ.get("AWL_MUSIC_ROOT") or _scfg("music.root") or ""
+        with _gpu_lock():
+            res = _worker("music", {"op": "generate", "root": root, "config": _scfg("music.config", "acestep-v15-turbo"),
+                                    "device": _scfg("music.device", "cuda"), "steps": int(_scfg("music.inference_steps", 8)), "tracks": tracks},
+                          cwd=root or None)
+    if not res.get("ok"):
+        fail("music failed: " + str(res.get("error"))[:600], 1, worker=res)
+    made = []
+    for t_ in tracks:
+        f = Path(t_["out"])
+        if f.is_file():
+            write_json(f.with_suffix(".json"), {**t_, "made": now_iso(), "model": _scfg("music.config", "acestep-v15-turbo"),
+                                                "stub": bool(os.environ.get("AWL_MUSIC_STUB"))})
+            made.append({"video": t_["video"], "file": str(f), "duration_s": (media_summary(f) or {}).get("duration_s")})
+    out({"ok": bool(made), "made": made, "asked": len(tracks), "note": "listen before use; the bed goes under the narration ducked (slideshow render)"})
+
+
+def cmd_static(a):
+    """Static's setup on this PC (contract item 36), as facts per part: the OpenAI key (present or not; never printed) and whether the image
+    model answers, the TTS and music environments (their workers' own checks), faster-whisper's cached models, ffmpeg's filters, capcut-cli."""
+    parts = {}
+    key = _oa_key()
+    model = _scfg("images.model", "gpt-image-2.5-sunburst")
+    img = {"key_present": bool(key), "model": model, "needed_for": "images by the API (static_images=api)"}
+    if key and not a.offline:
+        try:
+            st_, js, raw = _oa_call("GET", f"/models/{model}", None, key, 30)
+            img["model_answers"] = st_ == 200
+            if st_ != 200:
+                img["http"] = st_
+                img["error"] = _scrub((((js or {}).get("error") or {}) if isinstance(js, dict) else {}).get("message") or raw[:200], key)
+        except Exception as e:  # noqa: BLE001
+            img["model_answers"] = False
+            img["error"] = type(e).__name__
+    parts["images"] = img
+    if os.environ.get("AWL_TTS_STUB"):
+        parts["tts"] = {"ready": True, "stub": True}
+    else:
+        r = _worker("tts", {"op": "check", "models": [_scfg("tts.design_model"), _scfg("tts.clone_model")], **_tts_job_base()}, timeout=600)
+        parts["tts"] = {"ready": bool(r.get("ok")), "python": _worker_python("tts") or None, **r}
+    if os.environ.get("AWL_MUSIC_STUB"):
+        parts["music"] = {"ready": True, "stub": True}
+    else:
+        root = os.environ.get("AWL_MUSIC_ROOT") or _scfg("music.root") or ""
+        r = _worker("music", {"op": "check", "root": root, "config": _scfg("music.config", "acestep-v15-turbo")}, timeout=600, cwd=root or None)
+        parts["music"] = {"ready": bool(r.get("ok")), "python": _worker_python("music") or None, "root": root or None,
+                          "needed_for": "a bed, only when the plan calls for one", **r}
+    try:
+        import faster_whisper  # noqa: F401
+        hub = Path(os.environ.get("HF_HOME") or Path.home() / ".cache" / "huggingface") / "hub"
+        cached = sorted(p.name.split("--")[-1] for p in hub.glob("models--*faster-whisper*")) if hub.is_dir() else []
+        parts["whisper"] = {"ready": bool(cached) or bool(os.environ.get("AWL_TRANSCRIBE_STUB")), "cached_models": cached}
+    except ImportError:
+        parts["whisper"] = {"ready": bool(os.environ.get("AWL_TRANSCRIBE_STUB")), "error": "faster_whisper is not installed in this Python"}
+    try:
+        fl = run([find_tool("ffmpeg"), "-hide_banner", "-filters"], timeout=60).stdout
+        need = ["zoompan", "xfade", "loudnorm", "sidechaincompress", "subtitles", "ebur128"]
+        parts["ffmpeg"] = {"ready": all(re.search(rf"\b{n}\b", fl) for n in need), "missing_filters": [n for n in need if not re.search(rf"\b{n}\b", fl)]}
+    except Exception as e:  # noqa: BLE001
+        parts["ffmpeg"] = {"ready": False, "error": str(e)[:200]}
+    parts["capcut_cli"] = {"ready": bool(shutil.which("capcut")), "path": shutil.which("capcut")}
+    out({"ok": True, "parts": parts, "note": "facts per part; which part a run needs (the API key only with static_images=api, music only when a bed is "
+                                             "planned) and what is a blocker are the agent's call (reference/static §9 has the setup)"})
+
+
+# ---- the local render: stills with motion, transitions, the narration and the bed, loudness; the preview with the captions burned
+
+def _static_line_starts(side: dict) -> dict:
+    return {int(r["n"]): float(r["start"]) for r in side.get("lines") or []}
+
+
+def _slideshow_plan(a):
+    """40-briefs/video-NN-timeline.json from the image plan (each image starts at its narration line) and the narration's exact line times;
+    also the captions shifted onto the video's timeline (60-outputs/video-NN/captions.srt and .json) for CapCut and the preview."""
+    rd, _st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    plan = _img_plan(rd, nn)
+    imgs = plan.get("images") or []
+    if not imgs:
+        fail(f"no image plan for video {nn} (40-briefs/video-{nn}-images.json)", 2)
+    try:
+        side = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"no narration for video {nn}: `T tts say` first", 2)
+    lead = float(plan.get("lead_s", _scfg("narration.lead_s", 0.3)))
+    tail = float(plan.get("tail_s", _scfg("narration.tail_s", 0.8)))
+    starts = _static_line_starts(side)
+    try:
+        rec = json.loads((rd / "60-outputs" / f"video-{nn}" / "images.json").read_text(encoding="utf-8")).get("images") or {}
+    except (OSError, ValueError):
+        rec = {}
+    folder = rd / "60-outputs" / f"video-{nn}" / "images"
+    total = round(lead + float(side["duration_s"]) + tail, 3)
+    cyc = list(_scfg("render.motions", ["zoom-in", "pan-right", "zoom-out", "pan-left"]))
+    rows, missing_files, unknown_lines = [], [], []
+    for i, im in enumerate(sorted(imgs, key=lambda x: int(x.get("image") or 0))):
+        kk = f"{int(im.get('image') or 0):02d}"
+        if im.get("start") is not None and im.get("from_line") is None:
+            st_ = float(im["start"])
+        elif int(im.get("from_line") or 0) in starts:
+            st_ = lead + starts[int(im["from_line"])]
+        else:
+            unknown_lines.append(kk)
+            st_ = None
+        use = (rec.get(kk) or {}).get("use")
+        f = folder / use if use else None
+        if not f or not f.is_file():
+            missing_files.append(kk)
+        rows.append({"image": int(kk), "file": str(f) if f else None, "start": st_, "line": im.get("from_line"),
+                     "motion": im.get("motion") or cyc[i % len(cyc)], "amount": float(im.get("amount", _scfg("render.motion_amount", 0.12))),
+                     "transition": im.get("transition") or plan.get("transition") or _scfg("render.transition", "fade"),
+                     "trans_s": float(im.get("trans_s", plan.get("trans_s", _scfg("render.transition_s", 0.4))))})
+    if unknown_lines:
+        fail("images whose from_line is not a narration line: " + ", ".join(unknown_lines), 2)
+    rows[0]["start"] = 0.0
+    for i, r in enumerate(rows):
+        r["end"] = rows[i + 1]["start"] if i + 1 < len(rows) else total
+    short = [r["image"] for r in rows if r["end"] - r["start"] < 0.5]
+    music = rd / "30-assets" / "music" / f"video-{nn}.wav"
+    cap = plan.get("captions") or {}
+    tl = {"video": nn, "size": plan.get("render_size") or _scfg("render.size", "720x1280"), "fps": int(_scfg("render.fps", 30)),
+          "narration": side["file"], "narration_offset": lead, "duration_s": total,
+          "music": {"file": str(music), "gain": float(plan.get("music_gain", _scfg("music.gain", 0.22)))} if music.is_file() and plan.get("music", True) else None,
+          "captions": {"y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3)))},
+          "images": rows, "made": now_iso()}
+    tlp = rd / "40-briefs" / f"video-{nn}-timeline.json"
+    write_json(tlp, tl)
+    try:
+        cues = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        cues = []
+    shifted = [{**c, "start": round(c["start"] + lead, 3), "end": round(c["end"] + lead, 3)} for c in cues]
+    od = rd / "60-outputs" / f"video-{nn}"
+    write_json(od / "captions.json", shifted)
+    srt = []
+    for i, c in enumerate(shifted, 1):
+        srt += [str(i), f"{_srt_time(c['start'])} --> {_srt_time(c['end'])}", c["text"], ""]
+    write_text(od / "captions.srt", "\n".join(srt))
+    out({"ok": not missing_files, "timeline": str(tlp), "duration_s": total, "images": len(rows), "image_spans": [[r["image"], r["start"], r["end"]] for r in rows],
+         "shorter_than_0_5s": short, "images_without_a_file": missing_files, "captions": len(shifted), "captions_srt": str(od / "captions.srt"),
+         "music": bool(tl["music"]), "note": "edit motions or transitions in the timeline file if the spec asks for others, then `T slideshow render`"})
+
+
+def _zoompan(motion: str, amount: float, n: int) -> str:
+    A, N = max(0.0, float(amount)), max(1, n - 1)
+    cx, cy = "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)"
+    z = {"zoom-in": f"1+{A}*on/{N}", "zoom-out": f"{1 + A}-{A}*on/{N}"}.get(motion, f"{1 + A}" if motion != "none" else "1")
+    x = {"pan-right": f"(iw-iw/zoom)*on/{N}", "pan-left": f"(iw-iw/zoom)*(1-on/{N})"}.get(motion, cx)
+    y = {"pan-down": f"(ih-ih/zoom)*on/{N}", "pan-up": f"(ih-ih/zoom)*(1-on/{N})"}.get(motion, cy)
+    return f"z='{z}':x='{x}':y='{y}'"
+
+
+def _slideshow_render(a):
+    """The local render of a Static video from its timeline: each still scaled to cover 9:16, moved (zoom or pan), joined by its transitions
+    so every image still starts on its line; the narration at its offset, the bed under it ducked, the whole at the target loudness.
+    Writes deliverables/video-NN-clean.mp4 and, with the captions burned in the house look, video-NN-preview.mp4 (the complete video)."""
+    rd, _st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    tlp = rd / "40-briefs" / f"video-{nn}-timeline.json"
+    try:
+        tl = json.loads(tlp.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"no timeline for video {nn}: `T slideshow plan` first", 2)
+    W, H = (int(x) for x in str(tl.get("size") or "720x1280").lower().split("x"))
+    fps = int(tl.get("fps") or 30)
+    rows = tl["images"]
+    bad = [r["image"] for r in rows if not r.get("file") or not Path(r["file"]).is_file()]
+    if bad:
+        fail("images without a file: " + ", ".join(str(b) for b in bad), 2)
+    empty = [r["image"] for r in rows if float(r["end"]) - float(r["start"]) <= 0]
+    if empty:
+        fail("images whose span is empty or negative (their start lines are out of order): " + ", ".join(str(b) for b in empty), 2)
+    T = float(tl["duration_s"])
+    args, fc = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error"], []
+    for r in rows:
+        args += ["-i", str(r["file"])]
+    for k, r in enumerate(rows):
+        d_in = 0.0 if k == 0 else max(1.0 / fps, float(rows[k]["trans_s"]) if rows[k]["transition"] != "cut" else 1.0 / fps)
+        r["_d_in"] = d_in
+        L = (float(r["end"]) - float(r["start"])) + d_in
+        n = max(2, int(round(L * fps)))
+        fc.append(f"[{k}:v]scale={2 * W}:{2 * H}:force_original_aspect_ratio=increase,crop={2 * W}:{2 * H},setsar=1,"
+                  f"zoompan={_zoompan(r['motion'], r['amount'], n)}:d={n}:s={W}x{H}:fps={fps},trim=duration={L:.4f},setpts=PTS-STARTPTS,"
+                  f"format=yuv420p[v{k}]")
+    last = "v0"
+    for k in range(1, len(rows)):
+        tr = STATIC_TRANSITIONS.get(str(rows[k]["transition"]).lower(), "fade")
+        off = float(rows[k - 1]["end"]) - rows[k]["_d_in"]
+        fc.append(f"[{last}][v{k}]xfade=transition={tr}:duration={rows[k]['_d_in']:.4f}:offset={off:.4f}[x{k}]")
+        last = f"x{k}"
+    fc.append(f"[{last}]trim=duration={T:.4f},setpts=PTS-STARTPTS[vout]")
+    ni = len(rows)
+    args += ["-i", tl["narration"]]
+    lead_ms = int(round(float(tl.get("narration_offset") or 0) * 1000))
+    target = float(_scfg("narration.loudness_lufs", -14.0))
+    mus = tl.get("music") or None
+    if mus and Path(mus["file"]).is_file():
+        args += ["-i", mus["file"]]
+        fo = float(_scfg("music.fade_out_s", 3.0))
+        fc.append(f"[{ni}:a]aresample=48000,adelay={lead_ms}|{lead_ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f},asplit=2[narr][nsc]")
+        fc.append(f"[{ni + 1}:a]aresample=48000,volume={float(mus.get('gain') or 0.22)},atrim=0:{T:.3f},apad=whole_dur={T:.3f},"
+                  f"afade=t=out:st={max(0.0, T - fo):.3f}:d={fo:.3f}[mus]")
+        fc.append("[mus][nsc]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=350[duck]")
+        fc.append(f"[narr][duck]amix=inputs=2:normalize=0:duration=first,loudnorm=I={target}:TP=-1.5:LRA=11,aresample=48000[aout]")
+    else:
+        fc.append(f"[{ni}:a]aresample=48000,adelay={lead_ms}|{lead_ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f},"
+                  f"loudnorm=I={target}:TP=-1.5:LRA=11,aresample=48000[aout]")
+    dl = rd / "deliverables"
+    dl.mkdir(parents=True, exist_ok=True)
+    clean = dl / f"video-{nn}-clean.mp4"
+    work = rd / "60-outputs" / f"video-{nn}" / "render"
+    work.mkdir(parents=True, exist_ok=True)
+    (work / "filter.txt").write_text(";\n".join(fc), encoding="utf-8")
+    t0 = time.time()
+    cp = run(args + ["-filter_complex", ";".join(fc), "-map", "[vout]", "-map", "[aout]", "-r", str(fps), *_encode_args(18),
+                     "-c:a", "aac", "-b:a", "192k", "-t", f"{T:.3f}", str(clean)], timeout=7200)
+    if cp.returncode != 0 or not clean.is_file():
+        fail("render failed: " + (cp.stderr or "")[-900:], 1, filter=str(work / "filter.txt"))
+    res = {"ok": True, "clean": str(clean), "seconds": round(time.time() - t0, 1)}
+    if not a.no_captions:
+        try:
+            cues = json.loads((rd / "60-outputs" / f"video-{nn}" / "captions.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            cues = []
+        if cues:
+            y = float((tl.get("captions") or {}).get("y_rel", 0.72))
+            spec = {"events": [{"start": c["start"], "end": c["end"], "text": c["text"], "preset": "caption", "pos": [0.5, y]} for c in cues]}
+            (work / "fonts").mkdir(exist_ok=True)
+            (work / "captions.ass").write_text(build_ass(spec, W, H, work / "fonts"), encoding="utf-8")
+            prev = dl / f"video-{nn}-preview.mp4"
+            cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(clean.resolve()), "-vf",
+                      "subtitles=captions.ass:fontsdir=fonts", "-map", "0:v:0", "-map", "0:a?", *_encode_args(18), "-c:a", "copy",
+                      str(prev.resolve())], cwd=str(work), timeout=7200)
+            if cp.returncode != 0:
+                fail("caption burn failed: " + cp.stderr[-600:], 1, clean=str(clean))
+            res["preview"] = str(prev)
+            res["captions"] = len(cues)
+        else:
+            res["preview"] = None
+            res["captions"] = 0
+    info = media_summary(clean)
+    res.update({"duration_s": info.get("duration_s"), "size": f"{info.get('display_width')}x{info.get('display_height')}", "fps": info.get("fps"),
+                "loudness_lufs": _ebur128(clean), "images": len(rows), "timeline": str(tlp)})
+    write_json(rd / "60-outputs" / f"video-{nn}" / "slideshow.json", {**res, "made": now_iso()})
+    out({**res, "note": "watch the preview: the captions, each image on its line, the motion; the CapCut project mirrors this timeline (reference/static §7)"})
+
+
+def cmd_slideshow(a):
+    """Static's local render (contract item 36): plan (the timeline from the image plan and the narration's line times; the captions on the
+    video's timeline) | render (clean and preview mp4)."""
+    {"plan": _slideshow_plan, "render": _slideshow_render}[a.action](a)
+
+
 def main():
     ap = argparse.ArgumentParser(prog="awl.py", description=__doc__.split("\n\n")[0])
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -6877,6 +7881,8 @@ def main():
         p.add_argument("--language", default="auto")
         p.add_argument("--no-ocr", action="store_true")
         p.add_argument("--ocr-frames", type=int, default=cfg_get("analysis.ocr_frames", 12))
+        p.add_argument("--no-extras", action="store_true",
+                       help="exactly --fps: no extra frames around cuts and motion peaks (Static samples the references at 1 fps only)")
 
     p = sp.add_parser("prep-video"); p.add_argument("video"); p.add_argument("--out", required=True)
     p.add_argument("--id")
@@ -6921,6 +7927,7 @@ def main():
     p.add_argument("--retries", type=int, default=3); p.set_defaults(fn=cmd_fetch_audio)
 
     p = sp.add_parser("audio-profile"); p.add_argument("--audio", required=True, help="files_audio file or the original video")
+    p.add_argument("--voice", action="store_true", help="also the narrator's voice as numbers: pitch, voiced share, energy, words per minute, pauses (Static)")
     p.add_argument("--out", required=True); p.add_argument("--transcript", help="10-media/<V>/transcript.json")
     p.add_argument("--cuts", help="10-media/<V>/cuts.json"); p.set_defaults(fn=cmd_audio_profile)
 
@@ -7240,6 +8247,60 @@ def main():
     p.add_argument("--delogo", action="append", help="x,y,w,h[@t0-t1] (0-1 fractions or pixels); repeatable")
     p.add_argument("--crop", help="x,y,w,h (0-1 fractions or pixels) — keep this region")
     p.add_argument("--crf", type=int, default=18); p.set_defaults(fn=cmd_clean)
+
+    p = sp.add_parser("static", help="Static's setup on this PC (contract item 36): check (key present, image model answers, TTS and music "
+                                     "environments, whisper, ffmpeg filters, capcut-cli), facts per part")
+    p.add_argument("action", choices=["check"]); p.add_argument("--run")
+    p.add_argument("--offline", action="store_true", help="do not ask the image API whether the model answers")
+    p.set_defaults(fn=cmd_static)
+
+    p = sp.add_parser("image", help="Static stills (contract item 36): generate (OpenAI Images API, ledgered) | prompts (the file a user makes them "
+                                    "from) | intake (the user's folder, copied in) | use (which attempt the edit takes)")
+    p.add_argument("action", choices=["generate", "prompts", "intake", "use"]); p.add_argument("--run", required=True)
+    p.add_argument("--video", help="the video, NN"); p.add_argument("--image", type=int, help="generate, use: the image's number in the video's plan")
+    p.add_argument("--anchor", help="generate, use: a character's anchor image (its id, e.g. C1) instead of a video's image")
+    p.add_argument("--prompt-file", help="generate: the prompt, a text file"); p.add_argument("--prompt", help="generate: the prompt as text")
+    p.add_argument("--ref", action="append", help="generate: a reference image (a character photo or anchor), repeatable, at most 16")
+    p.add_argument("--model", help="generate: default config static.images.model")
+    p.add_argument("--size", help="generate: WxH, both divisible by 16 (default config static.images.size)")
+    p.add_argument("--quality", help="generate: low | medium | high | xhigh | max (default config)")
+    p.add_argument("--again", action="store_true", help="generate: a new draw of a request that already made an image")
+    p.add_argument("--timeout", type=float, help="generate: seconds to wait for the answer (default config, 300)")
+    p.add_argument("--folder", help="intake: the folder holding the user's images (named vNN-iKK)")
+    p.add_argument("--attempt", type=int, help="use: the attempt the edit takes")
+    p.set_defaults(fn=cmd_image)
+
+    p = sp.add_parser("tts", help="Static's voice (contract item 36): check | design (voice samples) | voice (the picked sample becomes the run's "
+                                  "voice) | say (a video's narration); Qwen3-TTS in its own environment (AWL_TTS_PYTHON), one GPU job at a time")
+    p.add_argument("action", choices=["check", "design", "voice", "say"]); p.add_argument("--run")
+    p.add_argument("--text", help="design: the line every sample speaks")
+    p.add_argument("--instruct", action="append", help="design: one voice described in words, repeatable (one sample each)")
+    p.add_argument("--language", help="design: english | spanish | ... (default config static.tts.language)")
+    p.add_argument("--sample", type=int, help="voice: the sample the user picked")
+    p.add_argument("--emotion", action="append", help="voice: NAME=TEXT, a reference clip of the same voice for lines tagged NAME, repeatable")
+    p.add_argument("--video", help="say: the video, NN"); p.add_argument("--lines-file", help="say: default 40-briefs/video-NN-narration.json")
+    p.add_argument("--only", help="say: make only these line numbers again, e.g. 3,7")
+    p.set_defaults(fn=cmd_tts)
+
+    p = sp.add_parser("narration-words", help="Static: a narration's words and times (speech-to-text timing, the script's wording), caption cues, "
+                                              "an SRT, and per line how the heard words differ from the script (facts)")
+    p.add_argument("--run", required=True); p.add_argument("--video", required=True)
+    p.add_argument("--words", type=int, help="words per caption (default config static.captions.words)")
+    p.add_argument("--min-match", type=float, default=0.85, help="list the lines whose heard share of their script words is below this")
+    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"))
+    p.set_defaults(fn=cmd_narration_words)
+
+    p = sp.add_parser("music", help="Static's bed (contract item 36), only when the plan calls for one: check | make (ACE-Step 1.5 in its own "
+                                    "environment, AWL_MUSIC_PYTHON and AWL_MUSIC_ROOT)")
+    p.add_argument("action", choices=["check", "make"]); p.add_argument("--run")
+    p.add_argument("--plan", help="make: default 40-briefs/music.json"); p.add_argument("--video", help="make: only this video's track")
+    p.set_defaults(fn=cmd_music)
+
+    p = sp.add_parser("slideshow", help="Static's local render (contract item 36): plan (the timeline from the image plan and the narration's line "
+                                        "times) | render (clean and captioned preview mp4)")
+    p.add_argument("action", choices=["plan", "render"]); p.add_argument("--run", required=True); p.add_argument("--video", required=True)
+    p.add_argument("--no-captions", action="store_true", help="render: the clean file only")
+    p.set_defaults(fn=cmd_slideshow)
 
     a = ap.parse_args()
     if getattr(a, "run", None) and a.cmd not in ("caught-flag", "qc-consult", "qc-brief", "plan-hints", "prompt-template"):

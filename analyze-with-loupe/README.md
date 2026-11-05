@@ -4,14 +4,14 @@ The `/analyze-with-loupe` slash command lives at `~/.claude/commands/analyze-wit
 `disable-model-invocation: true`, the `Workflow` tool is disallowed, and it uses at most 2 analysis agents plus, in Analyze Mode, one
 production agent per video (at most 5 at once). Everything it loads at run time lives here or in the skills below.
 
-## How it is organised: a router, 20 phase skills, section files
+## How it is organised: a router, 24 phase skills, section files
 
 The context of a run is its scarcest resource, so nothing is loaded before its step:
 
 - **The command is a router** (about 20 KB): arguments, resume, the loading rules, one line per contract item, the phase map, the labels table and the global Never rules.
-- **Phase skills** `~/.claude/skills/awl-*/SKILL.md` (20, `user-invocable: false`, descriptions marked internal) hold the steps, the contract items and the Never rules of one phase
+- **Phase skills** `~/.claude/skills/awl-*/SKILL.md` (24, `user-invocable: false`, descriptions marked internal) hold the steps, the contract items and the Never rules of one phase
   each, moved verbatim from the old monolithic command, plus a "Read now" list of the exact section files the phase needs and a hand-off that names the next skill.
-  Their order is the chain `awl-start` → (Analyze) `awl-analyze-prepare` → `awl-analyze-study` → `awl-create-plan` | `awl-recreate-plan` | `awl-free-plan` (Free; without references straight from `awl-analyze-prepare`) → `awl-asset-plan` → `awl-analyze-produce`
+  Their order is the chain `awl-start` → (Analyze) `awl-analyze-prepare` → `awl-analyze-study` → `awl-create-plan` | `awl-recreate-plan` | `awl-free-plan` (Free; without references straight from `awl-analyze-prepare`) → `awl-asset-plan` → `awl-analyze-produce` (Static: `awl-static-plan` → `awl-analyze-produce`, which runs `awl-static-sound` for every video and spawns agents that run `awl-static-images` → `awl-static-edit` → `awl-record`)
   → `awl-wrapup`, or (Edit) `awl-start` → `awl-edit` → `awl-wrapup`; the per-video loop is `awl-plan-video` → `awl-write-request` → `awl-inputs` → `awl-precheck` → `awl-submit` →
   `awl-postprocess` → `awl-qc` → `awl-record`; `awl-feedback` and `awl-model-guide` are called when needed. `state.json → next_skill` makes every phase boundary resumable.
 - **Born from the library at `C:/Users/Glaresquare1/.claude/analyze-then-pick` on 2026-10-20** (a copy under new names, then changed; its log entries before that date are
@@ -47,18 +47,21 @@ analyze-with-loupe/
 │   ├── brand-guardrails            the client's rules from the assets folder (no gore, count limits, no competitor brands, no ambassador likeness, claims, disclaimers): extraction, rule kinds, the per-reference guardrail audit (core → dismiss; peripheral → pick and edit: count reduced, competitor marks removed never blurred, faces swapped, captions rewritten), Create invariants, Edit Mode hits, QC
 │   ├── text-and-format             mode-dependent text policy (Analyze: clean plate + CapCut text layers), text removal, fixed 9:16 / 720p rules
 │   ├── capcut-assembly             Analyze Mode's editable master: one CapCut project per video (DD_Mon_YYYY_vNN) with the inserts and text layers (house text style: System, size 10, or 11 when the video has only a little text, the user's locked preset); save, repair, preview
-│   ├── production-agents           Analyze Mode (Recreate / Create / Free): one background agent per video (max 5 at once), its prompt (which invokes the per-video skills), contract and result.json
+│   ├── production-agents           Analyze Mode (Recreate / Create / Free / Static; Static's own prompt is §2s): one background agent per video (max 5 at once), its prompt (which invokes the per-video skills), contract and result.json
 │   ├── assets-and-substitution     user-supplied assets only (analyze: dropped once; edit: per operation), contents samples, understanding + registry, substitution map, reference strategy per model
 │   ├── effort                      the effort level (item 33): the start question with the five levels, and what never changes (the judges, coverage, the floors)
-│   └── voiceover                   the own voiceover (item 31): the state and the take files, the choice at the start (method, voice, language, style), writing the lines, generating and recording a take, on-camera or off-screen, the request by method (native driving audio, the lipsync scene and its `sync_so` pass, overlay), the upload, after the generation (align, mix, sync pass, the fallback), the CapCut voice track, QC, credits and honesty
+│   ├── voiceover                   the own voiceover (item 31): the state and the take files, the choice at the start (method, voice, language, style), writing the lines, generating and recording a take, on-camera or off-screen, the request by method (native driving audio, the lipsync scene and its `sync_so` pass, overlay), the upload, after the generation (align, mix, sync pass, the fallback), the CapCut voice track, QC, credits and honesty
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
-├── scripts/awl.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), sync-check, locked ledger/state, CapCut name/prep/repair, model-menu / model-entry, transfers; doc-text extracts PDFs with pypdf and flags an image-only one; seams (the per-frame luma and frame difference around a cut point, also printed by strip-inserts); status, doctor, lint-run and cost-report (gather-only inspection of a run and of this machine; status and doctor read the keeper's state); uploads (one schema per video, a loud merge into state.json); contract (the agent contract from the canonical prompt and state.json); frames --grid (gridded copies in source pixel coordinates); hf-put --capture (upload from the hook's capture); voiceover (outdir: the run's folder the ElevenLabs MCP may write to; record: a take into the run with its measured phrases, pauses and spoken words; align: where a take lies in a file's sound, with a plot; mix: the take laid over a picture, with the CapCut voice track); effort (the run's effort level: show it or set a level and custom values held to the floors; prep-all and the produce phase read it, never QC; a new run's level is empty until stored, and effort and prep-all stop on it); every `--run` takes a full path, a bare run name or a stamp prefix)
+│   └── static                      the Static sub-mode (item 36): what to mine (1 fps and the audio), the Static card and spec, a new subject, the script, the images (plan, API, prompts, intake), the voice and the bed, the edit, QC, the Static PC's setup
+├── scripts/tts_worker.py           Qwen3-TTS for Static, run only by `awl.py tts` in the TTS environment's own Python (AWL_TTS_PYTHON): check, design, voice (design then clone), say
+├── scripts/music_worker.py         ACE-Step 1.5 for Static beds, run only by `awl.py music` in its own Python (AWL_MUSIC_PYTHON, in AWL_MUSIC_ROOT): check, generate
+├── scripts/awl.py                  deterministic local toolkit (inventory, prep, frames, last-frame, strip-inserts, audio-profile, fetch-audio, conform, concat seams, qc with 30 fps --dense checkpoint sheets, scale (size reckoning: expected vs observed product size), sync-check, locked ledger/state, CapCut name/prep/repair, model-menu / model-entry, transfers; doc-text extracts PDFs with pypdf and flags an image-only one; seams (the per-frame luma and frame difference around a cut point, also printed by strip-inserts); status, doctor, lint-run and cost-report (gather-only inspection of a run and of this machine; status and doctor read the keeper's state); uploads (one schema per video, a loud merge into state.json); contract (the agent contract from the canonical prompt and state.json); frames --grid (gridded copies in source pixel coordinates); hf-put --capture (upload from the hook's capture); voiceover (outdir: the run's folder the ElevenLabs MCP may write to; record: a take into the run with its measured phrases, pauses and spoken words; align: where a take lies in a file's sound, with a plot; mix: the take laid over a picture, with the CapCut voice track); effort (the run's effort level: show it or set a level and custom values held to the floors; prep-all and the produce phase read it, never QC; a new run's level is empty until stored, and effort and prep-all stop on it); Static (item 36): static check, image generate/prompts/intake/use (the OpenAI Images API by urllib, every call a ledger row of kind image, the key only from OPENAI_API_KEY and never printed), tts check/design/voice/say, narration-words, music check/make, slideshow plan/render, prep --no-extras, audio-profile --voice; every `--run` takes a full path, a bare run name or a stamp prefix)
 ├── scripts/check_all.py            every check in one table (`check-all.cmd` / `.ps1` / `.sh`): the suites below, `docs_tool.py check`, Loupe's own tests; exit 1 on a failure
 ├── tests/                          the suites (`python tests/run_all.py`, `--real` adds the real-data suite): t01 the structure (docs check, skills, hand-offs, `T` commands, the Loupe and audio wiring, the forbidden names), t02 the toolkit on scratch fixtures, t03 the Loupe coupling against a Loupe server in the test process with a fake keeper, t04 real data read-only, t05 the four hooks (the input guard too) and the upload capture; tests/rehearsal.py drives the whole golden path in a temp copy
 ├── scripts/docs_tool.py            the section tool: `split` / `join` / `index` for the documents, `check` (indexes, section files, skills, paths, § citations) and `budget` (what each skill and the command load)
 └── runs/<stamp>-<slug>/            one folder per run (state.json makes runs resumable: /analyze-with-loupe resume <run-dir>; `next_skill` names the phase to continue)
 
-~/.claude/skills/awl-*/SKILL.md     the 20 phase skills (see above)
+~/.claude/skills/awl-*/SKILL.md     the 24 phase skills (see above)
 ~/.claude/commands/analyze-with-loupe.md   the router
 ```
 
@@ -179,7 +182,7 @@ every video its kind (`state.json → videos_kind`, `recreate` or `create`), whi
 model's own prompting and official examples (X2), the plan discipline, the QC stack, Loupe's judge (its prompt at X4b, its QC consult), the CapCut assembly and the deliverables.
 
 ## QC fixes (contract item 27, every Analyze sub-mode), pilot first (26), the stalled agent, the request freeze and the planner contract (28–30)
-At the start of a Recreate, Create or Free run the user chooses `ask` (from the first video on, a fix generation after a QC finding waits for the user's yes: the production agent
+At the start of a Recreate, Create, Free or Static run the user chooses `ask` (from the first video on, a fix generation after a QC finding waits for the user's yes: the production agent
 prepares the corrected request and stops with a `fix_proposal`, the main session asks with one question per waiting video, `Fix it` / `Keep this take` / `Fix it, and stop asking`)
 or `auto` (the agent submits its one diagnosed regeneration itself) or `off` (the user, 2026-10-28: no QC agent after a video's first generation at all; each video is
 generated once, assembled and delivered unchecked, the pilot shows only its technical outcome, and the user says what to fix after the wrap-up through its feedback
@@ -291,6 +294,34 @@ agents decide each case by its scene, its realism and the references' craft, wit
 - **No sticker or emoji added, ever** (item 6, every mode): none in a generation as a decoration, none in an edit as a graphic or text;
   one that belongs naturally to the scene (the emojis of a chat someone is typing) is scene content; the sticker tool is neither allowed
   nor named.
+
+## The Static sub-mode (contract item 36, A6s, S2–S4)
+The user, 2026-11-05: Analyze → Static makes narrated still-image videos ("image sliders every 5 or 10 sec") with the references' craft on a different subject.
+The references are studied at exactly 1 fps (`prep-all --fps 1 --dense-fps 1 --no-extras --ocr-frames 30`) with their audio (Whisper, never asked) and the
+narrator's voice as numbers (`audio-profile --voice`); the Static card and spec (`reference/static.md` §1–§2) carry the hook, the telling, the devices, the
+seconds per still, the style lock, the caption pattern, the voice profile and the bed. `awl-static-plan` (A6s) reads the characters (a known person: sourced
+facts; an ordinary role: a story of their world; a cartoon: a children's story), builds a scored pool of new subjects (sourced, two sources each, in a factual
+niche), makes three voice samples with Qwen3-TTS's VoiceDesign (`T tts design`) and stops once for the user's subjects and voice; then the scripts, fact sheets
+and image plans. `awl-analyze-produce` A9s runs `awl-static-sound` (S2) for every video in this session (the narration in the run's one voice, design then
+clone; its timed words and checks; the image spans; a bed from ACE-Step 1.5 only when the references use one), the characters' anchors, and with images by the
+user the prompts file and the folder intake; then one agent per video runs `awl-static-images` (S3: OpenAI's `gpt-image-2.5-sunburst` through `T image
+generate`, every image viewed and checked) → `awl-static-edit` (S4: `T slideshow plan/render`, the clean and captioned preview at 720×1280, −14 LUFS, and the
+CapCut project with the images, their moves, the transitions, the narration and bed tracks and the captions by `capcut import-srt`) → `awl-record`. No
+Higgsfield and no Loupe anywhere in Static; the product appears only when the assets hold one. Its agents get production-agents §2s's prompt (`T contract`
+picks it). Settings: `config.json → static`.
+
+**The Static PC** (`reference/static.md` §9; `T static check` reports each part): Qwen3-TTS in its own environment (Python 3.12, CUDA torch, `pip install
+-U qwen-tts`, sdpa attention) named by the user variable `AWL_TTS_PYTHON` (and `AWL_TTS_DEVICE` when not `cuda:0`); ACE-Step 1.5 from its repository with `uv
+sync` (never `pip install ace-step`, which is v1) named by `AWL_MUSIC_PYTHON` and `AWL_MUSIC_ROOT`; `OPENAI_API_KEY` for images by the API. No key or path of
+these is in the library: they live in the PC's environment.
+
+## Recreate: the whole source in one generation when it fits (2026-11-05)
+The user: a 14 or 15 s video on a model whose maximum is 15 s is one generation, never two; split only when necessary (a change of place or ambience, other
+specific cases), and a longer video takes 2, 3 or more generations by its data; "do not do it hardcoded, because models change often". `generation-system.md`
+§3b.1 item 7: the maximum is the locked model's live answer (`models_explore get` at E4 in A6r, before the source is prepared, and again at A8: the output's range and any video-reference limit it lists), recorded
+in `state.json → model_limits` with where each number came from; only a limit the live answer lacks (often the longest video reference) comes from the
+model's guide §2.2. A source at most 0.4 s over the maximum is one generation of its first <maximum> seconds (the user, the same day: "even if its 15.2s or 15.4s just send the 15s"). Splits under the maximum stay for a new place or ambience and for the cases one generation failed before (CE-079, CE-083, CE-086). A run made before
+the rule and resumed records the limits at A9's start, before any video is planned. The user's examples, the same day: a 15 s video on a 15 s maximum is one generation, never 7.5 + 7.5 s (a take back at 16 s is trimmed); a 27 s video on a 30 s maximum goes at once, and only a change of scene or surroundings may split it (15 + 12 s); the maximum is the hard limit, never a "works best" note such as Seedance 2.5's "≤20 s best". Edit Mode keeps its earlier rule.
 
 ## Orientation
 The output keeps the original's perspective (the user, 2026-10-27): a source is never flipped, in any mode. A front-camera selfie keeps its

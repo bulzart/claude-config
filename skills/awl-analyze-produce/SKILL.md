@@ -21,15 +21,21 @@ Only these section files for this phase, nothing else unless a step below says s
 - `models_explore {action:"get", model_id}` once (A8.2)
 - *an own voiceover (`state.json → voiceover.enabled` true; item 31; the takes in X1, a `voiceover` blocker):*
   - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.4 KB)
+- *Static (item 36): production-agents §1, §3 and §5 above, and §2s in place of §2, the Higgsfield section and `models_explore`:*
+  - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (4.9 KB)
 
 ### A8. Load the locked model's documentation
+**Static: no A8** (no video model; item 36): go to A9s.
+
 The model was picked at the start (§2.4) and does not change.
 1. **Read no guide or reference wholesale.** Invoke Skill `awl-model-guide` once: it resolves the locked model's guide folder and says which
    sections each step reads. Each per-video skill (`awl-plan-video`, `awl-write-request`, `awl-inputs`, `awl-precheck`, `awl-submit`, `awl-qc`)
    names the exact reference and guide sections it needs; they are read at that step and not before. For a model with no guide, `awl-model-guide`
    points to `AWL/models/_generic-fallback.md`.
 2. `models_explore {action:"get", model_id}` once. If the live parameters differ from the guide, the
-   live ones win; note the drift.
+   live ones win; note the drift. Record the limits the clip plans use (`generation-system.md` §3b.1 item 7), from this live
+   answer and never from a kept number: `T state --run RUN set model_limits='{"output_s": [<duration min>, <duration max>],
+   "video_ref_max_s": <from the live media limits, else the guide §2.2>, "video_ref_from": "live|guide §2.2", "checked": "<date>"}'`.
 3. Where a planned concept needs something this model cannot do, adapt the approach within the model
    and state it in the video's brief. Examples:
    - build a 9:16 start frame from the supplied assets when the model has no reference roles;
@@ -38,6 +44,7 @@ The model was picked at the start (§2.4) and does not change.
 
 ### A9. Prepare every video (this session)
 At the start of A9: `T state --run RUN set stage=producing next_skill=awl-analyze-produce` (a resume re-enters here; the ledger and `state.json → videos[]` show which videos are done).
+A run with no `state.json → model_limits` (one made before 2026-11-05, resumed) records it first, as A8 step 2 says, before any video is planned.
 
 **How A9 invokes the per-video skills.** Step 1 (X1–X4 for every video, in allocation order): invoke Skill `awl-plan-video` (X1), `awl-write-request` (X2: the checked draft) and `awl-precheck` for **X4 and X4b only** (X4b: the judge writes the final prompt from the whole checked brief); their text stays loaded for the next video. Step 2 (shared inputs, X3 for the shared uploads, every image the judge added at X4b (its placeholder `value`) and X5's folder): invoke Skill `awl-inputs`, then return here. Step 3 (X5–X6 per video): invoke `awl-precheck` again for X5 and X6 of every video and print the total once. Steps 4 and 5 follow here.
 Plan everything before production, in allocation order, **without asking for confirmation**
@@ -66,8 +73,22 @@ Plan everything before production, in allocation order, **without asking for con
    `T contract` also fills its "Voiceover" line (`state.json → voiceover`, `off` without it; item 31) and its "Memes" line
    (`state.json → memes`; item 32).
 
+### A9s. Static: prepare every video (this session; item 36, in place of A9)
+At the start: `T state --run RUN set stage=producing next_skill=awl-analyze-produce`. In order, without asking:
+1. **S2 for every video**, one at a time: invoke Skill `awl-static-sound` (the narration, its words and checks, the image spans; the
+   beds after the last narration).
+2. **Images by the API:** the characters' anchors once (Skill `awl-static-images`, its anchors step). **Images by the user:** Skill
+   `awl-static-images` for the prompts, then stop for their folder (`static.waiting=images`); when they send it (or on `resume` with
+   `static.waiting` set), the intake and the check of every image, then go on.
+3. **The agent contract:** `T contract --run RUN [--notes "…"]` (a Static run gets production-agents §2s's prompt; no Loupe line to
+   ensure).
+4. **Spawn** as A9b says, the pilot first (item 26): each agent runs S3 `awl-static-images` (with images by the user, only the check of its
+   images), S4 `awl-static-edit` and X10 `awl-record`. A9's steps and X1–X9 are not used; nothing here asks a question.
+
 ### A9b. Produce in parallel (production agents)
 
+- **Static runs:** the contract is production-agents §2s's (`T contract` picks it); the agents never load Higgsfield tools; a QC-fix
+  proposal is about image re-draws, with the cost from `cost_usd_estimate`.
 - **Free runs:** each agent's spawn message names its video's kind (`Video NN, kind recreate|create`, from `state.json → videos_kind`), and the contract's "Video kind" line says that the kind selects the Recreate or the Create branch of every per-video step.
 - **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to
   the run's contract file at A9; `subagent_type: general-purpose`, `model: "opus"` (they run QC and judge: Opus 5.5), `run_in_background: true`).
@@ -225,7 +246,8 @@ See §6.
 - Never close a run with a RESIDUAL FAILURE or a regenerated video that has no attempt block in its
   brief (A9b, §6). Never copy an agent contract from an earlier run: it is generated at A9 from
   `reference/production-agents.md` §2.
-- Analyze Mode: never ask for permission except for a video over 30 s that needs 2+ generations.
+- Analyze Mode: never ask for permission except for a video over 30 s that needs 2+ generations (Static: no such permission; its stops are
+  A6s and, with images by the user, their folder; item 36).
   Never generate any clip of such a video before that permission.
 
 ## Hand-off

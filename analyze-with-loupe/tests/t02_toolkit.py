@@ -751,4 +751,161 @@ _txt = _awl._pi_inputs_text(_req, _rd)
 check([x["product"] for x in _imgs] == [False, True] and [r[0] for r in _awl._pi_registry_rows(_rd)] == ["NG-EF6-SPE"] and "Image 1 (image_references; its original" in _txt,
       "a registry row whose type cell says product is a product row (a character's is not), and an input labelled with its id is a product view")
 
+# --- Static (contract item 36, the user 2026-11-05): 1 fps without extras, the image API through a local mock (the key never printed or
+# written), the prompts file and the user's folder (copied, never moved), the voice and bed stubs, the narration's words, the local render,
+# the Static contract. No model, no network, no Higgsfield, no Loupe.
+import base64 as _b64  # noqa: E402
+import io as _io  # noqa: E402
+import threading as _th  # noqa: E402
+from http.server import BaseHTTPRequestHandler as _BH, HTTPServer as _HS  # noqa: E402
+from PIL import Image as _Im  # noqa: E402
+
+js, _, _ = t("new-run", "--mode", "analyze", "--source", str(refs), "--slug", "static-fps", env=ENV)
+_srun = Path(js["run_dir"])
+js, _, _ = t("prep-video", str(clip), "--out", str(_srun / "10-media" / "V01"), "--id", "V01", "--audio-ingest", "frames-only", "--fps", "1",
+             "--dense-fps", "1", "--no-extras", "--no-ocr", env=ENV)
+_fr = json.loads((_srun / "10-media" / "V01" / "frames.json").read_text(encoding="utf-8"))
+_frames = _fr.get("frames", _fr) if isinstance(_fr, dict) else _fr
+check(js.get("ok") and all(f.get("kind") == "base" for f in _frames) and len(_frames) <= 5,
+      f"prep-video --fps 1 --no-extras keeps the 1 fps baseline only: no extra frames at the cut or around motion ({len(_frames)} frames for 4 s)")
+
+_KEY = "sk-test-NEVER-PRINT-424242"
+_SEEN = []
+
+
+def _png(col, size=(1088, 1920)):
+    b = _io.BytesIO()
+    _Im.new("RGB", size, col).save(b, "PNG")
+    return _b64.b64encode(b.getvalue()).decode()
+
+
+class _Mock(_BH):
+    def log_message(self, *a):
+        pass
+
+    def _send(self, code, obj):
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(obj).encode())
+
+    def do_GET(self):
+        self._send(200 if "gpt-image" in self.path else 404, {"id": self.path.rsplit("/", 1)[-1]})
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+        _SEEN.append({"path": self.path, "auth": self.headers.get("Authorization"), "refs": len(body.get("images") or [])})
+        if "BLOCKME" in (body.get("prompt") or ""):
+            self._send(400, {"error": {"type": "image_generation_user_error", "code": "moderation_blocked", "message": "blocked",
+                                       "moderation_details": {"moderation_stage": "input", "categories": ["violence"]}}})
+            return
+        self._send(200, {"created": 1730000000 + len(_SEEN), "data": [{"b64_json": _png((30 * len(_SEEN) % 255, 80, 150))}],
+                         "usage": {"input_tokens": 120, "output_tokens": 4000, "input_tokens_details": {"text_tokens": 100, "image_tokens": 20}}})
+
+
+_srv = _HS(("127.0.0.1", 0), _Mock)
+_th.Thread(target=_srv.serve_forever, daemon=True).start()
+SENV = {**ENV, "AWL_TTS_STUB": "1", "AWL_MUSIC_STUB": "1", "AWL_TRANSCRIBE_STUB": "1", "OPENAI_API_KEY": _KEY,
+        "AWL_OPENAI_BASE_URL": f"http://127.0.0.1:{_srv.server_port}/v1"}
+_outs = []
+
+
+def ts(*args, ok=True):
+    js_, code_, out_ = t(*args, env=SENV, ok=ok)
+    _outs.append(out_)
+    return js_, code_
+
+
+js, _ = ts("new-run", "--mode", "analyze", "--slug", "static")
+SR = Path(js["run_dir"])
+ts("state", "--run", str(SR), "set", "analyze_submode=static", "static_images=api", "audio_ingest=whisper", "qc_fixes=auto")
+js, _ = ts("static", "check", "--offline")
+check(js["parts"]["images"]["key_present"] is True and js["parts"]["tts"]["ready"] and "ffmpeg" in js["parts"], "static check reports each part as facts")
+js, _, _ = t("static", "check", "--offline", env={**SENV, "OPENAI_API_KEY": ""})
+check(js["parts"]["images"]["key_present"] is False, "static check without the key says so")
+js, code, _ = t("image", "generate", "--run", str(SR), "--video", "01", "--image", "1", "--prompt", "a field", env={**SENV, "OPENAI_API_KEY": ""}, ok=False)
+check(code == 2 and "OPENAI_API_KEY" in js.get("error", "") and not _SEEN, "image generate without the key refuses before any call (exit 2)")
+
+js, _ = ts("tts", "design", "--run", str(SR), "--text", "Most people never notice this.", "--instruct", "a calm deep male narrator",
+           "--instruct", "a warm female storyteller", "--instruct", "a gravelly older man")
+check(len(js.get("samples", [])) == 3 and all(Path(s["file"]).is_file() for s in js["samples"]), "tts design makes one sample per voice description")
+js, _ = ts("tts", "voice", "--run", str(SR), "--sample", "2", "--emotion", "tense=Something was wrong. Very wrong.")
+_st = json.loads((SR / "state.json").read_text(encoding="utf-8"))
+check(js.get("ok") and _st["static"]["voice"]["sample"] == 2 and set(_st["static"]["voice"]["prompts"]) == {"neutral", "tense"},
+      "tts voice makes the picked sample the run's voice, with its emotion clip (state.json -> static.voice)")
+(SR / "40-briefs" / "video-01-narration.json").write_text(json.dumps({"video": "01", "language": "english", "lines": [
+    {"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
+    {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "tense", "pause_after": 0.5},
+    {"n": 3, "text": "What they took that night is still a secret.", "emotion": "neutral"}]}), encoding="utf-8")
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "01")
+_side = json.loads((SR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
+_ln = _side["lines"]
+check(js.get("lines") == 3 and _ln[1]["start"] >= _ln[0]["end"] + 0.34 and _ln[2]["start"] >= _ln[1]["end"] + 0.49
+      and abs(js["duration_s"] - _ln[2]["end"]) < 0.01 and js.get("loudness_lufs") is not None,
+      "tts say joins the lines with their pauses (default and planned) and records each line's exact start and end, and the loudness")
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "01", "--only", "2")
+check(js.get("made_now") == [2], "tts say --only makes just that line again")
+js, _ = ts("narration-words", "--run", str(SR), "--video", "01")
+check(js.get("cues", 0) > 0 and len(js.get("lines", [])) == 3 and Path(js["files"]["srt"]).is_file() and "lines_to_check" in js,
+      "narration-words gives the timed words, cues, an SRT and per line what was heard against the script")
+
+_plan = {"video": "01", "size": "1088x1920", "characters": [{"id": "C1", "name": "the farmer", "photo": None, "sheet_prompt": "A weathered farmer, 60s"}],
+         "images": [{"image": 1, "from_line": 1, "prompt": "A farmer in a wheat field at dusk", "characters": ["C1"], "line": "In 1959 ..."},
+                    {"image": 2, "from_line": 2, "prompt": "Army trucks on a dirt road at night", "motion": "pan-left"},
+                    {"image": 3, "from_line": 3, "prompt": "A sealed crate in a dark hangar", "transition": "cut"}]}
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan), encoding="utf-8")
+js, _ = ts("image", "generate", "--run", str(SR), "--anchor", "C1", "--prompt", "Character sheet: a weathered farmer, front view")
+_anchor = Path(js["file"])
+check(_anchor.is_file() and _anchor.parent.name == "characters" and _SEEN[-1]["path"].endswith("/images/generations"), "an anchor is drawn by the generations endpoint")
+for _k in (1, 2, 3):
+    _pf = SR / "40-briefs" / f"video-01-i0{_k}-prompt.txt"
+    _pf.write_text(_plan["images"][_k - 1]["prompt"], encoding="utf-8")
+    ts("image", "generate", "--run", str(SR), "--video", "01", "--image", str(_k), "--prompt-file", str(_pf), *(["--ref", str(_anchor)] if _k == 1 else []))
+check(_SEEN[1]["path"].endswith("/images/edits") and _SEEN[1]["refs"] == 1 and all(s["auth"] == f"Bearer {_KEY}" for s in _SEEN),
+      "an image with a character goes to the edits endpoint with its reference; the key travels only in the Authorization header")
+_n = len(_SEEN)
+js, _ = ts("image", "generate", "--run", str(SR), "--video", "01", "--image", "1", "--prompt-file", str(SR / "40-briefs" / "video-01-i01-prompt.txt"), "--ref", str(_anchor))
+check(js.get("reused") is True and len(_SEEN) == _n, "the same request that already made an image is not sent again")
+js, code = ts("image", "generate", "--run", str(SR), "--video", "01", "--image", "2", "--prompt", "BLOCKME please", ok=False)
+check(code == 1 and js.get("error_code") == "moderation_blocked" and js.get("tries") == [400], "a refusal is reported (moderation_blocked) and not retried")
+_st = json.loads((SR / "state.json").read_text(encoding="utf-8"))
+_rows = [(e["attempt"], e["status"]) for e in _st.get("submissions", []) if e.get("kind") == "image"]
+check(_rows == [("C1-a1", "completed"), ("i01-a1", "completed"), ("i02-a1", "completed"), ("i03-a1", "completed"), ("i02-a2", "failed")],
+      f"every image call is a ledger row of kind image: {_rows}")
+check(not any(_KEY in o for o in _outs) and not any(_KEY in p.read_text(encoding="utf-8", errors="ignore") for p in SR.rglob("*") if p.is_file() and p.suffix in (".json", ".md", ".txt")),
+      "the OpenAI key is never printed and never written to the run")
+
+js, _ = ts("image", "prompts", "--run", str(SR))
+_pm = Path(js["files"][0]).read_text(encoding="utf-8")
+check("## v01-i01" in _pm and "## v01-i03" in _pm and "C1 character sheet" in _pm and "1088x1920" in _pm, "image prompts writes one prompt per image with its file name, the character sheet and the size")
+_up = home.parent / "user-images"
+_up.mkdir(exist_ok=True)
+for _k in (1, 3):
+    _Im.new("RGB", (1024, 1536), (200, 100, 50)).save(_up / f"v01-i0{_k} final.png")
+_Im.new("RGB", (900, 900), (0, 0, 0)).save(_up / "random.png")
+_before = sorted(p.name for p in _up.iterdir())
+js, _ = ts("image", "intake", "--run", str(SR), "--folder", str(_up))
+check([m["image"] for m in js["missing"]] == ["02"] and len(js["copied"]) == 2 and js["unmatched_total"] == 1 and sorted(p.name for p in _up.iterdir()) == _before,
+      "image intake copies the files named vNN-iKK, lists the missing one and the unmatched name, and leaves the user's folder as it was")
+ts("image", "use", "--run", str(SR), "--video", "01", "--image", "1", "--attempt", "1")
+ts("image", "use", "--run", str(SR), "--video", "01", "--image", "3", "--attempt", "1")
+(SR / "40-briefs" / "music.json").write_text(json.dumps({"tracks": [{"video": "01", "caption": "dark ambient drone", "duration": 12}]}), encoding="utf-8")
+js, _ = ts("music", "make", "--run", str(SR))
+check(js.get("made") and Path(js["made"][0]["file"]).is_file(), "music make writes the bed of the planned track (stub)")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01")
+_sp = js["image_spans"]
+check(js.get("ok") and _sp[0][1] == 0.0 and abs(_sp[1][1] - (0.3 + _ln[1]["start"])) < 0.02 and js.get("music") and Path(js["captions_srt"]).is_file(),
+      "slideshow plan starts each image on its narration line (after the lead) and writes the captions on the video's timeline")
+js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01")
+check(js.get("ok") and js.get("size") == "720x1280" and abs(js["duration_s"] - _sp[-1][2]) < 0.15 and js.get("captions", 0) > 0
+      and Path(js["preview"]).is_file() and js.get("loudness_lufs") is not None and abs(js["loudness_lufs"] + 14) < 2.5,
+      f"slideshow render makes the clean and the captioned preview at 720x1280, the timeline's length, near -14 LUFS ({js.get('duration_s')} s, {js.get('loudness_lufs')} LUFS)")
+js, _ = ts("contract", "--run", str(SR))
+_ct = Path(js["file"]).read_text(encoding="utf-8")
+check("Analyze Mode, static" in _ct and "Images: api" in _ct and "QC fixes: auto" in _ct and "awl-static-edit" in _ct and not js.get("unresolved_placeholders")
+      and "Memes: n/a (Static" in _ct, "contract writes production-agents 2s's Static prompt with the run's choices filled")
+js, _ = ts("lint-run", "--run", str(SR))
+check(js.get("contract", {}).get("loupe_line") is True and js.get("contract", {}).get("unresolved_placeholders") == [], "lint-run reads a Static contract's Loupe line")
+_srv.shutdown()
+
 finish()

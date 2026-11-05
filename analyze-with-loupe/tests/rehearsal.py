@@ -27,7 +27,7 @@ ap.add_argument("--loupe", default=str(Path.home() / ".claude" / "loupe"))
 ap.add_argument("--keep", action="store_true")
 A = ap.parse_args()
 LIB = Path(A.library).resolve()
-TK = next(p for p in (LIB / "scripts").glob("*.py") if p.name not in ("docs_tool.py", "check_all.py"))
+TK = next(p for p in sorted((LIB / "scripts").glob("*.py")) if p.name not in ("docs_tool.py", "check_all.py") and not p.name.endswith("_worker.py"))
 PY = sys.executable
 SKILLS = Path.home() / ".claude" / "skills"
 TMP = Path(tempfile.mkdtemp(prefix="rehearsal-"))

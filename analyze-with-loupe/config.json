@@ -28,7 +28,7 @@
   "production": {
     "max_parallel_agents": 5,
     "max_parallel_jobs": 5,
-    "note": "Analyze Mode (Recreate and Create): one production agent per video, at most max_parallel_agents at once; the ledger allows one job in flight per video lane and at most max_parallel_jobs per run (reference/production-agents.md). Edit Mode stays one video at a time."
+    "note": "Analyze Mode (Recreate, Create, Free and Static): one production agent per video, at most max_parallel_agents at once; the ledger allows one job in flight per video lane and at most max_parallel_jobs per run (reference/production-agents.md). Edit Mode stays one video at a time."
   },
   "capcut": {
     "drafts_dir": "C:/Users/Glaresquare1/AppData/Local/CapCut/User Data/Projects/com.lveditor.draft",
@@ -151,6 +151,63 @@
       },
       "note": "Every CapCut text layer of every /analyze-with-loupe video uses this style: font System, size 10 (11 when the video has only a little text: 'short_text'), and the user's chosen preset in 'learned' (applied by awl.py capcut-text-style, run by capcut-repair after every save). 'locked': true = the user chose it for all videos (2026-10-03); never re-learn or replace it unless the user explicitly asks for a different preset (awl.py capcut-text-style --learn --replace). fill/stroke above are only the fallback look if 'learned' were ever missing.",
       "locked": true
+    }
+  },
+  "static": {
+    "note": "Analyze -> Static (contract item 36): narrated still-image videos. No Higgsfield and no Loupe. Per PC, in the environment only: OPENAI_API_KEY (images by the API), AWL_TTS_PYTHON (+ AWL_TTS_DEVICE), AWL_MUSIC_PYTHON and AWL_MUSIC_ROOT (reference/static section 9).",
+    "analysis_fps": 1,
+    "images": {
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1088x1920",
+      "quality": "high",
+      "timeout_s": 300,
+      "api_base": "https://api.openai.com/v1",
+      "prices_usd_per_1m": {
+        "text_in": 5.0,
+        "image_in": 8.0,
+        "image_out": 30.0,
+        "as_of": "2026-11-05",
+        "note": "OpenAI's GPT Image 2.5 token prices; the cost a call reports is an estimate from its usage"
+      }
+    },
+    "tts": {
+      "design_model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "clone_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      "dtype": "bfloat16",
+      "attn": "sdpa",
+      "device": "cuda:0",
+      "language": "english"
+    },
+    "music": {
+      "config": "acestep-v15-turbo",
+      "device": "cuda",
+      "inference_steps": 8,
+      "gain": 0.22,
+      "fade_in_s": 1.0,
+      "fade_out_s": 3.0
+    },
+    "narration": {
+      "lead_s": 0.3,
+      "tail_s": 0.8,
+      "pause_s": 0.35,
+      "loudness_lufs": -14.0
+    },
+    "captions": {
+      "words": 3,
+      "y_rel": 0.72
+    },
+    "render": {
+      "size": "720x1280",
+      "fps": 30,
+      "motion_amount": 0.12,
+      "transition": "fade",
+      "transition_s": 0.4,
+      "motions": [
+        "zoom-in",
+        "pan-right",
+        "zoom-out",
+        "pan-left"
+      ]
     }
   }
 }

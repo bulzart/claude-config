@@ -1,6 +1,6 @@
 # Production agents: one video per agent (Analyze Mode)
 
-In Analyze Mode, both Recreate and Create, each video is produced by its **own background agent**,
+In Analyze Mode (Recreate, Create, Free and Static) each video is produced by its **own background agent**,
 so no video waits behind another's Higgsfield job. The work is split:
 - **this session** analyses, decides and plans (command A1–A9; skills `awl-analyze-*`, `awl-asset-plan`, `awl-analyze-produce`, and per video `awl-plan-video`, `awl-write-request`, `awl-precheck`);
 - **each agent** runs its one video from inputs to CapCut project (X3–X10; skills `awl-inputs`, `awl-submit`, `awl-postprocess`, `awl-qc`, `awl-record`, invoked from its contract).
@@ -17,6 +17,7 @@ Stored as section files in `production-agents/` (next to this file); **read only
 |---|---|---|---|
 | 1 | Prepared by this session before any agent starts (command A9) | `010_1_prepared-by-this-session-before.md` | 1.7 |
 | 2 | Spawning | `020_2_spawning.md` | 17.5 |
+| 2s | Spawning in Static (command item 36) | `025_2s_spawning-static.md` | 4.9 |
 | 3 | The agent's contract | `030_3_the-agent-s-contract.md` | 8.6 |
 | 4 | `60-outputs/video-NN/result.json` | `040_4_60-outputs-video-nn-result-json.md` | 2.6 |
 | 5 | This session, as agents report | `050_5_this-session-as-agents-report.md` | 2.3 |

@@ -37,8 +37,15 @@ Only these section files for this phase, nothing else unless a step below says s
 - anomaly-catalog §2.2: `AWL/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (2.8 KB)
 - anomaly-catalog §2.5: `AWL/reference/anomaly-catalog/080_2.5_object-permanence-exits-occlusio.md` (1.5 KB)
 - anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
+- *Static (item 36): these two, and of the list above only analysis-protocol §0–§2 and §4–§9, creative-direction §1–§4 and
+  brand-guardrails §3 (the product and video-physics sections are not read):*
+  - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (2.0 KB)
+  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (1.7 KB)
 
 ### A3. Video analysis (as continuous sequences)
+- **Static:** each card is the Static card (static §1–§2) in place of the product and physics fields: read `video.md`, `timeline.md`
+  and every storyboard sheet (1 fps), and run `T audio-profile --audio "<files_audio file>" --out 10-media/<V>/audio-profile.json
+  --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json --voice` (the bed and the voice as numbers).
 - Follow `AWL/reference/analysis-protocol/` (the sections named in Read now) exactly. For each video:
   - read `video.md` and `timeline.md`;
   - view **every** storyboard sheet in order, reading the timeline beside it;
@@ -136,6 +143,8 @@ Write, following the protocol §5–§6:
   §5). The guardrail audit is its first filter: dismissed references are out of the ranking and
   listed under it with their rule; pick-and-edit references rank with their guardrail operations
   counted in the edit load (`brand-guardrails.md` §4).
+- **Static:** `20-analysis/static-spec.md` (static §2): the narration template, seconds per still, the style lock, the caption pattern,
+  motion and transitions, the voice profile, the bed or none, the devices, what is left behind; no directions, ranking or craft sheet.
 - **With examples:** `20-analysis/house-approach.md` (protocol §9.3): the user's consistent approach,
   one rule per line with its evidence and the default it replaces. Directions, picks and plans
   follow it (contract item 18).
@@ -144,7 +153,7 @@ Show a **short** chat summary:
 - the project profile in about 5 lines;
 - the families table;
 - the house approach in 2–4 lines, or "no examples";
-- then the numbered style groups (Create) or the top of the recreate ranking (Recreate).
+- then the numbered style groups (Create), the top of the recreate ranking (Recreate) or the Static spec in about six lines (Static).
 Then run `T state --run RUN set stage=analyzed next_step=count`.
 
 ### A5. How many videos
@@ -153,6 +162,7 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 - **Recreate:** ask (header "Recreate"), "How many reference videos should be recreated?", options
   "1", "3", "5" ("Other": any number up to the usable references).
 - **Free:** the count the requirement states (`RUN/00-inventory/requirement.md`), without a question; only when it states none, ask as for Create.
+- **Static:** ask as for Create (header "Videos").
 - Store the answer in `requested_videos`.
 
 ## Rules this phase owns (contract items 18, 20, 21, 35)
@@ -223,5 +233,6 @@ After A5 is answered and stored (`requested_videos`):
 - Create: `T state --run RUN set stage=counted next_skill=awl-create-plan`, then invoke Skill `awl-create-plan`.
 - Recreate: `T state --run RUN set stage=counted next_skill=awl-recreate-plan`, then invoke Skill `awl-recreate-plan`.
 - Free (with references): `T state --run RUN set stage=counted next_skill=awl-free-plan`, then invoke Skill `awl-free-plan`.
+- Static: `T state --run RUN set stage=counted next_skill=awl-static-plan`, then invoke Skill `awl-static-plan`.
 
 After a compaction, or on `resume`, re-invoke the skill named in `RUN/state.json → next_skill`: its text may have been summarised away.

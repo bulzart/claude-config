@@ -821,3 +821,55 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   every recorded file it reads; `sample_origin` hands the judge the sample's own product images (each video's); a new report's product field takes
   Video A's product words.
 - **Verified:** t01 98, t02 147 (uploads set records a file in full), t03 71 (a clip's first take reads its own request; the toolkit reads every request name's generation as Loupe does), t05 73, docs_tool check 0 errors; Loupe: selftest 272 (a file an uploads record names from the pipeline's home found in the run; sample_origin hands the judge both videos' product images), keeper_sync 112, page_smoke 72 (a new report's product field takes Video A's product words), transport_check.
+
+## 2026-11-05 · Static: a fourth Analyze sub-mode, narrated still images instead of video generations (item 36)
+
+- **Asked (the user):** "lets add another option on analyze -> static, ideally it will have everything that recreate have but instead of
+  doing video generations it will do image generations"; "no higgsfield at all called in this mode strictly, i will give my api keys for the
+  direct api image generations, and as for the qwen voice model it is in a different pc"; "also try to avoid memory context rot and keep the
+  pipeline already established structure and calls logic"; "btw for the background music (if needed) the agent will use ace-step 1.5".
+- **Decided with the user:** Loupe is left out of Static (its code unchanged); three voice samples, the user picks one, and it is reused for
+  every video of the run; the OpenAI key lives only in the environment variable `OPENAI_API_KEY`, never printed and never written to a run.
+- **Changed:** the router's item 36 (with its owners), items 14, 15, 17, 24 and 27, the phase rows, the labels A6s and S2–S4, and no Loupe
+  at resume. Four skills: `awl-static-plan` (A6s: the characters, a pool of subjects with sources for facts, three voice samples, one stop,
+  the scripts and image plans), `awl-static-sound` (S2: the narration, its words and cues, a music bed only when the spec calls for one),
+  `awl-static-images` (S3: the API, or the prompts file and the folder intake) and `awl-static-edit` (S4: the timeline, the local render, the
+  CapCut project). Static lines in awl-start, awl-analyze-prepare, awl-analyze-study, awl-analyze-produce (A9s), awl-record and
+  awl-wrapup; `reference/static.md` (nine sections) and production-agents §2s, the Static contract `T contract` writes when
+  `analyze_submode=static`. The toolkit: `prep-video` and `prep-all --no-extras` (exactly 1 fps), `audio-profile --voice`, `static check`,
+  `image generate|prompts|intake|use` (the OpenAI Images API by urllib, a ledger row of kind image per call, a refusal never resent
+  unchanged, 429 and 5xx sent again twice at most, a timeout recorded as unknown), `tts check|design|voice|say` (`scripts/tts_worker.py`
+  in the Qwen3-TTS interpreter, `AWL_TTS_PYTHON`), `music check|make` (`scripts/music_worker.py`, ACE-Step 1.5, `AWL_MUSIC_PYTHON`,
+  `AWL_MUSIC_ROOT`), `narration-words`, `slideshow plan|render` (ffmpeg: zoompan, xfade, ducking, −14 LUFS); one GPU lock for the two
+  workers; `config.json → static`. While there: the production notes and item 27 name Recreate, Create, Free and Static.
+- **Verified:** docs_tool check 0 errors (36 docs, 24 skills); t01 108, t02 169 (exactly 1 fps; the image API against a local mock: an image,
+  a refusal, the key never printed or written, the ledger rows; prompts and intake copy, never move; tts and music with stubs;
+  narration-words with the transcribe stub; slideshow plan and render; static check with and without the key; the Static contract and its
+  lint), t03 71, t05 73; a scratch run end to end with the stubs (a 12 s video at 720×1280, −13.9 LUFS, captions burned). Not run on this
+  PC: Qwen3-TTS and ACE-Step themselves (they live on the Static PC, where `T static check` reports them).
+
+## 2026-11-05 · Recreate: the whole source in one generation when it fits the model's live maximum
+
+- **Asked (the user):** "if the model's max video generation is 15s ... and then one of our videos we're processing is 14s or 15s then no
+  need to do two seperate generations for a single video, rather send the whole video at once, only do it if necessary, such as changing
+  ambient and sorroundings or other specific cases, and if the videos length is > than the generation model's max length then do 2,3... or
+  more generations based on the data"; then "no do it after we call the higgsfield's mcp and it returns the models and their input and
+  output lengths, do not do it hardcoded, because models change often"; then "if the video generating model maximum output is 15seconds and our video reference is 15s no need to split it into two 7.5 + 7.5s (or similar) rather send one 15second video generation sample and expect a 16s output, or if the generation model max video output length is 30seconds and the video is 27seconds we send it all at once, but for example if that 27seconds has a different scene or sorroundings change and we decide that it would've been better to split it into 15+12 seconds then we can do it but otherwise send it 27seconds at once".
+- **Changed:** generation-system §3b.1 item 7: in Recreate (and a Free `recreate` video) a source within the maximum goes whole, in one
+  generation with its cuts; at most 0.4 s over the maximum, only its first <maximum> seconds are sent (one generation, the audio cut
+  with a short fade-out; `T trim --end`, `restore-audio --duration`); it is split under the maximum only for a new place or ambience or
+  a case one generation already failed; a longer source takes its length divided by the maximum, rounded up, split on its own cuts;
+  Edit Mode keeps the earlier rule. The user's examples are in item 7: 15 s on a 15 s maximum is never 7.5 + 7.5 s, a take back at
+  16 s is trimmed to the source, 27 s on a 30 s maximum goes at once, 15 + 12 s only for a change of scene or surroundings, and a
+  "works best" note (Seedance 2.5's "≤20 s best") never lowers the maximum. The maximum
+  is the live one: E4 (at A6r, before the source is prepared) and A8 record the `models_explore get` answer as `state.json → model_limits`
+  (the `duration` range and any video-reference limit; a limit the live answer lacks comes from the guide §2.2 and says so);
+  awl-plan-video and awl-recreate-plan read it; a run made before it and resumed (run 20261104-225639-04 among them) records it at
+  A9's start, before any video is planned. No number is kept in the models' index.
+- **Found:** the user's strict rule of the same morning, kept as a memory of run 20261104-225639-04 and not yet in the library ("videos
+  15s and under never do two generations but rather direct one, even if its 15.2s or 15.4s just send the 15s, but if its over that than
+  we can do a smart 2+ generations"; there video-30, one unbroken 15.0 s take, was split in two and the can jumped at the seam): the
+  first wording of item 7 would have split a 15.2 s source in two, so the 0.4 s margin was added. The live answer gives the output's range (Seedance 2.5 4–30 s, Wan 3.0 Prime 2–30 s on 2026-11-05) but not the longest video
+  reference, so that one number still comes from the model's guide, labelled `guide §2.2`.
+- **Verified:** t01 (the rule's words in §3b.1 and both skills; the limits recorded at E4 and refreshed at A8; the 0.4 s margin in
+  item 7, A6r, E5 and X1; the record at A9's start for a resumed run), docs_tool check 0 errors.

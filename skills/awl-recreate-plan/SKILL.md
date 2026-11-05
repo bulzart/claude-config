@@ -23,8 +23,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.5 KB)
 - *a placed product (the original is the only video reference; spot and size in the prompt):*
   - generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
-- *a source with many hard cuts (item 7: separate clips on its own cuts):*
-  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.9 KB)
+- *a source with hard cuts or longer than the model's maximum (item 7: whole in one generation when it fits; split only where it must):*
+  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (4.9 KB)
 - creative-direction §5.2: `AWL/reference/creative-direction/080_5.2_the-best-approach-both-sub-modes.md` (1.0 KB)
 - text-and-format §2: `AWL/reference/text-and-format/020_2_edit-mode-removing-source-text.md` (3.3 KB)
 - text-and-format §4: `AWL/reference/text-and-format/040_4_fixed-output-format-9-16-at-720p.md` (2.6 KB)
@@ -109,13 +109,20 @@ Only these section files for this phase, nothing else unless a step below says s
     model's own limits, else the clip plan of X1 splits the source; nothing is composited into it and no placement
     image rides beside it: the spot and the size are the prompt's (X2). No guide image is ever cut from a source
     frame (a crop of the source with the performer blurred or scrubbed).
-  - Then 9:16 (`T conform` / `reframe`). Split at cuts into the edit model's range when it is
-    longer.
+  - Then 9:16 (`T conform` / `reframe`). Within the locked model's maximum (the live one, `state.json → model_limits`, E4)
+    the source stays whole: one generation, its cuts included (`generation-system.md` §3b.1 item 7 says when it must still
+    split: a new place or ambience, a case one generation failed). At most 0.4 s over the maximum (15.2 or 15.4 s against 15 s),
+    only its first <maximum> seconds are sent: one generation. Longer, it is split at its own cuts into the fewest parts its
+    length needs.
 
 ### Edit Mode's E4–E5, as Recreate uses them
 
 ### E4. Locked model — how it performs this edit (Recreate uses Edit Mode's machinery E4–E5)
 - The model was picked at the start (§2.4) and does not change. Invoke Skill `awl-model-guide` (once) and call `models_explore get` once; each per-video skill then names the guide and reference sections it reads.
+- Record the limits the source's split decisions use (A6r above, E5 below), from this live answer and never from a kept number (`generation-system.md`
+  §3b.1 item 7): `T state --run RUN set model_limits='{"output_s": [<duration min>, <duration max>], "video_ref_max_s": <from the
+  live media limits, else the guide §2.2>, "video_ref_from": "live|guide §2.2", "checked": "<date>"}'`. A8 reads the model live
+  again and refreshes it.
 - Map the chosen operations onto the model's edit capability (`index.json → edit_kind`):
   - **✓ edits video** (`video_edit`, `object_replace`): a true edit of the 9:16 source.
   - **↔ motion transfer:** the source drives motion; the supplied files define the subjects and
@@ -143,9 +150,11 @@ Only these section files for this phase, nothing else unless a step below says s
     a reason to use `reframe` or to regenerate from a 9:16 start frame (say what you chose and why);
   - Higgsfield `reframe` (9:16, 720p; preflight first);
   - regeneration with the source as a video reference.
-- **Length.** If the source exceeds the edit model's input range, split it at cuts with `T trim` into
-  segments, edit them in order with identical references and wording, then `T concat` the edited
-  pictures. The original audio is restored once over the joined result.
+- **Length** (`generation-system.md` §3b.1 item 7; the maximum is `state.json → model_limits`, E4). Within the maximum the
+  source stays whole. At most 0.4 s over it, `T trim --end <maximum>` keeps its first <maximum> seconds and the video ends there
+  (the original audio restored to that length, `restore-audio --duration <maximum>`, with a short fade-out at its end). Longer,
+  split it at its own cuts with `T trim` into the fewest segments its length needs, edit them in order with identical references
+  and wording, then `T concat` the edited pictures. The original audio is restored once over the joined result.
 - **Duration (item 19).** Request each segment at its exact source duration, or at the nearest
   allowed duration above it and trim the extra afterwards. Never request a shorter one: the actions
   would be squeezed against the original sound.

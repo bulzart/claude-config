@@ -28,7 +28,7 @@ cp = subprocess.run([PY, "-X", "utf8", str(LIB / "scripts" / "docs_tool.py"), "c
 check(cp.returncode == 0 and " 0 errors" in cp.stdout, "docs_tool check reports 0 errors: " + (cp.stdout.strip().splitlines()[-1] if cp.stdout.strip() else "nothing printed"))
 
 # --- the router and the skills
-check(len(names) == 20, f"20 phase skills exist ({len(names)})")
+check(len(names) == 24, f"24 phase skills exist ({len(names)})")
 check(all(f"`{n}`" in router for n in names), "the router names every phase skill: " + ", ".join(n for n in names if f"`{n}`" not in router))
 check(all(b"\r" not in p.read_bytes() for p in SKILLS) and b"\r" not in ROUTER.read_bytes(), "the router and the skills use LF line endings (a CRLF frontmatter is not parsed)")
 check(all(rd(p).startswith("---\nname: " + p.parent.name + "\ndescription: ") and "\nuser-invocable: false\n---\n" in rd(p)[:600] for p in SKILLS),
@@ -171,13 +171,62 @@ check("qc_fix_permission" in qc and "fix_proposal" in qc, "the QC phase stops wi
 check("qc_fix_permission" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "header \"QC fix\"" in rd(SKD / "awl-analyze-produce" / "SKILL.md"), "the main session asks the fix question and continues the agent")
 check("25. **Scripts gather" in router and "26. **Pilot first" in router, "the router has the gather-only and pilot-first items")
 # the Free sub-mode (item 17, A6f): asked at the start, the requirement kept verbatim, its own planning skill, the kind per video, QC fixes for every sub-mode
-check("awl-free-plan" in names and "`awl-free-plan`" in router and "Three Analyze sub-modes" in router, "the router has the Free sub-mode and its skill")
+check("awl-free-plan" in names and "`awl-free-plan`" in router and "Four Analyze sub-modes" in router, "the router has the Free sub-mode and its skill")
 check("**Free**" in st and "free_references" in st and "requirement.md" in st and "analyze_submode=recreate|create|free" in st, "awl-start asks Free, with or without references, and keeps the requirement verbatim")
 fp = rd(SKD / "awl-free-plan" / "SKILL.md")
 check("requirement.md" in fp and "videos_kind" in fp and "T qc-brief" in fp and "free_plan_confirmed" in fp and "next_skill=awl-asset-plan" in fp, "the free plan reads the requirement, lists the past misses, is confirmed once, gives each video a kind and hands off to the asset plan")
 check("next_skill=awl-free-plan" in rd(SKD / "awl-analyze-prepare" / "SKILL.md") and "next_skill=awl-free-plan" in rd(SKD / "awl-analyze-study" / "SKILL.md"), "prepare (no references) and study (with references) hand off to the free plan")
 check("videos_kind" in rd(SKD / "awl-plan-video" / "SKILL.md") and "Video kind" in rd(PA / "020_2_spawning.md") and "Free" in rd(SKD / "awl-asset-plan" / "SKILL.md"), "the kind of a Free video reaches the plan step, the contract and the asset plan")
-check("every Analyze sub-mode" in router.split("27. **QC fixes")[1][:120] and "Recreate, Create and Free" in st, "the QC-fixes choice covers every Analyze sub-mode")
+check("every Analyze sub-mode" in router.split("27. **QC fixes")[1][:120] and "Recreate, Create, Free and Static" in st, "the QC-fixes choice covers every Analyze sub-mode")
+
+
+# the Static sub-mode (item 36, the user 2026-11-05): narrated still-image videos; no Higgsfield and no Loupe; its own skills, contract and reference
+STK = ("awl-static-plan", "awl-static-sound", "awl-static-images", "awl-static-edit")
+sp_text = {n: rd(SKD / n / "SKILL.md") for n in STK if (SKD / n / "SKILL.md").is_file()}
+item36 = router.split("36. **Static")[1].split(chr(10))[0] if "36. **Static" in router else ""
+check(len(sp_text) == 4 and item36 and all(f"`{n}`" in item36 for n in STK + ("awl-start", "awl-analyze-prepare", "awl-analyze-study", "awl-analyze-produce", "awl-record", "awl-wrapup")),
+      "the router has item 36 (Static) and names every skill that owns it; the four Static skills exist")
+check("**Static**" in st and "analyze_submode=recreate|create|free|static" in st and '"Images": **"Generate with OpenAI"**' in st and "T static check" in st and "static_images=api|prompts" in st,
+      "awl-start offers Static, asks Images (OpenAI or prompts) with the QC-fixes question, checks the setup and stores the choice")
+check("next_skill=awl-static-plan" in rd(SKD / "awl-analyze-study" / "SKILL.md") and "next_skill=awl-analyze-produce" in sp_text.get("awl-static-plan", "")
+      and "--fps 1 --dense-fps 1 --no-extras" in rd(SKD / "awl-analyze-prepare" / "SKILL.md") and "--voice" in rd(SKD / "awl-analyze-study" / "SKILL.md"),
+      "Static: 1 fps without extras in prepare, the voice numbers in study, study hands to the static plan and the plan to produce")
+check("### A9s. Static" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "awl-static-sound" in rd(SKD / "awl-analyze-produce" / "SKILL.md")
+      and "static.waiting=images" in sp_text.get("awl-static-images", "") and "T image intake" in sp_text.get("awl-static-images", ""),
+      "produce has A9s (sound for every video, then images, then the agents); prompts mode stops for the user's folder and takes it in by copy")
+s2s = rd(PA / "025_2s_spawning-static.md")
+check("<api|prompts>" in s2s and "<ask|auto|off>" in s2s and "Loupe: not used in Static" in s2s and "No Higgsfield" in s2s
+      and all(n in s2s for n in ("awl-static-images", "awl-static-edit", "awl-record")) and "OPENAI_API_KEY" in s2s,
+      "the Static agent contract (production-agents 2s): its own placeholders, no Loupe, no Higgsfield, its three skills, the key only in the environment")
+hig = [n for n, tx in sp_text.items() for w in ("mcp__higgsfield", "generate_video", "jobs_wait", "media_upload", "T ledger begin") if w in tx]
+check(not hig, "no Static skill calls a Higgsfield tool or the video ledger by hand (image calls go through T image generate): " + ", ".join(hig))
+check(all(f"{d}" in rd(LIB / "reference" / "static.md") for d in ("| 1 |", "| 9 |")) and "Nothing in Static calls Higgsfield or Loupe" in rd(LIB / "reference" / "static.md"),
+      "the Static reference is indexed in nine sections and says it calls neither Higgsfield nor Loupe")
+check("capcut import-srt" in sp_text.get("awl-static-edit", "") and "capcut_add_captions" in sp_text.get("awl-static-edit", "").split("## Never")[1],
+      "Static captions reach CapCut by import-srt; CapCut's own caption tools are named only to be never used")
+
+# Recreate: the whole source in one generation when it fits the locked model's maximum (the user, 2026-11-05)
+_gs31 = rd(LIB / "reference" / "generation-system" / "050_3b.1_plan-the-clips-in-the-video-plan.md")
+check("is sent whole, in ONE generation" in _gs31 and "a 14 or 15 s video is one generation, never two" in _gs31 and "as Higgsfield answers it live, never a number" in _gs31
+      and "model_limits" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "the fewest generations its length needs" in _gs31
+      and "Edit Mode** keeps the" in _gs31 and "goes whole, in one generation with its cuts" in rd(SKD / "awl-plan-video" / "SKILL.md")
+      and "the source stays whole: one generation" in rd(SKD / "awl-recreate-plan" / "SKILL.md"),
+      "Recreate sends a source within the model's maximum whole (one generation), splits only where it must, and a longer one into the fewest parts")
+# the limits are recorded from the live answer where it is first read: E4 at A6r (before the source is prepared) and A8 again
+check("set model_limits='" in rd(SKD / "awl-recreate-plan" / "SKILL.md").split("### E4.")[1].split("### E5.")[0]
+      and "set model_limits='" in rd(SKD / "awl-analyze-produce" / "SKILL.md"),
+      "the live model limits are recorded at E4 (A6r, before the source is prepared and split) and refreshed at A8")
+check("A run with no `state.json → model_limits`" in rd(SKD / "awl-analyze-produce" / "SKILL.md").split("### A9. ")[1].split("### A9s.")[0],
+      "a run resumed from before the live limits existed records them at A9's start, before any video is planned")
+# a source at most 0.4 s over the maximum is one generation of its first <maximum> seconds (the user, run 20261104-225639-04)
+check("at most 0.4 s over the maximum" in _gs31 and "At most 0.4 s over the maximum" in rd(SKD / "awl-recreate-plan" / "SKILL.md")
+      and "`T trim --end <maximum>`" in rd(SKD / "awl-recreate-plan" / "SKILL.md")
+      and "at most 0.4 s over the maximum sends only its first <maximum> seconds" in rd(SKD / "awl-plan-video" / "SKILL.md"),
+      "a source at most 0.4 s over the model's maximum is one generation of its first <maximum> seconds, in item 7, A6r, E5 and X1")
+# the user's examples (2026-11-05): 15 s on a 15 s maximum is never 7.5 + 7.5; 27 s on a 30 s maximum goes at once; a "works best" note
+# never lowers the maximum; a take a little longer than its source is trimmed
+check("never lowers it" in _gs31 and "a 27 s video is one generation" in _gs31 and "never 7.5 + 7.5 s" in _gs31 and "16 s for 15 s" in _gs31,
+      "item 7 keeps the user's examples: the hard maximum, 15 s never 7.5 + 7.5, 27 s on 30 s at once, a longer take trimmed")
 
 check("Pilot first" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "stalled" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "frozen once its agent is spawned" in rd(SKD / "awl-analyze-produce" / "SKILL.md"),
       "the produce phase has the pilot, the stalled-agent recovery and the request freeze rules")

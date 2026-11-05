@@ -88,6 +88,9 @@ and the diagnosis go into the video's brief before the fix is offered. When a pr
 references do not hold, add one line offering to write the rule into the section that owns it.
 
 ### 6b. Upscale the finals with Topaz (after the user's approval, both modes)
+**Not in Static** (item 36: no Higgsfield). A Static wrap-up reports, in place of credits and flags, the OpenAI cost estimate (the sum of
+the videos' `result.json → static.cost_usd_estimate`), the images' source and re-draws, and every narration line made again.
+
 
 Once the generated videos and the editing are done, and after the feedback question, offer the
 upscale. It runs only on the user's yes, never on its own, and never before the finals exist.

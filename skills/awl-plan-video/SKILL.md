@@ -39,9 +39,9 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §4b.5: `AWL/reference/generation-system/190_4b.5_expressing-it-to-the-model-with.md` (6.5 KB)
 - *Edit Mode or Recreate (the source action script):*
   - generation-system §5c.1: `AWL/reference/generation-system/240_5c.1_the-source-action-script-card-th.md` (1.4 KB)
-- *a multi-clip video, or a Recreate/Edit source with hard cuts (item 7: separate clips on the source's own cuts):*
+- *a multi-clip video, or a Recreate/Edit source with hard cuts (item 7: Recreate sends a source that fits the model's maximum whole, in one generation; it splits only where it must):*
   - generation-system §3b: `AWL/reference/generation-system/040_3b_videos-longer-than-one-generatio.md` (0.8 KB)
-  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (2.9 KB)
+  - generation-system §3b.1: `AWL/reference/generation-system/050_3b.1_plan-the-clips-in-the-video-plan.md` (4.9 KB)
 - *a video with inserts:*
   - generation-system §3c: `AWL/reference/generation-system/090_3c_reference-inserts-memes-cut-from.md` (3.6 KB)
 - anomaly-catalog §0: `AWL/reference/anomaly-catalog/010_0_four-questions-behind-every-anom.md` (1.5 KB)
@@ -111,8 +111,11 @@ a blocker with the real error (`voiceover.md` §4 step 8).
       carries the spot (pinned to a fixed neighbour) and the size (against a named neighbour, §4b.5), with the
       product's padded views; where the model guide lists size or place as a limit and no passing-list anchor fits
       (always for a near-plane spot the user marked), the size risk goes in the brief; plan the source span so that
-      the original fits the model's own limits (its guide §2.2, §2.5); a longer source is split into clips on its
-      own cuts (the clip plan below);
+      the original fits the model's own limits (its guide §2.2, §2.5); in Recreate a source within the model's maximum
+      goes whole, in one generation with its cuts (`generation-system.md` §3b.1 item 7; the maximum is the live one in
+      `state.json → model_limits`, A8), split under the maximum only where item 7 says it must (a new place or ambience, a case
+      one generation failed); a source at most 0.4 s over the maximum sends only its first <maximum> seconds, in one generation;
+      a longer one is split into the fewest clips its length needs, on its own cuts (the clip plan below);
     - the **guardrail hits** of the source (Recreate, Edit Mode) with their operations and times,
       or the guardrail invariants of the concept (Create): the count limit in the ledger, no
       competitor objects, supplied characters only, the wording rules in the text plan

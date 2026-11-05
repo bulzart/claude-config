@@ -17,6 +17,8 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
 - effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (2.1 KB) (every run, step 5d)
+- *Static, when `T static check` reports a part the run needs as not ready:*
+  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (1.4 KB)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
   - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)
@@ -54,7 +56,7 @@ Only these section files for this phase, nothing else unless a step below says s
    - **Edit Mode**: "Edit supplied videos one by one: replace, remove, insert, alter, restyle or
      recreate elements."
 
-   **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate`, `create` or `free`, use it. Otherwise ask
+   **Analyze Mode → sub-mode.** If `$ARGUMENTS` names `recreate`, `create`, `free` or `static`, use it. Otherwise ask
    with AskUserQuestion (header "Analyze as"):
    - **Recreate**: "Analyze the references, then recreate N of them with your product and
      characters: same scenario, faces and products swapped or blended. Fully autonomous."
@@ -63,6 +65,8 @@ Only these section files for this phase, nothing else unless a step below says s
    - **Free**: "Say in your own words what the videos must achieve and how. With reference material analysed first, or from your
      requirement alone. The pipeline plans to your requirement, keeps the model's official prompting, the QC stack and Loupe's samples
      and misses, and asks you once to confirm its reading of the plan."
+   - **Static**: "Narrated still-image videos in the references' style on a new subject: the images by OpenAI with your key, or by you
+     from my prompts; a local Qwen3-TTS voice; CapCut. No Higgsfield."
    **Free → two more things, asked in the same message batch.** (a) Header "Free: references": **"With references"** ("Analyse a
    folder of reference material first; the plan can follow, edit or avoid what they do") or **"Requirement only"** ("No references: the
    plan comes from your requirement and your assets"); `$ARGUMENTS` with `free` and a references folder means with references, `free`
@@ -71,7 +75,17 @@ Only these section files for this phase, nothing else unless a step below says s
    anything they want or forbid) or **"It is in a file"** (the path in the Other box: a .txt, .md or .pdf; `T doc-text` reads it).
    The words are kept verbatim, nothing is paraphrased or trimmed; a one-line requirement is accepted as it is (the free plan shows its
    gaps as visible [I] lines). The requirement is written once the run exists (step 6).
-   Store it with `T state --run RUN set analyze_submode=recreate|create|free` once the run exists (Free also `free_references=yes|no`).
+   Store it with `T state --run RUN set analyze_submode=recreate|create|free|static` once the run exists (Free also `free_references=yes|no`).
+   **Static → its own path** (item 36): no steps 2b, 2c, 3 or 4 (no voiceover or memes question, no Higgsfield tools, no model menu: the
+   images come from the OpenAI model in `config.json → static.images`, or from the user); step 5b is not asked (`audio_ingest=whisper`).
+   Its inputs (step 5): the references folder and the assets: the characters as photos and/or descriptions (a text file each, or words in
+   the message), usually no product; documents and examples as always. In the same AskUserQuestion call as the QC-fixes question, header
+   "Images": **"Generate with OpenAI"** ("I make every image with the OpenAI Images API on your key (OPENAI_API_KEY on this PC), check
+   each one and draw again by your QC-fixes choice; it uses your OpenAI credits.") or **"Prompts for me"** ("I write one prompt per image
+   and the character sheets; you make the images, put them in one folder and send me its path; I check them."); `$ARGUMENTS` with
+   `images api|prompts` answers it. Then `T static check` (add `--offline` with prompts): a part the run needs that is not ready (the key
+   with Generate; the TTS environment always) is a blocker: report it with static §9's setup line and stop before any analysis. Music is
+   needed only when a bed is planned (A6s): reported, never a blocker here.
 2b. **Own voiceover: the method (Create only; item 31), before the model menu.** When the sub-mode is Create, ask with AskUserQuestion
    (header "Voiceover") the method question of `voiceover.md` §2 step 1 (its four options, none recommended); `$ARGUMENTS` with
    `voiceover native|lipsync|overlay` or `no-voiceover` answers it. Free never asks it (`awl-free-plan` step 2b); Recreate and Edit Mode
@@ -132,7 +146,7 @@ Only these section files for this phase, nothing else unless a step below says s
      close-up + full body each). If none are supplied and the references show people, ask once at
      this step: add characters, or keep the people as they are. **Free** asks the same only when the requirement says people are replaced.
      **Free with references** needs the references folder like Recreate and Create; **Free, requirement only** needs no references: the assets (and the optional examples) are its inputs.
-     **QC fixes (every Analyze sub-mode: Recreate, Create and Free; a choice, asked once the paths are validated, unless `$ARGUMENTS` has `qc-fixes ask|auto|off`).**
+     **QC fixes (every Analyze sub-mode: Recreate, Create, Free and Static; a choice, asked once the paths are validated, unless `$ARGUMENTS` has `qc-fixes ask|auto|off`).**
      Ask with AskUserQuestion (header "QC fixes"), "After a video's first generation, how should QC and its fixes run?" (three options, none recommended):
      - **"Ask me first"**: "From the first video on, I show you what QC found, what the fix generation would change and cost, and wait for your yes or no before spending credits on it."
      - **"QC agents fix on their own"**: "The QC agents regenerate a video with one diagnosed fix on their own, without asking, and ship the best take flagged if it still fails."
@@ -146,7 +160,7 @@ Only these section files for this phase, nothing else unless a step below says s
      Higgsfield needs the original file.
    - Validate every path (Glob/ls) and report any that don't exist.
 5b. **Audio.** Ask once, with AskUserQuestion (header "Audio ingest"), in the same message batch as the other start questions,
-   whether the videos' audio is processed as text for this run (contract item 24). Both modes ask it. Never pick for the user and
+   whether the videos' audio is processed as text for this run (contract item 24). Both modes ask it (not Static: its audio is `whisper`, item 36). Never pick for the user and
    never mark one option as recommended; the two options, with these descriptions:
    - **Whisper speech-to-text**: "Every video's audio is transcribed locally (faster-whisper `small`, int8 on the CPU): about real
      time per video plus about 8 s to load the model once per batch (measured 2026-10-20 on this machine: a 15 s clip in 10 s, a 9 s
@@ -177,15 +191,16 @@ Only these section files for this phase, nothing else unless a step below says s
    - Create: store the voiceover choice (steps 2b, 5c) with the store line of `voiceover.md` §1 (`T state --run RUN set voiceover.enabled=true
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;
    - Create: store the memes choice (step 2c): `T state --run RUN set memes=include` or `memes=none`;
+   - Static: `T state --run RUN set analyze_submode=static static_images=api|prompts audio_ingest=whisper` (no model is stored; item 36);
    - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`
      (first line `# Requirement (the user's words)`, then the text; a file the user named is copied, a PDF through `T doc-text`);
-   - start Loupe: `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper
+   - start Loupe (not in Static: no Loupe call there, item 36): `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper
      is fed from, and `keeper.state`: the keeper is booted or brought up to date there, so the first consult finds it current (`busy`: another keeper call held
      it, and the first consult brings it up to date; an empty library has no keeper, `keeper: null`); `keeper.understanding` says how many
      samples it holds from their pictures, and `keeper.reading_note` appears when new or changed samples are being read in the background: nothing to do, Loupe
      tells the keeper when they are done), then `T state --run RUN set loupe=up`, or `loupe=down` when it exits 1 (tell the user in one line that
      `python ~/.claude/loupe/loupe.py serve` starts it by hand; the run goes on, QC without samples, flags wait in Loupe's outbox);
-   - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`).
+   - call `balance` and note the credits in `state.json` (`T state --run RUN set credits_start=<n>`); not in Static (no Higgsfield).
 
 ## Rules this phase owns (contract items 4, 11, 17, 24, 27, 31, 32, 33)
 
