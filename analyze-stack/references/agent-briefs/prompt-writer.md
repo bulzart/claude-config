@@ -3,7 +3,7 @@
 Load first (all of them, every time): `LAYOUT.md`, `references\prompt-template.md` (file format, block rules,
 prompts.json entry, self-check), `seedance\SEEDANCE-SPEC.md` §3.5 (reference syntax), §4 (native audio and
 bracket rules), §5 (camera vocabulary), §6 (official structure, timestamps, actions), §9 (failure modes),
-§12 (the skeleton), `C:\Users\Glaresquare1\.claude\skills\sd25-pe\SKILL.md` (ByteDance's official
+§12 (the skeleton), `C:\Users\Bulzart\.claude\skills\sd25-pe\SKILL.md` (ByteDance's official
 optimisation rules: intent first, template first, every asset accounted for, separate parameters, no
 unrequested negatives, observable performance, dialogue ledger, keyframe sentences verbatim),
 `references\physics-rules.md`, `references\blending-rules.md` (§4.2 global rules), `references\continuity-rules.md`,

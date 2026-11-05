@@ -137,7 +137,7 @@ Rules: trigger word ("Video edit", "Replace", "Remove") first; one video; 1–5 
 Local mux recipe (Windows, ffmpeg 9.0.1; adapted from Higgsfield's pipeline, which forbids `-itsoffset`, `-shortest`, `-avoid_negative_ts make_zero`):
 ```powershell
 # source segment: seg-03.mp4 (15.00 s); edited silent result: seg-03-edit.mp4 (~14.6–15.0 s)
-$ff = 'C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe'
+$ff = 'C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe'
 & $ff -nostdin -y -i seg-03.mp4 -map 0:a:0 -vn -c:a copy seg-03-audio.mka
 & $ff -nostdin -y -i seg-03-edit.mp4 -i seg-03-audio.mka -filter_complex "[1:a:0]asetpts=PTS-STARTPTS,apad=whole_dur=15.0,atrim=duration=15.0[a]" -map 0:v:0 -map "[a]" -t 15.0 -c:v copy -c:a aac -b:a 192k -movflags +faststart seg-03-final.mp4
 ```

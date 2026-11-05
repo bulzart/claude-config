@@ -22,7 +22,7 @@ captions/subtitles rendered, music licence, editable project present. Decide `do
 `state.json` (`stage=done` + `next_step=publish`, or `stage=re-edit` + `next_step=editor` with the issues).
 
 ## Method
-1. `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\clip_frames.py "<render>" --out "<run>\90-postgen\qa\final-A" --fps 1`
+1. `python C:\Users\Bulzart\.claude\analyze-stack\tools\clip_frames.py "<render>" --out "<run>\90-postgen\qa\final-A" --fps 1`
    → `sheet.jpg`, `f-*.jpg`; LOOK (Read tool) at the sheet and at the hook, mid and CTA frames.
 2. Frames vs plan: clip order and trims match `edit-plan.json.clips[]` (schema v2, `tools\edit\EDIT-PLAN.md`);
    every `text_overlays[]` item appears at its start/end; no S2+ window from `qa.json` survived.

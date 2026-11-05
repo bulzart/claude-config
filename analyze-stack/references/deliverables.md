@@ -60,7 +60,7 @@ estimated credits.
 
 ## 3. `state.json` (root of the run folder; updated at the end of every stage by `tools\state.py`)
 
-Written only through `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\state.py "<run>" set key=value …`
+Written only through `python C:\Users\Bulzart\.claude\analyze-stack\tools\state.py "<run>" set key=value …`
 (dotted keys write nested values, e.g. `answers.Q1="Replace red 12 oz can"`; values parse as JSON when
 possible) and `state.py "<run>" add-file <stage-dir> <path> …` (`files` is keyed by the run-folder stage
 directory, exactly as `tools\common.state_add_files` writes it). `intake.py` creates the file.

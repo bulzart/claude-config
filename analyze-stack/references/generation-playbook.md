@@ -81,7 +81,7 @@ Per item, params from `prompts.json` (never retyped):
 queued / in progress. Append every poll summary line to `75-generation\generation-log.md`.
 
 ### 4.4 Download + verify → `80-generated\`
-`python C:\Users\Glaresquare1\.claude\analyze-stack\tools\download.py "<result_url>" --out "<run>\80-generated\clip-NN.mp4" --probe`
+`python C:\Users\Bulzart\.claude\analyze-stack\tools\download.py "<result_url>" --out "<run>\80-generated\clip-NN.mp4" --probe`
 (streaming, retries with back-off, Content-Length check, `--probe` = ffprobe requires a video stream; then check
 duration, fps 24, audio as requested). Edit segments land as `80-generated\seg-NN-edit.mp4`; then conform + mux
 (`SEEDANCE-EDIT.md` §5 recipe: `-t <source_s>`, `apad`/`atrim`, source `seg-NN-audio.mka`) → `80-generated\seg-NN.mp4`;

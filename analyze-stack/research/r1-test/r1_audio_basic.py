@@ -5,7 +5,7 @@ import numpy as np, soundfile as sf
 from scipy.signal import find_peaks
 src, outdir = sys.argv[1], sys.argv[2]
 wav = os.path.join(outdir, "audio22k.wav")
-ff = os.environ.get("FFMPEG_EXE", r"C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe")
+ff = os.environ.get("FFMPEG_EXE", r"C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe")
 subprocess.run([ff, "-y", "-loglevel", "error", "-i", src, "-vn", "-ac", "1", "-ar", "22050", "-c:a", "pcm_s16le", wav], check=True)
 t0 = time.time()
 y, sr = sf.read(wav, dtype="float32")

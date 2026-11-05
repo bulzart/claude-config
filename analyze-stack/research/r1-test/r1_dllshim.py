@@ -14,7 +14,7 @@ def _runtime_ok():
 SHIM_DIR = None
 if os.name == "nt" and not _runtime_ok():
     cands = []
-    for pat in [r"C:\Users\Glaresquare1\AppData\Local\CapCut\Apps\*\msvcp140.dll",
+    for pat in [r"C:\Users\Bulzart\AppData\Local\CapCut\Apps\*\msvcp140.dll",
                 r"C:\Program Files\*\msvcp140.dll", r"C:\Program Files\*\*\msvcp140.dll",
                 r"C:\Program Files (x86)\*\msvcp140.dll", r"C:\Program Files (x86)\*\*\msvcp140.dll",
                 r"C:\Windows\System32\*\msvcp140.dll", r"C:\Windows\System32\*\*\msvcp140.dll"]:

@@ -6,7 +6,7 @@
 - S4 [OFFICIAL] BytePlus ModelArk — Create a video generation task (API reference incl. the resolution × ratio pixel table: 9:16 at 720p = 720×1280) — https://docs.byteplus.com/en/docs/ModelArk/1520757 (accessed 2026-09-30)
 - S5 [OFFICIAL] BytePlus ModelArk — Model list (bit depth, 24 fps, durations) — https://docs.byteplus.com/en/docs/ModelArk/1330310 (accessed 2026-09-30)
 - S6 [OFFICIAL] BytePlus ModelArk — Dreamina Seedance 2.0 series prompt guide (predecessor FAQ used where 2.5 docs are silent) — https://docs.byteplus.com/en/docs/ModelArk/2222480 (accessed 2026-09-30)
-- S7 [OFFICIAL] Seedance team — `sd25-pe` "Seedance 2.5 Prompt Optimizer" skill v0.1.1 (owner: seedance), distributed from https://arkdocs-en.tos-ap-southeast-1.volces.com/skills/ as published in S2/S3; local copy `C:\Users\Glaresquare1\.claude\skills\sd25-pe\SKILL.md` (read 2026-09-30; examples E2, E6)
+- S7 [OFFICIAL] Seedance team — `sd25-pe` "Seedance 2.5 Prompt Optimizer" skill v0.1.1 (owner: seedance), distributed from https://arkdocs-en.tos-ap-southeast-1.volces.com/skills/ as published in S2/S3; local copy `C:\Users\Bulzart\.claude\skills\sd25-pe\SKILL.md` (read 2026-09-30; examples E2, E6)
 - S8 [OFFICIAL] BytePlus ModelArk — Create portrait videos with Dreamina Seedance models — https://docs.byteplus.com/en/docs/ModelArk/2608626 (via local notes 2026-09-16; not re-fetched)
 - S9 [OFFICIAL] Dreamina (CapCut) — Seedance 2.5 Prompt Guide: Formula & Examples — https://dreamina.capcut.com/seedance/seedance-2-5-prompt (accessed 2026-09-30)
 - S10 [OFFICIAL] Team Seedance — Seedance 2.0 model card, arXiv:2604.14148 (lineage) — https://arxiv.org/abs/2604.14148 (accessed 2026-09-30)

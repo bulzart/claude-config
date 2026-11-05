@@ -101,7 +101,7 @@ Polling loop for a batch of N clips: submit â‰¤ 12 per `generate_video_batch` â†
 ```python
 # tools\hf_download.py  <url> <out.mp4>   (Python 3.12; requests 2.34 installed)
 import sys, time, requests, subprocess, json
-FFPROBE = r"C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffprobe.exe"
+FFPROBE = r"C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffprobe.exe"
 url, out = sys.argv[1], sys.argv[2]
 for attempt in range(4):
     try:

@@ -37,7 +37,7 @@ CapCut, shaped by the references' sound profiles (`10-media/<V>/audio-profile.js
       - When the `heygen` CLI is installed and signed in, the HeyGen catalog is an alternative:
         `npx hyperframes media-use resolve --type bgm --intent "<role, mood, tempo, energy arc>"`.
    4. **Sound effects:**
-      - first the bundled library, `C:/Users/Glaresquare1/.claude/skills/media-use/audio/assets/sfx/`.
+      - first the bundled library, `C:/Users/Bulzart/.claude/skills/media-use/audio/assets/sfx/`.
         It holds whoosh, whoosh-cinematic, impact-bass, riser, glitch, pop, chime, click, ping,
         sparkle and more, under the Pixabay license (commercial use, no credit);
       - for a named meme sound the references use, a downloaded royalty-free equivalent

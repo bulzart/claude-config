@@ -4,7 +4,7 @@ Load first (every time): `LAYOUT.md`, `references\edit-prompt-template.md` (file
 entry, self-check), `seedance\SEEDANCE-EDIT.md` §3 (how the source and references are cited: `@Video1`, `@ImageN`,
 trigger words), §4 (A→B phrasing, official examples, the Higgsfield preservation contract, §4.1 skeleton),
 §5 (audio: generate_audio false + mux), §6 (identical wording across segments), §7 (failure modes),
-`C:\Users\Glaresquare1\.claude\skills\sd25-pe\SKILL.md` "Video Editing Template" (sole master, inventory
+`C:\Users\Bulzart\.claude\skills\sd25-pe\SKILL.md` "Video Editing Template" (sole master, inventory
 every visible subject, scope-closure sentence, motion-slot replacement, timeline inheritance, never
 re-narrate the source from memory), `references\blending-rules.md`, `references\physics-rules.md`,
 `references\continuity-rules.md` §4, and the **Seedance 2.5 Director** bundle (read-only): `seedance\director\references\provider-checks.md`

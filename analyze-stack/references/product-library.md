@@ -1,4 +1,4 @@
-# Product library — `C:\Users\Glaresquare1\.claude\analyze-stack\product-library\`
+# Product library — `C:\Users\Bulzart\.claude\analyze-stack\product-library\`
 
 The persistent dataset the owner brief asks for: "it looks the product up in our own dataset (a local
 product library the skill maintains and reuses across runs) or on the internet … and saves a product

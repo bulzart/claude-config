@@ -2,7 +2,7 @@
 
 Sources folded in: `seedance\SEEDANCE-SPEC.md` §12 skeleton (official 2.5 layout: asset binding →
 one-sentence summary → timeline → additional notes; bracket rules; ≤ 1,000 words, 250–600 target),
-ByteDance's official prompt-optimisation skill `C:\Users\Glaresquare1\.claude\skills\sd25-pe\SKILL.md`
+ByteDance's official prompt-optimisation skill `C:\Users\Bulzart\.claude\skills\sd25-pe\SKILL.md`
 (intent first; template first; account for every asset with "use only / do not use"; one line per
 subject/asset — no range mappings; unused assets listed; separate parameters — never write ratio,
 resolution, duration, fps or the audio toggle into the prompt text; no unrequested generic negatives

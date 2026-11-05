@@ -66,8 +66,8 @@ continuous sequence.
 
 ## Commands
 
-Python: `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` (`config.json → python`).
-Script: `C:/Users/Glaresquare1/.claude/analyze-with-loupe/scripts/awl.py`. Every command prints one JSON
+Python: `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` (`config.json → python`).
+Script: `C:/Users/Bulzart/.claude/analyze-with-loupe/scripts/awl.py`. Every command prints one JSON
 object as its last stdout line.
 
 ```text

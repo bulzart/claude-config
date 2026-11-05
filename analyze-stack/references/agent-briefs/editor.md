@@ -1,7 +1,7 @@
 # editor — agent brief (Stage 9c; one agent; runs ONLY after P0 = "Edit now" and P2/P3 are answered)
 
 Load first: `LAYOUT.md`, `references\post-generation-playbook.md` (OWNER RULE at the top; §3 assembly, §4 boosts,
-§5 export, §6 editable project rule, re-edit loop), `C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\EDIT-PLAN.md`
+§5 export, §6 editable project rule, re-edit loop), `C:\Users\Bulzart\.claude\analyze-stack\tools\edit\EDIT-PLAN.md`
 (the `edit-plan.json` schema `analyze-stack.edit-plan/2` — authoritative; it supersedes the v1 example in the
 playbook §6: top-level `project`, `clips[]`, `transitions[]`, `text_overlays[]`, `audio`, `colour`, `export`, `meta`),
 `tools\edit\edit-plan.example.json`, `tools\edit\descript_bridge.md` (the Descript path, step by step), `tools\edit\README.md`
@@ -46,7 +46,7 @@ one thing), `render\final-A.log`, `render\history.md`, `90-postgen\media\` norma
    `Hook text overlay + callouts` / `Trending sound / SFX` / `Transitions + VFX` / `All recommended` — apply
    exactly the chosen groups. Captions requested anywhere → refuse and note "captions are added by the owner's caption tool".
 5. Draft the plan with the script first, then refine it by hand:
-   `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\plan_from_clips.py --run-dir "<run>" --clip-qa "<run>\90-postgen\qa.json" --trend-brief "<run>\90-postgen\trend-brief.json" --manifest "<run>\80-generated\manifest.json" --out "<run>\90-postgen\edit-plan.json" --name <run-id> --platform <tiktok|reels|shorts|universal> [--max-duration <s>] [--cta "<text>"]`
+   `python C:\Users\Bulzart\.claude\analyze-stack\tools\edit\plan_from_clips.py --run-dir "<run>" --clip-qa "<run>\90-postgen\qa.json" --trend-brief "<run>\90-postgen\trend-brief.json" --manifest "<run>\80-generated\manifest.json" --out "<run>\90-postgen\edit-plan.json" --name <run-id> --platform <tiktok|reels|shorts|universal> [--max-duration <s>] [--cta "<text>"]`
    (keeps S0/S1 clips whole, trims S2 windows with 6-frame handles, drops S3/S4, sets cadence from `cuts.json`, hook text
    from `hook_candidates`, CTA/end card). Then edit the JSON for the P3 choices and anything the script could not know.
    Write `edit-plan.json` BEFORE rendering, schema v2 (`project` with run_dir/fps/canvas/platform/safe_zones;
@@ -54,7 +54,7 @@ one thing), `render\final-A.log`, `render\history.md`, `90-postgen\media\` norma
    hook_text | callout | end_card | sticker only; `audio` with original gain, music bed + ducking, sfx, loudness;
    `colour`; `export`; `meta` with run_id, decisions, trend_brief, clip_qa, variants, projects, history).
    `common_edit.load_plan()` refuses any captions/subtitles/transcript-shaped content — do not add it.
-6. Overlays: `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\text_overlays.py "<run>\90-postgen\edit-plan.json" --out "<run>\90-postgen\overlays.ass" --fonts-dir "C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\fonts"`
+6. Overlays: `python C:\Users\Bulzart\.claude\analyze-stack\tools\edit\text_overlays.py "<run>\90-postgen\edit-plan.json" --out "<run>\90-postgen\overlays.ass" --fonts-dir "C:\Users\Bulzart\.claude\analyze-stack\tools\edit\fonts"`
    (exit 3 = caption-shaped input refused: fix the plan, never bypass).
 7. The CapCut project (always), in this order:
    7a. Build the registered draft from the plan: `python …\tools\edit\build_capcut_draft.py "<run>\90-postgen\edit-plan.json" --name <run-id>`
@@ -82,7 +82,7 @@ one thing), `render\final-A.log`, `render\history.md`, `90-postgen\media\` norma
        (`.otio`, `.xml` FCP7, `.fcpxml`, `.edl`, README-otio.md); Descript via MCP (`import_media` direct upload:
        presigned PUT with `Content-Type: application/octet-stream`, then `prompt_project_agent` with the plan in words
        — "no captions" — then `export_timeline`; record ids in `meta.projects.descript`). "CapCut + all exports" = both.
-8. Render: `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\render_ffmpeg.py "<run>\90-postgen\edit-plan.json" --out "<run>\90-postgen\render\final-A.mp4" --overlays "<run>\90-postgen\overlays.ass" --verify`
+8. Render: `python C:\Users\Bulzart\.claude\analyze-stack\tools\edit\render_ffmpeg.py "<run>\90-postgen\edit-plan.json" --out "<run>\90-postgen\render\final-A.mp4" --overlays "<run>\90-postgen\overlays.ass" --verify`
    (two-pass loudnorm to −14 LUFS / −1.0 dBTP; 1080x1920 30 fps H.264 High 4.1; faststart; writes `.filter.txt`,
    `.cmd.txt`, `.log`, `.report.json`). Then the variant (a copy of the plan with exactly one change).
 9. `history.md` line (who/what/why/output); `state.py "<run>" set stage=editing next_step=final-check`.

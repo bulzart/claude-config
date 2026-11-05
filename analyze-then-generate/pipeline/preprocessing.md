@@ -65,8 +65,8 @@ continuous sequence.
 
 ## Commands
 
-Python: `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` (`config.json → python`).
-Script: `C:/Users/Glaresquare1/.claude/analyze-then-generate/scripts/atg.py`. Every command prints one JSON
+Python: `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` (`config.json → python`).
+Script: `C:/Users/Bulzart/.claude/analyze-then-generate/scripts/atg.py`. Every command prints one JSON
 object as its last stdout line.
 
 ```text

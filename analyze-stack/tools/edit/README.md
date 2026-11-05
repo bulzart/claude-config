@@ -69,7 +69,7 @@ Re-edit loops (section 5) go back to `render_ffmpeg.py`; every render appends to
 
 ### `plan_from_clips.py`
 ```
-python C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\plan_from_clips.py --run-dir <run>
+python C:\Users\Bulzart\.claude\analyze-stack\tools\edit\plan_from_clips.py --run-dir <run>
        [--clip-qa <qa.json>] [--trend-brief <trend-brief.json>] [--manifest <manifest.json>] [--clips-dir <dir>]
        [--out <edit-plan.json>] [--name <project>] [--platform universal|tiktok|tiktok-ads|reels|shorts]
        [--max-duration S] [--cta "text"] [--music <file> --music-gain-db -18] [--sfx-dir <dir>] [--handle-frames 6] [--json]
@@ -125,7 +125,7 @@ python …\build_capcut_draft.py <edit-plan.json> --name <draft> [--drafts-dir D
        [--no-register] [--timelines-mirror] [--force] [--no-lint] [--json]
 ```
 Writes `<drafts-dir>\<name>\` (default drafts dir = the live store
-`C:\Users\Glaresquare1\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft`; refuses while CapCut.exe
+`C:\Users\Bulzart\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft`; refuses while CapCut.exe
 runs unless `--force`): `draft_content.json` (all markers verbatim from the 9.4 template: `version 360000`,
 `new_version "185.0.0"`, `platform.app_version "9.4.0"`; canvas 1080x1920 "9:16" 30 fps; main video track = one
 segment per clip piece with trims/order/speed (`source_timerange.duration = target × speed`), transitions

@@ -110,7 +110,7 @@ Round-trip caveats (DOC): OTIO carries clips/tracks/timing/markers/dissolves; no
 
 ### A.1 Draft anatomy (VERIFIED from `research\capcut-draft-sample\` = byte-identical copy of the live draft `...\com.lveditor.draft\0915\`)
 
-Folder `C:\Users\Glaresquare1\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\0915\`:
+Folder `C:\Users\Bulzart\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\0915\`:
 
 ```
 draft_content.json            12657 B  main timeline document (plaintext JSON)
@@ -132,7 +132,7 @@ Timelines\7E87051F-...\common_attachment\{attachment_id_mapping.json, attachment
 Timelines\7E87051F-...\attachment\patch\
 ```
 
-`root_meta_info.json` (in `com.lveditor.draft\`): `{"all_draft_store":[{draft_cover, draft_fold_path, draft_id, draft_json_file, draft_name, draft_root_path, draft_timeline_materials_size, tm_draft_create, tm_draft_modified, tm_duration, streaming_edit_draft_ready:true, ...}], "draft_ids":1, "root_path":"C:/Users/Glaresquare1/AppData/Local/CapCut/User Data/Projects/com.lveditor.draft"}`. Note mixed slashes: `draft_fold_path` uses `/`, `draft_json_file` = `<fold_path>\\draft_content.json`, `draft_root_path` uses `\\`.
+`root_meta_info.json` (in `com.lveditor.draft\`): `{"all_draft_store":[{draft_cover, draft_fold_path, draft_id, draft_json_file, draft_name, draft_root_path, draft_timeline_materials_size, tm_draft_create, tm_draft_modified, tm_duration, streaming_edit_draft_ready:true, ...}], "draft_ids":1, "root_path":"C:/Users/Bulzart/AppData/Local/CapCut/User Data/Projects/com.lveditor.draft"}`. Note mixed slashes: `draft_fold_path` uses `/`, `draft_json_file` = `<fold_path>\\draft_content.json`, `draft_root_path` uses `\\`.
 
 **Important for 9.x (DOC, capcut-cli version-support):** "CapCut 8.7+ prioritizes nested `Timelines/` storage over root documents … 9.2.8-beta4 treats the nested `Timelines/<main_timeline_id>/draft_info.json` as authoritative, making root-only writes silent no-ops." On this Windows 9.4 install the nested file is named `draft_content.json` and is byte-identical to the root one (VERIFIED). **Write both.**
 
@@ -215,12 +215,12 @@ Per clip: `trim=in:out,setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect
 **VERIFIED PowerShell command** (ran in 4.2 s; output `1080x1920, h264 High, yuv420p, 30/1, aac LC 48000 Hz stereo, 5.07 s, 4.56 MB`; two frames inspected: Arial Black karaoke line at 1.0 s, Impact per-word highlight mid-slideleft at 2.8 s). Quoting rules: pass the filter graph as one double-quoted PowerShell string; inside it use single quotes around the ASS path and escape the drive colon as `C\:`; use forward slashes; the 8.3 short path `GLARES~1` works. `-y` and `-hide_banner -loglevel error -stats` keep output clean.
 
 ```powershell
-$ff  = 'C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe'
-$c1  = 'C:\Users\Glaresquare1\.claude\analyze-stack\samples\generated-clips\clip-02-seg-0-15.mp4'
-$c2  = 'C:\Users\Glaresquare1\.claude\analyze-stack\samples\generated-clips\clip-03-seg-15-30.mp4'
+$ff  = 'C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe'
+$c1  = 'C:\Users\Bulzart\.claude\analyze-stack\samples\generated-clips\clip-02-seg-0-15.mp4'
+$c2  = 'C:\Users\Bulzart\.claude\analyze-stack\samples\generated-clips\clip-03-seg-15-30.mp4'
 $sfx = 'C:\path\sfx.wav'
 $ass = 'C:/path/captions.ass' -replace ':', '\:'      # -> C\:/path/captions.ass
-$fd  = 'C:/Users/Glaresquare1/.claude/analyze-stack/tools/edit/fonts' -replace ':', '\:'
+$fd  = 'C:/Users/Bulzart/.claude/analyze-stack/tools/edit/fonts' -replace ':', '\:'
 $fc  = "[0:v]trim=0:3,setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,format=yuv420p[v0];" +
        "[1:v]trim=0:3,setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,format=yuv420p,setpts=0.8*PTS[v1];" +
        "[v0][v1]xfade=transition=slideleft:duration=0.4:offset=2.6[vx];" +
@@ -251,7 +251,7 @@ Long graphs: write the filter graph to a file and pass `-filter_complex_script g
 - `publish_project`: `resolution` 480p–4K, `access_level`; returns `share_url` + `download_url`. `get_project` lists media/compositions/publishes.
 - Verdict: the "editable in the editing app via MCP" route; good for owners who like Descript's text-based editing; not the default because it re-uploads every clip and the edit is not reproducible.
 
-## E. HyperFrames (local skills at `C:\Users\Glaresquare1\.claude\skills\hyperframes-*`, `embedded-captions`, `media-use`, …)
+## E. HyperFrames (local skills at `C:\Users\Bulzart\.claude\skills\hyperframes-*`, `embedded-captions`, `media-use`, …)
 
 - CLI: `npx hyperframes init <proj> --resolution portrait --video clip.mp4` (`--skip-transcribe`), `lint`, `check` (lint + browser audit), `preview --background` (Studio at `http://localhost:3002/#project/<name>` — full timeline editor where the owner edits by hand), `render --quality draft|looks|delivery --fps 30 --output out.mp4 --format mp4|webm|mov|gif|png-sequence`, `snapshot --at t1,t2`, `doctor --json`, `browser ensure|path|clear`, `transcribe`, `tts`, `remove-background`, `cloud render` (HeyGen-hosted).
 - Dependencies (DOC npm `hyperframes@0.8.43`): Node ≥22 (have 24.21), FFmpeg on PATH, `puppeteer-core ^25.8.0` + `@puppeteer/browsers ^3.2.1` → **pinned Chrome downloaded by `npx hyperframes browser ensure`** (size not documented; typical Chrome-for-Testing ≈150–200 MB, UNCERTAIN); `sharp` (prebuilt). Unpacked 37.8 MB. No Playwright. First `npx hyperframes` downloads the package (install → approval).
@@ -291,10 +291,10 @@ Always prefix: `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machin
 |---|---|---|---|---|---|
 | 1 | Microsoft Visual C++ 2015-2022 Redistributable x64 | `winget install --id Microsoft.VCRedist.2015+.x64 -e --accept-package-agreements --accept-source-agreements` then verify `Test-Path C:\Windows\System32\msvcp140.dll; python -c "import opentimelineio, ctranslate2, onnxruntime, faster_whisper; print('ok')"` | yes (installer, UAC) | **critical** | Unblocks OTIO 0.18.1, faster-whisper (ctranslate2), rapidocr (onnxruntime) — all fail with missing MSVCP140.dll |
 | 2 | OTIO format adapters | `python -m pip install otio-fcp-adapter otio-fcpx-xml-adapter otio-cmx3600-adapter` then `python -c "import opentimelineio as otio; print(otio.adapters.available_adapter_names())"` | yes (pip) | high | fcp_xml (Premiere/Resolve), fcpx_xml (Final Cut), cmx_3600 (EDL); .otio itself is native |
-| 3 | Caption fonts (no admin; used via libass `fontsdir`) | `New-Item -ItemType Directory -Force C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\fonts; $d='C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\fonts'; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/googlefonts/Montserrat/master/fonts/ttf/Montserrat-ExtraBold.ttf' -OutFile "$d\Montserrat-ExtraBold.ttf"; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/googlefonts/Montserrat/master/fonts/ttf/Montserrat-Black.ttf' -OutFile "$d\Montserrat-Black.ttf"; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/googlefonts/Montserrat/master/fonts/ttf/Montserrat-Bold.ttf' -OutFile "$d\Montserrat-Bold.ttf"; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf' -OutFile "$d\Anton-Regular.ttf"; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/google/fonts/main/ofl/bebasneue/BebasNeue-Regular.ttf' -OutFile "$d\BebasNeue-Regular.ttf"` | no (file download into stack home) | high | Montserrat/Inter absent; Arial Black + Impact present as fallbacks. Inter 4.1 (32 MB zip, `https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip`) optional |
+| 3 | Caption fonts (no admin; used via libass `fontsdir`) | `New-Item -ItemType Directory -Force C:\Users\Bulzart\.claude\analyze-stack\tools\edit\fonts; $d='C:\Users\Bulzart\.claude\analyze-stack\tools\edit\fonts'; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/googlefonts/Montserrat/master/fonts/ttf/Montserrat-ExtraBold.ttf' -OutFile "$d\Montserrat-ExtraBold.ttf"; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/googlefonts/Montserrat/master/fonts/ttf/Montserrat-Black.ttf' -OutFile "$d\Montserrat-Black.ttf"; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/googlefonts/Montserrat/master/fonts/ttf/Montserrat-Bold.ttf' -OutFile "$d\Montserrat-Bold.ttf"; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf' -OutFile "$d\Anton-Regular.ttf"; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/google/fonts/main/ofl/bebasneue/BebasNeue-Regular.ttf' -OutFile "$d\BebasNeue-Regular.ttf"` | no (file download into stack home) | high | Montserrat/Inter absent; Arial Black + Impact present as fallbacks. Inter 4.1 (32 MB zip, `https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip`) optional |
 | 4 | Whisper model warm-up | `python -c "from faster_whisper import WhisperModel; WhisperModel('small.en', device='cpu', compute_type='int8')"` | no (network download ~466 MB to HF cache) | high | Do after item 1 |
 | 5 | pyCapCut (reference source only) | `python -m pip install pycapcut` | yes (pip) | low | Read `text_segment.py`/`keyframe.py`/`animation.py` shapes; not a runtime dependency. pyJianYingDraft: do not install (JianYing-only) |
-| 6 | capcut-cli (independent draft linter / caption importer) | `npm install -g capcut-cli@latest` then `capcut lint "C:\Users\Glaresquare1\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\<draft>"` | yes (npm -g) | medium/optional | Version-aware lint (`template-stale`, `media-unlinked`), `register --materials`, `import-srt`, `sync-timelines` |
+| 6 | capcut-cli (independent draft linter / caption importer) | `npm install -g capcut-cli@latest` then `capcut lint "C:\Users\Bulzart\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\<draft>"` | yes (npm -g) | medium/optional | Version-aware lint (`template-stale`, `media-unlinked`), `register --materials`, `import-srt`, `sync-timelines` |
 | 7 | HyperFrames CLI + pinned Chrome (optional overlay tier) | `npx hyperframes@0.8.43 doctor --json` then `npx hyperframes@0.8.43 browser ensure` | yes (npx download + Chrome download) | low/optional | Only if HTML/GSAP overlays are wanted; Windows render support undocumented — treat `doctor` result as the gate |
 | 8 | Remotion | — | — | skip | Company license >3 employees; no added value |
 | 9 | TikTok connector for Higgsfield trending music | owner runs `tiktok_connect` via the Higgsfield MCP | owner action | low | `tiktok_music_trending` needs `connector_id` |

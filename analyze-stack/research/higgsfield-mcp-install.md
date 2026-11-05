@@ -68,7 +68,7 @@ claude mcp get higgsfield               # expect: Scope: User config (~/.claude.
 Notes:
 - Transport is **http** (streamable HTTP). Not sse, not stdio, no `npx` package.
 - `--scope user` stores the entry under top-level `mcpServers` in `%USERPROFILE%\.claude.json`
-  (`C:\Users\Glaresquare1\.claude.json`). Use `--scope project` only if the stack should ship a
+  (`C:\Users\Bulzart\.claude.json`). Use `--scope project` only if the stack should ship a
   `.mcp.json` (it should not — the run folders are not a git project).
 - OAuth callback: Claude Code opens the default browser and listens on a local port; if the
   corporate firewall blocks the random port, re-add with `--callback-port 8080` (documented flag).

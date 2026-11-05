@@ -17,7 +17,7 @@ order, verbatim from `references\questions.md`.
 
 | Item | Value |
 |---|---|
-| Stack home `STACK` | `C:\Users\Glaresquare1\.claude\analyze-stack\` — read `STACK\LAYOUT.md` first on every run |
+| Stack home `STACK` | `C:\Users\Bulzart\.claude\analyze-stack\` — read `STACK\LAYOUT.md` first on every run |
 | `REFS` / `BRIEFS` | `STACK\references\` / `STACK\references\agent-briefs\` |
 | `SPEC` / `EDITSPEC` | `STACK\seedance\SEEDANCE-SPEC.md` / `STACK\seedance\SEEDANCE-EDIT.md` — **read-only**; every limit (clip seconds, resolutions, ratios, reference counts, edit input length, credits) is READ from them at run time, never assumed |
 | `DIRECTOR` | `STACK\seedance\director\` — the owner-supplied **Seedance 2.5 Director** bundle (rev 2.1.0, from `seedance-2-5-agent-guide.zip`; installed 2026-09-19; **read-only**, never refreshed by a run). Its method governs HOW prompts are built and audited: `SKILL.md` §1–§7 (intent contract → world state → causal action plan → audit → compile → release gate), `references\prompt-playbook.md` §7–§8 (compile + release gate), `references\continuity-and-causality.md` §4–§5 (ledger, 15 anomaly categories, cross-cutting safeguards), `references\examples.md`, `references\provider-checks.md` §10 (per-operation checks), `references\quality-and-iteration.md` §12 (defect record), `assets\*.md` (ledger / prompt / review templates). Hard numbers (seconds, pixels, reference counts, syntax) still come from SPEC/EDITSPEC — SPEC §14 states the precedence and the cross-check |
@@ -154,7 +154,7 @@ items go to DELIVERABLES "Known risks". State `planning` → `prompts`.
 ## 6. Step 5 — Prompt writing (rows 5, 5e), all writers in parallel in one message
 
 - Replicate: one `prompt-writer` per `plan.json` item (`BRIEFS\prompt-writer.md`; `REFS\prompt-template.md`,
-  SPEC §3.5/§4/§5/§6/§12, `C:\Users\Glaresquare1\.claude\skills\sd25-pe\SKILL.md`, `DIRECTOR` SKILL.md §3–§5 +
+  SPEC §3.5/§4/§5/§6/§12, `C:\Users\Bulzart\.claude\skills\sd25-pe\SKILL.md`, `DIRECTOR` SKILL.md §3–§5 +
   prompt-playbook §7–§8 + continuity-and-causality §4.2–§4.4, physics / blending / continuity rules; inputs: its
   plan item, its continuity row + the next row, swap-map, style bible or profile, its frames, its audio lines)
   → `50-prompts\clip-NN.md` (start state → second-by-second timeline → end state, camera, light, audio/dialogue,

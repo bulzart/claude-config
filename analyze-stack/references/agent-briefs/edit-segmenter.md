@@ -41,9 +41,9 @@ Join order after generation: 01 (edited) → 02 (edited) → 03 (passthrough) �
    close), never inside a spoken word; uneven → snap every boundary to hard cuts (confidence ≥ 2) so
    each segment stays within [min, max]; a remainder shorter than the minimum is merged into its neighbour.
 3. Cut. Preferred route (scripts): first
-   `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\slicer.py --duration <D> --clip-seconds <Q3b> --min-clip <MIN> --max-clip <MAX> [--uneven --shots "<run>\10-measure\shots.json" --snap-window 2] --out "<run>\40-plan\plan-slices.json"`
+   `python C:\Users\Bulzart\.claude\analyze-stack\tools\slicer.py --duration <D> --clip-seconds <Q3b> --min-clip <MIN> --max-clip <MAX> [--uneven --shots "<run>\10-measure\shots.json" --snap-window 2] --out "<run>\40-plan\plan-slices.json"`
    (adjust boundaries for the mid-word rule yourself), then
-   `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\segment_source.py --run-dir "<run>" --plan "<run>\40-plan\plan-slices.json" --reencode`
+   `python C:\Users\Bulzart\.claude\analyze-stack\tools\segment_source.py --run-dir "<run>" --plan "<run>\40-plan\plan-slices.json" --reencode`
    (`--copy` only when every boundary is on a keyframe) → `00-input\segments\seg-NN.mp4` + `segments.json`
    (ffprobe-verified durations). `segment_source.py` reads `plan-slices.json` (`clips[]` with start/end), not
    the final `plan.json` `items[]`, and writes ONLY the mp4 files + `segments.json` — after it, run the two

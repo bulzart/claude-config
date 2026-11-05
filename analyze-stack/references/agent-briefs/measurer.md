@@ -44,7 +44,7 @@ appended to `measure-summary.md`. Then `state.json` stage `measured`.
 
 ## Method
 1. PATH refresh (LAYOUT one-liner). Read `tools\README.md` if present and use its lines; otherwise:
-   `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\measure_all.py --run-dir "<run>"`.
+   `python C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py --run-dir "<run>"`.
    If `measure_all.py` is absent, run the individual scripts that exist, each with `--run-dir "<run>"`:
    `probe.py`, `cuts.py`, then the keyframe/contact-sheet, audio, transcript, OCR and audio-feature scripts
    (`probe.py`, `cuts.py`, `keyframes.py`, `audio.py`, `transcribe.py`, `ocr.py`, `visual_stats.py`). For any missing
@@ -64,7 +64,7 @@ appended to `measure-summary.md`. Then `state.json` stage `measured`.
    (`cuts.json` confidence ≥ 2) within ±5 s of the equal split, never inside a spoken word (word timestamps).
    A ≤ 60 s video is one segment. Write `analysis-segments.json` and append `## 11. Analysis segments` + `## 12. Problems`
    to `measure-summary.md` (do not rewrite the script's §1–§10).
-5. Then `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\state.py "<run>" set stage=measured next_step=analysis`
+5. Then `python C:\Users\Bulzart\.claude\analyze-stack\tools\state.py "<run>" set stage=measured next_step=analysis`
    and `state.py "<run>" add-file 10-measure <each output>` (the scripts already index their own files).
 
 ## Quality bar

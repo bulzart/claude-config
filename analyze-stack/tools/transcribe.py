@@ -5,8 +5,8 @@ Usage: python transcribe.py --run-dir <run> [--model small] [--language auto] [-
 
 Engines:
   faster-whisper (default): CPU int8, VAD filter, word timestamps + probabilities. Models `small`, `small.en`, `base`
-                            are cached in the default HF cache (C:\\Users\\Glaresquare1\\.cache\\huggingface\\hub).
-  ffmpeg:                   ffmpeg's built-in whisper.cpp filter with the ggml models in C:\\Users\\Glaresquare1\\.cache\\whisper-cpp\\
+                            are cached in the default HF cache (C:\\Users\\Bulzart\\.cache\\huggingface\\hub).
+  ffmpeg:                   ffmpeg's built-in whisper.cpp filter with the ggml models in C:\\Users\\Bulzart\\.cache\\whisper-cpp\\
                             (tiny.en, base.en). Segment timestamps only (no words). Python-free fallback.
 
 transcript.json: {engine, model, language, language_probability, has_speech, segments:[{id,start,end,text,words:[{word,start,end,probability}],

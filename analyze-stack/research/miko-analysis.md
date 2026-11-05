@@ -1,8 +1,8 @@
 # miko `video-ad-stack` — analysis for `analyze-stack` (agent R1)
 
-Source: `C:\Users\Glaresquare1\.claude\analyze-stack\research\miko\miko-video-ad-stack-main\` (13 files incl. `.gitignore`).
-Tested on: `C:\Users\Glaresquare1\.claude\analyze-stack\samples\sample-27s-roofingpov.mp4` (720x1280, 30 fps, 27.27 s, H.264 + HE-AACv2 stereo 44.1 kHz).
-Test outputs: `C:\Users\Glaresquare1\.claude\analyze-stack\research\r1-test\` (scripts `r1_*.py`, `*.txt`, `*.json`, `sheet_*.jpg`, `kf_*.jpg`, `cut_*.jpg`).
+Source: `C:\Users\Bulzart\.claude\analyze-stack\research\miko\miko-video-ad-stack-main\` (13 files incl. `.gitignore`).
+Tested on: `C:\Users\Bulzart\.claude\analyze-stack\samples\sample-27s-roofingpov.mp4` (720x1280, 30 fps, 27.27 s, H.264 + HE-AACv2 stereo 44.1 kHz).
+Test outputs: `C:\Users\Bulzart\.claude\analyze-stack\research\r1-test\` (scripts `r1_*.py`, `*.txt`, `*.json`, `sheet_*.jpg`, `kf_*.jpg`, `cut_*.jpg`).
 Date: 2026-09-16. Shell for every command below: Windows PowerShell 5.1 (no `&&`/`||`).
 
 ---
@@ -152,9 +152,9 @@ Conventions that were verified to work:
 Prelude used by every command:
 ```powershell
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
-$ff = "C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe"
-$s  = "C:\Users\Glaresquare1\.claude\analyze-stack\samples\sample-27s-roofingpov.mp4"
-$o  = "C:\Users\Glaresquare1\.claude\analyze-stack\research\r1-test"; New-Item -ItemType Directory -Force $o | Out-Null; Set-Location $o
+$ff = "C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe"
+$s  = "C:\Users\Bulzart\.claude\analyze-stack\samples\sample-27s-roofingpov.mp4"
+$o  = "C:\Users\Bulzart\.claude\analyze-stack\research\r1-test"; New-Item -ItemType Directory -Force $o | Out-Null; Set-Location $o
 ```
 
 ### 4.1 Probe → `probe.json`
@@ -232,7 +232,7 @@ Sample: 8 silences ≥0.5 s below −30 dB (largest 9.34–14.01 s and 14.01–1
 # 1) faster-whisper (word timestamps + VAD) — research\r1-test\r1_whisper.py <video> <out.json> <model> [lang]
 python "$o\r1_whisper.py" $s "$o\transcript-tiny.json" tiny en
 # 2) ffmpeg's built-in whisper.cpp filter (static build, no Python) — segment timestamps only
-& $ff -hide_banner -loglevel warning -y -i audio16k.wav -af "whisper=model='C\:/Users/Glaresquare1/.cache/whisper-cpp/ggml-tiny.en.bin':language=en:queue=10:use_gpu=false:format=srt:destination=whisper_ffmpeg.srt" -f null -
+& $ff -hide_banner -loglevel warning -y -i audio16k.wav -af "whisper=model='C\:/Users/Bulzart/.cache/whisper-cpp/ggml-tiny.en.bin':language=en:queue=10:use_gpu=false:format=srt:destination=whisper_ffmpeg.srt" -f null -
 ```
 Sample-27s: **no speech** → faster-whisper returned 0 segments and auto-detected language `cy` at p=0.245 (rule: if `language_probability < 0.5` or zero segments ⇒ record "no speech detected"; always pass `language="en"` for US content); ffmpeg whisper wrote an empty SRT in 3.9 s. On `sample-40s-sophiesnowscents.mp4` (speech): faster-whisper `tiny` int8 CPU = 7.95 s total for 40 s (1.65 s model load), 16 segments with per-word `start/end/probability`; ffmpeg whisper `tiny.en` = 11.5 s, 21 SRT blocks. `tiny` mis-hears brand words ("Create a Vectus" for a perfume name) — use `small` or `base` in production and keep `tiny` for smoke tests.
 

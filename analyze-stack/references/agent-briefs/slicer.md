@@ -36,7 +36,7 @@ Plan: 5 clips → 13, 13, 12, 12, 12 s (= 62 s; the last 0.40 s is a held frame 
    outside them (write the refusal in `slicing.md` and return; the main session re-asks).
 2. Run the slicer script (one call per window; Mode 2 = one call per A1-confirmed segment with `--start`
    and `--number-from` so numbering continues):
-   `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\slicer.py --duration <D> --clip-seconds <Q3b> --min-clip <MIN> --max-clip <MAX> [--uneven --shots "<run>\10-measure\shots.json" --snap-window 3] [--start <s>] [--number-from <n>] --out "<run>\40-plan\plan-slices.json"`
+   `python C:\Users\Bulzart\.claude\analyze-stack\tools\slicer.py --duration <D> --clip-seconds <Q3b> --min-clip <MIN> --max-clip <MAX> [--uneven --shots "<run>\10-measure\shots.json" --snap-window 3] [--start <s>] [--number-from <n>] --out "<run>\40-plan\plan-slices.json"`
    (MIN/MAX are the values you read from the spec; exit 2 = Q3b outside the limits → write the refusal).
    Output: `{clips:[{number,start,end,duration,gen_duration_s,snapped,cut_t}], warnings}` — `gen_duration_s`
    is the integer duration for the generation call. If the script is absent, compute by hand exactly as

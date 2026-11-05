@@ -6,7 +6,7 @@ user-invocable: false
 
 # atp-start — Start: mode, sub-mode, model, inputs, run
 
-> `ATP` = `C:/Users/Glaresquare1/.claude/analyze-then-pick` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
+> `ATP` = `C:/Users/Bulzart/.claude/analyze-then-pick` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATP/reference/<file>/` (models: `ATP/models/<guide>/`, Higgsfield: `ATP/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
 Phase 1 of `/analyze-then-pick`. The router (the command) sent you here and passes the command's arguments (`$ARGUMENTS` below) as this skill's args. Nothing else needs to be loaded for this phase.
@@ -21,8 +21,8 @@ Only these section files for this phase, nothing else unless a step below says s
 
 | name | value |
 |---|---|
-| `ATP` | `C:/Users/Glaresquare1/.claude/analyze-then-pick` (library root) |
-| `PY` | `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` (see `ATP/config.json`) |
+| `ATP` | `C:/Users/Bulzart/.claude/analyze-then-pick` (library root) |
+| `PY` | `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` (see `ATP/config.json`) |
 | `T` | `"$PY" "$ATP/scripts/atp.py"`. Every call prints one JSON object on its last line; run through Bash |
 | Model index | `ATP/models/index.json` (model id → guide, capabilities, 9:16/720p params). **Never Read it whole** (40 KB): `T model-menu` builds the menu, `T model-entry --id <id>` prints one model's entry and its guide path |
 | Model guides | `ATP/models/<guide>.md` is an index; the sections are in `ATP/models/<guide>/`. Which sections each step reads: `atp-model-guide` |

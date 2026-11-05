@@ -1,6 +1,6 @@
 # Baseline: videos that did NOT spread (contrast set only — never ideas, never inputs)
 
-Inputs: `C:\Users\Glaresquare1\AppData\Local\Temp\claude\C--Users-Glaresquare1-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\baseline`
+Inputs: `C:\Users\Bulzart\AppData\Local\Temp\claude\C--Users-Bulzart-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\baseline`
 
 Created 2026-10-11T00:49:05+02:00. Counts: video 2. Total video: 49.0 s.
 

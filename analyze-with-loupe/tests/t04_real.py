@@ -10,8 +10,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from t00_common import check, finish, t, temp_library  # noqa: E402
 
-REFS = Path(os.environ.get("AWL_TEST_REFS") or r"C:\Users\Glaresquare1\Documents\19.10")
-PDF = Path(os.environ.get("AWL_TEST_PDF") or r"C:\Users\Glaresquare1\Documents\neurogum\assets\Content Guardrails.pdf")
+REFS = Path(os.environ.get("AWL_TEST_REFS") or r"C:\Users\Bulzart\Documents\19.10")
+PDF = Path(os.environ.get("AWL_TEST_PDF") or r"C:\Users\Bulzart\Documents\neurogum\assets\Content Guardrails.pdf")
 V10 = REFS / "Video-39496.mp4"                       # the live run's V10: its insert out-point 7.52 s sits inside a white flash
 if not REFS.is_dir():
     print("SKIP  the reference folder is not on this machine:", REFS)

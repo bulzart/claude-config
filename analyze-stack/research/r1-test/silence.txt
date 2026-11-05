@@ -1,4 +1,4 @@
-Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\Users\Glaresquare1\.claude\analyze-stack\samples\sample-27s-roofingpov.mp4':
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\Users\Bulzart\.claude\analyze-stack\samples\sample-27s-roofingpov.mp4':
   Metadata:
     major_brand     : isom
     minor_version   : 512

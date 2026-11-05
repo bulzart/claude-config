@@ -6,7 +6,7 @@ user-invocable: false
 
 # awl-free-plan — Free: the user's requirement becomes the plan (A6f)
 
-> `AWL` = `C:/Users/Glaresquare1/.claude/analyze-with-loupe` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$AWL/scripts/awl.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `AWL/runs/<stamp>-<slug>/`.
+> `AWL` = `C:/Users/Bulzart/.claude/analyze-with-loupe` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$AWL/scripts/awl.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `AWL/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `AWL/reference/<file>/` (models: `AWL/models/<guide>/`, Higgsfield: `AWL/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
 ## Read now
@@ -20,7 +20,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 - generation-system §4b.0: `AWL/reference/generation-system/120_4b.0_choose-the-integration-form-the.md` (4.1 KB)
 - *with references (`state.json → free_references = yes`):* `RUN/20-analysis/synthesis.md`, the cards the requirement names (`RUN/20-analysis/cards/`), and creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
-- *when a video will edit a reference (kind `recreate`, step 3):* the source-preparation steps E4–E5 of `C:/Users/Glaresquare1/.claude/skills/awl-recreate-plan/SKILL.md` (Read that file from its heading "Edit Mode's E4–E5, as Recreate uses them" to its end; nothing before it)
+- *when a video will edit a reference (kind `recreate`, step 3):* the source-preparation steps E4–E5 of `C:/Users/Bulzart/.claude/skills/awl-recreate-plan/SKILL.md` (Read that file from its heading "Edit Mode's E4–E5, as Recreate uses them" to its end; nothing before it)
 - *only when the requirement asks for an own voiceover (step 2b; item 31):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
   - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)

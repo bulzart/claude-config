@@ -24,20 +24,20 @@ import subprocess
 import sys
 import uuid as _uuid
 
-STACK_HOME = r"C:\Users\Glaresquare1\.claude\analyze-stack"
+STACK_HOME = r"C:\Users\Bulzart\.claude\analyze-stack"
 TOOLS_DIR = os.path.join(STACK_HOME, "tools")
 EDIT_DIR = os.path.join(TOOLS_DIR, "edit")
 FONTS_DIR = os.path.join(EDIT_DIR, "fonts")
-CAPCUT_DRAFTS_DIR = r"C:\Users\Glaresquare1\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft"
+CAPCUT_DRAFTS_DIR = r"C:\Users\Bulzart\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft"
 CAPCUT_TEMPLATE_DIR = os.path.join(STACK_HOME, "research", "capcut-draft-sample")
-CAPCUT_EXE = r"C:\Users\Glaresquare1\AppData\Local\CapCut\Apps\9.4.0.4015\CapCut.exe"
+CAPCUT_EXE = r"C:\Users\Bulzart\AppData\Local\CapCut\Apps\9.4.0.4015\CapCut.exe"
 
-_FF_DIR = (r"C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages"
+_FF_DIR = (r"C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages"
            r"\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin")
 FFMPEG_FALLBACK = os.path.join(_FF_DIR, "ffmpeg.exe")
 FFPROBE_FALLBACK = os.path.join(_FF_DIR, "ffprobe.exe")
-PYTHON_FALLBACK = r"C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe"
-NPM_BIN_DIR = os.path.join(os.environ.get("APPDATA", r"C:\Users\Glaresquare1\AppData\Roaming"), "npm")
+PYTHON_FALLBACK = r"C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe"
+NPM_BIN_DIR = os.path.join(os.environ.get("APPDATA", r"C:\Users\Bulzart\AppData\Roaming"), "npm")
 
 PLAN_SCHEMA = "analyze-stack.edit-plan/2"
 

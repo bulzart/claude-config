@@ -15,7 +15,7 @@ Applies once the owner drops Seedance 2.5 (or other generator) clips back into a
 **realism beats length — a clean 30 s output is worth more than 2 min with anomalies.**
 
 Tool paths (PATH may be stale in a fresh shell; scripts fall back to these):
-`FFMPEG = C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe`,
+`FFMPEG = C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe`,
 `FFPROBE` = same folder. ffmpeg 9.0.1 here has libx264, libass, libfreetype, libharfbuzz, libvidstab and
 all filters used below (`xfade loudnorm drawtext subtitles ass zoompan noise deshake vidstab* setpts
 atempo ebur128 eq curves unsharp hqdn3d tpad fade afade acrossfade sidechaincompress dynaudnorm
@@ -220,7 +220,7 @@ Calibri Bold. Recommended downloads (Google Fonts, OFL, static TTFs verified on 
 `…/ofl/poppins/Poppins-Black.ttf`, `…/ofl/anton/Anton-Regular.ttf`,
 `…/ofl/bebasneue/BebasNeue-Regular.ttf` (Montserrat and Inter ship only as variable `[wght].ttf`
 files in that repo — ffmpeg/libass cannot pick a weight axis, so prefer the static Poppins/Anton).
-Store fonts in `C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\fonts\` and reference them via
+Store fonts in `C:\Users\Bulzart\.claude\analyze-stack\tools\edit\fonts\` and reference them via
 `fontsdir` (no system install needed).
 
 **4.3 Safe zones at 1080x1920** (keep text, product hero and CTA inside; sources: Meta's unified 9:16
@@ -324,7 +324,7 @@ lives in CapCut; the other formats are optional extras chosen in P2):
   `sync-timelines --nested --apply`, `lint`) and read back with `capcut_read_timeline` / `capcut export-timeline` on every
   re-edit. Server: `tools\mcp\capcut-mcp\` (LAYOUT.md tool table). The MCP refuses to save while CapCut.exe runs —
   that is the intended protection against CapCut's autosave; never force it.
-- **CapCut draft (direct path)** written into `C:\Users\Glaresquare1\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\<run-id>\draft_content.json` (plaintext JSON, `version` 360000 / `new_version` "185.0.0", registered in `root_meta_info.json`; a real sample is in `research\capcut-draft-sample\`). Builder script: `tools\edit\build_capcut_draft.py` (uses `pyJianYingDraft` if installed, else the in-house writer — see `research\editing-tooling.md`). Media is referenced by absolute path from `90-postgen\project\media\`.
+- **CapCut draft (direct path)** written into `C:\Users\Bulzart\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\<run-id>\draft_content.json` (plaintext JSON, `version` 360000 / `new_version` "185.0.0", registered in `root_meta_info.json`; a real sample is in `research\capcut-draft-sample\`). Builder script: `tools\edit\build_capcut_draft.py` (uses `pyJianYingDraft` if installed, else the in-house writer — see `research\editing-tooling.md`). Media is referenced by absolute path from `90-postgen\project\media\`.
 - **OTIO timeline** `90-postgen\project\timeline.otio` (+ FCPXML / Premiere XML via OTIO adapters) — note: on 2026-09-16 `import opentimelineio` failed on this machine (`DLL load failed while importing _opentime`); reinstall is in the install plan. Until fixed, the CapCut draft is the primary editable artefact.
 - **Descript project** via MCP: `import_media` (clips + VO) → `prompt_project_agent` (Agent Underlord applies the edit-plan: order, trims, captions) → `export_timeline` (EDL / AAF / SESX / FCPXML / Premiere XML / Resolve XML; poll `wait_for_job`, keep `download_url`) and/or `publish_project` for a shareable review link. Record the project id in `edit-plan.json → projects.descript`.
 

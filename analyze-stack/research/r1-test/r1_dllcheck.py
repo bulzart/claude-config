@@ -1,5 +1,5 @@
 ﻿import ctypes, os, glob
-base = r"C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\Lib\site-packages"
+base = r"C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\Lib\site-packages"
 for sub in ["ctranslate2", "ctranslate2.libs", r"onnxruntime\capi", "onnxruntime.libs", "opentimelineio", "opentimelineio.libs"]:
     d = os.path.join(base, sub)
     if not os.path.isdir(d):

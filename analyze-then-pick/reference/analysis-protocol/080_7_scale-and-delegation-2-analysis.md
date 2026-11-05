@@ -12,7 +12,7 @@ Agent prompt (fill in the placeholders; use the Agent tool with `subagent_type: 
 
 ```
 You analyse reference videos for a /analyze-then-pick run. Read now, in this order, and follow them exactly (these five files, nothing else
-of the protocol; the index analysis-protocol.md is only a table): C:/Users/Glaresquare1/.claude/analyze-then-pick/reference/analysis-protocol/
+of the protocol; the index analysis-protocol.md is only a table): C:/Users/Bulzart/.claude/analyze-then-pick/reference/analysis-protocol/
 010_0_provenance-labels-use-everywhere.md, 020_1_inputs-per-video-produced-by-atp.md, 030_2_reading-a-video-as-one-continuou.md,
 040_3_per-video-card-20-analysis-cards.md, 050_4_effectiveness-lenses-apply-those.md. The card fields that §3 names also use: brand-guardrails/ §3 (the guardrail audit, only when <RUN>/30-assets/guardrails.md exists),
 creative-direction/ §3, §4 and, for Create, §5.0 (trend elements, transferable craft), generation-system/ §4b.1c, §5c.1 and §5c.2b (placement

@@ -18,8 +18,8 @@ run's sub-mode). Wherever a skill says "Recreate:" or "Create:", follow the bran
 (<RUN>/00-inventory/requirement.md, [U]) and its lines for your video in <RUN>/20-analysis/free-plan.md decide what the video achieves; the
 hard rules, the locked model's own prompting, the QC stack and Loupe's samples stay as in every run.
 
-Run: <RUN>   Library (AWL): C:/Users/Glaresquare1/.claude/analyze-with-loupe
-Toolkit (T): "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe" "<AWL>/scripts/awl.py"
+Run: <RUN>   Library (AWL): C:/Users/Bulzart/.claude/analyze-with-loupe
+Toolkit (T): "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe" "<AWL>/scripts/awl.py"
 Locked model: <model id>; guide: <AWL>/<guide path>.
 QC fixes: <ask|auto|off> (the run's choice, state.json → qc_fixes; command item 27).
 Audio ingest: <whisper|frames-only> (state.json → audio_ingest, item 24). whisper: `<RUN>/10-media/<V>/transcript.json` holds the source's
@@ -39,7 +39,7 @@ Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md,
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 
 Follow, for this video only, by invoking these skills one after the other when you reach their step (Skill tool; if it is
-unavailable or the name is not found, Read C:/Users/Glaresquare1/.claude/skills/<name>/SKILL.md and follow it). Each skill lists
+unavailable or the name is not found, Read C:/Users/Bulzart/.claude/skills/<name>/SKILL.md and follow it). Each skill lists
 under "Read now" the exact section files it needs: read those and nothing else. Never read the command file, a whole reference,
 a whole model guide or models/index.json (that is what rots your context):
   1. awl-inputs      (X3: your own inputs; it loads the Higgsfield tools)

@@ -2,7 +2,7 @@
   "role": "baseline",
   "scope": null,
   "inputs": [
-    "C:\\Users\\Glaresquare1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\baseline"
+    "C:\\Users\\Bulzart\\AppData\\Local\\Temp\\claude\\C--Users-Bulzart-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\baseline"
   ],
   "created": "2026-10-11T00:49:05+02:00",
   "counts": {
@@ -13,7 +13,7 @@
     {
       "id": "B01",
       "kind": "video",
-      "path": "C:\\Users\\Glaresquare1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\baseline\\b-a.mp4",
+      "path": "C:\\Users\\Bulzart\\AppData\\Local\\Temp\\claude\\C--Users-Bulzart-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\baseline\\b-a.mp4",
       "rel": "b-a.mp4",
       "ext": ".mp4",
       "size_bytes": 316429,
@@ -31,7 +31,7 @@
     {
       "id": "B02",
       "kind": "video",
-      "path": "C:\\Users\\Glaresquare1\\AppData\\Local\\Temp\\claude\\C--Users-Glaresquare1-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\baseline\\b-b.mp4",
+      "path": "C:\\Users\\Bulzart\\AppData\\Local\\Temp\\claude\\C--Users-Bulzart-Documents\\f2e65d75-f760-412f-aaeb-1f90311ace7e\\scratchpad\\vb-test\\baseline\\b-b.mp4",
       "rel": "b-b.mp4",
       "ext": ".mp4",
       "size_bytes": 378640,

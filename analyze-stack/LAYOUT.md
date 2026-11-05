@@ -8,13 +8,13 @@ a clean 30 s output is worth more than a 2 min output with anomalies.
 
 ## Locations (absolute; Windows 11; shell = Windows PowerShell 5.1 — no `&&`, no `||`)
 
-Stack home: `C:\Users\Glaresquare1\.claude\analyze-stack\`
+Stack home: `C:\Users\Bulzart\.claude\analyze-stack\`
 
 | Path | Purpose |
 |---|---|
 | `LAYOUT.md` | this contract |
 | `research\` | build-time research: `miko-analysis.md`, `tool-audit.md`, `editing-tooling.md`, `trend-sources.md`, `capcut-draft-sample\` (a real CapCut 9.4 draft, plaintext JSON) |
-| `seedance\` | **Seedance notes — READ-ONLY at run time.** `SEEDANCE-SPEC.md` (structured spec notes; §14 = precedence over the director bundle), `SEEDANCE-EDIT.md` (video_edit notes), `sources.md` (URLs + version the notes are based on), and `director\` = the owner-supplied **Seedance 2.5 Director** bundle (rev 2.1.0, installed 2026-09-19 from `C:\Users\Glaresquare1\Documents\prompts\seedance-2-5-agent-guide.zip`; validator: `python seedance\director\scripts\validate_bundle.py seedance\director --integrity`): the prompt-engineering method (intent contract, world-state ledger, causal action expansion, 15 anomaly categories, release gate, review record) that writers, the continuity author, the anomaly checkers and clip QA load. Never refreshed or edited by `/analyze-stack`; only when the owner explicitly asks for an update. |
+| `seedance\` | **Seedance notes — READ-ONLY at run time.** `SEEDANCE-SPEC.md` (structured spec notes; §14 = precedence over the director bundle), `SEEDANCE-EDIT.md` (video_edit notes), `sources.md` (URLs + version the notes are based on), and `director\` = the owner-supplied **Seedance 2.5 Director** bundle (rev 2.1.0, installed 2026-09-19 from `C:\Users\Bulzart\Documents\prompts\seedance-2-5-agent-guide.zip`; validator: `python seedance\director\scripts\validate_bundle.py seedance\director --integrity`): the prompt-engineering method (intent contract, world-state ledger, causal action expansion, 15 anomaly categories, release gate, review record) that writers, the continuity author, the anomaly checkers and clip QA load. Never refreshed or edited by `/analyze-stack`; only when the owner explicitly asks for an update. |
 | `references\` | rule files loaded by `/analyze-stack` (single source of truth): questions, pipeline stages, agent briefs, physics/blending/continuity rules, style taxonomy, viral analysis, compression planning, prompt template, anomaly checklist, product-spec template, deliverables spec, post-generation playbook |
 | `tools\` | analysis scripts (Python). `tools\edit\` = post-generation scripts (editable project builders + render). Invoked as `python <script>` |
 | `product-library\` | persistent product spec sheets reused across runs: `<product-slug>\spec.md`, `<product-slug>\images\`, `index.json` |
@@ -26,7 +26,7 @@ Skill (slash command) — the ONLY command. It is never executed as a Workflow a
 
 | Path | Engine |
 |---|---|
-| `C:\Users\Glaresquare1\.claude\skills\analyze-stack\SKILL.md` | the main session runs the procedure step by step and spawns every worker with the **Agent** tool; questions and gates stay in the main session |
+| `C:\Users\Bulzart\.claude\skills\analyze-stack\SKILL.md` | the main session runs the procedure step by step and spawns every worker with the **Agent** tool; questions and gates stay in the main session |
 
 `/analyze-stack` loads the `references\*` files and `seedance\SEEDANCE-SPEC.md`, asks the questions
 in the fixed order (verbatim from `references\questions.md`), and writes the run-folder files below.
@@ -35,14 +35,14 @@ in the fixed order (verbatim from `references\questions.md`), and writes the run
 
 | Tool | Path |
 |---|---|
-| ffmpeg 9.0.1 | `C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe` |
+| ffmpeg 9.0.1 | `C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe` |
 | ffprobe 9.0.1 | same folder, `ffprobe.exe` |
-| Python 3.12.10 | `C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe` (also `py.exe` launcher) |
+| Python 3.12.10 | `C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe` (also `py.exe` launcher) |
 | Git 2.55 | `C:\Program Files\Git\cmd\git.exe` |
 | Node 24.21 / npm 11.19 | `C:\Program Files\nodejs\` |
 | Visual C++ 2015-2022 x64 runtime | installed 2026-09-16 via winget (`Microsoft.VCRedist.2015+.x64`); required by ctranslate2 (faster-whisper) and onnxruntime (RapidOCR) — without it their DLLs fail to load |
 | Nested headless Claude | `claude -p "<prompt>" --output-format text` works from a shell inside this session (~7 s round trip) — usable to verify that skills register |
-| CapCut 9.4.0.4015 | `C:\Users\Glaresquare1\AppData\Local\CapCut\Apps\9.4.0.4015\CapCut.exe`; drafts in `C:\Users\Glaresquare1\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\<name>\draft_content.json` (plaintext JSON, `version` 360000, `new_version` "185.0.0"; index in `root_meta_info.json`). **CapCut is THE editing app** (owner, 2026-09-19). |
+| CapCut 9.4.0.4015 | `C:\Users\Bulzart\AppData\Local\CapCut\Apps\9.4.0.4015\CapCut.exe`; drafts in `C:\Users\Bulzart\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft\<name>\draft_content.json` (plaintext JSON, `version` 360000, `new_version` "185.0.0"; index in `root_meta_info.json`). **CapCut is THE editing app** (owner, 2026-09-19). |
 | CapCut MCP server `capcut` | `tools\mcp\capcut-mcp\src\server.js` (Gusmares/MCP-CapCut fork of JmsLdrn/capcut-mcp, commit bbe4c21, MIT; `tools\mcp\capcut-mcp\PROVENANCE.md`). Registered 2026-09-19 at user scope: `claude mcp add --scope user capcut -e CAPCUT_DRAFTS_DIR=<live store> -e CAPCUT_TEMPLATE_DRAFT=_analyze-stack-template -- node <server.js>`. Tools `capcut_list_drafts / read_timeline / clone_draft / add_video / add_image / add_audio / add_text / add_track / set_track_mute / move_segment / trim_segment (ripple) / split_segment / delete_segment / set_props / list_filters / add_filter / list_transitions / add_transition / list_masks / add_mask / add_keyframe / remove_keyframes / add_audio_fade / add_sticker / undo / raw_patch / validate / save / discard`. Session model: open → edits in memory → `capcut_validate` → `capcut_save` (`.mcpbak` backup, atomic write, refuses while CapCut.exe runs or the draft changed on disk). Forbidden: `capcut_transcribe`, `capcut_review_transcript`, `capcut_add_captions`, `capcut_list_caption_styles`, `capcut_clear_captions` (speech-caption rule). Discover with `ToolSearch "capcut_read_timeline"`; never hard-code the tool prefix. Smoke script: `tools\mcp\capcut-mcp\smoke.mjs` (verified 2026-09-19; local validator patch documented in PROVENANCE.md). Overlays always go on their OWN text track (`capcut_add_track type:text` first) — the validator rejects two texts overlapping on one track; transition/filter names must come from `capcut_list_*` |
 | `_analyze-stack-template` draft | `<live store>\_analyze-stack-template\` — a permanent CapCut 9.4 draft with text, audio, transition and video materials (copied 2026-09-19 from the `analyze-stack-verify` run draft); the MCP harvests its text/audio/track shapes for `capcut_add_text` / `capcut_add_audio`. Never delete or edit it; if CapCut rewrites it on open that is harmless |
 | capcut-cli 0.25.0 | `capcut` on PATH via `%APPDATA%\npm` (upgraded 2026-09-19 from 0.23.0). Direct CapCut path and the repair layer after every MCP save: `capcut register "<draft dir>" --apply --materials` (registers media in `draft_meta_info.json` + the `root_meta_info.json` entry), `capcut sync-timelines "<draft dir>" --nested --apply` (writes the `Timelines\` mirror CapCut 9.x treats as authoritative), `capcut lint "<draft dir>" -H`, `capcut export-timeline "<draft dir>" --out <file.otio> --captions skip`, `capcut add-text / transition / keyframe / add-filter / add-effect / trim / speed / volume`, `capcut version "<draft dir>" -H` (write guard: refuses CapCut 10.x and schema > 360000). Every mutating command refuses while CapCut.exe runs; `--force-write` is never used on the live store |
@@ -53,7 +53,7 @@ PATH refresh one-liner for PowerShell:
 Python packages installed 2026-09-16 (verified importable): opentimelineio 0.18.1 with adapters
 `cmx_3600, fcpx_xml, fcp_xml, otio_json, otioz, otiod` (otio-fcp-adapter, otio-fcpx-xml-adapter,
 otio-cmx3600-adapter), scenedetect 0.7.1, faster-whisper 1.2.1 (+ctranslate2 4.8.2; models
-`small`, `small.en`, `base` already cached under `C:\Users\Glaresquare1\.cache\huggingface\hub`),
+`small`, `small.en`, `base` already cached under `C:\Users\Bulzart\.cache\huggingface\hub`),
 moviepy 2.2.1, pillow 11.3, numpy 2.5, opencv-python(-headless) 5.0, imageio-ffmpeg, yt-dlp
 2026.8.19, librosa 1.0, soundfile, pydub, rapidocr-onnxruntime 1.4.4 (+onnxruntime 1.30),
 pycapcut 0.0.3 (reference source only — its template is CapCut 6.7; do not use at run time),
@@ -66,9 +66,9 @@ Overlay-text fonts (hook text / callouts / end cards only — never speech capti
 libass `fontsdir`): `tools\edit\fonts\` = Montserrat-ExtraBold / Black / Bold, Anton-Regular,
 BebasNeue-Regular; system fallbacks Arial Black, Impact, Bahnschrift.
 Also installed 2026-09-16: trendspy (Google Trends client), ByteDance's official Seedance 2.5
-prompt-optimisation skill at `C:\Users\Glaresquare1\.claude\skills\sd25-pe\SKILL.md` (rule source
+prompt-optimisation skill at `C:\Users\Bulzart\.claude\skills\sd25-pe\SKILL.md` (rule source
 for prompt writers), whisper.cpp ggml models `tiny.en` + `base.en` in
-`C:\Users\Glaresquare1\.cache\whisper-cpp\` (ffmpeg built-in whisper filter fallback).
+`C:\Users\Bulzart\.cache\whisper-cpp\` (ffmpeg built-in whisper filter fallback).
 Higgsfield MCP: reachable two ways — the claude.ai connector "Higssfield" (tools
 `mcp__claude_ai_Higssfield__*`, connected) and a persistent user-scope Claude Code server named
 `higgsfield` (`https://mcp.higgsfield.ai/mcp`, HTTP; tools `mcp__higgsfield__*` once the owner

@@ -2,7 +2,7 @@
   "schema": "analyze-stack.edit-plan/2",
   "project": {
     "name": "20260916-101500-snowscents",
-    "run_dir": "C:/Users/Glaresquare1/.claude/analyze-stack/runs/20260916-101500-snowscents",
+    "run_dir": "C:/Users/Bulzart/.claude/analyze-stack/runs/20260916-101500-snowscents",
     "fps": 30,
     "width": 1080,
     "height": 1920,

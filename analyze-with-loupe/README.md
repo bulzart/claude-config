@@ -14,7 +14,7 @@ The context of a run is its scarcest resource, so nothing is loaded before its s
   Their order is the chain `awl-start` → (Analyze) `awl-analyze-prepare` → `awl-analyze-study` → `awl-create-plan` | `awl-recreate-plan` | `awl-free-plan` (Free; without references straight from `awl-analyze-prepare`) → `awl-asset-plan` → `awl-analyze-produce` (Static: `awl-static-plan` → `awl-analyze-produce`, which runs `awl-static-sound` for every video and spawns agents that run `awl-static-images` → `awl-static-edit` → `awl-record`)
   → `awl-wrapup`, or (Edit) `awl-start` → `awl-edit` → `awl-wrapup`; the per-video loop is `awl-plan-video` → `awl-write-request` → `awl-inputs` → `awl-precheck` → `awl-submit` →
   `awl-postprocess` → `awl-qc` → `awl-record`; `awl-feedback` and `awl-model-guide` are called when needed. `state.json → next_skill` makes every phase boundary resumable.
-- **Born from the library at `C:/Users/Glaresquare1/.claude/analyze-then-pick` on 2026-10-20** (a copy under new names, then changed; its log entries before that date are
+- **Born from the library at `C:/Users/Bulzart/.claude/analyze-then-pick` on 2026-10-20** (a copy under new names, then changed; its log entries before that date are
   inherited). What this command changes: the toolkit only gathers (contract item 25: `sync-check`, `scale`, `qc`, `conform`, `audio-profile`, the OCR spans, the ledger and the model
   menu return numbers and facts, never a verdict, a label or a refusal; the rules of thumb sit in the references); the QC-fixes choice (item 27, `ask` or `auto`); pilot first (item
   26); a stalled-agent recovery, a request freeze and a planner contract (produce items 28–30); one uploads schema (`T uploads`), the generated agent contract (`T contract`), gridded

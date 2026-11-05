@@ -6,7 +6,7 @@ user-invocable: false
 
 # atp-plan-video — Step X1: plan the video (work backward)
 
-> `ATP` = `C:/Users/Glaresquare1/.claude/analyze-then-pick` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
+> `ATP` = `C:/Users/Bulzart/.claude/analyze-then-pick` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATP/scripts/atp.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `ATP/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATP/reference/<file>/` (models: `ATP/models/<guide>/`, Higgsfield: `ATP/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
 Per-video loop: `atp-plan-video` (X1) → `atp-write-request` (X2) → `atp-inputs` (X3) → `atp-precheck` (X4–X6) → `atp-submit` (X7) → `atp-postprocess` (X8) → `atp-qc` (X9) → `atp-record` (X10). Analyze Mode: this session runs X1, X2 and X4 for every video, X3 for the shared uploads and X5–X6 (A9); a production agent runs the rest of its own video.

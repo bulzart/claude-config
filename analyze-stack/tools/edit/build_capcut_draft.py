@@ -2,7 +2,7 @@
 
     python build_capcut_draft.py <edit-plan.json> --name <draft-name>
         [--drafts-dir DIR]        CapCut draft store (default: the live store
-                                  C:\\Users\\Glaresquare1\\AppData\\Local\\CapCut\\User Data\\Projects\\com.lveditor.draft)
+                                  C:\\Users\\Bulzart\\AppData\\Local\\CapCut\\User Data\\Projects\\com.lveditor.draft)
         [--template DIR]          app-authored 9.4 draft used as the template
                                   (default: research\\capcut-draft-sample)
         [--project-copy DIR]      where our own copy of the draft is kept (default <plan dir>\\project\\capcut\\<name>)

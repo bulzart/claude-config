@@ -1,26 +1,36 @@
 {
   "version": 2,
   "plugins": {
-    "github@anthropic-plugin-directory": [
+    "figma@claude-plugins-official": [
       {
         "scope": "user",
-        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\github\\a2e251d9b97b-0e62e4cb",
-        "version": "a2e251d9b97b-0e62e4cb",
-        "installedAt": "2026-10-15T16:46:47.305Z",
-        "lastUpdated": "2026-11-03T20:41:25.355Z",
-        "gitCommitSha": "a2e251d9b97b909bf728b3e84fc8d17e6aba0063",
-        "directoryRepositoryKey": "github.com/anthropics/claude-plugins-official#external_plugins/github"
+        "installPath": "C:\\Users\\Bulzart\\.claude\\plugins\\cache\\claude-plugins-official\\figma\\2.2.157",
+        "version": "2.2.157",
+        "installedAt": "2026-08-23T18:17:26.341Z",
+        "lastUpdated": "2026-11-02T13:12:12.525Z",
+        "gitCommitSha": "f2789420e7e8b4e2465dfeb1e12e1fc6a31397e5"
       }
     ],
     "context7@anthropic-plugin-directory": [
       {
         "scope": "user",
-        "installPath": "C:\\Users\\Glaresquare1\\.claude\\plugins\\cache\\anthropic-plugin-directory\\context7\\fa4eb54397ee-abb48b51",
+        "installPath": "C:\\Users\\Bulzart\\.claude\\plugins\\cache\\anthropic-plugin-directory\\context7\\fa4eb54397ee-abb48b51",
         "version": "fa4eb54397ee-abb48b51",
-        "installedAt": "2026-10-15T16:47:07.704Z",
-        "lastUpdated": "2026-11-04T21:56:13.688Z",
+        "installedAt": "2026-11-05T08:27:49.707Z",
+        "lastUpdated": "2026-11-05T08:27:49.707Z",
         "gitCommitSha": "fa4eb54397ee2faccb6940512a19c017cb1337f3",
         "directoryRepositoryKey": "github.com/anthropics/claude-plugins-official#external_plugins/context7"
+      }
+    ],
+    "github@anthropic-plugin-directory": [
+      {
+        "scope": "user",
+        "installPath": "C:\\Users\\Bulzart\\.claude\\plugins\\cache\\anthropic-plugin-directory\\github\\a2e251d9b97b-0e62e4cb",
+        "version": "a2e251d9b97b-0e62e4cb",
+        "installedAt": "2026-11-05T08:28:10.568Z",
+        "lastUpdated": "2026-11-05T08:28:10.568Z",
+        "gitCommitSha": "a2e251d9b97b909bf728b3e84fc8d17e6aba0063",
+        "directoryRepositoryKey": "github.com/anthropics/claude-plugins-official#external_plugins/github"
       }
     ]
   }

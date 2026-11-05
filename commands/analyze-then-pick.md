@@ -11,7 +11,7 @@ allowed-tools:
   - Grep
   - ToolSearch
   - AskUserQuestion
-  - "Bash(C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe *)"
+  - "Bash(C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe *)"
   - "Bash(python *)"
   - "Bash(ffprobe *)"
   - "PowerShell(cd *)"
@@ -58,7 +58,7 @@ This file is only the **router**, and it is small on purpose. The pipeline is sp
 rules and data into **section files** (`ATP/reference/<name>/`, `ATP/models/<guide>/`, `ATP/higgsfield/higgsfield-mcp/`), so that every phase loads
 only what it needs and the context of a run does not rot. The skills are interconnected: each ends with a hand-off that names the next one.
 
-`ATP` = `C:/Users/Glaresquare1/.claude/analyze-then-pick` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` ·
+`ATP` = `C:/Users/Bulzart/.claude/analyze-then-pick` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` ·
 `T` = `"$PY" "$ATP/scripts/atp.py"` (one JSON object on its last line; run through Bash) · `RUN` = `ATP/runs/<stamp>-<slug>/`.
 
 ## How the pipeline loads (obey throughout)
@@ -75,7 +75,7 @@ only what it needs and the context of a run does not rot. The skills are interco
    **re-invoke the skill named in `state.json → next_skill`**: its text may have been summarised away. Inside the per-video loop a run resumes at the video level
    (`state.json` holds `video` and `next_skill`; the ledger and the files on disk show the step reached).
 5. **Agents never receive this file.** A production agent gets a contract that names the skills to invoke (Skill tool; if it is unavailable or the name is not found, Read
-   `C:/Users/Glaresquare1/.claude/skills/<name>/SKILL.md` and follow it); it reads the same section lists as the main session and nothing else. An analysis agent is briefed by the prompt
+   `C:/Users/Bulzart/.claude/skills/<name>/SKILL.md` and follow it); it reads the same section lists as the main session and nothing else. An analysis agent is briefed by the prompt
    in `reference/analysis-protocol/` §7.
 
 ## Resume, and a video reported as wrong

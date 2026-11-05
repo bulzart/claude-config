@@ -6,7 +6,7 @@ No captions anywhere: the QA never proposes captions/subtitles; on-screen text i
 what the prompt asked for (normally nothing) and against residual brand marks.
 
 ## 1. Evidence per clip (`90-postgen\qa\clip-NN\`)
-`python C:\Users\Glaresquare1\.claude\analyze-stack\tools\clip_frames.py "<run>\80-generated\clip-NN.mp4" --out "<run>\90-postgen\qa\clip-NN" --fps 1`
+`python C:\Users\Bulzart\.claude\analyze-stack\tools\clip_frames.py "<run>\80-generated\clip-NN.mp4" --out "<run>\90-postgen\qa\clip-NN" --fps 1`
 → `first-00m00.00s.jpg`, `last-<t>.jpg`, `f-<MMmSS.ffs>.jpg` (1 fps, long side ≤ 1280), `sheet.jpg` (4 columns),
 `frames.json` (index + probe); plus `detect.txt` (scene cuts > 0.35, freezes, black) from the playbook §2.1
 ffmpeg detector lines. The QA agent LOOKS at `sheet.jpg`, `first-*.jpg`, `last-*.jpg` and every `f-*.jpg` where something

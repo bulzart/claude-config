@@ -30,7 +30,7 @@ neighbours), `30-decisions\product-spec.md` + `swap-map.md` (identity, label tex
 The main session merges these into `90-postgen\clip-qa.md`, `qa.json`, `fix-prompts.md`.
 
 ## Method
-1. Evidence: `python C:\Users\Glaresquare1\.claude\analyze-stack\tools\clip_frames.py "<clip>" --out "<run>\90-postgen\qa\clip-NN" --fps 1`
+1. Evidence: `python C:\Users\Bulzart\.claude\analyze-stack\tools\clip_frames.py "<clip>" --out "<run>\90-postgen\qa\clip-NN" --fps 1`
    (writes `first-*.jpg`, `last-*.jpg`, `f-*.jpg`, `sheet.jpg`, `frames.json`); then the detectors into `detect.txt`
    (playbook §2.1: `select='gt(scene,0.35)',showinfo`, `freezedetect=n=-60dB:d=0.5`, `blackdetect=d=0.2:pic_th=0.98`,
    captured with `Start-Process … -RedirectStandardError`). Fallback when the script is absent: the playbook's

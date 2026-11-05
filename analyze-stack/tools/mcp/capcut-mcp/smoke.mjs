@@ -2,7 +2,7 @@
 // Usage (PowerShell, CapCut may be open — the scratch folder is not the live store):
 //   $S = "$env:TEMP\capcut-smoke"; New-Item -ItemType Directory -Force "$S\drafts" | Out-Null
 //   Copy-Item "$env:LOCALAPPDATA\CapCut\User Data\Projects\com.lveditor.draft\_analyze-stack-template" "$S\drafts\_analyze-stack-template" -Recurse -Force
-//   node "C:\Users\Glaresquare1\.claude\analyze-stack\tools\mcp\capcut-mcp\smoke.mjs" "C:\Users\Glaresquare1\.claude\analyze-stack\tools\mcp\capcut-mcp\src\server.js" "$S\drafts"
+//   node "C:\Users\Bulzart\.claude\analyze-stack\tools\mcp\capcut-mcp\smoke.mjs" "C:\Users\Bulzart\.claude\analyze-stack\tools\mcp\capcut-mcp\src\server.js" "$S\drafts"
 // Expected: initialize → 34 tools → list/read → clone → add_text / transition / keyframes / fade / trim(ripple) → validate ok
 // → save refused while CapCut.exe runs (safety check) → save with force:true succeeds in the scratch folder only.
 import { spawn } from 'child_process';

@@ -11,10 +11,10 @@ The lines below are the authoritative invocations that `SKILL.md` quotes; every 
 
 | Item | Value |
 |---|---|
-| Python | `C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe` (`python` resolves to it in PowerShell after the PATH refresh; in Git Bash the bare `python` is a Store stub, so always use the absolute path) |
+| Python | `C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe` (`python` resolves to it in PowerShell after the PATH refresh; in Git Bash the bare `python` is a Store stub, so always use the absolute path) |
 | PATH refresh | start every PowerShell 5.1 command with `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`; chain with `;` (no `&&` / `\|\|`) |
 | Tool fallback | scripts resolve `ffmpeg` / `ffprobe` from PATH, then the registry PATH, then the absolute paths in `LAYOUT.md` (`common.find_tool`), so a stale PATH never breaks them |
-| Run folder | `C:\Users\Glaresquare1\.claude\analyze-stack\runs\<YYYYMMDD-HHMMSS-slug>\` created by `intake.py` with the full skeleton (`common.RUN_SKELETON`); `TOOLS` below = `C:\Users\Glaresquare1\.claude\analyze-stack\tools` |
+| Run folder | `C:\Users\Bulzart\.claude\analyze-stack\runs\<YYYYMMDD-HHMMSS-slug>\` created by `intake.py` with the full skeleton (`common.RUN_SKELETON`); `TOOLS` below = `C:\Users\Bulzart\.claude\analyze-stack\tools` |
 | Common flags | Stage-1 scripts take `--run-dir "<run>"` and `--quiet` (progress lines off; the log file is always written) |
 | Logs | Stage-1 scripts append to `<run>\10-measure\measure.log`; `intake.py`, `segment_source.py`, `join_clips.py --run-dir` write `<run>\logs\<script>.log`; helpers without a run write `<out dir>\<script>.log` |
 | Exit codes | `0` ok · `1` failure (traceback in the log) · `2` bad arguments / bad plan (`slicer.py`, `segment_source.py`, `download.py`, `state.py`, `join_clips.py`, `measure_all.py` = intake failed) |
@@ -31,7 +31,7 @@ between runs, so treat them as orders of magnitude. Scale roughly with duration 
 
 ```powershell
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\measure_all.py "C:\path\to\video.mp4" --slug <slug>
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py "C:\path\to\video.mp4" --slug <slug>
 ```
 
 That one line runs `intake.py` (new run folder + normalised `source.mp4`) and then, as separate
@@ -43,9 +43,9 @@ line. A link (`https://…`) in place of the path is downloaded with yt-dlp.
 The two-step form the skill uses (intake first so the run dir is known before measuring):
 
 ```powershell
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\intake.py "C:\path\to\video.mp4" --slug <slug>
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\intake.py "C:\path\to\video.mp4" --slug <slug>
 #  -> last stdout line = <run>
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\measure_all.py --run-dir "<run>"
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py --run-dir "<run>"
 ```
 
 Assert after it: `10-measure\probe.json, cuts.json, shots.json, keyframes.json, keyframes\shots\ (3 per shot),
@@ -73,7 +73,7 @@ timestamp + shot id burned into each cell) and the `Log` class. Sets `sys.dont_w
 ### 2.1 `intake.py` — Stage 0: run folder + normalised source
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\intake.py "<path-or-url>" [--slug <slug>] [--run-root <runs dir>] [--run-dir <existing run>] [--cookies-from-browser chrome] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\intake.py "<path-or-url>" [--slug <slug>] [--run-root <runs dir>] [--run-dir <existing run>] [--cookies-from-browser chrome] [--quiet]
 ```
 Arguments: positional local video path or `http(s)` link; `--slug` run-id suffix (default: file stem
 or link host); `--run-root` (default `…\analyze-stack\runs`); `--run-dir` reuse an existing folder instead
@@ -91,7 +91,7 @@ this CPU; a download depends on the site.
 ### 2.2 `probe.py` — specs
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\probe.py --run-dir "<run>" [--source <file>] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\probe.py --run-dir "<run>" [--source <file>] [--quiet]
 ```
 Output `10-measure\probe.json`: `duration_s`, `duration_hms`, `width/height`, `rotation`,
 `display_width/height` (rotation-corrected), `orientation`, `aspect_ratio` (reduced, e.g. `9:16`),
@@ -103,7 +103,7 @@ pix_fmt, color_*, sar, dar, start_time}`, `audio[{codec, sample_rate, channels, 
 ### 2.3 `cuts.py` — shot cuts, shots, pacing
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\cuts.py --run-dir "<run>" [--content-threshold 27] [--adaptive-threshold 3] [--min-scene-len 6] [--hard 0.30] [--broad 0.08] [--scdet 10] [--merge-window 0.15] [--no-verify] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\cuts.py --run-dir "<run>" [--content-threshold 27] [--adaptive-threshold 3] [--min-scene-len 6] [--hard 0.30] [--broad 0.08] [--scdet 10] [--merge-window 0.15] [--no-verify] [--quiet]
 ```
 Five detectors run in parallel threads: PySceneDetect `ContentDetector(27)` and
 `AdaptiveDetector(3)`, ffmpeg `select=gt(scene,0.08)` (hits ≥ 0.30 count as strong), ffmpeg
@@ -120,7 +120,7 @@ Sample result: 12 hard cuts → 13 shots, median 1.33 s. Time: 9.5–17.4 s for 
 ### 2.4 `keyframes.py` — shot frames, sampled frames, contact sheets
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\keyframes.py --run-dir "<run>" [--fps N] [--max-frames 600] [--sample-max-side 1280] [--jobs 4] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\keyframes.py --run-dir "<run>" [--fps N] [--max-frames 600] [--sample-max-side 1280] [--jobs 4] [--quiet]
 ```
 Needs `shots.json` (without it the whole video is one shot, with a warning). Sampling rate: 2 fps,
 3 fps when the median shot is under 1.5 s, 1 fps for videos over 5 min, capped at `--max-frames`
@@ -138,7 +138,7 @@ Verified by eye on the sample: sheet-01 cells run 00:00.00 / 00:00.33 / 00:00.67
 ### 2.5 `audio.py` — audio extraction + features
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\audio.py --run-dir "<run>" [--silence-db -35] [--silence-min 0.6] [--no-librosa] [--refine-only] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\audio.py --run-dir "<run>" [--silence-db -35] [--silence-min 0.6] [--no-librosa] [--refine-only] [--quiet]
 ```
 Outputs: `audio.wav` (44.1 kHz stereo PCM, analysis/editing reference), `audio-16k.wav` (16 kHz mono,
 the ASR input), `_work\audio-22k.wav` (feature input), `audio-features.json`: `tempo_bpm`,
@@ -155,11 +155,11 @@ Time: 3–12 s (librosa's first call after a cold numba cache is the slow case; 
 ### 2.6 `transcribe.py` — speech with word timestamps
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\transcribe.py --run-dir "<run>" [--model small] [--language auto] [--engine faster-whisper|ffmpeg] [--beam-size 5] [--no-vad] [--audio <wav>] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\transcribe.py --run-dir "<run>" [--model small] [--language auto] [--engine faster-whisper|ffmpeg] [--beam-size 5] [--no-vad] [--audio <wav>] [--quiet]
 ```
 Engines: `faster-whisper` (default; CPU int8, VAD filter, word timestamps + probabilities; models
-`small`, `small.en`, `base` are cached in `C:\Users\Glaresquare1\.cache\huggingface\hub`) or `ffmpeg`
-(built-in whisper.cpp filter with `C:\Users\Glaresquare1\.cache\whisper-cpp\ggml-tiny.en.bin` /
+`small`, `small.en`, `base` are cached in `C:\Users\Bulzart\.cache\huggingface\hub`) or `ffmpeg`
+(built-in whisper.cpp filter with `C:\Users\Bulzart\.cache\whisper-cpp\ggml-tiny.en.bin` /
 `ggml-base.en.bin`; segment timestamps only — the Python-free fallback).
 Outputs: `transcript.json` (`engine, model, language, language_probability, has_speech,
 language_uncertain, segments[{id, start, end, text, words[{word, start, end, probability}], avg_logprob,
@@ -173,7 +173,7 @@ with `small` on this CPU.
 ### 2.7 `ocr.py` — on-screen text
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\ocr.py --run-dir "<run>" [--min-score 0.5] [--similarity 0.8] [--workers 3] [--threads 4] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\ocr.py --run-dir "<run>" [--min-score 0.5] [--similarity 0.8] [--workers 3] [--threads 4] [--quiet]
 ```
 RapidOCR (onnxruntime, CPU; detector limit 960 px on the long side) over every sampled frame plus
 the shot first/last frames that do not coincide with a sampled timestamp, in `--workers` processes x
@@ -192,7 +192,7 @@ combinations 3x4, 2x3, 4x2 and 6x1 were all within the run-to-run noise on this 
 ### 2.8 `visual_stats.py` — colour/light/texture per frame, camera motion per shot, style cues
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\visual_stats.py --run-dir "<run>" [--motion-rate 8] [--motion-width 320] [--no-motion] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\visual_stats.py --run-dir "<run>" [--motion-rate 8] [--motion-width 320] [--no-motion] [--quiet]
 ```
 Needs `keyframes.json` (+ `shots.json`, `probe.json`). Per sampled frame: k-means palette (k=5),
 brightness, contrast, saturation, Canny edge density, colourfulness, flat/soft/hard gradient ratios,
@@ -209,9 +209,9 @@ video once; `--no-motion` drops it to ~3 s).
 ### 2.9 `measure_all.py` — Stage-1 driver
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\measure_all.py --run-dir "<run>" [--whisper-model small] [--language auto] [--engine faster-whisper|ffmpeg] [--fps N] [--skip probe,cuts,keyframes,audio,transcribe,ocr,visual_stats] [--skip-transcribe] [--redo] [--quiet]
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\measure_all.py "<video-or-url>" [--run-root <runs>] [--slug <slug>] [--cookies-from-browser chrome] [same options]
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\measure_all.py "<existing run dir>" [same options]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py --run-dir "<run>" [--whisper-model small] [--language auto] [--engine faster-whisper|ffmpeg] [--fps N] [--skip probe,cuts,keyframes,audio,transcribe,ocr,visual_stats] [--skip-transcribe] [--redo] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py "<video-or-url>" [--run-root <runs>] [--slug <slug>] [--cookies-from-browser chrome] [same options]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py "<existing run dir>" [same options]
 ```
 Runs each script as its own process (a failing script is logged and the rest continue), skips steps
 whose marker output exists unless `--redo`, runs `audio.py --refine-only` after a successful
@@ -225,7 +225,7 @@ The measurer agent appends `## 11. Analysis segments` + `## 12. Problems` to the
 ### 2.10 `slicer.py` — clip / edit-segment plan (Stage 4 helper)
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\slicer.py --duration <D> --clip-seconds <S> --min-clip <MIN> --max-clip <MAX> [--uneven --shots "<run>\10-measure\shots.json"] [--snap-window 1.5] [--start 0] [--number-from 1] [--out "<run>\40-plan\plan-slices.json"] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\slicer.py --duration <D> --clip-seconds <S> --min-clip <MIN> --max-clip <MAX> [--uneven --shots "<run>\10-measure\shots.json"] [--snap-window 1.5] [--start 0] [--number-from 1] [--out "<run>\40-plan\plan-slices.json"] [--quiet]
 ```
 Pure arithmetic, no ffmpeg. `MIN`/`MAX` are read from `seedance\SEEDANCE-SPEC.md` (generation) or
 `SEEDANCE-EDIT.md` (video-input limit) at run time — the 2026-09-16 notes say 4–30 s for both — and
@@ -243,7 +243,7 @@ Verified on the sample (27.267 s): equal 15 s → `0–15.00, 15.00–27.27` (ge
 ### 2.11 `segment_source.py` — cut the source into edit segments (Seedance 2.5 edit approach)
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\segment_source.py --run-dir "<run>" --plan "<run>\40-plan\plan-slices.json" [--reencode | --copy] [--source <file>] [--out-dir <dir>] [--crf 18] [--preset medium] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\segment_source.py --run-dir "<run>" --plan "<run>\40-plan\plan-slices.json" [--reencode | --copy] [--source <file>] [--out-dir <dir>] [--crf 18] [--preset medium] [--quiet]
 ```
 The plan is `slicer.py` output or the Stage-4 `plan.json` (`clips | segments | slices | edit_segments`
 list; items need `start`/`end`, aliases `source_start`/`src_start`/`in` and nested `slice`/`source`
@@ -261,9 +261,9 @@ delta. Time: 31.5 s for 2 re-encoded 720p segments (27 s of source); `--copy` 0.
 ### 2.12 `state.py` — read / write `state.json`
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\state.py "<run>" get [key.path]
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\state.py "<run>" set stage=<stage> next_step=<step> [mode=1|2|3] [approach=replicate|edit] [answers.Q1="<answer>"] …
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\state.py "<run>" add-file <stage-dir> <path> [<path> …]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\state.py "<run>" get [key.path]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\state.py "<run>" set stage=<stage> next_step=<step> [mode=1|2|3] [approach=replicate|edit] [answers.Q1="<answer>"] …
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\state.py "<run>" add-file <stage-dir> <path> [<path> …]
 ```
 `get` prints the whole state (or one key; a plain string is printed bare, anything else as JSON;
 missing state → the default skeleton, not an error). `set` parses each value as JSON when possible
@@ -277,7 +277,7 @@ appends run-relative paths under `files[<stage-dir>]` without duplicates. Exit 0
 ### 3.1 `download.py` — stream a URL to disk
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\download.py "<url>" --out "<file>" [--probe] [--retries 3] [--timeout 120] [--min-bytes 1024] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\download.py "<url>" --out "<file>" [--probe] [--retries 3] [--timeout 120] [--min-bytes 1024] [--quiet]
 ```
 requests streaming download (connect timeout 15 s, read timeout `--timeout`), exponential-backoff
 retries, `.part` file renamed on success, Content-Length check, `text/html` warning (login page /
@@ -290,8 +290,8 @@ URLs (`80-generated\clip-NN.mp4`) and reference files. Verified: 788,493-byte pu
 ### 3.2 `join_clips.py` — normalise + concatenate clips in order
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\join_clips.py --run-dir "<run>" --out "<run>\80-generated\joined.mp4" [--width 1080] [--height 1920] [--fps 30] [--crf 18] [--preset medium] [--no-audio] [--work <dir>] [--keep-work] [--quiet]
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\join_clips.py --clips "<a.mp4>" "<b.mp4>" … --out "<joined.mp4>" [same options]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\join_clips.py --run-dir "<run>" --out "<run>\80-generated\joined.mp4" [--width 1080] [--height 1920] [--fps 30] [--crf 18] [--preset medium] [--no-audio] [--work <dir>] [--keep-work] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\join_clips.py --clips "<a.mp4>" "<b.mp4>" … --out "<joined.mp4>" [same options]
 ```
 `--run-dir` takes `80-generated\clip-*.mp4` in name order (or `manifest.json` `clips[].file` order when
 present); `--clips` is an explicit order (edit approach: edited segments and pass-through segments
@@ -308,7 +308,7 @@ clip took 44 s, the 30 fps ones 21–27 s each; `--preset fast` roughly halves i
 ### 3.3 `clip_frames.py` — first/last/1 fps frames + one contact sheet of a generated clip
 Usage:
 ```
-C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Glaresquare1\.claude\analyze-stack\tools\clip_frames.py "<clip.mp4>" --out "<dir>" [--fps 1] [--max-side 1280] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\clip_frames.py "<clip.mp4>" --out "<dir>" [--fps 1] [--max-side 1280] [--quiet]
 ```
 Writes `<dir>\first-00m00.00s.jpg` and `last-<t>.jpg` (full resolution, q=2), `f-<00m01.00s>.jpg` at
 `--fps` (long side ≤ `--max-side`), `sheet.jpg` (4 columns, as many rows as needed, first and last

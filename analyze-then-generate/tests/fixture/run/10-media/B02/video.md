@@ -11,9 +11,9 @@
 
 ## Storyboard sheets (read in order, with timeline.md open)
 
-- `C:\Users\GLARES~1\AppData\Local\Temp\claude\C--Users-Glaresquare1-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\runs\20261011-004855-vbtest\10-media\B02\sheets\storyboard-01.jpg` — 00:00.00–00:12.00 (30 cells)
-- `C:\Users\GLARES~1\AppData\Local\Temp\claude\C--Users-Glaresquare1-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\runs\20261011-004855-vbtest\10-media\B02\sheets\storyboard-02.jpg` — 00:12.20–00:27.00 (30 cells)
-- `C:\Users\GLARES~1\AppData\Local\Temp\claude\C--Users-Glaresquare1-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\runs\20261011-004855-vbtest\10-media\B02\sheets\storyboard-03.jpg` — 00:27.20–00:33.20 (13 cells)
+- `C:\Users\GLARES~1\AppData\Local\Temp\claude\C--Users-Bulzart-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\runs\20261011-004855-vbtest\10-media\B02\sheets\storyboard-01.jpg` — 00:00.00–00:12.00 (30 cells)
+- `C:\Users\GLARES~1\AppData\Local\Temp\claude\C--Users-Bulzart-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\runs\20261011-004855-vbtest\10-media\B02\sheets\storyboard-02.jpg` — 00:12.20–00:27.00 (30 cells)
+- `C:\Users\GLARES~1\AppData\Local\Temp\claude\C--Users-Bulzart-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\runs\20261011-004855-vbtest\10-media\B02\sheets\storyboard-03.jpg` — 00:27.20–00:33.20 (13 cells)
 
 ## Shots (heuristic cut detector — confirm on the storyboard)
 
@@ -25,4 +25,4 @@
 
 No speech detected.
 
-Machine data in `C:\Users\GLARES~1\AppData\Local\Temp\claude\C--Users-Glaresquare1-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\runs\20261011-004855-vbtest\10-media\B02`: video.json, frames.json, cuts.json, activity.json, audio.json, transcript.json, ocr.json, timeline.md · densify on demand: `atg.py frames "C:\Users\Glaresquare1\AppData\Local\Temp\claude\C--Users-Glaresquare1-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\baseline\b-b.mp4" --out <dir> --range a-b --fps 15 --sheet` · elapsed 7.1 s
+Machine data in `C:\Users\GLARES~1\AppData\Local\Temp\claude\C--Users-Bulzart-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\runs\20261011-004855-vbtest\10-media\B02`: video.json, frames.json, cuts.json, activity.json, audio.json, transcript.json, ocr.json, timeline.md · densify on demand: `atg.py frames "C:\Users\Bulzart\AppData\Local\Temp\claude\C--Users-Bulzart-Documents\f2e65d75-f760-412f-aaeb-1f90311ace7e\scratchpad\vb-test\baseline\b-b.mp4" --out <dir> --range a-b --fps 15 --sheet` · elapsed 7.1 s

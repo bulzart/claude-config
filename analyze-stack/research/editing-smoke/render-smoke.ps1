@@ -3,18 +3,18 @@
 # xfade slideleft, setpts/atempo speed change on clip 2, ASS captions (libass, optional fontsdir),
 # SFX via adelay+amix, loudnorm to -14 LUFS, faststart. Took ~4.2 s for 5 s of output.
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
-$ff  = 'C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe'
-$fp  = 'C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffprobe.exe'
-$c1  = 'C:\Users\Glaresquare1\.claude\analyze-stack\samples\generated-clips\clip-02-seg-0-15.mp4'
-$c2  = 'C:\Users\Glaresquare1\.claude\analyze-stack\samples\generated-clips\clip-03-seg-15-30.mp4'
+$ff  = 'C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffmpeg.exe'
+$fp  = 'C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin\ffprobe.exe'
+$c1  = 'C:\Users\Bulzart\.claude\analyze-stack\samples\generated-clips\clip-02-seg-0-15.mp4'
+$c2  = 'C:\Users\Bulzart\.claude\analyze-stack\samples\generated-clips\clip-03-seg-15-30.mp4'
 $out = "$PSScriptRoot\smoke.mp4"
 $sfx = "$PSScriptRoot\sfx.wav"
 # ASS path for the filter graph: forward slashes and escaped drive colon (C\:)
 $ass = ("$PSScriptRoot\captions-karaoke-sample.ass" -replace '\\', '/') -replace ':', '\:'
 # Optional: folder with un-installed TTFs (Montserrat, Anton ...) -> fontsdir
-$fd  = ('C:/Users/Glaresquare1/.claude/analyze-stack/tools/edit/fonts') -replace ':', '\:'
+$fd  = ('C:/Users/Bulzart/.claude/analyze-stack/tools/edit/fonts') -replace ':', '\:'
 $assFilter = "ass='$ass'"
-if (Test-Path 'C:\Users\Glaresquare1\.claude\analyze-stack\tools\edit\fonts') { $assFilter = "ass='$ass':fontsdir='$fd'" }
+if (Test-Path 'C:\Users\Bulzart\.claude\analyze-stack\tools\edit\fonts') { $assFilter = "ass='$ass':fontsdir='$fd'" }
 
 # 0.25 s test SFX
 & $ff -y -hide_banner -loglevel error -f lavfi -i 'sine=frequency=880:duration=0.25' -af 'afade=t=out:st=0.1:d=0.15' $sfx

@@ -12,8 +12,8 @@ the `<…>`):
 You are the production agent for video NN of a /analyze-then-pick run (Analyze Mode, <recreate|create>).
 Produce this one video end to end, then stop.
 
-Run: <RUN>   Library (ATP): C:/Users/Glaresquare1/.claude/analyze-then-pick
-Toolkit (T): "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe" "<ATP>/scripts/atp.py"
+Run: <RUN>   Library (ATP): C:/Users/Bulzart/.claude/analyze-then-pick
+Toolkit (T): "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe" "<ATP>/scripts/atp.py"
 Locked model: <model id>; guide: <ATP>/<guide path>.
 Loupe: <up|down> (state.json → loupe; none = up). Loupe commands start the web app themselves; you read the admin's samples only through
 `T qc-consult`, never from Loupe's data folder or database. If `qc-consult` answers `mode: unavailable` on an `up` run, run
@@ -25,7 +25,7 @@ Your files: <RUN>/40-briefs/video-NN-plan.md, <RUN>/40-briefs/video-NN-brief.md,
 <Recreate: your prepared source is <RUN>/10-media/<V>/own/ (map.json = the insert split points).>
 
 Follow, for this video only, by invoking these skills one after the other when you reach their step (Skill tool; if it is
-unavailable or the name is not found, Read C:/Users/Glaresquare1/.claude/skills/<name>/SKILL.md and follow it). Each skill lists
+unavailable or the name is not found, Read C:/Users/Bulzart/.claude/skills/<name>/SKILL.md and follow it). Each skill lists
 under "Read now" the exact section files it needs: read those and nothing else. Never read the command file, a whole reference,
 a whole model guide or models/index.json (that is what rots your context):
   1. atp-inputs      (X3: your own inputs; it loads the Higgsfield tools)

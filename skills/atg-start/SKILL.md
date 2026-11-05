@@ -6,7 +6,7 @@ user-invocable: false
 
 # atg-start — Start: mode, sub-mode, model, inputs, run
 
-> `ATG` = `C:/Users/Glaresquare1/.claude/analyze-then-generate` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATG/scripts/atg.py"` (every call prints one JSON object on its last line: numbers, tables and records, never a verdict; run through Bash) · `RUN` = the run folder `ATG/runs/<stamp>-<slug>/`.
+> `ATG` = `C:/Users/Bulzart/.claude/analyze-then-generate` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATG/scripts/atg.py"` (every call prints one JSON object on its last line: numbers, tables and records, never a verdict; run through Bash) · `RUN` = the run folder `ATG/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATG/reference/<file>/` (models: `ATG/models/<guide>/`, Higgsfield: `ATG/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
 Phase 1 of `/analyze-then-generate`. The router (the command) sent you here and passes the command's arguments (`$ARGUMENTS` below) as this skill's args. Nothing else needs to be loaded for this phase.
@@ -21,8 +21,8 @@ Only these section files for this phase, nothing else unless a step below says s
 
 | name | value |
 |---|---|
-| `ATG` | `C:/Users/Glaresquare1/.claude/analyze-then-generate` (library root) |
-| `PY` | `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` (see `ATG/config.json`) |
+| `ATG` | `C:/Users/Bulzart/.claude/analyze-then-generate` (library root) |
+| `PY` | `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` (see `ATG/config.json`) |
 | `T` | `"$PY" "$ATG/scripts/atg.py"`. Every call prints one JSON object on its last line (numbers, tables and records, never a verdict: the agent decides); run through Bash |
 | Model index | `ATG/models/index.json` (model id → guide, capabilities, 9:16/720p params). **Never Read it whole** (40 KB): `T model-menu` builds the menu, `T model-entry --id <id>` prints one model's entry and its guide path |
 | Model guides | `ATG/models/<guide>.md` is an index; the sections are in `ATG/models/<guide>/`. Which sections each step reads: `atg-model-guide` |

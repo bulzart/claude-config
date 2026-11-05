@@ -6,7 +6,7 @@ user-invocable: false
 
 # atg-vb-cards — Viral-Browser: inputs, brief, run, viral cards (V1–V2)
 
-> `ATG` = `C:/Users/Glaresquare1/.claude/analyze-then-generate` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATG/scripts/atg.py"` (every call prints one JSON object on its last line: numbers, tables and records, never a verdict; run through Bash) · `RUN` = the run folder `ATG/runs/<stamp>-<slug>/`.
+> `ATG` = `C:/Users/Bulzart/.claude/analyze-then-generate` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$ATG/scripts/atg.py"` (every call prints one JSON object on its last line: numbers, tables and records, never a verdict; run through Bash) · `RUN` = the run folder `ATG/runs/<stamp>-<slug>/`.
 > A citation `file.md §id` is a section of `ATG/reference/<file>/` (for the Viral-Browser playbook `<file>` is `viral-browser`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
 Viral-Browser is the third Analyze sub-mode. The references are a **source of ideas**; nothing is generated: no Higgsfield generation tool, no model, no credits, no CapCut, no client assets, no change to the references folder. The run ends with the **next three products to sell**, each with a blueprint and a reference pack. `atg-start` sent you here as soon as the sub-mode was known; `$ARGUMENTS` are the command's arguments. At the end of each step print one short status line and store `T state --run RUN set stage=<…> next_step=<…>` (the `next_step` values make the run resumable). The market, price range, selling model, sales channel, tools, depth and exclusions live in `state.json → brief.*`.

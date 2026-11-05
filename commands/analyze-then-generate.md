@@ -11,7 +11,7 @@ allowed-tools:
   - Grep
   - ToolSearch
   - AskUserQuestion
-  - "Bash(C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe *)"
+  - "Bash(C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe *)"
   - "Bash(python *)"
   - "Bash(ffprobe *)"
   - "PowerShell(cd *)"
@@ -64,7 +64,7 @@ This file is only the **router**, and it is small on purpose. The pipeline is sp
 (`ATG/reference/<name>/`, `ATG/models/<guide>/`, `ATG/higgsfield/higgsfield-mcp/`), so that every phase loads only what it needs and the context of a run does not rot. The skills are interconnected:
 each ends with a hand-off that names the next one.
 
-`ATG` = `C:/Users/Glaresquare1/.claude/analyze-then-generate` · `PY` = `C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe` ·
+`ATG` = `C:/Users/Bulzart/.claude/analyze-then-generate` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` ·
 `T` = `"$PY" "$ATG/scripts/atg.py"` (one JSON object on its last line; run through Bash) · `RUN` = `ATG/runs/<stamp>-<slug>/`.
 
 **Scripts gather, the agent decides** (the user's rule, 2026-10-12; every mode, every `T` command). `T` measures, extracts, records, tabulates and calculates; it never hands out a verdict, status or label
@@ -89,7 +89,7 @@ packs), never script gates.
    **re-invoke the skill named in `state.json → next_skill`**: its text may have been summarised away. Inside the per-video loop a run resumes at the video level
    (`state.json` holds `video` and `next_skill`; the ledger and the files on disk show the step reached).
 5. **Agents never receive this file.** A production agent gets a contract that names the skills to invoke (Skill tool; if it is unavailable or the name is not found, Read
-   `C:/Users/Glaresquare1/.claude/skills/<name>/SKILL.md` and follow it); it reads the same section lists as the main session and nothing else. An analysis agent is briefed by the prompt
+   `C:/Users/Bulzart/.claude/skills/<name>/SKILL.md` and follow it); it reads the same section lists as the main session and nothing else. An analysis agent is briefed by the prompt
    in `reference/analysis-protocol/` §7 (Create and Viral-Browser: `reference/viral-browser/` §13); Viral-Browser's other agents by the prompts of `reference/viral-browser/` §13.
 
 ## Resume, and a video reported as wrong

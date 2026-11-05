@@ -153,7 +153,7 @@ everything = [ROUTER] + SKILLS + [LIB / "README.md", LIB / "learning-log.md", LI
 leaks = []
 for p in everything:
     body = rd(p)
-    body = re.sub(r"C:/Users/Glaresquare1/\.claude/" + "analyze-then-" + "pick" + r"(?=[/`\s)])", "<path>", body)      # a file path may name the source library; nothing else may
+    body = re.sub(r"C:/Users/Bulzart/\.claude/" + "analyze-then-" + "pick" + r"(?=[/`\s)])", "<path>", body)      # a file path may name the source library; nothing else may
     for o in OLD:
         if re.search(r"(?<![A-Za-z_])" + re.escape(o), body):
             leaks.append(f"{p.name}: {o}")

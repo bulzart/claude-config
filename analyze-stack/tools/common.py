@@ -34,16 +34,16 @@ for _stream in (sys.stdout, sys.stderr):
 os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
-STACK_HOME = Path(r"C:\Users\Glaresquare1\.claude\analyze-stack")
+STACK_HOME = Path(r"C:\Users\Bulzart\.claude\analyze-stack")
 DEFAULT_RUN_ROOT = STACK_HOME / "runs"
 TOOLS_DIR = STACK_HOME / "tools"
 
-_FF_DIR = Path(r"C:\Users\Glaresquare1\AppData\Local\Microsoft\WinGet\Packages"
+_FF_DIR = Path(r"C:\Users\Bulzart\AppData\Local\Microsoft\WinGet\Packages"
                r"\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.1-full_build\bin")
 FFMPEG_FALLBACK = _FF_DIR / "ffmpeg.exe"
 FFPROBE_FALLBACK = _FF_DIR / "ffprobe.exe"
-PYTHON_FALLBACK = Path(r"C:\Users\Glaresquare1\AppData\Local\Programs\Python\Python312\python.exe")
-WHISPER_CPP_DIR = Path(r"C:\Users\Glaresquare1\.cache\whisper-cpp")
+PYTHON_FALLBACK = Path(r"C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe")
+WHISPER_CPP_DIR = Path(r"C:\Users\Bulzart\.cache\whisper-cpp")
 FONT_CANDIDATES = [r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\arial.ttf",
                    r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\consola.ttf"]
 

@@ -1,12 +1,19 @@
 {
-  "model": "opus",
+  "permissions": {
+    "allow": [
+      "Bash(powershell -File -:*)",
+      "mcp__Roblox_Studio__run_code"
+    ],
+    "defaultMode": "auto"
+  },
+  "model": "opus[1m]",
   "hooks": {
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Glaresquare1/.claude/hooks/autocommit.py Stop",
+            "command": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Bulzart/.claude/hooks/autocommit.py Stop",
             "timeout": 60
           }
         ]
@@ -17,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Glaresquare1/.claude/hooks/autocommit.py SessionStart",
+            "command": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Bulzart/.claude/hooks/autocommit.py SessionStart",
             "timeout": 60
           }
         ]
@@ -27,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Glaresquare1/.claude/hooks/atp_resume_note.py",
+            "command": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Bulzart/.claude/hooks/atp_resume_note.py",
             "timeout": 5
           }
         ]
@@ -39,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Glaresquare1/.claude/hooks/atp_read_guard.py",
+            "command": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Bulzart/.claude/hooks/atp_read_guard.py",
             "timeout": 5
           }
         ]
@@ -49,7 +56,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Glaresquare1/.claude/hooks/awl_input_guard.py",
+            "command": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Bulzart/.claude/hooks/awl_input_guard.py",
             "timeout": 5
           }
         ]
@@ -61,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Glaresquare1/.claude/hooks/atp_flag_watch.py",
+            "command": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Bulzart/.claude/hooks/atp_flag_watch.py",
             "timeout": 10
           }
         ]
@@ -73,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/Glaresquare1/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Glaresquare1/.claude/hooks/atp_flag_watch.py",
+            "command": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe C:/Users/Bulzart/.claude/hooks/atp_flag_watch.py",
             "timeout": 10
           }
         ]
@@ -85,17 +92,27 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "bash C:/Users/Glaresquare1/.claude/scripts/statusline.sh"
+    "command": "\"C:/Program Files/Git/bin/bash.exe\" C:/Users/Bulzart/.claude/scripts/statusline.sh"
   },
   "enabledPlugins": {
+    "figma@claude-plugins-official": true,
     "github@anthropic-plugin-directory": true,
     "context7@anthropic-plugin-directory": true
   },
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    }
+  },
+  "effortLevel": "high",
   "modelSettings": {
-    "claude-fable-5-1": {
-      "effortLevel": "xhigh"
-    },
     "claude-opus-5-5": {
+      "effortLevel": "high"
+    },
+    "claude-fable-5-1": {
       "effortLevel": "xhigh"
     },
     "claude-sonnet-5-5": {
@@ -116,6 +133,7 @@
     }
   },
   "autoUpdatesChannel": "latest",
+  "tui": "fullscreen",
   "voice": {
     "enabled": true,
     "mode": "hold"
@@ -125,33 +143,6 @@
   "editorMode": "vim",
   "autoCompactEnabled": true,
   "terminalProgressBarEnabled": true,
-  "autoMode": {
-    "environment": [
-      "### Org-wide",
-      "**Organization**: None configured",
-      "**Cloud provider(s)**: None configured",
-      "**Repository visibility**: assume private unless the remote host and repo name indicate otherwise, or a visibility check in the transcript shows public",
-      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
-      "**Secrets management**: None configured",
-      "**Default / protected branches**: Not queryable here (no git remotes configured in this repo) — default branch unknown (origin/HEAD unset)",
-      "**CI/CD deploy targets**: None configured",
-      "**Network posture**: None configured",
-      "**Host containment**: None configured — assume Claude Code runs on an ordinary developer machine or CI runner with open internet",
-      "**Source control**: no remotes configured for this repo (C:\\Users\\Glaresquare1\\Documents) — no additional orgs configured",
-      "**Trusted internal domains**: None configured",
-      "**Trusted cloud buckets**: None configured",
-      "**Key internal services**: None configured",
-      "**Internal package registry**: None configured",
-      "**Sensitive data locations & audiences**: any file or store holding personal data, confidential business data, credentials, regulated data, or similarly sensitive material; preserve exact handles when known and share only with audiences cleared at the [named+specifics] bar",
-      "**Data retention / declassification**: None configured",
-      "**Sensitive remote targets**: any namespace, host, or container whose name carries `prod` or `production` as a whole word or name segment",
-      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
-      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
-      "### User-specific",
-      "**Primary use of Claude Code**: software development",
-      "**Trusted repo**: the git repository at C:\\Users\\Glaresquare1\\Documents (its working directory) — no remotes are configured, so this repo only; visibility assumed private per default",
-      "**Org-specific CLIs**: None configured"
-    ]
-  },
+  "skipAutoPermissionPrompt": true,
   "voiceEnabled": true
 }
