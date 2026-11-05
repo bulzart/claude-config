@@ -794,7 +794,8 @@ class _Mock(_BH):
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
-        _SEEN.append({"path": self.path, "auth": self.headers.get("Authorization"), "refs": len(body.get("images") or [])})
+        _SEEN.append({"path": self.path, "auth": self.headers.get("Authorization"), "refs": len(body.get("images") or []),
+                      "size": body.get("size"), "quality": body.get("quality")})
         if "BLOCKME" in (body.get("prompt") or ""):
             self._send(400, {"error": {"type": "image_generation_user_error", "code": "moderation_blocked", "message": "blocked",
                                        "moderation_details": {"moderation_stage": "input", "categories": ["violence"]}}})
@@ -825,9 +826,28 @@ js, _, _ = t("static", "check", "--offline", env={**SENV, "OPENAI_API_KEY": ""})
 check(js["parts"]["images"]["key_present"] is False, "static check without the key says so")
 js, code, _ = t("image", "generate", "--run", str(SR), "--video", "01", "--image", "1", "--prompt", "a field", env={**SENV, "OPENAI_API_KEY": ""}, ok=False)
 check(code == 2 and "OPENAI_API_KEY" in js.get("error", "") and not _SEEN, "image generate without the key refuses before any call (exit 2)")
+# the format (A5): facts from the references' sizes, the pick stored, a size the API does not take refused
+(SR / "00-inventory").mkdir(parents=True, exist_ok=True)
+(SR / "00-inventory" / "inventory.json").write_text(json.dumps({"role": "references", "items": [
+    {"id": "R01", "kind": "video", "path": "a.mp4", "rel": "a.mp4", "display_width": 1080, "display_height": 1920, "duration_s": 20},
+    {"id": "R02", "kind": "video", "path": "b.mp4", "rel": "b.mp4", "display_width": 720, "display_height": 1280, "duration_s": 15},
+    {"id": "R03", "kind": "video", "path": "c.mp4", "rel": "c.mp4", "display_width": 1920, "display_height": 1080, "duration_s": 10}]}), encoding="utf-8")
+js, _ = ts("static", "formats", "--run", str(SR))
+_f0 = js["formats"][0]
+check(js["aspects"]["9:16"]["count"] == 2 and js["aspects"]["16:9"]["count"] == 1 and _f0["aspect"] == "9:16" and _f0["res"] == 1080
+      and _f0["export"] == "1080x1920" and _f0["image_size"] == "1216x2160" and _f0["preview"] == "720x1280" and _f0["image"]["valid"]
+      and any(f["aspect"] == "16:9" and f["res"] == 720 and f["export"] == "1280x720" for f in js["formats"]),
+      "static formats gives the references' aspects and per aspect and resolution the export, the image size with the move margin, the check size")
+js, code = ts("static", "format", "--run", str(SR), "--aspect", "1:1", "--res", "720", "--image-size", "720x720", ok=False)
+check(code == 2 and "pixels" in js.get("error", ""), "static format refuses an image size the image API does not take")
+ts("static", "format", "--run", str(SR), "--aspect", "9:16", "--res", "1080", "--quality", "high")
+_fmt = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["format"]
+check(_fmt["image_size"] == "1216x2160" and _fmt["export"] == "1080x1920" and _fmt["quality"] == "high" and _fmt["preview"] == "720x1280",
+      "static format stores the pick in state.json -> static.format")
 
 js, _ = ts("tts", "design", "--run", str(SR), "--text", "Most people never notice this.", "--instruct", "a calm deep male narrator",
            "--instruct", "a warm female storyteller", "--instruct", "a gravelly older man")
+_design = js
 check(len(js.get("samples", [])) == 3 and all(Path(s["file"]).is_file() for s in js["samples"]), "tts design makes one sample per voice description")
 js, _ = ts("tts", "voice", "--run", str(SR), "--sample", "2", "--emotion", "tense=Something was wrong. Very wrong.")
 _st = json.loads((SR / "state.json").read_text(encoding="utf-8"))
@@ -845,11 +865,23 @@ check(js.get("lines") == 3 and _ln[1]["start"] >= _ln[0]["end"] + 0.34 and _ln[2
       "tts say joins the lines with their pauses (default and planned) and records each line's exact start and end, and the loudness")
 js, _ = ts("tts", "say", "--run", str(SR), "--video", "01", "--only", "2")
 check(js.get("made_now") == [2], "tts say --only makes just that line again")
+(SR / "40-briefs" / "video-02-narration.json").write_text(json.dumps({"video": "02", "language": "english", "lines": [
+    {"n": 1, "text": "The letter arrived thirty years too late.", "emotion": "neutral"},
+    {"n": 2, "text": "It was in his own handwriting.", "strong": True, "delivery": "Quiet disbelief, slower, a catch in the voice", "pause_after": 0.6},
+    {"n": 3, "text": "He had never written it.", "emotion": "neutral"}]}), encoding="utf-8")
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "02")
+_r2 = {r["n"]: r for r in json.loads((SR / "30-assets" / "narration" / "video-02.json").read_text(encoding="utf-8"))["lines"]}
+_vs = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
+check([s["seed"] for s in _design["samples"]] == [1106, 1107, 1108] and _vs["seed"] == 1107 and _r2[2]["made_by"] == "design"
+      and _r2[2]["seed"] == 1107 and _r2[1]["made_by"] == "clone" and _r2[2].get("delivery", "").startswith("Quiet disbelief")
+      and all(isinstance(_r2[k].get("timbre_sim"), float) and _r2[k].get("pitch_st") is not None for k in (1, 2, 3))
+      and [x["n"] for x in js["voice_match"]["strong_lines"]] == [2] and js["voice_match"]["clone_lines"]["timbre_sim_min"] is not None,
+      "a strong line is made by the design model with the picked sample's seed; every line is measured against the run's voice (pitch, timbre)")
 js, _ = ts("narration-words", "--run", str(SR), "--video", "01")
 check(js.get("cues", 0) > 0 and len(js.get("lines", [])) == 3 and Path(js["files"]["srt"]).is_file() and "lines_to_check" in js,
       "narration-words gives the timed words, cues, an SRT and per line what was heard against the script")
 
-_plan = {"video": "01", "size": "1088x1920", "characters": [{"id": "C1", "name": "the farmer", "photo": None, "sheet_prompt": "A weathered farmer, 60s"}],
+_plan = {"video": "01", "characters": [{"id": "C1", "name": "the farmer", "photo": None, "sheet_prompt": "A weathered farmer, 60s"}],
          "images": [{"image": 1, "from_line": 1, "prompt": "A farmer in a wheat field at dusk", "characters": ["C1"], "line": "In 1959 ..."},
                     {"image": 2, "from_line": 2, "prompt": "Army trucks on a dirt road at night", "motion": "pan-left"},
                     {"image": 3, "from_line": 3, "prompt": "A sealed crate in a dark hangar", "transition": "cut"}]}
@@ -863,6 +895,7 @@ for _k in (1, 2, 3):
     ts("image", "generate", "--run", str(SR), "--video", "01", "--image", str(_k), "--prompt-file", str(_pf), *(["--ref", str(_anchor)] if _k == 1 else []))
 check(_SEEN[1]["path"].endswith("/images/edits") and _SEEN[1]["refs"] == 1 and all(s["auth"] == f"Bearer {_KEY}" for s in _SEEN),
       "an image with a character goes to the edits endpoint with its reference; the key travels only in the Authorization header")
+check(all(s["size"] == "1216x2160" and s["quality"] == "high" for s in _SEEN), "image generate sends the run's format (its image size and quality)")
 _n = len(_SEEN)
 js, _ = ts("image", "generate", "--run", str(SR), "--video", "01", "--image", "1", "--prompt-file", str(SR / "40-briefs" / "video-01-i01-prompt.txt"), "--ref", str(_anchor))
 check(js.get("reused") is True and len(_SEEN) == _n, "the same request that already made an image is not sent again")
@@ -877,7 +910,7 @@ check(not any(_KEY in o for o in _outs) and not any(_KEY in p.read_text(encoding
 
 js, _ = ts("image", "prompts", "--run", str(SR))
 _pm = Path(js["files"][0]).read_text(encoding="utf-8")
-check("## v01-i01" in _pm and "## v01-i03" in _pm and "C1 character sheet" in _pm and "1088x1920" in _pm, "image prompts writes one prompt per image with its file name, the character sheet and the size")
+check("## v01-i01" in _pm and "## v01-i03" in _pm and "C1 character sheet" in _pm and "vertical 9:16, 1216x2160" in _pm, "image prompts writes one prompt per image with its file name, the character sheet and the size")
 _up = home.parent / "user-images"
 _up.mkdir(exist_ok=True)
 for _k in (1, 3):
@@ -885,7 +918,8 @@ for _k in (1, 3):
 _Im.new("RGB", (900, 900), (0, 0, 0)).save(_up / "random.png")
 _before = sorted(p.name for p in _up.iterdir())
 js, _ = ts("image", "intake", "--run", str(SR), "--folder", str(_up))
-check([m["image"] for m in js["missing"]] == ["02"] and len(js["copied"]) == 2 and js["unmatched_total"] == 1 and sorted(p.name for p in _up.iterdir()) == _before,
+check([m["image"] for m in js["missing"]] == ["02"] and len(js["copied"]) == 2 and js["unmatched_total"] == 1 and sorted(p.name for p in _up.iterdir()) == _before
+      and js.get("aspect") == "9:16" and all("off_aspect" in c for c in js["copied"]),
       "image intake copies the files named vNN-iKK, lists the missing one and the unmatched name, and leaves the user's folder as it was")
 ts("image", "use", "--run", str(SR), "--video", "01", "--image", "1", "--attempt", "1")
 ts("image", "use", "--run", str(SR), "--video", "01", "--image", "3", "--attempt", "1")
@@ -900,6 +934,21 @@ js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01")
 check(js.get("ok") and js.get("size") == "720x1280" and abs(js["duration_s"] - _sp[-1][2]) < 0.15 and js.get("captions", 0) > 0
       and Path(js["preview"]).is_file() and js.get("loudness_lufs") is not None and abs(js["loudness_lufs"] + 14) < 2.5,
       f"slideshow render makes the clean and the captioned preview at 720x1280, the timeline's length, near -14 LUFS ({js.get('duration_s')} s, {js.get('loudness_lufs')} LUFS)")
+_tl = json.loads((SR / "40-briefs" / "video-01-timeline.json").read_text(encoding="utf-8"))
+check(_tl["size"] == "720x1280" and _tl["export"] == "1080x1920", "the timeline takes the format's check size and notes its export size")
+ts("static", "format", "--run", str(SR), "--aspect", "16:9", "--res", "1080")
+ts("slideshow", "plan", "--run", str(SR), "--video", "01")
+js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01", "--no-captions")
+check(js.get("ok") and js.get("size") == "1280x720", f"a 16:9 format renders its check copy at 1280x720 ({js.get('size')})")
+ts("static", "format", "--run", str(SR), "--aspect", "9:16", "--res", "1080", "--quality", "high")
+_dd = home.parent / "Draft_canvas"
+_dd.mkdir(exist_ok=True)
+(_dd / "draft_content.json").write_text(json.dumps({"id": "TL-1", "name": "Draft_canvas", "canvas_config": {"ratio": "9:16", "width": 1080,
+                                                                                                             "height": 1920, "background": None}}), encoding="utf-8")
+js, _ = ts("capcut-prep", "--draft", str(_dd), "--canvas", "1920x1080")
+_cc = json.loads((_dd / "draft_content.json").read_text(encoding="utf-8"))["canvas_config"]
+check(_cc == {"ratio": "16:9", "width": 1920, "height": 1080, "background": None} and (js.get("canvas") or {}).get("ratio") == "16:9",
+      "capcut-prep --canvas sets the project's canvas to the format's export size, labelled as capcut-cli labels it")
 js, _ = ts("contract", "--run", str(SR))
 _ct = Path(js["file"]).read_text(encoding="utf-8")
 check("Analyze Mode, static" in _ct and "Images: api" in _ct and "QC fixes: auto" in _ct and "awl-static-edit" in _ct and not js.get("unresolved_placeholders")

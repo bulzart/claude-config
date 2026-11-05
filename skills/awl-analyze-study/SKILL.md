@@ -40,7 +40,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Static (item 36): these two, and of the list above only analysis-protocol §0–§2 and §4–§9, creative-direction §1–§4 and
   brand-guardrails §3 (the product and video-physics sections are not read):*
   - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (2.0 KB)
-  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (1.7 KB)
+  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (3.3 KB)
 
 ### A3. Video analysis (as continuous sequences)
 - **Static:** each card is the Static card (static §1–§2) in place of the product and physics fields: read `video.md`, `timeline.md`
@@ -162,7 +162,9 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 - **Recreate:** ask (header "Recreate"), "How many reference videos should be recreated?", options
   "1", "3", "5" ("Other": any number up to the usable references).
 - **Free:** the count the requirement states (`RUN/00-inventory/requirement.md`), without a question; only when it states none, ask as for Create.
-- **Static:** ask as for Create (header "Videos").
+- **Static:** ask as for Create (header "Videos") and, in the same AskUserQuestion call, the format (header "Format", static §2):
+  `T static formats --run RUN` gives the facts; the best fit first, marked (Recommended), then the other options; store the answer with
+  `T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`.
 - Store the answer in `requested_videos`.
 
 ## Rules this phase owns (contract items 18, 20, 21, 35)

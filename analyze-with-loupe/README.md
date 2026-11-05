@@ -306,7 +306,14 @@ and image plans. `awl-analyze-produce` A9s runs `awl-static-sound` (S2) for ever
 clone; its timed words and checks; the image spans; a bed from ACE-Step 1.5 only when the references use one), the characters' anchors, and with images by the
 user the prompts file and the folder intake; then one agent per video runs `awl-static-images` (S3: OpenAI's `gpt-image-2.5-sunburst` through `T image
 generate`, every image viewed and checked) → `awl-static-edit` (S4: `T slideshow plan/render`, the clean and captioned preview at 720×1280, −14 LUFS, and the
-CapCut project with the images, their moves, the transitions, the narration and bed tracks and the captions by `capcut import-srt`) → `awl-record`. No
+CapCut project with the images, their moves, the transitions, the narration and bed tracks and the captions by `capcut import-srt`) → `awl-record`.
+**The format and the final** (the user, the same day): the CapCut project is the final, exported by the user at the format picked at A5 with the count
+(`T static formats` gives the facts; the best fit for the references first, marked Recommended, then options: 720, `medium`, the other aspect, the size
+without the move margin; `T static format` stores it in `state.json → static.format`, and the images, the prompts file, the canvas (`T capcut-prep
+--canvas`) and the check render follow it). At 1080 on the short side the images are 1216×2160 (vertical), so the export stays sharp through a 12 %
+zoom. **Strong lines**: a line marked `strong` is made by the VoiceDesign model from the run's voice description plus its delivery, with the picked
+sample's seed, only at the references' peaks; the sidecar measures every line's pitch and timbre against the run's voice and a strong line apart from
+the cloned ones is made again or cloned (`reference/static.md` §4, §6). No
 Higgsfield and no Loupe anywhere in Static; the product appears only when the assets hold one. Its agents get production-agents §2s's prompt (`T contract`
 picks it). Settings: `config.json → static`.
 

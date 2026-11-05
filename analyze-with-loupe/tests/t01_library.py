@@ -218,6 +218,21 @@ check("set model_limits='" in rd(SKD / "awl-recreate-plan" / "SKILL.md").split("
       "the live model limits are recorded at E4 (A6r, before the source is prepared and split) and refreshed at A8")
 check("A run with no `state.json → model_limits`" in rd(SKD / "awl-analyze-produce" / "SKILL.md").split("### A9. ")[1].split("### A9s.")[0],
       "a run resumed from before the live limits existed records them at A9's start, before any video is planned")
+# Static's format and final (the user, 2026-11-05): the CapCut export is the final, at the format the user picks at A5 (the best fit for the
+# references first, with options); strong lines by the voice-design model, sparingly and never jumping unannounced
+_s2t = rd(LIB / "reference" / "static" / "020_2_the-static-card-and-the-spec-a3.md")
+_s4t = rd(LIB / "reference" / "static" / "040_4_the-script-a6s.md")
+_s6t = rd(LIB / "reference" / "static" / "060_6_the-voice-and-the-bed-a6s-s2.md")
+_s7t = rd(LIB / "reference" / "static" / "070_7_the-edit-s4.md")
+_a5t = rd(SKD / "awl-analyze-study" / "SKILL.md")
+check("T static formats --run RUN" in _a5t and 'header "Format"' in _a5t and "(Recommended)" in _s2t
+      and "T static format --run RUN --aspect A --res R" in _s2t.replace("\n", " ") and "--canvas <state.json" in rd(SKD / "awl-static-edit" / "SKILL.md")
+      and "**The CapCut project is the final**" in _s7t and "that export is the final" in rd(SKD / "awl-wrapup" / "SKILL.md")
+      and "its export is the final" in rd(HOME / "commands" / "analyze-with-loupe.md"),
+      "Static asks the format at A5 (the best fit first), stores it, makes the CapCut project at its export size, and that export is the final")
+check('"strong": true' in _s4t and "never two in a row" in _s4t and "**Strong lines**" in _s6t and "timbre_sim" in _s6t
+      and "voice_match" in rd(SKD / "awl-static-sound" / "SKILL.md"),
+      "strong lines: the voice-design model at the references' peaks only, measured against the run's voice, made again or cloned when apart")
 # a source at most 0.4 s over the maximum is one generation of its first <maximum> seconds (the user, run 20261104-225639-04)
 check("at most 0.4 s over the maximum" in _gs31 and "At most 0.4 s over the maximum" in rd(SKD / "awl-recreate-plan" / "SKILL.md")
       and "`T trim --end <maximum>`" in rd(SKD / "awl-recreate-plan" / "SKILL.md")

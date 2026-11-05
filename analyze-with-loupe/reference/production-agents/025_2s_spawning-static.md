@@ -28,7 +28,7 @@ unavailable or the name is not found, Read C:/Users/Glaresquare1/.claude/skills/
 under "Read now" the exact section files it needs: read those and nothing else. Never read the command file or a whole reference:
   1. awl-static-images (S3: with Images api make, view and check every image of your plan and fix by QC fixes; with Images prompts
      view and check the user's images and list what fails)
-  2. awl-static-edit   (S4: the timeline, the local render, the CapCut project, the edit checks)
+  2. awl-static-edit   (S4: the timeline, the local check render, the CapCut project at the run's format: the final, the edit checks)
   3. awl-record        (X10: deliverables, README row, result.json)
   With QC fixes `off` every image is made once and nothing is redone: the edit is still built and its facts recorded; result.json
   `qc` = "off: not checked (the user reviews at the end)".

@@ -41,10 +41,12 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     - Create and Free `create` (item 35): `RUN/deliverables/video-NN-take-K.mp4`, every take conformed and untouched by the edit (the
       clean originals); the clean deliverable is the edit's main track cut together without text (`capcut-assembly.md` §6), and the
       README row lists what is to be applied in CapCut by hand (reverse playback, an effect from CapCut's library) when no tool placed it.
-  - **Static** (item 36): the CapCut project is the editable master; `RUN/deliverables/video-NN-clean.mp4` and `video-NN-preview.mp4`
-    are the local render (`T slideshow render`; the preview is the complete video with its captions). The README row lists the images
+  - **Static** (item 36): the CapCut project is the final (the user exports it from CapCut at the format's export size,
+    `state.json → static.format.export`, 30 fps); `RUN/deliverables/video-NN-clean.mp4` and `video-NN-preview.mp4` are the local check
+    copies (`T slideshow render`; the preview is the complete video with its captions). The README row lists the format (export size, image
+    size, quality), the images
     (`60-outputs/video-NN/images/`, api or user), the narration (`30-assets/narration/video-NN.wav`), the bed or none and, with images by
-    the user, the prompts file; `result.json` adds `static`: {images (count, source api|user, re-draws), cost_usd_estimate (the sum of
+    the user, the prompts file; `result.json` adds `static`: {format, images (count, source api|user, re-draws), cost_usd_estimate (the sum of
     the image calls), narration_s, voice sample, lines made again, bed}. No Higgsfield job, credit or flag fields.
   - Append a row to `RUN/deliverables/README.md` (an agent writes it to
     `60-outputs/video-NN/readme-row.md` and the main session appends it as the agent reports, A9b): direction, model, params, prompt file, assets, job

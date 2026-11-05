@@ -31,7 +31,8 @@ In Edit Mode the file paths point into `<given path>/final/`; state that folder 
 In Analyze Mode the table also names each video's **CapCut project**:
 - First assemble any projects still pending. If CapCut is running, ask the user once to close it
   (a blocker, not a permission), then assemble them.
-- Then say: "open CapCut → the projects are listed by name → review → Export".
+- Then say: "open CapCut → the projects are listed by name → review → Export". Static: each at its format's export size
+  (`state.json → static.format.export`, 30 fps); that export is the final.
 Then give:
 - the total credits used (`transactions` / `balance`);
 - the run folder (keep it: the CapCut projects use its files);

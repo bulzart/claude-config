@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (2.5 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (1.3 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (2.8 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (1.5 KB)
 - *the plan has characters:*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - *the style lock is illustrated, painted or cartoon:*
@@ -31,7 +31,8 @@ Only these section files for this phase, nothing else unless a step below says s
 2. **Every image of the plan** (the agent, in order): its prompt file `RUN/40-briefs/video-NN-iKK-prompt.txt` (the plan's prompt, the
    style lock, §5's composition, who is who when a reference image rides along), then
    `T image generate --run RUN --video NN --image K --prompt-file RUN/40-briefs/video-NN-iKK-prompt.txt [--ref <photo or anchor> …]` (the
-   photo or anchor of each character it shows; at most 16).
+   photo or anchor of each character it shows; at most 16). The size and quality are the run's format (`state.json → static.format`);
+   never another size.
 3. **View the image** (Read the file) and check it (static §8). A failure, by QC fixes: `auto` change the prompt or the references by the
    diagnosis and draw again (`--again` only when nothing but the draw changes), at most two re-draws per image, then the best one,
    flagged; `ask` the proposal and stop (the contract's QC fixes rule, blocker `qc_fix_permission`); `off` keep it, noted.
@@ -44,7 +45,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 1. **The prompts**, after S2 for every video: the plans' prompts written as step 2 says (the characters' sheet prompts first), then
    `T image prompts --run RUN` → `RUN/deliverables/prompts/video-NN-image-prompts.md`. Tell the user in one message: the files, the
-   names `vNN-iKK` (and `C1-sheet` for a character sheet they make first), the size, one folder for everything, and "send me the folder's
+   names `vNN-iKK` (and `C1-sheet` for a character sheet they make first), the format's aspect and size, one folder for everything, and "send me the folder's
    path". `T state --run RUN set static.waiting=images`, then stop and wait.
 2. **The folder** (their reply, or `resume` with a path): `T image intake --run RUN --folder "<path>"`. Missing images: tell the user which
    and wait (the same intake again later). Files it cannot match by name: show them and ask how they map; never guess.

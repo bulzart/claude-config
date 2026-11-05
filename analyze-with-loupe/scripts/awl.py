@@ -7852,7 +7852,9 @@ def _static_format_set(a):
     if q and q not in quals:
         fail(f"--quality is one of {', '.join(quals)}", 2)
     fmt = {"aspect": a.aspect, "res": int(a.res or 1080), "export": f"{ew}x{eh}", "image_size": f"{iw}x{ih}", "quality": q,
-           "preview": fs["preview"], "move_margin": margin, "image_aspect_off": _aspect_of(iw, ih)[1] if _aspect_of(iw, ih)[0] == a.aspect else None,
+           "preview": fs["preview"], "move_margin": margin,
+           "image_aspect_off": round(abs(iw / ih - STATIC_ASPECTS[a.aspect][0] / STATIC_ASPECTS[a.aspect][1])
+                                     / (STATIC_ASPECTS[a.aspect][0] / STATIC_ASPECTS[a.aspect][1]), 3),
            "image_experimental": facts["experimental"], "set_at": now_iso()}
     _state_set(rd, **{"static.format": fmt})
     out({"ok": True, "format": fmt, "note": "the images (API or prompts file), the CapCut canvas (`T capcut-prep --canvas`) and the check render "

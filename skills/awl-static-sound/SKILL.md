@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (1.6 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (1.3 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (2.6 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (1.5 KB)
 
 The main session runs S2 for every video, one at a time (one model on the GPU; the toolkit's lock holds a second one back), before any
 production agent starts (`awl-analyze-produce` A9s).
@@ -22,6 +22,8 @@ production agent starts (`awl-analyze-produce` A9s).
 ## Step S2 (per video)
 
 1. `T tts say --run RUN --video NN` → `RUN/30-assets/narration/video-NN.wav`, its sidecar (each line's start and end) and the loudness.
+   **Strong lines** (static §4, §6): read `voice_match`; a strong line apart from the cloned lines' numbers is made again with another seed
+   (the line's `seed` in `video-NN-narration.json`, then `--only N`), at most twice, then as a cloned line (`strong` false), noted.
 2. `T narration-words --run RUN --video NN` → the timed words, `video-NN.cues.json`, `video-NN.srt`, and per line what was heard
    against the script. Judge every line it lists (`lines_to_check`) from its missing, extra and repeated words: a wrong line is made again
    with `T tts say --run RUN --video NN --only N`, then `narration-words` again; at most twice per line, then it stays and the brief notes it
@@ -42,7 +44,8 @@ facts of the setup, static §9).
 
 ## Never (this phase)
 
-- Never change the run's voice between videos or make a line in another voice.
+- Never change the run's voice between videos or make a line in another voice (a strong line is the run's voice description by the
+  design model, static §6).
 - Never call ElevenLabs or Higgsfield for a Static voice or bed.
 - Never stretch or speed a narration to fit a length: rewrite the lines.
 
