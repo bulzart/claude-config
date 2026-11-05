@@ -5,11 +5,12 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 6df6fb40-e7ad-4b91-b765-6c6c020da849
-  modified: 2026-11-05T11:37:36.303Z
+  modified: 2026-11-05T12:18:03.273Z
 ---
 
 Set up 2026-11-05 (user: "install that tooling here too and anything else needed for the pipeline to work correctly as intended"). `awl.py doctor` all green; `awl.py static check` ready except the OpenAI key (the user sets it).
 - Tooling Python `C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe` 3.12.10: pypdf, Pillow, numpy, requests, librosa, rapidocr-onnxruntime, faster-whisper 1.2.1 with ctranslate2 4.8.5 and **av 18.1.0: keep `av<19`** (PyAV 19 removed `metadata_errors`, which faster-whisper 1.2.1 still passes to `av.open`, so every transcription failed). setuptools 80.10.2 stays from the old ctranslate2. Whisper models small, base, tiny cached in the HF cache.
+- **No pip-system-certs in Python312** (removed 2026-11-05): its `.pth` imported pip's network code at every Python start (~2.7 s), which slowed every Claude Code hook (all run on Python312) and failed t03's 3.5 s `loupe ensure` timing check. Replaced by `site-packages\_truststore_lazy.py` + `truststore_lazy.pth`: truststore is injected right after the first import of requests, urllib3, httpx or aiohttp (requests through Avast needs it: SSLCertVerificationError without). A bare start is 0.08 s, `awl.py --help` 0.31 s. pip 25 and huggingface_hub 2.4 need nothing.
 - CapCut template `_analyze-stack-template` built here with capcut-cli (`init --ratio 9:16`, which seeded the CapCut 9.7 skeleton from the user's empty draft `1105`; two 2 s clips, a tone and a text in its own `assets\`; registered). Never delete or edit it. A scratch run of the whole CapCut path passed (clone empty, capcut-prep, add video, image, audio and text, save, capcut-repair with preview).
 - Loupe's keeper needs a real `claude.exe` first on PATH. The npm `claude.cmd` shim goes through cmd.exe, which caps a command at 8191 characters; the keeper's command is ~21 000 (its role text), so it failed with "The command line is too long" and the picture readings with "The system cannot find the file specified". Fix: the user PATH has `C:\Users\Bulzart\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\bin` right before `...\AppData\Roaming\npm`. 22/22 samples read, keeper in sync on Opus 5.5. The Loupe admin passphrase is not set yet (the user sets it on the page).
 - MCP: `ElevenLabs` re-registered as `elevenlabs` (the name the pipeline's tools use) with `SSLKEYLOGFILE=""`. Its stored API key is refused ("Invalid API key"): the user must put in a valid one.
