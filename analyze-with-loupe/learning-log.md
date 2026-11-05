@@ -900,3 +900,19 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   image calls sending its size and quality, the prompts file's "vertical 9:16, 1216x2160", intake's `off_aspect`, the timeline's check
   and export sizes, a 16:9 check render at 1280×720, `capcut-prep --canvas 1920x1080` labelled 16:9, a strong line made by the design
   model with seed 1107 and every line's pitch and timbre); t03 71, t05 73; rehearsal 221/221.
+
+## 2026-11-05 · Static: the text look is the references' own (no house size or preset)
+
+- **Asked (the user):** "the agents are free to chose any font preset,size,color and family or whatever they like while editing the video and are not constrained like we do with recreate for example where the font size is 10,11 and the preset is set also, the thing is that everything is data driven (from the references) and nothing is predefined".
+- **Changed:** static §1 reads every text's look on the frames; §2's **Text look** replaces the caption pattern (the font family seen, or
+  the closest from `T capcut-font --list`, CapCut's own first; the weight; the size in CapCut's units; the fill; the outline; the
+  shadow; the box; the case; the words; the lines; the position; the highlight; the animation); §5's plan carries it per video in
+  `captions`; §7 applies it in CapCut with `capcut import-srt`'s flags, `T capcut-font` for the family, `capcut text-anim` and
+  `capcut add-text`, then `T capcut-repair --keep-text`; §8 checks it by reading the timeline back. awl-static-edit and awl-static-plan
+  follow; the router's item 6 notes the Static exception and item 36 the look. Toolkit: `capcut-font --list` (the fonts on this PC as
+  facts: CapCut's bundled ones, its downloads, Windows', the user's) and `capcut-font --draft --font-file [--track]` (the font on every
+  text or one track's, their size, colours, outline and ranges kept); `capcut-repair --keep-text`; `slideshow plan` carries the whole
+  captions block and writes the captions in upper case when the look says so; the check render burns the look (font file, the size
+  from CapCut's units, fill, outline, box, bold, shadow, animation). The video modes keep the house style.
+- **Verified:** docs_tool check 0 errors; t01 114; t02 180 (the fonts listed, a font set on the subtitle track only with its sizes and
+  colours kept, the check copy's look in its subtitle file: the colour, the fade, the upper case); t03 71, t05 73; rehearsal 221/221.

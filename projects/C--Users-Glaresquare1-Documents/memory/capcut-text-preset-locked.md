@@ -18,6 +18,10 @@ Every CapCut text layer in every /analyze-then-pick video uses the text preset t
 or change the style unless the user explicitly asks for a different preset. If a CapCut project shows another text
 style, re-apply the locked preset rather than re-learning.
 
+**Not in /analyze-with-loupe Static (user, 2026-11-05):** there the agents take the whole text look from the references
+(font, size, colours, preset-free; "everything is data driven ... and nothing is predefined"); the locked preset and the
+house size stay for every other mode.
+
 **Position (user, 2026-10-09):** every text layer is horizontally centred (posX 0); only its height follows the
 reference ("whether up, down or in the middle but in the center of the screen"). If centred text would cover the
 product, a face or an insert, move it up or down, never sideways. Logged as caught error CE-010 and written into

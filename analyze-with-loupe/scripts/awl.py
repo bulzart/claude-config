@@ -56,6 +56,7 @@ Subcommands (python awl.py <cmd> -h):
   last-frame     exact last frame of a clip as a lossless PNG: the hand-off start frame for the next clip
   capcut-name    free CapCut project name DD_Mon_YYYY_vNN for an Analyze Mode video
   capcut-prep    after capcut_clone_draft: set aside the template's identity/layout so `capcut register` rebuilds them
+  capcut-font    Static: list the fonts on this PC (CapCut's own, then Windows') | set one font on a draft's texts (nothing else)
   capcut-repair  after capcut_save: house text style + register + sync-timelines + lint (one machine-wide lock),
                  then a proxy preview
   capcut-text-style  every CapCut text layer → the user's locked house preset (config capcut.text_style.learned),
@@ -5751,7 +5752,8 @@ def cmd_capcut_repair(a):
     the media list CapCut needs, the store index), `capcut sync-timelines --nested --apply` (the nested
     timeline copy CapCut 9.x reads first) and `capcut lint`. register rewrites the store's SHARED
     root_meta_info.json, so all three run under one machine-wide lock: production agents assemble their
-    projects in parallel. --preview then renders capcut-cli's low-res proxy (outside the lock)."""
+    projects in parallel. --preview then renders capcut-cli's low-res proxy (outside the lock). --keep-text leaves every text as it is
+    (Static: the text look is the references', never the house style)."""
     d = Path(a.draft)
     if not (d / "draft_content.json").is_file():
         fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
@@ -5761,7 +5763,8 @@ def cmd_capcut_repair(a):
              "action": "CapCut is running: close it and run this again (nothing was changed)"}, 1)
     lock = Path(cfg_get("runs_root", str(Path(__file__).resolve().parent.parent / "runs"))) / ".capcut-store.lock"
     lock.parent.mkdir(parents=True, exist_ok=True)
-    steps = [{"step": "text-style", "exit": 0, "result": _text_style_pass(d, write=True)}]   # before sync-timelines
+    steps = ([{"step": "text-style", "exit": 0, "result": "kept: the draft's own text look (--keep-text)"}] if getattr(a, "keep_text", False)
+             else [{"step": "text-style", "exit": 0, "result": _text_style_pass(d, write=True)}])   # before sync-timelines
     with FileLock(lock, timeout=900):
         for name, args in (("register", ["register", str(d), "--apply", "--materials"]),
                            ("sync-timelines", ["sync-timelines", str(d), "--nested", "--apply"]),
@@ -5784,6 +5787,100 @@ def cmd_capcut_repair(a):
         res["preview"] = {"exit": cp.returncode, "file": a.preview if cp.returncode == 0 else None,
                           "result": _last_json(cp.stdout), "stderr": (cp.stderr or "").strip()[-400:]}
     out(res, 0 if ok else 1)
+
+
+def _font_files() -> list:
+    """Font files on this PC the edit can use, as facts: CapCut's own (bundled with the newest app, then the ones it downloaded), then
+    Windows' and the user's. One row per family and style (the first file found), never a judgement of which fits."""
+    la = Path(os.environ.get("LOCALAPPDATA", ""))
+    apps = []
+    for p in (la / "CapCut" / "Apps").glob("*"):
+        try:
+            apps.append((tuple(int(x) for x in p.name.split(".")), p))
+        except ValueError:
+            continue
+    roots = ([("capcut", max(apps)[1] / "Resources" / "Font")] if apps else []) + [
+        ("capcut-downloaded", la / "CapCut" / "User Data" / "Cache"),
+        ("windows", Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"),
+        ("user", la / "Microsoft" / "Windows" / "Fonts")]
+    try:
+        from PIL import ImageFont
+    except ImportError:
+        return []
+    seen, rows = set(), []
+    for src, root in roots:
+        if not root.is_dir():
+            continue
+        for f in sorted(root.rglob("*")):
+            if f.suffix.lower() not in (".ttf", ".otf", ".ttc") or "__MACOSX" in f.parts or f.name.startswith("._"):
+                continue
+            try:
+                fam, sty = ImageFont.truetype(str(f), 20).getname()
+            except Exception:  # noqa: BLE001
+                continue
+            key = (str(fam).lower(), str(sty).lower())
+            if key not in seen:
+                seen.add(key)
+                rows.append({"family": fam, "style": sty, "file": str(f).replace("\\", "/"), "source": src})
+    return rows
+
+
+def cmd_capcut_font(a):
+    """Static (contract item 36): --list the fonts on this PC (CapCut's own first), or set one font file on every text of a draft (or of
+    one track), the text's own size, colours, outline, box and ranges kept: the font family capcut-cli's text flags cannot set."""
+    if a.list:
+        rows = _font_files()
+        if a.family:
+            rows = [r for r in rows if a.family.lower() in str(r["family"]).lower()]
+        out({"ok": True, "count": len(rows), "fonts": rows,
+             "note": "CapCut draws its own fonts (capcut, capcut-downloaded) for sure; a Windows font is used when CapCut finds it"})
+    if not a.draft or not a.font_file:
+        fail("capcut-font needs --list, or --draft and --font-file", 2)
+    d, ff = Path(a.draft), Path(a.font_file)
+    if not (d / "draft_content.json").is_file():
+        fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
+    if not ff.is_file():
+        fail(f"font file not found: {ff}", 2)
+    if (d / ".locked").exists() or _capcut_running():
+        fail("CapCut is running: close it, then run this again", 3)
+    try:
+        from PIL import ImageFont
+        family = ImageFont.truetype(str(ff), 20).getname()[0]
+    except Exception:  # noqa: BLE001
+        family = ff.stem
+    font = str(ff).replace("\\", "/")
+    files, names = [], set()
+    for p in _draft_contents(d):
+        content = json.loads(p.read_text(encoding="utf-8"))
+        tracks = content.get("tracks", [])
+        names.update(str(tr.get("name") or "") for tr in tracks if tr.get("type") == "text")
+        ids = None
+        if a.track:
+            ids = {seg.get("material_id") for tr in tracks if str(tr.get("name") or "") == a.track for seg in tr.get("segments", [])}
+        n = 0
+        for m in content.get("materials", {}).get("texts", []):
+            if ids is not None and m.get("id") not in ids:
+                continue
+            m.update({"font_name": "", "font_title": "none", "font_id": "", "font_resource_id": "", "font_category_id": "",
+                      "font_category_name": "", "font_source_platform": 0, "font_team_id": "", "font_url": "", "fonts": [],
+                      "font_path": font})
+            try:
+                c = json.loads(m.get("content") or "{}")
+            except Exception:  # noqa: BLE001
+                c = {}
+            for s in c.get("styles") or []:
+                s["font"] = {"id": "", "path": font}
+            if c:
+                m["content"] = json.dumps(c, ensure_ascii=False, separators=(",", ":"))
+            n += 1
+        if n:
+            shutil.copyfile(p, p.with_name(p.name + ".font.bak"))
+            write_text(p, json.dumps(content, ensure_ascii=False))
+        files.append({"file": str(p), "texts_set": n})
+    if a.track and not any(f["texts_set"] for f in files):
+        fail(f"no text on a track named {a.track!r}; the draft's text tracks: {sorted(names)}", 2)
+    out({"ok": True, "draft": str(d), "font": font, "family": family, "track": a.track, "files": files,
+         "note": "then capcut_save is not needed (the file is written); run `T capcut-repair --draft ... --keep-text` after the last save"})
 
 
 # --------------------------------------------------------------------------- CapCut house text style
@@ -7927,7 +8024,7 @@ def _slideshow_plan(a):
           "export": _static_fmt(_st).get("export"), "fps": int(_scfg("render.fps", 30)),
           "narration": side["file"], "narration_offset": lead, "duration_s": total,
           "music": {"file": str(music), "gain": float(plan.get("music_gain", _scfg("music.gain", 0.22)))} if music.is_file() and plan.get("music", True) else None,
-          "captions": {"y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3)))},
+          "captions": {**cap, "y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3)))},
           "images": rows, "made": now_iso()}
     tlp = rd / "40-briefs" / f"video-{nn}-timeline.json"
     write_json(tlp, tl)
@@ -7935,7 +8032,9 @@ def _slideshow_plan(a):
         cues = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         cues = []
-    shifted = [{**c, "start": round(c["start"] + lead, 3), "end": round(c["end"] + lead, 3)} for c in cues]
+    upper = str(cap.get("case") or "").lower() == "upper"
+    shifted = [{**c, "start": round(c["start"] + lead, 3), "end": round(c["end"] + lead, 3), "text": str(c["text"]).upper() if upper else c["text"]}
+               for c in cues]
     od = rd / "60-outputs" / f"video-{nn}"
     write_json(od / "captions.json", shifted)
     srt = []
@@ -7954,6 +8053,29 @@ def _zoompan(motion: str, amount: float, n: int) -> str:
     x = {"pan-right": f"(iw-iw/zoom)*on/{N}", "pan-left": f"(iw-iw/zoom)*(1-on/{N})"}.get(motion, cx)
     y = {"pan-down": f"(ih-ih/zoom)*on/{N}", "pan-up": f"(ih-ih/zoom)*(1-on/{N})"}.get(motion, cy)
     return f"z='{z}':x='{x}':y='{y}'"
+
+
+def _static_caption_look(cap: dict, W: int) -> dict:
+    """The references' caption look (the plan's captions block, static §2) for the check copy's burn: CapCut's size turned into pixels of
+    this render (CAPCUT_FONT_PER_SIZE x size x width), the fill, the outline, the box, the font file. Empty: the house look stays."""
+    look = {}
+    if cap.get("font_file") and Path(str(cap["font_file"])).is_file():
+        look["font_file"] = str(cap["font_file"])
+    if cap.get("size"):
+        look["size"] = max(8, int(round(CAPCUT_FONT_PER_SIZE * float(cap["size"]) * W)))
+    if cap.get("fill"):
+        look["primary"] = cap["fill"]
+    if cap.get("stroke_color"):
+        look["outline"] = cap["stroke_color"]
+    if cap.get("stroke_width") is not None:
+        look["outline_width"] = max(0, int(round(float(cap["stroke_width"]) * look.get("size", 40))))
+    if cap.get("box_color"):
+        look.update({"box": True, "box_color": cap["box_color"], "box_alpha": float(cap.get("box_alpha", 0.6))})
+    if cap.get("bold") is not None:
+        look["bold"] = bool(cap["bold"])
+    if cap.get("shadow") is not None:
+        look["shadow"] = 2 if cap["shadow"] else 0
+    return look
 
 
 def _slideshow_render(a):
@@ -8030,8 +8152,14 @@ def _slideshow_render(a):
         except (OSError, ValueError):
             cues = []
         if cues:
-            y = float((tl.get("captions") or {}).get("y_rel", 0.72))
+            capl = tl.get("captions") or {}
+            y = float(capl.get("y_rel", 0.72))
             spec = {"events": [{"start": c["start"], "end": c["end"], "text": c["text"], "preset": "caption", "pos": [0.5, y]} for c in cues]}
+            look = _static_caption_look(capl, W)
+            if look:
+                spec["style"] = look
+            if "animation" in capl:
+                spec["animation"] = {"pop-up": "pop", "pop": "pop", "fade-in": "fade", "fade": "fade"}.get(str(capl.get("animation") or "").lower(), "none")
             (work / "fonts").mkdir(exist_ok=True)
             (work / "captions.ass").write_text(build_ass(spec, W, H, work / "fonts"), encoding="utf-8")
             prev = dl / f"video-{nn}-preview.mp4"
@@ -8449,11 +8577,19 @@ def main():
     p.add_argument("--date", help="YYYY-MM-DD (default: today)"); p.add_argument("--store", help="CapCut drafts dir")
     p.set_defaults(fn=cmd_capcut_name)
 
+    p = sp.add_parser("capcut-font", help="Static: --list the fonts on this PC (CapCut's own first) | set one font file on a draft's texts")
+    p.add_argument("--list", action="store_true", help="list the font files (family, style, file, source)")
+    p.add_argument("--family", help="list: only families containing this")
+    p.add_argument("--draft", help="the CapCut draft folder"); p.add_argument("--font-file", help="the font file (from --list)")
+    p.add_argument("--track", help="only the texts on the track with this name (e.g. subtitle, the import-srt default)")
+    p.set_defaults(fn=cmd_capcut_font)
+
     p = sp.add_parser("capcut-prep"); p.add_argument("--draft", required=True, help="the freshly cloned draft folder")
     p.add_argument("--canvas", help="WxH: the project's canvas (Static: state.json -> static.format.export); default: the template's")
     p.set_defaults(fn=cmd_capcut_prep)
 
     p = sp.add_parser("capcut-repair"); p.add_argument("--draft", required=True)
+    p.add_argument("--keep-text", action="store_true", help="leave every text as it is (Static: the references' look, never the house style)")
     p.add_argument("--preview", help="also render capcut-cli's proxy preview to this .mp4")
     p.set_defaults(fn=cmd_capcut_repair)
 

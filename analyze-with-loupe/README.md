@@ -313,7 +313,10 @@ without the move margin; `T static format` stores it in `state.json → static.f
 --canvas`) and the check render follow it). At 1080 on the short side the images are 1216×2160 (vertical), so the export stays sharp through a 12 %
 zoom. **Strong lines**: a line marked `strong` is made by the VoiceDesign model from the run's voice description plus its delivery, with the picked
 sample's seed, only at the references' peaks; the sidecar measures every line's pitch and timbre against the run's voice and a strong line apart from
-the cloned ones is made again or cloned (`reference/static.md` §4, §6). No
+the cloned ones is made again or cloned (`reference/static.md` §4, §6). **The text look** is the references' (the user: "everything is data
+driven (from the references) and nothing is predefined"): font, size, colours, outline, box, case, highlight and animation come from the spec;
+`capcut import-srt` takes them as flags, `T capcut-font` sets the font family (`--list` gives the fonts on the PC, CapCut's own first), and
+`T capcut-repair --keep-text` never applies the house style; the check copy burns the same look. No
 Higgsfield and no Loupe anywhere in Static; the product appears only when the assets hold one. Its agents get production-agents §2s's prompt (`T contract`
 picks it). Settings: `config.json → static`.
 

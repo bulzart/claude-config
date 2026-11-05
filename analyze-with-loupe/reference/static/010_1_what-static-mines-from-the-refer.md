@@ -13,7 +13,9 @@ transcript shows the telling. For every reference, collect as facts with times:
   illustrated, archival, cartoon), the framing (faces, wide scenes, objects, text cards), how a still moves (zoom in or out, a pan, none;
   from the change between the 1 fps frames inside one shot), the transitions (cut, fade, flash), and the effects on top (grain, vignette,
   light leaks, glitches) as the frames show them.
-- **The captions**: on screen or not; words at once; where they sit (`ocr.json` rows); upper case or not; a highlighted word; as facts.
+- **The text on screen** (the captions and any other text): on screen or not; words at once; where it sits (`ocr.json` rows); its look,
+  read on the frames: the font (the family as seen, the weight), the size against the frame, the fill, the outline, the shadow, a box,
+  upper case or not, the highlighted words and their colour, how it appears (pops, fades, types on); as facts.
 - **The sound**: the voice as numbers (`T audio-profile --voice`: pitch, its spread, words per minute, pauses) and as heard words in the
   transcript (gender and age as the voice suggests them are [I]); a music bed or none (the harmonic share outside speech, tempo, the
   energy arc); sound effects on cuts (hits on cuts).

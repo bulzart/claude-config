@@ -15,7 +15,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.1 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (2.0 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (2.8 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (3.2 KB)
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (2.6 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
@@ -48,7 +48,8 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    final.
 7. **Image plans** (static §5), per video: `RUN/40-briefs/video-NN-images.json`: the characters (photo, or the sheet prompt of one with
    none), one image per stretch of lines (`from_line`), every prompt with the spec's style lock word for word and §5's composition, the
-   motion and transition per the spec, the captions' band. The count follows the spec's seconds per still at the script's length; the
+   motion and transition per the spec, the `captions` block: the spec's text look (static §2: font file, size, colours, outline, box,
+   case, highlight, animation) with this video's highlighted words. The count follows the spec's seconds per still at the script's length; the
    narration's real timing settles it in S2.
 8. **The bed:** only when the spec says the references use one: `RUN/40-briefs/music.json`, one track per video (static §6; the duration
    is set in S2 once the narration exists).

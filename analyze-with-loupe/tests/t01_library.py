@@ -233,6 +233,12 @@ check("T static formats --run RUN" in _a5t and 'header "Format"' in _a5t and "(R
 check('"strong": true' in _s4t and "never two in a row" in _s4t and "**Strong lines**" in _s6t and "timbre_sim" in _s6t
       and "voice_match" in rd(SKD / "awl-static-sound" / "SKILL.md"),
       "strong lines: the voice-design model at the references' peaks only, measured against the run's voice, made again or cloned when apart")
+# Static's text look is the references' (the user, 2026-11-05: "everything is data driven (from the references) and nothing is predefined")
+_se = rd(SKD / "awl-static-edit" / "SKILL.md")
+check("**Text look**" in _s2t and "never the house text style" in _s2t and "--keep-text" in _se and "T capcut-font --draft" in _se
+      and "capcut-text-style --draft" not in _se and "**No house text style in Static**" in _s7t
+      and "Static: the references' own text look, item 36" in rd(HOME / "commands" / "analyze-with-loupe.md"),
+      "Static takes the text look from the references (font, size, colours): capcut-cli's flags, T capcut-font, capcut-repair --keep-text, no house style")
 # a source at most 0.4 s over the maximum is one generation of its first <maximum> seconds (the user, run 20261104-225639-04)
 check("at most 0.4 s over the maximum" in _gs31 and "At most 0.4 s over the maximum" in rd(SKD / "awl-recreate-plan" / "SKILL.md")
       and "`T trim --end <maximum>`" in rd(SKD / "awl-recreate-plan" / "SKILL.md")

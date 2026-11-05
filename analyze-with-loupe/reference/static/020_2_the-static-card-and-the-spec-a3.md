@@ -10,7 +10,11 @@ what makes it work (one paragraph, [I]). Every speech field reads from the trans
 - **Seconds per still**: the median and the range the references use; when a still changes (on a new line, on a reveal, mid-line).
 - **Style lock**: one sentence every image prompt of the run carries (the medium, the light, the palette, the grain, the era), from what
   the references share; a reference set that mixes styles gives the most common one, or the user's choice when the plan asks.
-- **Caption pattern**: words at once, height (y_rel), case, a highlight or none.
+- **Text look** (the user, 2026-11-05: "the agents are free to chose any font preset, size, color and family or whatever they like while editing the video and are not constrained like we do with recreate"; "everything is data driven (from the references) and nothing is predefined"; never the house text style of the video modes): for the captions and any other text the
+  references show, the font (the family seen, or the closest from `T capcut-font --list`, CapCut's own fonts first), the weight, the
+  size in CapCut's units for the export canvas (from the text's height on the frames), the fill, the outline (colour, width), the
+  shadow, the box, the case, the words at once, the lines, the position (y_rel, alignment), the highlight (colour, size, which words),
+  the animation (pop-up, fade-in, typewriter …). A set that mixes looks gives the most common one.
 - **Motion and transitions**: which moves and how strong, which transitions, which effects on top.
 - **Voice profile**: the numbers of §1 and the delivery in words; the three sample voices are written from it (§6).
 - **Bed**: yes (mood, genre, instruments, tempo, level under the voice) or no, from the references' sound.
