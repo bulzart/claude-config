@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (2.8 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (1.5 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (3.2 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (1.6 KB)
 - *the plan has characters:*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - *the style lock is illustrated, painted or cartoon:*

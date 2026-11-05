@@ -949,6 +949,42 @@ js, _ = ts("capcut-prep", "--draft", str(_dd), "--canvas", "1920x1080")
 _cc = json.loads((_dd / "draft_content.json").read_text(encoding="utf-8"))["canvas_config"]
 check(_cc == {"ratio": "16:9", "width": 1920, "height": 1080, "background": None} and (js.get("canvas") or {}).get("ratio") == "16:9",
       "capcut-prep --canvas sets the project's canvas to the format's export size, labelled as capcut-cli labels it")
+# the text look is the references' (the user, 2026-11-05): the fonts on this PC, one font set on a draft's track, the check copy's look
+js, _ = ts("capcut-font", "--list")
+_fonts = js.get("fonts") or []
+check(js.get("ok") and js.get("count") == len(_fonts) and all({"family", "style", "file", "source"} <= set(f) for f in _fonts[:5]),
+      f"capcut-font --list gives the fonts on this PC as facts ({js.get('count')} found)")
+if not _fonts:
+    print("SKIP  capcut-font and the look's burn: no font file found on this machine")
+else:
+    _ff = next((f["file"] for f in _fonts if f["source"] == "capcut"), _fonts[0]["file"])
+    _td = home.parent / "Draft_font"
+    _td.mkdir(exist_ok=True)
+    (_td / "draft_content.json").write_text(json.dumps({"id": "TL-2", "name": "Draft_font", "materials": {"texts": [
+        {"id": "A", "font_size": 12.0, "font_path": "x.ttf", "content": json.dumps({"text": "ONE TWO", "styles": [
+            {"range": [0, 7], "size": 12.0, "fill": {"content": {"solid": {"color": [1, 0.88, 0.3]}}}}]})},
+        {"id": "B", "font_size": 9.0, "font_path": "x.ttf", "content": json.dumps({"text": "title", "styles": [{"range": [0, 5], "size": 9.0}]})}]},
+        "tracks": [{"type": "text", "name": "subtitle", "segments": [{"material_id": "A"}]},
+                   {"type": "text", "name": "text", "segments": [{"material_id": "B"}]}]}), encoding="utf-8")
+    js, code, _ = t("capcut-font", "--draft", str(_td), "--font-file", _ff, "--track", "subtitle", env=SENV, ok=False)
+    if code == 3:
+        print("SKIP  capcut-font on a draft: CapCut is running on this machine")
+    else:
+        _m = {m["id"]: m for m in json.loads((_td / "draft_content.json").read_text(encoding="utf-8"))["materials"]["texts"]}
+        _sa = json.loads(_m["A"]["content"])["styles"][0]
+        check(code == 0 and _m["A"]["font_path"] == _ff and _sa["font"]["path"] == _ff and _sa["size"] == 12.0 and "fill" in _sa
+              and _m["A"]["font_size"] == 12.0 and _m["B"]["font_path"] == "x.ttf",
+              "capcut-font sets the font on the named track's texts only, their size and colours kept")
+    _plan2 = {**_plan, "captions": {"y_rel": 0.7, "words": 3, "font_file": _ff, "size": 12, "fill": "#FFE14D", "stroke_color": "#101010",
+                                    "stroke_width": 0.1, "case": "upper", "animation": "fade-in"}}
+    (SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan2), encoding="utf-8")
+    ts("slideshow", "plan", "--run", str(SR), "--video", "01")
+    _cue_lines = [ln for ln in (SR / "60-outputs" / "video-01" / "captions.srt").read_text(encoding="utf-8").splitlines()
+                  if ln.strip() and not ln.strip().isdigit() and "-->" not in ln]
+    js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01")
+    _ass = (SR / "60-outputs" / "video-01" / "render" / "captions.ass").read_text(encoding="utf-8")
+    check(js.get("ok") and _cue_lines and all(ln == ln.upper() for ln in _cue_lines) and "&H004DE1FF" in _ass and "\\fad(" in _ass,
+          "the check copy burns the references' look (the plan's font, colour, upper case and animation), the captions file in upper case")
 js, _ = ts("contract", "--run", str(SR))
 _ct = Path(js["file"]).read_text(encoding="utf-8")
 check("Analyze Mode, static" in _ct and "Images: api" in _ct and "QC fixes: auto" in _ct and "awl-static-edit" in _ct and not js.get("unresolved_placeholders")

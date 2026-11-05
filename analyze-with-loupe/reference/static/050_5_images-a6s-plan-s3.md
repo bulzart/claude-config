@@ -1,10 +1,13 @@
 ## 5 Images (A6s plan, S3)
 
 **The image plan** `40-briefs/video-NN-images.json`: `{"video": "NN", "transition": "fade", "music": true,
-"captions": {"y_rel": 0.72, "words": 3}, "characters": [{"id": "C1", "name": "…", "photo": "<path or null>", "sheet_prompt": "<when no
+"captions": {"y_rel": 0.72, "words": 3, "font_file": "<a file from T capcut-font --list>", "size": 12, "fill": "#FFFFFF",
+"stroke_color": "#000000", "stroke_width": 0.08, "shadow": false, "box_color": null, "bold": true, "case": "upper", "highlight_color":
+"#FFE14D", "highlight_words": ["…"], "animation": "pop-up"}, "characters": [{"id": "C1", "name": "…", "photo": "<path or null>", "sheet_prompt": "<when no
 photo>"}], "images": [{"image": 1, "from_line": 1, "prompt": "…", "characters": ["C1"], "motion": "zoom-in", "transition": "cut",
 "line": "<the words over it>"}, …]}`. The size and quality are the run's format (`state.json → static.format`, picked at A5, §2); a
-plan's own `"size"` changes it for that video only.
+plan's own `"size"` changes it for that video only. `captions` is the spec's text look (§2) with this video's highlighted words: the CapCut
+project and the check copy both take it.
 
 - **Count and cuts**: an image starts on a narration line (`from_line`); the spec's seconds per still decide how many lines one image
   covers. A reveal, a new place or a new person starts a new image. After the narration exists, `T slideshow plan` gives every image's
