@@ -873,3 +873,30 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Glaresqua
   reference, so that one number still comes from the model's guide, labelled `guide §2.2`.
 - **Verified:** t01 (the rule's words in §3b.1 and both skills; the limits recorded at E4 and refreshed at A8; the 0.4 s margin in
   item 7, A6r, E5 and X1; the record at A9's start for a resumed run), docs_tool check 0 errors.
+
+## 2026-11-05 · Static: the format the user picks (the CapCut export is the final) and strong lines by the voice-design model
+
+- **Asked (the user):** "export it as the final, but the images used quality depends on the users pick, make sure to suggest the most
+  correct size first along with options"; "let me ask about the quality but make sure to recommend whats the most optimal for our video
+  reference such as 16:9 720p or 1080p or whatever is the right version and also other options i could choose too"; "make strong lines with
+  the voice-design model instead, though the voice may shift slightly from line to line, but make sure to use it optimally and not make big
+  strong emotion changes unexpectedly, but yeah make room for it".
+- **Changed:** A5 asks the format with the count (header Format, static §2). `T static formats` gives the facts: the references' sizes and
+  aspects, and per aspect and resolution the export, the image size with the move margin, the one without, the check size, and whether the
+  image API takes each (OpenAI's documented size rules, `config.json → static.images.limits`). The best fit comes first, marked
+  Recommended (the references' main aspect at 1080, quality high); `T static format` stores `state.json → static.format` and refuses a size
+  the API does not take. `image generate` and `image prompts` take the run's size and quality; `image intake` measures each image against
+  the run's aspect (`off_aspect`); the check render takes the format's check size; `capcut-prep --canvas` sets the project's canvas;
+  awl-static-edit, awl-record and awl-wrapup say the CapCut export at the format's size is the final (no tool exports a CapCut project, so
+  the user does). Strong lines: a narration line with `strong` and `delivery` is made by the VoiceDesign model from the run's voice
+  description plus that delivery, with the picked sample's seed (`tts design` gives each sample a seed, `tts voice` keeps it, the worker
+  seeds every random source). The sidecar measures every line's pitch (semitones from the run's voice) and timbre similarity (MFCC
+  cosine), and `voice_match` gives the cloned lines' spread. Static §4 keeps strong lines to the references' peaks (at most one in five,
+  never two in a row, led in and out); one apart from the cloned lines is made again with another seed, at most twice, then cloned.
+- **Found:** at 1080 on the short side, a 1088×1920 image is upscaled about 11 % at the end of a 12 % zoom, so the recommended 9:16 size
+  is 1216×2160 (each edge times 1.12, up to a multiple of 16; inside the API's standard range, not "experimental"). A 720×720 square is
+  under the API's minimum pixels (refused; its margin size 816×816 is fine).
+- **Verified:** docs_tool check 0 errors; t01 113; t02 177 (the formats facts from an inventory, a refused size, the stored pick, the
+  image calls sending its size and quality, the prompts file's "vertical 9:16, 1216x2160", intake's `off_aspect`, the timeline's check
+  and export sizes, a 16:9 check render at 1280×720, `capcut-prep --canvas 1920x1080` labelled 16:9, a strong line made by the design
+  model with seed 1107 and every line's pitch and timbre); t03 71, t05 73; rehearsal 221/221.
