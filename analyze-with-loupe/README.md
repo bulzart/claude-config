@@ -317,10 +317,12 @@ the cloned ones is made again or cloned (`reference/static.md` §4, §6). No
 Higgsfield and no Loupe anywhere in Static; the product appears only when the assets hold one. Its agents get production-agents §2s's prompt (`T contract`
 picks it). Settings: `config.json → static`.
 
-**The Static PC** (`reference/static.md` §9; `T static check` reports each part): Qwen3-TTS in its own environment (Python 3.12, CUDA torch, `pip install
--U qwen-tts`, sdpa attention) named by the user variable `AWL_TTS_PYTHON` (and `AWL_TTS_DEVICE` when not `cuda:0`); ACE-Step 1.5 from its repository with `uv
-sync` (never `pip install ace-step`, which is v1) named by `AWL_MUSIC_PYTHON` and `AWL_MUSIC_ROOT`; `OPENAI_API_KEY` for images by the API. No key or path of
-these is in the library: they live in the PC's environment.
+**The Static PC** (`reference/static.md` §9; `T static check` reports each part): Qwen3-TTS in its own environment (Python 3.11 or 3.12, CUDA torch, `pip
+install -U qwen-tts`, sdpa attention; with `faster-qwen3-tts` installed there the worker uses it, about 8x faster, and names the engine in each answer;
+`AWL_TTS_ENGINE=qwen-tts` forces qwen-tts) named by the user variable `AWL_TTS_PYTHON` (and `AWL_TTS_DEVICE` when not `cuda:0`); ACE-Step 1.5 from its
+repository with `uv sync` (never `pip install ace-step`, which is v1) named by `AWL_MUSIC_PYTHON` and `AWL_MUSIC_ROOT`; `OPENAI_API_KEY` for images by the
+API. On a PC where loading a model can exhaust Windows' memory, the two Python variables may name a guarded `.cmd` (§9): keep it. No key or path of these
+is in the library: they live in the PC's environment.
 
 ## Recreate: the whole source in one generation when it fits (2026-11-05)
 The user: a 14 or 15 s video on a model whose maximum is 15 s is one generation, never two; split only when necessary (a change of place or ambience, other

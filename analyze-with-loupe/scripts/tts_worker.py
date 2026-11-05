@@ -16,8 +16,14 @@ Jobs (the "op" of the job file):
 The API used (QwenLM/Qwen3-TTS, qwen_tts/inference/qwen3_tts_model.py): Qwen3TTSModel.from_pretrained(id, device_map, dtype,
 attn_implementation); generate_voice_design(text, instruct, language); create_voice_clone_prompt(ref_audio, ref_text);
 generate_voice_clone(text, language, voice_clone_prompt). Each returns (list of numpy waves, sample rate 24000).
+
+The engine: when faster-qwen3-tts is installed in this environment (andimarafioti/faster-qwen3-tts: the same models and qwen_tts
+calls, the two decode loops replayed as CUDA graphs, about 8x faster) and the job runs on CUDA in bf16, it makes the audio;
+otherwise qwen-tts does. AWL_TTS_ENGINE=qwen-tts forces qwen-tts. Each answer names the engine: a seed reproduces its take only
+on the engine that made it (the graphs are captured at load, before any seed is set, so a seed gives the same take again).
 """
 import json
+import os
 import sys
 import time
 import traceback
@@ -34,11 +40,40 @@ def _dtype(name):
     return {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}.get(str(name or "bfloat16"), torch.bfloat16)
 
 
+def engine_for(dev, dt):
+    """faster-qwen3-tts on CUDA in bf16 when it is installed here (unless AWL_TTS_ENGINE=qwen-tts); qwen-tts otherwise."""
+    import torch
+    if str(os.environ.get("AWL_TTS_ENGINE") or "").strip().lower() in ("qwen-tts", "qwen_tts", "official"):
+        return "qwen-tts"
+    if not str(dev).startswith("cuda") or dt != torch.bfloat16:
+        return "qwen-tts"
+    try:
+        import faster_qwen3_tts  # noqa: F401
+    except ImportError:
+        return "qwen-tts"
+    return "faster-qwen3-tts"
+
+
+class FastModel:
+    """faster-qwen3-tts behind the three calls the ops make: the same arguments and the same (waves, sample rate) answers."""
+
+    def __init__(self, fast):
+        self.fast = fast
+
+    def generate_voice_design(self, text, instruct, language):
+        return self.fast.generate_voice_design(text=text, instruct=instruct, language=language or "auto")
+
+    def create_voice_clone_prompt(self, ref_audio, ref_text):
+        return self.fast.model.create_voice_clone_prompt(ref_audio=ref_audio, ref_text=ref_text)
+
+    def generate_voice_clone(self, text, language, voice_clone_prompt):
+        return self.fast.generate_voice_clone(text=text, language=language or "auto", voice_clone_prompt=voice_clone_prompt)
+
+
 def load(model_id, job):
     """The model on the job's device. bf16 where the GPU supports it (the model was trained in bf16); float32 otherwise, never float16
     (the maintainers: fp16 breaks the code predictor). CPU when no CUDA device is there (slow, but it runs)."""
     import torch
-    from qwen_tts import Qwen3TTSModel
     dev = str(job.get("device") or "cuda:0")
     notes = []
     if dev.startswith("cuda") and not torch.cuda.is_available():
@@ -51,12 +86,21 @@ def load(model_id, job):
     if dt == torch.float16:
         notes.append("float16 asked: float32 instead (fp16 breaks this model)")
         dt = torch.float32
-    kw = {"device_map": dev, "dtype": dt}
-    if job.get("attn"):
-        kw["attn_implementation"] = job["attn"]
+    engine = engine_for(dev, dt)
     t0 = time.time()
-    model = Qwen3TTSModel.from_pretrained(model_id, **kw)
-    return model, {"device": dev, "dtype": str(dt).replace("torch.", ""), "load_s": round(time.time() - t0, 1), "notes": notes}
+    if engine == "faster-qwen3-tts":
+        from faster_qwen3_tts import FasterQwen3TTS
+        fast = FasterQwen3TTS.from_pretrained(model_id, device=dev, dtype=dt, attn_implementation=job.get("attn") or "sdpa")
+        fast.warmup()  # capture the CUDA graphs now, before any seed is set: a seed then gives the same take again
+        model = FastModel(fast)
+    else:
+        from qwen_tts import Qwen3TTSModel
+        kw = {"device_map": dev, "dtype": dt}
+        if job.get("attn"):
+            kw["attn_implementation"] = job["attn"]
+        model = Qwen3TTSModel.from_pretrained(model_id, **kw)
+    return model, {"device": dev, "dtype": str(dt).replace("torch.", ""), "engine": engine, "load_s": round(time.time() - t0, 1),
+                   "notes": notes}
 
 
 def write_wav(path, wav, sr):
@@ -97,6 +141,16 @@ def op_check(job):
     except Exception as e:  # noqa: BLE001
         res["error"] = f"qwen_tts: {type(e).__name__}: {e} (pip install -U qwen-tts in this environment)"
         return res
+    try:
+        import faster_qwen3_tts
+        res["faster_qwen3_tts"] = getattr(faster_qwen3_tts, "__version__", "installed")
+    except ImportError:
+        res["faster_qwen3_tts"] = None
+    dev = str(job.get("device") or "cuda:0") if torch.cuda.is_available() else "cpu"
+    dt = _dtype(job.get("dtype"))
+    if dt != torch.bfloat16 or (dev.startswith("cuda") and not torch.cuda.is_bf16_supported()):
+        dt = torch.float32  # what load() would use
+    res["engine"] = engine_for(dev, dt)
     cached = {}
     try:
         from huggingface_hub import try_to_load_from_cache
