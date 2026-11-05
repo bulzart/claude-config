@@ -7,7 +7,8 @@ the toolkit. It makes audio and measures nothing else; the agent judges.
 
 Jobs (the "op" of the job file):
   check  : torch, qwen-tts, CUDA, bf16 support, the GPU, and whether the models are in the Hugging Face cache
-  design : VoiceDesign model; items [{n, text, instruct, out}] -> one wav each (a voice described in words)
+  design : VoiceDesign model; items [{n, text, instruct, out, seed}] -> one wav each (a voice described in words; the seed, when
+           given, set before each item, so a strong line can reuse the picked sample's)
   voice  : Base model; ref_audio + ref_text -> the reusable clone prompt (out_prompt, torch.save of the items, as the official demo);
            emotions [{name, text, out_wav, out_prompt}] -> the same voice speaking each line, and that clip's own prompt
   say    : Base model; prompts {name: file}; lines [{n, text, emotion, out}] -> one wav per line in the run's voice
@@ -109,11 +110,27 @@ def op_check(job):
     return res
 
 
+def seed_all(seed):
+    """The same seed for every random source the generation uses (python, numpy, torch, CUDA)."""
+    if seed is None:
+        return
+    import random
+    import numpy as np
+    import torch
+    s = int(seed)
+    random.seed(s)
+    np.random.seed(s % (2 ** 32))
+    torch.manual_seed(s)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(s)
+
+
 def op_design(job):
     model, info = load(job["model"], job)
     items = []
     for it in job["items"]:
         t0 = time.time()
+        seed_all(it.get("seed"))
         wavs, sr = model.generate_voice_design(text=it["text"], instruct=it["instruct"], language=job.get("language"))
         it = dict(it, duration_s=write_wav(it["out"], wavs[0], sr), seconds=round(time.time() - t0, 1), sample_rate=sr)
         items.append(it)

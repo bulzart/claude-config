@@ -70,6 +70,7 @@ Subcommands (python awl.py <cmd> -h):
   effort         the run's effort level (contract item 33): low | medium | high | xhigh | max, custom values held to the floors;
                  prep-all (the reference sampling) and the produce phase (agents at once, the pilot) read it; never QC
   static         Static (contract item 36): check the setup on this PC (key present, image model, TTS, music, whisper, ffmpeg, capcut-cli)
+                 | formats (facts for the format question: the references' aspects, sizes per aspect and resolution) | format (store the pick)
   image          Static stills: generate (OpenAI Images API, ledgered; the key only from OPENAI_API_KEY) | prompts (the file a user
                  makes them from) | intake (the user's folder, copied in) | use (which attempt the edit takes)
   tts            Static voice (Qwen3-TTS in its own environment): check | design (voice samples) | voice (the run's voice) | say (narration)
@@ -1951,7 +1952,8 @@ def cmd_status(a):
          "video": st.get("video"), "updated": st.get("updated"), "requested_videos": st.get("requested_videos"),
          "audio_ingest": st.get("audio_ingest"), "memes": st.get("memes"), "effort": effort_of_state(st),
          "static": ({"images": st.get("static_images"), "voice_sample": ((st.get("static") or {}).get("voice") or {}).get("sample"),
-                     "subjects": (st.get("static") or {}).get("subjects")} if st.get("analyze_submode") == "static" else None),
+                     "subjects": (st.get("static") or {}).get("subjects"), "format": _static_fmt(st) or None}
+                    if st.get("analyze_submode") == "static" else None),
          "voiceover": ({"enabled": st["voiceover"].get("enabled"), "method": st["voiceover"].get("method"), "source": st["voiceover"].get("source"),
                         "voice": st["voiceover"].get("voice_name"),
                         "language": st["voiceover"].get("language"), "preference": st["voiceover"].get("preference"),
@@ -5684,7 +5686,8 @@ def cmd_capcut_prep(a):
     The clone copies the template's identity sidecar (draft_meta_info.json: the TEMPLATE's draft id, name
     and folder) and its timeline_layout.json (the template's timeline id). Set both aside (*.awlbak), drop
     the template's build artefacts, and point the layout at the new timeline id, so that
-    `capcut register --apply --materials` (after capcut_save) recreates a correct identity."""
+    `capcut register --apply --materials` (after capcut_save) recreates a correct identity.
+    --canvas WxH sets the project's canvas (Static: the format's export size), labelled as capcut-cli labels its presets."""
     d = Path(a.draft)
     cp = d / "draft_content.json"
     if not cp.is_file():
@@ -5697,6 +5700,17 @@ def cmd_capcut_prep(a):
         fail("draft_content.json has no timeline id", 2)
     if name and name != d.name:
         fail(f"draft_content.json name {name!r} differs from the folder {d.name!r}: is this the fresh clone?", 2)
+    canvas = None
+    if getattr(a, "canvas", None):
+        cw, ch = _parse_size(a.canvas)
+        if cw % 2 or ch % 2:
+            fail(f"the canvas needs even edges, got {a.canvas}", 2)
+        cc = dict(content.get("canvas_config") or {})
+        cc.update({"width": cw, "height": ch,
+                   "ratio": next((k for k in CAPCUT_RATIO_LABELS if STATIC_ASPECTS[k][0] * ch == STATIC_ASPECTS[k][1] * cw), "original")})
+        content["canvas_config"] = cc
+        cp.write_text(json.dumps(content, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        canvas = cc
     moved = []
     for fn in ("draft_meta_info.json", "timeline_layout.json", "build-report.json", "build.log", "lint.json"):
         f = d / fn
@@ -5705,7 +5719,7 @@ def cmd_capcut_prep(a):
             moved.append(fn)
     write_json(d / "timeline_layout.json", {"dockItems": [{"dockIndex": 0, "ratio": 1, "timelineIds": [tid],
                                                            "timelineNames": ["Timeline 01"]}], "layoutOrientation": 1})
-    out({"ok": True, "draft": str(d), "timeline_id": tid, "name": name, "set_aside": moved,
+    out({"ok": True, "draft": str(d), "timeline_id": tid, "name": name, "set_aside": moved, "canvas": canvas,
          "next": "capcut_read_timeline → edits → capcut_validate → capcut_save, then: awl.py capcut-repair "
                  "--draft \"<draft>\" --preview \"<run>/60-outputs/video-NN/capcut-preview.mp4\""})
 
@@ -7047,8 +7061,9 @@ def _img_generate(a):
     if not key:
         fail("OPENAI_API_KEY is not set in this environment: set it once on this PC (reference/static §9). Nothing was sent.", 2)
     model = a.model or _scfg("images.model", "gpt-image-2.5-sunburst")
-    size = a.size or _scfg("images.size", "1088x1920")
-    quality = a.quality or _scfg("images.quality", "high")
+    fmt = _static_fmt(st)
+    size = a.size or fmt.get("image_size") or _scfg("images.size", "1088x1920")
+    quality = a.quality or fmt.get("quality") or _scfg("images.quality", "high")
     params = {"model": model, "prompt": prompt, "size": size, "quality": quality, "n": 1, "output_format": "png",
               "refs": [{"file": str(r.resolve()), "sha1": _sha1_file(r)} for r in refs]}
     fp = _fingerprint({"params": params})
@@ -7140,9 +7155,12 @@ def _img_prompts(a):
         imgs = plan.get("images") or []
         if not imgs:
             fail(f"40-briefs/video-{nn}-images.json has no images", 2)
-        size = plan.get("size") or _scfg("images.size", "1088x1920")
+        size = plan.get("size") or _static_fmt(_st).get("image_size") or _scfg("images.size", "1088x1920")
+        _w, _h = _parse_size(size)
+        asp = _static_fmt(_st).get("aspect") or _aspect_of(_w, _h)[0]
+        shape = "vertical" if _h > _w else ("horizontal" if _w > _h else "square")
         L = [f"# Video {nn}: {len(imgs)} image prompts", "",
-             f"Make every image **vertical 9:16, {size}** (or the nearest vertical size your tool offers) with GPT Image 2.5 or the image tool "
+             f"Make every image **{shape} {asp}, {size}** (or the nearest {shape} size your tool offers) with GPT Image 2.5 or the image tool "
              f"you use. Save each image under the name in its heading (`v{nn}-iKK`, png, jpg or webp). When the images of every video are done, "
              "put them all in ONE folder (sub-folders are fine) and send me its path: I copy them in and never move or change your files.", ""]
         chars = plan.get("characters") or []
@@ -7173,7 +7191,7 @@ def _img_prompts(a):
 def _img_intake(a):
     """Copy the user's images (Static, prompts mode) into the run, by their names vNN-iKK; never moves or changes the user's files.
     Reports, as facts, what each video's plan expects and does not have, what came in that no plan names, names seen twice, files whose
-    name holds no vNN-iKK, and each image's size and how far it is from 9:16."""
+    name holds no vNN-iKK, and each image's size and how far its aspect is from the run's format (9:16 when none is stored)."""
     rd, _st = _state_of(a.run)
     src = Path(a.folder)
     if not src.is_dir():
@@ -7192,6 +7210,8 @@ def _img_intake(a):
         if a.video and nn != _cf_nn(a.video):
             continue
         want[nn] = {f"{int(im.get('image') or 0):02d}" for im in (_img_plan(rd, nn).get("images") or [])}
+    t_asp = _static_fmt(_st).get("aspect") if _static_fmt(_st).get("aspect") in STATIC_ASPECTS else "9:16"
+    t_ratio = STATIC_ASPECTS[t_asp][0] / STATIC_ASPECTS[t_asp][1]
     copied, dupes, extra = [], [], []
     for (nn, kk), fs in sorted(found.items()):
         if a.video and nn != _cf_nn(a.video):
@@ -7207,7 +7227,7 @@ def _img_intake(a):
         dest = folder / f"i{kk}-user{f.suffix.lower()}"
         shutil.copy2(f, dest)
         wh = _img_size(dest)
-        aspect_off = round(abs((wh[0] / wh[1]) - 9 / 16) / (9 / 16), 3) if len(wh) == 2 and wh[1] else None
+        aspect_off = round(abs((wh[0] / wh[1]) - t_ratio) / t_ratio, 3) if len(wh) == 2 and wh[1] else None
         try:
             prev = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(kk) or {}
         except (OSError, ValueError):
@@ -7215,11 +7235,12 @@ def _img_intake(a):
         att = 1 + max([int(x.get("attempt") or 0) for x in prev.get("attempts", [])] or [0])
         _img_record_add(rec_p, kk, {"attempt": att, "status": "completed", "source": "user", "file": str(dest), "from": str(f),
                                     "sha1": _sha1_file(dest), "at": now_iso(), "size": wh}, use=dest.name)
-        copied.append({"video": nn, "image": kk, "file": str(dest), "from": str(f), "size": wh, "off_9x16": aspect_off})
+        copied.append({"video": nn, "image": kk, "file": str(dest), "from": str(f), "size": wh, "off_aspect": aspect_off})
     missing = [{"video": nn, "image": kk} for nn, ks in sorted(want.items()) for kk in sorted(ks) if (nn, kk) not in found]
     out({"ok": True, "folder": str(src), "copied": copied, "missing": missing, "not_in_any_plan": extra, "named_twice": dupes,
          "names_without_vNN_iKK": unmatched[:60], "unmatched_total": len(unmatched),
-         "note": "copies only (your folder is untouched); off_9x16 is the share the aspect differs from 9:16 (the edit crops to fill); view each image before the edit"})
+         "aspect": t_asp, "note": f"copies only (your folder is untouched); off_aspect is the share each image's aspect differs from the run's "
+                                  f"{t_asp} (the edit crops to fill); view each image before the edit"})
 
 
 def _img_use(a):
@@ -7324,7 +7345,9 @@ def _tts_design(a):
         fail("design needs --text (the line every sample speaks) and one --instruct per sample (the voice in words)", 2)
     vd = _voice_dir(rd)
     lang = a.language or _scfg("tts.language", "english")
-    items = [{"n": i + 1, "text": a.text, "instruct": ins, "out": str(vd / f"sample-{i + 1}.wav")} for i, ins in enumerate(a.instruct)]
+    base = int(_scfg("tts.seed", 1105))
+    items = [{"n": i + 1, "text": a.text, "instruct": ins, "out": str(vd / f"sample-{i + 1}.wav"), "seed": base + i + 1}
+             for i, ins in enumerate(a.instruct)]
     if os.environ.get("AWL_TTS_STUB"):
         for it in items:
             it["duration_s"] = _tone(Path(it["out"]), max(1.5, len(a.text.split()) / 2.6), 180 + 40 * it["n"])
@@ -7336,7 +7359,7 @@ def _tts_design(a):
         fail("voice design failed: " + str(res.get("error"))[:600], 1, worker=res)
     write_json(vd / "samples.json", {"text": a.text, "language": lang, "samples": res.get("items") or items, "made": now_iso(),
                                      "model": _scfg("tts.design_model")})
-    out({"ok": True, "samples": [{"n": it["n"], "file": it["out"], "instruct": it["instruct"], "duration_s": it.get("duration_s")}
+    out({"ok": True, "samples": [{"n": it["n"], "file": it["out"], "instruct": it["instruct"], "seed": it.get("seed"), "duration_s": it.get("duration_s")}
                                  for it in (res.get("items") or items)],
          "note": "give the user the three files to listen to; their pick is stored with `T tts voice --sample K`"})
 
@@ -7378,7 +7401,8 @@ def _tts_voice(a):
     if not res.get("ok"):
         fail("the voice could not be built: " + str(res.get("error"))[:600], 1, worker=res)
     prompts = {"neutral": job["out_prompt"], **{e["name"]: e["out_prompt"] for e in emotions}}
-    _state_set(rd, **{"static.voice": {"sample": int(a.sample), "instruct": pick.get("instruct"), "ref_text": samples["text"], "language": lang,
+    _state_set(rd, **{"static.voice": {"sample": int(a.sample), "instruct": pick.get("instruct"), "seed": pick.get("seed"),
+                                        "ref_text": samples["text"], "language": lang,
                                         "ref_audio": str(ref), "prompts": prompts, "design_model": _scfg("tts.design_model"),
                                         "clone_model": _scfg("tts.clone_model"), "set_at": now_iso()}})
     out({"ok": True, "voice": {"sample": int(a.sample), "prompts": prompts}, "emotion_clips": [e["out_wav"] for e in emotions],
@@ -7397,9 +7421,52 @@ def _ebur128(p: Path) -> float | None:
     return float(m[-1]) if m else None
 
 
+def _voice_match(ref: Path, files: dict) -> dict:
+    """Each line against the run's voice, as numbers: its pitch median and how many semitones it sits from the voice's, and a timbre
+    similarity (the cosine of the mean MFCCs, 0 to 1). Measured, never listened to; the agent compares a strong line with the cloned ones."""
+    try:
+        import numpy as np
+        import librosa
+    except ImportError:
+        return {}
+
+    def feats(p):
+        try:
+            y, sr = librosa.load(str(p), sr=16000, mono=True)
+        except Exception:  # noqa: BLE001
+            return None
+        if len(y) < 1600:
+            return None
+        f0, _vf, _vp = librosa.pyin(y, fmin=60, fmax=500, sr=sr, frame_length=1024)
+        f0 = f0[~np.isnan(f0)] if f0 is not None else []
+        mf = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=20)[1:].mean(axis=1)
+        return (float(np.median(f0)) if len(f0) else None), mf
+    r = feats(ref)
+    if not r:
+        return {}
+    res = {}
+    for n, p in files.items():
+        f = feats(p)
+        if not f:
+            continue
+        sim = float(np.dot(f[1], r[1]) / ((np.linalg.norm(f[1]) * np.linalg.norm(r[1])) or 1.0))
+        st_ = round(12 * math.log2(f[0] / r[0]), 2) if f[0] and r[0] else None
+        res[n] = {"pitch_hz": round(f[0], 1) if f[0] else None, "pitch_st": st_, "timbre_sim": round(sim, 3)}
+    return res
+
+
+def _strong_instruct(base: str, delivery: str) -> str:
+    """The run's voice description word for word, then the line's delivery."""
+    b = str(base or "").strip().rstrip(".")
+    d = str(delivery or "").strip().rstrip(".")
+    return f"{b}. {d}." if d else f"{b}."
+
+
 def _tts_say(a):
-    """A video's narration (Static): every line in the run's voice (its emotion's reference clip when the line names one), joined with the
-    planned pauses, brought to the target loudness. The sidecar holds each line's exact start and end in the narration file."""
+    """A video's narration (Static): every line in the run's voice (its emotion's reference clip when the line names one; a line marked
+    strong by the voice-design model, from the run's voice description plus the line's delivery and the picked sample's seed), joined with
+    the planned pauses, brought to the target loudness. The sidecar holds each line's exact start and end in the narration file and its
+    numbers against the run's voice."""
     rd, st = _state_of(a.run)
     nn = _cf_nn(a.video)
     lines_p = Path(a.lines_file) if a.lines_file else rd / "40-briefs" / f"video-{nn}-narration.json"
@@ -7421,18 +7488,32 @@ def _tts_say(a):
         ln["n"] = n
         ln["file"] = str(nd / f"line-{n:02d}.wav")
         if not only or n in only or not Path(ln["file"]).is_file():
-            todo.append({"n": n, "text": str(ln["text"]).strip(), "emotion": str(ln.get("emotion") or "neutral"), "out": ln["file"]})
+            todo.append({"n": n, "text": str(ln["text"]).strip(), "emotion": str(ln.get("emotion") or "neutral"), "out": ln["file"],
+                         "strong": bool(ln.get("strong")), "delivery": str(ln.get("delivery") or "").strip(), "seed": ln.get("seed")})
     lang = spec.get("language") or voice.get("language") or _scfg("tts.language", "english")
+    strong = [x for x in todo if x["strong"]]
+    if strong and not voice.get("instruct"):
+        fail("a strong line needs the run's voice description (state.json -> static.voice.instruct): `T tts voice --sample K` again", 2)
+    for x in strong:
+        x["instruct"] = _strong_instruct(voice["instruct"], x["delivery"])
+        x["seed"] = int(x["seed"]) if x.get("seed") is not None else voice.get("seed")
+    cloned = [x for x in todo if not x["strong"]]
     t0 = time.time()
     if todo:
         if os.environ.get("AWL_TTS_STUB"):
             for it in todo:
-                _tone(Path(it["out"]), max(0.8, len(it["text"].split()) / 2.6), 200)
+                _tone(Path(it["out"]), max(0.8, len(it["text"].split()) / 2.6), 230 if it["strong"] else 200)
             res = {"ok": True, "stub": True}
         else:
+            res = {"ok": True}
             with _gpu_lock():
-                res = _worker("tts", {"op": "say", "model": voice.get("clone_model") or _scfg("tts.clone_model"), "language": lang,
-                                      "prompts": voice["prompts"], "lines": todo, **_tts_job_base()})
+                if cloned:
+                    res = _worker("tts", {"op": "say", "model": voice.get("clone_model") or _scfg("tts.clone_model"), "language": lang,
+                                          "prompts": voice["prompts"], "lines": cloned, **_tts_job_base()})
+                if res.get("ok") and strong:
+                    res = _worker("tts", {"op": "design", "model": voice.get("design_model") or _scfg("tts.design_model"), "language": lang,
+                                          "items": [{"n": x["n"], "text": x["text"], "instruct": x["instruct"], "out": x["out"], "seed": x["seed"]}
+                                                    for x in strong], **_tts_job_base()})
         if not res.get("ok"):
             fail("narration failed: " + str(res.get("error"))[:600], 1, worker=res)
     pause_default = float(_scfg("narration.pause_s", 0.35))
@@ -7445,7 +7526,10 @@ def _tts_say(a):
             fail(f"line {ln['n']} has another sample format ({sr} Hz, {ch} ch) than line 1 ({sr0} Hz): re-make it", 1)
         dur = len(data) / (sr * ch * sw)
         rows.append({"n": ln["n"], "text": ln["text"], "emotion": ln.get("emotion") or "neutral", "file": ln["file"],
-                     "start": round(pos, 3), "end": round(pos + dur, 3)})
+                     "made_by": "design" if ln.get("strong") else "clone", "start": round(pos, 3), "end": round(pos + dur, 3)})
+        if ln.get("strong"):
+            rows[-1].update({"delivery": str(ln.get("delivery") or "").strip(),
+                             "seed": int(ln["seed"]) if ln.get("seed") is not None else voice.get("seed")})
         frames += data
         pos += dur
         gap = float(ln.get("pause_after", pause_default) or 0) if ln is not lines[-1] else 0.0
@@ -7464,13 +7548,24 @@ def _tts_say(a):
               "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", str(final)], timeout=900)
     if cp.returncode != 0:
         fail("loudness pass failed: " + cp.stderr[-400:])
-    side = {"video": nn, "file": str(final), "raw": str(raw), "duration_s": round(pos, 3), "language": lang, "lines": rows,
+    vm = _voice_match(Path(voice.get("ref_audio") or ""), {r["n"]: r["file"] for r in rows}) if voice.get("ref_audio") else {}
+    for r in rows:
+        r.update(vm.get(r["n"]) or {})
+    cl = [r for r in rows if r["made_by"] == "clone" and r.get("timbre_sim") is not None]
+    match = {"clone_lines": {"pitch_st": [min((r["pitch_st"] for r in cl if r.get("pitch_st") is not None), default=None),
+                                          max((r["pitch_st"] for r in cl if r.get("pitch_st") is not None), default=None)],
+                             "timbre_sim_min": min((r["timbre_sim"] for r in cl), default=None)},
+             "strong_lines": [{"n": r["n"], "pitch_st": r.get("pitch_st"), "timbre_sim": r.get("timbre_sim"), "seed": r.get("seed")}
+                              for r in rows if r["made_by"] == "design"]}
+    side = {"video": nn, "file": str(final), "raw": str(raw), "duration_s": round(pos, 3), "language": lang, "lines": rows, "voice_match": match,
             "voice": {"sample": voice.get("sample"), "instruct": voice.get("instruct")}, "loudness_lufs": _ebur128(final),
             "made": now_iso(), "stub": bool(os.environ.get("AWL_TTS_STUB"))}
     write_json(final.with_suffix(".json"), side)
     out({"ok": True, "file": str(final), "sidecar": str(final.with_suffix(".json")), "duration_s": side["duration_s"], "lines": len(rows),
          "made_now": [t["n"] for t in todo], "loudness_lufs": side["loudness_lufs"], "elapsed_s": round(time.time() - t0, 1),
-         "note": "next: `T narration-words` (the words, the cues and the check against the script)"})
+         "voice_match": match,
+         "note": "next: `T narration-words` (the words, the cues and the check against the script); a strong line far from the cloned "
+                 "lines' numbers is made again with another seed (reference/static §6)"})
 
 
 def cmd_tts(a):
@@ -7588,7 +7683,7 @@ def cmd_music(a):
     out({"ok": bool(made), "made": made, "asked": len(tracks), "note": "listen before use; the bed goes under the narration ducked (slideshow render)"})
 
 
-def cmd_static(a):
+def _static_check(a):
     """Static's setup on this PC (contract item 36), as facts per part: the OpenAI key (present or not; never printed) and whether the image
     model answers, the TTS and music environments (their workers' own checks), faster-whisper's cached models, ffmpeg's filters, capcut-cli."""
     parts = {}
@@ -7634,6 +7729,141 @@ def cmd_static(a):
     parts["capcut_cli"] = {"ready": bool(shutil.which("capcut")), "path": shutil.which("capcut")}
     out({"ok": True, "parts": parts, "note": "facts per part; which part a run needs (the API key only with static_images=api, music only when a bed is "
                                              "planned) and what is a blocker are the agent's call (reference/static §9 has the setup)"})
+
+
+# ---- the format (A5): the aspect, the export size the CapCut project is made at (its export is the final), the image size, the quality
+
+STATIC_ASPECTS = {"9:16": (9, 16), "16:9": (16, 9), "1:1": (1, 1), "4:5": (4, 5), "3:4": (3, 4), "4:3": (4, 3)}
+CAPCUT_RATIO_LABELS = ("16:9", "9:16", "1:1", "4:3", "3:4")     # capcut-cli's canvas presets; any other canvas is labelled "original"
+IMG_LIMITS_DEFAULT = {"multiple": 16, "max_edge": 3840, "min_pixels": 655360, "max_pixels": 8294400, "experimental_above_pixels": 3686400,
+                      "ratio_min": 1 / 3, "ratio_max": 3.0}
+
+
+def _aspect_of(w: float, h: float) -> tuple:
+    """The nearest named aspect of a size and how far the real one is from it (a share)."""
+    r = float(w) / float(h)
+    best = min(STATIC_ASPECTS, key=lambda k: abs(r - STATIC_ASPECTS[k][0] / STATIC_ASPECTS[k][1]))
+    tr = STATIC_ASPECTS[best][0] / STATIC_ASPECTS[best][1]
+    return best, round(abs(r - tr) / tr, 3)
+
+
+def _parse_size(s) -> tuple:
+    m = re.fullmatch(r"\s*(\d+)\s*[xX×]\s*(\d+)\s*", str(s or ""))
+    if not m:
+        fail(f"a size is WIDTHxHEIGHT, got {s!r}", 2)
+    return int(m.group(1)), int(m.group(2))
+
+
+def _img_limits() -> dict:
+    return {**IMG_LIMITS_DEFAULT, **(_scfg("images.limits", {}) or {})}
+
+
+def _img_size_facts(w: int, h: int) -> dict:
+    """Whether the image API takes this size, by its documented rules (config static.images.limits), as facts."""
+    lim = _img_limits()
+    m, px, why = int(lim["multiple"]), w * h, []
+    if w % m or h % m:
+        why.append(f"both edges must be divisible by {m}")
+    if max(w, h) > int(lim["max_edge"]):
+        why.append(f"no edge over {lim['max_edge']}")
+    if not (float(lim["ratio_min"]) <= w / h <= float(lim["ratio_max"])):
+        why.append("the aspect must be between 1:3 and 3:1")
+    if not (int(lim["min_pixels"]) <= px <= int(lim["max_pixels"])):
+        why.append(f"the total pixels must be between {lim['min_pixels']} and {lim['max_pixels']}")
+    return {"valid": not why, "why_not": why, "pixels": px, "experimental": px > int(lim["experimental_above_pixels"])}
+
+
+def _fit_size(min_w: float, min_h: float, ratio: float, m: int) -> tuple:
+    """The smallest size of multiples of m that covers min_w x min_h and keeps the ratio closest."""
+    ws = [int(math.ceil(min_w / m - 1e-9)) * m + k * m for k in range(3)]
+    hs = [int(math.ceil(min_h / m - 1e-9)) * m + k * m for k in range(3)]
+    return min(((w, h) for w in ws for h in hs), key=lambda wh: (round(abs(wh[0] / wh[1] - ratio) / ratio, 3), wh[0] * wh[1]))
+
+
+def _format_sizes(aspect: str, res: int, margin: float) -> dict:
+    """For an aspect and a resolution (its short side: 1080, 720 ...): the export size (the CapCut canvas, even edges), the image size that
+    stays sharp in that export through the stills' moves (each edge times 1 + the move's amount), the same without that margin, and the
+    local check render's size (720 on the short side)."""
+    aw, ah = STATIC_ASPECTS[aspect]
+    ratio = aw / ah
+
+    def by_short(short):
+        return (short, int(round(short * ah / aw / 2.0)) * 2) if aw <= ah else (int(round(short * aw / ah / 2.0)) * 2, short)
+    ew, eh = by_short(int(res))
+    m = int(_img_limits()["multiple"])
+    iw, ih = _fit_size(ew * (1 + margin), eh * (1 + margin), ratio, m)
+    pw, ph = _fit_size(ew, eh, ratio, m)
+    vw, vh = by_short(720)
+    return {"aspect": aspect, "res": int(res), "export": f"{ew}x{eh}", "image_size": f"{iw}x{ih}", "image_size_no_margin": f"{pw}x{ph}",
+            "preview": f"{vw}x{vh}", "image": _img_size_facts(iw, ih), "image_no_margin": _img_size_facts(pw, ph)}
+
+
+def _static_fmt(st: dict) -> dict:
+    return ((st or {}).get("static") or {}).get("format") or {}
+
+
+def _static_formats(a):
+    """Facts for the format question (A5): each reference's size and aspect, the aspects by count and seconds, and per aspect (the
+    references' own, then 9:16 and 16:9) and resolution (1080, 720) the export, the image sizes and whether the image API takes them."""
+    rd, st = _state_of(a.run)
+    try:
+        inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        inv = {}
+    refs, by = [], {}
+    for it in inv.get("items") or []:
+        w, h = it.get("display_width"), it.get("display_height")
+        if it.get("kind") != "video" or it.get("ignored") or not w or not h:
+            continue
+        asp, off = _aspect_of(w, h)
+        refs.append({"id": it.get("id"), "file": it.get("rel") or it.get("path"), "size": f"{int(w)}x{int(h)}", "aspect": asp,
+                     "aspect_off": off, "short_side": min(int(w), int(h)), "duration_s": it.get("duration_s")})
+        b = by.setdefault(asp, {"count": 0, "seconds": 0.0, "short_sides": []})
+        b["count"] += 1
+        b["seconds"] = round(b["seconds"] + float(it.get("duration_s") or 0), 1)
+        b["short_sides"].append(min(int(w), int(h)))
+    margin = float(_scfg("render.motion_amount", 0.12))
+    order = sorted(by, key=lambda k: (-by[k]["count"], -by[k]["seconds"]))
+    aspects = list(dict.fromkeys(order + ["9:16", "16:9"]))
+    out({"ok": True, "references": refs, "aspects": by, "move_margin": margin,
+         "formats": [_format_sizes(asp, r, margin) for asp in aspects for r in (1080, 720)],
+         "qualities": list(_scfg("images.qualities", ["low", "medium", "high", "xhigh", "max"])), "images": st.get("static_images"),
+         "current": _static_fmt(st) or None,
+         "note": "facts for the format question (reference/static §2): the export is the CapCut canvas (its export is the final), image_size "
+                 "keeps it sharp through the moves, image_size_no_margin is smaller; `T static format` stores the pick"})
+
+
+def _static_format_set(a):
+    """Store the user's format pick in state.json -> static.format; the sizes follow from the aspect and the resolution."""
+    rd, st = _state_of(a.run)
+    if a.aspect not in STATIC_ASPECTS:
+        fail("format needs --aspect " + " | ".join(STATIC_ASPECTS), 2)
+    margin = float(_scfg("render.motion_amount", 0.12))
+    fs = _format_sizes(a.aspect, int(a.res or 1080), margin)
+    iw, ih = _parse_size(a.image_size or fs["image_size"])
+    facts = _img_size_facts(iw, ih)
+    if not facts["valid"]:
+        fail(f"the image API does not take {iw}x{ih}: " + "; ".join(facts["why_not"]), 2, sizes=fs)
+    ew, eh = _parse_size(a.export or fs["export"])
+    if ew % 2 or eh % 2:
+        fail(f"the export size needs even edges, got {ew}x{eh}", 2)
+    quals = list(_scfg("images.qualities", ["low", "medium", "high", "xhigh", "max"]))
+    q = a.quality or (None if st.get("static_images") == "prompts" else _scfg("images.quality", "high"))
+    if q and q not in quals:
+        fail(f"--quality is one of {', '.join(quals)}", 2)
+    fmt = {"aspect": a.aspect, "res": int(a.res or 1080), "export": f"{ew}x{eh}", "image_size": f"{iw}x{ih}", "quality": q,
+           "preview": fs["preview"], "move_margin": margin, "image_aspect_off": _aspect_of(iw, ih)[1] if _aspect_of(iw, ih)[0] == a.aspect else None,
+           "image_experimental": facts["experimental"], "set_at": now_iso()}
+    _state_set(rd, **{"static.format": fmt})
+    out({"ok": True, "format": fmt, "note": "the images (API or prompts file), the CapCut canvas (`T capcut-prep --canvas`) and the check render "
+                                            "follow it; the final is the CapCut project exported at the export size"})
+
+
+def cmd_static(a):
+    """Static (contract item 36): check (the setup on this PC) | formats (facts for the format question) | format (store the pick)."""
+    if a.action != "check" and not a.run:
+        fail(f"static {a.action} needs --run", 2)
+    {"check": _static_check, "formats": _static_formats, "format": _static_format_set}[a.action](a)
 
 
 # ---- the local render: stills with motion, transitions, the narration and the bed, loudness; the preview with the captions burned
@@ -7691,7 +7921,8 @@ def _slideshow_plan(a):
     short = [r["image"] for r in rows if r["end"] - r["start"] < 0.5]
     music = rd / "30-assets" / "music" / f"video-{nn}.wav"
     cap = plan.get("captions") or {}
-    tl = {"video": nn, "size": plan.get("render_size") or _scfg("render.size", "720x1280"), "fps": int(_scfg("render.fps", 30)),
+    tl = {"video": nn, "size": plan.get("render_size") or _static_fmt(_st).get("preview") or _scfg("render.size", "720x1280"),
+          "export": _static_fmt(_st).get("export"), "fps": int(_scfg("render.fps", 30)),
           "narration": side["file"], "narration_offset": lead, "duration_s": total,
           "music": {"file": str(music), "gain": float(plan.get("music_gain", _scfg("music.gain", 0.22)))} if music.is_file() and plan.get("music", True) else None,
           "captions": {"y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3)))},
@@ -7724,7 +7955,8 @@ def _zoompan(motion: str, amount: float, n: int) -> str:
 
 
 def _slideshow_render(a):
-    """The local render of a Static video from its timeline: each still scaled to cover 9:16, moved (zoom or pan), joined by its transitions
+    """The local render of a Static video from its timeline: each still scaled to cover the timeline's size (the format's check size), moved (zoom
+    or pan), joined by its transitions
     so every image still starts on its line; the narration at its offset, the bed under it ducked, the whole at the target loudness.
     Writes deliverables/video-NN-clean.mp4 and, with the captions burned in the house look, video-NN-preview.mp4 (the complete video)."""
     rd, _st = _state_of(a.run)
@@ -8216,6 +8448,7 @@ def main():
     p.set_defaults(fn=cmd_capcut_name)
 
     p = sp.add_parser("capcut-prep"); p.add_argument("--draft", required=True, help="the freshly cloned draft folder")
+    p.add_argument("--canvas", help="WxH: the project's canvas (Static: state.json -> static.format.export); default: the template's")
     p.set_defaults(fn=cmd_capcut_prep)
 
     p = sp.add_parser("capcut-repair"); p.add_argument("--draft", required=True)
@@ -8248,10 +8481,15 @@ def main():
     p.add_argument("--crop", help="x,y,w,h (0-1 fractions or pixels) — keep this region")
     p.add_argument("--crf", type=int, default=18); p.set_defaults(fn=cmd_clean)
 
-    p = sp.add_parser("static", help="Static's setup on this PC (contract item 36): check (key present, image model answers, TTS and music "
-                                     "environments, whisper, ffmpeg filters, capcut-cli), facts per part")
-    p.add_argument("action", choices=["check"]); p.add_argument("--run")
-    p.add_argument("--offline", action="store_true", help="do not ask the image API whether the model answers")
+    p = sp.add_parser("static", help="Static (contract item 36): check (key present, image model answers, TTS and music environments, whisper, "
+                                     "ffmpeg filters, capcut-cli) | formats (facts for the format question at A5) | format (store the pick)")
+    p.add_argument("action", choices=["check", "formats", "format"]); p.add_argument("--run")
+    p.add_argument("--offline", action="store_true", help="check: do not ask the image API whether the model answers")
+    p.add_argument("--aspect", help="format: 9:16 | 16:9 | 1:1 | 4:5 | 3:4 | 4:3")
+    p.add_argument("--res", type=int, help="format: the export's short side, e.g. 1080 or 720 (default 1080)")
+    p.add_argument("--quality", help="format: the image API's quality, low | medium | high | xhigh | max (prompts mode: none)")
+    p.add_argument("--image-size", help="format: WxH instead of the computed image size (e.g. the size without the move margin)")
+    p.add_argument("--export", help="format: WxH instead of the computed export size")
     p.set_defaults(fn=cmd_static)
 
     p = sp.add_parser("image", help="Static stills (contract item 36): generate (OpenAI Images API, ledgered) | prompts (the file a user makes them "
@@ -8262,8 +8500,8 @@ def main():
     p.add_argument("--prompt-file", help="generate: the prompt, a text file"); p.add_argument("--prompt", help="generate: the prompt as text")
     p.add_argument("--ref", action="append", help="generate: a reference image (a character photo or anchor), repeatable, at most 16")
     p.add_argument("--model", help="generate: default config static.images.model")
-    p.add_argument("--size", help="generate: WxH, both divisible by 16 (default config static.images.size)")
-    p.add_argument("--quality", help="generate: low | medium | high | xhigh | max (default config)")
+    p.add_argument("--size", help="generate: WxH, both divisible by 16 (default the run's format, state.json -> static.format)")
+    p.add_argument("--quality", help="generate: low | medium | high | xhigh | max (default the run's format)")
     p.add_argument("--again", action="store_true", help="generate: a new draw of a request that already made an image")
     p.add_argument("--timeout", type=float, help="generate: seconds to wait for the answer (default config, 300)")
     p.add_argument("--folder", help="intake: the folder holding the user's images (named vNN-iKK)")
