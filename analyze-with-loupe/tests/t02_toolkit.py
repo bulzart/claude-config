@@ -751,6 +751,37 @@ _txt = _awl._pi_inputs_text(_req, _rd)
 check([x["product"] for x in _imgs] == [False, True] and [r[0] for r in _awl._pi_registry_rows(_rd)] == ["NG-EF6-SPE"] and "Image 1 (image_references; its original" in _txt,
       "a registry row whose type cell says product is a product row (a character's is not), and an input labelled with its id is a product view")
 
+# --- the judge's second view (the admin, 2026-11-05, any product): the template request lists the product's own images (a span 'A11–A12' read
+#     whole, only image files) and the run's other images of the client's products under the same registry heading, each with its #fingerprint and
+#     its row's own words; a row the registry marks never used and a character's row are left out
+_rd2 = Path(_tf.mkdtemp(prefix="awl-view-"))
+(_rd2 / "30-assets" / "project").mkdir(parents=True)
+_files2 = {"A10": "front.png", "A11": "left.png", "A12": "right.png", "A13": "props.txt", "A20": "b-front.png", "A30": "real.jpg", "A40": "old.png",
+           "A50": "face.jpg"}
+for _a2, _n2 in _files2.items():
+    (_rd2 / "assets" / _n2).parent.mkdir(parents=True, exist_ok=True)
+    (_rd2 / "assets" / _n2).write_bytes(f"content of {_n2}".encode())
+(_rd2 / "30-assets" / "project" / "asset-inventory.json").write_text(json.dumps({"items": [{"id": a, "path": str(_rd2 / "assets" / n)}
+                                                                                          for a, n in _files2.items()]}), encoding="utf-8")
+(_rd2 / "30-assets" / "registry.md").write_text(
+    "# Registry\n\n## Brand products\n\n| id | type | role | files |\n|---|---|---|---|\n| BR-A | product | variant A | A10 front, A11–A12 sides, A13 sheet |\n"
+    "| BR-B | product variant | variant B | A20 front |\n| BR-REAL | size reference | the real one lying flat | A30 photo (cut out only) |\n"
+    "| BR-OLD | product variant | old flavour, never used | A40 |\n\n## Characters\n\n| id | file | look | uses |\n|---|---|---|---|\n| C-1 | A50 | a man | - |\n",
+    encoding="utf-8")
+_req2 = {"params": {"medias": [{"role": "image_references", "value": "m1", "label": "Image 1 = image1-character-face",
+                                "source": {"original": str(_rd2 / "assets" / "face.jpg"), "asset_id": "A50", "kind": "character"}},
+                               {"role": "image_references", "value": "m2", "label": "Image 2 = image2-product-front",
+                                "source": {"original": str(_rd2 / "assets" / "front.png"), "asset_id": "A10", "kind": "product"}}]}}
+_ptxt = _awl._pi_product_text(_req2, _rd2)
+_fp2 = {a: _awl._pi_fingerprint(_rd2 / "assets" / n) for a, n in _files2.items()}
+check(f"The client's images of BR-A (the run's registry row and asset inventory): A10 front.png #{_fp2['A10']}, A11 left.png #{_fp2['A11']}, "
+      f"A12 right.png #{_fp2['A12']}" in _ptxt and "props.txt" not in _ptxt
+      and f"- BR-B (product variant · variant B · A20 front): A20 b-front.png #{_fp2['A20']}" in _ptxt
+      and f"- BR-REAL (size reference · the real one lying flat · A30 photo (cut out only)): A30 real.jpg #{_fp2['A30']}" in _ptxt
+      and "BR-OLD" not in _ptxt and "old.png" not in _ptxt and "C-1" not in _ptxt and "SECOND VIEW" in _ptxt,
+      "the judge's product-image list carries the product's own views (a span read whole, image files only) and the run's other images of the client's "
+      "products under the same heading with their fingerprints and words, never a row marked never used or a character")
+
 # --- Static (contract item 36, the user 2026-11-05): 1 fps without extras, the image API through a local mock (the key never printed or
 # written), the prompts file and the user's folder (copied, never moved), the voice and bed stubs, the narration's words, the local render,
 # the Static contract. No model, no network, no Higgsfield, no Loupe.

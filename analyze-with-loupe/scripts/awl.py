@@ -4693,6 +4693,11 @@ PI_MEDIA_FILE = re.compile(r"\.(?:png|jpe?g|webp|bmp|tiff?|gif|mp4|mov|m4v|webm|
 PI_IMAGE_REF = re.compile(r"(@?)\bImage( ?)(\d+)\b")
 PI_ROLE = {"image_references": "Image", "video_references": "Video", "audio_references": "Audio"}
 PI_PRODUCT_NAME = re.compile(r"(?:^|[\s=/\\_:-])product(?:[\s._:/\\\d-]|$)", re.I)      # 'image2-product-EF6-PM-front-padded.png': the pipeline names a product view so (also product/..., key:product, product2...; Loupe's runs.PRODUCT_FILE is the same pattern)
+PI_A_SPAN = re.compile(r"\bA(\d{2,4})(?:\s*[–—-]\s*A?(\d{2,4})\b)?")      # an asset id, or a span 'A122–A125' a registry row writes for several
+# The judge's list of the run's other images of the client's products (the admin, 2026-11-05: the judge finds a second view, this variant's own or the
+# one a sample's correct version was given, by its #fingerprint): at most this many rows and images, and this many characters of each row's own words.
+PI_OTHER_ROWS, PI_OTHER_IMAGES, PI_OTHER_NOTE, PI_OTHER_PRODUCT_NOTE = 16, 120, 420, 220
+PI_ROW_UNUSED = re.compile(r"\bnever used\b|\bexcluded\b", re.I)      # a registry row's type or role that says so (the Orange can: "never used")
 
 
 PI_FINGERPRINTS: dict = {}
@@ -4761,6 +4766,45 @@ def _pi_registry_rows(rd) -> list[tuple[str, str, list]]:
             continue
         if cells[0].startswith("P-") or any(c.lower() == "product" for c in cells[1:3]):
             rows.append((cells[0], ln.strip(), list(dict.fromkeys(PI_A_ID.findall(ln)))))
+    return rows
+
+
+def _pi_row_asset_ids(text: str) -> list:
+    """The asset ids a registry row names, in order, each span 'A122–A125' read as every id in it (at most 40, the first id's digits kept)."""
+    out = []
+    for m in PI_A_SPAN.finditer(str(text or "")):
+        lo = int(m.group(1))
+        hi = int(m.group(2)) if m.group(2) else lo
+        hi = hi if lo <= hi <= lo + 40 else lo
+        out.extend(f"A{n:0{len(m.group(1))}d}" for n in range(lo, hi + 1))
+    return list(dict.fromkeys(out))
+
+
+def _pi_is_product_row(rid: str, cells: list) -> bool:
+    """A registry row of a product for the judge's list: an id that starts with P-, or a type or role cell that starts with the word product
+    ('product', 'product variant')."""
+    return str(rid).startswith("P-") or any(re.match(r"product\b", str(x).strip().lower()) for x in cells[1:3])
+
+
+def _pi_registry_headed_rows(rd) -> list[tuple[str, str, list, list]]:
+    """Every table row of the run's asset registry that names asset ids, with the heading it stands under (the nearest line above it that starts
+    with '#'; '' before any): (heading, id, its cells, its asset ids with spans read whole), in file order."""
+    try:
+        text = (Path(rd) / "30-assets" / "registry.md").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    rows, head = [], ""
+    for ln in text.splitlines():
+        s = ln.strip()
+        if s.startswith("#"):
+            head = s.lstrip("#").strip()
+            continue
+        cells = [c.strip().strip("`").strip() for c in s.strip("|").split("|")] if s.startswith("|") else []
+        if not cells or not re.fullmatch(r"[A-Za-z][\w-]*", cells[0]) or cells[0].lower() == "id":
+            continue
+        ids = _pi_row_asset_ids(s)
+        if ids:
+            rows.append((head, cells[0], cells, ids))
     return rows
 
 
@@ -4889,12 +4933,40 @@ def _pi_product_text(j: dict, rd) -> str:
                "; they are NOT the last image inputs of this draft, so they cannot be changed here: keep them as they are (product_images empty)."))
     inv, _names = _pi_inventory(rd)
     used = {x["source"].get("asset_id") for x in prod if x["source"].get("asset_id")}
-    rows = [(rid, ids) for rid, _row, ids in _pi_registry_rows(rd) if used & set(ids)]
+    headed = _pi_registry_headed_rows(rd)
+
+    def image(a):
+        it = inv.get(a)
+        return bool(it) and Path(str(it.get("path") or it.get("rel") or "")).suffix.lower() in IMAGE_EXT
+
+    def named(a):
+        it = inv.get(a, {})
+        return f"{a} {Path(str(it.get('path') or it.get('rel') or '?').replace(chr(92), '/')).name}{_pi_fp_tag(it.get('path'))}"
+
+    mine = [(h, rid, [a for a in ids if image(a)] or ids) for h, rid, c, ids in headed if _pi_is_product_row(rid, c) and used & set(ids)]
     lines = [head]
-    for rid, ids in rows:
-        lines.append(f"The client's images of {rid} (the run's registry row and asset inventory): "
-                     + ", ".join(f"{a} {Path(str(inv.get(a, {}).get('path') or inv.get(a, {}).get('rel') or '?').replace(chr(92), '/')).name}"
-                                 f"{_pi_fp_tag(inv.get(a, {}).get('path'))}" for a in ids))
+    for _h, rid, ids in mine:
+        lines.append(f"The client's images of {rid} (the run's registry row and asset inventory): " + ", ".join(named(a) for a in ids))
+    # the run's other images of the client's products under the same registry heading (other variants, real photos, size references), so the judge
+    # can find a second view a sample's correct version was given by its #fingerprint (the admin, 2026-11-05); a registry without headings lists none,
+    # and a row the registry itself marks never used or excluded is left out
+    heads, mine_ids = {h for h, _rid, _ids in mine if h}, {rid for _h, rid, _ids in mine}
+    shown, more = 0, []
+    for h, rid, c, ids in headed:
+        if (h not in heads or rid in mine_ids or any(x.lower() == "character" for x in c[1:3]) or PI_ROW_UNUSED.search(" ".join(c[1:3]))
+                or len(more) >= PI_OTHER_ROWS or shown >= PI_OTHER_IMAGES):
+            continue
+        have = [a for a in ids if image(a)][:PI_OTHER_IMAGES - shown]
+        if not have:
+            continue
+        cap = PI_OTHER_PRODUCT_NOTE if _pi_is_product_row(rid, c) else PI_OTHER_NOTE      # another row's own words say how its photos may be used
+        note = re.sub(r"\s+", " ", " · ".join(x for x in c[1:] if x))
+        shown += len(have)
+        more.append(f"- {rid} ({note[:cap]}{'…' if len(note) > cap else ''}): " + ", ".join(named(a) for a in have))
+    if more:
+        lines.append("The run's other images of the client's products under the same registry heading (other variants, real photos, size references; "
+                     "a sample's image is one of these when its #fingerprint is the same; another variant's image is a look reference only, see SECOND VIEW):")
+        lines.extend(more)
     return "\n".join(lines)
 
 

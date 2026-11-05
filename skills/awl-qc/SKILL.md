@@ -82,7 +82,8 @@ Only these section files for this phase, nothing else unless a step below says s
     has caught what it caught: `T qc-consult --run RUN --video NN --attempt aK --question "<the errors you caught: what, where (time), at
     which beat or checkpoint; or none caught, with the product form, the beat and what the plan's checkpoints watch>" --kinds <counts,openings-use,scale-size,…>
     --product-details "<its shape, size, opening and natural posture, from its registry row>" --checkpoint "<a plan checkpoint>" …`
-    (repeat `--checkpoint`). The consult carries by itself what the judge needs to judge an error accurately: the prompt this video was
+    (repeat `--checkpoint`). An earlier video your question names carries its run ("this run's video 14", "run 20261029 video 14"): the judge reads
+    a video named without its run as this run's (the user, 2026-11-05). The consult carries by itself what the judge needs to judge an error accurately: the prompt this video was
     generated from (the request of `--attempt`, the newest otherwise) with that request's video model, parameters and inputs (each with
     the client's original it was made from, and its product images) and the model's entry of the model index, and the brief the judge got at X4b (`evidence_sent` says which; the request's prompt is the judge's, word for word). The answer adds `cause` (which part of the prompt or of the template let the error happen) and `template_fix` (that part
     rewritten): both go into the verdict and `result.json → judge`, for the user's review at the end. A regeneration (QC fixes `ask` or

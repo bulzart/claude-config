@@ -231,7 +231,9 @@ See §6.
     another video's files, writes state.json only through `T state … append`, and stops after `T lint-run --run RUN` shows its files clean. The main session reads the
     status note and the files, not the fork's final message, and spawns the production agent only after that. With an own voiceover (item 31) a fork never voices a
     take (a paid call that asks the user): this session records the video's take first, and the fork plans the rest to it (an unfit take
-    goes under Open).
+    goes under Open). A note this session gives planners or agents mid-run names the run of every earlier video it cites ("this run's video 14", "run 20261029
+    video 14"), and reports what an earlier take showed instead of banning a product image, a view or a mechanism the library's correct versions used: which
+    product images a request carries is the judge's to decide at X4b (the user, 2026-11-05; Loupe's SECOND VIEW and CLAIMS ARE NOT SAMPLES).
 
 ## Never (this phase)
 

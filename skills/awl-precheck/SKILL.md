@@ -101,7 +101,11 @@ Only these section files for this phase, nothing else unless a step below says s
      request kind and its inputs with their roles), what the video is about (one line per beat of the plan: what happens, the product's
      form and state, the camera), what it wants to achieve (the goal, the moment that must land, what it keeps of the source), and what
      X4 found the prompt must respect (a size, a count, a fallback). A Create take (item 35) says so: one clean continuous take that
-     the CapCut edit cuts, and no word of the edit in the prompt.
+     the CapCut edit cuts, and no word of the edit in the prompt. Every earlier video it names carries its run ("this run's video 14",
+     "run 20261029 video 14"), never a bare "video-14": a sample of another run can carry the same number, and the judge reads a video
+     named without its run as this run's (the user, 2026-11-05). The same holds for the pattern card, the musts and every note that reaches
+     the judge. A lesson of an earlier take that no Loupe sample shows is written as what that take showed, not as a ban on an image or a
+     mechanism the library's correct versions used: the judge weighs it as a claim (Loupe's CLAIMS ARE NOT SAMPLES).
   2. `T prompt-template --run RUN --video NN --structure-file RUN/50-requests/video-NN-pattern.md --product "<form>" --product-details
      "<its shape, size, opening and natural posture, from its registry row>"` (a clip: `--clip cK`). The toolkit sends that brief, the
      checked draft's prompt, parameters and inputs (each with the client's original it was made from: its asset id, its file name and how
