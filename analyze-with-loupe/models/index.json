@@ -17,7 +17,7 @@
     },
     "add_a_model": "Copy an entry, point 'guide' at a new file made from models/_TEMPLATE.md. The command needs no change."
   },
-  "updated": "2026-09-30",
+  "updated": "2026-11-06",
   "catalog_snapshot": "higgsfield/catalog-snapshot-2026-09-30.json",
   "higgsfield_guide": "higgsfield/higgsfield-mcp.md",
   "fallback_guide": "models/_generic-fallback.md",
@@ -34,6 +34,7 @@
     "order": [
       "seedance_2_5",
       "wan3_0_prime",
+      "kling4_0",
       "kling3_0",
       "veo3_1",
       "seedance_2_0",
@@ -216,6 +217,46 @@
         "max_s": 12,
         "continuous": "keyframe_ladder > last_frame",
         "note": "start/end frames only; identity rides on the frame and the verbatim description"
+      }
+    },
+    "kling4_0": {
+      "name": "Kling 4.0",
+      "provider": "Kuaishou",
+      "guide": "models/kling-4-0.md",
+      "status": "active",
+      "modes": [
+        "analyze",
+        "edit"
+      ],
+      "edit_kind": "pixel-preserving edit (mode video-edit: 'Edit @Video1. <change>. Keep everything else unchanged'; up to 5 clips of 3-30 s, 30 s in total) + recreate-from-video-reference (reference-to-video, Kling's Creative Recreation); both untested on Higgsfield",
+      "operations": [
+        "t2v",
+        "start_frame",
+        "end_frame",
+        "image_refs",
+        "video_refs",
+        "elements",
+        "video_edit",
+        "multi_shot",
+        "native_audio"
+      ],
+      "duration_s": "3-30 (whole seconds; edit: source clips 3-30 s, output length vs duration unverified)",
+      "text_rendering": "official claim: accurate multilingual text, emojis and logos (unverified); the model may add subtitles by default, so every prompt excludes them; clean plate + post captions (guide 3.11)",
+      "output_9x16_720p": {
+        "params": {
+          "aspect_ratio": "9:16",
+          "resolution": "720p"
+        },
+        "expected": "720x1280 expected (inferred; a third-party test measured 16:9 720p as 1280x720)",
+        "post": "verify; conform; resolution defaults to 1080p, so always send 720p; frames exactly 9:16 (the ratio follows the first keyframe); edit: source reframed to 9:16 first"
+      },
+      "best_for": "Up to 30 s in one generation: long continuous takes or auto multi-shot stories, Omni Reference (10 images, 5 videos, 7 elements), creative recreation of a reference video, instruction edits, stereo dialogue in 9 languages",
+      "avoid_for": "Silent output without a post step (audio always on, no toggle); voice or music references (no audio role on Higgsfield); a pixel-exact start frame together with references in one call",
+      "notes": "Send mode on every call (default text-to-video). Multi-shot is on by default: a take needs 'One uninterrupted <d>-second vertical 9:16 shot. No cuts ...'. The model may add subtitles and background music unless the prompt excludes them. Frames and references cannot be combined. @Image1/@Video1 by upload order (Higgsfield medias order inferred); how kling_element_ids are cited in the prompt is unverified.",
+      "continuation": {
+        "max_s": 30,
+        "continuous": "keyframe_ladder > last_frame",
+        "note": "image-to-video: start_image = the hand-off frame (awl.py last-frame), end_image = an approved end keyframe; a reference-to-video clip cannot take a frame role, so it names the hand-off frame in words ('Use @Image1 as the first frame', not pixel-exact, unverified); same references in the same order, same resolution and wording every clip; Kling's own Video Extension (to 2 min) is 'coming soon' and not on Higgsfield"
       }
     },
     "kling3_0": {
