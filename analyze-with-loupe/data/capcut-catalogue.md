@@ -4,7 +4,7 @@ Facts, written by `T capcut-check measure` from CapCut's own export of the check
 
 ## Moves (`T capcut-motion`)
 
-Per second (a move only partly in view still compares): zoom %, pan of the picture in % of the width / height (+ = right / down).
+Per second (a move only partly in view still compares): zoom %, pan of the picture in % of the width / height (+ = right / down). pan-left and pan-down are pan-right's and pan-up's keys (KFTypePositionX / Y) with the opposite sign, and a pan with a zoom or a zoom toward a corner sets both keys: the same keyframes, verified by these rows.
 
 | move | expected zoom, pan x, pan y per s | measured (seen for s) | plays |
 |---|---|---|---|

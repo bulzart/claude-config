@@ -6044,7 +6044,7 @@ def cmd_capcut_motion(a):
     fps = int(tl.get("fps") or 30)
     rows = [{**r, **({} if "scale" in r else _still_motion(r))} for r in tl.get("images") or []]
     half = 500000 / fps
-    files, unmatched, made = [], set(), {}
+    files, unmatched, made, stale = [], set(), {}, []
 
     def keys(prop, image, dur, v0, v1):   # one set of keyframes per clip, the same ids in every copy of the timeline
         if (prop, image, dur) not in made:
@@ -6055,11 +6055,13 @@ def cmd_capcut_motion(a):
         main = next((t for t in content.get("tracks", []) if t.get("type") == "video"), None)
         segs = (main or {}).get("segments") or []
         keyed, found = 0, set()
+        main_file = p == d / "draft_content.json"   # the timeline itself; the other copies are mirrors of it
         for r in rows:
             want = float(r["start"]) * 1e6
             seg = next((s for s in segs if abs(int((s.get("target_timerange") or {}).get("start") or 0) - want) <= half), None)
             if seg is None:
-                unmatched.add(int(r["image"]))
+                if main_file:
+                    unmatched.add(int(r["image"]))
                 continue
             found.add(int(r["image"]))
             dur = int(seg["target_timerange"]["duration"])
@@ -6077,14 +6079,20 @@ def cmd_capcut_motion(a):
             clip["scale"] = {"x": float(s0), "y": float(s0)}
             clip["transform"] = {"x": float(x0), "y": float(y0)}
             keyed += 1
-        unmatched -= found
+        if not main_file and len(found) < len(rows):
+            # a mirror still holding another timeline (the template's draft_info.json after an empty clone and an MCP save, 2026-11-06):
+            # capcut-cli's next write and capcut-repair's sync-timelines rewrite it from draft_content.json, keyframes included
+            stale.append({"file": str(p), "clips_on_main_track": len(segs), "images_not_there": len(rows) - len(found)})
         if keyed:
             shutil.copyfile(p, p.with_name(p.name + ".motion.bak"))
             write_text(p, json.dumps(content, ensure_ascii=False))
         files.append({"file": str(p), "clips_keyed": keyed, "clips_on_main_track": len(segs)})
-    out({"ok": not unmatched and any(f["clips_keyed"] for f in files), "draft": str(d), "timeline": str(tlp), "files": files,
-         "images_without_a_clip": sorted(unmatched), "moves": [[r["image"], r["motion"], r["scale"], r["x"], r["y"]] for r in rows],
-         "note": "scale = KFTypeScaleX with uniform scale on; position in half-canvas units (x right, y up); run `T capcut-repair` after"})
+    main_keyed = next((f["clips_keyed"] for f in files if f["file"] == str(d / "draft_content.json")), 0)
+    out({"ok": not unmatched and main_keyed > 0, "draft": str(d), "timeline": str(tlp), "files": files,
+         "images_without_a_clip": sorted(unmatched), "stale_copies": stale,
+         "moves": [[r["image"], r["motion"], r["scale"], r["x"], r["y"]] for r in rows],
+         "note": "scale = KFTypeScaleX with uniform scale on; position in half-canvas units (x right, y up); run `T capcut-repair` after "
+                 "(its sync-timelines rewrites a copy listed in stale_copies from draft_content.json)"})
 
 
 def cmd_capcut_text_anim(a):
@@ -6606,7 +6614,9 @@ def _capcut_check_measure(a):
           "Match a reference by its numbers (`T edit-profile`): a caption entrance by its curve, a join by its signature. "
           f"`free plan`: exports without CapCut Pro ({cat['pro_from']}); with `config.json → capcut.pro` false, never use one that does not.", "",
           "## Moves (`T capcut-motion`)", "", "Per second (a move only partly in view still compares): zoom %, pan of the picture in % of the "
-          "width / height (+ = right / down).", "", "| move | expected zoom, pan x, pan y per s | measured (seen for s) | plays |", "|---|---|---|---|"]
+          "width / height (+ = right / down). pan-left and pan-down are pan-right's and pan-up's keys (KFTypePositionX / Y) with the "
+          "opposite sign, and a pan with a zoom or a zoom toward a corner sets both keys: the same keyframes, verified by these rows.", "",
+          "| move | expected zoom, pan x, pan y per s | measured (seen for s) | plays |", "|---|---|---|---|"]
     md += [f"| {m['motion']} | {m['expected']['zoom_pct_per_s']}, {m['expected']['pan_x_pct_per_s']}, {m['expected']['pan_y_pct_per_s']} | "
            f"{m['measured']['zoom_pct_per_s']}, {m['measured']['pan_x_pct_per_s']}, {m['measured']['pan_y_pct_per_s']} ({m['measured']['seen_s']} s) | "
            f"{yn(m['plays'])} |" for m in moves]
@@ -9795,13 +9805,13 @@ def _fx_resolve(rd: Path, plan: dict, rows: list, starts: dict, lead: float, tot
         start = moment - (float(e["anchor_s"]) - in_s)
         head = max(0.0, -start)   # it would begin before the video: the head is cut, the anchor stays on its moment
         start, in_s, dur = start + head, in_s + head, dur - head
-        start = round(math.floor(start * fps + 1e-6) / fps, 4) if typ == "overlay" else round(start, 4)
+        start = round(math.floor(start * fps + 1e-6) / fps, 6) if typ == "overlay" else round(start, 6)
         end = min(total, start + dur)
         if end - start < 1 / fps:
             undecided.append(f"{tag}: falls outside the video")
             continue
-        r = {"n": n, "type": typ, "file": str(path), "id": f.get("id"), "kind": kind, "moment_s": round(moment, 4), "start": start,
-             "end": round(end, 4), "in_s": round(in_s, 4), "dur_s": round(end - start, 4), "head_cut_s": round(head, 4),
+        r = {"n": n, "type": typ, "file": str(path), "id": f.get("id"), "kind": kind, "moment_s": round(moment, 6), "start": start,
+             "end": round(end, 6), "in_s": round(in_s, 6), "dur_s": round(end - start, 6), "head_cut_s": round(head, 6),
              "why": e.get("why")}
         if not e.get("why"):
             undecided.append(f"{tag}: no why (the reason, from the references' joins and hits)")
@@ -9970,7 +9980,7 @@ def _slideshow_plan(a):
     fps = int(_scfg("render.fps", 30))
     rows[0]["start"] = 0.0
     for r in rows[1:]:   # every cut on the frame grid and never after its line's start: the render and CapCut cut on the same frame
-        r["start"] = round(math.floor(float(r["start"]) * fps + 1e-6) / fps, 4)
+        r["start"] = round(math.floor(float(r["start"]) * fps + 1e-6) / fps, 6)   # 6 places: 4 put a cut 33 µs after its frame (2026-11-06)
     for i, r in enumerate(rows):
         r["end"] = rows[i + 1]["start"] if i + 1 < len(rows) else total
     short = [r["image"] for r in rows if r["end"] - r["start"] < 0.5]
@@ -10287,6 +10297,7 @@ def _edit_profile(video: Path, shots: list, band: tuple) -> dict:
     orb = cv2.ORB_create(nfeatures=1500, fastThreshold=7)
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
     bounds = sorted({float(s["start"]) for s in shots if float(s["start"]) > 0})   # the given cuts; every picture switch splits too
+    bound_frames = {int(round(b * fps)) for b in bounds}   # a cut by its frame: a start rounded a hair after its frame still splits there
     stride = 3   # every third frame is measured against the shot's anchor frame: a slow zoom moves a pixel only over many frames
 
     def match(kd_a, kd_b):
@@ -10363,7 +10374,7 @@ def _edit_profile(video: Path, shots: list, band: tuple) -> dict:
             series["diff"].append(diff)
             series["step"].append(step)
             is_switch = (diff > 0.08 and (step is None or not 0.8 < step[0] < 1.25)) or diff > 0.2
-            crossed = any((i - 1) / fps < b <= t + 1e-9 for b in bounds)
+            crossed = i in bound_frames
             if is_switch or crossed:          # a new shot starts at this frame
                 if is_switch:
                     switches.append(round(t, 3))

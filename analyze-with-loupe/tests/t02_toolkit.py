@@ -1028,6 +1028,18 @@ check(abs(_prof["zoom-in"]["zoom_start_to_end"] - 1.2) < 0.02 and abs(_prof["zoo
       f"a still moved by the render glides (ffmpeg's zoompan measured 0.065-0.070 sideways on the run of 2026-11-06), and edit-profile reads "
       f"the move back: zoom {_prof['zoom-in']['zoom_start_to_end']} for 1.2, pan {_prof['pan-right']['pan_x_pct']} % for -19.6 %, "
       f"sideways jitter {[p['jitter']['x_step_sd_pct'] for p in _prof.values()]}")
+# a timeline start rounded a hair after its frame (13.9667 for frame 419, 2026-11-06) split the shot one frame late: a phantom 1-frame shot
+_cutv = home.parent / "cut-at-10.mp4"
+_pc = subprocess.Popen([_awl.find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "270x480",
+                        "-r", "30", "-i", "-", "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p", str(_cutv)], stdin=subprocess.PIPE)
+for _k in range(30):
+    _pc.stdin.write(_tex.resize((270, 480)).rotate(0 if _k < 10 else 180).tobytes())
+_pc.stdin.close()
+_pc.wait()
+(_cutf := home.parent / "cut-at-10.json").write_text(json.dumps({"shots": [{"shot": 1, "start": 0.0, "end": 0.3334}, {"shot": 2, "start": 0.3334, "end": 1.0}]}), encoding="utf-8")
+js, _ = ts("edit-profile", str(_cutv), "--cuts", str(_cutf), "--band", "0.0-0.01", "--out", str(home.parent / "prof-cut.json"))
+check([round(s["start"], 3) for s in js["shots"]] == [0.0, 0.333] and not js.get("short_shots_under_0_25s"),
+      f"edit-profile splits a given cut on its frame even when its time is rounded a hair after it: no phantom one-frame shot ({[s['start'] for s in js['shots']]})")
 _bg = _Im.new("RGB", (270, 480), (70, 95, 130))
 
 
@@ -1085,6 +1097,14 @@ else:
           and "KFTypePositionY" not in _k2 and _segs["draft_info.json"]["S2"]["common_keyframes"] == _s2["common_keyframes"],
           "capcut-motion keys each clip as CapCut 9.x plays it (KFTypeScaleX with uniform scale on, KFTypePositionX for a pan), drops the "
           "UNIFORM_SCALE keys CapCut ignores, keeps other keys, in both timeline files")
+    # the third build of 2026-11-06: an empty clone kept the template's draft_info.json, and capcut-motion answered ok false
+    (_md / "draft_content.json").write_text(_mdc, encoding="utf-8")
+    (_md / "draft_info.json").write_text(json.dumps({"id": "TPL", "materials": {}, "tracks": [{"type": "video", "segments": [
+        _clip("T1", 0, 1500000, []), _clip("T2", 1500000, 2500000, [])]}]}), encoding="utf-8")
+    js, code, _ = t("capcut-motion", "--draft", str(_md), "--timeline", str(_mtl), env=SENV, ok=False)
+    check(code == 0 and js.get("ok") and js.get("images_without_a_clip") == [] and len(js.get("stale_copies") or []) == 1
+          and js["stale_copies"][0]["file"].endswith("draft_info.json"),
+          "capcut-motion judges the clips on draft_content.json; a mirror still holding the template's timeline is named as stale, not a missing clip")
 _tpl = Path(os.environ.get("LOCALAPPDATA", "")) / "CapCut" / "User Data" / "Projects" / "com.lveditor.draft" / "_analyze-stack-template"
 if not (_tpl / "draft_content.json").is_file():
     print("SKIP  capcut-text-anim: no CapCut template on this machine")
