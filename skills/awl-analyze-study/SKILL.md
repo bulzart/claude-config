@@ -37,8 +37,10 @@ Only these section files for this phase, nothing else unless a step below says s
 - anomaly-catalog §2.2: `AWL/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (2.8 KB)
 - anomaly-catalog §2.5: `AWL/reference/anomaly-catalog/080_2.5_object-permanence-exits-occlusio.md` (1.5 KB)
 - anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
-- *Static (item 36): these two, and of the list above only analysis-protocol §0–§2 and §4–§9, creative-direction §1–§4 and
+- *Static (item 36): these three, and of the list above only analysis-protocol §0–§2 and §4–§9, creative-direction §1–§4 and
   brand-guardrails §3 (the product and video-physics sections are not read):*
+  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.3 KB) (who works the run: read at the start, again only
+    after a compaction)
   - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (2.3 KB)
   - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (4.2 KB)
 

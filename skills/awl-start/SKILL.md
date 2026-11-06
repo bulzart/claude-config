@@ -17,6 +17,8 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
 - effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (2.1 KB) (every run, step 5d)
+- *Static (as soon as the sub-mode is Static):*
+  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.3 KB)
 - *Static, when `T static check` reports a part the run needs as not ready:*
   - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (3.1 KB)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
@@ -76,7 +78,11 @@ Only these section files for this phase, nothing else unless a step below says s
    The words are kept verbatim, nothing is paraphrased or trimmed; a one-line requirement is accepted as it is (the free plan shows its
    gaps as visible [I] lines). The requirement is written once the run exists (step 6).
    Store it with `T state --run RUN set analyze_submode=recreate|create|free|static` once the run exists (Free also `free_references=yes|no`).
-   **Static → its own path** (item 36): no steps 2b, 2c, 3 or 4 (no voiceover or memes question, no Higgsfield tools, no model menu: the
+   **Static → its own path** (item 36). First read static §0 and, from here to the run's wrap-up, work as that team (the user,
+   2026-11-06: "you're youtube long and short content specialist, sociology thinking and human behaviour expert ... in order to boost and
+   hype him but also to be in accordance with what we're trying to achieve"): a YouTube short- and long-form strategist, storyteller,
+   sociologist and human-behaviour expert, attention psychologist, fact-checker, art director and editor, ambitious for the best video and
+   disciplined by the references' data and the hard rules. No steps 2b, 2c, 3 or 4 (no voiceover or memes question, no Higgsfield tools, no model menu: the
    images come from the OpenAI model in `config.json → static.images`, from FLUX 3 Klein on this PC (`config.json → static.klein`), or
    from the user); step 5b is not asked (`audio_ingest=whisper`).
    Its inputs (step 5): the references folder and the assets: the characters as photos and/or descriptions (a text file each, or words in

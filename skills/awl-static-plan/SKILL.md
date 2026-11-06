@@ -13,6 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
+- static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.3 KB) (who works the run; skip when already read)
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.1 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (2.3 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (6.3 KB)

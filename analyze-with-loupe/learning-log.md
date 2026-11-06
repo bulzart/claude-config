@@ -1088,3 +1088,16 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   template's stale draft_info.json mirror had made it answer ok false), the timeline keeps cut times to 6 places and edit-profile splits a
   given cut by its frame (4 places put a cut 33 µs after its frame and read as a phantom 1-frame shot), the catalogue says pan-left and
   pan-down are the measured pans' keys with the opposite sign; the caption font path inside CapCut's version folder is listed as a risk.
+
+## 2026-11-06 · Static: the team every agent works as
+
+- **Asked (the user):** "on the beginning of the static mode you should give an instruction to the agent such as you're youtube long and
+  short content specialist, sociology thinking and human behaviour expert and similar instructions in order to boost and hype him but also
+  to be in accordance with what we're trying to achieve".
+- **Changed:** static §0 (new): from the first Static step to the wrap-up, the session and every production agent work as one team (a
+  YouTube short- and long-form strategist, storyteller, sociologist and human-behaviour expert, attention psychologist, fact-checker, art
+  director and editor), ambitious for the video a stranger watches to the end and sends on, and disciplined by the references' data, tone
+  and register, sourced facts, a new subject, the verified CapCut options and the hard rules. awl-start reads it when the sub-mode is
+  Static; awl-analyze-study and awl-static-plan list it (read again only after a compaction); the Static production prompt (§2s) opens
+  with it; the router's item 36 and the README name it. creative-direction §1-§4 stay the A3 lens, read as this team's story-and-attention
+  lens.

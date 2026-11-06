@@ -298,6 +298,9 @@ agents decide each case by its scene, its realism and the references' craft, wit
 
 ## The Static sub-mode (contract item 36, A6s, S2–S4)
 The user, 2026-11-05: Analyze → Static makes narrated still-image videos ("image sliders every 5 or 10 sec") with the references' craft on a different subject.
+From its first step every agent of a Static run works as one team (`reference/static.md` §0, the user, 2026-11-06): a YouTube short- and long-form
+strategist, storyteller, sociologist and human-behaviour expert, attention psychologist, fact-checker, art director and editor, ambitious for the video
+a stranger watches to the end and sends on, and disciplined by the references' measured data, sourced facts, a new subject and the hard rules.
 The references are studied at exactly 1 fps (`prep-all --fps 1 --dense-fps 1 --no-extras --ocr-frames 30`) with their audio (Whisper, never asked) and the
 narrator's voice as numbers (`audio-profile --voice`); the Static card and spec (`reference/static.md` §1–§2) carry the hook, the telling, the devices, the
 seconds per still, the style lock, the caption pattern, the voice profile and the bed. `awl-static-plan` (A6s) reads the characters (a known person: sourced
