@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (3.9 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (1.6 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (5.1 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (2.0 KB)
 - *the plan has characters:*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - *the style lock is illustrated, painted or cartoon:*
@@ -31,12 +31,15 @@ lost or changed detail there is the cause). A character's **anchor** is drawn fr
 upsampler (it adds props such as a hat or a tool, and every later image copies the anchor): write the sheet as the full description
 itself (the medium, the framing, every visible trait, the clothing, the pose, the plain background, the light) and nothing more.
 At most 10 references per image; the seed is in each answer (`--again` draws with a new seed; `--again --seed N` makes a recorded draw
-again); `--no-upsample` only when a plan image's prompt file already is a full scene caption. No moderation, no cost.
+again); `--no-upsample` only when a plan image's prompt file already is a full scene caption. No moderation, no cost. Every Klein prompt
+says the picture is one continuous scene from a single camera viewpoint filling the whole frame (static §5: without it the upsampler may
+stack a tall frame into panels, above all with no reference image).
 
 1. **Anchors** (the main session, once per run, before any agent; a character with no photo): its sheet prompt in
    `RUN/30-assets/characters/C1-sheet.txt` (the look in words, a neutral pose on a plain background, the style lock), then
-   `T image generate --run RUN --anchor C1 --prompt-file RUN/30-assets/characters/C1-sheet.txt`. View it; a wrong look is drawn again by QC
-   fixes; the one kept is the reference of every image that shows them.
+   `T image generate --run RUN --anchor C1 --prompt-file RUN/30-assets/characters/C1-sheet.txt`. View it (static §8: the look, and no
+   ornament that reads as a letter or symbol, since every image copies it); a wrong look is drawn again by QC fixes; the one kept is the
+   reference of every image that shows them.
 2. **Every image of the plan** (the agent, in order): its prompt file `RUN/40-briefs/video-NN-iKK-prompt.txt` (the plan's prompt, the
    style lock, §5's composition, who is who when a reference image rides along), then
    `T image generate --run RUN --video NN --image K --prompt-file RUN/40-briefs/video-NN-iKK-prompt.txt [--ref <photo or anchor> …]` (the

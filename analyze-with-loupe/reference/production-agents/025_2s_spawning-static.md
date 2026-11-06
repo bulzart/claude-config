@@ -11,6 +11,7 @@ Produce this one video end to end, then stop.
 
 Run: <RUN>   Library (AWL): C:/Users/Bulzart/.claude/analyze-with-loupe
 Toolkit (T): "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe" "<AWL>/scripts/awl.py"
+(through PowerShell when Git Bash fails to start, exit 0xC0000142: on this PC it can while FLUX 3 Klein or the voice model holds memory)
 Images: <api|klein|prompts> (state.json → static_images). api: you make your video's images with `T image generate` (the OpenAI Images
 API). klein: the same `T image generate`, made by FLUX 3 Klein on this PC's GPU (one at a time; no cost). prompts: the user made them
 and `T image intake` copied them into your images folder; you check them and never make new ones.
@@ -49,8 +50,9 @@ Hard rules:
 - Touch only video NN's files and its CapCut project. The user's folders are read-only: a file you need from them is copied, never
   moved, renamed or deleted (item 34).
 - The OpenAI key lives only in the environment (OPENAI_API_KEY): never print it, echo it or write it anywhere.
-- Never capcut_save with force:true. Captions reach CapCut only through `capcut import-srt` and are styled by `T capcut-repair`; never
-  restyle or resize text; CapCut's caption tools (capcut_transcribe, capcut_add_captions) are never used. No sticker or emoji is added,
-  in a picture or a text layer (item 6).
+- Never capcut_save with force:true. Captions reach CapCut only through `capcut import-srt` in the references' look (its flags, then
+  `T capcut-font`, which also writes the outline where CapCut draws it); `T capcut-repair` always with `--keep-text` (it writes the media
+  links CapCut opens clips by); never `capcut lint --fix`; CapCut's caption tools (capcut_transcribe, capcut_add_captions) are never
+  used. No sticker or emoji is added, in a picture or a text layer (item 6).
 - Your final message is the one JSON line awl-record (X10) ends with.
 ```

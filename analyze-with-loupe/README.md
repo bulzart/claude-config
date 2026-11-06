@@ -307,8 +307,10 @@ and image plans. `awl-analyze-produce` A9s runs `awl-static-sound` (S2) for ever
 clone; its timed words and checks; the image spans; a bed from ACE-Step 1.5 only when the references use one), the characters' anchors, and with images by the
 user the prompts file and the folder intake; then one agent per video runs `awl-static-images` (S3: OpenAI's `gpt-image-2.5-sunburst`, or FLUX 3 Image
 Klein in int8 on this PC when the user picks it at the start, both through `T image generate`, every image viewed and checked) → `awl-static-edit` (S4: `T
-slideshow plan/render`, the clean and captioned preview at 720×1280, −14 LUFS, and the
+slideshow plan/render`, the clean and captioned preview at 720×1280, −14 LUFS, every cut on the frame grid and the frames each file holds counted, and the
 CapCut project with the images, their moves, the transitions, the narration and bed tracks and the captions by `capcut import-srt`) → `awl-record`.
+The narration file itself carries the target loudness (a gentle voice compressor, then two loudnorm passes; `T tts say --rejoin` joins existing lines
+again without making any), because the CapCut project plays it at 1.0; a word that would flash for under 0.2 s shares its caption with the next.
 **The format and the final** (the user, the same day): the CapCut project is the final, exported by the user at the format picked at A5 with the count
 (`T static formats` gives the facts; the best fit for the references first, marked Recommended, then options: 720, `medium`, the other aspect, the size
 without the move margin; `T static format` stores it in `state.json → static.format`, and the images, the prompts file, the canvas (`T capcut-prep
@@ -317,8 +319,10 @@ zoom. **Strong lines**: a line marked `strong` is made by the VoiceDesign model 
 sample's seed, only at the references' peaks; the sidecar measures every line's pitch and timbre against the run's voice and a strong line apart from
 the cloned ones is made again or cloned (`reference/static.md` §4, §6). **The text look** is the references' (the user: "everything is data
 driven (from the references) and nothing is predefined"): font, size, colours, outline, box, case, highlight and animation come from the spec;
-`capcut import-srt` takes them as flags, `T capcut-font` sets the font family (`--list` gives the fonts on the PC, CapCut's own first), and
-`T capcut-repair --keep-text` never applies the house style; the check copy burns the same look. No
+`capcut import-srt` takes them as flags, `T capcut-font` sets the font family (`--list` gives the fonts on the PC, CapCut's own first) and writes the
+outline, box and shadow where CapCut 9.x draws them (each style's strokes, the check_flag bits: import-srt sets them on the material only), and
+`T capcut-repair --keep-text` never applies the house style; the check copy burns the same look. In every mode `T capcut-repair` also writes each
+clip's `local_material_id` after `register` (CapCut 9.3 and later open a local clip by it; without it the clip shows as missing). No
 Higgsfield and no Loupe anywhere in Static; the product appears only when the assets hold one. Its agents get production-agents §2s's prompt (`T contract`
 picks it). Settings: `config.json → static`.
 

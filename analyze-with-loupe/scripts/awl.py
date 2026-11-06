@@ -2427,8 +2427,11 @@ def cmd_contract(a):
             substituted[token] = values[key]
         elif token in body:
             unresolved.append(token)
-    if a.notes:
-        body += "\n\nRun-specific notes\n" + a.notes.strip() + "\n"
+    if a.notes:   # the notes name paths the same way as the prompt: <RUN> and <AWL> are filled there too
+        notes = a.notes.strip()
+        for token, key in (("<RUN>", "run"), ("<AWL>", "library")):
+            notes = notes.replace(token, values[key])
+        body += "\n\nRun-specific notes\n" + notes + "\n"
     outp = Path(a.out) if a.out else rd / "50-requests" / "agent-contract.md"
     outp.parent.mkdir(parents=True, exist_ok=True)
     kept = None
@@ -3338,6 +3341,13 @@ _NUM_PARTS = sorted(("zero one two three four five six seven eight nine ten elev
 _SPOKEN_ABBR = {"st": "saint", "mt": "mount", "mr": "mister", "mrs": "missus", "dr": "doctor", "vs": "versus"}
 
 
+def _match_words(ws: list) -> list:
+    """The normalised words a script line and its heard words are compared by: numbers apart (spoken or in digits), with an 'a' or 'an'
+    that only belongs to a number ('about a hundred thousand' is heard as 'about 100,000'), and abbreviations as they are spoken."""
+    return [_SPOKEN_ABBR.get(x, x) for i, x in enumerate(ws) if not _is_number_token(x)
+            and not (x in ("a", "an") and i + 1 < len(ws) and _is_number_token(ws[i + 1]))]
+
+
 def _is_number_token(w: str) -> bool:
     """A normalised word that only spells a number ("seventeen", "sixtynine", "oh") or is written in digits ("1769", "600")."""
     if not w:
@@ -3381,7 +3391,9 @@ def align_script(words: list, script: str) -> list:
     return [{"w": target[i], "s": round(timed[i][0], 2), "e": round(timed[i][1], 2)} for i in range(len(target))]
 
 
-def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur: float = 1.8) -> list:
+def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur: float = 1.8, min_cue: float = 0.0) -> list:
+    """Timed words grouped into caption cues of up to max_words. With min_cue (s), a cue that would be on screen for less than that
+    (a quick 'he' or 'of' before the next word) takes the next word with it, up to twice max_words, never across a sentence end or a pause."""
     events, cur = [], []
     for w in words:
         if cur and (len(cur) >= max_words or w["s"] - cur[-1]["e"] > max_gap or w["e"] - cur[0]["s"] > max_dur
@@ -3391,6 +3403,17 @@ def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur:
         cur.append(w)
     if cur:
         events.append(cur)
+    if min_cue > 0:
+        merged, i = [], 0
+        while i < len(events):
+            ev = list(events[i])
+            while (i + 1 < len(events) and len(ev) + len(events[i + 1]) <= 2 * max_words and events[i + 1][0]["s"] - ev[0]["s"] < min_cue
+                   and events[i + 1][0]["s"] - ev[-1]["e"] <= max_gap and not re.search(r"[.!?;:]$", ev[-1]["w"])):
+                i += 1
+                ev += events[i]
+            merged.append(ev)
+            i += 1
+        events = merged
     res = []
     starts = [round(ev[0]["s"], 2) for ev in events]
     for i, ev in enumerate(events):
@@ -5770,10 +5793,54 @@ def _last_json(text: str):
     return None
 
 
+def _link_local_materials(d: Path) -> dict:
+    """CapCut 9.3+ (and JianYing 5.9+) open a local clip through its material's `local_material_id`, the id of the clip's entry in
+    draft_meta_info.json -> draft_materials; blank, the clip shows as missing and CapCut's own Link-media dialog cannot repair it.
+    `capcut register --materials` writes the entries but never the timeline; this writes the link on every video, photo and audio material
+    whose file has an entry (as capcut-cli's `lint --fix` does, without that command's other repairs: it would also shorten texts over 7 s,
+    trim overlapping captions, close main-track gaps and copy every external media file into the draft)."""
+    side = json.loads((d / "draft_meta_info.json").read_text(encoding="utf-8-sig"))
+
+    def key(p: str) -> str:
+        return os.path.normcase(os.path.normpath(p if os.path.isabs(p) else str(d / p)))
+    groups, entries = side.get("draft_materials"), []
+    for g in (groups if isinstance(groups, list) else list((groups or {}).values()) if isinstance(groups, dict) else []):
+        vals = g.get("value") if isinstance(g, dict) else g
+        entries += [e for e in (vals if isinstance(vals, list) else []) if isinstance(e, dict)]
+    by = {}
+    for e in entries:
+        if isinstance(e.get("file_Path"), str) and e.get("file_Path") and isinstance(e.get("id"), str) and e["id"]:
+            by.setdefault(key(e["file_Path"]), e["id"])
+    files, total, no_entry = [], 0, set()
+    for p in _draft_contents(d):
+        content = json.loads(p.read_text(encoding="utf-8"))
+        n = 0
+        for kind in ("videos", "audios"):
+            for m in content.get("materials", {}).get(kind) or []:
+                path = m.get("path")
+                if not isinstance(path, str) or not path or re.match(r"(?i)^https?://", path) or not isinstance(m.get("id"), str):
+                    continue
+                eid, cur = by.get(key(path)), str(m.get("local_material_id") or "")
+                if eid is None:
+                    if not cur:
+                        no_entry.add(path)
+                    continue
+                if cur != eid:
+                    m["local_material_id"] = eid
+                    n += 1
+        if n:
+            shutil.copyfile(p, p.with_name(p.name + ".link.bak"))
+            write_text(p, json.dumps(content, ensure_ascii=False))
+        files.append({"file": str(p), "linked": n})
+        total += n
+    return {"linked": total, "files": files, "media_without_entry": sorted(no_entry)}
+
+
 def cmd_capcut_repair(a):
     """After every capcut_save: the house text style on every text layer (capcut-text-style), then
     `capcut register --apply --materials` (identity from draft_content.json,
-    the media list CapCut needs, the store index), `capcut sync-timelines --nested --apply` (the nested
+    the media list CapCut needs, the store index), the media links CapCut 9.3+ opens clips by (_link_local_materials),
+    `capcut sync-timelines --nested --apply` (the nested
     timeline copy CapCut 9.x reads first) and `capcut lint`. register rewrites the store's SHARED
     root_meta_info.json, so all three run under one machine-wide lock: production agents assemble their
     projects in parallel. --preview then renders capcut-cli's low-res proxy (outside the lock). --keep-text leaves every text as it is
@@ -5791,8 +5858,16 @@ def cmd_capcut_repair(a):
              else [{"step": "text-style", "exit": 0, "result": _text_style_pass(d, write=True)}])   # before sync-timelines
     with FileLock(lock, timeout=900):
         for name, args in (("register", ["register", str(d), "--apply", "--materials"]),
+                           ("link", None),
                            ("sync-timelines", ["sync-timelines", str(d), "--nested", "--apply"]),
                            ("lint", ["lint", str(d)])):
+            if args is None:   # the media links CapCut 9.3+ opens a clip by, from the entries register just wrote
+                try:
+                    steps.append({"step": name, "exit": 0, "result": _link_local_materials(d)})
+                except (OSError, ValueError) as e:
+                    steps.append({"step": name, "exit": 1, "result": f"{type(e).__name__}: {e}"})
+                    break
+                continue
             cp = run([cli, *args], timeout=900)
             steps.append({"step": name, "exit": cp.returncode,
                           "result": _last_json(cp.stdout) or (cp.stdout or "").strip()[-800:],
@@ -5800,7 +5875,7 @@ def cmd_capcut_repair(a):
             if name != "lint" and cp.returncode != 0:
                 break
     codes = {s["step"]: s["exit"] for s in steps}
-    ok = codes.get("register") == 0 and codes.get("sync-timelines") == 0 and codes.get("lint") in (0, 1)
+    ok = codes.get("register") == 0 and codes.get("link") == 0 and codes.get("sync-timelines") == 0 and codes.get("lint") in (0, 1)
     res = {"ok": ok, "draft": str(d), "steps": steps}
     if not ok:
         res["action"] = ("a step refused or lint found errors: CapCut running → close it and run this again; "
@@ -5849,9 +5924,35 @@ def _font_files() -> list:
     return rows
 
 
+def _text_outline_into_styles(m: dict, c: dict) -> bool:
+    """capcut-cli's import-srt and add-text write a text's outline, box and shadow on the material only (border_*, background_*,
+    has_shadow, check_flag 7). CapCut 9.x draws the outline from each style's `strokes` and shows each layer by its check_flag bit (8
+    outline, 16 box, 32 shadow), as a text CapCut styled itself carries them (check_flag 15 with strokes). Writes those from the material's
+    own values; True when the text has an outline."""
+    flag = int(m.get("check_flag") or 7)
+    width = float(m.get("border_width") or 0)
+    outline = bool(m.get("border_color")) and width > 0 and m.get("has_border") is not False
+    if outline:
+        alpha = float(m.get("border_alpha", 1.0) if m.get("border_alpha") is not None else 1.0)
+        stroke = {"alpha": alpha, "content": {"render_type": "solid", "solid": {"alpha": alpha, "color": _hex_rgb(str(m["border_color"]))}},
+                  "width": width}
+        for s in c.get("styles") or []:
+            if not s.get("strokes"):
+                s["strokes"] = [json.loads(json.dumps(stroke))]
+        m.setdefault("border_mode", 0)
+        flag |= 8
+    if m.get("background_color") and float(m.get("background_alpha") or 0) > 0:
+        flag |= 16
+    if m.get("has_shadow"):
+        flag |= 32
+    m["check_flag"] = flag
+    return outline
+
+
 def cmd_capcut_font(a):
     """Static (contract item 36): --list the fonts on this PC (CapCut's own first), or set one font file on every text of a draft (or of
-    one track), the text's own size, colours, outline, box and ranges kept: the font family capcut-cli's text flags cannot set."""
+    one track), the text's own size, colours, outline, box and ranges kept: the font family capcut-cli's text flags cannot set. The
+    outline, box and shadow capcut-cli set on the material are also written where CapCut 9.x draws them from (_text_outline_into_styles)."""
     if a.list:
         rows = _font_files()
         if a.family:
@@ -5881,7 +5982,7 @@ def cmd_capcut_font(a):
         ids = None
         if a.track:
             ids = {seg.get("material_id") for tr in tracks if str(tr.get("name") or "") == a.track for seg in tr.get("segments", [])}
-        n = 0
+        n = n_out = 0
         for m in content.get("materials", {}).get("texts", []):
             if ids is not None and m.get("id") not in ids:
                 continue
@@ -5892,15 +5993,17 @@ def cmd_capcut_font(a):
                 c = json.loads(m.get("content") or "{}")
             except Exception:  # noqa: BLE001
                 c = {}
+            out_line = _text_outline_into_styles(m, c)
             for s in c.get("styles") or []:
                 s["font"] = {"id": "", "path": font}
             if c:
                 m["content"] = json.dumps(c, ensure_ascii=False, separators=(",", ":"))
             n += 1
+            n_out += bool(out_line)
         if n:
             shutil.copyfile(p, p.with_name(p.name + ".font.bak"))
             write_text(p, json.dumps(content, ensure_ascii=False))
-        files.append({"file": str(p), "texts_set": n})
+        files.append({"file": str(p), "texts_set": n, "outlines_in_styles": n_out})
     if a.track and not any(f["texts_set"] for f in files):
         fail(f"no text on a track named {a.track!r}; the draft's text tracks: {sorted(names)}", 2)
     out({"ok": True, "draft": str(d), "font": font, "family": family, "track": a.track, "files": files,
@@ -6005,8 +6108,10 @@ def _house_text_material(m: dict, st: dict, font_path: str, size: float) -> bool
 
 
 def _draft_contents(d: Path) -> list:
-    """The root draft_content.json plus CapCut 9.x's nested timeline copies."""
-    return [p for p in [d / "draft_content.json", *sorted((d / "Timelines").glob("*/draft_content.json"))] if p.is_file()]
+    """The root draft_content.json, its draft_info.json mirror (the macOS name, which capcut-cli keeps identical when it exists) and
+    CapCut 9.x's nested timeline copies: every copy a text, font or link fix is written into."""
+    return [p for p in [d / "draft_content.json", d / "draft_info.json", *sorted((d / "Timelines").glob("*/draft_content.json"))]
+            if p.is_file()]
 
 
 def _timeline_texts(content: dict) -> list:
@@ -7578,7 +7683,8 @@ def _tts_design(a):
         fail("voice design failed: " + str(res.get("error"))[:600], 1, worker=res)
     write_json(vd / "samples.json", {"text": a.text, "language": lang, "samples": res.get("items") or items, "made": now_iso(),
                                      "model": _scfg("tts.design_model")})
-    out({"ok": True, "samples": [{"n": it["n"], "file": it["out"], "instruct": it["instruct"], "seed": it.get("seed"), "duration_s": it.get("duration_s")}
+    out({"ok": True, "samples": [{"n": it["n"], "file": it["out"], "instruct": it["instruct"], "seed": it.get("seed"), "duration_s": it.get("duration_s"),
+                                  "words_per_s": _sample_pace(a.text, it)}
                                  for it in (res.get("items") or items)],
          "note": "give the user the three files to listen to; their pick is stored with `T tts voice --sample K`"})
 
@@ -7620,12 +7726,21 @@ def _tts_voice(a):
     if not res.get("ok"):
         fail("the voice could not be built: " + str(res.get("error"))[:600], 1, worker=res)
     prompts = {"neutral": job["out_prompt"], **{e["name"]: e["out_prompt"] for e in emotions}}
+    wps = _sample_pace(samples["text"], pick)
     _state_set(rd, **{"static.voice": {"sample": int(a.sample), "instruct": pick.get("instruct"), "seed": pick.get("seed"),
-                                        "ref_text": samples["text"], "language": lang,
+                                        "ref_text": samples["text"], "language": lang, "words_per_s": wps,
                                         "ref_audio": str(ref), "prompts": prompts, "design_model": _scfg("tts.design_model"),
                                         "clone_model": _scfg("tts.clone_model"), "set_at": now_iso()}})
-    out({"ok": True, "voice": {"sample": int(a.sample), "prompts": prompts}, "emotion_clips": [e["out_wav"] for e in emotions],
-         "note": "every narration of this run uses this voice (state.json -> static.voice)"})
+    out({"ok": True, "voice": {"sample": int(a.sample), "prompts": prompts, "words_per_s": wps}, "emotion_clips": [e["out_wav"] for e in emotions],
+         "note": "every narration of this run uses this voice (state.json -> static.voice); its words_per_s (the sample's words over its "
+                 "seconds) sizes the scripts (reference/static §4)"})
+
+
+def _sample_pace(text: str, sample: dict) -> float | None:
+    """A voice sample's pace: the words of its line over the sample's seconds (the file's length, its short edges included)."""
+    dur = sample.get("duration_s") or (media_summary(Path(sample.get("out") or sample.get("file") or "")) or {}).get("duration_s")
+    n = len(str(text or "").split())
+    return round(n / float(dur), 2) if dur and n else None
 
 
 def _wav_read(p: Path) -> tuple:
@@ -7638,6 +7753,48 @@ def _ebur128(p: Path) -> float | None:
     cp = run([find_tool("ffmpeg"), "-nostdin", "-hide_banner", "-i", str(p), "-af", "ebur128=framelog=quiet", "-f", "null", "-"], timeout=900)
     m = re.findall(r"I:\s+(-?\d+(?:\.\d+)?)\s+LUFS", cp.stderr or "")
     return float(m[-1]) if m else None
+
+
+# measured 2026-11-06 on a Qwen3-TTS narration (45 s, -23.4 LUFS raw, peaks 19.6 dB over its loudness): loudnorm alone, one pass
+# -15.9 LUFS, two passes -15.5; this compressor, then two passes: -14.1 LUFS, true peak -1.5 dBTP, the duration to the sample
+NARRATION_VOICE_CHAIN = "acompressor=threshold=-30dB:ratio=3:attack=1:release=80:knee=4"
+
+
+def _loudnorm_json(text: str) -> dict:
+    m = re.findall(r"\{[^{}]*\"(?:input_i|output_i)\"[^{}]*\}", text or "", re.S)
+    try:
+        return json.loads(m[-1]) if m else {}
+    except ValueError:
+        return {}
+
+
+def _loudnorm_2pass(src: Path, dst: Path, target: float, out_args: list, pre: str = "", tp: float = -1.5, lra: float = 11.0) -> dict:
+    """A sound file at the target loudness in two loudnorm passes (measure, then apply the measured values), after an optional pre-chain
+    (the narration's voice chain). One pass of loudnorm lands about 2 LU short on speech; two passes after the voice chain land within a
+    few tenths. The timing never changes (loudnorm compensates its look-ahead)."""
+    ff, pre_ = find_tool("ffmpeg"), (pre.strip().rstrip(",") + ",") if pre and pre.strip() else ""
+    base = f"loudnorm=I={target}:TP={tp}:LRA={lra}"
+    cp = run([ff, "-nostdin", "-hide_banner", "-i", str(src), "-af", pre_ + base + ":print_format=json", "-f", "null", "-"], timeout=900)
+    m = _loudnorm_json(cp.stderr)
+    if cp.returncode == 0 and all(k in m for k in ("input_i", "input_tp", "input_lra", "input_thresh", "target_offset")):
+        af = (pre_ + base + f":measured_I={m['input_i']}:measured_TP={m['input_tp']}:measured_LRA={m['input_lra']}:"
+              f"measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true:print_format=json")
+    else:
+        af = pre_ + base + ":print_format=json"   # the measurement failed: one pass
+    cp = run([ff, "-nostdin", "-y", "-hide_banner", "-i", str(src), "-af", af, *out_args, str(dst)], timeout=900)
+    k = _loudnorm_json(cp.stderr)
+    return {"ok": cp.returncode == 0 and dst.is_file(), "passes": 2 if "measured_I" in af else 1, "mode": k.get("normalization_type"),
+            "stderr": "" if cp.returncode == 0 else (cp.stderr or "")[-400:]}
+
+
+def _video_frames(p: Path) -> int | None:
+    """The number of frames the file's first video stream really holds (its packets counted; no decode)."""
+    cp = run([find_tool("ffprobe"), "-v", "error", "-select_streams", "v:0", "-count_packets", "-show_entries", "stream=nb_read_packets",
+              "-of", "csv=p=0", str(p)], timeout=600)
+    try:
+        return int(str(cp.stdout or "").strip().split(",")[0])
+    except ValueError:
+        return None
 
 
 def _voice_match(ref: Path, files: dict) -> dict:
@@ -7701,14 +7858,23 @@ def _tts_say(a):
         fail(f"{lines_p.name} has no lines", 2)
     nd = rd / "30-assets" / "narration" / f"video-{nn}"
     only = {int(x) for x in re.findall(r"\d+", a.only or "")}
-    todo = []
+    rejoin = bool(getattr(a, "rejoin", False))
+    if rejoin and only:
+        fail("--rejoin makes no line: leave out --only", 2)
+    todo, absent = [], []
     for i, ln in enumerate(lines, 1):
         n = int(ln.get("n") or i)
         ln["n"] = n
         ln["file"] = str(nd / f"line-{n:02d}.wav")
+        if rejoin:
+            if not Path(ln["file"]).is_file():
+                absent.append(n)
+            continue
         if not only or n in only or not Path(ln["file"]).is_file():
             todo.append({"n": n, "text": str(ln["text"]).strip(), "emotion": str(ln.get("emotion") or "neutral"), "out": ln["file"],
                          "strong": bool(ln.get("strong")), "delivery": str(ln.get("delivery") or "").strip(), "seed": ln.get("seed")})
+    if absent:
+        fail("--rejoin needs every line file; missing: " + ", ".join(str(n) for n in absent) + " (make them with --only)", 2)
     lang = spec.get("language") or voice.get("language") or _scfg("tts.language", "english")
     strong = [x for x in todo if x["strong"]]
     if strong and not voice.get("instruct"):
@@ -7763,10 +7929,12 @@ def _tts_say(a):
         w.writeframes(bytes(frames))
     final = rd / "30-assets" / "narration" / f"video-{nn}.wav"
     target = float(_scfg("narration.loudness_lufs", -14.0))
-    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(raw), "-af", f"loudnorm=I={target}:TP=-1.5:LRA=11",
-              "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", str(final)], timeout=900)
-    if cp.returncode != 0:
-        fail("loudness pass failed: " + cp.stderr[-400:])
+    # the voice chain (a gentle compressor, config static.narration.voice_chain; "" = none), then two loudnorm passes: the narration
+    # file is what the CapCut project (the final) plays at volume 1.0, so it carries the target loudness itself
+    ln = _loudnorm_2pass(raw, final, target, ["-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le"],
+                         pre=str(_scfg("narration.voice_chain", NARRATION_VOICE_CHAIN) or ""))
+    if not ln["ok"]:
+        fail("loudness pass failed: " + ln["stderr"])
     vm = _voice_match(Path(voice.get("ref_audio") or ""), {r["n"]: r["file"] for r in rows}) if voice.get("ref_audio") else {}
     for r in rows:
         r.update(vm.get(r["n"]) or {})
@@ -7778,6 +7946,8 @@ def _tts_say(a):
                               for r in rows if r["made_by"] == "design"]}
     side = {"video": nn, "file": str(final), "raw": str(raw), "duration_s": round(pos, 3), "language": lang, "lines": rows, "voice_match": match,
             "voice": {"sample": voice.get("sample"), "instruct": voice.get("instruct")}, "loudness_lufs": _ebur128(final),
+            "loudness_target": target, "loudness_pass": {"passes": ln["passes"], "mode": ln["mode"],
+                                                         "voice_chain": str(_scfg("narration.voice_chain", NARRATION_VOICE_CHAIN) or "")},
             "made": now_iso(), "stub": bool(os.environ.get("AWL_TTS_STUB"))}
     write_json(final.with_suffix(".json"), side)
     out({"ok": True, "file": str(final), "sidecar": str(final.with_suffix(".json")), "duration_s": side["duration_s"], "lines": len(rows),
@@ -7820,8 +7990,7 @@ def cmd_narration_words(a):
         hw = [_norm_word(w["w"]) for w in heard if r["start"] - 0.15 <= w["s"] <= r["end"] + 0.15]
         sw = [_norm_word(x) for x in r["text"].split()]
         # numbers are compared apart: speech-to-text writes a spoken "seventeen sixty-nine" as "1769" (and "Saint" as "St")
-        sc = [_SPOKEN_ABBR.get(x, x) for x in sw if not _is_number_token(x)]
-        hc = [_SPOKEN_ABBR.get(x, x) for x in hw if not _is_number_token(x)]
+        sc, hc = _match_words(sw), _match_words(hw)
         sm = difflib.SequenceMatcher(a=sc, b=hc, autojunk=False)
         miss = [x for tag, i1, i2, _j1, _j2 in sm.get_opcodes() if tag in ("delete", "replace") for x in sc[i1:i2]]
         extra = [x for tag, _i1, _i2, j1, j2 in sm.get_opcodes() if tag in ("insert", "replace") for x in hc[j1:j2]]
@@ -7830,8 +7999,9 @@ def cmd_narration_words(a):
                          "repeated": rep[:6], "match": round(sm.ratio(), 3) if (sc or hc) else 1.0,
                          "numbers": {"script": [x for x in sw if _is_number_token(x)], "heard": [x for x in hw if _is_number_token(x)]}})
         k += len(sw)
-    plan_words = (_img_plan(rd, nn).get("captions") or {}).get("words")   # the plan's text look sets the words at once (static §2)
-    cues = chunk_words(timed, int(a.words or plan_words or _scfg("captions.words", 3))) if timed else []
+    plan_cap = _img_plan(rd, nn).get("captions") or {}   # the plan's text look sets the words at once (static §2)
+    cues = chunk_words(timed, int(a.words or plan_cap.get("words") or _scfg("captions.words", 3)),
+                       min_cue=float(plan_cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2)))) if timed else []
     write_json(work.parent / f"video-{nn}.words.json", {"video": nn, "engine": tr.get("engine"), "words": timed, "heard": heard})
     write_json(work.parent / f"video-{nn}.cues.json", cues)
     srt = []
@@ -8154,17 +8324,21 @@ def _slideshow_plan(a):
                      "trans_s": float(im.get("trans_s", plan.get("trans_s", _scfg("render.transition_s", 0.4))))})
     if unknown_lines:
         fail("images whose from_line is not a narration line: " + ", ".join(unknown_lines), 2)
+    fps = int(_scfg("render.fps", 30))
     rows[0]["start"] = 0.0
+    for r in rows[1:]:   # every cut on the frame grid and never after its line's start: the render and CapCut cut on the same frame
+        r["start"] = round(math.floor(float(r["start"]) * fps + 1e-6) / fps, 4)
     for i, r in enumerate(rows):
         r["end"] = rows[i + 1]["start"] if i + 1 < len(rows) else total
     short = [r["image"] for r in rows if r["end"] - r["start"] < 0.5]
     music = rd / "30-assets" / "music" / f"video-{nn}.wav"
     cap = plan.get("captions") or {}
     tl = {"video": nn, "size": plan.get("render_size") or _static_fmt(_st).get("preview") or _scfg("render.size", "720x1280"),
-          "export": _static_fmt(_st).get("export"), "fps": int(_scfg("render.fps", 30)),
+          "export": _static_fmt(_st).get("export"), "fps": fps,
           "narration": side["file"], "narration_offset": lead, "duration_s": total,
           "music": {"file": str(music), "gain": float(plan.get("music_gain", _scfg("music.gain", 0.22)))} if music.is_file() and plan.get("music", True) else None,
-          "captions": {**cap, "y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3)))},
+          "captions": {**cap, "y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3))),
+                       "min_cue_s": float(cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2)))},
           "images": rows, "made": now_iso()}
     tlp = rd / "40-briefs" / f"video-{nn}-timeline.json"
     write_json(tlp, tl)
@@ -8173,7 +8347,7 @@ def _slideshow_plan(a):
     except (OSError, ValueError):
         timed_words = []
     try:
-        cues = (chunk_words(timed_words, tl["captions"]["words"]) if timed_words else
+        cues = (chunk_words(timed_words, tl["captions"]["words"], min_cue=tl["captions"]["min_cue_s"]) if timed_words else
                 json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8")))
     except (OSError, ValueError):
         cues = []
@@ -8186,9 +8360,14 @@ def _slideshow_plan(a):
     for i, c in enumerate(shifted, 1):
         srt += [str(i), f"{_srt_time(c['start'])} --> {_srt_time(c['end'])}", c["text"], ""]
     write_text(od / "captions.srt", "\n".join(srt))
-    out({"ok": not missing_files, "timeline": str(tlp), "duration_s": total, "images": len(rows), "image_spans": [[r["image"], r["start"], r["end"]] for r in rows],
+    out({"ok": not missing_files, "timeline": str(tlp), "duration_s": total, "fps": fps, "images": len(rows),
+         "image_spans": [[r["image"], r["start"], r["end"]] for r in rows],
          "shorter_than_0_5s": short, "images_without_a_file": missing_files, "captions": len(shifted), "captions_srt": str(od / "captions.srt"),
-         "music": bool(tl["music"]), "note": "edit motions or transitions in the timeline file if the spec asks for others, then `T slideshow render`"})
+         "captions_over_words": sum(1 for c in shifted if len(str(c["text"]).split()) > tl["captions"]["words"]),
+         "music": bool(tl["music"]),
+         "note": "the cuts sit on the frame grid (each at or just before its line's start); edit motions or transitions in the timeline "
+                 "file if the spec asks for others, then `T slideshow render`; a caption over the words at once is a quick word that took "
+                 "the next one with it (captions.min_cue_s)"})
 
 
 def _zoompan(motion: str, amount: float, n: int) -> str:
@@ -8245,52 +8424,70 @@ def _slideshow_render(a):
     if empty:
         fail("images whose span is empty or negative (their start lines are out of order): " + ", ".join(str(b) for b in empty), 2)
     T = float(tl["duration_s"])
+    # Everything in whole frames: ffmpeg rounds every xfade offset and trim to a frame, and a chain one frame short of its join's offset
+    # ends the first input before the transition, so xfade drops every later frame (2026-11-06: images 8 and 9 lost, the file still
+    # reported the full length). Image k holds frames S[k]..E[k]-1; a join of D[k] frames ends exactly on S[k].
+    NT = max(1, int(round(T * fps)))
+    S = [0] + [int(round(float(r["start"]) * fps)) for r in rows[1:]]
+    E = S[1:] + [NT]
+    no_frames = [rows[k]["image"] for k in range(len(rows)) if E[k] - S[k] < 1]
+    if no_frames:
+        fail("images that hold no whole frame (their start lines fall within one frame of each other): "
+             + ", ".join(str(b) for b in no_frames), 2)
+    D = [0]
+    for k in range(1, len(rows)):
+        want = 1 if str(rows[k]["transition"]).lower() == "cut" else max(1, int(round(float(rows[k]["trans_s"]) * fps)))
+        D.append(max(1, min(want, E[k - 1] - S[k - 1])))   # a join never reaches back past the previous image's own first frame
     args, fc = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error"], []
     for r in rows:
         args += ["-i", str(r["file"])]
     for k, r in enumerate(rows):
-        d_in = 0.0 if k == 0 else max(1.0 / fps, float(rows[k]["trans_s"]) if rows[k]["transition"] != "cut" else 1.0 / fps)
-        r["_d_in"] = d_in
-        L = (float(r["end"]) - float(r["start"])) + d_in
-        n = max(2, int(round(L * fps)))
+        n = (E[k] - S[k]) + D[k]
         fc.append(f"[{k}:v]scale={2 * W}:{2 * H}:force_original_aspect_ratio=increase,crop={2 * W}:{2 * H},setsar=1,"
-                  f"zoompan={_zoompan(r['motion'], r['amount'], n)}:d={n}:s={W}x{H}:fps={fps},trim=duration={L:.4f},setpts=PTS-STARTPTS,"
-                  f"format=yuv420p[v{k}]")
+                  f"zoompan={_zoompan(r['motion'], r['amount'], n)}:d={max(2, n)}:s={W}x{H}:fps={fps},trim=end_frame={n},"
+                  f"setpts=PTS-STARTPTS,format=yuv420p[v{k}]")
     last = "v0"
     for k in range(1, len(rows)):
         tr = STATIC_TRANSITIONS.get(str(rows[k]["transition"]).lower(), "fade")
-        off = float(rows[k - 1]["end"]) - rows[k]["_d_in"]
-        fc.append(f"[{last}][v{k}]xfade=transition={tr}:duration={rows[k]['_d_in']:.4f}:offset={off:.4f}[x{k}]")
+        fc.append(f"[{last}][v{k}]xfade=transition={tr}:duration={D[k] / fps:.6f}:offset={(E[k - 1] - D[k]) / fps:.6f}[x{k}]")
         last = f"x{k}"
-    fc.append(f"[{last}]trim=duration={T:.4f},setpts=PTS-STARTPTS[vout]")
-    ni = len(rows)
-    args += ["-i", tl["narration"]]
-    lead_ms = int(round(float(tl.get("narration_offset") or 0) * 1000))
-    target = float(_scfg("narration.loudness_lufs", -14.0))
-    mus = tl.get("music") or None
-    if mus and Path(mus["file"]).is_file():
-        args += ["-i", mus["file"]]
-        fo = float(_scfg("music.fade_out_s", 3.0))
-        fc.append(f"[{ni}:a]aresample=48000,adelay={lead_ms}|{lead_ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f},asplit=2[narr][nsc]")
-        fc.append(f"[{ni + 1}:a]aresample=48000,volume={float(mus.get('gain') or 0.22)},atrim=0:{T:.3f},apad=whole_dur={T:.3f},"
-                  f"afade=t=out:st={max(0.0, T - fo):.3f}:d={fo:.3f}[mus]")
-        fc.append("[mus][nsc]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=350[duck]")
-        fc.append(f"[narr][duck]amix=inputs=2:normalize=0:duration=first,loudnorm=I={target}:TP=-1.5:LRA=11,aresample=48000[aout]")
-    else:
-        fc.append(f"[{ni}:a]aresample=48000,adelay={lead_ms}|{lead_ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f},"
-                  f"loudnorm=I={target}:TP=-1.5:LRA=11,aresample=48000[aout]")
+    fc.append(f"[{last}]trim=end_frame={NT},setpts=PTS-STARTPTS[vout]")
     dl = rd / "deliverables"
     dl.mkdir(parents=True, exist_ok=True)
     clean = dl / f"video-{nn}-clean.mp4"
     work = rd / "60-outputs" / f"video-{nn}" / "render"
     work.mkdir(parents=True, exist_ok=True)
+    # the sound on its own: the narration at its offset, the bed under it ducked, then two loudnorm passes to the target
+    lead_ms = int(round(float(tl.get("narration_offset") or 0) * 1000))
+    target = float(_scfg("narration.loudness_lufs", -14.0))
+    mus = tl.get("music") or None
+    aargs, afc = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", tl["narration"]], []
+    if mus and Path(mus["file"]).is_file():
+        aargs += ["-i", mus["file"]]
+        fo = float(_scfg("music.fade_out_s", 3.0))
+        afc.append(f"[0:a]aresample=48000,adelay={lead_ms}|{lead_ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f},asplit=2[narr][nsc]")
+        afc.append(f"[1:a]aresample=48000,volume={float(mus.get('gain') or 0.22)},atrim=0:{T:.3f},apad=whole_dur={T:.3f},"
+                   f"afade=t=out:st={max(0.0, T - fo):.3f}:d={fo:.3f}[mus]")
+        afc.append("[mus][nsc]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=350[duck]")
+        afc.append("[narr][duck]amix=inputs=2:normalize=0:duration=first[aout]")
+    else:
+        afc.append(f"[0:a]aresample=48000,adelay={lead_ms}|{lead_ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f}[aout]")
     (work / "filter.txt").write_text(";\n".join(fc), encoding="utf-8")
+    (work / "filter-audio.txt").write_text(";\n".join(afc), encoding="utf-8")
     t0 = time.time()
-    cp = run(args + ["-filter_complex", ";".join(fc), "-map", "[vout]", "-map", "[aout]", "-r", str(fps), *_encode_args(18),
+    mix, mixn = work / "mix.wav", work / "mix-loudness.wav"
+    cp = run(aargs + ["-filter_complex", ";".join(afc), "-map", "[aout]", "-c:a", "pcm_s16le", str(mix)], timeout=1800)
+    if cp.returncode != 0 or not mix.is_file():
+        fail("the sound mix failed: " + (cp.stderr or "")[-900:], 1, filter=str(work / "filter-audio.txt"))
+    ln = _loudnorm_2pass(mix, mixn, target, ["-ar", "48000", "-c:a", "pcm_s16le"])
+    if not ln["ok"]:
+        fail("the loudness pass of the mix failed: " + ln["stderr"], 1)
+    ni = len(rows)
+    cp = run(args + ["-i", str(mixn), "-filter_complex", ";".join(fc), "-map", "[vout]", "-map", f"{ni}:a", "-r", str(fps), *_encode_args(18),
                      "-c:a", "aac", "-b:a", "192k", "-t", f"{T:.3f}", str(clean)], timeout=7200)
     if cp.returncode != 0 or not clean.is_file():
         fail("render failed: " + (cp.stderr or "")[-900:], 1, filter=str(work / "filter.txt"))
-    res = {"ok": True, "clean": str(clean), "seconds": round(time.time() - t0, 1)}
+    res = {"ok": True, "clean": str(clean), "seconds": round(time.time() - t0, 1), "loudness_pass": {"passes": ln["passes"], "mode": ln["mode"]}}
     if not a.no_captions:
         try:
             cues = json.loads((rd / "60-outputs" / f"video-{nn}" / "captions.json").read_text(encoding="utf-8"))
@@ -8319,10 +8516,20 @@ def _slideshow_render(a):
             res["preview"] = None
             res["captions"] = 0
     info = media_summary(clean)
+    frames = {"clean": _video_frames(clean)}
+    if res.get("preview"):
+        frames["preview"] = _video_frames(Path(res["preview"]))
     res.update({"duration_s": info.get("duration_s"), "size": f"{info.get('display_width')}x{info.get('display_height')}", "fps": info.get("fps"),
-                "loudness_lufs": _ebur128(clean), "images": len(rows), "timeline": str(tlp)})
+                "loudness_lufs": _ebur128(clean), "images": len(rows), "timeline": str(tlp),
+                "video_frames": frames, "expected_frames": NT, "image_first_frames": S})
+    lost = {k: v for k, v in frames.items() if v is None or abs(v - NT) > 1}
+    if lost:   # the file's length is the sound's: only the frames themselves show that pictures went missing
+        res["ok"] = False
+        res["error"] = (f"the video stream holds {lost} frames where the timeline has {NT} ({T:.2f} s at {fps} fps): pictures were lost "
+                        "in the render; these files are not to be used")
     write_json(rd / "60-outputs" / f"video-{nn}" / "slideshow.json", {**res, "made": now_iso()})
-    out({**res, "note": "watch the preview: the captions, each image on its line, the motion; the CapCut project mirrors this timeline (reference/static §7)"})
+    out({**res, "note": "watch the preview: the captions, each image on its line, the motion; the CapCut project mirrors this timeline (reference/static §7)"},
+        0 if res["ok"] else 1)
 
 
 def cmd_slideshow(a):
@@ -8808,6 +9015,8 @@ def main():
     p.add_argument("--emotion", action="append", help="voice: NAME=TEXT, a reference clip of the same voice for lines tagged NAME, repeatable")
     p.add_argument("--video", help="say: the video, NN"); p.add_argument("--lines-file", help="say: default 40-briefs/video-NN-narration.json")
     p.add_argument("--only", help="say: make only these line numbers again, e.g. 3,7")
+    p.add_argument("--rejoin", action="store_true", help="say: make no line; join the existing line files again with their pauses and the "
+                                                          "loudness pass (the timing stays)")
     p.set_defaults(fn=cmd_tts)
 
     p = sp.add_parser("narration-words", help="Static: a narration's words and times (speech-to-text timing, the script's wording), caption cues, "

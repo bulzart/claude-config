@@ -21,7 +21,7 @@ Stored as section files in `capcut-assembly/` (next to this file); **read only t
 | 3 | Build the timeline | `030_3_build-the-timeline.md` | 5.9 |
 | 3b | Sound layer (Create) | `040_3b_sound-layer-create.md` | 5.1 |
 | 3c | The Create edit from clean takes (command item 35) | `045_3c_the-create-edit-from-clean-takes.md` | 3.5 |
-| 4 | After every save (capcut-cli) | `050_4_after-every-save-capcut-cli.md` | 2.5 |
+| 4 | After every save (capcut-cli) | `050_4_after-every-save-capcut-cli.md` | 3.1 |
 | 5 | QC of the project | `060_5_qc-of-the-project.md` | 1.9 |
 | 6 | Deliverables (Analyze Mode) | `070_6_deliverables-analyze-mode.md` | 1.8 |
 <!-- sections:end -->

@@ -5,9 +5,10 @@ T capcut-repair --draft "<store>/<name>" --preview "<run>/60-outputs/video-NN/ca
 It first applies the **house text style** to every text layer (`T capcut-text-style`, root and
 nested timeline copies), at one size for the whole video: 10, or 11 when the video has only a
 little text (§3; its `sizing` gives the words on screen at once and the widest line at 11). Then it
-runs these capcut-cli steps, the first three under one machine-wide lock:
+runs these steps, all but the render under one machine-wide lock:
 ```
 capcut register "<store>/<name>" --apply --materials
+(the link step: each clip's local_material_id, written by the toolkit)
 capcut sync-timelines "<store>/<name>" --nested --apply
 capcut lint "<store>/<name>"
 capcut render "<store>/<name>" --out "<preview>" --burn-captions
@@ -17,8 +18,14 @@ capcut render "<store>/<name>" --out "<preview>" --burn-captions
 - Exit 1 with an `action` line means CapCut is running, or lint found errors.
 - `register` recreates the identity file from the new timeline and lists the media. Without the
   media list, CapCut shows the clips as "file inaccessible".
+- **The link step** writes on every clip the id of its entry in that media list (`local_material_id`):
+  CapCut 9.3 and later (this PC has 9.7) open a local clip by it, and without it the clip shows as
+  missing and CapCut's Link-media dialog cannot repair it. Its `media_without_entry` lists a clip
+  `register` did not list. Never `capcut lint --fix` for it: that command also copies every media
+  file into the draft, shortens any text over 7 s, trims overlapping captions and closes main-track
+  gaps.
 - `sync-timelines` writes the nested timeline copy that CapCut 9.x reads first.
-- `lint` must report 0 errors.
+- `lint` must report 0 errors and no `media-unlinked`.
 - The preview is a low-resolution proxy, not CapCut's own render. It shows the order, the timing,
   the inserts and the text.
 - **The exact preset: the user's choice, learned and locked.** CapCut keeps its preset tiles on its

@@ -865,6 +865,14 @@ check(js.get("lines") == 3 and _ln[1]["start"] >= _ln[0]["end"] + 0.34 and _ln[2
       "tts say joins the lines with their pauses (default and planned) and records each line's exact start and end, and the loudness")
 js, _ = ts("tts", "say", "--run", str(SR), "--video", "01", "--only", "2")
 check(js.get("made_now") == [2], "tts say --only makes just that line again")
+_before = [(r["start"], r["end"]) for r in json.loads((SR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))["lines"]]
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "01", "--rejoin")
+_side = json.loads((SR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
+check(js.get("made_now") == [] and [(r["start"], r["end"]) for r in _side["lines"]] == _before and _side["loudness_pass"]["passes"] == 2
+      and js.get("loudness_lufs") is not None and abs(js["loudness_lufs"] + 14) < 1.0,
+      f"tts say --rejoin makes no line, keeps every line's timing and brings the narration to the target in two passes ({js.get('loudness_lufs')} LUFS)")
+js, code = ts("tts", "say", "--run", str(SR), "--video", "01", "--rejoin", "--only", "2", ok=False)
+check(code == 2 and "--rejoin" in js.get("error", ""), "tts say refuses --rejoin together with --only")
 (SR / "40-briefs" / "video-02-narration.json").write_text(json.dumps({"video": "02", "language": "english", "lines": [
     {"n": 1, "text": "The letter arrived thirty years too late.", "emotion": "neutral"},
     {"n": 2, "text": "It was in his own handwriting.", "strong": True, "delivery": "Quiet disbelief, slower, a catch in the voice", "pause_after": 0.6},
@@ -880,6 +888,23 @@ check([s["seed"] for s in _design["samples"]] == [1106, 1107, 1108] and _vs["see
 js, _ = ts("narration-words", "--run", str(SR), "--video", "01")
 check(js.get("cues", 0) > 0 and len(js.get("lines", [])) == 3 and Path(js["files"]["srt"]).is_file() and "lines_to_check" in js,
       "narration-words gives the timed words, cues, an SRT and per line what was heard against the script")
+# the run of 2026-11-06: one word at a time overlapped the next cue 29 times, and a quick 'he' was on screen for one frame
+_tw = [{"w": "He", "s": 0.00, "e": 0.04}, {"w": "escaped", "s": 0.05, "e": 0.50}, {"w": "anyway.", "s": 0.52, "e": 0.95},
+       {"w": "Then", "s": 1.40, "e": 1.60}, {"w": "Waterloo", "s": 1.62, "e": 2.10}, {"w": "all.", "s": 2.50, "e": 2.55},
+       {"w": "Next", "s": 2.60, "e": 2.90}]
+_c1 = _awl.chunk_words(_tw, 1)
+_c2 = _awl.chunk_words(_tw, 1, min_cue=0.2)
+check([c["text"] for c in _c1] == [w["w"] for w in _tw] and all(_c1[i]["end"] <= _c1[i + 1]["start"] for i in range(len(_c1) - 1))
+      and _c1[0]["end"] - _c1[0]["start"] < 0.1, "one word at a time: no caption overlaps the next one (without min_cue a quick word stays short)")
+check([c["text"] for c in _c2] == ["He escaped", "anyway.", "Then", "Waterloo", "all.", "Next"]
+      and all(c["end"] - c["start"] >= 0.2 for c in _c2[:4]) and all(_c2[i]["end"] <= _c2[i + 1]["start"] for i in range(len(_c2) - 1)),
+      f"with min_cue a word that would flash takes the next word with it, never across a sentence end ({[c['text'] for c in _c2]})")
+check(_awl._is_number_token("1769") and _awl._is_number_token(_awl._norm_word("600,000")) and _awl._is_number_token(_awl._norm_word("sixty-nine"))
+      and _awl._is_number_token("eighteen") and not _awl._is_number_token("often") and not _awl._is_number_token("tense"),
+      "a spoken number and its digits are number tokens, compared apart from the words (speech-to-text writes 'seventeen sixty-nine' as 1769)")
+check(_awl._match_words(["only", "about", "a", "hundred", "thousand", "came"]) == _awl._match_words(["only", "about", "100000", "came"])
+      == ["only", "about", "came"] and _awl._match_words(["a", "man", "st", "helena"]) == ["a", "man", "saint", "helena"],
+      "an 'a' that belongs to a number is compared with it ('about a hundred thousand' heard as 'about 100,000'); 'St' is 'Saint'")
 
 _plan = {"video": "01", "characters": [{"id": "C1", "name": "the farmer", "photo": None, "sheet_prompt": "A weathered farmer, 60s"}],
          "images": [{"image": 1, "from_line": 1, "prompt": "A farmer in a wheat field at dusk", "characters": ["C1"], "line": "In 1959 ..."},
@@ -928,14 +953,30 @@ js, _ = ts("music", "make", "--run", str(SR))
 check(js.get("made") and Path(js["made"][0]["file"]).is_file(), "music make writes the bed of the planned track (stub)")
 js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01")
 _sp = js["image_spans"]
-check(js.get("ok") and _sp[0][1] == 0.0 and abs(_sp[1][1] - (0.3 + _ln[1]["start"])) < 0.02 and js.get("music") and Path(js["captions_srt"]).is_file(),
-      "slideshow plan starts each image on its narration line (after the lead) and writes the captions on the video's timeline")
+check(js.get("ok") and _sp[0][1] == 0.0 and -1 / 30 - 1e-6 <= _sp[1][1] - (0.3 + _ln[1]["start"]) <= 1e-6 and js.get("music")
+      and Path(js["captions_srt"]).is_file() and js.get("fps") == 30,
+      "slideshow plan starts each image on its narration line (after the lead), on the frame at or just before it, and writes the captions "
+      "on the video's timeline")
 js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01")
 check(js.get("ok") and js.get("size") == "720x1280" and abs(js["duration_s"] - _sp[-1][2]) < 0.15 and js.get("captions", 0) > 0
       and Path(js["preview"]).is_file() and js.get("loudness_lufs") is not None and abs(js["loudness_lufs"] + 14) < 2.5,
       f"slideshow render makes the clean and the captioned preview at 720x1280, the timeline's length, near -14 LUFS ({js.get('duration_s')} s, {js.get('loudness_lufs')} LUFS)")
 _tl = json.loads((SR / "40-briefs" / "video-01-timeline.json").read_text(encoding="utf-8"))
 check(_tl["size"] == "720x1280" and _tl["export"] == "1080x1920", "the timeline takes the format's check size and notes its export size")
+check(js["video_frames"] == {"clean": js["expected_frames"], "preview": js["expected_frames"]} and abs(js["loudness_lufs"] + 14) < 1.0
+      and all(abs(r["start"] * 30 - round(r["start"] * 30)) < 0.005 for r in _tl["images"]),
+      f"the render's video holds every frame of the timeline, the cuts sit on the frame grid, the mix is at the target "
+      f"({js['video_frames']} of {js['expected_frames']}, {js['loudness_lufs']} LUFS)")
+# the run of 2026-11-06: nine cuts off the frame grid lost images 8 and 9 (973 of 1394 frames) while the file still reported 46.48 s
+_reg = {**_tl, "size": "144x256", "duration_s": 46.48, "music": None,
+        "images": [{**_tl["images"][_k % len(_tl["images"])], "image": _k + 1, "start": _s, "transition": "cut"}
+                   for _k, _s in enumerate([0.0, 4.25, 9.4, 13.99, 17.72, 22.63, 26.98, 32.46, 35.74])]}
+for _k, _r in enumerate(_reg["images"]):
+    _r["end"] = _reg["images"][_k + 1]["start"] if _k + 1 < len(_reg["images"]) else 46.48
+(SR / "40-briefs" / "video-01-timeline.json").write_text(json.dumps(_reg), encoding="utf-8")
+js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01", "--no-captions")
+check(js.get("ok") and js["video_frames"]["clean"] == 1394 == js["expected_frames"] and js["image_first_frames"][7] == 974,
+      f"a timeline with its cuts off the frame grid renders every frame: no image is lost ({js.get('video_frames')} of {js.get('expected_frames')})")
 ts("static", "format", "--run", str(SR), "--aspect", "16:9", "--res", "1080")
 ts("slideshow", "plan", "--run", str(SR), "--video", "01")
 js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01", "--no-captions")
@@ -960,12 +1001,16 @@ else:
     _ff = next((f["file"] for f in _fonts if f["source"] == "capcut"), _fonts[0]["file"])
     _td = home.parent / "Draft_font"
     _td.mkdir(exist_ok=True)
-    (_td / "draft_content.json").write_text(json.dumps({"id": "TL-2", "name": "Draft_font", "materials": {"texts": [
-        {"id": "A", "font_size": 12.0, "font_path": "x.ttf", "content": json.dumps({"text": "ONE TWO", "styles": [
-            {"range": [0, 7], "size": 12.0, "fill": {"content": {"solid": {"color": [1, 0.88, 0.3]}}}}]})},
-        {"id": "B", "font_size": 9.0, "font_path": "x.ttf", "content": json.dumps({"text": "title", "styles": [{"range": [0, 5], "size": 9.0}]})}]},
+    _dc = json.dumps({"id": "TL-2", "name": "Draft_font", "materials": {"texts": [
+        {"id": "A", "font_size": 12.0, "font_path": "x.ttf", "has_border": True, "border_color": "#000000", "border_width": 0.1, "border_alpha": 1,
+         "check_flag": 7, "content": json.dumps({"text": "ONE TWO", "styles": [
+             {"range": [0, 7], "size": 12.0, "fill": {"content": {"solid": {"color": [1, 0.88, 0.3]}}}}]})},
+        {"id": "B", "font_size": 9.0, "font_path": "x.ttf", "check_flag": 7,
+         "content": json.dumps({"text": "title", "styles": [{"range": [0, 5], "size": 9.0}]})}]},
         "tracks": [{"type": "text", "name": "subtitle", "segments": [{"material_id": "A"}]},
-                   {"type": "text", "name": "text", "segments": [{"material_id": "B"}]}]}), encoding="utf-8")
+                   {"type": "text", "name": "text", "segments": [{"material_id": "B"}]}]})
+    (_td / "draft_content.json").write_text(_dc, encoding="utf-8")
+    (_td / "draft_info.json").write_text(_dc, encoding="utf-8")   # capcut-cli's mirror of the timeline
     js, code, _ = t("capcut-font", "--draft", str(_td), "--font-file", _ff, "--track", "subtitle", env=SENV, ok=False)
     if code == 3:
         print("SKIP  capcut-font on a draft: CapCut is running on this machine")
@@ -975,6 +1020,31 @@ else:
         check(code == 0 and _m["A"]["font_path"] == _ff and _sa["font"]["path"] == _ff and _sa["size"] == 12.0 and "fill" in _sa
               and _m["A"]["font_size"] == 12.0 and _m["B"]["font_path"] == "x.ttf",
               "capcut-font sets the font on the named track's texts only, their size and colours kept")
+        # the run of 2026-11-06: import-srt's outline sat on the material only (check_flag 7), where CapCut 9.x does not draw it from
+        _mi = {m["id"]: m for m in json.loads((_td / "draft_info.json").read_text(encoding="utf-8"))["materials"]["texts"]}
+        check(_m["A"]["check_flag"] == 15 and _sa.get("strokes") and _sa["strokes"][0]["width"] == 0.1
+              and _sa["strokes"][0]["content"]["solid"]["color"] == [0.0, 0.0, 0.0] and _m["B"]["check_flag"] == 7
+              and _mi["A"]["check_flag"] == 15 and _mi["A"]["font_path"] == _ff,
+              "capcut-font writes the text's outline where CapCut draws it (each style's strokes, check_flag 15), in the draft_info.json mirror too")
+    _lt = home.parent / "Draft_links"
+    _lt.mkdir(exist_ok=True)
+    _lc = json.dumps({"id": "TL-3", "materials": {"videos": [{"id": "V1", "type": "photo", "path": "C:/media/i01.png"},
+                                                             {"id": "V2", "type": "photo", "path": "C:/media/i02.png"}],
+                                                  "audios": [{"id": "A1", "path": "C:/media/narration.wav"}]}, "tracks": []})
+    (_lt / "draft_content.json").write_text(_lc, encoding="utf-8")
+    (_lt / "draft_info.json").write_text(_lc, encoding="utf-8")
+    (_lt / "draft_meta_info.json").write_text(json.dumps({"draft_materials": [{"type": 0, "value": [
+        {"file_Path": "C:/media/i01.png", "id": "E-1"}, {"file_Path": "C:\\media\\narration.wav", "id": "E-3"}]}]}), encoding="utf-8")
+    _lk = _awl._link_local_materials(_lt)
+    _lv = {m["id"]: m.get("local_material_id") for f in ("draft_content.json", "draft_info.json")
+           for k in ("videos", "audios") for m in json.loads((_lt / f).read_text(encoding="utf-8"))["materials"][k]}
+    check(_lk["linked"] == 4 and _lv == {"V1": "E-1", "V2": None, "A1": "E-3"} and _lk["media_without_entry"] == ["C:/media/i02.png"]
+          and _awl._link_local_materials(_lt)["linked"] == 0,
+          "capcut-repair's link step writes each clip's local_material_id from its registered entry (CapCut 9.3+ opens clips by it), "
+          "in both timeline files, names a clip with no entry, and changes nothing the second time")
+    _mx, _cx = {"background_color": "#000000", "background_alpha": 0.6, "has_shadow": True, "check_flag": 7}, {"styles": [{"range": [0, 3]}]}
+    check(_awl._text_outline_into_styles(_mx, _cx) is False and _mx["check_flag"] == 7 | 16 | 32 and "strokes" not in _cx["styles"][0],
+          "a box and a shadow get their check_flag bits (16, 32); a text without an outline gets no stroke")
     _plan2 = {**_plan, "captions": {"y_rel": 0.7, "words": 3, "font_file": _ff, "size": 12, "fill": "#FFE14D", "stroke_color": "#101010",
                                     "stroke_width": 0.1, "case": "upper", "animation": "fade-in"}}
     (SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan2), encoding="utf-8")
@@ -989,6 +1059,10 @@ js, _ = ts("contract", "--run", str(SR))
 _ct = Path(js["file"]).read_text(encoding="utf-8")
 check("Analyze Mode, static" in _ct and "Images: api" in _ct and "QC fixes: auto" in _ct and "awl-static-edit" in _ct and not js.get("unresolved_placeholders")
       and "Memes: n/a (Static" in _ct, "contract writes production-agents 2s's Static prompt with the run's choices filled")
+js, _ = ts("contract", "--run", str(SR), "--notes", "The anchor is <RUN>/30-assets/characters/C1-a1.png.")
+_ct = Path(js["file"]).read_text(encoding="utf-8")
+check(f"{SR}/30-assets/characters/C1-a1.png" in _ct and "<RUN>" not in _ct.split("Run-specific notes")[-1],
+      "contract fills <RUN> in the run-specific notes too (the run of 2026-11-06 sent it to the agent as it was)")
 js, _ = ts("lint-run", "--run", str(SR))
 check(js.get("contract", {}).get("loupe_line") is True and js.get("contract", {}).get("unresolved_placeholders") == [], "lint-run reads a Static contract's Loupe line")
 

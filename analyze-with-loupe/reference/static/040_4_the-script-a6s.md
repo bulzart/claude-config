@@ -4,7 +4,10 @@
 voice speaks: `{"video": "NN", "language": "english", "lines": [{"n": 1, "text": "…", "emotion": "neutral", "pause_after": 0.35}, …]}`.
 
 - **The template of the spec**: the hook in the first line (spoken within the first second), every beat in its share, the payoff, the
-  closing line or loop; the length from the spec's range at its words per minute (about 2.3–2.8 words per second of speech).
+  closing line or loop; the length from the spec's range: the words at the run's voice's pace plus every pause. The picked sample's
+  `words_per_s` (`state.json → static.voice`) runs about 12 % faster than its cloned narration (2026-11-06: the sample 2.9 words per
+  second, the narration 2.5, so a script sized at the reference narrator's pace came out at 45 s against the spec's 30–40 s); a
+  spelled-out year or number counts as the words it is spoken as ("eighteen twelve" is two).
 - **Lines**: one sentence or one breath each, as the references break them; a reveal gets its own line and a longer pause before it
   (`pause_after` of the line before, 0.5–0.9 s); the default pause is the config's.
 - **Emotion**: most lines `neutral`, the voice's own delivery, the wording carrying the feeling; a line tagged with an emotion the run's

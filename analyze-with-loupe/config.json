@@ -226,11 +226,15 @@
       "lead_s": 0.3,
       "tail_s": 0.8,
       "pause_s": 0.35,
-      "loudness_lufs": -14.0
+      "loudness_lufs": -14.0,
+      "voice_chain": "acompressor=threshold=-30dB:ratio=3:attack=1:release=80:knee=4",
+      "voice_chain_note": "a gentle compressor before the two loudnorm passes, so the narration file (what the CapCut project plays) reaches loudness_lufs: measured 2026-11-06, without it -15.5 LUFS, with it -14.1; an empty string turns it off"
     },
     "captions": {
       "words": 3,
-      "y_rel": 0.72
+      "y_rel": 0.72,
+      "min_cue_s": 0.2,
+      "min_cue_note": "a cue that would be on screen for less than this (a quick 'he' or 'of') takes the next word with it, up to twice the words at once; 0 turns it off; the plan's captions block can set its own"
     },
     "render": {
       "size": "720x1280",
