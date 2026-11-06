@@ -6282,65 +6282,118 @@ def _capcut_check_measure(a):
     if not exp.is_file():
         fail(f"export not found: {exp}", 2)
     c = man["settings"]
+    length = float(c["transitions_from"]) + (len(man["transitions"]) + 1) * float(c["still_s"])
+
+    def normalised(crop, name):
+        """A screen recording of CapCut's player (no Pro plan: its export is blocked) as if it were the export: from the project's 0.0 s
+        (--start), the player's area (--crop W:H:X:Y), at 1080x1920 and 30 fps."""
+        if not crop and not a.start:
+            return exp
+        outp = home / name
+        vf = (f"crop={crop}," if crop else "") + "scale=1080:1920:flags=lanczos,fps=30"
+        cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-ss", f"{float(a.start or 0):.4f}", "-i", str(exp), "-t",
+                  f"{length:.3f}", "-vf", vf, "-an", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", str(outp)], timeout=3600)
+        if cp.returncode != 0 or not outp.is_file():
+            fail("could not line the recording up: " + (cp.stderr or "")[-400:], 1)
+        return outp
+    main = normalised(a.crop, "aligned.mp4")
     starts = sorted({0.0, *[float(r["start"]) for r in man["moves"]], float(c["captions_from"]), *[float(x["at_s"]) for x in man["transitions"]],
                      float(c["transitions_from"])})
-    res = _edit_profile(exp, [{"start": s} for s in starts], (0.42, 0.58))
+    res = _edit_profile(main, [{"start": s} for s in starts], (0.42, 0.58))
     ser = res.pop("_series")
     fps, pf = ser["fps"], ser["per_frame"]
+    shots_moves = res["shots"]
+    if a.moves_crop:   # the move section played somewhere else in the recording (the editor's small preview)
+        mres = _edit_profile(normalised(a.moves_crop, "aligned-moves.mp4"), [{"start": s} for s in starts], (0.0, 0.01))
+        mres.pop("_series", None)
+        shots_moves = mres["shots"]
+    until = float(a.moves_until) if a.moves_until else None
     moves = []
     for r in man["moves"]:
-        shot = min(res["shots"], key=lambda s: abs(s["start"] - float(r["start"])))
-        want = {"zoom": round(r["scale"][1] / r["scale"][0], 4), "pan_x_pct": round((r["x"][1] - r["x"][0]) * 50, 2),
-                "pan_y_pct": round(-(r["y"][1] - r["y"][0]) * 50, 2)}
-        got = {"zoom": shot["zoom_start_to_end"], "pan_x_pct": shot["pan_x_pct"], "pan_y_pct": shot["pan_y_pct"], "jitter": shot["jitter"]}
-        ok = abs(got["zoom"] - want["zoom"]) < 0.03 and abs(got["pan_x_pct"] - want["pan_x_pct"]) < 3 and abs(got["pan_y_pct"] - want["pan_y_pct"]) < 3
+        src = shots_moves if (a.moves_crop and (until is None or float(r["start"]) < until)) else res["shots"]
+        shot = min(src, key=lambda s: abs(s["start"] - float(r["start"])))
+        span = float(r["end"]) - float(r["start"])
+        # per second, so a move only partly in view still compares: zoom % per second, pan % of the width / height per second
+        want = {"zoom_pct_per_s": round(((r["scale"][1] / r["scale"][0]) ** (1 / span) - 1) * 100, 2),
+                "pan_x_pct_per_s": round((r["x"][1] - r["x"][0]) * 50 / span, 2), "pan_y_pct_per_s": round(-(r["y"][1] - r["y"][0]) * 50 / span, 2)}
+        got = {"zoom_pct_per_s": shot["zoom_pct_per_s"], "pan_x_pct_per_s": shot["pan_x_pct_per_s"], "pan_y_pct_per_s": shot["pan_y_pct_per_s"],
+               "seen_s": round(shot["end"] - shot["start"], 2), "jitter": shot["jitter"]}
+        ok = (abs(got["zoom_pct_per_s"] - want["zoom_pct_per_s"]) < max(1.0, 0.2 * abs(want["zoom_pct_per_s"]))
+              and abs(got["pan_x_pct_per_s"] - want["pan_x_pct_per_s"]) < max(1.5, 0.2 * abs(want["pan_x_pct_per_s"]))
+              and abs(got["pan_y_pct_per_s"] - want["pan_y_pct_per_s"]) < max(1.5, 0.2 * abs(want["pan_y_pct_per_s"])))
         moves.append({"motion": r["motion"], "keyed": {"scale": r["scale"], "x": r["x"], "y": r["y"]}, "expected": want, "measured": got, "plays": ok})
+    # CapCut's own record of what a free plan cannot export (written when it blocked the export of this project)
+    pro, pro_from = {}, None
+    try:
+        fb = json.loads((Path(os.environ.get("LOCALAPPDATA", "")) / "CapCut" / "User Data" / "Cache" / "FeedbackOtherInfo.json").read_text(encoding="utf-8"))
+        blk = (fb.get("commercialization") or {}).get("last_block_info") or {}
+        pro = {str(b.get("resourceId")): b for b in blk.get("block_svip_benefits") or []}
+        pro_from = f"CapCut's FeedbackOtherInfo.json, the export it blocked at {dt.datetime.fromtimestamp(int(blk.get('time') or 0) / 1000).isoformat(timespec='seconds')}" if pro else None
+    except (OSError, ValueError, TypeError):
+        pass
+    res_ids = {x["slug"]: x.get("resource_id") for x in _capcut_enum(_capcut_cli(), "--text-intros") + _capcut_enum(_capcut_cli(), "--transitions")}
     intros = []
     settle_at = int(round((float(c["intro_s"]) + 0.12) * fps))
     for x in man["captions"]:
         j = int(round(float(x["at_s"]) * fps))
+        if 0 < j < len(pf) and pf[j - 1][4] >= 40:   # still the caption before: the recording sits a frame off; take the first new one
+            j = next((k for k in range(j, min(len(pf) - 1, j + 4)) if pf[k - 1][4] < 40), j)
         e = _entrance_curve(pf, j, ser["scale_back"], settled_at=settle_at)
         drawn = bool(e) and (any(abs(h - 100) > 3 for h in e["height_pct_of_settled"][:-1]) or any(abs(w - 100) > 3 for w in e["width_pct_of_settled"][:-1])
                              or any(abs(v or 0) > 2 for v in e["rise_px"][:-1] + e["shift_x_px"][:-1])
                              or any((f or 100) < 95 for f in e["fill_pct_of_settled"][:-1]))
-        intros.append({**x, "entrance": e, "visible_animation": drawn})
+        rid = str(res_ids.get(x["slug"]) or "")
+        intros.append({**x, "resource_id": rid, "entrance": e, "visible_animation": drawn, "pro": rid in pro})
     transitions = []
     for x in man["transitions"]:
         sig = _cut_signature(ser, int(round(float(x["at_s"]) * fps)), fps, before=int(fps * 0.5), after=int(fps * 0.6))
-        transitions.append({**x, "signature": sig, "visible_transition": sig["frames_changing"] >= 3})
-    cat = {"measured": now_iso(), "export": str(exp), "capcut": man.get("capcut"), "settings": c, "moves": moves,
-           "text_intros": intros, "transitions": transitions,
+        rid = str(res_ids.get(x["slug"]) or "")
+        transitions.append({**x, "resource_id": rid, "signature": sig, "visible_transition": sig["frames_changing"] >= 3, "pro": rid in pro})
+    pro_known = pro_from is not None
+    cat = {"measured": now_iso(), "export": str(exp), "recording": bool(a.crop or a.start), "capcut": man.get("capcut"), "settings": c,
+           "pro_from": pro_from or "unknown: CapCut has not blocked an export of this project (with Pro, everything exports)",
+           "moves": moves, "text_intros": intros, "transitions": transitions,
            "summary": {"moves_play": sum(m["plays"] for m in moves), "moves": len(moves),
                        "intros_drawn": sum(i["visible_animation"] for i in intros), "intros": len(intros),
-                       "transitions_drawn": sum(t["visible_transition"] for t in transitions), "transitions": len(transitions)}}
+                       "intros_drawn_free": sum(i["visible_animation"] and not i["pro"] for i in intros) if pro_known else None,
+                       "transitions_drawn": sum(t["visible_transition"] for t in transitions), "transitions": len(transitions),
+                       "transitions_drawn_free": sum(t["visible_transition"] and not t["pro"] for t in transitions) if pro_known else None}}
     dd = AWL_HOME / "data"
     dd.mkdir(parents=True, exist_ok=True)
     write_json(dd / "capcut-catalogue.json", cat)
+    yn = lambda b: "yes" if b else "NO"   # noqa: E731
+    free = lambda x: ("no (Pro)" if x["pro"] else "yes") if pro_known else "?"   # noqa: E731
     md = [f"# CapCut catalogue, measured on this PC's CapCut ({cat['capcut']}, {cat['measured'][:10]})", "",
-          "Facts, written by `T capcut-check measure` from CapCut's own export of the check project. Use only what CapCut drew. "
-          "Match a reference by its numbers (`T edit-profile`): a caption entrance by its curve, a join by its signature.", "",
-          "## Moves (`T capcut-motion`)", "", "| move | expected zoom, pan x %, pan y % | measured | plays |", "|---|---|---|---|"]
-    md += [f"| {m['motion']} | {m['expected']['zoom']}, {m['expected']['pan_x_pct']}, {m['expected']['pan_y_pct']} | "
-           f"{m['measured']['zoom']}, {m['measured']['pan_x_pct']}, {m['measured']['pan_y_pct']} | {'yes' if m['plays'] else 'NO'} |" for m in moves]
+          "Facts, written by `T capcut-check measure` from " + ("a screen recording of CapCut's own player playing" if cat["recording"] else
+                                                                 "CapCut's own export of") + " the check project. Use only what CapCut drew. "
+          "Match a reference by its numbers (`T edit-profile`): a caption entrance by its curve, a join by its signature. "
+          f"`free plan`: exports without CapCut Pro ({cat['pro_from']}); with `config.json → capcut.pro` false, never use one that does not.", "",
+          "## Moves (`T capcut-motion`)", "", "Per second (a move only partly in view still compares): zoom %, pan of the picture in % of the "
+          "width / height (+ = right / down).", "", "| move | expected zoom, pan x, pan y per s | measured (seen for s) | plays |", "|---|---|---|---|"]
+    md += [f"| {m['motion']} | {m['expected']['zoom_pct_per_s']}, {m['expected']['pan_x_pct_per_s']}, {m['expected']['pan_y_pct_per_s']} | "
+           f"{m['measured']['zoom_pct_per_s']}, {m['measured']['pan_x_pct_per_s']}, {m['measured']['pan_y_pct_per_s']} ({m['measured']['seen_s']} s) | "
+           f"{yn(m['plays'])} |" for m in moves]
     md += ["", f"## Text intros (`T capcut-text-anim --intro <slug>`), each at {c['intro_s']} s", "",
-           "Per frame from the caption's first: height and width in % of the settled text, rise and sideways shift in px (1080 wide), "
-           "fill in % (a fade starts low); `settle` = frames until it sits still.", "",
-           "| slug | drawn | height % | width % | rise px | shift px | fill % | settle |", "|---|---|---|---|---|---|---|---|"]
+           "Per frame from the caption's first: height and width in % of the settled text, rise and sideways shift in px (1080 wide; + = "
+           "lower / to the right), fill in % (a fade starts low); `settle` = frames until it sits still. At another length the same "
+           "curve runs faster or slower.", "",
+           "| slug | drawn | free plan | height % | width % | rise px | shift px | fill % | settle |", "|---|---|---|---|---|---|---|---|---|"]
     for i in intros:
         e = i["entrance"] or {}
-        md.append(f"| {i['slug']} | {'yes' if i['visible_animation'] else 'NO'} | {e.get('height_pct_of_settled', '')} | {e.get('width_pct_of_settled', '')} | "
+        md.append(f"| {i['slug']} | {yn(i['visible_animation'])} | {free(i)} | {e.get('height_pct_of_settled', '')} | {e.get('width_pct_of_settled', '')} | "
                   f"{e.get('rise_px', '')} | {e.get('shift_x_px', '')} | {e.get('fill_pct_of_settled', '')} | {e.get('settle_frames', '')} |")
     md += ["", f"## Transitions (`T capcut-transitions`; the timeline's `transition` = the slug), each at {c['transition_s']} s", "",
            "Around the cut: the frames that change (a hard cut changes 1), the largest shift per frame in % of the width / height, the "
-           "largest scale step, the brightness peak and dip, the sharpness low against the steady frames.", "",
-           "| slug | drawn | changing frames | shift x / y % | scale step | bright + / - | sharp min |", "|---|---|---|---|---|---|---|"]
+           "largest scale step, the brightness above both pictures / below both, the sharpness low against the steady frames.", "",
+           "| slug | drawn | free plan | changing frames | shift x / y % | scale step | bright + / - | sharp min |", "|---|---|---|---|---|---|---|---|"]
     for t_ in transitions:
         s = t_["signature"]
-        md.append(f"| {t_['slug']} | {'yes' if t_['visible_transition'] else 'NO'} | {s['frames_changing']} ({s['first_changing']}..{s['last_changing']}) | "
+        md.append(f"| {t_['slug']} | {yn(t_['visible_transition'])} | {free(t_)} | {s['frames_changing']} ({s['first_changing']}..{s['last_changing']}) | "
                   f"{s['shift_x_max_pct']} / {s['shift_y_max_pct']} | {s['scale_step_max']} | {s['bright_peak_delta']} / {s['bright_dip_delta']} | {s['sharp_min_ratio']} |")
     write_text(dd / "capcut-catalogue.md", "\n".join(md) + "\n")
     out({"ok": True, "catalogue": str(dd / "capcut-catalogue.md"), "data": str(dd / "capcut-catalogue.json"), **cat["summary"],
-         "moves": [{k: m[k] for k in ("motion", "expected", "plays")} | {"measured": {k: m["measured"][k] for k in ("zoom", "pan_x_pct", "pan_y_pct")}} for m in moves]})
+         "moves": [{k: m[k] for k in ("motion", "expected", "plays")}
+                   | {"measured": {k: m["measured"][k] for k in ("zoom_pct_per_s", "pan_x_pct_per_s", "pan_y_pct_per_s", "seen_s")}} for m in moves]})
 
 
 def cmd_capcut_check(a):
@@ -9682,6 +9735,10 @@ def main():
     p = sp.add_parser("capcut-check", help="Static: what this PC's CapCut plays, measured on its own export: fill (the check project) | "
                                            "measure --export <mp4> (data/capcut-catalogue.md)")
     p.add_argument("action", choices=["fill", "measure"]); p.add_argument("--draft"); p.add_argument("--export")
+    p.add_argument("--start", type=float, help="measure a screen recording: its second where the project's 0.0 s plays")
+    p.add_argument("--crop", help="measure a screen recording: CapCut's player area, W:H:X:Y in the recording")
+    p.add_argument("--moves-crop", help="where the move section played when that was elsewhere (the editor's small preview), W:H:X:Y")
+    p.add_argument("--moves-until", type=float, help="the project second up to which --moves-crop holds the moves")
     p.set_defaults(fn=cmd_capcut_check)
 
     p = sp.add_parser("capcut-text-anim", help="Static: one CapCut text animation (capcut-cli's catalogue) on every text of a track")
