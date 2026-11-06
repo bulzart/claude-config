@@ -11,14 +11,16 @@ Jobs:
   check    : the install (ComfyUI and its version, torch, CUDA, the GPU) and the four model files; "probe": true also starts ComfyUI
              and asks it for every node the workflow uses
   generate : images [{prompt, out, width, height, seed, steps, upsample, refs}] -> one PNG each, with the caption the image model got
-             (optional job keys: alpha, models, timeout_per_image, start_timeout, comfy_args: extra ComfyUI flags, log_out: a path
-             ComfyUI's log is copied to)
+             (optional job keys: alpha, models, timeout_per_image, start_timeout, reserve_vram_gb: the GPU memory ComfyUI leaves
+             unused, default 5, 0 for none; comfy_args: extra ComfyUI flags; log_out: a path ComfyUI's log is copied to)
 
 Each image runs in two stages in the same ComfyUI: the upsampler writes the caption, every model is unloaded (POST /free), then the
 image model draws it. ComfyUI's dynamic VRAM otherwise keeps the upsampler staged next to the text encoder and the transformer: on a
 16 GB PC that reserved about 15.8 GB of commit for a 1 MP image (measured 2026-11-06; 14.1 GB in two stages, 15.3 GB for 1216x2160
-with a reference; RAM itself stays mostly free). ComfyUI's classic loader (--disable-dynamic-vram) fills real RAM instead and was
-stopped by the memory guard. The same seed gives the same pixels again, in one process or another.
+with a reference; RAM itself stays mostly free). That commit is the GPU memory itself (Windows charges it to the process), so the
+worker also holds 5 GB of VRAM back (reserve_vram_gb): 11.8 GB for caption plus image at 1216x2160, no slower. ComfyUI's classic loader
+(--disable-dynamic-vram) fills real RAM instead and was stopped by the memory guard. The same seed gives the same pixels again, in one
+process or another, whatever is held back.
 
 The workflow is the one of ComfyUI's own FLUX 3 Image Klein templates (comfyui-workflow-templates 0.11.101:
 image_flux3_klein_distilled_t2i and image_flux3_klein_distilled_image_edit): UNETLoader (the int8 transformer), CLIPLoader type flux3
@@ -57,6 +59,10 @@ NODES = ("UNETLoader", "CLIPLoader", "VAELoader", "CLIPTextEncode", "TextGenerat
 MAX_REFS = 10
 EDGE_MULTIPLE, MIN_EDGE, MAX_EDGE = 16, 64, 4096
 STEPS, SAMPLER, SCHEDULER = 16, "euler", "simple"
+# Windows (WDDM) counts a program's GPU memory against its commit one to one (a 6 GB CUDA tensor = +6.0 GB, measured 2026-11-06), so
+# GPU room ComfyUI leaves unused is commit other programs keep. 5 GB held back: a 1216x2160 image peaked at 11.8 GB instead of about
+# 15 GB, with the same speed and the same pixels (dynamic VRAM streams the rest from the mapped model files).
+RESERVE_VRAM_GB = 5
 UPSAMPLER_TOKENS = 3584
 PRESENCE = {"t2i": 1.5, "i2i": 0.0}
 I2I_SCAFFOLD = "Reference images follow in order (the first image, the second image, ...).\nUser request: {instruction}\nOutput the caption."
@@ -413,7 +419,9 @@ def op_generate(job):
     results, t_all = [], time.time()
     try:
         port = free_port()
-        proc, log = start(comfy, work, port, job.get("comfy_args") or ())
+        reserve = job.get("reserve_vram_gb", RESERVE_VRAM_GB)
+        extra = ([] if reserve in (None, 0) else ["--reserve-vram", str(reserve)]) + list(job.get("comfy_args") or ())
+        proc, log = start(comfy, work, port, extra)
         stats, err = wait_ready(proc, port, float(job.get("start_timeout") or 300))
         if err:
             return {"ok": False, "error": err, "log_tail": tail(work), "images": results}

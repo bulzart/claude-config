@@ -1008,10 +1008,12 @@ js, _, _ = t("image", "generate", "--run", str(KR), "--anchor", "C1", "--prompt"
 _ka = Path(js["file"])
 check(js.get("ok") and _ka.is_file() and js.get("engine") == "flux3-image-klein-int8" and js.get("cost_usd_estimate") == 0.0
       and isinstance(js.get("seed"), int) and len(_SEEN) == _n, "with static_images=klein an image is made on this PC (no key, no API call), with its seed and no cost")
+check(js.get("upsampled") is False, "a Klein anchor is drawn from its sheet prompt as written (no upsampler: its props would be copied into every image)")
 _kp = ("image", "generate", "--run", str(KR), "--video", "01", "--image", "1", "--prompt", "A farmer in a wheat field at dusk", "--ref", str(_ka))
 js, _, _ = t(*_kp, env=KENV)
 _s1 = js.get("seed")
-check(js.get("ok") and js.get("size") == [1216, 2160] and js.get("refs") == 1 and js.get("caption"), "a Klein image takes the run's size and its reference and returns its caption")
+check(js.get("ok") and js.get("size") == [1216, 2160] and js.get("refs") == 1 and js.get("caption") and js.get("upsampled") is True,
+      "a Klein image of the plan goes through the upsampler, takes the run's size and its reference, and returns its caption")
 js, _, _ = t(*_kp, env=KENV)
 check(js.get("reused") is True and js.get("seed") == _s1, "the same Klein request is not made again")
 js, _, _ = t(*_kp, "--again", env=KENV)

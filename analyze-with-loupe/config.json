@@ -193,6 +193,9 @@
       "steps": 16,
       "alpha": 16.0,
       "upsample": true,
+      "anchor_upsample": false,
+      "reserve_vram_gb": 5,
+      "comfy_args": [],
       "max_refs": 10,
       "limits": {
         "multiple": 16,
@@ -200,7 +203,7 @@
         "max_edge": 4096
       },
       "timeout_s": 1800,
-      "note": "FLUX 3 Image Klein (distilled; int8, the build for GPUs without FP8 such as the RTX 30 series) made on this PC by scripts/image_worker.py in a private headless ComfyUI (AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT; reference/static section 9). steps 16 and no CFG are the checkpoint's defaults; alpha is the reference code's timestep shift since 2026-10-17 (ComfyUI's own default is 6.93); upsample runs Black Forest Labs' prompt upsampler first (their model card: always, unless the prompt already is a full caption). Licence: FLUX Kommunity License (non-commercial use, plus commercial outputs for a business under US$5M a year)."
+      "note": "FLUX 3 Image Klein (distilled; int8, the build for GPUs without FP8 such as the RTX 30 series) made on this PC by scripts/image_worker.py in a private headless ComfyUI (AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT; reference/static section 9). steps 16 and no CFG are the checkpoint's defaults; alpha is the reference code's timestep shift since 2026-10-17 (ComfyUI's own default is 6.93); upsample runs Black Forest Labs' prompt upsampler first (their model card: always, unless the prompt already is a full caption); anchor_upsample false draws a character's anchor from its sheet prompt as written, since the upsampler adds props every later image then copies. reserve_vram_gb: Windows charges GPU memory to the process's commit, so ComfyUI leaves 5 GB of VRAM unused (peak 11.8 GB instead of about 15 GB at 1216x2160, same speed and pixels, measured 2026-11-06); comfy_args are extra ComfyUI flags. Licence: FLUX Kommunity License (non-commercial use, plus commercial outputs for a business under US$5M a year)."
     },
     "tts": {
       "design_model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",

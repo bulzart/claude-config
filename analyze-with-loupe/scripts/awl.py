@@ -7274,7 +7274,9 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
     engine = _kcfg("engine", "flux3-image-klein-int8")
     models = dict(_kcfg("models", {}) or {})
     steps, alpha = int(_kcfg("steps", 16)), _kcfg("alpha", 16.0)
-    upsample = bool(_kcfg("upsample", True)) and not a.no_upsample
+    # a character's anchor is drawn from its sheet prompt as written: the upsampler adds plausible props (a veil, a tool) that every
+    # later image of that character then copies from the anchor (seen 2026-11-06); the plan's images keep the upsampler
+    upsample = bool(_kcfg("anchor_upsample", False) if anchor else _kcfg("upsample", True)) and not a.no_upsample
     params = {"engine": engine, "models": models, "prompt": prompt, "size": f"{w}x{h}", "steps": steps, "alpha": alpha,
               "upsample": upsample, "seed": a.seed, "refs": [{"file": str(r.resolve()), "sha1": _sha1_file(r)} for r in refs]}
     fp = _fingerprint({"params": params})
@@ -7296,6 +7298,7 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
     f = folder / f"{tag}.png"
     timeout = float(a.timeout or _kcfg("timeout_s", 1800))
     job = {"op": "generate", "root": os.environ.get("AWL_IMAGE_ROOT") or _kcfg("root") or "", "models": models, "alpha": alpha,
+           "reserve_vram_gb": _kcfg("reserve_vram_gb", 5), "comfy_args": list(_kcfg("comfy_args", []) or []),
            "timeout_per_image": timeout, "images": [{"prompt": prompt, "out": str(f), "width": w, "height": h, "seed": seed,
                                                      "steps": steps, "upsample": upsample, "refs": [str(r.resolve()) for r in refs]}]}
     t0 = time.time()
