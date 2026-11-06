@@ -22,7 +22,7 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 2.1 |
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 2.3 |
 | 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 9.0 |
-| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 5.8 |
+| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 6.1 |
 | 7 | The edit (S4) | `070_7_the-edit-s4.md` | 6.2 |
 | 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 2.7 |
 | 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 7.5 |

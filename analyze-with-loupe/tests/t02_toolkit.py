@@ -846,9 +846,12 @@ check(_fmt["image_size"] == "1216x2160" and _fmt["export"] == "1080x1920" and _f
       "static format stores the pick in state.json -> static.format")
 
 js, _ = ts("tts", "design", "--run", str(SR), "--text", "Most people never notice this.", "--instruct", "a calm deep male narrator",
-           "--instruct", "a warm female storyteller", "--instruct", "a gravelly older man")
+           "--instruct", "a warm female storyteller", "--instruct", "a gravelly older man", "--instruct", "a bright young woman, quick",
+           "--instruct", "a dry, wry middle-aged man")
 _design = js
-check(len(js.get("samples", [])) == 3 and all(Path(s["file"]).is_file() for s in js["samples"]), "tts design makes one sample per voice description")
+check(len(js.get("samples", [])) == 5 and all(Path(s["file"]).is_file() and Path(s["file"]).is_absolute() for s in js["samples"])
+      and "5 samples" in (js.get("note") or "") and "full file path" in (js.get("note") or ""),
+      "tts design makes one sample per voice description (the stop offers five) and gives each one's full file path to play")
 js, _ = ts("tts", "voice", "--run", str(SR), "--sample", "2", "--emotion", "tense=Something was wrong. Very wrong.")
 _st = json.loads((SR / "state.json").read_text(encoding="utf-8"))
 check(js.get("ok") and _st["static"]["voice"]["sample"] == 2 and set(_st["static"]["voice"]["prompts"]) == {"neutral", "tense"},
@@ -880,7 +883,7 @@ check(code == 2 and "--rejoin" in js.get("error", ""), "tts say refuses --rejoin
 js, _ = ts("tts", "say", "--run", str(SR), "--video", "02")
 _r2 = {r["n"]: r for r in json.loads((SR / "30-assets" / "narration" / "video-02.json").read_text(encoding="utf-8"))["lines"]}
 _vs = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
-check([s["seed"] for s in _design["samples"]] == [1106, 1107, 1108] and _vs["seed"] == 1107 and _r2[2]["made_by"] == "design"
+check([s["seed"] for s in _design["samples"]] == [1106, 1107, 1108, 1109, 1110] and _vs["seed"] == 1107 and _r2[2]["made_by"] == "design"
       and _r2[2]["seed"] == 1107 and _r2[1]["made_by"] == "clone" and _r2[2].get("delivery", "").startswith("Quiet disbelief")
       and all(isinstance(_r2[k].get("timbre_sim"), float) and _r2[k].get("pitch_st") is not None for k in (1, 2, 3))
       and [x["n"] for x in js["voice_match"]["strong_lines"]] == [2] and js["voice_match"]["clone_lines"]["timbre_sim_min"] is not None,

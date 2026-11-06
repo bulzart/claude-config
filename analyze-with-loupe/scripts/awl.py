@@ -8881,10 +8881,11 @@ def _tts_design(a):
         fail("voice design failed: " + str(res.get("error"))[:600], 1, worker=res)
     write_json(vd / "samples.json", {"text": a.text, "language": lang, "samples": res.get("items") or items, "made": now_iso(),
                                      "model": _scfg("tts.design_model")})
-    out({"ok": True, "samples": [{"n": it["n"], "file": it["out"], "instruct": it["instruct"], "seed": it.get("seed"), "duration_s": it.get("duration_s"),
-                                  "words_per_s": _sample_pace(a.text, it)}
-                                 for it in (res.get("items") or items)],
-         "note": "give the user the three files to listen to; their pick is stored with `T tts voice --sample K`"})
+    made = res.get("items") or items
+    out({"ok": True, "samples": [{"n": it["n"], "file": str(Path(it["out"]).resolve()), "instruct": it["instruct"], "seed": it.get("seed"),
+                                  "duration_s": it.get("duration_s"), "words_per_s": _sample_pace(a.text, it)} for it in made],
+         "note": f"give the user the {len(made)} samples to listen to, each with its full file path; their pick is stored with "
+                 "`T tts voice --sample K`"})
 
 
 def _tts_voice(a):

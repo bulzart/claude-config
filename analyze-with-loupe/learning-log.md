@@ -1134,3 +1134,11 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   gain, no ducking) its distance under the voice and the narration's words heard with it against without it. S2 judges it (§8): a voice
   in the bed or an arc against the story is a new take by QC fixes; a changed word is a lower level (free under any QC setting), kept as
   `music_gain`. t02 covers measure (facts, --gain, missing bed).
+
+## 2026-11-06 · Static: five voice samples at the stop, each with its file path
+
+- **Asked (the user):** "when it comes the time to pick the narrator voice model, the agent should suggest 5 versions and also the file
+  path for each of them so the user can hear them and pick the one they like to be the voice of the videos".
+- **Changed:** A6s makes five voice samples (five takes on the spec's voice profile) instead of three, and the one stop lists each with
+  the full path of its file (static §6, §2, awl-static-plan steps 3-4, the router, README). `T tts design` had no cap (one sample per
+  `--instruct`); it now prints each sample's resolved full path and a note that counts the samples. t02 makes five and checks the paths.

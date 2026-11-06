@@ -1,9 +1,11 @@
 ## 6 The voice and the bed (A6s, S2)
 
 **The voice** (Qwen3-TTS 1.7B, bf16, design then clone): one voice per run, the same in every video.
-- Three samples at the stop of A6s: three voice descriptions written from the spec's voice profile (gender, age, tone, pace, accent; the
-  references' register, three different takes on it), all speaking one line in the references' style:
-  `T tts design --run RUN --text "<line>" --instruct "<voice 1>" --instruct "<voice 2>" --instruct "<voice 3>"`. The user listens and picks.
+- Five samples at the stop of A6s (the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them so
+  the user can hear them and pick the one they like to be the voice of the videos"): five voice descriptions written from the spec's
+  voice profile (gender, age, tone, pace, accent; the references' register, five different takes on it), all speaking one line in the
+  references' style: `T tts design --run RUN --text "<line>" --instruct "<voice 1>" … --instruct "<voice 5>"` (one sample per
+  `--instruct`). The stop lists each with the full path of its file (`T tts design` prints them); the user listens and picks.
 - The pick becomes the run's voice: `T tts voice --run RUN --sample K`, plus at most two emotion clips when the spec's delivery swings
   (`--emotion tense="<a line that carries it>"`): the same voice speaking that line, used as the reference for lines tagged with it.
 - **Strong lines** (§4; the user, 2026-11-05: "make strong lines with the voice-design model instead, though the voice may shift slightly

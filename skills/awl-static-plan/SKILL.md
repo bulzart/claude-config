@@ -1,6 +1,6 @@
 ---
 name: awl-static-plan
-description: /analyze-with-loupe Analyze Mode / Static phase: characters, the subject pool, three voice samples, the one stop, scripts and image plans (A6s). Internal to that command.
+description: /analyze-with-loupe Analyze Mode / Static phase: characters, the subject pool, five voice samples, the one stop, scripts and image plans (A6s). Internal to that command.
 user-invocable: false
 ---
 
@@ -17,7 +17,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.1 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (2.3 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.0 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (5.8 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (6.1 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
@@ -34,13 +34,16 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    reference's own subject, scored as §3 says. A factual niche: research every candidate (WebSearch, then WebFetch on the strongest
    results; at most four searches per candidate) and keep only the candidates two independent sources hold. Write
    `RUN/20-analysis/static-subjects.md` (each candidate: title, hook line, why it fits, the scores, the sources).
-3. **Three voice samples** (static §6): three voice descriptions from the spec's voice profile and one line in the references' style that
-   names no subject, then `T tts design --run RUN --text "<line>" --instruct "<voice 1>" --instruct "<voice 2>" --instruct "<voice 3>"`.
+3. **Five voice samples** (static §6; the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them
+   so the user can hear them and pick the one they like to be the voice of the videos"): five voice descriptions from the spec's voice
+   profile, five different takes on it, and one line in the references' style that names no subject, then `T tts design --run RUN
+   --text "<line>" --instruct "<voice 1>" --instruct "<voice 2>" --instruct "<voice 3>" --instruct "<voice 4>" --instruct "<voice 5>"`.
    A worker error is a blocker of the run: report its real text with `T static check` and stop.
 4. **The one stop**, in plain chat (never AskUserQuestion: the pool is longer than four options), the last thing in the turn: the
-   subjects numbered (title — hook line — why it fits — for facts the number of sources), the three voices (number, the voice in a few
-   words, the file to play), and "Reply with N subject numbers and one voice number, or 'you pick'." Then stop and wait. Fewer subjects
-   than the count: ask once more. "You pick": the top-scored subjects and the voice that best fits the profile [I].
+   subjects numbered (title — hook line — why it fits — for facts the number of sources), the five voices (number, the voice in a few
+   words, and the full path of its file, as `T tts design` prints it, so the user can play it), and "Reply with N subject numbers and
+   one voice number, or 'you pick'." Then stop and wait. Fewer subjects than the count: ask once more. "You pick": the top-scored
+   subjects and the voice that best fits the profile [I].
 5. **Store the picks:** `T state --run RUN set static.subjects='["<title 1>","<title 2>"]'` (video order), then
    `T tts voice --run RUN --sample K`, plus `--emotion NAME="<a line that carries it>"` (at most two) when the spec's delivery swings
    (static §6).

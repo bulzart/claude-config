@@ -32,7 +32,7 @@ what makes it work (one paragraph, [I]). Every speech field reads from the trans
   check verified (`AWL/data/capcut-catalogue.md`, Effects). An effect the references never show is used only where it plays the part of a
   device they do show (a green-screen wipe for their quick slide at a turn, a whoosh where their slide carries one); without a folder,
   CapCut's own transitions and no sound effects. Name the numbers each choice rests on.
-- **Voice profile**: the numbers of §1 and the delivery in words; the three sample voices are written from it (§6).
+- **Voice profile**: the numbers of §1 and the delivery in words; the five sample voices are written from it (§6).
 - **Bed brief** (§6; a bed goes under every video, also when the references are voice only): the content type and its register, the
   narration's pace, pitch and delivery, the arc the beats make, the pictures' rhythm, and the references' own sound as the audio profile's
   numbers (a bed or none; when one, its tempo, beat strength and energy arc; its instruments and genre are not analysed).
