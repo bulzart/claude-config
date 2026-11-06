@@ -18,7 +18,12 @@
   word, the start repeating the reference's words, another speaker) is made again: `T tts say --only N`, at most twice, then noted.
 - The narration starts `lead_s` after the first frame and the video ends `tail_s` after it (config `static.narration`).
 
-**The bed** (ACE-Step 1.5), only when the spec says the references use one: `40-briefs/music.json`
+**The bed** (ACE-Step 1.5), only when the spec says the references use one, or the user asks for one (their word outranks the spec; the
+user, 2026-11-06, on a voice-only reference: "lets also generate some instrumental over the capcut project ... with acestep 1.5"):
+`40-briefs/music.json`
 `{"tracks": [{"video": "NN", "caption": "<genre, mood, instruments, tempo in words>", "duration": <lead + narration + tail>, "bpm": 80}]}`,
-then `T music make --run RUN` (every track in one model load; instrumental). It goes under the voice ducked, at the plan's gain.
+then `T music make --run RUN` (every track in one model load; instrumental). The file carries its own fades (the track's `fade_in`,
+`fade_out`) and is saved as 16-bit PCM WAV, the format the CapCut effects check showed playing (ACE-Step writes 32-bit float; the toolkit
+converts it). The image plan takes it with `"music": true` and `music_gain` (else `config.json → static.music.gain`). The check render
+ducks it under the voice; the CapCut project plays it at that gain without ducking (no CapCut ducking was checked).
 

@@ -8825,11 +8825,11 @@ def _gpu_lock():
     return FileLock(runs_root() / ".gpu.lock", timeout=7200.0, stale=14400.0)
 
 
-def _tone(dest: Path, seconds: float, freq: int = 220, rate: int = 24000) -> float:
+def _tone(dest: Path, seconds: float, freq: int = 220, rate: int = 24000, codec: str = "pcm_s16le") -> float:
     """Tests and dry runs (AWL_TTS_STUB / AWL_MUSIC_STUB): a plain tone stands in for a model's audio."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-f", "lavfi", "-i", f"sine=frequency={freq}:duration={seconds:.3f}",
-         "-ac", "1", "-ar", str(rate), "-c:a", "pcm_s16le", str(dest)], check=True, timeout=120)
+         "-ac", "1", "-ar", str(rate), "-c:a", codec, str(dest)], check=True, timeout=120)
     return round(seconds, 3)
 
 
@@ -9222,9 +9222,36 @@ def _srt_time(t: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
+def _audio_codec(f: Path):
+    try:
+        st = [s for s in ffprobe_json(f).get("streams", []) if s.get("codec_type") == "audio"]
+        return st[0].get("codec_name") if st else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _bed_pcm16(f: Path) -> dict:
+    """A bed in the audio format this PC's CapCut was shown playing: 16-bit PCM WAV at 48 kHz (every sound of the CapCut effects check is
+    one; ACE-Step 1.5 writes 32-bit float, which no check has shown CapCut playing). Converted in place, same length and channels; a peak
+    over full scale (possible in float) is brought to -1 dBFS first so nothing clips, and the change is reported."""
+    before = _audio_codec(f)
+    if before == "pcm_s16le":
+        return {"codec": before, "converted": False}
+    ff = find_tool("ffmpeg")
+    cp = run([ff, "-nostdin", "-hide_banner", "-i", str(f), "-af", "volumedetect", "-f", "null", "-"], timeout=300)
+    m = re.search(r"max_volume:\s*(-?[\d.]+) dB", cp.stderr or "")
+    peak = float(m.group(1)) if m else None
+    gain = round(-(peak + 1.0), 2) if peak is not None and peak > -0.05 else 0.0
+    tmp = f.with_name(f.stem + ".pcm16.tmp.wav")
+    run([ff, "-nostdin", "-y", "-loglevel", "error", "-i", str(f)] + (["-af", f"volume={gain}dB"] if gain else [])
+        + ["-c:a", "pcm_s16le", "-ar", "48000", str(tmp)], check=True, timeout=300)
+    os.replace(tmp, f)
+    return {"codec": "pcm_s16le", "converted": True, "from": before, "peak_db_before": peak, "gain_db_applied": gain}
+
+
 def cmd_music(a):
     """Static's bed (contract item 36), only when the plan calls for one: every track of --plan in one ACE-Step 1.5 load (instrumental, the
-    narration's length plus a tail, fades), saved as 30-assets/music/video-NN.wav with a sidecar."""
+    narration's length plus a tail, fades), saved as 30-assets/music/video-NN.wav (16-bit PCM, _bed_pcm16) with a sidecar."""
     if a.action == "check":
         if os.environ.get("AWL_MUSIC_STUB"):
             out({"ok": True, "stub": True, "ready": True})
@@ -9254,8 +9281,8 @@ def cmd_music(a):
     if not tracks:
         fail("no track to make (the plan is empty, or --video names none of it)", 2)
     if os.environ.get("AWL_MUSIC_STUB"):
-        for t_ in tracks:
-            _tone(Path(t_["out"]), t_["duration"], 110, 48000)
+        for t_ in tracks:   # 32-bit float, as ACE-Step writes it, so the conversion below runs in the tests too
+            _tone(Path(t_["out"]), t_["duration"], 110, 48000, codec="pcm_f32le")
         res = {"ok": True, "stub": True, "tracks": tracks}
     else:
         root = os.environ.get("AWL_MUSIC_ROOT") or _scfg("music.root") or ""
@@ -9269,9 +9296,11 @@ def cmd_music(a):
     for t_ in tracks:
         f = Path(t_["out"])
         if f.is_file():
+            fmt = _bed_pcm16(f)
             write_json(f.with_suffix(".json"), {**t_, "made": now_iso(), "model": _scfg("music.config", "acestep-v15-turbo"),
-                                                "stub": bool(os.environ.get("AWL_MUSIC_STUB"))})
-            made.append({"video": t_["video"], "file": str(f), "duration_s": (media_summary(f) or {}).get("duration_s")})
+                                                "stub": bool(os.environ.get("AWL_MUSIC_STUB")), "format": fmt})
+            made.append({"video": t_["video"], "file": str(f), "duration_s": (media_summary(f) or {}).get("duration_s"),
+                         "codec": fmt.get("codec"), "converted_from": fmt.get("from")})
     out({"ok": bool(made), "made": made, "asked": len(tracks), "note": "listen before use; the bed goes under the narration ducked (slideshow render)"})
 
 

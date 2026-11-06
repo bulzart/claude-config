@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (4.9 KB)
+- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (6.2 KB)
 - static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (2.2 KB)
 - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
@@ -40,7 +40,8 @@ Only these section files for this phase, nothing else unless a step below says s
      static.format.export>` (the project's canvas is the format's export size), `capcut_read_timeline`;
    - each image of the timeline with `capcut_add_image` (`atSec` its start, `durSec` its span, on the main track);
    - the narration with `capcut_add_audio` (`atSec` = the timeline's `narration_offset`, its own track, volume 1.0); the bed, when there
-     is one, with `capcut_add_audio` (`atSec` 0, volume = the timeline's gain) and `capcut_add_audio_fade`;
+     is one, with `capcut_add_audio` (`atSec` 0, volume = the timeline's gain; its fades are in the file, so no `capcut_add_audio_fade`,
+     which would fade it twice);
    - no CapCut scene effect or filter (`capcut add-effect`, `capcut_add_filter`): the CapCut check has verified none; grain, a vignette or
      light leaks come from the effects folder as overlays (static §5) or are named in the brief as left out;
    - `capcut_validate`, `capcut_save` (never force); this is the last MCP save: the commands below write the project's files, and a later

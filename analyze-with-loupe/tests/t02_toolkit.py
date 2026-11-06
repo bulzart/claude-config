@@ -954,6 +954,14 @@ ts("image", "use", "--run", str(SR), "--video", "01", "--image", "3", "--attempt
 (SR / "40-briefs" / "music.json").write_text(json.dumps({"tracks": [{"video": "01", "caption": "dark ambient drone", "duration": 12}]}), encoding="utf-8")
 js, _ = ts("music", "make", "--run", str(SR))
 check(js.get("made") and Path(js["made"][0]["file"]).is_file(), "music make writes the bed of the planned track (stub)")
+_bed = Path(js["made"][0]["file"]) if js.get("made") else None
+_bcodec = [s.get("codec_name") for s in json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_streams", "-of", "json", str(_bed)],
+                                                                capture_output=True, text=True).stdout or "{}").get("streams", [])] if _bed else []
+_bside = json.loads(_bed.with_suffix(".json").read_text(encoding="utf-8")) if _bed and _bed.with_suffix(".json").is_file() else {}
+check(_bcodec == ["pcm_s16le"] and js["made"][0].get("converted_from") == "pcm_f32le" and (_bside.get("format") or {}).get("converted") is True
+      and abs(float(js["made"][0].get("duration_s") or 0) - 12.0) < 0.05,
+      "music make saves the bed as 16-bit PCM WAV, the format the CapCut check showed playing (the stub writes float as ACE-Step does), "
+      "same length, and the sidecar says it was converted")
 js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01")
 _sp = js["image_spans"]
 check(js.get("ok") and _sp[0][1] == 0.0 and -1 / 30 - 1e-6 <= _sp[1][1] - (0.3 + _ln[1]["start"]) <= 1e-6 and js.get("music")

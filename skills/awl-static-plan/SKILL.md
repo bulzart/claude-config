@@ -17,7 +17,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.1 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (2.3 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (6.3 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (2.6 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (3.1 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
@@ -57,8 +57,8 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    is blended, its fit and volume, and why; only the ways the catalogue's Effects part shows playing). Nothing is left to a stock value:
    `T slideshow plan` lists what is undecided. The count follows the spec's seconds per still at the script's length; the narration's
    real timing settles it in S2 (and the effects' moments with it: a `join` or a `line` follows the timing, an `at_s` does not).
-8. **The bed:** only when the spec says the references use one: `RUN/40-briefs/music.json`, one track per video (static §6; the duration
-   is set in S2 once the narration exists).
+8. **The bed:** only when the spec says the references use one, or the user asks for one (their word outranks the spec):
+   `RUN/40-briefs/music.json`, one track per video (static §6; the duration is set in S2 once the narration exists).
 9. Show one line per video (number, subject, length, images, bed or none) and go on without waiting.
 
 ## Rules this phase owns (contract item 36)

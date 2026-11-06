@@ -1101,3 +1101,20 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   Static; awl-analyze-study and awl-static-plan list it (read again only after a compaction); the Static production prompt (§2s) opens
   with it; the router's item 36 and the README name it. creative-direction §1-§4 stay the A3 lens, read as this team's story-and-attention
   lens.
+
+## 2026-11-06 · Static: a bed on request, in the format CapCut was shown playing
+
+- **Asked (the user):** "lets also generate some instrumental over the capcut project 06_Nov_2026_v01-3 with acestep 1.5" (a run whose
+  reference is voice only, so its spec said "Bed: none").
+- **Done:** the first real `T music make` of a run: ACE-Step 1.5 turbo, 46.48 s, one load under the memory guard in 55 s (free commit 14.6
+  GB at the start, no stop). Measured: -13.4 LUFS, mostly under 250 Hz, no word heard by whisper (no vocals); at the config's gain 0.22 it
+  sits 12.4 LU under the narration, and whisper hears the same 96 narration words with it under them at that constant gain (CapCut plays no
+  ducking). Added to the approved project on its own track with `capcut add-audio` (CapCut closed; never through the MCP after the
+  toolkit's writes), then `T capcut-repair --keep-text`; only the track and its material changed.
+- **Found and fixed:** ACE-Step writes 32-bit float WAV, and every sound the CapCut effects check showed playing is 16-bit PCM: `T music
+  make` now converts each bed to 16-bit PCM WAV in place (`_bed_pcm16`, a peak over full scale brought to -1 dBFS first; the sidecar
+  records it; t02 checks it with a float stub). `capcut add-audio` copies the file into the project's `assets\audio`, so a file converted
+  after the add needs that copy replaced too. The bed's fades are in the file, so static §7 and awl-static-edit no longer add
+  `capcut_add_audio_fade` (it would fade it twice). Static §6, awl-static-plan and the router: a bed also when the user asks for one.
+- **Open:** the check render ducks the bed under the voice and the CapCut project plays it flat at the same gain (no CapCut ducking was
+  checked): the two differ under speech; asked the user which one both should do.

@@ -18,7 +18,8 @@
 - **The CapCut project is the final** (the user, 2026-11-05: "export it as the final"): it mirrors the timeline at the format's export
   size, the images at their full size (`reference/capcut-assembly.md` §1–§2, §4): `T capcut-name`, `capcut_clone_draft`,
   `T capcut-prep --draft "<draft>" --canvas <state.json → static.format.export>`; each image with `capcut_add_image` at its start for its duration on the main
-  track; the narration with `capcut_add_audio` at `lead_s`; the bed with `capcut_add_audio` at its gain and `capcut_add_audio_fade`;
+  track; the narration with `capcut_add_audio` at `lead_s`; the bed with `capcut_add_audio` at its gain (its fades are in the file: no
+  `capcut_add_audio_fade`, which would fade it twice);
   `capcut_validate`, `capcut_save` (the last MCP save: the commands after it write the project's files, and a later MCP save would write its
   own copy back over them); then the moves with `T capcut-motion --draft "<draft>" --run RUN --video NN` (KFTypeScaleX with the clip's
   uniform scale on and KFTypePositionX/Y, the timeline's values: CapCut 9.7 ignores UNIFORM_SCALE keyframes, so never
