@@ -293,7 +293,8 @@ def _int(v, name):
         raise ValueError(f"{name} must be a whole number, got {v!r}") from None
 
 
-def normalise(img, i):
+def normalise(img, i, earlier_outs=()):
+    """One image of the job, checked and with its defaults; a reference may be an earlier image's out (it exists by then)."""
     if not str(img.get("prompt") or "").strip():
         raise ValueError(f"image {i + 1}: no prompt")
     if not img.get("out"):
@@ -305,7 +306,8 @@ def normalise(img, i):
     refs = [Path(r) for r in img.get("refs") or []]
     if len(refs) > MAX_REFS:
         raise ValueError(f"image {i + 1}: at most {MAX_REFS} reference images, got {len(refs)}")
-    missing = [str(r) for r in refs if not r.is_file()]
+    later = {os.path.normcase(os.path.abspath(o)) for o in earlier_outs}
+    missing = [str(r) for r in refs if not r.is_file() and os.path.normcase(os.path.abspath(str(r))) not in later]
     if missing:
         raise ValueError(f"image {i + 1}: reference image(s) not found: " + "; ".join(missing))
     seed = img.get("seed")
@@ -382,7 +384,8 @@ def op_generate(job):
         return {"ok": False, "error": "model files missing: " + "; ".join(missing)}
     try:
         prompts = json.loads((HERE / "flux3_upsampler_prompts.json").read_text(encoding="utf-8"))
-        imgs = [normalise({"alpha": job.get("alpha"), **im}, i) for i, im in enumerate(job.get("images") or [])]
+        raw = job.get("images") or []
+        imgs = [normalise({"alpha": job.get("alpha"), **im}, i, [str(x.get("out") or "") for x in raw[:i]]) for i, im in enumerate(raw)]
     except (OSError, ValueError) as e:
         return {"ok": False, "error": str(e)}
     if not imgs:
