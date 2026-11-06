@@ -24,8 +24,10 @@ production agent starts (`awl-analyze-produce` A9s).
 1. `T tts say --run RUN --video NN` → `RUN/30-assets/narration/video-NN.wav`, its sidecar (each line's start and end) and the loudness.
    **Strong lines** (static §4, §6): read `voice_match`; a strong line apart from the cloned lines' numbers is made again with another seed
    (the line's `seed` in `video-NN-narration.json`, then `--only N`), at most twice, then as a cloned line (`strong` false), noted.
-2. `T narration-words --run RUN --video NN` → the timed words, `video-NN.cues.json`, `video-NN.srt`, and per line what was heard
-   against the script. Judge every line it lists (`lines_to_check`) from its missing, extra and repeated words: a wrong line is made again
+2. `T narration-words --run RUN --video NN` → the timed words, `video-NN.cues.json`, `video-NN.srt` (as many words at once as the image
+   plan's `captions.words`), and per line what was heard against the script; numbers are compared apart (speech-to-text writes a spoken
+   "seventeen sixty-nine" as "1769"): each line's `numbers` gives the script's and the heard ones to compare by ear. Judge every line it
+   lists (`lines_to_check`) from its missing, extra and repeated words and its numbers: a wrong line is made again
    with `T tts say --run RUN --video NN --only N`, then `narration-words` again; at most twice per line, then it stays and the brief notes it
    (local and free; with QC fixes `off` nothing is made again).
 3. **Length and pace:** the duration against the spec's range; a quarter or more outside it: shorten or extend lines of the script and

@@ -3332,6 +3332,27 @@ def _norm_word(w: str) -> str:
     return re.sub(r"[^\w']+", "", w.lower())
 
 
+_NUM_PARTS = sorted(("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen "
+                     "eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred thousand million billion oh").split(),
+                    key=len, reverse=True)
+_SPOKEN_ABBR = {"st": "saint", "mt": "mount", "mr": "mister", "mrs": "missus", "dr": "doctor", "vs": "versus"}
+
+
+def _is_number_token(w: str) -> bool:
+    """A normalised word that only spells a number ("seventeen", "sixtynine", "oh") or is written in digits ("1769", "600")."""
+    if not w:
+        return False
+    if re.fullmatch(r"\d[\d,.]*(?:st|nd|rd|th|s)?", w):
+        return True
+    rest = w
+    while rest:
+        part = next((p for p in _NUM_PARTS if rest.startswith(p)), None)
+        if part is None:
+            return False
+        rest = rest[len(part):]
+    return True
+
+
 def align_script(words: list, script: str) -> list:
     """Keep the intended wording, borrow timing from ASR words (difflib alignment + interpolation)."""
     import difflib
@@ -3371,12 +3392,13 @@ def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur:
     if cur:
         events.append(cur)
     res = []
+    starts = [round(ev[0]["s"], 2) for ev in events]
     for i, ev in enumerate(events):
-        end = ev[-1]["e"]
+        start = starts[i]
+        end = max(ev[-1]["e"] + (0.05 if i + 1 < len(events) else 0.0), start + 0.25)   # at least 0.25 s on screen ...
         if i + 1 < len(events):
-            end = min(max(end, ev[-1]["e"] + 0.05), events[i + 1][0]["s"])   # never overlap the next caption
-        res.append({"start": round(ev[0]["s"], 2), "end": round(max(end, ev[0]["s"] + 0.25), 2),
-                    "text": " ".join(w["w"] for w in ev), "preset": "caption"})
+            end = min(end, starts[i + 1])   # ... but never overlapping the next caption (a short word next to a quick one stays shorter)
+        res.append({"start": start, "end": round(max(end, start + 0.01), 2), "text": " ".join(w["w"] for w in ev), "preset": "caption"})
     return res
 
 
@@ -7797,14 +7819,19 @@ def cmd_narration_words(a):
     for r in side["lines"]:
         hw = [_norm_word(w["w"]) for w in heard if r["start"] - 0.15 <= w["s"] <= r["end"] + 0.15]
         sw = [_norm_word(x) for x in r["text"].split()]
-        sm = difflib.SequenceMatcher(a=sw, b=hw, autojunk=False)
-        miss = [x for tag, i1, i2, _j1, _j2 in sm.get_opcodes() if tag in ("delete", "replace") for x in sw[i1:i2]]
-        extra = [x for tag, _i1, _i2, j1, j2 in sm.get_opcodes() if tag in ("insert", "replace") for x in hw[j1:j2]]
+        # numbers are compared apart: speech-to-text writes a spoken "seventeen sixty-nine" as "1769" (and "Saint" as "St")
+        sc = [_SPOKEN_ABBR.get(x, x) for x in sw if not _is_number_token(x)]
+        hc = [_SPOKEN_ABBR.get(x, x) for x in hw if not _is_number_token(x)]
+        sm = difflib.SequenceMatcher(a=sc, b=hc, autojunk=False)
+        miss = [x for tag, i1, i2, _j1, _j2 in sm.get_opcodes() if tag in ("delete", "replace") for x in sc[i1:i2]]
+        extra = [x for tag, _i1, _i2, j1, j2 in sm.get_opcodes() if tag in ("insert", "replace") for x in hc[j1:j2]]
         rep = [w for i, w in enumerate(hw[1:], 1) if w and w == hw[i - 1]]
         per_line.append({"n": r["n"], "script_words": len(sw), "heard_words": len(hw), "missing": miss[:12], "extra": extra[:12],
-                         "repeated": rep[:6], "match": round(sm.ratio(), 3)})
+                         "repeated": rep[:6], "match": round(sm.ratio(), 3) if (sc or hc) else 1.0,
+                         "numbers": {"script": [x for x in sw if _is_number_token(x)], "heard": [x for x in hw if _is_number_token(x)]}})
         k += len(sw)
-    cues = chunk_words(timed, int(a.words or _scfg("captions.words", 3))) if timed else []
+    plan_words = (_img_plan(rd, nn).get("captions") or {}).get("words")   # the plan's text look sets the words at once (static §2)
+    cues = chunk_words(timed, int(a.words or plan_words or _scfg("captions.words", 3))) if timed else []
     write_json(work.parent / f"video-{nn}.words.json", {"video": nn, "engine": tr.get("engine"), "words": timed, "heard": heard})
     write_json(work.parent / f"video-{nn}.cues.json", cues)
     srt = []
@@ -7815,7 +7842,8 @@ def cmd_narration_words(a):
     out({"ok": True, "video": nn, "engine": tr.get("engine"), "words": len(timed), "cues": len(cues), "lines": per_line,
          "lines_to_check": [x["n"] for x in off], "files": {"words": str(work.parent / f"video-{nn}.words.json"),
                                                              "cues": str(work.parent / f"video-{nn}.cues.json"), "srt": str(work.parent / f"video-{nn}.srt")},
-         "note": "match is the share of a line's script words heard in its span (speech-to-text, not a verdict): listen to and judge the lines it lists; "
+         "note": "match is the share of a line's script words heard in its span (speech-to-text, not a verdict), numbers apart (each line's "
+                 "`numbers` lists the script's and the heard ones: speech-to-text writes spoken numbers as digits): judge the lines it lists; "
                  "a line made again: `T tts say --only N`, then this again"})
 
 
@@ -8140,8 +8168,13 @@ def _slideshow_plan(a):
           "images": rows, "made": now_iso()}
     tlp = rd / "40-briefs" / f"video-{nn}-timeline.json"
     write_json(tlp, tl)
+    try:   # the cues are grouped again from the timed words at the plan's words at once, whatever narration-words was run with
+        timed_words = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.words.json").read_text(encoding="utf-8")).get("words") or []
+    except (OSError, ValueError):
+        timed_words = []
     try:
-        cues = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8"))
+        cues = (chunk_words(timed_words, tl["captions"]["words"]) if timed_words else
+                json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8")))
     except (OSError, ValueError):
         cues = []
     upper = str(cap.get("case") or "").lower() == "upper"

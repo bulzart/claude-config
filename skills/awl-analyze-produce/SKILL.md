@@ -77,8 +77,8 @@ Plan everything before production, in allocation order, **without asking for con
 At the start: `T state --run RUN set stage=producing next_skill=awl-analyze-produce`. In order, without asking:
 1. **S2 for every video**, one at a time: invoke Skill `awl-static-sound` (the narration, its words and checks, the image spans; the
    beds after the last narration).
-2. **Images by the API:** the characters' anchors once (Skill `awl-static-images`, its anchors step). **Images by the user:** Skill
-   `awl-static-images` for the prompts, then stop for their folder (`static.waiting=images`); when they send it (or on `resume` with
+2. **Images by the API or by FLUX 3 Klein** (`static_images=api|klein`): the characters' anchors once (Skill `awl-static-images`, its
+   anchors step). **Images by the user:** Skill `awl-static-images` for the prompts, then stop for their folder (`static.waiting=images`); when they send it (or on `resume` with
    `static.waiting` set), the intake and the check of every image, then go on.
 3. **The agent contract:** `T contract --run RUN [--notes "…"]` (a Static run gets production-agents §2s's prompt; no Loupe line to
    ensure).
