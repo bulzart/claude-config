@@ -6893,17 +6893,23 @@ def _capcut_check_effects_measure(a):
         k = min(n_frames - 1, max(0, int(round(t * fps))))
         return (kept.get(k) if k in kept else kept[min(kept, key=lambda j: abs(j - k))]).astype(np.int16)
     refA, refB = fr(c["ref_a_s"]), fr(c["ref_b_s"])     # the plain stills (A at 0-3 s, B at 3-6 s) where no effect plays, caption included
-    ref = lambda t: refA if int(t // c["still_s"]) % 2 == 0 else refB   # noqa: E731
+    per_still = int(round(float(c["still_s"]) * fps))
+    ref = lambda t: refA if (int(round(t * fps)) // per_still) % 2 == 0 else refB   # noqa: E731  (the frame's own still)
 
-    def green_share(f):
+    def green_mask(f):
         g = f[..., 1]
-        return float(((g > 80) & (g - np.maximum(f[..., 0], f[..., 2]) > 50)).mean())
+        return (g > 80) & (g - np.maximum(f[..., 0], f[..., 2]) > 50)
+
+    def green_share(f, r=None):
+        """Key green the overlay adds: green in the frame that the plain still at that place is not (a still may hold green of its own)."""
+        m = green_mask(f)
+        return float((m & ~green_mask(r)).mean() if r is not None else m.mean())
     res = {}
     cap_band = slice(int(H * (0.5 + 0.5 * abs(c["caption_y"])) - 90), int(H * (0.5 + 0.5 * abs(c["caption_y"])) + 90))
     for name in ("chroma", "chroma_low"):
         s0 = float(ov[name]["start"])
         ts = np.arange(s0 + 0.1, s0 + 2.9, 3 / fps)
-        gs = [green_share(fr(t)) for t in ts]
+        gs = [green_share(fr(t), ref(t)) for t in ts]
         mid = fr(s0 + FX_CHECK["tone_at_file_s"])
         white = float((mid[: int(H * 0.8)].min(axis=2) > 225).mean())   # above the caption band
         dark_in_caption = float((mid[cap_band].max(axis=2) < 60).mean())
