@@ -6587,6 +6587,16 @@ def _capcut_check_measure(a):
                        "transitions_drawn_free": sum(t["visible_transition"] and not t["pro"] for t in transitions) if pro_known else None}}
     dd = AWL_HOME / "data"
     dd.mkdir(parents=True, exist_ok=True)
+    keep_md = ""   # the effects check's part (capcut-check effects-measure) stays as it was measured
+    try:
+        old = json.loads((dd / "capcut-catalogue.json").read_text(encoding="utf-8"))
+        if old.get("effects"):
+            cat["effects"] = old["effects"]
+        old_md = (dd / "capcut-catalogue.md").read_text(encoding="utf-8")
+        if "\n## Effects" in old_md:
+            keep_md = "\n## Effects" + old_md.split("\n## Effects", 1)[1].rstrip("\n")
+    except (OSError, ValueError):
+        pass
     write_json(dd / "capcut-catalogue.json", cat)
     yn = lambda b: "yes" if b else "NO"   # noqa: E731
     free = lambda x: ("no (Pro)" if x["pro"] else "yes") if pro_known else "?"   # noqa: E731
@@ -6617,7 +6627,7 @@ def _capcut_check_measure(a):
         s = t_["signature"]
         md.append(f"| {t_['slug']} | {yn(t_['visible_transition'])} | {free(t_)} | {s['frames_changing']} ({s['first_changing']}..{s['last_changing']}) | "
                   f"{s['shift_x_max_pct']} / {s['shift_y_max_pct']} | {s['scale_step_max']} | {s['bright_peak_delta']} / {s['bright_dip_delta']} | {s['sharp_min_ratio']} |")
-    write_text(dd / "capcut-catalogue.md", "\n".join(md) + "\n")
+    write_text(dd / "capcut-catalogue.md", "\n".join(md) + ("\n" + keep_md if keep_md else "") + "\n")
     out({"ok": True, "catalogue": str(dd / "capcut-catalogue.md"), "data": str(dd / "capcut-catalogue.json"), **cat["summary"],
          "moves": [{k: m[k] for k in ("motion", "expected", "plays")}
                    | {"measured": {k: m["measured"][k] for k in ("zoom_pct_per_s", "pan_x_pct_per_s", "pan_y_pct_per_s", "seen_s")}} for m in moves]})
@@ -6897,7 +6907,10 @@ def _capcut_check_effects_measure(a):
         mid = fr(s0 + FX_CHECK["tone_at_file_s"])
         white = float((mid[: int(H * 0.8)].min(axis=2) > 225).mean())   # above the caption band
         dark_in_caption = float((mid[cap_band].max(axis=2) < 60).mean())
-        res[name] = {"plays": max(gs) < 0.01 and white > 0.9, "residual_green_max": round(max(gs), 4), "white_at_cover": round(white, 3),
+        # keyed: almost no green most of the time, at most a fringe at the wipe's moving edges (a 16:9 file is magnified 3.16 times on
+        # 9:16); unkeyed, the green fills most of the picture
+        res[name] = {"plays": float(np.median(gs)) < 0.005 and max(gs) < 0.04 and white > 0.9, "residual_green_max": round(max(gs), 4),
+                     "residual_green_median": round(float(np.median(gs)), 4), "white_at_cover": round(white, 3),
                      "intensity": ov[name]["key_intensity"], "caption_dark_px_at_cover": round(dark_in_caption, 4)}
     res["cover_scale"] = {"plays": max(res["chroma"]["white_at_cover"], res["chroma_low"]["white_at_cover"]) > 0.9,
                           "white_at_cover": res["chroma"]["white_at_cover"]}
@@ -7013,12 +7026,13 @@ def _capcut_check_effects_measure(a):
     write_json(cat_p, cat)
     md_p = AWL_HOME / "data" / "capcut-catalogue.md"
     try:
-        md = md_p.read_text(encoding="utf-8").split("\n## Effects")[0].rstrip("\n")
+        md = [md_p.read_text(encoding="utf-8").split("\n## Effects")[0].rstrip("\n")]
     except OSError:
-        md = "# CapCut catalogue"
+        md = ["# CapCut catalogue"]
     yn = lambda b: "yes" if b else ("not measured" if b is None else "NO")   # noqa: E731
     rows = [("chroma", "CapCut's chroma key on a green screen (`blend: chroma`)", f"best intensity {res['chroma'].get('intensity')}; residual green "
-             + ", ".join(f"{k}: {v['residual_green_max']} at {v['intensity']}" for k, v in res["chroma"]["tested"].items())),
+             + ", ".join(f"{k} at {v['intensity']}: median {v.get('residual_green_median')}, most {v['residual_green_max']}"
+                         for k, v in res["chroma"]["tested"].items())),
             ("cover_scale", "an overlay scaled to cover the canvas (`fit: cover`)", f"white at the cover moment {res['cover_scale']['white_at_cover']}"),
             ("captions_above_overlays", "the captions stay above the overlays", f"dark outline px {res['captions_above_overlays']['dark_px_in_caption_band']}"),
             ("screen", "CapCut's screen blend on a black background (`blend: screen`)", f"outer band diff {res['screen']['outer_band_diff_max']}, centre lift {res['screen']['centre_lift_median']}"),
@@ -7030,14 +7044,14 @@ def _capcut_check_effects_measure(a):
             ("sfx", "a sound effect on an audio track, on time", json.dumps({k: v for k, v in res["sfx"].items() if k != "plays"})),
             ("sfx_volume", "a sound effect's volume", json.dumps({k: v for k, v in res["sfx_volume"].items() if k != "plays"})),
             ("sfx_fade", "a sound effect's fade", json.dumps({k: v for k, v in res["sfx_fade"].items() if k != "plays"}))]
-    md += ["", "", f"## Effects (`T capcut-effects`), measured {cat['effects']['measured'][:10]} from "
+    md += ["", f"## Effects (`T capcut-effects`), measured {cat['effects']['measured'][:10]} from "
            + ("a screen recording of CapCut's player" if rec else "CapCut's own export"), "",
            "What the effects check verified on this PC's CapCut. `T capcut-effects` writes an effect only by a way that plays here and "
            "refuses one that needs a NO; with no CapCut chroma key or screen blend it makes an alpha file instead (`alpha_video`). "
            f"Export blocked by CapCut Pro: {', '.join(str(b['name']) for b in pro_block) or 'none recorded'}.", "",
            "| what | plays | numbers |", "|---|---|---|"]
     md += [f"| {label} | {yn(res[k].get('plays'))}{' (Pro)' if res[k].get('pro') else ''} | {nums} |" for k, label, nums in rows]
-    write_text(md_p, md + "\n")
+    write_text(md_p, "\n".join(md) + "\n")
     out({"ok": True, "catalogue": str(md_p), "start_s": start, "effects": {k: v.get("plays") for k, v in res.items() if isinstance(v, dict)},
          "pro_block": [b["name"] for b in pro_block]})
 

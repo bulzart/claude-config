@@ -16,11 +16,11 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 
 | § | Section | File | KB |
 |---|---|---|---|
-| 1 | What Static mines from the references (A3) | `010_1_what-static-mines-from-the-refer.md` | 3.9 |
+| 1 | What Static mines from the references (A3) | `010_1_what-static-mines-from-the-refer.md` | 4.4 |
 | 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 6.2 |
 | 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 2.1 |
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 2.3 |
-| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 8.4 |
+| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 8.9 |
 | 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 2.6 |
 | 7 | The edit (S4) | `070_7_the-edit-s4.md` | 5.7 |
 | 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 2.5 |

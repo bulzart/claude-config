@@ -95,7 +95,8 @@ cat = json.loads((home / "data" / "capcut-catalogue.json").read_text(encoding="u
 check(code == 0 and all(e.get(k) is True for k in want) and cat.get("alpha_video", {}).get("codec") == "prores4444"
       and cat.get("chroma", {}).get("intensity") in (0.3, 0.5),
       f"effects-measure reads an export where every way plays as playing, with the first alpha format and a chroma strength ({e}, "
-      f"codec {cat.get('alpha_video', {}).get('codec')}, intensity {cat.get('chroma', {}).get('intensity')})")
+      f"codec {cat.get('alpha_video', {}).get('codec')}, intensity {cat.get('chroma', {}).get('intensity')}, error {js.get('error')}, "
+      f"chroma tested {json.dumps((cat.get('chroma') or {}).get('tested'))})")
 check((home / "data" / "capcut-catalogue.md").is_file() and "## Effects" in (home / "data" / "capcut-catalogue.md").read_text(encoding="utf-8"),
       "effects-measure writes the Effects table into the catalogue")
 
@@ -111,7 +112,7 @@ js, code, _ = t("capcut-check", "effects-measure", "--export", str(rec), "--crop
 e = js.get("effects") or {}
 check(code == 0 and abs(float(js.get("start_s") or 0) - 1.7) < 0.05 and all(e.get(k) is True for k in want),
       f"effects-measure lines a screen recording up from its first click and the stills' switches (start {js.get('start_s')} for 1.7) "
-      f"and reads the same ways as playing ({e})")
+      f"and reads the same ways as playing ({e}, error {js.get('error')}, align {js.get('align')})")
 
 # a project whose green screen was not keyed: the measure says so
 bad = compose(work / "export-unkeyed.mp4", key_green=False)
@@ -124,5 +125,9 @@ check(_awl._fx_method({"type": "overlay", "blend": "chroma", "fit": "cover", "ha
       and _awl._fx_method({"type": "overlay", "blend": "screen", "fit": "cover", "has_audio": False}, cat)[0] == "capcut-screen"
       and _awl._fx_method({"type": "sfx", "volume": 0.5, "fade_in_s": 0, "fade_out_s": 0.3}, cat)[0] == "sound",
       "with CapCut's chroma key not playing, capcut-effects keys a green screen into an alpha file (prores4444) and keeps the verified ways")
-shutil.rmtree(home.parent, ignore_errors=True)
+from t00_common import fails  # noqa: E402
+if fails:
+    print(f"kept for a look: {home.parent}")
+else:
+    shutil.rmtree(home.parent, ignore_errors=True)
 finish()
