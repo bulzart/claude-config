@@ -916,3 +916,25 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   from CapCut's units, fill, outline, box, bold, shadow, animation). The video modes keep the house style.
 - **Verified:** docs_tool check 0 errors; t01 114; t02 180 (the fonts listed, a font set on the subtitle track only with its sizes and
   colours kept, the check copy's look in its subtitle file: the colour, the fade, the upper case); t03 71, t05 73; rehearsal 221/221.
+
+## 2026-11-06 · Static: FLUX 3 Image Klein on this PC, a third images choice
+
+- **Asked (the user):** "setup flux.3 image klein int8 and if it works, set it up to be the generating model along with openai image in analyze with loupe -> analyze -> static (user picks if it wants klien image,openai image,or just prompts) but this one running locally instead (kleint image int8)".
+- **Changed:** awl-start's "Images" question has a third option, "FLUX 3 Klein on this PC" (`static_images=api|klein|prompts`;
+  `images api|klein|prompts` in the arguments). `T image generate` takes the source from `static_images` (`--engine` overrides): with
+  klein it runs `scripts/image_worker.py` in a ComfyUI portable's Python (`AWL_IMAGE_PYTHON`, a guarded .cmd; `AWL_IMAGE_ROOT`) under
+  the GPU lock, ledgered with provider klein and no cost; the seed comes from the request and the attempt (recorded; `--seed`,
+  `--again`), the caption the model got is in the answer and the record, at most 10 references, edges a multiple of 16 from 64 to
+  4096 (`config.json → static.klein`). `T static check` reports `images_klein`; `static formats` gives Klein's size facts and `static
+  format` checks them (no quality in Klein mode); the contract's Images line takes klein. Static §2, §5, §8 and §9, awl-static-images,
+  production-agents §2s, awl-wrapup, the router's item 36 and the README follow.
+- **Found:** the int8 build exists only for ComfyUI (the reference code has none). Black Forest Labs' own ComfyUI workflows use the w4a8
+  prompt upsampler (6.7 GB), ModelSamplingFlux at alpha 16 (the reference code's shift since 2026-10-17; ComfyUI's built-in default is
+  the launch value 6.93) and the upsampler's decoding (greedy, presence penalty 1.5 for text-to-image and 0 for edits, no repetition
+  penalty). ComfyUI's dynamic VRAM keeps all three models staged at once (15.8 GB of commit on this 16 GB PC), so the worker writes the
+  caption, unloads everything (POST /free), then draws (14.1 GB at 1 MP, 15.3 GB at 1216×2160 with a reference; RAM stays mostly free);
+  the classic loader filled real RAM and the memory guard stopped it. The same seed gives identical pixels in another process.
+- **Verified:** docs_tool check 0 errors; t01 115; t02 192 (a Klein run's format and its refused size, static check's part, an image
+  made with no key and no API call, the record's seed and caption, the same request reused, `--again` with a new seed, `--again --seed`,
+  the 10-reference limit, the ledger's provider, the contract's Images line); t03 71, t05 73; rehearsal 221/221. On the real model,
+  through `T image generate`: a 1216×2160 character sheet in 69 s and a story image with it as the reference in 93 s.

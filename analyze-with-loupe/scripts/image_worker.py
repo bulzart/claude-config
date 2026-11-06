@@ -11,6 +11,14 @@ Jobs:
   check    : the install (ComfyUI and its version, torch, CUDA, the GPU) and the four model files; "probe": true also starts ComfyUI
              and asks it for every node the workflow uses
   generate : images [{prompt, out, width, height, seed, steps, upsample, refs}] -> one PNG each, with the caption the image model got
+             (optional job keys: alpha, models, timeout_per_image, start_timeout, comfy_args: extra ComfyUI flags, log_out: a path
+             ComfyUI's log is copied to)
+
+Each image runs in two stages in the same ComfyUI: the upsampler writes the caption, every model is unloaded (POST /free), then the
+image model draws it. ComfyUI's dynamic VRAM otherwise keeps the upsampler staged next to the text encoder and the transformer: on a
+16 GB PC that reserved about 15.8 GB of commit for a 1 MP image (measured 2026-11-06; 14.1 GB in two stages, 15.3 GB for 1216x2160
+with a reference; RAM itself stays mostly free). ComfyUI's classic loader (--disable-dynamic-vram) fills real RAM instead and was
+stopped by the memory guard. The same seed gives the same pixels again, in one process or another.
 
 The workflow is the one of ComfyUI's own FLUX 3 Image Klein templates (comfyui-workflow-templates 0.11.101:
 image_flux3_klein_distilled_t2i and image_flux3_klein_distilled_image_edit): UNETLoader (the int8 transformer), CLIPLoader type flux3
@@ -91,7 +99,7 @@ def free_port():
         return s.getsockname()[1]
 
 
-def start(comfy, work, port):
+def start(comfy, work, port, extra=()):
     for d in ("in", "out", "tmp", "user"):
         (work / d).mkdir(parents=True, exist_ok=True)
     log = open(work / "comfyui.log", "w", encoding="utf-8", errors="replace")
@@ -99,7 +107,7 @@ def start(comfy, work, port):
     cmd = [sys.executable, "-s", str(comfy / "main.py"), "--listen", "127.0.0.1", "--port", str(port), "--disable-auto-launch",
            "--disable-all-custom-nodes", "--offline", "--disable-pinned-memory", "--disable-metadata",
            "--output-directory", str(work / "out"), "--input-directory", str(work / "in"), "--temp-directory", str(work / "tmp"),
-           "--user-directory", str(work / "user"), "--database-url", "sqlite:///:memory:"]
+           "--user-directory", str(work / "user"), "--database-url", "sqlite:///:memory:", *[str(x) for x in extra]]
     proc = subprocess.Popen(cmd, cwd=str(comfy), stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, env=env,
                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     return proc, log
@@ -210,8 +218,25 @@ def canvas_line(w, h):
     return f"TARGET CANVAS: {a}:{b}\n"
 
 
-def build(img, names, prompts, staged, tag):
-    """The API graph of one image; returns (graph, the SaveImage node id, the caption node id or None)."""
+def build_caption(img, names, prompts, staged):
+    """The upsampler's graph: the request (and the references as it sees them) -> one full scene caption (node 'caption')."""
+    task = "i2i" if staged else "t2i"
+    request = I2I_SCAFFOLD.format(instruction=img["prompt"]) if staged else canvas_line(img["width"], img["height"]) + img["prompt"]
+    tg = {"clip": ["up", 0], "prompt": request, "max_length": UPSAMPLER_TOKENS, "sampling_mode": "on",
+          "sampling_mode.temperature": 1.0, "sampling_mode.top_k": 1, "sampling_mode.top_p": 0.95, "sampling_mode.min_p": 0.0,
+          "sampling_mode.repetition_penalty": 1.0, "sampling_mode.presence_penalty": PRESENCE[task], "sampling_mode.seed": 0,
+          "thinking": False, "use_default_template": True, "mtp": img.get("mtp") or "off", "system_prompt": prompts[task]}
+    g = {"up": {"class_type": "CLIPLoader", "inputs": {"clip_name": names["upsampler"], "type": "flux3", "device": "default"}}}
+    for i, (_m, pup_name) in enumerate(staged):
+        g[f"pupref{i}"] = {"class_type": "LoadImage", "inputs": {"image": pup_name}}
+        tg[f"images.image{i + 1}"] = [f"pupref{i}", 0]
+    g["upsample"] = {"class_type": "TextGenerateV2", "inputs": tg}
+    g["caption"] = {"class_type": "PreviewAny", "inputs": {"source": ["upsample", 0]}}
+    return g
+
+
+def build_image(img, names, text, staged, tag):
+    """The image model's graph for one caption; returns it (the PNG comes from node 'save')."""
     w, h, steps, seed = img["width"], img["height"], img["steps"], img["seed"]
     g = {"unet": {"class_type": "UNETLoader", "inputs": {"unet_name": names["unet"], "weight_dtype": "default"}},
          "te": {"class_type": "CLIPLoader", "inputs": {"clip_name": names["text_encoder"], "type": "flux3", "device": "default"}},
@@ -222,23 +247,6 @@ def build(img, names, prompts, staged, tag):
         g["shift"] = {"class_type": "ModelSamplingFlux", "inputs": {"model": ["unet", 0], "max_shift": shift, "base_shift": shift,
                                                                     "width": w, "height": h}}
         model = ["shift", 0]
-    task = "i2i" if staged else "t2i"
-    caption_node = None
-    if img["upsample"]:
-        g["up"] = {"class_type": "CLIPLoader", "inputs": {"clip_name": names["upsampler"], "type": "flux3", "device": "default"}}
-        request = I2I_SCAFFOLD.format(instruction=img["prompt"]) if staged else canvas_line(w, h) + img["prompt"]
-        tg = {"clip": ["up", 0], "prompt": request, "max_length": UPSAMPLER_TOKENS, "sampling_mode": "on",
-              "sampling_mode.temperature": 1.0, "sampling_mode.top_k": 1, "sampling_mode.top_p": 0.95, "sampling_mode.min_p": 0.0,
-              "sampling_mode.repetition_penalty": 1.0, "sampling_mode.presence_penalty": PRESENCE[task], "sampling_mode.seed": 0,
-              "thinking": False, "use_default_template": True, "mtp": img.get("mtp") or "off", "system_prompt": prompts[task]}
-        for i, (_m, pup_name) in enumerate(staged):
-            g[f"pupref{i}"] = {"class_type": "LoadImage", "inputs": {"image": pup_name}}
-            tg[f"images.image{i + 1}"] = [f"pupref{i}", 0]
-        g["upsample"] = {"class_type": "TextGenerateV2", "inputs": tg}
-        g["caption"] = {"class_type": "PreviewAny", "inputs": {"source": ["upsample", 0]}}
-        caption_node, text = "caption", ["upsample", 0]
-    else:
-        text = img["prompt"]
     g["pos"] = {"class_type": "CLIPTextEncode", "inputs": {"clip": ["te", 0], "text": text}}
     g["latent"] = {"class_type": "EmptyFlux2LatentImage", "inputs": {"width": w, "height": h, "batch_size": 1}}
     if staged:
@@ -257,7 +265,17 @@ def build(img, names, prompts, staged, tag):
                                                          "latent_image": ["latent", 0], "denoise": 1.0}}
     g["decode"] = {"class_type": "VAEDecode", "inputs": {"samples": ["sample", 0], "vae": ["vae", 0]}}
     g["save"] = {"class_type": "SaveImage", "inputs": {"images": ["decode", 0], "filename_prefix": tag}}
-    return g, "save", caption_node
+    return g
+
+
+def free_models(port):
+    """Unload every model and drop ComfyUI's caches between the caption and the image stages, so the upsampler and the image model
+    are never held at once (together they reserve about 16 GB of commit on a 16 GB PC)."""
+    try:
+        http(port, "POST", "/free", {"unload_models": True, "free_memory": True}, timeout=30)
+    except OSError:
+        pass
+    time.sleep(2.0)
 
 
 def run_prompt(proc, port, graph, timeout):
@@ -395,19 +413,29 @@ def op_generate(job):
     results, t_all = [], time.time()
     try:
         port = free_port()
-        proc, log = start(comfy, work, port)
+        proc, log = start(comfy, work, port, job.get("comfy_args") or ())
         stats, err = wait_ready(proc, port, float(job.get("start_timeout") or 300))
         if err:
             return {"ok": False, "error": err, "log_tail": tail(work), "images": results}
         version = (stats.get("system") or {}).get("comfyui_version")
+        timeout = float(job.get("timeout_per_image") or 1800)
         for i, img in enumerate(imgs):
             tag, t0 = f"img{i:03d}", time.time()
             res = {k: img[k] for k in ("out", "seed", "width", "height", "steps", "upsample", "refs", "alpha")}
             res["request"] = img["prompt"]
+            err, caption, entry = None, img["prompt"], None
             try:
                 staged = stage_refs(img["refs"], work, tag)
-                graph, save_id, cap_id = build(img, names, prompts, staged, tag)
-                entry, err = run_prompt(proc, port, graph, float(job.get("timeout_per_image") or 1800))
+                if img["upsample"]:          # stage 1: the caption, then every model unloaded before the image model loads
+                    entry, err = run_prompt(proc, port, build_caption(img, names, prompts, staged), timeout)
+                    if not err:
+                        caption = str((((entry.get("outputs") or {}).get("caption") or {}).get("text") or [""])[0]).strip()
+                        err = None if caption else "the prompt upsampler gave an empty caption"
+                    res["caption_s"] = round(time.time() - t0, 1)
+                    if not err:
+                        free_models(port)
+                if not err:                  # stage 2: the image from the caption
+                    entry, err = run_prompt(proc, port, build_image(img, names, caption, staged, tag), timeout)
             except Exception as e:  # noqa: BLE001
                 entry, err = None, f"{type(e).__name__}: {e}"
             if err:
@@ -416,8 +444,7 @@ def op_generate(job):
                 if proc.poll() is not None:
                     break
                 continue
-            outs = entry.get("outputs") or {}
-            files_ = (outs.get(save_id) or {}).get("images") or []
+            files_ = ((entry.get("outputs") or {}).get("save") or {}).get("images") or []
             src = work / "out" / (files_[0].get("subfolder") or "") / files_[0]["filename"] if files_ else None
             if src is None or not src.is_file():
                 res.update({"ok": False, "error": "ComfyUI finished without an image file", "seconds": round(time.time() - t0, 1)})
@@ -426,9 +453,10 @@ def op_generate(job):
             dest = Path(img["out"])
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(src), str(dest))
-            caption = ((outs.get(cap_id) or {}).get("text") or [None])[0] if cap_id else img["prompt"]
             res.update({"ok": True, "caption": caption, "seconds": round(time.time() - t0, 1)})
             results.append(res)
+            if i + 1 < len(imgs) and imgs[i + 1]["upsample"]:
+                free_models(port)
         ok = bool(results) and all(r.get("ok") for r in results) and len(results) == len(imgs)
         ans = {"ok": ok, "engine": "flux3-image-klein-int8", "comfyui": version, "models": names, "images": results,
                "seconds": round(time.time() - t_all, 1)}
@@ -438,6 +466,11 @@ def op_generate(job):
         return ans
     finally:
         stop(proc, log)
+        if job.get("log_out"):
+            try:
+                shutil.copyfile(work / "comfyui.log", job["log_out"])
+            except OSError:
+                pass
         shutil.rmtree(work, ignore_errors=True)
 
 
