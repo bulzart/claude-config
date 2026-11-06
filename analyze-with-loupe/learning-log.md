@@ -938,3 +938,97 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   made with no key and no API call, the record's seed and caption, the same request reused, `--again` with a new seed, `--again --seed`,
   the 10-reference limit, the ledger's provider, the contract's Images line); t03 71, t05 73; rehearsal 221/221. On the real model,
   through `T image generate`: a 1216×2160 character sheet in 69 s and a story image with it as the reference in 93 s.
+
+## 2026-11-06 · Static: what the first full test run found, fixed in the toolkit and the steps
+
+- **Asked (the user):** "test the workflow and also do any tweaks in order to deliver the final runable and verified coupled pipeline";
+  during the fixes: "feel free to do any updgrades in mcp version if needed too, just fix all isues".
+- **The run:** `20261106-063422-static-klein` (one reference of 40 s; one video, Napoleon Bonaparte in 46 s; nine FLUX 3 Klein stills with
+  one anchor; one word at a time in the references' look; QC fixes off).
+- **Found and changed:**
+  - **The check render lost pictures and said nothing.** Hard cuts are one-frame xfades; with cuts off the frame grid ffmpeg rounds each
+    offset to a frame, the chain came up one frame short of a join, and xfade dropped every later frame: 973 of 1394 frames (images 8 and
+    9 gone) while the file still reported 46.48 s, its sound's length. `T slideshow render` now works in whole frames (each image's first
+    frame, each join's frames, `trim=end_frame`) and counts the frames each file holds (`video_frames` against `expected_frames`; short of
+    them it answers `ok` false and exits 1); `T slideshow plan` puts every cut on the frame at or just before its line's start, so the
+    render and CapCut cut on the same frame. The old code on that timeline gives 973 frames, the new one 1394.
+  - **CapCut 9.3 and later open a local clip by its `local_material_id`** (the id of its entry in `draft_meta_info.json`); capcut-cli's
+    `register --materials` writes the entries but never the links, so every project the toolkit built would open with its clips missing
+    in this PC's CapCut 9.7 (the agent repaired its project with `capcut lint --fix`, which also copied every media file into the draft).
+    `T capcut-repair` has a link step after `register` in every mode: on the delivered project its links equal capcut-cli's, and a second
+    run changes nothing. `capcut lint --fix` is never used: it also shortens any text over 7 s, trims captions, closes main-track gaps and
+    copies all media.
+  - **CapCut would not draw the captions' outline.** `capcut import-srt` writes the outline on the material only (check_flag 7); a text
+    CapCut styled itself carries it in each style's `strokes` with check_flag 15. `T capcut-font` now writes the outline into the styles
+    and the check_flag bits (8 outline, 16 box, 32 shadow) from the material's own values. Every toolkit fix of a draft also updates the
+    `draft_info.json` mirror capcut-cli keeps.
+  - **The narration was 1.9 LU under the target** (-15.9 LUFS: one loudnorm pass on speech whose peaks sit 19.6 dB over its loudness; two
+    passes alone gave -15.5). `T tts say` runs a voice chain (a gentle compressor, `config.json → static.narration.voice_chain`) and two
+    loudnorm passes: -14.1 LUFS, true peak -1.5 dBTP, the duration to the sample. The CapCut project plays that file at 1.0, so the final
+    carries the target; the render mixes its sound apart and brings it to the target the same way. `--rejoin` joins the existing lines
+    again without making any (before, a call without `--only` made every line again).
+  - **One word at a time:** 29 of 103 cues overlapped the next (fixed during the run) and 18 were on screen under 0.2 s, one for a single
+    frame. A word that would be on screen for less than `captions.min_cue_s` (0.2 s) takes the next word with it, up to twice the words
+    at once, never across a sentence end: 85 cues.
+  - **The word check listed correct lines.** Speech-to-text writes spoken years as digits ("1769"), "Saint" as "St", and "about a hundred
+    thousand" as "about 100,000": numbers, an "a" that belongs to one, and abbreviations are compared as spoken; `narration-words` takes
+    the plan's `captions.words`. On this video: 5 lines listed before, none after.
+  - **The script came out 13 % long** (45.4 s against the spec's 30–40 s): it was sized at the reference narrator's pace, and the picked
+    voice's sample runs about 12 % faster than its cloned narration (2.9 against 2.5 words per second). `tts design` and `tts voice` record
+    each sample's `words_per_s`; static §4 sizes the script by it plus every pause.
+  - **Image lessons (static §5, §8):** the one image with no reference came back as two stacked pictures with a seam (Klein's upsampler):
+    every Klein prompt says one continuous scene from a single viewpoint. A character's reference makes the models draw that character
+    larger than the rest (an emperor three times the pope's size, a giant horse): the prompt states sizes and depth. An anchor's ornament
+    that reads as a letter came back in every image: the anchor check looks for it.
+  - **Smaller:** `T contract --notes` fills `<RUN>` and `<AWL>`; the Static contract no longer says captions are "styled by
+    capcut-repair" (in Static it keeps the text as set) and runs T through PowerShell when Git Bash cannot start under memory load;
+    awl-record lists the klein source.
+- **Not changed:** capcut-cli stays 0.25.0: 0.32.0 writes neither the links nor the strokes, and its new `loudness --target` is not
+  needed once the narration carries the target. The images of the run were not drawn again (QC fixes off: the user reviews at the end).
+
+## 2026-11-06 · Static: the edit layer measured, decided by the agent, played by CapCut as verified on this PC
+
+- **Asked (the user, on the first test video):** "in the reference video there were zoom in and zoom outs and other sort of edits but the
+  video i exported from capcut seems to have no type of edits beside the font (even though the video-01-preview have a zoom in and zoom out
+  but it shaky and not stable), even the font transition had no popup style ... please make sure to check these things that make the video
+  enjoyable and engagaging"; then: "dont set fixed numbers let the agent decide how much to zoom in or out, how fast, decide the font popup
+  style and do other edits based on ... what the analyzed data tells and what pattern it understands from it, but make sure we chose the
+  right approach and what is left to the incoming agent is already verified that will work".
+- **Found (measured, not seen at 1 fps):**
+  - CapCut 9.7 plays no UNIFORM_SCALE keyframe: the user's export of the rebuilt project measured a zoom of exactly 1.000 on all nine
+    stills although each clip was keyed 1.0 to 1.12.
+  - The check copy shook: ffmpeg's zoompan crops on whole pixels; frame to frame it wobbled 0.065-0.070 % of the width sideways, where the
+    reference wobbles 0.001-0.002.
+  - The 1 fps study misread the reference: "a slight push-in on most stills, no caption animation" was in fact a zoom of about 20 % on
+    every still, in and out by turns (6 %/s on the first), a pan of 12.6 %, two 0.1 s slides at cuts, and every word popping in (it enters
+    about 20 px low at 86 % size, overshoots about 8 px and 4 %, and settles in about five frames).
+  - Frame-to-frame feature matching under-reads a slow zoom (a twelfth of a pixel per frame: 1.058 for 1.12), and feature points sit on
+    whole pixels (a smooth pan read as shaky).
+- **Changed:**
+  - `T edit-profile`: a video's edit layer as numbers at its full frame rate (shots split at every picture switch; each shot's zoom and pan
+    against its first frame, re-anchored on a long move; pace in the first and last quarter; jitter from sub-pixel optical flow; short
+    shots; each cut's signature: the frames that change, shift, scale step, brightness peak and dip, sharpness low; each caption entrance:
+    height, width, sideways shift, rise and fill over ten frames against where it settles). A1 runs it for every Static reference; the
+    card, the spec and the plan take the moves, joins and entrance from it.
+  - No stock style: the timeline has no default move, amount or transition (config `render.motions`, `render.transition` gone); the plan
+    decides each image's move and amount (or its own scale and position pairs) and each join; `T slideshow plan` lists what is undecided
+    and an edge that would show. The image margin of `T static formats` comes from the references' largest measured move.
+  - The check copy draws each still with an exact affine resample per frame (`_render_still`), the values CapCut keys; joins stay
+    frame-exact xfades (a CapCut transition's nearest).
+  - CapCut: `T capcut-motion` (KFTypeScaleX with uniform scale on, KFTypePositionX/Y; replaces capcut_add_keyframe for moves),
+    `T capcut-transitions` (capcut-cli `transition`; replaces capcut_add_transition), `T capcut-text-anim` (one CapCut intro on every
+    caption, capped at each caption's length).
+  - The CapCut check: `T capcut-check fill` builds one project with every move, all 76 text intros and all 116 transitions of capcut-cli's
+    catalogue at known times; the user exports it once; `T capcut-check measure` reads CapCut's own export into `data/capcut-catalogue.md`:
+    what CapCut drew, and each option's measured shape, so a reference's entrance and joins are matched by numbers.
+- **Verified on this PC's CapCut** (9.7.0.4153; no CapCut Pro, so its export of the check project was blocked and the user recorded
+  CapCut's player full screen instead; the recording lined up at 5.45 s, the player's 608x1080 column): the moves play (zoom-in 9.42 %/s
+  against 9.54 keyed, zoom-out -8.69 against -8.71, pan-right -9.64 against -9.8, pan-up 9.8 against 9.8); 76 text intros drawn, 59 of
+  them free (17 Pro, among them Pop Up, Spring and Bounce In, read from CapCut's own FeedbackOtherInfo.json); 96 of capcut-cli's 116
+  transitions drawn, all free, 20 draw nothing. `data/capcut-catalogue.md` holds each one's measured shape and a free-plan column;
+  `config.json -> capcut.pro` false keeps the agents to the free ones.
+- **The reference read again, frame by frame:** its two "slides" (7.4 % of the width per frame, one with a flash of +0.13, one with a
+  dip of -0.15) were inserts: another picture flashed for 3 frames at the turn into the rise and at the turn into the fall; the optical
+  flow read the change of picture as a shift. Static §1 now says to view every join that is not a one-frame cut before naming it, and
+  §5 plans an insert as an image of its own with `offset_s` (`T slideshow plan` orders the timeline by start). Its joins sit in silent
+  pauses (50-90 dB under the voice): no sound effects.

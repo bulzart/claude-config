@@ -325,6 +325,21 @@ outline, box and shadow where CapCut 9.x draws them (each style's strokes, the c
 clip's `local_material_id` after `register` (CapCut 9.3 and later open a local clip by it; without it the clip shows as missing). No
 Higgsfield and no Loupe anywhere in Static; the product appears only when the assets hold one. Its agents get production-agents §2s's prompt (`T contract`
 picks it). Settings: `config.json → static`.
+**The edit layer is measured, decided and verified** (the user, 2026-11-06: "dont set fixed numbers let the agent decide ... but make sure ... what is
+left to the incoming agent is already verified that will work"): `T edit-profile` reads each reference at its full frame rate (every still's zoom and pan,
+their pace and jitter, each join's signature, each caption word's entrance curve), the joins that are not a one-frame cut are viewed frame by frame (an
+insert of a few frames reads as a slide in the numbers), and the plan decides every move, join, insert (`offset_s`), caption entrance and effect from them,
+with no stock value (`T slideshow plan` lists what is undecided). CapCut gets them through `T capcut-motion` (KFTypeScaleX with uniform scale and
+KFTypePositionX/Y: CapCut 9.7 ignores UNIFORM_SCALE keys), `T capcut-transitions`, `T capcut-text-anim` and `T capcut-effects`, and only options the
+CapCut check showed this PC's CapCut drawing (`T capcut-check fill | measure`, `effects-fill | effects-measure` → `data/capcut-catalogue.md`; without
+CapCut Pro, `config.json → capcut.pro` false, only the free ones; the check is measured from CapCut's export or, when Pro blocks it, a screen recording).
+The check copy draws each still with an exact sub-pixel resample per frame (ffmpeg's zoompan shook). **The effects folder** (optional, the user, the
+same day: "sound effects, and green screen transitions"): read-only like the references; `T effects scan` measures every file once (cached): a sound's
+start, loudest moment, length, colour and loudness, an overlay's key green, the seconds it hides a 9:16 box, its black and white shares, its own
+transparency, and contact sheets; the plan's `effects` place overlays (chroma, screen or as they are; cover or contain; scale and position keys) and
+sounds at a join, a line or a second by an anchor second of the file, only where they play the part of a device the references show, never a sticker
+or emoji (item 6); `T capcut-effects` writes each by a way the CapCut effects check verified (an alpha file made by ffmpeg when CapCut's own chroma key
+or screen blend does not play).
 
 **The Static PC** (`reference/static.md` §9; `T static check` reports each part): Qwen3-TTS in its own environment (Python 3.11 or 3.12, CUDA torch, `pip
 install -U qwen-tts`, sdpa attention; with `faster-qwen3-tts` installed there the worker uses it, about 8x faster, and names the engine in each answer;

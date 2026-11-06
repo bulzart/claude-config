@@ -155,9 +155,14 @@ def mkrun(name, **st):
     return d
 
 
+fx_g = G / "fx"
+fx_g.mkdir()
+(fx_g / "wipe.mp4").write_bytes(b"x")
 rg = mkrun("20990101-000001-guard", mode="analyze", stage="producing", source=str(refs_g), examples_paths=[str(ex_g)])
 mkrun("20990101-000002-old", mode="analyze", stage="done", source=str(done_g), examples_paths=[])
 mkrun("20990101-000003-edit", mode="edit", stage="editing", source=[str(edit_v)], examples_paths=[])
+mkrun("20990101-000004-static", mode="analyze", stage="producing", source=str(G / "static-refs"), examples_paths=[],
+      static={"effects_folder": str(fx_g)})
 R, RUN = str(refs_g), str(rg)
 RF, RUNF, LONG = R.replace("\\", "/"), RUN.replace("\\", "/"), str(refs_g.resolve()).replace("\\", "/")
 GB = "/" + LONG[0].lower() + LONG[2:]
@@ -199,6 +204,8 @@ cases = [
     ("PowerShell", f'Copy-Item "{R}\\a.mp4" "{RUN}\\a.mp4"', False, "Copy-Item into the run folder"),
     ("PowerShell", f'Rename-Item "{R}\\a.mp4" b.mp4', True, "Rename-Item"),
     ("PowerShell", f'Set-Location "{R}"; Remove-Item *.mp4', True, "Set-Location into the references, then Remove-Item"),
+    ("Bash", f'rm "{str(fx_g)}/wipe.mp4"', True, "rm in an open Static run's effects folder"),
+    ("PowerShell", f'Copy-Item "{fx_g}\\wipe.mp4" "{RUN}\\wipe.mp4"', False, "Copy-Item from the effects folder into the run folder"),
 ]
 for tool, cmd, want, label in cases:
     got = denied(tool, cmd)

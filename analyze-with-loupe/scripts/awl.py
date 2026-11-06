@@ -80,6 +80,8 @@ Subcommands (python awl.py <cmd> -h):
   narration-words Static: a narration's timed words, caption cues, SRT and per-line differences from the script
   music          Static bed (ACE-Step 1.5 in its own environment), only when planned: check | make
   slideshow      Static: plan (timeline from the image plan and the narration) | render (clean and captioned preview mp4)
+  effects        Static: the optional effects folder as facts (scan: sounds, overlays, keying, contact sheets)
+  capcut-effects Static: the timeline's overlays and sounds into the CapCut project, by the ways the CapCut effects check verified
 
 Every command prints one JSON object on its last stdout line. Exit codes: 0 ok, 1 failure,
 2 bad arguments.
@@ -6196,6 +6198,231 @@ def cmd_capcut_transitions(a):
          "note": "only transitions the CapCut check verified (data/capcut-catalogue.md); run `T capcut-repair` after"}, 0 if not failed else 1)
 
 
+def _kf_multi(prop: str, keys: list) -> dict:
+    """A keyframe track with several keys: [(time from the clip's start in microseconds, value), ...], linear between them."""
+    import uuid
+    return {"id": str(uuid.uuid4()).upper(), "material_id": "", "property_type": prop,
+            "keyframe_list": [{"id": str(uuid.uuid4()).upper(), "curveType": "Line", "time_offset": int(t), "left_control": {"x": 0.0, "y": 0.0},
+                               "right_control": {"x": 0.0, "y": 0.0}, "values": [float(v)], "string_value": "", "graphID": ""}
+                              for t, v in keys]}
+
+
+FX_ALPHA_CODECS = {   # alpha video files the CapCut effects check tries, in this order (the first that CapCut plays is the one used)
+    "prores4444": (".mov", ["-c:v", "prores_ks", "-profile:v", "4444", "-pix_fmt", "yuva444p10le", "-vendor", "apl0"], ["-c:a", "aac", "-b:a", "192k"]),
+    "qtrle": (".mov", ["-c:v", "qtrle", "-pix_fmt", "argb"], ["-c:a", "aac", "-b:a", "192k"]),
+    "png-mov": (".mov", ["-c:v", "png", "-pix_fmt", "rgba"], ["-c:a", "aac", "-b:a", "192k"]),
+    "vp9-webm": (".webm", ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0", "-crf", "30", "-auto-alt-ref", "0"], ["-c:a", "libopus"]),
+}
+
+
+def _fx_prepare(src: Path, how: str, codec: str, dst: Path, key_color: str = None, key_intensity: float = 0.5,
+                box: tuple = None) -> Path:
+    """An overlay made into an alpha video for CapCut, when the CapCut check showed that CapCut's own chroma key or screen blend does
+    not play but an alpha file does: `keyed` = the key colour taken out by ffmpeg's chromakey (and its green spill), `luma` = black made
+    transparent by brightness (alpha = the brightest channel, the colour divided by it: over the picture it adds light as a screen
+    blend does, a little darker where it is coloured). `box` crops it to the part the canvas shows (a cover), so the file has the
+    canvas's aspect. Its own sound is kept."""
+    ext, vargs, aargs = FX_ALPHA_CODECS[codec]
+    out_p = dst.with_suffix(ext)
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+    info = media_summary(src)
+    w, h = int(info.get("display_width") or 0), int(info.get("display_height") or 0)
+    vf = []
+    if box and w and h:
+        cw, ch = int(round((box[2] - box[0]) * w / 2)) * 2, int(round((box[3] - box[1]) * h / 2)) * 2
+        vf.append(f"crop={cw}:{ch}:{int(round(box[0] * w))}:{int(round(box[1] * h))}")
+    if how == "keyed":
+        sim = round(0.08 + 0.3 * float(key_intensity if key_intensity is not None else 0.5), 3)
+        vf += [f"format=yuva444p,chromakey=color=0x{str(key_color or '#00FF00').lstrip('#')}:similarity={sim}:blend=0.05",
+               "despill=type=green", "format=rgba"]
+    elif how == "luma":
+        m = "max(max(r(X,Y),g(X,Y)),b(X,Y))"
+        vf += ["format=rgba", f"geq=r='if(gt({m},0),min(255,r(X,Y)*255/{m}),0)':g='if(gt({m},0),min(255,g(X,Y)*255/{m}),0)':"
+                              f"b='if(gt({m},0),min(255,b(X,Y)*255/{m}),0)':a='{m}'"]
+    args = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-map", "0:v:0", "-map", "0:a:0?"]
+    if vf:
+        args += ["-vf", ",".join(vf)]
+    cp = run(args + vargs + aargs + [str(out_p)], timeout=3600)
+    if cp.returncode != 0 or not out_p.is_file():
+        raise RuntimeError(f"could not make {out_p.name}: {(cp.stderr or '')[-400:]}")
+    return out_p
+
+
+def _fx_method(e: dict, ver: dict) -> tuple:
+    """How an effect goes into CapCut, from what the CapCut effects check verified (data/capcut-catalogue.json -> effects): returns
+    (method, None) or (None, the unverified point). Methods: capcut-chroma | capcut-screen | keyed-file:<codec> | luma-file:<codec> |
+    plain | sound."""
+    pro_ok = bool(cfg_get("capcut.pro", False))
+    ok = lambda k: bool((ver.get(k) or {}).get("plays")) and (pro_ok or not (ver.get(k) or {}).get("pro"))   # noqa: E731
+    codec = (ver.get("alpha_video") or {}).get("codec")
+    if e["type"] == "sfx":
+        if not ok("sfx"):
+            return None, "sound effects on an audio track (sfx)"
+        if abs(float(e.get("volume") or 0) - 1.0) > 1e-3 and not ok("sfx_volume"):
+            return None, "a sound effect's volume (sfx_volume)"
+        if (float(e.get("fade_in_s") or 0) or float(e.get("fade_out_s") or 0)) and not ok("sfx_fade"):
+            return None, "a sound effect's fades (sfx_fade)"
+        return "sound", None
+    if e.get("fit") == "cover" and not ok("cover_scale"):
+        return None, "an overlay scaled to cover the canvas (cover_scale)"
+    if any(isinstance(e.get(k), list) and len(e[k]) > 1 for k in ("scale", "x", "y")) and not ok("overlay_keyframes"):
+        return None, "keyframes on an overlay (overlay_keyframes)"
+    if e.get("has_audio"):
+        if float(e.get("volume") or 0) > 0 and not ok("overlay_sound"):
+            return None, "an overlay's own sound (overlay_sound)"
+        if float(e.get("volume") or 0) <= 0 and not ok("mute"):
+            return None, "an overlay's sound muted (mute)"
+    if e.get("blend") == "chroma":
+        if ok("chroma"):
+            return "capcut-chroma", None
+        return (f"keyed-file:{codec}", None) if codec and ok("alpha_video") else (None, "a green screen keyed out (chroma, alpha_video)")
+    if e.get("blend") == "screen":
+        if ok("screen"):
+            return "capcut-screen", None
+        return (f"luma-file:{codec}", None) if codec and ok("alpha_video") else (None, "a screen blend (screen, alpha_video)")
+    trans = bool(((e.get("_facts") or {}).get("picture") or {}).get("has_transparency"))
+    if trans and not ok("alpha_image" if e.get("kind") == "image" else "alpha_video"):
+        return None, "a file's own transparency (alpha_image / alpha_video)"
+    return "plain", None
+
+
+def cmd_capcut_effects(a):
+    """Static: the timeline's effects (40-briefs/video-NN-timeline.json -> effects, from the plan and the effects folder) into the CapCut
+    project with capcut-cli: each overlay on its own video track above the stills (`add-video`; the file is copied into the draft),
+    from its in point, sized (cover or contain, times its scale) and placed (x, y in half-canvas units), keyframed when those change,
+    keyed or blended by the method the CapCut effects check verified (data/capcut-catalogue.json -> effects: CapCut's own chroma key
+    and screen blend, else an alpha file made here), at its volume (0 mutes its sound); each sound on an audio track (`add-audio`) at
+    its volume with its fades. An effect that needs something the check did not verify is not written and is listed. Run it after
+    capcut-motion and capcut-transitions (after the last capcut_save), then `T capcut-repair`."""
+    d = Path(a.draft)
+    if not (d / "draft_content.json").is_file():
+        fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
+    if (d / ".locked").exists() or _capcut_running():
+        fail("CapCut is running: close it, then run this again", 3)
+    rd = _state_of(a.run)[0] if a.run else None
+    tlp = Path(a.timeline) if a.timeline else (rd / "40-briefs" / f"video-{_cf_nn(a.video)}-timeline.json" if rd and a.video else None)
+    if not tlp or not tlp.is_file():
+        fail("capcut-effects needs --run and --video (the run's timeline) or --timeline <file>", 2)
+    tl = json.loads(tlp.read_text(encoding="utf-8"))
+    fxs = tl.get("effects") or []
+    if not fxs:
+        out({"ok": True, "draft": str(d), "written": [], "note": "the timeline has no effects"})
+    ver = a.verified_from and json.loads(Path(a.verified_from).read_text(encoding="utf-8")).get("effects") or _fx_catalogue()
+    if not ver:
+        fail("no verified effects in data/capcut-catalogue.json: run the CapCut effects check first (reference/static §9)", 2)
+    content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
+    W, H = int((content.get("canvas_config") or {}).get("width") or 1080), int((content.get("canvas_config") or {}).get("height") or 1920)
+    try:
+        scan = {str(f.get("id")): f for f in json.loads(((rd or tlp.parent.parent) / "00-inventory" / "effects.json")
+                                                         .read_text(encoding="utf-8")).get("files") or []}
+    except (OSError, ValueError):
+        scan = {}
+    prep = (rd / "30-assets" / "effects" / f"video-{_cf_nn(a.video)}") if rd and a.video else d / "fx-prepared"
+    items, refused = [], []
+    for e in sorted(fxs, key=lambda e: (e["type"] != "overlay", str(e.get("track")), e["start"])):
+        e = {**e, "_facts": scan.get(str(e.get("id"))) or {}}
+        method, why_not = _fx_method(e, ver)
+        if method is None:
+            refused.append({"effect": e["n"], "file": Path(e["file"]).name, "not_verified": why_not})
+            continue
+        items.append((e, method))
+    written, failed = _fx_write_capcut(d, items, W, H, prep)
+    refused += failed
+    out({"ok": not refused, "draft": str(d), "timeline": str(tlp), "written": written, "refused": refused,
+         "note": "run `T capcut-repair` next; a refused effect needs a plan without it (it uses something the CapCut check did not verify) "
+                 "or a CapCut check that verifies it (reference/static §9)"}, 0 if not refused else 1)
+
+
+def _fx_write_capcut(d: Path, items: list, W: int, H: int, prep: Path) -> tuple:
+    """Write effects into a CapCut draft with capcut-cli, each by its method (see _fx_method): returns (written, failed)."""
+    cli = _capcut_cli()
+    written, refused, post = [], [], []
+    for e, method in items:
+        src, w, h = Path(e["file"]), float(e.get("width") or W), float(e.get("height") or H)
+        try:
+            if method.startswith(("keyed-file", "luma-file")):
+                bx = (((e.get("_facts") or {}).get("picture") or {}).get("visible_box")) if e.get("fit") == "cover" else None
+                src = _fx_prepare(src, "keyed" if method.startswith("keyed") else "luma", method.split(":", 1)[1],
+                                  prep / f"effect-{e['n']:02d}", e.get("key_color"), e.get("key_intensity"), tuple(bx) if bx else None)
+                info = media_summary(src)
+                w, h = float(info.get("display_width") or w), float(info.get("display_height") or h)
+        except (OSError, RuntimeError) as ex:
+            refused.append({"effect": e["n"], "file": Path(e["file"]).name, "error": str(ex)[-300:]})
+            continue
+        if e["type"] == "overlay":
+            cp = run([cli, "add-video", str(d), str(src), f"{e['start']:.4f}", f"{e['dur_s']:.4f}", "--track-name", e["track"],
+                      "--width", str(int(w)), "--height", str(int(h))], timeout=300)
+        else:
+            cp = run([cli, "add-audio", str(d), str(src), f"{e['start']:.4f}", f"{e['dur_s']:.4f}", "--volume", f"{float(e['volume']):.4f}",
+                      "--track-name", e["track"]], timeout=300)
+        js = _last_json(cp.stdout) or {}
+        sid = js.get("segmentId") or js.get("segment_id") or js.get("id")
+        if cp.returncode != 0 or not sid:
+            refused.append({"effect": e["n"], "file": Path(e["file"]).name, "error": (cp.stdout or cp.stderr or "")[-300:]})
+            continue
+        steps = []
+        if method == "capcut-chroma":
+            steps.append(["chroma", str(d), sid, "--color", str(e["key_color"]), "--intensity", f"{float(e['key_intensity']):.3f}"])
+        elif method == "capcut-screen":
+            steps.append(["mix-mode", str(d), sid, "screen"])
+        if e["type"] == "sfx" and (float(e.get("fade_in_s") or 0) or float(e.get("fade_out_s") or 0)):
+            steps.append(["audio-fade", str(d), sid] + (["--in", f"{float(e['fade_in_s']):.3f}"] if float(e.get("fade_in_s") or 0) else [])
+                         + (["--fade-out", f"{float(e['fade_out_s']):.3f}"] if float(e.get("fade_out_s") or 0) else []))
+        bad = None
+        for s in steps:
+            cp = run([cli, *s], timeout=120)
+            if cp.returncode != 0:
+                bad = (cp.stdout or cp.stderr or "")[-300:]
+                break
+        if bad:
+            refused.append({"effect": e["n"], "file": Path(e["file"]).name, "error": bad})
+            continue
+        post.append((sid, e, w, h, method, src))
+        written.append({"effect": e["n"], "type": e["type"], "file": Path(e["file"]).name, "track": e["track"], "start": e["start"],
+                        "end": e["end"], "method": method, "segment": sid})
+    # the in points, the files' real lengths, the size and place (keyed when they change), opacity and volume, in every copy of the timeline
+    made = {}
+    for p in _draft_contents(d):
+        c = json.loads(p.read_text(encoding="utf-8"))
+        segs = {s.get("id"): s for t in c.get("tracks", []) for s in t.get("segments") or []}
+        mats = {m.get("id"): m for kind in ("videos", "audios") for m in (c.get("materials") or {}).get(kind) or []}
+        n = 0
+        for sid, e, w, h, method, src in post:
+            seg = segs.get(sid)
+            if seg is None:
+                continue
+            fd = e.get("file_duration_s")
+            seg["source_timerange"] = {"start": int(round(float(e["in_s"]) * 1e6)), "duration": int(round(float(e["dur_s"]) * 1e6))}
+            m = mats.get(seg.get("material_id"))
+            if m is not None and fd:
+                m["duration"] = int(round(float(fd) * 1e6))
+            if e["type"] == "overlay":
+                k = 1.0
+                if e.get("fit") == "cover" and not method.startswith(("keyed-file", "luma-file")):
+                    k = max(W / w, H / h) / min(W / w, H / h)
+                off = float(e.get("head_cut_s") or 0)
+                sk, xk, yk = _fx_keyed(e.get("scale", 1.0), off), _fx_keyed(e.get("x", 0.0), off), _fx_keyed(e.get("y", 0.0), off)
+                clip = seg.setdefault("clip", {})
+                clip["scale"] = {"x": round(k * sk[0][1], 6), "y": round(k * sk[0][1], 6)}
+                clip["transform"] = {"x": round(xk[0][1], 6), "y": round(yk[0][1], 6)}
+                clip["alpha"] = float(e.get("opacity", 1.0))
+                kfs = [x for x in seg.get("common_keyframes") or [] if x.get("property_type") not in CAPCUT_MOVE_PROPS]
+                for prop, ks, mul in (("KFTypeScaleX", sk, k), ("KFTypePositionX", xk, 1.0), ("KFTypePositionY", yk, 1.0)):
+                    if len(ks) > 1:
+                        if (sid, prop) not in made:
+                            made[(sid, prop)] = _kf_multi(prop, [(t * 1e6, v * mul) for t, v in ks])
+                        kfs.append(json.loads(json.dumps(made[(sid, prop)])))
+                seg["common_keyframes"] = kfs
+                if len(sk) > 1:
+                    seg["uniform_scale"] = {"on": True, "value": 1.0}
+                seg["volume"] = float(e.get("volume") or 0.0) if e.get("has_audio") else 0.0
+            n += 1
+        if n:
+            shutil.copyfile(p, p.with_name(p.name + ".effects.bak"))
+            write_text(p, json.dumps(c, ensure_ascii=False))
+    return written, refused
+
+
 CAPCUT_CHECK = {"amount": 0.2, "moves": [["zoom-in", 0.0], ["zoom-out", 2.0], ["pan-right", 4.0], ["pan-up", 6.0]], "move_s": 2.0,
                 "captions_from": 8.0, "caption_s": 0.6, "intro_s": 0.3, "transitions_from": 53.6, "still_s": 1.2, "transition_s": 0.5}
 
@@ -6396,10 +6623,417 @@ def _capcut_check_measure(a):
                    | {"measured": {k: m["measured"][k] for k in ("zoom_pct_per_s", "pan_x_pct_per_s", "pan_y_pct_per_s", "seen_s")}} for m in moves]})
 
 
+# The effects check: one 30 s project (ten stills of 3 s, A warm and B cool by turns, and one caption low on the canvas) with every
+# way an effect can go into CapCut, each in its own window, on test media made here with known shapes, colours and times.
+FX_CHECK = {
+    "still_s": 3.0, "length_s": 30.0, "caption_y": -0.75, "tone_at_file_s": 1.5, "tone_s": 0.25, "ref_a_s": 0.25, "ref_b_s": 4.0,
+    "quiet_s": [7.7, 7.95],
+    "overlays": [
+        {"test": "chroma", "file": "green-wipe.mp4", "start": 0.5, "method": "capcut-chroma", "fit": "cover", "key_intensity": 0.5, "volume": 1.0},
+        {"test": "chroma_low", "file": "green-wipe.mp4", "start": 4.5, "method": "capcut-chroma", "fit": "cover", "key_intensity": 0.3, "volume": 0.0},
+        {"test": "screen", "file": "black-glow.mp4", "start": 9.5, "method": "capcut-screen", "fit": "cover"},
+        {"test": "alpha_prores4444", "file": "disc-prores4444.mov", "start": 13.0, "method": "plain", "fit": "contain"},
+        {"test": "alpha_qtrle", "file": "disc-qtrle.mov", "start": 15.5, "method": "plain", "fit": "contain"},
+        {"test": "alpha_png-mov", "file": "disc-png-mov.mov", "start": 18.5, "method": "plain", "fit": "contain"},
+        {"test": "alpha_vp9-webm", "file": "disc-vp9-webm.webm", "start": 21.5, "method": "plain", "fit": "contain"},
+        {"test": "sticker", "file": "sticker.png", "start": 24.2, "dur_s": 2.5, "method": "plain", "fit": "contain",
+         "scale": [[0.0, 0.3], [0.2, 0.6], [0.3, 0.5]], "x": [[0.0, -0.5], [1.5, 0.5]], "y": 0.3}],
+    "sounds": [
+        {"test": "sfx", "file": "click.wav", "start": 0.5, "volume": 1.0},
+        {"test": "sfx_volume", "file": "click.wav", "start": 3.8, "volume": 0.25},
+        {"test": "sfx_fade", "file": "noise.wav", "start": 8.0, "volume": 1.0, "fade_out_s": 1.0},
+        {"test": "sfx_again", "file": "click.wav", "start": 13.5, "volume": 1.0}]}
+
+
+def _fx_check_media(media: Path) -> None:
+    """The effects check's test media: a green-screen wipe (1920x1080, pure green, a white band sweeping across: the visible centre is
+    white from 0.99 s to 2.0 s; a 440 Hz tone at 1.5 s for 0.25 s), a glow on black (an orange disc growing from 80 to 300 px), a red disc
+    on transparent in every alpha format of FX_ALPHA_CODECS, a white ring sticker (PNG with alpha), a 2 kHz click and a noise burst."""
+    import numpy as np
+    from PIL import Image, ImageDraw
+    media.mkdir(parents=True, exist_ok=True)
+    ff, fps = find_tool("ffmpeg"), 30
+
+    def wav(path: Path, x):
+        import wave
+        y = (np.clip(x, -1, 1) * 32767).astype("<i2")
+        with wave.open(str(path), "wb") as w:
+            w.setnchannels(2)
+            w.setsampwidth(2)
+            w.setframerate(48000)
+            w.writeframes(np.repeat(y[:, None], 2, axis=1).tobytes())
+
+    def video(path: Path, frames, size, extra=(), audio=None):
+        args = [ff, "-nostdin", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{size[0]}x{size[1]}", "-r", str(fps), "-i", "-"]
+        if audio:
+            args += ["-i", str(audio), "-map", "0:v", "-map", "1:a", "-c:a", "aac", "-b:a", "192k", "-shortest"]
+        p = subprocess.Popen(args + list(extra) + [str(path)], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        for f in frames:
+            p.stdin.write(f.tobytes())
+        p.stdin.close()
+        if p.wait(timeout=600) != 0:
+            raise RuntimeError(p.stderr.read().decode("utf-8", "replace")[-400:])
+    sr = 48000
+    t = np.arange(int(3.0 * sr)) / sr
+    tone = np.where((t >= FX_CHECK["tone_at_file_s"]) & (t < FX_CHECK["tone_at_file_s"] + FX_CHECK["tone_s"]), 0.5 * np.sin(2 * np.pi * 440 * t), 0.0)
+    wav(media / "tone.wav", tone)
+    W, H = 1920, 1080
+
+    def wipe():
+        for i in range(int(3.0 * fps)):
+            tt = i / fps
+            xr = int(np.clip((tt - 0.4) / 0.9, 0, 1) * W)          # the band's right edge comes in from the left
+            xl = int(np.clip((tt - 1.7) / 0.9, 0, 1) * W)          # then its left edge leaves to the right
+            f = np.zeros((H, W, 3), np.uint8)
+            f[..., 1] = 255
+            if xr > xl:
+                f[:, xl:xr] = 255
+            yield f
+    video(media / "green-wipe.mp4", wipe(), (W, H), ["-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p"], audio=media / "tone.wav")
+    yy, xx = np.mgrid[0:H, 0:W]
+    dist = np.hypot(xx - W / 2, yy - H / 2)
+
+    def glow():
+        for i in range(int(3.0 * fps)):
+            r = 80 + 220 * i / (3.0 * fps - 1)
+            a = np.clip((r - dist) / 40.0, 0, 1)[..., None]
+            yield (a * np.array([255, 140, 40])).astype(np.uint8)
+    video(media / "black-glow.mp4", glow(), (W, H), ["-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p"])
+    disc = Image.new("RGBA", (1000, 1000), (0, 0, 0, 0))
+    ImageDraw.Draw(disc).ellipse([200, 200, 800, 800], fill=(230, 30, 30, 255))
+    disc.save(media / "disc.png")
+    for name, (ext, vargs, _aargs) in FX_ALPHA_CODECS.items():
+        cp = run([ff, "-nostdin", "-y", "-loglevel", "error", "-loop", "1", "-framerate", str(fps), "-t", "2", "-i", str(media / "disc.png"),
+                  *vargs, str(media / f"disc-{name}{ext}")], timeout=600)
+        if cp.returncode != 0:
+            raise RuntimeError(f"disc-{name}: {(cp.stderr or '')[-300:]}")
+    ring = Image.new("RGBA", (800, 800), (0, 0, 0, 0))
+    ImageDraw.Draw(ring).ellipse([20, 20, 780, 780], outline=(255, 255, 255, 255), width=80)
+    ring.save(media / "sticker.png")
+    tc = np.arange(int(0.03 * sr)) / sr
+    click = 0.5 * np.sin(2 * np.pi * 2000 * tc) * np.minimum(1, np.minimum(tc, tc[-1] - tc) / 0.002)
+    wav(media / "click.wav", click)
+    rng = np.random.default_rng(1106)
+    wav(media / "noise.wav", rng.uniform(-0.2, 0.2, int(1.5 * sr)))
+
+
+def _capcut_check_effects_fill(a):
+    """The effects check project, after the CapCut MCP placed its ten stills (A, B by turns, 3 s each, from runs/_capcut-check/media)
+    and capcut_save: the caption (import-srt, low on the canvas), every overlay test and every sound test of FX_CHECK written the way
+    `T capcut-effects` writes them (_fx_write_capcut), then capcut-repair. Writes runs/_capcut-check/effects/manifest.json."""
+    d, home = Path(a.draft), _capcut_check_home() / "effects"
+    if not (d / "draft_content.json").is_file():
+        fail("capcut-check effects-fill needs --draft (the cloned check project with its ten stills)", 2)
+    if (d / ".locked").exists() or _capcut_running():
+        fail("CapCut is running: close it, then run this again", 3)
+    media = home / "media"
+    try:
+        _fx_check_media(media)
+    except (OSError, RuntimeError) as e:
+        fail(f"the test media could not be made: {e}", 1)
+    content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
+    W, H = int((content.get("canvas_config") or {}).get("width") or 1080), int((content.get("canvas_config") or {}).get("height") or 1920)
+    cli, me = _capcut_cli(), [sys.executable, str(Path(__file__).resolve())]
+    c = FX_CHECK
+    write_text(home / "caption.srt", f"1\n{_srt_time(0.3)} --> {_srt_time(c['length_s'] - 0.3)}\nCAPTION\n")
+    cp = run([cli, "import-srt", str(d), str(home / "caption.srt"), "--font-size", "12", "--color", "#FFFFFF", "--border-width", "0.08",
+              "--border-color", "#000000", "--align", "1", "--y", str(c["caption_y"])], timeout=300)
+    if cp.returncode != 0:
+        fail("import-srt failed on the effects check project: " + (cp.stdout or cp.stderr)[-300:], 1)
+    items = []
+    for n, o in enumerate(c["overlays"], 1):
+        f = media / o["file"]
+        info = media_summary(f)
+        dur = float(o.get("dur_s") or info.get("duration_s") or 2.0)
+        e = {"n": n, "type": "overlay", "file": str(f), "kind": "image" if f.suffix == ".png" else "video", "start": o["start"],
+             "end": o["start"] + dur, "in_s": 0.0, "dur_s": dur, "track": "fx1", "fit": o["fit"], "scale": o.get("scale", 1.0),
+             "x": o.get("x", 0.0), "y": o.get("y", 0.0), "opacity": 1.0, "has_audio": bool(info.get("has_audio")),
+             "volume": float(o.get("volume") or 0.0), "key_color": "#00FF00" if o["method"] == "capcut-chroma" else None,
+             "key_intensity": o.get("key_intensity"), "width": info.get("display_width"), "height": info.get("display_height"),
+             "file_duration_s": info.get("duration_s"), "head_cut_s": 0.0}
+        items.append((e, o["method"]))
+    for k, s in enumerate(c["sounds"], 1):
+        f = media / s["file"]
+        dur = float(media_summary(f).get("duration_s") or 0.1)
+        items.append(({"n": 100 + k, "type": "sfx", "file": str(f), "kind": "audio", "start": s["start"], "end": s["start"] + dur, "in_s": 0.0,
+                       "dur_s": dur, "track": "sfx1", "volume": s["volume"], "fade_in_s": 0.0, "fade_out_s": float(s.get("fade_out_s") or 0.0),
+                       "file_duration_s": dur, "has_audio": True}, "sound"))
+    written, failed = _fx_write_capcut(d, items, W, H, home / "prepared")
+    cp = run(me + ["capcut-repair", "--draft", str(d), "--keep-text"], timeout=900)
+    man = {"draft": str(d), "made": now_iso(), "settings": c, "canvas": [W, H], "written": written, "failed": failed,
+           "capcut": next((p.name for p in sorted((Path(os.environ.get("LOCALAPPDATA", "")) / "CapCut" / "Apps").glob("*"))), None),
+           "repair_ok": cp.returncode == 0}
+    write_json(home / "manifest.json", man)
+    out({"ok": not failed and cp.returncode == 0, "draft": str(d), "manifest": str(home / "manifest.json"), "written": len(written),
+         "failed": failed, "length_s": c["length_s"],
+         "next": "the user opens the project in CapCut and tries Export once (1080x1920, 30 fps); exported, `T capcut-check effects-measure "
+                 "--export <the mp4>`; blocked (Pro), a full-screen screen recording with the desktop sound from the project's 0.0 s, then "
+                 "`T capcut-check effects-measure --export <the recording> --crop W:H:X:Y` (the player's area; --start is found from the "
+                 "stills' cuts when not given)"})
+
+
+def _fx_align(video: Path, crop: str) -> dict:
+    """Where the effects check project's 0.0 s plays in a recording of CapCut's player: roughly from the first click in the recording's
+    sound (the project's 0.5 s), then to the frame from the stills' switches (warm A and cool B by turns every 3 s, read in the top band
+    of the player): every clean switch sits a whole number of 3 s steps after the project's start."""
+    import cv2
+    import numpy as np
+    out_ = {"click_s": None, "switches": [], "start_s": None}
+    cp = subprocess.run([find_tool("ffmpeg"), "-nostdin", "-v", "error", "-i", str(video), "-map", "0:a:0", "-ac", "1", "-ar", "16000",
+                         "-f", "f32le", "-"], capture_output=True, timeout=1800)
+    if cp.returncode == 0 and cp.stdout:
+        y = np.frombuffer(cp.stdout, np.float32).astype(np.float64)
+        sr, hop, win = 16000, 80, 480
+        n = (len(y) - win) // hop
+        if n > 10:
+            fq = np.fft.rfftfreq(win, 1 / sr)
+            sel = (fq >= 1800) & (fq <= 2200)
+            frames = np.lib.stride_tricks.sliding_window_view(y, win)[::hop][:n]
+            e = 10 * np.log10((np.abs(np.fft.rfft(frames * np.hanning(win), axis=1)) ** 2)[:, sel].sum(axis=1) + 1e-12)
+            floor = float(np.percentile(e, 20))
+            hit = np.where(e > floor + 25)[0]
+            if len(hit):
+                out_["click_s"] = round(float(hit[0]) * hop / sr, 4)
+    cap = cv2.VideoCapture(str(video))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    cw, ch, cx, cy = (int(float(v)) for v in crop.split(":"))
+    kind = []
+    while True:
+        ok, f = cap.read()
+        if not ok:
+            break
+        band = f[cy:cy + max(4, int(ch * 0.14)), cx:cx + cw].astype(np.float32)
+        sat = float((band.max(axis=2) - band.min(axis=2)).mean())
+        rb = float(band[..., 2].mean() - band[..., 0].mean())
+        kind.append("A" if rb > 12 and sat > 25 else "B" if rb < -12 and sat > 25 else "?")
+    cap.release()
+    k = int(fps * 0.4)
+    for j in range(k, len(kind) - k):
+        if kind[j] != kind[j - 1] and kind[j] in "AB" and kind[j - 1] in "AB" \
+                and all(x == kind[j - 1] for x in kind[j - k:j]) and all(x == kind[j] for x in kind[j:j + k]):
+            out_["switches"].append(round(j / fps, 4))
+    if out_["click_s"] is not None:
+        guess = out_["click_s"] - FX_CHECK["sounds"][0]["start"]
+        step = FX_CHECK["still_s"]
+        res_ = [(t - guess) - step * round((t - guess) / step) for t in out_["switches"]]
+        res_ = [r for r in res_ if abs(r) < 0.3]
+        out_["start_s"] = round(guess + (float(np.median(res_)) if res_ else 0.0), 4)
+    return out_
+
+
+def _capcut_check_effects_measure(a):
+    """The effects check, measured on CapCut's export of it (or a full-screen recording of its player with the desktop sound): per test
+    whether CapCut drew it as written, and the numbers behind that. Writes the `effects` part of data/capcut-catalogue.json and its
+    section in data/capcut-catalogue.md: what `T capcut-effects` may use."""
+    import cv2
+    import numpy as np
+    home = _capcut_check_home() / "effects"
+    try:
+        man = json.loads((home / "manifest.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail("no runs/_capcut-check/effects/manifest.json: `T capcut-check effects-fill` first", 2)
+    exp = Path(a.export)
+    if not exp.is_file():
+        fail(f"export not found: {exp}", 2)
+    c, L = man["settings"], float(man["settings"]["length_s"])
+    W, H = man.get("canvas") or [1080, 1920]
+    rec = bool(a.crop or a.start is not None)
+    start, align = a.start, None
+    if a.crop and start is None:
+        align = _fx_align(exp, a.crop)
+        if align["start_s"] is None:
+            fail("could not line the recording up (no click in its sound): pass --start (its second where the project's 0.0 s plays)", 2,
+                 align=align)
+        start = align["start_s"]
+    start = float(start or 0.0)
+    vid, aud = home / "aligned.mp4", home / "aligned.wav"
+    vf = (f"crop={a.crop}," if a.crop else "") + f"scale={W}:{H}:flags=lanczos,fps=30"
+    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-ss", f"{start:.4f}", "-i", str(exp), "-t", f"{L:.3f}",
+              "-vf", vf, "-an", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", str(vid)], timeout=3600)
+    if cp.returncode != 0:
+        fail("could not cut the video: " + (cp.stderr or "")[-300:], 1)
+    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-ss", f"{start:.4f}", "-i", str(exp), "-t", f"{L:.3f}",
+              "-map", "0:a:0?", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(aud)], timeout=600)
+    have_audio = cp.returncode == 0 and aud.is_file() and aud.stat().st_size > 1000
+    cap = cv2.VideoCapture(str(vid))
+    frames = []
+    while True:
+        ok, f = cap.read()
+        if not ok:
+            break
+        frames.append(f)
+    cap.release()
+    if len(frames) < int(L * 30) - 15:
+        fail(f"the cut video holds {len(frames)} frames, the project {int(L * 30)}: check --start / --crop", 2)
+    fps = 30.0
+    fr = lambda t: frames[min(len(frames) - 1, max(0, int(round(t * fps))))].astype(np.int16)   # noqa: E731
+    refA, refB = fr(c["ref_a_s"]), fr(c["ref_b_s"])     # the plain stills (A at 0-3 s, B at 3-6 s) where no effect plays, caption included
+    ref = lambda t: refA if int(t // c["still_s"]) % 2 == 0 else refB   # noqa: E731
+
+    def green_share(f):
+        g = f[..., 1]
+        return float(((g > 80) & (g - np.maximum(f[..., 0], f[..., 2]) > 50)).mean())
+    res = {}
+    ov = {o["test"]: o for o in c["overlays"]}
+    cap_band = slice(int(H * (0.5 + 0.5 * abs(c["caption_y"])) - 90), int(H * (0.5 + 0.5 * abs(c["caption_y"])) + 90))
+    for name in ("chroma", "chroma_low"):
+        s0 = float(ov[name]["start"])
+        ts = np.arange(s0 + 0.1, s0 + 2.9, 1 / fps)
+        gs = [green_share(fr(t)) for t in ts]
+        mid = fr(s0 + FX_CHECK["tone_at_file_s"])
+        white = float((mid[: int(H * 0.8)].min(axis=2) > 225).mean())   # above the caption band
+        dark_in_caption = float((mid[cap_band].max(axis=2) < 60).mean())
+        res[name] = {"plays": max(gs) < 0.01 and white > 0.9, "residual_green_max": round(max(gs), 4), "white_at_cover": round(white, 3),
+                     "intensity": ov[name]["key_intensity"], "caption_dark_px_at_cover": round(dark_in_caption, 4)}
+    res["cover_scale"] = {"plays": max(res["chroma"]["white_at_cover"], res["chroma_low"]["white_at_cover"]) > 0.9,
+                          "white_at_cover": res["chroma"]["white_at_cover"]}
+    res["captions_above_overlays"] = {"plays": res["chroma"]["caption_dark_px_at_cover"] > 0.002,
+                                      "dark_px_in_caption_band": res["chroma"]["caption_dark_px_at_cover"]}
+    s0 = float(ov["screen"]["start"])
+    band = slice(0, int(H * 0.14))
+    diffs, lifts = [], []
+    for t in np.arange(s0 + 0.2, s0 + 2.8, 0.2):
+        f, r = fr(t), ref(t)
+        diffs.append(float(np.abs(f[band] - r[band]).mean()))
+        lifts.append(float(f[int(H * 0.45):int(H * 0.55), int(W * 0.45):int(W * 0.55)].mean() - r[int(H * 0.45):int(H * 0.55), int(W * 0.45):int(W * 0.55)].mean()))
+    res["screen"] = {"plays": max(diffs) < 8 and float(np.median(lifts)) > 10, "outer_band_diff_max": round(max(diffs), 2),
+                     "centre_lift_median": round(float(np.median(lifts)), 1)}
+    codecs_ok = []
+    for name in FX_ALPHA_CODECS:
+        o = ov[f"alpha_{name}"]
+        t = float(o["start"]) + 1.0
+        f, r = fr(t), ref(t)
+        cyy, cxx = H // 2, W // 2
+        centre = f[cyy - 150:cyy + 150, cxx - 150:cxx + 150]
+        red = float(((centre[..., 2] > 150) & (centre[..., 1] < 90) & (centre[..., 0] < 90)).mean())
+        sq = int(540 * 1.0)   # the file's square on the canvas (1000 px contained to the width: 1080) and its corners outside the disc
+        corners = [(cyy - sq + 30, cxx - sq + 30), (cyy - sq + 30, cxx + sq - 130), (cyy + sq - 130, cxx - sq + 30), (cyy + sq - 130, cxx + sq - 130)]
+        cdiff = max(float(np.abs(f[y:y + 100, x:x + 100] - r[y:y + 100, x:x + 100]).mean()) for y, x in corners)
+        plays = red > 0.9 and cdiff < 8
+        res[f"alpha_{name}"] = {"plays": plays, "red_in_centre": round(red, 3), "corner_diff_max": round(cdiff, 2)}
+        if plays:
+            codecs_ok.append(name)
+    res["alpha_video"] = {"plays": bool(codecs_ok), "codec": codecs_ok[0] if codecs_ok else None, "codecs": codecs_ok}
+    o = ov["sticker"]
+    s0 = float(o["start"])
+    sizes, xs = [], []
+    for dt_ in (0.0, 0.2, 0.3, 0.75, 1.5):
+        f, r = fr(s0 + dt_ + 0.02), ref(s0 + dt_ + 0.02)
+        m = (np.abs(f - r).max(axis=2) > 60) & (f.min(axis=2) > 200)
+        m[cap_band] = False
+        ys, xs_ = np.where(m)
+        sizes.append(int(xs_.max() - xs_.min() + 1) if len(xs_) > 200 else 0)
+        xs.append(round(float(xs_.mean()) / W * 2 - 1, 3) if len(xs_) > 200 else None)
+    want = [round(1026 * v) for v in (0.3, 0.6, 0.5, 0.5, 0.5)]
+    sticker_drawn = sizes[3] > 0
+    res["alpha_image"] = {"plays": sticker_drawn, "ring_width_px": sizes}
+    res["overlay_keyframes"] = {"plays": sticker_drawn and all(abs(s - w_) < 0.25 * w_ for s, w_ in zip(sizes, want)) and
+                                xs[0] is not None and xs[4] is not None and xs[4] - xs[0] > 0.6,
+                                "ring_width_px": sizes, "expected_px": want, "x_centre": xs, "expected_x": [-0.5, -0.367, -0.3, 0.0, 0.5]}
+    if have_audio:
+        import wave
+        with wave.open(str(aud), "rb") as w:
+            y = np.frombuffer(w.readframes(w.getnframes()), "<i2").astype(np.float64) / 32768
+        sr = 16000
+
+        def band_db(t0, t1, f0, f1):
+            s = y[int(t0 * sr):int(t1 * sr)]
+            if len(s) < 256:
+                return -120.0
+            P = np.abs(np.fft.rfft(s * np.hanning(len(s)))) ** 2
+            fq = np.fft.rfftfreq(len(s), 1 / sr)
+            return round(float(10 * np.log10(P[(fq >= f0) & (fq <= f1)].sum() / len(s) + 1e-12)), 1)
+
+        def onset(t, f0=1800, f1=2200):
+            best, bt = -999, None
+            for k in range(int((t - 0.3) * 1000), int((t + 0.3) * 1000), 5):
+                v = band_db(k / 1000, k / 1000 + 0.03, f0, f1)
+                if v > best:
+                    best, bt = v, k / 1000
+            return bt, best
+        sd = {s["test"]: s for s in c["sounds"]}
+        o1, l1 = onset(sd["sfx"]["start"])
+        o2, l2 = onset(sd["sfx_volume"]["start"])
+        o4, l4 = onset(sd["sfx_again"]["start"])
+        q0, q1 = c["quiet_s"]
+        floor = band_db(q0, q1, 1800, 2200)
+        res["sfx"] = {"plays": l1 - floor > 20 and l4 - floor > 20, "offset_ms": [round((o1 - sd["sfx"]["start"]) * 1000), round((o4 - sd["sfx_again"]["start"]) * 1000)],
+                      "level_db": [l1, l4], "floor_db": floor}
+        res["sfx_volume"] = {"plays": abs((l2 - l1) - 20 * math.log10(0.25)) < 3, "level_change_db": round(l2 - l1, 1),
+                             "expected_db": round(20 * math.log10(0.25), 1)}
+        f0 = float(sd["sfx_fade"]["start"])
+        before, end_ = band_db(f0 + 0.1, f0 + 0.45, 300, 6000), band_db(f0 + 1.3, f0 + 1.45, 300, 6000)
+        res["sfx_fade"] = {"plays": before - end_ > 8, "drop_db": round(before - end_, 1)}
+        t_on = float(ov["chroma"]["start"]) + FX_CHECK["tone_at_file_s"]
+        t_off = float(ov["chroma_low"]["start"]) + FX_CHECK["tone_at_file_s"]
+        tone_on, tone_off = band_db(t_on + 0.03, t_on + 0.22, 420, 460), band_db(t_off + 0.03, t_off + 0.22, 420, 460)
+        tone_floor = band_db(q0, q1, 420, 460)
+        res["overlay_sound"] = {"plays": tone_on - tone_floor > 20, "tone_db": tone_on, "floor_db": tone_floor}
+        res["mute"] = {"plays": tone_off - tone_floor < 6, "tone_db": tone_off, "floor_db": tone_floor}
+    else:
+        for k in ("sfx", "sfx_volume", "sfx_fade", "overlay_sound", "mute"):
+            res[k] = {"plays": None, "note": "the file has no sound: record with the desktop sound (or export)"}
+    pro_block = []
+    try:
+        fb = json.loads((Path(os.environ.get("LOCALAPPDATA", "")) / "CapCut" / "User Data" / "Cache" / "FeedbackOtherInfo.json").read_text(encoding="utf-8"))
+        blk = (fb.get("commercialization") or {}).get("last_block_info") or {}
+        pro_block = [{"name": b.get("name"), "resourceId": b.get("resourceId"), "type": b.get("type")} for b in blk.get("block_svip_benefits") or []]
+        pro_at = int(blk.get("time") or 0) / 1000
+    except (OSError, ValueError, TypeError):
+        pro_at = 0
+    for k, kw in (("chroma", ("chroma", "key")), ("chroma_low", ("chroma", "key")), ("screen", ("blend", "mix", "screen"))):
+        res[k]["pro"] = any(any(w in str(b.get("name") or "").lower() for w in kw) for b in pro_block)
+    cat_p = AWL_HOME / "data" / "capcut-catalogue.json"
+    try:
+        cat = json.loads(cat_p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        cat = {}
+    best = min((x for x in ("chroma", "chroma_low") if res[x]["plays"]), key=lambda x: res[x]["residual_green_max"], default=None)
+    res["chroma"] = {**res["chroma"], "plays": best is not None, "intensity": res[best]["intensity"] if best else None,
+                     "tested": {x: {k: v for k, v in res[x].items() if k != "plays"} | {"plays": res[x]["plays"]} for x in ("chroma", "chroma_low")}}
+    res.pop("chroma_low", None)
+    cat["effects"] = {**res, "measured": now_iso(), "from": str(exp), "recording": rec, "start_s": start, "align": align, "capcut": man.get("capcut"),
+                      "pro_block_at_export": pro_block,
+                      "pro_from": (f"CapCut's FeedbackOtherInfo.json, the export it blocked at {dt.datetime.fromtimestamp(pro_at).isoformat(timespec='seconds')}"
+                                   if pro_at else "no blocked export recorded")}
+    write_json(cat_p, cat)
+    md_p = AWL_HOME / "data" / "capcut-catalogue.md"
+    try:
+        md = md_p.read_text(encoding="utf-8").split("\n## Effects")[0].rstrip("\n")
+    except OSError:
+        md = "# CapCut catalogue"
+    yn = lambda b: "yes" if b else ("not measured" if b is None else "NO")   # noqa: E731
+    rows = [("chroma", "CapCut's chroma key on a green screen (`blend: chroma`)", f"best intensity {res['chroma'].get('intensity')}; residual green "
+             + ", ".join(f"{k}: {v['residual_green_max']} at {v['intensity']}" for k, v in res["chroma"]["tested"].items())),
+            ("cover_scale", "an overlay scaled to cover the canvas (`fit: cover`)", f"white at the cover moment {res['cover_scale']['white_at_cover']}"),
+            ("captions_above_overlays", "the captions stay above the overlays", f"dark outline px {res['captions_above_overlays']['dark_px_in_caption_band']}"),
+            ("screen", "CapCut's screen blend on a black background (`blend: screen`)", f"outer band diff {res['screen']['outer_band_diff_max']}, centre lift {res['screen']['centre_lift_median']}"),
+            ("alpha_video", "a video's own transparency (`blend: normal`)", f"codecs that play: {', '.join(res['alpha_video']['codecs']) or 'none'}"),
+            ("alpha_image", "a PNG's own transparency (`blend: normal`)", f"ring width px {res['alpha_image']['ring_width_px']}"),
+            ("overlay_keyframes", "scale / x / y keys on an overlay", f"ring px {res['overlay_keyframes']['ring_width_px']} vs {res['overlay_keyframes']['expected_px']}, x {res['overlay_keyframes']['x_centre']}"),
+            ("overlay_sound", "an overlay's own sound at its volume", json.dumps({k: v for k, v in res["overlay_sound"].items() if k != "plays"})),
+            ("mute", "an overlay's sound at volume 0 is silent", json.dumps({k: v for k, v in res["mute"].items() if k != "plays"})),
+            ("sfx", "a sound effect on an audio track, on time", json.dumps({k: v for k, v in res["sfx"].items() if k != "plays"})),
+            ("sfx_volume", "a sound effect's volume", json.dumps({k: v for k, v in res["sfx_volume"].items() if k != "plays"})),
+            ("sfx_fade", "a sound effect's fade", json.dumps({k: v for k, v in res["sfx_fade"].items() if k != "plays"}))]
+    md += ["", "", f"## Effects (`T capcut-effects`), measured {cat['effects']['measured'][:10]} from "
+           + ("a screen recording of CapCut's player" if rec else "CapCut's own export"), "",
+           "What the effects check verified on this PC's CapCut. `T capcut-effects` writes an effect only by a way that plays here and "
+           "refuses one that needs a NO; with no CapCut chroma key or screen blend it makes an alpha file instead (`alpha_video`). "
+           f"Export blocked by CapCut Pro: {', '.join(str(b['name']) for b in pro_block) or 'none recorded'}.", "",
+           "| what | plays | numbers |", "|---|---|---|"]
+    md += [f"| {label} | {yn(res[k].get('plays'))}{' (Pro)' if res[k].get('pro') else ''} | {nums} |" for k, label, nums in rows]
+    write_text(md_p, md + "\n")
+    out({"ok": True, "catalogue": str(md_p), "start_s": start, "effects": {k: v.get("plays") for k, v in res.items() if isinstance(v, dict)},
+         "pro_block": [b["name"] for b in pro_block]})
+
+
 def cmd_capcut_check(a):
     """The CapCut check (Static): what this PC's CapCut really plays, measured on its own export. fill: the check project's edits; measure:
-    the export read into data/capcut-catalogue.json and .md (re-run both after a CapCut update)."""
-    {"fill": _capcut_check_fill, "measure": _capcut_check_measure}[a.action](a)
+    the export read into data/capcut-catalogue.json and .md (re-run both after a CapCut update). effects-fill / effects-measure: the
+    same for the effects (overlays, keying, blends, alpha files, keyframes on overlays, sounds)."""
+    {"fill": _capcut_check_fill, "measure": _capcut_check_measure, "effects-fill": _capcut_check_effects_fill,
+     "effects-measure": _capcut_check_effects_measure}[a.action](a)
 
 
 # --------------------------------------------------------------------------- CapCut house text style
@@ -8686,6 +9320,555 @@ def cmd_static(a):
     {"check": _static_check, "formats": _static_formats, "format": _static_format_set}[a.action](a)
 
 
+# ---- the optional effects folder (Static; the user, 2026-11-06: "a folder of effects (optional) that can have: sound effects, and green
+# screen transitions"): every file measured once, as facts; what is used where, how loud and how it is keyed is the plan's (static §5)
+
+FX_VIDEO_EXT = (".mp4", ".mov", ".m4v", ".webm", ".mkv", ".avi", ".gif")
+FX_IMAGE_EXT = (".png", ".webp", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
+FX_AUDIO_EXT = (".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac", ".opus", ".wma")
+FX_ARCHIVE_EXT = (".zip", ".rar", ".7z", ".tar", ".gz", ".tgz")
+FX_SCAN_VERSION = 2   # 2: the sheets also show the cover's middle, the brightest and the busiest frame
+FX_BLENDS = ("chroma", "screen", "normal")   # how an overlay meets the picture: key colour out, screen blend, as it is (its own alpha kept)
+FX_FITS = ("cover", "contain")
+
+
+def _fx_windows(flags, fps: float) -> list:
+    """The spans [start s, end s) where a per-frame flag holds, at the scan's rate."""
+    spans, start = [], None
+    for i, f in enumerate(list(flags) + [False]):
+        if f and start is None:
+            start = i
+        elif not f and start is not None:
+            spans.append([round(start / fps, 3), round(i / fps, 3)])
+            start = None
+    return spans
+
+
+def _fx_visible(w: float, h: float, aw: int, ah: int) -> tuple:
+    """The part of an overlay's frame (fractions x0, y0, x1, y1) that a canvas of aspect aw:ah shows when the overlay covers it, centred."""
+    r, rc = w / h, aw / ah
+    if r > rc + 1e-6:
+        f = rc / r
+        return ((1 - f) / 2, 0.0, (1 + f) / 2, 1.0)
+    if r < rc - 1e-6:
+        f = r / rc
+        return (0.0, (1 - f) / 2, 1.0, (1 + f) / 2)
+    return (0.0, 0.0, 1.0, 1.0)
+
+
+def _fx_audio_facts(p: Path) -> dict | None:
+    """A sound's facts (a sound file, or a video file's own sound), in 10 ms steps: its length, the loudest sample and step, its loudness,
+    where it starts (30 dB under its loudest step), where its loudest step is, how long it takes to fall 20 dB after it, where it ends
+    (40 dB under), and its colour: the spectral centroid (low: a thud or a boom; high: a click, a hiss), the flatness (near 0 a tone,
+    near 1 noise such as a whoosh) and the strongest frequency."""
+    import numpy as np
+    sr, hop = 16000, 160
+    try:
+        cp = subprocess.run([find_tool("ffmpeg"), "-nostdin", "-v", "error", "-i", str(p), "-map", "0:a:0", "-ac", "1", "-ar", str(sr),
+                             "-f", "f32le", "-"], capture_output=True, timeout=600)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if cp.returncode != 0 or not cp.stdout:
+        return None
+    x = np.frombuffer(cp.stdout, dtype=np.float32).astype(np.float64)
+    dur, n = len(x) / sr, len(x) // hop
+    if n < 2:
+        return {"duration_s": round(dur, 3), "silent": True}
+    db = 20 * np.log10(np.sqrt((x[: n * hop].reshape(n, hop) ** 2).mean(axis=1)) + 1e-9)
+    pk = int(db.argmax())
+    top = float(db[pk])
+    if top < -60:
+        return {"duration_s": round(dur, 3), "silent": True, "loudest_10ms_dbfs": round(top, 1)}
+    on = int(np.argmax(db > top - 30))
+    end = int(n - 1 - np.argmax(db[::-1] > top - 40))
+    after = np.where(db[pk:] < top - 20)[0]
+    seg = x[on * hop:(end + 1) * hop]
+    N = 1024
+    if len(seg) < N:
+        seg = np.pad(seg, (0, N - len(seg)))
+    frames = np.lib.stride_tricks.sliding_window_view(seg, N)[:: N // 2]
+    P = (np.abs(np.fft.rfft(frames * np.hanning(N), axis=1)) ** 2).mean(axis=0) + 1e-18
+    f = np.fft.rfftfreq(N, 1 / sr)
+    return {"duration_s": round(dur, 3), "silent": False,
+            "sample_peak_dbfs": round(float(20 * np.log10(np.abs(x).max() + 1e-9)), 1), "loudest_10ms_dbfs": round(top, 1),
+            "loudness_lufs": _ebur128(p) if dur >= 0.4 else None,
+            "starts_s": round(on * hop / sr, 3), "loudest_at_s": round(pk * hop / sr, 3),
+            "falls_20db_in_s": round(float(after[0]) * hop / sr, 3) if len(after) else None, "ends_s": round((end + 1) * hop / sr, 3),
+            "centroid_hz": int(float((f * P).sum() / P.sum())), "flatness": round(float(np.exp(np.log(P).mean()) / P.mean()), 3),
+            "strongest_hz": int(f[int(P[1:].argmax()) + 1])}
+
+
+def _fx_visual(p: Path, info: dict, aw: int, ah: int, fps: float, width: int, nthumb: int) -> tuple:
+    """An overlay's picture over time (a video at `fps`, an image once), on a copy `width` px wide, on its whole frame and on the box a
+    canvas of aw:ah shows when the overlay covers it: per frame the share of key green (green well above red and blue), black, white
+    and transparent pixels, the brightness and the motion; the key green's colour; the spans where the box holds no green (keyed, the
+    overlay hides the picture there), only green, only black (nothing shows in screen blend), only white, only transparent pixels.
+    Returns (facts, thumbnails for the contact sheet as (seconds, PIL image))."""
+    import numpy as np
+    from PIL import Image
+    w0, h0 = int(info.get("display_width") or info.get("width") or 0), int(info.get("display_height") or info.get("height") or 0)
+    if not w0 or not h0:
+        return {"error": "no picture size"}, []
+    W, H = int(width), max(2, int(round(width * h0 / w0 / 2)) * 2)
+    image = p.suffix.lower() in FX_IMAGE_EXT
+    vf = ("" if image else f"fps={fps},") + f"scale={W}:{H}:flags=area,setsar=1,format=rgba"
+    try:
+        cp = subprocess.run([find_tool("ffmpeg"), "-nostdin", "-v", "error", "-i", str(p), "-map", "0:v:0", "-vf", vf,
+                             *(["-frames:v", "1"] if image else []), "-f", "rawvideo", "-"], capture_output=True, timeout=1800)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return {"error": f"{type(e).__name__}: {e}"}, []
+    fs = W * H * 4
+    n = len(cp.stdout) // fs
+    if cp.returncode != 0 or n < 1:
+        return {"error": (cp.stderr or b"")[-300:].decode("utf-8", "replace") or "no frame decoded"}, []
+    arr = np.frombuffer(cp.stdout[: n * fs], np.uint8).reshape(n, H, W, 4)
+    bx = _fx_visible(w0, h0, aw, ah)
+    cx0, cy0, cx1, cy1 = int(round(bx[0] * W)), int(round(bx[1] * H)), int(round(bx[2] * W)), int(round(bx[3] * H))
+    regions = {"full": (slice(None), slice(None)), "visible": (slice(cy0, cy1), slice(cx0, cx1))}
+    curves = {r: {k: [] for k in ("green", "black", "white", "transparent", "bright", "motion")} for r in regions}
+    greens, prev = [], None
+    for i in range(n):
+        rgb = arr[i, ..., :3].astype(np.int16)
+        al = arr[i, ..., 3]
+        mx, mn = rgb.max(axis=2), rgb.min(axis=2)
+        solid = al > 128
+        g = solid & (rgb[..., 1] > 80) & (rgb[..., 1] - np.maximum(rgb[..., 0], rgb[..., 2]) > 50)
+        masks = {"green": g, "black": solid & (mx < 20), "white": solid & (mn > 230), "transparent": al < 26}
+        gray = rgb.mean(axis=2)
+        for r, sl in regions.items():
+            for k, m in masks.items():
+                curves[r][k].append(float(m[sl].mean()))
+            curves[r]["bright"].append(float(gray[sl].mean() / 255))
+            curves[r]["motion"].append(float(np.abs(gray[sl] - prev[sl]).mean() / 255) if prev is not None else 0.0)
+        prev = gray
+        if g.any():
+            px = rgb[g]
+            greens.append(px[:: max(1, len(px) // 2000)])
+    key = None
+    if greens:
+        med = np.median(np.concatenate(greens), axis=0).astype(int)
+        key = "#{:02X}{:02X}{:02X}".format(*(int(v) for v in med))
+    vis = curves["visible"]
+    sfps = 1.0 if image else float(fps)
+    span = lambda k, test: _fx_windows([test(v) for v in vis[k]], sfps) if not image else ([[0.0, None]] if test(vis[k][0]) else [])  # noqa: E731
+    four = lambda xs: [round(xs[0], 3), round(min(xs), 3), round(max(xs), 3), round(xs[-1], 3)]   # noqa: E731
+    facts = {"scan_fps": None if image else fps, "frames_scanned": n, "visible_box": [round(v, 4) for v in bx], "key_green": key,
+             "has_transparency": bool(max(curves["full"]["transparent"]) > 0.001),
+             "shares_visible": {k: four(vis[k]) for k in ("green", "black", "white", "transparent")},
+             "shares_full": {k: four(curves["full"][k]) for k in ("green", "black", "white", "transparent")},
+             "spans_visible": {"no_green": span("green", lambda v: v <= 0.005) if max(vis["green"]) > 0.2 else [],
+                               "all_green": span("green", lambda v: v >= 0.995), "all_black": span("black", lambda v: v >= 0.995),
+                               "all_white": span("white", lambda v: v >= 0.99), "all_transparent": span("transparent", lambda v: v >= 0.995)},
+             "brightest_at_s": round(int(np.argmax(vis["bright"])) / sfps, 3), "most_motion_at_s": round(int(np.argmax(vis["motion"])) / sfps, 3),
+             "curves_visible": {k: [round(v, 3) for v in vis[k][:: max(1, n // 60)]] for k in ("green", "black", "white", "bright", "motion")},
+             "curves_step_s": round(max(1, n // 60) / sfps, 3)}
+    thumbs = []
+    picks = {int(round(k * (n - 1) / max(1, nthumb - 1))) for k in range(nthumb)}
+    if not image:   # the moments that matter on top of the even spread: the middle of the first cover, the brightest and the busiest frame
+        sp0 = (facts["spans_visible"]["no_green"] or facts["spans_visible"]["all_white"] or [None])[0]
+        if sp0:
+            picks.add(min(n - 1, int(round((sp0[0] + sp0[1]) / 2 * sfps))))
+        picks |= {int(np.argmax(vis["bright"])), int(np.argmax(vis["motion"]))}
+    for i in sorted(picks):
+        im = Image.fromarray(arr[i], "RGBA")
+        if facts["has_transparency"]:   # a checkerboard shows what is transparent
+            cb = np.indices((H, W)).sum(axis=0) // 8 % 2
+            bg = Image.fromarray(np.where(cb[..., None] == 1, 170, 110).astype(np.uint8).repeat(3, axis=2), "RGB")
+            bg.paste(im, (0, 0), im)
+            im = bg
+        thumbs.append((round(i / sfps, 2), im.convert("RGB"), (cx0, cy0, cx1, cy1) if bx != (0.0, 0.0, 1.0, 1.0) else None))
+    return facts, thumbs
+
+
+def _fx_strip(thumbs: list, h: int = 120):
+    """One effect's thumbnails side by side at height h, the visible box outlined, each with its second under it."""
+    from PIL import Image, ImageDraw
+    font = _fx_font(13)
+    tiles = []
+    for t, im, box in thumbs:
+        k = h / im.height
+        tw = max(1, int(round(im.width * k)))
+        tile = Image.new("RGB", (tw, h + 16), (24, 24, 24))
+        tile.paste(im.resize((tw, h)), (0, 0))
+        d = ImageDraw.Draw(tile)
+        if box:
+            d.rectangle([int(box[0] * k), int(box[1] * k), int(box[2] * k) - 1, int(box[3] * k) - 1], outline=(0, 220, 255), width=2)
+        d.text((3, h + 1), f"{t:.2f}s", fill=(230, 230, 230), font=font)
+        tiles.append(tile)
+    strip = Image.new("RGB", (sum(x.width for x in tiles) + 4 * (len(tiles) - 1), h + 16), (24, 24, 24))
+    x = 0
+    for tile in tiles:
+        strip.paste(tile, (x, 0))
+        x += tile.width + 4
+    return strip
+
+
+def _fx_font(size: int):
+    from PIL import ImageFont
+    for f in ("arial.ttf", "segoeui.ttf", "DejaVuSans.ttf"):
+        try:
+            return ImageFont.truetype(f, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def _fx_scan_one(p: Path, aw: int, ah: int, fps: float, width: int, nthumb: int, cache: Path) -> dict:
+    """One file of the effects folder, measured (or read from the cache: the same file, size, time and settings)."""
+    stt = p.stat()
+    key = hashlib.sha1(f"{p.resolve()}|{stt.st_size}|{stt.st_mtime_ns}|{aw}:{ah}|{fps}|{width}|{nthumb}|{FX_SCAN_VERSION}"
+                       .encode("utf-8")).hexdigest()[:24]
+    cj, cs = cache / f"{key}.json", cache / f"{key}.jpg"
+    if cj.is_file():
+        try:
+            rec = json.loads(cj.read_text(encoding="utf-8"))
+            if not rec.get("strip") or Path(rec["strip"]).is_file():
+                return {**rec, "cached": True}
+        except ValueError:
+            pass
+    ext = p.suffix.lower()
+    rec = {"path": str(p), "size_mb": round(stt.st_size / 1e6, 2), "ext": ext}
+    if ext in FX_ARCHIVE_EXT:
+        rec["kind"] = "archive"
+    elif ext in FX_AUDIO_EXT:
+        rec["kind"] = "audio"
+        rec["sound"] = _fx_audio_facts(p)
+        rec["duration_s"] = (rec["sound"] or {}).get("duration_s")
+    elif ext in FX_VIDEO_EXT or ext in FX_IMAGE_EXT:
+        kind = "image" if ext in FX_IMAGE_EXT else "video"
+        try:
+            info = media_summary(p)
+        except Exception as e:   # noqa: BLE001 - a file ffprobe cannot read is listed with its error
+            info = {"error": f"{type(e).__name__}: {e}"}
+        rec.update({"kind": kind, "width": info.get("display_width"), "height": info.get("display_height"), "codec": info.get("codec"),
+                    "pix_fmt": info.get("pix_fmt"), "fps": info.get("fps") if kind == "video" else None,
+                    "duration_s": info.get("duration_s") if kind == "video" else None, "has_audio": bool(info.get("has_audio"))})
+        if info.get("error"):
+            rec["error"] = info["error"]
+        else:
+            rec["picture"], thumbs = _fx_visual(p, info, aw, ah, fps, width, nthumb)
+            if thumbs:
+                cache.mkdir(parents=True, exist_ok=True)
+                _fx_strip(thumbs).save(cs, quality=85)
+                rec["strip"] = str(cs)
+            if rec["has_audio"]:
+                rec["sound"] = _fx_audio_facts(p)
+    else:
+        rec["kind"] = "other"
+    write_json(cj, rec)
+    return rec
+
+
+def _fx_pct(v) -> str:
+    return "·".join(str(int(round(x * 100))) for x in v) if isinstance(v, list) else ""
+
+
+def _fx_spans(sp) -> str:
+    return ", ".join(f"{a}-{b if b is not None else 'end'}" for a, b in sp[:3]) + (" …" if len(sp) > 3 else "") if sp else ""
+
+
+def _effects_scan(a):
+    """The effects folder (state.json -> static.effects_folder, or --folder) as facts: 00-inventory/effects.json and .md, and contact
+    sheets in 10-media/effects/ (every overlay's frames with the box a cover on the run's canvas shows). Files are never moved or
+    changed (the user's folder is read-only); archives are listed, not unpacked."""
+    rd, st = _state_of(a.run) if a.run else (None, {})
+    folder = a.folder or ((st.get("static") or {}).get("effects_folder"))
+    if not folder or str(folder).strip().lower() in ("none", "no", "-"):
+        fail("no effects folder: pass --folder <path> (or state.json -> static.effects_folder)", 2)
+    root = Path(str(folder))
+    if not root.is_dir():
+        fail(f"effects folder not found: {root}", 2)
+    asp = a.aspect or _static_fmt(st).get("aspect") or "9:16"
+    if asp not in STATIC_ASPECTS:
+        fail("--aspect is one of " + " | ".join(STATIC_ASPECTS), 2)
+    aw, ah = STATIC_ASPECTS[asp]
+    if a.out:
+        outd, shd = Path(a.out), Path(a.out) / "effects-sheets"
+    elif rd:
+        outd, shd = rd / "00-inventory", rd / "10-media" / "effects"
+    else:
+        fail("effects scan needs --run or --out", 2)
+    fps, width = float(_scfg("effects.scan_fps", 15)), int(_scfg("effects.scan_width", 192))
+    nthumb, per_sheet, jobs = int(_scfg("effects.sheet_frames", 8)), int(_scfg("effects.sheet_rows", 10)), int(a.jobs or _scfg("effects.jobs", 4))
+    cache = AWL_HOME / "runs" / "_effects-cache"
+    files = sorted((p for p in root.rglob("*") if p.is_file()), key=lambda p: str(p.relative_to(root)).lower())
+    t0 = time.time()
+    with cf.ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
+        recs = list(ex.map(lambda p: _fx_scan_one(p, aw, ah, fps, width, nthumb, cache), files))
+    for k, (p, r) in enumerate(zip(files, recs), 1):
+        r["id"] = f"FX{k:03d}"
+        r["rel"] = str(p.relative_to(root))
+    shd.mkdir(parents=True, exist_ok=True)
+    for old in shd.glob("sheet-*.jpg"):
+        old.unlink()
+    pics = [r for r in recs if r.get("strip") and Path(r["strip"]).is_file()]
+    sheets = []
+    if pics:
+        from PIL import Image, ImageDraw
+        font, small = _fx_font(15), _fx_font(12)
+        for s0 in range(0, len(pics), per_sheet):
+            rows = pics[s0:s0 + per_sheet]
+            strips = [Image.open(r["strip"]) for r in rows]
+            lw = 250
+            sheet = Image.new("RGB", (lw + max(x.width for x in strips) + 8, sum(x.height + 6 for x in strips) + 4), (12, 12, 12))
+            d = ImageDraw.Draw(sheet)
+            y = 4
+            for r, sp in zip(rows, strips):
+                d.text((6, y + 2), f"{r['id']}  {r['kind']}  {r.get('duration_s') or '-'} s", fill=(255, 255, 255), font=font)
+                name = r["rel"]
+                for ln, i0 in enumerate(range(0, min(len(name), 96), 32)):
+                    d.text((6, y + 24 + 15 * ln), name[i0:i0 + 32], fill=(190, 190, 190), font=small)
+                pic = r.get("picture") or {}
+                d.text((6, y + 24 + 15 * 3 + 4), f"green {_fx_pct((pic.get('shares_visible') or {}).get('green'))}", fill=(120, 230, 120), font=small)
+                sheet.paste(sp, (lw, y))
+                y += sp.height + 6
+            name = f"sheet-{len(sheets) + 1:02d}.jpg"
+            sheet.save(shd / name, quality=85)
+            for r in rows:
+                r["sheet"] = name
+            sheets.append(str(shd / name))
+    by = {}
+    for r in recs:
+        by[r["kind"]] = by.get(r["kind"], 0) + 1
+    data = {"folder": str(root), "aspect": asp, "scanned": now_iso(), "scan_fps": fps, "counts": by, "sheets_dir": str(shd),
+            "files": recs}
+    write_json(outd / "effects.json", data)
+    md = [f"# Effects folder: `{root}`", "",
+          f"Facts from `T effects scan` ({data['scanned'][:16]}), canvas {asp}. Gather only: which effect is used where, how loud, how it is "
+          "keyed or blended and why is the plan's (reference/static §5). The user's folder is read-only: files are copied, never moved.", "",
+          "Shares are of the box a canvas of this aspect shows when a video covers it (outlined on the sheets; an image's: of its whole "
+          "picture), in %: first · least · most · last frame. `no green` = the seconds the box holds no key green (keyed out, the overlay hides the whole picture there: "
+          "a green-screen transition's cut goes inside); `all black` = nothing shows with screen blend; `all white` = white over the whole "
+          "box; `transparent` = the file's own alpha.", "",
+          f"## Overlays: {by.get('video', 0)} videos, {by.get('image', 0)} images", "",
+          "| id | file | s | size | sound: LUFS, loudest at s | green % | black % | white % | transparent % | key | no green s | all black s | "
+          "all white s | brightest at s | sheet |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for r in recs:
+        if r["kind"] not in ("video", "image"):
+            continue
+        pic, snd = r.get("picture") or {}, r.get("sound") or {}
+        # an image is mostly placed whole (a sticker): its shares are of the whole picture; a video's of the box a cover shows
+        sv, sp = pic.get("shares_full" if r["kind"] == "image" else "shares_visible") or {}, pic.get("spans_visible") or {}
+        sound = (f"{snd.get('loudness_lufs')}, {snd.get('loudest_at_s')}" if snd and not snd.get("silent") else ("silent" if snd else "-"))
+        md.append(f"| {r['id']} | {r['rel']} | {r.get('duration_s') or '-'} | {r.get('width')}x{r.get('height')} | {sound} | "
+                  f"{_fx_pct(sv.get('green'))} | {_fx_pct(sv.get('black'))} | {_fx_pct(sv.get('white'))} | {_fx_pct(sv.get('transparent'))} | "
+                  f"{pic.get('key_green') or ''} | {_fx_spans(sp.get('no_green'))} | {_fx_spans(sp.get('all_black'))} | "
+                  f"{_fx_spans(sp.get('all_white'))} | {pic.get('brightest_at_s', '')} | {r.get('sheet') or r.get('error') or ''} |")
+    md += ["", f"## Sounds: {by.get('audio', 0)} files", "",
+           "In seconds from the file's start: where it starts (30 dB under its loudest), its loudest 10 ms, how long it falls 20 dB, where "
+           "it ends (40 dB under). Centroid: low = a thud or boom, high = a click or hiss; flatness near 0 = a tone, near 1 = noise (a whoosh).", "",
+           "| id | file | s | LUFS | peak dBFS | starts | loudest at | falls 20 dB in | ends | centroid Hz | flatness | strongest Hz |",
+           "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for r in recs:
+        if r["kind"] != "audio":
+            continue
+        s = r.get("sound") or {}
+        md.append(f"| {r['id']} | {r['rel']} | {s.get('duration_s', '')} | {s.get('loudness_lufs', '')} | {s.get('sample_peak_dbfs', '')} | "
+                  f"{s.get('starts_s', '')} | {s.get('loudest_at_s', '')} | {s.get('falls_20db_in_s', '')} | {s.get('ends_s', '')} | "
+                  f"{s.get('centroid_hz', '')} | {s.get('flatness', '')} | {s.get('strongest_hz', '')} |")
+    arch = [r for r in recs if r["kind"] == "archive"]
+    if arch:
+        md += ["", "## Archives (not read: their files are used only once unpacked into a folder)", "", "| file | MB |", "|---|---|"]
+        md += [f"| {r['rel']} | {r['size_mb']} |" for r in arch]
+    other = {}
+    for r in recs:
+        if r["kind"] == "other":
+            other[r["ext"] or "(none)"] = other.get(r["ext"] or "(none)", 0) + 1
+    if other:
+        md += ["", "Other files (not effects): " + ", ".join(f"{k} ×{v}" for k, v in sorted(other.items()))]
+    write_text(outd / "effects.md", "\n".join(md) + "\n")
+    if rd and a.folder:
+        _state_set(rd, **{"static.effects_folder": str(root)})
+    out({"ok": True, "folder": str(root), "aspect": asp, "counts": by, "files": len(recs), "cached": sum(1 for r in recs if r.get("cached")),
+         "errors": [r["rel"] for r in recs if r.get("error")][:10], "effects_md": str(outd / "effects.md"),
+         "effects_json": str(outd / "effects.json"), "sheets": sheets, "seconds": round(time.time() - t0, 1),
+         "note": "facts only; the plan decides which effect goes where (reference/static §5) and the CapCut effects check says how each kind "
+                 "plays (data/capcut-catalogue.md)"})
+
+
+def cmd_effects(a):
+    """Static: the optional effects folder. scan: every file measured (sound, picture over time, keying facts) and drawn on sheets."""
+    {"scan": _effects_scan}[a.action](a)
+
+
+def _fx_catalogue() -> dict:
+    try:
+        return json.loads((AWL_HOME / "data" / "capcut-catalogue.json").read_text(encoding="utf-8")).get("effects") or {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _fx_resolve(rd: Path, plan: dict, rows: list, starts: dict, lead: float, total: float, fps: int) -> tuple:
+    """The plan's effects on the video's timeline: each one's file (an id of 00-inventory/effects.json or a path), the moment it is
+    anchored to (`join` K: the cut into image K; `line` N: narration line N's start; `at_s`), the point of the file that lands there
+    (`anchor_s`), its start, head trim (`in_s`) and length, its track (overlapping effects of a kind go on separate tracks), and what the
+    plan left undecided. Nothing here chooses an effect, a moment, a level or a look."""
+    effects = plan.get("effects") or []
+    if not effects:
+        return [], []
+    try:
+        scan = json.loads((rd / "00-inventory" / "effects.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        scan = {}
+    by_id = {str(f.get("id")): f for f in scan.get("files") or []}
+    verified = _fx_catalogue()
+    res, undecided = [], []
+    for n, e in enumerate(effects, 1):
+        tag = f"effect {n}"
+        f = by_id.get(str(e.get("id") or ""))
+        path = Path(str(e["file"])) if e.get("file") else (Path(f["path"]) if f else None)
+        if path is None or not path.is_file():
+            undecided.append(f"{tag}: no file (an id of 00-inventory/effects.json or a path)")
+            continue
+        if f is None:   # a path: its facts from the scan when it is in it
+            f = next((x for x in by_id.values() if Path(str(x.get("path"))).resolve() == path.resolve()), None) or {}
+        kind = f.get("kind") or ("audio" if path.suffix.lower() in FX_AUDIO_EXT else "image" if path.suffix.lower() in FX_IMAGE_EXT else "video")
+        typ = str(e.get("type") or "")
+        if typ not in ("overlay", "sfx"):
+            undecided.append(f"{tag}: no type (overlay | sfx)")
+            continue
+        if typ == "overlay" and kind == "audio":
+            undecided.append(f"{tag}: an overlay needs a picture, {path.name} is a sound")
+            continue
+        if e.get("join") is not None:
+            k = int(e["join"])
+            row = next((r for i, r in enumerate(rows) if i and int(r["image"]) == k), None)
+            if row is None:
+                undecided.append(f"{tag}: join {k} is not a cut of this video (images 2..{rows[-1]['image']})")
+                continue
+            moment = float(row["start"])
+        elif e.get("line") is not None:
+            if int(e["line"]) not in starts:
+                undecided.append(f"{tag}: line {e['line']} is not a narration line")
+                continue
+            moment = lead + starts[int(e["line"])]
+        elif e.get("at_s") is not None:
+            moment = float(e["at_s"])
+        else:
+            undecided.append(f"{tag}: no moment (join, line or at_s)")
+            continue
+        if e.get("anchor_s") is None:
+            undecided.append(f"{tag}: no anchor_s (the second of the file that lands on its moment)")
+            continue
+        file_dur = float(f.get("duration_s") or (f.get("sound") or {}).get("duration_s") or 0) if kind != "image" else None
+        in_s = max(0.0, float(e.get("in_s") or 0.0))
+        if kind == "image" and e.get("dur_s") is None:
+            undecided.append(f"{tag}: an image needs dur_s")
+            continue
+        dur = float(e["dur_s"]) if e.get("dur_s") is not None else max(0.0, (file_dur or 0.0) - in_s)
+        if file_dur:
+            dur = min(dur, max(0.0, file_dur - in_s))
+        start = moment - (float(e["anchor_s"]) - in_s)
+        head = max(0.0, -start)   # it would begin before the video: the head is cut, the anchor stays on its moment
+        start, in_s, dur = start + head, in_s + head, dur - head
+        start = round(math.floor(start * fps + 1e-6) / fps, 4) if typ == "overlay" else round(start, 4)
+        end = min(total, start + dur)
+        if end - start < 1 / fps:
+            undecided.append(f"{tag}: falls outside the video")
+            continue
+        r = {"n": n, "type": typ, "file": str(path), "id": f.get("id"), "kind": kind, "moment_s": round(moment, 4), "start": start,
+             "end": round(end, 4), "in_s": round(in_s, 4), "dur_s": round(end - start, 4), "head_cut_s": round(head, 4),
+             "why": e.get("why")}
+        if not e.get("why"):
+            undecided.append(f"{tag}: no why (the reason, from the references' joins and hits)")
+        if typ == "overlay":
+            blend = str(e.get("blend") or "")
+            fit = str(e.get("fit") or "")
+            if blend not in FX_BLENDS:
+                undecided.append(f"{tag}: no blend ({' | '.join(FX_BLENDS)})")
+            if fit not in FX_FITS:
+                undecided.append(f"{tag}: no fit ({' | '.join(FX_FITS)})")
+            has_audio = bool(f.get("has_audio")) and kind == "video"
+            if has_audio and e.get("volume") is None:
+                undecided.append(f"{tag}: the file has sound: no volume (0 mutes it)")
+            key = e.get("key_color") or ((f.get("picture") or {}).get("key_green") if blend == "chroma" else None)
+            ki = e.get("key_intensity", (verified.get("chroma") or {}).get("intensity"))
+            if blend == "chroma" and (not key or ki is None):
+                undecided.append(f"{tag}: chroma with no key_color or key_intensity (the scan's key_green; the catalogue's verified intensity)")
+            r.update({"blend": blend, "fit": fit, "key_color": key if blend == "chroma" else None,
+                      "key_intensity": float(ki) if blend == "chroma" and ki is not None else None,
+                      "scale": e.get("scale", 1.0), "x": e.get("x", 0.0), "y": e.get("y", 0.0), "opacity": float(e.get("opacity", 1.0)),
+                      "volume": float(e.get("volume") or 0.0) if has_audio else 0.0, "has_audio": has_audio,
+                      "width": f.get("width"), "height": f.get("height"), "file_duration_s": file_dur})
+        else:
+            if e.get("volume") is None:
+                undecided.append(f"{tag}: no volume")
+            r.update({"volume": float(e.get("volume") or 0.0), "fade_in_s": float(e.get("fade_in_s") or 0.0),
+                      "fade_out_s": float(e.get("fade_out_s") or 0.0), "file_duration_s": file_dur, "has_audio": True})
+        res.append(r)
+    for typ, prefix in (("overlay", "fx"), ("sfx", "sfx")):   # overlapping effects of a kind go on separate tracks, in start order
+        ends = []
+        for r in sorted((x for x in res if x["type"] == typ), key=lambda x: x["start"]):
+            k = next((i for i, e_ in enumerate(ends) if e_ <= r["start"] + 1e-6), None)
+            if k is None:
+                ends.append(r["end"])
+                k = len(ends) - 1
+            else:
+                ends[k] = r["end"]
+            r["track"] = f"{prefix}{k + 1}"
+    return res, undecided
+
+
+def _fx_keyed(v, offset: float = 0.0) -> list:
+    """A value that is a number or [[t, v], ...] (t in seconds from the effect's start) as sorted (t, v) keys, shifted by offset."""
+    if isinstance(v, (list, tuple)) and v and isinstance(v[0], (list, tuple)):
+        return sorted((max(0.0, float(t) - offset), float(x)) for t, x in v)
+    return [(0.0, float(v if v is not None else 0.0))]
+
+
+def _fx_expr(keys: list, var: str) -> str:
+    """Keys as a piecewise-linear ffmpeg expression of var (held before the first and after the last key)."""
+    if len(keys) == 1:
+        return f"{keys[0][1]:.6f}"
+    e = f"{keys[-1][1]:.6f}"
+    for (t0, v0), (t1, v1) in reversed(list(zip(keys, keys[1:]))):
+        e = f"if(lt({var},{t1:.6f}),{v0:.6f}+({v1 - v0:.6f})*({var}-{t0:.6f})/{max(1e-6, t1 - t0):.6f},{e})"
+    return f"if(lt({var},{keys[0][0]:.6f}),{keys[0][1]:.6f},{e})"
+
+
+def _fx_base_size(w: float, h: float, W: int, H: int, fit: str) -> tuple:
+    """The overlay's size on the canvas at scale 1: contained (CapCut's own scale 1) or covering."""
+    k = max(W / w, H / h) if fit == "cover" else min(W / w, H / h)
+    return w * k, h * k
+
+
+def _fx_render_chain(fx: list, base: str, first_input: int, W: int, H: int, fps: int, T: float) -> tuple:
+    """The check render's overlays on top of the stills, in track order: each input moved to its start, keyed (ffmpeg's chromakey, the
+    nearest of CapCut's chroma key), sized (cover or contain, times its scale keys), placed (its x, y keys in half-canvas units, y up)
+    and blended (screen: on black over the whole frame, then the screen blend; otherwise overlaid with its alpha). Returns the filter
+    lines and the output label."""
+    lines, cur = [], base
+    for j, e in enumerate(fx):
+        ii = first_input + j
+        w, h = float(e.get("width") or W), float(e.get("height") or H)
+        bw, bh = _fx_base_size(w, h, W, H, e.get("fit") or "contain")
+        sk, xk, yk = _fx_keyed(e.get("scale", 1.0), e.get("head_cut_s") or 0), _fx_keyed(e.get("x", 0.0), e.get("head_cut_s") or 0), \
+            _fx_keyed(e.get("y", 0.0), e.get("head_cut_s") or 0)
+        s_e = _fx_expr(sk, "t")
+        size = (f"scale=w='max(2,trunc({bw:.3f}*({s_e})/2)*2)':h='max(2,trunc({bh:.3f}*({s_e})/2)*2)':eval=frame" if len(sk) > 1
+                else f"scale={max(2, int(bw * sk[0][1] / 2) * 2)}:{max(2, int(bh * sk[0][1] / 2) * 2)}")
+        key = ""
+        if e.get("blend") == "chroma" and e.get("key_color"):
+            sim = round(0.08 + 0.3 * float(e.get("key_intensity") or 0.5), 3)
+            key = f"format=yuva444p,chromakey=color=0x{str(e['key_color']).lstrip('#')}:similarity={sim}:blend=0.05,"
+        op = float(e.get("opacity", 1.0))
+        alpha = f",colorchannelmixer=aa={op:.3f}" if op < 0.999 and e.get("blend") != "screen" else ""
+        lines.append(f"[{ii}:v]fps={fps},{key}format=rgba,{size}{alpha},setpts=PTS-STARTPTS+{e['start']:.4f}/TB[o{j}]")
+        tl = f"(t-{e['start']:.4f})"
+        xe, ye = _fx_expr([(t, v) for t, v in xk], tl), _fx_expr([(t, v) for t, v in yk], tl)
+        pos = (f"x='{W}/2+({xe})*{W}/2-overlay_w/2':y='{H}/2-({ye})*{H}/2-overlay_h/2':eval=frame:eof_action=pass:"
+               f"enable='between(t,{e['start']:.4f},{e['end']:.4f})'")
+        if e.get("blend") == "screen":
+            lines.append(f"color=c=black:s={W}x{H}:r={fps}:d={T:.3f},format=rgba[bk{j}]")
+            lines.append(f"[bk{j}][o{j}]overlay={pos},format=gbrp[lg{j}]")
+            lines.append(f"[{cur}]format=gbrp[cg{j}]")
+            lines.append(f"[cg{j}][lg{j}]blend=all_mode=screen:all_opacity={op:.3f}:shortest=1,format=yuv420p[c{j}]")
+        else:
+            lines.append(f"[{cur}][o{j}]overlay={pos},format=yuv420p[c{j}]")
+        cur = f"c{j}"
+    return lines, cur
+
+
 # ---- the local render: stills with motion, transitions, the narration and the bed, loudness; the preview with the captions burned
 
 def _static_line_starts(side: dict) -> dict:
@@ -8715,15 +9898,20 @@ def _slideshow_plan(a):
     folder = rd / "60-outputs" / f"video-{nn}" / "images"
     total = round(lead + float(side["duration_s"]) + tail, 3)
     rows, missing_files, unknown_lines, undecided = [], [], [], []
-    for i, im in enumerate(sorted(imgs, key=lambda x: int(x.get("image") or 0))):
-        kk = f"{int(im.get('image') or 0):02d}"
+
+    def start_of(im):   # on its line (plus the plan's offset_s: an insert a few frames before a line's cut), or at its own seconds
         if im.get("start") is not None and im.get("from_line") is None:
-            st_ = float(im["start"])
-        elif int(im.get("from_line") or 0) in starts:
-            st_ = lead + starts[int(im["from_line"])]
-        else:
+            return float(im["start"])
+        if int(im.get("from_line") or 0) in starts:
+            return lead + starts[int(im["from_line"])] + float(im.get("offset_s") or 0.0)
+        return None
+    # the timeline follows the starts (an insert numbered after the others still plays where it starts), the number breaking a tie
+    order = sorted(imgs, key=lambda x: (start_of(x) if start_of(x) is not None else 1e9, int(x.get("image") or 0)))
+    for i, im in enumerate(order):
+        kk = f"{int(im.get('image') or 0):02d}"
+        st_ = start_of(im)
+        if st_ is None:
             unknown_lines.append(kk)
-            st_ = None
         use = (rec.get(kk) or {}).get("use")
         f = folder / use if use else None
         if not f or not f.is_file():
@@ -8752,6 +9940,8 @@ def _slideshow_plan(a):
     for i, r in enumerate(rows):
         r["end"] = rows[i + 1]["start"] if i + 1 < len(rows) else total
     short = [r["image"] for r in rows if r["end"] - r["start"] < 0.5]
+    effects, fx_undecided = _fx_resolve(rd, plan, rows, starts, lead, total, fps)
+    undecided += fx_undecided
     music = rd / "30-assets" / "music" / f"video-{nn}.wav"
     cap = plan.get("captions") or {}
     tl = {"video": nn, "size": plan.get("render_size") or _static_fmt(_st).get("preview") or _scfg("render.size", "720x1280"),
@@ -8760,7 +9950,7 @@ def _slideshow_plan(a):
           "music": {"file": str(music), "gain": float(plan.get("music_gain", _scfg("music.gain", 0.22)))} if music.is_file() and plan.get("music", True) else None,
           "captions": {**cap, "y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3))),
                        "min_cue_s": float(cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2)))},
-          "images": rows, "made": now_iso()}
+          "images": rows, "effects": effects, "made": now_iso()}
     tlp = rd / "40-briefs" / f"video-{nn}-timeline.json"
     write_json(tlp, tl)
     try:   # the cues are grouped again from the timed words at the plan's words at once, whatever narration-words was run with
@@ -8788,6 +9978,7 @@ def _slideshow_plan(a):
          "captions_over_words": sum(1 for c in shifted if len(str(c["text"]).split()) > tl["captions"]["words"]),
          "moves": [[r["image"], r["motion"], r["scale"], r["x"], r["y"]] for r in rows],
          "edges_show": [r["image"] for r in rows if r.get("edge_shows")],
+         "effects": [[e["n"], e["type"], Path(e["file"]).name, e["start"], e["end"], e.get("track")] for e in effects],
          "music": bool(tl["music"]),
          "note": "the cuts sit on the frame grid (each at or just before its line's start); edit motions or transitions in the timeline "
                  "file if the spec asks for others, then `T slideshow render`; a caption over the words at once is a quick word that took "
@@ -8943,7 +10134,22 @@ def _slideshow_render(a):
         fc.append(f"[{last}][v{k}]xfade=transition={tr}:duration={D[k] / fps:.6f}:offset={(E[k - 1] - D[k]) / fps:.6f}[x{k}]")
         last = f"x{k}"
     fc.append(f"[{last}]trim=end_frame={NT},setpts=PTS-STARTPTS[vout]")
-    # the sound on its own: the narration at its offset, the bed under it ducked, then two loudnorm passes to the target
+    # the effects (00-inventory/effects.json, the plan's `effects`): overlays over the stills in track order, sounds into the mix
+    fx_all = tl.get("effects") or []
+    missing_fx = [e["n"] for e in fx_all if not Path(str(e.get("file"))).is_file()]
+    if missing_fx:
+        fail("effects whose file is gone: " + ", ".join(str(x) for x in missing_fx), 2)
+    fx = sorted((e for e in fx_all if e["type"] == "overlay"), key=lambda e: (int(str(e.get("track") or "fx1")[2:] or 1), e["start"]))
+    vlabel = "vout"
+    if fx:
+        for e in fx:
+            if e.get("kind") == "image":
+                args += ["-loop", "1", "-framerate", str(fps), "-t", f"{e['dur_s']:.4f}", "-i", e["file"]]
+            else:
+                args += ["-ss", f"{e['in_s']:.4f}", "-t", f"{e['dur_s']:.4f}", "-i", e["file"]]
+        lines, vlabel = _fx_render_chain(fx, "vout", len(rows), W, H, fps, T)
+        fc += lines
+    # the sound on its own: the narration at its offset, the bed under it ducked, the effects' sounds, then two loudnorm passes to the target
     lead_ms = int(round(float(tl.get("narration_offset") or 0) * 1000))
     target = float(_scfg("narration.loudness_lufs", -14.0))
     mus = tl.get("music") or None
@@ -8955,9 +10161,26 @@ def _slideshow_render(a):
         afc.append(f"[1:a]aresample=48000,volume={float(mus.get('gain') or 0.22)},atrim=0:{T:.3f},apad=whole_dur={T:.3f},"
                    f"afade=t=out:st={max(0.0, T - fo):.3f}:d={fo:.3f}[mus]")
         afc.append("[mus][nsc]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=350[duck]")
-        afc.append("[narr][duck]amix=inputs=2:normalize=0:duration=first[aout]")
+        afc.append("[narr][duck]amix=inputs=2:normalize=0:duration=first[a0]")
+        nin = 2
     else:
-        afc.append(f"[0:a]aresample=48000,adelay={lead_ms}|{lead_ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f}[aout]")
+        afc.append(f"[0:a]aresample=48000,adelay={lead_ms}|{lead_ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f}[a0]")
+        nin = 1
+    sounds = [e for e in fx_all if e["type"] == "sfx" or (e["type"] == "overlay" and e.get("has_audio") and float(e.get("volume") or 0) > 0)]
+    for k, e in enumerate(sounds):
+        aargs += ["-ss", f"{e['in_s']:.4f}", "-t", f"{e['dur_s']:.4f}", "-i", e["file"]]
+        ms = int(round(float(e["start"]) * 1000))
+        ch = f"[{nin + k}:a]aresample=48000,aformat=channel_layouts=stereo"
+        if float(e.get("fade_in_s") or 0) > 0:
+            ch += f",afade=t=in:st=0:d={float(e['fade_in_s']):.3f}"
+        if float(e.get("fade_out_s") or 0) > 0:
+            ch += f",afade=t=out:st={max(0.0, float(e['dur_s']) - float(e['fade_out_s'])):.3f}:d={float(e['fade_out_s']):.3f}"
+        afc.append(ch + f",volume={float(e['volume']):.4f},adelay={ms}|{ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f}[s{k}]")
+    if sounds:
+        afc.append("[a0]aformat=channel_layouts=stereo[a0s]")
+        afc.append("[a0s]" + "".join(f"[s{k}]" for k in range(len(sounds))) + f"amix=inputs={1 + len(sounds)}:normalize=0:duration=first[aout]")
+    else:
+        afc.append("[a0]anull[aout]")
     (work / "filter.txt").write_text(";\n".join(fc), encoding="utf-8")
     (work / "filter-audio.txt").write_text(";\n".join(afc), encoding="utf-8")
     mix, mixn = work / "mix.wav", work / "mix-loudness.wav"
@@ -8967,12 +10190,13 @@ def _slideshow_render(a):
     ln = _loudnorm_2pass(mix, mixn, target, ["-ar", "48000", "-c:a", "pcm_s16le"])
     if not ln["ok"]:
         fail("the loudness pass of the mix failed: " + ln["stderr"], 1)
-    ni = len(rows)
-    cp = run(args + ["-i", str(mixn), "-filter_complex", ";".join(fc), "-map", "[vout]", "-map", f"{ni}:a", "-r", str(fps), *_encode_args(18),
+    ni = len(rows) + len(fx)
+    cp = run(args + ["-i", str(mixn), "-filter_complex", ";".join(fc), "-map", f"[{vlabel}]", "-map", f"{ni}:a", "-r", str(fps), *_encode_args(18),
                      "-c:a", "aac", "-b:a", "192k", "-t", f"{T:.3f}", str(clean)], timeout=7200)
     if cp.returncode != 0 or not clean.is_file():
         fail("render failed: " + (cp.stderr or "")[-900:], 1, filter=str(work / "filter.txt"))
-    res = {"ok": True, "clean": str(clean), "seconds": round(time.time() - t0, 1), "loudness_pass": {"passes": ln["passes"], "mode": ln["mode"]}}
+    res = {"ok": True, "clean": str(clean), "seconds": round(time.time() - t0, 1), "loudness_pass": {"passes": ln["passes"], "mode": ln["mode"]},
+           "effects": {"overlays": len(fx), "sounds": len(sounds)}}
     if not a.no_captions:
         try:
             cues = json.loads((rd / "60-outputs" / f"video-{nn}" / "captions.json").read_text(encoding="utf-8"))
@@ -9732,9 +10956,25 @@ def main():
     p.add_argument("--timeline", help="a timeline file instead of the run's 40-briefs/video-NN-timeline.json")
     p.set_defaults(fn=cmd_capcut_transitions)
 
+    p = sp.add_parser("capcut-effects", help="Static: the timeline's effects (overlays, sounds from the effects folder) into the CapCut project "
+                                             "by the ways the CapCut effects check verified; after capcut-motion and capcut-transitions")
+    p.add_argument("--draft", required=True); p.add_argument("--run"); p.add_argument("--video", help="NN")
+    p.add_argument("--timeline", help="a timeline file instead of the run's 40-briefs/video-NN-timeline.json")
+    p.add_argument("--verified-from", help="a catalogue file instead of data/capcut-catalogue.json (tests)")
+    p.set_defaults(fn=cmd_capcut_effects)
+
+    p = sp.add_parser("effects", help="Static: the optional effects folder (sound effects, green-screen transitions, overlays) as facts: "
+                                      "scan (00-inventory/effects.json and .md, contact sheets in 10-media/effects)")
+    p.add_argument("action", choices=["scan"]); p.add_argument("--run")
+    p.add_argument("--folder", help="the effects folder (stored in state.json -> static.effects_folder); default: the stored one")
+    p.add_argument("--aspect", help="the canvas aspect the visible box is measured for (default the run's format, else 9:16)")
+    p.add_argument("--out", help="without a run: where effects.json, effects.md and the sheets go")
+    p.add_argument("--jobs", type=int, help="files measured at once (default config static.effects.jobs)")
+    p.set_defaults(fn=cmd_effects)
+
     p = sp.add_parser("capcut-check", help="Static: what this PC's CapCut plays, measured on its own export: fill (the check project) | "
-                                           "measure --export <mp4> (data/capcut-catalogue.md)")
-    p.add_argument("action", choices=["fill", "measure"]); p.add_argument("--draft"); p.add_argument("--export")
+                                           "measure --export <mp4> (data/capcut-catalogue.md) | effects-fill | effects-measure --export <mp4>")
+    p.add_argument("action", choices=["fill", "measure", "effects-fill", "effects-measure"]); p.add_argument("--draft"); p.add_argument("--export")
     p.add_argument("--start", type=float, help="measure a screen recording: its second where the project's 0.0 s plays")
     p.add_argument("--crop", help="measure a screen recording: CapCut's player area, W:H:X:Y in the recording")
     p.add_argument("--moves-crop", help="where the move section played when that was elsewhere (the editor's small preview), W:H:X:Y")

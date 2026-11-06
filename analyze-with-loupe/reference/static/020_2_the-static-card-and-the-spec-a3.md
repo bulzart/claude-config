@@ -22,6 +22,15 @@ what makes it work (one paragraph, [I]). Every speech field reads from the trans
   the closest option this PC's CapCut verifiably plays (`AWL/data/capcut-catalogue.md`, §9): the moves CapCut plays, the text intro and
   its seconds whose measured curve is nearest the references' entrance (an intro's curve at another length runs faster or slower), the
   transition (or a cut) whose signature is nearest each kind of join. Name the numbers each choice rests on.
+- **Effects** (the user, 2026-11-06: "a folder of effects (optional) that can have: sound effects, and green screen transitions"): the
+  references' overlays and sound effects as a pattern (which joins carry an overlay transition and for how long it hides the picture,
+  which moments carry a sound and of what kind, their level under the voice, how often), never guessed. With the user's effects folder
+  (`state.json → static.effects_folder`, its facts in `00-inventory/effects.md` and its sheets in `10-media/effects/`), the closest files
+  for each device by their numbers (a transition's seconds with no green in the canvas's box and its colour, a sound's start, loudest
+  moment, length, colour and loudness; view the sheet row of each candidate) and the way CapCut plays each kind that the CapCut effects
+  check verified (`AWL/data/capcut-catalogue.md`, Effects). An effect the references never show is used only where it plays the part of a
+  device they do show (a green-screen wipe for their quick slide at a turn, a whoosh where their slide carries one); without a folder,
+  CapCut's own transitions and no sound effects. Name the numbers each choice rests on.
 - **Voice profile**: the numbers of §1 and the delivery in words; the three sample voices are written from it (§6).
 - **Bed**: yes (mood, genre, instruments, tempo, level under the voice) or no, from the references' sound.
 - **Devices to reuse**, and **what is left behind**: every reference's subject, its names, its facts and its exact lines.

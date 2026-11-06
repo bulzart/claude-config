@@ -33,6 +33,9 @@ Only these section files for this phase, nothing else unless a step below says s
   the edit layer at the full frame rate, `T edit-profile --run RUN --ref <V>` for every reference (its moves, joins and caption
   entrances as numbers, `10-media/<V>/edit-profile.json`; 1 fps cannot show them, static §1). The
   assets are characters (photos and/or descriptions), prepared as below. No silent copies: no reference is ever an input.
+  With an effects folder (`state.json → static.effects_folder` not `none`): `T effects scan --run RUN` (every sound and overlay measured
+  once and cached: `00-inventory/effects.md` and `.json`, contact sheets in `10-media/effects/`; a large folder takes a minute or more,
+  run it with `run_in_background: true` beside the other steps). Facts only: the spec and the plan pick from them (static §2, §5).
 - `T inventory "<references folder>" --run RUN --as references`: everything in it is **reference
   material only**.
 - `T inventory "<asset path>" "<asset path>" … --run RUN --as assets` (scope `project`), then

@@ -33,6 +33,8 @@
   "capcut": {
     "drafts_dir": "C:/Users/Bulzart/AppData/Local/CapCut/User Data/Projects/com.lveditor.draft",
     "template_draft": "_analyze-stack-template",
+    "pro": false,
+    "pro_note": "false: this PC's CapCut has no Pro plan, so a project that uses a Pro option cannot be exported (the user, 2026-11-06). The agents use only what data/capcut-catalogue.md marks 'free plan: yes'; CapCut lists what blocked an export in User Data/Cache/FeedbackOtherInfo.json, which `T capcut-check measure` reads. true: every option CapCut drew may be used.",
     "note": "Analyze Mode assembles every video as its own CapCut project DD_Mon_YYYY_vNN (reference/capcut-assembly.md). Same store and template as the capcut MCP server's CAPCUT_DRAFTS_DIR / CAPCUT_TEMPLATE_DRAFT.",
     "text_style": {
       "font": "System",
@@ -241,6 +243,14 @@
       "fps": 30,
       "motion_amount": 0.12,
       "motion_amount_note": "only the image size margin of `T static formats` when no reference was measured; every move, its amount and every transition are the plan's (the agent's, from the references' edit profile and data/capcut-catalogue.md), never a stock value (the user, 2026-11-06)"
+    },
+    "effects": {
+      "scan_fps": 15,
+      "scan_width": 192,
+      "sheet_frames": 8,
+      "sheet_rows": 10,
+      "jobs": 4,
+      "note": "The optional effects folder (the user, 2026-11-06: sound effects, green-screen transitions, overlays): `T effects scan` measures every file once (cached in runs/_effects-cache by path, size and time) at scan_fps on a scan_width copy, and draws contact sheets of sheet_frames frames per file, sheet_rows files per sheet. Facts only: what each effect is used for, where and how loud is the plan's (reference/static section 5)."
     }
   }
 }

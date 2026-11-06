@@ -6,7 +6,8 @@
 "highlight_words": ["…"], "animation": "<a text intro slug the catalogue shows drawn>", "animation_s": <seconds>}, "characters": [{"id":
 "C1", "name": "…", "photo": "<path or null>", "sheet_prompt": "<when no photo>"}], "images": [{"image": 1, "from_line": 1, "prompt": "…",
 "characters": ["C1"], "motion": "<zoom-in | zoom-out | pan-left | pan-right | pan-up | pan-down | none>", "amount": <the change>,
-"transition": "<cut | a transition slug the catalogue shows drawn>", "trans_s": <seconds>, "line": "<the words over it>"}, …]}`. Every value
+"transition": "<cut | a transition slug the catalogue shows drawn>", "trans_s": <seconds>, "line": "<the words over it>"}, …],
+"effects": [<with an effects folder, below>]}`. Every value
 in `<…>` is decided from the spec (no stock value exists: `T slideshow plan` lists what is undecided). The size and quality are the run's
 format (`state.json → static.format`, picked at A5, §2); a plan's own `"size"` changes it for that video only. `captions` is the spec's
 text look (§2) with this video's highlighted words: the CapCut project and the check copy both take it.
@@ -20,9 +21,30 @@ text look (§2) with this video's highlighted words: the CapCut project and the 
   only what it shows drawn). `T slideshow plan` gives each image's `moves`, lists an edge that would show (`edges_show`) and every
   decision left out (`undecided`).
 
+- **Effects** (only with the user's effects folder, as the spec's effects pattern says, §2): the plan's `"effects": [{"id": "<FXnnn of
+  00-inventory/effects.md, or "file": a path>", "type": "<overlay | sfx>", "join": <K: the cut into image K> | "line": <N: narration line
+  N's start> | "at_s": <seconds on the video>, "anchor_s": <the second of the file that lands on that moment>, "in_s": <optional: where in
+  the file it starts>, "dur_s": <optional; an image needs it>, "why": "<the reference's device and the numbers it rests on>", …}]`. An
+  **overlay** also has `"blend": "<chroma | screen | normal>"` (chroma: the key colour taken out, `key_color` from the scan's `key green`
+  and `key_intensity` from the catalogue's verified one unless given; screen: a black background vanishes, light adds; normal: as it is,
+  its own transparency kept), `"fit": "<cover | contain>"` (cover fills the canvas: a 16:9 file on 9:16 shows only the box outlined on its
+  sheet; contain shows it whole), `"volume": <0 mutes; required when the file has sound>`, and optional `"scale"`, `"x"`, `"y"` (a
+  number, or keys `[[seconds from the overlay's start, value], …]` for a pop or a slide; scale 1 = as fit, x and y in half-canvas units,
+  y up) and `"opacity"`. A **sfx** has `"volume"` and optional `"fade_in_s"`, `"fade_out_s"`. The anchor is a fact of the file, not a
+  taste: a green-screen transition's cut sits inside its `no green` seconds (their middle, so the box is hidden on both sides of the cut);
+  a sound's `starts` or `loudest at` lands on its moment (a click file with half a second of silence before it has `starts` 0.53).
+  Effects that overlap go on separate tracks (`fx1`, `fx2`, `sfx1` …); a file used twice is fine. `T slideshow plan` lists every effect
+  setting the plan left out in `undecided`, and nothing has a stock value. Never a sticker, emoji, icon or badge as an overlay (a like or
+  subscribe button, an arrow), even when the folder holds one (contract item 6): overlays are transitions and treatments of the whole
+  picture (a wipe, a flash, a light leak, grain, a glow).
+
 - **Count and cuts**: an image starts on a narration line (`from_line`); the spec's seconds per still decide how many lines one image
   covers. A reveal, a new place or a new person starts a new image. After the narration exists, `T slideshow plan` gives every image's
-  span; keep each within the spec's range (none under about 2 s).
+  span; keep each within the spec's range (none under about 2 s). An **insert** the references use (a picture flashed for a few frames
+  at a turn, §1) is an image of its own with `"from_line"` of the line it leads into and `"offset_s"`: minus its length (−0.1 for 3
+  frames at 30 fps), its own number after the others (the timeline follows the starts), `"motion": "none"` unless the reference's insert
+  moves; `T slideshow plan` lists it under `shorter_than_0_5s` as a fact. Its picture is a glimpse in the run's subject (the reference's
+  device, never its picture: §3).
 - **The prompt**: what the image shows at that moment of the story (the subject, the action, the place, the time of day), the framing, the
   style lock of the spec word for word, then the composition for the run's aspect (`static.format.aspect`; vertical: the main subject in
   the upper two thirds; horizontal: the subject on a third with room around it; square: centred), the band where the captions sit (the

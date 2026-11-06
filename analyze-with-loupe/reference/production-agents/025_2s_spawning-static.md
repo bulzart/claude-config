@@ -57,5 +57,7 @@ Hard rules:
 - Moves, joins and the caption entrance reach CapCut only through `T capcut-motion`, `T capcut-transitions` and `T capcut-text-anim`
   (never capcut_add_keyframe or capcut_add_transition), with the plan's values: decided from the references' measured pattern (their
   edit profiles), never a stock amount, and only what <AWL>/data/capcut-catalogue.md shows drawn by this PC's CapCut.
+- Effects from the user's effects folder (the plan's `effects`, when the run has a folder) reach CapCut only through `T capcut-effects`
+  (never capcut-cli or the MCP by hand); one it refuses is planned again without it. The effects folder is read-only like the references.
 - Your final message is the one JSON line awl-record (X10) ends with.
 ```

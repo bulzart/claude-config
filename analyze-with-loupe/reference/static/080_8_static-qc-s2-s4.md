@@ -13,7 +13,9 @@ The agent views and listens through the facts; `qc_fixes` (ask, auto, off) decid
 - **The edit**: the preview watched at every image's start and at three caption times; each image on its line; the captions match the
   words; no black frame or jump; the duration, the loudness and the frames (`video_frames` = `expected_frames`) of `slideshow.json`; the
   moves as planned (`T edit-profile deliverables/video-NN-clean.mp4 --timeline 40-briefs/video-NN-timeline.json`: each image's zoom and
-  pan against its `moves`, and a jitter at the references' level); the
+  pan against its `moves`, and a jitter at the references' level); each effect at its moment (frames around it with `T frames`): a keyed
+  overlay leaves no green and a transition hides its cut, a blended one leaves no dark box, a sound lands on its moment and sits under
+  the voice, the `refused` list of `capcut-effects` empty; the
   CapCut lint without `media-unlinked`; the CapCut timeline read back (`capcut_read_timeline`) and
   the texts' look against the plan's `captions` (font, size, colours, position) as `capcut_read_timeline` gives them; the house text
   check (`capcut-text-style`) is not used in Static.

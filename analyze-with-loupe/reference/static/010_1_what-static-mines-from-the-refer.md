@@ -18,15 +18,24 @@ reference, collect as facts with times:
   the zoom from start to end and per second, the pan in % of the width or height, the pace in the first and the last quarter, steady or
   eased, the jitter; and the order of the moves across the video, in and out by turns, a pan after two zooms …), the joins (the cut
   signatures: a hard cut changes in one frame; a dissolve over many frames with no move; a slide or a push with a large shift; a zoom with
-  a scale step; a flash with a brightness peak; a blur with a sharpness dip; and the short shots, a flash or a slide of a few frames), and
-  the effects on top (grain, vignette, light leaks, glitches) as the frames show them.
+  a scale step; a flash with a brightness peak; a blur with a sharpness dip; and the short shots of a few frames), each join with a
+  signature other than a one-frame cut viewed frame by frame (`T frames <file> --out <dir> --range <t-0.1>-<t+0.2> --fps 30 --sheet`)
+  before it is named: the numbers cannot tell a slide from an **insert**, another picture flashed for a few frames (2026-11-06: two
+  "slides" of 7.4 % per frame with a flash and a dip were a statue and a face in hands shown for 3 frames each, a glimpse at each turn
+  of the story; the optical flow read the change of picture as a shift), and
+  the effects on top as the frames show them, each with its times: an overlay transition over a cut (a wipe, a paint or ink splash, a
+  flash; the cut signature's frames that change and its brightness), light leaks, grain, a vignette, glitches, read densely where a
+  signature shows one (`T frames … --range a-b --fps 30 --sheet`); stickers, emojis and badges (a like or subscribe button) are noted and
+  never re-made (contract item 6).
 - **The text on screen** (the captions and any other text): on screen or not; words at once; where it sits (`ocr.json` rows); its look,
   read on the frames: the font (the family as seen, the weight), the size against the frame, the fill, the outline, the shadow, a box,
   upper case or not, the highlighted words and their colour, how it appears (the edit profile's caption entrances: each word's height,
   width, rise, sideways shift and fill over its first ten frames against where it settles, and the frames it takes); as facts.
 - **The sound**: the voice as numbers (`T audio-profile --voice`: pitch, its spread, words per minute, pauses) and as heard words in the
   transcript (gender and age as the voice suggests them are [I]); a music bed or none (the harmonic share outside speech, tempo, the
-  energy arc); sound effects on cuts (hits on cuts).
+  energy arc); the sound effects: each hit of the audio profile with its time, whether it lands on a cut, its level against the voice
+  and its colour (a whoosh with a slide, a hit on a reveal, a click on a list item, a riser before a payoff), and the moments that carry
+  none.
 - **The subject**: what each video is about, and what kind of subject it is (a book, a person, an event, a fact list, a story), to be
   left behind (§3).
 

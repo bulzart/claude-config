@@ -36,3 +36,21 @@ Static runs where Qwen3-TTS (and ACE-Step 1.5 when beds are wanted, FLUX 3 Klein
   effects load and exports it; `T capcut-check measure --export <the mp4>` writes `AWL/data/capcut-catalogue.md` (and `.json`): each
   move played or not, each intro's and each transition's measured shape and whether CapCut drew it. The plans use only what it shows
   drawn, and match a reference's measured entrance and joins to its shapes.
+  **Without CapCut Pro** (`config.json → capcut.pro` false) CapCut refuses to export a project that uses a Pro option, and writes which
+  ones in `User Data/Cache/FeedbackOtherInfo.json`: the user tries the export once (that list becomes the catalogue's `free plan`
+  column), then records CapCut's player full screen from before pressing play to the end, the time bar steady (2026-11-06: a first
+  recording with the window moving could not be lined up), with the desktop sound; measure it with `--export <the recording> --crop
+  W:H:X:Y` (the player's area; on a 1920x1080 screen with a 9:16 project `608:1080:656:0`) and `--start <second where the project's
+  0.0 s plays>`. The agents use only options marked free while `capcut.pro` is false.
+- **The CapCut effects check** (once per PC, after a CapCut update, and before the first run with an effects folder; the user, 2026-11-06:
+  "a folder of effects (optional) that can have: sound effects, and green screen transitions"): the same steps into `AWL_effects_check`
+  with ten stills of 3 s (`check-A.png` and `check-B.png` by turns, 0 to 30 s), then `T capcut-check effects-fill --draft <it>`: it makes
+  test media with known shapes and times (a green-screen wipe with a tone, a glow on black, a red disc on transparent in four video
+  formats, a ring sticker, a click and a noise burst; `runs/_capcut-check/effects/media/`) and writes them the way `T capcut-effects`
+  does: CapCut's chroma key at two strengths, a cover scale, an overlay's sound and a muted one, the screen blend, each alpha format,
+  scale and position keys on an overlay, sound effects on time, at a lower volume and with a fade, and a caption over all of it. The user
+  exports it (or, blocked by Pro, records it as above, with the desktop sound: the sounds are measured from it); `T capcut-check
+  effects-measure --export <file> [--crop W:H:X:Y]` (a recording is lined up from its first click and the stills' switches) writes the
+  `effects` part of the catalogue: which ways play, the chroma strength that left no green, the alpha format CapCut reads.
+  `T capcut-effects` writes an effect only by a way marked as playing (and free while `capcut.pro` is false); with no CapCut chroma key
+  or screen blend it makes an alpha file of the overlay instead (`30-assets/effects/video-NN/`), when an alpha format plays.

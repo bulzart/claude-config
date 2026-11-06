@@ -10,8 +10,11 @@
   side). Each still is drawn with an exact sub-pixel resample per frame (ffmpeg's zoompan stepped on whole pixels and the picture shook:
   2026-11-06), with the same values CapCut keys. It counts the frames each file really holds (`video_frames` against `expected_frames`): a
   file's length is its sound's, so only the frames show a lost picture; short of frames it answers `ok` false and exits 1, and those files
-  are not used. A join's check copy is the nearest ffmpeg transition; CapCut carries the real one.
-- **Motion**: the plan's moves and joins (§5), as the references make them; effects only as the references use them.
+  are not used. A join's check copy is the nearest ffmpeg transition; CapCut carries the real one. The plan's effects (§5) are on the
+  timeline too (`effects`: each one's start, in point, length and track) and in the check copies: overlays keyed (ffmpeg's chromakey,
+  the nearest of CapCut's), blended or overlaid, sized and keyed as planned, and the sounds in the mix before its loudness pass
+  (`effects` in the answer counts them).
+- **Motion**: the plan's moves and joins (§5), as the references make them; effects only as the references use them (§2).
 - **The CapCut project is the final** (the user, 2026-11-05: "export it as the final"): it mirrors the timeline at the format's export
   size, the images at their full size (`reference/capcut-assembly.md` §1–§2, §4): `T capcut-name`, `capcut_clone_draft`,
   `T capcut-prep --draft "<draft>" --canvas <state.json → static.format.export>`; each image with `capcut_add_image` at its start for its duration on the main
@@ -20,7 +23,11 @@
   own copy back over them); then the moves with `T capcut-motion --draft "<draft>" --run RUN --video NN` (KFTypeScaleX with the clip's
   uniform scale on and KFTypePositionX/Y, the timeline's values: CapCut 9.7 ignores UNIFORM_SCALE keyframes, so never
   `capcut_add_keyframe` for a move) and the joins with `T capcut-transitions --draft "<draft>" --run RUN --video NN` (the timeline's
-  transition slugs, never `capcut_add_transition`); then the captions in the references' look (the plan's `captions`, §2, §5):
+  transition slugs, never `capcut_add_transition`); the effects, when the plan has any, with `T capcut-effects --draft "<draft>" --run
+  RUN --video NN` (each overlay on its own video track above the stills, its file copied into the draft, sized, placed and keyed or
+  blended by the way the CapCut effects check verified, at its volume; each sound on an audio track at its volume with its fades; it
+  refuses an effect that needs something the check did not verify, listed in `refused`: plan that moment again without it, and never
+  write an effect with the CapCut MCP); then the captions in the references' look (the plan's `captions`, §2, §5):
   `capcut import-srt "<draft>" "<RUN>/60-outputs/video-NN/captions.srt" --font-size <size> --color <fill> --border-width <stroke_width>
   --border-color <stroke_color> --align 1 --y <1 − 2 × y_rel>`, with `--shadow`, `--bg-color`/`--bg-alpha` and `--highlight-words …
   --keyword-color … --keyword-size …` as the look has them; the font with `T capcut-font --draft "<draft>" --font-file <font_file> --track

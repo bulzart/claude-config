@@ -4,8 +4,9 @@ folders are read-only (the user, 2026-10-27: agents never remove or move the fil
 folder or anywhere else is copied).  It refuses a command that moves, renames, deletes or writes inside a protected folder (or deletes a
 folder that holds one), and a Write or Edit into one; reading it, copying from it and everything outside it pass untouched.
 
-Protected: `source` (the references folder, or Edit Mode's videos) and `examples_paths` of every run of the library whose stage is not done
-or abandoned and whose state.json changed in the last 7 days.  The assets folders stay open: the user curates them.
+Protected: `source` (the references folder, or Edit Mode's videos), `examples_paths` and Static's `static.effects_folder` of every run of the
+library whose stage is not done or abandoned and whose state.json changed in the last 7 days.  The assets folders stay open: the user
+curates them.
 
 What it reads in a command: delete, move and rename verbs and write targets (a copy's destination, a redirection, an encoder's output) at
 command position, through shell variables, `for` loops, nested shells (`bash -c`, `cmd /c`, `powershell -Command`) and line continuations;
@@ -140,8 +141,9 @@ def protected() -> list:
         if not isinstance(st, dict) or str(st.get("stage") or "").lower() in FINAL:
             continue
         src = st.get("source")
-        for p in (src if isinstance(src, list) else [src]) + list(st.get("examples_paths") or []):
-            if not p or not isinstance(p, str):
+        fx = (st.get("static") or {}).get("effects_folder") if isinstance(st.get("static"), dict) else None   # Static's optional effects folder
+        for p in (src if isinstance(src, list) else [src]) + list(st.get("examples_paths") or []) + [fx]:
+            if not p or not isinstance(p, str) or p.strip().lower() in ("none", "no", "-"):
                 continue
             n = norm(p)
             if re.fullmatch(r"[a-z]:", n) or inside(lib, n):          # a drive, or a folder holding the library itself: never guarded

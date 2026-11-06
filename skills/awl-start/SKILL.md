@@ -80,7 +80,12 @@ Only these section files for this phase, nothing else unless a step below says s
    images come from the OpenAI model in `config.json → static.images`, from FLUX 3 Klein on this PC (`config.json → static.klein`), or
    from the user); step 5b is not asked (`audio_ingest=whisper`).
    Its inputs (step 5): the references folder and the assets: the characters as photos and/or descriptions (a text file each, or words in
-   the message), usually no product; documents and examples as always. In the same AskUserQuestion call as the QC-fixes question, header
+   the message), usually no product; documents and examples as always; and **an effects folder (optional;** the user, 2026-11-06: "a
+   folder of effects (optional) that can have: sound effects, and green screen transitions"**)**, asked in the same plain-chat message as
+   the other paths: *"An effects folder is optional: sound effects, green-screen transitions, overlays (light leaks, flashes, glows).
+   I measure every file and use what fits the references' edit; 'none' skips it. Your folder is read only: files are copied, never moved."*
+   `$ARGUMENTS` with `effects <folder>` or `no-effects` answers it. An archive in it (.zip, .rar) is listed and not unpacked: say once that
+   its files are used only once unpacked into a folder. In the same AskUserQuestion call as the QC-fixes question, header
    "Images", none recommended: **"Generate with OpenAI"** ("I make every image with the OpenAI Images API on your key (OPENAI_API_KEY on
    this PC), check each one and draw again by your QC-fixes choice; it uses your OpenAI credits.") or **"FLUX 3 Klein on this PC"** ("I
    make every image locally with FLUX 3 Image Klein (int8) on this PC's GPU, check each one and draw again by your QC-fixes choice; no
@@ -195,7 +200,8 @@ Only these section files for this phase, nothing else unless a step below says s
    - Create: store the voiceover choice (steps 2b, 5c) with the store line of `voiceover.md` §1 (`T state --run RUN set voiceover.enabled=true
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;
    - Create: store the memes choice (step 2c): `T state --run RUN set memes=include` or `memes=none`;
-   - Static: `T state --run RUN set analyze_submode=static static_images=api|klein|prompts audio_ingest=whisper` (no model is stored; item 36);
+   - Static: `T state --run RUN set analyze_submode=static static_images=api|klein|prompts audio_ingest=whisper` (no model is stored; item 36),
+     and the effects folder: `T state --run RUN set static.effects_folder="<folder>"` or `static.effects_folder=none`;
    - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`
      (first line `# Requirement (the user's words)`, then the text; a file the user named is copied, a PDF through `T doc-text`);
    - start Loupe (not in Static: no Loupe call there, item 36): `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper

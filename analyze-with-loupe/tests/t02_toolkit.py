@@ -971,6 +971,14 @@ js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01", ok=False)
 check(js.get("ok") is False and "image 1: no motion" in js.get("undecided", []) and "image 2: no transition into it" in js.get("undecided", [])
       and js["moves"][0][1] == "none" and js["moves"][0][2] == [1.0, 1.0],
       f"slideshow plan invents no move or join: an image the plan leaves undecided stays still and is listed ({js.get('undecided')})")
+# the reference of 2026-11-06 flashed another picture for 3 frames at its two story turns: an insert a few frames before a line's cut
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps({**_plan, "images": _plan["images"] + [
+    {"image": 4, "from_line": 2, "offset_s": -0.1, "prompt": "a glimpse", "motion": "none", "transition": "cut"}]}), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01", ok=False)
+_isp = {s[0]: s for s in js.get("image_spans") or []}
+check([s[0] for s in js.get("image_spans") or []] == [1, 4, 2, 3] and abs((_isp[4][2] - _isp[4][1]) - 0.1) < 1 / 30 + 1e-6
+      and _isp[4][2] == _isp[2][1] and _isp[1][2] == _isp[4][1],
+      f"an image with offset_s before its line plays between the images around it, on the frame grid ({js.get('image_spans')})")
 (SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan), encoding="utf-8")
 js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01")
 _sp = js["image_spans"]
@@ -1112,6 +1120,168 @@ ts("slideshow", "plan", "--run", str(SR), "--video", "01")
 js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01", "--no-captions")
 check(js.get("ok") and js.get("size") == "1280x720", f"a 16:9 format renders its check copy at 1280x720 ({js.get('size')})")
 ts("static", "format", "--run", str(SR), "--aspect", "9:16", "--res", "1080", "--quality", "high")
+
+# the effects folder (the user, 2026-11-06: "a folder of effects (optional) that can have: sound effects, and green screen transitions"):
+# facts from a scan, the plan's effects on the timeline, the check copy draws them, CapCut gets them by the verified ways only
+import wave as _wave  # noqa: E402
+import zipfile as _zip  # noqa: E402
+_fx = home.parent / "fx-folder"
+(_fx / "transitions").mkdir(parents=True, exist_ok=True)
+
+
+def _fxvid(path, frame_of, n=30, audio=None):
+    args = [_awl.find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "320x180", "-r", "30", "-i", "-"]
+    if audio:
+        args += ["-i", str(audio), "-map", "0:v", "-map", "1:a", "-c:a", "aac", "-shortest"]
+    p = subprocess.Popen(args + ["-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p", str(path)], stdin=subprocess.PIPE)
+    for i in range(n):
+        p.stdin.write(frame_of(i).tobytes())
+    p.stdin.close()
+    p.wait()
+
+
+def _fxwav(path, x, sr=48000):
+    with _wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes((_np.clip(x, -1, 1) * 32767).astype("<i2").tobytes())
+
+
+_sr = 48000
+_tt = _np.arange(_sr) / _sr
+_fxwav(home.parent / "tone.wav", _np.where((_tt >= 0.5) & (_tt < 0.6), 0.5 * _np.sin(2 * _np.pi * 440 * _tt), 0.0))
+_green = lambda i: _np.full((180, 320, 3), 255, _np.uint8) if 10 <= i < 20 else _np.tile(_np.array([0, 255, 0], _np.uint8), (180, 320, 1))   # noqa: E731
+_fxvid(_fx / "transitions" / "green.mp4", _green, audio=home.parent / "tone.wav")
+_yy, _xx = _np.mgrid[0:180, 0:320]
+_glow = (_np.clip((40 - _np.hypot(_xx - 160, _yy - 90)) / 8, 0, 1)[..., None] * _np.array([255, 140, 40])).astype(_np.uint8)
+_fxvid(_fx / "glow.mp4", lambda i: _glow)
+_tc = _np.arange(int(0.03 * _sr)) / _sr
+_fxwav(_fx / "click.wav", _np.concatenate([_np.zeros(int(0.2 * _sr)), 0.5 * _np.sin(2 * _np.pi * 2000 * _tc), _np.zeros(int(0.3 * _sr))]))
+_st_png = _Im.new("RGBA", (100, 100), (0, 0, 0, 0))
+_Idraw.Draw(_st_png).ellipse([10, 10, 90, 90], fill=(255, 255, 255, 255))
+_st_png.save(_fx / "sticker.png")
+with _zip.ZipFile(_fx / "pack.zip", "w") as _z:
+    _z.writestr("inside.txt", "x")
+(_fx / "notes.sfk").write_bytes(b"\0" * 64)
+_fx_before = sorted((p.relative_to(_fx).as_posix(), p.stat().st_size, p.stat().st_mtime_ns) for p in _fx.rglob("*") if p.is_file())
+js, _ = ts("effects", "scan", "--run", str(SR), "--folder", str(_fx))
+_ej = json.loads((SR / "00-inventory" / "effects.json").read_text(encoding="utf-8"))
+_by = {Path(f["rel"]).name: f for f in _ej["files"]}
+_g = _by["green.mp4"]["picture"]
+_ng = _g["spans_visible"]["no_green"]
+check(js["counts"] == {"video": 2, "audio": 1, "image": 1, "archive": 1, "other": 1} and _g["key_green"] and int(_g["key_green"][3:5], 16) > 200
+      and _ng and abs(_ng[0][0] - 1 / 3) < 0.07 and abs(_ng[0][1] - 2 / 3) < 0.07
+      and _by["glow.mp4"]["picture"]["shares_full"]["black"][0] > 0.88 and 0.6 < _by["glow.mp4"]["picture"]["shares_visible"]["black"][0] < 0.8
+      and abs(_by["click.wav"]["sound"]["starts_s"] - 0.2) < 0.02 and _by["click.wav"]["sound"]["centroid_hz"] > 1500
+      and _by["sticker.png"]["picture"]["has_transparency"] and _by["green.mp4"]["has_audio"]
+      and js["sheets"] and all(Path(s).is_file() for s in js["sheets"]) and (SR / "00-inventory" / "effects.md").is_file(),
+      f"effects scan measures each file: the green screen's key colour and the seconds it covers the 9:16 box ({_ng}), a black background, "
+      "a sound's start and colour, a PNG's transparency; archives and other files are listed, the sheets drawn")
+check(json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["effects_folder"] == str(_fx)
+      and sorted((p.relative_to(_fx).as_posix(), p.stat().st_size, p.stat().st_mtime_ns) for p in _fx.rglob("*") if p.is_file()) == _fx_before,
+      "effects scan stores the folder in state.json and leaves the user's folder exactly as it was")
+js, _ = ts("effects", "scan", "--run", str(SR))
+check(js.get("cached") == js.get("files") == 6, "a second scan of the same folder reads every file from the cache")
+_ids = {Path(f["rel"]).name: f["id"] for f in _ej["files"]}
+_plan_fx = {**_plan, "effects": [
+    {"id": _ids["green.mp4"], "type": "overlay", "join": 2, "anchor_s": 0.5, "blend": "chroma", "key_intensity": 0.5, "fit": "cover",
+     "volume": 0.0, "why": "the reference's quick slide at its turn"},
+    {"id": _ids["click.wav"], "type": "sfx", "join": 3, "anchor_s": 0.2, "volume": 0.5, "why": "the reference's hit on its cut"},
+    {"id": _ids["sticker.png"], "type": "overlay", "line": 1, "anchor_s": 0.0, "dur_s": 1.0, "blend": "normal", "fit": "contain",
+     "scale": [[0.0, 0.3], [0.2, 0.6]], "y": 0.3, "why": "a pop on the hook"},
+    {"id": _ids["glow.mp4"], "type": "overlay", "at_s": 0.1, "anchor_s": 0.0, "blend": "screen", "fit": "cover", "why": "a glow"}]}
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan_fx), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01")
+_tlx = json.loads((SR / "40-briefs" / "video-01-timeline.json").read_text(encoding="utf-8"))
+_ef = {e["n"]: e for e in _tlx["effects"]}
+_cut2, _cut3 = _tlx["images"][1]["start"], _tlx["images"][2]["start"]
+check(js.get("ok") and js.get("undecided") == [] and -1 / 30 - 1e-6 <= _ef[1]["start"] - (_cut2 - 0.5) <= 1e-6 and _ef[1]["track"] == "fx1"
+      and abs(_ef[2]["start"] - (_cut3 - 0.2)) < 1e-3 and _ef[2]["track"] == "sfx1" and _ef[1]["key_color"] == _g["key_green"]
+      and abs(_ef[3]["start"] - 0.3) < 1e-6 and _ef[3]["track"] == "fx2" and _ef[4]["track"] == "fx1" and _ef[3]["dur_s"] == 1.0,
+      "slideshow plan puts each effect on the timeline: its anchor second on its moment (a cut, a line, a second), the scan's key colour, "
+      "overlapping overlays on separate tracks")
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps({**_plan, "effects": [
+    {"id": _ids["green.mp4"], "type": "overlay", "join": 2, "fit": "cover", "why": "x"},
+    {"file": str(_fx / "nope.mp4"), "type": "sfx", "at_s": 1.0, "anchor_s": 0.0, "volume": 1.0, "why": "x"},
+    {"id": _ids["glow.mp4"], "type": "overlay", "at_s": 0.1, "anchor_s": 0.0, "why": "x"}]}), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01", ok=False)
+_u = js.get("undecided") or []
+check(js.get("ok") is False and any(u.startswith("effect 1: no anchor_s") for u in _u) and any(u.startswith("effect 2: no file") for u in _u)
+      and any(u.startswith("effect 3: no blend") for u in _u) and any(u.startswith("effect 3: no fit") for u in _u),
+      f"slideshow plan chooses no effect setting: what the plan leaves out is listed ({_u})")
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan_fx), encoding="utf-8")
+ts("slideshow", "plan", "--run", str(SR), "--video", "01")
+js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01", "--no-captions")
+_clean = Path(js["clean"])
+
+
+def _frame_at(t):
+    cp = subprocess.run([_awl.find_tool("ffmpeg"), "-nostdin", "-v", "error", "-ss", f"{t:.3f}", "-i", str(_clean), "-frames:v", "1", "-f", "rawvideo",
+                         "-pix_fmt", "rgb24", "-"], capture_output=True)
+    return _np.frombuffer(cp.stdout, _np.uint8).reshape(1280, 720, 3).astype(int)
+
+
+_fw, _fg = _frame_at(_cut2 + 0.02), _frame_at(_cut2 - 0.4)
+_green_share = lambda f: float(((f[..., 1] > 80) & (f[..., 1] - _np.maximum(f[..., 0], f[..., 2]) > 50)).mean())   # noqa: E731
+_cpa = subprocess.run([_awl.find_tool("ffmpeg"), "-nostdin", "-v", "error", "-i", str(_clean), "-ac", "1", "-ar", "16000", "-f", "f32le", "-"], capture_output=True)
+_au = _np.frombuffer(_cpa.stdout, _np.float32)
+
+
+def _band(t0, t1, f0=1800, f1=2200):
+    s = _au[int(t0 * 16000):int(t1 * 16000)].astype(float)
+    P = _np.abs(_np.fft.rfft(s * _np.hanning(len(s)))) ** 2
+    q = _np.fft.rfftfreq(len(s), 1 / 16000)
+    return 10 * _np.log10(P[(q >= f0) & (q <= f1)].sum() + 1e-12)
+
+
+check(js.get("ok") and js.get("effects") == {"overlays": 3, "sounds": 1} and js["video_frames"]["clean"] == js["expected_frames"]
+      and float((_fw.min(axis=2) > 220).mean()) > 0.9 and _green_share(_fw) < 0.01 and _green_share(_fg) < 0.02
+      and _band(_cut3 - 0.01, _cut3 + 0.04) - _band(_cut3 - 0.4, _cut3 - 0.35) > 15,
+      f"slideshow render draws the effects: the green screen keyed out and covering the cut (white {float((_fw.min(axis=2) > 220).mean()):.2f}, "
+      f"green {_green_share(_fg):.3f} before it), the click on its cut, every frame kept")
+if not (_tpl / "draft_content.json").is_file():
+    print("SKIP  capcut-effects: no CapCut template on this machine")
+else:
+    _fd = home.parent / "Draft_effects"
+    _shutil.copytree(_tpl, _fd, ignore=_shutil.ignore_patterns("*.bak", "*bak", "assets", "Resources"))
+    _all = {k: {"plays": True} for k in ("cover_scale", "overlay_keyframes", "overlay_sound", "mute", "screen", "alpha_image", "sfx", "sfx_volume", "sfx_fade")}
+    _ver = home.parent / "verified.json"
+    _ver.write_text(json.dumps({"effects": {**_all, "chroma": {"plays": True, "intensity": 0.5},
+                                            "alpha_video": {"plays": True, "codec": "qtrle", "codecs": ["qtrle"]}}}), encoding="utf-8")
+    js, code, _ = t("capcut-effects", "--draft", str(_fd), "--run", str(SR), "--video", "01", "--verified-from", str(_ver), env=SENV, ok=False)
+    if code == 3:
+        print("SKIP  capcut-effects on a draft: CapCut is running on this machine")
+    else:
+        _dc = json.loads((_fd / "draft_content.json").read_text(encoding="utf-8"))
+        _sg = {s["id"]: (tr, s) for tr in _dc["tracks"] for s in tr.get("segments") or []}
+        _w = {w["effect"]: w for w in js.get("written") or []}
+        _vm = {m["id"]: m for m in _dc["materials"].get("videos", [])}
+        _chr = {m["id"]: m for m in _dc["materials"].get("chromas", [])}
+        _t1, _s1 = _sg[_w[1]["segment"]]
+        _t3, _s3 = _sg[_w[3]["segment"]]
+        _t4, _s4 = _sg[_w[4]["segment"]]
+        _t2, _s2x = _sg[_w[2]["segment"]]
+        _k3 = {k["property_type"]: k for k in _s3.get("common_keyframes") or []}
+        check(code == 0 and _t1["name"] == "fx1" and _t3["name"] == "fx2" and abs(_s1["clip"]["scale"]["x"] - 3.1605) < 0.01
+              and any(r in _chr and _chr[r]["color"] == _g["key_green"] for r in _s1.get("extra_material_refs") or []) and _s1["volume"] == 0.0
+              and _s1["source_timerange"]["start"] == 0 and _vm[_s4["material_id"]].get("mix_mode") == "Screen"
+              and [x["values"][0] for x in _k3["KFTypeScaleX"]["keyframe_list"]] == [0.3, 0.6] and _s3["uniform_scale"]["on"] is True
+              and _s3["clip"]["transform"]["y"] == 0.3 and _t2["type"] == "audio" and _t2["name"] == "sfx1" and _s2x["volume"] == 0.5,
+              "capcut-effects writes each overlay on its own track above the stills (cover scale 3.16 for 16:9 on 9:16, the chroma key with the "
+              "scan's colour, screen blend, scale keys) and each sound on an audio track at its volume, by the verified ways")
+        _fd2 = home.parent / "Draft_effects2"
+        _shutil.copytree(_tpl, _fd2, ignore=_shutil.ignore_patterns("*.bak", "*bak", "assets", "Resources"))
+        _ver2 = home.parent / "verified2.json"
+        _ver2.write_text(json.dumps({"effects": {**{k: v for k, v in _all.items() if k not in ("sfx",)}, "chroma": {"plays": False},
+                                                 "alpha_video": {"plays": True, "codec": "qtrle", "codecs": ["qtrle"]}}}), encoding="utf-8")
+        js, code, _ = t("capcut-effects", "--draft", str(_fd2), "--run", str(SR), "--video", "01", "--verified-from", str(_ver2), env=SENV, ok=False)
+        _w2 = {w["effect"]: w for w in js.get("written") or []}
+        _mov = SR / "30-assets" / "effects" / "video-01" / "effect-01.mov"
+        _pf = _awl.media_summary(_mov).get("pix_fmt") if _mov.is_file() else None
+        check(code == 1 and [r["effect"] for r in js.get("refused") or []] == [2] and "sfx" in js["refused"][0].get("not_verified", "")
+              and _w2.get(1, {}).get("method") == "keyed-file:qtrle" and _pf == "argb",
+              f"without CapCut's chroma key the green screen goes in as an alpha file made here ({_pf}); a sound the check did not verify is refused")
 _dd = home.parent / "Draft_canvas"
 _dd.mkdir(exist_ok=True)
 (_dd / "draft_content.json").write_text(json.dumps({"id": "TL-1", "name": "Draft_canvas", "canvas_config": {"ratio": "9:16", "width": 1080,
