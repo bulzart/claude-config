@@ -154,7 +154,7 @@
     }
   },
   "static": {
-    "note": "Analyze -> Static (contract item 36): narrated still-image videos. No Higgsfield and no Loupe. Per PC, in the environment only: OPENAI_API_KEY (images by the API), AWL_TTS_PYTHON (+ AWL_TTS_DEVICE), AWL_MUSIC_PYTHON and AWL_MUSIC_ROOT (reference/static section 9).",
+    "note": "Analyze -> Static (contract item 36): narrated still-image videos. No Higgsfield and no Loupe. Per PC, in the environment only: OPENAI_API_KEY (images by the API), AWL_IMAGE_PYTHON and AWL_IMAGE_ROOT (images by FLUX 3 Klein on the PC), AWL_TTS_PYTHON (+ AWL_TTS_DEVICE), AWL_MUSIC_PYTHON and AWL_MUSIC_ROOT (reference/static section 9).",
     "analysis_fps": 1,
     "images": {
       "model": "gpt-image-2.5-sunburst",
@@ -181,6 +181,26 @@
         "as_of": "2026-11-05",
         "note": "OpenAI's GPT Image 2.5 token prices; the cost a call reports is an estimate from its usage"
       }
+    },
+    "klein": {
+      "engine": "flux3-image-klein-int8",
+      "models": {
+        "unet": "flux3-image-klein-int8-convrot.safetensors",
+        "text_encoder": "qwen3vl_4b_int8_convrot.safetensors",
+        "vae": "flux2-vae.safetensors",
+        "upsampler": "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors"
+      },
+      "steps": 16,
+      "alpha": 16.0,
+      "upsample": true,
+      "max_refs": 10,
+      "limits": {
+        "multiple": 16,
+        "min_edge": 64,
+        "max_edge": 4096
+      },
+      "timeout_s": 1800,
+      "note": "FLUX 3 Image Klein (distilled; int8, the build for GPUs without FP8 such as the RTX 30 series) made on this PC by scripts/image_worker.py in a private headless ComfyUI (AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT; reference/static section 9). steps 16 and no CFG are the checkpoint's defaults; alpha is the reference code's timestep shift since 2026-10-17 (ComfyUI's own default is 6.93); upsample runs Black Forest Labs' prompt upsampler first (their model card: always, unless the prompt already is a full caption). Licence: FLUX Kommunity License (non-commercial use, plus commercial outputs for a business under US$5M a year)."
     },
     "tts": {
       "design_model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",

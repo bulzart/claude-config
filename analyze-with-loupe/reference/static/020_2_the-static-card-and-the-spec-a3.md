@@ -24,12 +24,14 @@ what makes it work (one paragraph, [I]). Every speech field reads from the trans
 to suggest the most correct size first along with options"**).** `T static formats --run RUN` gives the facts: each reference's size and
 aspect, the aspects by count and seconds, and per aspect and resolution the export size (the CapCut canvas), the image size that stays
 sharp through the stills' moves (`image_size`, each edge times 1 + the move's amount), the smaller one without that margin, and whether
-the image API takes each. The question rides in A5's AskUserQuestion call with the count (header "Format"). Its first option is the best
-fit, marked (Recommended): the references' main aspect (the most videos, then the most seconds) at 1080 on the short side, the image size
-with the margin, quality `high` (prompts mode: no quality). Up to three more, each differing in one thing, from the facts: 720 (smaller
-images, less cost and time), `medium` (cheaper, a little less detail), the other main aspect when the references mix them, or the image
-size without the margin (slightly soft at the end of a zoom). Each option's description names the export size, the image size and, with
-the API, the quality; "Other" takes the rest (another aspect, `xhigh` or `max`, an exact size). The answer is stored with
-`T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`, which refuses a size the image API does not take. Every
+the image API (`image`) and FLUX 3 Klein (`klein`) take each. The question rides in A5's AskUserQuestion call with the count (header
+"Format"). Its first option is the best fit, marked (Recommended): the references' main aspect (the most videos, then the most seconds)
+at 1080 on the short side, the image size with the margin, quality `high` (prompts and Klein mode: no quality). Up to three more, each
+differing in one thing, from the facts: 720 (smaller images, less cost and time), `medium` (the API: cheaper, a little less detail), the
+other main aspect when the references mix them, or the image size without the margin (slightly soft at the end of a zoom; with Klein
+also quicker per image). Each option's description names the export size, the image size and, with the API, the quality; "Other" takes
+the rest (another aspect, `xhigh` or `max`, an exact size). The answer is stored with
+`T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`, which refuses a size the run's image source does not
+take (the API's rules; Klein's: edges of a multiple of 16 from 64 to 4096). Every
 later step reads `state.json → static.format`: the images' size and quality, the prompts file, the project's canvas, the check render.
 

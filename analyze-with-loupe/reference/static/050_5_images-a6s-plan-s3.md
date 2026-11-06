@@ -24,6 +24,10 @@ project and the check copy both take it.
   (the size and quality from the run's format); the toolkit sends it through the ledger, saves `60-outputs/video-NN/images/iKK-aM.png` and marks it the one the edit uses. A request
   that already made an image is not sent again (`--again` for a new draw). `moderation_blocked`: change the prompt (or the reference), never
   send it again unchanged.
+- **Klein mode** (`static_images=klein`): the same `T image generate` (the size from the run's format; no quality); FLUX 3 Image Klein
+  makes it on this PC, one image at a time, ledgered with provider `klein` and no cost. The prompt is written as for the API; Black Forest
+  Labs' prompt upsampler turns it into the full scene caption the model takes (the answer's `caption`). A character's photo or anchor
+  rides as a reference (at most 10). The seed comes from the request and the attempt and is recorded; `--again` draws with a new one.
 - **Prompts mode** (`static_images=prompts`): `T image prompts --run RUN` writes `deliverables/prompts/video-NN-image-prompts.md` (the
   characters' sheets first, then one prompt per image with its file name `vNN-iKK`, the character to attach, and the format's aspect and size); the user makes
   them, puts them in one folder and sends its path; `T image intake --run RUN --folder <path>` copies them in (never moves or changes

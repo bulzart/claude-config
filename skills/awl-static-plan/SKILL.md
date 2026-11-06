@@ -15,7 +15,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.1 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (2.0 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (3.2 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (3.8 KB)
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (2.6 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)

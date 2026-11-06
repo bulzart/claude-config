@@ -186,8 +186,16 @@ sp_text = {n: rd(SKD / n / "SKILL.md") for n in STK if (SKD / n / "SKILL.md").is
 item36 = router.split("36. **Static")[1].split(chr(10))[0] if "36. **Static" in router else ""
 check(len(sp_text) == 4 and item36 and all(f"`{n}`" in item36 for n in STK + ("awl-start", "awl-analyze-prepare", "awl-analyze-study", "awl-analyze-produce", "awl-record", "awl-wrapup")),
       "the router has item 36 (Static) and names every skill that owns it; the four Static skills exist")
-check("**Static**" in st and "analyze_submode=recreate|create|free|static" in st and '"Images": **"Generate with OpenAI"**' in st and "T static check" in st and "static_images=api|prompts" in st,
-      "awl-start offers Static, asks Images (OpenAI or prompts) with the QC-fixes question, checks the setup and stores the choice")
+check("**Static**" in st and "analyze_submode=recreate|create|free|static" in st and '"Images", none recommended: **"Generate with OpenAI"**' in st
+      and '**"FLUX 3 Klein on this PC"**' in st and '**"Prompts for me"**' in st and "T static check" in st and "static_images=api|klein|prompts" in st,
+      "awl-start offers Static, asks Images (OpenAI, FLUX 3 Klein on this PC or prompts; the user 2026-11-06) with the QC-fixes question, "
+      "checks the setup and stores the choice")
+s9 = rd(LIB / "reference" / "static" / "090_9_the-static-pc-setup-once-per-pc.md")
+sim = sp_text.get("awl-static-images", "")
+check("AWL_IMAGE_PYTHON" in s9 and "AWL_IMAGE_ROOT" in s9 and "flux3-image-klein-int8-convrot.safetensors" in s9 and "hf auth login" in s9
+      and "`klein`" in sim and "caption" in sim and "At most 10 references" in sim,
+      "FLUX 3 Klein: static §9 names its setup (the two variables, the int8 files, the gated download) and awl-static-images its half "
+      "(the caption the model got, at most 10 references)")
 check("next_skill=awl-static-plan" in rd(SKD / "awl-analyze-study" / "SKILL.md") and "next_skill=awl-analyze-produce" in sp_text.get("awl-static-plan", "")
       and "--fps 1 --dense-fps 1 --no-extras" in rd(SKD / "awl-analyze-prepare" / "SKILL.md") and "--voice" in rd(SKD / "awl-analyze-study" / "SKILL.md"),
       "Static: 1 fps without extras in prepare, the voice numbers in study, study hands to the static plan and the plan to produce")
@@ -195,7 +203,7 @@ check("### A9s. Static" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "awl
       and "static.waiting=images" in sp_text.get("awl-static-images", "") and "T image intake" in sp_text.get("awl-static-images", ""),
       "produce has A9s (sound for every video, then images, then the agents); prompts mode stops for the user's folder and takes it in by copy")
 s2s = rd(PA / "025_2s_spawning-static.md")
-check("<api|prompts>" in s2s and "<ask|auto|off>" in s2s and "Loupe: not used in Static" in s2s and "No Higgsfield" in s2s
+check("<api|klein|prompts>" in s2s and "<ask|auto|off>" in s2s and "Loupe: not used in Static" in s2s and "No Higgsfield" in s2s
       and all(n in s2s for n in ("awl-static-images", "awl-static-edit", "awl-record")) and "OPENAI_API_KEY" in s2s,
       "the Static agent contract (production-agents 2s): its own placeholders, no Loupe, no Higgsfield, its three skills, the key only in the environment")
 hig = [n for n, tx in sp_text.items() for w in ("mcp__higgsfield", "generate_video", "jobs_wait", "media_upload", "T ledger begin") if w in tx]

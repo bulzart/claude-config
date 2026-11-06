@@ -991,6 +991,45 @@ check("Analyze Mode, static" in _ct and "Images: api" in _ct and "QC fixes: auto
       and "Memes: n/a (Static" in _ct, "contract writes production-agents 2s's Static prompt with the run's choices filled")
 js, _ = ts("lint-run", "--run", str(SR))
 check(js.get("contract", {}).get("loupe_line") is True and js.get("contract", {}).get("unresolved_placeholders") == [], "lint-run reads a Static contract's Loupe line")
+
+# FLUX 3 Klein on this PC (static_images=klein, the user 2026-11-06): the same T image generate through the local worker (stubbed here), no key
+KENV = {**SENV, "AWL_IMAGE_STUB": "1", "OPENAI_API_KEY": ""}
+js, _, _ = t("new-run", "--mode", "analyze", "--slug", "static-klein", env=KENV)
+KR = Path(js["run_dir"])
+t("state", "--run", str(KR), "set", "analyze_submode=static", "static_images=klein", "audio_ingest=whisper", "qc_fixes=auto", env=KENV)
+js, code, _ = t("static", "format", "--run", str(KR), "--aspect", "9:16", "--res", "1080", "--image-size", "1080x1920", env=KENV, ok=False)
+check(code == 2 and "FLUX 3 Klein" in js.get("error", "") and "divisible by 16" in js.get("error", ""), "a Klein run's format refuses an edge that is not a multiple of 16")
+js, _, _ = t("static", "format", "--run", str(KR), "--aspect", "9:16", "--res", "1080", env=KENV)
+check(js["format"]["image_size"] == "1216x2160" and js["format"]["quality"] is None, "a Klein run's format stores the image size and no quality")
+js, _, _ = t("static", "check", "--offline", env=KENV)
+check(js["parts"]["images_klein"]["ready"] is True and js["parts"]["images_klein"].get("stub") is True, "static check reports FLUX 3 Klein's part")
+_n = len(_SEEN)
+js, _, _ = t("image", "generate", "--run", str(KR), "--anchor", "C1", "--prompt", "Character sheet: a weathered farmer, front view", env=KENV)
+_ka = Path(js["file"])
+check(js.get("ok") and _ka.is_file() and js.get("engine") == "flux3-image-klein-int8" and js.get("cost_usd_estimate") == 0.0
+      and isinstance(js.get("seed"), int) and len(_SEEN) == _n, "with static_images=klein an image is made on this PC (no key, no API call), with its seed and no cost")
+_kp = ("image", "generate", "--run", str(KR), "--video", "01", "--image", "1", "--prompt", "A farmer in a wheat field at dusk", "--ref", str(_ka))
+js, _, _ = t(*_kp, env=KENV)
+_s1 = js.get("seed")
+check(js.get("ok") and js.get("size") == [1216, 2160] and js.get("refs") == 1 and js.get("caption"), "a Klein image takes the run's size and its reference and returns its caption")
+js, _, _ = t(*_kp, env=KENV)
+check(js.get("reused") is True and js.get("seed") == _s1, "the same Klein request is not made again")
+js, _, _ = t(*_kp, "--again", env=KENV)
+check(js.get("ok") and js.get("attempt") == 2 and js.get("seed") != _s1, "--again draws the Klein image again with a new seed")
+js, _, _ = t(*_kp, "--again", "--seed", str(_s1), env=KENV)
+check(js.get("ok") and js.get("attempt") == 3 and js.get("seed") == _s1, "--again --seed makes a recorded draw again")
+js, code, _ = t("image", "generate", "--run", str(KR), "--video", "01", "--image", "2", "--prompt", "x", *sum((["--ref", str(_ka)] for _ in range(11)), []),
+                env=KENV, ok=False)
+check(code == 2 and "at most 10" in js.get("error", ""), "FLUX 3 Klein takes at most 10 references")
+_krows = [(e["attempt"], e["status"], e.get("provider")) for e in json.loads((KR / "state.json").read_text(encoding="utf-8")).get("submissions", [])
+          if e.get("kind") == "image"]
+check(_krows == [("C1-a1", "completed", "klein"), ("i01-a1", "completed", "klein"), ("i01-a2", "completed", "klein"), ("i01-a3", "completed", "klein")],
+      f"every Klein image is a ledger row of provider klein: {_krows}")
+_krec = json.loads((KR / "60-outputs" / "video-01" / "images.json").read_text(encoding="utf-8"))["images"]["01"]
+check(_krec["use"] == "i01-a3.png" and _krec["attempts"][0]["source"] == "klein" and _krec["attempts"][0]["seed"] == _s1 and _krec["attempts"][0]["caption"],
+      "the record keeps each Klein attempt with its seed and caption; the newest is the one the edit uses")
+js, _, _ = t("contract", "--run", str(KR), env=KENV)
+check("Images: klein" in Path(js["file"]).read_text(encoding="utf-8") and not js.get("unresolved_placeholders"), "a Klein run's contract says Images: klein")
 _srv.shutdown()
 
 finish()

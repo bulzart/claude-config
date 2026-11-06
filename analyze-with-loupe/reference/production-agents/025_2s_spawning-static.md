@@ -11,8 +11,9 @@ Produce this one video end to end, then stop.
 
 Run: <RUN>   Library (AWL): C:/Users/Bulzart/.claude/analyze-with-loupe
 Toolkit (T): "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe" "<AWL>/scripts/awl.py"
-Images: <api|prompts> (state.json → static_images). api: you make your video's images with `T image generate`. prompts: the user made
-them and `T image intake` copied them into your images folder; you check them and never make new ones.
+Images: <api|klein|prompts> (state.json → static_images). api: you make your video's images with `T image generate` (the OpenAI Images
+API). klein: the same `T image generate`, made by FLUX 3 Klein on this PC's GPU (one at a time; no cost). prompts: the user made them
+and `T image intake` copied them into your images folder; you check them and never make new ones.
 QC fixes: <ask|auto|off> (the run's choice, state.json → qc_fixes; command item 27).
 Audio ingest: whisper (Static always reads the references' audio; command item 36).
 Loupe: not used in Static (command item 36): no `T qc-consult`, `T prompt-template`, `T caught-flag` or any Loupe command.
@@ -26,8 +27,8 @@ video-NN-images.json and, after `T slideshow plan`, video-NN-timeline.json; <RUN
 Follow, for this video only, by invoking these skills one after the other when you reach their step (Skill tool; if it is
 unavailable or the name is not found, Read C:/Users/Bulzart/.claude/skills/<name>/SKILL.md and follow it). Each skill lists
 under "Read now" the exact section files it needs: read those and nothing else. Never read the command file or a whole reference:
-  1. awl-static-images (S3: with Images api make, view and check every image of your plan and fix by QC fixes; with Images prompts
-     view and check the user's images and list what fails)
+  1. awl-static-images (S3: with Images api or klein make, view and check every image of your plan and fix by QC fixes; with Images
+     prompts view and check the user's images and list what fails)
   2. awl-static-edit   (S4: the timeline, the local check render, the CapCut project at the run's format: the final, the edit checks)
   3. awl-record        (X10: deliverables, README row, result.json)
   With QC fixes `off` every image is made once and nothing is redone: the edit is still built and its facts recorded; result.json

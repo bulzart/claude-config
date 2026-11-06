@@ -18,7 +18,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
 - effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (2.1 KB) (every run, step 5d)
 - *Static, when `T static check` reports a part the run needs as not ready:*
-  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (1.4 KB)
+  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (3.1 KB)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
   - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)
@@ -65,8 +65,8 @@ Only these section files for this phase, nothing else unless a step below says s
    - **Free**: "Say in your own words what the videos must achieve and how. With reference material analysed first, or from your
      requirement alone. The pipeline plans to your requirement, keeps the model's official prompting, the QC stack and Loupe's samples
      and misses, and asks you once to confirm its reading of the plan."
-   - **Static**: "Narrated still-image videos in the references' style on a new subject: the images by OpenAI with your key, or by you
-     from my prompts; a local Qwen3-TTS voice; CapCut. No Higgsfield."
+   - **Static**: "Narrated still-image videos in the references' style on a new subject: the images by OpenAI with your key, by FLUX 3
+     Klein on this PC, or by you from my prompts; a local Qwen3-TTS voice; CapCut. No Higgsfield."
    **Free → two more things, asked in the same message batch.** (a) Header "Free: references": **"With references"** ("Analyse a
    folder of reference material first; the plan can follow, edit or avoid what they do") or **"Requirement only"** ("No references: the
    plan comes from your requirement and your assets"); `$ARGUMENTS` with `free` and a references folder means with references, `free`
@@ -77,15 +77,19 @@ Only these section files for this phase, nothing else unless a step below says s
    gaps as visible [I] lines). The requirement is written once the run exists (step 6).
    Store it with `T state --run RUN set analyze_submode=recreate|create|free|static` once the run exists (Free also `free_references=yes|no`).
    **Static → its own path** (item 36): no steps 2b, 2c, 3 or 4 (no voiceover or memes question, no Higgsfield tools, no model menu: the
-   images come from the OpenAI model in `config.json → static.images`, or from the user); step 5b is not asked (`audio_ingest=whisper`).
+   images come from the OpenAI model in `config.json → static.images`, from FLUX 3 Klein on this PC (`config.json → static.klein`), or
+   from the user); step 5b is not asked (`audio_ingest=whisper`).
    Its inputs (step 5): the references folder and the assets: the characters as photos and/or descriptions (a text file each, or words in
    the message), usually no product; documents and examples as always. In the same AskUserQuestion call as the QC-fixes question, header
-   "Images": **"Generate with OpenAI"** ("I make every image with the OpenAI Images API on your key (OPENAI_API_KEY on this PC), check
-   each one and draw again by your QC-fixes choice; it uses your OpenAI credits.") or **"Prompts for me"** ("I write one prompt per image
-   and the character sheets; you make the images, put them in one folder and send me its path; I check them."); `$ARGUMENTS` with
-   `images api|prompts` answers it. Then `T static check` (add `--offline` with prompts): a part the run needs that is not ready (the key
-   with Generate; the TTS environment always) is a blocker: report it with static §9's setup line and stop before any analysis. Music is
-   needed only when a bed is planned (A6s): reported, never a blocker here.
+   "Images", none recommended: **"Generate with OpenAI"** ("I make every image with the OpenAI Images API on your key (OPENAI_API_KEY on
+   this PC), check each one and draw again by your QC-fixes choice; it uses your OpenAI credits.") or **"FLUX 3 Klein on this PC"** ("I
+   make every image locally with FLUX 3 Image Klein (int8) on this PC's GPU, check each one and draw again by your QC-fixes choice; no
+   credits, about a minute or more per image, and its licence allows commercial use only for a business under US$5M a year.") or
+   **"Prompts for me"** ("I write one prompt per image and the character sheets; you make the images, put them in one folder and send me
+   its path; I check them."); `$ARGUMENTS` with `images api|klein|prompts` answers it. Then `T static check` (add `--offline` with
+   prompts or klein): a part the run needs that is not ready (the key with OpenAI; `images_klein` with FLUX 3 Klein; the TTS environment
+   always) is a blocker: report it with static §9's setup line and stop before any analysis. Music is needed only when a bed is planned
+   (A6s): reported, never a blocker here.
 2b. **Own voiceover: the method (Create only; item 31), before the model menu.** When the sub-mode is Create, ask with AskUserQuestion
    (header "Voiceover") the method question of `voiceover.md` §2 step 1 (its four options, none recommended); `$ARGUMENTS` with
    `voiceover native|lipsync|overlay` or `no-voiceover` answers it. Free never asks it (`awl-free-plan` step 2b); Recreate and Edit Mode
@@ -191,7 +195,7 @@ Only these section files for this phase, nothing else unless a step below says s
    - Create: store the voiceover choice (steps 2b, 5c) with the store line of `voiceover.md` §1 (`T state --run RUN set voiceover.enabled=true
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;
    - Create: store the memes choice (step 2c): `T state --run RUN set memes=include` or `memes=none`;
-   - Static: `T state --run RUN set analyze_submode=static static_images=api|prompts audio_ingest=whisper` (no model is stored; item 36);
+   - Static: `T state --run RUN set analyze_submode=static static_images=api|klein|prompts audio_ingest=whisper` (no model is stored; item 36);
    - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`
      (first line `# Requirement (the user's words)`, then the text; a file the user named is copied, a PDF through `T doc-text`);
    - start Loupe (not in Static: no Loupe call there, item 36): `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper

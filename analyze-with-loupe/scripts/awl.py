@@ -70,10 +70,12 @@ Subcommands (python awl.py <cmd> -h):
                  against the take) | mix (the take over the picture, plus a placed track for CapCut); facts, no verdict
   effort         the run's effort level (contract item 33): low | medium | high | xhigh | max, custom values held to the floors;
                  prep-all (the reference sampling) and the produce phase (agents at once, the pilot) read it; never QC
-  static         Static (contract item 36): check the setup on this PC (key present, image model, TTS, music, whisper, ffmpeg, capcut-cli)
-                 | formats (facts for the format question: the references' aspects, sizes per aspect and resolution) | format (store the pick)
-  image          Static stills: generate (OpenAI Images API, ledgered; the key only from OPENAI_API_KEY) | prompts (the file a user
-                 makes them from) | intake (the user's folder, copied in) | use (which attempt the edit takes)
+  static         Static (contract item 36): check the setup on this PC (key present, image model, FLUX 3 Klein, TTS, music, whisper,
+                 ffmpeg, capcut-cli) | formats (facts for the format question: the references' aspects, sizes per aspect and resolution)
+                 | format (store the pick)
+  image          Static stills: generate (OpenAI Images API with the key only from OPENAI_API_KEY, or FLUX 3 Klein on this PC with
+                 static_images=klein; ledgered) | prompts (the file a user makes them from) | intake (the user's folder, copied in) | use
+                 (which attempt the edit takes)
   tts            Static voice (Qwen3-TTS in its own environment): check | design (voice samples) | voice (the run's voice) | say (narration)
   narration-words Static: a narration's timed words, caption cues, SRT and per-line differences from the script
   music          Static bed (ACE-Step 1.5 in its own environment), only when planned: check | make
@@ -2348,7 +2350,7 @@ def cmd_uploads(a):
 
 CONTRACT_SUBS = (("<RUN>", "run"), ("<AWL>", "library"), ("<model id>", "model"), ("<guide path>", "guide path"), ("<recreate|create>", "analyze_submode"),
                  ("<ask|auto|off>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"),
-                 ("<memes>", "memes"), ("<api|prompts>", "static_images"))
+                 ("<memes>", "memes"), ("<api|klein|prompts>", "static_images"))
 
 
 def _contract_memes(st: dict) -> str:
@@ -6993,8 +6995,9 @@ def cmd_voiceover(a):
 
 
 # --------------------------------------------------------------------------- Static (Analyze → Static, contract item 36)
-# Narrated still-image videos: stills from the OpenAI Images API (or the user's own files), the narration from a local Qwen3-TTS voice,
-# an optional bed from a local ACE-Step 1.5, all joined by ffmpeg and in CapCut. No Higgsfield call and no Loupe call anywhere here.
+# Narrated still-image videos: stills from the OpenAI Images API, from a local FLUX 3 Image Klein (static_images=klein) or the user's own
+# files, the narration from a local Qwen3-TTS voice, an optional bed from a local ACE-Step 1.5, all joined by ffmpeg and in CapCut. No
+# Higgsfield call and no Loupe call anywhere here.
 # Every command gathers, records and measures; the agent decides (contract item 25). The OpenAI key comes only from the environment
 # (OPENAI_API_KEY): it is never printed, never written to a run, and scrubbed from every error text.
 
@@ -7114,7 +7117,7 @@ def _img_record_add(rec_p: Path, key: str, attempt: dict | None = None, use: str
 
 def _img_ledger(rd: Path, action: str, **kw) -> dict:
     """The image calls in the run's ledger (state.json -> submissions), the same rows paid video generations keep, with kind 'image'
-    and provider 'openai'. Records and reports; it never refuses."""
+    and provider 'openai' (or 'klein', made on this PC). Records and reports; it never refuses."""
     p = rd / "state.json"
     with FileLock(p.with_name("state.json.lock")):
         st = json.loads(p.read_text(encoding="utf-8"))
@@ -7122,7 +7125,7 @@ def _img_ledger(rd: Path, action: str, **kw) -> dict:
         if action == "begin":
             e = {"video": kw["video"], "lane": _lane(kw["video"]), "attempt": kw["attempt"], "fingerprint": kw["fp"], "status": "pending",
                  "job_id": None, "model": kw["model"], "request_file": kw["request_file"], "created": now_iso(), "history": [],
-                 "conflicts_seen": [], "kind": "image", "provider": "openai"}
+                 "conflicts_seen": [], "kind": "image", "provider": kw.get("provider") or "openai"}
             led.append(e)
         else:
             hits = [e for e in led if e.get("fingerprint") == kw["fp"] and e.get("kind") == "image"]
@@ -7152,6 +7155,9 @@ def _img_generate(a):
     missing = [str(r) for r in refs if not r.is_file()]
     if missing:
         fail("reference image(s) not found: " + "; ".join(missing), 2)
+    engine = a.engine or ("klein" if st.get("static_images") == "klein" else "api")
+    if engine == "klein":
+        _img_generate_klein(a, rd, st, anchor, nn, key_name, prompt, refs)
     if len(refs) > 16:
         fail("the image API takes at most 16 reference images per request", 2)
     key = _oa_key()
@@ -7229,6 +7235,95 @@ def _img_generate(a):
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "model": model, "quality": quality, "refs": len(refs),
          "usage": usage, "cost_usd_estimate": cost, "elapsed_s": round(time.time() - t0, 1), "tries": tries, "fingerprint": fp,
          "note": "view the image before you use it (the QC of reference/static §8); this attempt is now the one the edit uses"})
+
+
+def _kcfg(key: str, default=None):
+    return _scfg(f"klein.{key}", default)
+
+
+def _klein_size_facts(w: int, h: int) -> dict:
+    """Whether FLUX 3 Klein takes this size (config static.klein.limits: edges of a multiple of 16, from 64 to 4096), as facts."""
+    lim = {"multiple": 16, "min_edge": 64, "max_edge": 4096, **(_kcfg("limits", {}) or {})}
+    m, why = int(lim["multiple"]), []
+    if w % m or h % m:
+        why.append(f"both edges must be divisible by {m}")
+    if min(w, h) < int(lim["min_edge"]) or max(w, h) > int(lim["max_edge"]):
+        why.append(f"each edge must be between {lim['min_edge']} and {lim['max_edge']}")
+    return {"valid": not why, "why_not": why, "pixels": w * h, "megapixels": round(w * h / 1e6, 2)}
+
+
+def _klein_stub_png(dest: Path, w: int, h: int, seed: int) -> None:
+    """Tests and dry runs (AWL_IMAGE_STUB): a flat picture stands in for a FLUX 3 Klein image."""
+    from PIL import Image
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (w, h), ((seed * 53) % 256, (seed * 97) % 256, (seed * 29) % 256)).save(dest, format="PNG")
+
+
+def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, prompt: str, refs: list):
+    """One still made on this PC by FLUX 3 Image Klein (static_images=klein): the worker (scripts/image_worker.py) in the ComfyUI
+    install's own Python (AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT), one GPU job at a time, ledgered like an API call (provider klein, no cost).
+    The seed comes from the request and the attempt unless --seed names one, so a draw can be made again exactly."""
+    max_refs = int(_kcfg("max_refs", 10))
+    if len(refs) > max_refs:
+        fail(f"FLUX 3 Klein takes at most {max_refs} reference images per image", 2)
+    fmt = _static_fmt(st)
+    w, h = _parse_size(a.size or fmt.get("image_size") or _scfg("images.size", "1088x1920"))
+    facts = _klein_size_facts(w, h)
+    if not facts["valid"]:
+        fail(f"FLUX 3 Klein does not take {w}x{h}: " + "; ".join(facts["why_not"]), 2)
+    engine = _kcfg("engine", "flux3-image-klein-int8")
+    models = dict(_kcfg("models", {}) or {})
+    steps, alpha = int(_kcfg("steps", 16)), _kcfg("alpha", 16.0)
+    upsample = bool(_kcfg("upsample", True)) and not a.no_upsample
+    params = {"engine": engine, "models": models, "prompt": prompt, "size": f"{w}x{h}", "steps": steps, "alpha": alpha,
+              "upsample": upsample, "seed": a.seed, "refs": [{"file": str(r.resolve()), "sha1": _sha1_file(r)} for r in refs]}
+    fp = _fingerprint({"params": params})
+    folder, rec_p = _img_where(rd, nn, anchor)
+    try:
+        slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {"attempts": []}
+    except (OSError, ValueError):
+        slot = {"attempts": []}
+    done = [x for x in slot["attempts"] if x.get("fingerprint") == fp and x.get("status") == "completed" and Path(x.get("file") or "").is_file()]
+    if done and not a.again:
+        out({"ok": True, "reused": True, "file": done[-1]["file"], "attempt": done[-1]["attempt"], "seed": done[-1].get("seed"),
+             "fingerprint": fp, "note": "this exact request already made this image: nothing was made (--again asks for a new draw)"})
+    attempt = 1 + max([int(x.get("attempt") or 0) for x in slot["attempts"]] or [0])
+    seed = int(a.seed) if a.seed is not None else int(hashlib.sha256(f"{fp}:{attempt}".encode("utf-8")).hexdigest(), 16) % 2 ** 32
+    tag = f"{anchor}-a{attempt}" if anchor else f"i{key_name}-a{attempt}"
+    reqf = rd / "50-requests" / (f"anchor-{anchor}-a{attempt}-image-request.json" if anchor else f"video-{nn}-i{key_name}-a{attempt}-image-request.json")
+    write_json(reqf, {"video": nn, "image": key_name, "attempt": attempt, "kind": "image", "provider": "klein", "params": params, "seed": seed})
+    _img_ledger(rd, "begin", video=nn, attempt=tag, fp=fp, model=engine, request_file=str(reqf), provider="klein")
+    f = folder / f"{tag}.png"
+    timeout = float(a.timeout or _kcfg("timeout_s", 1800))
+    job = {"op": "generate", "root": os.environ.get("AWL_IMAGE_ROOT") or _kcfg("root") or "", "models": models, "alpha": alpha,
+           "timeout_per_image": timeout, "images": [{"prompt": prompt, "out": str(f), "width": w, "height": h, "seed": seed,
+                                                     "steps": steps, "upsample": upsample, "refs": [str(r.resolve()) for r in refs]}]}
+    t0 = time.time()
+    if os.environ.get("AWL_IMAGE_STUB"):
+        _klein_stub_png(f, w, h, seed)
+        res = {"ok": True, "stub": True, "engine": engine, "images": [{"ok": True, "out": str(f), "seed": seed, "caption": prompt, "seconds": 0.0}]}
+    else:
+        with _gpu_lock():
+            res = _worker("image", job, timeout=timeout + 600)
+    one = (res.get("images") or [{}])[0] if isinstance(res.get("images"), list) else {}
+    if not res.get("ok") or not one.get("ok") or not f.is_file():
+        err = str(one.get("error") or res.get("error") or "no image")[:600]
+        _img_ledger(rd, "set", fp=fp, status="failed", note=err[:200])
+        _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "failed", "fingerprint": fp, "at": now_iso(), "request_file": str(reqf),
+                                          "engine": engine, "seed": seed, "error": err})
+        fail(f"no image from FLUX 3 Klein: {err}", 1, fingerprint=fp, seed=seed, log_tail=str(res.get("log_tail") or "")[-1200:] or None)
+    wh = _img_size(f)
+    _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "completed", "source": "klein", "file": str(f), "fingerprint": fp,
+                                      "at": now_iso(), "model": engine, "size": wh, "seed": seed, "steps": steps, "alpha": alpha,
+                                      "upsampled": upsample, "caption": one.get("caption"), "refs": [r["file"] for r in params["refs"]],
+                                      "request_file": str(reqf), "seconds": one.get("seconds"), "cost_usd_estimate": 0.0,
+                                      "stub": bool(res.get("stub"))}, use=f.name)
+    _img_ledger(rd, "set", fp=fp, status="completed", note=f.name)
+    out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "engine": engine, "seed": seed, "upsampled": upsample,
+         "caption": one.get("caption"), "refs": len(refs), "cost_usd_estimate": 0.0, "elapsed_s": round(time.time() - t0, 1),
+         "fingerprint": fp, "stub": bool(res.get("stub")),
+         "note": "view the image before you use it (the QC of reference/static §8); caption is what the image model received; this attempt "
+                 "is now the one the edit uses"})
 
 
 def _img_plan(rd: Path, nn: str) -> dict:
@@ -7365,17 +7460,19 @@ def cmd_image(a):
 
 # ---- the local workers (Qwen3-TTS, ACE-Step 1.5): each runs in its own Python, one model load per call, one JSON line back
 
+WORKER_ENV = {"tts": "AWL_TTS_PYTHON", "music": "AWL_MUSIC_PYTHON", "image": "AWL_IMAGE_PYTHON"}
+
+
 def _worker_python(kind: str) -> str:
-    env = {"tts": "AWL_TTS_PYTHON", "music": "AWL_MUSIC_PYTHON"}[kind]
-    return (os.environ.get(env) or _scfg(f"{kind}.python") or "").strip().strip('"')
+    return (os.environ.get(WORKER_ENV[kind]) or _scfg(f"{kind}.python") or "").strip().strip('"')
 
 
 def _worker(kind: str, job: dict, timeout: float = 7200, cwd=None) -> dict:
     """Run scripts/<kind>_worker.py with the job in the tool's own interpreter; its last stdout line is the answer."""
     py = _worker_python(kind)
     if not py or not Path(py).is_file():
-        env = {"tts": "AWL_TTS_PYTHON", "music": "AWL_MUSIC_PYTHON"}[kind]
-        return {"ok": False, "error": f"{env} is not set to an existing python.exe of the {kind} environment (reference/static §9)"}
+        return {"ok": False, "error": f"{WORKER_ENV[kind]} is not set to an existing python.exe (or guarded .cmd) of the {kind} environment "
+                                      "(reference/static §9)"}
     script = Path(__file__).resolve().parent / f"{kind}_worker.py"
     jf = runs_root() / ".workers" / f"{kind}-{os.getpid()}-{int(time.time() * 1000)}.json"
     jf.parent.mkdir(parents=True, exist_ok=True)
@@ -7782,7 +7879,8 @@ def cmd_music(a):
 
 def _static_check(a):
     """Static's setup on this PC (contract item 36), as facts per part: the OpenAI key (present or not; never printed) and whether the image
-    model answers, the TTS and music environments (their workers' own checks), faster-whisper's cached models, ffmpeg's filters, capcut-cli."""
+    model answers, FLUX 3 Klein's install and model files, the TTS and music environments (their workers' own checks), faster-whisper's
+    cached models, ffmpeg's filters, capcut-cli."""
     parts = {}
     key = _oa_key()
     model = _scfg("images.model", "gpt-image-2.5-sunburst")
@@ -7798,6 +7896,14 @@ def _static_check(a):
             img["model_answers"] = False
             img["error"] = type(e).__name__
     parts["images"] = img
+    if os.environ.get("AWL_IMAGE_STUB"):
+        parts["images_klein"] = {"ready": True, "stub": True, "needed_for": "images by FLUX 3 Klein on this PC (static_images=klein)"}
+    else:
+        r = _worker("image", {"op": "check", "root": os.environ.get("AWL_IMAGE_ROOT") or _kcfg("root") or "",
+                              "models": _kcfg("models", {}) or {}}, timeout=600)
+        parts["images_klein"] = {"ready": bool(r.get("ok")), "python": _worker_python("image") or None,
+                                 "root": os.environ.get("AWL_IMAGE_ROOT") or _kcfg("root") or None,
+                                 "needed_for": "images by FLUX 3 Klein on this PC (static_images=klein)", **r}
     if os.environ.get("AWL_TTS_STUB"):
         parts["tts"] = {"ready": True, "stub": True}
     else:
@@ -7824,7 +7930,8 @@ def _static_check(a):
     except Exception as e:  # noqa: BLE001
         parts["ffmpeg"] = {"ready": False, "error": str(e)[:200]}
     parts["capcut_cli"] = {"ready": bool(shutil.which("capcut")), "path": shutil.which("capcut")}
-    out({"ok": True, "parts": parts, "note": "facts per part; which part a run needs (the API key only with static_images=api, music only when a bed is "
+    out({"ok": True, "parts": parts, "note": "facts per part; which part a run needs (the API key only with static_images=api, images_klein only with "
+                                             "static_images=klein, music only when a bed is "
                                              "planned) and what is a blocker are the agent's call (reference/static §9 has the setup)"})
 
 
@@ -7892,7 +7999,8 @@ def _format_sizes(aspect: str, res: int, margin: float) -> dict:
     pw, ph = _fit_size(ew, eh, ratio, m)
     vw, vh = by_short(720)
     return {"aspect": aspect, "res": int(res), "export": f"{ew}x{eh}", "image_size": f"{iw}x{ih}", "image_size_no_margin": f"{pw}x{ph}",
-            "preview": f"{vw}x{vh}", "image": _img_size_facts(iw, ih), "image_no_margin": _img_size_facts(pw, ph)}
+            "preview": f"{vw}x{vh}", "image": _img_size_facts(iw, ih), "image_no_margin": _img_size_facts(pw, ph),
+            "klein": _klein_size_facts(iw, ih), "klein_no_margin": _klein_size_facts(pw, ph)}
 
 
 def _static_fmt(st: dict) -> dict:
@@ -7938,21 +8046,22 @@ def _static_format_set(a):
     margin = float(_scfg("render.motion_amount", 0.12))
     fs = _format_sizes(a.aspect, int(a.res or 1080), margin)
     iw, ih = _parse_size(a.image_size or fs["image_size"])
-    facts = _img_size_facts(iw, ih)
+    klein = st.get("static_images") == "klein"
+    facts = _klein_size_facts(iw, ih) if klein else _img_size_facts(iw, ih)
     if not facts["valid"]:
-        fail(f"the image API does not take {iw}x{ih}: " + "; ".join(facts["why_not"]), 2, sizes=fs)
+        fail(f"{'FLUX 3 Klein' if klein else 'the image API'} does not take {iw}x{ih}: " + "; ".join(facts["why_not"]), 2, sizes=fs)
     ew, eh = _parse_size(a.export or fs["export"])
     if ew % 2 or eh % 2:
         fail(f"the export size needs even edges, got {ew}x{eh}", 2)
     quals = list(_scfg("images.qualities", ["low", "medium", "high", "xhigh", "max"]))
-    q = a.quality or (None if st.get("static_images") == "prompts" else _scfg("images.quality", "high"))
+    q = a.quality or (None if st.get("static_images") in ("prompts", "klein") else _scfg("images.quality", "high"))
     if q and q not in quals:
         fail(f"--quality is one of {', '.join(quals)}", 2)
     fmt = {"aspect": a.aspect, "res": int(a.res or 1080), "export": f"{ew}x{eh}", "image_size": f"{iw}x{ih}", "quality": q,
            "preview": fs["preview"], "move_margin": margin,
            "image_aspect_off": round(abs(iw / ih - STATIC_ASPECTS[a.aspect][0] / STATIC_ASPECTS[a.aspect][1])
                                      / (STATIC_ASPECTS[a.aspect][0] / STATIC_ASPECTS[a.aspect][1]), 3),
-           "image_experimental": facts["experimental"], "set_at": now_iso()}
+           "image_experimental": bool(facts.get("experimental")), "set_at": now_iso()}
     _state_set(rd, **{"static.format": fmt})
     out({"ok": True, "format": fmt, "note": "the images (API or prompts file), the CapCut canvas (`T capcut-prep --canvas`) and the check render "
                                             "follow it; the final is the CapCut project exported at the export size"})
@@ -8619,8 +8728,9 @@ def main():
     p.add_argument("--crop", help="x,y,w,h (0-1 fractions or pixels) — keep this region")
     p.add_argument("--crf", type=int, default=18); p.set_defaults(fn=cmd_clean)
 
-    p = sp.add_parser("static", help="Static (contract item 36): check (key present, image model answers, TTS and music environments, whisper, "
-                                     "ffmpeg filters, capcut-cli) | formats (facts for the format question at A5) | format (store the pick)")
+    p = sp.add_parser("static", help="Static (contract item 36): check (key present, image model answers, FLUX 3 Klein's install and files, TTS "
+                                     "and music environments, whisper, ffmpeg filters, capcut-cli) | formats (facts for the format question "
+                                     "at A5) | format (store the pick)")
     p.add_argument("action", choices=["check", "formats", "format"]); p.add_argument("--run")
     p.add_argument("--offline", action="store_true", help="check: do not ask the image API whether the model answers")
     p.add_argument("--aspect", help="format: 9:16 | 16:9 | 1:1 | 4:5 | 3:4 | 4:3")
@@ -8630,18 +8740,24 @@ def main():
     p.add_argument("--export", help="format: WxH instead of the computed export size")
     p.set_defaults(fn=cmd_static)
 
-    p = sp.add_parser("image", help="Static stills (contract item 36): generate (OpenAI Images API, ledgered) | prompts (the file a user makes them "
-                                    "from) | intake (the user's folder, copied in) | use (which attempt the edit takes)")
+    p = sp.add_parser("image", help="Static stills (contract item 36): generate (OpenAI Images API, or FLUX 3 Klein on this PC with "
+                                    "static_images=klein; ledgered) | prompts (the file a user makes them from) | intake (the user's folder, "
+                                    "copied in) | use (which attempt the edit takes)")
     p.add_argument("action", choices=["generate", "prompts", "intake", "use"]); p.add_argument("--run", required=True)
     p.add_argument("--video", help="the video, NN"); p.add_argument("--image", type=int, help="generate, use: the image's number in the video's plan")
     p.add_argument("--anchor", help="generate, use: a character's anchor image (its id, e.g. C1) instead of a video's image")
     p.add_argument("--prompt-file", help="generate: the prompt, a text file"); p.add_argument("--prompt", help="generate: the prompt as text")
-    p.add_argument("--ref", action="append", help="generate: a reference image (a character photo or anchor), repeatable, at most 16")
+    p.add_argument("--ref", action="append", help="generate: a reference image (a character photo or anchor), repeatable, at most 16 "
+                                                  "(FLUX 3 Klein: 10)")
+    p.add_argument("--engine", choices=["api", "klein"], help="generate: default the run's state.json -> static_images (klein, else api)")
+    p.add_argument("--seed", type=int, help="generate, FLUX 3 Klein: a seed (default one from the request and the attempt, recorded)")
+    p.add_argument("--no-upsample", action="store_true", help="generate, FLUX 3 Klein: the prompt already is a full scene caption, so "
+                                                              "Black Forest Labs' prompt upsampler is skipped")
     p.add_argument("--model", help="generate: default config static.images.model")
     p.add_argument("--size", help="generate: WxH, both divisible by 16 (default the run's format, state.json -> static.format)")
     p.add_argument("--quality", help="generate: low | medium | high | xhigh | max (default the run's format)")
     p.add_argument("--again", action="store_true", help="generate: a new draw of a request that already made an image")
-    p.add_argument("--timeout", type=float, help="generate: seconds to wait for the answer (default config, 300)")
+    p.add_argument("--timeout", type=float, help="generate: seconds to wait for the answer (default config: 300 for the API, 1800 for FLUX 3 Klein)")
     p.add_argument("--folder", help="intake: the folder holding the user's images (named vNN-iKK)")
     p.add_argument("--attempt", type=int, help="use: the attempt the edit takes")
     p.set_defaults(fn=cmd_image)

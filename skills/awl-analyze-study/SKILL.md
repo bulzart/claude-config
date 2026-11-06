@@ -40,7 +40,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Static (item 36): these two, and of the list above only analysis-protocol §0–§2 and §4–§9, creative-direction §1–§4 and
   brand-guardrails §3 (the product and video-physics sections are not read):*
   - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (2.3 KB)
-  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (4.0 KB)
+  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (4.2 KB)
 
 ### A3. Video analysis (as continuous sequences)
 - **Static:** each card is the Static card (static §1–§2) in place of the product and physics fields: read `video.md`, `timeline.md`
