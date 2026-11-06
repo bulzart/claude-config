@@ -6010,6 +6010,345 @@ def cmd_capcut_font(a):
          "note": "then capcut_save is not needed (the file is written); run `T capcut-repair --draft ... --keep-text` after the last save"})
 
 
+CAPCUT_MOVE_PROPS = ("UNIFORM_SCALE", "KFTypeScaleX", "KFTypeScaleY", "KFTypePositionX", "KFTypePositionY")
+
+
+def _kf_list(prop: str, dur_us: int, v0: float, v1: float) -> dict:
+    import uuid
+
+    def one(t, v):
+        return {"id": str(uuid.uuid4()).upper(), "curveType": "Line", "time_offset": int(t), "left_control": {"x": 0.0, "y": 0.0},
+                "right_control": {"x": 0.0, "y": 0.0}, "values": [float(v)], "string_value": "", "graphID": ""}
+    return {"id": str(uuid.uuid4()).upper(), "material_id": "", "property_type": prop, "keyframe_list": [one(0, v0), one(dur_us, v1)]}
+
+
+def cmd_capcut_motion(a):
+    """Static (contract item 36): each image's move from the run's timeline written into its CapCut clip as keyframes CapCut 9.x plays:
+    the scale as KFTypeScaleX with the clip's uniform scale on, the position as KFTypePositionX / KFTypePositionY (half-canvas units, y
+    up), at the clip's first and last moment, linear, the same values the check render draws. CapCut 9.7 ignores UNIFORM_SCALE
+    keyframes (2026-11-06: a project keyed that way exported with every still static), so any scale or position keyframes already on
+    those clips are replaced. Clips are matched to the timeline's images by their start (within half a frame). Run it after the last
+    capcut_save (the MCP would write its own copy of the timeline back over it)."""
+    d = Path(a.draft)
+    if not (d / "draft_content.json").is_file():
+        fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
+    if (d / ".locked").exists() or _capcut_running():
+        fail("CapCut is running: close it, then run this again", 3)
+    tlp = Path(a.timeline) if a.timeline else (_state_of(a.run)[0] / "40-briefs" / f"video-{_cf_nn(a.video)}-timeline.json"
+                                                if a.run and a.video else None)
+    if not tlp or not tlp.is_file():
+        fail("capcut-motion needs --run and --video (the run's timeline) or --timeline <file>", 2)
+    tl = json.loads(tlp.read_text(encoding="utf-8"))
+    fps = int(tl.get("fps") or 30)
+    rows = [{**r, **({} if "scale" in r else _still_motion(r))} for r in tl.get("images") or []]
+    half = 500000 / fps
+    files, unmatched, made = [], set(), {}
+
+    def keys(prop, image, dur, v0, v1):   # one set of keyframes per clip, the same ids in every copy of the timeline
+        if (prop, image, dur) not in made:
+            made[(prop, image, dur)] = _kf_list(prop, dur, v0, v1)
+        return json.loads(json.dumps(made[(prop, image, dur)]))
+    for p in _draft_contents(d):
+        content = json.loads(p.read_text(encoding="utf-8"))
+        main = next((t for t in content.get("tracks", []) if t.get("type") == "video"), None)
+        segs = (main or {}).get("segments") or []
+        keyed, found = 0, set()
+        for r in rows:
+            want = float(r["start"]) * 1e6
+            seg = next((s for s in segs if abs(int((s.get("target_timerange") or {}).get("start") or 0) - want) <= half), None)
+            if seg is None:
+                unmatched.add(int(r["image"]))
+                continue
+            found.add(int(r["image"]))
+            dur = int(seg["target_timerange"]["duration"])
+            (s0, s1), (x0, x1), (y0, y1) = r["scale"], r["x"], r["y"]
+            kfs = [k for k in seg.get("common_keyframes") or [] if k.get("property_type") not in CAPCUT_MOVE_PROPS]
+            if (s0, s1) != (1.0, 1.0):
+                kfs.append(keys("KFTypeScaleX", r["image"], dur, s0, s1))
+            if (x0, x1) != (0.0, 0.0):
+                kfs.append(keys("KFTypePositionX", r["image"], dur, x0, x1))
+            if (y0, y1) != (0.0, 0.0):
+                kfs.append(keys("KFTypePositionY", r["image"], dur, y0, y1))
+            seg["common_keyframes"] = kfs
+            seg["uniform_scale"] = {"on": True, "value": 1.0}
+            clip = seg.setdefault("clip", {})
+            clip["scale"] = {"x": float(s0), "y": float(s0)}
+            clip["transform"] = {"x": float(x0), "y": float(y0)}
+            keyed += 1
+        unmatched -= found
+        if keyed:
+            shutil.copyfile(p, p.with_name(p.name + ".motion.bak"))
+            write_text(p, json.dumps(content, ensure_ascii=False))
+        files.append({"file": str(p), "clips_keyed": keyed, "clips_on_main_track": len(segs)})
+    out({"ok": not unmatched and any(f["clips_keyed"] for f in files), "draft": str(d), "timeline": str(tlp), "files": files,
+         "images_without_a_clip": sorted(unmatched), "moves": [[r["image"], r["motion"], r["scale"], r["x"], r["y"]] for r in rows],
+         "note": "scale = KFTypeScaleX with uniform scale on; position in half-canvas units (x right, y up); run `T capcut-repair` after"})
+
+
+def cmd_capcut_text_anim(a):
+    """Static: one of CapCut's own text animations on every text of a track (an intro, an outro or both), through capcut-cli's
+    `text-anim` and its catalogue (`capcut enums --text-intros`; CapCut fetches the effect by its id when it opens the project), each
+    one's duration capped at its text's own. A text that already has one of that kind is left as it is."""
+    d = Path(a.draft)
+    if not (d / "draft_content.json").is_file():
+        fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
+    if not a.intro and not a.outro:
+        fail("capcut-text-anim needs --intro and/or --outro (a slug from `capcut enums --text-intros` / `--text-outros`)", 2)
+    if (d / ".locked").exists() or _capcut_running():
+        fail("CapCut is running: close it, then run this again", 3)
+    cli = _capcut_cli()
+    content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
+    segs = [s for tr in content.get("tracks", []) if tr.get("type") == "text" and (not a.track or str(tr.get("name") or "") == a.track)
+            for s in tr.get("segments", [])]
+    if not segs:
+        fail(f"no text on {'a track named ' + repr(a.track) if a.track else 'any text track'}", 2)
+    done, kept, failed = 0, 0, []
+    for s in segs:
+        dur_s = int((s.get("target_timerange") or {}).get("duration") or 0) / 1e6
+        args = [cli, "text-anim", str(d), str(s["id"])]
+        if a.intro:
+            args += ["--intro", a.intro, "--intro-duration", f"{max(0.001, min(float(a.intro_duration), dur_s)):.3f}s"]
+        if a.outro:
+            args += ["--outro", a.outro, "--outro-duration", f"{max(0.001, min(float(a.outro_duration), dur_s)):.3f}s"]
+        cp = run(args, timeout=120)
+        msg = (_last_json(cp.stdout) or {}).get("error") or (cp.stderr or cp.stdout or "").strip()[-300:]
+        if cp.returncode == 0:
+            done += 1
+        elif "already has" in str(msg):
+            kept += 1
+        else:
+            failed.append({"segment": s["id"], "error": msg})
+    out({"ok": not failed, "draft": str(d), "track": a.track, "intro": a.intro, "intro_duration_s": float(a.intro_duration) if a.intro else None,
+         "outro": a.outro, "texts": len(segs), "animated": done, "already_animated": kept, "failed": failed[:5],
+         "note": "the check copy burns the same entrance (the plan's captions.animation); CapCut shows it once it has fetched the effect"},
+        0 if not failed else 1)
+
+
+def _xfade_for(name: str) -> str:
+    """The check render's nearest ffmpeg xfade for a join (the CapCut project carries the real transition): an xfade name as it is, a
+    CapCut transition by the words in its name, a plain fade otherwise."""
+    n = str(name or "").lower()
+    if n in STATIC_TRANSITIONS:
+        return STATIC_TRANSITIONS[n]
+    for words, xf in ((("black",), "fadeblack"), (("white", "flash", "blanch", "glow", "light"), "fadewhite"),
+                      (("pull in", "pull-in", "zoom in", "zoom-in", "inhale"), "zoomin"), (("blur",), "hblur"),
+                      (("left",), "slideleft"), (("right",), "slideright"), (("up",), "slideup"), (("down", "bottom"), "slidedown"),
+                      (("wipe",), "wipeleft"), (("dissolve", "mix"), "dissolve")):
+        if any(w in n for w in words):
+            return xf
+    return "fade"
+
+
+def _capcut_enum(cli: str, flag: str) -> list:
+    cp = run([cli, "enums", flag], timeout=120)
+    try:
+        return json.loads(cp.stdout)
+    except ValueError:
+        fail(f"capcut enums {flag} gave no list: {(cp.stdout or cp.stderr)[-300:]}", 1)
+
+
+def _main_clips(d: Path) -> list:
+    content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
+    main = next((t for t in content.get("tracks", []) if t.get("type") == "video"), None)
+    return sorted((main or {}).get("segments") or [], key=lambda s: int(s["target_timerange"]["start"]))
+
+
+def cmd_capcut_transitions(a):
+    """Static: the timeline's joins as CapCut's own transitions (capcut-cli `transition`, a slug from `capcut enums --transitions`; the
+    measured catalogue says which play and how, data/capcut-catalogue.md): for every image whose join in is not a cut, the transition
+    on the clip before it, for the timeline's seconds. Clips are matched by their start. A clip that already has one keeps it."""
+    d = Path(a.draft)
+    if not (d / "draft_content.json").is_file():
+        fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
+    if (d / ".locked").exists() or _capcut_running():
+        fail("CapCut is running: close it, then run this again", 3)
+    tlp = Path(a.timeline) if a.timeline else (_state_of(a.run)[0] / "40-briefs" / f"video-{_cf_nn(a.video)}-timeline.json"
+                                                if a.run and a.video else None)
+    if not tlp or not tlp.is_file():
+        fail("capcut-transitions needs --run and --video (the run's timeline) or --timeline <file>", 2)
+    tl = json.loads(tlp.read_text(encoding="utf-8"))
+    rows, fps, cli = tl.get("images") or [], int(tl.get("fps") or 30), _capcut_cli()
+    known = {x.get("slug") for x in _capcut_enum(cli, "--transitions")}
+    clips = _main_clips(d)
+    half = 500000 / fps
+    done, kept, failed = [], 0, []
+    for k in range(1, len(rows)):
+        slug = str(rows[k].get("transition") or "cut")
+        if slug == "cut":
+            continue
+        if slug not in known:
+            failed.append({"image": rows[k]["image"], "error": f"{slug!r} is not a CapCut transition (capcut enums --transitions)"})
+            continue
+        want = float(rows[k - 1]["start"]) * 1e6
+        seg = next((s for s in clips if abs(int(s["target_timerange"]["start"]) - want) <= half), None)
+        if seg is None:
+            failed.append({"image": rows[k]["image"], "error": "no clip starts where the image before it starts"})
+            continue
+        cp = run([cli, "transition", str(d), str(seg["id"]), slug, "--duration", f"{float(rows[k].get('trans_s') or 0.5):.3f}s"], timeout=120)
+        msg = (_last_json(cp.stdout) or {}).get("error") or (cp.stderr or "").strip()[-300:]
+        if cp.returncode == 0:
+            done.append({"into_image": rows[k]["image"], "transition": slug, "s": rows[k].get("trans_s")})
+        elif "already has" in str(msg):
+            kept += 1
+        else:
+            failed.append({"image": rows[k]["image"], "error": msg})
+    out({"ok": not failed, "draft": str(d), "transitions": done, "already_there": kept, "failed": failed,
+         "note": "only transitions the CapCut check verified (data/capcut-catalogue.md); run `T capcut-repair` after"}, 0 if not failed else 1)
+
+
+CAPCUT_CHECK = {"amount": 0.2, "moves": [["zoom-in", 0.0], ["zoom-out", 2.0], ["pan-right", 4.0], ["pan-up", 6.0]], "move_s": 2.0,
+                "captions_from": 8.0, "caption_s": 0.6, "intro_s": 0.3, "transitions_from": 53.6, "still_s": 1.2, "transition_s": 0.5}
+
+
+def _capcut_check_home() -> Path:
+    return AWL_HOME / "runs" / "_capcut-check"
+
+
+def _capcut_check_fill(a):
+    """The check project's edits by the toolkit's own commands, after the CapCut MCP placed the four move stills (0, 2, 4, 6 s, 2 s each)
+    and the grey still (8 s to the transitions): the moves (`capcut-motion`), one caption per text intro of capcut-cli's catalogue in
+    the import-srt look with its intro (`capcut-font`, `text-anim`), one still per transition alternating two pictures with every
+    transition of the catalogue (`add-video`, `transition`), then `capcut-repair`. Writes runs/_capcut-check/manifest.json."""
+    d, c, home, cli = Path(a.draft), CAPCUT_CHECK, _capcut_check_home(), _capcut_cli()
+    media = home / "media"
+    if not (d / "draft_content.json").is_file() or not (media / "check-A.png").is_file():
+        fail("capcut-check fill needs --draft (the cloned check project with its five stills) and runs/_capcut-check/media", 2)
+    if (d / ".locked").exists() or _capcut_running():
+        fail("CapCut is running: close it, then run this again", 3)
+    me = [sys.executable, str(Path(__file__).resolve())]
+    rows = [{"image": k + 1, "start": s, "end": s + c["move_s"], "motion": m, "amount": c["amount"], **_still_motion({"motion": m, "amount": c["amount"]})}
+            for k, (m, s) in enumerate(c["moves"])]
+    write_json(home / "moves-timeline.json", {"fps": 30, "images": rows})
+    cp = run(me + ["capcut-motion", "--draft", str(d), "--timeline", str(home / "moves-timeline.json")], timeout=300)
+    if cp.returncode != 0:
+        fail("capcut-motion failed on the check project: " + (cp.stdout or cp.stderr)[-400:], 1)
+    trs = _capcut_enum(cli, "--transitions")
+    t, stills = float(c["transitions_from"]), []
+    for k in range(len(trs) + 1):
+        cp = run([cli, "add-video", str(d), str(media / ("check-A.png" if k % 2 == 0 else "check-B.png")), f"{t:.3f}", f"{c['still_s']:.3f}",
+                  "--track-name", "video"], timeout=120)
+        js = _last_json(cp.stdout) or {}
+        sid = js.get("segment_id") or js.get("segmentId") or js.get("id") or (js.get("segment") or {}).get("id")
+        if cp.returncode != 0 or not sid:
+            fail(f"add-video failed at {t:.1f} s: " + (cp.stdout or cp.stderr)[-300:], 1)
+        stills.append((sid, t))
+        t = round(t + c["still_s"], 3)
+    transitions = []
+    for k, x in enumerate(trs):
+        cp = run([cli, "transition", str(d), stills[k][0], x["slug"], "--duration", f"{c['transition_s']}s"], timeout=120)
+        transitions.append({"slug": x["slug"], "name": x.get("name") or x.get("title"), "at_s": stills[k + 1][1], "s": c["transition_s"],
+                            "written": cp.returncode == 0, "error": None if cp.returncode == 0 else (cp.stdout or cp.stderr)[-200:]})
+    intros = _capcut_enum(cli, "--text-intros")
+    srt = []
+    for k, _x in enumerate(intros):
+        s0 = c["captions_from"] + k * c["caption_s"]
+        srt += [str(k + 1), f"{_srt_time(s0)} --> {_srt_time(s0 + c['caption_s'] - 0.1)}", "STORY", ""]
+    write_text(home / "captions.srt", "\n".join(srt))
+    cp = run([cli, "import-srt", str(d), str(home / "captions.srt"), "--font-size", "12", "--color", "#FFFFFF", "--border-width", "0.08",
+              "--border-color", "#000000", "--align", "1", "--y", "0"], timeout=300)
+    if cp.returncode != 0:
+        fail("import-srt failed on the check project: " + (cp.stdout or cp.stderr)[-300:], 1)
+    font = next((f["file"] for f in _font_files() if "capcutsanstext-bold" in Path(f["file"]).name.lower()), None) or _capcut_system_font()
+    run(me + ["capcut-font", "--draft", str(d), "--font-file", font, "--track", "subtitle"], timeout=300)
+    content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
+    caps = sorted((s for tr in content.get("tracks", []) if tr.get("type") == "text" for s in tr.get("segments", [])),
+                  key=lambda s: int(s["target_timerange"]["start"]))
+    captions = []
+    for k, (x, s) in enumerate(zip(intros, caps)):
+        cp = run([cli, "text-anim", str(d), str(s["id"]), "--intro", x["slug"], "--intro-duration", f"{c['intro_s']}s"], timeout=120)
+        captions.append({"slug": x["slug"], "name": x.get("title") or x.get("name"), "at_s": round(c["captions_from"] + k * c["caption_s"], 3),
+                         "intro_s": c["intro_s"], "written": cp.returncode == 0, "error": None if cp.returncode == 0 else (cp.stdout or cp.stderr)[-200:]})
+    cp = run(me + ["capcut-repair", "--draft", str(d), "--keep-text"], timeout=900)
+    man = {"draft": str(d), "made": now_iso(), "settings": c, "moves": rows, "captions": captions, "transitions": transitions,
+           "capcut": next((p.name for p in sorted((Path(os.environ.get("LOCALAPPDATA", "")) / "CapCut" / "Apps").glob("*"))), None),
+           "repair_ok": cp.returncode == 0}
+    write_json(home / "manifest.json", man)
+    out({"ok": cp.returncode == 0 and all(x["written"] for x in captions + transitions), "draft": str(d), "manifest": str(home / "manifest.json"),
+         "moves": len(rows), "captions": len(captions), "transitions": len(transitions),
+         "not_written": [x["slug"] for x in captions + transitions if not x["written"]],
+         "length_s": round(float(c["transitions_from"]) + (len(trs) + 1) * float(c["still_s"]), 1),
+         "next": "the user opens the project in CapCut and exports it (1080x1920, 30 fps); then `T capcut-check measure --export <the mp4>`"})
+
+
+def _capcut_check_measure(a):
+    """CapCut's own export of the check project, measured: each move against the values keyed, each text intro's entrance curve (did
+    CapCut draw an animation, and its shape), each transition's change around its cut (did CapCut draw it, and its shape). Writes
+    data/capcut-catalogue.json and .md: what the agents may use, verified on this PC's CapCut, with the shapes to match a reference by."""
+    home, exp = _capcut_check_home(), Path(a.export)
+    try:
+        man = json.loads((home / "manifest.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail("no runs/_capcut-check/manifest.json: `T capcut-check fill` first", 2)
+    if not exp.is_file():
+        fail(f"export not found: {exp}", 2)
+    c = man["settings"]
+    starts = sorted({0.0, *[float(r["start"]) for r in man["moves"]], float(c["captions_from"]), *[float(x["at_s"]) for x in man["transitions"]],
+                     float(c["transitions_from"])})
+    res = _edit_profile(exp, [{"start": s} for s in starts], (0.42, 0.58))
+    ser = res.pop("_series")
+    fps, pf = ser["fps"], ser["per_frame"]
+    moves = []
+    for r in man["moves"]:
+        shot = min(res["shots"], key=lambda s: abs(s["start"] - float(r["start"])))
+        want = {"zoom": round(r["scale"][1] / r["scale"][0], 4), "pan_x_pct": round((r["x"][1] - r["x"][0]) * 50, 2),
+                "pan_y_pct": round(-(r["y"][1] - r["y"][0]) * 50, 2)}
+        got = {"zoom": shot["zoom_start_to_end"], "pan_x_pct": shot["pan_x_pct"], "pan_y_pct": shot["pan_y_pct"], "jitter": shot["jitter"]}
+        ok = abs(got["zoom"] - want["zoom"]) < 0.03 and abs(got["pan_x_pct"] - want["pan_x_pct"]) < 3 and abs(got["pan_y_pct"] - want["pan_y_pct"]) < 3
+        moves.append({"motion": r["motion"], "keyed": {"scale": r["scale"], "x": r["x"], "y": r["y"]}, "expected": want, "measured": got, "plays": ok})
+    intros = []
+    settle_at = int(round((float(c["intro_s"]) + 0.12) * fps))
+    for x in man["captions"]:
+        j = int(round(float(x["at_s"]) * fps))
+        e = _entrance_curve(pf, j, ser["scale_back"], settled_at=settle_at)
+        drawn = bool(e) and (any(abs(h - 100) > 3 for h in e["height_pct_of_settled"][:-1]) or any(abs(w - 100) > 3 for w in e["width_pct_of_settled"][:-1])
+                             or any(abs(v or 0) > 2 for v in e["rise_px"][:-1] + e["shift_x_px"][:-1])
+                             or any((f or 100) < 95 for f in e["fill_pct_of_settled"][:-1]))
+        intros.append({**x, "entrance": e, "visible_animation": drawn})
+    transitions = []
+    for x in man["transitions"]:
+        sig = _cut_signature(ser, int(round(float(x["at_s"]) * fps)), fps, before=int(fps * 0.5), after=int(fps * 0.6))
+        transitions.append({**x, "signature": sig, "visible_transition": sig["frames_changing"] >= 3})
+    cat = {"measured": now_iso(), "export": str(exp), "capcut": man.get("capcut"), "settings": c, "moves": moves,
+           "text_intros": intros, "transitions": transitions,
+           "summary": {"moves_play": sum(m["plays"] for m in moves), "moves": len(moves),
+                       "intros_drawn": sum(i["visible_animation"] for i in intros), "intros": len(intros),
+                       "transitions_drawn": sum(t["visible_transition"] for t in transitions), "transitions": len(transitions)}}
+    dd = AWL_HOME / "data"
+    dd.mkdir(parents=True, exist_ok=True)
+    write_json(dd / "capcut-catalogue.json", cat)
+    md = [f"# CapCut catalogue, measured on this PC's CapCut ({cat['capcut']}, {cat['measured'][:10]})", "",
+          "Facts, written by `T capcut-check measure` from CapCut's own export of the check project. Use only what CapCut drew. "
+          "Match a reference by its numbers (`T edit-profile`): a caption entrance by its curve, a join by its signature.", "",
+          "## Moves (`T capcut-motion`)", "", "| move | expected zoom, pan x %, pan y % | measured | plays |", "|---|---|---|---|"]
+    md += [f"| {m['motion']} | {m['expected']['zoom']}, {m['expected']['pan_x_pct']}, {m['expected']['pan_y_pct']} | "
+           f"{m['measured']['zoom']}, {m['measured']['pan_x_pct']}, {m['measured']['pan_y_pct']} | {'yes' if m['plays'] else 'NO'} |" for m in moves]
+    md += ["", f"## Text intros (`T capcut-text-anim --intro <slug>`), each at {c['intro_s']} s", "",
+           "Per frame from the caption's first: height and width in % of the settled text, rise and sideways shift in px (1080 wide), "
+           "fill in % (a fade starts low); `settle` = frames until it sits still.", "",
+           "| slug | drawn | height % | width % | rise px | shift px | fill % | settle |", "|---|---|---|---|---|---|---|---|"]
+    for i in intros:
+        e = i["entrance"] or {}
+        md.append(f"| {i['slug']} | {'yes' if i['visible_animation'] else 'NO'} | {e.get('height_pct_of_settled', '')} | {e.get('width_pct_of_settled', '')} | "
+                  f"{e.get('rise_px', '')} | {e.get('shift_x_px', '')} | {e.get('fill_pct_of_settled', '')} | {e.get('settle_frames', '')} |")
+    md += ["", f"## Transitions (`T capcut-transitions`; the timeline's `transition` = the slug), each at {c['transition_s']} s", "",
+           "Around the cut: the frames that change (a hard cut changes 1), the largest shift per frame in % of the width / height, the "
+           "largest scale step, the brightness peak and dip, the sharpness low against the steady frames.", "",
+           "| slug | drawn | changing frames | shift x / y % | scale step | bright + / - | sharp min |", "|---|---|---|---|---|---|---|"]
+    for t_ in transitions:
+        s = t_["signature"]
+        md.append(f"| {t_['slug']} | {'yes' if t_['visible_transition'] else 'NO'} | {s['frames_changing']} ({s['first_changing']}..{s['last_changing']}) | "
+                  f"{s['shift_x_max_pct']} / {s['shift_y_max_pct']} | {s['scale_step_max']} | {s['bright_peak_delta']} / {s['bright_dip_delta']} | {s['sharp_min_ratio']} |")
+    write_text(dd / "capcut-catalogue.md", "\n".join(md) + "\n")
+    out({"ok": True, "catalogue": str(dd / "capcut-catalogue.md"), "data": str(dd / "capcut-catalogue.json"), **cat["summary"],
+         "moves": [{k: m[k] for k in ("motion", "expected", "plays")} | {"measured": {k: m["measured"][k] for k in ("zoom", "pan_x_pct", "pan_y_pct")}} for m in moves]})
+
+
+def cmd_capcut_check(a):
+    """The CapCut check (Static): what this PC's CapCut really plays, measured on its own export. fill: the check project's edits; measure:
+    the export read into data/capcut-catalogue.json and .md (re-run both after a CapCut update)."""
+    {"fill": _capcut_check_fill, "measure": _capcut_check_measure}[a.action](a)
+
+
 # --------------------------------------------------------------------------- CapCut house text style
 
 HOUSE_TEXT_DEFAULT = {"font": "System", "size": 10, "fill": "#FFFFFF",
@@ -8208,6 +8547,25 @@ def _static_fmt(st: dict) -> dict:
     return ((st or {}).get("static") or {}).get("format") or {}
 
 
+def _move_margin(rd: Path) -> tuple:
+    """The margin the images need so the largest move stays sharp, from the references' measured moves (10-media/*/edit-profile.json:
+    a zoom of z needs max(z, 1/z) - 1, a pan of p % of the width or height needs p / 100), or the config's value when no reference was
+    measured. Returns (margin, where it came from)."""
+    need = []
+    for p in sorted((rd / "10-media").glob("*/edit-profile.json")):
+        try:
+            for s in json.loads(p.read_text(encoding="utf-8")).get("shots") or []:
+                if s.get("short"):
+                    continue
+                z = float(s.get("zoom_start_to_end") or 1.0)
+                need.append(max(z, 1 / z) - 1 + max(abs(float(s.get("pan_x_pct") or 0)), abs(float(s.get("pan_y_pct") or 0))) / 100)
+        except (OSError, ValueError, ZeroDivisionError):
+            continue
+    if need:
+        return round(min(0.5, max(need)), 3), "the references' largest measured move (edit-profile)"
+    return float(_scfg("render.motion_amount", 0.12)), "config static.render.motion_amount (no reference measured)"
+
+
 def _static_formats(a):
     """Facts for the format question (A5): each reference's size and aspect, the aspects by count and seconds, and per aspect (the
     references' own, then 9:16 and 16:9) and resolution (1080, 720) the export, the image sizes and whether the image API takes them."""
@@ -8228,10 +8586,10 @@ def _static_formats(a):
         b["count"] += 1
         b["seconds"] = round(b["seconds"] + float(it.get("duration_s") or 0), 1)
         b["short_sides"].append(min(int(w), int(h)))
-    margin = float(_scfg("render.motion_amount", 0.12))
+    margin, margin_from = _move_margin(rd)
     order = sorted(by, key=lambda k: (-by[k]["count"], -by[k]["seconds"]))
     aspects = list(dict.fromkeys(order + ["9:16", "16:9"]))
-    out({"ok": True, "references": refs, "aspects": by, "move_margin": margin,
+    out({"ok": True, "references": refs, "aspects": by, "move_margin": margin, "move_margin_from": margin_from,
          "formats": [_format_sizes(asp, r, margin) for asp in aspects for r in (1080, 720)],
          "qualities": list(_scfg("images.qualities", ["low", "medium", "high", "xhigh", "max"])), "images": st.get("static_images"),
          "current": _static_fmt(st) or None,
@@ -8244,7 +8602,7 @@ def _static_format_set(a):
     rd, st = _state_of(a.run)
     if a.aspect not in STATIC_ASPECTS:
         fail("format needs --aspect " + " | ".join(STATIC_ASPECTS), 2)
-    margin = float(_scfg("render.motion_amount", 0.12))
+    margin = _move_margin(rd)[0]
     fs = _format_sizes(a.aspect, int(a.res or 1080), margin)
     iw, ih = _parse_size(a.image_size or fs["image_size"])
     klein = st.get("static_images") == "klein"
@@ -8303,8 +8661,7 @@ def _slideshow_plan(a):
         rec = {}
     folder = rd / "60-outputs" / f"video-{nn}" / "images"
     total = round(lead + float(side["duration_s"]) + tail, 3)
-    cyc = list(_scfg("render.motions", ["zoom-in", "pan-right", "zoom-out", "pan-left"]))
-    rows, missing_files, unknown_lines = [], [], []
+    rows, missing_files, unknown_lines, undecided = [], [], [], []
     for i, im in enumerate(sorted(imgs, key=lambda x: int(x.get("image") or 0))):
         kk = f"{int(im.get('image') or 0):02d}"
         if im.get("start") is not None and im.get("from_line") is None:
@@ -8319,9 +8676,20 @@ def _slideshow_plan(a):
         if not f or not f.is_file():
             missing_files.append(kk)
         rows.append({"image": int(kk), "file": str(f) if f else None, "start": st_, "line": im.get("from_line"),
-                     "motion": im.get("motion") or cyc[i % len(cyc)], "amount": float(im.get("amount", _scfg("render.motion_amount", 0.12))),
-                     "transition": im.get("transition") or plan.get("transition") or _scfg("render.transition", "fade"),
-                     "trans_s": float(im.get("trans_s", plan.get("trans_s", _scfg("render.transition_s", 0.4))))})
+                     # no stock style: the move, its amount and the join are the plan's (the agent's, from the references' edit
+                     # profile and the CapCut catalogue); what the plan leaves out stays still or cut and is listed as undecided
+                     "motion": im.get("motion") or "none", "amount": float(im.get("amount") or 0.0),
+                     "transition": im.get("transition") or plan.get("transition") or "cut",
+                     "trans_s": float(im.get("trans_s", plan.get("trans_s", 0.0)) or 0.0)})
+        rows[-1].update(_still_motion({**rows[-1], **{k: im[k] for k in ("scale", "x", "y") if k in im}}))
+        if not im.get("motion") and not any(k in im for k in ("scale", "x", "y")):
+            undecided.append(f"image {int(kk)}: no motion")
+        elif str(im.get("motion") or "") not in ("", "none") and not im.get("amount") and not any(k in im for k in ("scale", "x", "y")):
+            undecided.append(f"image {int(kk)}: {im.get('motion')} with no amount")
+        if i and not (im.get("transition") or plan.get("transition")):
+            undecided.append(f"image {int(kk)}: no transition into it")
+        elif i and str(rows[-1]["transition"]) != "cut" and not rows[-1]["trans_s"]:
+            undecided.append(f"image {int(kk)}: {rows[-1]['transition']} with no seconds")
     if unknown_lines:
         fail("images whose from_line is not a narration line: " + ", ".join(unknown_lines), 2)
     fps = int(_scfg("render.fps", 30))
@@ -8360,23 +8728,84 @@ def _slideshow_plan(a):
     for i, c in enumerate(shifted, 1):
         srt += [str(i), f"{_srt_time(c['start'])} --> {_srt_time(c['end'])}", c["text"], ""]
     write_text(od / "captions.srt", "\n".join(srt))
-    out({"ok": not missing_files, "timeline": str(tlp), "duration_s": total, "fps": fps, "images": len(rows),
+    out({"ok": not missing_files and not undecided, "timeline": str(tlp), "duration_s": total, "fps": fps, "images": len(rows),
+         "undecided": undecided,
          "image_spans": [[r["image"], r["start"], r["end"]] for r in rows],
          "shorter_than_0_5s": short, "images_without_a_file": missing_files, "captions": len(shifted), "captions_srt": str(od / "captions.srt"),
          "captions_over_words": sum(1 for c in shifted if len(str(c["text"]).split()) > tl["captions"]["words"]),
+         "moves": [[r["image"], r["motion"], r["scale"], r["x"], r["y"]] for r in rows],
+         "edges_show": [r["image"] for r in rows if r.get("edge_shows")],
          "music": bool(tl["music"]),
          "note": "the cuts sit on the frame grid (each at or just before its line's start); edit motions or transitions in the timeline "
                  "file if the spec asks for others, then `T slideshow render`; a caption over the words at once is a quick word that took "
                  "the next one with it (captions.min_cue_s)"})
 
 
-def _zoompan(motion: str, amount: float, n: int) -> str:
-    A, N = max(0.0, float(amount)), max(1, n - 1)
-    cx, cy = "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)"
-    z = {"zoom-in": f"1+{A}*on/{N}", "zoom-out": f"{1 + A}-{A}*on/{N}"}.get(motion, f"{1 + A}" if motion != "none" else "1")
-    x = {"pan-right": f"(iw-iw/zoom)*on/{N}", "pan-left": f"(iw-iw/zoom)*(1-on/{N})"}.get(motion, cx)
-    y = {"pan-down": f"(ih-ih/zoom)*on/{N}", "pan-up": f"(ih-ih/zoom)*(1-on/{N})"}.get(motion, cy)
-    return f"z='{z}':x='{x}':y='{y}'"
+def _still_motion(r: dict) -> dict:
+    """An image's move as the values CapCut keys and the render draws: the scale (1 = the image covers the canvas) and the position of
+    its centre in half-canvas units (x to the right, y up, as CapCut stores a clip's position), at the image's start and at its end,
+    linear in between. A named motion with its amount (the zoom's change, or for a pan the scale it travels at), or the row's own
+    `scale`, `x`, `y` pairs (a pan with a slow zoom, a zoom toward a corner). `edge_shows` is a fact: an edge of the picture would show."""
+    a = max(0.0, float(r.get("amount") or 0.0))      # no stock amount: the plan decides it from the references (static §5)
+    m = str(r.get("motion") or "none").lower()
+    s0 = s1 = 1.0 + (a if m.startswith("pan") else 0.0)
+    x0 = x1 = y0 = y1 = 0.0
+    e = round(0.98 * a, 4)   # a pan travels the margin its scale gives, a hair inside the picture's edges
+    if m == "zoom-in":
+        s0, s1 = 1.0, 1.0 + a
+    elif m == "zoom-out":
+        s0, s1 = 1.0 + a, 1.0
+    elif m == "pan-right":           # the view travels right: the picture slides left
+        x0, x1 = e, -e
+    elif m == "pan-left":
+        x0, x1 = -e, e
+    elif m == "pan-up":              # the view travels up: the picture slides down (CapCut's y points up)
+        y0, y1 = e, -e
+    elif m == "pan-down":
+        y0, y1 = -e, e
+    mv = {"scale": [round(s0, 4), round(s1, 4)], "x": [x0, x1], "y": [y0, y1]}
+    for k in ("scale", "x", "y"):
+        if isinstance(r.get(k), (list, tuple)) and len(r[k]) == 2:
+            mv[k] = [round(float(r[k][0]), 4), round(float(r[k][1]), 4)]
+    mv["edge_shows"] = any(abs(mv["x"][i]) > mv["scale"][i] - 1 + 1e-6 or abs(mv["y"][i]) > mv["scale"][i] - 1 + 1e-6 for i in (0, 1))
+    return mv
+
+
+def _render_still(src: Path, out: Path, n: int, lead: int, W: int, H: int, fps: int, mv: dict) -> None:
+    """One still's frames with its move, each drawn exactly: an affine resample per frame from a picture resized once to the largest
+    scale it reaches, so the move glides by fractions of a pixel (ffmpeg's zoompan crops on whole pixels and the picture shook, the
+    user, 2026-11-06). n frames: the first `lead` hold the start values (the join into the image), then the move runs linear from the
+    start values to the end values over the image's own frames, as CapCut interpolates its keyframes."""
+    from PIL import Image
+    resample = getattr(Image, "Resampling", Image)
+    im = Image.open(src).convert("RGB")
+    s_max = max([1.0] + [float(v) for v in mv["scale"]])
+    k = max(W / im.width, H / im.height) * s_max          # cover the canvas at scale 1, times the largest scale
+    big = im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), resample.LANCZOS)
+    Ws, Hs = big.size
+    span = max(1, n - lead)
+    proc = subprocess.Popen([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
+                             "-s", f"{W}x{H}", "-r", str(fps), "-i", "-", "-c:v", "libx264", "-preset", "veryfast", "-crf", "12",
+                             "-pix_fmt", "yuv420p", str(out)], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        for i in range(n):
+            p = 0.0 if i < lead else (i - lead) / span
+            s = mv["scale"][0] + (mv["scale"][1] - mv["scale"][0]) * p
+            x = mv["x"][0] + (mv["x"][1] - mv["x"][0]) * p
+            y = mv["y"][0] + (mv["y"][1] - mv["y"][0]) * p
+            f = s_max / s                                     # big-picture pixels per canvas pixel in this frame
+            cx, cy = W / 2 + x * W / 2, H / 2 - y * H / 2     # the picture's centre on the canvas (CapCut's y points up)
+            fr = big.transform((W, H), getattr(Image, "Transform", Image).AFFINE, (f, 0, Ws / 2 - f * cx, 0, f, Hs / 2 - f * cy),
+                               resample=resample.BICUBIC)
+            proc.stdin.write(fr.tobytes())
+        proc.stdin.close()
+        err = proc.stderr.read().decode("utf-8", "replace")
+        rc = proc.wait(timeout=900)
+    except Exception:
+        proc.kill()
+        raise
+    if rc != 0 or not out.is_file():
+        raise RuntimeError(f"the still's frames could not be encoded: {err[-400:]}")
 
 
 def _static_caption_look(cap: dict, W: int) -> dict:
@@ -8438,25 +8867,29 @@ def _slideshow_render(a):
     for k in range(1, len(rows)):
         want = 1 if str(rows[k]["transition"]).lower() == "cut" else max(1, int(round(float(rows[k]["trans_s"]) * fps)))
         D.append(max(1, min(want, E[k - 1] - S[k - 1])))   # a join never reaches back past the previous image's own first frame
-    args, fc = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error"], []
-    for r in rows:
-        args += ["-i", str(r["file"])]
-    for k, r in enumerate(rows):
-        n = (E[k] - S[k]) + D[k]
-        fc.append(f"[{k}:v]scale={2 * W}:{2 * H}:force_original_aspect_ratio=increase,crop={2 * W}:{2 * H},setsar=1,"
-                  f"zoompan={_zoompan(r['motion'], r['amount'], n)}:d={max(2, n)}:s={W}x{H}:fps={fps},trim=end_frame={n},"
-                  f"setpts=PTS-STARTPTS,format=yuv420p[v{k}]")
-    last = "v0"
-    for k in range(1, len(rows)):
-        tr = STATIC_TRANSITIONS.get(str(rows[k]["transition"]).lower(), "fade")
-        fc.append(f"[{last}][v{k}]xfade=transition={tr}:duration={D[k] / fps:.6f}:offset={(E[k - 1] - D[k]) / fps:.6f}[x{k}]")
-        last = f"x{k}"
-    fc.append(f"[{last}]trim=end_frame={NT},setpts=PTS-STARTPTS[vout]")
     dl = rd / "deliverables"
     dl.mkdir(parents=True, exist_ok=True)
     clean = dl / f"video-{nn}-clean.mp4"
     work = rd / "60-outputs" / f"video-{nn}" / "render"
     work.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    args, fc = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error"], []
+    for k, r in enumerate(rows):   # each still with its move, drawn exactly (_render_still), then joined frame by frame
+        n = (E[k] - S[k]) + D[k]
+        mv = {key: r[key] for key in ("scale", "x", "y")} if "scale" in r else _still_motion(r)   # a timeline made before the moves
+        seg = work / f"still-{int(r['image']):02d}.mp4"
+        try:
+            _render_still(Path(r["file"]), seg, n, D[k], W, H, fps, mv)
+        except (OSError, RuntimeError, ValueError) as e:
+            fail(f"image {r['image']}: {e}", 1)
+        args += ["-i", str(seg)]
+        fc.append(f"[{k}:v]trim=end_frame={n},setpts=PTS-STARTPTS,format=yuv420p[v{k}]")
+    last = "v0"
+    for k in range(1, len(rows)):
+        tr = _xfade_for(rows[k]["transition"])   # the check copy's nearest xfade; the CapCut project carries CapCut's own transition
+        fc.append(f"[{last}][v{k}]xfade=transition={tr}:duration={D[k] / fps:.6f}:offset={(E[k - 1] - D[k]) / fps:.6f}[x{k}]")
+        last = f"x{k}"
+    fc.append(f"[{last}]trim=end_frame={NT},setpts=PTS-STARTPTS[vout]")
     # the sound on its own: the narration at its offset, the bed under it ducked, then two loudnorm passes to the target
     lead_ms = int(round(float(tl.get("narration_offset") or 0) * 1000))
     target = float(_scfg("narration.loudness_lufs", -14.0))
@@ -8474,7 +8907,6 @@ def _slideshow_render(a):
         afc.append(f"[0:a]aresample=48000,adelay={lead_ms}|{lead_ms},apad=whole_dur={T:.3f},atrim=0:{T:.3f}[aout]")
     (work / "filter.txt").write_text(";\n".join(fc), encoding="utf-8")
     (work / "filter-audio.txt").write_text(";\n".join(afc), encoding="utf-8")
-    t0 = time.time()
     mix, mixn = work / "mix.wav", work / "mix-loudness.wav"
     cp = run(aargs + ["-filter_complex", ";".join(afc), "-map", "[aout]", "-c:a", "pcm_s16le", str(mix)], timeout=1800)
     if cp.returncode != 0 or not mix.is_file():
@@ -8500,8 +8932,10 @@ def _slideshow_render(a):
             look = _static_caption_look(capl, W)
             if look:
                 spec["style"] = look
-            if "animation" in capl:
-                spec["animation"] = {"pop-up": "pop", "pop": "pop", "fade-in": "fade", "fade": "fade"}.get(str(capl.get("animation") or "").lower(), "none")
+            if "animation" in capl:   # the check copy's nearest entrance; the CapCut project carries CapCut's own intro
+                an = str(capl.get("animation") or "").lower()
+                spec["animation"] = ("pop" if any(w in an for w in ("pop", "zoom", "bounce", "spring", "boing", "grow", "jolt", "slingshot"))
+                                     else "fade" if any(w in an for w in ("fade", "dissolve", "blur")) else "none")
             (work / "fonts").mkdir(exist_ok=True)
             (work / "captions.ass").write_text(build_ass(spec, W, H, work / "fonts"), encoding="utf-8")
             prev = dl / f"video-{nn}-preview.mp4"
@@ -8530,6 +8964,304 @@ def _slideshow_render(a):
     write_json(rd / "60-outputs" / f"video-{nn}" / "slideshow.json", {**res, "made": now_iso()})
     out({**res, "note": "watch the preview: the captions, each image on its line, the motion; the CapCut project mirrors this timeline (reference/static §7)"},
         0 if res["ok"] else 1)
+
+
+def _edit_profile(video: Path, shots: list, band: tuple) -> dict:
+    """The measuring pass of `T edit-profile` (facts only), streamed frame by frame at the video's own rate on a 270 px wide copy."""
+    import cv2
+    import numpy as np
+    cap = cv2.VideoCapture(str(video))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    Wp = 270
+    orb = cv2.ORB_create(nfeatures=1500, fastThreshold=7)
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    bounds = sorted({float(s["start"]) for s in shots if float(s["start"]) > 0})   # the given cuts; every picture switch splits too
+    stride = 3   # every third frame is measured against the shot's anchor frame: a slow zoom moves a pixel only over many frames
+
+    def match(kd_a, kd_b):
+        """The similarity transform taking frame a's points to frame b's (3x3), or None."""
+        (ka, da), (kb, db) = kd_a, kd_b
+        if da is None or db is None or len(ka) < 12 or len(kb) < 12:
+            return None
+        m = bf.match(da, db)
+        if len(m) < 12:
+            return None
+        pa = np.float32([ka[x.queryIdx].pt for x in m])
+        pb = np.float32([kb[x.trainIdx].pt for x in m])
+        M, inl = cv2.estimateAffinePartial2D(pa, pb, method=cv2.RANSAC, ransacReprojThreshold=1.5)
+        return None if M is None or inl is None or inl.sum() < 10 else np.vstack([M, [0.0, 0.0, 1.0]])
+
+    def flow(g0, g1):
+        """Frame to frame with sub-pixel optical flow (Lucas-Kanade): a feature point sits on whole pixels, so a pan of under a pixel
+        per frame read through feature points looked shaky when it was not."""
+        p0 = cv2.goodFeaturesToTrack(g0, maxCorners=400, qualityLevel=0.01, minDistance=6, mask=mask)
+        if p0 is None or len(p0) < 12:
+            return None
+        p1, stt, _err = cv2.calcOpticalFlowPyrLK(g0, g1, p0, None, winSize=(21, 21), maxLevel=3,
+                                                 criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01))
+        good = stt.reshape(-1) == 1
+        if good.sum() < 12:
+            return None
+        M, inl = cv2.estimateAffinePartial2D(p0[good], p1[good], method=cv2.RANSAC, ransacReprojThreshold=0.5)
+        return None if M is None or inl is None or inl.sum() < 10 else np.vstack([M, [0.0, 0.0, 1.0]])
+
+    def params(M3, Wd, Hd):
+        """scale, rotation (degrees), and the frame centre's move in % of the width and the height (+ = right, down)."""
+        cx, cy = Wd / 2, Hd / 2
+        return (float(np.hypot(M3[0, 0], M3[1, 0])), float(np.degrees(np.arctan2(M3[1, 0], M3[0, 0]))),
+                float((M3[0, 0] * cx + M3[0, 1] * cy + M3[0, 2] - cx) / Wd * 100), float((M3[1, 0] * cx + M3[1, 1] * cy + M3[1, 2] - cy) / Hd * 100))
+
+    def seg_at(t, i0, kd0):
+        return {"start": t, "i0": i0, "anchor": kd0, "anchor_M": np.eye(3), "last": None, "traj": [(t, 1.0, 0.0, 0.0, 0.0)],
+                "S": 1.0, "X": 0.0, "Y": 0.0, "R": 0.0, "steps": [], "dx": [], "dy": [], "jumps": [], "unmatched": 0}
+    segs, cur = [], None
+    prev_gray = prev_small = None
+    per_frame, switches, i, scale_back = [], [], 0, 1.0
+    series = {"diff": [0.0], "bright": [], "sharp": [], "step": [None], "shot_starts": [0]}   # per frame, for the cut signatures
+    mask = y0 = y1 = None
+    while True:
+        ok, f = cap.read()
+        if not ok:
+            break
+        scale_back = f.shape[1] / Wp
+        fr = cv2.resize(f, (Wp, int(round(f.shape[0] / scale_back))), interpolation=cv2.INTER_AREA)
+        H = fr.shape[0]
+        if mask is None:
+            y0, y1 = int(band[0] * H), int(band[1] * H)
+            mask = np.full((H, Wp), 255, np.uint8)
+            mask[y0:y1, :] = 0          # the caption band never counts for the picture's move
+        gray = cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY)
+        small = cv2.resize(gray, (48, 85), interpolation=cv2.INTER_AREA).astype(np.float32)
+        hsv = cv2.cvtColor(fr[y0:y1], cv2.COLOR_BGR2HSV)
+        white = (hsv[..., 2] > 215) & (hsv[..., 1] < 50)
+        near_dark = cv2.dilate((hsv[..., 2] < 50).astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
+        txt = white & near_dark
+        ys, xs = np.where(cv2.dilate(txt.astype(np.uint8), np.ones((3, 3), np.uint8)) > 0)
+        fill = float(hsv[..., 2][txt].mean()) if txt.any() else 0.0
+        per_frame.append((int(ys.max() - ys.min() + 1) if len(ys) > 30 else 0, int(xs.max() - xs.min() + 1) if len(xs) > 30 else 0,
+                          float(ys.mean()) if len(ys) > 30 else 0.0, fill, int(txt.sum()), float(xs.mean()) if len(xs) > 30 else 0.0))
+        series["bright"].append(float(gray.mean() / 255))
+        series["sharp"].append(float(cv2.Laplacian(gray, cv2.CV_32F).var()))
+        t = i / fps
+        if prev_gray is None:
+            cur = seg_at(0.0, 0, orb.detectAndCompute(gray, mask))
+        else:
+            diff = float(np.abs(small - prev_small).mean() / 255)
+            M1 = flow(prev_gray, gray)
+            step = params(M1, Wp, H) if M1 is not None else None
+            series["diff"].append(diff)
+            series["step"].append(step)
+            is_switch = (diff > 0.08 and (step is None or not 0.8 < step[0] < 1.25)) or diff > 0.2
+            crossed = any((i - 1) / fps < b <= t + 1e-9 for b in bounds)
+            if is_switch or crossed:          # a new shot starts at this frame
+                if is_switch:
+                    switches.append(round(t, 3))
+                series["shot_starts"].append(i)
+                cur["end"] = t
+                segs.append(cur)
+                cur = seg_at(t, i, orb.detectAndCompute(gray, mask))
+            else:
+                if step is None:
+                    cur["unmatched"] += 1
+                else:   # frame to frame: the chained totals (a fallback) and the jitter
+                    s, r_, dx, dy = step
+                    cur["S"] *= s
+                    cur["R"] += r_
+                    cur["X"] += dx
+                    cur["Y"] += dy
+                    if abs(s - 1) > 0.02 or abs(dx) > 2 or abs(dy) > 2:   # a punch-in or a whip: kept apart from the jitter
+                        cur["jumps"].append({"t": round(t, 3), "scale_step": round(s, 4), "dx_pct": round(dx, 2), "dy_pct": round(dy, 2)})
+                    else:
+                        cur["steps"].append(s)
+                        cur["dx"].append(dx)
+                        cur["dy"].append(dy)
+                if (i - cur["i0"]) % stride == 0:   # against the anchor: the trajectory, re-anchored on the last good frame
+                    kd = orb.detectAndCompute(gray, mask)
+                    Mr = match(cur["anchor"], kd)
+                    if Mr is None and cur["last"] is not None:
+                        cur["anchor"], cur["anchor_M"] = cur["last"]
+                        cur["last"] = None
+                        Mr = match(cur["anchor"], kd)
+                    if Mr is not None:
+                        Mt = Mr @ cur["anchor_M"]
+                        cur["traj"].append((t, *params(Mt, Wp, H)))
+                        cur["last"] = (kd, Mt)
+        prev_gray, prev_small = gray, small
+        i += 1
+    cap.release()
+    if cur is None:
+        fail(f"no frame could be read from {video}", 1)
+    cur["end"] = i / fps
+    segs.append(cur)
+    res = {"fps": round(fps, 3), "frames": i, "duration_s": round(i / fps, 3), "band": [round(band[0], 3), round(band[1], 3)], "shots": []}
+    for n_, A in enumerate(segs, 1):
+        dur = max(1e-6, A["end"] - A["start"])
+        tr_ = A["traj"]
+        anchored = len(tr_) >= 3 and tr_[-1][0] >= A["start"] + 0.6 * dur
+        if anchored:   # the last anchored sample, carried at its own pace to the shot's end
+            k_ = dur / max(1e-6, tr_[-1][0] - A["start"])
+            S, R, X, Y = tr_[-1][1] ** k_, tr_[-1][2] * k_, tr_[-1][3] * k_, tr_[-1][4] * k_
+        else:
+            S, R, X, Y = A["S"], A["R"], A["X"], A["Y"]
+
+        def at(frac):   # the trajectory sample nearest a share of the shot
+            return min(tr_, key=lambda p: abs(p[0] - (A["start"] + frac * dur)))
+        q1, q3 = (at(0.25), at(0.75)) if anchored else (None, None)
+        rate = lambda a_, b_: round(((b_[1] / a_[1]) ** (1 / max(1e-6, b_[0] - a_[0])) - 1) * 100, 2) if b_[0] > a_[0] else None   # noqa: E731
+        st = np.array(A["steps"]) if A["steps"] else np.array([1.0])
+        res["shots"].append({
+            "shot": n_, "start": round(A["start"], 3), "end": round(A["end"], 3), "dur": round(dur, 3), "short": dur < 0.25,
+            "zoom_start_to_end": round(S, 4), "zoom_pct_per_s": round((S ** (1 / dur) - 1) * 100, 2),
+            "zoom_pct_per_s_first_quarter": rate(tr_[0], q1) if anchored else None,
+            "zoom_pct_per_s_last_quarter": rate(q3, tr_[-1]) if anchored else None,
+            "pan_x_pct": round(X, 2), "pan_y_pct": round(Y, 2), "rotation_deg": round(R, 2),
+            "pan_x_pct_per_s": round(X / dur, 2), "pan_y_pct_per_s": round(Y / dur, 2),
+            "measured": "against the shot's first frame" if anchored else "frame to frame (a slow move reads low this way)",
+            "jitter": {"scale_step_sd_pct": round(float(np.std(st)) * 100, 3),
+                       "x_step_sd_pct": round(float(np.std(A["dx"])), 3) if A["dx"] else None,
+                       "y_step_sd_pct": round(float(np.std(A["dy"])), 3) if A["dy"] else None},
+            "jumps": A["jumps"][:12], "pairs_unmatched": A["unmatched"], "pairs_measured": len(A["steps"]) + len(A["jumps"])})
+    res["switches"] = switches
+    res["short_shots_under_0_25s"] = [{"from": s["start"], "for_s": s["dur"], "pan_x_pct": s["pan_x_pct"], "pan_y_pct": s["pan_y_pct"],
+                                       "zoom": s["zoom_start_to_end"]} for s in res["shots"] if s["short"]]
+    ents = []
+    for j in range(1, len(per_frame) - ENTRANCE_FRAMES):
+        h0, w0, _c0, _f0, a0, _x0 = per_frame[j - 1]
+        _h1, w1, _c1, _f1, a1, _x1 = per_frame[j]
+        if a1 < 40 or (abs(w1 - w0) < 3 and abs(a1 - a0) < 0.35 * max(a0, a1)):
+            continue
+        e = _entrance_curve(per_frame, j, scale_back)
+        if e:
+            ents.append({"t": round(j / fps, 3), **e})
+    ents = [e for k, e in enumerate(ents) if not k or e["t"] - ents[k - 1]["t"] > 1.5 / fps]
+    first = [e["height_pct_of_settled"][0] for e in ents]
+    res["caption_entrances"] = {
+        "count": len(ents), "first_frame_height_pct_median": float(np.median(first)) if first else None,
+        "settle_frames_median": float(np.median([e["settle_frames"] for e in ents])) if ents else None,
+        "share_first_frame_off_size": round(sum(1 for x in first if x < 95 or x > 105) / len(first), 2) if first else None,
+        "share_rising": round(sum(1 for e in ents if (e["rise_px"][0] or 0) > 2) / len(ents), 2) if ents else None,
+        "examples": ents[:12]}
+    joins = []   # one signature per join: a join that comes as a few short shots (a slide's 2-3 frames) is read once
+    for k in series["shot_starts"][1:]:
+        if not joins or k - joins[-1] > 6:
+            joins.append(k)
+    res["cut_signatures"] = [_cut_signature(series, k, fps) for k in joins]
+    res["_series"] = {"fps": fps, "per_frame": per_frame, "scale_back": scale_back, **series}   # for the CapCut check; never written
+    return res
+
+
+ENTRANCE_FRAMES = 10   # a caption entrance is read over its first ten frames (a third of a second at 30 fps)
+
+
+def _entrance_curve(per_frame: list, j: int, scale_back: float, settled_at: int = None) -> dict | None:
+    """A caption's entrance from frame j: its height, width, horizontal shift, rise and fill per frame against the frame it settles at
+    (ENTRANCE_FRAMES later unless given), in % and in pixels of the full-size video, and the frames it takes to settle."""
+    k = j + (settled_at if settled_at is not None else ENTRANCE_FRAMES)
+    if k >= len(per_frame):
+        return None
+    hs, ws, cs, fs, _as, xs = per_frame[k]
+    if not hs or not ws:
+        return None
+    seq = per_frame[j:j + ENTRANCE_FRAMES]
+    settle = next((m for m, x in enumerate(seq) if x[0] and abs(x[0] - hs) <= 0.03 * hs and abs(x[2] - cs) <= 1.0 and abs(x[5] - xs) <= 1.0),
+                  ENTRANCE_FRAMES)
+    return {"height_pct_of_settled": [round(x[0] / hs * 100) for x in seq],
+            "width_pct_of_settled": [round(x[1] / ws * 100) for x in seq],
+            "shift_x_px": [round((x[5] - xs) * scale_back, 1) if x[1] else None for x in seq],
+            "rise_px": [round((x[2] - cs) * scale_back, 1) if x[0] else None for x in seq],
+            "fill_pct_of_settled": [round(x[3] / fs * 100) if fs else None for x in seq], "settle_frames": settle}
+
+
+def _cut_signature(series: dict, i: int, fps: float, before: int = 9, after: int = 21) -> dict:
+    """How the picture changes around a cut at frame i, frame by frame (a hard cut changes in one frame; a dissolve over many with no
+    motion; a slide or a push with a large shift; a zoom with a scale step; a flash with a brightness peak; a blur with a sharpness
+    dip): the changing frames, and per frame the difference to the frame before, the brightness, the sharpness against the steady
+    frames, the flow's shift (% of the width / height) and scale step."""
+    import numpy as np
+    lo, hi = max(1, i - before), min(len(series["diff"]), i + after)
+    d = series["diff"]
+    calm = [d[k] for k in range(lo, hi) if abs(k - i) > 6]
+    noise = float(np.median(calm)) if calm else 0.0
+    thr = max(0.004, 3 * noise)
+    changing = [k - i for k in range(lo, hi) if d[k] > thr]
+    steady_sharp = [series["sharp"][k] for k in (lo, hi - 1) if 0 <= k < len(series["sharp"])]
+    ref_sharp = float(np.mean(steady_sharp)) if steady_sharp else 1.0
+    steps = [series["step"][k] for k in range(lo, hi)]
+    sides = [series["bright"][k] for k in (lo, hi - 1) if 0 <= k < len(series["bright"])] or [0.0]
+    return {"t": round(i / fps, 3), "frames_changing": len(changing), "first_changing": min(changing) if changing else None,
+            "last_changing": max(changing) if changing else None,
+            # a flash rises above both pictures' brightness, a dip to black falls below both
+            "bright_peak_delta": round(max(series["bright"][k] for k in range(lo, hi)) - max(sides), 3),
+            "bright_dip_delta": round(min(series["bright"][k] for k in range(lo, hi)) - min(sides), 3),
+            "sharp_min_ratio": round(min(series["sharp"][k] for k in range(lo, hi)) / max(1e-6, ref_sharp), 2),
+            "shift_x_max_pct": round(max((abs(s[2]) for s in steps if s), default=0.0), 2),
+            "shift_y_max_pct": round(max((abs(s[3]) for s in steps if s), default=0.0), 2),
+            "scale_step_max": round(max((abs(s[0] - 1) for s in steps if s), default=0.0), 4),
+            "diff": [round(d[k], 4) for k in range(lo, hi)], "from_frame": lo - i}
+
+
+def cmd_edit_profile(a):
+    """A video's edit layer as numbers at its full frame rate (gather only; the agent reads and decides, static §1): per shot the
+    picture's move (its zoom from start to end and per second, the pan of its centre in % of the width and the height, + = to the right
+    and down, the rotation, the pace in its first and last quarter: a steady move keeps one pace, an eased one changes), its jumps (a
+    punch-in or a hidden cut) and its jitter (how unevenly it steps); every switch of the whole picture (a flash of a few frames shows as
+    a short shot); and every caption entrance in the caption band: the text's height, width, rise and fill in its first six frames
+    against where it settles (an animated entrance starts off its settled size, rising or faded; a cut-in starts full). For a run's
+    reference: --run RUN --ref V01 (its file, cuts and caption band from the run); for a render: the file with --timeline (its images as
+    the shots) or --cuts."""
+    try:
+        import cv2  # noqa: F401
+    except ImportError:
+        fail("edit-profile needs OpenCV (opencv-python) in this Python", 1)
+    rd = _state_of(a.run)[0] if a.run else None
+    video = Path(a.video) if a.video else None
+    cuts_p = Path(a.cuts) if a.cuts else None
+    ocr_p = None
+    if rd and a.ref:
+        inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
+        item = next((x for x in inv.get("items") or [] if x.get("id") == a.ref), None)
+        if not item:
+            fail(f"no reference {a.ref} in the run's inventory", 2)
+        video = video or Path(item["path"])
+        cuts_p = cuts_p or rd / "10-media" / a.ref / "cuts.json"
+        ocr_p = rd / "10-media" / a.ref / "ocr.json"
+    if not video or not video.is_file():
+        fail("edit-profile needs a video file, or --run RUN --ref V01", 2)
+    if a.timeline:
+        tl = json.loads(Path(a.timeline).read_text(encoding="utf-8"))
+        shots = [{"shot": int(r["image"]), "start": float(r["start"]), "end": float(r["end"])} for r in tl.get("images") or []]
+        band_c = float((tl.get("captions") or {}).get("y_rel", 0.5))
+    else:
+        if not cuts_p or not cuts_p.is_file():
+            fail("edit-profile needs the shots: --cuts <cuts.json>, --timeline <timeline.json>, or --run RUN --ref V01", 2)
+        shots = json.loads(cuts_p.read_text(encoding="utf-8")).get("shots") or []
+        ys = []
+        if ocr_p and ocr_p.is_file():
+            ys = [float(d["y_rel"]) for d in json.loads(ocr_p.read_text(encoding="utf-8")).get("detections") or [] if d.get("y_rel") is not None]
+        band_c = sorted(ys)[len(ys) // 2] if ys else 0.5
+    if a.band:
+        lo, hi = (float(x) for x in a.band.split("-"))
+    else:
+        lo, hi = max(0.0, band_c - 0.07), min(1.0, band_c + 0.07)
+    if not shots:
+        fail("no shots to measure", 2)
+    res = _edit_profile(video, shots, (lo, hi))
+    res.pop("_series", None)
+    res.update({"video": str(video), "shots_from": str(a.timeline or cuts_p)})
+    outp = Path(a.out) if a.out else ((rd / "10-media" / a.ref / "edit-profile.json") if rd and a.ref else None)
+    if outp:
+        write_json(outp, res)
+    summary = {k: res[k] for k in ("fps", "frames", "band")}
+    out({"ok": True, "file": str(outp) if outp else None, **summary,
+         "shots": [{k: s[k] for k in ("shot", "start", "end", "short", "zoom_start_to_end", "zoom_pct_per_s", "pan_x_pct", "pan_y_pct", "rotation_deg",
+                                     "zoom_pct_per_s_first_quarter", "zoom_pct_per_s_last_quarter", "jitter", "pairs_unmatched")}
+                   | {"jumps": len(s["jumps"])} for s in res["shots"]],
+         "switches": len(res["switches"]), "short_shots_under_0_25s": res["short_shots_under_0_25s"],
+         "cuts": [{k: c[k] for k in ("t", "frames_changing", "shift_x_max_pct", "shift_y_max_pct", "scale_step_max", "bright_peak_delta",
+                                     "sharp_min_ratio")} for c in res["cut_signatures"]],
+         "caption_entrances": {k: v for k, v in res["caption_entrances"].items() if k != "examples"},
+         "note": "facts: zoom_start_to_end > 1 zooms in, < 1 out; pan + = the picture moves right / down; read the examples of the caption "
+                 "entrances in the file and view one entrance and one cut densely before naming the motion and the animation (static §1)"})
 
 
 def cmd_slideshow(a):
@@ -8935,6 +9667,38 @@ def main():
     p.add_argument("--draft", help="the CapCut draft folder"); p.add_argument("--font-file", help="the font file (from --list)")
     p.add_argument("--track", help="only the texts on the track with this name (e.g. subtitle, the import-srt default)")
     p.set_defaults(fn=cmd_capcut_font)
+
+    p = sp.add_parser("capcut-motion", help="Static: each image's move from the run's timeline as keyframes CapCut 9.x plays (KFTypeScaleX with "
+                                            "uniform scale, KFTypePositionX/Y), after the last capcut_save")
+    p.add_argument("--draft", required=True); p.add_argument("--run"); p.add_argument("--video", help="NN")
+    p.add_argument("--timeline", help="a timeline file instead of the run's 40-briefs/video-NN-timeline.json")
+    p.set_defaults(fn=cmd_capcut_motion)
+
+    p = sp.add_parser("capcut-transitions", help="Static: the timeline's joins as CapCut's own transitions (capcut-cli, verified catalogue)")
+    p.add_argument("--draft", required=True); p.add_argument("--run"); p.add_argument("--video", help="NN")
+    p.add_argument("--timeline", help="a timeline file instead of the run's 40-briefs/video-NN-timeline.json")
+    p.set_defaults(fn=cmd_capcut_transitions)
+
+    p = sp.add_parser("capcut-check", help="Static: what this PC's CapCut plays, measured on its own export: fill (the check project) | "
+                                           "measure --export <mp4> (data/capcut-catalogue.md)")
+    p.add_argument("action", choices=["fill", "measure"]); p.add_argument("--draft"); p.add_argument("--export")
+    p.set_defaults(fn=cmd_capcut_check)
+
+    p = sp.add_parser("capcut-text-anim", help="Static: one CapCut text animation (capcut-cli's catalogue) on every text of a track")
+    p.add_argument("--draft", required=True); p.add_argument("--track", help="e.g. subtitle (the import-srt default); default: every text track")
+    p.add_argument("--intro", help="a slug from `capcut enums --text-intros`, e.g. pop-up"); p.add_argument("--outro")
+    p.add_argument("--intro-duration", type=float, default=0.5, help="seconds, capped at each text's own length")
+    p.add_argument("--outro-duration", type=float, default=0.5)
+    p.set_defaults(fn=cmd_capcut_text_anim)
+
+    p = sp.add_parser("edit-profile", help="a video's edit layer as numbers at its full frame rate: each shot's zoom, pan, pace and jitter, "
+                                           "the picture's switches (short flashes), the caption entrances (gather only)")
+    p.add_argument("video", nargs="?", help="the video (or --run RUN --ref V01 for a run's reference)")
+    p.add_argument("--run"); p.add_argument("--ref", help="a reference's id in the run (V01)")
+    p.add_argument("--cuts", help="a cuts.json with its shots"); p.add_argument("--timeline", help="a Static timeline: its images are the shots")
+    p.add_argument("--band", help="the caption band as fractions of the height, e.g. 0.43-0.57 (default: the OCR's caption row ± 0.07)")
+    p.add_argument("--out", help="default for a reference: 10-media/<ref>/edit-profile.json")
+    p.set_defaults(fn=cmd_edit_profile)
 
     p = sp.add_parser("capcut-prep"); p.add_argument("--draft", required=True, help="the freshly cloned draft folder")
     p.add_argument("--canvas", help="WxH: the project's canvas (Static: state.json -> static.format.export); default: the template's")

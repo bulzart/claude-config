@@ -14,8 +14,14 @@ what makes it work (one paragraph, [I]). Every speech field reads from the trans
   references show, the font (the family seen, or the closest from `T capcut-font --list`, CapCut's own fonts first), the weight, the
   size in CapCut's units for the export canvas (from the text's height on the frames), the fill, the outline (colour, width), the
   shadow, the box, the case, the words at once, the lines, the position (y_rel, alignment), the highlight (colour, size, which words),
-  the animation (pop-up, fade-in, typewriter …). A set that mixes looks gives the most common one.
-- **Motion and transitions**: which moves and how strong, which transitions, which effects on top.
+  the entrance (from the edit profile's caption entrances, below). A set that mixes looks gives the most common one.
+- **Motion, joins and the caption entrance** (the user, 2026-11-06: "dont set fixed numbers let the agent decide how much to zoom in or
+  out, how fast, decide the font popup style and do other edits based on ... what the analyzed data tells"): from the edit profiles, never
+  guessed and never a stock value: the moves as the references make them (each kind with its amount and its pace per second, steady or
+  eased, how they follow each other), the joins by their signatures and the short shots, the caption entrance by its curve. Then, for each,
+  the closest option this PC's CapCut verifiably plays (`AWL/data/capcut-catalogue.md`, §9): the moves CapCut plays, the text intro and
+  its seconds whose measured curve is nearest the references' entrance (an intro's curve at another length runs faster or slower), the
+  transition (or a cut) whose signature is nearest each kind of join. Name the numbers each choice rests on.
 - **Voice profile**: the numbers of §1 and the delivery in words; the three sample voices are written from it (§6).
 - **Bed**: yes (mood, genre, instruments, tempo, level under the voice) or no, from the references' sound.
 - **Devices to reuse**, and **what is left behind**: every reference's subject, its names, its facts and its exact lines.

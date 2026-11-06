@@ -27,9 +27,11 @@ Only these section files for this phase, nothing else unless a step below says s
 ### A1. Inventory and preprocessing (deterministic, local)
 - **Free, requirement only** (`state.json → free_references = no`): there are no references; skip the references inventory, `prep-all` of the
   references and `split-audio`, prepare the assets, the documents and the optional examples as below, and hand off to `awl-free-plan`.
-- **Static** (`state.json → analyze_submode = static`, item 36): the references are studied at exactly 1 fps with their audio:
+- **Static** (`state.json → analyze_submode = static`, item 36): the references' storyboards are at 1 fps with their audio:
   `T split-audio "<references folder>" --run RUN --audio-only` (for the sound and voice numbers of A3), and `prep-all` with
-  `--fps 1 --dense-fps 1 --no-extras --ocr-frames 30` (no extra frames around cuts or motion; more OCR frames for the captions). The
+  `--fps 1 --dense-fps 1 --no-extras --ocr-frames 30` (no extra frames around cuts or motion; more OCR frames for the captions); then
+  the edit layer at the full frame rate, `T edit-profile --run RUN --ref <V>` for every reference (its moves, joins and caption
+  entrances as numbers, `10-media/<V>/edit-profile.json`; 1 fps cannot show them, static §1). The
   assets are characters (photos and/or descriptions), prepared as below. No silent copies: no reference is ever an input.
 - `T inventory "<references folder>" --run RUN --as references`: everything in it is **reference
   material only**.

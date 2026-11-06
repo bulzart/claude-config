@@ -907,9 +907,12 @@ check(_awl._match_words(["only", "about", "a", "hundred", "thousand", "came"]) =
       "an 'a' that belongs to a number is compared with it ('about a hundred thousand' heard as 'about 100,000'); 'St' is 'Saint'")
 
 _plan = {"video": "01", "characters": [{"id": "C1", "name": "the farmer", "photo": None, "sheet_prompt": "A weathered farmer, 60s"}],
-         "images": [{"image": 1, "from_line": 1, "prompt": "A farmer in a wheat field at dusk", "characters": ["C1"], "line": "In 1959 ..."},
-                    {"image": 2, "from_line": 2, "prompt": "Army trucks on a dirt road at night", "motion": "pan-left"},
-                    {"image": 3, "from_line": 3, "prompt": "A sealed crate in a dark hangar", "transition": "cut"}]}
+         "images": [{"image": 1, "from_line": 1, "prompt": "A farmer in a wheat field at dusk", "characters": ["C1"], "line": "In 1959 ...",
+                     "motion": "zoom-in", "amount": 0.1},
+                    {"image": 2, "from_line": 2, "prompt": "Army trucks on a dirt road at night", "motion": "pan-left", "amount": 0.1,
+                     "transition": "mix", "trans_s": 0.4},
+                    {"image": 3, "from_line": 3, "prompt": "A sealed crate in a dark hangar", "motion": "zoom-out", "amount": 0.08,
+                     "transition": "cut"}]}
 (SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan), encoding="utf-8")
 js, _ = ts("image", "generate", "--run", str(SR), "--anchor", "C1", "--prompt", "Character sheet: a weathered farmer, front view")
 _anchor = Path(js["file"])
@@ -957,6 +960,20 @@ check(js.get("ok") and _sp[0][1] == 0.0 and -1 / 30 - 1e-6 <= _sp[1][1] - (0.3 +
       and Path(js["captions_srt"]).is_file() and js.get("fps") == 30,
       "slideshow plan starts each image on its narration line (after the lead), on the frame at or just before it, and writes the captions "
       "on the video's timeline")
+check(js.get("undecided") == [] and [m[1:3] for m in js["moves"]] == [["zoom-in", [1.0, 1.1]], ["pan-left", [1.1, 1.1]], ["zoom-out", [1.08, 1.0]]]
+      and _awl._xfade_for("mix") == "dissolve" and _awl._xfade_for("black-fade") == "fadeblack" and _awl._xfade_for("cut") == "fade",
+      "the timeline carries each image's decided move as exact values, and the check copy maps a CapCut transition to its nearest xfade")
+# no stock style (the user, 2026-11-06: "dont set fixed numbers let the agent decide"): what the plan leaves out stays still or cut, listed
+_undec = {**_plan, "images": [({k: v for k, v in im.items() if k not in ("motion", "amount")} if im["image"] == 1 else
+                               {k: v for k, v in im.items() if k != "transition"} if im["image"] == 2 else im) for im in _plan["images"]]}
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_undec), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01", ok=False)
+check(js.get("ok") is False and "image 1: no motion" in js.get("undecided", []) and "image 2: no transition into it" in js.get("undecided", [])
+      and js["moves"][0][1] == "none" and js["moves"][0][2] == [1.0, 1.0],
+      f"slideshow plan invents no move or join: an image the plan leaves undecided stays still and is listed ({js.get('undecided')})")
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01")
+_sp = js["image_spans"]
 js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01")
 check(js.get("ok") and js.get("size") == "720x1280" and abs(js["duration_s"] - _sp[-1][2]) < 0.15 and js.get("captions", 0) > 0
       and Path(js["preview"]).is_file() and js.get("loudness_lufs") is not None and abs(js["loudness_lufs"] + 14) < 2.5,
@@ -977,6 +994,119 @@ for _k, _r in enumerate(_reg["images"]):
 js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01", "--no-captions")
 check(js.get("ok") and js["video_frames"]["clean"] == 1394 == js["expected_frames"] and js["image_first_frames"][7] == 974,
       f"a timeline with its cuts off the frame grid renders every frame: no image is lost ({js.get('video_frames')} of {js.get('expected_frames')})")
+
+# the moves (the user, 2026-11-06: CapCut's export had no zoom at all and the check copy's zoom shook): exact values, a render that
+# glides, keyframes CapCut 9.x plays, and edit-profile reading a known move back
+_mv = {m: _awl._still_motion({"motion": m, "amount": 0.2}) for m in ("zoom-in", "zoom-out", "pan-right", "pan-up", "none")}
+check(_mv["zoom-in"]["scale"] == [1.0, 1.2] and _mv["zoom-out"]["scale"] == [1.2, 1.0] and _mv["pan-right"]["x"] == [0.196, -0.196]
+      and _mv["pan-right"]["scale"] == [1.2, 1.2] and _mv["pan-up"]["y"] == [0.196, -0.196] and _mv["none"]["scale"] == [1.0, 1.0]
+      and not any(v["edge_shows"] for v in _mv.values()) and _awl._still_motion({"motion": "zoom-in", "amount": 0.1, "x": [0.3, 0.3]})["edge_shows"],
+      "each named move becomes exact scale and position values (half-canvas units, y up); a position past the picture's margin is named")
+import numpy as _np  # noqa: E402
+from PIL import ImageDraw as _Idraw, ImageFilter as _Ifilt, ImageFont as _Ifont  # noqa: E402
+_tex = _Im.fromarray(_np.kron(_np.random.default_rng(7).integers(0, 255, (160, 90, 3)), _np.ones((6, 6, 1))).astype("uint8")).filter(_Ifilt.GaussianBlur(1))
+_texp = home.parent / "texture.png"
+_tex.save(_texp)
+_one = home.parent / "one-shot.json"
+_one.write_text(json.dumps({"shots": [{"shot": 1, "start": 0.0, "end": 2.0}]}), encoding="utf-8")
+_prof = {}
+for _m in ("zoom-in", "pan-right"):
+    _awl._render_still(_texp, home.parent / f"move-{_m}.mp4", 60, 0, 270, 480, 30, _mv[_m])
+    js, _ = ts("edit-profile", str(home.parent / f"move-{_m}.mp4"), "--cuts", str(_one), "--band", "0.0-0.01", "--out", str(home.parent / f"prof-{_m}.json"))
+    _prof[_m] = js["shots"][0]
+check(abs(_prof["zoom-in"]["zoom_start_to_end"] - 1.2) < 0.02 and abs(_prof["zoom-in"]["pan_x_pct"]) < 1
+      and -21.5 < _prof["pan-right"]["pan_x_pct"] < -17.5 and abs(_prof["pan-right"]["zoom_start_to_end"] - 1) < 0.02
+      and all(p["jitter"]["x_step_sd_pct"] < 0.03 and p["jitter"]["y_step_sd_pct"] < 0.03 for p in _prof.values()),
+      f"a still moved by the render glides (ffmpeg's zoompan measured 0.065-0.070 sideways on the run of 2026-11-06), and edit-profile reads "
+      f"the move back: zoom {_prof['zoom-in']['zoom_start_to_end']} for 1.2, pan {_prof['pan-right']['pan_x_pct']} % for -19.6 %, "
+      f"sideways jitter {[p['jitter']['x_step_sd_pct'] for p in _prof.values()]}")
+_bg = _Im.new("RGB", (270, 480), (70, 95, 130))
+
+
+def _word(scale, dy):
+    fr = _bg.copy()
+    try:
+        fnt = _Ifont.truetype("arialbd.ttf", int(round(40 * scale)))
+    except OSError:
+        fnt = _Ifont.load_default()
+    _Idraw.Draw(fr).text((135, 240 + dy), "STORY", font=fnt, fill=(255, 255, 255), stroke_width=3, stroke_fill=(0, 0, 0), anchor="mm")
+    return fr
+
+
+_pop = home.parent / "pop.mp4"
+_pp = subprocess.Popen([_awl.find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "270x480",
+                        "-r", "30", "-i", "-", "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p", str(_pop)], stdin=subprocess.PIPE)
+for _fr in [_bg] * 15 + [_word(0.86, 20), _word(1.04, -8)] + [_word(1.0, 0)] * 13:
+    _pp.stdin.write(_fr.tobytes())
+_pp.stdin.close()
+_pp.wait()
+_pone = home.parent / "pop-shot.json"
+_pone.write_text(json.dumps({"shots": [{"shot": 1, "start": 0.0, "end": 1.0}]}), encoding="utf-8")
+js, _ = ts("edit-profile", str(_pop), "--cuts", str(_pone), "--band", "0.40-0.60", "--out", str(home.parent / "prof-pop.json"))
+_ex = (json.loads((home.parent / "prof-pop.json").read_text(encoding="utf-8"))["caption_entrances"]["examples"] or [{}])[0]
+check(js["caption_entrances"]["count"] >= 1 and abs(_ex.get("t", 0) - 0.5) < 0.05 and _ex["height_pct_of_settled"][0] < 95 and _ex["rise_px"][0] > 10,
+      f"edit-profile reads a caption's pop-in: it enters small and low, then settles ({_ex.get('height_pct_of_settled')}, rise {_ex.get('rise_px')})")
+_md = home.parent / "Draft_motion"
+_md.mkdir(exist_ok=True)
+
+
+def _clip(sid, st, du, kfs):
+    return {"id": sid, "material_id": "M" + sid, "target_timerange": {"start": st, "duration": du}, "common_keyframes": kfs,
+            "clip": {"scale": {"x": 1.0, "y": 1.0}, "transform": {"x": 0.0, "y": 0.0}}, "uniform_scale": {"on": False, "value": 1.0}}
+
+
+_mdc = json.dumps({"id": "TL-4", "materials": {}, "tracks": [{"type": "video", "segments": [
+    _clip("S1", 0, 2000000, [{"id": "K1", "property_type": "UNIFORM_SCALE", "keyframe_list": []}, {"id": "K2", "property_type": "KFTypeAlpha", "keyframe_list": []}]),
+    _clip("S2", 2000000, 2000000, [])]}]})
+(_md / "draft_content.json").write_text(_mdc, encoding="utf-8")
+(_md / "draft_info.json").write_text(_mdc, encoding="utf-8")
+_mtl = home.parent / "motion-timeline.json"
+_mtl.write_text(json.dumps({"fps": 30, "images": [{"image": 1, "start": 0.0, "end": 2.0, "motion": "zoom-in", "amount": 0.2, **_mv["zoom-in"]},
+                                                  {"image": 2, "start": 2.0, "end": 4.0, "motion": "pan-right", "amount": 0.2, **_mv["pan-right"]}]}), encoding="utf-8")
+js, code, _ = t("capcut-motion", "--draft", str(_md), "--timeline", str(_mtl), env=SENV, ok=False)
+if code == 3:
+    print("SKIP  capcut-motion on a draft: CapCut is running on this machine")
+else:
+    _segs = {f: {s["id"]: s for s in json.loads((_md / f).read_text(encoding="utf-8"))["tracks"][0]["segments"]} for f in ("draft_content.json", "draft_info.json")}
+    _s1, _s2 = _segs["draft_content.json"]["S1"], _segs["draft_content.json"]["S2"]
+    _k1 = {k["property_type"]: k for k in _s1["common_keyframes"]}
+    _k2 = {k["property_type"]: k for k in _s2["common_keyframes"]}
+    check(code == 0 and set(_k1) == {"KFTypeAlpha", "KFTypeScaleX"} and [x["values"][0] for x in _k1["KFTypeScaleX"]["keyframe_list"]] == [1.0, 1.2]
+          and [x["time_offset"] for x in _k1["KFTypeScaleX"]["keyframe_list"]] == [0, 2000000] and _s1["uniform_scale"]["on"] is True
+          and [x["values"][0] for x in _k2["KFTypePositionX"]["keyframe_list"]] == [0.196, -0.196] and _s2["clip"]["scale"] == {"x": 1.2, "y": 1.2}
+          and "KFTypePositionY" not in _k2 and _segs["draft_info.json"]["S2"]["common_keyframes"] == _s2["common_keyframes"],
+          "capcut-motion keys each clip as CapCut 9.x plays it (KFTypeScaleX with uniform scale on, KFTypePositionX for a pan), drops the "
+          "UNIFORM_SCALE keys CapCut ignores, keeps other keys, in both timeline files")
+_tpl = Path(os.environ.get("LOCALAPPDATA", "")) / "CapCut" / "User Data" / "Projects" / "com.lveditor.draft" / "_analyze-stack-template"
+if not (_tpl / "draft_content.json").is_file():
+    print("SKIP  capcut-text-anim: no CapCut template on this machine")
+else:
+    import shutil as _shutil  # noqa: E402
+    _ta = home.parent / "Draft_textanim"
+    _shutil.copytree(_tpl, _ta, ignore=_shutil.ignore_patterns("*.bak", "*bak", "assets", "Resources"))
+    js, code, _ = t("capcut-text-anim", "--draft", str(_ta), "--intro", "pop-up", "--intro-duration", "0.2", env=SENV, ok=False)
+    if code == 3:
+        print("SKIP  capcut-text-anim: CapCut is running on this machine")
+    else:
+        _anims = [x for m in json.loads((_ta / "draft_content.json").read_text(encoding="utf-8"))["materials"].get("material_animations", [])
+                  for x in m.get("animations", [])]
+        js2, _c2, _ = t("capcut-text-anim", "--draft", str(_ta), "--intro", "pop-up", "--intro-duration", "0.2", env=SENV, ok=False)
+        check(code == 0 and js.get("animated") == 1 and any(x.get("resource_id") == "7145435451946439170" and x.get("duration") == 200000 for x in _anims)
+              and js2.get("animated") == 0 and js2.get("already_animated") == 1,
+              "capcut-text-anim puts CapCut's own Pop Up intro (0.2 s) on every caption through capcut-cli, and leaves an animated one as it is")
+        _vs = _awl._main_clips(_ta)
+        _ttl = home.parent / "transition-timeline.json"
+        _ttl.write_text(json.dumps({"fps": 30, "images": [
+            {"image": 1, "start": _vs[0]["target_timerange"]["start"] / 1e6, "transition": "cut"},
+            {"image": 2, "start": _vs[1]["target_timerange"]["start"] / 1e6, "transition": "mix", "trans_s": 0.3}]}), encoding="utf-8")
+        js, code, _ = t("capcut-transitions", "--draft", str(_ta), "--timeline", str(_ttl), env=SENV, ok=False)
+        _dc = json.loads((_ta / "draft_content.json").read_text(encoding="utf-8"))
+        _trm = {m["id"]: m for m in _dc["materials"].get("transitions", [])}
+        _first = next(s for tr in _dc["tracks"] if tr["type"] == "video" for s in tr["segments"] if s["id"] == _vs[0]["id"])
+        js2, _c2, _ = t("capcut-transitions", "--draft", str(_ta), "--timeline", str(_ttl), env=SENV, ok=False)
+        check(code == 0 and any(_trm.get(r, {}).get("name") == "Mix" and _trm[r]["duration"] == 300000 for r in _first.get("extra_material_refs", []))
+              and js2.get("already_there") == 1 and not js2.get("transitions"),
+              "capcut-transitions puts the timeline's CapCut transition on the clip before its cut (Mix, 0.3 s), and leaves one that is there")
 ts("static", "format", "--run", str(SR), "--aspect", "16:9", "--res", "1080")
 ts("slideshow", "plan", "--run", str(SR), "--video", "01")
 js, _ = ts("slideshow", "render", "--run", str(SR), "--video", "01", "--no-captions")

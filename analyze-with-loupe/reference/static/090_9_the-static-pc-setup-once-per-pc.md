@@ -25,5 +25,14 @@ Static runs where Qwen3-TTS (and ACE-Step 1.5 when beds are wanted, FLUX 3 Klein
   `text_encoders/qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors` and `vae/flux2-vae.safetensors` (about 18 GB). Then
   `AWL_IMAGE_PYTHON` = its `python_embeded\python.exe` (or a guarded `.cmd`) and `AWL_IMAGE_ROOT` = the portable folder. int8 is the
   build for GPUs without FP8 (the RTX 30 series); the licence allows commercial outputs only for a business under US$5M a year.
-- faster-whisper's cached models and ffmpeg (with zoompan, xfade, loudnorm, sidechaincompress, subtitles) as for every run; capcut-cli on
-  the PATH.
+- faster-whisper's cached models and ffmpeg (with xfade, loudnorm, sidechaincompress, subtitles) as for every run; OpenCV in the
+  toolkit's Python (`T edit-profile`); capcut-cli on the PATH.
+- **The CapCut check** (once per PC and again after every CapCut update; the user, 2026-11-06: "make sure ... what is left to the
+  incoming agent is already verified that will work"): a file can look right and play nothing (CapCut 9.7 ignores UNIFORM_SCALE
+  keyframes), so what CapCut draws is measured on CapCut's own export. `capcut_clone_draft` of the template into `AWL_capcut_check`,
+  `T capcut-prep --canvas 1080x1920`, the four move stills (`runs/_capcut-check/media/check-A.png` and `check-B.png` at 0, 2, 4 and 6 s,
+  2 s each) and the grey still (8 s to 53.6 s) with `capcut_add_image`, `capcut_save`; then `T capcut-check fill --draft <it>` (every
+  move, every text intro and every transition of capcut-cli's catalogue, each at a known time); the user opens it in CapCut, lets the
+  effects load and exports it; `T capcut-check measure --export <the mp4>` writes `AWL/data/capcut-catalogue.md` (and `.json`): each
+  move played or not, each intro's and each transition's measured shape and whether CapCut drew it. The plans use only what it shows
+  drawn, and match a reference's measured entrance and joins to its shapes.

@@ -54,5 +54,8 @@ Hard rules:
   `T capcut-font`, which also writes the outline where CapCut draws it); `T capcut-repair` always with `--keep-text` (it writes the media
   links CapCut opens clips by); never `capcut lint --fix`; CapCut's caption tools (capcut_transcribe, capcut_add_captions) are never
   used. No sticker or emoji is added, in a picture or a text layer (item 6).
+- Moves, joins and the caption entrance reach CapCut only through `T capcut-motion`, `T capcut-transitions` and `T capcut-text-anim`
+  (never capcut_add_keyframe or capcut_add_transition), with the plan's values: decided from the references' measured pattern (their
+  edit profiles), never a stock amount, and only what <AWL>/data/capcut-catalogue.md shows drawn by this PC's CapCut.
 - Your final message is the one JSON line awl-record (X10) ends with.
 ```

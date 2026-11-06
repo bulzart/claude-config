@@ -45,7 +45,10 @@ Only these section files for this phase, nothing else unless a step below says s
 ### A3. Video analysis (as continuous sequences)
 - **Static:** each card is the Static card (static §1–§2) in place of the product and physics fields: read `video.md`, `timeline.md`
   and every storyboard sheet (1 fps), and run `T audio-profile --audio "<files_audio file>" --out 10-media/<V>/audio-profile.json
-  --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json --voice` (the bed and the voice as numbers).
+  --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json --voice` (the bed and the voice as numbers). The moves, joins
+  and caption entrances come from `10-media/<V>/edit-profile.json` (`T edit-profile`, A1), never from the 1 fps sheets; view one caption
+  entrance and one cut densely (`T frames … --range a-b --fps 30 --sheet`) to see what its numbers describe. The spec's motion, joins and
+  entrance are matched to `AWL/data/capcut-catalogue.md` (static §2, §9: only what CapCut drew on this PC).
 - Follow `AWL/reference/analysis-protocol/` (the sections named in Read now) exactly. For each video:
   - read `video.md` and `timeline.md`;
   - view **every** storyboard sheet in order, reading the timeline beside it;

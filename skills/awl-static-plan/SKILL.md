@@ -15,7 +15,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.1 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (2.3 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (5.1 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (6.3 KB)
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (2.6 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
@@ -47,10 +47,12 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    niche `RUN/40-briefs/video-NN-facts.md`. The copy test and the sharpness gate (creative-direction §5.0, §6) pass before a script is
    final.
 7. **Image plans** (static §5), per video: `RUN/40-briefs/video-NN-images.json`: the characters (photo, or the sheet prompt of one with
-   none), one image per stretch of lines (`from_line`), every prompt with the spec's style lock word for word and §5's composition, the
-   motion and transition per the spec, the `captions` block: the spec's text look (static §2: font file, size, colours, outline, box,
-   case, highlight, animation) with this video's highlighted words. The count follows the spec's seconds per still at the script's length; the
-   narration's real timing settles it in S2.
+   none), one image per stretch of lines (`from_line`), every prompt with the spec's style lock word for word and §5's composition, each
+   image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times
+   this still's seconds, the references' order of moves; a join and the caption entrance from `AWL/data/capcut-catalogue.md`, only what it
+   shows drawn), the `captions` block: the spec's text look (static §2: font file, size, colours, outline, box, case, highlight, the
+   entrance as `animation` and `animation_s`) with this video's highlighted words. Nothing is left to a stock value: `T slideshow plan`
+   lists what is undecided. The count follows the spec's seconds per still at the script's length; the narration's real timing settles it in S2.
 8. **The bed:** only when the spec says the references use one: `RUN/40-briefs/music.json`, one track per video (static §6; the duration
    is set in S2 once the narration exists).
 9. Show one line per video (number, subject, length, images, bed or none) and go on without waiting.

@@ -240,14 +240,7 @@
       "size": "720x1280",
       "fps": 30,
       "motion_amount": 0.12,
-      "transition": "fade",
-      "transition_s": 0.4,
-      "motions": [
-        "zoom-in",
-        "pan-right",
-        "zoom-out",
-        "pan-left"
-      ]
+      "motion_amount_note": "only the image size margin of `T static formats` when no reference was measured; every move, its amount and every transition are the plan's (the agent's, from the references' edit profile and data/capcut-catalogue.md), never a stock value (the user, 2026-11-06)"
     }
   }
 }

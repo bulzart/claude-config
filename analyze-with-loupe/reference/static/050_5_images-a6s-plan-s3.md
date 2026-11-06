@@ -1,13 +1,24 @@
 ## 5 Images (A6s plan, S3)
 
-**The image plan** `40-briefs/video-NN-images.json`: `{"video": "NN", "transition": "fade", "music": true,
-"captions": {"y_rel": 0.72, "words": 3, "font_file": "<a file from T capcut-font --list>", "size": 12, "fill": "#FFFFFF",
-"stroke_color": "#000000", "stroke_width": 0.08, "shadow": false, "box_color": null, "bold": true, "case": "upper", "highlight_color":
-"#FFE14D", "highlight_words": ["…"], "animation": "pop-up"}, "characters": [{"id": "C1", "name": "…", "photo": "<path or null>", "sheet_prompt": "<when no
-photo>"}], "images": [{"image": 1, "from_line": 1, "prompt": "…", "characters": ["C1"], "motion": "zoom-in", "transition": "cut",
-"line": "<the words over it>"}, …]}`. The size and quality are the run's format (`state.json → static.format`, picked at A5, §2); a
-plan's own `"size"` changes it for that video only. `captions` is the spec's text look (§2) with this video's highlighted words: the CapCut
-project and the check copy both take it.
+**The image plan** `40-briefs/video-NN-images.json`: `{"video": "NN", "music": true,
+"captions": {"y_rel": <from the spec>, "words": <n>, "font_file": "<a file from T capcut-font --list>", "size": <n>, "fill": "#…",
+"stroke_color": "#…", "stroke_width": <n>, "shadow": false, "box_color": null, "bold": true, "case": "upper", "highlight_color": "#…",
+"highlight_words": ["…"], "animation": "<a text intro slug the catalogue shows drawn>", "animation_s": <seconds>}, "characters": [{"id":
+"C1", "name": "…", "photo": "<path or null>", "sheet_prompt": "<when no photo>"}], "images": [{"image": 1, "from_line": 1, "prompt": "…",
+"characters": ["C1"], "motion": "<zoom-in | zoom-out | pan-left | pan-right | pan-up | pan-down | none>", "amount": <the change>,
+"transition": "<cut | a transition slug the catalogue shows drawn>", "trans_s": <seconds>, "line": "<the words over it>"}, …]}`. Every value
+in `<…>` is decided from the spec (no stock value exists: `T slideshow plan` lists what is undecided). The size and quality are the run's
+format (`state.json → static.format`, picked at A5, §2); a plan's own `"size"` changes it for that video only. `captions` is the spec's
+text look (§2) with this video's highlighted words: the CapCut project and the check copy both take it.
+
+- **Moves and joins** (the spec's measured pattern, §2): each image's `motion` with its `amount` (a zoom's change: 0.2 zooms from 1.0 to
+  1.2 or back; a pan travels the margin of a scale of 1 + amount), or its own `scale`, `x` and `y` pairs at its start and end (scale 1 =
+  the picture covers the canvas; x and y in half-canvas units, y up, as CapCut keys them) for a pan with a slow zoom or a zoom toward a
+  corner. The amount is the reference's pace per second times this still's seconds, and the moves follow the references' order (in and out
+  by turns, a pan where they pan). Each join's `transition` and `trans_s` are a cut or the transition whose signature matches the
+  references' join; the caption `animation` and `animation_s` are the intro whose curve matches their entrance (data/capcut-catalogue.md;
+  only what it shows drawn). `T slideshow plan` gives each image's `moves`, lists an edge that would show (`edges_show`) and every
+  decision left out (`undecided`).
 
 - **Count and cuts**: an image starts on a narration line (`from_line`); the spec's seconds per still decide how many lines one image
   covers. A reveal, a new place or a new person starts a new image. After the narration exists, `T slideshow plan` gives every image's
