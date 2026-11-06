@@ -18,9 +18,9 @@ Only these section files for this phase, nothing else unless a step below says s
 - *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
 - effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (2.1 KB) (every run, step 5d)
 - *Static (as soon as the sub-mode is Static):*
-  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.3 KB)
+  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.4 KB)
 - *Static, when `T static check` reports a part the run needs as not ready:*
-  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (3.1 KB)
+  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (7.5 KB)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
   - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)
@@ -103,8 +103,9 @@ Only these section files for this phase, nothing else unless a step below says s
    subscription.") or **"Pro"** ("The edit may also use CapCut's Pro options the CapCut check showed working (such as the Pop Up and
    Spring text intros); you export with an active CapCut Pro subscription."); `$ARGUMENTS` with `capcut free|pro` answers it. Then `T static check` (add `--offline` with
    prompts or klein): a part the run needs that is not ready (the key with OpenAI; `images_klein` with FLUX 3 Klein; the TTS environment
-   always) is a blocker: report it with static §9's setup line and stop before any analysis. Music is needed only when a bed is planned
-   (A6s): reported, never a blocker here.
+   always) is a blocker: report it with static §9's setup line and stop before any analysis. Music (ACE-Step 1.5) makes the bed under
+   every video (static §6): when it is not ready, tell the user here with static §9's setup line; the videos then go without a bed (never
+   a blocker).
 2b. **Own voiceover: the method (Create only; item 31), before the model menu.** When the sub-mode is Create, ask with AskUserQuestion
    (header "Voiceover") the method question of `voiceover.md` §2 step 1 (its four options, none recommended); `$ARGUMENTS` with
    `voiceover native|lipsync|overlay` or `no-voiceover` answers it. Free never asks it (`awl-free-plan` step 2b); Recreate and Edit Mode

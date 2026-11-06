@@ -307,7 +307,7 @@ seconds per still, the style lock, the caption pattern, the voice profile and th
 facts; an ordinary role: a story of their world; a cartoon: a children's story), builds a scored pool of new subjects (sourced, two sources each, in a factual
 niche), makes three voice samples with Qwen3-TTS's VoiceDesign (`T tts design`) and stops once for the user's subjects and voice; then the scripts, fact sheets
 and image plans. `awl-analyze-produce` A9s runs `awl-static-sound` (S2) for every video in this session (the narration in the run's one voice, design then
-clone; its timed words and checks; the image spans; a bed from ACE-Step 1.5 only when the references use one), the characters' anchors, and with images by the
+clone; its timed words and checks; the image spans; an instrumental bed from ACE-Step 1.5 under every video, written from the references' data (the content type, the narration, the story's arc; never from analysing their music) and measured with `T music measure`), the characters' anchors, and with images by the
 user the prompts file and the folder intake; then one agent per video runs `awl-static-images` (S3: OpenAI's `gpt-image-2.5-sunburst`, or FLUX 3 Image
 Klein in int8 on this PC when the user picks it at the start, both through `T image generate`, every image viewed and checked) → `awl-static-edit` (S4: `T
 slideshow plan/render`, the clean and captioned preview at 720×1280, −14 LUFS, every cut on the frame grid and the frames each file holds counted, and the

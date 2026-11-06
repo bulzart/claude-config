@@ -14,7 +14,7 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - static §7: `AWL/reference/static/070_7_the-edit-s4.md` (6.2 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (2.2 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (2.7 KB)
 - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
 - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.1 KB)

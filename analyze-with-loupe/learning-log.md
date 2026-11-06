@@ -1118,3 +1118,19 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   `capcut_add_audio_fade` (it would fade it twice). Static §6, awl-static-plan and the router: a bed also when the user asks for one.
 - **Open:** the check render ducks the bed under the voice and the CapCut project plays it flat at the same gain (no CapCut ducking was
   checked): the two differ under speech; asked the user which one both should do.
+
+## 2026-11-06 · Static: an instrumental under every video, written from the references' data
+
+- **Asked (the user):** whether Whisper or "qwen3 1.7b" could describe the references' music (answered: Whisper and Qwen3-TTS cannot;
+  ACE-Step's own Qwen3-1.7B language model has an "understand" mode, untested here because the memory guard stopped the test at 15.1 GB),
+  then: "okay no need to do it, just make sure we try to generate instrumentals that fit the video content type and narration based on
+  the data collected from the references, no need to analyze their instrumentals too".
+- **Changed:** a bed goes under every Static video, also when the references are voice only (static §6, the router, README, §9, the
+  start skill: a missing music setup is told at the start, never a blocker). The spec's "Bed" line became a **bed brief** (§2): the
+  content type and register, the narration's pace, pitch and delivery, the beats' arc, the pictures' rhythm, and the references' own
+  sound only as the audio profile's numbers. A6s writes one track per video reasoned from it and the video's script (four worked examples
+  in §6, no lookup table), with a `why`. New `T music measure --run RUN --video NN [--gain G]` (facts, no verdict): the words heard in
+  the bed alone, its loudness, per-second level and level over each narration line, its energy by band, and as CapCut plays it (one
+  gain, no ducking) its distance under the voice and the narration's words heard with it against without it. S2 judges it (§8): a voice
+  in the bed or an arc against the story is a new take by QC fixes; a changed word is a lower level (free under any QC setting), kept as
+  `music_gain`. t02 covers measure (facts, --gain, missing bed).

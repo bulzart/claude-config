@@ -1,6 +1,7 @@
 ## 5 Images (A6s plan, S3)
 
-**The image plan** `40-briefs/video-NN-images.json`: `{"video": "NN", "music": true,
+**The image plan** `40-briefs/video-NN-images.json`: `{"video": "NN", "music": true, "music_gain": <the bed's level, kept after its
+check, §6>,
 "captions": {"y_rel": <from the spec>, "words": <n>, "font_file": "<a file from T capcut-font --list>", "size": <n>, "fill": "#…",
 "stroke_color": "#…", "stroke_width": <n>, "shadow": false, "box_color": null, "bold": true, "case": "upper", "highlight_color": "#…",
 "highlight_words": ["…"], "animation": "<a text intro slug the catalogue shows drawn>", "animation_s": <seconds>}, "characters": [{"id":

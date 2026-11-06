@@ -18,12 +18,34 @@
   word, the start repeating the reference's words, another speaker) is made again: `T tts say --only N`, at most twice, then noted.
 - The narration starts `lead_s` after the first frame and the video ends `tail_s` after it (config `static.narration`).
 
-**The bed** (ACE-Step 1.5), only when the spec says the references use one, or the user asks for one (their word outranks the spec; the
-user, 2026-11-06, on a voice-only reference: "lets also generate some instrumental over the capcut project ... with acestep 1.5"):
-`40-briefs/music.json`
-`{"tracks": [{"video": "NN", "caption": "<genre, mood, instruments, tempo in words>", "duration": <lead + narration + tail>, "bpm": 80}]}`,
-then `T music make --run RUN` (every track in one model load; instrumental). The file carries its own fades (the track's `fade_in`,
-`fade_out`) and is saved as 16-bit PCM WAV, the format the CapCut effects check showed playing (ACE-Step writes 32-bit float; the toolkit
-converts it). The image plan takes it with `"music": true` and `music_gain` (else `config.json → static.music.gain`). The check render
-ducks it under the voice; the CapCut project plays it at that gain without ducking (no CapCut ducking was checked).
+**The bed** (ACE-Step 1.5): an instrumental under every video, also when the references are voice only (the user, 2026-11-06: "make
+sure we try to generate instrumentals that fit the video content type and narration based on the data collected from the references, no
+need to analyze their instrumentals too"). It is written from what the run already knows, never from analysing the references' music:
+- **the content type**: the kind and niche of the references and of this video's subject (a life story, quick facts, a kids' story, a
+  true case, a myth …): the palette;
+- **the narration**: the spec's register and delivery in words (calm, wry, warm, ominous …), its pace (words per minute, the pauses) and
+  the voice's pitch: the music leaves the narrator's band clear (no lead melody or busy part where the voice sits) and has no vocals;
+- **the story's arc over time**: this video's beats (its script) at the narration's line times (the hook, the rise, the turn, the fall
+  or payoff, the close) and each line's emotion: where the bed holds, builds, drops or darkens;
+- **the pictures' rhythm**: the seconds per still and the cuts (§2), which a pulse can sit under without fighting;
+- **the references' own sound, as the numbers A3 already has** (`T audio-profile`: a bed or none; when one, its tempo, beat strength and
+  energy arc): a reference bed's tempo and energy are followed; its instruments and genre are not analysed.
+Reason from these to the caption, as these worked examples do, never as a lookup: a brisk, wry life story with a rise and a fall → a
+light orchestral underscore with a march pulse that swells to the peak and darkens with low strings at the fall (the run of 2026-11-06:
+100 bpm under a 175-words-a-minute narrator); a calm bedtime story → soft celesta, harp and warm strings, slow and even, no drums; a dark
+true case → low drones and sparse piano on a slow pulse that tightens at the reveal; quick surprising facts → light plucked and mallet
+sounds, curious and bouncy. `40-briefs/music.json` (A6s), one track per video:
+`{"tracks": [{"video": "NN", "caption": "<genre, mood and its arc, instruments, tempo in words; no vocals>", "duration": <lead +
+narration + tail, set in S2>, "bpm": <n>, "seed": <n>, "why": "<each choice and the data it rests on>"}]}`, then in S2 `T music make
+--run RUN` (every track in one model load; instrumental). The file carries its own fades (the track's `fade_in`, `fade_out`) and is
+saved as 16-bit PCM WAV, the format the CapCut effects check showed playing (ACE-Step writes 32-bit float; the toolkit converts it).
+
+**The bed's check and level** (S2): `T music measure --run RUN --video NN` gives the facts: the words speech-to-text hears in the bed
+alone (a voice where none was asked), its loudness, its level per second and over each narration line (does it build and drop where the
+beats do), its energy by band, and, as the CapCut project plays it (one constant gain, no ducking), its distance under the narration and
+the narration's words heard with it against without it. The level is the agent's: every narration word heard the same with the bed
+under it, and the bed still heard in the pauses; another level is tried with `--gain G` and kept as the image plan's `music_gain` (with
+`"music": true`; else `config.json → static.music.gain`). A voice in the bed, or an arc that fights the story, is a new take (another
+seed or a reworded caption, `T music make --run RUN --video NN`), at most two, by the run's QC fixes (off: none, noted in the brief). The
+check render ducks the bed under the voice; the CapCut project plays it at the gain without ducking (no CapCut ducking was checked).
 

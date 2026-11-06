@@ -962,6 +962,27 @@ check(_bcodec == ["pcm_s16le"] and js["made"][0].get("converted_from") == "pcm_f
       and abs(float(js["made"][0].get("duration_s") or 0) - 12.0) < 0.05,
       "music make saves the bed as 16-bit PCM WAV, the format the CapCut check showed playing (the stub writes float as ACE-Step does), "
       "same length, and the sidecar says it was converted")
+_nlines = len(json.loads((SR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8")).get("lines") or [])
+_g0 = float(json.loads((SR / "40-briefs" / "video-01-images.json").read_text(encoding="utf-8")).get("music_gain")
+            or json.loads((home / "config.json").read_text(encoding="utf-8"))["static"]["music"]["gain"])
+js, _ = ts("music", "measure", "--run", str(SR), "--video", "01")
+_mb, _mc = js.get("bed") or {}, js.get("as_capcut_plays_it") or {}
+check(js.get("ok") and _mb.get("codec") == "pcm_s16le" and isinstance(_mb.get("loudness_lufs"), (int, float))
+      and len(_mb.get("over_the_lines") or []) == _nlines > 0 and all("bed_db" in r for r in _mb["over_the_lines"])
+      and abs(float(_mc.get("gain") or 0) - _g0) < 1e-9 and isinstance(_mc.get("bed_under_voice_lu"), (int, float))
+      and _mc.get("words_narration_alone") == _mc.get("words_with_bed") and _mc.get("word_differences") == []
+      and Path(_mc.get("mix") or "").is_file() and (SR / "60-outputs" / "video-01" / "bed-check" / "bed-check.json").is_file()
+      and "verdict" in (js.get("note") or ""),
+      "music measure gives the bed's facts alone (codec, loudness, its level over each narration line) and under the narration at the "
+      "gain CapCut plays (its distance under the voice, the words heard with it against without it), writes them, and judges nothing")
+js2, _ = ts("music", "measure", "--run", str(SR), "--video", "01", "--gain", "0.11")
+_mc2 = js2.get("as_capcut_plays_it") or {}
+check(js2.get("ok") and _mc2.get("gain") == 0.11 and isinstance(_mc2.get("bed_under_voice_lu"), (int, float))
+      and isinstance(_mc.get("bed_under_voice_lu"), (int, float))
+      and abs((_mc2["bed_under_voice_lu"] - _mc["bed_under_voice_lu"]) - 20 * __import__("math").log10(_g0 / 0.11)) < 0.15,
+      "music measure --gain tests another level: the bed sits that many dB further under the voice")
+js, code = ts("music", "measure", "--run", str(SR), "--video", "07", ok=False)
+check(code == 2 and "music make" in json.dumps(js), "music measure of a video with no bed says to make it first")
 js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01")
 _sp = js["image_spans"]
 check(js.get("ok") and _sp[0][1] == 0.0 and -1 / 30 - 1e-6 <= _sp[1][1] - (0.3 + _ln[1]["start"]) <= 1e-6 and js.get("music")

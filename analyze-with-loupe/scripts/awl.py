@@ -78,7 +78,8 @@ Subcommands (python awl.py <cmd> -h):
                  (which attempt the edit takes)
   tts            Static voice (Qwen3-TTS in its own environment): check | design (voice samples) | voice (the run's voice) | say (narration)
   narration-words Static: a narration's timed words, caption cues, SRT and per-line differences from the script
-  music          Static bed (ACE-Step 1.5 in its own environment), only when planned: check | make
+  music          Static bed under every video (ACE-Step 1.5 in its own environment): check | make | measure (the bed alone and under
+                 the narration as CapCut plays it: a voice in it, its level, the narration's words with it)
   slideshow      Static: plan (timeline from the image plan and the narration) | render (clean and captioned preview mp4)
   effects        Static: the optional effects folder as facts (scan: sounds, overlays, keying, contact sheets)
   capcut-effects Static: the timeline's overlays and sounds into the CapCut project, by the ways the CapCut effects check verified
@@ -9249,9 +9250,106 @@ def _bed_pcm16(f: Path) -> dict:
     return {"codec": "pcm_s16le", "converted": True, "from": before, "peak_db_before": peak, "gain_db_applied": gain}
 
 
+def _heard_words(tr: dict) -> list:
+    words = [w.get("w", "") for s in tr.get("segments", []) for w in s.get("words") or []]
+    if not words:   # the ffmpeg fallback gives segment texts only
+        words = [t for s in tr.get("segments", []) for t in str(s.get("text") or "").split()]
+    return [y for y in (_norm_word(w) for w in words) if y]
+
+
+def _music_measure(a):
+    """Facts on a made bed (contract item 36; static §6, §8), never a verdict: the bed alone (length, codec, loudness, its level per
+    second and over each narration line, its share of energy by band, the words speech-to-text hears in it: a voice where none was asked)
+    and the bed as the CapCut project plays it (one constant gain, no ducking) under the narration: its loudness at that gain against the
+    narration's, and the narration's words heard with it against without it. Writes 60-outputs/video-NN/bed-check/bed-check.json."""
+    import difflib
+    import numpy as np
+    if not a.run or not a.video:
+        fail("music measure needs --run and --video", 2)
+    rd, _st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    bed = rd / "30-assets" / "music" / f"video-{nn}.wav"
+    if not bed.is_file():
+        fail(f"no bed for video {nn}: `T music make` first ({bed})", 2)
+    try:
+        side = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"no narration for video {nn}: `T tts say` first", 2)
+    tl_p = rd / "40-briefs" / f"video-{nn}-timeline.json"
+    tl = json.loads(tl_p.read_text(encoding="utf-8")) if tl_p.is_file() else {}
+    lead = float(tl.get("narration_offset", _scfg("narration.lead_s", 0.3)) or 0)
+    gain = float(a.gain) if a.gain is not None else float(_img_plan(rd, nn).get("music_gain") or _scfg("music.gain", 0.22))
+    if gain <= 0:
+        fail("the gain must be above 0", 2)
+    work = rd / "60-outputs" / f"video-{nn}" / "bed-check"
+    work.mkdir(parents=True, exist_ok=True)
+    ff, sr = find_tool("ffmpeg"), 16000
+    cp = subprocess.run([ff, "-nostdin", "-v", "error", "-i", str(bed), "-ac", "1", "-ar", str(sr), "-f", "f32le", "-"],
+                        capture_output=True, timeout=600)
+    x = np.frombuffer(cp.stdout, dtype=np.float32).astype(np.float64) if cp.returncode == 0 else np.zeros(0)
+    total = float(tl.get("duration_s") or 0) or len(x) / sr
+
+    def lvl(t0, t1):
+        seg = x[int(max(0.0, t0) * sr):int(max(0.0, t1) * sr)]
+        return round(float(20 * np.log10(np.sqrt((seg ** 2).mean()) + 1e-9)), 1) if len(seg) else None
+    lines = side.get("lines") or []
+    over_lines = [{"n": r.get("n"), "start": round(lead + float(r["start"]), 2), "end": round(lead + float(r["end"]), 2),
+                   "bed_db": lvl(lead + float(r["start"]), lead + float(r["end"]))} for r in lines]
+    bands = {}
+    if len(x) >= 2048:
+        N = 2048
+        P = (np.abs(np.fft.rfft(np.lib.stride_tricks.sliding_window_view(x, N)[:: N // 2] * np.hanning(N), axis=1)) ** 2).mean(axis=0)
+        f = np.fft.rfftfreq(N, 1 / sr)
+        tot = float(P.sum()) or 1.0
+        for lo, hi in ((20, 250), (250, 1000), (1000, 4000), (4000, 8000)):
+            bands[f"{lo}-{hi}Hz"] = round(float(P[(f >= lo) & (f < hi)].sum()) / tot, 3)
+        bands["centroid_hz"] = int(float((f * P).sum()) / tot)
+    # the narration placed as the project places it, alone and with the bed at the gain (stereo as CapCut plays them; the same
+    # speech-to-text reads both, so what differs is the bed's doing)
+    narr, placed, mixed = Path(side["file"]), work / "narration-placed.wav", work / f"mix-gain-{gain:.3f}.wav"
+    ms = int(round(lead * 1000))
+
+    def stereo(p):
+        return "" if int((([s for s in ffprobe_json(p).get("streams", []) if s.get("codec_type") == "audio"] or [{}])[0]).get("channels") or 1) == 2 \
+            else "pan=stereo|c0=c0|c1=c0,"
+    run([ff, "-nostdin", "-y", "-loglevel", "error", "-i", str(narr), "-af",
+         f"aresample=48000,{stereo(narr)}adelay={ms}|{ms},apad=whole_dur={total:.3f},atrim=0:{total:.3f}", str(placed)], check=True, timeout=600)
+    run([ff, "-nostdin", "-y", "-loglevel", "error", "-i", str(placed), "-i", str(bed), "-filter_complex",
+         f"[1:a]aresample=48000,{stereo(bed)}volume={gain},atrim=0:{total:.3f},apad=whole_dur={total:.3f}[b];"
+         f"[0:a][b]amix=inputs=2:normalize=0:duration=first[o]", "-map", "[o]", str(mixed)], check=True, timeout=600)
+    lang = STATIC_LANG_ISO.get(str(side.get("language") or "").lower(), "auto")
+    tr_bed = transcribe(str(bed), work, "small", lang)
+    w_alone, w_n = _heard_words(tr_bed), _heard_words(transcribe(str(placed), work, "small", lang))
+    w_m = _heard_words(transcribe(str(mixed), work, "small", lang))
+    sm = difflib.SequenceMatcher(a=w_n, b=w_m, autojunk=False)
+    diffs = [{"op": op, "alone": " ".join(w_n[i1:i2]), "with_bed": " ".join(w_m[j1:j2])} for op, i1, i2, j1, j2 in sm.get_opcodes() if op != "equal"]
+    bed_lufs, narr_lufs = _ebur128(bed), _ebur128(narr)
+    at_gain = round(bed_lufs + 20 * math.log10(gain), 1) if bed_lufs is not None else None
+    res = {"ok": True, "video": nn, "engine": tr_bed.get("engine"),
+           "bed": {"file": str(bed), "codec": _audio_codec(bed), "duration_s": round(len(x) / sr, 3), "loudness_lufs": bed_lufs,
+                   "per_second_db": [lvl(i, i + 1) for i in range(int(len(x) // sr))], "bands": bands,
+                   "before_first_line_db": lvl(0, lead + float(lines[0]["start"])) if lines else None,
+                   "over_the_lines": over_lines,
+                   "after_last_line_db": lvl(lead + float(lines[-1]["end"]), total) if lines else None,
+                   "words_heard_alone": len(w_alone), "heard_alone": " ".join(w_alone)[:300]},
+           "narration": {"file": str(narr), "loudness_lufs": narr_lufs, "lead_s": lead},
+           "as_capcut_plays_it": {"gain": gain, "gain_db": round(20 * math.log10(gain), 2), "bed_at_gain_lufs": at_gain,
+                                  "bed_under_voice_lu": round(narr_lufs - at_gain, 1) if narr_lufs is not None and at_gain is not None else None,
+                                  "words_narration_alone": len(w_n), "words_with_bed": len(w_m), "word_differences": diffs[:40],
+                                  "mix": str(mixed)},
+           "note": "facts, not a verdict (static §6, §8): a voice in the bed (words heard in it alone), narration words changed under it, its "
+                   "level against the voice and its rise and fall over the lines are the agent's to judge. The CapCut project plays the bed "
+                   "at this one gain (no ducking); the check render ducks it. Another level: `--gain G`, then `music_gain` in the image plan"}
+    write_json(work / "bed-check.json", res)
+    out(res)
+
+
 def cmd_music(a):
-    """Static's bed (contract item 36), only when the plan calls for one: every track of --plan in one ACE-Step 1.5 load (instrumental, the
-    narration's length plus a tail, fades), saved as 30-assets/music/video-NN.wav (16-bit PCM, _bed_pcm16) with a sidecar."""
+    """Static's bed under every video (contract item 36, static §6): every track of --plan in one ACE-Step 1.5 load (instrumental, the
+    narration's length plus a tail, fades), saved as 30-assets/music/video-NN.wav (16-bit PCM, _bed_pcm16) with a sidecar; `measure`
+    gives a made bed's facts (_music_measure)."""
+    if a.action == "measure":
+        _music_measure(a)
     if a.action == "check":
         if os.environ.get("AWL_MUSIC_STUB"):
             out({"ok": True, "stub": True, "ready": True})
@@ -9301,7 +9399,8 @@ def cmd_music(a):
                                                 "stub": bool(os.environ.get("AWL_MUSIC_STUB")), "format": fmt})
             made.append({"video": t_["video"], "file": str(f), "duration_s": (media_summary(f) or {}).get("duration_s"),
                          "codec": fmt.get("codec"), "converted_from": fmt.get("from")})
-    out({"ok": bool(made), "made": made, "asked": len(tracks), "note": "listen before use; the bed goes under the narration ducked (slideshow render)"})
+    out({"ok": bool(made), "made": made, "asked": len(tracks),
+         "note": "next, per video: `T music measure --run RUN --video NN` (the bed alone and under the narration as CapCut plays it)"})
 
 
 def _static_check(a):
@@ -9342,7 +9441,7 @@ def _static_check(a):
         root = os.environ.get("AWL_MUSIC_ROOT") or _scfg("music.root") or ""
         r = _worker("music", {"op": "check", "root": root, "config": _scfg("music.config", "acestep-v15-turbo")}, timeout=600, cwd=root or None)
         parts["music"] = {"ready": bool(r.get("ok")), "python": _worker_python("music") or None, "root": root or None,
-                          "needed_for": "a bed, only when the plan calls for one", **r}
+                          "needed_for": "the bed under every video (static §6); without it the videos go without one", **r}
     try:
         import faster_whisper  # noqa: F401
         hub = Path(os.environ.get("HF_HOME") or Path.home() / ".cache" / "huggingface") / "hub"
@@ -9358,8 +9457,8 @@ def _static_check(a):
         parts["ffmpeg"] = {"ready": False, "error": str(e)[:200]}
     parts["capcut_cli"] = {"ready": bool(shutil.which("capcut")), "path": shutil.which("capcut")}
     out({"ok": True, "parts": parts, "note": "facts per part; which part a run needs (the API key only with static_images=api, images_klein only with "
-                                             "static_images=klein, music only when a bed is "
-                                             "planned) and what is a blocker are the agent's call (reference/static §9 has the setup)"})
+                                             "static_images=klein, music for the bed under every video) and what is a "
+                                             "blocker are the agent's call (reference/static §9 has the setup)"})
 
 
 # ---- the format (A5): the aspect, the export size the CapCut project is made at (its export is the final), the image size, the quality
@@ -11312,10 +11411,13 @@ def main():
     p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"))
     p.set_defaults(fn=cmd_narration_words)
 
-    p = sp.add_parser("music", help="Static's bed (contract item 36), only when the plan calls for one: check | make (ACE-Step 1.5 in its own "
-                                    "environment, AWL_MUSIC_PYTHON and AWL_MUSIC_ROOT)")
-    p.add_argument("action", choices=["check", "make"]); p.add_argument("--run")
-    p.add_argument("--plan", help="make: default 40-briefs/music.json"); p.add_argument("--video", help="make: only this video's track")
+    p = sp.add_parser("music", help="Static's bed under every video (contract item 36): check (the setup) | make (ACE-Step 1.5 in its own "
+                                    "environment, AWL_MUSIC_PYTHON and AWL_MUSIC_ROOT) | measure (a made bed's facts, alone and under "
+                                    "the narration as CapCut plays it)")
+    p.add_argument("action", choices=["check", "make", "measure"]); p.add_argument("--run")
+    p.add_argument("--plan", help="make: default 40-briefs/music.json")
+    p.add_argument("--video", help="make: only this video's track; measure: the video (required)")
+    p.add_argument("--gain", type=float, help="measure: the level to test (default the image plan's music_gain, else config static.music.gain)")
     p.set_defaults(fn=cmd_music)
 
     p = sp.add_parser("slideshow", help="Static's local render (contract item 36): plan (the timeline from the image plan and the narration's line "

@@ -33,7 +33,9 @@ what makes it work (one paragraph, [I]). Every speech field reads from the trans
   device they do show (a green-screen wipe for their quick slide at a turn, a whoosh where their slide carries one); without a folder,
   CapCut's own transitions and no sound effects. Name the numbers each choice rests on.
 - **Voice profile**: the numbers of §1 and the delivery in words; the three sample voices are written from it (§6).
-- **Bed**: yes (mood, genre, instruments, tempo, level under the voice) or no, from the references' sound.
+- **Bed brief** (§6; a bed goes under every video, also when the references are voice only): the content type and its register, the
+  narration's pace, pitch and delivery, the arc the beats make, the pictures' rhythm, and the references' own sound as the audio profile's
+  numbers (a bed or none; when one, its tempo, beat strength and energy arc; its instruments and genre are not analysed).
 - **Devices to reuse**, and **what is left behind**: every reference's subject, its names, its facts and its exact lines.
 
 **The format (A5;** the user, 2026-11-05: the CapCut export is the final, and the images' size and quality are the user's pick, "make sure

@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (3.1 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (2.2 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (5.8 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (2.7 KB)
 
 The main session runs S2 for every video, one at a time (one model on the GPU; the toolkit's lock holds a second one back), before any
 production agent starts (`awl-analyze-produce` A9s).
@@ -38,11 +38,15 @@ production agent starts (`awl-analyze-produce` A9s).
 4. **The images meet the narration:** each image spans from its `from_line`'s start to the next image's (the first from 0, the last to the
    end with the tail). Keep every span within the spec's range of seconds per still and none under about 2 s: move `from_line`, merge or
    split images in `video-NN-images.json` (their prompts with them).
-5. **The bed** (only when `RUN/40-briefs/music.json` exists), after every narration is made: each track's `duration` = lead + the
-   narration's duration + tail (config `static.narration`), then `T music make --run RUN` (every track in one model load). A bed that
-   failed: that video goes on without one, noted; a bed is never a blocker.
+5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made: each track's `duration` =
+   lead + the narration's duration + tail (config `static.narration`), then `T music make --run RUN` (every track in one model load).
+   Then per video `T music measure --run RUN --video NN`, judged as static §6 and §8 say: a voice heard in the bed alone, or an arc that
+   fights the story's beats → a new take (another `seed` or a reworded `caption` in music.json, `T music make --run RUN --video NN`, then
+   measure again), at most two, by the run's QC fixes (off: none, noted); a narration word heard differently with the bed under it, or a
+   bed lost in the pauses → another level with `--gain G`, kept as the image plan's `music_gain`. A bed that failed: that video goes on
+   without one, noted; a bed is never a blocker.
 6. The video's brief (`RUN/40-briefs/video-NN-brief.md`, block S2): the voice, the narration's length, the lines made again and why, the
-   bed or none.
+   bed (its caption and why, the take, the level and the facts the level rests on) or why there is none.
 
 A worker error is reported with its real text. Narration failing for every video is a blocker of the run (`T static check` gives the
 facts of the setup, static §9).
@@ -53,6 +57,8 @@ facts of the setup, static §9).
   design model, static §6).
 - Never call ElevenLabs or Higgsfield for a Static voice or bed.
 - Never stretch or speed a narration to fit a length: rewrite the lines.
+- Never analyse the references' music beyond the numbers A3 already has (the user, 2026-11-06: "no need to analyze their instrumentals
+  too"); never keep a bed's level at which a narration word is heard differently (a level costs nothing to change, whatever the QC fixes).
 
 ## Hand-off
 

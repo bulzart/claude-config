@@ -3,6 +3,8 @@
 The agent views and listens through the facts; `qc_fixes` (ask, auto, off) decides fixes as in every sub-mode (contract item 27).
 - **Narration**: `narration-words` lists the lines to check (the heard share of their words under the threshold); the duration within the
   spec's range; the loudness; one speaker throughout; each strong line's `pitch_st` and `timbre_sim` against the cloned lines' spread (§6).
+- **The bed** (`T music measure`, §6): no word heard in it alone; the narration's words heard the same with it under it at the project's
+  gain; its level over the lines rising and falling with the story's beats, not against them; still heard in the pauses.
 - **Every image, viewed** (Read the file): it shows what its line says; the character matches their photo or anchor (face, hair, build,
   clothing, age); hands, faces, bodies and counts are right (`anomaly-catalog.md` §2.13 for illustrated, painted and cartoon pictures, §2.17 for identity); its size and aspect the format's (`off_aspect` for the user's
   images); no stray text, letters, logos or watermarks; the style lock holds across the set; the caption band is free of faces and key detail;

@@ -1,7 +1,8 @@
 ## 9 The Static PC (setup, once per PC)
 
-Static runs where Qwen3-TTS (and ACE-Step 1.5 when beds are wanted, FLUX 3 Klein when the images are made on the PC) are installed.
-`T static check` reports each part; a part a run needs and does not have is a blocker, reported at the start (never asked).
+Static runs where Qwen3-TTS and ACE-Step 1.5 (the bed under every video) are installed, and FLUX 3 Klein when the images are made on
+the PC. `T static check` reports each part; a part a run needs and does not have is a blocker, reported at the start (never asked);
+music alone is not: without it the user is told at the start and the videos go without a bed.
 - **The pipeline**: `git pull` of the `~/.claude` repository, as on any PC.
 - **Qwen3-TTS**: its own environment (Python 3.11 or 3.12; a CUDA build of torch and torchaudio from download.pytorch.org; `pip install -U
   qwen-tts`; flash-attn is optional and not used: `sdpa`), then the user environment variable `AWL_TTS_PYTHON` = that environment's
@@ -13,7 +14,7 @@ Static runs where Qwen3-TTS (and ACE-Step 1.5 when beds are wanted, FLUX 3 Klein
   `AWL_TTS_PYTHON`, `AWL_MUSIC_PYTHON` and `AWL_IMAGE_PYTHON` may name a small `.cmd` that starts the environment's `python.exe` inside a memory guard (a
   hard cap and a watchdog that stops the job before Windows runs out). Keep such a `.cmd`: pointing the variable at `python.exe`
   instead removes the guard, and everything still seems to work.
-- **ACE-Step 1.5** (only for beds): `git clone https://github.com/ace-step/ACE-Step-1.5`, `uv sync` in it (or the Windows portable
+- **ACE-Step 1.5** (the bed under every video): `git clone https://github.com/ace-step/ACE-Step-1.5`, `uv sync` in it (or the Windows portable
   package); never `pip install ace-step` (that is version 1). Then `AWL_MUSIC_PYTHON` = its `.venv\Scripts\python.exe` and `AWL_MUSIC_ROOT`
   = the clone's folder. Its models (about 10 GB) download on first use.
 - **OpenAI** (only for images by the API): the user environment variable `OPENAI_API_KEY`; the organisation may need verifying for image
