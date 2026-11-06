@@ -12651,5 +12651,161 @@
     "transitions_drawn": 96,
     "transitions": 116,
     "transitions_drawn_free": 96
+  },
+  "effects": {
+    "chroma": {
+      "plays": false,
+      "residual_green_max": 0.845,
+      "residual_green_median": 0.5681,
+      "white_at_cover": 1.0,
+      "intensity": null,
+      "caption_dark_px_at_cover": 0.0,
+      "pro": false,
+      "tested": {
+        "chroma": {
+          "residual_green_max": 0.845,
+          "residual_green_median": 0.5681,
+          "white_at_cover": 1.0,
+          "intensity": 0.5,
+          "caption_dark_px_at_cover": 0.0,
+          "pro": false,
+          "plays": false
+        },
+        "chroma_low": {
+          "residual_green_max": 0.845,
+          "residual_green_median": 0.5738,
+          "white_at_cover": 1.0,
+          "intensity": 0.3,
+          "caption_dark_px_at_cover": 0.0,
+          "pro": false,
+          "plays": false
+        }
+      }
+    },
+    "cover_scale": {
+      "plays": true,
+      "white_at_cover": 1.0
+    },
+    "captions_above_overlays": {
+      "plays": true,
+      "covered_frames": 37,
+      "caption_seen_in": 13,
+      "dark_px_in_caption_band_at_white_cover": 0.0
+    },
+    "screen": {
+      "plays": false,
+      "outer_band_diff_max": 109.0,
+      "centre_lift_median": 29.2,
+      "pro": false
+    },
+    "alpha_prores4444": {
+      "plays": true,
+      "red_in_centre": 1.0,
+      "corner_diff_max": 2.52
+    },
+    "alpha_qtrle": {
+      "plays": true,
+      "red_in_centre": 1.0,
+      "corner_diff_max": 1.38
+    },
+    "alpha_png-mov": {
+      "plays": true,
+      "red_in_centre": 1.0,
+      "corner_diff_max": 2.57
+    },
+    "alpha_vp9-webm": {
+      "plays": false,
+      "red_in_centre": 1.0,
+      "corner_diff_max": 110.32
+    },
+    "alpha_video": {
+      "plays": true,
+      "codec": "prores4444",
+      "codecs": [
+        "prores4444",
+        "qtrle",
+        "png-mov"
+      ]
+    },
+    "alpha_image": {
+      "plays": true,
+      "ring_width_px": [
+        359,
+        582,
+        513,
+        513,
+        513
+      ]
+    },
+    "overlay_keyframes": {
+      "plays": true,
+      "ring_width_px": [
+        359,
+        582,
+        513,
+        513,
+        513
+      ],
+      "expected_px": [
+        308,
+        616,
+        513,
+        513,
+        513
+      ],
+      "x_centre": [
+        -0.478,
+        -0.345,
+        -0.28,
+        0.011,
+        0.503
+      ],
+      "expected_x": [
+        -0.5,
+        -0.367,
+        -0.3,
+        0.0,
+        0.5
+      ]
+    },
+    "sfx": {
+      "plays": true,
+      "offset_ms": [
+        -5,
+        -5
+      ],
+      "level_db": [
+        10.4,
+        10.4
+      ],
+      "floor_db": -120.0
+    },
+    "sfx_volume": {
+      "plays": true,
+      "level_change_db": -11.9,
+      "expected_db": -12.0
+    },
+    "sfx_fade": {
+      "plays": true,
+      "drop_db": 18.0
+    },
+    "overlay_sound": {
+      "plays": true,
+      "tone_db": 18.5,
+      "floor_db": -120.0
+    },
+    "mute": {
+      "plays": false,
+      "tone_db": 18.5,
+      "floor_db": -120.0
+    },
+    "measured": "2026-11-06T20:14:37+01:00",
+    "from": "C:\\Users\\Bulzart\\AppData\\Local\\CapCut\\Videos\\AWL_effects_check.mp4",
+    "recording": false,
+    "start_s": 0.0,
+    "align": null,
+    "capcut": "9.7.0.4153",
+    "pro_block_at_export": [],
+    "pro_from": "CapCut's FeedbackOtherInfo.json, the export it blocked at 2026-11-06T09:15:04"
   }
 }

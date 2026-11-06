@@ -41,7 +41,9 @@ Static runs where Qwen3-TTS (and ACE-Step 1.5 when beds are wanted, FLUX 3 Klein
   column), then records CapCut's player full screen from before pressing play to the end, the time bar steady (2026-11-06: a first
   recording with the window moving could not be lined up), with the desktop sound; measure it with `--export <the recording> --crop
   W:H:X:Y` (the player's area; on a 1920x1080 screen with a 9:16 project `608:1080:656:0`) and `--start <second where the project's
-  0.0 s plays>`. The agents use only options marked free while `capcut.pro` is false.
+  0.0 s plays>`. Each Static run asks for the CapCut plan the user exports with (`state.json → capcut_plan`, free | pro; the user,
+  2026-11-06: "make him pick"): free, the agents use only options marked free; pro, the Pro ones too; a run without the key follows
+  `config.json → capcut.pro`.
 - **The CapCut effects check** (once per PC, after a CapCut update, and before the first run with an effects folder; the user, 2026-11-06:
   "a folder of effects (optional) that can have: sound effects, and green screen transitions"): the same steps into `AWL_effects_check`
   with ten stills of 3 s (`check-A.png` and `check-B.png` by turns, 0 to 30 s), then `T capcut-check effects-fill --draft <it>`: it makes
@@ -52,5 +54,10 @@ Static runs where Qwen3-TTS (and ACE-Step 1.5 when beds are wanted, FLUX 3 Klein
   exports it (or, blocked by Pro, records it as above, with the desktop sound: the sounds are measured from it); `T capcut-check
   effects-measure --export <file> [--crop W:H:X:Y]` (a recording is lined up from its first click and the stills' switches) writes the
   `effects` part of the catalogue: which ways play, the chroma strength that left no green, the alpha format CapCut reads.
-  `T capcut-effects` writes an effect only by a way marked as playing (and free while `capcut.pro` is false); with no CapCut chroma key
-  or screen blend it makes an alpha file of the overlay instead (`30-assets/effects/video-NN/`), when an alpha format plays.
+  `T capcut-effects` writes an effect only by a way marked as playing (and free while the run's CapCut plan is free); with no CapCut
+  chroma key or screen blend it makes an alpha file of the overlay instead (`30-assets/effects/video-NN/`), when an alpha format plays.
+  Measured on this PC 2026-11-06 (CapCut 9.7, its own export; nothing in it Pro): capcut-cli's chroma key and screen blend do not play,
+  so green screens and black backgrounds go in as ProRes 4444 alpha files made by ffmpeg (ProRes 4444, QuickTime Animation and PNG-in-MOV
+  keep their transparency; VP9 does not); an overlay's sound at volume 0 still played, so overlays go in silent and their sound on an
+  audio track; the cover scale, captions above the overlays, scale and position keys on an overlay, sound effects on time (5 ms), their
+  volume (-11.9 dB for 0.25) and fades all play.

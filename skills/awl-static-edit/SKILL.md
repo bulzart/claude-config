@@ -57,7 +57,7 @@ Only these section files for this phase, nothing else unless a step below says s
      --align 1 --y <1 − 2 × y_rel>` (plus `--shadow`, `--bg-color`/`--bg-alpha`, `--highlight-words … --keyword-color … --keyword-size …`
      as the look has them), the font with `T capcut-font --draft "<draft>" --font-file <font_file> --track subtitle` (it also writes the
      outline, box and shadow where CapCut 9.x draws them: `outlines_in_styles`), the entrance with `T capcut-text-anim --draft "<draft>"
-     --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s>` (CapCut's own intro on every caption), any
+     --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s> --run RUN` (CapCut's own intro on every caption), any
      other text with `capcut add-text` in its own look (its font with
      `T capcut-font --draft "<draft>" --font-file <file> --track text`), then
      `T capcut-repair --draft "<draft>" --keep-text --preview RUN/60-outputs/video-NN/capcut-preview.mp4` (register, the media links, sync,
@@ -75,8 +75,8 @@ Only these section files for this phase, nothing else unless a step below says s
   `capcut-repair` always with `--keep-text`): the look is the references'; never `capcut_save` with force; never `capcut lint --fix`
   (it copies every media file into the draft, shortens texts over 7 s and trims captions; `capcut-repair` writes the links).
 - Never a move, an intro, a transition or a way of writing an effect that `AWL/data/capcut-catalogue.md` does not show drawn by this PC's
-  CapCut (nor one marked Pro while `config.json → capcut.pro` is false), and never a stock amount: every move, join and effect is the
-  plan's, decided from the references' measured pattern.
+  CapCut (nor one marked Pro while the run's CapCut plan, `state.json → capcut_plan`, is free), and never a stock amount: every move,
+  join and effect is the plan's, decided from the references' measured pattern.
 - Never move, rename or change a file of the user's effects folder (it is read-only, like the references): `T capcut-effects` copies what
   it uses into the draft.
 - Never move an image off its line to fill a gap, and never stretch the narration: fix the plan.

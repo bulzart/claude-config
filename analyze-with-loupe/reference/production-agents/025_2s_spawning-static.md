@@ -16,6 +16,8 @@ Images: <api|klein|prompts> (state.json → static_images). api: you make your v
 API). klein: the same `T image generate`, made by FLUX 3 Klein on this PC's GPU (one at a time; no cost). prompts: the user made them
 and `T image intake` copied them into your images folder; you check them and never make new ones.
 QC fixes: <ask|auto|off> (the run's choice, state.json → qc_fixes; command item 27).
+CapCut plan: <free|pro> (the user's pick at the start, state.json → capcut_plan). free: only options <AWL>/data/capcut-catalogue.md marks
+free (a Pro one blocks the export); pro: every option it shows drawn, Pro ones too (the user exports with a CapCut Pro subscription).
 Audio ingest: whisper (Static always reads the references' audio; command item 36).
 Loupe: not used in Static (command item 36): no `T qc-consult`, `T prompt-template`, `T caught-flag` or any Loupe command.
 Voiceover: off (a Static video's voice is the run's own narration, made by the main session: <RUN>/30-assets/narration/video-NN.wav).
@@ -55,8 +57,9 @@ Hard rules:
   links CapCut opens clips by); never `capcut lint --fix`; CapCut's caption tools (capcut_transcribe, capcut_add_captions) are never
   used. No sticker or emoji is added, in a picture or a text layer (item 6).
 - Moves, joins and the caption entrance reach CapCut only through `T capcut-motion`, `T capcut-transitions` and `T capcut-text-anim`
-  (never capcut_add_keyframe or capcut_add_transition), with the plan's values: decided from the references' measured pattern (their
-  edit profiles), never a stock amount, and only what <AWL>/data/capcut-catalogue.md shows drawn by this PC's CapCut.
+  (never capcut_add_keyframe or capcut_add_transition; pass `--run` to the last two so they read the CapCut plan), with the plan's
+  values: decided from the references' measured pattern (their edit profiles), never a stock amount, and only what
+  <AWL>/data/capcut-catalogue.md shows drawn by this PC's CapCut (and marked free while the CapCut plan is free).
 - Effects from the user's effects folder (the plan's `effects`, when the run has a folder) reach CapCut only through `T capcut-effects`
   (never capcut-cli or the MCP by hand); one it refuses is planned again without it. The effects folder is read-only like the references.
 - Your final message is the one JSON line awl-record (X10) ends with.

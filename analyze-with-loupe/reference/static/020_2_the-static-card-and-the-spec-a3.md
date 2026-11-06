@@ -21,7 +21,8 @@ what makes it work (one paragraph, [I]). Every speech field reads from the trans
   eased, how they follow each other), the joins by their signatures and the short shots, the caption entrance by its curve. Then, for each,
   the closest option this PC's CapCut verifiably plays (`AWL/data/capcut-catalogue.md`, §9): the moves CapCut plays, the text intro and
   its seconds whose measured curve is nearest the references' entrance (an intro's curve at another length runs faster or slower), the
-  transition (or a cut) whose signature is nearest each kind of join. Name the numbers each choice rests on.
+  transition (or a cut) whose signature is nearest each kind of join. With the run's CapCut plan free (`state.json → capcut_plan`, the
+  user's pick at the start) only options marked free; with pro, the Pro ones too. Name the numbers each choice rests on.
 - **Effects** (the user, 2026-11-06: "a folder of effects (optional) that can have: sound effects, and green screen transitions"): the
   references' overlays and sound effects as a pattern (which joins carry an overlay transition and for how long it hides the picture,
   which moments carry a sound and of what kind, their level under the voice, how often), never guessed. With the user's effects folder

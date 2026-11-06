@@ -2352,7 +2352,7 @@ def cmd_uploads(a):
 
 CONTRACT_SUBS = (("<RUN>", "run"), ("<AWL>", "library"), ("<model id>", "model"), ("<guide path>", "guide path"), ("<recreate|create>", "analyze_submode"),
                  ("<ask|auto|off>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"),
-                 ("<memes>", "memes"), ("<api|klein|prompts>", "static_images"))
+                 ("<memes>", "memes"), ("<api|klein|prompts>", "static_images"), ("<free|pro>", "capcut_plan"))
 
 
 def _contract_memes(st: dict) -> str:
@@ -2421,7 +2421,8 @@ def cmd_contract(a):
         guide = ""
     values = {"run": str(rd), "library": str(AWL_HOME), "model": model, "guide path": guide, "analyze_submode": str(st.get("analyze_submode") or ""),
               "qc_fixes": str(st.get("qc_fixes") or "auto"), "loupe": str(st.get("loupe") or "up"), "audio_ingest": str(st.get("audio_ingest") or ""),
-              "voiceover": _contract_voiceover(st, rd), "memes": _contract_memes(st), "static_images": str(st.get("static_images") or "")}
+              "voiceover": _contract_voiceover(st, rd), "memes": _contract_memes(st), "static_images": str(st.get("static_images") or ""),
+              "capcut_plan": str(st.get("capcut_plan") or "")}
     substituted, unresolved = {}, []
     for token, key in CONTRACT_SUBS:
         if values[key]:
@@ -6095,15 +6096,52 @@ def cmd_capcut_motion(a):
                  "(its sync-timelines rewrites a copy listed in stale_copies from draft_content.json)"})
 
 
+def _capcut_pro_ok(rd: Path = None) -> bool:
+    """Whether a CapCut Pro option may go into a project: the run's CapCut plan (state.json -> capcut_plan, free | pro, asked at the start
+    of a Static run: the user, 2026-11-06, "make him pick, if he picks pro then be free to pick any edit feature that pro has"), else
+    config.json -> capcut.pro (this PC's default)."""
+    if rd is not None:
+        try:
+            plan = str(json.loads((Path(rd) / "state.json").read_text(encoding="utf-8")).get("capcut_plan") or "").lower()
+            if plan in ("free", "pro"):
+                return plan == "pro"
+        except (OSError, ValueError):
+            pass
+    return bool(cfg_get("capcut.pro", False))
+
+
+def _catalogue_refusal(kind: str, slug: str, pro_ok: bool) -> str | None:
+    """Why a text intro or a transition may not go into a project, from the measured catalogue (data/capcut-catalogue.json): CapCut drew
+    nothing for it in the check, or it is Pro and the run's plan is free. None when it may (or when no catalogue was measured yet)."""
+    try:
+        cat = json.loads((AWL_HOME / "data" / "capcut-catalogue.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    rows = {str(x.get("slug")): x for x in cat.get("text_intros" if kind == "intro" else "transitions") or []}
+    x = rows.get(slug)
+    if x is None:
+        return f"{slug!r} is not in the measured catalogue (data/capcut-catalogue.md): not verified on this PC's CapCut"
+    if not x.get("visible_animation" if kind == "intro" else "visible_transition"):
+        return f"{slug!r}: CapCut drew nothing for it in the CapCut check (data/capcut-catalogue.md)"
+    if x.get("pro") and not pro_ok:
+        return f"{slug!r} is CapCut Pro and the run's CapCut plan is free (state.json -> capcut_plan): the export would be blocked"
+    return None
+
+
 def cmd_capcut_text_anim(a):
     """Static: one of CapCut's own text animations on every text of a track (an intro, an outro or both), through capcut-cli's
     `text-anim` and its catalogue (`capcut enums --text-intros`; CapCut fetches the effect by its id when it opens the project), each
-    one's duration capped at its text's own. A text that already has one of that kind is left as it is."""
+    one's duration capped at its text's own. A text that already has one of that kind is left as it is. An intro the measured catalogue
+    shows CapCut not drawing, or a Pro one on a run whose CapCut plan is free, is refused."""
     d = Path(a.draft)
     if not (d / "draft_content.json").is_file():
         fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
     if not a.intro and not a.outro:
         fail("capcut-text-anim needs --intro and/or --outro (a slug from `capcut enums --text-intros` / `--text-outros`)", 2)
+    if a.intro:
+        why = _catalogue_refusal("intro", a.intro, _capcut_pro_ok(_state_of(a.run)[0] if a.run else None))
+        if why:
+            fail(why, 2)
     if (d / ".locked").exists() or _capcut_running():
         fail("CapCut is running: close it, then run this again", 3)
     cli = _capcut_cli()
@@ -6181,6 +6219,7 @@ def cmd_capcut_transitions(a):
     known = {x.get("slug") for x in _capcut_enum(cli, "--transitions")}
     clips = _main_clips(d)
     half = 500000 / fps
+    pro_ok = _capcut_pro_ok(_state_of(a.run)[0] if a.run else None)
     done, kept, failed = [], 0, []
     for k in range(1, len(rows)):
         slug = str(rows[k].get("transition") or "cut")
@@ -6188,6 +6227,10 @@ def cmd_capcut_transitions(a):
             continue
         if slug not in known:
             failed.append({"image": rows[k]["image"], "error": f"{slug!r} is not a CapCut transition (capcut enums --transitions)"})
+            continue
+        why = _catalogue_refusal("transition", slug, pro_ok)
+        if why:
+            failed.append({"image": rows[k]["image"], "error": why})
             continue
         want = float(rows[k - 1]["start"]) * 1e6
         seg = next((s for s in clips if abs(int(s["target_timerange"]["start"]) - want) <= half), None)
@@ -6224,15 +6267,23 @@ FX_ALPHA_CODECS = {   # alpha video files the CapCut effects check tries, in thi
 
 
 def _fx_prepare(src: Path, how: str, codec: str, dst: Path, key_color: str = None, key_intensity: float = 0.5,
-                box: tuple = None) -> Path:
+                box: tuple = None, keep_audio: bool = False) -> Path:
     """An overlay made into an alpha video for CapCut, when the CapCut check showed that CapCut's own chroma key or screen blend does
-    not play but an alpha file does: `keyed` = the key colour taken out by ffmpeg's chromakey (and its green spill), `luma` = black made
-    transparent by brightness (alpha = the brightest channel, the colour divided by it: over the picture it adds light as a screen
-    blend does, a little darker where it is coloured). `box` crops it to the part the canvas shows (a cover), so the file has the
-    canvas's aspect. Its own sound is kept."""
+    not play but an alpha file does (2026-11-06: capcut-cli's chroma key and screen blend were ignored by CapCut 9.7; ProRes 4444,
+    QuickTime Animation and PNG-in-MOV kept their transparency): `keyed` = the key colour taken out by ffmpeg's chromakey (and its green
+    spill), `luma` = black made transparent by brightness (alpha = the brightest channel, the colour divided by it: over the picture it
+    adds light as a screen blend does, a little darker where it is coloured). `box` crops it to the part the canvas shows (a cover), so
+    the file has the canvas's aspect. Silent unless keep_audio (an overlay's sound goes on its own audio track). The same file is reused
+    while it is newer than its source (the check render and CapCut use one file)."""
     ext, vargs, aargs = FX_ALPHA_CODECS[codec]
     out_p = dst.with_suffix(ext)
     out_p.parent.mkdir(parents=True, exist_ok=True)
+    if out_p.is_file() and out_p.stat().st_size > 0 and out_p.stat().st_mtime >= src.stat().st_mtime \
+            and (out_p.with_suffix(out_p.suffix + ".json").is_file()
+                 and json.loads(out_p.with_suffix(out_p.suffix + ".json").read_text(encoding="utf-8")) == {
+                     "src": str(src), "how": how, "codec": codec, "key_color": key_color, "key_intensity": key_intensity,
+                     "box": list(box) if box else None, "keep_audio": keep_audio}):
+        return out_p
     info = media_summary(src)
     w, h = int(info.get("display_width") or 0), int(info.get("display_height") or 0)
     vf = []
@@ -6247,20 +6298,50 @@ def _fx_prepare(src: Path, how: str, codec: str, dst: Path, key_color: str = Non
         m = "max(max(r(X,Y),g(X,Y)),b(X,Y))"
         vf += ["format=rgba", f"geq=r='if(gt({m},0),min(255,r(X,Y)*255/{m}),0)':g='if(gt({m},0),min(255,g(X,Y)*255/{m}),0)':"
                               f"b='if(gt({m},0),min(255,b(X,Y)*255/{m}),0)':a='{m}'"]
-    args = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-map", "0:v:0", "-map", "0:a:0?"]
+    args = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-map", "0:v:0"] + (["-map", "0:a:0?"] if keep_audio else [])
     if vf:
         args += ["-vf", ",".join(vf)]
-    cp = run(args + vargs + aargs + [str(out_p)], timeout=3600)
+    cp = run(args + vargs + (aargs if keep_audio else ["-an"]) + [str(out_p)], timeout=3600)
+    if cp.returncode != 0 or not out_p.is_file():
+        raise RuntimeError(f"could not make {out_p.name}: {(cp.stderr or '')[-400:]}")
+    write_json(out_p.with_suffix(out_p.suffix + ".json"), {"src": str(src), "how": how, "codec": codec, "key_color": key_color,
+                                                           "key_intensity": key_intensity, "box": list(box) if box else None,
+                                                           "keep_audio": keep_audio})
+    return out_p
+
+
+def _fx_silent_copy(src: Path, dst: Path) -> Path:
+    """The overlay's picture without its sound, stream-copied (no re-encode): CapCut 9.7 played an overlay's sound at volume 0
+    (2026-11-06), so an overlay always goes in silent and its sound, when wanted, on an audio track of its own."""
+    out_p = dst.with_name(dst.name + "-silent" + src.suffix)
+    if out_p.is_file() and out_p.stat().st_size > 0 and out_p.stat().st_mtime >= src.stat().st_mtime:
+        return out_p
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-map", "0:v:0", "-c:v", "copy", "-an", str(out_p)],
+             timeout=600)
     if cp.returncode != 0 or not out_p.is_file():
         raise RuntimeError(f"could not make {out_p.name}: {(cp.stderr or '')[-400:]}")
     return out_p
 
 
-def _fx_method(e: dict, ver: dict) -> tuple:
+def _fx_sound_of(src: Path, dst: Path) -> Path:
+    """An overlay's own sound as a file of its own (48 kHz PCM), for its audio track."""
+    out_p = dst.with_name(dst.name + "-sound.wav")
+    if out_p.is_file() and out_p.stat().st_size > 0 and out_p.stat().st_mtime >= src.stat().st_mtime:
+        return out_p
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-map", "0:a:0", "-vn", "-ar", "48000",
+              "-c:a", "pcm_s16le", str(out_p)], timeout=600)
+    if cp.returncode != 0 or not out_p.is_file():
+        raise RuntimeError(f"could not take the sound of {src.name}: {(cp.stderr or '')[-400:]}")
+    return out_p
+
+
+def _fx_method(e: dict, ver: dict, pro_ok: bool = None) -> tuple:
     """How an effect goes into CapCut, from what the CapCut effects check verified (data/capcut-catalogue.json -> effects): returns
     (method, None) or (None, the unverified point). Methods: capcut-chroma | capcut-screen | keyed-file:<codec> | luma-file:<codec> |
-    plain | sound."""
-    pro_ok = bool(cfg_get("capcut.pro", False))
+    plain | sound. A way marked Pro counts only when pro_ok (the run's CapCut plan; default this PC's config)."""
+    pro_ok = bool(cfg_get("capcut.pro", False)) if pro_ok is None else bool(pro_ok)
     ok = lambda k: bool((ver.get(k) or {}).get("plays")) and (pro_ok or not (ver.get(k) or {}).get("pro"))   # noqa: E731
     codec = (ver.get("alpha_video") or {}).get("codec")
     if e["type"] == "sfx":
@@ -6275,11 +6356,13 @@ def _fx_method(e: dict, ver: dict) -> tuple:
         return None, "an overlay scaled to cover the canvas (cover_scale)"
     if any(isinstance(e.get(k), list) and len(e[k]) > 1 for k in ("scale", "x", "y")) and not ok("overlay_keyframes"):
         return None, "keyframes on an overlay (overlay_keyframes)"
-    if e.get("has_audio"):
-        if float(e.get("volume") or 0) > 0 and not ok("overlay_sound"):
-            return None, "an overlay's own sound (overlay_sound)"
-        if float(e.get("volume") or 0) <= 0 and not ok("mute"):
-            return None, "an overlay's sound muted (mute)"
+    if e.get("has_audio") and float(e.get("volume") or 0) > 0:
+        # an overlay goes in silent (CapCut played an overlay's sound at volume 0, 2026-11-06); its sound, when wanted, goes on an
+        # audio track of its own, where the volume plays
+        if not ok("sfx"):
+            return None, "an overlay's sound on an audio track (sfx)"
+        if abs(float(e.get("volume") or 0) - 1.0) > 1e-3 and not ok("sfx_volume"):
+            return None, "an overlay's sound at its volume (sfx_volume)"
     if e.get("blend") == "chroma":
         if ok("chroma"):
             return "capcut-chroma", None
@@ -6327,9 +6410,10 @@ def cmd_capcut_effects(a):
         scan = {}
     prep = (rd / "30-assets" / "effects" / f"video-{_cf_nn(a.video)}") if rd and a.video else d / "fx-prepared"
     items, refused = [], []
+    pro_ok = _capcut_pro_ok(rd)
     for e in sorted(fxs, key=lambda e: (e["type"] != "overlay", str(e.get("track")), e["start"])):
         e = {**e, "_facts": scan.get(str(e.get("id"))) or {}}
-        method, why_not = _fx_method(e, ver)
+        method, why_not = _fx_method(e, ver, pro_ok)
         if method is None:
             refused.append({"effect": e["n"], "file": Path(e["file"]).name, "not_verified": why_not})
             continue
@@ -6347,6 +6431,7 @@ def _fx_write_capcut(d: Path, items: list, W: int, H: int, prep: Path) -> tuple:
     written, refused, post = [], [], []
     for e, method in items:
         src, w, h = Path(e["file"]), float(e.get("width") or W), float(e.get("height") or H)
+        sound = None
         try:
             if method.startswith(("keyed-file", "luma-file")):
                 bx = (((e.get("_facts") or {}).get("picture") or {}).get("visible_box")) if e.get("fit") == "cover" else None
@@ -6354,12 +6439,24 @@ def _fx_write_capcut(d: Path, items: list, W: int, H: int, prep: Path) -> tuple:
                                   prep / f"effect-{e['n']:02d}", e.get("key_color"), e.get("key_intensity"), tuple(bx) if bx else None)
                 info = media_summary(src)
                 w, h = float(info.get("display_width") or w), float(info.get("display_height") or h)
+            elif e["type"] == "overlay" and e.get("has_audio"):
+                src = _fx_silent_copy(src, prep / f"effect-{e['n']:02d}")
+            if e["type"] == "overlay" and e.get("has_audio") and float(e.get("volume") or 0) > 0:
+                sound = _fx_sound_of(Path(e["file"]), prep / f"effect-{e['n']:02d}")
         except (OSError, RuntimeError) as ex:
             refused.append({"effect": e["n"], "file": Path(e["file"]).name, "error": str(ex)[-300:]})
             continue
         if e["type"] == "overlay":
             cp = run([cli, "add-video", str(d), str(src), f"{e['start']:.4f}", f"{e['dur_s']:.4f}", "--track-name", e["track"],
                       "--width", str(int(w)), "--height", str(int(h))], timeout=300)
+            if cp.returncode == 0 and sound is not None:
+                cps = run([cli, "add-audio", str(d), str(sound), f"{e['start']:.4f}", f"{e['dur_s']:.4f}", "--volume",
+                           f"{float(e['volume']):.4f}", "--track-name", f"{e['track']}-sound"], timeout=300)
+                sid_s = (_last_json(cps.stdout) or {}).get("segmentId")
+                if cps.returncode != 0 or not sid_s:
+                    refused.append({"effect": e["n"], "file": Path(e["file"]).name, "error": "its sound: " + (cps.stdout or cps.stderr or "")[-300:]})
+                else:
+                    post.append((sid_s, {**e, "type": "sfx"}, 0, 0, "sound", sound))
         else:
             cp = run([cli, "add-audio", str(d), str(src), f"{e['start']:.4f}", f"{e['dur_s']:.4f}", "--volume", f"{float(e['volume']):.4f}",
                       "--track-name", e["track"]], timeout=300)
@@ -6387,7 +6484,8 @@ def _fx_write_capcut(d: Path, items: list, W: int, H: int, prep: Path) -> tuple:
             continue
         post.append((sid, e, w, h, method, src))
         written.append({"effect": e["n"], "type": e["type"], "file": Path(e["file"]).name, "track": e["track"], "start": e["start"],
-                        "end": e["end"], "method": method, "segment": sid})
+                        "end": e["end"], "method": method, "segment": sid,
+                        "sound_track": f"{e['track']}-sound" if e["type"] == "overlay" and sound is not None else None})
     # the in points, the files' real lengths, the size and place (keyed when they change), opacity and volume, in every copy of the timeline
     made = {}
     for p in _draft_contents(d):
@@ -6423,7 +6521,7 @@ def _fx_write_capcut(d: Path, items: list, W: int, H: int, prep: Path) -> tuple:
                 seg["common_keyframes"] = kfs
                 if len(sk) > 1:
                     seg["uniform_scale"] = {"on": True, "value": 1.0}
-                seg["volume"] = float(e.get("volume") or 0.0) if e.get("has_audio") else 0.0
+                seg["volume"] = 0.0   # the overlay is silent: its sound, when wanted, is its own audio segment
             n += 1
         if n:
             shutil.copyfile(p, p.with_name(p.name + ".effects.bak"))
@@ -6760,6 +6858,9 @@ def _capcut_check_effects_fill(a):
               "--border-color", "#000000", "--align", "1", "--y", str(c["caption_y"])], timeout=300)
     if cp.returncode != 0:
         fail("import-srt failed on the effects check project: " + (cp.stdout or cp.stderr)[-300:], 1)
+    # the caption's outline where CapCut draws it (without it the caption cannot show over a white overlay: 2026-11-06)
+    font = next((f["file"] for f in _font_files() if "capcutsanstext-bold" in Path(f["file"]).name.lower()), None) or _capcut_system_font()
+    run(me + ["capcut-font", "--draft", str(d), "--font-file", font, "--track", "subtitle"], timeout=300)
     items = []
     for n, o in enumerate(c["overlays"], 1):
         f = media / o["file"]
@@ -6930,8 +7031,24 @@ def _capcut_check_effects_measure(a):
                      "intensity": ov[name]["key_intensity"], "caption_dark_px_at_cover": round(dark_in_caption, 4)}
     res["cover_scale"] = {"plays": max(res["chroma"]["white_at_cover"], res["chroma_low"]["white_at_cover"]) > 0.9,
                           "white_at_cover": res["chroma"]["white_at_cover"]}
-    res["captions_above_overlays"] = {"plays": res["chroma"]["caption_dark_px_at_cover"] > 0.002,
-                                      "dark_px_in_caption_band": res["chroma"]["caption_dark_px_at_cover"]}
+    # the caption above the overlays: in a frame where an overlay covers the caption's band with one flat colour (the rows above the
+    # letters match neither the still nor anything but that colour), the caption still shows: its white letters on a dark or green
+    # overlay, its dark outline on a white one (a caption without an outline cannot show on white: 2026-11-06)
+    above_hits, covered_frames = 0, 0
+    a0, a1 = cap_band.start - 160, cap_band.start - 60
+    for t in [x for x in times if x not in (c["ref_a_s"], c["ref_b_s"])]:
+        f, r = fr(t), ref(t)
+        strip = f[a0:a1]
+        if float(np.abs(strip - r[a0:a1]).mean()) < 40 or float(strip.std()) > 12:
+            continue                          # the still shows above the band: no overlay covers it here
+        covered_frames += 1
+        band = f[cap_band]
+        white_bg = float(strip.mean()) > 220
+        seen = float((band.max(axis=2) < 60).mean()) if white_bg else float((band.min(axis=2) > 200).mean())
+        above_hits += seen > 0.002
+    res["captions_above_overlays"] = {"plays": (above_hits > 0) if covered_frames else (res["chroma"]["caption_dark_px_at_cover"] > 0.002 or None),
+                                      "covered_frames": covered_frames, "caption_seen_in": above_hits,
+                                      "dark_px_in_caption_band_at_white_cover": res["chroma"]["caption_dark_px_at_cover"]}
     s0 = float(ov["screen"]["start"])
     band = slice(0, int(H * 0.14))
     diffs, lifts = [], []
@@ -7024,6 +7141,8 @@ def _capcut_check_effects_measure(a):
         pro_at = int(blk.get("time") or 0) / 1000
     except (OSError, ValueError, TypeError):
         pro_at = 0
+    if not rec and pro_at and exp.stat().st_mtime > pro_at + 60:
+        pro_block = []   # CapCut's last block is older than this export: the export went through, nothing in it is Pro
     for k, kw in (("chroma", ("chroma", "key")), ("chroma_low", ("chroma", "key")), ("screen", ("blend", "mix", "screen"))):
         res[k]["pro"] = any(any(w in str(b.get("name") or "").lower() for w in kw) for b in pro_block)
     cat_p = AWL_HOME / "data" / "capcut-catalogue.json"
@@ -7050,21 +7169,29 @@ def _capcut_check_effects_measure(a):
              + ", ".join(f"{k} at {v['intensity']}: median {v.get('residual_green_median')}, most {v['residual_green_max']}"
                          for k, v in res["chroma"]["tested"].items())),
             ("cover_scale", "an overlay scaled to cover the canvas (`fit: cover`)", f"white at the cover moment {res['cover_scale']['white_at_cover']}"),
-            ("captions_above_overlays", "the captions stay above the overlays", f"dark outline px {res['captions_above_overlays']['dark_px_in_caption_band']}"),
+            ("captions_above_overlays", "the captions stay above the overlays",
+             f"seen in {res['captions_above_overlays']['caption_seen_in']} of {res['captions_above_overlays']['covered_frames']} frames an overlay covers"),
             ("screen", "CapCut's screen blend on a black background (`blend: screen`)", f"outer band diff {res['screen']['outer_band_diff_max']}, centre lift {res['screen']['centre_lift_median']}"),
             ("alpha_video", "a video's own transparency (`blend: normal`)", f"codecs that play: {', '.join(res['alpha_video']['codecs']) or 'none'}"),
             ("alpha_image", "a PNG's own transparency (`blend: normal`)", f"ring width px {res['alpha_image']['ring_width_px']}"),
             ("overlay_keyframes", "scale / x / y keys on an overlay", f"ring px {res['overlay_keyframes']['ring_width_px']} vs {res['overlay_keyframes']['expected_px']}, x {res['overlay_keyframes']['x_centre']}"),
-            ("overlay_sound", "an overlay's own sound at its volume", json.dumps({k: v for k, v in res["overlay_sound"].items() if k != "plays"})),
-            ("mute", "an overlay's sound at volume 0 is silent", json.dumps({k: v for k, v in res["mute"].items() if k != "plays"})),
+            ("overlay_sound", "an overlay's own sound at volume 1 (not used: an overlay goes in silent, its sound on an audio track)",
+             json.dumps({k: v for k, v in res["overlay_sound"].items() if k != "plays"})),
+            ("mute", "an overlay's sound at volume 0 is silent (not used: the overlay is a silent copy)",
+             json.dumps({k: v for k, v in res["mute"].items() if k != "plays"})),
             ("sfx", "a sound effect on an audio track, on time", json.dumps({k: v for k, v in res["sfx"].items() if k != "plays"})),
             ("sfx_volume", "a sound effect's volume", json.dumps({k: v for k, v in res["sfx_volume"].items() if k != "plays"})),
             ("sfx_fade", "a sound effect's fade", json.dumps({k: v for k, v in res["sfx_fade"].items() if k != "plays"}))]
     md += ["", f"## Effects (`T capcut-effects`), measured {cat['effects']['measured'][:10]} from "
            + ("a screen recording of CapCut's player" if rec else "CapCut's own export"), "",
            "What the effects check verified on this PC's CapCut. `T capcut-effects` writes an effect only by a way that plays here and "
-           "refuses one that needs a NO; with no CapCut chroma key or screen blend it makes an alpha file instead (`alpha_video`). "
-           f"Export blocked by CapCut Pro: {', '.join(str(b['name']) for b in pro_block) or 'none recorded'}.", "",
+           "refuses one that needs a NO. With no CapCut chroma key or screen blend it makes an alpha file with ffmpeg instead, in the first "
+           "`alpha_video` format that plays: a green screen keyed out, a black background turned into transparency by brightness (right for "
+           "bright elements on black such as sparks and flares; a dim wash over the whole frame darkens the picture under it a little); the "
+           "check render draws the same file. An overlay always goes in silent; its sound, when the plan wants it, is an audio segment of "
+           "its own at its volume (`sfx`, `sfx_volume`). "
+           + ("This export went through without a Pro block: nothing here is Pro." if not pro_block else
+              f"Export blocked by CapCut Pro: {', '.join(str(b['name']) for b in pro_block)}."), "",
            "| what | plays | numbers |", "|---|---|---|"]
     md += [f"| {label} | {yn(res[k].get('plays'))}{' (Pro)' if res[k].get('pro') else ''} | {nums} |" for k, label, nums in rows]
     write_text(md_p, "\n".join(md) + "\n")
@@ -10184,6 +10311,28 @@ def _slideshow_render(a):
     if missing_fx:
         fail("effects whose file is gone: " + ", ".join(str(x) for x in missing_fx), 2)
     fx = sorted((e for e in fx_all if e["type"] == "overlay"), key=lambda e: (int(str(e.get("track") or "fx1")[2:] or 1), e["start"]))
+    ver = _fx_catalogue()
+    if fx and ver:   # draw what CapCut will play: an overlay CapCut gets as an alpha file made here is drawn from that same file
+        try:
+            scan = {str(f.get("id")): f for f in json.loads((rd / "00-inventory" / "effects.json").read_text(encoding="utf-8")).get("files") or []}
+        except (OSError, ValueError):
+            scan = {}
+        pro_ok, drawn = _capcut_pro_ok(rd), []
+        for e in fx:
+            facts = scan.get(str(e.get("id"))) or {}
+            method, _why = _fx_method({**e, "_facts": facts}, ver, pro_ok)
+            if method and method.startswith(("keyed-file", "luma-file")):
+                bx = (facts.get("picture") or {}).get("visible_box") if e.get("fit") == "cover" else None
+                try:
+                    pf = _fx_prepare(Path(e["file"]), "keyed" if method.startswith("keyed") else "luma", method.split(":", 1)[1],
+                                     rd / "30-assets" / "effects" / f"video-{nn}" / f"effect-{int(e['n']):02d}", e.get("key_color"),
+                                     e.get("key_intensity"), tuple(bx) if bx else None)
+                    pi = media_summary(pf)
+                    e = {**e, "file": str(pf), "blend": "normal", "width": pi.get("display_width"), "height": pi.get("display_height")}
+                except (OSError, RuntimeError) as ex:
+                    fail(f"effect {e['n']}: {ex}", 1)
+            drawn.append(e)
+        fx = drawn
     vlabel = "vout"
     if fx:
         for e in fx:
@@ -11031,6 +11180,7 @@ def main():
     p.add_argument("--intro", help="a slug from `capcut enums --text-intros`, e.g. pop-up"); p.add_argument("--outro")
     p.add_argument("--intro-duration", type=float, default=0.5, help="seconds, capped at each text's own length")
     p.add_argument("--outro-duration", type=float, default=0.5)
+    p.add_argument("--run", help="the run: its CapCut plan (state.json -> capcut_plan) decides whether a Pro intro may be used")
     p.set_defaults(fn=cmd_capcut_text_anim)
 
     p = sp.add_parser("edit-profile", help="a video's edit layer as numbers at its full frame rate: each shot's zoom, pan, pace and jitter, "

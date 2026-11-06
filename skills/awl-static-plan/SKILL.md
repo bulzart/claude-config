@@ -50,7 +50,7 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    none), one image per stretch of lines (`from_line`), every prompt with the spec's style lock word for word and §5's composition, each
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times
    this still's seconds, the references' order of moves; a join and the caption entrance from `AWL/data/capcut-catalogue.md`, only what it
-   shows drawn), the `captions` block: the spec's text look (static §2: font file, size, colours, outline, box, case, highlight, the
+   shows drawn, and only options marked free while the run's CapCut plan is free, `state.json → capcut_plan`), the `captions` block: the spec's text look (static §2: font file, size, colours, outline, box, case, highlight, the
    entrance as `animation` and `animation_s`) with this video's highlighted words; with an effects folder, the `effects` the spec's effects
    pattern calls for (static §2, §5 "Effects": each overlay or sound from `00-inventory/effects.md`, its moment and anchor second, how it
    is blended, its fit and volume, and why; only the ways the catalogue's Effects part shows playing). Nothing is left to a stock value:

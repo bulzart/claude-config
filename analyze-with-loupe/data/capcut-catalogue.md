@@ -218,3 +218,22 @@ Around the cut: the frames that change (a hard cut changes 1), the largest shift
 | stretch-left | yes | yes | 9 (-5..7) | 2.29 / 0.3 | 0.0033 | 0.0 / -0.01 | 0.43 |
 | squeeze | yes | yes | 10 (-5..8) | 0.0 / 0.0 | 0.0001 | 0.001 / -0.003 | 0.98 |
 | squeeze-1 | yes | yes | 11 (-5..8) | 0.02 / 0.01 | 0.0003 | 0.001 / -0.001 | 0.97 |
+
+## Effects (`T capcut-effects`), measured 2026-11-06 from CapCut's own export
+
+What the effects check verified on this PC's CapCut. `T capcut-effects` writes an effect only by a way that plays here and refuses one that needs a NO. With no CapCut chroma key or screen blend it makes an alpha file with ffmpeg instead, in the first `alpha_video` format that plays: a green screen keyed out, a black background turned into transparency by brightness (right for bright elements on black such as sparks and flares; a dim wash over the whole frame darkens the picture under it a little); the check render draws the same file. An overlay always goes in silent; its sound, when the plan wants it, is an audio segment of its own at its volume (`sfx`, `sfx_volume`). This export went through without a Pro block: nothing here is Pro.
+
+| what | plays | numbers |
+|---|---|---|
+| CapCut's chroma key on a green screen (`blend: chroma`) | NO | best intensity None; residual green chroma at 0.5: median 0.5681, most 0.845, chroma_low at 0.3: median 0.5738, most 0.845 |
+| an overlay scaled to cover the canvas (`fit: cover`) | yes | white at the cover moment 1.0 |
+| the captions stay above the overlays | yes | seen in 13 of 37 frames an overlay covers |
+| CapCut's screen blend on a black background (`blend: screen`) | NO | outer band diff 109.0, centre lift 29.2 |
+| a video's own transparency (`blend: normal`) | yes | codecs that play: prores4444, qtrle, png-mov |
+| a PNG's own transparency (`blend: normal`) | yes | ring width px [359, 582, 513, 513, 513] |
+| scale / x / y keys on an overlay | yes | ring px [359, 582, 513, 513, 513] vs [308, 616, 513, 513, 513], x [-0.478, -0.345, -0.28, 0.011, 0.503] |
+| an overlay's own sound at volume 1 (not used: an overlay goes in silent, its sound on an audio track) | yes | {"tone_db": 18.5, "floor_db": -120.0} |
+| an overlay's sound at volume 0 is silent (not used: the overlay is a silent copy) | NO | {"tone_db": 18.5, "floor_db": -120.0} |
+| a sound effect on an audio track, on time | yes | {"offset_ms": [-5, -5], "level_db": [10.4, 10.4], "floor_db": -120.0} |
+| a sound effect's volume | yes | {"level_change_db": -11.9, "expected_db": -12.0} |
+| a sound effect's fade | yes | {"drop_db": 18.0} |

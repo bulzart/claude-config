@@ -25,15 +25,18 @@
   `capcut_add_keyframe` for a move) and the joins with `T capcut-transitions --draft "<draft>" --run RUN --video NN` (the timeline's
   transition slugs, never `capcut_add_transition`); the effects, when the plan has any, with `T capcut-effects --draft "<draft>" --run
   RUN --video NN` (each overlay on its own video track above the stills, its file copied into the draft, sized, placed and keyed or
-  blended by the way the CapCut effects check verified, at its volume; each sound on an audio track at its volume with its fades; it
-  refuses an effect that needs something the check did not verify, listed in `refused`: plan that moment again without it, and never
-  write an effect with the CapCut MCP); then the captions in the references' look (the plan's `captions`, §2, §5):
+  blended by the way the CapCut effects check verified: on this PC an alpha file ffmpeg makes, since CapCut 9.7 ignored capcut-cli's
+  chroma key and screen blend; the overlay silent and its sound, when wanted, on an audio track of its own, since CapCut played an
+  overlay's sound at volume 0; each sound effect on an audio track at its volume with its fades; it refuses an effect that needs
+  something the check did not verify, listed in `refused`: plan that moment again without it, and never write an effect with the
+  CapCut MCP); these three and `T capcut-text-anim` take `--run` and refuse an option the catalogue shows CapCut not drawing, or a Pro
+  one while the run's CapCut plan is free (`state.json → capcut_plan`); then the captions in the references' look (the plan's `captions`, §2, §5):
   `capcut import-srt "<draft>" "<RUN>/60-outputs/video-NN/captions.srt" --font-size <size> --color <fill> --border-width <stroke_width>
   --border-color <stroke_color> --align 1 --y <1 − 2 × y_rel>`, with `--shadow`, `--bg-color`/`--bg-alpha` and `--highlight-words …
   --keyword-color … --keyword-size …` as the look has them; the font with `T capcut-font --draft "<draft>" --font-file <font_file> --track
   subtitle` (it also writes the outline, box and shadow import-srt set on each caption where CapCut 9.x draws them: the outline into each
   style's strokes, their check_flag bits; without it CapCut shows the words with no outline); the entrance with `T capcut-text-anim --draft
-  "<draft>" --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s>` (CapCut's own intro on every caption,
+  "<draft>" --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s> --run RUN` (CapCut's own intro on every caption,
   capped at each caption's length); any other text with `capcut add-text`
   in its own look (its font with `T capcut-font ... --track text`, the add-text default); then `T capcut-repair --draft "<draft>" --keep-text`
   (register, the media links CapCut 9.3+ opens a clip by, sync, lint). Never `capcut lint --fix` on a project: besides the links it copies

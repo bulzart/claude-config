@@ -34,7 +34,7 @@
     "drafts_dir": "C:/Users/Bulzart/AppData/Local/CapCut/User Data/Projects/com.lveditor.draft",
     "template_draft": "_analyze-stack-template",
     "pro": false,
-    "pro_note": "false: this PC's CapCut has no Pro plan, so a project that uses a Pro option cannot be exported (the user, 2026-11-06). The agents use only what data/capcut-catalogue.md marks 'free plan: yes'; CapCut lists what blocked an export in User Data/Cache/FeedbackOtherInfo.json, which `T capcut-check measure` reads. true: every option CapCut drew may be used.",
+    "pro_note": "This PC's default for a run that has no CapCut plan of its own. Each Static run asks the user which plan they export with (state.json -> capcut_plan, free | pro; the user, 2026-11-06: \"make him pick, if he picks pro then be free to pick any edit feature that pro has if we need them, if not then just the free ones\"), and that pick wins. free (false): only what data/capcut-catalogue.md marks free, so the export is never blocked; CapCut lists what blocked an export in User Data/Cache/FeedbackOtherInfo.json, which `T capcut-check measure` reads. pro (true): every option CapCut drew may be used.",
     "note": "Analyze Mode assembles every video as its own CapCut project DD_Mon_YYYY_vNN (reference/capcut-assembly.md). Same store and template as the capcut MCP server's CAPCUT_DRAFTS_DIR / CAPCUT_TEMPLATE_DRAFT.",
     "text_style": {
       "font": "System",

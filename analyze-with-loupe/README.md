@@ -331,8 +331,10 @@ their pace and jitter, each join's signature, each caption word's entrance curve
 insert of a few frames reads as a slide in the numbers), and the plan decides every move, join, insert (`offset_s`), caption entrance and effect from them,
 with no stock value (`T slideshow plan` lists what is undecided). CapCut gets them through `T capcut-motion` (KFTypeScaleX with uniform scale and
 KFTypePositionX/Y: CapCut 9.7 ignores UNIFORM_SCALE keys), `T capcut-transitions`, `T capcut-text-anim` and `T capcut-effects`, and only options the
-CapCut check showed this PC's CapCut drawing (`T capcut-check fill | measure`, `effects-fill | effects-measure` → `data/capcut-catalogue.md`; without
-CapCut Pro, `config.json → capcut.pro` false, only the free ones; the check is measured from CapCut's export or, when Pro blocks it, a screen recording).
+CapCut check showed this PC's CapCut drawing (`T capcut-check fill | measure`, `effects-fill | effects-measure` → `data/capcut-catalogue.md`; the
+check is measured from CapCut's export or, when Pro blocks it, a screen recording). Each Static run asks which CapCut plan the user exports with
+(`state.json → capcut_plan`): free keeps the edit to the options marked free, pro allows the Pro ones too (`T capcut-text-anim`, `capcut-transitions`
+and `capcut-effects` refuse a Pro option on a free run; `config.json → capcut.pro` is the default for a run without the key).
 The check copy draws each still with an exact sub-pixel resample per frame (ffmpeg's zoompan shook). **The effects folder** (optional, the user, the
 same day: "sound effects, and green screen transitions"): read-only like the references; `T effects scan` measures every file once (cached): a sound's
 start, loudest moment, length, colour and loudness, an overlay's key green, the seconds it hides a 9:16 box, its black and white shares, its own

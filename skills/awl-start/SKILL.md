@@ -91,7 +91,11 @@ Only these section files for this phase, nothing else unless a step below says s
    make every image locally with FLUX 3 Image Klein (int8) on this PC's GPU, check each one and draw again by your QC-fixes choice; no
    credits, about a minute or more per image, and its licence allows commercial use only for a business under US$5M a year.") or
    **"Prompts for me"** ("I write one prompt per image and the character sheets; you make the images, put them in one folder and send me
-   its path; I check them."); `$ARGUMENTS` with `images api|klein|prompts` answers it. Then `T static check` (add `--offline` with
+   its path; I check them."); `$ARGUMENTS` with `images api|klein|prompts` answers it. In the same call, header "CapCut plan" (the user,
+   2026-11-06: "make him pick, if he picks pro then be free to pick any edit feature that pro has if we need them, if not then just the
+   free ones"), none recommended: **"Free"** ("The edit uses only CapCut's free options, so every project exports without a
+   subscription.") or **"Pro"** ("The edit may also use CapCut's Pro options the CapCut check showed working (such as the Pop Up and
+   Spring text intros); you export with an active CapCut Pro subscription."); `$ARGUMENTS` with `capcut free|pro` answers it. Then `T static check` (add `--offline` with
    prompts or klein): a part the run needs that is not ready (the key with OpenAI; `images_klein` with FLUX 3 Klein; the TTS environment
    always) is a blocker: report it with static §9's setup line and stop before any analysis. Music is needed only when a bed is planned
    (A6s): reported, never a blocker here.
@@ -201,7 +205,8 @@ Only these section files for this phase, nothing else unless a step below says s
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;
    - Create: store the memes choice (step 2c): `T state --run RUN set memes=include` or `memes=none`;
    - Static: `T state --run RUN set analyze_submode=static static_images=api|klein|prompts audio_ingest=whisper` (no model is stored; item 36),
-     and the effects folder: `T state --run RUN set static.effects_folder="<folder>"` or `static.effects_folder=none`;
+     the effects folder: `T state --run RUN set static.effects_folder="<folder>"` or `static.effects_folder=none`, and the CapCut plan:
+     `T state --run RUN set capcut_plan=free|pro`;
    - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`
      (first line `# Requirement (the user's words)`, then the text; a file the user named is copied, a PDF through `T doc-text`);
    - start Loupe (not in Static: no Loupe call there, item 36): `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper

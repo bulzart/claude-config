@@ -1032,3 +1032,59 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   flow read the change of picture as a shift. Static §1 now says to view every join that is not a one-frame cut before naming it, and
   §5 plans an insert as an image of its own with `offset_s` (`T slideshow plan` orders the timeline by start). Its joins sit in silent
   pauses (50-90 dB under the voice): no sound effects.
+
+## 2026-11-06 · Static: the optional effects folder (sound effects, green-screen transitions, overlays), verified in CapCut
+
+- **Asked (the user):** "the static mode will also to ask user to provide with a folder of effects(optional) that can have: sound
+  effects, and green screen transitions(such as some transitions found in C:\Users\Bulzart\Documents\fx\100 Green screen transitions\100
+  Green screen transitions) make sure to cover these too".
+- **Changed:**
+  - `awl-start` asks for the folder (optional, in the same message as the other paths; `effects <folder>` / `no-effects` in the
+    arguments); `state.json → static.effects_folder`; the input guard protects it like the references (read-only: copied, never moved).
+  - `T effects scan` (A1): every file measured once and cached (`runs/_effects-cache`, by path, size, time and settings): a sound's
+    length, loudness, peak, where it starts, its loudest 10 ms, how fast it falls, its colour (centroid, flatness, strongest frequency);
+    an overlay's key green, its shares of green, black, white and transparent pixels in the box a cover on the run's canvas shows, the
+    seconds that box holds no green (a green-screen transition hides the picture there: its cut goes inside), all black (nothing shows
+    in screen blend) or all white, its brightest and busiest moment; contact sheets with the box outlined and the cover's middle,
+    brightest and busiest frames; archives listed, not unpacked. Facts only.
+  - The plan's `effects` (static §5): an overlay or a sound from the scan, its moment (`join` K, `line` N or `at_s`) and the second of
+    the file that lands on it (`anchor_s`), how an overlay meets the picture (`blend`: chroma, screen, normal), its `fit` (cover,
+    contain), `volume`, optional scale and position keys and opacity; a sound's volume and fades; the reason. Nothing has a stock value:
+    `T slideshow plan` lists what is left out, places each effect, and puts overlapping ones on separate tracks. Only where an effect plays
+    the part of a device the references show; never a sticker, emoji or badge (item 6), even when the folder holds one.
+  - `T slideshow render` draws them (ffmpeg's chromakey, the screen blend on black, alpha overlays, keys as expressions; the sounds in the
+    mix before its loudness pass).
+  - `T capcut-effects` (S4) writes each overlay on its own video track above the stills and each sound on an audio track with capcut-cli
+    (`add-video`, `chroma`, `mix-mode`, `add-audio`, `audio-fade`), then the in point, the file's real length, the cover scale (3.16 for
+    16:9 on 9:16), the scale and position keys, opacity and volume into the draft; only by ways the CapCut effects check verified, and an
+    alpha file made by ffmpeg when CapCut's own chroma key or screen blend does not play but an alpha format does; it refuses the rest.
+  - The CapCut effects check (`T capcut-check effects-fill | effects-measure`, static §9): test media with known shapes and times (a green
+    wipe with a tone, a glow on black, a red disc in four alpha formats, a ring sticker, a click and a noise burst) written the way
+    capcut-effects writes them, measured on CapCut's export or a screen recording with the desktop sound (lined up from its first click
+    and the stills' switches); `data/capcut-catalogue.json → effects` and the catalogue's Effects table.
+  - `config.json → capcut.pro` false: the agents use only options marked free.
+- **Found in the user's folder (219 files):** 5 green-screen transitions (silent sound tracks; 01 and 02 never hide a whole 9:16 box,
+  03-05 hide it for 0.13-0.27 s), 25 "Flash" files that are fire and sparks on black, electricity, HUD, light leaks, 26 paint-brush mattes
+  (black to white), motion graphics, two sound effects (the mouse click starts 0.53 s into its file), two PNG stickers (never used:
+  item 6), two archives (not read).
+- **Verified:** CapCut's own export of the effects check (9.7, nothing in it Pro: it exported on the free plan): capcut-cli's chroma
+  key and screen blend are ignored (the wipe stayed green, the glow kept its black box), so green screens and black backgrounds go in as
+  ProRes 4444 alpha files made by ffmpeg (ProRes 4444, QuickTime Animation and PNG-in-MOV keep their transparency, VP9 does not), and the
+  check render draws the same file; an overlay's sound at volume 0 still played, so overlays go in silent and their sound, when wanted,
+  on an audio track of its own; the cover scale, the captions above the overlays, scale and position keys on an overlay, sound effects on
+  time (5 ms early), at their volume (-11.9 dB for 0.25) and with their fades all play. The measuring side was first proven on synthetic
+  exports and a synthetic screen recording (`tests/t06_effects_check.py`: every way read as playing, a recording lined up at 1.7 s from
+  its first click, an unkeyed green screen read as chroma not playing).
+- **The CapCut plan** (the user, the same day: "the user might also pay for pro subscription too so make him pick, if he picks pro then
+  be free to pick any edit feature that pro has if we need them, if not then just the free ones"): `awl-start` asks Free or Pro for every
+  Static run (`state.json → capcut_plan`, the contract's CapCut plan line); `T capcut-text-anim`, `capcut-transitions` and
+  `capcut-effects` refuse a Pro option on a free run and an option the catalogue shows CapCut not drawing; `config.json → capcut.pro` is
+  the default for a run without the key.
+- **The third build of the test video** (`06_Nov_2026_v01-3`, the plan decided from the measured reference: the moves, hard cuts, two
+  3-frame inserts at the story's turns, CapCut's free Mini Zoom on every word, no effects since the reference has none), measured on the
+  user's own CapCut export: zooms 1.198-1.203 for 1.2, 0.832 for 0.833, 0.847 for 0.847, pans 12.55 and 12.52 % of the height (the
+  reference: 12.56), inserts 0.10 s, jitter 0.000-0.001, every word entering at 76-96 % of its size and settling in 2-4 frames; it
+  exported without a Pro block. The production agent's notes became fixes: `capcut-motion` judges the clips on draft_content.json (a
+  template's stale draft_info.json mirror had made it answer ok false), the timeline keeps cut times to 6 places and edit-profile splits a
+  given cut by its frame (4 places put a cut 33 µs after its frame and read as a phantom 1-frame shot), the catalogue says pan-left and
+  pan-down are the measured pans' keys with the opposite sign; the caption font path inside CapCut's version folder is listed as a risk.

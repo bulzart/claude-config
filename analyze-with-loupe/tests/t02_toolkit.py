@@ -819,7 +819,7 @@ def ts(*args, ok=True):
 
 js, _ = ts("new-run", "--mode", "analyze", "--slug", "static")
 SR = Path(js["run_dir"])
-ts("state", "--run", str(SR), "set", "analyze_submode=static", "static_images=api", "audio_ingest=whisper", "qc_fixes=auto")
+ts("state", "--run", str(SR), "set", "analyze_submode=static", "static_images=api", "audio_ingest=whisper", "qc_fixes=auto", "capcut_plan=free")
 js, _ = ts("static", "check", "--offline")
 check(js["parts"]["images"]["key_present"] is True and js["parts"]["tts"]["ready"] and "ffmpeg" in js["parts"], "static check reports each part as facts")
 js, _, _ = t("static", "check", "--offline", env={**SENV, "OPENAI_API_KEY": ""})
@@ -1378,7 +1378,25 @@ else:
 js, _ = ts("contract", "--run", str(SR))
 _ct = Path(js["file"]).read_text(encoding="utf-8")
 check("Analyze Mode, static" in _ct and "Images: api" in _ct and "QC fixes: auto" in _ct and "awl-static-edit" in _ct and not js.get("unresolved_placeholders")
-      and "Memes: n/a (Static" in _ct, "contract writes production-agents 2s's Static prompt with the run's choices filled")
+      and "Memes: n/a (Static" in _ct and "CapCut plan: free" in _ct, "contract writes production-agents 2s's Static prompt with the run's choices filled (the CapCut plan too)")
+# the CapCut plan (the user, 2026-11-06: "make him pick, if he picks pro then be free to pick any edit feature that pro has"): a Pro intro
+# or transition is refused on a free run, allowed on a pro one; one CapCut drew nothing for is refused either way
+if (_tpl / "draft_content.json").is_file():
+    (home / "data").mkdir(exist_ok=True)
+    (home / "data" / "capcut-catalogue.json").write_text(json.dumps({
+        "text_intros": [{"slug": "pop-up", "visible_animation": True, "pro": True}, {"slug": "mini-zoom", "visible_animation": True, "pro": False},
+                        {"slug": "fade-in", "visible_animation": False, "pro": False}],
+        "transitions": [{"slug": "mix", "visible_transition": True, "pro": False}]}), encoding="utf-8")
+    _pa = home.parent / "Draft_plan"
+    _shutil.copytree(_tpl, _pa, ignore=_shutil.ignore_patterns("*.bak", "*bak", "assets", "Resources"))
+    _r1 = t("capcut-text-anim", "--draft", str(_pa), "--intro", "pop-up", "--intro-duration", "0.12", "--run", str(SR), env=SENV, ok=False)
+    _r2 = t("capcut-text-anim", "--draft", str(_pa), "--intro", "fade-in", "--intro-duration", "0.12", "--run", str(SR), env=SENV, ok=False)
+    ts("state", "--run", str(SR), "set", "capcut_plan=pro")
+    _r3 = t("capcut-text-anim", "--draft", str(_pa), "--intro", "pop-up", "--intro-duration", "0.12", "--run", str(SR), env=SENV, ok=False)
+    ts("state", "--run", str(SR), "set", "capcut_plan=free")
+    check(_r1[1] == 2 and "Pro" in _r1[0].get("error", "") and _r2[1] == 2 and "drew nothing" in _r2[0].get("error", "") and _r3[1] != 2,
+          "capcut-text-anim refuses a Pro intro on a run whose CapCut plan is free and allows it on a pro run; an intro CapCut drew nothing for is refused")
+    (home / "data" / "capcut-catalogue.json").unlink()
 js, _ = ts("contract", "--run", str(SR), "--notes", "The anchor is <RUN>/30-assets/characters/C1-a1.png.")
 _ct = Path(js["file"]).read_text(encoding="utf-8")
 check(f"{SR}/30-assets/characters/C1-a1.png" in _ct and "<RUN>" not in _ct.split("Run-specific notes")[-1],
@@ -1390,7 +1408,7 @@ check(js.get("contract", {}).get("loupe_line") is True and js.get("contract", {}
 KENV = {**SENV, "AWL_IMAGE_STUB": "1", "OPENAI_API_KEY": ""}
 js, _, _ = t("new-run", "--mode", "analyze", "--slug", "static-klein", env=KENV)
 KR = Path(js["run_dir"])
-t("state", "--run", str(KR), "set", "analyze_submode=static", "static_images=klein", "audio_ingest=whisper", "qc_fixes=auto", env=KENV)
+t("state", "--run", str(KR), "set", "analyze_submode=static", "static_images=klein", "audio_ingest=whisper", "qc_fixes=auto", "capcut_plan=pro", env=KENV)
 js, code, _ = t("static", "format", "--run", str(KR), "--aspect", "9:16", "--res", "1080", "--image-size", "1080x1920", env=KENV, ok=False)
 check(code == 2 and "FLUX 3 Klein" in js.get("error", "") and "divisible by 16" in js.get("error", ""), "a Klein run's format refuses an edge that is not a multiple of 16")
 js, _, _ = t("static", "format", "--run", str(KR), "--aspect", "9:16", "--res", "1080", env=KENV)
