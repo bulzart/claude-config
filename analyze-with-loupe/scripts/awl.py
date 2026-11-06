@@ -2362,7 +2362,7 @@ def _contract_memes(st: dict) -> str:
     if sub == "recreate":
         return "n/a (Recreate keeps each reference's own inserts)"
     if sub == "static":
-        return "n/a (Static: no inserts)"
+        return "n/a (Static: no meme or clip is cut in; a still the plan inserts for a few frames is one of its images)"
     if m == "none":
         return "none (pure generation: no insert, meme still or meme sound of any kind)"
     if m == "include" or (sub == "create" and not m):
@@ -6855,18 +6855,33 @@ def _capcut_check_effects_measure(a):
     cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-ss", f"{start:.4f}", "-i", str(exp), "-t", f"{L:.3f}",
               "-map", "0:a:0?", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(aud)], timeout=600)
     have_audio = cp.returncode == 0 and aud.is_file() and aud.stat().st_size > 1000
+    fps = 30.0
+    ov = {o["test"]: o for o in c["overlays"]}
+    # only the frames the tests read are kept (the whole cut at 1080x1920 would hold several GB)
+    times = [c["ref_a_s"], c["ref_b_s"]]
+    for name in ("chroma", "chroma_low"):
+        s0 = float(ov[name]["start"])
+        times += list(np.arange(s0 + 0.1, s0 + 2.9, 3 / fps)) + [s0 + FX_CHECK["tone_at_file_s"]]
+    times += list(np.arange(float(ov["screen"]["start"]) + 0.2, float(ov["screen"]["start"]) + 2.8, 0.2))
+    times += [float(ov[f"alpha_{n}"]["start"]) + 1.0 for n in FX_ALPHA_CODECS]
+    times += [float(ov["sticker"]["start"]) + d + 0.02 for d in (0.0, 0.2, 0.3, 0.75, 1.5)]
+    want = {int(round(t * fps)) for t in times}
     cap = cv2.VideoCapture(str(vid))
-    frames = []
+    kept, n_frames = {}, 0
     while True:
         ok, f = cap.read()
         if not ok:
             break
-        frames.append(f)
+        if n_frames in want:
+            kept[n_frames] = f
+        n_frames += 1
     cap.release()
-    if len(frames) < int(L * 30) - 15:
-        fail(f"the cut video holds {len(frames)} frames, the project {int(L * 30)}: check --start / --crop", 2)
-    fps = 30.0
-    fr = lambda t: frames[min(len(frames) - 1, max(0, int(round(t * fps))))].astype(np.int16)   # noqa: E731
+    if n_frames < int(L * 30) - 15:
+        fail(f"the cut video holds {n_frames} frames, the project {int(L * 30)}: check --start / --crop", 2)
+
+    def fr(t):
+        k = min(n_frames - 1, max(0, int(round(t * fps))))
+        return (kept.get(k) if k in kept else kept[min(kept, key=lambda j: abs(j - k))]).astype(np.int16)
     refA, refB = fr(c["ref_a_s"]), fr(c["ref_b_s"])     # the plain stills (A at 0-3 s, B at 3-6 s) where no effect plays, caption included
     ref = lambda t: refA if int(t // c["still_s"]) % 2 == 0 else refB   # noqa: E731
 
@@ -6874,11 +6889,10 @@ def _capcut_check_effects_measure(a):
         g = f[..., 1]
         return float(((g > 80) & (g - np.maximum(f[..., 0], f[..., 2]) > 50)).mean())
     res = {}
-    ov = {o["test"]: o for o in c["overlays"]}
     cap_band = slice(int(H * (0.5 + 0.5 * abs(c["caption_y"])) - 90), int(H * (0.5 + 0.5 * abs(c["caption_y"])) + 90))
     for name in ("chroma", "chroma_low"):
         s0 = float(ov[name]["start"])
-        ts = np.arange(s0 + 0.1, s0 + 2.9, 1 / fps)
+        ts = np.arange(s0 + 0.1, s0 + 2.9, 3 / fps)
         gs = [green_share(fr(t)) for t in ts]
         mid = fr(s0 + FX_CHECK["tone_at_file_s"])
         white = float((mid[: int(H * 0.8)].min(axis=2) > 225).mean())   # above the caption band
