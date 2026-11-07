@@ -144,7 +144,6 @@
   "autoCompactEnabled": true,
   "terminalProgressBarEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
   "autoMode": {
     "environment": [
       "### Org-wide",
@@ -172,5 +171,6 @@
       "**Trusted repo**: The git repository the agent started in (its working directory) — C:\\Users\\Bulzart\\Documents has no tracked files and no configured remotes, so there is no identifiable trusted remote at this time",
       "**Org-specific CLIs**: None configured"
     ]
-  }
+  },
+  "voiceEnabled": true
 }
