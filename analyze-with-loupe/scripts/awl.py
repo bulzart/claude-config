@@ -74,6 +74,7 @@ Subcommands (python awl.py <cmd> -h):
                  ffmpeg, capcut-cli) | formats (facts for the format question: the references' aspects, sizes per aspect and resolution)
                  | format (store the pick) | lock (the run's niche and style reference, once; the locks shown) | subjects (in video
                  order; --add appends the next ones) | context (the references' real YouTube titles and thumbnails, context.txt)
+  reuse-analysis a reference another run already analysed (the same file) gets that analysis here instead of a second one
   clone-run      Static: a new run with a Static run's analysis copied (inventory, media, cards, spec, characters, voice); its niche,
                  subjects, videos and ledger are not (the clone asks its niche)
   image          Static stills: generate (OpenAI Images API with the key only from OPENAI_API_KEY, or FLUX 3 Klein on this PC with
@@ -9899,6 +9900,49 @@ def _thumb_sheets(items: list, out_dir: Path, per: int = 12) -> list:
     return paths
 
 
+YT_ID_TAIL = re.compile(r"^(?P<rest>.+)_(?P<id>[A-Za-z0-9_-]{11})$")
+
+
+def _context_from_names(rd: Path, refs_dir) -> None:
+    """No context.txt: the references' file names carry their titles (the user, 2026-11-07: "the video already have their name, the
+    pattern is like this every video is named like Channel_Name_Video_Title_..."; the tail of such a name is the YouTube video's id, which
+    the downloader adds). Facts per video: the name's words (underscores as spaces), the 11-character id its end looks like, its
+    #hashtags, and the words every name starts with; which words are the channel and which the title is the agent's reading."""
+    try:
+        inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail("no inventory in this run: `T inventory \"<references folder>\" --run RUN --as references` first", 2)
+    rows = []
+    for it in inv.get("items") or []:
+        if it.get("kind") != "video" or it.get("ignored"):
+            continue
+        stem = Path(it.get("rel") or it.get("path") or "").stem
+        m = YT_ID_TAIL.match(stem)
+        rest, yid = (m.group("rest"), m.group("id")) if m else (stem, None)
+        words = [w for w in re.split(r"[_\s]+", re.sub(r"#\w+", " ", rest)) if w]
+        rows.append({"ref": it["id"], "file": Path(it.get("rel") or "").name, "words": " ".join(words), "word_count": len(words),
+                     "youtube_id_like": yid, "hashtags": re.findall(r"#\w+", rest),
+                     "duration_s": it.get("duration_s"), "size": f"{it.get('display_width')}x{it.get('display_height')}"})
+    named = [r["words"].split() for r in rows if r["youtube_id_like"]]
+    common = []
+    if len(named) > 1:
+        for toks in zip(*named):
+            if len({t.casefold() for t in toks}) != 1:
+                break
+            common.append(toks[0])
+    res = {"ok": True, "found": False, "from_names": True, "references": str(refs_dir) if refs_dir else None, "rows": rows,
+           "common_leading_words": " ".join(common) or None, "thumbnails": None}
+    write_json(rd / "00-inventory" / "context.json", res)
+    L = ["# The references' titles, from their file names (no context.txt)", "",
+         "Each name reads `<channel>_<title>_<YouTube id>`; which words are the channel and which the title is the agent's reading.", "",
+         "| ref | words of the name | id-like tail | hashtags | length |", "|---|---|---|---|---|"]
+    L += [f"| {r['ref']} | {r['words']} | {r['youtube_id_like'] or '-'} | {' '.join(r['hashtags']) or '-'} | {r['duration_s']} s |" for r in rows]
+    write_text(rd / "00-inventory" / "context.md", "\n".join(L))
+    out({**{k: v for k, v in res.items() if k != "rows"}, "rows": rows, "table": str(rd / "00-inventory" / "context.md"),
+         "note": "no context.txt: the titles come from the file names (facts above; a name without that pattern carries no title); no "
+                 "reference thumbnails, so the thumbnail follows the references' hooks and first frames (static §12)"})
+
+
 def _static_context(a):
     """The references' real YouTube titles and thumbnails (contract item 36; the user, 2026-11-07: "in the references folder there is also
     a context.txt file that has all the real youtube title of each video and their thumbnails image file path ... like this
@@ -9911,9 +9955,7 @@ def _static_context(a):
     src = Path(a.file) if a.file else next((p for p in (sorted(refs_dir.iterdir()) if refs_dir else [])
                                             if p.is_file() and p.name.casefold() == "context.txt"), None)
     if not src or not src.is_file():
-        out({"ok": True, "found": False, "references": str(refs_dir) if refs_dir else None,
-             "note": "no context.txt in the references folder: no real titles or thumbnails to study (static §12: the title and the "
-                     "thumbnail then follow the references' hooks and first frames)"})
+        _context_from_names(rd, refs_dir)
     try:
         inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -9973,6 +10015,70 @@ def cmd_static(a):
         fail(f"static {a.action} needs --run", 2)
     {"check": _static_check, "formats": _static_formats, "format": _static_format_set, "lock": _static_lock,
      "subjects": _static_subjects, "context": _static_context}[a.action](a)
+
+
+def _rewrite_ids(text: str, src: Path, dst: Path, oid: str, nid: str) -> str:
+    """A copied analysis file's text pointed at its new run and id: the old run's paths (as written, with forward slashes, JSON-escaped)
+    become the new run's, then the old id as a word becomes the new one."""
+    for o, n_ in ((str(src), str(dst)), (str(src).replace("\\", "/"), str(dst).replace("\\", "/")),
+                  (json.dumps(str(src))[1:-1], json.dumps(str(dst))[1:-1])):
+        text = text.replace(o, n_)
+    return re.sub(rf"\b{re.escape(oid)}\b", nid, text) if oid != nid else text
+
+
+def cmd_reuse_analysis(a):
+    """A reference another run already analysed is not analysed again (the user, 2026-11-07: "we already have the Sadam Hussein's there
+    whom we've already analyzed, analyze the two new samples"): every video of this run's inventory whose file is one of the other run's
+    (the same hash and size) gets that run's media folder (frames, storyboards, transcript, audio, OCR, the audio and edit profiles) under
+    its id here, and its card when both runs are of the same sub-mode, with the paths and the id inside rewritten. prep-all then skips it
+    as already prepared. Facts: what matched, what was copied, the videos that are new."""
+    rd, st = _state_of(a.run)
+    src, sst = _state_of(a.from_run)
+    try:
+        inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
+        sinv = json.loads((src / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail("both runs need an inventory (00-inventory/inventory.json)", 2)
+    there = {(it.get("hash"), it.get("size_bytes")): it for it in sinv.get("items") or [] if it.get("kind") == "video" and it.get("hash")}
+    same = st.get("analyze_submode") == sst.get("analyze_submode")
+    matched, new, kept = [], [], []
+    for it in inv.get("items") or []:
+        if it.get("kind") != "video" or it.get("ignored"):
+            continue
+        old = there.get((it.get("hash"), it.get("size_bytes")))
+        if not old or not (src / "10-media" / old["id"] / "video.json").is_file():
+            new.append({"id": it["id"], "file": it.get("rel")})
+            continue
+        oid, nid = old["id"], it["id"]
+        dm = rd / "10-media" / nid
+        if (dm / "video.json").is_file() and not a.redo:
+            kept.append({"id": nid, "file": it.get("rel"), "note": "already prepared here (--redo copies it again)"})
+            continue
+        if dm.exists():
+            shutil.rmtree(dm)
+        shutil.copytree(src / "10-media" / oid, dm)
+        n = 0
+        for f in dm.rglob("*"):
+            if f.is_file() and f.suffix.lower() in CLONE_TEXT_EXT:
+                try:
+                    raw = f.read_bytes().decode("utf-8")
+                except (UnicodeDecodeError, OSError):
+                    continue
+                new_t = _rewrite_ids(raw, src, rd, oid, nid)
+                if new_t != raw:
+                    f.write_bytes(new_t.encode("utf-8"))
+                    n += 1
+        card = None
+        sc = src / "20-analysis" / "cards" / f"{oid}.md"
+        if same and sc.is_file():
+            dc = rd / "20-analysis" / "cards" / f"{nid}.md"
+            dc.parent.mkdir(parents=True, exist_ok=True)
+            dc.write_bytes(_rewrite_ids(sc.read_bytes().decode("utf-8"), src, rd, oid, nid).encode("utf-8"))
+            card = str(dc)
+        matched.append({"here": nid, "there": oid, "file": it.get("rel"), "media": str(dm), "card": card, "rewritten_files": n})
+    out({"ok": True, "from": str(src), "matched": matched, "already_here": kept, "new": new,
+         "note": "prep-all skips the matched videos (already prepared); analyse only the new ones (their media, audio and edit profiles, "
+                 "and their cards); a card copied from a run of the same sub-mode is read again, never rewritten blindly"})
 
 
 CLONE_COPY = ("00-inventory", "10-media", "20-analysis")
@@ -11800,6 +11906,13 @@ def main():
     p.add_argument("--image-size", help="format: WxH instead of the computed image size (e.g. the size without the move margin)")
     p.add_argument("--export", help="format: WxH instead of the computed export size")
     p.set_defaults(fn=cmd_static)
+
+    p = sp.add_parser("reuse-analysis", help="a reference another run already analysed is not analysed again: its media folder (and its card, "
+                                             "same sub-mode) copied under its id here, matched by the file's hash and size; prep-all then "
+                                             "skips it")
+    p.add_argument("--run", required=True); p.add_argument("--from", dest="from_run", required=True, help="the run that analysed it")
+    p.add_argument("--redo", action="store_true", help="copy again over a video already prepared here")
+    p.set_defaults(fn=cmd_reuse_analysis)
 
     p = sp.add_parser("clone-run", help="Static (contract item 36): a new run with a Static run's analysis copied (inventory, media, cards, "
                                         "spec, characters, voice); its subjects, niche, videos and ledger are not: the clone asks its niche")
