@@ -1271,8 +1271,15 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   default font. CapCut's font folder is inside the version folder, and its cache is CapCut's to clean.
 - **Changed:** a library `fonts/` folder (seven Google fonts under the SIL Open Font License, copied from CapCut's cache, each with its
   row in `fonts/README.md`); `T capcut-font --list` lists it first and gives every font's `kept_by`, and `capcut-font` answers the chosen
-  file's `font_kept_by`; static §7 "Fonts". A test project `07_Nov_2026_fonttest` (Sigmar One, Coiny, Anton from the library) is for the
-  user to open: whether CapCut draws a font from a folder of its own is only seen in CapCut.
+  file's `font_kept_by`; static §7 "Fonts". A test project `07_Nov_2026_fonttest` (Sigmar One, Coiny, Anton, Luckiest Guy from the
+  library) is for the user to open: whether CapCut draws a font from a folder of its own is only seen in CapCut.
+- **Asked (the same evening):** "download other popular fonts used in captions in youtube videos and use one of them if you find it
+  suitable and another preset too".
+- **Changed:** 34 static weights of popular caption fonts (Montserrat, Poppins, Bebas Neue, Oswald, Roboto, Inter, Luckiest Guy,
+  Bangers, Lilita One, Archivo Black, Titan One, Rubik, Nunito, Fredoka, Permanent Marker, Bungee, League Spartan, Barlow, Kanit, Open
+  Sans, Lato, Raleway, Baloo 2, Chewy, Bowlby One, Passion One, Paytone One, Russo One, Fjalla One) from the Fontsource CDN into
+  `fonts/` (OFL or Apache 2.0, the latin subset, each listed in its README); paid and personal-use faces left out. Video 02's captions:
+  Luckiest Guy, a 0.18 outline, a shadow and the key words in Airbnb's pink.
 - **Found (the same evening):** `T tts voice --sample 2 --replace` stopped by the memory (the worker crashed at a 12.68 GB peak with 12.6
   GB free commit) had already copied sample 2 over the reference audio, while the voice prompt and state.json still held sample 1.
 - **Changed:** `tts voice` builds into `30-assets/voice/.voice-build/` from the sample's own file and replaces the reference, its text
