@@ -1524,9 +1524,45 @@ def _get_dotted(d, key: str):
     return d
 
 
+def _pid_alive(pid: int) -> bool:
+    """Whether a process with this id runs now (Windows: OpenProcess and its exit code; never os.kill, which on Windows ends it)."""
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x1000, False, pid)          # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return ctypes.GetLastError() == 5            # access denied: it exists
+        try:
+            code = ctypes.c_ulong()
+            return not k32.GetExitCodeProcess(h, ctypes.byref(code)) or code.value == 259   # STILL_ACTIVE
+        finally:
+            k32.CloseHandle(h)
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def _lock_owner_dead(path: Path) -> bool:
+    """A lock file names its owner ("<pid> <time>"): true only when that process is gone (2026-11-07: a call killed under memory
+    pressure left the GPU lock behind, and every FLUX 3 Klein call would have waited out the 4-hour stale time). An unreadable or
+    still-empty file (its writer has not written yet) counts as alive."""
+    try:
+        first = path.read_text(encoding="utf-8", errors="replace").split()
+        return bool(first) and first[0].isdigit() and int(first[0]) != os.getpid() and not _pid_alive(int(first[0]))
+    except (OSError, ValueError):
+        return False
+
+
 class FileLock:
     """Cross-process lock (O_EXCL lock file). Production agents run in parallel (one per video), so every
-    read-modify-write of a shared file (state.json, CapCut's store index) holds one of these."""
+    read-modify-write of a shared file (state.json, CapCut's store index) holds one of these. A lock whose owner process is gone is
+    taken over at once; one whose owner lives waits out `stale` seconds."""
 
     def __init__(self, path, timeout: float = 120.0, stale: float = 600.0):
         self.path, self.timeout, self.stale, self.fd = Path(path), timeout, stale, None
@@ -1541,7 +1577,7 @@ class FileLock:
                 return self
             except FileExistsError:
                 try:
-                    if time.time() - self.path.stat().st_mtime > self.stale:
+                    if time.time() - self.path.stat().st_mtime > self.stale or _lock_owner_dead(self.path):
                         self.path.unlink()          # left behind by a killed process
                         continue
                 except FileNotFoundError:
