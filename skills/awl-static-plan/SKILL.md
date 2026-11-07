@@ -14,12 +14,12 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run; skip when already read)
-- static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.4 KB)
+- static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (2.5 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.5 KB)
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (6.4 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (4.3 KB)
-- static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (2.5 KB)
+- static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (4.5 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)

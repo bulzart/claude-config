@@ -196,9 +196,19 @@ check("AWL_IMAGE_PYTHON" in s9 and "AWL_IMAGE_ROOT" in s9 and "flux3-image-klein
       and "`klein`" in sim and "caption" in sim and "At most 10 references" in sim,
       "FLUX 3 Klein: static §9 names its setup (the two variables, the int8 files, the gated download) and awl-static-images its half "
       "(the caption the model got, at most 10 references)")
+_prep = rd(SKD / "awl-analyze-prepare" / "SKILL.md")
 check("next_skill=awl-static-plan" in rd(SKD / "awl-analyze-study" / "SKILL.md") and "next_skill=awl-analyze-produce" in sp_text.get("awl-static-plan", "")
-      and "--fps 1 --dense-fps 1 --no-extras" in rd(SKD / "awl-analyze-prepare" / "SKILL.md") and "--voice" in rd(SKD / "awl-analyze-study" / "SKILL.md"),
-      "Static: 1 fps without extras in prepare, the voice numbers in study, study hands to the static plan and the plan to produce")
+      and "2 fps flat" in _prep and "no effort level" in _prep and "--fps 1" not in _prep and "T static context --run RUN" in _prep
+      and "--voice" in rd(SKD / "awl-analyze-study" / "SKILL.md"),
+      "Static (the user, 2026-11-07: no effort level, 2 fps): prepare samples at 2 fps flat with no effort level and reads context.txt, "
+      "the voice numbers in study, study hands to the static plan and the plan to produce")
+_study = rd(SKD / "awl-analyze-study" / "SKILL.md")
+check("step 5d is not asked" in st and 'header "Niche"' in _study and 'header "Visual style"' in _study
+      and "T static lock --run RUN --niche" in _study and "**More videos**" in sp_text.get("awl-static-plan", "")
+      and "T static subjects --run RUN --add" in sp_text.get("awl-static-plan", "") and "clone <run>" in router
+      and "more <run>" in router and "--thumbnail" in sp_text.get("awl-static-images", ""),
+      "one channel per run (the user, 2026-11-07): no effort question in Static, the niche and the visual style asked at A5 and locked, "
+      "more videos and clones routed, the subjects numbered by the toolkit, the thumbnail made at S3")
 check("### A9s. Static" in rd(SKD / "awl-analyze-produce" / "SKILL.md") and "awl-static-sound" in rd(SKD / "awl-analyze-produce" / "SKILL.md")
       and "static.waiting=images" in sp_text.get("awl-static-images", "") and "T image intake" in sp_text.get("awl-static-images", ""),
       "produce has A9s (sound for every video, then images, then the agents); prompts mode stops for the user's folder and takes it in by copy")
