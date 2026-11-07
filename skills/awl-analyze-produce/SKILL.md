@@ -120,7 +120,8 @@ videos only (their numbers from `T static subjects`); the videos already in `sta
     for the admin;
   - verify, and fix at once what is missing (`production-agents.md` §5 item 3): `videos[]` in
     `state.json`; the README table (the agent's `readme-row.md` appended to `deliverables/README.md`);
-    `video-NN-clean.mp4` and `video-NN-preview.mp4` in `deliverables/`; `result.json` complete, each
+    `video-NN-clean.mp4` and `video-NN-preview.mp4` in `deliverables/` (Static: the CapCut project instead, no video file, static §7);
+    `result.json` complete, each
     check of the agent contract with an evidence path or "not checked: <why>"; the plan and brief files
     with their attempts. A size reading is never repeated or summarised before its frame was viewed
     and its method (two estimates, a derived distance) is in the verdict; a size from one assumed

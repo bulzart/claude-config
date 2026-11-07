@@ -19,7 +19,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - brand-guardrails §2: `AWL/reference/brand-guardrails/020_2_rule-kinds-and-what-each-does-to.md` (4.9 KB)
 - anomaly-catalog §1: `AWL/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.6 KB)
 - *only when a product has no supplied spec and its size must come from the standard-size table:*
-  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
+  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.8 KB)
 - `AWL/pipeline/preprocessing.md` — only when a prep step reports an error
 
 ## 3. Analyze Mode
@@ -33,10 +33,15 @@ Only these section files for this phase, nothing else unless a step below says s
   `T split-audio "<references folder>" --run RUN --audio-only` (for the sound and voice numbers of A3), and `prep-all` with
   `--ocr-frames 30` (more OCR frames for the captions); then
   the edit layer at the full frame rate, `T edit-profile --run RUN --ref <V>` for every reference (its moves, joins and caption
-  entrances as numbers, `10-media/<V>/edit-profile.json`; 2 fps cannot show them, static §1); then the references' real YouTube titles
-  and thumbnails, `T static context --run RUN` (`context.txt` in the references folder, one line per video, `<file>|<title>|<thumbnail
-  path>`; the table `00-inventory/context.md`, the labelled sheets in `10-media/thumbnails/`; static §12). The
+  entrances as numbers, `10-media/<V>/edit-profile.json`; 2 fps cannot show them, static §1); then the references' real YouTube titles,
+  `T static context --run RUN` (usually from the file names, `<channel>_<title>_<YouTube id>`; with a `context.txt` in the references
+  folder, its lines `<file>|<title>|<thumbnail path>` and the thumbnails; the table `00-inventory/context.md`; static §12). The
   assets are characters (photos and/or descriptions), prepared as below. No silent copies: no reference is ever an input.
+  **A reference another run already analysed** (the same file): `T reuse-analysis --run RUN --from <that run>` right after the inventory
+  copies its media folder (its frames, transcript, audio numbers and edit profile; and its card, when that run is Static too) under its
+  id here: `prep-all` skips it as already prepared, `edit-profile` is not run for it, and A3 reads its card again instead of writing a
+  new one, adding what the current card (static §1) asks that the older card lacks, from the copied media, never by analysing the video
+  again (the user, 2026-11-07: "we already have the Sadam Hussein's there whom we've already analyzed, analyze the two new samples").
   With an effects folder (`state.json → static.effects_folder` not `none`): `T effects scan --run RUN` (every sound and overlay measured
   once and cached: `00-inventory/effects.md` and `.json`, contact sheets in `10-media/effects/`; a large folder takes a minute or more,
   run it with `run_in_background: true` beside the other steps). Facts only: the spec and the plan pick from them (static §2, §5).

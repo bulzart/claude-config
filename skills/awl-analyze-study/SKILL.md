@@ -43,7 +43,7 @@ Only these section files for this phase, nothing else unless a step below says s
     after a compaction)
   - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (5.1 KB)
   - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (8.1 KB)
-  - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (4.3 KB) (the niche, the visual style and the narrator, A5)
+  - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.8 KB) (the niche, the visual style and the narrator, A5)
 
 ### A3. Video analysis (as continuous sequences)
 - **Static:** each card is the Static card (static §1–§2) in place of the product and physics fields: read `video.md`, `timeline.md`

@@ -87,9 +87,9 @@ Only these section files for this phase, nothing else unless a step below says s
    from the user); step 5b is not asked (`audio_ingest=whisper`), and step 5d is not asked: Static has no effort level, every reference is
    sampled at 2 fps (the user, 2026-11-07: "remove the effort idea completely (on static mode), just do 2fps when on static mode"). The
    run is one channel (static §10): its niche and its visual style are the user's picks at A5, after the analysis, and its narrator at
-   A6s; nothing religious or superstitious ever (static §11). The references folder may hold `context.txt` (one line per video,
-   `<file>|<its real YouTube title>|<its thumbnail's path>`) and a `thumbnails` folder: they are studied (A1, static §12), and every video
-   gets its own YouTube title and thumbnail.
+   A6s; nothing religious or superstitious ever (static §11). The references' real YouTube titles come from their file names
+   (`<channel>_<title>_<YouTube id>`), or from a `context.txt` with a `thumbnails` folder when the references folder holds one: they are
+   studied (A1, static §12), and every video gets its own YouTube title and thumbnail.
    Its inputs (step 5): the references folder and the assets: the characters as photos and/or descriptions (a text file each, or words in
    the message), usually no product; documents and examples as always; and **an effects folder (optional;** the user, 2026-11-06: "a
    folder of effects (optional) that can have: sound effects, and green screen transitions"**)**, asked in the same plain-chat message as
@@ -205,7 +205,8 @@ Only these section files for this phase, nothing else unless a step below says s
    with AskUserQuestion (a dialog holds four options and hides the text printed above it): the question of `effort.md` §1, all five
    levels numbered, none recommended, as a message of its own and the last thing in the turn; then stop and wait for the reply.
    `$ARGUMENTS` with `effort low|medium|high|xhigh|max` answers it. Stored in step 6.
-6. Create the run:
+6. Create the run (only at a new start: a session that already has a run continues it for every later request, new references
+   included; the router's "One run per session"):
    - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]` (Free, requirement only: no `--source`);
    - keep `RUN` from the JSON;
    - store the locked model (step 4.5);

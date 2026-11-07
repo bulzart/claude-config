@@ -37,7 +37,8 @@ unavailable or the name is not found, Read C:/Users/Bulzart/.claude/skills/<name
 under "Read now" the exact section files it needs: read those and nothing else. Never read the command file or a whole reference:
   1. awl-static-images (S3: with Images api or klein make, view and check every image of your plan and the video's YouTube thumbnail
      and fix by QC fixes; with Images prompts view and check the user's images and list what fails)
-  2. awl-static-edit   (S4: the timeline, the local check render, the CapCut project at the run's format: the final, the edit checks)
+  2. awl-static-edit   (S4: the timeline, the CapCut project made directly at the run's format: the final, no local render; the
+     edit checks read the project back)
   3. awl-record        (X10: deliverables with the YouTube title and thumbnail, README row, result.json)
   With QC fixes `off` every image is made once and nothing is redone: the edit is still built and its facts recorded; result.json
   `qc` = "off: not checked (the user reviews at the end)".

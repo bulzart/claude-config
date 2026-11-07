@@ -59,5 +59,6 @@ the narration's words heard with it against without it. The level is the agent's
 under it, and the bed still heard in the pauses; another level is tried with `--gain G` and kept as the image plan's `music_gain` (with
 `"music": true`; else `config.json → static.music.gain`). A voice in the bed, or an arc that fights the story, is a new take (another
 seed or a reworded caption, `T music make --run RUN --video NN`), at most two, by the run's QC fixes (off: none, noted in the brief). The
-check render ducks the bed under the voice; the CapCut project plays it at the gain without ducking (no CapCut ducking was checked).
+CapCut project, the only edit (no local render, §7), plays the bed at that gain without ducking (no CapCut ducking was checked), which is
+the level the measure judged.
 

@@ -27,18 +27,18 @@ Only these section files for this phase, nothing else unless a step below says s
   - generation-system §5c.2b: `AWL/reference/generation-system/260_5c.2b_prepare-the-source-before-it-rid.md` (2.5 KB)
 - *a placed or contents product (the spot):*
   - generation-system §4b.1c: `AWL/reference/generation-system/150_4b.1c_is-the-spot-feasible-read-the-so.md` (3.1 KB)
-- anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.4 KB)
+- anomaly-catalog §3: `AWL/reference/anomaly-catalog/210_3_the-prompting-stack-in-order-per.md` (2.3 KB)
 - *a product in use, prepared or counted:*
   - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
   - anomaly-catalog §2.2: `AWL/reference/anomaly-catalog/050_2.2_openings-and-use-affordances.md` (2.8 KB)
   - anomaly-catalog §2.3: `AWL/reference/anomaly-catalog/060_2.3_preparation-and-causality-cause.md` (1.5 KB)
   - anomaly-catalog §2.5: `AWL/reference/anomaly-catalog/080_2.5_object-permanence-exits-occlusio.md` (1.5 KB)
 - *a placed or contents product (size words):*
-  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
+  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.8 KB)
 - *the video shows a throw/pass (solidity lines):*
   - anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
 - *a placed or contents product (blend lines):*
-  - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (9.6 KB)
+  - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (9.2 KB)
 - *a person is swapped (the skin-tone sentence):*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - text-and-format §1: `AWL/reference/text-and-format/010_1_text-policy-depends-on-the-mode.md` (7.5 KB)

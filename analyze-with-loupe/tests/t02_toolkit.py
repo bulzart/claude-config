@@ -2,6 +2,7 @@
 choice, each answer one JSON object on its last line. A temp library copy (AWL_HOME) holds the runs; nothing real is touched."""
 import json
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -852,11 +853,13 @@ check(code == 2 and "OPENAI_API_KEY" in js.get("error", "") and not _SEEN, "imag
     {"id": "R02", "kind": "video", "path": "b.mp4", "rel": "b.mp4", "display_width": 720, "display_height": 1280, "duration_s": 15},
     {"id": "R03", "kind": "video", "path": "c.mp4", "rel": "c.mp4", "display_width": 1920, "display_height": 1080, "duration_s": 10}]}), encoding="utf-8")
 js, _ = ts("static", "formats", "--run", str(SR))
-_f0 = js["formats"][0]
-check(js["aspects"]["9:16"]["count"] == 2 and js["aspects"]["16:9"]["count"] == 1 and _f0["aspect"] == "9:16" and _f0["res"] == 1080
+_f0 = next(f for f in js["formats"] if f["aspect"] == "9:16" and f["res"] == 1080)
+check(js["aspects"]["9:16"]["count"] == 2 and js["aspects"]["16:9"]["count"] == 1 and js["formats"][0]["aspect"] == "9:16"
       and _f0["export"] == "1080x1920" and _f0["image_size"] == "1216x2160" and _f0["preview"] == "720x1280" and _f0["image"]["valid"]
-      and any(f["aspect"] == "16:9" and f["res"] == 720 and f["export"] == "1280x720" for f in js["formats"]),
-      "static formats gives the references' aspects and per aspect and resolution the export, the image size with the move margin, the check size")
+      and any(f["aspect"] == "16:9" and f["res"] == 720 and f["export"] == "1280x720" for f in js["formats"])
+      and any(f["aspect"] == "16:9" and f["res"] == 1440 and f["export"] == "2560x1440" and f["preview"] == "1280x720" for f in js["formats"]),
+      "static formats gives the references' aspects and per aspect and resolution (1440, 1080, 720) the export, the image size with the "
+      "move margin, the check size")
 js, code = ts("static", "format", "--run", str(SR), "--aspect", "1:1", "--res", "720", "--image-size", "720x720", ok=False)
 check(code == 2 and "pixels" in js.get("error", ""), "static format refuses an image size the image API does not take")
 ts("static", "format", "--run", str(SR), "--aspect", "9:16", "--res", "1080", "--quality", "high")
@@ -1609,6 +1612,88 @@ check(js.get("found") and js.get("matched") == 2 and _cr["how_to_drive_a_car.mp4
       "title with a bar in it, lists what does not match, measures the thumbnails and makes the labelled sheets")
 js, _, _ = t("static", "context", "--run", str(SR), env=ENV)
 check(js.get("ok") and js.get("found") is False, "no context.txt: the run goes on, told there are no real titles or thumbnails")
+# the titles from the file names (the user, 2026-11-07: "we will not have the context.txt file no more because the video already have
+# their name ... Channel_Name_Video_Title_and_somehashtags"; the tail is the YouTube id)
+nm_refs = home.parent / "refs-names"
+for _nm in ("Deep_Dives_The_Rise_of_Rome_in_9_Minutes_TZIOfwN7bVI.mp4", "Deep_Dives_POV_You_Have_$1_Billion_#shorts_dw-fdH1_7Zk.mp4",
+            "video.mp4", "Cooking_Pasta_Masterclass.mp4"):
+    make_clip(nm_refs / _nm, seconds=2.0, flash=None, audio=False)
+NM = Path(t("new-run", "--mode", "analyze", "--source", str(nm_refs), "--slug", "static-names", env=ENV)[0]["run_dir"])
+t("inventory", str(nm_refs), "--run", str(NM), "--as", "references", env=ENV)
+t("state", "--run", NM.name, "set", "analyze_submode=static", "static_images=prompts", "audio_ingest=whisper", env=ENV)
+js, _, _ = t("static", "context", "--run", NM.name, env=ENV)
+_nr = {r["file"]: r for r in js.get("rows") or []}
+_n1, _n2 = _nr.get("Deep_Dives_The_Rise_of_Rome_in_9_Minutes_TZIOfwN7bVI.mp4") or {}, _nr.get("Deep_Dives_POV_You_Have_$1_Billion_#shorts_dw-fdH1_7Zk.mp4") or {}
+check(js.get("ok") and js.get("from_names") and js.get("found") is False and _n1.get("youtube_id_like") == "TZIOfwN7bVI"
+      and _n1.get("words") == "Deep Dives The Rise of Rome in 9 Minutes" and _n2.get("youtube_id_like") == "dw-fdH1_7Zk"
+      and _n2.get("hashtags") == ["#shorts"] and _n2.get("words") == "Deep Dives POV You Have $1 Billion"
+      and (_nr.get("video.mp4") or {}).get("youtube_id_like") is None and js.get("common_leading_words") == "Deep Dives"
+      and (_nr.get("Cooking_Pasta_Masterclass.mp4") or {}).get("youtube_id_like") is None
+      and (_nr.get("Cooking_Pasta_Masterclass.mp4") or {}).get("words") == "Cooking Pasta Masterclass"
+      and (NM / "00-inventory" / "context.md").is_file() and json.loads((NM / "00-inventory" / "context.json").read_text(encoding="utf-8")).get("from_names"),
+      "without context.txt the titles come from the file names: the words, the YouTube id at the end (letters, digits, _ and -), the "
+      "hashtags apart, the words every name starts with (the channel's), and no title from a name without that pattern")
+js, code, _ = t("static", "context", "--run", NM.name, "--file", str(nm_refs / "missing.txt"), env=ENV, ok=False)
+check(code == 2 and "no such file" in js.get("error", ""), "static context --file names a file that must exist")
+# a reference another run already analysed is not analysed again (the user, 2026-11-07: "we already have the Sadam Hussein's there whom
+# we've already analyzed, analyze the two new samples"): matched by the file's hash and size, copied under its id here
+_nv = {it["rel"]: it["id"] for it in json.loads((NM / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))["items"]}["video.mp4"]
+_om = NM / "10-media" / _nv              # stands in for the run that analysed video.mp4 (its id there; V02 in the new run below)
+_om.mkdir(parents=True, exist_ok=True)
+(_om / "video.json").write_text(json.dumps({"id": _nv, "frames": str(_om / "base" / "base_0001.jpg"), "see": f"{_nv} at 00:01"}), encoding="utf-8")
+(_om / "base").mkdir(exist_ok=True)
+(_om / "base" / "base_0001.jpg").write_bytes(b"\xff\xd8not-a-real-jpeg")
+(NM / "20-analysis" / "cards").mkdir(parents=True, exist_ok=True)
+(NM / "20-analysis" / "cards" / f"{_nv}.md").write_text(f"# {_nv} · video.mp4\nStoryboard: `{_om / 'sheets' / 'storyboard-01.jpg'}` ({_nv}).\n"
+                                                        f"Not {_nv}0.\n", encoding="utf-8")
+ru_refs = home.parent / "refs-reuse"
+ru_refs.mkdir(parents=True, exist_ok=True)
+shutil.copy2(nm_refs / "video.mp4", ru_refs / "video.mp4")
+make_clip(ru_refs / "Another_Channel_A_New_One_abcdefghijk.mp4", seconds=2.5, flash=None, audio=False)
+RU = Path(t("new-run", "--mode", "analyze", "--source", str(ru_refs), "--slug", "static-reuse", env=ENV)[0]["run_dir"])
+t("inventory", str(ru_refs), "--run", str(RU), "--as", "references", env=ENV)
+t("state", "--run", RU.name, "set", "analyze_submode=static", "static_images=prompts", "audio_ingest=whisper", env=ENV)
+_rid = {it["rel"]: it["id"] for it in json.loads((RU / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))["items"]}
+js, _, _ = t("reuse-analysis", "--run", RU.name, "--from", NM.name, env=ENV)
+_rv = _rid.get("video.mp4")
+_rj = (RU / "10-media" / str(_rv) / "video.json").read_text(encoding="utf-8") if _rv else ""
+_rc = (RU / "20-analysis" / "cards" / f"{_rv}.md").read_text(encoding="utf-8") if _rv else ""
+check(js.get("ok") and _rv == "V02" and [(m["here"], m["there"]) for m in js.get("matched") or []] == [("V02", _nv)]
+      and [n["id"] for n in js.get("new") or []] == ["V01"] and (RU / "10-media" / "V02" / "base" / "base_0001.jpg").is_file()
+      and str(NM) not in _rj and str(RU / "10-media" / "V02") in json.loads(_rj)["frames"] and json.loads(_rj)["id"] == "V02"
+      and "V02 at 00:01" in _rj and _rc.startswith("# V02 · video.mp4") and "(V02)" in _rc and f"Not {_nv}0." in _rc and str(NM) not in _rc
+      and not (RU / "10-media" / "V01").exists(),
+      "reuse-analysis copies an analysed reference's media folder and card under its id here (matched by hash and size), points the "
+      "paths and the id inside at this run (never a longer id), and leaves the new references to be analysed")
+js, _, _ = t("reuse-analysis", "--run", RU.name, "--from", NM.name, env=ENV)
+check(js.get("ok") and not js.get("matched") and [k["id"] for k in js.get("already_here") or []] == ["V02"],
+      "reuse-analysis again keeps a reference already prepared here (--redo copies it again)")
+js, code, _ = t("reuse-analysis", "--run", RU.name, "--from", str(home / "runs" / "no-such-run"), env=ENV, ok=False)
+check(code != 0 and js.get("ok") is False, "reuse-analysis from a run that does not exist fails")
+# a run goes on in its session (the user, 2026-11-07: "if there's new references analyze them and save their data on the folders we
+# specifically use"): the inventory taken again keeps every id, numbers the new files after the old ones and marks a vanished one gone
+st_refs = home.parent / "refs-stable"
+make_clip(st_refs / "video.mp4", seconds=2.0, flash=None, audio=False)
+make_clip(st_refs / "zebra.mp4", seconds=2.2, flash=None, audio=False)
+ST = Path(t("new-run", "--mode", "analyze", "--source", str(st_refs), "--slug", "stable-ids", env=ENV)[0]["run_dir"])
+t("inventory", str(st_refs), "--run", str(ST), "--as", "references", env=ENV)
+_ids0 = {it["rel"]: it["id"] for it in json.loads((ST / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))["items"]}
+make_clip(st_refs / "CEO_The_History_of_Rockets_TZIOfwN7bVI.mp4", seconds=2.4, flash=None, audio=False)
+make_clip(st_refs / "Another_POV_Story_dwSfdH1K7Zk.mp4", seconds=2.6, flash=None, audio=False)
+(st_refs / "zebra.mp4").unlink()
+js, _, _ = t("inventory", str(st_refs), "--run", str(ST), "--as", "references", env=ENV)
+_it1 = {it["rel"]: it for it in json.loads((ST / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))["items"]}
+check(_ids0 == {"video.mp4": "V01", "zebra.mp4": "V02"} and _it1["video.mp4"]["id"] == "V01"
+      and _it1["Another_POV_Story_dwSfdH1K7Zk.mp4"]["id"] == "V03" and _it1["CEO_The_History_of_Rockets_TZIOfwN7bVI.mp4"]["id"] == "V04"
+      and _it1["zebra.mp4"].get("gone") and _it1["zebra.mp4"].get("ignored") and _it1["zebra.mp4"]["id"] == "V02"
+      and js.get("kept_ids") == 1 and [n["id"] for n in js.get("new") or []] == ["V03", "V04"] and [g["id"] for g in js.get("gone") or []] == ["V02"]
+      and js["counts"] == {"video": 3},
+      "the inventory taken again keeps the ids it gave (the analysis stays valid), numbers new files after them and keeps a vanished "
+      "file's id taken, marked gone")
+js, _, _ = t("inventory", str(st_refs), "--run", str(ST), "--as", "references", "--renumber", env=ENV)
+_it2 = {it["rel"]: it["id"] for it in json.loads((ST / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))["items"]}
+check(_it2 == {"Another_POV_Story_dwSfdH1K7Zk.mp4": "V01", "CEO_The_History_of_Rockets_TZIOfwN7bVI.mp4": "V02", "video.mp4": "V03"},
+      "inventory --renumber numbers every file afresh in file order")
 (CX / "40-briefs").mkdir(parents=True, exist_ok=True)
 (CX / "40-briefs" / "video-01-images.json").write_text(json.dumps({"video": "01", "title": "One light against the storm",
     "thumbnail": {"prompt": "A keeper's lamp in a storm", "size": "1280x720", "text": "ONE LIGHT"},

@@ -27,7 +27,8 @@ capcut render "<store>/<name>" --out "<preview>" --burn-captions
 - `sync-timelines` writes the nested timeline copy that CapCut 9.x reads first.
 - `lint` must report 0 errors and no `media-unlinked`.
 - The preview is a low-resolution proxy, not CapCut's own render. It shows the order, the timing,
-  the inserts and the text.
+  the inserts and the text. Static runs the repair with `--keep-text` and without `--preview` (no
+  local video of any kind there: static §7).
 - **The exact preset: the user's choice, learned and locked.** CapCut keeps its preset tiles on its
   servers, not in a readable file, so the preset is copied from a text the user styled in CapCut.
   - **Current house preset:** chosen by the user in `03_Oct_2026_v09` and learned on 2026-10-03

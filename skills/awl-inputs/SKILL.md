@@ -27,7 +27,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - higgsfield-mcp §4: `AWL/higgsfield/higgsfield-mcp/040_4_local-file-upload-terminal-path.md` (2.0 KB)
 - higgsfield-mcp §5: `AWL/higgsfield/higgsfield-mcp/050_5_media-roles-how-the-catalog-name.md` (2.3 KB)
 - higgsfield-mcp §6: `AWL/higgsfield/higgsfield-mcp/060_6_elements-reusable-project-assets.md` (1.3 KB)
-- assets-and-substitution §5: `AWL/reference/assets-and-substitution/050_5_getting-references-into-the-mode.md` (2.9 KB)
+- assets-and-substitution §5: `AWL/reference/assets-and-substitution/050_5_getting-references-into-the-mode.md` (2.8 KB)
 - *a multi-clip video (hand-off inputs):*
   - generation-system §3b.3: `AWL/reference/generation-system/070_3b.3_seam-discipline.md` (2.5 KB)
 - *a placed product (the original is the only video reference; spot and size in the prompt):*

@@ -12,7 +12,7 @@ check, §6>,
 "<W>x<H>", "text": "<its exact words, or null>", "characters": ["C1"], "why": "…"}}` (the title and the thumbnail: §12). Every value
 in `<…>` is decided from the spec (no stock value exists: `T slideshow plan` lists what is undecided). The size and quality are the run's
 format (`state.json → static.format`, picked at A5, §2); a plan's own `"size"` changes it for that video only. `captions` is the spec's
-text look (§2) with this video's highlighted words: the CapCut project and the check copy both take it.
+text look (§2) with this video's highlighted words: the CapCut project takes it.
 
 - **Moves and joins** (the spec's measured pattern, §2): each image's `motion` with its `amount` (a zoom's change: 0.2 zooms from 1.0 to
   1.2 or back; a pan travels the margin of a scale of 1 + amount), or its own `scale`, `x` and `y` pairs at its start and end (scale 1 =

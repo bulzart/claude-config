@@ -9,8 +9,8 @@
   - Create (command item 35): every piece of the edit plan in order, cut on the beat it shows (its in and out set on the take,
     not the planned seconds), with its speed and track, and every keyframe, mask, transition, filter, graphic and text on its moment; what no tool could place is listed in the README row. The preview
     flattens the main track only: the layouts, keyframes, masks, filters and graphics are checked here, on the timeline read back.
-- On the preview (`awl.py qc --video <capcut-preview.mp4> --out <dir> --expect-size 540x960`, plus
-  its storyboard), check:
+- On the preview (not in Static, which makes none: static §7, §8; `awl.py qc --video <capcut-preview.mp4> --out <dir> --expect-size
+  540x960`, plus its storyboard), check:
   - the cut into and out of every insert, and the sound;
   - text presence and timing;
   - dense sheets (15 to 30 fps) of every transition, insert start and end, overlay start and end and the

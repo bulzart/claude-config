@@ -41,10 +41,11 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     - Create and Free `create` (item 35): `RUN/deliverables/video-NN-take-K.mp4`, every take conformed and untouched by the edit (the
       clean originals); the clean deliverable is the edit's main track cut together without text (`capcut-assembly.md` §6), and the
       README row lists what is to be applied in CapCut by hand (reverse playback, an effect from CapCut's library) when no tool placed it.
-  - **Static** (item 36): the CapCut project is the final (the user exports it from CapCut at the format's export size,
-    `state.json → static.format.export`, 30 fps); `RUN/deliverables/video-NN-clean.mp4` and `video-NN-preview.mp4` are the local check
-    copies (`T slideshow render`; the preview is the complete video with its captions). The README row lists the format (export size, image
-    size, quality), the images
+  - **Static** (item 36): the CapCut project is the final and the only edit (the user exports it from CapCut at the format's export
+    size, `state.json → static.format.export`, 30 fps); no local copy is rendered (the user, 2026-11-07: "no need to generate a ffmpeg
+    video simulation version, just do it in capcut directly"), so `deliverables/` has no video file and `state.json → videos[]` names the
+    project (`capcut_project`, `capcut_project_path`) instead of `clean` and `preview`. The README row lists the CapCut project's name and
+    full path, the format (export size, image size, quality), the images
     (`60-outputs/video-NN/images/`, api, klein or user), the narration (`30-assets/narration/video-NN.wav`), the bed or none and, with images by
     the user, the prompts file; the YouTube title and thumbnail (static §12): write `RUN/deliverables/video-NN-title.txt` (the plan's `title`
     on its first line) and name it and `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row; the

@@ -20,7 +20,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
   - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
   - capcut-assembly §3: `AWL/reference/capcut-assembly/030_3_build-the-timeline.md` (5.9 KB)
-  - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.1 KB)
+  - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.2 KB)
   - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.9 KB)
   - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 
@@ -75,7 +75,8 @@ the run unexplained.
 Analyze Mode: before the table, check the run's deliverables and text. Every video in `state.json` →
 `videos[]` has `video-NN-clean.mp4` and `video-NN-preview.mp4` in `<RUN>/deliverables/` (all videos in that
 one folder; a with-inserts clean built from the pieces, the inserts and the original audio, never
-overwritten by a generated-only clip) and a row in `deliverables/README.md`; the plan and brief files carry
+overwritten by a generated-only clip; Static: its CapCut project instead, by name and full path, with its title and thumbnail in
+`deliverables/`, and no video file: static §7) and a row in `deliverables/README.md`; the plan and brief files carry
 every attempt; no CapCut text layer of any project contains an emoji (the user's rule, strict); and every
 size figure in the table was viewed on a frame with its method (two estimates, a derived distance), never
 repeated from an agent's provisional reading (the agent's own word; the tool prints numbers). What is missing is fixed before the table is shown.

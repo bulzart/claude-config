@@ -2,18 +2,15 @@
 
 - `T slideshow plan --run RUN --video NN`: the timeline (`40-briefs/video-NN-timeline.json`: every image with its start, end, motion,
   transition) and the captions on the video's timeline (`60-outputs/video-NN/captions.srt`). Every cut sits on the frame grid, on the
-  frame at or just before its line's start, so the render and CapCut cut on the same frame. A caption that would be on screen for less
+  frame at or just before its line's start, so CapCut cuts on that frame. A caption that would be on screen for less
   than `captions.min_cue_s` (0.2 s, a quick "he" or "of") takes the next word with it, never across a sentence end (`captions_over_words`
   counts them). Its `undecided` lists a move, an amount or a join the plan left out (nothing has a stock value: decide it in the plan, §5),
-  `edges_show` an image whose move would show its edge. `T slideshow render --run RUN --video NN` makes `deliverables/video-NN-clean.mp4`
-  and `video-NN-preview.mp4` (the captions burned in the references' look): the check copies, at the format's check size (720 on the short
-  side). Each still is drawn with an exact sub-pixel resample per frame (ffmpeg's zoompan stepped on whole pixels and the picture shook:
-  2026-11-06), with the same values CapCut keys. It counts the frames each file really holds (`video_frames` against `expected_frames`): a
-  file's length is its sound's, so only the frames show a lost picture; short of frames it answers `ok` false and exits 1, and those files
-  are not used. A join's check copy is the nearest ffmpeg transition; CapCut carries the real one. The plan's effects (§5) are on the
-  timeline too (`effects`: each one's start, in point, length and track) and in the check copies: overlays keyed (ffmpeg's chromakey,
-  the nearest of CapCut's), blended or overlaid, sized and keyed as planned, and the sounds in the mix before its loudness pass
-  (`effects` in the answer counts them).
+  `edges_show` an image whose move would show its edge. The plan's effects (§5) are on the timeline too (`effects`: each one's start, in
+  point, length and track).
+- **No local render** (the user, 2026-11-07: "no need to generate a ffmpeg video simulation version, just do it in capcut directly"):
+  the timeline goes straight into the CapCut project; no check copies and no capcut-cli proxy preview are made, and the edit's checks
+  read the project back (§8). (`T slideshow render` still exists for a local copy the user asks for: at the format's check size, each
+  still drawn with an exact sub-pixel resample per frame, the captions burned in, the frames counted.)
 - **Motion**: the plan's moves and joins (§5), as the references make them; effects only as the references use them (§2).
 - **The CapCut project is the final** (the user, 2026-11-05: "export it as the final"): it mirrors the timeline at the format's export
   size, the images at their full size (`reference/capcut-assembly.md` §1–§2, §4): `T capcut-name`, `capcut_clone_draft`,
@@ -46,7 +43,7 @@
   `capcut-text-style` is not used and the size, font and colours are the references'. CapCut's own caption tools stay unused
   (`capcut-assembly.md` §1).
 - Loudness: the narration file itself is at the config's target (about −14 LUFS; `T tts say`: a gentle voice compressor, then two
-  loudnorm passes), because the CapCut project plays it at 1.0 with the bed under it; the render brings its mix to the same target.
+  loudnorm passes), because the CapCut project plays it at 1.0 with the bed under it at the plan's gain.
 - **The export** is the user's, in CapCut (no tool exports a CapCut project): each project at the format's export size, 30 fps; the
   wrap-up says so, and that file is the final.
 

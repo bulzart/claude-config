@@ -1651,7 +1651,34 @@ def cmd_inventory(a):
     else:
         prefix = {"video": "V", "image": "I", "audio": "S", "pdf": "D", "office": "D", "text": "D",
                   "font": "F", "vector": "G", "other": "X"}
+    # Ids stay put when the run already has this inventory (the user, 2026-11-07: a run goes on in its session, "if there's new
+    # references analyze them and save their data on the folders we specifically use"): a file it lists keeps its id (by its hash and
+    # size, else by its path), a new file takes the next free number, a file that is gone keeps its id, marked gone (its analysis stays
+    # in 10-media), and no id is ever given twice. --renumber numbers everything afresh in file order.
+    if run_dir:
+        if role == "assets":
+            old_p = run_dir / "30-assets" / (a.scope or "project") / "asset-inventory.json"
+        elif role == "examples":
+            old_p = run_dir / "00-inventory" / "examples-inventory.json"
+        else:
+            old_p = run_dir / "00-inventory" / "inventory.json"
+    else:
+        old_p = None
+    old_items = []
+    if old_p and old_p.is_file() and not getattr(a, "renumber", False):
+        try:
+            old_inv = json.loads(old_p.read_text(encoding="utf-8"))
+            if old_inv.get("role") == role:
+                old_items = [it for it in old_inv.get("items") or [] if re.fullmatch(r"[A-Z]\d+", str(it.get("id") or ""))]
+        except (OSError, ValueError):
+            old_items = []
+    by_hash = {(it.get("hash"), it.get("size_bytes")): it for it in old_items if it.get("hash")}
+    by_rel = {str(it.get("rel") or "").casefold(): it for it in old_items}
+    taken = set()
     seq = {k: 0 for k in set(prefix.values())}
+    for it in old_items:
+        p_, n_ = it["id"][0], int(it["id"][1:])
+        seq[p_] = max(seq.get(p_, 0), n_)
     items, seen = [], {}
     multi_base = len({str(b) for _, b in files}) > 1
     for f, base in files:
@@ -1661,23 +1688,32 @@ def cmd_inventory(a):
                           "reason": "Edit Mode processes only videos; name this file explicitly if it is an asset"})
             continue
         pre = prefix[kind]
-        seq[pre] += 1
         rel = str(f.relative_to(base))
         if multi_base:
             rel = str(Path(base.name) / rel)
-        item = {"id": f"{pre}{seq[pre]:02d}", "kind": kind, "path": str(f), "rel": rel,
+        item = {"id": None, "kind": kind, "path": str(f), "rel": rel,
                 "ext": f.suffix.lower(), "size_bytes": f.stat().st_size,
                 "folder": str(Path(rel).parent) if str(Path(rel).parent) != "." else "."}
         if role == "assets":
             item["group"] = item["folder"]           # the folder it came in (a fact); what the asset is, is decided by viewing it
         try:
             item["hash"] = quick_hash(f)
+        except Exception:
+            pass
+        old = by_hash.get((item.get("hash"), item["size_bytes"])) if item.get("hash") else None
+        old = old or by_rel.get(rel.casefold())
+        if old and old["id"][0] == pre and old["id"] not in taken and (not old.get("hash") or old.get("hash") == item.get("hash")):
+            item["id"] = old["id"]
+        else:
+            seq[pre] += 1
+            item["id"] = f"{pre}{seq[pre]:02d}"
+            item["new_in_this_inventory"] = bool(old_items)
+        taken.add(item["id"])
+        if item.get("hash"):
             if item["hash"] in seen:
                 item["duplicate_of"] = seen[item["hash"]]
             else:
                 seen[item["hash"]] = item["id"]
-        except Exception:
-            pass
         if kind in ("video", "audio"):
             try:
                 s = media_summary(f)
@@ -1695,6 +1731,19 @@ def cmd_inventory(a):
             except Exception as e:
                 item["probe_error"] = str(e)[:200]
         items.append(item)
+    gone = []
+    for it in old_items:
+        if it["id"] not in taken:
+            g = {**{k: v for k, v in it.items() if k not in ("duplicate_of", "new_in_this_inventory")}, "gone": True, "ignored": True,
+                 "reason": "no longer in the folder: its id stays taken and its analysis stays in 10-media"}
+            items.append(g)
+            gone.append({"id": it["id"], "rel": it.get("rel")})
+
+    def _id_key(it):
+        m_ = re.fullmatch(r"([A-Z])(\d+)", str(it.get("id") or ""))
+        return (0, m_.group(1), int(m_.group(2))) if m_ else (1, "", 0)
+    items.sort(key=_id_key)
+    new_ids = [{"id": it["id"], "rel": it["rel"]} for it in items if it.get("new_in_this_inventory")]
     used = [it for it in items if not it.get("ignored")]
     by_kind = {}
     for it in used:
@@ -1755,6 +1804,8 @@ def cmd_inventory(a):
     out({"ok": True, "role": role, "counts": inv["counts"], "ignored": len(ignored),
          "total_video_seconds": inv["total_video_seconds"],
          "inventory_json": str(jp) if jp else None, "inventory_md": str(mp) if mp else None,
+         **({"kept_ids": len(old_items) - len(gone), "new": new_ids, "gone": gone,
+             "note": "the files already listed kept their ids (their analysis stays valid); analyse only the new ones"} if old_items else {}),
          **({} if run_dir else {"items": items})})
 
 
@@ -6189,7 +6240,7 @@ def cmd_capcut_text_anim(a):
             failed.append({"segment": s["id"], "error": msg})
     out({"ok": not failed, "draft": str(d), "track": a.track, "intro": a.intro, "intro_duration_s": float(a.intro_duration) if a.intro else None,
          "outro": a.outro, "texts": len(segs), "animated": done, "already_animated": kept, "failed": failed[:5],
-         "note": "the check copy burns the same entrance (the plan's captions.animation); CapCut shows it once it has fetched the effect"},
+         "note": "CapCut shows the entrance once it has fetched the effect (the plan's captions.animation)"},
         0 if not failed else 1)
 
 
@@ -9702,7 +9753,8 @@ def _move_margin(rd: Path) -> tuple:
 
 def _static_formats(a):
     """Facts for the format question (A5): each reference's size and aspect, the aspects by count and seconds, and per aspect (the
-    references' own, then 9:16 and 16:9) and resolution (1080, 720) the export, the image sizes and whether the image API takes them."""
+    references' own, then 9:16 and 16:9) and resolution (1440, 1080, 720; the user, 2026-11-07: "do a 1440 quality both for images and
+    export video setting too") the export, the image sizes and whether the image API takes them."""
     rd, st = _state_of(a.run)
     try:
         inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
@@ -9724,7 +9776,7 @@ def _static_formats(a):
     order = sorted(by, key=lambda k: (-by[k]["count"], -by[k]["seconds"]))
     aspects = list(dict.fromkeys(order + ["9:16", "16:9"]))
     out({"ok": True, "references": refs, "aspects": by, "move_margin": margin, "move_margin_from": margin_from,
-         "formats": [_format_sizes(asp, r, margin) for asp in aspects for r in (1080, 720)],
+         "formats": [_format_sizes(asp, r, margin) for asp in aspects for r in (1440, 1080, 720)],
          "qualities": list(_scfg("images.qualities", ["low", "medium", "high", "xhigh", "max"])), "images": st.get("static_images"),
          "current": _static_fmt(st) or None,
          "note": "facts for the format question (reference/static §2): the export is the CapCut canvas (its export is the final), image_size "
@@ -9918,10 +9970,15 @@ def _context_from_names(rd: Path, refs_dir) -> None:
             continue
         stem = Path(it.get("rel") or it.get("path") or "").stem
         m = YT_ID_TAIL.match(stem)
-        rest, yid = (m.group("rest"), m.group("id")) if m else (stem, None)
-        words = [w for w in re.split(r"[_\s]+", re.sub(r"#\w+", " ", rest)) if w]
+        # an id is random: a digit, "-", "_" or a capital after its first letter (an 11-letter last word such as "Masterclass" is a word)
+        if m and (re.search(r"[0-9_-]", m.group("id")) or any(c.isupper() for c in m.group("id")[1:])):
+            rest, yid = m.group("rest"), m.group("id")
+        else:
+            rest, yid = stem, None
+        # in a file name an underscore stands for a space, so a hashtag ends at one
+        words = [w for w in re.split(r"[_\s]+", re.sub(r"#[^\W_]+", " ", rest)) if w]
         rows.append({"ref": it["id"], "file": Path(it.get("rel") or "").name, "words": " ".join(words), "word_count": len(words),
-                     "youtube_id_like": yid, "hashtags": re.findall(r"#\w+", rest),
+                     "youtube_id_like": yid, "hashtags": re.findall(r"#[^\W_]+", rest),
                      "duration_s": it.get("duration_s"), "size": f"{it.get('display_width')}x{it.get('display_height')}"})
     named = [r["words"].split() for r in rows if r["youtube_id_like"]]
     common = []
@@ -9949,9 +10006,12 @@ def _static_context(a):
     how_to_drive_a_car.mp4|How do you drive a car|C:/users.../how_to_drive.png"). Each line `<video file>|<title>|<thumbnail path>` is
     matched to the inventory's videos by file name; each thumbnail is found (the path as written, else by its name in the references
     folder's thumbnails folder) and measured; contact sheets show them labelled. Facts only: what matched, the videos without a line, the
-    lines no video matches, the thumbnails not found. Writes 00-inventory/context.json and .md and 10-media/thumbnails/sheet-NN.jpg."""
+    lines no video matches, the thumbnails not found. Writes 00-inventory/context.json and .md and 10-media/thumbnails/sheet-NN.jpg.
+    Without a context.txt (the usual case since 2026-11-07) the titles come from the file names: _context_from_names."""
     rd, st = _state_of(a.run)
     refs_dir = Path(st["source"]) if isinstance(st.get("source"), str) and Path(st["source"]).is_dir() else None
+    if a.file and not Path(a.file).is_file():
+        fail(f"--file: no such file: {a.file}", 2)
     src = Path(a.file) if a.file else next((p for p in (sorted(refs_dir.iterdir()) if refs_dir else [])
                                             if p.is_file() and p.name.casefold() == "context.txt"), None)
     if not src or not src.is_file():
@@ -10010,7 +10070,7 @@ def _static_context(a):
 def cmd_static(a):
     """Static (contract item 36): check (the setup on this PC) | formats (facts for the format question) | format (store the pick) |
     lock (the run's niche and style reference, and the locks shown) | subjects (the run's subjects in video order; --add appends) |
-    context (the references' real titles and thumbnails from context.txt)."""
+    context (the references' real titles: from context.txt with their thumbnails, else from the file names)."""
     if a.action != "check" and not a.run:
         fail(f"static {a.action} needs --run", 2)
     {"check": _static_check, "formats": _static_formats, "format": _static_format_set, "lock": _static_lock,
@@ -10815,8 +10875,8 @@ def _slideshow_plan(a):
          "effects": [[e["n"], e["type"], Path(e["file"]).name, e["start"], e["end"], e.get("track")] for e in effects],
          "music": bool(tl["music"]),
          "note": "the cuts sit on the frame grid (each at or just before its line's start); edit motions or transitions in the timeline "
-                 "file if the spec asks for others, then `T slideshow render`; a caption over the words at once is a quick word that took "
-                 "the next one with it (captions.min_cue_s)"})
+                 "file if the spec asks for others, then build the CapCut project from this timeline (no local render in Static: static "
+                 "§7); a caption over the words at once is a quick word that took the next one with it (captions.min_cue_s)"})
 
 
 def _still_motion(r: dict) -> dict:
@@ -10960,7 +11020,7 @@ def _slideshow_render(a):
             _render_still(Path(r["file"]), seg, n, D[k], W, H, fps, mv)
         except (OSError, RuntimeError, ValueError) as e:
             fail(f"image {r['image']}: {e}", 1)
-        args += ["-i", str(seg)]
+        args += ["-i", seg.name]   # relative to the work folder (the render runs there): a long video's paths would pass Windows' 32 767-character command line
         fc.append(f"[{k}:v]trim=end_frame={n},setpts=PTS-STARTPTS,format=yuv420p[v{k}]")
     last = "v0"
     for k in range(1, len(rows)):
@@ -11000,9 +11060,9 @@ def _slideshow_render(a):
     if fx:
         for e in fx:
             if e.get("kind") == "image":
-                args += ["-loop", "1", "-framerate", str(fps), "-t", f"{e['dur_s']:.4f}", "-i", e["file"]]
+                args += ["-loop", "1", "-framerate", str(fps), "-t", f"{e['dur_s']:.4f}", "-i", str(Path(e["file"]).resolve())]
             else:
-                args += ["-ss", f"{e['in_s']:.4f}", "-t", f"{e['dur_s']:.4f}", "-i", e["file"]]
+                args += ["-ss", f"{e['in_s']:.4f}", "-t", f"{e['dur_s']:.4f}", "-i", str(Path(e["file"]).resolve())]
         lines, vlabel = _fx_render_chain(fx, "vout", len(rows), W, H, fps, T)
         fc += lines
     # the sound on its own: the narration at its offset, the bed under it ducked, the effects' sounds, then two loudnorm passes to the target
@@ -11047,8 +11107,10 @@ def _slideshow_render(a):
     if not ln["ok"]:
         fail("the loudness pass of the mix failed: " + ln["stderr"], 1)
     ni = len(rows) + len(fx)
-    cp = run(args + ["-i", str(mixn), "-filter_complex", ";".join(fc), "-map", f"[{vlabel}]", "-map", f"{ni}:a", "-r", str(fps), *_encode_args(18),
-                     "-c:a", "aac", "-b:a", "192k", "-t", f"{T:.3f}", str(clean)], timeout=7200)
+    # the graph from its file (ffmpeg 7+ reads an option's value from a file with "-/"; 9.x has no -filter_complex_script): a long video's
+    # graph alone passes the command-line limit
+    cp = run(args + ["-i", str(mixn.resolve()), "-/filter_complex", "filter.txt", "-map", f"[{vlabel}]", "-map", f"{ni}:a", "-r", str(fps),
+                     *_encode_args(18), "-c:a", "aac", "-b:a", "192k", "-t", f"{T:.3f}", str(clean.resolve())], cwd=str(work), timeout=7200)
     if cp.returncode != 0 or not clean.is_file():
         fail("render failed: " + (cp.stderr or "")[-900:], 1, filter=str(work / "filter.txt"))
     res = {"ok": True, "clean": str(clean), "seconds": round(time.time() - t0, 1), "loudness_pass": {"passes": ln["passes"], "mode": ln["mode"]},
@@ -11422,6 +11484,8 @@ def main():
     p.add_argument("--run"); p.add_argument("--as", dest="role", choices=["references", "sources", "assets", "examples"],
                                             default="references")
     p.add_argument("--scope", help="asset scope: 'project' (analyze, default) or e.g. 'video-01' (edit)")
+    p.add_argument("--renumber", action="store_true", help="number every file afresh in file order (by default a file the run's inventory "
+                                                           "already lists keeps its id, new files take the next free ids)")
     p.add_argument("--max-depth", type=int); p.set_defaults(fn=cmd_inventory)
 
     p = sp.add_parser("prep-assets"); p.add_argument("--run", required=True); p.add_argument("--scope")
@@ -11901,7 +11965,7 @@ def main():
     p.add_argument("--add", action="append", help="subjects: one new subject, repeatable (each gets the next video number)")
     p.add_argument("--offline", action="store_true", help="check: do not ask the image API whether the model answers")
     p.add_argument("--aspect", help="format: 9:16 | 16:9 | 1:1 | 4:5 | 3:4 | 4:3")
-    p.add_argument("--res", type=int, help="format: the export's short side, e.g. 1080 or 720 (default 1080)")
+    p.add_argument("--res", type=int, help="format: the export's short side, e.g. 1440, 1080 or 720 (default 1080)")
     p.add_argument("--quality", help="format: the image API's quality, low | medium | high | xhigh | max (prompts mode: none)")
     p.add_argument("--image-size", help="format: WxH instead of the computed image size (e.g. the size without the move margin)")
     p.add_argument("--export", help="format: WxH instead of the computed export size")

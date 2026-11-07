@@ -6,14 +6,23 @@ how_to_drive_a_car.mp4|How do you drive a car|C:/users.../how_to_drive.png ... b
 for each video using klein or openai api directly or just prompt (image files stand at /thumbnails folder in the references folder) and
 the title too".
 
-**The references' titles and thumbnails (A1, A3).** `T static context --run RUN` reads `context.txt` in the references folder, one line
-per video, `<video file>|<the real YouTube title>|<its thumbnail's path>`, matches each line to the inventory's video by its file name,
-finds each thumbnail (the path as written, else the file of that name in the references folder's `thumbnails` folder), measures it, and
-writes `00-inventory/context.md` (the table) and `10-media/thumbnails/sheet-NN.jpg` (the thumbnails labelled). It lists the videos
-without a line, the lines no video matches and the thumbnails not found. Without the file there are no real titles or thumbnails, and the
-title and the thumbnail below follow the references' hooks and first frames. Each card (§1) carries its reference's title and what its
-thumbnail shows; the spec (§2) the patterns. The thumbnails are reference material like the videos: studied, never an input image of a
-generation, never copied.
+The user, later the same day: "we will not have the context.txt file no more because the video already have their name, the pattern is
+like this every video is named like "Channel_Name_Video_Title_and_somehashtags"". The tail of such a name is the YouTube video's id (11
+letters, digits, `_` or `-`, added by the downloader), not hashtags.
+
+**The references' titles (A1, A3).** `T static context --run RUN`. **Usually (no `context.txt`)** it reads the titles from the file names
+`<channel>_<title>_<YouTube id>`: per video the name's words (underscores as spaces), the id-like tail, any `#hashtags`, and the words
+every name starts with; `00-inventory/context.md` holds the table. Which words are the channel and which the title is your reading (a
+channel name is usually the first one to three words, the same for two videos of one channel; the title is what is left, as YouTube
+shows it: `$1 Trillion` with its `$`, a `(` … `)` kept); a name without that pattern (`video.mp4`) carries no title. There are no
+reference thumbnails then: the thumbnail below follows the references' hooks and first frames, at YouTube's 1280x720 (16:9; a 9:16
+run's Short keeps 1280x720 too, as YouTube shows a Short's thumbnail in the feed).
+**With a `context.txt`** in the references folder, one line per video, `<video file>|<the real YouTube title>|<its thumbnail's path>`,
+it matches each line to the inventory's video by its file name, finds each thumbnail (the path as written, else the file of that name in
+the references folder's `thumbnails` folder), measures it, and writes `00-inventory/context.md` (the table) and
+`10-media/thumbnails/sheet-NN.jpg` (the thumbnails labelled); it lists the videos without a line, the lines no video matches and the
+thumbnails not found. Each card (§1) carries its reference's title (and what its thumbnail shows, when there is one); the spec (§2) the
+patterns. The thumbnails are reference material like the videos: studied, never an input image of a generation, never copied.
 
 **The patterns** (the spec, A4), as facts from the titles and the thumbnails viewed one by one (and the sheets):
 - **Titles**: the length in words and characters, the hook form (a question, a number, a bold claim, a "how", a name, a time promise),

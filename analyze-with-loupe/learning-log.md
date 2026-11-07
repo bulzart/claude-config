@@ -1168,3 +1168,35 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   `deliverables/video-NN-thumbnail.png` with a feed-size copy; prompts mode `vNN-thumb` in the prompts file and the intake).
 - **Found:** the delivered Napoleon still i04 (the coronation) shows a Gothic cathedral, crosses on the throne's spires and the pope:
   against §11 now; reported to the user, not redrawn unasked.
+
+## 2026-11-07 · Static: titles from the file names, an analysed reference reused, 1440
+
+- **Asked:** "we will not have the context.txt file no more because the video already have their name, the pattern is like this every
+  video is named like "Channel_Name_Video_Title_and_somehashtags" ... we already have the Sadam Hussein's there whom we've already
+  analyzed, analyze the two new samples ... do a 1440 quality both for images and export video setting too (with flux's klein this
+  time)".
+- **Found:** the tail of such a name (`TZIOfwN7bVI`, `dwSfdH1K7Zk`) is the YouTube video's id, 11 letters, digits, `_` or `-`, added by
+  the downloader, not hashtags.
+- **Changed:** `T static context` without a context.txt reads each name's words, its id-like tail, any `#hashtags` (a hashtag ends at an
+  underscore) and the words every name starts with, into `00-inventory/context.md`; the agent reads which words are the channel and which
+  the title (static §12). New `T reuse-analysis --run RUN --from <run>`: a video of this run's inventory with the same hash and size as one
+  the other run prepared gets that media folder (and its card, both Static) under its id here, the paths and the id inside rewritten
+  (as a word only: V03 never touches V030); prep-all skips it. `T static formats` lists 1440 with 1080 and 720. Measured: FLUX 3 Klein at
+  3104x1744 (16:9 at 1440 with a 0.2 move margin, 5.4 MP) made a clean picture in 143 s with the upsampler on the RTX 3060.
+- **Asked (same night):** "no need to generate a ffmpeg video simulation version, just do it in capcut directly".
+- **Changed:** Static's S4 makes no local video: no `T slideshow render`, no check copies in `deliverables/`, and `T capcut-repair` without
+  `--preview` (no capcut-cli proxy). The edit's checks read the CapCut project back (static §7, §8: every image at its start and span,
+  contiguous; the keys and joins the toolkit wrote; the captions against `captions.srt`; the texts' look; the lint), and what only playing
+  shows is named in the brief. `T slideshow render` stays for a local copy the user asks for; it now runs in its work folder with the
+  stills by name and the graph read from its file (`-/filter_complex filter.txt`): with 100+ stills the old command line came near
+  Windows' 32 767-character limit (ffmpeg 9.0.1 has no `-filter_complex_script`).
+- **Asked (same night):** "no need to generate multiple runs for each generation we do inside one session ... if there's new references
+  analyze them and save their data on the folders we specifically use ... a new run session or a clone session is the only thing that
+  creates a new run folder".
+- **Changed:** the router's "One run per session" and static §10 "New references in the same run": more videos and references added to
+  the run's folder continue the session's run (inventory again, A1 and A3 for the new ones, the spec revised at A4, the locks kept, A5
+  not asked again). `T inventory` into a run that has that inventory keeps every listed file's id (by hash and size, else by path), gives
+  new files the next ids, keeps a vanished file's id taken (marked gone, ignored), never gives an id twice; `--renumber` numbers afresh.
+  Before, taking the inventory again renumbered by file order (a new `CEOzoned_...` file would have become V01 and the analysed
+  `video.mp4` V03). A run folder made by mistake for tonight (`20261107-034832-static-klein-1440`, only its empty folders and state) was
+  removed.

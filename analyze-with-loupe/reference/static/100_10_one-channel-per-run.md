@@ -17,18 +17,31 @@ A Static run is one channel. Its **locks** are set once and kept by every video 
   craft.
 - **The narrator** (A6s, the user's pick of five samples, §6): one voice for every video. `T tts design` and `T tts voice` refuse a new
   voice once one is picked; `--replace` only when the user picks again in a clone.
-- The format, the images' source, the CapCut plan, the effects folder and the QC fixes: the start's answers.
+- The format, the images' source, the CapCut plan, the effects folder and the QC fixes: the start's answers (a later request may name
+  another format for its videos, `T static format` again: one channel can hold Shorts and long videos).
 The toolkit refuses another niche or style reference once one is set (`--replace` only before the run's first video): another niche
 is another run, a clone.
 
 **More videos** (the user: "the next videos he decides to generate in that claude code run session he will only be suggested to pick
 subjects of that niche he firstly picked"): `/analyze-with-loupe more <run> [N]`, or the user asking for more after a wrap-up. No start
-question is asked again and nothing is analysed again: the count when it is not given (AskUserQuestion, header "Videos"), then A6s for
-the new videos only. Their pool holds subjects of the locked niche the run has not made (`T static subjects --run RUN` lists the made
+question is asked again and nothing already analysed is analysed again (new references first: below): the count when it is not given
+(AskUserQuestion, header "Videos"), then A6s for the new videos only. Their pool holds subjects of the locked niche the run has not made (`T static subjects --run RUN` lists the made
 ones; never one of them, never one so close it retells it), the one stop shows the subjects alone (no voice samples: the narrator is
 locked), each pick is added with `T static subjects --run RUN --add "<title>"` (it takes the next video number), and their scripts and
 image plans keep the locked style and text look. Then A9s runs for the new videos only. A run made before the locks existed is asked
 its niche once, with its subjects as context, before its pool is drawn; its style reference is the reference its style lock came from.
+
+**New references in the same run** (the user, 2026-11-07: "if we did generate one video based on sadam husseins reference and then i
+added two more references it doesnt mean we have to create a new run folder ... if there's new references analyze them and save their
+data on the folders we specifically use, if there's not we just use what we already mined from the references, but all inside one run
+folder"; "a new run session or a clone session is the only thing that creates a new run folder"): a session keeps its run. Files added
+to the run's references folder are taken into it before its next videos: `T inventory "<references folder>" --run RUN --as references`
+again (every file already listed keeps its id; the new ones take the next ids, its `new` lists them; a file that has gone keeps its id,
+marked gone), then A1 for the new ones only (`awl-analyze-prepare`'s Static A1: `split-audio --audio-only`, `prep-all --ocr-frames
+30`, which skips every prepared reference, `edit-profile --ref <V>` for each new one, `T static context`), their cards (A3 in
+`awl-analyze-study`), and the spec revised with every reference (A4: the length, pace, hook, title and bed patterns now hold the new
+ones; the locks stay: the niche, the style reference, the narrator; A5 is not asked again). No new reference: the videos use what the
+run already mined. Then More videos as above.
 
 **A clone for another niche** (the user: "we still need the references processed data to be used in another niche such as history then
 we can do something like /analyze-with-loupe clone <run> and it will create a new run folder but will just clone all the references

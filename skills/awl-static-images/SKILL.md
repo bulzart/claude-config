@@ -14,9 +14,9 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.6 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (3.5 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (3.6 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
-- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (4.5 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.5 KB)
 - *the plan has characters:*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - *the style lock is illustrated, painted or cartoon:*

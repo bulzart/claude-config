@@ -17,10 +17,10 @@ Only these section files for this phase, nothing else unless a step below says s
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (3.0 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.6 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (7.3 KB)
-- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (4.3 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (7.4 KB)
+- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.8 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
-- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (4.5 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.5 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
@@ -82,8 +82,9 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    toolkit makes equal sections.
 9. Show one line per video (number, subject, title, length, images, bed or none) and go on without waiting.
 
-**More videos** (static §10; `/analyze-with-loupe more <run> [N]`, or the user asking for more after a wrap-up): no start question is
-asked and nothing is analysed again. `T static lock --run RUN` (the locks; a run made before the locks existed is asked its niche once,
+**More videos** (static §10; `/analyze-with-loupe more <run> [N]`, or the user asking for more after a wrap-up; always in the session's
+run, never a new one): no start question is asked; references new to the run's folder are taken in first (static §10 "New
+references": the inventory again, A1–A4 for them only), and nothing else is analysed again. `T static lock --run RUN` (the locks; a run made before the locks existed is asked its niche once,
 with its subjects as context, and locks it with its style reference: the reference its style lock came from), the count when it is not
 given (AskUserQuestion, header "Videos"), then steps 2 and 4–9 for the new videos only: no voice samples (the narrator is locked), the
 stop asks only for the subjects, `T static subjects --add` gives them the next numbers, and their scripts, image plans, titles and

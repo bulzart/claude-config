@@ -1,6 +1,6 @@
 ---
 name: awl-static-edit
-description: /analyze-with-loupe Static step S4: the timeline, the local check render, the CapCut project (the final, at the run's format) and the edit checks. Internal to that command.
+description: /analyze-with-loupe Static step S4: the timeline, the CapCut project made directly (the final, at the run's format; no local render) and the edit checks. Internal to that command.
 user-invocable: false
 ---
 
@@ -13,11 +13,11 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (6.2 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (3.5 KB)
+- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (5.8 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (3.6 KB)
 - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
-- capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.1 KB)
+- capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.2 KB)
 - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.9 KB)
 
 ## Step S4
@@ -28,13 +28,9 @@ Only these section files for this phase, nothing else unless a step below says s
    `shorter_than_0_5s` and `images_without_a_file`: a gap, an undecided move, join or effect setting, or an edge that shows is fixed in the
    image plan (static §5: every value is decided there from the spec's measured pattern, the CapCut catalogue and, for effects, the effects
    folder's facts; there is no stock value) or in the images, then plan again.
-2. **The local render** (the check copies, at the format's check size): `T slideshow render --run RUN --video NN` → `RUN/deliverables/video-NN-clean.mp4` and `video-NN-preview.mp4`
-   (the complete video with its captions). Its `video_frames` must equal `expected_frames` (`ok` false, exit 1: pictures were lost; the
-   files are not used, the fault is reported with the answer). Watch it: `T frames RUN/deliverables/video-NN-preview.mp4 --out RUN/60-outputs/video-NN/check
-   --at <each image's start + 0.5 s, three caption times, and each effect's moment> --sheet` (a transition overlay densely too: `--range
-   <its start>-<its end> --fps 15`), view the sheets, check them as static §8 says; measure its moves:
-   `T edit-profile RUN/deliverables/video-NN-clean.mp4 --timeline RUN/40-briefs/video-NN-timeline.json` (each image's zoom and pan
-   against its `moves`, the jitter at the references' level).
+2. **No local render** (the user, 2026-11-07: "no need to generate a ffmpeg video simulation version, just do it in capcut directly"):
+   the edit is made in CapCut straight from the timeline; no `T slideshow render`, no check copies in `deliverables/` and no capcut-cli
+   proxy preview. The checks read the project itself (step 4).
 3. **The CapCut project** (static §7; capcut-assembly §1, §2, §4):
    - `T capcut-name --video NN`, `capcut_clone_draft` (the template, empty), `T capcut-prep --draft "<draft>" --canvas <state.json →
      static.format.export>` (the project's canvas is the format's export size), `capcut_read_timeline`;
@@ -52,7 +48,7 @@ Only these section files for this phase, nothing else unless a step below says s
    - the effects, when the timeline has any: `T capcut-effects --draft "<draft>" --run RUN --video NN` (each overlay on its own video
      track above the stills, each sound on an audio track, by the ways the CapCut effects check verified). Its `refused` must be empty: a
      refused effect needs something this PC's CapCut was not shown to play; plan that moment without it (static §5), `T slideshow plan`
-     and `render` again, and run this again on a fresh clone (never write an effect by hand with the MCP or capcut-cli);
+     again, and run this again on a fresh clone (never write an effect by hand with the MCP or capcut-cli);
    - the captions in the references' look (static §7; the timeline's `captions` block): `capcut import-srt "<draft>"
      "RUN/60-outputs/video-NN/captions.srt" --font-size <size> --color <fill> --border-width <stroke_width> --border-color <stroke_color>
      --align 1 --y <1 − 2 × y_rel>` (plus `--shadow`, `--bg-color`/`--bg-alpha`, `--highlight-words … --keyword-color … --keyword-size …`
@@ -61,14 +57,18 @@ Only these section files for this phase, nothing else unless a step below says s
      --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s> --run RUN` (CapCut's own intro on every caption), any
      other text with `capcut add-text` in its own look (its font with
      `T capcut-font --draft "<draft>" --font-file <file> --track text`), then
-     `T capcut-repair --draft "<draft>" --keep-text --preview RUN/60-outputs/video-NN/capcut-preview.mp4` (register, the media links, sync,
-     lint; the text stays as you set it). capcut-assembly's house text style (§1, §4, §5) does not apply in Static.
+     `T capcut-repair --draft "<draft>" --keep-text` (register, the media links, sync, lint; the text stays as you set it; no `--preview`:
+     no proxy video). capcut-assembly's house text style (§1, §4, §5) does not apply in Static.
    CapCut is open: blocker `capcut_running` (result.json).
-4. **Project checks** (capcut-assembly §5): `capcut_read_timeline` (every image at its start and span, the narration and the bed on their
-   tracks, each effect on its `fx`/`sfx` track at its start), every text's look against the timeline's `captions` (font, size, colours,
-   position); the repair's lint with no `media-unlinked` and its link step's `media_without_entry` empty.
-5. The video's brief, block S4: the render's facts (`RUN/60-outputs/video-NN/slideshow.json`), the project's name and its export size (the
-   final: the user exports it from CapCut at that size, 30 fps), anything left to set by hand in CapCut. Then invoke Skill `awl-record`.
+4. **Project checks** (capcut-assembly §5, static §8), on the project itself: `capcut_read_timeline`: every image at the timeline's start
+   and span, contiguous from 0 to the timeline's `duration_s` with no gap or overlap; the narration at `narration_offset` and the bed at
+   0 at its gain on their tracks; each effect on its `fx`/`sfx` track at its start. `T capcut-motion`'s answer: every image keyed, its
+   values the timeline's `moves`; `T capcut-transitions`': every join the timeline's. The captions: the project's caption count and words
+   against `captions.srt` (the narration's words), every text's look against the timeline's `captions` (font, size, colours, outline,
+   position, intro). The repair's lint with no `media-unlinked` and its link step's `media_without_entry` empty.
+5. The video's brief, block S4: the timeline's facts (`T slideshow plan`'s answer: images, spans, moves, joins, captions, effects), the
+   project's name, path and export size (the final: the user exports it from CapCut at that size, 30 fps), what the checks read back,
+   and anything left to set by hand in CapCut. Then invoke Skill `awl-record`.
 
 ## Never (this phase)
 

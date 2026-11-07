@@ -303,8 +303,10 @@ strategist, storyteller, sociologist and human-behaviour expert, attention psych
 a stranger watches to the end and sends on, and disciplined by the references' measured data, sourced facts, a new subject and the hard rules.
 Static has no effort level (the user, 2026-11-07): the references are studied at 2 fps flat (`prep-all --ocr-frames 30`; `config.json →
 static.analysis.fps`) with their audio (Whisper, never asked) and the narrator's voice as numbers (`audio-profile --voice`), and with their
-real YouTube titles and thumbnails when the references folder has `context.txt` (`<file>|<title>|<thumbnail path>`, a `thumbnails` folder;
-`T static context`, `reference/static.md` §12); the Static card and spec (§1–§2) carry the hook, the telling, the devices, the seconds per
+real YouTube titles from their file names (`<channel>_<title>_<YouTube id>`; or `context.txt` with a `thumbnails` folder when the
+references folder has one; `T static context`, `reference/static.md` §12); a reference another run already analysed is copied from that
+run, never analysed twice (`T reuse-analysis --run RUN --from <run>`, matched by the file's hash and size); the export can be 1440, 1080
+or 720 on the short side (`T static format --res`); the Static card and spec (§1–§2) carry the hook, the telling, the devices, the seconds per
 still, the visual styles, the caption pattern, the voice profile, the bed brief and the title and thumbnail patterns. A run is one channel
 (§10): its niche and visual style (one reference the user names) are picked at A5, its narrator at A6s, and every video keeps them
 (`T static lock`; `/analyze-with-loupe more <run>` adds videos of that niche, `/analyze-with-loupe clone <run>` copies the analysis into
@@ -326,14 +328,14 @@ again without making any), because the CapCut project plays it at 1.0; a word th
 **The format and the final** (the user, the same day): the CapCut project is the final, exported by the user at the format picked at A5 with the count
 (`T static formats` gives the facts; the best fit for the references first, marked Recommended, then options: 720, `medium`, the other aspect, the size
 without the move margin; `T static format` stores it in `state.json → static.format`, and the images, the prompts file, the canvas (`T capcut-prep
---canvas`) and the check render follow it). At 1080 on the short side the images are 1216×2160 (vertical), so the export stays sharp through a 12 %
+--canvas`) follow it; no local render: the edit is made in CapCut directly and read back for its checks, the user, 2026-11-07: "no need to generate a ffmpeg video simulation version, just do it in capcut directly"). At 1080 on the short side the images are 1216×2160 (vertical), so the export stays sharp through a 12 %
 zoom. **Strong lines**: a line marked `strong` is made by the VoiceDesign model from the run's voice description plus its delivery, with the picked
 sample's seed, only at the references' peaks; the sidecar measures every line's pitch and timbre against the run's voice and a strong line apart from
 the cloned ones is made again or cloned (`reference/static.md` §4, §6). **The text look** is the references' (the user: "everything is data
 driven (from the references) and nothing is predefined"): font, size, colours, outline, box, case, highlight and animation come from the spec;
 `capcut import-srt` takes them as flags, `T capcut-font` sets the font family (`--list` gives the fonts on the PC, CapCut's own first) and writes the
 outline, box and shadow where CapCut 9.x draws them (each style's strokes, the check_flag bits: import-srt sets them on the material only), and
-`T capcut-repair --keep-text` never applies the house style; the check copy burns the same look. In every mode `T capcut-repair` also writes each
+`T capcut-repair --keep-text` never applies the house style. In every mode `T capcut-repair` also writes each
 clip's `local_material_id` after `register` (CapCut 9.3 and later open a local clip by it; without it the clip shows as missing). No
 Higgsfield and no Loupe anywhere in Static; the product appears only when the assets hold one. Its agents get production-agents §2s's prompt (`T contract`
 picks it). Settings: `config.json → static`.
@@ -347,7 +349,7 @@ CapCut check showed this PC's CapCut drawing (`T capcut-check fill | measure`, `
 check is measured from CapCut's export or, when Pro blocks it, a screen recording). Each Static run asks which CapCut plan the user exports with
 (`state.json → capcut_plan`): free keeps the edit to the options marked free, pro allows the Pro ones too (`T capcut-text-anim`, `capcut-transitions`
 and `capcut-effects` refuse a Pro option on a free run; `config.json → capcut.pro` is the default for a run without the key).
-The check copy draws each still with an exact sub-pixel resample per frame (ffmpeg's zoompan shook). **The effects folder** (optional, the user, the
+`T slideshow render` (only for a local copy the user asks for) draws each still with an exact sub-pixel resample per frame. **The effects folder** (optional, the user, the
 same day: "sound effects, and green screen transitions"): read-only like the references; `T effects scan` measures every file once (cached): a sound's
 start, loudest moment, length, colour and loudness, an overlay's key green, the seconds it hides a 9:16 box, its black and white shares, its own
 transparency, and contact sheets; the plan's `effects` place overlays (chroma, screen or as they are; cover or contain; scale and position keys) and

@@ -46,8 +46,9 @@ sound · subject, its kind and its field · what makes it work (one paragraph, [
 - **Bed brief** (§6; a bed goes under every video, also when the references are voice only): the content type and its register, the
   narration's pace, pitch and delivery, the arc the beats make, the pictures' rhythm, and the references' own sound as the audio profile's
   numbers (a bed or none; when one, its tempo, beat strength and energy arc; its instruments and genre are not analysed).
-- **Titles and thumbnails** (§12): the titles' pattern and the thumbnails' pattern, with the thumbnails' size and aspect from
-  `T static context`; none when the references folder has no `context.txt`.
+- **Titles and thumbnails** (§12): the titles' pattern (from the file names, or `context.txt`) and, when `context.txt` gives
+  thumbnails, the thumbnails' pattern with their size and aspect from `T static context`; without reference thumbnails the thumbnail
+  follows the references' hooks and first frames.
 - **Devices to reuse**, and **what is left behind**: every reference's subject, its names, its facts, its exact lines, its title and its
   thumbnail.
 
@@ -64,5 +65,5 @@ also quicker per image). Each option's description names the export size, the im
 the rest (another aspect, `xhigh` or `max`, an exact size). The answer is stored with
 `T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`, which refuses a size the run's image source does not
 take (the API's rules; Klein's: edges of a multiple of 16 from 64 to 4096). Every
-later step reads `state.json → static.format`: the images' size and quality, the prompts file, the project's canvas, the check render.
+later step reads `state.json → static.format`: the images' size and quality, the prompts file, the project's canvas.
 
