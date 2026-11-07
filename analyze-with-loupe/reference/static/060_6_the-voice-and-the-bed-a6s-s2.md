@@ -1,6 +1,8 @@
 ## 6 The voice and the bed (A6s, S2)
 
-**The voice** (Qwen3-TTS 1.7B, bf16, design then clone): one voice per run, the same in every video.
+**The voice** (Qwen3-TTS 1.7B, bf16, design then clone): one voice per run, the same in every video, locked once picked (§10): more
+videos of the run and a clone that keeps it make no new samples; the toolkit refuses a new design or pick without `--replace`. The
+sample line names nothing religious or superstitious (§11).
 - Five samples at the stop of A6s (the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them so
   the user can hear them and pick the one they like to be the voice of the videos"): five voice descriptions written from the spec's
   voice profile (gender, age, tone, pace, accent; the references' register, five different takes on it), all speaking one line in the
@@ -26,7 +28,8 @@ need to analyze their instrumentals too"). It is written from what the run alrea
 - **the content type**: the kind and niche of the references and of this video's subject (a life story, quick facts, a kids' story, a
   true case, a myth …): the palette;
 - **the narration**: the spec's register and delivery in words (calm, wry, warm, ominous …), its pace (words per minute, the pauses) and
-  the voice's pitch: the music leaves the narrator's band clear (no lead melody or busy part where the voice sits) and has no vocals;
+  the voice's pitch: the music leaves the narrator's band clear (no lead melody or busy part where the voice sits) and has no vocals,
+  and nothing sacred or ritual (no hymn, choir singing sacred words, chant or church organ: §11);
 - **the story's arc over time**: this video's beats (its script) at the narration's line times (the hook, the rise, the turn, the fall
   or payoff, the close) and each line's emotion: where the bed holds, builds, drops or darkens;
 - **the pictures' rhythm**: the seconds per still and the cuts (§2), which a pulse can sit under without fighting;

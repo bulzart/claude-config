@@ -72,7 +72,10 @@ Subcommands (python awl.py <cmd> -h):
                  prep-all (the reference sampling) and the produce phase (agents at once, the pilot) read it; never QC
   static         Static (contract item 36): check the setup on this PC (key present, image model, FLUX 3 Klein, TTS, music, whisper,
                  ffmpeg, capcut-cli) | formats (facts for the format question: the references' aspects, sizes per aspect and resolution)
-                 | format (store the pick)
+                 | format (store the pick) | lock (the run's niche and style reference, once; the locks shown) | subjects (in video
+                 order; --add appends the next ones) | context (the references' real YouTube titles and thumbnails, context.txt)
+  clone-run      Static: a new run with a Static run's analysis copied (inventory, media, cards, spec, characters, voice); its niche,
+                 subjects, videos and ledger are not (the clone asks its niche)
   image          Static stills: generate (OpenAI Images API with the key only from OPENAI_API_KEY, or FLUX 3 Klein on this PC with
                  static_images=klein; ledgered) | prompts (the file a user makes them from) | intake (the user's folder, copied in) | use
                  (which attempt the edit takes)
@@ -810,9 +813,24 @@ EFFORT_HELP = ("state.json -> effort is empty: the user's effort level is not st
                "`T effort --run RUN --level low|medium|high|xhigh|max`")
 
 
+def _effort_static() -> dict:
+    """Static has no effort level (the user, 2026-11-07: "remove the effort idea completely (on static mode), just do 2fps when on static
+    mode"): every reference flat at config static.analysis.fps, nothing denser (no extra frames around cuts, motion or the first second;
+    the edit layer is measured at the full frame rate by `edit-profile`), the analyst's close-ups uncapped, and the produce phase as it
+    was before effort levels (max's agents at once and pilot)."""
+    fps = float(cfg_get("static.analysis.fps", 2.0) or 2.0)
+    return {"level": "static", "analysis_fps": fps, "analysis_dense_fps": fps, "motion_peaks": EFFORT_LEVELS["max"]["motion_peaks"],
+            "densify_ranges": None, "max_agents": EFFORT_LEVELS["max"]["max_agents"], "pilot_from": EFFORT_LEVELS["max"]["pilot_from"],
+            "extras": False, "note": f"Static has no effort level: every reference at {fps:g} fps flat, nothing denser; agents at once and "
+                                     "the pilot as before effort levels (contract item 36)"}
+
+
 def effort_of_state(st: dict) -> dict:
     """The run's effort settings: state.json -> effort. A run made before item 33 has no key and keeps its rates (max); new-run writes the
-    key empty (null) until the user's answer is stored, and such a run is pending: what needs the level stops on it."""
+    key empty (null) until the user's answer is stored, and such a run is pending: what needs the level stops on it. A Static run has no
+    level at all (_effort_static), whatever the key holds."""
+    if isinstance(st, dict) and st.get("analyze_submode") == "static":
+        return _effort_static()
     e = st.get("effort") if isinstance(st, dict) else None
     if isinstance(e, dict) and e.get("level"):
         base = dict(EFFORT_LEVELS.get(e["level"], EFFORT_LEVELS["max"]))
@@ -1096,7 +1114,7 @@ def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, de
     # a still stretch counts from 3 duplicates in a row at 4 fps and up (the rates before item 33); at 3 fps from the 2 a still second holds,
     # so Medium never keeps more frames of a still shot than High; at 2 fps a still second holds 1, and thinning it would save no cell
     statics = thin_static(base, static_threshold, min_run=max(2, min(3, math.ceil(base_fps) - 1)))
-    plan = densify_plan(cuts, peaks, dur, fps, eff_fps, dense_fps) if extras else []     # --no-extras: the baseline rate only (Static: 1 fps)
+    plan = densify_plan(cuts, peaks, dur, fps, eff_fps, dense_fps) if extras else []     # --no-extras: the baseline rate only (Static: 2 fps)
     extra = extract_many(video, [(tt, fr_dir / "extra" / f"x-{ts_name(tt)}.jpg", {"kind": "extra", "tag": tag, "why": why})
                                  for tt, tag, why in plan], max_side=720)
     shot_of = lambda tt: next((s["shot"] for s in shots if s["start"] <= tt < s["end"]), shots[-1]["shot"] if shots else 1)
@@ -1243,7 +1261,8 @@ def _media_kwargs(a, audio_ingest: str, eff: dict | None = None) -> dict:
     return dict(base_fps=float(base), dense_fps=float(max(dense, base)), static_threshold=a.static_threshold,
                 whisper_model=a.whisper_model, language=a.language, audio_ingest=audio_ingest,
                 do_ocr=not a.no_ocr, ocr_budget=a.ocr_frames, max_frames=a.max_frames,
-                peaks_max=int(eff["motion_peaks"]) if eff and eff.get("motion_peaks") else 8, extras=not getattr(a, "no_extras", False))
+                peaks_max=int(eff["motion_peaks"]) if eff and eff.get("motion_peaks") else 8,
+                extras=not getattr(a, "no_extras", False) and not (eff and eff.get("extras") is False))
 
 
 def cmd_prep_video(a):
@@ -8285,6 +8304,11 @@ def cmd_effort(a):
     rd, st = _state_of(a.run)
     custom = {k: getattr(a, k) for k in EFFORT_KEYS if getattr(a, k, None) is not None}
     cur = effort_of_state(st)
+    if cur.get("level") == "static":
+        if a.level or custom:
+            fail("a Static run has no effort level (contract item 36; the user, 2026-11-07: \"remove the effort idea completely (on static "
+                 f"mode)\"): every reference is sampled at {cur['analysis_fps']:g} fps flat (config static.analysis.fps); nothing to set", 2)
+        out({"ok": True, "run": rd.name, "effort": cur})
     if not a.level and not custom:
         if cur.get("pending"):
             fail(EFFORT_HELP, 2)
@@ -8327,6 +8351,7 @@ def cmd_voiceover(a):
 # (OPENAI_API_KEY): it is never printed, never written to a run, and scrubbed from every error text.
 
 STATIC_IMG_NAME = re.compile(r"(?i)(?:^|[^a-z0-9])v(\d{1,3})[-_ ]?i(\d{1,3})(?:[^0-9]|$)")
+STATIC_THUMB_NAME = re.compile(r"(?i)(?:^|[^a-z0-9])v(\d{1,3})[-_ ]?thumb(?:nail)?(?:[^a-z0-9]|$)")
 STATIC_MOTIONS = ("zoom-in", "zoom-out", "pan-left", "pan-right", "pan-up", "pan-down", "none")
 STATIC_TRANSITIONS = {"cut": "fade", "fade": "fade", "dissolve": "dissolve", "fadeblack": "fadeblack", "fadewhite": "fadewhite",
                       "slideleft": "slideleft", "slideright": "slideright", "slideup": "slideup", "slidedown": "slidedown",
@@ -8466,13 +8491,47 @@ def _img_ledger(rd: Path, action: str, **kw) -> dict:
     return e
 
 
+def _img_tag(anchor, key_name: str, attempt: int) -> str:
+    """An attempt's file stem: the anchor's, a thumbnail's (thumb-aK) or a still's (iKK-aK)."""
+    return f"{anchor}-a{attempt}" if anchor else (f"thumb-a{attempt}" if key_name == "thumb" else f"i{key_name}-a{attempt}")
+
+
+def _img_req_name(anchor, nn: str, key_name: str, attempt: int) -> str:
+    return (f"anchor-{anchor}-a{attempt}-image-request.json" if anchor else
+            f"video-{nn}-{_img_tag(None, key_name, attempt)}-image-request.json")
+
+
+def _thumb_deliver(rd: Path, nn: str, f: Path) -> dict:
+    """The video's YouTube thumbnail in use (static §12) as a deliverable: deliverables/video-NN-thumbnail.<ext>, copied whenever the
+    thumbnail in use changes, and a phone-feed-size copy beside the attempt (320 px wide) to view it as a viewer first sees it."""
+    dst = rd / "deliverables" / f"video-{nn}-thumbnail{f.suffix.lower()}"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    for old in dst.parent.glob(f"video-{nn}-thumbnail.*"):
+        if old != dst:
+            old.unlink()
+    shutil.copy2(f, dst)
+    small = f.with_name(f.stem + "-small.png")
+    try:
+        from PIL import Image
+        with Image.open(f) as im:
+            w, h = im.size
+            im.convert("RGB").resize((320, max(1, round(320 * h / w)))).save(small, format="PNG")
+    except Exception:  # noqa: BLE001
+        small = None
+    return {"deliverable": str(dst), "small": str(small) if small else None}
+
+
 def _img_generate(a):
     rd, st = _state_of(a.run)
     anchor = re.sub(r"[^A-Za-z0-9_-]+", "", a.anchor or "") or None
+    thumb = bool(getattr(a, "thumbnail", False)) and not anchor
     nn = "00" if anchor else _cf_nn(a.video)
-    if not anchor and (not a.video or not a.image):
-        fail("generate needs --video NN and --image K (or --anchor ID for a character's anchor image)", 2)
-    key_name = anchor or f"{int(a.image):02d}"
+    if thumb and (not a.video or not a.size):
+        fail("a thumbnail needs --video NN and --size WxH (the references' thumbnails' size, else YouTube's 1280x720: static §12)", 2)
+    if not anchor and not thumb and (not a.video or not a.image):
+        fail("generate needs --video NN and --image K (or --thumbnail for the video's YouTube thumbnail, or --anchor ID for a character's "
+             "anchor image)", 2)
+    key_name = anchor or ("thumb" if thumb else f"{int(a.image):02d}")
     prompt = (Path(a.prompt_file).read_text(encoding="utf-8") if a.prompt_file else (a.prompt or "")).strip()
     if not prompt:
         fail("generate needs --prompt-file (or --prompt)", 2)
@@ -8505,8 +8564,8 @@ def _img_generate(a):
         out({"ok": True, "reused": True, "file": done[-1]["file"], "attempt": done[-1]["attempt"], "fingerprint": fp,
              "note": "this exact request already made this image: nothing was sent (--again asks for a new draw of the same request)"})
     attempt = 1 + max([int(x.get("attempt") or 0) for x in slot["attempts"]] or [0])
-    tag = f"{anchor}-a{attempt}" if anchor else f"i{key_name}-a{attempt}"
-    reqf = rd / "50-requests" / (f"anchor-{anchor}-a{attempt}-image-request.json" if anchor else f"video-{nn}-i{key_name}-a{attempt}-image-request.json")
+    tag = _img_tag(anchor, key_name, attempt)
+    reqf = rd / "50-requests" / _img_req_name(anchor, nn, key_name, attempt)
     write_json(reqf, {"video": nn, "image": key_name, "attempt": attempt, "kind": "image", "provider": "openai",
                       "endpoint": "edits" if refs else "generations", "params": params})
     _img_ledger(rd, "begin", video=nn, attempt=tag, fp=fp, model=model, request_file=str(reqf))
@@ -8559,6 +8618,7 @@ def _img_generate(a):
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name, job=str(js.get("created") or ""))
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "model": model, "quality": quality, "refs": len(refs),
          "usage": usage, "cost_usd_estimate": cost, "elapsed_s": round(time.time() - t0, 1), "tries": tries, "fingerprint": fp,
+         **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
          "note": "view the image before you use it (the QC of reference/static §8); this attempt is now the one the edit uses"})
 
 
@@ -8616,8 +8676,8 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
              "fingerprint": fp, "note": "this exact request already made this image: nothing was made (--again asks for a new draw)"})
     attempt = 1 + max([int(x.get("attempt") or 0) for x in slot["attempts"]] or [0])
     seed = int(a.seed) if a.seed is not None else int(hashlib.sha256(f"{fp}:{attempt}".encode("utf-8")).hexdigest(), 16) % 2 ** 32
-    tag = f"{anchor}-a{attempt}" if anchor else f"i{key_name}-a{attempt}"
-    reqf = rd / "50-requests" / (f"anchor-{anchor}-a{attempt}-image-request.json" if anchor else f"video-{nn}-i{key_name}-a{attempt}-image-request.json")
+    tag = _img_tag(anchor, key_name, attempt)
+    reqf = rd / "50-requests" / _img_req_name(anchor, nn, key_name, attempt)
     write_json(reqf, {"video": nn, "image": key_name, "attempt": attempt, "kind": "image", "provider": "klein", "params": params, "seed": seed})
     _img_ledger(rd, "begin", video=nn, attempt=tag, fp=fp, model=engine, request_file=str(reqf), provider="klein")
     f = folder / f"{tag}.png"
@@ -8649,7 +8709,7 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name)
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "engine": engine, "seed": seed, "upsampled": upsample,
          "caption": one.get("caption"), "refs": len(refs), "cost_usd_estimate": 0.0, "elapsed_s": round(time.time() - t0, 1),
-         "fingerprint": fp, "stub": bool(res.get("stub")),
+         "fingerprint": fp, "stub": bool(res.get("stub")), **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
          "note": "view the image before you use it (the QC of reference/static §8); caption is what the image model received; this attempt "
                  "is now the one the edit uses"})
 
@@ -8700,11 +8760,23 @@ def _img_prompts(a):
             if im.get("characters"):
                 L.append("Attach: " + ", ".join(str(c) for c in im["characters"]) + " (their photo or sheet, above)")
             L += ["", "```", str(im.get("prompt") or "").strip(), "```", ""]
+        th = plan.get("thumbnail") or {}
+        if th.get("prompt"):
+            L += [f"## v{nn}-thumb  ·  the YouTube thumbnail, {th.get('size') or '1280x720'}", ""]
+            if plan.get("title"):
+                L.append(f"The video's title: “{str(plan['title']).strip()}”")
+            if th.get("text"):
+                L.append(f"Its text, exactly: “{str(th['text']).strip()}”")
+            if th.get("characters"):
+                L.append("Attach: " + ", ".join(str(c) for c in th["characters"]) + " (their photo or sheet, above)")
+            L += ["", "```", str(th["prompt"]).strip(), "```", ""]
+            total += 1
         dest = rd / "deliverables" / "prompts" / f"video-{nn}-image-prompts.md"
         write_text(dest, "\n".join(L))
         files.append(str(dest))
         total += len(imgs)
-    out({"ok": True, "files": files, "images": total, "naming": "vNN-iKK (png, jpg or webp), all in one folder; sub-folders fine",
+    out({"ok": True, "files": files, "images": total,
+         "naming": "vNN-iKK for the stills and vNN-thumb for the thumbnail (png, jpg or webp), all in one folder; sub-folders fine",
          "note": "give the user these files' paths and how to hand back the folder; `T image intake --folder <path>` copies them in"})
 
 
@@ -8719,17 +8791,25 @@ def _img_intake(a):
     found, unmatched = {}, []
     for f in sorted(src.rglob("*")):
         if f.is_file() and f.suffix.lower() in IMAGE_EXT:
-            m = STATIC_IMG_NAME.search(f.stem)
-            if m:
+            mt = STATIC_THUMB_NAME.search(f.stem)
+            m = None if mt else STATIC_IMG_NAME.search(f.stem)
+            if mt:
+                found.setdefault((f"{int(mt.group(1)):02d}", "thumb"), []).append(f)
+            elif m:
                 found.setdefault((f"{int(m.group(1)):02d}", f"{int(m.group(2)):02d}"), []).append(f)
             else:
                 unmatched.append(str(f))
-    want = {}
+    want, thumb_ratio = {}, {}
     for p in sorted((rd / "40-briefs").glob("video-*-images.json")):
         nn = p.name[6:-12]
         if a.video and nn != _cf_nn(a.video):
             continue
-        want[nn] = {f"{int(im.get('image') or 0):02d}" for im in (_img_plan(rd, nn).get("images") or [])}
+        plan = _img_plan(rd, nn)
+        want[nn] = {f"{int(im.get('image') or 0):02d}" for im in (plan.get("images") or [])}
+        if (plan.get("thumbnail") or {}).get("prompt"):
+            want[nn].add("thumb")
+            tw, th_ = _parse_size((plan.get("thumbnail") or {}).get("size") or "1280x720")
+            thumb_ratio[nn] = tw / th_
     t_asp = _static_fmt(_st).get("aspect") if _static_fmt(_st).get("aspect") in STATIC_ASPECTS else "9:16"
     t_ratio = STATIC_ASPECTS[t_asp][0] / STATIC_ASPECTS[t_asp][1]
     copied, dupes, extra = [], [], []
@@ -8744,10 +8824,11 @@ def _img_intake(a):
             dupes.append({"video": nn, "image": kk, "files": [str(x) for x in fs], "taken": str(f)})
         folder, rec_p = _img_where(rd, nn, None)
         folder.mkdir(parents=True, exist_ok=True)
-        dest = folder / f"i{kk}-user{f.suffix.lower()}"
+        dest = folder / (f"thumb-user{f.suffix.lower()}" if kk == "thumb" else f"i{kk}-user{f.suffix.lower()}")
         shutil.copy2(f, dest)
         wh = _img_size(dest)
-        aspect_off = round(abs((wh[0] / wh[1]) - t_ratio) / t_ratio, 3) if len(wh) == 2 and wh[1] else None
+        ratio = thumb_ratio.get(nn, 16 / 9) if kk == "thumb" else t_ratio
+        aspect_off = round(abs((wh[0] / wh[1]) - ratio) / ratio, 3) if len(wh) == 2 and wh[1] else None
         try:
             prev = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(kk) or {}
         except (OSError, ValueError):
@@ -8755,7 +8836,10 @@ def _img_intake(a):
         att = 1 + max([int(x.get("attempt") or 0) for x in prev.get("attempts", [])] or [0])
         _img_record_add(rec_p, kk, {"attempt": att, "status": "completed", "source": "user", "file": str(dest), "from": str(f),
                                     "sha1": _sha1_file(dest), "at": now_iso(), "size": wh}, use=dest.name)
-        copied.append({"video": nn, "image": kk, "file": str(dest), "from": str(f), "size": wh, "off_aspect": aspect_off})
+        row = {"video": nn, "image": kk, "file": str(dest), "from": str(f), "size": wh, "off_aspect": aspect_off}
+        if kk == "thumb":
+            row["thumbnail"] = _thumb_deliver(rd, nn, dest)
+        copied.append(row)
     missing = [{"video": nn, "image": kk} for nn, ks in sorted(want.items()) for kk in sorted(ks) if (nn, kk) not in found]
     out({"ok": True, "folder": str(src), "copied": copied, "missing": missing, "not_in_any_plan": extra, "named_twice": dupes,
          "names_without_vNN_iKK": unmatched[:60], "unmatched_total": len(unmatched),
@@ -8767,7 +8851,7 @@ def _img_use(a):
     rd, _st = _state_of(a.run)
     anchor = re.sub(r"[^A-Za-z0-9_-]+", "", a.anchor or "") or None
     nn = "00" if anchor else _cf_nn(a.video)
-    key_name = anchor or f"{int(a.image or 0):02d}"
+    key_name = anchor or ("thumb" if getattr(a, "thumbnail", False) else f"{int(a.image or 0):02d}")
     folder, rec_p = _img_where(rd, nn, anchor)
     try:
         slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {}
@@ -8777,7 +8861,8 @@ def _img_use(a):
     if not pick:
         fail(f"no finished attempt {a.attempt} of {key_name} with a file on disk", 2)
     _img_record_add(rec_p, key_name, None, use=Path(pick["file"]).name)
-    out({"ok": True, "image": key_name, "uses": pick["file"]})
+    out({"ok": True, "image": key_name, "uses": pick["file"],
+         **({"thumbnail": _thumb_deliver(rd, nn, Path(pick["file"]))} if key_name == "thumb" else {})})
 
 
 def cmd_image(a):
@@ -8865,6 +8950,9 @@ def _tts_design(a):
     rd, _st = _state_of(a.run)
     if not a.text or not a.instruct:
         fail("design needs --text (the line every sample speaks) and one --instruct per sample (the voice in words)", 2)
+    if ((_st.get("static") or {}).get("voice") or {}).get("sample") and not a.replace:
+        fail("the run's narrator is locked (state.json -> static.voice): every video of a run keeps one voice. New samples only with "
+             "--replace, when the user picks the voice again (a clone)", 2)
     vd = _voice_dir(rd)
     lang = a.language or _scfg("tts.language", "english")
     base = int(_scfg("tts.seed", 1105))
@@ -8893,6 +8981,10 @@ def _tts_voice(a):
     prompt; each --emotion NAME=TEXT adds a reference clip of the same voice speaking that line, and its own prompt."""
     rd, _st = _state_of(a.run)
     vd = _voice_dir(rd)
+    cur = ((_st.get("static") or {}).get("voice") or {}).get("sample")
+    if cur and int(cur) != int(a.sample or 0) and not a.replace:
+        fail(f"the run's narrator is locked to sample {cur} (state.json -> static.voice): every video of a run keeps one voice; another "
+             "pick only with --replace, when the user picks the voice again (a clone)", 2)
     try:
         samples = json.loads((vd / "samples.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -9613,11 +9705,278 @@ def _static_format_set(a):
                                             "follow it; the final is the CapCut project exported at the export size"})
 
 
+# ---- one channel per run (the user, 2026-11-07: one narrator, one niche and one visual style per run, "because we want to remain
+# consistency on content and style"; another niche is a clone of the run's analysis, never a second analysis of the same references)
+
+def _ref_ids(rd: Path) -> list:
+    try:
+        inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [it["id"] for it in inv.get("items") or [] if it.get("kind") == "video" and not it.get("ignored") and not it.get("duplicate_of")]
+
+
+def _niche_name(s: dict):
+    n = (s or {}).get("niche")
+    return n.get("name") if isinstance(n, dict) else (n or None)
+
+
+def _static_locks(rd: Path, st: dict) -> dict:
+    s = st.get("static") or {}
+    subj = s.get("subjects") or []
+    v = s.get("voice") or {}
+    return {"niche": _niche_name(s), "style_ref": s.get("style_ref"),
+            "voice": {"sample": v.get("sample"), "instruct": v.get("instruct"), "seed": v.get("seed"),
+                      "file": str(_voice_dir(rd) / "ref-neutral.wav")} if v else None,
+            "subjects": [{"video": f"{i:02d}", "title": t_} for i, t_ in enumerate(subj, 1)], "next_video": f"{len(subj) + 1:02d}",
+            "format": (s.get("format") or {}).get("export"), "images": st.get("static_images"), "capcut_plan": st.get("capcut_plan"),
+            "qc_fixes": st.get("qc_fixes"), "spec": str(rd / "20-analysis" / "static-spec.md"), "cloned_from": st.get("cloned_from")}
+
+
+def _lock_change(what: str, cur, new, a, made: bool, rd: Path):
+    """Refuses another value of a set lock: --replace changes it only before the run's first video; after it, another niche or style is
+    another run (a clone)."""
+    if not cur or str(cur).casefold() == str(new).casefold():
+        return
+    if not a.replace:
+        fail(f"the run's {what} is locked: {cur!r} (every video of a run keeps it). Another {what} is another run: `T clone-run --from "
+             f"{rd.name}`; --replace changes it only before the run's first video", 2)
+    if made:
+        fail(f"the {what} cannot change once a video of the run exists ({cur!r}): clone the run (`T clone-run --from {rd.name}`)", 2)
+
+
+def _static_lock(a):
+    """The run's channel locks (contract item 36): --niche (the field every subject of the run stays in) and --style-ref (the reference
+    whose look the images and the captions keep) are recorded once and refused when another value comes later (_lock_change); without
+    them it prints the locks: niche, style reference, voice, the subjects made with their video numbers, the next video number."""
+    rd, st = _state_of(a.run)
+    if st.get("analyze_submode") != "static":
+        fail("static lock is for a Static run (analyze_submode=static)", 2)
+    s = st.get("static") or {}
+    made = bool(st.get("videos")) or bool(s.get("subjects"))
+    changes = {}
+    if a.niche:
+        new = " ".join(str(a.niche).split())
+        cur = _niche_name(s)
+        _lock_change("niche", cur, new, a, made, rd)
+        if not cur or cur.casefold() != new.casefold():
+            changes["static.niche"] = {"name": new, "set_at": now_iso()}
+    if a.style_ref:
+        ids = _ref_ids(rd)
+        m = re.fullmatch(r"(?i)\s*v?0*(\d{1,3})\s*", str(a.style_ref))
+        ref = f"V{int(m.group(1)):02d}" if m else str(a.style_ref).strip().upper()
+        if not ids:
+            fail("no references are inventoried in this run (00-inventory/inventory.json)", 2)
+        if ref not in ids:
+            fail(f"{ref} is not a reference of this run: {', '.join(ids[:60])}", 2)
+        _lock_change("style reference", s.get("style_ref"), ref, a, made, rd)
+        if s.get("style_ref") != ref:
+            changes["static.style_ref"] = ref
+    if changes:
+        _state_set(rd, **changes)
+        st = json.loads((rd / "state.json").read_text(encoding="utf-8"))
+    out({"ok": True, "run": rd.name, "changed": sorted(changes), "locks": _static_locks(rd, st),
+         "note": "every video of this run keeps these: subjects from its niche, the style reference's look for the images and the "
+                 "captions, one narrator; another niche is a clone of the run (`T clone-run --from <run>`)"})
+
+
+def _static_subjects(a):
+    """The run's subjects in video order (contract item 36): --add appends new ones (the first pick and every 'more videos' later), each
+    with the next video number; a subject the run already has is refused; adding needs the niche lock. Without --add it lists them."""
+    rd, st = _state_of(a.run)
+    s = st.get("static") or {}
+    subj, added = list(s.get("subjects") or []), []
+    for t_ in a.add or []:
+        t2 = " ".join(str(t_).split())
+        if not t2:
+            continue
+        low = [x.casefold() for x in subj]
+        if t2.casefold() in low:
+            fail(f"{t2!r} is already a subject of this run (video {low.index(t2.casefold()) + 1:02d}): pick another", 2)
+        subj.append(t2)
+        added.append({"video": f"{len(subj):02d}", "title": t2})
+    if added:
+        if not _niche_name(s):
+            fail("the run's niche is not locked yet: `T static lock --run RUN --niche \"<the user's niche>\"` first", 2)
+        _state_set(rd, **{"static.subjects": subj})
+    out({"ok": True, "niche": _niche_name(s), "subjects": [{"video": f"{i:02d}", "title": x} for i, x in enumerate(subj, 1)],
+         "added": added})
+
+
+def _thumb_sheets(items: list, out_dir: Path, per: int = 12) -> list:
+    """Contact sheets of the references' thumbnails, three a row, each labelled with its reference and title, to view them all at once."""
+    from PIL import Image, ImageDraw
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for old in out_dir.glob("sheet-*.jpg"):
+        old.unlink()
+    font, cw, ch, lab, paths = _fx_font(16), 384, 216, 30, []
+    for k in range(0, len(items), per):
+        chunk = items[k:k + per]
+        sheet = Image.new("RGB", (3 * cw, math.ceil(len(chunk) / 3) * (ch + lab)), (24, 24, 24))
+        d = ImageDraw.Draw(sheet)
+        for i, (ref, title, p) in enumerate(chunk):
+            x, y = (i % 3) * cw, (i // 3) * (ch + lab)
+            try:
+                with Image.open(p) as im:
+                    im = im.convert("RGB")
+                    im.thumbnail((cw - 8, ch - 8))
+                    sheet.paste(im, (x + (cw - im.width) // 2, y + (ch - im.height) // 2))
+            except Exception:  # noqa: BLE001
+                d.text((x + 8, y + 8), "unreadable", fill=(255, 90, 90), font=font)
+            d.text((x + 6, y + ch + 6), f"{ref} · {title}"[:46], fill=(235, 235, 235), font=font)
+        f = out_dir / f"sheet-{k // per + 1:02d}.jpg"
+        sheet.save(f, quality=88)
+        paths.append(str(f))
+    return paths
+
+
+def _static_context(a):
+    """The references' real YouTube titles and thumbnails (contract item 36; the user, 2026-11-07: "in the references folder there is also
+    a context.txt file that has all the real youtube title of each video and their thumbnails image file path ... like this
+    how_to_drive_a_car.mp4|How do you drive a car|C:/users.../how_to_drive.png"). Each line `<video file>|<title>|<thumbnail path>` is
+    matched to the inventory's videos by file name; each thumbnail is found (the path as written, else by its name in the references
+    folder's thumbnails folder) and measured; contact sheets show them labelled. Facts only: what matched, the videos without a line, the
+    lines no video matches, the thumbnails not found. Writes 00-inventory/context.json and .md and 10-media/thumbnails/sheet-NN.jpg."""
+    rd, st = _state_of(a.run)
+    refs_dir = Path(st["source"]) if isinstance(st.get("source"), str) and Path(st["source"]).is_dir() else None
+    src = Path(a.file) if a.file else next((p for p in (sorted(refs_dir.iterdir()) if refs_dir else [])
+                                            if p.is_file() and p.name.casefold() == "context.txt"), None)
+    if not src or not src.is_file():
+        out({"ok": True, "found": False, "references": str(refs_dir) if refs_dir else None,
+             "note": "no context.txt in the references folder: no real titles or thumbnails to study (static §12: the title and the "
+                     "thumbnail then follow the references' hooks and first frames)"})
+    try:
+        inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail("no inventory in this run: `T inventory \"<references folder>\" --run RUN --as references` first", 2)
+    vids = [it for it in inv.get("items") or [] if it.get("kind") == "video" and not it.get("ignored")]
+    by_name = {Path(it.get("rel") or it.get("path") or "").name.casefold(): it for it in vids}
+    by_stem = {Path(it.get("rel") or it.get("path") or "").stem.casefold(): it for it in vids}
+    tdir = next((p for p in (refs_dir.iterdir() if refs_dir else []) if p.is_dir() and p.name.casefold() == "thumbnails"), None)
+    rows, unparsed = [], []
+    for n, line in enumerate(src.read_bytes().decode("utf-8-sig", errors="replace").splitlines(), 1):
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        parts = [p.strip() for p in s.split("|")]
+        if len(parts) < 3:
+            unparsed.append({"line": n, "text": s[:200]})
+            continue
+        fname, title, tpath = parts[0], " | ".join(parts[1:-1]).strip(), parts[-1].strip('"')
+        it = by_name.get(Path(fname).name.casefold()) or by_stem.get(Path(fname).stem.casefold())
+        tp = Path(tpath)
+        at = tp if tpath and tp.is_file() else (tdir / tp.name if tdir and tpath and (tdir / tp.name).is_file() else None)
+        wh = _img_size(at) if at else []
+        rows.append({"line": n, "file": fname, "ref": it["id"] if it else None, "title": title, "title_words": len(title.split()),
+                     "title_chars": len(title), "thumbnail": str(at) if at else None, "thumbnail_as_written": tpath,
+                     "thumbnail_size": f"{wh[0]}x{wh[1]}" if len(wh) == 2 else None,
+                     "thumbnail_aspect": _aspect_of(*wh)[0] if len(wh) == 2 else None})
+    have = {r["ref"] for r in rows if r["ref"]}
+    sizes = {}
+    for r in rows:
+        if r["thumbnail_size"]:
+            sizes[r["thumbnail_size"]] = sizes.get(r["thumbnail_size"], 0) + 1
+    sheets = _thumb_sheets([(r["ref"] or "?", r["title"], Path(r["thumbnail"])) for r in rows if r["thumbnail"]],
+                           rd / "10-media" / "thumbnails")
+    res = {"ok": True, "found": True, "file": str(src), "thumbnails_folder": str(tdir) if tdir else None, "rows": rows,
+           "videos_without_a_line": [it["id"] for it in vids if it["id"] not in have],
+           "lines_no_video_matches": [r["file"] for r in rows if not r["ref"]], "unparsed_lines": unparsed,
+           "thumbnails_not_found": [{"ref": r["ref"], "as_written": r["thumbnail_as_written"]} for r in rows if not r["thumbnail"]],
+           "thumbnail_sizes": sizes, "sheets": sheets}
+    write_json(rd / "00-inventory" / "context.json", res)
+    L = ["# The references' real YouTube titles and thumbnails (context.txt)", "", f"From `{src}`.", "",
+         "| ref | file | title | words | thumbnail | size |", "|---|---|---|---|---|---|"]
+    L += [f"| {r['ref'] or '-'} | {r['file']} | {r['title']} | {r['title_words']} | {r['thumbnail'] or 'not found: ' + r['thumbnail_as_written']} | "
+          f"{r['thumbnail_size'] or '-'} |" for r in rows]
+    L += ["", "Sheets: " + (", ".join(f"`{s}`" for s in sheets) or "none")]
+    write_text(rd / "00-inventory" / "context.md", "\n".join(L))
+    out({**{k: v for k, v in res.items() if k != "rows"}, "matched": sum(1 for r in rows if r["ref"]), "lines": len(rows),
+         "table": str(rd / "00-inventory" / "context.md"),
+         "note": "facts: read the table, view the sheets and each thumbnail; the cards and the spec carry the title and thumbnail patterns "
+                 "(static §1, §2, §12)"})
+
+
 def cmd_static(a):
-    """Static (contract item 36): check (the setup on this PC) | formats (facts for the format question) | format (store the pick)."""
+    """Static (contract item 36): check (the setup on this PC) | formats (facts for the format question) | format (store the pick) |
+    lock (the run's niche and style reference, and the locks shown) | subjects (the run's subjects in video order; --add appends) |
+    context (the references' real titles and thumbnails from context.txt)."""
     if a.action != "check" and not a.run:
         fail(f"static {a.action} needs --run", 2)
-    {"check": _static_check, "formats": _static_formats, "format": _static_format_set}[a.action](a)
+    {"check": _static_check, "formats": _static_formats, "format": _static_format_set, "lock": _static_lock,
+     "subjects": _static_subjects, "context": _static_context}[a.action](a)
+
+
+CLONE_COPY = ("00-inventory", "10-media", "20-analysis")
+CLONE_ASSETS = ("characters", "voice", "characters.md", "registry.md", "guardrails.md")   # 30-assets: the run's, not a video's
+CLONE_STATE_KEEP = ("mode", "source", "assets_paths", "examples_paths", "analyze_submode", "static_images", "audio_ingest", "qc_fixes",
+                    "capcut_plan", "guardrails", "assets", "model", "directions")
+CLONE_TEXT_EXT = (".json", ".md", ".txt", ".srt", ".csv", ".jsonl", ".html")
+
+
+def cmd_clone_run(a):
+    """A Static run's analysis in a new run (contract item 36; the user, 2026-11-07: "/analyze-with-loupe clone <run> ... will just clone
+    all the references data such as frames, text, voice and everything processed there and then ask for the niche"): the inventory, the
+    media (frames, storyboards, transcripts, the audio and edit profiles), the cards and the spec, the characters and the run's voice
+    are copied, the paths inside them pointed at the new run; the subjects, the niche, every video's files, the ledger and the CapCut
+    projects are not. The new run asks its niche (and keeps or re-picks the voice and the style reference) at A5."""
+    src, st = _state_of(a.from_run)
+    if st.get("analyze_submode") != "static":
+        fail("clone-run copies a Static run's analysis (analyze_submode=static)", 2)
+    if not (src / "20-analysis" / "static-spec.md").is_file():
+        fail(f"{src.name} has no Static spec yet (20-analysis/static-spec.md): finish its analysis (A3-A4) before cloning it", 2)
+    slug = slugify(a.slug or (re.sub(r"^\d{8}-\d{6}-", "", src.name) + "-clone"))
+    dst = src.parent / f"{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}-{slug}"
+    if dst.exists():
+        fail(f"{dst} exists already: try again in a second or give --slug", 2)
+    copied = {}
+    for sub in CLONE_COPY:
+        if (src / sub).is_dir():
+            shutil.copytree(src / sub, dst / sub, ignore=shutil.ignore_patterns("static-subjects.md") if sub == "20-analysis" else None)
+            copied[sub] = sum(1 for f in (dst / sub).rglob("*") if f.is_file())
+    (dst / "30-assets").mkdir(parents=True, exist_ok=True)
+    for name in CLONE_ASSETS:
+        p = src / "30-assets" / name
+        if p.is_dir():
+            shutil.copytree(p, dst / "30-assets" / name)
+            copied[f"30-assets/{name}"] = sum(1 for f in (dst / "30-assets" / name).rglob("*") if f.is_file())
+        elif p.is_file():
+            shutil.copy2(p, dst / "30-assets" / name)
+            copied[f"30-assets/{name}"] = 1
+    for sub in ("40-briefs", "50-requests", "60-outputs", "logs"):
+        (dst / sub).mkdir(parents=True, exist_ok=True)
+    pairs = [(str(src), str(dst)), (str(src).replace("\\", "/"), str(dst).replace("\\", "/")),
+             (json.dumps(str(src))[1:-1], json.dumps(str(dst))[1:-1])]
+    rewritten = 0
+    for f in dst.rglob("*"):
+        if not f.is_file() or f.suffix.lower() not in CLONE_TEXT_EXT:
+            continue
+        try:
+            raw = f.read_bytes().decode("utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        new = raw
+        for o, n_ in pairs:
+            new = new.replace(o, n_)
+        if new != raw:
+            f.write_bytes(new.encode("utf-8"))
+            rewritten += 1
+    s_old = st.get("static") or {}
+    kept = {k: s_old[k] for k in ("format", "effects_folder", "voice", "style_ref") if k in s_old}
+    nst = {k: st[k] for k in CLONE_STATE_KEEP if k in st}
+    nst.update({"run_id": dst.name, "created": now_iso(), "updated": now_iso(), "stage": "analyzed", "next_step": "count",
+                "next_skill": "awl-analyze-study", "requested_videos": None, "videos": [], "notes": [], "submissions": [], "effort": None,
+                "static": kept, "cloned_from": {"run": src.name, "at": now_iso(), "niche": _niche_name(s_old), "kept": sorted(kept),
+                                                "reset": ["niche", "subjects", "videos", "submissions", "briefs", "outputs", "deliverables",
+                                                          "CapCut projects"]}})
+    text = json.dumps(nst, ensure_ascii=False)
+    for o, n_ in pairs[2:]:
+        text = text.replace(o, n_)
+    write_json(dst / "state.json", json.loads(text.replace(json.dumps(str(src).replace("\\", "/"))[1:-1],
+                                                           json.dumps(str(dst).replace("\\", "/"))[1:-1])))
+    out({"ok": True, "run_dir": str(dst), "from": str(src), "copied_files": copied, "paths_rewritten_in": rewritten,
+         "kept": sorted(kept), "reset": nst["cloned_from"]["reset"], "old_niche": _niche_name(s_old),
+         "next": "A5 of the clone (awl-analyze-study): the new niche (asked), the voice and the style reference kept or picked again, the "
+                 "count; nothing is analysed again"})
 
 
 # ---- the optional effects folder (Static; the user, 2026-11-06: "a folder of effects (optional) that can have: sound effects, and green
@@ -11359,7 +11718,12 @@ def main():
     p = sp.add_parser("static", help="Static (contract item 36): check (key present, image model answers, FLUX 3 Klein's install and files, TTS "
                                      "and music environments, whisper, ffmpeg filters, capcut-cli) | formats (facts for the format question "
                                      "at A5) | format (store the pick)")
-    p.add_argument("action", choices=["check", "formats", "format"]); p.add_argument("--run")
+    p.add_argument("action", choices=["check", "formats", "format", "lock", "subjects", "context"]); p.add_argument("--run")
+    p.add_argument("--file", help="context: the context file (default: context.txt in the references folder)")
+    p.add_argument("--niche", help="lock: the run's niche, the user's pick (every subject of the run stays in it)")
+    p.add_argument("--style-ref", help="lock: the reference whose look the images and the captions keep (V01, V07 ...)")
+    p.add_argument("--replace", action="store_true", help="lock: change a set niche or style reference (only before the run's first video)")
+    p.add_argument("--add", action="append", help="subjects: one new subject, repeatable (each gets the next video number)")
     p.add_argument("--offline", action="store_true", help="check: do not ask the image API whether the model answers")
     p.add_argument("--aspect", help="format: 9:16 | 16:9 | 1:1 | 4:5 | 3:4 | 4:3")
     p.add_argument("--res", type=int, help="format: the export's short side, e.g. 1080 or 720 (default 1080)")
@@ -11368,12 +11732,20 @@ def main():
     p.add_argument("--export", help="format: WxH instead of the computed export size")
     p.set_defaults(fn=cmd_static)
 
+    p = sp.add_parser("clone-run", help="Static (contract item 36): a new run with a Static run's analysis copied (inventory, media, cards, "
+                                        "spec, characters, voice); its subjects, niche, videos and ledger are not: the clone asks its niche")
+    p.add_argument("--from", dest="from_run", required=True, help="the Static run to clone (a name, a stamp prefix or a path)")
+    p.add_argument("--slug", help="the new run's name after the stamp (default: the old one's + -clone)")
+    p.set_defaults(fn=cmd_clone_run)
+
     p = sp.add_parser("image", help="Static stills (contract item 36): generate (OpenAI Images API, or FLUX 3 Klein on this PC with "
                                     "static_images=klein; ledgered) | prompts (the file a user makes them from) | intake (the user's folder, "
                                     "copied in) | use (which attempt the edit takes)")
     p.add_argument("action", choices=["generate", "prompts", "intake", "use"]); p.add_argument("--run", required=True)
     p.add_argument("--video", help="the video, NN"); p.add_argument("--image", type=int, help="generate, use: the image's number in the video's plan")
     p.add_argument("--anchor", help="generate, use: a character's anchor image (its id, e.g. C1) instead of a video's image")
+    p.add_argument("--thumbnail", action="store_true", help="generate, use: the video's YouTube thumbnail (thumb-aK) instead of a still; "
+                                                            "generate needs --size (static §12); the one in use is copied to deliverables")
     p.add_argument("--prompt-file", help="generate: the prompt, a text file"); p.add_argument("--prompt", help="generate: the prompt as text")
     p.add_argument("--ref", action="append", help="generate: a reference image (a character photo or anchor), repeatable, at most 16 "
                                                   "(FLUX 3 Klein: 10)")
@@ -11398,6 +11770,8 @@ def main():
     p.add_argument("--language", help="design: english | spanish | ... (default config static.tts.language)")
     p.add_argument("--sample", type=int, help="voice: the sample the user picked")
     p.add_argument("--emotion", action="append", help="voice: NAME=TEXT, a reference clip of the same voice for lines tagged NAME, repeatable")
+    p.add_argument("--replace", action="store_true", help="design/voice: the run's narrator is locked once picked; new samples or another "
+                                                          "pick only with this (a clone that picks its voice again)")
     p.add_argument("--video", help="say: the video, NN"); p.add_argument("--lines-file", help="say: default 40-briefs/video-NN-narration.json")
     p.add_argument("--only", help="say: make only these line numbers again, e.g. 3,7")
     p.add_argument("--rejoin", action="store_true", help="say: make no line; join the existing line files again with their pauses and the "

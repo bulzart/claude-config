@@ -13,6 +13,6 @@ Stored as section files in `effort/` (next to this file); **read only the sectio
 
 | § | Section | File | KB |
 |---|---|---|---|
-| 1 | The question (`awl-start` step 5d) | `010_1_the-question-awl-start-step-5d.md` | 2.1 |
+| 1 | The question (`awl-start` step 5d) | `010_1_the-question-awl-start-step-5d.md` | 3.0 |
 | 2 | What never changes | `020_2_what-never-changes.md` | 1.5 |
 <!-- sections:end -->

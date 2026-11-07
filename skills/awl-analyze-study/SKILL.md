@@ -39,16 +39,17 @@ Only these section files for this phase, nothing else unless a step below says s
 - anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
 - *Static (item 36): these three, and of the list above only analysis-protocol §0–§2 and §4–§9, creative-direction §1–§4 and
   brand-guardrails §3 (the product and video-physics sections are not read):*
-  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.4 KB) (who works the run: read at the start, again only
+  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run: read at the start, again only
     after a compaction)
-  - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (4.4 KB)
-  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (6.6 KB)
+  - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (5.1 KB)
+  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (7.4 KB)
+  - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (4.3 KB) (the niche, the visual style and the narrator, A5)
 
 ### A3. Video analysis (as continuous sequences)
 - **Static:** each card is the Static card (static §1–§2) in place of the product and physics fields: read `video.md`, `timeline.md`
-  and every storyboard sheet (1 fps), and run `T audio-profile --audio "<files_audio file>" --out 10-media/<V>/audio-profile.json
+  and every storyboard sheet (2 fps), and run `T audio-profile --audio "<files_audio file>" --out 10-media/<V>/audio-profile.json
   --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json --voice` (the bed and the voice as numbers). The moves, joins
-  and caption entrances come from `10-media/<V>/edit-profile.json` (`T edit-profile`, A1), never from the 1 fps sheets; view one caption
+  and caption entrances come from `10-media/<V>/edit-profile.json` (`T edit-profile`, A1), never from the 2 fps sheets; view one caption
   entrance and one cut densely (`T frames … --range a-b --fps 30 --sheet`) to see what its numbers describe. The spec's motion, joins and
   entrance are matched to `AWL/data/capcut-catalogue.md` (static §2, §9: only what CapCut drew on this PC).
 - Follow `AWL/reference/analysis-protocol/` (the sections named in Read now) exactly. For each video:
@@ -148,8 +149,10 @@ Write, following the protocol §5–§6:
   §5). The guardrail audit is its first filter: dismissed references are out of the ranking and
   listed under it with their rule; pick-and-edit references rank with their guardrail operations
   counted in the edit load (`brand-guardrails.md` §4).
-- **Static:** `20-analysis/static-spec.md` (static §2): the narration template, seconds per still, the style lock, the caption pattern,
-  motion and transitions, the voice profile, the bed or none, the devices, what is left behind; no directions, ranking or craft sheet.
+- **Static:** `20-analysis/static-spec.md` (static §2): the narration template, seconds per still, the niche candidates, the visual
+  styles (each reference's, grouped, with a storyboard sheet each), the caption pattern, motion and transitions, the voice profile, the
+  bed brief, the devices, what is left behind; the style lock and the text look are written after A5 from the reference the user picks
+  (static §10); no directions, ranking or craft sheet.
 - **With examples:** `20-analysis/house-approach.md` (protocol §9.3): the user's consistent approach,
   one rule per line with its evidence and the default it replaces. Directions, picks and plans
   follow it (contract item 18).
@@ -158,7 +161,9 @@ Show a **short** chat summary:
 - the project profile in about 5 lines;
 - the families table;
 - the house approach in 2–4 lines, or "no examples";
-- then the numbered style groups (Create), the top of the recreate ranking (Recreate) or the Static spec in about six lines (Static).
+- then the numbered style groups (Create), the top of the recreate ranking (Recreate) or the Static spec in about six lines (Static),
+  followed by the visual styles, one line per family: the references in it, the look in words and the full path of its storyboard sheet,
+  so the user can look before A5's question.
 Then run `T state --run RUN set stage=analyzed next_step=count`.
 
 ### A5. How many videos
@@ -167,9 +172,24 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 - **Recreate:** ask (header "Recreate"), "How many reference videos should be recreated?", options
   "1", "3", "5" ("Other": any number up to the usable references).
 - **Free:** the count the requirement states (`RUN/00-inventory/requirement.md`), without a question; only when it states none, ask as for Create.
-- **Static:** ask as for Create (header "Videos") and, in the same AskUserQuestion call, the format (header "Format", static §2):
-  `T static formats --run RUN` gives the facts; the best fit first, marked (Recommended), then the other options; store the answer with
-  `T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`.
+- **Static:** one AskUserQuestion call with four questions (static §10; the user, 2026-11-07: one niche, one visual style and one narrator
+  per run, "because we want to remain consistency on content and style"):
+  - header "Videos": as for Create;
+  - header "Format" (static §2): `T static formats --run RUN` gives the facts; the best fit first, marked (Recommended), then the other
+    options; stored with `T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`;
+  - header "Niche", "Which niche is this channel about? Every video of this run stays in it.", none recommended: up to four of the spec's
+    niche candidates (the references' own field first), each with one line on what its videos would be; "Other" takes any niche;
+  - header "Visual style", "Which reference's visuals should every video have?", none recommended: up to four references, one per visual
+    style family, each named with its look in words; "Other" takes any reference by its id. A run with one reference skips this question
+    and takes that one (said in one line).
+  Then `T static lock --run RUN --niche "<niche>" --style-ref <V>`, and write the spec's style lock and text look from that reference's
+  card (static §2, §10: its captions when it has them, else the most common look of the references that have them).
+- **Static, a clone** (`state.json → cloned_from`; `/analyze-with-loupe clone <run>`, static §10): nothing is analysed; one
+  AskUserQuestion call: header "Niche" (as above; never the old niche, `cloned_from.niche`), header "Narrator": **"Keep the narrator"**
+  (the voice in a few words and the full path of `30-assets/voice/ref-neutral.wav`) or **"Pick a new narrator"** (five new samples at
+  A6s), header "Visual style": **"Keep <V>'s style"** or another reference (as above), and header "Videos". Store with
+  `T static lock --run RUN --niche "<niche>" [--style-ref <V> --replace]`; a new style rewrites the spec's style lock and text look from
+  that reference's card; a new narrator: `T state --run RUN set static.new_voice=true` (A6s makes the samples).
 - Store the answer in `requested_videos`.
 
 ## Rules this phase owns (contract items 18, 20, 21, 35)
@@ -217,7 +237,8 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     no content rules of its own:** without a guardrail document only the copyright and ownership
     floor (`generation-system.md` §9b rows 1–6) and the generation service's blocks apply;
     alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
-    them, and nothing is blurred, softened or removed for taste.
+    them, and nothing is blurred, softened or removed for taste. Static has one rule of its own: nothing
+    religious or superstitious in a subject, a line, a caption, a picture or a sound (static §11).
 35. **Create: the scene layer and the edit layer** (item 35, `awl-plan-video`): every Create and Free card separates what a generation
     makes (the scene, its art direction, its in-world text, symbols and effects) from what the reference's edit adds (cuts, transitions,
     punch-ins, speed effects, layouts, graphics, decorative effects, finishing); the craft sheet carries the edit layer's kinds as the

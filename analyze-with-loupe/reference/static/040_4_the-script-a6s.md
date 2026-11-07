@@ -19,6 +19,8 @@ voice speaks: `{"video": "NN", "language": "english", "lines": [{"n": 1, "text":
   so the feeling never jumps unannounced.
 - **Spoken text only**: numbers written as they are said ("nineteen fifty-nine" when the voice must say it so), no stage directions, no
   emoji, no markup.
+- **No religion and no superstition** (§11): no line names or alludes to either; a fact that needs one to be told is cut or told without
+  it. The subject is the run's niche (§10), told in the references' craft.
 - **Fact sheet** (factual niches): `40-briefs/video-NN-facts.md`, every claim of the script with its source URLs.
 - The copy test (`creative-direction.md` §5.0) and the sharpness gate pass before the script is final.
 

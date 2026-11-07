@@ -1,5 +1,9 @@
 ## 1. The question (`awl-start` step 5d)
 
+Not in Static (contract item 36): a Static run has no effort level and is never asked; every reference is sampled at 2 fps flat and the
+produce phase runs as before levels (the user, 2026-11-07: "remove the effort idea completely (on static mode), just do 2fps when on
+static mode"; `T effort` prints that and refuses a level there).
+
 All five levels are offered every time (the user, 2026-10-27: "they need to be 5: low,medium,high,xhigh and max"). The question is asked
 in plain chat, never with AskUserQuestion: a question dialog holds at most four options and hides the text printed above it, which is
 how XHigh went missing. It is a message of its own, after the start's question dialogs, and the last thing in that turn: the table,

@@ -16,9 +16,9 @@ Phase 1 of `/analyze-with-loupe`. The router (the command) sent you here and pas
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
-- effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (2.1 KB) (every run, step 5d)
+- effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (3.0 KB) (every run, step 5d)
 - *Static (as soon as the sub-mode is Static):*
-  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.4 KB)
+  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB)
 - *Static, when `T static check` reports a part the run needs as not ready:*
   - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (7.5 KB)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
@@ -84,7 +84,12 @@ Only these section files for this phase, nothing else unless a step below says s
    sociologist and human-behaviour expert, attention psychologist, fact-checker, art director and editor, ambitious for the best video and
    disciplined by the references' data and the hard rules. No steps 2b, 2c, 3 or 4 (no voiceover or memes question, no Higgsfield tools, no model menu: the
    images come from the OpenAI model in `config.json → static.images`, from FLUX 3 Klein on this PC (`config.json → static.klein`), or
-   from the user); step 5b is not asked (`audio_ingest=whisper`).
+   from the user); step 5b is not asked (`audio_ingest=whisper`), and step 5d is not asked: Static has no effort level, every reference is
+   sampled at 2 fps (the user, 2026-11-07: "remove the effort idea completely (on static mode), just do 2fps when on static mode"). The
+   run is one channel (static §10): its niche and its visual style are the user's picks at A5, after the analysis, and its narrator at
+   A6s; nothing religious or superstitious ever (static §11). The references folder may hold `context.txt` (one line per video,
+   `<file>|<its real YouTube title>|<its thumbnail's path>`) and a `thumbnails` folder: they are studied (A1, static §12), and every video
+   gets its own YouTube title and thumbnail.
    Its inputs (step 5): the references folder and the assets: the characters as photos and/or descriptions (a text file each, or words in
    the message), usually no product; documents and examples as always; and **an effects folder (optional;** the user, 2026-11-06: "a
    folder of effects (optional) that can have: sound effects, and green screen transitions"**)**, asked in the same plain-chat message as
@@ -196,7 +201,7 @@ Only these section files for this phase, nothing else unless a step below says s
    audio questions, `voiceover.md` §2 steps 3–5: load the ElevenLabs tools (§2 step 3), read the subscription, the models and the voices,
    print the whole voice list, then one AskUserQuestion call with header "Voice", header "Language" and header "Voice style" (§2 step 4),
    then resolve and verify the answers. Stored in step 6.
-5d. **Effort** (both modes; item 33). After the start's question dialogs (QC fixes, audio, and step 5c's voice), in plain chat, never
+5d. **Effort** (both modes, not Static; item 33). After the start's question dialogs (QC fixes, audio, and step 5c's voice), in plain chat, never
    with AskUserQuestion (a dialog holds four options and hides the text printed above it): the question of `effort.md` §1, all five
    levels numbered, none recommended, as a message of its own and the last thing in the turn; then stop and wait for the reply.
    `$ARGUMENTS` with `effort low|medium|high|xhigh|max` answers it. Stored in step 6.
@@ -206,7 +211,7 @@ Only these section files for this phase, nothing else unless a step below says s
    - store the locked model (step 4.5);
    - store the audio choice (step 5b): `T state --run RUN set audio_ingest=whisper` or `audio_ingest=frames-only`;
    - store the effort level (step 5d): `T effort --run RUN --level <level>` plus the user's own numbers as its options (`effort.md` §1;
-     `T new-run` leaves it empty, and `T prep-all` stops until it is stored);
+     `T new-run` leaves it empty, and `T prep-all` stops until it is stored); not in Static (no level; `T effort` refuses one there);
    - every Analyze sub-mode: store the QC-fixes choice (`T state --run RUN set qc_fixes=ask|auto|off`);
    - Create: store the voiceover choice (steps 2b, 5c) with the store line of `voiceover.md` §1 (`T state --run RUN set voiceover.enabled=true
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;

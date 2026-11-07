@@ -1,6 +1,6 @@
 ---
 name: awl-static-images
-description: /analyze-with-loupe Static step S3: a video's stills made by OpenAI or by FLUX 3 Klein on this PC and checked, or the prompts for the user and their folder taken in. Internal to that command.
+description: /analyze-with-loupe Static step S3: a video's stills and YouTube thumbnail, made by OpenAI or FLUX 3 Klein and checked, or the user's taken in. Internal to that command.
 user-invocable: false
 ---
 
@@ -13,8 +13,10 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.0 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (2.7 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.5 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (3.5 KB)
+- static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (2.5 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (4.5 KB)
 - *the plan has characters:*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - *the style lock is illustrated, painted or cartoon:*
@@ -53,13 +55,19 @@ stack a tall frame into panels, above all with no reference image).
    failure answer carries the error and the end of ComfyUI's log: a memory stop means other programs hold the RAM (say so; never retry
    in a loop).
 5. An earlier attempt is the better one: `T image use --run RUN --video NN --image K --attempt M`.
-6. Each answer carries `cost_usd_estimate` (0 with FLUX 3 Klein): write their sum in `result.json` and the brief.
+6. **The YouTube thumbnail** (static §12), after the stills: its prompt file `RUN/40-briefs/video-NN-thumb-prompt.txt` (the plan's
+   `thumbnail.prompt`, the style lock, its exact words when it has any), then `T image generate --run RUN --video NN --thumbnail --size
+   <the plan's thumbnail.size> --prompt-file RUN/40-briefs/video-NN-thumb-prompt.txt [--ref <photo or anchor> …]`; view it at full size
+   and its `-small.png` (the feed size) and check it as static §8 says; re-draws by QC fixes as in step 3; another attempt:
+   `T image use --run RUN --video NN --thumbnail --attempt M`. The one in use is in `RUN/deliverables/video-NN-thumbnail.png`.
+7. Each answer carries `cost_usd_estimate` (0 with FLUX 3 Klein): write their sum in `result.json` and the brief.
 
 ## Images by the user (`static_images=prompts`; main session)
 
 1. **The prompts**, after S2 for every video: the plans' prompts written as step 2 says (the characters' sheet prompts first), then
-   `T image prompts --run RUN` → `RUN/deliverables/prompts/video-NN-image-prompts.md`. Tell the user in one message: the files, the
-   names `vNN-iKK` (and `C1-sheet` for a character sheet they make first), the format's aspect and size, one folder for everything, and "send me the folder's
+   `T image prompts --run RUN` → `RUN/deliverables/prompts/video-NN-image-prompts.md` (each video's thumbnail too, as `vNN-thumb`, at
+   its own size). Tell the user in one message: the files, the names `vNN-iKK` and `vNN-thumb` (and `C1-sheet` for a character sheet they
+   make first), the format's aspect and size (the thumbnail's own), one folder for everything, and "send me the folder's
    path". `T state --run RUN set static.waiting=images`, then stop and wait.
 2. **The folder** (their reply, or `resume` with a path): `T image intake --run RUN --folder "<path>"`. Missing images: tell the user which
    and wait (the same intake again later). Files it cannot match by name: show them and ask how they map; never guess.
@@ -73,7 +81,10 @@ stack a tall frame into panels, above all with no reference image).
   echo or write the key.
 - Never move, rename or change the user's files (intake copies them).
 - Never send a refused request again unchanged; never draw an image again when nothing in it was wrong.
-- Never put text, a logo, a sticker or an emoji into an image the story does not need (item 6).
+- Never put text, a logo, a sticker or an emoji into an image the story does not need (item 6; a thumbnail's words only as static §12
+  says).
+- Never anything religious or superstitious in a still or a thumbnail (static §11): a prompt describes a secular scene and never names
+  what must stay out.
 
 ## Hand-off
 

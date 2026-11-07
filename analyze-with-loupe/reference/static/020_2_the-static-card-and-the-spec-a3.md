@@ -1,20 +1,25 @@
 ## 2 The Static card and the spec (A3–A4)
 
-**The card** (`20-analysis/cards/<V>.md`, one per reference): the fields of §1 in this order: hook · telling (structure as a beat list with
-times) · devices · pictures (seconds per still, style, framing, motion, transitions, effects) · captions · sound · subject and its kind ·
-what makes it work (one paragraph, [I]). Every speech field reads from the transcript.
+**The card** (`20-analysis/cards/<V>.md`, one per reference): the fields of §1 in this order: title and thumbnail · hook · telling
+(structure as a beat list with times) · devices · pictures (seconds per still, style, framing, motion, transitions, effects) · captions ·
+sound · subject, its kind and its field · what makes it work (one paragraph, [I]). Every speech field reads from the transcript.
 
 **The Static spec** (`20-analysis/static-spec.md`, one per run, the synthesis of all cards; Static's craft sheet):
 - **Narration template**: the beats in order with their share of the length (hook 0–5 %, setup, escalation 1…n, the reveal, the payoff,
   the closing line), the length range in seconds, the words per minute, the line length, the pause pattern.
 - **Seconds per still**: the median and the range the references use; when a still changes (on a new line, on a reveal, mid-line).
-- **Style lock**: one sentence every image prompt of the run carries (the medium, the light, the palette, the grain, the era), from what
-  the references share; a reference set that mixes styles gives the most common one, or the user's choice when the plan asks.
+- **Niche candidates**: the fields the references are about (§1) and the fields their craft would carry, for the user's pick at A5; the
+  pick is the run's niche (`state.json → static.niche`, §10) and every subject comes from it.
+- **Visual styles**: each reference's picture style in a few words and its text look, grouped into the families the set holds, with one
+  storyboard sheet per family (its full path), for the user's pick of one reference at A5 (§10).
+- **Style lock** (written once the user has picked, A5): one sentence every image prompt of the run carries (the medium, the light, the
+  palette, the grain, the era), from the reference the user picked (`state.json → static.style_ref`); a set of one reference: that one.
 - **Text look** (the user, 2026-11-05: "the agents are free to chose any font preset, size, color and family or whatever they like while editing the video and are not constrained like we do with recreate"; "everything is data driven (from the references) and nothing is predefined"; never the house text style of the video modes): for the captions and any other text the
   references show, the font (the family seen, or the closest from `T capcut-font --list`, CapCut's own fonts first), the weight, the
   size in CapCut's units for the export canvas (from the text's height on the frames), the fill, the outline (colour, width), the
   shadow, the box, the case, the words at once, the lines, the position (y_rel, alignment), the highlight (colour, size, which words),
-  the entrance (from the edit profile's caption entrances, below). A set that mixes looks gives the most common one.
+  the entrance (from the edit profile's caption entrances, below). The run's text look is the style reference's when it shows captions
+  (§10), else the most common look of the references that have them; every video of the run keeps it.
 - **Motion, joins and the caption entrance** (the user, 2026-11-06: "dont set fixed numbers let the agent decide how much to zoom in or
   out, how fast, decide the font popup style and do other edits based on ... what the analyzed data tells"): from the edit profiles, never
   guessed and never a stock value: the moves as the references make them (each kind with its amount and its pace per second, steady or
@@ -36,7 +41,10 @@ what makes it work (one paragraph, [I]). Every speech field reads from the trans
 - **Bed brief** (§6; a bed goes under every video, also when the references are voice only): the content type and its register, the
   narration's pace, pitch and delivery, the arc the beats make, the pictures' rhythm, and the references' own sound as the audio profile's
   numbers (a bed or none; when one, its tempo, beat strength and energy arc; its instruments and genre are not analysed).
-- **Devices to reuse**, and **what is left behind**: every reference's subject, its names, its facts and its exact lines.
+- **Titles and thumbnails** (§12): the titles' pattern and the thumbnails' pattern, with the thumbnails' size and aspect from
+  `T static context`; none when the references folder has no `context.txt`.
+- **Devices to reuse**, and **what is left behind**: every reference's subject, its names, its facts, its exact lines, its title and its
+  thumbnail.
 
 **The format (A5;** the user, 2026-11-05: the CapCut export is the final, and the images' size and quality are the user's pick, "make sure
 to suggest the most correct size first along with options"**).** `T static formats --run RUN` gives the facts: each reference's size and

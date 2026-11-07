@@ -27,11 +27,15 @@ Only these section files for this phase, nothing else unless a step below says s
 ### A1. Inventory and preprocessing (deterministic, local)
 - **Free, requirement only** (`state.json → free_references = no`): there are no references; skip the references inventory, `prep-all` of the
   references and `split-audio`, prepare the assets, the documents and the optional examples as below, and hand off to `awl-free-plan`.
-- **Static** (`state.json → analyze_submode = static`, item 36): the references' storyboards are at 1 fps with their audio:
+- **Static** (`state.json → analyze_submode = static`, item 36): the references' storyboards are at 2 fps flat with their audio (Static has
+  no effort level: `T prep-all` samples every reference at `config.json → static.analysis.fps`, nothing denser; the user, 2026-11-07:
+  "remove the effort idea completely (on static mode), just do 2fps when on static mode"):
   `T split-audio "<references folder>" --run RUN --audio-only` (for the sound and voice numbers of A3), and `prep-all` with
-  `--fps 1 --dense-fps 1 --no-extras --ocr-frames 30` (no extra frames around cuts or motion; more OCR frames for the captions); then
+  `--ocr-frames 30` (more OCR frames for the captions); then
   the edit layer at the full frame rate, `T edit-profile --run RUN --ref <V>` for every reference (its moves, joins and caption
-  entrances as numbers, `10-media/<V>/edit-profile.json`; 1 fps cannot show them, static §1). The
+  entrances as numbers, `10-media/<V>/edit-profile.json`; 2 fps cannot show them, static §1); then the references' real YouTube titles
+  and thumbnails, `T static context --run RUN` (`context.txt` in the references folder, one line per video, `<file>|<title>|<thumbnail
+  path>`; the table `00-inventory/context.md`, the labelled sheets in `10-media/thumbnails/`; static §12). The
   assets are characters (photos and/or descriptions), prepared as below. No silent copies: no reference is ever an input.
   With an effects folder (`state.json → static.effects_folder` not `none`): `T effects scan --run RUN` (every sound and overlay measured
   once and cached: `00-inventory/effects.md` and `.json`, contact sheets in `10-media/effects/`; a large folder takes a minute or more,
@@ -66,8 +70,8 @@ Only these section files for this phase, nothing else unless a step below says s
     exists and `video.md`, `timeline.md` and every card say `audio not ingested` (what was said is unknown, not absent).
   Spoken hooks, sounds and music are part of what made them work; a frames-only run reads the hook from the frames and the text.
 - Show the counts (references, assets, examples) in one line.
-- `T prep-all --run RUN --jobs 2` (Static: `T prep-all --run RUN --jobs 2 --fps 1 --dense-fps 1 --no-extras --ocr-frames 30`):
-  - it runs the adaptive frame pipeline at the run's effort level (`state.json → effort`, item 33), storyboards, per-second timeline, the audio measurements, speech-to-text when
+- `T prep-all --run RUN --jobs 2` (Static: `T prep-all --run RUN --jobs 2 --ocr-frames 30`, 2 fps flat, no effort level):
+  - it runs the adaptive frame pipeline at the run's effort level (`state.json → effort`, item 33; Static: none), storyboards, per-second timeline, the audio measurements, speech-to-text when
     `state.json → audio_ingest` is `whisper` (it reads the key itself and stops when the key is missing: ask the audio question then,
     `awl-start` step 5b; it stops the same way while `state.json → effort` is empty: ask `effort.md` §1, `awl-start` step 5d), and the
     OCR sample for every video, plus image previews and document text; its JSON says which
@@ -160,7 +164,8 @@ Only these section files for this phase, nothing else unless a step below says s
     no content rules of its own:** without a guardrail document only the copyright and ownership
     floor (`generation-system.md` §9b rows 1–6) and the generation service's blocks apply;
     alcohol, weapons, gore, profanity, meme faces, cameos and the like stay as the reference shows
-    them, and nothing is blurred, softened or removed for taste.
+    them, and nothing is blurred, softened or removed for taste. Static has one rule of its own: nothing
+    religious or superstitious in a subject, a line, a caption, a picture or a sound (static §11).
 
 ## Never (this phase)
 

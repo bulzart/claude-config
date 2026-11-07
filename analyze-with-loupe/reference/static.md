@@ -16,14 +16,17 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 
 | § | Section | File | KB |
 |---|---|---|---|
-| 0 | The team (who works a Static run) | `005_0_the-team-who-works-a-static-run.md` | 3.4 |
-| 1 | What Static mines from the references (A3) | `010_1_what-static-mines-from-the-refer.md` | 4.4 |
-| 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 6.6 |
-| 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 2.1 |
-| 4 | The script (A6s) | `040_4_the-script-a6s.md` | 2.3 |
-| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 9.0 |
-| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 6.1 |
+| 0 | The team (who works a Static run) | `005_0_the-team-who-works-a-static-run.md` | 3.6 |
+| 1 | What Static mines from the references (A3) | `010_1_what-static-mines-from-the-refer.md` | 5.1 |
+| 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 7.4 |
+| 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 2.4 |
+| 4 | The script (A6s) | `040_4_the-script-a6s.md` | 2.5 |
+| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 9.5 |
+| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 6.4 |
 | 7 | The edit (S4) | `070_7_the-edit-s4.md` | 6.2 |
-| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 2.7 |
+| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 3.5 |
 | 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 7.5 |
+| 10 | One channel per run | `100_10_one-channel-per-run.md` | 4.3 |
+| 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 2.5 |
+| 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 4.5 |
 <!-- sections:end -->

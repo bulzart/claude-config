@@ -52,7 +52,7 @@ analyze-with-loupe/
 │   ├── effort                      the effort level (item 33): the start question with the five levels, and what never changes (the judges, coverage, the floors)
 │   ├── voiceover                   the own voiceover (item 31): the state and the take files, the choice at the start (method, voice, language, style), writing the lines, generating and recording a take, on-camera or off-screen, the request by method (native driving audio, the lipsync scene and its `sync_so` pass, overlay), the upload, after the generation (align, mix, sync pass, the fallback), the CapCut voice track, QC, credits and honesty
 ├── pipeline/preprocessing.md       the recorded local pipeline (FFmpeg-first) and sampling policy (~5 fps adaptive)
-│   └── static                      the Static sub-mode (item 36): what to mine (1 fps and the audio), the Static card and spec, a new subject, the script, the images (plan, API, prompts, intake), the voice and the bed, the edit, QC, the Static PC's setup
+│   └── static                      the Static sub-mode (item 36): what to mine (2 fps and the audio), the Static card and spec, a new subject, the script, the images (plan, API, prompts, intake), the voice and the bed, the edit, QC, the Static PC's setup, one channel per run (locks, more, clone), no religion or superstition, the YouTube title and thumbnail
 ├── scripts/tts_worker.py           Qwen3-TTS for Static, run only by `awl.py tts` in the TTS environment's own Python (AWL_TTS_PYTHON): check, design, voice (design then clone), say
 ├── scripts/music_worker.py         ACE-Step 1.5 for Static beds, run only by `awl.py music` in its own Python (AWL_MUSIC_PYTHON, in AWL_MUSIC_ROOT): check, generate
 ├── scripts/image_worker.py         FLUX 3 Image Klein (int8) for Static stills, run only by `awl.py image generate` and `static check` in a ComfyUI portable's Python (AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT): check, generate; flux3_upsampler_prompts.json holds Black Forest Labs' upsampler system prompts
@@ -301,9 +301,15 @@ The user, 2026-11-05: Analyze → Static makes narrated still-image videos ("ima
 From its first step every agent of a Static run works as one team (`reference/static.md` §0, the user, 2026-11-06): a YouTube short- and long-form
 strategist, storyteller, sociologist and human-behaviour expert, attention psychologist, fact-checker, art director and editor, ambitious for the video
 a stranger watches to the end and sends on, and disciplined by the references' measured data, sourced facts, a new subject and the hard rules.
-The references are studied at exactly 1 fps (`prep-all --fps 1 --dense-fps 1 --no-extras --ocr-frames 30`) with their audio (Whisper, never asked) and the
-narrator's voice as numbers (`audio-profile --voice`); the Static card and spec (`reference/static.md` §1–§2) carry the hook, the telling, the devices, the
-seconds per still, the style lock, the caption pattern, the voice profile and the bed. `awl-static-plan` (A6s) reads the characters (a known person: sourced
+Static has no effort level (the user, 2026-11-07): the references are studied at 2 fps flat (`prep-all --ocr-frames 30`; `config.json →
+static.analysis.fps`) with their audio (Whisper, never asked) and the narrator's voice as numbers (`audio-profile --voice`), and with their
+real YouTube titles and thumbnails when the references folder has `context.txt` (`<file>|<title>|<thumbnail path>`, a `thumbnails` folder;
+`T static context`, `reference/static.md` §12); the Static card and spec (§1–§2) carry the hook, the telling, the devices, the seconds per
+still, the visual styles, the caption pattern, the voice profile, the bed brief and the title and thumbnail patterns. A run is one channel
+(§10): its niche and visual style (one reference the user names) are picked at A5, its narrator at A6s, and every video keeps them
+(`T static lock`; `/analyze-with-loupe more <run>` adds videos of that niche, `/analyze-with-loupe clone <run>` copies the analysis into
+a new run for another niche, `T clone-run`); nothing religious or superstitious ever (§11); every video also gets a YouTube title and a
+thumbnail (§12: `T image generate --thumbnail`, `deliverables/video-NN-title.txt` and `video-NN-thumbnail.png`). `awl-static-plan` (A6s) reads the characters (a known person: sourced
 facts; an ordinary role: a story of their world; a cartoon: a children's story), builds a scored pool of new subjects (sourced, two sources each, in a factual
 niche), makes five voice samples with Qwen3-TTS's VoiceDesign (`T tts design`) and stops once for the user's subjects and voice (each sample with its full file path to play); then the scripts, fact sheets
 and image plans. `awl-analyze-produce` A9s runs `awl-static-sound` (S2) for every video in this session (the narration in the run's one voice, design then

@@ -35,10 +35,10 @@ video-NN-images.json and, after `T slideshow plan`, video-NN-timeline.json; <RUN
 Follow, for this video only, by invoking these skills one after the other when you reach their step (Skill tool; if it is
 unavailable or the name is not found, Read C:/Users/Bulzart/.claude/skills/<name>/SKILL.md and follow it). Each skill lists
 under "Read now" the exact section files it needs: read those and nothing else. Never read the command file or a whole reference:
-  1. awl-static-images (S3: with Images api or klein make, view and check every image of your plan and fix by QC fixes; with Images
-     prompts view and check the user's images and list what fails)
+  1. awl-static-images (S3: with Images api or klein make, view and check every image of your plan and the video's YouTube thumbnail
+     and fix by QC fixes; with Images prompts view and check the user's images and list what fails)
   2. awl-static-edit   (S4: the timeline, the local check render, the CapCut project at the run's format: the final, the edit checks)
-  3. awl-record        (X10: deliverables, README row, result.json)
+  3. awl-record        (X10: deliverables with the YouTube title and thumbnail, README row, result.json)
   With QC fixes `off` every image is made once and nothing is redone: the edit is still built and its facts recorded; result.json
   `qc` = "off: not checked (the user reviews at the end)".
 
@@ -67,5 +67,12 @@ Hard rules:
   <AWL>/data/capcut-catalogue.md shows drawn by this PC's CapCut (and marked free while the CapCut plan is free).
 - Effects from the user's effects folder (the plan's `effects`, when the run has a folder) reach CapCut only through `T capcut-effects`
   (never capcut-cli or the MCP by hand); one it refuses is planned again without it. The effects folder is read-only like the references.
+- One channel (<AWL>/reference/static/100_10_one-channel-per-run.md): your video keeps the run's niche, its style lock (every still and
+  the thumbnail), its text look and its narrator; never another.
+- Nothing religious or superstitious, ever (<AWL>/reference/static/110_11_no-religion-and-no-superstition.md): no religious figure,
+  place, symbol, idol, rite or superstition in a still, the thumbnail, the title or a caption; a prompt describes a secular scene and never
+  names what must stay out; an image that shows one is a regenerate reason by QC fixes (off: named in the brief and result.json).
+- The YouTube thumbnail: `T image generate --run <RUN> --video NN --thumbnail --size <the plan's thumbnail.size> --prompt-file …`
+  (static §12); the title: `<RUN>/deliverables/video-NN-title.txt` at X10.
 - Your final message is the one JSON line awl-record (X10) ends with.
 ```

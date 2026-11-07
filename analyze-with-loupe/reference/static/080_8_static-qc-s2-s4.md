@@ -21,5 +21,13 @@ The agent views and listens through the facts; `qc_fixes` (ask, auto, off) decid
   CapCut lint without `media-unlinked`; the CapCut timeline read back (`capcut_read_timeline`) and
   the texts' look against the plan's `captions` (font, size, colours, position) as `capcut_read_timeline` gives them; the house text
   check (`capcut-text-style`) is not used in Static.
+- **No religion and no superstition** (§11): every image viewed for any sign of either (a cross on a spire or a throne, a halo, an altar,
+  a figure that reads as clergy or as an idol, a symbol in a pattern) and every script line and caption read for them; a hit is a
+  regenerate reason by QC fixes (off: named in the brief and the wrap-up).
+- **One channel** (§10): the video's subject is of the run's niche, its images in the run's style lock, its captions in the run's text
+  look, its voice the run's narrator.
+- **The thumbnail and the title** (§12): the thumbnail viewed at full size and at feed size (its `-small.png`): the subject and its
+  feeling read at a glance, its words (if any) letter for letter, the run's style, nothing of §11 or item 6; the title promises what
+  the narration keeps.
 - **The craft**: the hook lands in the first second, the payoff lands, and the copy test still says no (`creative-direction.md` §8).
 

@@ -46,8 +46,10 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     copies (`T slideshow render`; the preview is the complete video with its captions). The README row lists the format (export size, image
     size, quality), the images
     (`60-outputs/video-NN/images/`, api, klein or user), the narration (`30-assets/narration/video-NN.wav`), the bed or none and, with images by
-    the user, the prompts file; `result.json` adds `static`: {format, images (count, source api|klein|user, re-draws), cost_usd_estimate (the sum of
-    the image calls), narration_s, voice sample, lines made again, bed}. No Higgsfield job, credit or flag fields.
+    the user, the prompts file; the YouTube title and thumbnail (static §12): write `RUN/deliverables/video-NN-title.txt` (the plan's `title`
+    on its first line) and name it and `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row; the
+    run's locks it kept (niche, style reference, narrator; static §10); `result.json` adds `static`: {format, images (count, source api|klein|user, re-draws), cost_usd_estimate (the sum of
+    the image calls), narration_s, voice sample, lines made again, bed, title, thumbnail}. No Higgsfield job, credit or flag fields.
   - Append a row to `RUN/deliverables/README.md` (an agent writes it to
     `60-outputs/video-NN/readme-row.md` and the main session appends it as the agent reports, A9b): direction, model, params, prompt file, assets, job
     id, attempt, credits, verdict (with QC fixes `off`: "not checked (QC off)", and `result.json → qc` = "off: not checked (the user reviews at the end)"), final path, notes. For a multi-clip video, list every clip's

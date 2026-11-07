@@ -31,7 +31,8 @@
   overlay's sound at volume 0; each sound effect on an audio track at its volume with its fades; it refuses an effect that needs
   something the check did not verify, listed in `refused`: plan that moment again without it, and never write an effect with the
   CapCut MCP); these three and `T capcut-text-anim` take `--run` and refuse an option the catalogue shows CapCut not drawing, or a Pro
-  one while the run's CapCut plan is free (`state.json → capcut_plan`); then the captions in the references' look (the plan's `captions`, §2, §5):
+  one while the run's CapCut plan is free (`state.json → capcut_plan`); then the captions in the run's text look, the same in every video
+  of the run (the plan's `captions`, §2, §5, §10):
   `capcut import-srt "<draft>" "<RUN>/60-outputs/video-NN/captions.srt" --font-size <size> --color <fill> --border-width <stroke_width>
   --border-color <stroke_color> --align 1 --y <1 − 2 × y_rel>`, with `--shadow`, `--bg-color`/`--bg-alpha` and `--highlight-words …
   --keyword-color … --keyword-size …` as the look has them; the font with `T capcut-font --draft "<draft>" --font-file <font_file> --track

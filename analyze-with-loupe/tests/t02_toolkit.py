@@ -610,6 +610,25 @@ check(js["effort"]["analysis_fps"] == 2.0 and js["effort"]["analysis_dense_fps"]
       "custom values are held to the bounds (2 fps, 6 around motion, 4 peaks, 2 close-ups, 1 agent, a pilot from 5 videos at the latest)")
 js, code, _ = t("effort", "--run", run_f.name, "--qc-dense-fps", "15", env=ENV, ok=False)
 check(code == 2, "effort has no QC option: the judges are not part of the level")
+# Static has no effort level (the user, 2026-11-07: "remove the effort idea completely (on static mode), just do 2fps when on static mode")
+run_s = Path(t("new-run", "--mode", "analyze", "--source", str(ef_src), "--slug", "static-effort", env=ENV)[0]["run_dir"])
+t("inventory", str(ef_src), "--run", str(run_s), "--as", "references", env=ENV)
+t("state", "--run", run_s.name, "set", "audio_ingest=frames-only", "analyze_submode=static", env=ENV)
+js, _, _ = t("effort", "--run", run_s.name, env=ENV)
+_se = js.get("effort") or {}
+check(_se.get("level") == "static" and _se.get("analysis_fps") == 2.0 and _se.get("analysis_dense_fps") == 2.0 and _se.get("max_agents") == 5
+      and _se.get("pilot_from") == 5 and not _se.get("pending"),
+      "a Static run has no effort level to ask (its effort key empty): references at 2 fps flat, agents and the pilot as before levels")
+js, code, _ = t("effort", "--run", run_s.name, "--level", "low", env=ENV, ok=False)
+check(code == 2 and "Static" in js.get("error", ""), "effort refuses a level on a Static run")
+js, _, _ = t("prep-all", "--run", run_s.name, "--jobs", "1", "--no-ocr", env=ENV)
+_sv = run_s / "10-media" / "V01"
+_svj = json.loads((_sv / "video.json").read_text(encoding="utf-8"))
+_sfr = json.loads((_sv / "frames.json").read_text(encoding="utf-8"))["frames"]
+check(js["sampling"]["effort"] == "static" and js["sampling"]["baseline_fps"] == 2.0 and js["sampling"]["dense_fps"] == 2.0
+      and abs(_svj["sampling"]["baseline_frames"] - 80) <= 2 and not [f for f in _sfr if f.get("why") in ("peak", "hook", "pre_cut", "post_cut")],
+      f"prep-all samples a Static reference at 2 fps only ({_svj['sampling']['baseline_frames']} frames in 40 s), none around motion, cuts or the "
+      "first second, with no flag")
 # a moving source has motion peaks: their window stays +-0.5 s at a low dense rate
 mv = ef_src.parent / "motion" / "moving.mp4"
 mv.parent.mkdir(parents=True, exist_ok=True)
@@ -856,6 +875,11 @@ js, _ = ts("tts", "voice", "--run", str(SR), "--sample", "2", "--emotion", "tens
 _st = json.loads((SR / "state.json").read_text(encoding="utf-8"))
 check(js.get("ok") and _st["static"]["voice"]["sample"] == 2 and set(_st["static"]["voice"]["prompts"]) == {"neutral", "tense"},
       "tts voice makes the picked sample the run's voice, with its emotion clip (state.json -> static.voice)")
+js, code = ts("tts", "design", "--run", str(SR), "--text", "Another line.", "--instruct", "another voice", ok=False)
+check(code == 2 and "locked" in js.get("error", ""), "tts design refuses new samples once the run's narrator is picked (one voice per run)")
+js, code = ts("tts", "voice", "--run", str(SR), "--sample", "3", ok=False)
+check(code == 2 and "locked" in js.get("error", "") and json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]["sample"] == 2,
+      "tts voice refuses another pick once the narrator is set (no --replace), and the voice stays")
 (SR / "40-briefs" / "video-01-narration.json").write_text(json.dumps({"video": "01", "language": "english", "lines": [
     {"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
     {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "tense", "pause_after": 0.5},
@@ -1436,6 +1460,51 @@ check(f"{SR}/30-assets/characters/C1-a1.png" in _ct and "<RUN>" not in _ct.split
 js, _ = ts("lint-run", "--run", str(SR))
 check(js.get("contract", {}).get("loupe_line") is True and js.get("contract", {}).get("unresolved_placeholders") == [], "lint-run reads a Static contract's Loupe line")
 
+# one channel per run (the user, 2026-11-07): the niche, the style reference and the narrator are locked; another niche is a clone that
+# copies the analysis and asks its niche, never a second analysis of the same references
+js, code = ts("static", "subjects", "--run", str(SR), "--add", "The Ship of Theseus", ok=False)
+check(code == 2 and "niche" in js.get("error", ""), "a subject is added only once the run's niche is locked")
+js, _ = ts("static", "lock", "--run", str(SR), "--niche", "Philosophy", "--style-ref", "R02")
+_lk = js.get("locks") or {}
+check(js.get("ok") and _lk.get("niche") == "Philosophy" and _lk.get("style_ref") == "R02" and (_lk.get("voice") or {}).get("sample") == 2,
+      "static lock records the run's niche and style reference and shows the narrator with them")
+js, _ = ts("static", "lock", "--run", str(SR), "--niche", "philosophy")
+check(js.get("ok") and js.get("changed") == [], "the same niche again changes nothing")
+js, code = ts("static", "lock", "--run", str(SR), "--niche", "History", ok=False)
+check(code == 2 and "clone-run" in js.get("error", ""), "another niche is refused: one niche per run; another niche is a clone")
+js, code = ts("static", "lock", "--run", str(SR), "--style-ref", "R09", ok=False)
+check(code == 2 and "not a reference" in js.get("error", ""), "a style reference that is not one of the run's references is refused")
+js, _ = ts("static", "subjects", "--run", str(SR), "--add", "The Ship of Theseus", "--add", "Diogenes and the lamp")
+_sb = js.get("subjects") or []
+check(js.get("ok") and [x["video"] for x in js.get("added") or []] == [f"{len(_sb) - 1:02d}", f"{len(_sb):02d}"] and _sb[-1]["title"] == "Diogenes and the lamp",
+      "static subjects --add appends the next subjects with the next video numbers")
+js, code = ts("static", "subjects", "--run", str(SR), "--add", "the ship of theseus", ok=False)
+check(code == 2 and "already" in js.get("error", ""), "a subject the run already has is refused (more videos never repeat one)")
+js, code = ts("static", "lock", "--run", str(SR), "--niche", "History", "--replace", ok=False)
+check(code == 2 and "once a video" in js.get("error", ""), "--replace cannot change the niche once the run has a video")
+(SR / "20-analysis").mkdir(parents=True, exist_ok=True)
+(SR / "20-analysis" / "static-spec.md").write_text(f"# Static spec\nThe cards: {SR}/20-analysis/cards.\n", encoding="utf-8")
+(SR / "20-analysis" / "static-subjects.md").write_text("# the old niche's pool\n", encoding="utf-8")
+js, _ = ts("clone-run", "--from", str(SR))
+CR = Path(js["run_dir"])
+_cs = json.loads((CR / "state.json").read_text(encoding="utf-8"))
+_csm = json.loads((CR / "30-assets" / "voice" / "samples.json").read_text(encoding="utf-8"))
+check(js.get("ok") and CR.is_dir() and CR != SR and (CR / "20-analysis" / "static-spec.md").is_file()
+      and not (CR / "20-analysis" / "static-subjects.md").exists() and str(CR) in (CR / "20-analysis" / "static-spec.md").read_text(encoding="utf-8")
+      and (CR / "00-inventory" / "inventory.json").is_file() and _cs.get("analyze_submode") == "static"
+      and ((_cs.get("static") or {}).get("voice") or {}).get("sample") == 2 and "niche" not in (_cs.get("static") or {})
+      and not (_cs.get("static") or {}).get("subjects") and _cs.get("videos") == [] and _cs.get("submissions") == []
+      and (_cs.get("cloned_from") or {}).get("run") == SR.name and (_cs.get("cloned_from") or {}).get("niche") == "Philosophy"
+      and all(str(CR) in s["out"] for s in _csm["samples"]) and not any((CR / "40-briefs").iterdir()) and not (CR / "deliverables").exists(),
+      "clone-run copies the Static analysis, the characters and the narrator into a new run, with the paths inside pointed at it, and "
+      "leaves out the niche, the subjects, the videos, the ledger, the briefs and the old niche's subject pool")
+js, _ = ts("static", "lock", "--run", str(CR), "--niche", "History")
+check(js.get("ok") and js["locks"]["niche"] == "History" and js["locks"]["style_ref"] == "R02" and js["locks"]["next_video"] == "01"
+      and (js["locks"].get("voice") or {}).get("sample") == 2 and ts("effort", "--run", str(CR))[0]["effort"]["level"] == "static",
+      "the clone takes its own niche, keeps the style reference and the narrator, numbers its videos from 01 and has no effort level")
+js, code = ts("clone-run", "--from", str(run_f), ok=False)
+check(code == 2 and "Static" in js.get("error", ""), "clone-run is for Static runs")
+
 # FLUX 3 Klein on this PC (static_images=klein, the user 2026-11-06): the same T image generate through the local worker (stubbed here), no key
 KENV = {**SENV, "AWL_IMAGE_STUB": "1", "OPENAI_API_KEY": ""}
 js, _, _ = t("new-run", "--mode", "analyze", "--slug", "static-klein", env=KENV)
@@ -1474,8 +1543,72 @@ check(_krows == [("C1-a1", "completed", "klein"), ("i01-a1", "completed", "klein
 _krec = json.loads((KR / "60-outputs" / "video-01" / "images.json").read_text(encoding="utf-8"))["images"]["01"]
 check(_krec["use"] == "i01-a3.png" and _krec["attempts"][0]["source"] == "klein" and _krec["attempts"][0]["seed"] == _s1 and _krec["attempts"][0]["caption"],
       "the record keeps each Klein attempt with its seed and caption; the newest is the one the edit uses")
+# the video's YouTube thumbnail (the user, 2026-11-07: "we will also in the end generate the yt thumbnail for each video using klein or
+# openai api directly or just prompt"): one more image of the video, at its own size, kept in the deliverables
+js, code, _ = t("image", "generate", "--run", str(KR), "--video", "01", "--thumbnail", "--prompt", "x", env=KENV, ok=False)
+check(code == 2 and "--size" in js.get("error", ""), "a thumbnail needs its own size (the references' thumbnails', static §12)")
+_tp = ("image", "generate", "--run", str(KR), "--video", "01", "--thumbnail", "--size", "1280x720", "--prompt", "A farmer's face lit by the sunset",
+       "--ref", str(_ka))
+js, _, _ = t(*_tp, env=KENV)
+_th = js.get("thumbnail") or {}
+_tdir = KR / "60-outputs" / "video-01" / "images"
+check(js.get("ok") and js.get("size") == [1280, 720] and Path(js["file"]).name == "thumb-a1.png" and Path(_th.get("deliverable") or "").name == "video-01-thumbnail.png"
+      and Path(_th["deliverable"]).is_file() and Path(_th.get("small") or "").is_file()
+      and json.loads((KR / "60-outputs" / "video-01" / "images.json").read_text(encoding="utf-8"))["images"]["thumb"]["use"] == "thumb-a1.png"
+      and (KR / "50-requests" / "video-01-thumb-a1-image-request.json").is_file(),
+      "image generate --thumbnail makes the video's thumbnail at its size (thumb-a1), keeps it in deliverables with a feed-size copy")
+js, _, _ = t(*_tp, "--again", env=KENV)
+js2, _, _ = t("image", "use", "--run", str(KR), "--video", "01", "--thumbnail", "--attempt", "1", env=KENV)
+check(js.get("attempt") == 2 and js2.get("ok") and js2["uses"].endswith("thumb-a1.png")
+      and (KR / "deliverables" / "video-01-thumbnail.png").read_bytes() == (_tdir / "thumb-a1.png").read_bytes(),
+      "another thumbnail attempt replaces the deliverable; image use --thumbnail puts the chosen one back")
 js, _, _ = t("contract", "--run", str(KR), env=KENV)
 check("Images: klein" in Path(js["file"]).read_text(encoding="utf-8") and not js.get("unresolved_placeholders"), "a Klein run's contract says Images: klein")
+
+# the references' real YouTube titles and thumbnails (the user, 2026-11-07: "in the references folder there is also a context.txt file ...
+# how_to_drive_a_car.mp4|How do you drive a car|C:/users.../how_to_drive.png ... (image files stand at /thumbnails folder)")
+from PIL import Image as _PI  # noqa: E402
+cx_refs = home.parent / "refs-context"
+for _nm in ("how_to_drive_a_car.mp4", "the_last_lighthouse.mp4", "no_line_here.mp4"):
+    make_clip(cx_refs / _nm, seconds=2.0, flash=None, audio=False)
+(cx_refs / "thumbnails").mkdir(parents=True, exist_ok=True)
+_PI.new("RGB", (1280, 720), (200, 40, 40)).save(cx_refs / "thumbnails" / "how_to_drive.png")
+_PI.new("RGB", (1280, 720), (40, 40, 200)).save(cx_refs / "thumbnails" / "lighthouse.jpg")
+(cx_refs / "context.txt").write_text("how_to_drive_a_car.mp4|How do you drive a car|C:/users/someone/elsewhere/how_to_drive.png\n"
+                                     f"the_last_lighthouse.mp4|The Last Lighthouse Keeper | A True Story|{cx_refs / 'thumbnails' / 'lighthouse.jpg'}\n"
+                                     "a_video_not_here.mp4|Nobody|nothing.png\njust one field\n", encoding="utf-8")
+CX = Path(t("new-run", "--mode", "analyze", "--source", str(cx_refs), "--slug", "static-context", env=ENV)[0]["run_dir"])
+t("inventory", str(cx_refs), "--run", str(CX), "--as", "references", env=ENV)
+t("state", "--run", CX.name, "set", "analyze_submode=static", "static_images=prompts", "audio_ingest=whisper", env=ENV)
+js, _, _ = t("static", "context", "--run", CX.name, env=ENV)
+_cr = {r["file"]: r for r in json.loads((CX / "00-inventory" / "context.json").read_text(encoding="utf-8"))["rows"]}
+check(js.get("found") and js.get("matched") == 2 and _cr["how_to_drive_a_car.mp4"]["title"] == "How do you drive a car"
+      and str(_cr["how_to_drive_a_car.mp4"]["thumbnail"]).endswith("how_to_drive.png") and _cr["how_to_drive_a_car.mp4"]["thumbnail_size"] == "1280x720"
+      and _cr["the_last_lighthouse.mp4"]["title"] == "The Last Lighthouse Keeper | A True Story"
+      and js.get("lines_no_video_matches") == ["a_video_not_here.mp4"] and len(js.get("unparsed_lines") or []) == 1
+      and len(js.get("videos_without_a_line") or []) == 1 and js.get("thumbnail_sizes") == {"1280x720": 2}
+      and js.get("sheets") and all(Path(s).is_file() for s in js["sheets"]) and (CX / "00-inventory" / "context.md").is_file(),
+      "static context matches each line to its video by file name, finds a moved thumbnail in the thumbnails folder by its name, keeps a "
+      "title with a bar in it, lists what does not match, measures the thumbnails and makes the labelled sheets")
+js, _, _ = t("static", "context", "--run", str(SR), env=ENV)
+check(js.get("ok") and js.get("found") is False, "no context.txt: the run goes on, told there are no real titles or thumbnails")
+(CX / "40-briefs").mkdir(parents=True, exist_ok=True)
+(CX / "40-briefs" / "video-01-images.json").write_text(json.dumps({"video": "01", "title": "One light against the storm",
+    "thumbnail": {"prompt": "A keeper's lamp in a storm", "size": "1280x720", "text": "ONE LIGHT"},
+    "images": [{"image": 1, "from_line": 1, "prompt": "A lighthouse at night"}]}), encoding="utf-8")
+js, _, _ = t("image", "prompts", "--run", CX.name, env=ENV)
+_pf = Path(js["files"][0]).read_text(encoding="utf-8")
+check("## v01-thumb" in _pf and "ONE LIGHT" in _pf and "1280x720" in _pf and js.get("images") == 2 and "vNN-thumb" in js.get("naming", ""),
+      "image prompts adds each video's thumbnail as vNN-thumb at its own size, with its exact words")
+_uf = home.parent / "user-images-thumb"
+_uf.mkdir(parents=True, exist_ok=True)
+_PI.new("RGB", (1216, 2160), (10, 120, 10)).save(_uf / "v01-i01.png")
+_PI.new("RGB", (1280, 720), (120, 10, 120)).save(_uf / "v01-thumb.png")
+js, _, _ = t("image", "intake", "--run", CX.name, "--folder", str(_uf), env=ENV)
+_ti = [c for c in js.get("copied") or [] if c["image"] == "thumb"]
+check(len(js.get("copied") or []) == 2 and _ti and _ti[0]["off_aspect"] == 0.0 and Path((_ti[0].get("thumbnail") or {}).get("deliverable") or "").is_file()
+      and not js.get("missing") and not js.get("names_without_vNN_iKK"),
+      "image intake takes the user's vNN-thumb file in as the video's thumbnail (its aspect against the thumbnail's size) and delivers it")
 _srv.shutdown()
 
 finish()

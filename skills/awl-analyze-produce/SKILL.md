@@ -22,7 +22,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *an own voiceover (`state.json → voiceover.enabled` true; item 31; the takes in X1, a `voiceover` blocker):*
   - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.4 KB)
 - *Static (item 36): production-agents §1, §3 and §5 above, and §2s in place of §2, the Higgsfield section and `models_explore`:*
-  - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (5.7 KB)
+  - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (7.7 KB)
 
 ### A8. Load the locked model's documentation
 **Static: no A8** (no video model; item 36): go to A9s.
@@ -82,8 +82,12 @@ At the start: `T state --run RUN set stage=producing next_skill=awl-analyze-prod
    `static.waiting` set), the intake and the check of every image, then go on.
 3. **The agent contract:** `T contract --run RUN [--notes "…"]` (a Static run gets production-agents §2s's prompt; no Loupe line to
    ensure).
-4. **Spawn** as A9b says, the pilot first (item 26): each agent runs S3 `awl-static-images` (with images by the user, only the check of its
-   images), S4 `awl-static-edit` and X10 `awl-record`. A9's steps and X1–X9 are not used; nothing here asks a question.
+4. **Spawn** as A9b says, the pilot first (item 26): each agent runs S3 `awl-static-images` (the stills and the YouTube thumbnail; with
+   images by the user, only the check of its images), S4 `awl-static-edit` and X10 `awl-record` (the title and the thumbnail into the
+   deliverables, static §12). A9's steps and X1–X9 are not used; nothing here asks a question. Static has no effort level: 5 agents at
+   once and the pilot from 5 videos, as before effort levels (`T effort --run RUN` prints them).
+**More videos** of a run (static §10; `awl-static-plan`'s More videos): S2, the anchors' check, the contract and the agents for the new
+videos only (their numbers from `T static subjects`); the videos already in `state.json → videos[]` are not touched.
 
 ### A9b. Produce in parallel (production agents)
 

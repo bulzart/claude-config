@@ -8,7 +8,8 @@ check, §6>,
 "C1", "name": "…", "photo": "<path or null>", "sheet_prompt": "<when no photo>"}], "images": [{"image": 1, "from_line": 1, "prompt": "…",
 "characters": ["C1"], "motion": "<zoom-in | zoom-out | pan-left | pan-right | pan-up | pan-down | none>", "amount": <the change>,
 "transition": "<cut | a transition slug the catalogue shows drawn>", "trans_s": <seconds>, "line": "<the words over it>"}, …],
-"effects": [<with an effects folder, below>]}`. Every value
+"effects": [<with an effects folder, below>], "title": "<the video's YouTube title, §12>", "thumbnail": {"prompt": "…", "size":
+"<W>x<H>", "text": "<its exact words, or null>", "characters": ["C1"], "why": "…"}}` (the title and the thumbnail: §12). Every value
 in `<…>` is decided from the spec (no stock value exists: `T slideshow plan` lists what is undecided). The size and quality are the run's
 format (`state.json → static.format`, picked at A5, §2); a plan's own `"size"` changes it for that video only. `captions` is the spec's
 text look (§2) with this video's highlighted words: the CapCut project and the check copy both take it.
@@ -47,13 +48,16 @@ text look (§2) with this video's highlighted words: the CapCut project and the 
   moves; `T slideshow plan` lists it under `shorter_than_0_5s` as a fact. Its picture is a glimpse in the run's subject (the reference's
   device, never its picture: §3).
 - **The prompt**: what the image shows at that moment of the story (the subject, the action, the place, the time of day), the framing, the
-  style lock of the spec word for word, then the composition for the run's aspect (`static.format.aspect`; vertical: the main subject in
+  style lock of the spec word for word (the style reference's look, the same in every video of the run: §10), then the composition for
+  the run's aspect (`static.format.aspect`; vertical: the main subject in
   the upper two thirds; horizontal: the subject on a third with room around it; square: centred), the band where the captions sit (the
   plan's y_rel) free of faces and key detail, no text, letters, numbers, logos or watermarks in the picture unless the
-  story needs a sign or a page (then the exact words), no added sticker or emoji (contract item 6).
+  story needs a sign or a page (then the exact words), no added sticker or emoji (contract item 6), and a secular scene described in
+  positive terms with nothing religious or superstitious in it (§11: a palace throne hall, never a cathedral; the prompt names what is
+  there, never what must stay out).
 - **Scale and depth**, when a character's reference image rides with other people, animals or buildings in the frame: the models tend to
-  draw the referenced character larger than the rest (2026-11-06: an emperor three times the size of the pope crowning him, a horse and
-  rider towering over the soldiers, a pony-sized horse merging into his coat). Say each one's real size and place in words: life-size, the
+  draw the referenced character larger than the rest (2026-11-06: an emperor three times the size of the courtier seated behind him, a
+  horse and rider towering over the soldiers, a pony-sized horse merging into his coat). Say each one's real size and place in words: life-size, the
   same height as, seated behind him, in the background, a full-sized horse he leads by the reins.
 - **Characters**: a character with a photo is the photo as a reference image of every image that shows them; one with only a description
   first gets an **anchor**: a neutral sheet image (`T image generate --anchor C1`, the look in words), viewed and kept, then used as the

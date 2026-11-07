@@ -1142,3 +1142,29 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
 - **Changed:** A6s makes five voice samples (five takes on the spec's voice profile) instead of three, and the one stop lists each with
   the full path of its file (static §6, §2, awl-static-plan steps 3-4, the router, README). `T tts design` had no cap (one sample per
   `--instruct`); it now prints each sample's resolved full path and a note that counts the samples. t02 makes five and checks the paths.
+
+## 2026-11-07 · Static: no effort level, one channel per run, no religion, the YouTube title and thumbnail
+
+- **Asked (the user):** "why do i see two settings for static mode" (the effort table offered 2-5 fps and motion densifying, then the
+  references were read at 1 fps) "remove the effort idea completely (on static mode), just do 2fps when on static mode"; "on Static mode
+  the idea behind it is that when we do analyzing the references we should lock: one narrator, and one field/kind of videos ... the user
+  is also told to pick visual style and he will give name one video from the references that he likes the visuals ... the next videos
+  ... will only be suggested to pick subjects of that niche ... the run has to have the ability to be cloned ... /analyze-with-loupe
+  clone <run>"; "nothing about religious should appear or be spoken about such as: God, shaykh, pope, cross, idol statue, pagan things,
+  rabbi, budism or any superstitious", then "if there's a story about a famous rabbi ... we should not pick the rabbi story at all";
+  "context.txt ... how_to_drive_a_car.mp4|How do you drive a car|C:/users.../how_to_drive.png ... we will also in the end generate the
+  yt thumbnail for each video using klein or openai api directly or just prompt ... and the title too".
+- **Changed:** Static has no effort level (`effort_of_state` returns a fixed profile for a Static run: every reference at
+  `config.json → static.analysis.fps` 2, no extra frames, 5 agents and a pilot from 5; `T effort` refuses a level there; awl-start skips
+  step 5d). One channel per run (static §10): A5 asks the niche and the visual style (a reference the user names) with the count and the
+  format; `T static lock` records them once and refuses another (`--replace` only before the first video); `T static subjects --add`
+  numbers the subjects and refuses a repeat; `T tts design` / `T tts voice` refuse a new narrator once one is picked (`--replace` in a
+  clone); `more <run>` and `clone <run>` in the router; `T clone-run` copies the inventory, media, cards, spec, characters and voice with
+  the paths pointed at the new run and resets the niche, subjects, videos and ledger. Static §11: nothing religious or superstitious in
+  a subject, line, caption, picture or sound; such a subject is never picked (never told with the religion cut out); prompts describe a
+  secular scene and never name what to leave out; QC views for it. Static §12: `T static context` reads context.txt (file, real title,
+  thumbnail; a moved thumbnail found by its name in `thumbnails/`), with labelled sheets; the spec's title and thumbnail patterns; every
+  video gets a title (`deliverables/video-NN-title.txt`) and a thumbnail (`T image generate --thumbnail --size`, the one in use copied to
+  `deliverables/video-NN-thumbnail.png` with a feed-size copy; prompts mode `vNN-thumb` in the prompts file and the intake).
+- **Found:** the delivered Napoleon still i04 (the coronation) shows a Gothic cathedral, crosses on the throne's spires and the pope:
+  against §11 now; reported to the user, not redrawn unasked.

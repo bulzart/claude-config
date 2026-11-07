@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (6.1 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (2.7 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (6.4 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (3.5 KB)
 
 The main session runs S2 for every video, one at a time (one model on the GPU; the toolkit's lock holds a second one back), before any
 production agent starts (`awl-analyze-produce` A9s).
