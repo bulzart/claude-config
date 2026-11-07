@@ -1010,6 +1010,23 @@ check(js2.get("ok") and _mc2.get("gain") == 0.11 and isinstance(_mc2.get("bed_un
       "music measure --gain tests another level: the bed sits that many dB further under the voice")
 js, code = ts("music", "measure", "--run", str(SR), "--video", "07", ok=False)
 check(code == 2 and "music make" in json.dumps(js), "music measure of a video with no bed says to make it first")
+# a bed longer than one piece (the user, 2026-11-07: "if acestep 1.5 max is 10 minutes, then we could do 2x8minutes for a 16minutes
+# video i guess, or 5x5 for a 25 minutes"): sections joined with crossfades into one file of the planned length (small numbers here)
+(SR / "40-briefs" / "music-long.json").write_text(json.dumps({"tracks": [
+    {"video": "05", "caption": "a slow orchestral underscore", "duration": 50, "split_over_s": 30, "max_section_s": 20, "crossfade_s": 2},
+    {"video": "06", "caption": "x", "duration": 40, "crossfade_s": 2,
+     "sections": [{"caption": "a calm opening", "duration": 22}, {"caption": "a darker close", "duration": 20}]}]}), encoding="utf-8")
+js, _ = ts("music", "make", "--run", str(SR), "--plan", str(SR / "40-briefs" / "music-long.json"))
+_ml = {m["video"]: m for m in js.get("made") or []}
+check(js.get("ok") and _ml["05"]["sections"] == 3 and abs(float(_ml["05"]["duration_s"]) - 50) < 0.1 and _ml["05"]["codec"] == "pcm_s16le"
+      and all(abs(x - 18.0) < 0.01 for x in _ml["05"]["section_s"]) and _ml["06"]["sections"] == 2
+      and abs(float(_ml["06"]["duration_s"]) - 40) < 0.1 and (SR / "30-assets" / "music" / "parts" / "video-05-part3.wav").is_file(),
+      "a bed longer than one piece is made in equal sections (3 x 18 s for 50 s with 2 s crossfades) or in the plan's own sections, "
+      "joined into one 16-bit file of the planned length")
+(SR / "40-briefs" / "music-too-long.json").write_text(json.dumps({"tracks": [{"video": "05", "caption": "x", "duration": 700,
+                                                                                "sections": [{"duration": 700}]}]}), encoding="utf-8")
+js, code = ts("music", "make", "--run", str(SR), "--plan", str(SR / "40-briefs" / "music-too-long.json"), ok=False)
+check(code == 2 and "longer than ACE-Step" in js.get("error", ""), "a section longer than ACE-Step's 600 s is refused before any model runs")
 js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01")
 _sp = js["image_spans"]
 check(js.get("ok") and _sp[0][1] == 0.0 and -1 / 30 - 1e-6 <= _sp[1][1] - (0.3 + _ln[1]["start"]) <= 1e-6 and js.get("music")

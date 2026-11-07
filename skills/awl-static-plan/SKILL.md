@@ -15,9 +15,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run; skip when already read)
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
-- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (2.5 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.5 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (6.4 KB)
+- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (3.0 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.6 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (7.3 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (4.3 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (4.5 KB)
@@ -56,8 +56,10 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    `T state --run RUN set static.new_voice=false`), plus `--emotion NAME="<a line that carries it>"` (at most two) when the spec's
    delivery swings (static §6).
 6. **Scripts** (static §4), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
-   niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11). The copy test and the sharpness
-   gate (creative-direction §5.0, §6) pass before a script is final.
+   niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11). The length is yours, never the
+   user's (the user, 2026-11-07): decided per video from the spec's length pattern (the references' lengths in `T static lock`'s
+   `reference_lengths`, what drives them), written as `target_length_s` and `length_why` in the narration JSON, the script sized to it.
+   The copy test and the sharpness gate (creative-direction §5.0, §6) pass before a script is final.
 7. **Image plans** (static §5), per video: `RUN/40-briefs/video-NN-images.json`: the characters (photo, or the sheet prompt of one with
    none), one image per stretch of lines (`from_line`), every prompt with the spec's style lock word for word (the style reference's
    look, the same in every video of the run: static §10) and §5's composition, a secular scene with nothing of static §11 in it, the
@@ -75,7 +77,9 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    its `caption`, `bpm` and `why` reasoned from the spec's bed brief and this video's script (its beats and their emotions), never from
    analysing the references' music (the user, 2026-11-06: "make sure we try to generate instrumentals that fit the video content type and
    narration based on the data collected from the references, no need to analyze their instrumentals too"); the image plan gets
-   `"music": true`. The duration is set in S2 once the narration exists, and the level after the bed's check.
+   `"music": true`. The duration is set in S2 once the narration exists, and the level after the bed's check. A video longer than
+   ACE-Step's 600 s may carry `sections` (one caption per part of the story, the same instruments and tempo; static §6); without them the
+   toolkit makes equal sections.
 9. Show one line per video (number, subject, title, length, images, bed or none) and go on without waiting.
 
 **More videos** (static §10; `/analyze-with-loupe more <run> [N]`, or the user asking for more after a wrap-up): no start question is

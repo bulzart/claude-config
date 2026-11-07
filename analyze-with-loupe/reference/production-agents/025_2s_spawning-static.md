@@ -41,6 +41,10 @@ under "Read now" the exact section files it needs: read those and nothing else. 
   3. awl-record        (X10: deliverables with the YouTube title and thumbnail, README row, result.json)
   With QC fixes `off` every image is made once and nothing is redone: the edit is still built and its facts recorded; result.json
   `qc` = "off: not checked (the user reviews at the end)".
+  A long video is split (awl-analyze-produce A9b): when your spawn message says `images K1-K2: S3 only`, make and check only those images
+  (and the thumbnail when it says so), write <RUN>/60-outputs/video-NN/images-K1-K2.json (each image's attempts, re-draws, cost, flags)
+  and end with one JSON line {"video", "images": "K1-K2", "status", "cost_usd_estimate", "flagged"}; when it says `S4 and X10`, every image
+  exists: build the edit and the record (awl-static-edit, awl-record), summing the images-*.json files into result.json.
 
 Hard rules:
 - The toolkit T measures, extracts, records and calculates; it never judges. Every reading (an image right or not, a line heard or not,

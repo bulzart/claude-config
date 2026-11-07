@@ -44,6 +44,13 @@ sounds, curious and bouncy. `40-briefs/music.json` (A6s), one track per video:
 narration + tail, set in S2>, "bpm": <n>, "seed": <n>, "why": "<each choice and the data it rests on>"}]}`, then in S2 `T music make
 --run RUN` (every track in one model load; instrumental). The file carries its own fades (the track's `fade_in`, `fade_out`) and is
 saved as 16-bit PCM WAV, the format the CapCut effects check showed playing (ACE-Step writes 32-bit float; the toolkit converts it).
+**A long bed** (the user, 2026-11-07: "if acestep 1.5 max is 10 minutes, then we could do 2x8minutes for a 16minutes video i guess, or
+5x5 for a 25 minutes"): ACE-Step makes at most 600 s per piece on this PC (`config.json → static.music.max_s`), so a longer track is made
+in sections and joined end to end with crossfades (`crossfade_s`, default 4 s) into the one file the edit uses: either the agent's own
+`"sections": [{"caption": "<this part's mood, the same instruments and tempo>", "duration": <s>}, …]` (one per part of the story: the
+rise, the turn, the fall; the section lengths add up to the track's duration plus one crossfade per join), or, without them, the fewest
+equal sections of at most `max_section_s` (480 s) under the track's caption. The fade-in is on the first section, the fade-out on the
+last; the pieces stay in `30-assets/music/parts/`. `T music measure`'s level per second shows each join: no drop or jump around it.
 
 **The bed's check and level** (S2): `T music measure --run RUN --video NN` gives the facts: the words speech-to-text hears in the bed
 alone (a voice where none was asked), its loudness, its level per second and over each narration line (does it build and drop where the

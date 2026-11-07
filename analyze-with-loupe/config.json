@@ -227,7 +227,11 @@
       "gain": 0.22,
       "gain_note": "the starting level only: each video's level is the agent's, kept as the image plan's music_gain after `T music measure` (static §6); 0.22 put the 2026-11-06 bed 12.4 LU under the narration with every word heard the same",
       "fade_in_s": 1.0,
-      "fade_out_s": 3.0
+      "fade_out_s": 3.0,
+      "max_s": 600,
+      "max_section_s": 480,
+      "crossfade_s": 4.0,
+      "sections_note": "ACE-Step 1.5 makes at most 600 s per piece on this PC (its own limit for an 8-12 GB GPU without its language model, acestep/gpu_config.py tier4, constants DURATION_MAX). A longer bed is made in sections (the user, 2026-11-07: \"we could do 2x8minutes for a 16minutes video i guess, or 5x5 for a 25 minutes\"): the agent's own sections in music.json (one caption per part of the story), or the fewest equal ones of at most max_section_s, joined end to end with a crossfade of crossfade_s; the fade-in on the first, the fade-out on the last"
     },
     "narration": {
       "lead_s": 0.3,

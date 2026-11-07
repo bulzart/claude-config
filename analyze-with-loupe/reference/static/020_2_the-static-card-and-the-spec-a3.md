@@ -6,7 +6,12 @@ sound · subject, its kind and its field · what makes it work (one paragraph, [
 
 **The Static spec** (`20-analysis/static-spec.md`, one per run, the synthesis of all cards; Static's craft sheet):
 - **Narration template**: the beats in order with their share of the length (hook 0–5 %, setup, escalation 1…n, the reveal, the payoff,
-  the closing line), the length range in seconds, the words per minute, the line length, the pause pattern.
+  the closing line), the words per minute, the line length, the pause pattern.
+- **Length**: the references' lengths (each, the shortest, the median, the longest: `T static lock --run RUN` lists them) and what their
+  length follows, read from the cards: the kind of subject and how much it holds, the number of beats and how long each runs, how deep
+  each beat goes, the format (a Short under a minute, a long video of many minutes). No user picks it (the user, 2026-11-07: "the user
+  will not pick any length for the video btw, it will be the pipeline's choice based on the references data, based on what ai agents
+  understands and mine and patterns collected from that"): each video's length is decided from this pattern at A6s (§4).
 - **Seconds per still**: the median and the range the references use; when a still changes (on a new line, on a reveal, mid-line).
 - **Niche candidates**: the fields the references are about (§1) and the fields their craft would carry, for the user's pick at A5; the
   pick is the run's niche (`state.json → static.niche`, §10) and every subject comes from it.

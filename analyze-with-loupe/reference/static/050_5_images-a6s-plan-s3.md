@@ -41,7 +41,8 @@ text look (§2) with this video's highlighted words: the CapCut project and the 
   picture (a wipe, a flash, a light leak, grain, a glow).
 
 - **Count and cuts**: an image starts on a narration line (`from_line`); the spec's seconds per still decide how many lines one image
-  covers. A reveal, a new place or a new person starts a new image. After the narration exists, `T slideshow plan` gives every image's
+  covers. A reveal, a new place or a new person starts a new image. A long video holds many (12 minutes at 5 s a still: about 144); its
+  images are then made by several agents, each a stretch of them (`awl-analyze-produce` A9b). After the narration exists, `T slideshow plan` gives every image's
   span; keep each within the spec's range (none under about 2 s). An **insert** the references use (a picture flashed for a few frames
   at a turn, §1) is an image of its own with `"from_line"` of the line it leads into and `"offset_s"`: minus its length (−0.1 for 3
   frames at 30 fps), its own number after the others (the timeline follows the starts), `"motion": "none"` unless the reference's insert

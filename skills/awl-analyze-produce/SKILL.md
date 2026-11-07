@@ -22,7 +22,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *an own voiceover (`state.json → voiceover.enabled` true; item 31; the takes in X1, a `voiceover` blocker):*
   - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.4 KB)
 - *Static (item 36): production-agents §1, §3 and §5 above, and §2s in place of §2, the Higgsfield section and `models_explore`:*
-  - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (7.7 KB)
+  - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (8.3 KB)
 
 ### A8. Load the locked model's documentation
 **Static: no A8** (no video model; item 36): go to A9s.
@@ -93,6 +93,12 @@ videos only (their numbers from `T static subjects`); the videos already in `sta
 
 - **Static runs:** the contract is production-agents §2s's (`T contract` picks it); the agents never load Higgsfield tools; a QC-fix
   proposal is about image re-draws, with the cost from `cost_usd_estimate`.
+  **A long video** (more than about 40 stills in its plan, e.g. a 12-minute video at 5 s a still holds about 144): its stills are split
+  across image agents, each a stretch of about 30–40 in plan order (spawn message `Video NN, images K1-K2: S3 only`; the one with the
+  last stretch also makes the thumbnail, `… and the thumbnail`), all at once within the agents-at-once count (with FLUX 3 Klein they take
+  turns on the GPU; the API draws in parallel). When every stretch has reported, one edit agent (`Video NN: S4 and X10`) builds the edit
+  and the record from them. The image agents' files are `60-outputs/video-NN/images-K1-K2.json` (their images, attempts, re-draws, costs,
+  flags); the edit agent sums them into `result.json`.
 - **Free runs:** each agent's spawn message names its video's kind (`Video NN, kind recreate|create`, from `state.json → videos_kind`), and the contract's "Video kind" line says that the kind selects the Recreate or the Create branch of every per-video step.
 - **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to
   the run's contract file at A9; `subagent_type: general-purpose`, `model: "opus"` (they run QC and judge: Opus 5.5), `run_in_background: true`).

@@ -309,7 +309,10 @@ still, the visual styles, the caption pattern, the voice profile, the bed brief 
 (§10): its niche and visual style (one reference the user names) are picked at A5, its narrator at A6s, and every video keeps them
 (`T static lock`; `/analyze-with-loupe more <run>` adds videos of that niche, `/analyze-with-loupe clone <run>` copies the analysis into
 a new run for another niche, `T clone-run`); nothing religious or superstitious ever (§11); every video also gets a YouTube title and a
-thumbnail (§12: `T image generate --thumbnail`, `deliverables/video-NN-title.txt` and `video-NN-thumbnail.png`). `awl-static-plan` (A6s) reads the characters (a known person: sourced
+thumbnail (§12: `T image generate --thumbnail`, `deliverables/video-NN-title.txt` and `video-NN-thumbnail.png`). Each video's length is
+the agent's, from the references' lengths and what drives them (`target_length_s` in the narration JSON; the user picks none); a bed
+over ACE-Step's 600 s is made in sections joined with crossfades (`T music make`), and a long video's stills are split across image
+agents (A9b). `awl-static-plan` (A6s) reads the characters (a known person: sourced
 facts; an ordinary role: a story of their world; a cartoon: a children's story), builds a scored pool of new subjects (sourced, two sources each, in a factual
 niche), makes five voice samples with Qwen3-TTS's VoiceDesign (`T tts design`) and stops once for the user's subjects and voice (each sample with its full file path to play); then the scripts, fact sheets
 and image plans. `awl-analyze-produce` A9s runs `awl-static-sound` (S2) for every video in this session (the narration in the run's one voice, design then

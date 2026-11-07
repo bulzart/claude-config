@@ -3,8 +3,12 @@
 `40-briefs/video-NN-script.md` (readable: the beats, the devices used, the sources) and `40-briefs/video-NN-narration.json`, the lines the
 voice speaks: `{"video": "NN", "language": "english", "lines": [{"n": 1, "text": "…", "emotion": "neutral", "pause_after": 0.35}, …]}`.
 
+- **The length** is the agent's, per video, from the spec's length pattern (§2), never asked of the user: where this subject sits among
+  the references (a subject with as much to tell as their longest runs as long; one beat-light subject as short as their shortest), the
+  beats the template needs and how long the references let each run. It is written into `video-NN-narration.json` as
+  `"target_length_s"` with `"length_why"` (the references' numbers it rests on), and the script is sized to it.
 - **The template of the spec**: the hook in the first line (spoken within the first second), every beat in its share, the payoff, the
-  closing line or loop; the length from the spec's range: the words at the run's voice's pace plus every pause. The picked sample's
+  closing line or loop; the length: the target, as the words at the run's voice's pace plus every pause. The picked sample's
   `words_per_s` (`state.json → static.voice`) runs about 12 % faster than its cloned narration (2026-11-06: the sample 2.9 words per
   second, the narration 2.5, so a script sized at the reference narrator's pace came out at 45 s against the spec's 30–40 s); a
   spelled-out year or number counts as the words it is spoken as ("eighteen twelve" is two).

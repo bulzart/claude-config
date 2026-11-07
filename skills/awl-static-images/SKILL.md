@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.5 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.6 KB)
 - static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (3.5 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (4.5 KB)
@@ -25,6 +25,10 @@ Only these section files for this phase, nothing else unless a step below says s
 `state.json → static_images` says which half applies: `api` or `klein` (the first), `prompts` (the second).
 
 ## Images made for you (`static_images=api`: the OpenAI Images API; `klein`: FLUX 3 Klein on this PC)
+
+A long video's stills are split across agents (`awl-analyze-produce` A9b): when your spawn message names `images K1-K2`, steps 2–5
+apply to those images only (step 6, the thumbnail, only when it says so); write `RUN/60-outputs/video-NN/images-K1-K2.json` (each
+image's attempts, re-draws, cost, flags) and end with its one JSON line; the edit agent does S4 and X10.
 
 The same commands for both; `T image generate` takes the source from `static_images`. With **FLUX 3 Klein** the toolkit runs the model
 on this PC's GPU, one image at a time (it waits for the GPU; a minute or more per image): your prompt goes through Black Forest Labs'

@@ -9411,9 +9411,20 @@ def _music_measure(a):
          f"[1:a]aresample=48000,{stereo(bed)}volume={gain},atrim=0:{total:.3f},apad=whole_dur={total:.3f}[b];"
          f"[0:a][b]amix=inputs=2:normalize=0:duration=first[o]", "-map", "[o]", str(mixed)], check=True, timeout=600)
     lang = STATIC_LANG_ISO.get(str(side.get("language") or "").lower(), "auto")
-    tr_bed = transcribe(str(bed), work, "small", lang)
-    w_alone, w_n = _heard_words(tr_bed), _heard_words(transcribe(str(placed), work, "small", lang))
-    w_m = _heard_words(transcribe(str(mixed), work, "small", lang))
+    wm = cfg_get("whisper_model", "small")       # the model narration-words reads with, so its words can stand in below
+    tr_bed = transcribe(str(bed), work, wm, lang)
+    w_alone, w_n, w_from = _heard_words(tr_bed), None, "transcribed now"
+    wj = rd / "30-assets" / "narration" / f"video-{nn}.words.json"
+    if wj.is_file() and wj.stat().st_mtime >= narr.stat().st_mtime:   # S2's reading of this same narration: a long one is not read twice
+        try:
+            hw = json.loads(wj.read_text(encoding="utf-8")).get("heard") or []
+            w_n = [y for y in (_norm_word(w.get("w", "")) for w in hw if isinstance(w, dict)) if y] or None
+        except (OSError, ValueError):
+            w_n = None
+        w_from = "narration-words (S2)" if w_n else w_from
+    if w_n is None:
+        w_n = _heard_words(transcribe(str(placed), work, wm, lang))
+    w_m = _heard_words(transcribe(str(mixed), work, wm, lang))
     sm = difflib.SequenceMatcher(a=w_n, b=w_m, autojunk=False)
     diffs = [{"op": op, "alone": " ".join(w_n[i1:i2]), "with_bed": " ".join(w_m[j1:j2])} for op, i1, i2, j1, j2 in sm.get_opcodes() if op != "equal"]
     bed_lufs, narr_lufs = _ebur128(bed), _ebur128(narr)
@@ -9429,7 +9440,7 @@ def _music_measure(a):
            "as_capcut_plays_it": {"gain": gain, "gain_db": round(20 * math.log10(gain), 2), "bed_at_gain_lufs": at_gain,
                                   "bed_under_voice_lu": round(narr_lufs - at_gain, 1) if narr_lufs is not None and at_gain is not None else None,
                                   "words_narration_alone": len(w_n), "words_with_bed": len(w_m), "word_differences": diffs[:40],
-                                  "mix": str(mixed)},
+                                  "narration_words_from": w_from, "mix": str(mixed)},
            "note": "facts, not a verdict (static §6, §8): a voice in the bed (words heard in it alone), narration words changed under it, its "
                    "level against the voice and its rise and fall over the lines are the agent's to judge. The CapCut project plays the bed "
                    "at this one gain (no ducking); the check render ducks it. Another level: `--gain G`, then `music_gain` in the image plan"}
@@ -9459,41 +9470,84 @@ def cmd_music(a):
     except (OSError, ValueError):
         fail(f"music plan not found or not JSON: {plan_p} (reference/static §6)", 2)
     md = rd / "30-assets" / "music"
-    tracks = []
+    hard = float(_scfg("music.max_s", 600))
+    tracks, jobs = [], []          # one track per video (the file the edit uses); one job per piece the model makes
     for tr in plan.get("tracks") or []:
         nn = _cf_nn(tr.get("video"))
         if a.video and nn != _cf_nn(a.video):
             continue
         if not tr.get("caption") or not tr.get("duration"):
             fail(f"track of video {nn} needs caption and duration", 2)
-        tracks.append({"video": nn, "caption": str(tr["caption"])[:500], "duration": float(tr["duration"]), "bpm": tr.get("bpm"),
-                       "seed": int(tr.get("seed") or 1234), "fade_in": float(tr.get("fade_in", _scfg("music.fade_in_s", 1.0))),
-                       "fade_out": float(tr.get("fade_out", _scfg("music.fade_out_s", 3.0))), "out": str(md / f"video-{nn}.wav")})
+        dur, seed = float(tr["duration"]), int(tr.get("seed") or 1234)
+        fi, fo = float(tr.get("fade_in", _scfg("music.fade_in_s", 1.0))), float(tr.get("fade_out", _scfg("music.fade_out_s", 3.0)))
+        xf = float(tr.get("crossfade_s", _scfg("music.crossfade_s", 4.0)))
+        over = min(hard, float(tr.get("split_over_s") or hard))
+        cap = min(hard, float(tr.get("max_section_s") or _scfg("music.max_section_s", 480)))
+        base = {"video": nn, "caption": str(tr["caption"])[:500], "duration": dur, "bpm": tr.get("bpm"), "seed": seed,
+                "fade_in": fi, "fade_out": fo, "out": str(md / f"video-{nn}.wav")}
+        if tr.get("sections"):       # the agent's own sections (one per part of the story, each its own caption)
+            parts = [{"caption": str(s.get("caption") or tr["caption"])[:500], "duration": float(s["duration"]),
+                      "seed": int(s.get("seed") or seed + k), "bpm": s.get("bpm", tr.get("bpm"))} for k, s in enumerate(tr["sections"])]
+        elif dur > over:             # longer than one piece can be: the fewest equal sections, joined with crossfades
+            n = max(2, math.ceil((dur - xf) / max(1.0, cap - xf)))
+            ln = round((dur + (n - 1) * xf) / n, 3)
+            parts = [{"caption": base["caption"], "duration": ln, "seed": seed + k, "bpm": tr.get("bpm")} for k in range(n)]
+        else:
+            parts = []
+        if any(p["duration"] > hard for p in parts):
+            fail(f"video {nn}: a section is longer than ACE-Step's {hard:g} s on this PC (config static.music.max_s): make more sections", 2)
+        if parts:
+            mine = [{"video": nn, **p, "fade_in": fi if k == 0 else 0.0, "fade_out": fo if k == len(parts) - 1 else 0.0,
+                     "out": str(md / "parts" / f"video-{nn}-part{k + 1}.wav")} for k, p in enumerate(parts)]
+            jobs += mine
+            tracks.append({**base, "sections": parts, "crossfade_s": xf, "parts": [j["out"] for j in mine],
+                           "joined_s": round(sum(p["duration"] for p in parts) - (len(parts) - 1) * xf, 3)})
+        else:
+            jobs.append(dict(base))
+            tracks.append(base)
     if not tracks:
         fail("no track to make (the plan is empty, or --video names none of it)", 2)
     if os.environ.get("AWL_MUSIC_STUB"):
-        for t_ in tracks:   # 32-bit float, as ACE-Step writes it, so the conversion below runs in the tests too
-            _tone(Path(t_["out"]), t_["duration"], 110, 48000, codec="pcm_f32le")
-        res = {"ok": True, "stub": True, "tracks": tracks}
+        for j in jobs:   # 32-bit float, as ACE-Step writes it, so the conversion below runs in the tests too
+            _tone(Path(j["out"]), j["duration"], 110, 48000, codec="pcm_f32le")
+        res = {"ok": True, "stub": True, "tracks": jobs}
     else:
         root = os.environ.get("AWL_MUSIC_ROOT") or _scfg("music.root") or ""
         with _gpu_lock():
             res = _worker("music", {"op": "generate", "root": root, "config": _scfg("music.config", "acestep-v15-turbo"),
-                                    "device": _scfg("music.device", "cuda"), "steps": int(_scfg("music.inference_steps", 8)), "tracks": tracks},
+                                    "device": _scfg("music.device", "cuda"), "steps": int(_scfg("music.inference_steps", 8)), "tracks": jobs},
                           cwd=root or None)
     if not res.get("ok"):
         fail("music failed: " + str(res.get("error"))[:600], 1, worker=res)
     made = []
     for t_ in tracks:
         f = Path(t_["out"])
+        if t_.get("parts"):
+            if not all(Path(p).is_file() for p in t_["parts"]):
+                continue
+            _bed_join([Path(p) for p in t_["parts"]], f, float(t_["crossfade_s"]))
         if f.is_file():
             fmt = _bed_pcm16(f)
             write_json(f.with_suffix(".json"), {**t_, "made": now_iso(), "model": _scfg("music.config", "acestep-v15-turbo"),
                                                 "stub": bool(os.environ.get("AWL_MUSIC_STUB")), "format": fmt})
             made.append({"video": t_["video"], "file": str(f), "duration_s": (media_summary(f) or {}).get("duration_s"),
-                         "codec": fmt.get("codec"), "converted_from": fmt.get("from")})
+                         "codec": fmt.get("codec"), "converted_from": fmt.get("from"), "sections": len(t_.get("parts") or []) or 1,
+                         **({"section_s": [p["duration"] for p in t_["sections"]], "crossfade_s": t_["crossfade_s"]} if t_.get("parts") else {})})
     out({"ok": bool(made), "made": made, "asked": len(tracks),
          "note": "next, per video: `T music measure --run RUN --video NN` (the bed alone and under the narration as CapCut plays it)"})
+
+
+def _bed_join(parts: list, dst: Path, xf: float) -> None:
+    """A bed's sections end to end, each join a crossfade of xf seconds (ffmpeg acrossfade), as one 16-bit WAV at 48 kHz."""
+    args = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error"]
+    for p in parts:
+        args += ["-i", str(p)]
+    fc, prev = [], "[0:a]"
+    for k in range(1, len(parts)):
+        fc.append(f"{prev}[{k}:a]acrossfade=d={xf:.3f}[x{k}]")
+        prev = f"[x{k}]"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    run(args + ["-filter_complex", ";".join(fc), "-map", prev, "-c:a", "pcm_s16le", "-ar", "48000", str(dst)], check=True, timeout=1800)
 
 
 def _static_check(a):
@@ -9721,11 +9775,26 @@ def _niche_name(s: dict):
     return n.get("name") if isinstance(n, dict) else (n or None)
 
 
+def _ref_lengths(rd: Path) -> dict:
+    """The references' lengths as facts (the inventory's durations): each, the shortest, the median, the longest, in seconds."""
+    try:
+        inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    each = {it["id"]: round(float(it["duration_s"]), 1) for it in inv.get("items") or []
+            if it.get("kind") == "video" and not it.get("ignored") and it.get("duration_s")}
+    if not each:
+        return {}
+    v = sorted(each.values())
+    mid = v[len(v) // 2] if len(v) % 2 else round((v[len(v) // 2 - 1] + v[len(v) // 2]) / 2, 1)
+    return {"each": each, "shortest_s": v[0], "median_s": mid, "longest_s": v[-1]}
+
+
 def _static_locks(rd: Path, st: dict) -> dict:
     s = st.get("static") or {}
     subj = s.get("subjects") or []
     v = s.get("voice") or {}
-    return {"niche": _niche_name(s), "style_ref": s.get("style_ref"),
+    return {"niche": _niche_name(s), "style_ref": s.get("style_ref"), "reference_lengths": _ref_lengths(rd),
             "voice": {"sample": v.get("sample"), "instruct": v.get("instruct"), "seed": v.get("seed"),
                       "file": str(_voice_dir(rd) / "ref-neutral.wav")} if v else None,
             "subjects": [{"video": f"{i:02d}", "title": t_} for i, t_ in enumerate(subj, 1)], "next_video": f"{len(subj) + 1:02d}",

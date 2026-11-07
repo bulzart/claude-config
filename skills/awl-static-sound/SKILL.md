@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (6.4 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (7.3 KB)
 - static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (3.5 KB)
 
 The main session runs S2 for every video, one at a time (one model on the GPU; the toolkit's lock holds a second one back), before any
@@ -33,13 +33,16 @@ production agent starts (`awl-analyze-produce` A9s).
    lists (`lines_to_check`) from its missing, extra and repeated words and its numbers: a wrong line is made again
    with `T tts say --run RUN --video NN --only N`, then `narration-words` again; at most twice per line, then it stays and the brief notes it
    (local and free; with QC fixes `off` nothing is made again).
-3. **Length and pace:** the duration against the spec's range; a quarter or more outside it: shorten or extend lines of the script and
+3. **Length and pace:** the duration against the video's own target (`target_length_s` in `video-NN-narration.json`, the agent's from the
+   references' pattern, static §4); more than about a tenth off it: shorten or extend lines of the script and
    `video-NN-narration.json` (static §4), then make those lines again.
 4. **The images meet the narration:** each image spans from its `from_line`'s start to the next image's (the first from 0, the last to the
    end with the tail). Keep every span within the spec's range of seconds per still and none under about 2 s: move `from_line`, merge or
    split images in `video-NN-images.json` (their prompts with them).
 5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made: each track's `duration` =
-   lead + the narration's duration + tail (config `static.narration`), then `T music make --run RUN` (every track in one model load).
+   lead + the narration's duration + tail (config `static.narration`), then `T music make --run RUN` (every track in one model load; a
+   track over ACE-Step's 600 s is made in sections and joined with crossfades, static §6: the plan's own `sections` per part of the
+   story, else equal ones).
    Then per video `T music measure --run RUN --video NN`, judged as static §6 and §8 say: a voice heard in the bed alone, or an arc that
    fights the story's beats → a new take (another `seed` or a reworded `caption` in music.json, `T music make --run RUN --video NN`, then
    measure again), at most two, by the run's QC fixes (off: none, noted); a narration word heard differently with the bed under it, or a
