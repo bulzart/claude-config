@@ -1617,6 +1617,31 @@ js, _, _ = t("fetch-image", "--run", str(KR), "--kind", "photo", "--name", "C1-p
              env={**KENV, "AWL_FETCH_STUB": str(_lg)})
 check(js.get("ok") and Path(js["file"]).parent == KR / "30-assets" / "characters" / "photos" and js.get("licence") == "Public domain"
       and js.get("commons") == "File:Someone.jpg", "fetch-image --commons records the Commons file's licence; a photo goes to the characters' photos")
+# no subtitle-like text (the user, 2026-11-07: "just not subtitles style text whatsoever"): the answer lists caption words in a prompt,
+# a cast sheet carries 3+ characters as one reference, and image text reads the letters in the stills as facts
+js, _, _ = t("image", "generate", "--run", str(KR), "--video", "01", "--image", "3", "--prompt",
+             "A quiet street at dusk; the bottom fifth, where captions sit, shows only pavement.", env=KENV)
+check(js.get("ok") and js.get("prompt_overlay_words") == ["captions"] and "memory_retry" in js,
+      "image generate lists the caption words a prompt holds (they make the model draw a made-up subtitle) and its memory retry")
+js, _, _ = t("image", "generate", "--run", str(KR), "--anchor", "C2", "--prompt", "Character sheet: a tall woman in a red coat", env=KENV)
+js, _, _ = t("image", "cast", "--run", str(KR), "--ids", "C1,C2", env=KENV)
+check(js.get("ok") and Path(js.get("file") or "").name == "cast-C1-C2.png" and Path(js["file"]).is_file() and js.get("order_left_to_right") == ["C1", "C2"],
+      "image cast sets the anchors in use side by side on one sheet, left to right as given")
+from PIL import ImageFont as _PF  # noqa: E402
+_t3 = Path(json.loads((KR / "60-outputs" / "video-01" / "images.json").read_text(encoding="utf-8"))["images"]["03"]["attempts"][-1]["file"])
+_ti = _PL.open(_t3).convert("RGB")
+_dr = _PD.Draw(_ti)
+_dr.rectangle((80, 1700, 1140, 1900), fill=(250, 250, 250))
+try:
+    _fn = _PF.truetype("C:/Windows/Fonts/arial.ttf", 64)
+except OSError:
+    _fn = _PF.load_default()
+_dr.text((110, 1760), "MADE UP SUBTITLE LINE", fill=(10, 10, 10), font=_fn)
+_ti.save(_t3)
+js, _, _ = t("image", "text", "--run", str(KR), "--video", "01", "--image", "3", env=KENV)
+_tx = json.loads((KR / "60-outputs" / "video-01" / "image-text.json").read_text(encoding="utf-8"))["images"][0]["lines"]
+check(js.get("ok") and js.get("with_lines_in_bottom_third") == [3] and any(x["in_bottom_third"] and "SUBTITLE" in x["text"].upper() for x in _tx),
+      "image text reads the letters in a still with their box and marks a line in the bottom third")
 
 # the references' real YouTube titles and thumbnails (the user, 2026-11-07: "in the references folder there is also a context.txt file ...
 # how_to_drive_a_car.mp4|How do you drive a car|C:/users.../how_to_drive.png ... (image files stand at /thumbnails folder)")

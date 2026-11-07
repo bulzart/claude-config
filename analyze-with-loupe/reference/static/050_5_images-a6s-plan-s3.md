@@ -51,18 +51,31 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
 - **The prompt**: what the image shows at that moment of the story (the subject, the action, the place, the time of day), the framing, the
   style lock of the spec word for word (the style reference's look, the same in every video of the run: §10), then the composition for
   the run's aspect (`static.format.aspect`; vertical: the main subject in
-  the upper two thirds; horizontal: the subject on a third with room around it; square: centred), the band where the captions sit (the
-  plan's y_rel) free of faces and key detail, no text, letters, numbers, logos or watermarks in the picture unless the
+  the upper two thirds; horizontal: the subject on a third with room around it; square: centred; people placed at different depths only
+  in a scene that has people), the band the captions will take (the plan's y_rel) described only by what it shows ("the bottom fifth
+  shows only the wooden floor"), no text, letters, numbers, logos or watermarks in the picture unless the
   story needs a sign or a page (then the exact words), no added sticker or emoji (contract item 6), and a secular scene described in
-  positive terms with nothing religious or superstitious in it (§11: a palace throne hall, never a cathedral; the prompt names what is
-  there, never what must stay out).
+  positive terms with nothing religious or superstitious in it (§11: a palace throne hall, never a cathedral; a "red X" mark, never a
+  "red cross"; the prompt names what is there, never what must stay out).
+- **No subtitle-like text, ever** (the user, 2026-11-07: "try to push no captions or subtitles style text in any image generation at
+  all, it can have text over objects, books, logos, brands, inside screens, or whatever, just not subtitles style text whatsoever"):
+  a prompt never holds the words caption, subtitle, lower third, title bar or text overlay, not even to keep a band clear: the model
+  reads them as a request and draws a line of made-up letters across the bottom (2026-11-07: eleven stills whose prompts said "where
+  captions sit"); `T image generate` lists any such word it finds in its answer (`prompt_overlay_words`), and a prompt that has one is
+  rewritten before it is sent again. Every prompt ends on one clean-picture sentence: "Nothing is laid over the picture: it is one
+  clean illustration from edge to edge." Words appear only on the things that carry them in the scene (a sign, a page, a screen, a
+  logo, a package), and a name stays out of the prompt unless it is meant to be written (a cast's names in a prompt got written onto
+  a cheque).
 - **Scale and depth**, when a character's reference image rides with other people, animals or buildings in the frame: the models tend to
   draw the referenced character larger than the rest (2026-11-06: an emperor three times the size of the courtier seated behind him, a
   horse and rider towering over the soldiers, a pony-sized horse merging into his coat). Say each one's real size and place in words: life-size, the
   same height as, seated behind him, in the background, a full-sized horse he leads by the reins.
 - **Characters**: a character with a photo is the photo as a reference image of every image that shows them; one with only a description
   first gets an **anchor**: a neutral sheet image (`T image generate --anchor C1`, the look in words), viewed and kept, then used as the
-  reference of every image that shows them. The prompt names who is who ("the man in the first image"). Every image copies the anchor's
+  reference of every image that shows them. The prompt names who is who ("the man in the first image"). A still that shows three or
+  more characters rides with one **cast sheet** (`T image cast --run RUN --ids C2,C3,C4`: their anchors cropped side by side) instead
+  of one reference each, the prompt describing each by look from left to right, never by name: FLUX 3 Klein takes every reference at
+  1 MP, and on this PC its memory guard stopped every still with 3-4 references (2026-11-07). Every image copies the anchor's
   details, so view it for an ornament that reads as a letter or symbol (braid loops, embroidery, a pattern): it comes back in every image
   (2026-11-06: lapel braid loops read as a repeated "N"). The sheet prompt names the ornament plainly ("plain straight gold braid").
 - **Real things look like themselves** (the user, 2026-11-07: "if there's a company, or a brand being talked about, their logo should
@@ -96,6 +109,10 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   Labs' prompt upsampler turns it into the full scene caption the model takes (the answer's `caption`). An anchor skips the upsampler
   (it would add props every later image copies), so its sheet prompt is the full description itself. A character's photo or anchor
   rides as a reference (at most 10). The seed comes from the request and the attempt and is recorded; `--again` draws with a new one.
+  The model's peak sits a few hundred MB from the memory guard's floor on this PC: a job the guard stops is run once more by the
+  toolkit once the commit memory is back (`memory_retry` in the answer); image calls run in the foreground (Claude Code ends background
+  commands when memory runs low, and their GPU lock with them), and one image agent works at a time (three at once stopped a third of
+  the stills, 2026-11-07).
   Every Klein prompt says the picture is one continuous scene from a single camera viewpoint filling the whole frame, above all one with
   no reference image: the upsampler may otherwise lay a tall frame out as stacked panels (2026-11-06: an image with no reference came back
   as two pictures with a hard seam; with that sentence the seven after it were single scenes).

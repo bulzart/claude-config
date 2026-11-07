@@ -1548,6 +1548,35 @@ def _pid_alive(pid: int) -> bool:
         return True
 
 
+def _free_commit_gb() -> float:
+    """Windows' free commit memory (what the memory guard watches: RAM plus page file not yet promised), in GB; elsewhere free RAM."""
+    try:
+        if os.name == "nt":
+            import ctypes
+
+            class MS(ctypes.Structure):
+                _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong), ("ullTotalPhys", ctypes.c_ulonglong),
+                            ("ullAvailPhys", ctypes.c_ulonglong), ("ullTotalPageFile", ctypes.c_ulonglong),
+                            ("ullAvailPageFile", ctypes.c_ulonglong), ("ullTotalVirtual", ctypes.c_ulonglong),
+                            ("ullAvailVirtual", ctypes.c_ulonglong), ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+            ms = MS()
+            ms.dwLength = ctypes.sizeof(MS)
+            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(ms))
+            return round(ms.ullAvailPageFile / 1024 ** 3, 2)
+        return round(os.sysconf("SC_AVPHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") / 1024 ** 3, 2)
+    except Exception:  # noqa: BLE001
+        return 0.0
+
+
+OVERLAY_WORDS = re.compile(r"\b(captions?|subtitles?|subtitled|lower[- ]thirds?|text overlays?|title bars?|on-screen text)\b", re.I)
+
+
+def _overlay_words(prompt: str) -> list:
+    """The words in an image prompt that make the model draw a line of made-up letters across the picture (2026-11-07: "where captions
+    sit" in eleven prompts gave eleven stills a nonsense subtitle): facts for the agent, who rewrites the prompt (static §5)."""
+    return sorted({m.group(0).lower() for m in OVERLAY_WORDS.finditer(prompt or "")})
+
+
 def _lock_owner_dead(path: Path) -> bool:
     """A lock file names its owner ("<pid> <time>"): true only when that process is gone (2026-11-07: a call killed under memory
     pressure left the GPU lock behind, and every FLUX 3 Klein call would have waited out the 4-hour stale time). An unreadable or
@@ -8706,6 +8735,7 @@ def _img_generate(a):
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name, job=str(js.get("created") or ""))
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "model": model, "quality": quality, "refs": len(refs),
          "usage": usage, "cost_usd_estimate": cost, "elapsed_s": round(time.time() - t0, 1), "tries": tries, "fingerprint": fp,
+         "prompt_overlay_words": _overlay_words(prompt),
          **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
          "note": "view the image before you use it (the QC of reference/static §8); this attempt is now the one the edit uses"})
 
@@ -8775,29 +8805,45 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
            "timeout_per_image": timeout, "images": [{"prompt": prompt, "out": str(f), "width": w, "height": h, "seed": seed,
                                                      "steps": steps, "upsample": upsample, "refs": [str(r.resolve()) for r in refs]}]}
     t0 = time.time()
+    mem_retry = None
     if os.environ.get("AWL_IMAGE_STUB"):
         _klein_stub_png(f, w, h, seed)
         res = {"ok": True, "stub": True, "engine": engine, "images": [{"ok": True, "out": str(f), "seed": seed, "caption": prompt, "seconds": 0.0}]}
     else:
         with _gpu_lock():
             res = _worker("image", job, timeout=timeout + 600)
+            # The memory guard stops a job at its peak when this PC's commit memory runs a few hundred MB short (2026-11-07: a third
+            # of the stills at once). That is the moment, not the request: wait until the commit memory is back, then run it once more.
+            if not res.get("ok") and "memguard" in (str(res.get("error") or "") + str(res.get("log_tail") or "")).lower() \
+                    and "stopped" in (str(res.get("error") or "") + str(res.get("log_tail") or "")).lower():
+                need = float(_kcfg("retry_free_commit_gb", 15.0))
+                before, t1 = _free_commit_gb(), time.time()
+                while _free_commit_gb() < need and time.time() - t1 < float(_kcfg("retry_wait_s", 180)):
+                    time.sleep(5)
+                mem_retry = {"free_commit_gb_at_stop": before, "waited_s": round(time.time() - t1, 1), "free_commit_gb_at_retry":
+                             _free_commit_gb(), "first_error": str(res.get("error") or "")[:300]}
+                res = _worker("image", job, timeout=timeout + 600)
+                mem_retry["retry_ok"] = bool(res.get("ok"))
     one = (res.get("images") or [{}])[0] if isinstance(res.get("images"), list) else {}
     if not res.get("ok") or not one.get("ok") or not f.is_file():
         err = str(one.get("error") or res.get("error") or "no image")[:600]
         _img_ledger(rd, "set", fp=fp, status="failed", note=err[:200])
         _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "failed", "fingerprint": fp, "at": now_iso(), "request_file": str(reqf),
-                                          "engine": engine, "seed": seed, "error": err})
-        fail(f"no image from FLUX 3 Klein: {err}", 1, fingerprint=fp, seed=seed, log_tail=str(res.get("log_tail") or "")[-1200:] or None)
+                                          "engine": engine, "seed": seed, "error": err, "memory_retry": mem_retry})
+        fail(f"no image from FLUX 3 Klein: {err}", 1, fingerprint=fp, seed=seed, log_tail=str(res.get("log_tail") or "")[-1200:] or None,
+             memory_retry=mem_retry)
     wh = _img_size(f)
     _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "completed", "source": "klein", "file": str(f), "fingerprint": fp,
                                       "at": now_iso(), "model": engine, "size": wh, "seed": seed, "steps": steps, "alpha": alpha,
                                       "upsampled": upsample, "caption": one.get("caption"), "refs": [r["file"] for r in params["refs"]],
                                       "request_file": str(reqf), "seconds": one.get("seconds"), "cost_usd_estimate": 0.0,
-                                      "stub": bool(res.get("stub"))}, use=f.name)
+                                      "stub": bool(res.get("stub")), "memory_retry": mem_retry}, use=f.name)
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name)
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "engine": engine, "seed": seed, "upsampled": upsample,
          "caption": one.get("caption"), "refs": len(refs), "cost_usd_estimate": 0.0, "elapsed_s": round(time.time() - t0, 1),
-         "fingerprint": fp, "stub": bool(res.get("stub")), **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
+         "fingerprint": fp, "stub": bool(res.get("stub")), "memory_retry": mem_retry,
+         "prompt_overlay_words": _overlay_words(prompt),
+         **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
          "note": "view the image before you use it (the QC of reference/static §8); caption is what the image model received; this attempt "
                  "is now the one the edit uses"})
 
@@ -9063,6 +9109,104 @@ def _img_brand(a):
                  "one the edit uses; `T image use --attempt <base's>` goes back"})
 
 
+def _img_text(a):
+    """The text in a video's stills, as facts (static §8; 2026-11-07: eleven stills carried a made-up subtitle line along the bottom):
+    every line RapidOCR reads in each still in use (or --image K), its box in the picture's pixels, its confidence, the letters it holds
+    and whether it sits in the bottom third, where a subtitle-like line falls. Which line belongs to a sign, a page, a screen or a logo and
+    which one is a stray subtitle is the agent's reading (view the image). Writes 60-outputs/video-NN/image-text.json."""
+    global _OCR
+    rd, _st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    folder, rec_p = _img_where(rd, nn, None)
+    try:
+        rec = json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}
+    except (OSError, ValueError):
+        fail(f"no images recorded for video {nn}", 2)
+    keys = [f"{int(a.image):02d}"] if a.image else sorted(k for k in rec if k != "thumb")
+    try:
+        with _OCR_LOCK:
+            if _OCR is None:
+                from rapidocr_onnxruntime import RapidOCR  # type: ignore
+                _OCR = RapidOCR()
+        from PIL import Image
+        import numpy as np
+    except Exception as e:  # noqa: BLE001
+        fail(f"OCR is not available here: {str(e)[:200]}", 1)
+    rows = []
+    for k in keys:
+        use = (rec.get(k) or {}).get("use")
+        f = folder / use if use else None
+        if not f or not f.is_file():
+            rows.append({"image": int(k), "file": None, "lines": [], "note": "no file in use"})
+            continue
+        with Image.open(f) as im:
+            im = im.convert("RGB")
+            W, H = im.size
+            sm = im.copy()
+            sm.thumbnail((1280, 1280))
+            sx, sy = W / sm.width, H / sm.height
+            arr = np.asarray(sm)[:, :, ::-1].copy()
+        with _OCR_LOCK:
+            result, _ = _OCR(arr)
+        lines = []
+        for box, text, score in (result or []):
+            if not str(text).strip() or float(score) < 0.5:
+                continue
+            xs, ys = [p[0] * sx for p in box], [p[1] * sy for p in box]
+            bx = [round(min(xs)), round(min(ys)), round(max(xs)), round(max(ys))]
+            lines.append({"text": str(text).strip(), "score": round(float(score), 2), "box": bx,
+                          "letters": sum(ch.isalpha() for ch in str(text)), "words": len(str(text).split()),
+                          "in_bottom_third": bx[1] >= H * 2 / 3, "width_share": round((bx[2] - bx[0]) / W, 3)})
+        rows.append({"image": int(k), "file": str(f), "lines": lines})
+    res = {"video": nn, "made": now_iso(), "images": rows}
+    write_json(rd / "60-outputs" / f"video-{nn}" / "image-text.json", res)
+    out({"ok": True, "file": str(rd / "60-outputs" / f"video-{nn}" / "image-text.json"), "images": len(rows),
+         "with_lines_in_bottom_third": [r["image"] for r in rows if any(x["in_bottom_third"] and x["letters"] >= 6 for x in r["lines"])],
+         "note": "facts: a long line of letters across the bottom third reads like a made-up subtitle (view the image): a redraw reason by "
+                 "QC fixes, with the prompt checked for caption words first (static §5, §8); words on a sign, a page or a screen may stay"})
+
+
+def _img_cast(a):
+    """A cast sheet: the anchors in use cropped to their figures and set side by side on one plain card (static §5; 2026-11-07: FLUX 3
+    Klein's memory guard stopped every still with 3-4 character references on this PC, each taken at 1 MP; one sheet is one reference).
+    Writes 30-assets/characters/cast-<ids>.png; the prompt then says who stands where on it, from left to right."""
+    from PIL import Image, ImageChops
+    rd, _st = _state_of(a.run)
+    ids = [x.strip().upper() for x in str(a.ids or "").split(",") if x.strip()]
+    if len(ids) < 2:
+        fail("cast needs --ids C1,C2[,...] (two or more characters)", 2)
+    d = rd / "30-assets" / "characters"
+    try:
+        anchors = json.loads((d / "anchors.json").read_text(encoding="utf-8")).get("images") or {}
+    except (OSError, ValueError):
+        anchors = {}
+    figs, used = [], []
+    for c in ids:
+        use = (anchors.get(c) or {}).get("use")
+        p = d / use if use else d / f"{c}-a1.png"
+        if not p.is_file():
+            fail(f"no anchor in use for {c} in {d}", 2)
+        im = Image.open(p).convert("RGB")
+        bg = Image.new("RGB", im.size, im.getpixel((8, 8)))
+        bb = ImageChops.difference(im, bg).convert("L").point(lambda v: 255 if v > 24 else 0).getbbox() or (0, 0, im.width, im.height)
+        m = 40
+        figs.append(im.crop((max(0, bb[0] - m), max(0, bb[1] - m), min(im.width, bb[2] + m), min(im.height, bb[3] + m))))
+        used.append(str(p))
+    h = max(f.height for f in figs)
+    figs = [f.resize((max(1, round(f.width * h / f.height)), h), Image.Resampling.LANCZOS) for f in figs]
+    gap = 60
+    canvas = Image.new("RGB", (sum(f.width for f in figs) + gap * (len(figs) + 1), h + 2 * gap), (232, 232, 230))
+    x = gap
+    for f in figs:
+        canvas.paste(f, (x, gap))
+        x += f.width + gap
+    out_p = d / f"cast-{'-'.join(ids)}.png"
+    canvas.save(out_p)
+    out({"ok": True, "file": str(out_p), "order_left_to_right": ids, "anchors": used, "size": list(canvas.size),
+         "note": "pass it as the one --ref of a still that shows three or more of them; the prompt describes each by look, left to right, "
+                 "with no names (a name in the prompt can be written into the picture)"})
+
+
 FETCH_UA = "awl-video-tool/1.0 (local video pipeline)"
 
 
@@ -9141,7 +9285,7 @@ def cmd_image(a):
     """Static stills (contract item 36): generate (OpenAI Images API, ledgered) | prompts (the file a user makes them from) | intake (the
     user's folder, copied in) | use (which attempt the edit takes) | brand (a brand's real logo composited onto a surface, stray marks
     covered). Facts only; the agent views and judges every image."""
-    {"generate": _img_generate, "prompts": _img_prompts, "intake": _img_intake, "use": _img_use, "brand": _img_brand}[a.action](a)
+    {"generate": _img_generate, "prompts": _img_prompts, "intake": _img_intake, "use": _img_use, "brand": _img_brand, "text": _img_text, "cast": _img_cast}[a.action](a)
 
 
 # ---- the local workers (Qwen3-TTS, ACE-Step 1.5): each runs in its own Python, one model load per call, one JSON line back
@@ -12209,7 +12353,7 @@ def main():
                                     "static_images=klein; ledgered) | prompts (the file a user makes them from) | intake (the user's folder, "
                                     "copied in) | use (which attempt the edit takes) | brand (a brand's real logo composited onto a "
                                     "surface of the still, stray marks covered)")
-    p.add_argument("action", choices=["generate", "prompts", "intake", "use", "brand"]); p.add_argument("--run", required=True)
+    p.add_argument("action", choices=["generate", "prompts", "intake", "use", "brand", "text", "cast"]); p.add_argument("--run", required=True)
     p.add_argument("--video", help="the video, NN"); p.add_argument("--image", type=int, help="generate, use: the image's number in the video's plan")
     p.add_argument("--anchor", help="generate, use: a character's anchor image (its id, e.g. C1) instead of a video's image")
     p.add_argument("--thumbnail", action="store_true", help="generate, use: the video's YouTube thumbnail (thumb-aK) instead of a still; "
@@ -12234,6 +12378,7 @@ def main():
                                                        "holds something to hide: a stand-in shape, stray letters)")
     p.add_argument("--card-color", help="brand: the card's colour as #rrggbb (default the colour around the box)")
     p.add_argument("--margin", type=float, help="brand: the space around the logo inside the box, a share of its shorter side (default 0.12)")
+    p.add_argument("--ids", help="cast: the characters side by side, left to right, e.g. C2,C3,C4")
     p.add_argument("--cover", action="append", help="brand: x0,y0,x1,y1 painted with the colour around it (another brand's mark the model "
                                                     "drew, stray letters), repeatable")
     p.set_defaults(fn=cmd_image)

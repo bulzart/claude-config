@@ -49,15 +49,21 @@ stack a tall frame into panels, above all with no reference image).
 2. **Every image of the plan** (the agent, in order): its prompt file `RUN/40-briefs/video-NN-iKK-prompt.txt` (the plan's prompt, the
    style lock, §5's composition, who is who when a reference image rides along), then
    `T image generate --run RUN --video NN --image K --prompt-file RUN/40-briefs/video-NN-iKK-prompt.txt [--ref <photo or anchor> …]` (the
-   photo or anchor of each character it shows; at most 16, with FLUX 3 Klein 10). The size and quality (the API's) are the run's format
-   (`state.json → static.format`); never another size.
-3. **View the image** (Read the file) and check it (static §8). A failure, by QC fixes: `auto` change the prompt or the references by the
+   photo or anchor of each character it shows; at most 16, with FLUX 3 Klein 10; three or more characters: their one cast sheet, `T image
+   cast --run RUN --ids C2,C3,C4`). The size and quality (the API's) are the run's format (`state.json → static.format`); never another
+   size. The prompt never holds the words caption, subtitle, lower third or text overlay (static §5: the model then draws a made-up
+   subtitle) and ends on the clean-picture sentence; the answer's `prompt_overlay_words` must be empty, else rewrite the prompt. Every
+   image call runs in the foreground (never a background loop: Claude Code ends background commands when memory runs low).
+3. **View the image** (Read the file) and check it (static §8); after the stills, `T image text --run RUN --video NN` lists every line
+   of letters in them (a long line across the bottom third that no sign, page or screen carries is a made-up subtitle: a failure). A
+   failure, by QC fixes: `auto` change the prompt or the references by the
    diagnosis and draw again (`--again` only when nothing but the draw changes), at most two re-draws per image, then the best one,
    flagged; `ask` the proposal and stop (the contract's QC fixes rule, blocker `qc_fix_permission`); `off` keep it, noted.
 4. `moderation_blocked` (the API): rewrite the prompt (or drop the reference that sets it off) before any new call; refused again: show
    that moment of the line another way, noted. A timeout leaves the ledger `unknown`: decide before sending again. FLUX 3 Klein's
-   failure answer carries the error and the end of ComfyUI's log: a memory stop means other programs hold the RAM (say so; never retry
-   in a loop).
+   failure answer carries the error and the end of ComfyUI's log: a memory stop the toolkit already ran once more after the memory came
+   back (`memory_retry`); one that still fails means other programs hold the memory (say so, go on with the next image, and make it
+   again once at the end; never retry in a loop).
 5. An earlier attempt is the better one: `T image use --run RUN --video NN --image K --attempt M`.
 5b. **Logos** (static §5 "Real things look like themselves"): an image whose plan has a `logo`, once made and viewed: read the box of its
    blank surface off the picture, `T image brand --run RUN --video NN --image K --logo <the plan's file> --box x0,y0,x1,y1 [--card]`, and

@@ -95,8 +95,9 @@ videos only (their numbers from `T static subjects`); the videos already in `sta
   proposal is about image re-draws, with the cost from `cost_usd_estimate`.
   **A long video** (more than about 40 stills in its plan, e.g. a 12-minute video at 5 s a still holds about 144): its stills are split
   across image agents, each a stretch of about 30–40 in plan order (spawn message `Video NN, images K1-K2: S3 only`; the one with the
-  last stretch also makes the thumbnail, `… and the thumbnail`), all at once within the agents-at-once count (with FLUX 3 Klein they take
-  turns on the GPU; the API draws in parallel). When every stretch has reported, one edit agent (`Video NN: S4 and X10`) builds the edit
+  last stretch also makes the thumbnail, `… and the thumbnail`): with the API all at once within the agents-at-once count; with FLUX 3
+  Klein one after another, each making its images in the foreground (one GPU; three Klein agents at once ran this PC's commit memory
+  short and Claude Code ended their background loops, 2026-11-07: static §5). When every stretch has reported, one edit agent (`Video NN: S4 and X10`) builds the edit
   and the record from them. The image agents' files are `60-outputs/video-NN/images-K1-K2.json` (their images, attempts, re-draws, costs,
   flags); the edit agent sums them into `result.json`.
 - **Free runs:** each agent's spawn message names its video's kind (`Video NN, kind recreate|create`, from `state.json → videos_kind`), and the contract's "Video kind" line says that the kind selects the Recreate or the Create branch of every per-video step.

@@ -77,6 +77,11 @@ Hard rules:
 - Nothing religious or superstitious, ever (<AWL>/reference/static/110_11_no-religion-and-no-superstition.md): no religious figure,
   place, symbol, idol, rite or superstition in a still, the thumbnail, the title or a caption; a prompt describes a secular scene and never
   names what must stay out; an image that shows one is a regenerate reason by QC fixes (off: named in the brief and result.json).
+- No subtitle-like text in any image (<AWL>/reference/static/050_5_images-a6s-plan-s3.md): no prompt holds the words caption,
+  subtitle, lower third or text overlay (the answer's `prompt_overlay_words` stays empty), every prompt ends on the clean-picture
+  sentence, and `T image text` is read after the stills; words only on things that carry them (signs, pages, screens, logos).
+- With FLUX 3 Klein every image call runs in the foreground, one at a time (never a background loop: Claude Code ends background
+  commands when memory runs low); three or more characters ride with one cast sheet (`T image cast`).
 - Real things look like themselves (<AWL>/reference/static/050_5_images-a6s-plan-s3.md): a logo the plan places is the official file,
   put on its surface with `T image brand` (never drawn by the model); another brand's mark the model drew is painted over (`--cover`);
   a known person keeps their anchor's likeness.
