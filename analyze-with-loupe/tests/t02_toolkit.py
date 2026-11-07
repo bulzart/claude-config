@@ -1642,6 +1642,12 @@ js, _, _ = t("image", "text", "--run", str(KR), "--video", "01", "--image", "3",
 _tx = json.loads((KR / "60-outputs" / "video-01" / "image-text.json").read_text(encoding="utf-8"))["images"][0]["lines"]
 check(js.get("ok") and js.get("with_lines_in_bottom_third") == [3] and any(x["in_bottom_third"] and "SUBTITLE" in x["text"].upper() for x in _tx),
       "image text reads the letters in a still with their box and marks a line in the bottom third")
+js_all, _, _ = t("image", "text", "--run", str(KR), "--video", "01", env=KENV)
+js_one, _, _ = t("image", "text", "--run", str(KR), "--video", "01", "--image", "3", env=KENV)
+_tx = json.loads((KR / "60-outputs" / "video-01" / "image-text.json").read_text(encoding="utf-8"))["images"]
+check(js_all.get("ok") and js_one.get("images") == 1 and js_one.get("images_in_file") == js_all.get("images") == len(_tx) >= 2
+      and [r["image"] for r in _tx] == sorted(r["image"] for r in _tx),
+      "image text for one still (after a redraw) replaces only that still's row; the other stills' rows stay in the file")
 
 # the references' real YouTube titles and thumbnails (the user, 2026-11-07: "in the references folder there is also a context.txt file ...
 # how_to_drive_a_car.mp4|How do you drive a car|C:/users.../how_to_drive.png ... (image files stand at /thumbnails folder)")

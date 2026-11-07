@@ -1213,3 +1213,31 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   and 7, awl-static-images 5b, the Static contract and item 36. New `T fetch-image` (a logo or a photo from a URL or Wikimedia Commons,
   with its source and licence beside it) and `T image brand` (the logo file fitted into a box of the still, on a card when something
   must be hidden; `--cover` paints over another brand's mark; the next attempt, the generated one kept).
+
+## 2026-11-07 · Static: no subtitle-like text in any image, and the memory margin of FLUX 3 Klein
+
+- **Asked:** "i25-a1 is incorrect due to unreadable and non sense subtitle/captions style text appearing ... they all have the same
+  problem ... so try to push no captions or subtitles style text in any image generation at all, it can have text over
+  objects,books,logos,brands,inside screens,or whatever, just not subtitles style text whatsoever, redo them again"; "also make sure to
+  avoid this error in the future runs of the static mode".
+- **Found:** every plan prompt said "the bottom fifth of the frame, where captions sit, holds only floor ..."; with no reference image and
+  no upsampler, FLUX 3 Klein read "captions" as a request and drew a line of made-up letters across the bottom (eleven stills, and the
+  cut-off tops of one at the bottom edge of a twelfth, which the text reader cannot see). Other prompt words that drew what they named:
+  a sentence about people placed at different depths put people into empty scenes; "a split picture" came back as two panels; city
+  names were written onto a map, one over the wrong continent.
+- **Changed:** static §5 "No subtitle-like text, ever": no prompt holds caption, subtitle, lower third, title bar or text overlay; every
+  prompt ends on the clean-picture sentence; words only on things that carry them; one picture, never a split picture; a map centred on
+  its region, its pins placed in words, no place names. `T image generate` lists such words in its answer (`prompt_overlay_words`); new
+  `T image text` (RapidOCR) lists every line of letters in the stills with its box and whether it sits in the bottom third, the reading
+  is the agent's (a sign, a page or a screen may keep its words); run for one still it replaces only that still's row. §8 adds the
+  check and the bottom edge looked at. The plan of video 02 was rewritten without the caption sentence and 12 stills drawn again
+  (63 and 93 once more after the split picture and the map).
+- **Found (the same day):** FLUX 3 Klein peaks at about 11.2-11.6 GB with one or two references and the guard's floor is 3.0 GB, so a
+  job needs about 14.6 GB of free commit; this PC sits near 14.8 GB. WPS Office helpers, the toolkit's test suite run beside the images
+  and two image calls at once each tipped it (six stops). A cast sheet fits in memory but costs composition (13 stills kept its
+  front-facing lineup, 4 came back as the sheet itself).
+- **Changed:** after a guard stop `T image generate` waits for the commit memory (15 GB by default) and runs the job once more
+  (`memory_retry`); new `T image cast` (the anchors cropped side by side, one reference); §5: nothing else heavy runs while Klein makes
+  images, the main session included; two characters ride with their own two anchors, a cast sheet only for three or more, every still
+  made with one viewed for the lineup; awl-static-images steps 2-4, awl-analyze-produce A9b (one image agent at a time, in the
+  foreground) and the Static contract.

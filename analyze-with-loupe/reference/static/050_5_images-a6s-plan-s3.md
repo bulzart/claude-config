@@ -56,14 +56,19 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   shows only the wooden floor"), no text, letters, numbers, logos or watermarks in the picture unless the
   story needs a sign or a page (then the exact words), no added sticker or emoji (contract item 6), and a secular scene described in
   positive terms with nothing religious or superstitious in it (§11: a palace throne hall, never a cathedral; a "red X" mark, never a
-  "red cross"; the prompt names what is there, never what must stay out).
+  "red cross"; the prompt names what is there, never what must stay out). One picture, never a split picture, a side-by-side or panels
+  (§8): two ideas share one place (2026-11-07: "a split picture" of a full hotel and an empty spare room came back as two panels with a
+  seam; one street with the hotel and the house next door read as one scene). A map is centred on the region its pins mark and says
+  where they stand, not the places' names (2026-11-07: the cities' names were written onto the map, one over the wrong continent, and
+  pins "in western Europe" on a whole world map landed on the United States; centred on Europe they landed on Europe).
 - **No subtitle-like text, ever** (the user, 2026-11-07: "try to push no captions or subtitles style text in any image generation at
   all, it can have text over objects, books, logos, brands, inside screens, or whatever, just not subtitles style text whatsoever"):
   a prompt never holds the words caption, subtitle, lower third, title bar or text overlay, not even to keep a band clear: the model
   reads them as a request and draws a line of made-up letters across the bottom (2026-11-07: eleven stills whose prompts said "where
   captions sit"); `T image generate` lists any such word it finds in its answer (`prompt_overlay_words`), and a prompt that has one is
-  rewritten before it is sent again. Every prompt ends on one clean-picture sentence: "Nothing is laid over the picture: it is one
-  clean illustration from edge to edge." Words appear only on the things that carry them in the scene (a sign, a page, a screen, a
+  rewritten before it is sent again. Every prompt ends on one clean-picture sentence in the style lock's medium: "Nothing is laid over
+  the picture: it is one clean illustration from edge to edge." (a photoreal lock: "one clean photograph"; a painted one: "one clean
+  painting"). Words appear only on the things that carry them in the scene (a sign, a page, a screen, a
   logo, a package), and a name stays out of the prompt unless it is meant to be written (a cast's names in a prompt got written onto
   a cheque).
 - **Scale and depth**, when a character's reference image rides with other people, animals or buildings in the frame: the models tend to
@@ -75,7 +80,9 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   reference of every image that shows them. The prompt names who is who ("the man in the first image"). A still that shows three or
   more characters rides with one **cast sheet** (`T image cast --run RUN --ids C2,C3,C4`: their anchors cropped side by side) instead
   of one reference each, the prompt describing each by look from left to right, never by name: FLUX 3 Klein takes every reference at
-  1 MP, and on this PC its memory guard stopped every still with 3-4 references (2026-11-07). Every image copies the anchor's
+  1 MP, and on this PC its memory guard stopped every still with 3-4 references (2026-11-07). A cast sheet costs composition (the same
+  day: the people kept its front-facing lineup in 13 stills, and 4 came back as the sheet itself instead of the scene), so every still
+  made with one is viewed for that, and two characters ride with their own two anchors (two references fit in memory). Every image copies the anchor's
   details, so view it for an ornament that reads as a letter or symbol (braid loops, embroidery, a pattern): it comes back in every image
   (2026-11-06: lapel braid loops read as a repeated "N"). The sheet prompt names the ornament plainly ("plain straight gold braid").
 - **Real things look like themselves** (the user, 2026-11-07: "if there's a company, or a brand being talked about, their logo should
@@ -112,7 +119,8 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   The model's peak sits a few hundred MB from the memory guard's floor on this PC: a job the guard stops is run once more by the
   toolkit once the commit memory is back (`memory_retry` in the answer); image calls run in the foreground (Claude Code ends background
   commands when memory runs low, and their GPU lock with them), and one image agent works at a time (three at once stopped a third of
-  the stills, 2026-11-07).
+  the stills, 2026-11-07). While it makes images nothing else heavy runs on this PC, the main session included: no test suite, no second
+  image call, no model load (2026-11-07: the toolkit's tests run beside the images were one cause of six guard stops).
   Every Klein prompt says the picture is one continuous scene from a single camera viewpoint filling the whole frame, above all one with
   no reference image: the upsampler may otherwise lay a tall frame out as stacked panels (2026-11-06: an image with no reference came back
   as two pictures with a hard seam; with that sentence the seven after it were single scenes).

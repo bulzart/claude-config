@@ -9158,9 +9158,18 @@ def _img_text(a):
                           "letters": sum(ch.isalpha() for ch in str(text)), "words": len(str(text).split()),
                           "in_bottom_third": bx[1] >= H * 2 / 3, "width_share": round((bx[2] - bx[0]) / W, 3)})
         rows.append({"image": int(k), "file": str(f), "lines": lines})
-    res = {"video": nn, "made": now_iso(), "images": rows}
-    write_json(rd / "60-outputs" / f"video-{nn}" / "image-text.json", res)
-    out({"ok": True, "file": str(rd / "60-outputs" / f"video-{nn}" / "image-text.json"), "images": len(rows),
+    out_p = rd / "60-outputs" / f"video-{nn}" / "image-text.json"
+    kept = []
+    if a.image:
+        # one still read again (after a redraw): its row replaces the old one and the other stills' rows stay in the file
+        try:
+            old = json.loads(out_p.read_text(encoding="utf-8")).get("images") or []
+        except (OSError, ValueError):
+            old = []
+        kept = [r for r in old if r.get("image") not in {x["image"] for x in rows}]
+    res = {"video": nn, "made": now_iso(), "images": sorted(kept + rows, key=lambda r: r.get("image") or 0)}
+    write_json(out_p, res)
+    out({"ok": True, "file": str(out_p), "images": len(rows), "images_in_file": len(res["images"]),
          "with_lines_in_bottom_third": [r["image"] for r in rows if any(x["in_bottom_third"] and x["letters"] >= 6 for x in r["lines"])],
          "note": "facts: a long line of letters across the bottom third reads like a made-up subtitle (view the image): a redraw reason by "
                  "QC fixes, with the prompt checked for caption words first (static §5, §8); words on a sign, a page or a screen may stay"})
