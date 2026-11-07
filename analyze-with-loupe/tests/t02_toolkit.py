@@ -1297,6 +1297,39 @@ check(js.get("ok") and js.get("undecided") == [] and -1 / 30 - 1e-6 <= _ef[1]["s
       and abs(_ef[3]["start"] - 0.3) < 1e-6 and _ef[3]["track"] == "fx2" and _ef[4]["track"] == "fx1" and _ef[3]["dur_s"] == 1.0,
       "slideshow plan puts each effect on the timeline: its anchor second on its moment (a cut, a line, a second), the scan's key colour, "
       "overlapping overlays on separate tracks")
+# a map's place names as CapCut text (the user, 2026-11-07: "Yes, as CapCut text"): slideshow plan carries each image's labels and lists
+# a look the plan leaves out; capcut-labels places them over the image's span in the plan's look
+_plan_lb = json.loads(json.dumps(_plan_fx))
+_plan_lb["images"][1]["labels"] = [{"text": "London", "x_rel": 0.48, "y_rel": 0.3}, {"text": "Sao Paulo", "x_rel": 0.3, "y_rel": 0.7}]
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan_lb), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01", ok=False)
+check(js.get("ok") is False and any(u.startswith("labels_style: no font_file") for u in js.get("undecided") or [])
+      and [lb[1] for lb in js.get("labels") or []] == ["London", "Sao Paulo"],
+      "slideshow plan carries an image's labels to the timeline and lists the labels' look the plan leaves undecided")
+_plan_lb["labels_style"] = {"font_file": "C:/Windows/Fonts/arial.ttf", "size": 7, "fill": "#FFFFFF", "stroke_color": "#000000",
+                            "stroke_width": 0.12, "shadow": True}
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan_lb), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01")
+_mv = str(_plan_lb["images"][1].get("motion") or "none") != "none"
+check(js.get("ok") and js.get("labels_on_moving_images") == ([2] if _mv else []),
+      "slideshow plan lists a labelled image that moves (a label does not follow a move)")
+_lbd = home.parent / "labels-drafts"
+subprocess.run([shutil.which("capcut.cmd") or shutil.which("capcut") or "capcut", "init", "lbl", "--drafts", str(_lbd), "--width", "1080",
+                "--height", "1920"], capture_output=True, text=True)
+js, code, _ = t("capcut-labels", "--draft", str(_lbd / "lbl"), "--run", str(SR), "--video", "01", env=SENV, ok=False)
+if code == 3:
+    print("SKIP  capcut-labels: CapCut is running on this machine")
+else:
+    _c = json.loads((_lbd / "lbl" / "draft_content.json").read_text(encoding="utf-8"))
+    _segs = [s for tr in _c["tracks"] if tr.get("name") == "labels" for s in tr["segments"]]
+    _tl2 = json.loads((SR / "40-briefs" / "video-01-timeline.json").read_text(encoding="utf-8"))["images"][1]
+    check(code == 0 and js.get("labels") == 2 and len(_segs) == 2
+          and all(abs(s["target_timerange"]["start"] / 1e6 - _tl2["start"]) < 1e-3 for s in _segs)
+          and abs(_segs[0]["clip"]["transform"]["x"] - (-0.04)) < 1e-6 and abs(_segs[0]["clip"]["transform"]["y"] - 0.4) < 1e-6
+          and js.get("font"),
+          "capcut-labels puts each label on the track 'labels' over its image's span, its centre in CapCut's units, in the plan's font")
+    js, code, _ = t("capcut-labels", "--draft", str(_lbd / "lbl"), "--run", str(SR), "--video", "01", env=SENV, ok=False)
+    check(code == 2 and "already has" in str(js.get("error")), "capcut-labels places the labels once per build (a second run is refused)")
 (SR / "40-briefs" / "video-01-images.json").write_text(json.dumps({**_plan, "effects": [
     {"id": _ids["green.mp4"], "type": "overlay", "join": 2, "fit": "cover", "why": "x"},
     {"file": str(_fx / "nope.mp4"), "type": "sfx", "at_s": 1.0, "anchor_s": 0.0, "volume": 1.0, "why": "x"},
@@ -1648,6 +1681,20 @@ _tx = json.loads((KR / "60-outputs" / "video-01" / "image-text.json").read_text(
 check(js_all.get("ok") and js_one.get("images") == 1 and js_one.get("images_in_file") == js_all.get("images") == len(_tx) >= 2
       and [r["image"] for r in _tx] == sorted(r["image"] for r in _tx),
       "image text for one still (after a redraw) replaces only that still's row; the other stills' rows stay in the file")
+# separate references where they fit (the user, 2026-11-07: "Separate where it fits"): fit gives the free memory against each count
+js, _, _ = t("image", "fit", "--run", str(KR), env=KENV)
+_rows = {r["refs"]: r for r in js.get("by_refs") or []}
+check(js.get("ok") and sorted(_rows) == [0, 1, 2, 3, 4] and all(r["need_gb"] == round(r["peak_gb"] + js["guard_floor_gb"], 2) for r in _rows.values())
+      and _rows[3]["peak_from"].startswith("config"),
+      "image fit lists, for 0-4 references, the peak (the config's table when the run measured none), the need (peak + floor) and the headroom")
+_ir = KR / "60-outputs" / "video-01" / "images.json"
+_d = json.loads(_ir.read_text(encoding="utf-8"))
+_d["images"].setdefault("09", {"attempts": []})["attempts"].append(
+    {"attempt": 1, "status": "failed", "refs_count": 3, "error": "[memguard] STOPPED the app ... peak memory used by the app: 12.90 GB (cap 16.0 GB)"})
+_ir.write_text(json.dumps(_d), encoding="utf-8")
+js, _, _ = t("image", "fit", "--run", str(KR), "--n-refs", "3", env=KENV)
+check(js.get("ok") and len(js.get("by_refs") or []) == 1 and js["by_refs"][0]["peak_gb"] == 12.9 and js["by_refs"][0]["peak_from"] == "this run's jobs",
+      "image fit takes the run's own measured peak (here from a stopped job's guard line) over the config's table")
 
 # the references' real YouTube titles and thumbnails (the user, 2026-11-07: "in the references folder there is also a context.txt file ...
 # how_to_drive_a_car.mp4|How do you drive a car|C:/users.../how_to_drive.png ... (image files stand at /thumbnails folder)")

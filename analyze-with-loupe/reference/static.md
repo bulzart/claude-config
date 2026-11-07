@@ -21,10 +21,10 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 8.1 |
 | 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 2.5 |
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 3.0 |
-| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 15.6 |
+| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 17.0 |
 | 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 7.4 |
-| 7 | The edit (S4) | `070_7_the-edit-s4.md` | 5.8 |
-| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 4.5 |
+| 7 | The edit (S4) | `070_7_the-edit-s4.md` | 6.0 |
+| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 4.7 |
 | 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 7.5 |
 | 10 | One channel per run | `100_10_one-channel-per-run.md` | 5.8 |
 | 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 3.1 |

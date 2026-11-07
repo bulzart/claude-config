@@ -1241,3 +1241,21 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   images, the main session included; two characters ride with their own two anchors, a cast sheet only for three or more, every still
   made with one viewed for the lineup; awl-static-images steps 2-4, awl-analyze-produce A9b (one image agent at a time, in the
   foreground) and the Static contract.
+
+## 2026-11-07 · Static: separate references where they fit, and a map's place names as CapCut labels
+
+- **Asked (the wrap-up of video 02):** for stills with three or more characters, "Separate where it fits"; for maps, the city names
+  "Yes, as CapCut text".
+- **Changed:** `_worker` keeps the memory guard's "peak memory used by the app" of every job (`peak_gb`), and each FLUX 3 Klein attempt
+  records it with its number of references (`refs_count`). New `T image fit --run RUN [--n-refs N]`: the free commit memory now, the
+  guard's floor and, per number of references, the highest peak the run's jobs reached (else `config.json → static.klein.peak_gb_by_refs`,
+  measured on this PC: 11.3, 11.4, 11.9, 12.3, 12.5 GB for 0-4), the need (peak + floor) and the headroom; the agent gives each
+  character their own anchor where the headroom allows, else one cast sheet (static §5, awl-static-images step 2, the contract). The
+  memory retry waits for the larger of 15 GB and that need.
+- **Changed:** a plan image may carry `labels` (each label's text and centre, read off the made picture) and the plan one `labels_style`
+  (font file, size, fill, outline, shadow: nothing stock, `T slideshow plan` lists what is left out). `T slideshow plan` carries them to
+  the timeline and lists a labelled image that moves (`labels_on_moving_images`: a label does not follow a move); new
+  `T capcut-labels --draft D --run RUN --video NN` adds them through capcut-cli (`add-text` at the image's span and the centre in
+  CapCut's half-canvas units, `text-style` for the outline and shadow, `T capcut-font --track labels`), once per build. Static §5
+  "Labels", §7, §8, awl-static-images 5c, awl-static-edit, the contract. Verified on a scratch project: two labels at 3.0 s for 4.5 s,
+  Sigmar One, outline 0.12, shadow on.

@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (5.8 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (4.5 KB)
+- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (6.0 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (4.7 KB)
 - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
 - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.2 KB)
@@ -54,8 +54,9 @@ Only these section files for this phase, nothing else unless a step below says s
      --align 1 --y <1 − 2 × y_rel>` (plus `--shadow`, `--bg-color`/`--bg-alpha`, `--highlight-words … --keyword-color … --keyword-size …`
      as the look has them), the font with `T capcut-font --draft "<draft>" --font-file <font_file> --track subtitle` (it also writes the
      outline, box and shadow where CapCut 9.x draws them: `outlines_in_styles`), the entrance with `T capcut-text-anim --draft "<draft>"
-     --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s> --run RUN` (CapCut's own intro on every caption), any
-     other text with `capcut add-text` in its own look (its font with
+     --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s> --run RUN` (CapCut's own intro on every caption),
+     the labels when the timeline has any (a map's place names, static §5 "Labels") with `T capcut-labels --draft "<draft>" --run RUN
+     --video NN` (once per build), any other text with `capcut add-text` in its own look (its font with
      `T capcut-font --draft "<draft>" --font-file <file> --track text`), then
      `T capcut-repair --draft "<draft>" --keep-text` (register, the media links, sync, lint; the text stays as you set it; no `--preview`:
      no proxy video). capcut-assembly's house text style (§1, §4, §5) does not apply in Static.

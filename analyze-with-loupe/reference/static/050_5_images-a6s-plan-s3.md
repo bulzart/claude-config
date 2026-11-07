@@ -60,7 +60,17 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   (§8): two ideas share one place (2026-11-07: "a split picture" of a full hotel and an empty spare room came back as two panels with a
   seam; one street with the hotel and the house next door read as one scene). A map is centred on the region its pins mark and says
   where they stand, not the places' names (2026-11-07: the cities' names were written onto the map, one over the wrong continent, and
-  pins "in western Europe" on a whole world map landed on the United States; centred on Europe they landed on Europe).
+  pins "in western Europe" on a whole world map landed on the United States; centred on Europe they landed on Europe); the names go
+  onto it as CapCut text (Labels below).
+- **Labels** (the user, 2026-11-07: a map's place names "as CapCut text"): a picture whose places the line names (a map with pins, a
+  route) carries the names as CapCut texts over it, never drawn by the model. Once the image is made and viewed, its plan entry gets
+  `"labels": [{"text": "London", "x_rel": 0.47, "y_rel": 0.33}, …]`: each label's centre read off the picture as shares of its width
+  and height from the top left, beside the pin or place it names (not on it), inside the frame and above the caption band, spelled as
+  the narration says it. The plan gets one `labels_style` for the video: `font_file`, `size`, `fill`, `stroke_color`, `stroke_width`,
+  `shadow` (the run's text look's font and colours unless the plan says why not; `T slideshow plan` lists any left out as undecided). A
+  label stays where it is put and does not follow a move, so an image with labels has the motion `none` (`T slideshow plan` lists any
+  that moves in `labels_on_moving_images`). A label on a pin that sits in the wrong place makes the error plain: the pins are checked
+  against the places first (§8), and a wrong pin is a redraw reason by QC fixes.
 - **No subtitle-like text, ever** (the user, 2026-11-07: "try to push no captions or subtitles style text in any image generation at
   all, it can have text over objects, books, logos, brands, inside screens, or whatever, just not subtitles style text whatsoever"):
   a prompt never holds the words caption, subtitle, lower third, title bar or text overlay, not even to keep a band clear: the model
@@ -77,12 +87,14 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   same height as, seated behind him, in the background, a full-sized horse he leads by the reins.
 - **Characters**: a character with a photo is the photo as a reference image of every image that shows them; one with only a description
   first gets an **anchor**: a neutral sheet image (`T image generate --anchor C1`, the look in words), viewed and kept, then used as the
-  reference of every image that shows them. The prompt names who is who ("the man in the first image"). A still that shows three or
-  more characters rides with one **cast sheet** (`T image cast --run RUN --ids C2,C3,C4`: their anchors cropped side by side) instead
-  of one reference each, the prompt describing each by look from left to right, never by name: FLUX 3 Klein takes every reference at
-  1 MP, and on this PC its memory guard stopped every still with 3-4 references (2026-11-07). A cast sheet costs composition (the same
-  day: the people kept its front-facing lineup in 13 stills, and 4 came back as the sheet itself instead of the scene), so every still
-  made with one is viewed for that, and two characters ride with their own two anchors (two references fit in memory). Every image copies the anchor's
+  reference of every image that shows them. The prompt names who is who ("the man in the first image"). Every character rides with
+  their own anchor where the memory fits them (the user, 2026-11-07: "Separate where it fits"): FLUX 3 Klein takes every reference at
+  1 MP, so before a still with three or more characters `T image fit --run RUN --n-refs N` gives the free commit memory against what N
+  references need on this PC (their measured peak plus the memory guard's floor). A negative headroom means the guard would stop it
+  (on this PC it stopped every still with 3-4 references, 2026-11-07), and the still then rides with one **cast sheet** (`T image cast
+  --run RUN --ids C2,C3,C4`: their anchors cropped side by side), the prompt describing each by look from left to right, never by name.
+  A cast sheet costs composition (the same day: the people kept its front-facing lineup in 13 stills, and 4 came back as the sheet
+  itself instead of the scene), so every still made with one is viewed for that. Every image copies the anchor's
   details, so view it for an ornament that reads as a letter or symbol (braid loops, embroidery, a pattern): it comes back in every image
   (2026-11-06: lapel braid loops read as a repeated "N"). The sheet prompt names the ornament plainly ("plain straight gold braid").
 - **Real things look like themselves** (the user, 2026-11-07: "if there's a company, or a brand being talked about, their logo should

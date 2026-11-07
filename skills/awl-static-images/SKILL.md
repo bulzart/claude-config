@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (15.6 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (4.5 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (17.0 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (4.7 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.5 KB)
 - *the plan has characters:*
@@ -49,8 +49,9 @@ stack a tall frame into panels, above all with no reference image).
 2. **Every image of the plan** (the agent, in order): its prompt file `RUN/40-briefs/video-NN-iKK-prompt.txt` (the plan's prompt, the
    style lock, §5's composition, who is who when a reference image rides along), then
    `T image generate --run RUN --video NN --image K --prompt-file RUN/40-briefs/video-NN-iKK-prompt.txt [--ref <photo or anchor> …]` (the
-   photo or anchor of each character it shows; at most 16, with FLUX 3 Klein 10; three or more characters: their one cast sheet, `T image
-   cast --run RUN --ids C2,C3,C4`). The size and quality (the API's) are the run's format (`state.json → static.format`); never another
+   photo or anchor of each character it shows; at most 16, with FLUX 3 Klein 10; three or more characters with FLUX 3 Klein: their own
+   anchors when `T image fit --run RUN --n-refs N`, read right before the call, shows headroom for them, else their one cast sheet,
+   `T image cast --run RUN --ids C2,C3,C4`). The size and quality (the API's) are the run's format (`state.json → static.format`); never another
    size. The prompt never holds the words caption, subtitle, lower third or text overlay (static §5: the model then draws a made-up
    subtitle) and ends on the clean-picture sentence; the answer's `prompt_overlay_words` must be empty, else rewrite the prompt. Every
    image call runs in the foreground (never a background loop: Claude Code ends background commands when memory runs low).
@@ -69,6 +70,9 @@ stack a tall frame into panels, above all with no reference image).
    blank surface off the picture, `T image brand --run RUN --video NN --image K --logo <the plan's file> --box x0,y0,x1,y1 [--card]`, and
    view the result (static §8). Another brand's mark the model drew in any image: `T image brand … --cover x0,y0,x1,y1`. A known person's
    anchor (step 1) rides with their photos (`--ref <photo>`), and every still that shows them with the anchor.
+5c. **Labels** (static §5 "Labels"): a map or route whose line names places, once made and viewed (its pins where the places are,
+   else a redraw reason by QC fixes): read each label's centre off the picture beside its pin and write it into the image's plan entry
+   (`"labels": [{"text", "x_rel", "y_rel"}]`, the motion `none`) and the plan's `labels_style`; the edit places them (`T capcut-labels`).
 6. **The YouTube thumbnail** (static §12), after the stills: its prompt file `RUN/40-briefs/video-NN-thumb-prompt.txt` (the plan's
    `thumbnail.prompt`, the style lock, its exact words when it has any), then `T image generate --run RUN --video NN --thumbnail --size
    <the plan's thumbnail.size> --prompt-file RUN/40-briefs/video-NN-thumb-prompt.txt [--ref <photo or anchor> …]`; view it at full size

@@ -22,7 +22,9 @@ The agent views and listens through the facts; `qc_fixes` (ask, auto, off) decid
   keeps their anchor's likeness in every still.
 - **The edit**, read back from the CapCut project (no local render, §7): `capcut_read_timeline`: each image at its line's start for its
   span, contiguous from 0 to the timeline's duration (no gap, no overlap, so no black frame), the narration and the bed on their tracks at
-  their offsets and gains; `T capcut-motion`: every image keyed with the timeline's `moves` (the moves themselves are the plan's, from the
+  their offsets and gains; the labels (§5): each on the track "labels" over its image's span, its words letter for letter, beside the
+  place it names (the picture viewed with the label positions), no labelled image moving; `T capcut-motion`: every image keyed with
+  the timeline's `moves` (the moves themselves are the plan's, from the
   references' measured pattern, and `edges_show` was empty); `T capcut-transitions`: every join the timeline's; each effect on its track
   at its moment, the `refused` list of `capcut-effects` empty; the captions: as many as `captions.srt` and the same words as the
   narration, the texts' look against the plan's `captions` (font, size, colours, outline, position, intro) as `capcut_read_timeline`

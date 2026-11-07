@@ -57,6 +57,7 @@ Subcommands (python awl.py <cmd> -h):
   capcut-name    free CapCut project name DD_Mon_YYYY_vNN for an Analyze Mode video
   capcut-prep    after capcut_clone_draft: set aside the template's identity/layout so `capcut register` rebuilds them
   capcut-font    Static: list the fonts on this PC (CapCut's own, then Windows') | set one font on a draft's texts (nothing else)
+  capcut-labels  Static: the timeline's labels (a place's name on a map) as CapCut texts over their images, in the plan's labels_style
   capcut-repair  after capcut_save: house text style + register + sync-timelines + lint (one machine-wide lock),
                  then a proxy preview
   capcut-text-style  every CapCut text layer → the user's locked house preset (config capcut.text_style.learned),
@@ -6309,6 +6310,74 @@ def cmd_capcut_text_anim(a):
         0 if not failed else 1)
 
 
+LABEL_TRACK = "labels"
+
+
+def cmd_capcut_labels(a):
+    """Static (the user, 2026-11-07: a map's place names "as CapCut text"): every label of the timeline (`T slideshow plan` takes them
+    from the plan's images) placed as a CapCut text on the track "labels" over its image's span, its centre where the plan read it off
+    the picture (x_rel, y_rel from the top left, turned into CapCut's half-canvas units, y up), in the plan's labels_style: size and
+    fill by capcut-cli `add-text`, outline and shadow by `text-style`, the font by `T capcut-font --track labels`. A label does not
+    follow a move: a labelled image that moves is listed in labels_on_moving_images (the plan's to change), never changed here."""
+    rd, _st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    d = Path(a.draft)
+    if not (d / "draft_content.json").is_file():
+        fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
+    try:
+        tl = json.loads((rd / "40-briefs" / f"video-{nn}-timeline.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"no timeline: run `T slideshow plan --run RUN --video {nn}` first", 2)
+    rows = [r for r in tl.get("images") or [] if r.get("labels")]
+    if not rows:
+        out({"ok": True, "draft": str(d), "labels": 0, "note": "the timeline has no labels (the plan's images carry none)"})
+    style = tl.get("labels_style") or {}
+    missing = [k for k in LABEL_STYLE_KEYS if k not in style]
+    if missing:
+        fail("labels_style leaves undecided: " + ", ".join(missing) + " (the plan's, static §5)", 2)
+    if not Path(str(style["font_file"])).is_file():
+        fail(f"labels_style.font_file not found: {style['font_file']}", 2)
+    if (d / ".locked").exists() or _capcut_running():
+        fail("CapCut is running: close it, then run this again", 3)
+    content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
+    if any(str(tr.get("name") or "") == LABEL_TRACK for tr in content.get("tracks", [])):
+        fail(f"the draft already has a {LABEL_TRACK!r} track: the labels are placed once per build", 2)
+    cli = _capcut_cli()
+    placed, failed = [], []
+    for r in rows:
+        start, dur = float(r["start"]), float(r["end"]) - float(r["start"])
+        for lb in r["labels"]:
+            x, y = round(2 * float(lb["x_rel"]) - 1, 4), round(1 - 2 * float(lb["y_rel"]), 4)
+            cp = run([cli, "add-text", str(d), f"{start:.6f}s", f"{dur:.6f}s", str(lb["text"]), "--font-size", str(style["size"]),
+                      "--color", str(style["fill"]), "--x", str(x), "--y", str(y), "--track-name", LABEL_TRACK], timeout=120)
+            res = _last_json(cp.stdout) or {}
+            sid = res.get("segment_id")
+            if cp.returncode != 0 or not sid:
+                failed.append({"image": r["image"], "text": lb["text"], "error": str(res.get("error") or cp.stderr or cp.stdout or "")[-300:]})
+                continue
+            args = [cli, "text-style", str(d), sid, "--border-width", str(style["stroke_width"]), "--border-color", str(style["stroke_color"])]
+            if style.get("shadow"):
+                args.append("--shadow")
+            cp2 = run(args, timeout=120)
+            if cp2.returncode != 0:
+                failed.append({"image": r["image"], "text": lb["text"], "error": "text-style: " + str(cp2.stderr or cp2.stdout or "")[-300:]})
+            placed.append({"image": r["image"], "text": lb["text"], "start": round(start, 6), "dur": round(dur, 6), "x": x, "y": y,
+                           "segment": sid})
+    font = None
+    if placed:
+        cp = run([sys.executable, str(Path(__file__).resolve()), "capcut-font", "--draft", str(d), "--font-file", str(style["font_file"]),
+                  "--track", LABEL_TRACK], timeout=300)
+        font = _last_json(cp.stdout) or {"ok": False, "error": str(cp.stderr or cp.stdout or "")[-300:]}
+        if not font.get("ok"):
+            failed.append({"step": "capcut-font", "error": str(font.get("error"))[:300]})
+    out({"ok": not failed, "draft": str(d), "track": LABEL_TRACK, "labels": len(placed), "placed": placed, "failed": failed[:5],
+         "labels_on_moving_images": [r["image"] for r in rows if str(r.get("motion") or "none") != "none"],
+         "font": (font or {}).get("family"),
+         "note": "read the project back (capcut_read_timeline): each label at its image's start for its span, its words letter for "
+                 "letter, beside the place it names; run `T capcut-repair --draft ... --keep-text` after the last write"},
+        0 if not failed else 1)
+
+
 def _xfade_for(name: str) -> str:
     """The check render's nearest ffmpeg xfade for a join (the CapCut project carries the real transition): an xfade name as it is, a
     CapCut transition by the words in its name, a plain fade otherwise."""
@@ -8816,7 +8885,9 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
             # of the stills at once). That is the moment, not the request: wait until the commit memory is back, then run it once more.
             if not res.get("ok") and "memguard" in (str(res.get("error") or "") + str(res.get("log_tail") or "")).lower() \
                     and "stopped" in (str(res.get("error") or "") + str(res.get("log_tail") or "")).lower():
-                need = float(_kcfg("retry_free_commit_gb", 15.0))
+                pk_cfg = _klein_peak_cfg(len(refs))
+                need = max(float(_kcfg("retry_free_commit_gb", 15.0)),
+                           (pk_cfg + float(_kcfg("guard_floor_gb", 3.0))) if pk_cfg is not None else 0.0)
                 before, t1 = _free_commit_gb(), time.time()
                 while _free_commit_gb() < need and time.time() - t1 < float(_kcfg("retry_wait_s", 180)):
                     time.sleep(5)
@@ -8829,19 +8900,21 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
         err = str(one.get("error") or res.get("error") or "no image")[:600]
         _img_ledger(rd, "set", fp=fp, status="failed", note=err[:200])
         _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "failed", "fingerprint": fp, "at": now_iso(), "request_file": str(reqf),
-                                          "engine": engine, "seed": seed, "error": err, "memory_retry": mem_retry})
+                                          "engine": engine, "seed": seed, "error": err, "memory_retry": mem_retry,
+                                          "refs_count": len(refs), "peak_gb": res.get("peak_gb")})
         fail(f"no image from FLUX 3 Klein: {err}", 1, fingerprint=fp, seed=seed, log_tail=str(res.get("log_tail") or "")[-1200:] or None,
-             memory_retry=mem_retry)
+             memory_retry=mem_retry, refs_count=len(refs), peak_gb=res.get("peak_gb"))
     wh = _img_size(f)
     _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "completed", "source": "klein", "file": str(f), "fingerprint": fp,
                                       "at": now_iso(), "model": engine, "size": wh, "seed": seed, "steps": steps, "alpha": alpha,
                                       "upsampled": upsample, "caption": one.get("caption"), "refs": [r["file"] for r in params["refs"]],
                                       "request_file": str(reqf), "seconds": one.get("seconds"), "cost_usd_estimate": 0.0,
-                                      "stub": bool(res.get("stub")), "memory_retry": mem_retry}, use=f.name)
+                                      "stub": bool(res.get("stub")), "memory_retry": mem_retry, "refs_count": len(refs),
+                                      "peak_gb": res.get("peak_gb")}, use=f.name)
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name)
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "engine": engine, "seed": seed, "upsampled": upsample,
          "caption": one.get("caption"), "refs": len(refs), "cost_usd_estimate": 0.0, "elapsed_s": round(time.time() - t0, 1),
-         "fingerprint": fp, "stub": bool(res.get("stub")), "memory_retry": mem_retry,
+         "fingerprint": fp, "stub": bool(res.get("stub")), "memory_retry": mem_retry, "peak_gb": res.get("peak_gb"),
          "prompt_overlay_words": _overlay_words(prompt),
          **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
          "note": "view the image before you use it (the QC of reference/static §8); caption is what the image model received; this attempt "
@@ -9175,6 +9248,65 @@ def _img_text(a):
                  "QC fixes, with the prompt checked for caption words first (static §5, §8); words on a sign, a page or a screen may stay"})
 
 
+def _klein_peak_cfg(n: int):
+    """The config's measured peak (GB) of a FLUX 3 Klein job with n reference images (static.klein.peak_gb_by_refs; the largest key not
+    over n), or None."""
+    tab = _kcfg("peak_gb_by_refs", {}) or {}
+    keys = sorted(int(k) for k in tab if str(k).isdigit())
+    if not keys:
+        return None
+    k = max([x for x in keys if x <= n] or [keys[0]])
+    return float(tab[str(k)])
+
+
+def _img_fit(a):
+    """Facts for the references of a still made by FLUX 3 Klein (static §5; the user, 2026-11-07: "Separate where it fits"): the free
+    commit memory now, the memory guard's floor, and for each number of reference images the highest peak this run's jobs reached (else
+    the config's table measured on this PC), the need (peak + floor) and the headroom (free - need). Whether a still takes its characters'
+    own anchors or one cast sheet is the agent's call."""
+    rd, _st = _state_of(a.run)
+    measured = {}
+    recs = list((rd / "60-outputs").glob("video-*/images.json")) + [rd / "30-assets" / "characters" / "anchors.json"]
+    for rec_p in recs:
+        try:
+            imgs = json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}
+        except (OSError, ValueError):
+            continue
+        for slot in imgs.values():
+            for x in slot.get("attempts") or []:
+                pk = x.get("peak_gb")
+                if pk is None:
+                    m = re.findall(r"peak memory used by the app: ([\d.]+) GB", str(x.get("error") or ""))
+                    pk = float(m[-1]) if m else None
+                if pk is None:
+                    continue
+                n = x.get("refs_count")
+                if n is None:
+                    if x.get("status") == "completed":
+                        n = len(x.get("refs") or [])
+                    else:
+                        try:
+                            n = len((json.loads(Path(x.get("request_file") or "").read_text(encoding="utf-8")).get("params") or {}).get("refs") or [])
+                        except (OSError, ValueError):
+                            continue
+                measured.setdefault(int(n), []).append(float(pk))
+    floor = float(_kcfg("guard_floor_gb", 3.0))
+    free = _free_commit_gb()
+    rows = []
+    for n in ([int(a.n_refs)] if a.n_refs is not None else list(range(0, 5))):
+        if measured.get(n):
+            pk, src, cnt = max(measured[n]), "this run's jobs", len(measured[n])
+        else:
+            pk, src, cnt = _klein_peak_cfg(n), "config static.klein.peak_gb_by_refs", 0
+        need = round(pk + floor, 2) if pk is not None else None
+        rows.append({"refs": n, "peak_gb": pk, "peak_from": src, "jobs_measured": cnt, "need_gb": need,
+                     "headroom_gb": round(free - need, 2) if need is not None and free is not None else None})
+    out({"ok": True, "free_commit_gb": round(free, 2) if free is not None else None, "guard_floor_gb": floor, "by_refs": rows,
+         "note": "facts: a job needs about its peak plus the guard's floor in free commit memory, so a negative headroom means the guard "
+                 "would stop it; a still whose characters' own anchors do not fit rides with one cast sheet (`T image cast`), the agent's "
+                 "call (static §5); memory moves (another program, a test run), so read it right before the call"})
+
+
 def _img_cast(a):
     """A cast sheet: the anchors in use cropped to their figures and set side by side on one plain card (static §5; 2026-11-07: FLUX 3
     Klein's memory guard stopped every still with 3-4 character references on this PC, each taken at 1 MP; one sheet is one reference).
@@ -9294,7 +9426,8 @@ def cmd_image(a):
     """Static stills (contract item 36): generate (OpenAI Images API, ledgered) | prompts (the file a user makes them from) | intake (the
     user's folder, copied in) | use (which attempt the edit takes) | brand (a brand's real logo composited onto a surface, stray marks
     covered). Facts only; the agent views and judges every image."""
-    {"generate": _img_generate, "prompts": _img_prompts, "intake": _img_intake, "use": _img_use, "brand": _img_brand, "text": _img_text, "cast": _img_cast}[a.action](a)
+    {"generate": _img_generate, "prompts": _img_prompts, "intake": _img_intake, "use": _img_use, "brand": _img_brand, "text": _img_text,
+     "cast": _img_cast, "fit": _img_fit}[a.action](a)
 
 
 # ---- the local workers (Qwen3-TTS, ACE-Step 1.5): each runs in its own Python, one model load per call, one JSON line back
@@ -9329,6 +9462,9 @@ def _worker(kind: str, job: dict, timeout: float = 7200, cwd=None) -> dict:
         res = {}
     if not res:
         res = {"ok": False, "error": f"the {kind} worker gave no answer (exit {cp.returncode}): " + (cp.stderr or "")[-800:]}
+    pk = re.findall(r"peak memory used by the app: ([\d.]+) GB", cp.stderr or "")
+    if pk and isinstance(res, dict):
+        res.setdefault("peak_gb", float(pk[-1]))   # the memory guard's measure of the job: what one needs on this PC (static §5)
     return res
 
 
@@ -10598,6 +10734,8 @@ FX_ARCHIVE_EXT = (".zip", ".rar", ".7z", ".tar", ".gz", ".tgz")
 FX_SCAN_VERSION = 2   # 2: the sheets also show the cover's middle, the brightest and the busiest frame
 FX_BLENDS = ("chroma", "screen", "normal")   # how an overlay meets the picture: key colour out, screen blend, as it is (its own alpha kept)
 FX_FITS = ("cover", "contain")
+# a label's look (the user, 2026-11-07: a map's place names "as CapCut text"): every key is the plan's, decided like the captions' look
+LABEL_STYLE_KEYS = ("font_file", "size", "fill", "stroke_color", "stroke_width", "shadow")
 
 
 def _fx_windows(flags, fps: float) -> list:
@@ -11191,6 +11329,15 @@ def _slideshow_plan(a):
                      "transition": im.get("transition") or plan.get("transition") or "cut",
                      "trans_s": float(im.get("trans_s", plan.get("trans_s", 0.0)) or 0.0)})
         rows[-1].update(_still_motion({**rows[-1], **{k: im[k] for k in ("scale", "x", "y") if k in im}}))
+        for j, lb in enumerate(im.get("labels") or []):   # a place's name as CapCut text over the picture (static §5 "Labels")
+            try:
+                ok_lb = bool(str(lb.get("text") or "").strip()) and 0.0 <= float(lb["x_rel"]) <= 1.0 and 0.0 <= float(lb["y_rel"]) <= 1.0
+            except (KeyError, TypeError, ValueError):
+                ok_lb = False
+            if not ok_lb:
+                undecided.append(f"image {int(kk)}: label {j + 1} needs text, x_rel and y_rel (0..1, its centre read off the picture)")
+        if im.get("labels"):
+            rows[-1]["labels"] = im["labels"]
         if not im.get("motion") and not any(k in im for k in ("scale", "x", "y")):
             undecided.append(f"image {int(kk)}: no motion")
         elif str(im.get("motion") or "") not in ("", "none") and not im.get("amount") and not any(k in im for k in ("scale", "x", "y")):
@@ -11210,6 +11357,9 @@ def _slideshow_plan(a):
     short = [r["image"] for r in rows if r["end"] - r["start"] < 0.5]
     effects, fx_undecided = _fx_resolve(rd, plan, rows, starts, lead, total, fps)
     undecided += fx_undecided
+    lstyle = plan.get("labels_style") or {}
+    if any(r.get("labels") for r in rows):
+        undecided += [f"labels_style: no {k}" for k in LABEL_STYLE_KEYS if k not in lstyle]
     music = rd / "30-assets" / "music" / f"video-{nn}.wav"
     cap = plan.get("captions") or {}
     tl = {"video": nn, "size": plan.get("render_size") or _static_fmt(_st).get("preview") or _scfg("render.size", "720x1280"),
@@ -11218,7 +11368,8 @@ def _slideshow_plan(a):
           "music": {"file": str(music), "gain": float(plan.get("music_gain", _scfg("music.gain", 0.22)))} if music.is_file() and plan.get("music", True) else None,
           "captions": {**cap, "y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3))),
                        "min_cue_s": float(cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2)))},
-          "images": rows, "effects": effects, "made": now_iso()}
+          "images": rows, "effects": effects, "made": now_iso(),
+          **({"labels_style": lstyle} if any(r.get("labels") for r in rows) else {})}
     tlp = rd / "40-briefs" / f"video-{nn}-timeline.json"
     write_json(tlp, tl)
     try:   # the cues are grouped again from the timed words at the plan's words at once, whatever narration-words was run with
@@ -11246,6 +11397,8 @@ def _slideshow_plan(a):
          "captions_over_words": sum(1 for c in shifted if len(str(c["text"]).split()) > tl["captions"]["words"]),
          "moves": [[r["image"], r["motion"], r["scale"], r["x"], r["y"]] for r in rows],
          "edges_show": [r["image"] for r in rows if r.get("edge_shows")],
+         "labels": [[r["image"], lb.get("text"), lb.get("x_rel"), lb.get("y_rel")] for r in rows for lb in r.get("labels") or []],
+         "labels_on_moving_images": [r["image"] for r in rows if r.get("labels") and str(r.get("motion") or "none") != "none"],
          "effects": [[e["n"], e["type"], Path(e["file"]).name, e["start"], e["end"], e.get("track")] for e in effects],
          "music": bool(tl["music"]),
          "note": "the cuts sit on the frame grid (each at or just before its line's start); edit motions or transitions in the timeline "
@@ -12284,6 +12437,11 @@ def main():
     p.add_argument("--run", help="the run: its CapCut plan (state.json -> capcut_plan) decides whether a Pro intro may be used")
     p.set_defaults(fn=cmd_capcut_text_anim)
 
+    p = sp.add_parser("capcut-labels", help="Static: the timeline's labels (a place's name on a map) as CapCut texts on the track "
+                                            "'labels' over their images' spans, in the plan's labels_style")
+    p.add_argument("--draft", required=True); p.add_argument("--run", required=True); p.add_argument("--video", required=True)
+    p.set_defaults(fn=cmd_capcut_labels)
+
     p = sp.add_parser("edit-profile", help="a video's edit layer as numbers at its full frame rate: each shot's zoom, pan, pace and jitter, "
                                            "the picture's switches (short flashes), the caption entrances (gather only)")
     p.add_argument("video", nargs="?", help="the video (or --run RUN --ref V01 for a run's reference)")
@@ -12361,8 +12519,11 @@ def main():
     p = sp.add_parser("image", help="Static stills (contract item 36): generate (OpenAI Images API, or FLUX 3 Klein on this PC with "
                                     "static_images=klein; ledgered) | prompts (the file a user makes them from) | intake (the user's folder, "
                                     "copied in) | use (which attempt the edit takes) | brand (a brand's real logo composited onto a "
-                                    "surface of the still, stray marks covered)")
-    p.add_argument("action", choices=["generate", "prompts", "intake", "use", "brand", "text", "cast"]); p.add_argument("--run", required=True)
+                                    "surface of the still, stray marks covered) | text (the letters in the stills, as facts) | cast (the "
+                                    "anchors side by side, one reference) | fit (FLUX 3 Klein: the free memory against each number of "
+                                    "references)")
+    p.add_argument("action", choices=["generate", "prompts", "intake", "use", "brand", "text", "cast", "fit"]); p.add_argument("--run", required=True)
+    p.add_argument("--n-refs", type=int, help="fit: the number of reference images a still would take (default every count from 0 to 4)")
     p.add_argument("--video", help="the video, NN"); p.add_argument("--image", type=int, help="generate, use: the image's number in the video's plan")
     p.add_argument("--anchor", help="generate, use: a character's anchor image (its id, e.g. C1) instead of a video's image")
     p.add_argument("--thumbnail", action="store_true", help="generate, use: the video's YouTube thumbnail (thumb-aK) instead of a still; "

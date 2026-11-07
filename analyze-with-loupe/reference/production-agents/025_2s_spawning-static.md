@@ -70,6 +70,7 @@ Hard rules:
   (never capcut_add_keyframe or capcut_add_transition; pass `--run` to the last two so they read the CapCut plan), with the plan's
   values: decided from the references' measured pattern (their edit profiles), never a stock amount, and only what
   <AWL>/data/capcut-catalogue.md shows drawn by this PC's CapCut (and marked free while the CapCut plan is free).
+- A map's place names (the plan's `labels`, static §5) reach CapCut only through `T capcut-labels`, never drawn by the image model.
 - Effects from the user's effects folder (the plan's `effects`, when the run has a folder) reach CapCut only through `T capcut-effects`
   (never capcut-cli or the MCP by hand); one it refuses is planned again without it. The effects folder is read-only like the references.
 - One channel (<AWL>/reference/static/100_10_one-channel-per-run.md): your video keeps the run's niche, its style lock (every still and
@@ -81,7 +82,8 @@ Hard rules:
   subtitle, lower third or text overlay (the answer's `prompt_overlay_words` stays empty), every prompt ends on the clean-picture
   sentence, and `T image text` is read after the stills; words only on things that carry them (signs, pages, screens, logos).
 - With FLUX 3 Klein every image call runs in the foreground, one at a time (never a background loop: Claude Code ends background
-  commands when memory runs low); three or more characters ride with one cast sheet (`T image cast`).
+  commands when memory runs low); three or more characters ride with their own anchors where `T image fit` shows the memory for them,
+  else with one cast sheet (`T image cast`).
 - Real things look like themselves (<AWL>/reference/static/050_5_images-a6s-plan-s3.md): a logo the plan places is the official file,
   put on its surface with `T image brand` (never drawn by the model); another brand's mark the model drew is painted over (`--cover`);
   a known person keeps their anchor's likeness.

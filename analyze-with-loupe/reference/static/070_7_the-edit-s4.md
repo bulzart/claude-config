@@ -36,7 +36,9 @@
   subtitle` (it also writes the outline, box and shadow import-srt set on each caption where CapCut 9.x draws them: the outline into each
   style's strokes, their check_flag bits; without it CapCut shows the words with no outline); the entrance with `T capcut-text-anim --draft
   "<draft>" --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s> --run RUN` (CapCut's own intro on every caption,
-  capped at each caption's length); any other text with `capcut add-text`
+  capped at each caption's length); the labels, when the timeline has any (a map's place names, §5 "Labels"), with `T capcut-labels
+  --draft "<draft>" --run RUN --video NN` (each on the track "labels" over its image's span, its centre where the plan put it, in the
+  plan's `labels_style`, its font with them; once per build); any other text with `capcut add-text`
   in its own look (its font with `T capcut-font ... --track text`, the add-text default); then `T capcut-repair --draft "<draft>" --keep-text`
   (register, the media links CapCut 9.3+ opens a clip by, sync, lint). Never `capcut lint --fix` on a project: besides the links it copies
   every media file into the draft, shortens any text over 7 s and trims captions. **No house text style in Static** (the user, 2026-11-05: "the agents are free to chose any font preset, size, color and family or whatever they like while editing the video and are not constrained like we do with recreate"; "everything is data driven (from the references) and nothing is predefined"):
