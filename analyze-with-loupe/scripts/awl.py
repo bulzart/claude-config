@@ -8953,10 +8953,195 @@ def _img_use(a):
          **({"thumbnail": _thumb_deliver(rd, nn, Path(pick["file"]))} if key_name == "thumb" else {})})
 
 
+def _box_of(s, w: int, h: int, what: str) -> tuple:
+    m = re.fullmatch(r"\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*", str(s or ""))
+    if not m:
+        fail(f"{what} is x0,y0,x1,y1 in the picture's pixels, got {s!r}", 2)
+    x0, y0, x1, y1 = (int(v) for v in m.groups())
+    if not (0 <= x0 < x1 <= w and 0 <= y0 < y1 <= h):
+        fail(f"{what} {s} lies outside the {w}x{h} picture or is empty", 2)
+    return x0, y0, x1, y1
+
+
+def _ring_colour(im, box, pad: int = 6) -> tuple:
+    """The median colour of a thin ring just outside a box: the surface a patch or a card continues."""
+    x0, y0, x1, y1 = box
+    W, H = im.size
+    px = []
+    for x in range(max(0, x0 - pad), min(W, x1 + pad), 2):
+        for y in (max(0, y0 - pad), min(H - 1, y1 + pad - 1)):
+            px.append(im.getpixel((x, y)))
+    for y in range(max(0, y0 - pad), min(H, y1 + pad), 2):
+        for x in (max(0, x0 - pad), min(W - 1, x1 + pad - 1)):
+            px.append(im.getpixel((x, y)))
+    if not px:
+        return (255, 255, 255)
+    return tuple(sorted(p[i] for p in px)[len(px) // 2] for i in range(3))
+
+
+def _img_brand(a):
+    """A brand's real logo placed into a still, and stray marks covered (static §5 "Real things look like themselves"; the user,
+    2026-11-07: "if there's a company, or a brand being talked about, their logo should appear somewhere"). A model redraws a logo
+    wrong, so the official file is composited, never generated. From the attempt in use (or --attempt): --logo FILE fitted into --box
+    x0,y0,x1,y1 (the surface the agent picked by viewing: a banner, a sign, a screen) with a margin, in its own proportions, on a flat
+    --card (the surface's colour sampled around the box, or --card-color, with an ink outline) when the surface holds something to
+    hide; each --cover x0,y0,x1,y1 is painted with the colour around it (another brand's mark the model drew, stray letters). The result
+    is the next attempt and the one the edit uses; the generated file stays. Facts: the logo's size, a box that reaches the captions."""
+    from PIL import Image, ImageDraw
+    rd, _st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    thumb = bool(getattr(a, "thumbnail", False))
+    if not thumb and not a.image:
+        fail("brand needs --video NN and --image K (or --thumbnail)", 2)
+    if not a.logo and not a.cover:
+        fail("brand needs --logo FILE --box x0,y0,x1,y1 and/or --cover x0,y0,x1,y1", 2)
+    key_name = "thumb" if thumb else f"{int(a.image):02d}"
+    folder, rec_p = _img_where(rd, nn, None)
+    try:
+        slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {}
+    except (OSError, ValueError):
+        slot = {}
+    done = [x for x in slot.get("attempts", []) if x.get("status") == "completed" and Path(x.get("file") or "").is_file()]
+    base = (next((x for x in done if int(x.get("attempt") or 0) == int(a.attempt)), None) if a.attempt else
+            next((x for x in done if Path(x["file"]).name == slot.get("use")), None) or (done[-1] if done else None))
+    if not base:
+        fail(f"no finished attempt of {key_name}{f' numbered {a.attempt}' if a.attempt else ''} with a file on disk", 2)
+    im = Image.open(base["file"]).convert("RGB")
+    W, H = im.size
+    draw = ImageDraw.Draw(im)
+    covers = []
+    for c in a.cover or []:
+        bx = _box_of(c, W, H, "--cover")
+        col = _ring_colour(im, bx)
+        draw.rectangle(bx, fill=col)
+        covers.append({"box": list(bx), "colour": "#%02x%02x%02x" % col})
+    placed = None
+    if a.logo:
+        lp = Path(a.logo)
+        if not lp.is_file():
+            fail(f"--logo: no such file: {lp}", 2)
+        if not a.box:
+            fail("--logo needs --box x0,y0,x1,y1 (the surface it goes on)", 2)
+        bx = _box_of(a.box, W, H, "--box")
+        x0, y0, x1, y1 = bx
+        if a.card:
+            col = tuple(int(a.card_color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)) if a.card_color else _ring_colour(im, bx)
+            ink = max(3, round(min(W, H) * 0.005))
+            draw.rounded_rectangle(bx, radius=max(4, round(min(x1 - x0, y1 - y0) * 0.05)), fill=col, outline=(20, 20, 20), width=ink)
+        logo = Image.open(lp).convert("RGBA")
+        bb = logo.getchannel("A").getbbox()
+        if bb:
+            logo = logo.crop(bb)
+        m = float(a.margin if a.margin is not None else 0.12) * min(x1 - x0, y1 - y0)
+        iw, ih = max(1.0, (x1 - x0) - 2 * m), max(1.0, (y1 - y0) - 2 * m)
+        s = min(iw / logo.width, ih / logo.height)
+        lw, lh = max(1, round(logo.width * s)), max(1, round(logo.height * s))
+        logo = logo.resize((lw, lh), Image.Resampling.LANCZOS)
+        px, py = round(x0 + ((x1 - x0) - lw) / 2), round(y0 + ((y1 - y0) - lh) / 2)
+        im.paste(logo, (px, py), logo)
+        placed = {"file": str(lp), "box": list(bx), "card": bool(a.card), "at": [px, py, px + lw, py + lh], "size_px": [lw, lh],
+                  "share_of_width": round(lw / W, 3), "share_of_height": round(lh / H, 3)}
+    attempt = 1 + max([int(x.get("attempt") or 0) for x in slot.get("attempts", [])] or [0])
+    f = folder / f"{_img_tag(None, key_name, attempt)}.png"
+    im.save(f, format="PNG")
+    try:
+        cap = json.loads((rd / "40-briefs" / f"video-{nn}-images.json").read_text(encoding="utf-8")).get("captions") or {}
+    except (OSError, ValueError):
+        cap = {}
+    band = None
+    if cap.get("y_rel") is not None and not thumb:
+        cy = float(cap["y_rel"]) * H
+        band = [round(cy - 0.06 * H), round(cy + 0.06 * H)]
+    reach = [b["box"] for b in ([placed] if placed else []) + covers if band and b["box"][3] > band[0] and b["box"][1] < band[1]]
+    _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "completed", "source": "brand", "file": str(f), "base": Path(base["file"]).name,
+                                      "logo": placed, "covers": covers, "at": now_iso(), "size": [W, H], "cost_usd_estimate": 0.0},
+                    use=f.name)
+    out({"ok": True, "file": str(f), "attempt": attempt, "base": base["file"], "logo": placed, "covers": covers,
+         "caption_band_px": band, "boxes_reaching_the_caption_band": reach,
+         **({"thumbnail": _thumb_deliver(rd, nn, f)} if thumb else {}),
+         "note": "view the result at full size (the logo legible and on its surface, nothing of the patch showing); this attempt is now the "
+                 "one the edit uses; `T image use --attempt <base's>` goes back"})
+
+
+FETCH_UA = "awl-video-tool/1.0 (local video pipeline)"
+
+
+def _http_get(url: str, timeout: float = 60.0) -> bytes:
+    import urllib.request
+    try:
+        import truststore  # this PC's antivirus re-signs TLS: the Windows store holds its root
+        truststore.inject_into_ssl()
+    except Exception:  # noqa: BLE001
+        pass
+    req = urllib.request.Request(url, headers={"User-Agent": FETCH_UA})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
+def cmd_fetch_image(a):
+    """A picture the plan needs from the web, saved into the run with where it came from (static §5 "Real things look like
+    themselves"; the user, 2026-11-07): a brand's official logo (--kind logo -> 30-assets/brand/) or a reference photo of a known person
+    or thing (--kind photo -> 30-assets/characters/photos/). --url URL [--source PAGE] [--licence TEXT] downloads it as given; --commons
+    "File:Name.ext" asks Wikimedia Commons for the file (a PNG rendering --width wide for an SVG) and records its licence, author and page.
+    Facts only: the file, its size, the source and the licence as given or found; whether it may be used is the agent's reading."""
+    rd, _st = _state_of(a.run)
+    sub = rd / "30-assets" / ("brand" if a.kind == "logo" else "characters" / Path("photos"))
+    sub.mkdir(parents=True, exist_ok=True)
+    name = re.sub(r"[^A-Za-z0-9._-]+", "-", a.name or "").strip("-.")
+    if not name:
+        fail("fetch-image needs --name (the file's name in the run, e.g. airbnb-logo)", 2)
+    meta = {"kind": a.kind, "fetched_at": now_iso(), "url": a.url, "source": a.source, "licence": a.licence, "author": None}
+    stub = os.environ.get("AWL_FETCH_STUB")
+    if a.commons:
+        title = a.commons if a.commons.lower().startswith("file:") else f"File:{a.commons}"
+        if stub:
+            info = {"url": "stub://" + title, "thumburl": "stub://" + title, "mime": "image/png",
+                    "extmetadata": {"LicenseShortName": {"value": "Public domain"}, "Artist": {"value": "stub"}}}
+        else:
+            import urllib.parse
+            q = ("https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=url|size|mime|extmetadata"
+                 f"&iiurlwidth={int(a.width or 2400)}&titles=" + urllib.parse.quote(title))
+            try:
+                js = json.loads(_http_get(q).decode("utf-8"))
+            except Exception as e:  # noqa: BLE001
+                fail(f"Wikimedia Commons did not answer: {e}", 1)
+            page = next(iter((js.get("query") or {}).get("pages", {}).values()), {})
+            if not page.get("imageinfo"):
+                fail(f"no such file on Wikimedia Commons: {title}", 2)
+            info = page["imageinfo"][0]
+        em = info.get("extmetadata") or {}
+        strip = lambda v: re.sub(r"<[^>]+>", "", str((v or {}).get("value") or "")).strip() or None  # noqa: E731
+        url = info.get("thumburl") if str(info.get("mime", "")).endswith("svg+xml") or a.width else info.get("url")
+        meta.update({"url": url or info.get("url"), "source": info.get("descriptionurl") or f"https://commons.wikimedia.org/wiki/{title}",
+                     "licence": strip(em.get("LicenseShortName")) or a.licence, "usage_terms": strip(em.get("UsageTerms")),
+                     "author": strip(em.get("Artist")), "commons": title})
+    elif not a.url:
+        fail("fetch-image needs --url URL or --commons \"File:Name.ext\"", 2)
+    try:
+        data = Path(stub).read_bytes() if stub else _http_get(meta["url"])
+    except Exception as e:  # noqa: BLE001
+        fail(f"the download failed: {e}", 1, url=meta["url"])
+    try:
+        from PIL import Image
+        import io
+        with Image.open(io.BytesIO(data)) as im:
+            fmt, size, mode = (im.format or "png").lower(), list(im.size), im.mode
+    except Exception:  # noqa: BLE001
+        fail("the file is not an image this toolkit can read (an SVG needs --commons with --width, or a PNG/JPEG URL)", 2, url=meta["url"])
+    ext = {"jpeg": ".jpg"}.get(fmt, f".{fmt}")
+    dst = sub / f"{name}{ext}"
+    dst.write_bytes(data)
+    meta.update({"file": str(dst), "size": size, "mode": mode, "has_alpha": "A" in mode, "bytes": len(data)})
+    write_json(dst.with_suffix(dst.suffix + ".source.json"), meta)
+    out({"ok": True, **meta, "note": "view it; a logo goes into the stills with `T image brand`, a photo rides with an anchor's sheet "
+                                     "(`T image generate --anchor C1 --ref <photo>`); the source and licence are recorded beside the file"})
+
+
 def cmd_image(a):
     """Static stills (contract item 36): generate (OpenAI Images API, ledgered) | prompts (the file a user makes them from) | intake (the
-    user's folder, copied in) | use (which attempt the edit takes). Facts only; the agent views and judges every image."""
-    {"generate": _img_generate, "prompts": _img_prompts, "intake": _img_intake, "use": _img_use}[a.action](a)
+    user's folder, copied in) | use (which attempt the edit takes) | brand (a brand's real logo composited onto a surface, stray marks
+    covered). Facts only; the agent views and judges every image."""
+    {"generate": _img_generate, "prompts": _img_prompts, "intake": _img_intake, "use": _img_use, "brand": _img_brand}[a.action](a)
 
 
 # ---- the local workers (Qwen3-TTS, ACE-Step 1.5): each runs in its own Python, one model load per call, one JSON line back
@@ -12022,8 +12207,9 @@ def main():
 
     p = sp.add_parser("image", help="Static stills (contract item 36): generate (OpenAI Images API, or FLUX 3 Klein on this PC with "
                                     "static_images=klein; ledgered) | prompts (the file a user makes them from) | intake (the user's folder, "
-                                    "copied in) | use (which attempt the edit takes)")
-    p.add_argument("action", choices=["generate", "prompts", "intake", "use"]); p.add_argument("--run", required=True)
+                                    "copied in) | use (which attempt the edit takes) | brand (a brand's real logo composited onto a "
+                                    "surface of the still, stray marks covered)")
+    p.add_argument("action", choices=["generate", "prompts", "intake", "use", "brand"]); p.add_argument("--run", required=True)
     p.add_argument("--video", help="the video, NN"); p.add_argument("--image", type=int, help="generate, use: the image's number in the video's plan")
     p.add_argument("--anchor", help="generate, use: a character's anchor image (its id, e.g. C1) instead of a video's image")
     p.add_argument("--thumbnail", action="store_true", help="generate, use: the video's YouTube thumbnail (thumb-aK) instead of a still; "
@@ -12041,8 +12227,26 @@ def main():
     p.add_argument("--again", action="store_true", help="generate: a new draw of a request that already made an image")
     p.add_argument("--timeout", type=float, help="generate: seconds to wait for the answer (default config: 300 for the API, 1800 for FLUX 3 Klein)")
     p.add_argument("--folder", help="intake: the folder holding the user's images (named vNN-iKK)")
-    p.add_argument("--attempt", type=int, help="use: the attempt the edit takes")
+    p.add_argument("--attempt", type=int, help="use: the attempt the edit takes; brand: the attempt to start from (default the one in use)")
+    p.add_argument("--logo", help="brand: the brand's official logo file (a PNG, transparent where it has no ink)")
+    p.add_argument("--box", help="brand: x0,y0,x1,y1, the surface in the picture's pixels the logo goes on (fitted inside with --margin)")
+    p.add_argument("--card", action="store_true", help="brand: paint a flat card with an ink outline over the box first (the surface "
+                                                       "holds something to hide: a stand-in shape, stray letters)")
+    p.add_argument("--card-color", help="brand: the card's colour as #rrggbb (default the colour around the box)")
+    p.add_argument("--margin", type=float, help="brand: the space around the logo inside the box, a share of its shorter side (default 0.12)")
+    p.add_argument("--cover", action="append", help="brand: x0,y0,x1,y1 painted with the colour around it (another brand's mark the model "
+                                                    "drew, stray letters), repeatable")
     p.set_defaults(fn=cmd_image)
+
+    p = sp.add_parser("fetch-image", help="Static: a brand's official logo or a known person's or thing's reference photo from the web, "
+                                          "saved into the run with its source and licence (static §5 'Real things look like themselves')")
+    p.add_argument("--run", required=True); p.add_argument("--kind", choices=["logo", "photo"], required=True)
+    p.add_argument("--name", required=True, help="the file's name in the run (without extension), e.g. airbnb-logo or C2-photo-1")
+    p.add_argument("--url", help="a direct PNG or JPEG address"); p.add_argument("--source", help="the page it is published on")
+    p.add_argument("--licence", help="the licence or terms as the source states them")
+    p.add_argument("--commons", help="a Wikimedia Commons file title, File:Name.ext (licence, author and page are read from Commons)")
+    p.add_argument("--width", type=int, help="--commons: the width of the PNG rendering (an SVG always comes as a PNG; default 2400)")
+    p.set_defaults(fn=cmd_fetch_image)
 
     p = sp.add_parser("tts", help="Static's voice (contract item 36): check | design (voice samples) | voice (the picked sample becomes the run's "
                                   "voice) | say (a video's narration); Qwen3-TTS in its own environment (AWL_TTS_PYTHON), one GPU job at a time")

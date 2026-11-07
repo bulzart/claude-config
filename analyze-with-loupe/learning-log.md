@@ -1200,3 +1200,16 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   Before, taking the inventory again renumbered by file order (a new `CEOzoned_...` file would have become V01 and the analysed
   `video.mp4` V03). A run folder made by mistake for tonight (`20261107-034832-static-klein-1440`, only its empty folders and state) was
   removed.
+- **Found (the same morning):** three image agents at once ran FLUX 3 Klein at the edge of the commit memory: every still with 3-4
+  character references peaked at 12.2 GB and the guard (3.0 GB floor) stopped it; Claude Code then killed the agents' background loops
+  under memory pressure, which left the GPU lock behind (its owner dead, the stale time 4 hours). Changed: `FileLock` takes over a lock
+  whose owner process is gone (`_lock_owner_dead`, OpenProcess on Windows); images with 3+ characters ride with one cast sheet (the
+  anchors cropped side by side) instead of 3-4 references; image calls run in the foreground, one agent at a time.
+- **Asked:** "make it (the logo) appear somewhere in the beginning of the story where they first found the company, and then somewhere
+  latter"; "also apply this logic on the pipeline, such as if there's a company, or a brand being talked about, their logo should appear
+  somewhere, or if talking about famous person whos appeareance is known it should really look like them, and so on".
+- **Changed:** static §5 "Real things look like themselves" (official logos composited, never drawn, where the company comes in and again
+  later; a known person's likeness from public photos with their anchor; known places and things), §8 checks, awl-static-plan steps 1
+  and 7, awl-static-images 5b, the Static contract and item 36. New `T fetch-image` (a logo or a photo from a URL or Wikimedia Commons,
+  with its source and licence beside it) and `T image brand` (the logo file fitted into a box of the still, on a card when something
+  must be hidden; `--cover` paints over another brand's mark; the next attempt, the generated one kept).

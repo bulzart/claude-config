@@ -65,6 +65,28 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   reference of every image that shows them. The prompt names who is who ("the man in the first image"). Every image copies the anchor's
   details, so view it for an ornament that reads as a letter or symbol (braid loops, embroidery, a pattern): it comes back in every image
   (2026-11-06: lapel braid loops read as a repeated "N"). The sheet prompt names the ornament plainly ("plain straight gold braid").
+- **Real things look like themselves** (the user, 2026-11-07: "if there's a company, or a brand being talked about, their logo should
+  appear somewhere, or if talking about famous person whos appeareance is known it should really look like them, and so on"; "we need
+  to let the viewer watching the video have more context about who we're talking about"):
+  - **A company, brand or product** the story is about or names at length gets its official logo in the stills: where the story first
+    brings it in (its founding, its first mention) and at least once more later (a later chapter, the payoff), so the viewer knows whom
+    the video is about. The file comes from an official source (the company's brand or press page, or Wikimedia Commons: `T fetch-image
+    --run RUN --kind logo --name <brand>-logo --commons "File:…"` records its licence and author; `--url` for a direct PNG), and the
+    image model never draws it (it redraws a logo wrong): the plan's image gets `"logo": {"brand": "<name>", "file":
+    "<30-assets/brand/…>", "surface": "<what carries it: a banner, a sign, a screen, a box>"}` and its prompt describes that surface
+    plain and blank ("a large plain white banner across the tent's front edge, completely blank"). Once the image is made and viewed,
+    `T image brand --run RUN --video NN --image K --logo <file> --box x0,y0,x1,y1 [--card]` places the file on that surface (the box read
+    off the picture, outside the caption band; `--card` paints a flat card first when something there must be hidden) as the next attempt,
+    the generated one kept. The present logo tells the viewer who even in an earlier year; a dated logo, when the official archive holds
+    it, tells when: the agent's call, written in the plan. Another brand's mark the model drew on its own (a fruit on a laptop, a label)
+    is painted over with `--cover x0,y0,x1,y1`.
+  - **A known person** (whose appearance is public: a founder, a leader, an artist) is drawn to look like them, in the run's style lock:
+    two or three public photos (the user's assets first; else ones whose licence allows reuse, from Wikimedia Commons or an official press
+    page: `T fetch-image --kind photo`) ride with their anchor (`T image generate --anchor C1 --ref <photo> …`; the sheet prompt names
+    their real look at the story's time: face shape, hair, build, glasses, signature clothes), and the anchor is checked against the
+    photos (§8). They appear only in what the fact sheet sources, never in a degrading, sexual or violent scene they were not part of.
+  - **A known place or thing** (a landmark, a product, a vehicle, a building) looks like itself: its real features in words, and a photo
+    as a reference where the model would guess; nothing of §11 (a religious landmark is left out of the pictures).
 - **API mode** (`static_images=api`): `T image generate --run RUN --video NN --image K --prompt-file <file> [--ref <photo or anchor> …]`
   (the size and quality from the run's format); the toolkit sends it through the ledger, saves `60-outputs/video-NN/images/iKK-aM.png` and marks it the one the edit uses. A request
   that already made an image is not sent again (`--again` for a new draw). `moderation_blocked`: change the prompt (or the reference), never

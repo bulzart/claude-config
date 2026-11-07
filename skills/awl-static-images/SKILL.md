@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.6 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (3.6 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (12.4 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (4.0 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.5 KB)
 - *the plan has characters:*
@@ -59,6 +59,10 @@ stack a tall frame into panels, above all with no reference image).
    failure answer carries the error and the end of ComfyUI's log: a memory stop means other programs hold the RAM (say so; never retry
    in a loop).
 5. An earlier attempt is the better one: `T image use --run RUN --video NN --image K --attempt M`.
+5b. **Logos** (static §5 "Real things look like themselves"): an image whose plan has a `logo`, once made and viewed: read the box of its
+   blank surface off the picture, `T image brand --run RUN --video NN --image K --logo <the plan's file> --box x0,y0,x1,y1 [--card]`, and
+   view the result (static §8). Another brand's mark the model drew in any image: `T image brand … --cover x0,y0,x1,y1`. A known person's
+   anchor (step 1) rides with their photos (`--ref <photo>`), and every still that shows them with the anchor.
 6. **The YouTube thumbnail** (static §12), after the stills: its prompt file `RUN/40-briefs/video-NN-thumb-prompt.txt` (the plan's
    `thumbnail.prompt`, the style lock, its exact words when it has any), then `T image generate --run RUN --video NN --thumbnail --size
    <the plan's thumbnail.size> --prompt-file RUN/40-briefs/video-NN-thumb-prompt.txt [--ref <photo or anchor> …]`; view it at full size

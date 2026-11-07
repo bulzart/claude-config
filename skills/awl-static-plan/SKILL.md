@@ -16,7 +16,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run; skip when already read)
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (3.0 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (9.6 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (12.4 KB)
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (7.4 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.8 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
@@ -32,7 +32,9 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
 1. **Characters.** Every character of the asset registry gets an id (C1, C2 …), who they are (a known real person, an ordinary role, a
    cartoon or children's character, an animal …) read from their photos and words [A]/[I], the look in words (face, hair, build, age,
    clothing, style) and its source: photo(s) or description only. Write `RUN/30-assets/characters.md`. No characters: write "none"; the
-   subject then comes from the references alone (static §3).
+   subject then comes from the references alone (static §3). A known real person the script brings in (theirs or the subject's people:
+   a founder, a leader) gets two or three public photos for their likeness (static §5 "Real things look like themselves": the user's
+   assets first, else `T fetch-image --kind photo`, the licence recorded) and is written in `characters.md` with them.
 2. **The subject pool** (static §3, §10): `T static lock --run RUN` first (the locks: the niche, the style reference, the narrator, the
    subjects made). The requested count plus three at least (never under five), all of the run's niche, told in the references' craft,
    never a reference's own subject and never one the run made or one so close it retells it, nothing religious or superstitious
@@ -62,7 +64,9 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    The copy test and the sharpness gate (creative-direction §5.0, §6) pass before a script is final.
 7. **Image plans** (static §5), per video: `RUN/40-briefs/video-NN-images.json`: the characters (photo, or the sheet prompt of one with
    none), one image per stretch of lines (`from_line`), every prompt with the spec's style lock word for word (the style reference's
-   look, the same in every video of the run: static §10) and §5's composition, a secular scene with nothing of static §11 in it, the
+   look, the same in every video of the run: static §10) and §5's composition, each company or brand the story is about with its
+   official logo where the story brings it in and once more later (static §5 "Real things look like themselves": `T fetch-image --kind
+   logo`, the image's `logo` field, its surface plain and blank in the prompt), a secular scene with nothing of static §11 in it, the
    video's `title` and `thumbnail` (static §12: the references' title and thumbnail patterns, the thumbnails' size, the run's style
    lock), each
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times

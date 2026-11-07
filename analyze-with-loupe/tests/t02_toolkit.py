@@ -1584,6 +1584,39 @@ check(js.get("attempt") == 2 and js2.get("ok") and js2["uses"].endswith("thumb-a
       "another thumbnail attempt replaces the deliverable; image use --thumbnail puts the chosen one back")
 js, _, _ = t("contract", "--run", str(KR), env=KENV)
 check("Images: klein" in Path(js["file"]).read_text(encoding="utf-8") and not js.get("unresolved_placeholders"), "a Klein run's contract says Images: klein")
+# real things look like themselves (the user, 2026-11-07: "if there's a company, or a brand being talked about, their logo should appear
+# somewhere"): the official logo file is composited onto a surface of the still, never drawn; another brand's mark is painted over
+from PIL import Image as _PL, ImageDraw as _PD  # noqa: E402
+_lg = home.parent / "brand-test" / "logo.png"
+_lg.parent.mkdir(parents=True, exist_ok=True)
+_li = _PL.new("RGBA", (400, 200), (0, 0, 0, 0))
+_PD.Draw(_li).ellipse((20, 20, 380, 180), fill=(230, 40, 60, 255))
+_li.save(_lg)
+js, _, _ = t("image", "brand", "--run", str(KR), "--video", "01", "--image", "1", "--logo", str(_lg), "--box", "100,100,700,500", "--card",
+             "--card-color", "#fafafa", "--cover", "800,800,860,860", env=KENV)
+_bf = Path(js.get("file") or "")
+_bim = _PL.open(_bf).convert("RGB") if _bf.is_file() else None
+_brec = json.loads((KR / "60-outputs" / "video-01" / "images.json").read_text(encoding="utf-8"))["images"]["01"]
+check(js.get("ok") and _bf.name == "i01-a4.png" and _brec["use"] == "i01-a4.png" and _brec["attempts"][-1]["source"] == "brand"
+      and Path(js["base"]).name == "i01-a3.png" and (KR / "60-outputs" / "video-01" / "images" / "i01-a3.png").is_file()
+      and _bim.getpixel((400, 300))[0] > 200 and _bim.getpixel((400, 300))[1] < 80 and _bim.getpixel((105, 300)) != _bim.getpixel((150, 300))
+      and len({_bim.getpixel((x, y)) for x in range(805, 856, 10) for y in range(805, 856, 10)}) == 1
+      and 100 <= js["logo"]["at"][0] and js["logo"]["at"][2] <= 700 and js["logo"]["at"][1] >= 100 and js["logo"]["at"][3] <= 500,
+      "image brand composites the logo file inside its box on a card (the next attempt, now in use, the generated one kept) and paints a "
+      "cover with one colour")
+js, code, _ = t("image", "brand", "--run", str(KR), "--video", "01", "--image", "1", "--logo", str(_lg), "--box", "100,100,5000,500",
+                env=KENV, ok=False)
+check(code == 2 and "outside" in js.get("error", ""), "image brand refuses a box outside the picture")
+js, _, _ = t("fetch-image", "--run", str(KR), "--kind", "logo", "--name", "test-brand-logo", "--url", "https://example.org/logo.png",
+             "--source", "https://example.org/press", "--licence", "press kit", env={**KENV, "AWL_FETCH_STUB": str(_lg)})
+_fm = json.loads(Path(str(js.get("file")) + ".source.json").read_text(encoding="utf-8")) if js.get("file") else {}
+check(js.get("ok") and Path(js["file"]).parent == KR / "30-assets" / "brand" and js.get("has_alpha") and js.get("size") == [400, 200]
+      and _fm.get("source") == "https://example.org/press" and _fm.get("licence") == "press kit",
+      "fetch-image saves a logo into the run's brand folder with its size, transparency, source and licence beside it")
+js, _, _ = t("fetch-image", "--run", str(KR), "--kind", "photo", "--name", "C1-photo-1", "--commons", "File:Someone.jpg",
+             env={**KENV, "AWL_FETCH_STUB": str(_lg)})
+check(js.get("ok") and Path(js["file"]).parent == KR / "30-assets" / "characters" / "photos" and js.get("licence") == "Public domain"
+      and js.get("commons") == "File:Someone.jpg", "fetch-image --commons records the Commons file's licence; a photo goes to the characters' photos")
 
 # the references' real YouTube titles and thumbnails (the user, 2026-11-07: "in the references folder there is also a context.txt file ...
 # how_to_drive_a_car.mp4|How do you drive a car|C:/users.../how_to_drive.png ... (image files stand at /thumbnails folder)")

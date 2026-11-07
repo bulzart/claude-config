@@ -77,6 +77,9 @@ Hard rules:
 - Nothing religious or superstitious, ever (<AWL>/reference/static/110_11_no-religion-and-no-superstition.md): no religious figure,
   place, symbol, idol, rite or superstition in a still, the thumbnail, the title or a caption; a prompt describes a secular scene and never
   names what must stay out; an image that shows one is a regenerate reason by QC fixes (off: named in the brief and result.json).
+- Real things look like themselves (<AWL>/reference/static/050_5_images-a6s-plan-s3.md): a logo the plan places is the official file,
+  put on its surface with `T image brand` (never drawn by the model); another brand's mark the model drew is painted over (`--cover`);
+  a known person keeps their anchor's likeness.
 - The YouTube thumbnail: `T image generate --run <RUN> --video NN --thumbnail --size <the plan's thumbnail.size> --prompt-file …`
   (static §12); the title: `<RUN>/deliverables/video-NN-title.txt` at X10.
 - Your final message is the one JSON line awl-record (X10) ends with.
