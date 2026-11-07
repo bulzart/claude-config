@@ -1259,3 +1259,22 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   CapCut's half-canvas units, `text-style` for the outline and shadow, `T capcut-font --track labels`), once per build. Static §5
   "Labels", §7, §8, awl-static-images 5c, awl-static-edit, the contract. Verified on a scratch project: two labels at 3.0 s for 4.5 s,
   Sigmar One, outline 0.12, shadow on.
+
+## 2026-11-07 · Static: fonts the projects keep, and a voice switch that cannot stop half way
+
+- **Asked:** "yes fix this because the capcut looks like returned the font back to default one ... copy the font into the run folder
+  and test whether CapCut reads it from there. or just tell me how do i solve it manually or download all popular fonts and put them
+  info CapCuts font folder so it doesnt miss or make the cache persistent maybe?"
+- **Found:** the first build's captions are CapCut Sans Text Bold (CapCut's own default family, from V01's look) read from CapCut's
+  9.7.1.4203 version folder: they look like the default because they are it. Every font the agents could pick sat in a folder CapCut
+  changes: its version folder (an update replaces it) or its template cache (it may clear it); a text whose file is gone shows in the
+  default font. CapCut's font folder is inside the version folder, and its cache is CapCut's to clean.
+- **Changed:** a library `fonts/` folder (seven Google fonts under the SIL Open Font License, copied from CapCut's cache, each with its
+  row in `fonts/README.md`); `T capcut-font --list` lists it first and gives every font's `kept_by`, and `capcut-font` answers the chosen
+  file's `font_kept_by`; static §7 "Fonts". A test project `07_Nov_2026_fonttest` (Sigmar One, Coiny, Anton from the library) is for the
+  user to open: whether CapCut draws a font from a folder of its own is only seen in CapCut.
+- **Found (the same evening):** `T tts voice --sample 2 --replace` stopped by the memory (the worker crashed at a 12.68 GB peak with 12.6
+  GB free commit) had already copied sample 2 over the reference audio, while the voice prompt and state.json still held sample 1.
+- **Changed:** `tts voice` builds into `30-assets/voice/.voice-build/` from the sample's own file and replaces the reference, its text
+  and the prompts only once the model has built them; a failed build leaves the run's voice as it was. The run's reference was put back
+  to sample 1.

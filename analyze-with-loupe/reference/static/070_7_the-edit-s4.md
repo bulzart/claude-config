@@ -44,6 +44,12 @@
   every media file into the draft, shortens any text over 7 s and trims captions. **No house text style in Static** (the user, 2026-11-05: "the agents are free to chose any font preset, size, color and family or whatever they like while editing the video and are not constrained like we do with recreate"; "everything is data driven (from the references) and nothing is predefined"):
   `capcut-text-style` is not used and the size, font and colours are the references'. CapCut's own caption tools stay unused
   (`capcut-assembly.md` §1).
+- **Fonts** (the user, 2026-11-07: "the capcut looks like returned the font back to default one ... fix this"): a project shows a text
+  in its font only while the font file stays where the project points, and CapCut keeps neither of its own folders still: its version
+  folder (the fonts it bundles) is replaced by an update, its cache (the fonts it downloads for templates) may be cleared, and a text
+  whose file is gone shows in CapCut's default font. So the captions' and labels' `font_file` is a copy in the library's `fonts/`
+  folder: `T capcut-font --list` lists it first and gives every font's `kept_by`; a font from CapCut's cache under an open licence
+  (SIL Open Font License) is copied there first with its row in `fonts/README.md`, one whose licence is not known is not used.
 - Loudness: the narration file itself is at the config's target (about −14 LUFS; `T tts say`: a gentle voice compressor, then two
   loudnorm passes), because the CapCut project plays it at 1.0 with the bed under it at the plan's gain.
 - **The export** is the user's, in CapCut (no tool exports a CapCut project): each project at the format's export size, 30 fps; the

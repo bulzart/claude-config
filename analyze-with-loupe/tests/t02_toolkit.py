@@ -1424,6 +1424,13 @@ js, _ = ts("capcut-font", "--list")
 _fonts = js.get("fonts") or []
 check(js.get("ok") and js.get("count") == len(_fonts) and all({"family", "style", "file", "source"} <= set(f) for f in _fonts[:5]),
       f"capcut-font --list gives the fonts on this PC as facts ({js.get('count')} found)")
+# a project keeps a font only while its file stays put (the user, 2026-11-07: "the capcut looks like returned the font back to default")
+_lib = [f for f in _fonts if f.get("source") == "library"]
+check(_lib and _fonts[:len(_lib)] == _lib and any(f["family"] == "Sigmar One" for f in _lib)
+      and all(f.get("kept_by") for f in _fonts) and "kept across" in _lib[0]["kept_by"]
+      and all("may clear" in f["kept_by"] for f in _fonts if f.get("source") == "capcut-downloaded")
+      and all("update replaces" in f["kept_by"] for f in _fonts if f.get("source") == "capcut"),
+      "capcut-font --list puts the library's fonts folder first and says how every font's folder is kept (an update, a cache clear)")
 if not _fonts:
     print("SKIP  capcut-font and the look's burn: no font file found on this machine")
 else:

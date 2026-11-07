@@ -6029,9 +6029,16 @@ def cmd_capcut_repair(a):
     out(res, 0 if ok else 1)
 
 
-def _font_files() -> list:
-    """Font files on this PC the edit can use, as facts: CapCut's own (bundled with the newest app, then the ones it downloaded), then
-    Windows' and the user's. One row per family and style (the first file found), never a judgement of which fits."""
+FONTS_DIR = Path(__file__).resolve().parent.parent / "fonts"
+# where a font file lives decides whether a project keeps finding it (2026-11-07: CapCut's own fonts sit in its version folder, which an
+# update replaces, and the fonts it downloads sit in its cache, which it may clear: a project then shows its texts in the default font)
+FONT_KEPT_BY = {"library": "this library's fonts folder: kept across CapCut updates and cache clears",
+                "capcut": "CapCut's version folder: an update replaces it",
+                "capcut-downloaded": "CapCut's cache: CapCut may clear it",
+                "windows": "Windows' fonts folder", "user": "the user's Windows fonts folder"}
+
+
+def _font_roots() -> list:
     la = Path(os.environ.get("LOCALAPPDATA", ""))
     apps = []
     for p in (la / "CapCut" / "Apps").glob("*"):
@@ -6039,10 +6046,27 @@ def _font_files() -> list:
             apps.append((tuple(int(x) for x in p.name.split(".")), p))
         except ValueError:
             continue
-    roots = ([("capcut", max(apps)[1] / "Resources" / "Font")] if apps else []) + [
+    return [("library", FONTS_DIR)] + ([("capcut", max(apps)[1] / "Resources" / "Font")] if apps else []) + [
         ("capcut-downloaded", la / "CapCut" / "User Data" / "Cache"),
         ("windows", Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"),
         ("user", la / "Microsoft" / "Windows" / "Fonts")]
+
+
+def _font_kept_by(f: Path) -> str:
+    """How the folder of a font file is kept (FONT_KEPT_BY), or 'elsewhere'."""
+    la = Path(os.environ.get("LOCALAPPDATA", ""))
+    rf = str(Path(f).resolve()).lower()
+    for src, root in [*_font_roots(), ("capcut", la / "CapCut" / "Apps")]:
+        if rf.startswith(str(Path(root).resolve()).lower() + os.sep):
+            return FONT_KEPT_BY[src]
+    return "elsewhere"
+
+
+def _font_files() -> list:
+    """Font files on this PC the edit can use, as facts: this library's fonts folder first, then CapCut's own (bundled with the newest
+    app, then the ones it downloaded), then Windows' and the user's, each with how its folder is kept. One row per family and style
+    (the first file found), never a judgement of which fits."""
+    roots = _font_roots()
     try:
         from PIL import ImageFont
     except ImportError:
@@ -6061,7 +6085,7 @@ def _font_files() -> list:
             key = (str(fam).lower(), str(sty).lower())
             if key not in seen:
                 seen.add(key)
-                rows.append({"family": fam, "style": sty, "file": str(f).replace("\\", "/"), "source": src})
+                rows.append({"family": fam, "style": sty, "file": str(f).replace("\\", "/"), "source": src, "kept_by": FONT_KEPT_BY[src]})
     return rows
 
 
@@ -6098,8 +6122,9 @@ def cmd_capcut_font(a):
         rows = _font_files()
         if a.family:
             rows = [r for r in rows if a.family.lower() in str(r["family"]).lower()]
-        out({"ok": True, "count": len(rows), "fonts": rows,
-             "note": "CapCut draws its own fonts (capcut, capcut-downloaded) for sure; a Windows font is used when CapCut finds it"})
+        out({"ok": True, "count": len(rows), "fonts": rows, "library": str(FONTS_DIR),
+             "note": "CapCut draws its own fonts (capcut, capcut-downloaded) for sure; a Windows font is used when CapCut finds it; a "
+                     "project keeps a font only while its file stays where it points (kept_by): use the library's copy"})
     if not a.draft or not a.font_file:
         fail("capcut-font needs --list, or --draft and --font-file", 2)
     d, ff = Path(a.draft), Path(a.font_file)
@@ -6147,8 +6172,9 @@ def cmd_capcut_font(a):
         files.append({"file": str(p), "texts_set": n, "outlines_in_styles": n_out})
     if a.track and not any(f["texts_set"] for f in files):
         fail(f"no text on a track named {a.track!r}; the draft's text tracks: {sorted(names)}", 2)
-    out({"ok": True, "draft": str(d), "font": font, "family": family, "track": a.track, "files": files,
-         "note": "then capcut_save is not needed (the file is written); run `T capcut-repair --draft ... --keep-text` after the last save"})
+    out({"ok": True, "draft": str(d), "font": font, "family": family, "track": a.track, "files": files, "font_kept_by": _font_kept_by(ff),
+         "note": "then capcut_save is not needed (the file is written); run `T capcut-repair --draft ... --keep-text` after the last save; "
+                 "a font CapCut downloaded or bundled is copied into the library's fonts folder first (static §7), so the project keeps it"})
 
 
 CAPCUT_MOVE_PROPS = ("UNIFORM_SCALE", "KFTypeScaleX", "KFTypeScaleY", "KFTypePositionX", "KFTypePositionY")
@@ -9555,18 +9581,22 @@ def _tts_voice(a):
     if not pick or not Path(pick.get("out") or "").is_file():
         fail(f"sample {a.sample} not found in 30-assets/voice/samples.json", 2)
     ref = vd / "ref-neutral.wav"
-    shutil.copy2(pick["out"], ref)
-    write_text(vd / "ref-neutral.txt", samples["text"])
+    # nothing of the run's voice changes until the model has built the new one: it builds into a staging folder from the sample's own
+    # file, and only a built voice replaces the reference, its text and the prompts (2026-11-07: a build the memory stopped had already
+    # copied the new sample over the reference, while the prompt and state.json still held the old voice)
+    stage = vd / ".voice-build"
+    shutil.rmtree(stage, ignore_errors=True)
+    stage.mkdir(parents=True, exist_ok=True)
     emotions = []
     for e in a.emotion or []:
         if "=" not in e:
             fail(f"--emotion takes NAME=TEXT, got {e!r}", 2)
         name, text = e.split("=", 1)
         name = re.sub(r"[^a-z0-9]+", "-", name.strip().lower()).strip("-")
-        emotions.append({"name": name, "text": text.strip(), "out_wav": str(vd / f"ref-{name}.wav"), "out_prompt": str(vd / f"prompt-{name}.pt")})
+        emotions.append({"name": name, "text": text.strip(), "out_wav": str(stage / f"ref-{name}.wav"), "out_prompt": str(stage / f"prompt-{name}.pt")})
     lang = samples.get("language") or _scfg("tts.language", "english")
-    job = {"op": "voice", "model": _scfg("tts.clone_model"), "language": lang, "ref_audio": str(ref), "ref_text": samples["text"],
-           "out_prompt": str(vd / "prompt-neutral.pt"), "emotions": emotions, **_tts_job_base()}
+    job = {"op": "voice", "model": _scfg("tts.clone_model"), "language": lang, "ref_audio": str(Path(pick["out"]).resolve()),
+           "ref_text": samples["text"], "out_prompt": str(stage / "prompt-neutral.pt"), "emotions": emotions, **_tts_job_base()}
     if os.environ.get("AWL_TTS_STUB"):
         Path(job["out_prompt"]).write_text("stub", encoding="utf-8")
         for e in emotions:
@@ -9576,9 +9606,19 @@ def _tts_voice(a):
     else:
         with _gpu_lock():
             res = _worker("tts", job)
-    if not res.get("ok"):
-        fail("the voice could not be built: " + str(res.get("error"))[:600], 1, worker=res)
-    prompts = {"neutral": job["out_prompt"], **{e["name"]: e["out_prompt"] for e in emotions}}
+    built = [Path(job["out_prompt"])] + [Path(e[k]) for e in emotions for k in ("out_wav", "out_prompt")]
+    if not res.get("ok") or not all(p.is_file() for p in built):
+        shutil.rmtree(stage, ignore_errors=True)
+        fail("the voice could not be built (the run's voice is unchanged): " + str(res.get("error") or "the worker wrote no prompt")[:600],
+             1, worker=res)
+    shutil.copy2(pick["out"], ref)
+    write_text(vd / "ref-neutral.txt", samples["text"])
+    for p in built:
+        os.replace(p, vd / p.name)
+    shutil.rmtree(stage, ignore_errors=True)
+    for e in emotions:
+        e["out_wav"], e["out_prompt"] = str(vd / Path(e["out_wav"]).name), str(vd / Path(e["out_prompt"]).name)
+    prompts = {"neutral": str(vd / "prompt-neutral.pt"), **{e["name"]: e["out_prompt"] for e in emotions}}
     wps = _sample_pace(samples["text"], pick)
     _state_set(rd, **{"static.voice": {"sample": int(a.sample), "instruct": pick.get("instruct"), "seed": pick.get("seed"),
                                         "ref_text": samples["text"], "language": lang, "words_per_s": wps,
