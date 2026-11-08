@@ -1797,6 +1797,28 @@ def cmd_inventory(a):
             except Exception as e:
                 item["probe_error"] = str(e)[:200]
         items.append(item)
+    # references the user dropped from the run (the user, 2026-11-08: "drop the sadam hussain reference we had before and the data we
+    # mined from it"): the file stays in their folder (read-only), keeps its id and is left out of every step, now and in later inventories
+    dropped = set()
+    if run_dir and role == "references":
+        try:
+            dropped = {str(x).casefold() for x in json.loads((run_dir / "state.json").read_text(encoding="utf-8")).get("references_dropped") or []}
+        except (OSError, ValueError):
+            dropped = set()
+    asked = [str(x) for x in (getattr(a, "drop", None) or [])]
+    dropped |= {x.casefold() for x in asked}
+    hit = set()
+    for it in items:
+        keys = {str(it.get("rel") or "").casefold(), Path(str(it.get("rel") or "")).name.casefold(), str(it.get("id") or "").casefold()}
+        m_ = keys & dropped
+        if m_ and it.get("id") != "-":
+            it.update({"ignored": True, "dropped": True, "reason": "dropped by the user: not part of this run's reference set"})
+            hit |= m_
+    if asked and run_dir and role == "references":
+        unknown = [x for x in asked if x.casefold() not in hit]
+        if unknown:
+            fail("--drop names no file of this inventory: " + ", ".join(unknown) + " (a file name, its path in the folder or its id)", 2)
+        _state_set(run_dir, references_dropped=sorted(dropped))
     gone = []
     for it in old_items:
         if it["id"] not in taken:
@@ -12983,6 +13005,9 @@ def main():
     p.add_argument("--scope", help="asset scope: 'project' (analyze, default) or e.g. 'video-01' (edit)")
     p.add_argument("--renumber", action="store_true", help="number every file afresh in file order (by default a file the run's inventory "
                                                            "already lists keeps its id, new files take the next free ids)")
+    p.add_argument("--drop", action="append", help="references only: a reference the user dropped from the run (its file name, path in the "
+                                                   "folder or id), repeatable; kept in state.json -> references_dropped, so later "
+                                                   "inventories leave it out too; the file itself is never touched")
     p.add_argument("--max-depth", type=int); p.set_defaults(fn=cmd_inventory)
 
     p = sp.add_parser("prep-assets"); p.add_argument("--run", required=True); p.add_argument("--scope")
