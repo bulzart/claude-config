@@ -10381,9 +10381,16 @@ def _tts_say(a):
     final = rd / "30-assets" / "narration" / f"video-{nn}.wav"
     target = float(_scfg("narration.loudness_lufs", -14.0))
     # the voice chain (a gentle compressor, config static.narration.voice_chain; "" = none), then two loudnorm passes: the narration
-    # file is what the CapCut project (the final) plays at volume 1.0, so it carries the target loudness itself
-    ln = _loudnorm_2pass(raw, final, target, ["-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le"],
-                         pre=str(_scfg("narration.voice_chain", NARRATION_VOICE_CHAIN) or ""))
+    # file is what the CapCut project (the final) plays at volume 1.0, so it carries the target loudness itself. A paced narration was
+    # measured on exactly that file (its last pass): it becomes the narration, so what was measured is what plays
+    measured_file = (pace_rec or {}).pop("measured_file", None)
+    ln_paced = (pace_rec or {}).pop("loudness_pass", None)
+    if measured_file and Path(measured_file).is_file() and (ln_paced or {}).get("ok"):
+        os.replace(measured_file, final)
+        ln = ln_paced
+    else:
+        ln = _loudnorm_2pass(raw, final, target, ["-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le"],
+                             pre=str(_scfg("narration.voice_chain", NARRATION_VOICE_CHAIN) or ""))
     if not ln["ok"]:
         fail("loudness pass failed: " + ln["stderr"])
     vm = _voice_match(Path(voice.get("ref_audio") or ""), {r["n"]: r["file"] for r in rows}) if voice.get("ref_audio") else {}
@@ -10412,8 +10419,8 @@ def _tts_say(a):
          "made_now": [t["n"] for t in todo], "loudness_lufs": side["loudness_lufs"], "elapsed_s": round(time.time() - t0, 1),
          "voice_match": match, "engine": engine,
          "pace": ({k: pace_rec.get(k) for k in ("measure", "target", "measured", "on_target", "within", "unreachable", "model_rate",
-                                                "tempo", "pause_default_s", "first_setting_from", "method", "tempo_outside_clean_range",
-                                                "native_wpm_speech")}
+                                                "tempo", "pause_default_s", "pause_floor_s", "pause_ceiling_s", "first_setting_from",
+                                                "method", "tempo_outside_clean_range", "native_wpm_speech")}
                   | {"passes": len(pace_rec.get("passes") or [])})
          if pace_rec else {"target": None, "note": "the narration JSON has no `pace`: made at the voice's own speed (static §4, §6)"},
          **({"characters_now": sum(int(v.get("characters") or 0) for v in made_info.values()), "cost_usd_estimate_now": cost_now,
@@ -10624,7 +10631,12 @@ def _pace_targets(p: dict) -> dict:
         return None
     return {"measure": mk, "band_speak": bs, "band_overall": bo, "target_speak": float(ts),
             "target_overall": float(to) if to is not None else None, "from_judge": bool(tgt),
-            "tol": float(p.get("tolerance") or _scfg("narration.pace_tol", 0.015))}
+            "tol": float(p.get("tolerance") or _scfg("narration.pace_tol", 0.015)),
+            # the default pause's limits: the plan's (the judge keeps every default join heard clearly as a pause, static §13), else
+            # the config's
+            "pause_floor_s": float(p["pause_floor_s"]) if p.get("pause_floor_s") is not None else float(_scfg("narration.pause_floor_s", 0.12)),
+            "pause_ceiling_s": (float(p["pause_ceiling_s"]) if p.get("pause_ceiling_s") is not None
+                                else float(_scfg("narration.pause_ceiling_s", 1.5)))}
 
 
 def _ds_rate_for(voice: dict, band_sp, measure: str = "wpm_speech") -> float:
@@ -10682,7 +10694,14 @@ def _pace_narration(lines: list, nd: Path, raw: Path, pt: dict, pause_default: f
     words = sum(len(str(ln["text"]).split()) for ln in lines)
     mk, ts, to, tol = pt["measure"], pt["target_speak"], pt["target_overall"], pt["tol"]
     bs, bo = pt["band_speak"], pt["band_overall"]
-    floor, ceil = float(_scfg("narration.pause_floor_s", 0.12)), float(_scfg("narration.pause_ceiling_s", 1.5))
+    floor, ceil = float(pt["pause_floor_s"]), float(pt["pause_ceiling_s"])
+    # every pass is measured on the narration as it is delivered: the voice chain and the two loudness passes applied, the file the
+    # video plays and the second reading (`T narration-words`) reads (2026-11-08: the raw join read 212.7 words a minute articulating,
+    # the delivered file 207.4); the last pass's file becomes the narration
+    target_lufs = float(_scfg("narration.loudness_lufs", -14.0))
+    chain = str(_scfg("narration.voice_chain", NARRATION_VOICE_CHAIN) or "")
+    proc = raw.with_name(raw.name.replace(".raw.wav", "") + ".pace.wav")
+    lnr = {}
     n_def = sum(1 for ln in lines[:-1] if "pause_after" not in ln)
     p_expl = sum(float(ln["pause_after"]) for ln in lines[:-1] if "pause_after" in ln)
     fit = fit or {}
@@ -10709,7 +10728,10 @@ def _pace_narration(lines: list, nd: Path, raw: Path, pt: dict, pause_default: f
             done = list(ex.map(lambda n: (n, _apply_tempo(trimmed[n], pd / f"line-{n:02d}.wav", f)), list(trimmed)))
         files = dict(done)
         spans, total = _join_lines(lines, files, pause_default, raw)
-        m = _measure_pace(raw, lines, spans, lang, nd)
+        lnr = _loudnorm_2pass(raw, proc, target_lufs, ["-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le"], pre=chain)
+        if not lnr["ok"]:
+            fail("loudness pass failed: " + lnr["stderr"])
+        m = _measure_pace(proc, lines, spans, lang, nd)
         words_heard = m.pop("_words", [])
         on_s = bool(m.get(mk)) and abs(m[mk] / ts - 1) <= tol
         on_o = to is None or (bool(m.get("wpm_overall")) and abs(m["wpm_overall"] / to - 1) <= tol)
@@ -10765,15 +10787,17 @@ def _pace_narration(lines: list, nd: Path, raw: Path, pt: dict, pause_default: f
                    "intra_pauses_per_line": round(bd["intra_pauses"] / len(lines), 3),
                    "intra_pause_s_mean_at_1": round(bd["intra_pause_s_mean"] * speed, 3) if bd.get("intra_pause_s_mean") else None,
                    "breakdown": bd, "lines": len(lines), "words": words, "tempo": f_used, "model_rate": model_rate, "learned": now_iso()}
-    return {"files": files, "spans": spans, "total": total,
+    return {"files": files, "spans": spans, "total": total, "measured_file": str(proc), "loudness_pass": lnr,
             "target": {mk: bs, "wpm_overall": bo, "point": {mk: ts, "wpm_overall": to}, "tolerance": tol, "from_judge": pt.get("from_judge")},
             "measure": mk, "measured": {k_: m.get(k_) for k_ in PACE_MEASURED_KEYS},
             "on_target": {"speak": on_s, "overall": on_o}, "within": within, "unreachable": unreachable,
-            "model_rate": model_rate, "tempo": f_used, "pause_default_s": pause_used, "first_setting_from": first_from,
+            "model_rate": model_rate, "tempo": f_used, "pause_default_s": pause_used, "pause_floor_s": floor, "pause_ceiling_s": ceil,
+            "first_setting_from": first_from,
             "method": method, "tempo_outside_clean_range": not (lo <= f_used <= hi), "native_wpm_speech": native, "fit": learned,
             "passes": hist,
-            "yardstick": ("faster-whisper's timed words of the joined narration, as the references were read: words a minute overall (first to "
-                          "last word) and while articulating (pauses of 0.25 s or more taken out)")}
+            "yardstick": ("faster-whisper's timed words of the narration as delivered (the voice chain and the loudness passes applied: the "
+                          "file the video plays and `T narration-words` reads), as the references were read: words a minute overall (first "
+                          "to last word) and while articulating (pauses of 0.25 s or more taken out)")}
 
 
 def _tts_fit(a):
@@ -11823,7 +11847,10 @@ def _forecast_narration(rd: Path, st: dict, nn: str) -> dict:
     voice = (st.get("static") or {}).get("voice") or {}
     fit = voice.get("fit") or {}
     res["voice_fit"] = {k: v for k, v in fit.items() if k != "breakdown"} or None
-    floor, ceil = float(_scfg("narration.pause_floor_s", 0.12)), float(_scfg("narration.pause_ceiling_s", 1.5))
+    floor, ceil = ((pt["pause_floor_s"], pt["pause_ceiling_s"]) if pt else
+                   (float(_scfg("narration.pause_floor_s", 0.12)), float(_scfg("narration.pause_ceiling_s", 1.5))))
+    if pt:
+        res["target"]["pause_limits_s"] = [floor, ceil]
     lo, hi = float(_scfg("narration.tempo_clean_min", 0.85)), float(_scfg("narration.tempo_clean_max", 1.35))
     if pt and pt["measure"] == "wpm_articulation" and fit.get("wpm_articulation_at_1"):
         speed = pt["target_speak"] / float(fit["wpm_articulation_at_1"])

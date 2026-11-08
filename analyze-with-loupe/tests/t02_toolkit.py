@@ -1019,6 +1019,20 @@ check(js.get("ok") and (_p9.get("on_target") or {}).get("speak") is True and (_p
       and "floor" in str(_p9.get("unreachable")),
       f"tts say reports a point the planned pauses leave no room for as unreachable, with its cause, never as a pace that merely landed "
       f"somewhere ({str(_p9.get('unreachable'))[:90]})")
+# the plan's own floor for the default pause (the judge keeps every default join heard clearly as a pause, static §13), and the
+# narration that plays is the very file its pace was measured on (2026-11-08: the raw join read 212.7, the delivered file 207.4)
+(SR / "40-briefs" / "video-10-narration.json").write_text(json.dumps({"video": "10", "language": "english", "lines": [dict(x) for x in _pl8],
+    "pause_default_s": 0.3, "pace": {"wpm_articulation": [180, 200], "wpm_overall": [150, 185],
+                                      "target": {"wpm_articulation": 190.0, "wpm_overall": 175.0}, "pause_floor_s": 0.3}}), encoding="utf-8")
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "10")
+_p10 = js.get("pace") or {}
+_s10 = json.loads((SR / "30-assets" / "narration" / "video-10.json").read_text(encoding="utf-8"))
+check(js.get("ok") and _p10.get("pause_floor_s") == 0.3 and abs(float(_p10.get("pause_default_s") or 0) - 0.3) < 0.005
+      and (_p10.get("on_target") or {}).get("speak") is True and (_p10.get("on_target") or {}).get("overall") is False
+      and "(0.3 s)" in str(_p10.get("unreachable")) and not (SR / "30-assets" / "narration" / "video-10.pace.wav").exists()
+      and Path(_s10["file"]).is_file() and "as delivered" in str((_s10.get("pace") or {}).get("yardstick")),
+      f"the plan's own floor for the default pause holds (the loop names the point it then cannot reach), and the narration is the very "
+      f"file its pace was measured on ({_p10.get('pause_default_s')} s; {str(_p10.get('unreachable'))[:70]})")
 _s8 = json.loads((SR / "30-assets" / "narration" / "video-08.json").read_text(encoding="utf-8"))
 _h8 = []
 for _r8 in _s8["lines"]:

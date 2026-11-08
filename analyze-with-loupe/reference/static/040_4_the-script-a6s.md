@@ -3,10 +3,12 @@
 `40-briefs/video-NN-script.md` (readable: the beats, the devices used, the sources) and `40-briefs/video-NN-narration.json`, the lines the
 voice speaks: `{"video": "NN", "language": "english", "pace": {"refs": ["<the family's references>"], "wpm_articulation": [<low>,
 <high>], "wpm_overall": [<low>, <high>], "target": {"wpm_articulation": <the point>, "wpm_overall": <the point>}, "tolerance": 0.015,
-"pauses": {<the family's pauses a minute, median, p90, long ones per 10 minutes: the pattern the plan follows>}, "why": "<the numbers>"},
+"pauses": {<the family's pauses a minute, median, p90, long ones per 10 minutes: the pattern the plan follows>}, "pause_floor_s":
+<the default pause's lowest: every default join heard clearly as a pause>, "why": "<the numbers>"},
 "pause_default_s": <the family's median pause>, "lines": [{"n": 1, "text": "…", "emotion": "neutral", "pause_after": <only where the
-family holds a long pause>}, …]}`. The pace, the point and the pauses are the family's measured numbers (§2, §6 "The pace": the fair
-measure), chosen and checked by the judge before a line is made (§13, J1); `T tts say` aims the narration at the point and measures it.
+family holds a long pause, or short where a line runs on into the next>}, …]}`. The pace, the point and the pauses are the family's
+measured numbers (§2, §6 "The pace": the fair measure), chosen and checked by the judge before a line is made (§13, J1); `T tts say` aims
+the narration at the point and measures it.
 
 - **The length** is the agent's, per video, from the spec's length pattern (§2), never asked of the user: where this subject sits among
   the references (a subject with as much to tell as their longest runs as long; one beat-light subject as short as their shortest), the

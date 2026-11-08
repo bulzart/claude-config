@@ -44,10 +44,16 @@ and `pause_default_s` drive `T tts say`:
 - **a tempo afterwards only for what the model did not reach**, and for every line of a model without a speed setting (Qwen3-TTS on
   this PC has none): one factor for all lines, ffmpeg's rubberband with the pitch and the formants kept, its first value from the voice's
   fit; a factor outside 0.85 to 1.35 is named (`tempo_outside_clean_range`: the voice is far from the family's pace);
-- the default pause between lines is set for the overall point (first from the fit, then from each pass's measure); a line's own
-  `pause_after` stays;
-- after every pass the joined narration is measured with **the references' own yardstick** (faster-whisper's timed words), until both
-  measures sit within the tolerance of their points (`narration.pace_tol`, 1.5 %), at most four passes. A point the plan's own pauses
+- the default pause between lines is set for the overall point (first from the fit, then from each pass's measure), between the plan's
+  `pace.pause_floor_s` and `pace.pause_ceiling_s` (else the config's 0.12 and 1.5 s); a line's own `pause_after` stays. The judge sets
+  the floor so every default join is heard clearly as a pause: a default whose heard gap (the pause plus the voice's breath) sits near
+  the 0.25 s mark is counted as a pause in one reading and as speech in the next (2026-11-08: a default of 0.215 s read 212.7 words a
+  minute articulating once and 207.4 the next time); a line that runs on into the next (its sentence or its list goes on) takes a short
+  `pause_after` of its own instead;
+- after every pass the narration **as delivered** (the voice chain and the two loudness passes applied: the file the video plays and
+  `T narration-words` reads) is measured with **the references' own yardstick** (faster-whisper's timed words), until both
+  measures sit within the tolerance of their points (`narration.pace_tol`, 1.5 %), at most four passes; the last pass's file is the
+  narration, so what was measured is what plays. A point the plan's own pauses
   cannot reach (the default pause would have to go under its floor) is named in `unreachable` with its cause: the judge's forecast (§13)
   catches it before the narration is made, by cutting planned pauses the family does not hold. The sidecar's `pace` holds the point, the
   bands, every pass, `on_target`, `within`, the method and the voice's new fit; `T narration-words` reads the pace again from its own

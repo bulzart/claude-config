@@ -1390,3 +1390,15 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   stretches), J4 (before the bed) and J5 (before the edit) decides alone from the family's data, edits only its checkpoint's plan
   files, never generates and never changes a lock, a start choice or the memory guard; its record is `40-briefs/video-NN-judge.md`
   with `video-NN-forecast.json`. The plan, sound, images, produce and edit skills call it at those points.
+
+## 2026-11-08 · Static: the pace measured on the narration as delivered, and default joins kept clear of the pause mark
+- **Seen:** video 03's re-join on the judge's point (211.9 articulating, 174.0 overall) ended on it by the loop's own reading (212.7,
+  174.2; tempo 1.0794, default pause 0.215 s, 3 passes), but `T narration-words` read 207.4 and 174.0 on the delivered file: 2.1 % under
+  the point, outside the tolerance. The loop read the raw join; the delivered file has the voice chain and two loudness passes. And at a
+  default of 0.215 s plus the voice's breath many joins are heard right around the 0.25 s mark, so whether a join counts as a pause
+  flips between two readings of nearly the same audio (21.7 against 24.3 pauses a minute).
+- **Changed:** `_pace_narration` measures every pass on the narration as delivered (the voice chain and the loudness passes applied) and
+  that last file becomes the narration, so what was measured is what plays and what `T narration-words` reads. The plan's pace block may
+  carry `pause_floor_s` and `pause_ceiling_s` for the default pause (the judge keeps every default join heard clearly as a pause; a line
+  that runs on into the next takes a short `pause_after`), read by the loop and the forecast. Static §4, §6, §13; t02: the plan's floor
+  holds and the measured file is the narration.

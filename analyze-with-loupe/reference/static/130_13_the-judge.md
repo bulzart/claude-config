@@ -49,6 +49,11 @@ span with every pause of 0.25 s or more taken out, `wpm_articulation`), from the
 speech-to-text segments, `wpm_speech`) counts pauses differently in a natural recording (its segments run long and hold most of its
 pauses) and in a joined narration (its segments end at the lines): 2026-11-08, video 03 read 208.5 by segments and 213.8 by the fair
 measure against a family median of 211.9 by the same fair measure. The judge sets and judges the speaking pace by `wpm_articulation`.
+Two cautions from the same video's re-join: the pace is measured on the narration as delivered (the voice chain and the loudness passes
+applied; the raw join read 212.7 where the delivered file read 207.4), so the loop and `T narration-words` read the same file; and a
+join heard near the 0.25 s mark (a default of 0.215 s plus the voice's breath) is counted as a pause in one reading and as speech in the
+next, so the judge keeps every default join clearly on one side: `pace.pause_floor_s` (§4, §6) high enough that a default join is
+heard as a pause, and a short `pause_after` of its own on a line that runs on into the next.
 
 **The checkpoints** (each writes its decisions into `40-briefs/video-NN-judge.md`: the decision, the numbers it rests on, the
 predicted result; and afterwards the measured result against it):
@@ -57,7 +62,8 @@ predicted result; and afterwards the measured result against it):
    - the narration's `pace` (§4): `refs` (the family), the bands by the fair measure, the `target` point (the family's median of
      `wpm_articulation` and of `wpm_overall`, unless a reason in the data), the `tolerance`;
    - the pauses: the long pauses the family holds (its `long_pauses_per_10min` times the video's minutes, at the strongest turns:
-     the reveals, the chapter starts) as `pause_after`, every other join the default the pace loop sets; the forecast must then show the
+     the reveals, the chapter starts) as `pause_after`, a short `pause_after` where a line runs on into the next, every other join the
+     default the pace loop sets, kept over `pace.pause_floor_s` so each is heard clearly as a pause; the forecast must then show the
      point reachable and the predicted pause pattern near the family's (a planned pause the family does not hold is cut);
    - the strong lines (at most one in five, never two in a row, §4), the length against the family's (§4);
    - every image prompt the forecast marks: a thing that would carry writing gets its exact words when the story needs them (a label
