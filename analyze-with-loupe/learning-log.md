@@ -1362,3 +1362,31 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   rate (`_media_kwargs`). `_ds_post` sends a request again after a reset or refused connection, three times at most (a timeout still
   raises); the stand-in server has a larger backlog and can drop connections on purpose. `T inventory --drop` marks a reference dropped
   (persisted). t02: the pairing, 2 fps past the cap, the dropped-connection resend.
+
+## 2026-11-08 · Static: a judge decides before anything is made, and the pace aims at a point
+- **Asked:** "no need to ask me for my call, just make a smart judge system who can do things on its own who decides what to do when
+  this happens or similar cases, who is given enough brief and information and it evaluates the situation and decides way before
+  generation happens and the generation is done whether image,speech or music is done so we just make the most quality outputs and not
+  unexpected things turn out after the work is done ... so before we execute we also judge the potential outcomes before we continue to
+  generate, all without drifting from the mined and collected data patterns and analysis from the references"; then "the problem was
+  with this word "We didn't aim for 209.", because every step should be taken carefully and thoroghfully, and nothing should turn out
+  as unexpected".
+- **Found:** video 03's narration measured 208.5 and 209.1 words a minute while speaking against a band of 178-212: the pace loop
+  stopped at its first pass inside the band, so where in the band it landed was chance, and the script's 56 explicit pauses (0.5-1.2 s,
+  43 s in all) pushed the speaking rate up. The yardstick was uneven too: the references' speech-to-text segments run long and hold
+  most of their pauses (V10: 88 of its 125 s of pauses inside segments; V12: 103 of 121 s), while a joined narration's segments end at
+  its lines, so "while speaking" meant different things on the two sides. Read by the words' own times, video 03 sits at its family's
+  centre (213.8 words a minute articulating and 174.5 overall, against F3's medians 211.9 and 174.0), but its long pauses (0.8 s or
+  more) ran 33.4 per 10 minutes against the family's 6.3: nobody had decided them. No step predicted a result before a model ran.
+- **Changed:** the fair measure (`wpm_articulation`: the words over the span less every pause of 0.25 s or more, from the words'
+  times; `wpm_overall`; pauses a minute, their median and p90, long pauses per 10 minutes, the pause share) in the references'
+  numbers, `T static profile` and every narration measure. The pace aims at a point (the judge's, else the band's middle) within a
+  tolerance (`narration.pace_tol`, 0.015): the tempo for the articulation, the default pause for the overall, the first setting from
+  the voice's learned fit (`T tts fit`, `state.json -> static.voice.fit`), and `unreachable` with its cause when a setting cannot get
+  there. `T static forecast --part narration|images|music` predicts before a generation: the pace and the pause pattern against the
+  family, the length, each image's text and static §11 risks, the image hours, the bed's sections and words, and the memory headroom
+  from a new record of every model job (`runs/.model-memory.json`: its peak, a guard stop, the free commit memory before it). The
+  judge (contract item 37, static §13): an Opus agent at J1 (before any generation), J2 (after the narration), J3 (between image
+  stretches), J4 (before the bed) and J5 (before the edit) decides alone from the family's data, edits only its checkpoint's plan
+  files, never generates and never changes a lock, a start choice or the memory guard; its record is `40-briefs/video-NN-judge.md`
+  with `video-NN-forecast.json`. The plan, sound, images, produce and edit skills call it at those points.

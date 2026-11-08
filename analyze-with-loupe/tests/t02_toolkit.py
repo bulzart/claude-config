@@ -950,6 +950,132 @@ check(js.get("ok") and (js.get("pace") or {}).get("within") == {"wpm_speech": Tr
 js, _ = ts("tts", "say", "--run", str(SR), "--video", "07", "--rejoin")
 check(js.get("made_now") == [] and (js.get("pace") or {}).get("within", {}).get("wpm_speech") is True,
       "tts say --rejoin paces the existing lines again without making any")
+# the pace aimed at a point, and the judge's forecast (the user, 2026-11-08: "the problem was with this word "We didn't aim for 209.",
+# because every step should be taken carefully and thoroghfully, and nothing should turn out as unexpected"; static §6, §13): the fair
+# measure (the words over their span with every pause of 0.25 s or more taken out), the voice's learned fit, the point within its
+# tolerance, a point the plan's own pauses cannot reach named before and after, the image and bed plans' risks, the memory record
+_pw = _awl._pace_of_words([{"s": 0.0, "e": 0.5}, {"s": 0.5, "e": 1.0}, {"s": 1.2, "e": 1.5}, {"s": 2.5, "e": 3.0}])
+check(_pw["wpm_articulation"] == 120.0 and _pw["wpm_overall"] == 80.0 and _pw["pauses_per_minute"] == 20.0 and _pw["pause_s_median"] == 1.0
+      and _pw["long_pauses_per_10min"] == 200.0 and _pw["pause_share"] == 0.333,
+      f"the fair measure: words a minute over the span with every pause of 0.25 s or more taken out (a 0.2 s gap stays speech), the "
+      f"pauses a minute, their median, the long ones per 10 minutes and their share ({_pw})")
+_ptn = _awl._pace_targets({"wpm_articulation": [200, 224], "wpm_overall": [160, 185], "target": {"wpm_articulation": 211.9, "wpm_overall": 174.0},
+                           "tolerance": 0.01})
+_pto = _awl._pace_targets({"wpm_speech": [178, 212], "wpm_overall": [170, 185]})
+check(_ptn["measure"] == "wpm_articulation" and _ptn["target_speak"] == 211.9 and _ptn["target_overall"] == 174.0 and _ptn["from_judge"] is True
+      and _ptn["tol"] == 0.01 and _pto["measure"] == "wpm_speech" and _pto["target_speak"] == 195.0 and _pto["target_overall"] == 177.5
+      and _pto["from_judge"] is False and _awl._pace_targets({}) is None,
+      "a plan's pace is read as a point to aim at: the judge's with its tolerance, else each band's middle; an older plan keeps its measure")
+_fit7 = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"].get("fit") or {}
+check(_fit7.get("video") == "07" and abs(float(_fit7.get("wpm_articulation_at_1") or 0) - 156) < 4
+      and abs(float(_fit7.get("nonword_s_per_line_at_1") if _fit7.get("nonword_s_per_line_at_1") is not None else 9)) < 0.05,
+      f"a paced narration teaches the run's voice its fit (state.json -> static.voice.fit): its words a minute at speed 1 by the fair "
+      f"measure and the silence it adds beside the planned pauses ({_fit7.get('wpm_articulation_at_1')} wpm, the stub speaks 156)")
+_pl8 = [{"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
+        {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "neutral", "pause_after": 0.9},
+        {"n": 3, "text": "What they took that night is still a secret.", "emotion": "neutral"},
+        {"n": 4, "text": "The papers were sealed for fifty years.", "emotion": "neutral"},
+        {"n": 5, "text": "Then a single page went missing.", "emotion": "neutral", "pause_after": 0.6},
+        {"n": 6, "text": "Nobody has found it since.", "emotion": "neutral"}]
+(SR / "40-briefs" / "video-08-narration.json").write_text(json.dumps({"video": "08", "language": "english", "lines": _pl8, "pause_default_s": 0.3,
+    "pace": {"refs": [], "wpm_articulation": [180, 200], "wpm_overall": [150, 170], "target": {"wpm_articulation": 190.0, "wpm_overall": 160.0},
+             "tolerance": 0.015, "why": "test"}}), encoding="utf-8")
+js, _ = ts("static", "forecast", "--run", str(SR), "--video", "08", "--part", "narration")
+_f8 = (js.get("narration") or {}).get("forecast") or {}
+check(js.get("ok") and _f8.get("overall_reachable") is True and abs(float(_f8.get("default_pause_s") or 0) - 0.368) < 0.03
+      and abs(float((_f8.get("predicted") or {}).get("wpm_overall") or 0) - 160) < 1.0 and (_f8.get("predicted") or {}).get("wpm_articulation") == 190.0
+      and (SR / "40-briefs" / "video-08-forecast.json").is_file(),
+      f"static forecast predicts a narration before it is made: from the voice's fit, the default pause that brings the overall pace to its "
+      f"point, and the pace and pauses it gives ({_f8.get('default_pause_s')} s, {(_f8.get('predicted') or {}).get('wpm_overall')} wpm)")
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "08")
+_p8 = js.get("pace") or {}
+_m8 = _p8.get("measured") or {}
+check(js.get("ok") and _p8.get("measure") == "wpm_articulation" and _p8.get("on_target") == {"speak": True, "overall": True}
+      and abs(float(_m8.get("wpm_articulation") or 0) / 190 - 1) <= 0.015 and abs(float(_m8.get("wpm_overall") or 0) / 160 - 1) <= 0.015
+      and _p8.get("first_setting_from") == "the voice's fit" and _p8.get("passes", 9) <= 2 and _p8.get("unreachable") is None
+      and (_p8.get("target") or {}).get("point") == {"wpm_articulation": 190.0, "wpm_overall": 160.0}
+      and abs(float(_p8.get("pause_default_s") or 0) - float(_f8.get("default_pause_s") or 0)) < 0.03,
+      f"tts say aims at the judge's point, not anywhere in the band: the first setting from the voice's fit, both measures within the "
+      f"tolerance of their points, the pause the forecast predicted ({_m8.get('wpm_articulation')} and {_m8.get('wpm_overall')} wpm in "
+      f"{_p8.get('passes')} passes, pause {_p8.get('pause_default_s')} s)")
+js, _ = ts("narration-words", "--run", str(SR), "--video", "08")
+_nw8 = js.get("pace") or {}
+check(_nw8.get("measure") == "wpm_articulation" and "speak" in (_nw8.get("on_target") or {})
+      and (_nw8.get("target") or {}).get("point") == {"wpm_articulation": 190.0, "wpm_overall": 160.0},
+      "narration-words reads the pace again by the fair measure, against the plan's point and tolerance")
+_pl9 = [dict(x) for x in _pl8]
+_pl9[1]["pause_after"] = 1.5
+_pl9[4]["pause_after"] = 1.5
+(SR / "40-briefs" / "video-09-narration.json").write_text(json.dumps({"video": "09", "language": "english", "lines": _pl9, "pause_default_s": 0.3,
+    "pace": {"wpm_articulation": [180, 200], "wpm_overall": [165, 185], "target": {"wpm_articulation": 190.0, "wpm_overall": 175.0}}}),
+    encoding="utf-8")
+js, _ = ts("static", "forecast", "--run", str(SR), "--video", "09", "--part", "narration")
+_f9 = (js.get("narration") or {}).get("forecast") or {}
+check(_f9.get("overall_reachable") is False and float(_f9.get("seconds_over") or 0) > 1.0,
+      f"static forecast names an overall point the plan's own pauses cannot reach, before anything is made ({_f9.get('seconds_over')} s over)")
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "09")
+_p9 = js.get("pace") or {}
+check(js.get("ok") and (_p9.get("on_target") or {}).get("speak") is True and (_p9.get("on_target") or {}).get("overall") is False
+      and "floor" in str(_p9.get("unreachable")),
+      f"tts say reports a point the planned pauses leave no room for as unreachable, with its cause, never as a pace that merely landed "
+      f"somewhere ({str(_p9.get('unreachable'))[:90]})")
+_s8 = json.loads((SR / "30-assets" / "narration" / "video-08.json").read_text(encoding="utf-8"))
+_h8 = []
+for _r8 in _s8["lines"]:
+    _w8 = _r8["text"].split()
+    _st8 = (_r8["end"] - _r8["start"]) / len(_w8)
+    _h8 += [{"w": w, "s": round(_r8["start"] + i * _st8, 3), "e": round(_r8["start"] + (i + 1) * _st8, 3)} for i, w in enumerate(_w8)]
+(SR / "30-assets" / "narration" / "video-08.words.json").write_text(json.dumps({"video": "08", "heard": _h8}), encoding="utf-8")
+js, _ = ts("tts", "fit", "--run", str(SR), "--video", "08")
+_fv = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"].get("fit") or {}
+check(js.get("ok") and _fv.get("video") == "08" and abs(float(_fv.get("wpm_articulation_at_1") or 0) - 156) < 4
+      and (_fv.get("breakdown") or {}).get("joins") == 5 and abs(float(_fv.get("join_excess_s_at_1") if _fv.get("join_excess_s_at_1") is not None else 9)) < 0.03,
+      f"tts fit learns the voice's fit again from a made narration and the words heard in it, with no model: its words a minute at speed 1 "
+      f"and the silence it adds at the joins ({_fv.get('wpm_articulation_at_1')} wpm, {_fv.get('join_excess_s_at_1')} s)")
+js, _ = ts("new-run", "--mode", "analyze", "--slug", "static-forecast")
+FR = Path(js["run_dir"])
+_fsl = "Flat 2D vector illustration with thick dark outlines."
+_fcs = "Nothing is laid over the picture: no captions, no titles, no labels, no logos."
+(FR / "40-briefs").mkdir(parents=True, exist_ok=True)
+(FR / "40-briefs" / "video-01-images.json").write_text(json.dumps({"video": "01", "style_lock": _fsl, "images": [
+    {"image": 1, "from_line": 1, "prompt": f"A kitchen wall where a thermometer reads 38 degrees. {_fsl} {_fcs}", "motion": "zoom-in"},
+    {"image": 2, "from_line": 2, "prompt": f"A quiet street at dawn with no signs and no posters. {_fsl} {_fcs}", "motion": "none"},
+    {"image": 3, "from_line": 3, "prompt": f"Two scenes side by side: an old church on a hill. {_fcs}", "motion": "none"},
+    {"image": 4, "from_line": 4, "prompt": f"A map of the coast. {_fsl} {_fcs}", "motion": "pan-left", "label_note": "the city's name"}]}),
+    encoding="utf-8")
+js, _ = ts("static", "forecast", "--run", str(FR), "--video", "01", "--part", "images", "--from", "1", "--to", "4")
+_fic = (js.get("images") or {}).get("counts") or {}
+check(js.get("ok") and _fic.get("text_carriers_without_planned_text") == [1, 4] and _fic.get("digits_in_scene") == [1]
+      and _fic.get("religion_or_superstition_words") == [3] and _fic.get("split_words") == [3] and _fic.get("style_lock_missing") == [3]
+      and _fic.get("label_on_moving_image") == [4] and _fic.get("clean_sentence_missing") == [],
+      f"static forecast lists each image prompt's facts that tend to spoil a still, before it is drawn: a thing that carries writing with no "
+      f"words planned, digits, a split, words of static §11, a missing style lock, a label on a moving image; 'no signs' is kept out ({_fic})")
+(FR / "40-briefs" / "music.json").write_text(json.dumps({"tracks": [{"video": "01", "caption": "slow ambient pads under a distant choir, no vocals",
+    "duration": 700, "bpm": 70, "sections": [{"caption": "calm", "duration": 300}, {"caption": "tense", "duration": 300},
+                                             {"caption": "release", "duration": 108}]}]}), encoding="utf-8")
+js, _ = ts("static", "forecast", "--run", str(FR), "--video", "01", "--part", "music")
+_fmu = js.get("music") or {}
+check(js.get("ok") and _fmu.get("vocal_words_not_negated") == ["choir"] and _fmu.get("religion_or_superstition_words") == ["choir"]
+      and _fmu.get("needs_sections") is True and _fmu.get("sections") == 3 and _fmu.get("sections_sum_s") == 708.0
+      and _fmu.get("sections_should_sum_s") == 708.0 and _fmu.get("made") is False and "headroom_gb" in (_fmu.get("memory") or {}),
+      f"static forecast reads a bed's plan before it is made: a voice the caption asks for (a choir; 'no vocals' is kept out), the sections "
+      f"against the length with their crossfades, and the memory record ({_fmu.get('vocal_words_not_negated')})")
+_mmp = Path(_tf.mkdtemp(prefix="awl-mm-")) / ".model-memory.json"
+_mm_orig = _awl._model_memory_path
+_awl._model_memory_path = lambda: _mmp
+try:
+    _awl._model_memory_note("music", {"op": "make", "model": "acestep-v15"}, {"ok": False, "peak_gb": 12.83},
+                            "[memguard] STOPPED the app to protect Windows: free RAM 4.4 GB, free commit 2.0 GB (app was using 12.8 GB).\n"
+                            "[memguard] peak memory used by the app: 12.83 GB (cap 20.0 GB)", 14.8, 1)
+    _awl._model_memory_note("tts", {"op": "say", "model": "qwen3-tts"}, {"ok": True, "peak_gb": 12.68}, "", 15.1, 0)
+    _mmj = json.loads(_mmp.read_text(encoding="utf-8"))["jobs"]
+    _fmm = _awl._fc_memory("music", 3.0)
+finally:
+    _awl._model_memory_path = _mm_orig
+check(len(_mmj) == 2 and _mmj[0]["guard_stopped"] is True and _mmj[0]["free_commit_gb_at_stop"] == 2.0 and _mmj[0]["free_commit_gb_before"] == 14.8
+      and _mmj[1]["ok"] is True and _mmj[1]["guard_stopped"] is False and _fmm["guard_stops"] == 1 and _fmm["need_gb"] == 15.83,
+      "every local model job's memory facts go to the PC's record (its peak, a guard stop with the free memory then, the free memory before "
+      "it), and the forecast reads the next job's need from it (the stopped peak plus the guard's floor)")
 # the whole set as numbers: a reference's measured files read into one table with the set's median and range
 _md = SR / "10-media" / "R01"
 _md.mkdir(parents=True, exist_ok=True)
