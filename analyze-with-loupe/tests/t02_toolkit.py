@@ -1712,6 +1712,7 @@ _DSKEY = "sk-ds-NEVER-PRINT-777"
 _DS_SEEN = []
 _DS_AUDIO = {}          # request number -> (words, rate): the stand-in speaks 2.6 words a second at rate 1, faster as rate rises
 _DS_LOCK = _th.Lock()
+_DS_DROP = {"n": 0}     # the next n requests are dropped without an answer
 
 
 def _ds_tone(seconds, freq, sr=24000):
@@ -1748,6 +1749,17 @@ class _DSMock(_BH):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
         with _DS_LOCK:
+            drop = _DS_DROP["n"] > 0
+            if drop:
+                _DS_DROP["n"] -= 1
+        if drop:   # a dropped connection, no answer: the socket is reset as a busy PC or a web shield can do
+            import socket as _sk
+            import struct as _sx
+            self.connection.setsockopt(_sk.SOL_SOCKET, _sk.SO_LINGER, _sx.pack("ii", 1, 0))
+            self.connection.close()
+            self.close_connection = True
+            return
+        with _DS_LOCK:
             _DS_SEEN.append({"path": self.path, "auth": self.headers.get("Authorization"), "body": body})
             k = len(_DS_SEEN)
         inp = body.get("input") or {}
@@ -1779,6 +1791,9 @@ class _DSSrv(_THS):
     request_queue_size = 64   # Python's default backlog of 5 made Windows reset parallel requests on a busy PC (2026-11-08)
     daemon_threads = True
 
+    def handle_error(self, request, client_address):   # a dropped connection on purpose is not a test error
+        pass
+
 
 _dsrv = _DSSrv(("127.0.0.1", 0), _DSMock)
 _th.Thread(target=_dsrv.serve_forever, daemon=True).start()
@@ -1804,7 +1819,10 @@ check(code == 2 and "DASHSCOPE_API_KEY" in str(js.get("error")) and not _DS_SEEN
 js, code = ta(*_dargs, "--language", "german", ok=False)
 check(code == 2 and "English or Chinese" in str(js.get("error")) and not _DS_SEEN,
       "Alibaba's voice design takes English or Chinese lines only: another language is told to design on this PC, nothing is sent")
+_DS_DROP["n"] = 2       # two dropped connections along the way: each is sent again, the samples all come back
 js, _ = ta(*_dargs)
+check(_DS_DROP["n"] == 0 and len(js.get("samples") or []) == 5,
+      "a dropped connection to Alibaba (no answer) is sent again, at most twice, and the call goes on")
 _dsm = json.loads((AR / "30-assets" / "voice" / "samples.json").read_text(encoding="utf-8"))
 _cv = [s["body"]["input"] for s in _DS_SEEN if s["path"].endswith("/customization")]
 with wave.open(str(js["samples"][0]["file"]), "rb") as _w:

@@ -9748,13 +9748,18 @@ def _ds_scrub(text, key: str) -> str:
 
 def _ds_post(path: str, body: dict, key: str, timeout: float) -> tuple:
     """(http status, parsed JSON or None, raw text with the key scrubbed, the statuses tried) of one Model Studio call. Only rate limits
-    and server errors are sent again, twice at most. The key travels only in the Authorization header. A timeout or a dropped connection
-    raises (whether a line was made and billed is then not known)."""
+    and server errors are sent again, twice at most; a connection reset or refused (no answer came: on this PC a busy machine or the
+    antivirus's web shield can drop one, 2026-11-08) is sent again twice at most, 1 s and 3 s later (at worst a line billed twice, a few
+    hundredths of a cent, or one more free voice on the account). The key travels only in the Authorization header. A timeout raises
+    (whether a line was made and billed is then not known)."""
     import urllib.error
     import urllib.request
     base, _how = _ds_base()
     tries, status, raw = [], None, ""
-    for wait in (0, 5, 20):
+    drops = 0
+    waits = [0, 5, 20]
+    while waits:
+        wait = waits.pop(0)
         if wait:
             time.sleep(wait)
         req = urllib.request.Request(base + path, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), method="POST",
@@ -9768,6 +9773,14 @@ def _ds_post(path: str, body: dict, key: str, timeout: float) -> tuple:
                 raw = e.read().decode("utf-8", "replace")
             except Exception:  # noqa: BLE001
                 raw = ""
+        except (ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError, urllib.error.URLError) as e:
+            reason = getattr(e, "reason", e)
+            if not isinstance(reason, (ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError)) or drops >= 2:
+                raise
+            drops += 1
+            tries.append(f"dropped:{type(reason).__name__}")
+            waits.insert(0, 1 if drops == 1 else 3)
+            continue
         tries.append(status)
         if status not in (429, 500, 502, 503, 504):
             break
