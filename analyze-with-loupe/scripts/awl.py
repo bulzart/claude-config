@@ -103,6 +103,7 @@ import glob
 import hashlib
 import html
 import json
+import uuid
 import math
 import os
 import re
@@ -6357,6 +6358,25 @@ def _catalogue_refusal(kind: str, slug: str, pro_ok: bool) -> str | None:
     return None
 
 
+def _anim_slug(name) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", str(name or "").lower()).strip("-")
+
+
+def _text_anim_template(content: dict, slug: str, kind: str):
+    """An animation of `kind` (in|out) named as `slug` that capcut-cli already wrote into this draft, to copy."""
+    for m in content.get("materials", {}).get("material_animations", []):
+        for an in m.get("animations") or []:
+            if an.get("type") == kind and _anim_slug(an.get("name")) == slug:
+                return m, an
+    return None, None
+
+
+def _seg_has_anim(content: dict, seg: dict, kind: str) -> bool:
+    refs = set(seg.get("extra_material_refs") or [])
+    return any(m.get("id") in refs and any(an.get("type") == kind for an in m.get("animations") or [])
+               for m in content.get("materials", {}).get("material_animations", []))
+
+
 def cmd_capcut_text_anim(a):
     """Static: one of CapCut's own text animations on every text of a track (an intro, an outro or both), through capcut-cli's
     `text-anim` and its catalogue (`capcut enums --text-intros`; CapCut fetches the effect by its id when it opens the project), each
@@ -6380,6 +6400,50 @@ def cmd_capcut_text_anim(a):
     if not segs:
         fail(f"no text on {'a track named ' + repr(a.track) if a.track else 'any text track'}", 2)
     done, kept, failed = 0, 0, []
+    cloned = 0
+    if a.intro and not a.outro:
+        # many texts (one per caption word): capcut-cli writes the intro once, every other text gets a copy of that animation in one
+        # pass (the same material, its own id, its duration capped at its text's), in every copy of the timeline
+        _m, tmpl = _text_anim_template(content, a.intro, "in")
+        if tmpl is None:
+            first = next((s for s in segs if not _seg_has_anim(content, s, "in")), None)
+            if first is not None:
+                dur_s = int((first.get("target_timerange") or {}).get("duration") or 0) / 1e6
+                cp = run([cli, "text-anim", str(d), str(first["id"]), "--intro", a.intro, "--intro-duration",
+                          f"{max(0.001, min(float(a.intro_duration), dur_s)):.3f}s"], timeout=120)
+                if cp.returncode != 0:
+                    fail("capcut-cli text-anim: " + str((_last_json(cp.stdout) or {}).get("error") or cp.stderr or cp.stdout)[-300:], 1)
+                done += 1
+                content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
+                _m, tmpl = _text_anim_template(content, a.intro, "in")
+        if tmpl is not None:
+            want = {str(s["id"]) for s in segs}
+            new_ids = {}
+            for p in _draft_contents(d):
+                c2 = json.loads(p.read_text(encoding="utf-8"))
+                mats2 = c2.setdefault("materials", {}).setdefault("material_animations", [])
+                n_here, k_here = 0, 0
+                for tr in c2.get("tracks", []):
+                    for s in tr.get("segments", []):
+                        if str(s.get("id")) not in want:
+                            continue
+                        if _seg_has_anim(c2, s, "in"):
+                            k_here += 1
+                            continue
+                        mid = new_ids.setdefault(str(s["id"]), str(uuid.uuid4()))
+                        an = json.loads(json.dumps(tmpl))
+                        seg_us = int((s.get("target_timerange") or {}).get("duration") or 0)
+                        an["duration"] = max(1000, min(int(round(float(a.intro_duration) * 1e6)), seg_us))
+                        an["start"] = 0
+                        mats2.append({**json.loads(json.dumps(_m)), "id": mid, "animations": [an]})
+                        s.setdefault("extra_material_refs", []).append(mid)
+                        n_here += 1
+                p.write_text(json.dumps(c2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+                cloned = max(cloned, n_here)
+                kept = max(kept, k_here - (1 if done else 0))
+            out({"ok": True, "draft": str(d), "track": a.track, "intro": a.intro, "intro_duration_s": float(a.intro_duration),
+                 "texts": len(segs), "animated": done + cloned, "by_capcut_cli": done, "copied": cloned, "already_animated": kept,
+                 "failed": [], "note": "CapCut shows the entrance once it has fetched the effect (the plan's captions.animation)"})
     for s in segs:
         dur_s = int((s.get("target_timerange") or {}).get("duration") or 0) / 1e6
         args = [cli, "text-anim", str(d), str(s["id"])]
