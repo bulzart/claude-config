@@ -11536,6 +11536,16 @@ def _ref_numbers(md: Path) -> dict:
          # the cutting
          "shots": pc.get("shots"), "shot_s_median": pc.get("median_shot_s"), "shot_s_min": pc.get("min_shot_s"), "shot_s_max": pc.get("max_shot_s"),
          "cuts_per_10s": pc.get("cuts_per_10s"), "short_shots_under_0_25s": len(ep.get("short_shots_under_0_25s") or []) if ep else None}
+    # the cutting from the edit profile when there is one: it reads every frame, where the 192-px scene detector of A1 missed most picture
+    # changes of a quiet drawn style (2026-11-08: 119 against 259 shots on one reference); its few-frame shots inside a join are left out
+    eps = [s for s in ep.get("shots") or [] if not s.get("short") and s.get("dur") is not None]
+    if eps and dur:
+        lens = [float(s["dur"]) for s in eps]
+        r.update({"shots": len(eps), "shot_s_median": round(statistics.median(lens), 2), "shot_s_min": round(min(lens), 2),
+                  "shot_s_max": round(max(lens), 2), "cuts_per_10s": round((len(eps) - 1) / dur * 10, 2),
+                  "first_cut_s": round(float(eps[1]["start"]), 2) if len(eps) > 1 else None,
+                  "cuts_in_first_3s": sum(1 for s in eps[1:] if float(s["start"]) <= 3.0),
+                  "shots_from": "edit-profile", "shots_scene_detector": pc.get("shots")})
     shots = [s for s in ep.get("shots") or [] if s.get("measured")]
     if shots:
         zooms = [abs(float(s.get("zoom_start_to_end") or 1) - 1) * 100 for s in shots]

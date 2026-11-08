@@ -970,6 +970,17 @@ check(js.get("ok") and js.get("references") == 1 and sorted(js.get("not_analysed
       and _sp["references"]["R01"]["you_per_100_words"] > 0 and (SR / "20-analysis" / "set-profile.md").is_file(),
       "static profile reads every analysed reference's measured numbers into one table with the set's median and range, and lists "
       "the references not analysed yet")
+check(_sp["references"]["R01"]["shots"] == 20 and _sp["references"]["R01"]["shot_s_median"] == 3.0,
+      "without an edit profile the cutting comes from A1's scene detector")
+# with an edit profile the cutting is its shots (every frame read), its few-frame shots inside a join left out
+(_md / "edit-profile.json").write_text(json.dumps({"shots": [
+    {"start": 0.0, "end": 2.0, "dur": 2.0}, {"start": 2.0, "end": 2.07, "dur": 0.07, "short": True}, {"start": 2.07, "end": 6.0, "dur": 3.93},
+    {"start": 6.0, "end": 9.0, "dur": 3.0}] + [{"start": 9.0 + 5 * k, "end": 14.0 + 5 * k, "dur": 5.0} for k in range(10)]}), encoding="utf-8")
+ts("static", "profile", "--run", str(SR))
+_r1 = json.loads((SR / "20-analysis" / "set-profile.json").read_text(encoding="utf-8"))["references"]["R01"]
+check(_r1["shots"] == 13 and _r1["shot_s_median"] == 5.0 and _r1["first_cut_s"] == 2.07 and _r1["shots_from"] == "edit-profile"
+      and _r1["shots_scene_detector"] == 20 and _r1["cuts_in_first_3s"] == 1,
+      "with an edit profile the shots are its own (every frame read), its few-frame shots inside a join left out, the detector's kept beside")
 js, code = ts("static", "profile", "--run", str(SR), "--refs", "R09", ok=False)
 check(code == 2 and "no analysed reference" in str(js.get("error")), "static profile with references that were never analysed says so")
 # the run of 2026-11-06: one word at a time overlapped the next cue 29 times, and a quick 'he' was on screen for one frame

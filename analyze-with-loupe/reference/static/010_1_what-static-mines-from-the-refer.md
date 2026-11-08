@@ -29,7 +29,9 @@ and their amounts, the captions a minute, the bed. For every reference, collect 
   the pauses before reveals, the address (you, we, a story in the third person), the register (calm, ominous, playful, urgent).
 - **The devices that hold attention**: open loops ("but that was not the strangest part"), numbered lists, cliffhangers, rhetorical
   questions, contrasts, the punchline's form and where punchlines fall, the call to action or the loop back to the hook.
-- **The pictures**: the seconds each still holds (the median and the range from `cuts.json`), the style (photoreal, painted, cinematic,
+- **The pictures**: the seconds each still holds (the median and the range from the edit profile's shots, which read every frame, its
+  few-frame shots inside a join left out; A1's `cuts.json` misses many changes of a quiet drawn style: 119 against 259 on one
+  reference, 2026-11-08), the style (photoreal, painted, cinematic,
   illustrated, archival, cartoon, anime, vintage …: in words the user can recognise, since one reference's style becomes the run's at A5,
   §10), the framing (faces, wide scenes, objects, text cards), how each still moves (the edit profile's shots:
   the zoom from start to end and per second, the pan in % of the width or height, the pace in the first and the last quarter, steady or

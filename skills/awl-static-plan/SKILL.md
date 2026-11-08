@@ -20,7 +20,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (12.3 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.9 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
-- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.6 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.0 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*

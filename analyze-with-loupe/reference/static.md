@@ -17,7 +17,7 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | § | Section | File | KB |
 |---|---|---|---|
 | 0 | The team (who works a Static run) | `005_0_the-team-who-works-a-static-run.md` | 3.6 |
-| 1 | What Static mines from the references (A3) | `010_1_what-static-mines-from-the-refer.md` | 8.3 |
+| 1 | What Static mines from the references (A3) | `010_1_what-static-mines-from-the-refer.md` | 8.5 |
 | 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 10.5 |
 | 2b | More than one format (A5, S3, S4, X10) | `025_2b_more-than-one-format.md` | 4.5 |
 | 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 2.5 |
