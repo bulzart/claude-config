@@ -29,5 +29,5 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 8.5 |
 | 10 | One channel per run | `100_10_one-channel-per-run.md` | 5.9 |
 | 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 3.1 |
-| 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 5.6 |
+| 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 6.0 |
 <!-- sections:end -->

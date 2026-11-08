@@ -11330,11 +11330,23 @@ def _context_from_names(rd: Path, refs_dir) -> None:
         inv = json.loads((rd / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         fail("no inventory in this run: `T inventory \"<references folder>\" --run RUN --as references` first", 2)
+    # a thumbnail beside its video (the user, 2026-11-08: the .jpg of the same name next to the .mp4), or of that name in a thumbnails folder
+    img_ext = {".jpg", ".jpeg", ".png", ".webp"}
+    tdir = next((p for p in (refs_dir.iterdir() if refs_dir else []) if p.is_dir() and p.name.casefold() == "thumbnails"), None)
+    pics = {}
+    for folder in [d for d in (refs_dir, tdir) if d]:
+        for p in sorted(folder.iterdir()):
+            if p.is_file() and p.suffix.lower() in img_ext:
+                pics.setdefault(p.stem.casefold(), p)
+    used = set()
     rows = []
     for it in inv.get("items") or []:
         if it.get("kind") != "video" or it.get("ignored"):
             continue
         stem = Path(it.get("rel") or it.get("path") or "").stem
+        tp = pics.get(stem.casefold())
+        if tp:
+            used.add(tp.stem.casefold())
         m = YT_ID_TAIL.match(stem)
         # an id is random: a digit, "-", "_" or a capital after its first letter (an 11-letter last word such as "Masterclass" is a word)
         if m and (re.search(r"[0-9_-]", m.group("id")) or any(c.isupper() for c in m.group("id")[1:])):
@@ -11345,7 +11357,18 @@ def _context_from_names(rd: Path, refs_dir) -> None:
         words = [w for w in re.split(r"[_\s]+", re.sub(r"#[^\W_]+", " ", rest)) if w]
         rows.append({"ref": it["id"], "file": Path(it.get("rel") or "").name, "words": " ".join(words), "word_count": len(words),
                      "youtube_id_like": yid, "hashtags": re.findall(r"#[^\W_]+", rest),
-                     "duration_s": it.get("duration_s"), "size": f"{it.get('display_width')}x{it.get('display_height')}"})
+                     "duration_s": it.get("duration_s"), "size": f"{it.get('display_width')}x{it.get('display_height')}",
+                     **_thumb_facts(tp)})
+    # images of the same naming pattern that no video matches: thumbnails studied on their own (the title is in their name too)
+    alone = []
+    for key, p in pics.items():
+        if key in used:
+            continue
+        m = YT_ID_TAIL.match(p.stem)
+        if not (m and (re.search(r"[0-9_-]", m.group("id")) or any(c.isupper() for c in m.group("id")[1:]))):
+            continue
+        words = [w for w in re.split(r"[_\s]+", m.group("rest")) if w]
+        alone.append({"file": p.name, "words": " ".join(words), "youtube_id_like": m.group("id"), **_thumb_facts(p)})
     named = [r["words"].split() for r in rows if r["youtube_id_like"]]
     common = []
     if len(named) > 1:
@@ -11353,17 +11376,44 @@ def _context_from_names(rd: Path, refs_dir) -> None:
             if len({t.casefold() for t in toks}) != 1:
                 break
             common.append(toks[0])
+    sizes = {}
+    for r in rows + alone:
+        if r.get("thumbnail_size"):
+            sizes[r["thumbnail_size"]] = sizes.get(r["thumbnail_size"], 0) + 1
+    sheet_items = [(r["ref"], r["words"], Path(r["thumbnail"])) for r in rows if r.get("thumbnail")]
+    sheet_items += [("no video", r["words"], Path(r["thumbnail"])) for r in alone]
+    sheets = _thumb_sheets(sheet_items, rd / "10-media" / "thumbnails") if sheet_items else []
+    with_thumb = [r["ref"] for r in rows if r.get("thumbnail")]
     res = {"ok": True, "found": False, "from_names": True, "references": str(refs_dir) if refs_dir else None, "rows": rows,
-           "common_leading_words": " ".join(common) or None, "thumbnails": None}
+           "common_leading_words": " ".join(common) or None,
+           "thumbnails": {"with_thumbnail": with_thumb, "without": [r["ref"] for r in rows if not r.get("thumbnail")],
+                          "thumbnails_without_video": alone, "thumbnail_sizes": sizes, "sheets": sheets} if sheet_items else None}
     write_json(rd / "00-inventory" / "context.json", res)
     L = ["# The references' titles, from their file names (no context.txt)", "",
-         "Each name reads `<channel>_<title>_<YouTube id>`; which words are the channel and which the title is the agent's reading.", "",
-         "| ref | words of the name | id-like tail | hashtags | length |", "|---|---|---|---|---|"]
-    L += [f"| {r['ref']} | {r['words']} | {r['youtube_id_like'] or '-'} | {' '.join(r['hashtags']) or '-'} | {r['duration_s']} s |" for r in rows]
+         "Each name reads `<channel>_<title>_<YouTube id>`; which words are the channel and which the title is the agent's reading.",
+         "A thumbnail is the image of the same name beside the video (or in a `thumbnails` folder).", "",
+         "| ref | words of the name | id-like tail | hashtags | length | thumbnail | size |", "|---|---|---|---|---|---|---|"]
+    L += [f"| {r['ref']} | {r['words']} | {r['youtube_id_like'] or '-'} | {' '.join(r['hashtags']) or '-'} | {r['duration_s']} s | "
+          f"{r.get('thumbnail') or '-'} | {r.get('thumbnail_size') or '-'} |" for r in rows]
+    if alone:
+        L += ["", "Thumbnails with no video of the same name (reference material on their own):", ""]
+        L += [f"- {r['words']} · `{r['thumbnail']}` · {r.get('thumbnail_size') or '-'}" for r in alone]
+    if sheets:
+        L += ["", "Sheets: " + ", ".join(f"`{s}`" for s in sheets)]
     write_text(rd / "00-inventory" / "context.md", "\n".join(L))
     out({**{k: v for k, v in res.items() if k != "rows"}, "rows": rows, "table": str(rd / "00-inventory" / "context.md"),
-         "note": "no context.txt: the titles come from the file names (facts above; a name without that pattern carries no title); no "
-                 "reference thumbnails, so the thumbnail follows the references' hooks and first frames (static §12)"})
+         "note": "no context.txt: the titles come from the file names (facts above; a name without that pattern carries no title); "
+                 + ("the thumbnails are the images of the same name: view the sheets and each one (static §12)" if sheet_items else
+                    "no reference thumbnails, so the thumbnail follows the references' hooks and first frames (static §12)")})
+
+
+def _thumb_facts(p) -> dict:
+    """A thumbnail's file, size and aspect (or none)."""
+    if not p:
+        return {"thumbnail": None}
+    wh = _img_size(p)
+    return {"thumbnail": str(p), "thumbnail_size": f"{wh[0]}x{wh[1]}" if len(wh) == 2 else None,
+            "thumbnail_aspect": _aspect_of(*wh)[0] if len(wh) == 2 else None}
 
 
 def _static_context(a):

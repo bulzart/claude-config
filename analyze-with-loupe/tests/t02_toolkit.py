@@ -2078,6 +2078,20 @@ check(js.get("ok") and js.get("from_names") and js.get("found") is False and _n1
       "hashtags apart, the words every name starts with (the channel's), and no title from a name without that pattern")
 js, code, _ = t("static", "context", "--run", NM.name, "--file", str(nm_refs / "missing.txt"), env=ENV, ok=False)
 check(code == 2 and "no such file" in js.get("error", ""), "static context --file names a file that must exist")
+check(js.get("ok") is not True and (json.loads((NM / "00-inventory" / "context.json").read_text(encoding="utf-8")).get("thumbnails") is None),
+      "names without an image of the same name: no reference thumbnails")
+# a thumbnail beside its video under the same name (the user, 2026-11-08), and one with no video of its name
+from PIL import Image as _TIm
+_TIm.new("RGB", (1280, 720), (200, 40, 40)).save(nm_refs / "Deep_Dives_The_Rise_of_Rome_in_9_Minutes_TZIOfwN7bVI.jpg")
+_TIm.new("RGB", (1280, 720), (40, 40, 200)).save(nm_refs / "Deep_Dives_Fall_of_Carthage_Ab3dEf9hIjK.jpg")
+js, _, _ = t("static", "context", "--run", NM.name, env=ENV)
+_th = js.get("thumbnails") or {}
+_nr = {r["file"]: r for r in js.get("rows") or []}
+check(js.get("ok") and (_nr.get("Deep_Dives_The_Rise_of_Rome_in_9_Minutes_TZIOfwN7bVI.mp4") or {}).get("thumbnail_size") == "1280x720"
+      and (_nr.get("video.mp4") or {}).get("thumbnail") is None and len(_th.get("with_thumbnail") or []) == 1
+      and [x["words"] for x in _th.get("thumbnails_without_video") or []] == ["Deep Dives Fall of Carthage"]
+      and _th.get("thumbnail_sizes") == {"1280x720": 2} and all(Path(s).is_file() for s in _th.get("sheets") or [None]),
+      "static context pairs each video with the image of its name beside it, lists a thumbnail no video matches, and makes the sheets")
 # a reference another run already analysed is not analysed again (the user, 2026-11-07: "we already have the Sadam Hussein's there whom
 # we've already analyzed, analyze the two new samples"): matched by the file's hash and size, copied under its id here
 _nv = {it["rel"]: it["id"] for it in json.loads((NM / "00-inventory" / "inventory.json").read_text(encoding="utf-8"))["items"]}["video.mp4"]

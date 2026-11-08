@@ -14,9 +14,12 @@ letters, digits, `_` or `-`, added by the downloader), not hashtags.
 `<channel>_<title>_<YouTube id>`: per video the name's words (underscores as spaces), the id-like tail, any `#hashtags`, and the words
 every name starts with; `00-inventory/context.md` holds the table. Which words are the channel and which the title is your reading (a
 channel name is usually the first one to three words, the same for two videos of one channel; the title is what is left, as YouTube
-shows it: `$1 Trillion` with its `$`, a `(` … `)` kept); a name without that pattern (`video.mp4`) carries no title. There are no
-reference thumbnails then: the thumbnail below follows the references' hooks and first frames, at YouTube's 1280x720 (16:9; a 9:16
-run's Short keeps 1280x720 too, as YouTube shows a Short's thumbnail in the feed).
+shows it: `$1 Trillion` with its `$`, a `(` … `)` kept); a name without that pattern (`video.mp4`) carries no title. **A thumbnail** is
+the image of the same name beside its video (the user, 2026-11-08: the `.jpg` next to the `.mp4`; or of that name in a `thumbnails`
+folder): measured, in the table and on the labelled sheets `10-media/thumbnails/sheet-NN.jpg`; an image of that naming pattern that no
+video matches is listed as a thumbnail on its own (its title in its name), studied for the pattern like the others. Without any, the
+thumbnail below follows the references' hooks and first frames, at YouTube's 1280x720 (16:9; a 9:16 run's Short keeps 1280x720 too, as
+YouTube shows a Short's thumbnail in the feed).
 **With a `context.txt`** in the references folder, one line per video, `<video file>|<the real YouTube title>|<its thumbnail's path>`,
 it matches each line to the inventory's video by its file name, finds each thumbnail (the path as written, else the file of that name in
 the references folder's `thumbnails` folder), measures it, and writes `00-inventory/context.md` (the table) and
