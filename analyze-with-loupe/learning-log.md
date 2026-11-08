@@ -1417,3 +1417,17 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   script word's line is known), in `T narration-words` (it reports `words_kept_in_their_line`) and in `T slideshow plan` (the edit's
   captions). The pace still reads the words as heard, the references' yardstick. Video 03: 128 starts moved later, 5 ends earlier, the
   1026 cues' words unchanged. Static §6; t02.
+
+## 2026-11-08 · Static: a memory forecast is a fact, never a gate
+- **Seen:** the main session's spawn message for video 03's image stretch 3, and then the judge's plan for stretch 4, told the image
+  agent to wait whenever `T image fit` read a negative headroom. J4 held the bed until the free commit read 16.1 GB (ACE-Step's
+  13.1 GB plus the guard's 3.0 GB floor). Static §13 J4 and awl-static-sound step 5 said the same: "a negative headroom waits for
+  memory". The user turned that gate down on 2026-11-07, when the normal voice model ran at a free memory the same sum called short.
+- **Changed:** static §13 now has "Memory is a fact, never a gate". Every still, narration and bed is tried, and only a real guard
+  stop shows that a job does not fit. After a stop, the job waits until the free commit is at least 1 GB above where the stopped
+  attempt started, and the user is told the guard's line; a bed that still does not fit goes on without, named. J1, J4 and
+  awl-static-sound step 5 now say the same. The bed may also run in a gap between image stretches once the narration is final,
+  since no other model runs then.
+- **Measured:** video 03's bed was tried at 21:39 at 15.4 GB free (commit limit 26.1 GB, page file system-managed). The guard stopped
+  it at the start of diffusion, at 2.3 GB free with ACE-Step at 13.07 GB: 42 s, no file, nothing left running, the memory back at
+  once. In stretch 3, a still tried at 13.53 GB free was stopped; stills passed from 15.3 GB.

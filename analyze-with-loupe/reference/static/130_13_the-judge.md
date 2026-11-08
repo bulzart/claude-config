@@ -44,6 +44,15 @@ briefs), and the PC's model-memory record.
   negated, "no vocals", is not counted), and the music model's memory record (the highest peak, the guard's stops) against the free
   commit memory now and the guard's floor.
 
+**Memory is a fact, never a gate** (the user, 2026-11-07, after a lighter voice model was used because the free memory looked short:
+"we've already generated prior voices such as the first one used in the video02 with the same memory we have now"): a forecast's
+headroom (the free commit against a job's measured peak plus the guard's floor) says when a job is likeliest to fit (in a gap, with
+nothing else running), never whether it is tried, and never turns a job into a lighter one. Every still, narration and bed is tried;
+only a real guard stop (its "STOPPED the app to protect Windows" line) shows it does not fit. Then the job waits until the free
+commit is at least 1 GB above where the stopped attempt started (the user is told the guard's line; nothing of theirs is closed and
+the guard is never changed), or, for a bed, goes on without, named. 2026-11-08, video 03: the bed tried at 15.4 GB free was stopped
+at 2.3 GB with ACE-Step at 13.07 GB; a still tried at 13.53 GB was stopped, and stills passed from 15.3 GB.
+
 **The fair measure of pace** (§6 "The pace"): words a minute overall (first to last word) and while articulating (the same words over the
 span with every pause of 0.25 s or more taken out, `wpm_articulation`), from the words' times. The older reading (words over the
 speech-to-text segments, `wpm_speech`) counts pauses differently in a natural recording (its segments run long and hold most of its
@@ -70,8 +79,9 @@ predicted result; and afterwards the measured result against it):
      is CapCut text, §5) or is described as plain and blank ("a blank white screen", "a chart of plain coloured bars with no writing");
      digits leave the scene words; a split word becomes one scene; a §11 word becomes a secular description; a missing sentence is put
      back; a still whose references the memory cannot hold rides with a cast sheet (§5);
-   - the bed: its caption and sections fixed where the forecast marks them; when it can run (the memory forecast: a negative headroom
-     means the guard would stop it, so it is run when the images are done and nothing else holds memory, read again right before).
+   - the bed: its caption and sections fixed where the forecast marks them; when it runs (when the images are done, or in a gap
+     between image stretches once the narration is final, with nothing else holding memory; the memory forecast read again right
+     before, a fact and never a gate: J4).
    It then runs the forecast again and writes the predicted numbers it expects.
 2. **J2, after the narration** (S2, before the images; `awl-static-sound`): the measured pace and pauses (`T tts say`'s `pace`, then `T
    narration-words`) against J1's forecast and point: on the point within the tolerance, the pause pattern near the family's, the
@@ -82,9 +92,11 @@ predicted result; and afterwards the measured result against it):
    the stretch's report and flags and the stills it names, viewed; what went wrong is traced to its prompt words (the caption the
    upsampler wrote is in each attempt) and the next stretches' prompts are changed so it does not happen again (prevention costs no
    generation); a re-draw of a made still follows the run's QC fixes.
-4. **J4, right before the bed** (S2's bed step, when the images are done): the memory forecast again; run, or wait for the headroom
-   (the guard is never changed and no program of the user's is closed), or go on without a bed when it cannot fit (never a blocker);
-   after it: `T music measure` against the bed's plan.
+4. **J4, right before the bed** (S2's bed step, when the images are done or in a gap between image stretches): the memory forecast
+   again, recorded as a fact and never a gate ("Memory is a fact" above), so the bed is tried. Only a real guard stop shows it does
+   not fit: the user is told the guard's line (a closed program frees the memory; the guard is never changed and nothing of the
+   user's is closed), the bed is tried once more before the edit, and still stopped the video goes on without a bed, named (never a
+   blocker); after it: `T music measure` against the bed's plan.
 5. **J5, before the edit** (S4; the edit agent's first step reads `video-NN-judge.md`): the labels, moves and joins the plan carries
    against the spec's numbers (the push-ins as many as the family's moving shots allow, the dips at the chapters), decided before the
    project is built.

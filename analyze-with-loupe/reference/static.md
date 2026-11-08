@@ -30,5 +30,5 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 10 | One channel per run | `100_10_one-channel-per-run.md` | 5.9 |
 | 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 3.1 |
 | 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 6.0 |
-| 13 | The judge (A6s, S2, S3, S4) | `130_13_the-judge.md` | 11.3 |
+| 13 | The judge (A6s, S2, S3, S4) | `130_13_the-judge.md` | 12.6 |
 <!-- sections:end -->

@@ -15,7 +15,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (14.4 KB)
 - static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.4 KB)
-- static §13: `AWL/reference/static/130_13_the-judge.md` (11.3 KB)
+- static §13: `AWL/reference/static/130_13_the-judge.md` (12.6 KB)
 
 The main session runs S2 for every video, one at a time (one model on the GPU; the toolkit's lock holds a second one back), before any
 production agent starts (`awl-analyze-produce` A9s). The narration uses the engine the run's voice was made with (`state.json →
@@ -55,10 +55,12 @@ static.voice.engine`: `local`, or `alibaba` on the user's key, static §6 "With 
    `T narration-words` again; spans by `from_line`); a line made again follows the run's QC fixes. The narration's learned fit
    (`state.json → static.voice.fit`) is what the next video's forecast reads. Nothing heavy runs while FLUX 3 Klein makes images: J2's
    re-join waits for a gap between image stretches.
-5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made **and every image is made**
-   (two local models never share the GPU and the commit memory; 2026-11-08 the guard stopped ACE-Step at 2.0 GB free commit): first
-   **J4** (static §13): `T static forecast --run RUN --video NN --part music` right before; a negative memory headroom waits for memory
-   (nothing of the user's is closed, the guard is never changed) or goes on without a bed, noted. Each track's `duration` =
+5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made, when every image is made
+   or in a gap between image stretches (two local models never share the GPU and the commit memory; 2026-11-08 the guard stopped
+   ACE-Step at 2.0 GB free commit): first **J4** (static §13): `T static forecast --run RUN --video NN --part music` right before, its
+   memory headroom a fact and never a gate (static §13 "Memory is a fact"): the bed is tried; after a real guard stop the user is told
+   its line, the bed is tried once more before the edit, and still stopped the video goes on without a bed, noted (nothing of the
+   user's is closed, the guard is never changed). Each track's `duration` =
    lead + the narration's duration + tail (config `static.narration`), then `T music make --run RUN` (every track in one model load; a
    track over ACE-Step's 600 s is made in sections and joined with crossfades, static §6: the plan's own `sections` per part of the
    story, else equal ones).
