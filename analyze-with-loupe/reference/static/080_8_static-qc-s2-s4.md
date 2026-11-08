@@ -38,5 +38,8 @@ The agent views and listens through the facts; `qc_fixes` (ask, auto, off) decid
 - **The thumbnail and the title** (§12): the thumbnail viewed at full size and at feed size (its `-small.png`): the subject and its
   feeling read at a glance, its words (if any) letter for letter, the run's style, nothing of §11 or item 6; the title promises what
   the narration keeps.
+- **An extra format** (§2b): its stills and its project get every check above, on their own files; each still also against the
+  primary's (the same scene, people and things, only its layout changed for the frame), and its labels, logos, aimed zooms and caption
+  band read off its own picture, never carried over.
 - **The craft**: the hook lands in the first second, the payoff lands, and the copy test still says no (`creative-direction.md` §8).
 

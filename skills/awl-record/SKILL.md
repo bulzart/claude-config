@@ -14,7 +14,7 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - capcut-assembly §6: `AWL/reference/capcut-assembly/070_6_deliverables-analyze-mode.md` (1.8 KB)
-- production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.6 KB)
+- production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.8 KB)
 
 A production agent does not touch `state.json → videos[]` or `next_step`: it writes `result.json` and `readme-row.md`, and the main session appends `videos[]` as the agent reports (`production-agents` §5 item 1).
 
@@ -51,6 +51,11 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     on its first line) and name it and `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row; the
     run's locks it kept (niche, style reference, narrator; static §10); `result.json` adds `static`: {format, images (count, source api|klein|user, re-draws), cost_usd_estimate (the sum of
     the image calls), narration_s, voice sample, lines made again, bed, title, thumbnail}. No Higgsfield job, credit or flag fields.
+    More than one format (static §2b): one README row per format (its CapCut project's name and full path, its export size, its stills'
+    folder `60-outputs/video-NN/<tag>/images/`; the title and thumbnail named in each), and `result.json → static.formats`: one entry
+    per format {aspect, tag (null for the primary), export, capcut_project, capcut_project_path, images (count, re-draws, own prompts),
+    swaps, cost_usd_estimate, flags}; `static.cost_usd_estimate` sums them. A run told to make one format of a video later (spawn
+    message `format <tag>`) adds that format's entry and row and leaves the others as they are.
   - Append a row to `RUN/deliverables/README.md` (an agent writes it to
     `60-outputs/video-NN/readme-row.md` and the main session appends it as the agent reports, A9b): direction, model, params, prompt file, assets, job
     id, attempt, credits, verdict (with QC fixes `off`: "not checked (QC off)", and `result.json → qc` = "off: not checked (the user reviews at the end)"), final path, notes. For a multi-clip video, list every clip's

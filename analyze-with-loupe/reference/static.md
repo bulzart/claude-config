@@ -18,15 +18,16 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 |---|---|---|---|
 | 0 | The team (who works a Static run) | `005_0_the-team-who-works-a-static-run.md` | 3.6 |
 | 1 | What Static mines from the references (A3) | `010_1_what-static-mines-from-the-refer.md` | 5.1 |
-| 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 8.1 |
+| 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 8.8 |
+| 2b | More than one format (A5, S3, S4, X10) | `025_2b_more-than-one-format.md` | 4.5 |
 | 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 2.5 |
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 3.0 |
-| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 17.0 |
+| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 18.0 |
 | 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 7.4 |
-| 7 | The edit (S4) | `070_7_the-edit-s4.md` | 6.8 |
-| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 4.7 |
+| 7 | The edit (S4) | `070_7_the-edit-s4.md` | 7.6 |
+| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 5.0 |
 | 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 7.5 |
-| 10 | One channel per run | `100_10_one-channel-per-run.md` | 5.8 |
+| 10 | One channel per run | `100_10_one-channel-per-run.md` | 5.9 |
 | 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 3.1 |
-| 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 5.5 |
+| 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 5.6 |
 <!-- sections:end -->

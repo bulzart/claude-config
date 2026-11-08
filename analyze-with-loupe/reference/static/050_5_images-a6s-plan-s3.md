@@ -12,7 +12,8 @@ check, §6>,
 "<W>x<H>", "text": "<its exact words, or null>", "characters": ["C1"], "why": "…"}}` (the title and the thumbnail: §12). Every value
 in `<…>` is decided from the spec (no stock value exists: `T slideshow plan` lists what is undecided). The size and quality are the run's
 format (`state.json → static.format`, picked at A5, §2); a plan's own `"size"` changes it for that video only. `captions` is the spec's
-text look (§2) with this video's highlighted words: the CapCut project takes it.
+text look (§2) with this video's highlighted words: the CapCut project takes it. With more than one format (§2b) the plan is the primary's, and an extra format's own values sit in `"by_format": {"<tag>": {…}}`: the plan's `captions`
+(`size`, `y_rel`) and `labels_style`, an image's `labels`, `scale`, `x`, `y` (and, in prompts mode only, a `prompt` the swaps do not fit).
 
 - **Moves and joins** (the spec's measured pattern, §2): each image's `motion` with its `amount` (a zoom's change: 0.2 zooms from 1.0 to
   1.2 or back; a pan travels the margin of a scale of 1 + amount), or its own `scale`, `x` and `y` pairs at its start and end (scale 1 =
@@ -53,7 +54,8 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   the run's aspect (`static.format.aspect`; vertical: the main subject in
   the upper two thirds; horizontal: the subject on a third with room around it; square: centred; people placed at different depths only
   in a scene that has people), the band the captions will take (the plan's y_rel) described only by what it shows ("the bottom fifth
-  shows only the wooden floor"), no text, letters, numbers, logos or watermarks in the picture unless the
+  shows only the wooden floor"); these frame words are written the same way in every prompt of the video, so an extra format swaps
+  them with the same `--swap` pairs (§2b), no text, letters, numbers, logos or watermarks in the picture unless the
   story needs a sign or a page (then the exact words), no added sticker or emoji (contract item 6), and a secular scene described in
   positive terms with nothing religious or superstitious in it (§11: a palace throne hall, never a cathedral; a "red X" mark, never a
   "red cross"; the prompt names what is there, never what must stay out). One picture, never a split picture, a side-by-side or panels
@@ -66,7 +68,8 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   route) carries the names as CapCut texts over it, never drawn by the model. Once the image is made and viewed, its plan entry gets
   `"labels": [{"text": "London", "x_rel": 0.47, "y_rel": 0.33}, …]`: each label's centre read off the picture as shares of its width
   and height from the top left, beside the pin or place it names (not on it), inside the frame and above the caption band, spelled as
-  the narration says it. The plan gets one `labels_style` for the video: `font_file`, `size`, `fill`, `stroke_color`, `stroke_width`,
+  the narration says it (an extra format's places are read off its own still into `by_format.<tag>.labels`, §2b). The plan gets one
+  `labels_style` for the video: `font_file`, `size`, `fill`, `stroke_color`, `stroke_width`,
   `shadow` (the run's text look's font and colours unless the plan says why not; `T slideshow plan` lists any left out as undecided). A
   label stays where it is put and does not follow a move, so an image with labels has the motion `none` (`T slideshow plan` lists any
   that moves in `labels_on_moving_images`). A label on a pin that sits in the wrong place makes the error plain: the pins are checked
@@ -109,7 +112,7 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
     plain and blank ("a large plain white banner across the tent's front edge, completely blank"). Once the image is made and viewed,
     `T image brand --run RUN --video NN --image K --logo <file> --box x0,y0,x1,y1 [--card]` places the file on that surface (the box read
     off the picture, outside the caption band; `--card` paints a flat card first when something there must be hidden) as the next attempt,
-    the generated one kept. The present logo tells the viewer who even in an earlier year; a dated logo, when the official archive holds
+    the generated one kept; an extra format's still gets its own (`--format <tag>`, the box read off that still). The present logo tells the viewer who even in an earlier year; a dated logo, when the official archive holds
     it, tells when: the agent's call, written in the plan. Another brand's mark the model drew on its own (a fruit on a laptop, a label)
     is painted over with `--cover x0,y0,x1,y1`.
   - **A known person** (whose appearance is public: a founder, a leader, an artist) is drawn to look like them, in the run's style lock:
@@ -122,7 +125,8 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
 - **API mode** (`static_images=api`): `T image generate --run RUN --video NN --image K --prompt-file <file> [--ref <photo or anchor> …]`
   (the size and quality from the run's format); the toolkit sends it through the ledger, saves `60-outputs/video-NN/images/iKK-aM.png` and marks it the one the edit uses. A request
   that already made an image is not sent again (`--again` for a new draw). `moderation_blocked`: change the prompt (or the reference), never
-  send it again unchanged.
+  send it again unchanged. An extra format's still (§2b): `T image generate --run RUN --video NN --image K --format <tag>
+  --same-as-primary [--swap "<frame words>" "<this frame's words>" …]`, saved in `60-outputs/video-NN/<tag>/images/`.
 - **Klein mode** (`static_images=klein`): the same `T image generate` (the size from the run's format; no quality); FLUX 3 Image Klein
   makes it on this PC, one image at a time, ledgered with provider `klein` and no cost. The prompt is written as for the API; Black Forest
   Labs' prompt upsampler turns it into the full scene caption the model takes (the answer's `caption`). An anchor skips the upsampler
@@ -139,5 +143,6 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
 - **Prompts mode** (`static_images=prompts`): `T image prompts --run RUN` writes `deliverables/prompts/video-NN-image-prompts.md` (the
   characters' sheets first, then one prompt per image with its file name `vNN-iKK`, the character to attach, and the format's aspect and size); the user makes
   them, puts them in one folder and sends its path; `T image intake --run RUN --folder <path>` copies them in (never moves or changes
-  them) and lists what is missing, extra or named twice.
+  them) and lists what is missing, extra or named twice. An extra format (§2b): `T image prompts --run RUN --format <tag> [--swap … …]`
+  (the same prompts, its frame words swapped, named `vNN-<tag>-iKK`) and `T image intake --run RUN --folder <path> --format <tag>`.
 

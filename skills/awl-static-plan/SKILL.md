@@ -16,11 +16,11 @@ Only these section files for this phase, nothing else unless a step below says s
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run; skip when already read)
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (3.0 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (17.0 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (18.0 KB)
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (7.4 KB)
-- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.8 KB)
+- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.9 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
-- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.5 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.6 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
@@ -77,6 +77,9 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    is blended, its fit and volume, and why; only the ways the catalogue's Effects part shows playing). Nothing is left to a stock value:
    `T slideshow plan` lists what is undecided. The count follows the spec's seconds per still at the script's length; the narration's
    real timing settles it in S2 (and the effects' moments with it: a `join` or a `line` follows the timing, an `at_s` does not).
+   More than one format (`state.json → static.extra_formats`): the plan is the primary's and serves every format; each prompt words
+   its frame (shape, the subject's place, the caption band) the same way, so an extra format swaps those words only (static §5); the
+   extra formats' own values (`by_format`) are read off their stills later, at S3 and S4.
 8. **The bed** (every video, also when the references are voice only; static §6): `RUN/40-briefs/music.json`, one track per video,
    its `caption`, `bpm` and `why` reasoned from the spec's bed brief and this video's script (its beats and their emotions), never from
    analysing the references' music (the user, 2026-11-06: "make sure we try to generate instrumentals that fit the video content type and

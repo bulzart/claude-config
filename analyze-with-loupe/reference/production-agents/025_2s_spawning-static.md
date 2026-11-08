@@ -23,6 +23,7 @@ and `T image intake` copied them into your images folder; you check them and nev
 QC fixes: <ask|auto|off> (the run's choice, state.json → qc_fixes; command item 27).
 CapCut plan: <free|pro> (the user's pick at the start, state.json → capcut_plan). free: only options <AWL>/data/capcut-catalogue.md marks
 free (a Pro one blocks the export); pro: every option it shows drawn, Pro ones too (the user exports with a CapCut Pro subscription).
+Formats: <formats>
 Audio ingest: whisper (Static always reads the references' audio; command item 36).
 Loupe: not used in Static (command item 36): no `T qc-consult`, `T prompt-template`, `T caught-flag` or any Loupe command.
 Voiceover: off (a Static video's voice is the run's own narration, made by the main session: <RUN>/30-assets/narration/video-NN.wav).
@@ -46,6 +47,10 @@ under "Read now" the exact section files it needs: read those and nothing else. 
   (and the thumbnail when it says so), write <RUN>/60-outputs/video-NN/images-K1-K2.json (each image's attempts, re-draws, cost, flags)
   and end with one JSON line {"video", "images": "K1-K2", "status", "cost_usd_estimate", "flagged"}; when it says `S4 and X10`, every image
   exists: build the edit and the record (awl-static-edit, awl-record), summing the images-*.json files into result.json.
+  More than one format (the Formats line; static §2b): you make every format of your video. awl-static-images makes the primary's
+  stills, then each extra format's; awl-static-edit builds the primary's project, then each extra format's; awl-record records them
+  all. A spawn message that names a format (`format <tag>`) means that format only: its stills, its project and its part of the
+  record (a split video: `format <tag>, images K1-K2: S3 only`, its file <RUN>/60-outputs/video-NN/<tag>/images-K1-K2.json).
 
 Hard rules:
 - The toolkit T measures, extracts, records and calculates; it never judges. Every reading (an image right or not, a line heard or not,
@@ -87,6 +92,12 @@ Hard rules:
 - Real things look like themselves (<AWL>/reference/static/050_5_images-a6s-plan-s3.md): a logo the plan places is the official file,
   put on its surface with `T image brand` (never drawn by the model); another brand's mark the model drew is painted over (`--cover`);
   a known person keeps their anchor's likeness.
+- Every format is the same video (static §2b): the script, the narration, the bed, the cuts on their lines, the moves, the joins, the
+  effects, the captions' words and look, the title and the thumbnail are the primary's, made once. An extra format's stills are the
+  primary's requests sent at its size with only the words that name the primary's frame swapped (`T image generate --format <tag>
+  --same-as-primary --swap "<words>" "<words>"`); a prompt of its own only for a scene the swaps do not fit, the scene unchanged. What
+  sits at a point of a picture is read off that format's own still: a placed logo (`T image brand --format <tag>`), the labels' places,
+  a zoom aimed at a spot, the captions' size and band (the plan's `by_format.<tag>`).
 - The YouTube thumbnail: `T image generate --run <RUN> --video NN --thumbnail --size <the plan's thumbnail.size> --prompt-file …`
   (static §12); the title: `<RUN>/deliverables/video-NN-title.txt` at X10.
 - Your final message is the one JSON line awl-record (X10) ends with.

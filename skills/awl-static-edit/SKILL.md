@@ -13,12 +13,14 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (6.8 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (4.7 KB)
+- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (7.6 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.0 KB)
 - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
 - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.2 KB)
 - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.9 KB)
+- *the run has more than one format (`state.json → static.extra_formats`):*
+  - static §2b: `AWL/reference/static/025_2b_more-than-one-format.md` (4.5 KB)
 
 ## Step S4
 
@@ -69,7 +71,17 @@ Only these section files for this phase, nothing else unless a step below says s
    position, intro). The repair's lint with no `media-unlinked` and its link step's `media_without_entry` empty.
 5. The video's brief, block S4: the timeline's facts (`T slideshow plan`'s answer: images, spans, moves, joins, captions, effects), the
    project's name, path and export size (the final: the user exports it from CapCut at that size, 30 fps), what the checks read back,
-   and anything left to set by hand in CapCut. Then invoke Skill `awl-record`.
+   and anything left to set by hand in CapCut.
+6. **Each extra format** (static §2b), after the primary's project: steps 1, 3, 4 and 5 again with `--format <tag>` on every command
+   that takes it. First its own values in the plan, read off its stills: `by_format.<tag>.captions` (`size`, `y_rel`; set at S3), the
+   labels' places, and an aim of its own for each image `T slideshow plan --format <tag>` lists in `moves_aimed_in_the_first_format`
+   whose spot matters (`"by_format": {"<tag>": {"scale": […], "x": […], "y": […]}}`; else its plain move plays). Then `T slideshow plan
+   --run RUN --video NN --format <tag>` (`undecided` empty), `T capcut-name --video NN --format <tag>`, `capcut_clone_draft`,
+   `T capcut-prep --draft "<draft>" --canvas <that format's export, state.json → static.extra_formats>`, its stills from its timeline,
+   the same narration and bed, `T capcut-motion`, `capcut-transitions`, `capcut-effects` and `capcut-labels` with `--format <tag>`,
+   the captions from `RUN/60-outputs/video-NN/<tag>/captions.srt` at its timeline's `size` and `y_rel` (font, colours, outline and
+   entrance the run's), `T capcut-repair`, the checks, and its own S4 block in the brief.
+Then invoke Skill `awl-record`.
 
 ## Never (this phase)
 

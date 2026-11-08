@@ -57,13 +57,18 @@ to suggest the most correct size first along with options"**).** `T static forma
 aspect, the aspects by count and seconds, and per aspect and resolution the export size (the CapCut canvas), the image size that stays
 sharp through the stills' moves (`image_size`, each edge times 1 + the move's amount), the smaller one without that margin, and whether
 the image API (`image`) and FLUX 3 Klein (`klein`) take each. The question rides in A5's AskUserQuestion call with the count (header
-"Format"). Its first option is the best fit, marked (Recommended): the references' main aspect (the most videos, then the most seconds)
-at 1080 on the short side, the image size with the margin, quality `high` (prompts and Klein mode: no quality). Up to three more, each
-differing in one thing, from the facts: 720 (smaller images, less cost and time), `medium` (the API: cheaper, a little less detail), the
-other main aspect when the references mix them, or the image size without the margin (slightly soft at the end of a zoom; with Klein
-also quicker per image). Each option's description names the export size, the image size and, with the API, the quality; "Other" takes
-the rest (another aspect, `xhigh` or `max`, an exact size). The answer is stored with
+"Formats", multiSelect; the user, 2026-11-08: "the user can chose how much image formats video versions they want to do"): "Which
+formats should every video be made in? Each one more is the same video with its own pictures and CapCut project." Its options are
+aspects, the best fit first, marked (Recommended): the references' main aspect (the most videos, then the most seconds); then the
+other main aspect when the references mix them, else the other of 9:16 and 16:9; then up to two more the facts allow (1:1, 4:5). Each
+is offered at 1080 on the short side with the image size with the margin and quality `high` (prompts and Klein mode: no quality); each
+description names the export size, the image size and, with the API, the quality, and for a format beyond the first what it adds: its
+own stills (with the API their cost again, with Klein their hours again) and its own CapCut project. "Other" takes the rest: another
+resolution (720: smaller images, less cost and time; 1440: sharper, slower), `medium` (the API: cheaper, a little less detail), `xhigh`
+or `max`, the image size without the margin (slightly soft at the end of a zoom; with Klein also quicker per image), an exact size.
+The first picked format in the options' order is the **primary**, stored with
 `T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`, which refuses a size the run's image source does not
-take (the API's rules; Klein's: edges of a multiple of 16 from 64 to 4096). Every
-later step reads `state.json → static.format`: the images' size and quality, the prompts file, the project's canvas.
-
+take (the API's rules; Klein's: edges of a multiple of 16 from 64 to 4096); each other picked format with the same command and
+`--also` (`state.json → static.extra_formats`, each with its `tag`: 9:16 is `9x16`). Every later step reads `static.format` for the
+primary (the images' size and quality, the prompts file, the project's canvas) and the extra formats' own sizes for theirs
+(§2b).

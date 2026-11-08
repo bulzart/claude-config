@@ -50,8 +50,15 @@
   whose file is gone shows in CapCut's default font. So the captions' and labels' `font_file` is a copy in the library's `fonts/`
   folder: `T capcut-font --list` lists it first and gives every font's `kept_by`; a font from CapCut's cache under an open licence
   (SIL Open Font License) is copied there first with its row in `fonts/README.md`, one whose licence is not known is not used.
+- **An extra format** (§2b): its own CapCut project by the same steps, each command with `--format <tag>`:
+  `T slideshow plan` (its timeline `40-briefs/video-NN-timeline-<tag>.json`: the same cuts, moves, joins and effects, its own stills,
+  labels, aimed zooms and caption size and band; its `undecided` lists what its `by_format` still lacks), `T capcut-name` (the name
+  ends `-<tag>`), `T capcut-prep --canvas <that format's export>`, its stills from `60-outputs/video-NN/<tag>/images/`, the same
+  narration and bed, `T capcut-motion`, `capcut-transitions`, `capcut-effects` and `capcut-labels` with `--format <tag>`, and its
+  captions from `60-outputs/video-NN/<tag>/captions.srt` at the timeline's `size` and `y_rel`, in the run's font, outline, colours and
+  entrance.
 - Loudness: the narration file itself is at the config's target (about −14 LUFS; `T tts say`: a gentle voice compressor, then two
   loudnorm passes), because the CapCut project plays it at 1.0 with the bed under it at the plan's gain.
-- **The export** is the user's, in CapCut (no tool exports a CapCut project): each project at the format's export size, 30 fps; the
+- **The export** is the user's, in CapCut (no tool exports a CapCut project): each project at its format's export size, 30 fps; the
   wrap-up says so, and that file is the final.
 

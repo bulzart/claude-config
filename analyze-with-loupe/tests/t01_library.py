@@ -243,11 +243,21 @@ _s4t = rd(LIB / "reference" / "static" / "040_4_the-script-a6s.md")
 _s6t = rd(LIB / "reference" / "static" / "060_6_the-voice-and-the-bed-a6s-s2.md")
 _s7t = rd(LIB / "reference" / "static" / "070_7_the-edit-s4.md")
 _a5t = rd(SKD / "awl-analyze-study" / "SKILL.md")
-check("T static formats --run RUN" in _a5t and 'header "Format"' in _a5t and "(Recommended)" in _s2t
+check("T static formats --run RUN" in _a5t and 'header "Formats", multiSelect' in _a5t and "(Recommended)" in _s2t
       and "T static format --run RUN --aspect A --res R" in _s2t.replace("\n", " ") and "--canvas <state.json" in rd(SKD / "awl-static-edit" / "SKILL.md")
       and "**The CapCut project is the final**" in _s7t and "that export is the final" in rd(SKD / "awl-wrapup" / "SKILL.md")
       and "its export is the final" in rd(HOME / "commands" / "analyze-with-loupe.md"),
       "Static asks the format at A5 (the best fit first), stores it, makes the CapCut project at its export size, and that export is the final")
+# more than one format (the user, 2026-11-08: "so we end up generating 2 video formats for the same content (2 capcut projects too ...)")
+_s2b = rd(LIB / "reference" / "static" / "025_2b_more-than-one-format.md").replace("\n", " ")
+_tpl_s = rd(LIB / "reference" / "production-agents" / "025_2s_spawning-static.md")
+check("`--also`" in _s2t and "--same-as-primary" in _s2b and "--swap" in _s2b and "by_format.<tag>" in _s2b
+      and "Formats: <formats>" in _tpl_s and "--same-as-primary" in _tpl_s
+      and "## Another format" in rd(SKD / "awl-static-images" / "SKILL.md") and "**Each extra format**" in rd(SKD / "awl-static-edit" / "SKILL.md")
+      and "static.formats" in rd(SKD / "awl-record" / "SKILL.md") and "format <tag>" in rd(SKD / "awl-analyze-produce" / "SKILL.md")
+      and "static §2b" in rd(HOME / "commands" / "analyze-with-loupe.md"),
+      "Static makes a video in every format the user picks: the same plan and narration, the primary's prompts with their frame words "
+      "swapped, its own captions band, labels and aims, one CapCut project per format (static §2b, the contract's Formats line, the skills)")
 check('"strong": true' in _s4t and "never two in a row" in _s4t and "**Strong lines**" in _s6t and "timbre_sim" in _s6t
       and "voice_match" in rd(SKD / "awl-static-sound" / "SKILL.md"),
       "strong lines: the voice-design model at the references' peaks only, measured against the run's voice, made again or cloned when apart")

@@ -8778,17 +8778,29 @@ def _img_generate(a):
         fail("generate needs --video NN and --image K (or --thumbnail for the video's YouTube thumbnail, or --anchor ID for a character's "
              "anchor image)", 2)
     key_name = anchor or ("thumb" if thumb else f"{int(a.image):02d}")
-    prompt = (Path(a.prompt_file).read_text(encoding="utf-8") if a.prompt_file else (a.prompt or "")).strip()
+    ftag = _img_format(a, st, anchor, thumb)
+    origin = None
+    if getattr(a, "same_as_primary", False):   # the user, 2026-11-08: "same image prompts too, but just 9:16"
+        if not ftag:
+            fail("--same-as-primary is for an extra format's still (--format TAG): it sends the first format's request at this size", 2)
+        if a.prompt or a.prompt_file or a.ref:
+            fail("--same-as-primary sends the prompt and the reference images of the first format's still: pass none of your own "
+                 "(your own prompt for this format goes in --prompt-file without --same-as-primary)", 2)
+        prompt, refs, origin = _primary_request(rd, nn, key_name)
+        prompt, origin["swaps"] = _swap_words(prompt, getattr(a, "swap", None), f"image {key_name}'s first-format prompt")
+    elif getattr(a, "swap", None):
+        fail("--swap changes words of the first format's prompt: it goes with --same-as-primary", 2)
+    else:
+        prompt = (Path(a.prompt_file).read_text(encoding="utf-8") if a.prompt_file else (a.prompt or "")).strip()
+        refs = [Path(r) for r in (a.ref or [])]
     if not prompt:
         fail("generate needs --prompt-file (or --prompt)", 2)
-    refs = [Path(r) for r in (a.ref or [])]
     missing = [str(r) for r in refs if not r.is_file()]
     if missing:
         fail("reference image(s) not found: " + "; ".join(missing), 2)
-    ftag = _img_format(a, st, anchor, thumb)
     engine = a.engine or ("klein" if st.get("static_images") == "klein" else "api")
     if engine == "klein":
-        _img_generate_klein(a, rd, st, anchor, nn, key_name, prompt, refs, ftag)
+        _img_generate_klein(a, rd, st, anchor, nn, key_name, prompt, refs, ftag, origin)
     if len(refs) > 16:
         fail("the image API takes at most 16 reference images per request", 2)
     key = _oa_key()
@@ -8814,7 +8826,7 @@ def _img_generate(a):
     tag = _img_tag(anchor, key_name, attempt)
     reqf = rd / "50-requests" / _img_req_name(anchor, nn, key_name, attempt, ftag)
     write_json(reqf, {"video": nn, "image": key_name, "attempt": attempt, "kind": "image", "provider": "openai",
-                      "endpoint": "edits" if refs else "generations", "params": params, "format": ftag or None})
+                      "endpoint": "edits" if refs else "generations", "params": params, "format": ftag or None, "same_as_primary": origin})
     _img_ledger(rd, "begin", video=nn, attempt=(f"{ftag}-" if ftag else "") + tag, fp=fp, model=model, request_file=str(reqf))
     body = {"model": model, "prompt": prompt, "size": size, "quality": quality, "n": 1, "output_format": "png"}
     if refs:
@@ -8861,10 +8873,11 @@ def _img_generate(a):
     wh = _img_size(f)
     _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "completed", "source": "api", "file": str(f), "fingerprint": fp,
                                       "at": now_iso(), "model": model, "size": wh, "quality": quality, "refs": [r["file"] for r in params["refs"]],
-                                      "request_file": str(reqf), "usage": usage, "cost_usd_estimate": cost}, use=f.name)
+                                      "request_file": str(reqf), "usage": usage, "cost_usd_estimate": cost, "same_as_primary": origin},
+                    use=f.name)
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name, job=str(js.get("created") or ""))
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "model": model, "quality": quality, "refs": len(refs),
-         "format": ftag or None,
+         "format": ftag or None, "same_as_primary": origin,
          "usage": usage, "cost_usd_estimate": cost, "elapsed_s": round(time.time() - t0, 1), "tries": tries, "fingerprint": fp,
          "prompt_overlay_words": _overlay_words(prompt),
          **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
@@ -8893,7 +8906,48 @@ def _klein_stub_png(dest: Path, w: int, h: int, seed: int) -> None:
     Image.new("RGB", (w, h), ((seed * 53) % 256, (seed * 97) % 256, (seed * 29) % 256)).save(dest, format="PNG")
 
 
-def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, prompt: str, refs: list, ftag: str = ""):
+def _swap_words(prompt: str, swaps, where: str) -> tuple:
+    """The agent's --swap OLD NEW pairs applied to a prompt, each everywhere it stands (the words that name the first format's frame:
+    its shape, the subject's place across it, the band kept for the captions). Every OLD must be in the prompt, else nothing is sent."""
+    pairs = [[str(o), str(n)] for o, n in (swaps or [])]
+    absent = [o for o, _n in pairs if not o or o not in prompt]
+    if absent:
+        fail(f"--swap: not in {where}: " + "; ".join(repr(o) for o in absent) + " (nothing was sent: read the prompt and pick its "
+             "exact words)", 2, prompt=prompt)
+    for o, n in pairs:
+        prompt = prompt.replace(o, n)
+    return prompt.strip(), pairs
+
+
+def _primary_request(rd: Path, nn: str, key_name: str) -> tuple:
+    """The prompt and the reference images the first format's still in use was made with (an extra format's --same-as-primary): the
+    attempt in use, or the one its logo or covers were placed on (T image brand), followed back to its request file."""
+    _f, rec_p = _img_where(rd, nn, None, "")
+    try:
+        slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {}
+    except (OSError, ValueError):
+        slot = {}
+    atts = {Path(x.get("file") or "").name: x for x in slot.get("attempts") or [] if x.get("file")}
+    cur, seen = atts.get(slot.get("use") or ""), set()
+    while cur and cur.get("source") == "brand" and cur.get("base") and cur["base"] not in seen:
+        seen.add(cur["base"])
+        cur = atts.get(cur["base"])
+    if not cur:
+        fail(f"image {key_name} of the first format has no still in use: make it first (--same-as-primary sends its request)", 2)
+    if not cur.get("request_file"):
+        fail(f"image {key_name}'s first-format still was not made from a request here (source {cur.get('source')}): pass the prompt "
+             "with --prompt-file", 2)
+    try:
+        req = json.loads(Path(cur["request_file"]).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"the request file of image {key_name}'s first-format still is missing or unreadable: {cur['request_file']}", 2)
+    p = req.get("params") or {}
+    refs = [Path(r["file"]) for r in p.get("refs") or [] if isinstance(r, dict) and r.get("file")]
+    return (str(p.get("prompt") or "").strip(), refs,
+            {"attempt": cur.get("attempt"), "file": cur.get("file"), "request_file": cur["request_file"], "refs": len(refs)})
+
+
+def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, prompt: str, refs: list, ftag: str = "", origin=None):
     """One still made on this PC by FLUX 3 Image Klein (static_images=klein): the worker (scripts/image_worker.py) in the ComfyUI
     install's own Python (AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT), one GPU job at a time, ledgered like an API call (provider klein, no cost).
     The seed comes from the request and the attempt unless --seed names one, so a draw can be made again exactly."""
@@ -8928,7 +8982,7 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
     tag = _img_tag(anchor, key_name, attempt)
     reqf = rd / "50-requests" / _img_req_name(anchor, nn, key_name, attempt, ftag)
     write_json(reqf, {"video": nn, "image": key_name, "attempt": attempt, "kind": "image", "provider": "klein", "params": params, "seed": seed,
-                      "format": ftag or None})
+                      "format": ftag or None, "same_as_primary": origin})
     _img_ledger(rd, "begin", video=nn, attempt=(f"{ftag}-" if ftag else "") + tag, fp=fp, model=engine, request_file=str(reqf), provider="klein")
     f = folder / f"{tag}.png"
     timeout = float(a.timeout or _kcfg("timeout_s", 1800))
@@ -8973,11 +9027,12 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
                                       "upsampled": upsample, "caption": one.get("caption"), "refs": [r["file"] for r in params["refs"]],
                                       "request_file": str(reqf), "seconds": one.get("seconds"), "cost_usd_estimate": 0.0,
                                       "stub": bool(res.get("stub")), "memory_retry": mem_retry, "refs_count": len(refs),
-                                      "peak_gb": res.get("peak_gb")}, use=f.name)
+                                      "peak_gb": res.get("peak_gb"), "same_as_primary": origin}, use=f.name)
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name)
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "engine": engine, "seed": seed, "upsampled": upsample,
          "caption": one.get("caption"), "refs": len(refs), "cost_usd_estimate": 0.0, "elapsed_s": round(time.time() - t0, 1),
          "fingerprint": fp, "stub": bool(res.get("stub")), "memory_retry": mem_retry, "peak_gb": res.get("peak_gb"), "format": ftag or None,
+         "same_as_primary": origin,
          "prompt_overlay_words": _overlay_words(prompt),
          **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
          "note": "view the image before you use it (the QC of reference/static §8); caption is what the image model received; this attempt "
@@ -9000,17 +9055,32 @@ def _img_prompts(a):
     vids = [_cf_nn(a.video)] if a.video else sorted({p.name[6:-12] for p in (rd / "40-briefs").glob("video-*-images.json")})
     if not vids:
         fail("no image plan: write 40-briefs/video-NN-images.json first (reference/static §5)", 2)
-    files, total = [], 0
+    files, total, own = [], 0, {}
     for nn in vids:
         plan = _img_plan(rd, nn)
         imgs = plan.get("images") or []
         if not imgs:
             fail(f"40-briefs/video-{nn}-images.json has no images", 2)
-        if ftag:
-            lacking = [int(im.get("image") or 0) for im in imgs if not str(_by_format(im, ftag).get("prompt") or "").strip()]
-            if lacking:
-                fail(f"video {nn}: images without their {ftag} prompt (by_format.{ftag}.prompt, static §5): "
-                     + ", ".join(str(k) for k in lacking), 2)
+        swapped = {}
+        if ftag:   # an extra format takes each image's own prompt with the --swap words; by_format.<tag>.prompt where the plan wrote one
+            own[nn] = [int(im.get("image") or 0) for im in imgs if str(_by_format(im, ftag).get("prompt") or "").strip()]
+            pairs = [[str(o), str(n)] for o, n in (getattr(a, "swap", None) or [])]
+            absent = {}
+            for im in imgs:
+                k = int(im.get("image") or 0)
+                if k in own[nn]:
+                    continue
+                p = str(im.get("prompt") or "")
+                for o, n in pairs:
+                    if not o or o not in p:
+                        absent.setdefault(o, []).append(k)
+                    p = p.replace(o, n) if o else p
+                swapped[k] = p
+            if absent:
+                fail(f"video {nn}: --swap words not in these images' prompts: " + "; ".join(f"{o!r}: images {', '.join(map(str, ks))}"
+                     for o, ks in absent.items()) + f" (their prompt for {ftag} goes in by_format.{ftag}.prompt, or pick other words)", 2)
+        elif getattr(a, "swap", None):
+            fail("--swap is for an extra format's prompts (--format TAG)", 2)
         size = (None if ftag else plan.get("size")) or _fmt_for(_st, ftag).get("image_size") or _scfg("images.size", "1088x1920")
         _w, _h = _parse_size(size)
         asp = _fmt_for(_st, ftag).get("aspect") or _aspect_of(_w, _h)[0]
@@ -9020,6 +9090,10 @@ def _img_prompts(a):
              f"Make every image **{shape} {asp}, {size}** (or the nearest {shape} size your tool offers) with GPT Image 2.5 or the image tool "
              f"you use. Save each image under the name in its heading (`{pre}-iKK`, png, jpg or webp). When the images of every video are done, "
              "put them all in ONE folder (sub-folders are fine) and send me its path: I copy them in and never move or change your files.", ""]
+        if ftag:
+            L += [f"The same pictures as video-{nn}-image-prompts.md (the video's {_static_fmt(_st).get('aspect') or 'first'} version), "
+                  f"made {shape} this time: the prompts are the same" + (", the words about the frame changed for this shape" if pairs else "")
+                  + (" (a heading marks a picture whose prompt was rewritten for it)" if own.get(nn) else "") + ".", ""]
         chars = [] if ftag else (plan.get("characters") or [])
         if ftag and plan.get("characters"):
             L += [f"Attach the same character photos or sheets as for the video's {_static_fmt(_st).get('aspect') or 'first'} images "
@@ -9034,12 +9108,14 @@ def _img_prompts(a):
             L.append("")
         for im in imgs:
             kk = f"{int(im.get('image') or 0):02d}"
-            L += [f"## {pre}-i{kk}" + (f"  ·  {ts_label(float(im['start']))}–{ts_label(float(im['end']))}" if im.get("start") is not None and im.get("end") is not None else ""), ""]
+            L += [f"## {pre}-i{kk}" + (f"  ·  {ts_label(float(im['start']))}–{ts_label(float(im['end']))}" if im.get("start") is not None and im.get("end") is not None else "")
+                  + ("  ·  its prompt rewritten for this format" if ftag and int(kk) in own.get(nn, []) else ""), ""]
             if im.get("line"):
                 L.append(f"Narration over it: “{str(im['line']).strip()}”")
             if im.get("characters"):
                 L.append("Attach: " + ", ".join(str(c) for c in im["characters"]) + " (their photo or sheet, above)")
-            L += ["", "```", str((_by_format(im, ftag).get("prompt") if ftag else im.get("prompt")) or "").strip(), "```", ""]
+            L += ["", "```", str((_by_format(im, ftag).get("prompt") or swapped.get(int(kk)) if ftag else None) or im.get("prompt") or "").strip(),
+                  "```", ""]
         th = {} if ftag else (plan.get("thumbnail") or {})   # the YouTube thumbnail is the video's: made once, with the first format
         if th.get("prompt"):
             L += [f"## v{nn}-thumb  ·  the YouTube thumbnail, {th.get('size') or '1280x720'}", ""]
@@ -9056,6 +9132,7 @@ def _img_prompts(a):
         files.append(str(dest))
         total += len(imgs)
     out({"ok": True, "files": files, "images": total, "format": ftag or None,
+         **({"own_prompt_for_format": own, "swaps": [[str(o), str(n)] for o, n in (getattr(a, "swap", None) or [])]} if ftag else {}),
          "naming": (f"vNN-{ftag}-iKK for this format's stills" if ftag else "vNN-iKK for the stills and vNN-thumb for the thumbnail")
                    + " (png, jpg or webp), all in one folder; sub-folders fine",
          "note": "give the user these files' paths and how to hand back the folder; `T image intake --folder <path>` copies them in"})
@@ -12725,6 +12802,12 @@ def main():
     p.add_argument("--thumbnail", action="store_true", help="generate, use: the video's YouTube thumbnail (thumb-aK) instead of a still; "
                                                             "generate needs --size (static §12); the one in use is copied to deliverables")
     p.add_argument("--prompt-file", help="generate: the prompt, a text file"); p.add_argument("--prompt", help="generate: the prompt as text")
+    p.add_argument("--same-as-primary", action="store_true", help="generate with --format: the prompt and the reference images the first "
+                                                                  "format's still in use was made with (followed back past a placed logo), "
+                                                                  "sent at this format's size")
+    p.add_argument("--swap", nargs=2, action="append", metavar=("OLD", "NEW"),
+                   help="generate --same-as-primary, prompts --format: words of the first format's prompt that name its frame, each "
+                        "replaced everywhere (repeatable); an OLD the prompt does not hold stops the call")
     p.add_argument("--ref", action="append", help="generate: a reference image (a character photo or anchor), repeatable, at most 16 "
                                                   "(FLUX 3 Klein: 10)")
     p.add_argument("--engine", choices=["api", "klein"], help="generate: default the run's state.json -> static_images (klein, else api)")

@@ -1285,3 +1285,25 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
 - **Changed:** `tts voice` builds into `30-assets/voice/.voice-build/` from the sample's own file and replaces the reference, its text
   and the prompts only once the model has built them; a failed build leaves the run's voice as it was. The run's reference was put back
   to sample 1.
+
+## 2026-11-08 · Static: one video in more than one format
+
+- **Asked:** "add another feature on the static mode, the user can chose how much image formats video versions they want to do, for
+  example if they chose only 16:9 we do the video for 16:9 but he might also chose 9:16 too, so if they pick both options then we should
+  use the same plan we have for 16:9 such as narration,story,hooks,and literally everything that the pipeline decides to do but also in
+  a 9:16 image version too(same image prompts too, but just 9:16) so we end up generating 2 video formats for the same content (2
+  capcut projects too, each one of them in their format)".
+- **Found:** video 02's prompts name their frame ("Wide 16:9 frame ...; the main subject on the left or right third ...; the bottom
+  fifth of the frame ..."), so the same prompt sent at 9:16 would ask for a wide picture at a tall size; and what sits at a point of a
+  picture (a placed logo's box, a map label's place, a zoom aimed at a spot, the captions' size and band) does not carry over to
+  another frame.
+- **Changed:** A5's Formats question is multi-select (the first pick is the primary, `T static format`; each other one `--also`, kept
+  in `state.json -> static.extra_formats` with its tag, e.g. `9x16`). `--format <tag>` on `image generate|use|brand|text|prompts|intake`,
+  `slideshow plan|render`, `capcut-name`, `capcut-motion`, `capcut-transitions`, `capcut-effects` and `capcut-labels` keeps each extra
+  format's stills, record, captions and timeline apart (`60-outputs/video-NN/<tag>/`, `40-briefs/video-NN-timeline-<tag>.json`,
+  project `DD_Mon_YYYY_vNN-<tag>`). `image generate --format <tag> --same-as-primary` sends the primary still's own prompt and
+  references (followed back past a placed logo) at the other size, with `--swap OLD NEW` for the frame words only (an OLD the prompt
+  lacks stops the call before anything is sent); `image prompts --format <tag> --swap ...` does the same for prompts mode. The plan's
+  `by_format.<tag>` holds an extra format's captions size and band, labels and aimed zooms; `slideshow plan --format` lists what it
+  lacks and the zooms aimed in the first format. Agents make every format of their video (the primary first); the contract has a
+  Formats line. New section static §2b; t02 tests.

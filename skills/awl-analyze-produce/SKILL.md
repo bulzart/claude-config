@@ -22,7 +22,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *an own voiceover (`state.json → voiceover.enabled` true; item 31; the takes in X1, a `voiceover` blocker):*
   - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.4 KB)
 - *Static (item 36): production-agents §1, §3 and §5 above, and §2s in place of §2, the Higgsfield section and `models_explore`:*
-  - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (9.4 KB)
+  - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (10.7 KB)
 
 ### A8. Load the locked model's documentation
 **Static: no A8** (no video model; item 36): go to A9s.
@@ -86,8 +86,13 @@ At the start: `T state --run RUN set stage=producing next_skill=awl-analyze-prod
    images by the user, only the check of its images), S4 `awl-static-edit` and X10 `awl-record` (the title and the thumbnail into the
    deliverables, static §12). A9's steps and X1–X9 are not used; nothing here asks a question. Static has no effort level: 5 agents at
    once and the pilot from 5 videos, as before effort levels (`T effort --run RUN` prints them).
+   More than one format (`state.json → static.extra_formats`, static §2b): the same one agent per video makes every format (the
+   contract's Formats line says how); the narration, bed and anchors serve them all.
 **More videos** of a run (static §10; `awl-static-plan`'s More videos): S2, the anchors' check, the contract and the agents for the new
 videos only (their numbers from `T static subjects`); the videos already in `state.json → videos[]` are not touched.
+**A format added later** (the user asks for the run's videos in one more format: static §2b): `T static format --run RUN --aspect A
+--res R --also`, `T contract --run RUN` again, then one agent per video the user names with the spawn message `Video NN, format <tag>`
+(its stills, project and record entry only; split as A9b says for a long video); nothing of the first format is touched.
 
 ### A9b. Produce in parallel (production agents)
 
@@ -99,7 +104,9 @@ videos only (their numbers from `T static subjects`); the videos already in `sta
   Klein one after another, each making its images in the foreground (one GPU; three Klein agents at once ran this PC's commit memory
   short and Claude Code ended their background loops, 2026-11-07: static §5). When every stretch has reported, one edit agent (`Video NN: S4 and X10`) builds the edit
   and the record from them. The image agents' files are `60-outputs/video-NN/images-K1-K2.json` (their images, attempts, re-draws, costs,
-  flags); the edit agent sums them into `result.json`.
+  flags); the edit agent sums them into `result.json`. More than one format (static §2b): each extra format's stretches too
+  (`Video NN, format <tag>, images K1-K2: S3 only`; their files `60-outputs/video-NN/<tag>/images-K1-K2.json`), each one after the
+  primary's same stretch has reported (it sends the primary's requests); the one edit agent builds every format's project and records them.
 - **Free runs:** each agent's spawn message names its video's kind (`Video NN, kind recreate|create`, from `state.json → videos_kind`), and the contract's "Video kind" line says that the kind selects the Recreate or the Create branch of every per-video step.
 - **Spawn one production agent per video** (`reference/production-agents.md` §2 prompt, as written to
   the run's contract file at A9; `subagent_type: general-purpose`, `model: "opus"` (they run QC and judge: Opus 5.5), `run_in_background: true`).
@@ -121,7 +128,8 @@ videos only (their numbers from `T static subjects`); the videos already in `sta
     for the admin;
   - verify, and fix at once what is missing (`production-agents.md` §5 item 3): `videos[]` in
     `state.json`; the README table (the agent's `readme-row.md` appended to `deliverables/README.md`);
-    `video-NN-clean.mp4` and `video-NN-preview.mp4` in `deliverables/` (Static: the CapCut project instead, no video file, static §7);
+    `video-NN-clean.mp4` and `video-NN-preview.mp4` in `deliverables/` (Static: the CapCut project instead, no video file, static §7;
+    one per format, each with its README row, static §2b);
     `result.json` complete, each
     check of the agent contract with an evidence path or "not checked: <why>"; the plan and brief files
     with their attempts. A size reading is never repeated or summarised before its frame was viewed

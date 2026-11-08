@@ -21,5 +21,7 @@ and why it could not be answered. Empty when the keeper had everything it needed
 `judge` keeps the X2 template's file (or why there was none) and the judge's `cause`, `template_fix` and `product_images` from the QC consult, for
 the user's review.
 With an own voiceover (command item 31), `clean` names the file whose sound is the take (`reference/voiceover/` §8).
+A Static video (item 36) records its edit under `static` (`awl-record`); made in more than one format, `static.formats` holds one entry
+per format, each with its own CapCut project (static §2b).
 `fix_proposal` is set only with `blocker: qc_fix_permission` (QC fixes `ask`): `{"findings": ["<expected, why, seen, frame paths>", …], "cause": "<the diagnosis>", "retry_changes": "<what the corrected request changes>", "request": "<path of the corrected request.json>", "credits_now": <n>, "preflight_credits": <n>}`.
 

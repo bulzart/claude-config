@@ -1340,11 +1340,46 @@ check(js.get("ok") and _mf.get("tag") == "16x9" and _mf.get("export") == "1280x7
       "static format --also stores a second format beside the primary (tag 16x9, its own export), the primary kept")
 js, code = ts("image", "generate", "--run", str(SR), "--anchor", "C1", "--format", "16:9", "--prompt", "x", ok=False)
 check(code == 2 and "once for every format" in str(js.get("error")), "an anchor is made once for every format (--format refused)")
+_rec0 = json.loads((SR / "60-outputs" / "video-01" / "images.json").read_text(encoding="utf-8"))["images"]["01"]
+_use0 = next(x for x in _rec0["attempts"] if Path(x.get("file") or "").name == _rec0["use"])
+_base0 = next(x for x in _rec0["attempts"] if Path(x.get("file") or "").name == _use0["base"]) if _use0.get("source") == "brand" else _use0
+_req0 = json.loads(Path(_base0["request_file"]).read_text(encoding="utf-8"))
+_n_seen = len(_SEEN)
+js, _ = ts("image", "generate", "--run", str(SR), "--video", "01", "--image", "1", "--format", "16:9", "--same-as-primary")
+_rq = json.loads(Path(json.loads((SR / "60-outputs" / "video-01" / "16x9" / "images.json").read_text(encoding="utf-8"))["images"]["01"]
+                      ["attempts"][-1]["request_file"]).read_text(encoding="utf-8"))
+check(js.get("ok") and _rq["params"]["prompt"] == _req0["params"]["prompt"] and _rq["params"]["refs"] == _req0["params"]["refs"]
+      and _rq["params"]["size"] == _mf["image_size"] and (js.get("same_as_primary") or {}).get("attempt") == _base0["attempt"]
+      and _SEEN[-1]["size"] == _mf["image_size"] and _SEEN[-1]["refs"] == len(_req0["params"]["refs"]) == 1
+      and len(_SEEN) == _n_seen + 1 and "16x9" in Path(js["file"]).parts,
+      "image generate --same-as-primary sends the first format's still's own prompt and references at the extra format's size, into its folder")
+js, code = ts("image", "generate", "--run", str(SR), "--video", "01", "--image", "1", "--format", "16:9", "--same-as-primary",
+              "--prompt", "x", ok=False)
+check(code == 2 and "none of your own" in str(js.get("error")), "--same-as-primary takes no prompt of its own")
+js, _ = ts("image", "generate", "--run", str(SR), "--video", "01", "--image", "1", "--format", "16:9", "--same-as-primary",
+           "--swap", "wheat field", "barley field")
+_rq = json.loads(Path(json.loads((SR / "60-outputs" / "video-01" / "16x9" / "images.json").read_text(encoding="utf-8"))["images"]["01"]
+                      ["attempts"][-1]["request_file"]).read_text(encoding="utf-8"))
+check(js.get("ok") and _rq["params"]["prompt"] == _req0["params"]["prompt"].replace("wheat field", "barley field")
+      and (js.get("same_as_primary") or {}).get("swaps") == [["wheat field", "barley field"]],
+      "--same-as-primary --swap changes only the words the agent names (the frame's), the rest of the prompt word for word")
+_n_seen = len(_SEEN)
+js, code = ts("image", "generate", "--run", str(SR), "--video", "01", "--image", "1", "--format", "16:9", "--same-as-primary",
+              "--swap", "a tall frame", "a wide frame", ok=False)
+check(code == 2 and "not in" in str(js.get("error")) and len(_SEEN) == _n_seen, "a --swap whose words the prompt does not hold sends nothing")
+js, code = ts("image", "prompts", "--run", str(SR), "--format", "16:9", "--swap", "at dusk", "at dawn", ok=False)
+check(code == 2 and "images 2, 3" in str(js.get("error")), "image prompts --format --swap names the images whose prompt lacks the words")
+js, _ = ts("image", "prompts", "--run", str(SR), "--format", "16:9", "--swap", " a ", " one ")
+_pm16 = Path(js["files"][0]).read_text(encoding="utf-8") if js.get("files") else ""
+check(js.get("ok") and Path(js["files"][0]).name == "video-01-16x9-image-prompts.md" and "## v01-16x9-i01" in _pm16
+      and "A farmer in one wheat field at dusk" in _pm16 and "horizontal 16:9" in _pm16 and "C1 character sheet" not in _pm16
+      and "v01-thumb" not in _pm16,
+      "image prompts --format writes the same prompts (its swaps applied) named vNN-16x9-iKK, at that format's size, no sheet or thumbnail")
 _mfd = home.parent / "user-16x9"
 _mfd.mkdir(exist_ok=True)
 for _k in (1, 2, 3):
-    _PL.new("RGB", (1280, 720), (40 * _k, 90, 140)).save(_mfd / f"v01-16x9-i{_k:02d}.png")
-_PL.new("RGB", (1080, 1920), (9, 9, 9)).save(_mfd / "v01-i01.png")   # a first-format still in the same folder: not this format's
+    _Im.new("RGB", (1280, 720), (40 * _k, 90, 140)).save(_mfd / f"v01-16x9-i{_k:02d}.png")
+_Im.new("RGB", (1080, 1920), (9, 9, 9)).save(_mfd / "v01-i01.png")   # a first-format still in the same folder: not this format's
 js, _ = ts("image", "intake", "--run", str(SR), "--folder", str(_mfd), "--format", "16:9")
 check(js.get("ok") and len(js.get("copied") or []) == 3 and not js.get("missing") and js.get("aspect") == "16:9"
       and all("16x9" in Path(c["file"]).parts for c in js["copied"]),
@@ -1703,6 +1738,14 @@ check(js.get("ok") and _bf.name == "i01-a4.png" and _brec["use"] == "i01-a4.png"
 js, code, _ = t("image", "brand", "--run", str(KR), "--video", "01", "--image", "1", "--logo", str(_lg), "--box", "100,100,5000,500",
                 env=KENV, ok=False)
 check(code == 2 and "outside" in js.get("error", ""), "image brand refuses a box outside the picture")
+_kf, _, _ = t("static", "format", "--run", str(KR), "--aspect", "16:9", "--res", "720", "--also", env=KENV)
+js, _, _ = t("image", "generate", "--run", str(KR), "--video", "01", "--image", "1", "--format", "16:9", "--same-as-primary", env=KENV)
+_rqa3 = json.loads((KR / "50-requests" / "video-01-i01-a3-image-request.json").read_text(encoding="utf-8"))
+_rq16 = json.loads((KR / "50-requests" / "video-01-16x9-i01-a1-image-request.json").read_text(encoding="utf-8"))
+check(js.get("ok") and (js.get("same_as_primary") or {}).get("attempt") == 3 and _rq16["params"]["prompt"] == _rqa3["params"]["prompt"]
+      and _rq16["params"]["size"] == (_kf.get("format") or {}).get("image_size") and _rq16.get("format") == "16x9"
+      and Path(js["file"]).parent == KR / "60-outputs" / "video-01" / "16x9" / "images",
+      "--same-as-primary follows a still whose logo was placed back to the generated attempt and sends that request at the other size")
 js, _, _ = t("fetch-image", "--run", str(KR), "--kind", "logo", "--name", "test-brand-logo", "--url", "https://example.org/logo.png",
              "--source", "https://example.org/press", "--licence", "press kit", env={**KENV, "AWL_FETCH_STUB": str(_lg)})
 _fm = json.loads(Path(str(js.get("file")) + ".source.json").read_text(encoding="utf-8")) if js.get("file") else {}

@@ -53,4 +53,5 @@ reliably: few words, large); the run's style; nothing of §11; nothing of item 6
 (it promises what the video keeps).
 
 **The record (X10)**: `deliverables/video-NN-title.txt` (the title on its first line), the thumbnail in `deliverables/`, and both in the
-video's README row and its result.json.
+video's README row and its result.json. A video in more than one format (§2b) has one title and one thumbnail, made with the primary and
+named in every format's row.

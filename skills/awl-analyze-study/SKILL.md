@@ -42,8 +42,8 @@ Only these section files for this phase, nothing else unless a step below says s
   - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run: read at the start, again only
     after a compaction)
   - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (5.1 KB)
-  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (8.1 KB)
-  - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.8 KB) (the niche, the visual style and the narrator, A5)
+  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (8.8 KB)
+  - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.9 KB) (the niche, the visual style and the narrator, A5)
 
 ### A3. Video analysis (as continuous sequences)
 - **Static:** each card is the Static card (static §1–§2) in place of the product and physics fields: read `video.md`, `timeline.md`
@@ -175,8 +175,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
 - **Static:** one AskUserQuestion call with four questions (static §10; the user, 2026-11-07: one niche, one visual style and one narrator
   per run, "because we want to remain consistency on content and style"):
   - header "Videos": as for Create;
-  - header "Format" (static §2): `T static formats --run RUN` gives the facts; the best fit first, marked (Recommended), then the other
-    options; stored with `T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`;
+  - header "Formats", multiSelect (static §2): `T static formats --run RUN` gives the facts; the aspects, the best fit first,
+    marked (Recommended), each with its sizes and, from the second on, what one more format adds; the first picked (in the options'
+    order) is the primary, stored with `T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`, each other one
+    with the same command and `--also`;
   - header "Niche", "Which niche is this channel about? Every video of this run stays in it.", none recommended: up to four of the spec's
     niche candidates (the references' own field first), each with one line on what its videos would be; "Other" takes any niche;
   - header "Visual style", "Which reference's visuals should every video have?", none recommended: up to four references, one per visual

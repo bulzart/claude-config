@@ -17,8 +17,9 @@ A Static run is one channel. Its **locks** are set once and kept by every video 
   craft.
 - **The narrator** (A6s, the user's pick of five samples, §6): one voice for every video. `T tts design` and `T tts voice` refuse a new
   voice once one is picked; `--replace` only when the user picks again in a clone.
-- The format, the images' source, the CapCut plan, the effects folder and the QC fixes: the start's answers (a later request may name
-  another format for its videos, `T static format` again: one channel can hold Shorts and long videos).
+- The formats, the images' source, the CapCut plan, the effects folder and the QC fixes: the start's answers (a later request may name
+  another format for its next videos, `T static format` again: one channel can hold Shorts and long videos; or the same videos in one
+  more format, `T static format --also`, §2b).
 The toolkit refuses another niche or style reference once one is set (`--replace` only before the run's first video): another niche
 is another run, a clone.
 

@@ -53,7 +53,7 @@ Only these section files for this phase, nothing else unless a step below says s
   - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.3 KB) (the fix routes)
   - voiceover §10: `AWL/reference/voiceover/100_10_qc-of-a-voiceover-x9.md` (1.4 KB)
 - *a `result.json` field this phase writes (a fix proposal under QC fixes `ask`, the keeper's gaps, the voiceover verdict):*
-  - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.6 KB)
+  - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.8 KB)
 - model guide sections: the locked model's guide (`T model-entry --id <model>` prints `guide` and `sections_dir`; see `awl-model-guide`) — §5 (failure table); §9 when a retry is planned
 - the plan's QC checkpoints (`RUN/40-briefs/video-NN-plan.md`), the contract's checks (`AWL/reference/production-agents/` §3 item 13, for a production agent)
 

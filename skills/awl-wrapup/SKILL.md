@@ -32,7 +32,9 @@ In Analyze Mode the table also names each video's **CapCut project**:
 - First assemble any projects still pending. If CapCut is running, ask the user once to close it
   (a blocker, not a permission), then assemble them.
 - Then say: "open CapCut → the projects are listed by name → review → Export". Static: each at its format's export size
-  (`state.json → static.format.export`, 30 fps); that export is the final.
+  (`state.json → static.format.export`, 30 fps; an extra format's project, named `…-<tag>`, at its own, `static.extra_formats`, one
+  table row per format, static §2b); that export is the final. A vertical version longer than 3 minutes is a vertical long video on
+  YouTube, not a Short: say so in one line when the run has one.
 Then give:
 - the total credits used (`transactions` / `balance`);
 - the run folder (keep it: the CapCut projects use its files);

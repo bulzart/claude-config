@@ -13,16 +13,19 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (17.0 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (4.7 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (18.0 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.0 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
-- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.5 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.6 KB)
 - *the plan has characters:*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - *the style lock is illustrated, painted or cartoon:*
   - anomaly-catalog §2.13: `AWL/reference/anomaly-catalog/160_2.13_stylised-and-anime-rendering.md` (1.3 KB)
+- *the run has more than one format (`state.json → static.extra_formats`):*
+  - static §2b: `AWL/reference/static/025_2b_more-than-one-format.md` (4.5 KB)
 
-`state.json → static_images` says which half applies: `api` or `klein` (the first), `prompts` (the second).
+`state.json → static_images` says which half applies: `api` or `klein` (the first), `prompts` (the second). With more than one format,
+the primary's stills come first (the steps below), then each extra format's ("Another format", below).
 
 ## Images made for you (`static_images=api`: the OpenAI Images API; `klein`: FLUX 3 Klein on this PC)
 
@@ -80,14 +83,40 @@ stack a tall frame into panels, above all with no reference image).
    `T image use --run RUN --video NN --thumbnail --attempt M`. The one in use is in `RUN/deliverables/video-NN-thumbnail.png`.
 7. Each answer carries `cost_usd_estimate` (0 with FLUX 3 Klein): write their sum in `result.json` and the brief.
 
+## Another format (`static.extra_formats`; static §2b)
+
+After the primary's stills, each extra format's, in plan order; no anchor and no thumbnail (made once, for every format). A split
+video's spawn message `format <tag>, images K1-K2` means that format's stills K1-K2 only (write
+`RUN/60-outputs/video-NN/<tag>/images-K1-K2.json`).
+1. **Its caption band and the swap pairs**, once per video and format: the plan's `"by_format": {"<tag>": {"captions": {"size",
+   "y_rel"}}}` (static §2b), written now when the plan lacks it, since the stills keep that band clear; then read the requests of two
+   or three of the primary's stills in use (`RUN/50-requests/video-NN-iKK-aM-image-request.json`, `params.prompt`) and pick the exact
+   phrases that name the primary's frame (its shape and aspect, the main subject's place across it, the band kept at the plan's
+   `y_rel`) and what each says for this format (its shape, §5's composition for its aspect, its band at its own `y_rel`). Write them in
+   the brief.
+2. **Every still**: `T image generate --run RUN --video NN --image K --format <tag> --same-as-primary --swap "<old>" "<new>" …` (the
+   primary's prompt and references, sent at this format's size). It stops before sending when a phrase is not in that still's prompt:
+   pick that still's own words, or, for a scene the swaps do not fit (laid out across the other frame), write
+   `RUN/40-briefs/video-NN-<tag>-iKK-prompt.txt` (the same scene, only its layout changed) and send it with `--prompt-file` and the same
+   `--ref`s, why in the brief. In the foreground, one at a time with FLUX 3 Klein, as for the primary.
+3. **View and check** each one (static §8) and against the primary's still (the same scene, people and things); after the stills,
+   `T image text --run RUN --video NN --format <tag>`; re-draws by QC fixes as step 3 says; another attempt: `T image use … --format <tag>`.
+4. **Logos and labels** on its own picture: `T image brand --run RUN --video NN --image K --format <tag> --logo <file> --box …`
+   (the box read off this still); a labelled image's places read off this still into the plan entry's `"by_format": {"<tag>":
+   {"labels": […]}}`.
+5. Its costs as in step 7, per format in `result.json`.
+
 ## Images by the user (`static_images=prompts`; main session)
 
 1. **The prompts**, after S2 for every video: the plans' prompts written as step 2 says (the characters' sheet prompts first), then
    `T image prompts --run RUN` → `RUN/deliverables/prompts/video-NN-image-prompts.md` (each video's thumbnail too, as `vNN-thumb`, at
    its own size). Tell the user in one message: the files, the names `vNN-iKK` and `vNN-thumb` (and `C1-sheet` for a character sheet they
    make first), the format's aspect and size (the thumbnail's own), one folder for everything, and "send me the folder's
-   path". `T state --run RUN set static.waiting=images`, then stop and wait.
-2. **The folder** (their reply, or `resume` with a path): `T image intake --run RUN --folder "<path>"`. Missing images: tell the user which
+   path". More than one format (static §2b): also `T image prompts --run RUN --format <tag> [--swap "<old>" "<new>" …]` per extra
+   format (the same prompts, their frame words swapped; names `vNN-<tag>-iKK`), named in the same message.
+   `T state --run RUN set static.waiting=images`, then stop and wait.
+2. **The folder** (their reply, or `resume` with a path): `T image intake --run RUN --folder "<path>"` (and once more with `--format
+   <tag>` per extra format: it takes only `vNN-<tag>-iKK`). Missing images: tell the user which
    and wait (the same intake again later). Files it cannot match by name: show them and ask how they map; never guess.
    Then `T state --run RUN set static.waiting=null`.
 3. **View every image** (static §8) and list the failures per video for the user; nothing is made by the API in this mode (the user may
@@ -106,4 +135,5 @@ stack a tall frame into panels, above all with no reference image).
 
 ## Hand-off
 
-A production agent: invoke Skill `awl-static-edit`. The main session (anchors, prompts, intake): return to A9s in `awl-analyze-produce`.
+A production agent: invoke Skill `awl-static-edit` once every format's stills are made (a split video's image agent: end with its
+JSON line). The main session (anchors, prompts, intake): return to A9s in `awl-analyze-produce`.
