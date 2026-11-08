@@ -9752,7 +9752,7 @@ def _ds_scrub(text, key: str) -> str:
 def _ds_post(path: str, body: dict, key: str, timeout: float) -> tuple:
     """(http status, parsed JSON or None, raw text with the key scrubbed, the statuses tried) of one Model Studio call. Only rate limits
     and server errors are sent again, twice at most; a connection reset or refused (no answer came: on this PC a busy machine or the
-    antivirus's web shield can drop one, 2026-11-08) is sent again twice at most, 1 s and 3 s later (at worst a line billed twice, a few
+    antivirus's web shield can drop one, 2026-11-08) is sent again three times at most, 1, 3 and 6 s later (at worst a line billed twice, a few
     hundredths of a cent, or one more free voice on the account). The key travels only in the Authorization header. A timeout raises
     (whether a line was made and billed is then not known)."""
     import urllib.error
@@ -9778,11 +9778,11 @@ def _ds_post(path: str, body: dict, key: str, timeout: float) -> tuple:
                 raw = ""
         except (ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError, urllib.error.URLError) as e:
             reason = getattr(e, "reason", e)
-            if not isinstance(reason, (ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError)) or drops >= 2:
+            if not isinstance(reason, (ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError)) or drops >= 3:
                 raise
             drops += 1
             tries.append(f"dropped:{type(reason).__name__}")
-            waits.insert(0, 1 if drops == 1 else 3)
+            waits.insert(0, (1, 3, 6)[drops - 1])
             continue
         tries.append(status)
         if status not in (429, 500, 502, 503, 504):

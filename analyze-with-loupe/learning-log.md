@@ -1359,6 +1359,6 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   The t02 Alibaba stand-in had connections reset while the PC was busy (one each in voice design and in a line's audio).
 - **Changed:** `T static context` pairs each video with the image of its name (beside it or in a `thumbnails` folder), lists the
   thumbnails no video matches, measures them and makes the labelled sheets (static §12). In Static the frame cap no longer lowers the
-  rate (`_media_kwargs`). `_ds_post` sends a request again after a reset or refused connection, twice at most (a timeout still
+  rate (`_media_kwargs`). `_ds_post` sends a request again after a reset or refused connection, three times at most (a timeout still
   raises); the stand-in server has a larger backlog and can drop connections on purpose. `T inventory --drop` marks a reference dropped
   (persisted). t02: the pairing, 2 fps past the cap, the dropped-connection resend.

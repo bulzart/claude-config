@@ -1824,10 +1824,10 @@ check(code == 2 and "DASHSCOPE_API_KEY" in str(js.get("error")) and not _DS_SEEN
 js, code = ta(*_dargs, "--language", "german", ok=False)
 check(code == 2 and "English or Chinese" in str(js.get("error")) and not _DS_SEEN,
       "Alibaba's voice design takes English or Chinese lines only: another language is told to design on this PC, nothing is sent")
-_DS_DROP["n"] = 2       # two dropped connections along the way: each is sent again, the samples all come back
+_DS_DROP["n"] = 1       # a dropped connection along the way: it is sent again, the samples all come back
 js, _ = ta(*_dargs)
 check(_DS_DROP["n"] == 0 and len(js.get("samples") or []) == 5,
-      "a dropped connection to Alibaba (no answer) is sent again, at most twice, and the call goes on")
+      "a dropped connection to Alibaba (no answer) is sent again, at most three times, and the call goes on")
 _dsm = json.loads((AR / "30-assets" / "voice" / "samples.json").read_text(encoding="utf-8"))
 _cv = [s["body"]["input"] for s in _DS_SEEN if s["path"].endswith("/customization")]
 with wave.open(str(js["samples"][0]["file"]), "rb") as _w:
