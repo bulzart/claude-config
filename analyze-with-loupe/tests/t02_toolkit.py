@@ -630,6 +630,11 @@ check(js["sampling"]["effort"] == "static" and js["sampling"]["baseline_fps"] ==
       and abs(_svj["sampling"]["baseline_frames"] - 80) <= 2 and not [f for f in _sfr if f.get("why") in ("peak", "hook", "pre_cut", "post_cut")],
       f"prep-all samples a Static reference at 2 fps only ({_svj['sampling']['baseline_frames']} frames in 40 s), none around motion, cuts or the "
       "first second, with no flag")
+js, _, _ = t("prep-all", "--run", run_s.name, "--jobs", "1", "--no-ocr", "--redo", "--max-frames", "30", env=ENV)
+_svj = json.loads((_sv / "video.json").read_text(encoding="utf-8"))
+check(abs(_svj["sampling"]["baseline_frames"] - 80) <= 2 and _svj["sampling"]["baseline_fps"] == 2.0,
+      f"a long Static reference keeps 2 fps past the frame cap ({_svj['sampling']['baseline_frames']} frames in 40 s with a cap of 30; "
+      "2026-11-08: a 22-minute reference had been lowered to 1.3 fps)")
 # a moving source has motion peaks: their window stays +-0.5 s at a low dense rate
 mv = ef_src.parent / "motion" / "moving.mp4"
 mv.parent.mkdir(parents=True, exist_ok=True)

@@ -423,7 +423,7 @@ def extract_baseline(video: str, fps: float, dest: Path, dur: float, max_side: i
     shutil.rmtree(dest, ignore_errors=True)
     dest.mkdir(parents=True, exist_ok=True)
     eff, note = fps, None
-    if dur and dur * fps > max_frames:
+    if max_frames and dur and dur * fps > max_frames:
         eff = max_frames / dur
         note = (f"baseline lowered from {fps} to {eff:.2f} fps to respect max_frames={max_frames}; "
                 f"densify segments of interest with `frames --range a-b --fps {fps:g}`")
@@ -1260,9 +1260,12 @@ def _media_kwargs(a, audio_ingest: str, eff: dict | None = None) -> dict:
     """The sampling rates: the command line's when given, else the run's effort level (prep-all), else the config's defaults."""
     base = a.fps if a.fps is not None else (eff["analysis_fps"] if eff else cfg_get("analysis.baseline_fps", 5.0))
     dense = a.dense_fps if a.dense_fps is not None else (eff["analysis_dense_fps"] if eff else cfg_get("analysis.dense_fps", 10.0))
+    # Static: the flat rate holds for every length (the user, 2026-11-07: "just do 2fps when on static mode"); the frame cap lowered a
+    # 22-minute reference to 1.3 fps (2026-11-08), so it does not apply there
+    static_flat = bool(eff and eff.get("level") == "static" and a.fps is None)
     return dict(base_fps=float(base), dense_fps=float(max(dense, base)), static_threshold=a.static_threshold,
                 whisper_model=a.whisper_model, language=a.language, audio_ingest=audio_ingest,
-                do_ocr=not a.no_ocr, ocr_budget=a.ocr_frames, max_frames=a.max_frames,
+                do_ocr=not a.no_ocr, ocr_budget=a.ocr_frames, max_frames=None if static_flat else a.max_frames,
                 peaks_max=int(eff["motion_peaks"]) if eff and eff.get("motion_peaks") else 8,
                 extras=not getattr(a, "no_extras", False) and not (eff and eff.get("extras") is False))
 

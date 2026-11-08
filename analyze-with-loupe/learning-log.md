@@ -1351,3 +1351,14 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   band, and measures every pass with the references' own yardstick (faster-whisper words and segments); `pace.within` in its answer and
   in `T narration-words`. Scripts are sized at the set's overall pace (§4). t02: the local tempo loop, the Alibaba model-first loop on a
   stand-in that speaks faster as `rate` rises, the set profile.
+
+## 2026-11-08 · New references: thumbnails beside the videos, 2 fps for long references, dropped Alibaba connections
+- **Seen:** the user dropped the Saddam Hussein Short (V01) and added 14 references (7.6 to 22.7 minutes) with 12 thumbnails as
+  `.jpg` files of the same name beside the videos (two with no video). `T static context` read titles from the file names but paired
+  no thumbnail. `prep-all` lowered the four references over 15 minutes to 1.3 fps (the 1,800-frame cap), against Static's flat 2 fps.
+  The t02 Alibaba stand-in had connections reset while the PC was busy (one each in voice design and in a line's audio).
+- **Changed:** `T static context` pairs each video with the image of its name (beside it or in a `thumbnails` folder), lists the
+  thumbnails no video matches, measures them and makes the labelled sheets (static §12). In Static the frame cap no longer lowers the
+  rate (`_media_kwargs`). `_ds_post` sends a request again after a reset or refused connection, twice at most (a timeout still
+  raises); the stand-in server has a larger backlog and can drop connections on purpose. `T inventory --drop` marks a reference dropped
+  (persisted). t02: the pairing, 2 fps past the cap, the dropped-connection resend.
