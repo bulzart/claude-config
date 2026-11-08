@@ -9773,10 +9773,19 @@ def _ds_wav(src_bytes: bytes, dest: Path) -> None:
 
 
 def _ds_fetch(url: str, timeout: float) -> bytes:
-    """The audio file of a synthesis (a signed link, valid 24 hours): fetched without the key."""
+    """The audio file of a synthesis (a signed link, valid 24 hours): fetched without the key, and tried again twice when the connection
+    drops (fetching costs nothing; the request that made the line is never sent again here)."""
     import urllib.request
-    with urllib.request.urlopen(urllib.request.Request(url, method="GET"), timeout=timeout) as r:
-        return r.read()
+    last = None
+    for wait in (0, 1, 3):
+        if wait:
+            time.sleep(wait)
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, method="GET"), timeout=timeout) as r:
+                return r.read()
+        except OSError as e:          # a reset, a refused or dropped connection, a timeout, an HTTP error
+            last = e
+    raise last
 
 
 def _ds_lang(lang: str) -> str:
@@ -10276,6 +10285,7 @@ def _tts_say(a):
                 made_info.update(_tts_say_alibaba(voice, every, lang, rate))
         pace_rec = _pace_narration(lines, nd, raw, band_sp, band_ov, pause_default, lang, model_rate=model_rate, resynth=resynth)
         files, spans, pos = pace_rec.pop("files"), pace_rec.pop("spans"), pace_rec.pop("total")
+        pause_default = float(pace_rec["pause_default_s"])     # the pause the narration was joined with (set for the overall band)
         if pace_rec.get("native_wpm_speech"):   # the voice's own speed while speaking, learned: the next narration's first setting
             _state_set(rd, **{"static.voice.native_wpm_speech": pace_rec["native_wpm_speech"]})
     else:
