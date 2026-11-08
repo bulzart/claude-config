@@ -1775,7 +1775,12 @@ class _DSMock(_BH):
             self._send(404, {"code": "NotFound", "message": self.path})
 
 
-_dsrv = _THS(("127.0.0.1", 0), _DSMock)
+class _DSSrv(_THS):
+    request_queue_size = 64   # Python's default backlog of 5 made Windows reset parallel requests on a busy PC (2026-11-08)
+    daemon_threads = True
+
+
+_dsrv = _DSSrv(("127.0.0.1", 0), _DSMock)
 _th.Thread(target=_dsrv.serve_forever, daemon=True).start()
 AENV = {**SENV, "DASHSCOPE_API_KEY": _DSKEY, "AWL_DASHSCOPE_BASE_URL": f"http://127.0.0.1:{_dsrv.server_port}"}
 _aouts = []
