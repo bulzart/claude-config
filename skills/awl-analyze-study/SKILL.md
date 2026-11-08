@@ -41,8 +41,8 @@ Only these section files for this phase, nothing else unless a step below says s
   brand-guardrails §3 (the product and video-physics sections are not read):*
   - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run: read at the start, again only
     after a compaction)
-  - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (5.1 KB)
-  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (8.8 KB)
+  - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (8.3 KB)
+  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (10.5 KB)
   - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.9 KB) (the niche, the visual style and the narrator, A5)
 
 ### A3. Video analysis (as continuous sequences)
@@ -51,7 +51,9 @@ Only these section files for this phase, nothing else unless a step below says s
   --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json --voice` (the bed and the voice as numbers). The moves, joins
   and caption entrances come from `10-media/<V>/edit-profile.json` (`T edit-profile`, A1), never from the 2 fps sheets; view one caption
   entrance and one cut densely (`T frames … --range a-b --fps 30 --sheet`) to see what its numbers describe. The spec's motion, joins and
-  entrance are matched to `AWL/data/capcut-catalogue.md` (static §2, §9: only what CapCut drew on this PC).
+  entrance are matched to `AWL/data/capcut-catalogue.md` (static §2, §9: only what CapCut drew on this PC). Every card has every field
+  of static §1, the retention, emotion, language, engagement, attachment, social and content-style fields included, so the set can be
+  read as a whole.
 - Follow `AWL/reference/analysis-protocol/` (the sections named in Read now) exactly. For each video:
   - read `video.md` and `timeline.md`;
   - view **every** storyboard sheet in order, reading the timeline beside it;
@@ -149,10 +151,14 @@ Write, following the protocol §5–§6:
   §5). The guardrail audit is its first filter: dismissed references are out of the ranking and
   listed under it with their rule; pick-and-edit references rank with their guardrail operations
   counted in the edit load (`brand-guardrails.md` §4).
-- **Static:** `20-analysis/static-spec.md` (static §2): the narration template, seconds per still, the niche candidates, the visual
-  styles (each reference's, grouped, with a storyboard sheet each), the caption pattern, motion and transitions, the voice profile, the
-  bed brief, the devices, what is left behind; the style lock and the text look are written after A5 from the reference the user picks
-  (static §10); no directions, ranking or craft sheet.
+- **Static:** first `T static profile --run RUN` (every analysed reference's measured numbers and the set's median and range,
+  `20-analysis/set-profile.md`; `--refs` for a family), then `20-analysis/static-spec.md` (static §2) from the **whole set** (the user,
+  2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy"): the narration template, the pace
+  (the set's bands while speaking and overall, the pauses), seconds per still, retention, emotion over time, language, engagement,
+  attachment, the social side, content style, the niche candidates, the visual styles (each reference's, grouped, with a storyboard sheet
+  each), the caption pattern, motion and transitions, the voice profile, the bed brief, the devices, what is left behind; each value
+  with the counts and numbers of the set it rests on, families read apart when the set holds different kinds; the style lock and the
+  text look are written after A5 from the reference the user picks (static §10: the look only); no directions, ranking or craft sheet.
 - **With examples:** `20-analysis/house-approach.md` (protocol §9.3): the user's consistent approach,
   one rule per line with its evidence and the default it replaces. Directions, picks and plans
   follow it (contract item 18).

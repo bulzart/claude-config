@@ -25,6 +25,29 @@ for both engines; what differs with Alibaba is in its own paragraph.
   word, the start repeating the reference's words, another speaker) is made again: `T tts say --only N`, at most twice, then noted.
 - The narration starts `lead_s` after the first frame and the video ends `tail_s` after it (config `static.narration`).
 
+**The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns, if the data tells that
+the best speed is 160 words with pauses and 178-191 while speaking per minute then thats what we should use too ... we have to be very
+sure that the workflow really achieves a 178-191 words a minute"; "if qwen 3.1 plus for example has the speed feature or word per minute
+then set it up in the model, only do manual tweaks if the model does not provied with what we want to achieve"). The narration JSON's
+`pace` (§4: words a minute while speaking and overall, the set's bands, §2) and `pause_default_s` drive `T tts say`:
+- every line's silent edges are trimmed, so the pause between lines is exactly the planned one (a line's `pause_after`, else
+  `pause_default_s`);
+- **the model's own speed setting first**: Alibaba's `rate` (0.5 to 2.0), set from the voice's own speed (learned from its last
+  narration, `state.json → static.voice.native_wpm_speech`, else read off its sample); when the measure misses the band, every line is
+  made once more at the corrected setting (billed again; the voice's learned speed makes the next video right the first time);
+- **a tempo afterwards only for what the model did not reach**, and for every line of a model without a speed setting (Qwen3-TTS on
+  this PC has none): one factor for all lines, ffmpeg's rubberband with the pitch and the formants kept; a factor outside 0.85 to 1.35
+  is named (`tempo_outside_clean_range`: the voice is far from the set's pace; a voice described nearer it, or picked nearer it, needs
+  less);
+- the default pause is set so the words a minute overall land in their band (a line's own `pause_after` stays);
+- after every pass the joined narration is measured with **the references' own yardstick** (faster-whisper's words and segments, read the
+  way A1 read them: words a minute from the first word to the last, and over the spoken segments only), at most four passes. The
+  sidecar's `pace` holds the target, every pass, the measure, `within` and the method; `T narration-words` reads the pace again from its
+  own transcription. A narration outside its band after the passes is a fact for the brief and the agent's call (another voice nearer
+  the set's pace), never shipped as if it matched.
+The made lines stay as they came (`video-NN/line-NN.wav`); the paced ones are in `video-NN/paced/`, and the image spans and the captions
+follow the paced narration. A narration is never stretched to fit a length: the length comes from the words at the set's pace (§4).
+
 **With Alibaba** (`static_tts=alibaba`; the user, 2026-11-08: "add qwen 3.1 tts plus from the alibaba provider and the user will just
 provide with the api key when they pick it over our local model, the workflow will be the same"). The key is the user environment
 variable `DASHSCOPE_API_KEY` (§9); nothing runs on this PC's GPU, so no memory guard or GPU wait applies.

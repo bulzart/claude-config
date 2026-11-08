@@ -1,17 +1,21 @@
 ## 4 The script (A6s)
 
 `40-briefs/video-NN-script.md` (readable: the beats, the devices used, the sources) and `40-briefs/video-NN-narration.json`, the lines the
-voice speaks: `{"video": "NN", "language": "english", "lines": [{"n": 1, "text": "…", "emotion": "neutral", "pause_after": 0.35}, …]}`.
+voice speaks: `{"video": "NN", "language": "english", "pace": {"wpm_speech": [<low>, <high>], "wpm_overall": [<low>, <high>], "why":
+"<the set's numbers>"}, "pause_default_s": <the set's median pause>, "lines": [{"n": 1, "text": "…", "emotion": "neutral",
+"pause_after": <only where the set pauses longer, before a reveal>}, …]}`. The pace and the pauses are the spec's (§2, the set's
+numbers); `T tts say` brings the narration to them and measures it (§6 "The pace").
 
 - **The length** is the agent's, per video, from the spec's length pattern (§2), never asked of the user: where this subject sits among
   the references (a subject with as much to tell as their longest runs as long; one beat-light subject as short as their shortest), the
   beats the template needs and how long the references let each run. It is written into `video-NN-narration.json` as
   `"target_length_s"` with `"length_why"` (the references' numbers it rests on), and the script is sized to it.
 - **The template of the spec**: the hook in the first line (spoken within the first second), every beat in its share, the payoff, the
-  closing line or loop; the length: the target, as the words at the run's voice's pace plus every pause. The picked sample's
-  `words_per_s` (`state.json → static.voice`) runs about 12 % faster than its cloned narration (2026-11-06: the sample 2.9 words per
-  second, the narration 2.5, so a script sized at the reference narrator's pace came out at 45 s against the spec's 30–40 s); a
-  spelled-out year or number counts as the words it is spoken as ("eighteen twelve" is two).
+  closing line or loop; the length: the target, as the words at the plan's overall pace (the middle of `pace.wpm_overall`: words =
+  seconds × words a minute / 60; 530 s at 165 words a minute is about 1,460 words), since the narration is brought to that pace whatever
+  the voice's own speed (§6). A spelled-out year or number counts as the words it is spoken as ("eighteen twelve" is two). (Before the
+  pace was set, 2026-11-06 to 11-08, scripts were sized at the voice's own speed, which ran about 12 % under its sample's: video 02 of
+  the run of 2026-11-06 said 1,154 words in 530 s, 131 words a minute against the set's 160–174.)
 - **Lines**: one sentence or one breath each, as the references break them; a reveal gets its own line and a longer pause before it
   (`pause_after` of the line before, 0.5–0.9 s); the default pause is the config's.
 - **Emotion**: most lines `neutral`, the voice's own delivery, the wording carrying the feeling; a line tagged with an emotion the run's

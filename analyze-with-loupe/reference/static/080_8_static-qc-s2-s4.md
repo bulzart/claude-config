@@ -2,7 +2,8 @@
 
 The agent views and listens through the facts; `qc_fixes` (ask, auto, off) decides fixes as in every sub-mode (contract item 27).
 - **Narration**: `narration-words` lists the lines to check (the heard share of their words under the threshold); the duration within the
-  spec's range; the loudness; one speaker throughout; each strong line's `pitch_st` and `timbre_sim` against the cloned lines' spread (§6).
+  spec's range; the pace inside the plan's bands (`tts say`'s and `narration-words`' `pace.within`, both true; §6 "The pace"); the
+  loudness; one speaker throughout; each strong line's `pitch_st` and `timbre_sim` against the cloned lines' spread (§6).
 - **The bed** (`T music measure`, §6): no word heard in it alone; the narration's words heard the same with it under it at the project's
   gain; its level over the lines rising and falling with the story's beats, not against them; still heard in the pauses.
 - **Every image, viewed** (Read the file): it shows what its line says; the character matches their photo or anchor (face, hair, build,

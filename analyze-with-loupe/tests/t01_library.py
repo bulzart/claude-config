@@ -257,6 +257,17 @@ check('header "Narration"' in _st_s and "static_tts=local|alibaba" in _st_s and 
       and "static.voice.engine" in rd(SKD / "awl-static-sound" / "SKILL.md") and "--engine local" in rd(SKD / "awl-static-plan" / "SKILL.md"),
       "Static asks the narration engine at the start (Qwen3-TTS on this PC or Alibaba's qwen-audio-3.1-tts-plus on the user's key) and "
       "keeps the same steps for both (static §6, §9, the start, plan and sound skills)")
+# the whole set and the pace (the user, 2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy";
+# "we have to be very sure that the workflow really achieves a 178-191 words a minute"; "if qwen 3.1 plus ... has the speed feature ...
+# set it up in the model, only do manual tweaks if the model does not provied with what we want to achieve")
+_s1t = rd(LIB / "reference" / "static" / "010_1_what-static-mines-from-the-refer.md")
+check("**The set as a whole**" in _s1t and "T static profile" in _s1t and "**Attachment**" in _s1t and "**The pace**" in _s2t
+      and "is the **whole set's**" in _s2t and "**The pace**" in _s6t and "model's own speed setting first" in _s6t.replace("\n", " ")
+      and "references' own yardstick" in _s6t.replace("\n", " ") and '"pace"' in _s4t
+      and "T static profile" in rd(SKD / "awl-analyze-study" / "SKILL.md") and "pace.within" in rd(SKD / "awl-static-sound" / "SKILL.md")
+      and "pause_default_s" in rd(SKD / "awl-static-plan" / "SKILL.md"),
+      "Static reads the references as one set (every field, the set's numbers, families apart, no single reference as the template) and "
+      "brings every narration to the set's pace, the model's own speed first, measured with the references' yardstick")
 # more than one format (the user, 2026-11-08: "so we end up generating 2 video formats for the same content (2 capcut projects too ...)")
 _s2b = rd(LIB / "reference" / "static" / "025_2b_more-than-one-format.md").replace("\n", " ")
 _tpl_s = rd(LIB / "reference" / "production-agents" / "025_2s_spawning-static.md")

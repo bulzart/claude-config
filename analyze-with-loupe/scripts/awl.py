@@ -9912,6 +9912,7 @@ def _tts_design(a):
     out({"ok": True, "engine": engine, "model": model,
          "samples": [{"n": it["n"], "file": str(Path(it["out"]).resolve()), "instruct": it["instruct"], "seed": it.get("seed"),
                       "duration_s": it.get("duration_s"), "words_per_s": _sample_pace(a.text, it),
+                      "wpm": round(_sample_pace(a.text, it) * 60, 1) if _sample_pace(a.text, it) else None,
                       **({"voice_id": it.get("voice_id")} if it.get("voice_id") else {})} for it in made],
          **({"cost_usd_estimate": 0.0} if engine == "alibaba" else {}),
          "note": f"give the user the {len(made)} samples to listen to, each with its full file path; their pick is stored with "
@@ -10135,10 +10136,11 @@ def _strong_instruct(base: str, delivery: str) -> str:
     return f"{b}. {d}." if d else f"{b}."
 
 
-def _tts_say_alibaba(voice: dict, todo: list, lang: str) -> dict:
+def _tts_say_alibaba(voice: dict, todo: list, lang: str, rate=None) -> dict:
     """The lines in the run's Alibaba voice, a few at a time (config parallel): each in the voice, its instruction the line's own
-    `delivery`, else its emotion's instruction (`T tts voice --emotion`), else none; its seed the line's, else the voice's (0..65535).
-    Every line that came back is kept; the lines that did not are listed and nothing is joined."""
+    `delivery`, else its emotion's instruction (`T tts voice --emotion`), else none; its seed the line's, else the voice's (0..65535);
+    the model's speed setting `rate` when the plan has a pace (static §6 "The pace"). Every line that came back is kept; the lines that
+    did not are listed and nothing is joined."""
     from concurrent.futures import ThreadPoolExecutor
     key = _ds_need_key()
     al = voice.get("alibaba") or {}
@@ -10150,7 +10152,8 @@ def _tts_say_alibaba(voice: dict, todo: list, lang: str) -> dict:
         instr = it.get("delivery") or by_emotion.get(it["emotion"]) or ""
         seed = (int(it["seed"]) if it.get("seed") is not None else int(voice.get("seed") or 0)) % 65536
         body = {"model": model, "input": {"text": it["text"], "voice": vid, "format": "wav", "sample_rate": sr, "language_hints": [code],
-                                          "seed": seed, **({"instruction": instr} if instr else {})}}
+                                          "seed": seed, **({"instruction": instr} if instr else {}),
+                                          **({"rate": float(rate)} if rate is not None and abs(float(rate) - 1.0) >= 0.005 else {})}}
         try:
             status, js, raw, tries = _ds_post(_ds_cfg("synth_path"), body, key, timeout)
         except Exception as e:  # noqa: BLE001
@@ -10165,7 +10168,8 @@ def _tts_say_alibaba(voice: dict, todo: list, lang: str) -> dict:
                                                         "link lasts 24 hours", "request_id": (js or {}).get("request_id")}
         chars = int(((js or {}).get("usage") or {}).get("characters") or len(it["text"]))
         return {"n": it["n"], "ok": True, "characters": chars, "request_id": (js or {}).get("request_id"), "seed": seed,
-                "instruction": instr or None, "cost_usd_estimate": round(chars / 10000 * price, 5) if price is not None else None}
+                "instruction": instr or None, "rate": rate,
+                "cost_usd_estimate": round(chars / 10000 * price, 5) if price is not None else None}
     with ThreadPoolExecutor(max_workers=max(1, int(_ds_cfg("parallel", 4)))) as ex:
         res = list(ex.map(one, todo))
     bad = [r for r in res if not r["ok"]]
@@ -10226,8 +10230,14 @@ def _tts_say(a):
     cloned = [x for x in todo if not x["strong"]]
     t0 = time.time()
     made_info = {}
+    # the pace (static §6 "The pace"): the plan's words a minute; a model's own speed setting first (the user, 2026-11-08: "if qwen 3.1
+    # plus for example has the speed feature or word per minute then set it up in the model, only do manual tweaks if the model does not
+    # provied with what we want to achieve"): Alibaba's `rate`; Qwen3-TTS on this PC has none, so its lines get the tempo afterwards
+    pace_t = spec.get("pace") or {}
+    band_sp, band_ov = _pace_band(pace_t.get("wpm_speech")), _pace_band(pace_t.get("wpm_overall"))
+    model_rate = _ds_rate_for(voice, band_sp) if engine == "alibaba" and band_sp else None
     if todo and engine == "alibaba":
-        made_info = _tts_say_alibaba(voice, todo, lang)
+        made_info = _tts_say_alibaba(voice, todo, lang, model_rate)
     elif todo:
         if os.environ.get("AWL_TTS_STUB"):
             for it in todo:
@@ -10245,23 +10255,39 @@ def _tts_say(a):
                                                     for x in strong], **_tts_job_base()})
         if not res.get("ok"):
             fail("narration failed: " + str(res.get("error"))[:600], 1, worker=res)
-    pause_default = float(_scfg("narration.pause_s", 0.35))
+    # the pause between lines and the pace are the plan's, from the references' measured numbers (static §4, §6): the narration
+    # JSON's pause_default_s, else the config's; its `pace` (words a minute while speaking and overall) sets the tempo
+    pause_default = float(spec.get("pause_default_s") or _scfg("narration.pause_s", 0.35))
     try:   # a line not made now keeps what the last narration recorded of it (its cost, its request, its instruction)
         prev = {int(r["n"]): r for r in json.loads((rd / "30-assets" / "narration" / f"video-{nn}.json").read_text(encoding="utf-8"))
                 .get("lines") or []}
     except (OSError, ValueError, KeyError, TypeError):
         prev = {}
-    sr0, frames, rows, pos = None, bytearray(), [], 0.0
+    raw = rd / "30-assets" / "narration" / f"video-{nn}.raw.wav"
+    pace_rec = None
+    if band_sp:
+        resynth = None
+        if engine == "alibaba":
+            every = [{"n": ln["n"], "text": str(ln["text"]).strip(), "emotion": str(ln.get("emotion") or "neutral"), "out": ln["file"],
+                      "strong": bool(ln.get("strong")), "delivery": str(ln.get("delivery") or "").strip(), "seed": ln.get("seed")}
+                     for ln in lines]
+
+            def resynth(rate):   # every line again at the corrected speed setting (each line billed again)
+                made_info.update(_tts_say_alibaba(voice, every, lang, rate))
+        pace_rec = _pace_narration(lines, nd, raw, band_sp, band_ov, pause_default, lang, model_rate=model_rate, resynth=resynth)
+        files, spans, pos = pace_rec.pop("files"), pace_rec.pop("spans"), pace_rec.pop("total")
+        if pace_rec.get("native_wpm_speech"):   # the voice's own speed while speaking, learned: the next narration's first setting
+            _state_set(rd, **{"static.voice.native_wpm_speech": pace_rec["native_wpm_speech"]})
+    else:
+        files = {ln["n"]: ln["file"] for ln in lines}
+        spans, pos = _join_lines(lines, files, pause_default, raw)
+    rows = []
     for ln in lines:
-        sr, ch, sw, data = _wav_read(Path(ln["file"]))
-        if sr0 is None:
-            sr0, ch0, sw0 = sr, ch, sw
-        if (sr, ch, sw) != (sr0, ch0, sw0):
-            fail(f"line {ln['n']} has another sample format ({sr} Hz, {ch} ch) than line 1 ({sr0} Hz): re-make it", 1)
-        dur = len(data) / (sr * ch * sw)
-        rows.append({"n": ln["n"], "text": ln["text"], "emotion": ln.get("emotion") or "neutral", "file": ln["file"],
+        rows.append({"n": ln["n"], "text": ln["text"], "emotion": ln.get("emotion") or "neutral", "file": files[ln["n"]],
                      "made_by": "alibaba" if engine == "alibaba" else ("design" if ln.get("strong") else "clone"),
-                     "strong": bool(ln.get("strong")), "start": round(pos, 3), "end": round(pos + dur, 3)})
+                     "strong": bool(ln.get("strong")), "start": spans[ln["n"]][0], "end": spans[ln["n"]][1]})
+        if files[ln["n"]] != ln["file"]:
+            rows[-1]["raw_file"] = ln["file"]
         if ln.get("strong"):
             rows[-1].update({"delivery": str(ln.get("delivery") or "").strip(),
                              "seed": int(ln["seed"]) if ln.get("seed") is not None else voice.get("seed")})
@@ -10269,18 +10295,6 @@ def _tts_say(a):
             info = made_info.get(ln["n"]) or {k: v for k, v in (prev.get(ln["n"]) or {}).items()
                                              if k in ("characters", "request_id", "seed", "instruction", "cost_usd_estimate")}
             rows[-1].update(info)
-        frames += data
-        pos += dur
-        gap = float(ln.get("pause_after", pause_default) or 0) if ln is not lines[-1] else 0.0
-        frames += b"\x00" * (int(round(gap * sr)) * ch * sw)
-        pos += round(int(round(gap * sr)) / sr, 6)
-    import wave
-    raw = rd / "30-assets" / "narration" / f"video-{nn}.raw.wav"
-    with wave.open(str(raw), "wb") as w:
-        w.setnchannels(ch0)
-        w.setsampwidth(sw0)
-        w.setframerate(sr0)
-        w.writeframes(bytes(frames))
     final = rd / "30-assets" / "narration" / f"video-{nn}.wav"
     target = float(_scfg("narration.loudness_lufs", -14.0))
     # the voice chain (a gentle compressor, config static.narration.voice_chain; "" = none), then two loudnorm passes: the narration
@@ -10302,7 +10316,8 @@ def _tts_say(a):
             "voice": {"sample": voice.get("sample"), "instruct": voice.get("instruct")}, "loudness_lufs": _ebur128(final),
             "loudness_target": target, "loudness_pass": {"passes": ln["passes"], "mode": ln["mode"],
                                                          "voice_chain": str(_scfg("narration.voice_chain", NARRATION_VOICE_CHAIN) or "")},
-            "engine": engine, "made": now_iso(), "stub": bool(os.environ.get("AWL_TTS_STUB")) and engine == "local"}
+            "engine": engine, "made": now_iso(), "stub": bool(os.environ.get("AWL_TTS_STUB")) and engine == "local",
+            "pause_default_s": round(pause_default, 3), "pace": pace_rec}
     cost_now = None
     if engine == "alibaba":
         side["voice"].update({"voice_id": voice["alibaba"].get("voice_id"), "model": voice["alibaba"].get("target_model")})
@@ -10313,10 +10328,235 @@ def _tts_say(a):
     out({"ok": True, "file": str(final), "sidecar": str(final.with_suffix(".json")), "duration_s": side["duration_s"], "lines": len(rows),
          "made_now": [t["n"] for t in todo], "loudness_lufs": side["loudness_lufs"], "elapsed_s": round(time.time() - t0, 1),
          "voice_match": match, "engine": engine,
+         "pace": ({k: pace_rec.get(k) for k in ("target", "measured", "within", "model_rate", "tempo", "pause_default_s", "method",
+                                                "tempo_outside_clean_range", "native_wpm_speech")}
+                  | {"passes": len(pace_rec.get("passes") or [])})
+         if pace_rec else {"target": None, "note": "the narration JSON has no `pace`: made at the voice's own speed (static §4, §6)"},
          **({"characters_now": sum(int(v.get("characters") or 0) for v in made_info.values()), "cost_usd_estimate_now": cost_now,
              "cost_usd_estimate_narration": side["cost_usd_estimate"]} if engine == "alibaba" else {}),
-         "note": "next: `T narration-words` (the words, the cues and the check against the script); a strong line far from the cloned "
-                 "lines' numbers is made again with another seed (reference/static §6)"})
+         "note": "next: `T narration-words` (the words, the cues, the check against the script and the pace again); a strong line far "
+                 "from the cloned lines' numbers is made again with another seed (reference/static §6)"})
+
+
+def _pace_band(v):
+    """A pace target as [low, high] words a minute; a single number is a band of 2 % either side."""
+    if v is None or v == []:
+        return None
+    if isinstance(v, (int, float)):
+        return [round(float(v) * 0.98, 1), round(float(v) * 1.02, 1)]
+    if isinstance(v, (list, tuple)) and len(v) == 2:
+        lo, hi = sorted(float(x) for x in v)
+        return [lo, hi]
+    fail("a pace target is a number or [low, high] words a minute (the narration JSON's `pace`)", 2)
+
+
+def _pace_of(segments: list) -> dict:
+    """A narration's pace by the yardstick the references were measured with: words a minute from the first word to the last
+    (audio-profile's words_per_minute), words a minute over the speech-to-text segments only (the transcript's wpm_speech_only), and
+    the pauses between words of 0.25 s or more (their median, longest and number a minute)."""
+    ws = [w for s in segments for w in s.get("words") or []]
+    seg_words = sum(len(str(s.get("text") or "").split()) for s in segments)
+    speech = sum(float(s["end"]) - float(s["start"]) for s in segments)
+    res = {"words": len(ws), "wpm_speech": round(seg_words / (speech / 60), 1) if speech > 1 else None}
+    if len(ws) >= 2:
+        span = float(ws[-1]["e"]) - float(ws[0]["s"])
+        gaps = [float(ws[i]["s"]) - float(ws[i - 1]["e"]) for i in range(1, len(ws))]
+        pauses = [g for g in gaps if g >= 0.25]
+        res.update({"wpm_overall": round(len(ws) / (span / 60), 1) if span > 0 else None, "span_s": round(span, 2),
+                    "pauses_per_minute": round(len(pauses) / (span / 60), 1) if span > 0 else None,
+                    "pause_s_median": round(statistics.median(pauses), 2) if pauses else None,
+                    "pause_s_max": round(max(pauses), 2) if pauses else None})
+    return res
+
+
+def _join_lines(lines: list, files: dict, pause_default: float, dest: Path) -> tuple:
+    """The line files end to end, each followed by its pause (its pause_after, else the default; none after the last), written to dest
+    as one WAV. Returns each line's (start, end) in it and the total seconds."""
+    import wave
+    sr0, frames, spans, pos = None, bytearray(), {}, 0.0
+    for ln in lines:
+        sr, ch, sw, data = _wav_read(Path(files[ln["n"]]))
+        if sr0 is None:
+            sr0, ch0, sw0 = sr, ch, sw
+        if (sr, ch, sw) != (sr0, ch0, sw0):
+            fail(f"line {ln['n']} has another sample format ({sr} Hz, {ch} ch) than line 1 ({sr0} Hz): re-make it", 1)
+        dur = len(data) / (sr * ch * sw)
+        spans[ln["n"]] = (round(pos, 3), round(pos + dur, 3))
+        frames += data
+        pos += dur
+        gap = float(ln.get("pause_after", pause_default) or 0) if ln is not lines[-1] else 0.0
+        frames += b"\x00" * (int(round(gap * sr)) * ch * sw)
+        pos += round(int(round(gap * sr)) / sr, 6)
+    with wave.open(str(dest), "wb") as w:
+        w.setnchannels(ch0)
+        w.setsampwidth(sw0)
+        w.setframerate(sr0)
+        w.writeframes(bytes(frames))
+    return spans, round(pos, 3)
+
+
+def _trim_edges(src: Path, dest: Path, thresh_db: float = -45.0, keep_s: float = 0.02) -> float:
+    """A line without the silence a voice model leaves before and after it (anything under thresh_db), keep_s of it kept; the pause
+    between lines is then exactly the planned one. Returns the seconds left."""
+    import wave
+    import numpy as np
+    sr, ch, sw, data = _wav_read(src)
+    if sw != 2:
+        shutil.copy2(src, dest)
+        return len(data) / (sr * ch * sw)
+    x = np.frombuffer(data, dtype="<i2").reshape(-1, ch)
+    idx = np.nonzero(np.abs(x.astype(np.int32)).max(axis=1) > 32768 * 10 ** (thresh_db / 20))[0]
+    if len(idx):
+        x = x[max(0, int(idx[0]) - int(keep_s * sr)): min(len(x), int(idx[-1]) + int(keep_s * sr) + 1)]
+    with wave.open(str(dest), "wb") as w:
+        w.setnchannels(ch)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes(x.tobytes())
+    return len(x) / sr
+
+
+_RUBBERBAND = None
+
+
+def _tempo_af(f: float) -> tuple:
+    """The filter that changes a voice's tempo by f and keeps its pitch: ffmpeg's rubberband (formants preserved, its quality pitch
+    mode), else atempo. Returns (filter, method)."""
+    global _RUBBERBAND
+    if _RUBBERBAND is None:
+        try:
+            _RUBBERBAND = " rubberband " in (run([find_tool("ffmpeg"), "-hide_banner", "-filters"], timeout=60).stdout or "")
+        except Exception:  # noqa: BLE001
+            _RUBBERBAND = False
+    if _RUBBERBAND:
+        return f"rubberband=tempo={f:.4f}:pitch=1:formant=preserved:transients=mixed:detector=soft:pitchq=quality", "rubberband"
+    parts, g = [], f
+    while g > 2.0:
+        parts.append("atempo=2.0")
+        g /= 2.0
+    while g < 0.5:
+        parts.append("atempo=0.5")
+        g /= 0.5
+    return ",".join(parts + [f"atempo={g:.4f}"]), "atempo"
+
+
+def _apply_tempo(src: Path, dest: Path, f: float) -> str:
+    if abs(f - 1.0) < 0.002:
+        shutil.copy2(src, dest)
+        return str(dest)
+    sr, ch, _sw, _d = _wav_read(src)
+    run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-af", _tempo_af(f)[0], "-ar", str(sr), "-ac",
+         str(ch), "-c:a", "pcm_s16le", str(dest)], check=True, timeout=300)
+    return str(dest)
+
+
+def _measure_pace(wav: Path, lines: list, spans: dict, lang: str, workdir: Path) -> dict:
+    """The joined narration's pace with the references' yardstick: speech-to-text (faster-whisper, the same call that read them) on the
+    file, then _pace_of. Tests (AWL_TRANSCRIBE_STUB): the lines' own spans as the segments, their words spread evenly."""
+    if os.environ.get("AWL_TRANSCRIBE_STUB"):
+        segs = []
+        for ln in lines:
+            s, e = spans[ln["n"]]
+            ws = str(ln["text"]).split()
+            step = (e - s) / max(1, len(ws))
+            segs.append({"start": s, "end": e, "text": ln["text"],
+                         "words": [{"w": w, "s": round(s + i * step, 3), "e": round(s + (i + 1) * step, 3)} for i, w in enumerate(ws)]})
+        return _pace_of(segs)
+    work = workdir / "pace"
+    work.mkdir(parents=True, exist_ok=True)
+    wav16 = work / "pace-16k.wav"
+    run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(wav), "-ac", "1", "-ar", "16000", str(wav16)],
+        check=True, timeout=600)
+    tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), STATIC_LANG_ISO.get(str(lang or "").lower(), "auto"))
+    return _pace_of(tr.get("segments") or [])
+
+
+def _ds_rate_for(voice: dict, band_sp) -> float:
+    """Alibaba's speed setting (`rate`, 0.5 to 2.0) for the plan's pace: the target's middle over the voice's own words a minute
+    while speaking, learned from its last narration (state.json -> static.voice.native_wpm_speech), else read off its sample with the
+    silent edges left out. 1.0 when neither is known."""
+    mid = (band_sp[0] + band_sp[1]) / 2
+    native = voice.get("native_wpm_speech")
+    if not native:
+        ref, words = Path(voice.get("ref_audio") or ""), len(str(voice.get("ref_text") or "").split())
+        if ref.is_file() and words:
+            probe = ref.with_name(".rate-probe.wav")
+            try:
+                secs = _trim_edges(ref, probe)
+            finally:
+                probe.unlink(missing_ok=True)
+            native = words / (secs / 60) if secs > 0 else None
+    return round(min(2.0, max(0.5, mid / float(native))), 3) if native else 1.0
+
+
+def _pace_narration(lines: list, nd: Path, raw: Path, band_sp: list, band_ov, pause_default: float, lang: str, model_rate=None,
+                    resynth=None) -> dict:
+    """The narration at the plan's pace (static §6 "The pace"; the user, 2026-11-08: "the narration speed and style should mirror the
+    reference's data patterns ... we can still speed it up after generation ... we have to be very sure that the workflow really achieves
+    a 178-191 words a minute"; "if qwen 3.1 plus for example has the speed feature ... set it up in the model, only do manual tweaks if
+    the model does not provied with what we want"). Every line's silent edges are trimmed. A model with a speed setting (Alibaba:
+    model_rate, resynth) made the lines at it: they keep their tempo, and when the measure misses the band the lines are made once more
+    at the corrected setting; what is still off, or every line of a model without one (Qwen3-TTS on this PC), gets one tempo factor with
+    the pitch kept (rubberband). The default pause between lines (a line's own pause_after stays) is set so the words a minute overall land
+    in band_ov. Measured after each pass with the references' own yardstick, at most config narration.pace_passes passes. The made lines
+    are never changed: the paced copies are in <video>/paced/."""
+    from concurrent.futures import ThreadPoolExecutor
+    pd = nd / "paced"
+    pd.mkdir(parents=True, exist_ok=True)
+
+    def trim_all():
+        tr_, v_ = {}, 0.0
+        for ln in lines:
+            t = pd / f"line-{ln['n']:02d}.trim.wav"
+            v_ += _trim_edges(Path(ln["file"]), t)
+            tr_[ln["n"]] = t
+        return tr_, v_
+    trimmed, voiced = trim_all()
+    words = sum(len(str(ln["text"]).split()) for ln in lines)
+    mid_sp = (band_sp[0] + band_sp[1]) / 2
+    if resynth is not None:
+        f = 1.0                      # the model set the speed: no manual tempo unless the measure shows it missed
+    else:
+        f = round(mid_sp / (words / (voiced / 60)), 4) if voiced > 0 and words else 1.0
+    remakes = 1 if resynth is not None and model_rate is not None else 0
+    n_def = sum(1 for ln in lines[:-1] if "pause_after" not in ln)
+    hist, m, in_sp, in_ov, files, spans, total = [], {}, False, None, {}, {}, 0.0
+    for k in range(max(1, int(_scfg("narration.pace_passes", 4)))):
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            done = list(ex.map(lambda n: (n, _apply_tempo(trimmed[n], pd / f"line-{n:02d}.wav", f)), list(trimmed)))
+        files = dict(done)
+        spans, total = _join_lines(lines, files, pause_default, raw)
+        m = _measure_pace(raw, lines, spans, lang, nd)
+        in_sp = bool(m.get("wpm_speech")) and band_sp[0] <= m["wpm_speech"] <= band_sp[1]
+        in_ov = None if not band_ov else (bool(m.get("wpm_overall")) and band_ov[0] <= m["wpm_overall"] <= band_ov[1])
+        hist.append({"pass": k + 1, "model_rate": model_rate, "tempo": f, "pause_default_s": round(pause_default, 3), **m})
+        if in_sp and in_ov is not False:
+            break
+        if not in_sp and m.get("wpm_speech"):
+            new_rate = round(min(2.0, max(0.5, model_rate * mid_sp / m["wpm_speech"])), 3) if remakes else None
+            if new_rate is not None and abs(new_rate - model_rate) >= 0.01:
+                remakes -= 1
+                resynth(new_rate)        # the model again, at the corrected setting
+                model_rate = new_rate
+                trimmed, voiced = trim_all()
+                continue
+            f = round(f * mid_sp / m["wpm_speech"], 4)
+        elif band_ov and n_def and m.get("span_s") and m.get("words"):
+            need = m["words"] / ((band_ov[0] + band_ov[1]) / 2) * 60
+            pause_default = min(1.5, max(0.12, pause_default + (need - m["span_s"]) / n_def))
+        else:
+            break
+    last = hist[-1] if hist else {}
+    f_used, pause_used = last.get("tempo", f), last.get("pause_default_s", pause_default)
+    lo, hi = float(_scfg("narration.tempo_clean_min", 0.85)), float(_scfg("narration.tempo_clean_max", 1.35))
+    native = round(m["wpm_speech"] / ((model_rate or 1.0) * f_used), 1) if m.get("wpm_speech") and f_used else None
+    method = (("model rate" if model_rate is not None else "") + (" + " if model_rate is not None and abs(f_used - 1) >= 0.002 else "")
+              + (_tempo_af(f_used)[1] if abs(f_used - 1) >= 0.002 else "")) or "none needed"
+    return {"files": files, "spans": spans, "total": total, "target": {"wpm_speech": band_sp, "wpm_overall": band_ov},
+            "measured": {k_: m.get(k_) for k_ in ("wpm_speech", "wpm_overall", "pause_s_median", "pause_s_max", "pauses_per_minute", "words")},
+            "within": {"wpm_speech": in_sp, "wpm_overall": in_ov}, "model_rate": model_rate, "tempo": f_used, "pause_default_s": pause_used,
+            "method": method, "tempo_outside_clean_range": not (lo <= f_used <= hi), "native_wpm_speech": native, "passes": hist,
+            "yardstick": "faster-whisper words and segments of the joined narration, as the references were read"}
 
 
 def cmd_tts(a):
@@ -10371,7 +10611,16 @@ def cmd_narration_words(a):
         srt += [str(i), f"{_srt_time(c['start'])} --> {_srt_time(c['end'])}", c["text"], ""]
     write_text(work.parent / f"video-{nn}.srt", "\n".join(srt))
     off = [x for x in per_line if x["match"] < float(a.min_match)]
-    out({"ok": True, "video": nn, "engine": tr.get("engine"), "words": len(timed), "cues": len(cues), "lines": per_line,
+    try:   # the pace again, read off this transcription by the references' yardstick, against the plan's target (static §6 "The pace")
+        tgt = json.loads((rd / "40-briefs" / f"video-{nn}-narration.json").read_text(encoding="utf-8")).get("pace") or {}
+    except (OSError, ValueError):
+        tgt = {}
+    pace = _pace_of(tr.get("segments") or [])
+    b_sp, b_ov = _pace_band(tgt.get("wpm_speech")), _pace_band(tgt.get("wpm_overall"))
+    pace["target"] = {"wpm_speech": b_sp, "wpm_overall": b_ov}
+    pace["within"] = {"wpm_speech": (b_sp[0] <= pace["wpm_speech"] <= b_sp[1]) if b_sp and pace.get("wpm_speech") else None,
+                      "wpm_overall": (b_ov[0] <= pace["wpm_overall"] <= b_ov[1]) if b_ov and pace.get("wpm_overall") else None}
+    out({"ok": True, "video": nn, "engine": tr.get("engine"), "words": len(timed), "cues": len(cues), "lines": per_line, "pace": pace,
          "lines_to_check": [x["n"] for x in off], "files": {"words": str(work.parent / f"video-{nn}.words.json"),
                                                              "cues": str(work.parent / f"video-{nn}.cues.json"), "srt": str(work.parent / f"video-{nn}.srt")},
          "note": "match is the share of a line's script words heard in its span (speech-to-text, not a verdict), numbers apart (each line's "
@@ -11159,7 +11408,117 @@ def cmd_static(a):
     if a.action != "check" and not a.run:
         fail(f"static {a.action} needs --run", 2)
     {"check": _static_check, "formats": _static_formats, "format": _static_format_set, "lock": _static_lock,
-     "subjects": _static_subjects, "context": _static_context}[a.action](a)
+     "subjects": _static_subjects, "context": _static_context, "profile": _static_profile}[a.action](a)
+
+
+def _jload(p: Path) -> dict:
+    try:
+        v = json.loads(p.read_text(encoding="utf-8"))
+        return v if isinstance(v, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _ref_numbers(md: Path) -> dict:
+    """One analysed reference's measured numbers, from the files A1 and A3 wrote in 10-media/<V>/ (gathered, never judged)."""
+    vj, ap, ep, tj = _jload(md / "video.json"), _jload(md / "audio-profile.json"), _jload(md / "edit-profile.json"), _jload(md / "transcript.json")
+    pr, pc, hk, sp, au, vo = (vj.get("probe") or {}), (vj.get("pacing") or {}), (vj.get("hook") or {}), (vj.get("speech") or {}), \
+        (vj.get("audio") or {}), (ap.get("voice") or {})
+    dur = float(pr.get("duration_s") or ap.get("duration_s") or 0) or None
+    r = {"length_s": round(dur, 1) if dur else None, "aspect": pr.get("aspect"), "width": pr.get("display_width"), "height": pr.get("display_height"),
+         # the voice (audio-profile: words over the first to last word; the transcript: words over its segments only)
+         "wpm_overall": vo.get("words_per_minute"), "wpm_speech": sp.get("wpm_speech_only"), "words": vo.get("words") or sp.get("n_words"),
+         "pauses_per_minute": vo.get("pauses_per_minute"), "pause_s_median": vo.get("pause_s_median"), "pause_s_max": vo.get("pause_s_max"),
+         "pitch_hz_median": vo.get("pitch_hz_median"), "pitch_spread_semitones": vo.get("pitch_spread_semitones"), "energy_cv": vo.get("energy_cv"),
+         "speech_share": ap.get("speech_share"), "loudness_lufs": au.get("integrated_lufs"), "loudness_range_lu": au.get("lra_lu"),
+         "bed_tempo_bpm": ap.get("tempo_bpm"), "non_speech_audible_share": ap.get("non_speech_audible_share"),
+         # the hook and the loop
+         "speech_starts_s": hk.get("speech_starts_s"), "first_cut_s": pc.get("first_cut_s") or hk.get("first_cut_s"),
+         "cuts_in_first_3s": pc.get("cuts_in_first_3s"), "loop_similarity_first_last": vj.get("loop_similarity_first_last"),
+         # the cutting
+         "shots": pc.get("shots"), "shot_s_median": pc.get("median_shot_s"), "shot_s_min": pc.get("min_shot_s"), "shot_s_max": pc.get("max_shot_s"),
+         "cuts_per_10s": pc.get("cuts_per_10s"), "short_shots_under_0_25s": len(ep.get("short_shots_under_0_25s") or []) if ep else None}
+    shots = [s for s in ep.get("shots") or [] if s.get("measured")]
+    if shots:
+        zooms = [abs(float(s.get("zoom_start_to_end") or 1) - 1) * 100 for s in shots]
+        pans = [max(abs(float(s.get("pan_x_pct") or 0)), abs(float(s.get("pan_y_pct") or 0))) for s in shots]
+        moving = [z >= 3 or p >= 3 for z, p in zip(zooms, pans)]
+        r.update({"moving_shot_share": round(sum(moving) / len(shots), 2),
+                  "zoom_pct_median": round(statistics.median([z for z in zooms if z >= 3]), 1) if any(z >= 3 for z in zooms) else None,
+                  "pan_pct_median": round(statistics.median([p for p in pans if p >= 3]), 1) if any(p >= 3 for p in pans) else None})
+    ce = ep.get("caption_entrances") or {}
+    if ce.get("count") is not None and dur:
+        r["captions_per_minute"] = round(float(ce["count"]) / (dur / 60), 1)
+    segs = tj.get("segments") or []
+    text = " ".join(str(s.get("text") or "") for s in segs)
+    toks = re.findall(r"[A-Za-z0-9$%'’.,-]+", text)
+    if toks and dur:
+        mins = dur / 60
+        sents = [x for x in re.split(r"(?<=[.!?])\s+", text.strip()) if x.strip()]
+        low = [t.lower().strip(".,'’") for t in toks]
+        r.update({"sentences": len(sents), "words_per_sentence_median": statistics.median([len(x.split()) for x in sents]) if sents else None,
+                  "questions_per_minute": round(text.count("?") / mins, 2),
+                  "you_per_100_words": round(100 * sum(w in ("you", "your", "you're", "yours", "yourself", "you'll", "you've", "you'd")
+                                                       for w in low) / len(low), 2),
+                  "numbers_per_minute": round(sum(any(c.isdigit() for c in t) for t in toks) / mins, 2),
+                  "first_line": (sents[0][:160] if sents else None)})
+    return r
+
+
+def _static_profile(a):
+    """The whole reference set as numbers (static §2; the user, 2026-11-08: "the reference datas should be studied as a whole not just
+    pick one of them to copy"): for every analysed reference its length and shape, its voice (words a minute overall and while speaking,
+    pauses, pitch, energy, loudness), its words (sentences, words a sentence, questions, "you", numbers a minute, its first line), its
+    hook (the first word, the first cut), its cutting (shots, seconds a shot, cuts a 10 s, moving shots and their amounts, short shots,
+    captions a minute) and its bed's numbers; then for every number the set's median, lowest and highest (over --refs when given).
+    Writes 20-analysis/set-profile.json and .md. Which references belong together and what a number means for a video are the agent's."""
+    rd, _st = _state_of(a.run)
+    inv = _jload(rd / "00-inventory" / "inventory.json")
+    items = [it for it in inv.get("items") or [] if it.get("kind") == "video" and not it.get("ignored") and not it.get("duplicate_of")]
+    want = {x.strip().upper() for x in str(getattr(a, "refs", "") or "").split(",") if x.strip()}
+    refs, not_analysed = {}, []
+    for it in items:
+        if want and it["id"].upper() not in want:
+            continue
+        md = rd / "10-media" / it["id"]
+        if not (md / "video.json").is_file():
+            not_analysed.append(it["id"])
+            continue
+        refs[it["id"]] = {"file": Path(str(it.get("rel") or it.get("path") or "")).name, **_ref_numbers(md)}
+    if not refs:
+        fail("no analysed reference" + (f" among {', '.join(sorted(want))}" if want else "") + " (A1 first)", 2)
+    keys = [k for k in next(iter(refs.values())) if k not in ("file", "aspect", "first_line")]
+    stats = {}
+    for k in keys:
+        vals = [float(r[k]) for r in refs.values() if isinstance(r.get(k), (int, float)) and not isinstance(r.get(k), bool)]
+        if vals:
+            stats[k] = {"median": round(statistics.median(vals), 2), "low": round(min(vals), 2), "high": round(max(vals), 2), "n": len(vals)}
+    aspects = {}
+    for v, r in refs.items():
+        aspects.setdefault(str(r.get("aspect")), []).append(v)
+    res = {"run": rd.name, "made": now_iso(), "references": refs, "set": stats, "by_aspect": aspects, "not_analysed": not_analysed,
+           "refs_asked": sorted(want) or None,
+           "note": "measured numbers of every analysed reference and the set's median, lowest and highest; the spec reads the set as a "
+                   "whole (static §2), and a family of references that differ in kind (a Short and a long video) is read by its own "
+                   "numbers (--refs) - the agent's call, with the numbers it rests on"}
+    tag = ("-" + "-".join(sorted(want)).lower()) if want else ""
+    write_json(rd / "20-analysis" / f"set-profile{tag}.json", res)
+    cols = ["length_s", "wpm_overall", "wpm_speech", "pause_s_median", "pauses_per_minute", "words_per_sentence_median",
+            "questions_per_minute", "you_per_100_words", "numbers_per_minute", "shot_s_median", "cuts_per_10s", "moving_shot_share",
+            "zoom_pct_median", "speech_starts_s", "first_cut_s"]
+    L = [f"# The reference set as numbers ({len(refs)} references{'; ' + ', '.join(sorted(want)) if want else ''})", "",
+         "Measured by the toolkit, no verdict. The set's line is the median with the lowest and highest in brackets.", "",
+         "| ref | " + " | ".join(cols) + " |", "|" + "---|" * (len(cols) + 1)]
+    for v, r in refs.items():
+        L.append(f"| {v} | " + " | ".join("" if r.get(c) is None else str(r[c]) for c in cols) + " |")
+    L.append("| **set** | " + " | ".join((f"{stats[c]['median']} ({stats[c]['low']}–{stats[c]['high']})" if c in stats else "") for c in cols) + " |")
+    L += ["", "First lines:", ""] + [f"- {v}: {r.get('first_line') or '(none)'}" for v, r in refs.items()]
+    if not_analysed:
+        L += ["", "Not analysed yet (no 10-media/<V>/video.json): " + ", ".join(not_analysed)]
+    write_text(rd / "20-analysis" / f"set-profile{tag}.md", "\n".join(L) + "\n")
+    out({"ok": True, "references": len(refs), "not_analysed": not_analysed, "set": stats, "by_aspect": aspects,
+         "files": [str(rd / "20-analysis" / f"set-profile{tag}.json"), str(rd / "20-analysis" / f"set-profile{tag}.md")],
+         "note": res["note"]})
 
 
 def _rewrite_ids(text: str, src: Path, dst: Path, oid: str, nid: str) -> str:
@@ -13095,7 +13454,8 @@ def main():
     p = sp.add_parser("static", help="Static (contract item 36): check (key present, image model answers, FLUX 3 Klein's install and files, TTS "
                                      "and music environments, whisper, ffmpeg filters, capcut-cli) | formats (facts for the format question "
                                      "at A5) | format (store the pick)")
-    p.add_argument("action", choices=["check", "formats", "format", "lock", "subjects", "context"]); p.add_argument("--run")
+    p.add_argument("action", choices=["check", "formats", "format", "lock", "subjects", "context", "profile"]); p.add_argument("--run")
+    p.add_argument("--refs", help="profile: only these references, e.g. V01,V04 (a family the agent reads apart); default every analysed one")
     p.add_argument("--file", help="context: the context file (default: context.txt in the references folder)")
     p.add_argument("--niche", help="lock: the run's niche, the user's pick (every subject of the run stays in it)")
     p.add_argument("--style-ref", help="lock: the reference whose look the images and the captions keep (V01, V07 ...)")

@@ -6,8 +6,19 @@ transcript shows the telling. **The edit layer is measured at the full frame rat
 (`10-media/<V>/edit-profile.json`): at 2 fps a pop-in of a few frames is invisible and a zoom between two samples reads as almost nothing
 (2026-11-06: a reference read at 1 fps as
 "a slight push-in, no caption animation" zoomed its stills by about 20 %, in and out by turns, and popped every word in). View one caption
-entrance and one cut densely (`T frames <file> --out <dir> --range a-b --fps 30 --sheet`) to see what the numbers describe. For every
-reference, collect as facts with times:
+entrance and one cut densely (`T frames <file> --out <dir> --range a-b --fps 30 --sheet`) to see what the numbers describe.
+
+**The set as a whole** (the user, 2026-11-08: "the reference datas should be studied as a whole not just pick one of them to "copy" ...
+we should try to understand them as a whole, what worked, hooks, emotions, patterns, length, voice speed, visuals, editing, engagement,
+mental attachment, social strategy, why it got the viewer hooked, content style, and everything ... the data is what should drive the
+video generation not fixated or constrained terms or prefixed values"). Every reference is read with the same fields below, and the
+spec (§2) reads them together: what recurs across the set (counted: "5 of 8 hooks open with a question"), what the numbers say as the
+set's median and range, what differs and why (a 45 s Short and a 9-minute history are two families, each read by its own numbers), and
+what a viewer gets from it. No single reference is the template of a video; the one the user names at A5 sets only the look (§10).
+`T static profile --run RUN` gives the measured numbers of every analysed reference side by side with the set's median, lowest and
+highest (`--refs V01,V04` for a family): the voice's pace while speaking and overall, the pauses, the pitch, the loudness, the words a
+sentence, the questions, "you" and numbers a minute, the first word and the first cut, the seconds a shot, the cuts, the moving shots
+and their amounts, the captions a minute, the bed. For every reference, collect as facts with times:
 
 - **The title and the thumbnail** (when the references folder has `context.txt`, §12): the reference's real YouTube title word for word
   and what its thumbnail shows (viewed: the subject, the face and its feeling, the words on it and their look, the colours, the
@@ -42,6 +53,22 @@ reference, collect as facts with times:
   energy arc); the sound effects: each hit of the audio profile with its time, whether it lands on a cut, its level against the voice
   and its colour (a whoosh with a slide, a hit on a reveal, a click on a list item, a riser before a payoff), and the moments that carry
   none.
+- **Retention**: where curiosity is raised again (a re-hook every so many seconds: its times), the open loops planted and when each is
+  paid off, the pattern breaks (an insert, a tonal flip, a joke, a sudden quiet), how the stakes rise, the longest stretch with no new
+  question or turn.
+- **Emotion over time**: the arc (curiosity, tension, awe, laughter, relief, sympathy, a wince), where each peak falls as a share of the
+  length, and how the words, the voice (pace, pitch, pauses), the pictures and the bed carry it; how often the mood turns.
+- **The language**: the person and the tense, the words a sentence, the questions, "you" and numbers a minute (`T static profile`), the
+  specificity (dates, sums, names), the humour (deadpan tags, callbacks, irony) and how often it lands, slang, the reading level.
+- **Engagement**: each call to action (subscribe, comment, like) with its time and wording, the questions put to the viewer, the ending
+  (a loop back to the hook, a teaser of the next video, a question for the comments).
+- **Attachment**: what makes a viewer care: a recurring protagonist, the narrator as a persona, the viewer cast as the hero ("POV: you"),
+  relatable stakes, aspiration, belonging to an in-group, a character's fall and rise.
+- **The social side**: why someone would send it on or comment (a surprising fact to repeat, a usable lesson, identity, nostalgia, a
+  harmless argument), the title and thumbnail as a pair (§12), a series or a time-box promise ("in 9 Minutes"), the comment bait.
+- **The content style**: a story, an explainer, a list or a scenario; factual or invented; how serious and how playful; the angle on the
+  subject (the underdog, the hidden cost, the "what if").
+- **Why it holds** [I]: one paragraph per reference, from the facts above: what kept a viewer to the end and what made them come back.
 - **The subject**: what each video is about, and what kind of subject it is (a book, a person, an event, a fact list, a story), to be
   left behind (§3), and its field (history, philosophy, psychology …): a candidate for the run's niche, which the user picks at A5 (§10).
 

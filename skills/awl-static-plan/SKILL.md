@@ -15,9 +15,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run; skip when already read)
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
-- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (3.0 KB)
+- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (3.5 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (18.0 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (9.8 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (12.3 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.9 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.6 KB)
@@ -44,7 +44,8 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
 3. **Five voice samples** (static §6; the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them
    so the user can hear them and pick the one they like to be the voice of the videos"), only when the run has no narrator yet (the
    locks' `voice` empty) or a clone picks a new one (`state.json → static.new_voice` true): five voice descriptions from the spec's voice
-   profile, five different takes on it, and one line in the references' style that names no subject and nothing of static §11, then
+   profile, five different takes on it, each naming the set's pace in words ("brisk, about 185 words a minute"), and one line in the
+   references' style that names no subject and nothing of static §11, then
    `T tts design --run RUN --text "<line>" --instruct "<voice 1>" --instruct "<voice 2>" --instruct "<voice 3>" --instruct "<voice 4>"
    --instruct "<voice 5>"` (a clone's new narrator adds `--replace`). A locked narrator makes no samples (static §10). The command
    uses the run's engine (`state.json → static_tts`); with Alibaba (static §6 "With Alibaba"): each description at most 500 characters,
@@ -52,7 +53,9 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    A worker or Alibaba error is a blocker of the run: report its real text with `T static check` and stop.
 4. **The one stop**, in plain chat (never AskUserQuestion: the pool is longer than four options), the last thing in the turn: the
    subjects numbered (title — hook line — why it fits — for facts the number of sources), the five voices when step 3 made them (number,
-   the voice in a few words, and the full path of its file, as `T tts design` prints it, so the user can play it), and "Reply with N
+   the voice in a few words, its own speed in words a minute (`T tts design`'s `wpm`) next to the set's, said plainly: every narration
+   is brought to the set's pace, so a voice near it needs the least change, and the full path of its file, as `T tts design` prints it,
+   so the user can play it), and "Reply with N
    subject numbers and one voice number, or 'you pick'." (no voice number when the narrator is locked). Then stop and wait. Fewer
    subjects than the count: ask once more. "You pick": the top-scored subjects and the voice that best fits the profile [I].
 5. **Store the picks:** `T static subjects --run RUN --add "<title 1>" --add "<title 2>"` (in video order; each gets the next video
@@ -62,8 +65,12 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
 6. **Scripts** (static §4), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
    niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11). The length is yours, never the
    user's (the user, 2026-11-07): decided per video from the spec's length pattern (the references' lengths in `T static lock`'s
-   `reference_lengths`, what drives them), written as `target_length_s` and `length_why` in the narration JSON, the script sized to it.
-   The copy test and the sharpness gate (creative-direction §5.0, §6) pass before a script is final.
+   `reference_lengths`, what drives them), written as `target_length_s` and `length_why` in the narration JSON, the script sized to it
+   at the set's overall pace (static §4: words = seconds × words a minute / 60). The narration JSON also carries the spec's `pace`
+   (`wpm_speech` and `wpm_overall` as the set's or the family's bands from `T static profile`, with `why`) and `pause_default_s` (the
+   set's median pause), and `pause_after` only where the set pauses longer (before a reveal). The beats, the hooks, the emotions, the
+   language and the calls to action follow the spec's whole-set patterns (static §2), never one reference's. The copy test and the
+   sharpness gate (creative-direction §5.0, §6) pass before a script is final.
 7. **Image plans** (static §5), per video: `RUN/40-briefs/video-NN-images.json`: the characters (photo, or the sheet prompt of one with
    none), one image per stretch of lines (`from_line`), every prompt with the spec's style lock word for word (the style reference's
    look, the same in every video of the run: static §10) and §5's composition, each company or brand the story is about with its

@@ -918,6 +918,55 @@ check([s["seed"] for s in _design["samples"]] == [1106, 1107, 1108, 1109, 1110] 
 js, _ = ts("narration-words", "--run", str(SR), "--video", "01")
 check(js.get("cues", 0) > 0 and len(js.get("lines", [])) == 3 and Path(js["files"]["srt"]).is_file() and "lines_to_check" in js,
       "narration-words gives the timed words, cues, an SRT and per line what was heard against the script")
+check("wpm_speech" in (js.get("pace") or {}) and (js["pace"].get("within") or {}).get("wpm_speech") is None,
+      "narration-words reports the pace by the references' yardstick (no target in this plan: nothing to compare)")
+# the pace (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very sure
+# that the workflow really achieves a 178-191 words a minute"): Qwen3-TTS on this PC has no speed setting, so the lines get one tempo
+# (pitch kept) and the default pause is set, both measured with the references' yardstick until they land in the plan's bands
+_pl = [{"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
+       {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "neutral", "pause_after": 0.5},
+       {"n": 3, "text": "What they took that night is still a secret.", "emotion": "neutral"}]
+(SR / "40-briefs" / "video-07-narration.json").write_text(json.dumps({"video": "07", "language": "english", "lines": _pl,
+                                                                     "pace": {"wpm_speech": [178, 191], "wpm_overall": [160, 170]},
+                                                                     "pause_default_s": 0.1}), encoding="utf-8")
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "07")
+_p7 = json.loads((SR / "30-assets" / "narration" / "video-07.json").read_text(encoding="utf-8"))
+_pm = (_p7.get("pace") or {}).get("measured") or {}
+with wave.open(str(SR / "30-assets" / "narration" / "video-07" / "line-01.wav"), "rb") as _w:
+    _raw1 = _w.getnframes() / _w.getframerate()
+check(js.get("ok") and (js.get("pace") or {}).get("within") == {"wpm_speech": True, "wpm_overall": True}
+      and 178 <= _pm.get("wpm_speech", 0) <= 191 and 160 <= _pm.get("wpm_overall", 0) <= 170
+      and 1.1 < _p7["pace"]["tempo"] < 1.3 and _p7["pace"]["method"] == "rubberband" and _p7["pace"]["model_rate"] is None
+      and abs(_raw1 - 10 / 2.6) < 0.05 and all("paced" in Path(r["file"]).parts and r.get("raw_file") for r in _p7["lines"])
+      and _p7["pause_default_s"] > 0.1 and abs(_p7["lines"][2]["start"] - _p7["lines"][1]["end"] - 0.5) < 0.01,
+      f"tts say brings a narration to the plan's pace: one tempo with the pitch kept and the default pause set, measured with the "
+      f"references' yardstick into both bands, the made lines untouched ({_pm.get('wpm_speech')} and {_pm.get('wpm_overall')} wpm, "
+      f"tempo {_p7['pace']['tempo']}, pause {_p7['pause_default_s']} s)")
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "07", "--rejoin")
+check(js.get("made_now") == [] and (js.get("pace") or {}).get("within", {}).get("wpm_speech") is True,
+      "tts say --rejoin paces the existing lines again without making any")
+# the whole set as numbers: a reference's measured files read into one table with the set's median and range
+_md = SR / "10-media" / "R01"
+_md.mkdir(parents=True, exist_ok=True)
+(_md / "video.json").write_text(json.dumps({"probe": {"duration_s": 60.0, "aspect": "9:16", "display_width": 1080, "display_height": 1920},
+                                            "pacing": {"shots": 20, "median_shot_s": 3.0, "cuts_per_10s": 3.2, "first_cut_s": 1.1,
+                                                       "cuts_in_first_3s": 1},
+                                            "hook": {"speech_starts_s": 0.1}, "speech": {"n_words": 180, "wpm_speech_only": 190.0},
+                                            "audio": {"integrated_lufs": -16.0, "lra_lu": 3.0}}), encoding="utf-8")
+(_md / "audio-profile.json").write_text(json.dumps({"speech_share": 0.9, "voice": {"words_per_minute": 175.0, "words": 175,
+                                                                                   "pause_s_median": 0.45}}), encoding="utf-8")
+(_md / "transcript.json").write_text(json.dumps({"segments": [{"text": "Did you know this? You never noticed it. In 1959 it began."}]}),
+                                     encoding="utf-8")
+js, _ = ts("static", "profile", "--run", str(SR))
+_sp = json.loads((SR / "20-analysis" / "set-profile.json").read_text(encoding="utf-8"))
+check(js.get("ok") and js.get("references") == 1 and sorted(js.get("not_analysed") or []) == ["R02", "R03"]
+      and _sp["references"]["R01"]["wpm_speech"] == 190.0 and _sp["references"]["R01"]["wpm_overall"] == 175.0
+      and _sp["set"]["wpm_speech"]["median"] == 190.0 and _sp["references"]["R01"]["questions_per_minute"] == 1.0
+      and _sp["references"]["R01"]["you_per_100_words"] > 0 and (SR / "20-analysis" / "set-profile.md").is_file(),
+      "static profile reads every analysed reference's measured numbers into one table with the set's median and range, and lists "
+      "the references not analysed yet")
+js, code = ts("static", "profile", "--run", str(SR), "--refs", "R09", ok=False)
+check(code == 2 and "no analysed reference" in str(js.get("error")), "static profile with references that were never analysed says so")
 # the run of 2026-11-06: one word at a time overlapped the next cue 29 times, and a quick 'he' was on screen for one frame
 _tw = [{"w": "He", "s": 0.00, "e": 0.04}, {"w": "escaped", "s": 0.05, "e": 0.50}, {"w": "anyway.", "s": 0.52, "e": 0.95},
        {"w": "Then", "s": 1.40, "e": 1.60}, {"w": "Waterloo", "s": 1.62, "e": 2.10}, {"w": "all.", "s": 2.50, "e": 2.55},
@@ -1661,6 +1710,8 @@ check(code == 2 and "Static" in js.get("error", ""), "clone-run is for Static ru
 from http.server import ThreadingHTTPServer as _THS  # noqa: E402
 _DSKEY = "sk-ds-NEVER-PRINT-777"
 _DS_SEEN = []
+_DS_AUDIO = {}          # request number -> (words, rate): the stand-in speaks 2.6 words a second at rate 1, faster as rate rises
+_DS_LOCK = _th.Lock()
 
 
 def _ds_tone(seconds, freq, sr=24000):
@@ -1689,14 +1740,18 @@ class _DSMock(_BH):
     def do_GET(self):
         n = int((re.findall(r"/audio/(\d+)\.wav", self.path) or ["0"])[0])
         if n:
-            self._send(200, _ds_tone(0.7 + 0.05 * (n % 7), 200 + 7 * (n % 9)), "audio/wav")
+            words, rate = _DS_AUDIO.get(n, (3, 1.0))
+            self._send(200, _ds_tone(max(0.3, words / 2.6 / rate), 200 + 7 * (n % 9)), "audio/wav")
         else:
             self._send(404, {"code": "NotFound"})
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
-        _DS_SEEN.append({"path": self.path, "auth": self.headers.get("Authorization"), "body": body})
-        inp, k = body.get("input") or {}, len(_DS_SEEN)
+        with _DS_LOCK:
+            _DS_SEEN.append({"path": self.path, "auth": self.headers.get("Authorization"), "body": body})
+            k = len(_DS_SEEN)
+        inp = body.get("input") or {}
+        _DS_AUDIO[k] = (len(str(inp.get("text") or "").split()), float(inp.get("rate") or 1.0))
         if self.path.endswith("/customization"):
             act = inp.get("action")
             if act == "create_voice" and inp.get("voice_prompt"):
@@ -1795,6 +1850,23 @@ _alines[1]["text"] = "FAILME " + _alines[1]["text"]
 js, code = ta("tts", "say", "--run", str(AR), "--video", "01", "--only", "2", ok=False)
 check(code == 1 and "--only 2" in str(js.get("error")) and "the text was refused" in str(js.get("error")),
       "a line Alibaba refuses is reported with its error and the command that makes only the missing lines")
+# the pace with a model that has a speed setting (the user, 2026-11-08: "if qwen 3.1 plus for example has the speed feature ... set it
+# up in the model, only do manual tweaks if the model does not provied with what we want to achieve")
+_pal = [{"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
+        {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "neutral"},
+        {"n": 3, "text": "What they took that night is still a secret.", "emotion": "neutral"}]
+(AR / "40-briefs" / "video-03-narration.json").write_text(json.dumps({"video": "03", "language": "english", "lines": _pal,
+                                                                     "pace": {"wpm_speech": [178, 191]}}), encoding="utf-8")
+_n0 = len(_DS_SEEN)
+js, _ = ta("tts", "say", "--run", str(AR), "--video", "03")
+_rates = [s["body"]["input"].get("rate") for s in _DS_SEEN[_n0:] if s["path"].endswith("/SpeechSynthesizer")]
+_p3 = json.loads((AR / "30-assets" / "narration" / "video-03.json").read_text(encoding="utf-8")).get("pace") or {}
+_nat = json.loads((AR / "state.json").read_text(encoding="utf-8"))["static"]["voice"].get("native_wpm_speech")
+check(js.get("ok") and (_p3.get("within") or {}).get("wpm_speech") is True and _p3.get("method") == "model rate" and _p3.get("tempo") == 1.0
+      and len(_rates) == 6 and None not in _rates and len(set(_rates[:3])) == 1 and len(set(_rates[3:])) == 1 and _rates[3] != _rates[0]
+      and abs(_p3.get("model_rate", 0) - _rates[3]) < 1e-6 and _nat and abs(_nat - 156) < 4,
+      f"with Alibaba the model's own speed setting makes the pace (first from the voice's sample, then corrected once by measuring), no "
+      f"manual tempo, and the voice's own speed is learned for the next narration (rates {_rates[0]} then {_rates[3]}, learned {_nat} wpm)")
 _n0 = len(_DS_SEEN)
 ta("tts", "design", "--run", str(AR), "--engine", "local", "--replace", "--text", "Most people never notice this.", "--instruct", "a calm narrator")
 js, _ = ta("tts", "voice", "--run", str(AR), "--sample", "1", "--replace")

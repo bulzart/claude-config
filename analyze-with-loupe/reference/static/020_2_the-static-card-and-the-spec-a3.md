@@ -1,12 +1,26 @@
 ## 2 The Static card and the spec (A3–A4)
 
 **The card** (`20-analysis/cards/<V>.md`, one per reference): the fields of §1 in this order: title and thumbnail · hook · telling
-(structure as a beat list with times) · devices · pictures (seconds per still, style, framing, motion, transitions, effects) · captions ·
-sound · subject, its kind and its field · what makes it work (one paragraph, [I]). Every speech field reads from the transcript.
+(structure as a beat list with times) · devices · retention · emotion over time · language · pictures (seconds per still, style,
+framing, motion, transitions, effects) · captions · sound · engagement · attachment · the social side · content style · subject, its
+kind and its field · why it holds (one paragraph, [I]). Every speech field reads from the transcript.
 
-**The Static spec** (`20-analysis/static-spec.md`, one per run, the synthesis of all cards; Static's craft sheet):
+**The Static spec** (`20-analysis/static-spec.md`, one per run; Static's craft sheet) is the **whole set's** (§1 "The set as a whole"):
+after the cards, `T static profile --run RUN` (`20-analysis/set-profile.md`), then every field below written from all the references
+together: what recurs (with its count), the numbers as the set's median and range, the differences and what they follow. When the set
+holds different kinds (Shorts and long videos, a story and a list), each kind is a family read by its own numbers (`T static profile
+--run RUN --refs …`), and a video takes its family's. A value from one reference only is named as that, with the reason no other
+reference speaks to it; "V02's template" or "V01's moves" is never the reason for a value of the run.
 - **Narration template**: the beats in order with their share of the length (hook 0–5 %, setup, escalation 1…n, the reveal, the payoff,
-  the closing line), the words per minute, the line length, the pause pattern.
+  the closing line), as the set builds them; the line length; the pace and the pauses (below).
+- **The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very
+  sure that the workflow really achieves" it): the words a minute while speaking and overall as the set's (or the family's) band from
+  `T static profile` (`wpm_speech`, `wpm_overall`: lowest to highest, or the middle of a wide set with the reason), the pause between
+  lines (the set's median pause) and the pause before a reveal (the set's longest). Each video's narration JSON carries them (§4), and
+  the narration is brought to them and measured (§6 "The pace").
+- **Retention, emotion, language, engagement, attachment, the social side, content style** (§1): each as the set's pattern with its
+  counts and numbers (a re-hook every N s, the emotion peaks as shares of the length, "you" and questions a minute, the calls to action
+  and where they fall), so the scripts (§4), the pictures (§5) and the edit (§7) follow the set, not one video.
 - **Length**: the references' lengths (each, the shortest, the median, the longest: `T static lock --run RUN` lists them) and what their
   length follows, read from the cards: the kind of subject and how much it holds, the number of beats and how long each runs, how deep
   each beat goes, the format (a Short under a minute, a long video of many minutes). No user picks it (the user, 2026-11-07: "the user

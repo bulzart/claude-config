@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (9.8 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.0 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (12.3 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.1 KB)
 
 The main session runs S2 for every video, one at a time (one model on the GPU; the toolkit's lock holds a second one back), before any
 production agent starts (`awl-analyze-produce` A9s). The narration uses the engine the run's voice was made with (`state.json →
@@ -25,9 +25,13 @@ static.voice.engine`: `local`, or `alibaba` on the user's key, static §6 "With 
 1. `T tts say --run RUN --video NN` → `RUN/30-assets/narration/video-NN.wav`, its sidecar (each line's start and end) and the loudness
    (the voice chain and two loudnorm passes bring the file to the target: it is what the CapCut project plays). Without `--only` it
    makes every line; `--only N` makes those lines again; `--rejoin` makes none and only joins the line files again (the timing stays).
+   **The pace** (static §6 "The pace"): with the narration JSON's `pace`, the answer's `pace.within` must be true for both bands: the
+   toolkit set the model's speed (Alibaba's `rate`) or the tempo (Qwen3-TTS on this PC) and the pauses, and measured it with the
+   references' yardstick. Not within after its passes: a fact for the brief; the cure is a voice nearer the set's pace, never shipping a
+   narration outside it. A plan without `pace` is made at the voice's own speed: write the pace into the narration JSON first.
    **Strong lines** (static §4, §6): read `voice_match`; a strong line apart from the cloned lines' numbers is made again with another seed
    (the line's `seed` in `video-NN-narration.json`, then `--only N`), at most twice, then as a cloned line (`strong` false), noted.
-2. `T narration-words --run RUN --video NN` → the timed words, `video-NN.cues.json`, `video-NN.srt` (as many words at once as the image
+2. `T narration-words --run RUN --video NN` (its `pace` is the second reading of the speed, against the same bands) → the timed words, `video-NN.cues.json`, `video-NN.srt` (as many words at once as the image
    plan's `captions.words`; a word that would be on screen under `captions.min_cue_s`, 0.2 s, takes the next word with it; no cue
    overlaps the next), and per line what was heard against the script; numbers are compared apart (speech-to-text writes a spoken
    "seventeen sixty-nine" as "1769"): each line's `numbers` gives the script's and the heard ones to compare by ear. Judge every line it
@@ -62,7 +66,8 @@ facts of the setup, static §9).
   design model, static §6).
 - Never call ElevenLabs or Higgsfield for a Static voice or bed; Alibaba Cloud only through `T tts` with the run's engine set to it,
   and never print, echo or write `DASHSCOPE_API_KEY`.
-- Never stretch or speed a narration to fit a length: rewrite the lines.
+- Never stretch or speed a narration to fit a length: rewrite the lines. Its speed is only ever set to the set's pace (the narration
+  JSON's `pace`, static §6), by the model's own setting first and a tempo only for what the model did not reach.
 - Never analyse the references' music beyond the numbers A3 already has (the user, 2026-11-06: "no need to analyze their instrumentals
   too"); never keep a bed's level at which a narration word is heard differently (a level costs nothing to change, whatever the QC fixes).
 

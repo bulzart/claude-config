@@ -1326,3 +1326,26 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   user environment (`DASHSCOPE_API_KEY`, read from the stored user environment when set after Claude Code started), never printed or
   written; `T tts check --engine alibaba` and `T static check` give its facts. config `static.tts.alibaba`; static §6, §9; the start,
   plan, sound and wrap-up skills; t02 tests against a stand-in server.
+
+## 2026-11-08 · Static: the whole set drives the video, and the narration is brought to its pace
+
+- **Asked:** "the narration speed and style should mirror the reference's data patterns, if the data tells that the best speed is 160
+  words with pauses and 178-191 while speaking per minute then thats what we should use too, no matter if we cant set the speaking speed
+  of the generating voice we can still speed it up after generation ... we have to be very sure that the workflow really achieves a
+  178-191 words a minute. Also the reference datas should be studied as a whole not just pick one of them to "copy" ... the data is what
+  should drive the video generation not fixated or constrained terms or prefixed values"; then "if qwen 3.1 plus for example has the
+  speed feature or word per minute then set it up in the model, only do manual tweaks if the model does not provied with what we want to
+  achieve".
+- **Found:** video 02's narration said 1,154 words in 530.5 s: 131 words a minute overall and 143 while speaking, against the set's
+  160-174 and 178-196 (V01, V02, V03). Nothing set or checked the speed: the voice's own speed set it, the script was sized to that, and
+  the plan named "V02's template" and "V01's moves" as its reasons. The set's numbers sat in the cards and the spec, unused by any step.
+- **Changed:** `T static profile` (every analysed reference's measured numbers and the set's median, lowest and highest; `--refs` for a
+  family), §1 "The set as a whole" with the new fields (retention, emotion over time, language, engagement, attachment, the social side,
+  content style, why it holds), §2's spec built from the whole set (counts and numbers, families apart, no single reference as a
+  reason; the user's style pick sets the look only). The narration JSON carries `pace` (words a minute while speaking and overall, the
+  set's bands) and `pause_default_s`; `T tts say` trims each line's silent edges, sets the model's own speed first (Alibaba's `rate`,
+  from the voice's learned speed or its sample; once more at the corrected setting when the measure misses), a pitch-kept tempo
+  (rubberband) only for what is left or for a model without a speed setting (Qwen3-TTS here), sets the default pause for the overall
+  band, and measures every pass with the references' own yardstick (faster-whisper words and segments); `pace.within` in its answer and
+  in `T narration-words`. Scripts are sized at the set's overall pace (§4). t02: the local tempo loop, the Alibaba model-first loop on a
+  stand-in that speaks faster as `rate` rises, the set profile.
