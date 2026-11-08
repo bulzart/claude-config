@@ -14,7 +14,7 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (18.0 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.1 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.4 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.0 KB)
 - *the plan has characters:*
@@ -32,6 +32,11 @@ the primary's stills come first (the steps below), then each extra format's ("An
 A long video's stills are split across agents (`awl-analyze-produce` A9b): when your spawn message names `images K1-K2`, steps 2–5
 apply to those images only (step 6, the thumbnail, only when it says so); write `RUN/60-outputs/video-NN/images-K1-K2.json` (each
 image's attempts, re-draws, cost, flags) and end with its one JSON line; the edit agent does S4 and X10.
+
+**The judge's decisions come first** (static §13, `RUN/40-briefs/video-NN-judge.md`): the prompts you send are the plan's as the judge
+left them (J1, and J3 between stretches); read the judge's record of your images before the first call, and name in your report every
+still whose outcome differs from what the record forecast for it (the caption the upsampler wrote, in each attempt, is the first place
+to look), so the next J3 prevents it in the stretches still to come.
 
 The same commands for both; `T image generate` takes the source from `static_images`. With **FLUX 3 Klein** the toolkit runs the model
 on this PC's GPU, one image at a time (it waits for the GPU; a minute or more per image): your prompt goes through Black Forest Labs'

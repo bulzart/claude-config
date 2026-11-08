@@ -14,7 +14,7 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - static §7: `AWL/reference/static/070_7_the-edit-s4.md` (7.6 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.1 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.4 KB)
 - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
 - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.2 KB)
@@ -24,6 +24,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Step S4
 
+0. **The judge's record first** (static §13, J5): read `RUN/40-briefs/video-NN-judge.md`: the moves, joins, labels and the bed's level
+   decided and forecast for this video are what the project carries; a value the timeline gives that differs from the record is traced
+   to its cause and named in the brief before the project is built (nothing lands by accident).
 1. **The timeline:** `T slideshow plan --run RUN --video NN` → `RUN/40-briefs/video-NN-timeline.json` and the captions on the video's
    timeline (`RUN/60-outputs/video-NN/captions.srt`; a word that would flash for under `captions.min_cue_s` shares its cue with the next,
    `captions_over_words`). Read `image_spans` (every cut on the frame grid), `moves`, `effects`, `undecided`, `edges_show`,

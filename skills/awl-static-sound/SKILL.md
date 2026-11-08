@@ -13,8 +13,9 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (12.3 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.1 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (13.3 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.4 KB)
+- static §13: `AWL/reference/static/130_13_the-judge.md` (10.6 KB)
 
 The main session runs S2 for every video, one at a time (one model on the GPU; the toolkit's lock holds a second one back), before any
 production agent starts (`awl-analyze-produce` A9s). The narration uses the engine the run's voice was made with (`state.json →
@@ -25,10 +26,14 @@ static.voice.engine`: `local`, or `alibaba` on the user's key, static §6 "With 
 1. `T tts say --run RUN --video NN` → `RUN/30-assets/narration/video-NN.wav`, its sidecar (each line's start and end) and the loudness
    (the voice chain and two loudnorm passes bring the file to the target: it is what the CapCut project plays). Without `--only` it
    makes every line; `--only N` makes those lines again; `--rejoin` makes none and only joins the line files again (the timing stays).
-   **The pace** (static §6 "The pace"): with the narration JSON's `pace`, the answer's `pace.within` must be true for both bands: the
-   toolkit set the model's speed (Alibaba's `rate`) or the tempo (Qwen3-TTS on this PC) and the pauses, and measured it with the
-   references' yardstick. Not within after its passes: a fact for the brief; the cure is a voice nearer the set's pace, never shipping a
-   narration outside it. A plan without `pace` is made at the voice's own speed: write the pace into the narration JSON first.
+   **The pace** (static §6 "The pace", §13): the narration JSON's `pace` carries the judge's point (J1); the answer's `pace.on_target`
+   must be true for both measures (within the tolerance of the point) and `pace.within` for both bands: the toolkit set the model's speed
+   (Alibaba's `rate`) or the tempo (Qwen3-TTS on this PC) and the pauses, and measured it with the references' yardstick (the fair
+   measure). Off the point or `unreachable`: the judge's J2 decides (below), never shipping a narration off its point unexplained. A plan
+   without `pace` is made at the voice's own speed: J1 writes the pace first.
+   Run it in the foreground (a heavy background command can be ended by Claude Code when memory runs low: 2026-11-08 the first try of a
+   narration exited with -1 in the background and made it in the foreground); it may run past ten minutes and continue in the background
+   on its own, which is fine once started.
    **Strong lines** (static §4, §6): read `voice_match`; a strong line apart from the cloned lines' numbers is made again with another seed
    (the line's `seed` in `video-NN-narration.json`, then `--only N`), at most twice, then as a cloned line (`strong` false), noted.
 2. `T narration-words --run RUN --video NN` (its `pace` is the second reading of the speed, against the same bands) → the timed words, `video-NN.cues.json`, `video-NN.srt` (as many words at once as the image
@@ -45,7 +50,15 @@ static.voice.engine`: `local`, or `alibaba` on the user's key, static §6 "With 
 4. **The images meet the narration:** each image spans from its `from_line`'s start to the next image's (the first from 0, the last to the
    end with the tail). Keep every span within the spec's range of seconds per still and none under about 2 s: move `from_line`, merge or
    split images in `video-NN-images.json` (their prompts with them).
-5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made: each track's `duration` =
+4b. **The judge, J2** (static §13): spawn the judge with the narration's measured pace, pauses, length and spans; it reads them against
+   J1's forecast and point and decides what costs nothing (the plan's pauses or point changed, then `T tts say --rejoin` and
+   `T narration-words` again; spans by `from_line`); a line made again follows the run's QC fixes. The narration's learned fit
+   (`state.json → static.voice.fit`) is what the next video's forecast reads. Nothing heavy runs while FLUX 3 Klein makes images: J2's
+   re-join waits for a gap between image stretches.
+5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made **and every image is made**
+   (two local models never share the GPU and the commit memory; 2026-11-08 the guard stopped ACE-Step at 2.0 GB free commit): first
+   **J4** (static §13): `T static forecast --run RUN --video NN --part music` right before; a negative memory headroom waits for memory
+   (nothing of the user's is closed, the guard is never changed) or goes on without a bed, noted. Each track's `duration` =
    lead + the narration's duration + tail (config `static.narration`), then `T music make --run RUN` (every track in one model load; a
    track over ACE-Step's 600 s is made in sections and joined with crossfades, static §6: the plan's own `sections` per part of the
    story, else equal ones).

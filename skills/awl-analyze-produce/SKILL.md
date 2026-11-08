@@ -102,8 +102,12 @@ videos only (their numbers from `T static subjects`); the videos already in `sta
   across image agents, each a stretch of about 30–40 in plan order (spawn message `Video NN, images K1-K2: S3 only`; the one with the
   last stretch also makes the thumbnail, `… and the thumbnail`): with the API all at once within the agents-at-once count; with FLUX 3
   Klein one after another, each making its images in the foreground (one GPU; three Klein agents at once ran this PC's commit memory
-  short and Claude Code ended their background loops, 2026-11-07: static §5). When every stretch has reported, one edit agent (`Video NN: S4 and X10`) builds the edit
-  and the record from them. The image agents' files are `60-outputs/video-NN/images-K1-K2.json` (their images, attempts, re-draws, costs,
+  short and Claude Code ended their background loops, 2026-11-07: static §5). **Between two stretches, the judge's J3** (static §13):
+  when a stretch's agent reports, spawn the judge with its report before the next stretch's agent; it traces what went wrong to its
+  prompt words and changes the prompts still to come (prevention costs no generation; a re-draw follows the run's QC fixes); a gap
+  between stretches is also where J2's re-join and a test suite may run (nothing heavy beside FLUX 3 Klein). When every stretch has
+  reported, the bed (J4, `awl-static-sound` step 5), then one edit agent (`Video NN: S4 and X10`; it reads the judge's record first,
+  J5) builds the edit and the record from them. The image agents' files are `60-outputs/video-NN/images-K1-K2.json` (their images, attempts, re-draws, costs,
   flags); the edit agent sums them into `result.json`. More than one format (static §2b): each extra format's stretches too
   (`Video NN, format <tag>, images K1-K2: S3 only`; their files `60-outputs/video-NN/<tag>/images-K1-K2.json`), each one after the
   primary's same stretch has reported (it sends the primary's requests); the one edit agent builds every format's project and records them.

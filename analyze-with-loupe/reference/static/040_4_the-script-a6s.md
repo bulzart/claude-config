@@ -1,26 +1,32 @@
 ## 4 The script (A6s)
 
 `40-briefs/video-NN-script.md` (readable: the beats, the devices used, the sources) and `40-briefs/video-NN-narration.json`, the lines the
-voice speaks: `{"video": "NN", "language": "english", "pace": {"wpm_speech": [<low>, <high>], "wpm_overall": [<low>, <high>], "why":
-"<the set's numbers>"}, "pause_default_s": <the set's median pause>, "lines": [{"n": 1, "text": "…", "emotion": "neutral",
-"pause_after": <only where the set pauses longer, before a reveal>}, …]}`. The pace and the pauses are the spec's (§2, the set's
-numbers); `T tts say` brings the narration to them and measures it (§6 "The pace").
+voice speaks: `{"video": "NN", "language": "english", "pace": {"refs": ["<the family's references>"], "wpm_articulation": [<low>,
+<high>], "wpm_overall": [<low>, <high>], "target": {"wpm_articulation": <the point>, "wpm_overall": <the point>}, "tolerance": 0.015,
+"pauses": {<the family's pauses a minute, median, p90, long ones per 10 minutes: the pattern the plan follows>}, "why": "<the numbers>"},
+"pause_default_s": <the family's median pause>, "lines": [{"n": 1, "text": "…", "emotion": "neutral", "pause_after": <only where the
+family holds a long pause>}, …]}`. The pace, the point and the pauses are the family's measured numbers (§2, §6 "The pace": the fair
+measure), chosen and checked by the judge before a line is made (§13, J1); `T tts say` aims the narration at the point and measures it.
 
 - **The length** is the agent's, per video, from the spec's length pattern (§2), never asked of the user: where this subject sits among
   the references (a subject with as much to tell as their longest runs as long; one beat-light subject as short as their shortest), the
   beats the template needs and how long the references let each run. It is written into `video-NN-narration.json` as
   `"target_length_s"` with `"length_why"` (the references' numbers it rests on), and the script is sized to it.
 - **The template of the spec**: the hook in the first line (spoken within the first second), every beat in its share, the payoff, the
-  closing line or loop; the length: the target, as the words at the plan's overall pace (the middle of `pace.wpm_overall`: words =
-  seconds × words a minute / 60; 530 s at 165 words a minute is about 1,460 words), since the narration is brought to that pace whatever
+  closing line or loop; the length: the target, as the words at the plan's overall point (`pace.target.wpm_overall`: words =
+  seconds × words a minute / 60; 530 s at 165 words a minute is about 1,460 words), since the narration is brought to that point whatever
   the voice's own speed (§6). A spelled-out year or number counts as the words it is spoken as ("eighteen twelve" is two). (Before the
   pace was set, 2026-11-06 to 11-08, scripts were sized at the voice's own speed, which ran about 12 % under its sample's: video 02 of
   the run of 2026-11-06 said 1,154 words in 530 s: by the references' yardstick 125 words a minute overall and 152 while speaking, its
   median pause 0.83 s, against the set's 160–174, 178–196 and 0.42–0.5 s; its own lines paced by `T tts say` measured 164 and 190,
   pauses 0.5 s.)
-- **Lines**: one sentence or one breath each, as the references break them; a reveal gets its own line and a longer pause before it
-  (`pause_after` of the line before: the set's longest pauses, `T static profile`'s `pause_s_max`, 0.78–0.96 s on the run of
-  2026-11-06), only where the set pauses so; every other pause is the set's median (`pause_default_s`).
+- **Lines**: one sentence or one breath each, as the references break them; a reveal gets its own line. **Long pauses are counted, not
+  sprinkled**: the family holds `long_pauses_per_10min` pauses of 0.8 s or more (`T static profile --refs <family>`; F3 of the run of
+  2026-11-06: median 6.3, the survival references 8.8), so a video of M minutes gets about that rate times M/10 `pause_after` values, at
+  its strongest turns (a reveal, a chapter's start), each as long as the family's long pauses run (their 90th percentile and longest);
+  every other join takes the default the pace loop sets for the overall point. (2026-11-08: video 03 planned 56 pauses of 0.5-1.2 s and
+  measured 33 long ones per 10 minutes, five times the family's median: the overall point then forced the voice faster.) The judge's
+  forecast (§13, J1) shows the pattern the plan will give against the family's before a line is made.
 - **Emotion**: most lines `neutral`, the voice's own delivery, the wording carrying the feeling; a line tagged with an emotion the run's
   voice holds a clip for (§6) takes that clip's tone. A **strong** line (`"strong": true, "delivery": "<the feeling in words, e.g. quiet
   disbelief, slower, a catch in the voice>"`) is made by the voice-design model (§6), for the peaks only (the user, 2026-11-05: "not make

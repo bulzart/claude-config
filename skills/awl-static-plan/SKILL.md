@@ -15,12 +15,13 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run; skip when already read)
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
-- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (3.8 KB)
+- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (4.7 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (18.0 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (12.3 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (13.3 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.9 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.0 KB)
+- static §13: `AWL/reference/static/130_13_the-judge.md` (10.6 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
@@ -96,7 +97,14 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    `"music": true`. The duration is set in S2 once the narration exists, and the level after the bed's check. A video longer than
    ACE-Step's 600 s may carry `sections` (one caption per part of the story, the same instruments and tempo; static §6); without them the
    toolkit makes equal sections.
-9. Show one line per video (number, subject, title, length, images, bed or none) and go on without waiting.
+9. **The judge, J1** (static §13; the user, 2026-11-08: "it evaluates the situation and decides way before generation happens";
+   "nothing should turn out as unexpected"), per video, before any line, image or bed is made: spawn the judge (§13's prompt,
+   checkpoint J1, `model: "opus"`; the video's family and its references from the spec) and wait for it. It reads `T static forecast`
+   and the family's numbers, decides the pace point, the pauses, the strong lines, every prompt the forecast marks and the bed's
+   caption, sections and timing, edits those plan files itself and writes `RUN/40-briefs/video-NN-judge.md` with each decision, its
+   numbers and the result it forecasts. Read its record: a decision that breaks a lock or a rule of this phase is undone and the judge
+   is continued with why.
+10. Show one line per video (number, subject, title, length, images, bed or none, the judge's forecast pace) and go on without waiting.
 
 **More videos** (static §10; `/analyze-with-loupe more <run> [N]`, or the user asking for more after a wrap-up; always in the session's
 run, never a new one): no start question is asked; references new to the run's folder are taken in first (static §10 "New

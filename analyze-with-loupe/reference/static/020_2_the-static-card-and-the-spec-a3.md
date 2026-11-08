@@ -14,10 +14,11 @@ reference speaks to it; "V02's template" or "V01's moves" is never the reason fo
 - **Narration template**: the beats in order with their share of the length (hook 0–5 %, setup, escalation 1…n, the reveal, the payoff,
   the closing line), as the set builds them; the line length; the pace and the pauses (below).
 - **The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very
-  sure that the workflow really achieves" it): the words a minute while speaking and overall as the set's (or the family's) band from
-  `T static profile` (`wpm_speech`, `wpm_overall`: lowest to highest, or the middle of a wide set with the reason), the pause between
-  lines (the set's median pause) and the pause before a reveal (the set's longest). Each video's narration JSON carries them (§4), and
-  the narration is brought to them and measured (§6 "The pace").
+  sure that the workflow really achieves" it): per family, by the fair measure (§6 "The pace", §13): the words a minute while
+  articulating (`wpm_articulation`) and overall (`wpm_overall`) as the family's median (the point a video aims at) and range, and the
+  pause pattern (pauses a minute, their median and 90th percentile, the long ones of 0.8 s or more per 10 minutes, their share), all from
+  `T static profile --refs <family>`; `wpm_speech` (the older segment reading) only as a fact. Each video's narration JSON carries them
+  (§4), the judge checks the plan against them before anything is made (§13), and the narration is aimed at the point and measured (§6).
 - **Retention, emotion, language, engagement, attachment, the social side, content style** (§1): each as the set's pattern with its
   counts and numbers (a re-hook every N s, the emotion peaks as shares of the length, "you" and questions a minute, the calls to action
   and where they fall), so the scripts (§4), the pictures (§5) and the edit (§7) follow the set, not one video.

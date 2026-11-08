@@ -28,23 +28,30 @@ for both engines; what differs with Alibaba is in its own paragraph.
 **The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns, if the data tells that
 the best speed is 160 words with pauses and 178-191 while speaking per minute then thats what we should use too ... we have to be very
 sure that the workflow really achieves a 178-191 words a minute"; "if qwen 3.1 plus for example has the speed feature or word per minute
-then set it up in the model, only do manual tweaks if the model does not provied with what we want to achieve"). The narration JSON's
-`pace` (§4: words a minute while speaking and overall, the set's bands, §2) and `pause_default_s` drive `T tts say`:
-- every line's silent edges are trimmed, so the pause between lines is exactly the planned one (a line's `pause_after`, else
-  `pause_default_s`);
-- **the model's own speed setting first**: Alibaba's `rate` (0.5 to 2.0), set from the voice's own speed (learned from its last
-  narration, `state.json → static.voice.native_wpm_speech`, else read off its sample); when the measure misses the band, every line is
-  made once more at the corrected setting (billed again; the voice's learned speed makes the next video right the first time);
+then set it up in the model, only do manual tweaks if the model does not provied with what we want to achieve"; then "every step should
+be taken carefully and thoroghfully, and nothing should turn out as unexpected": the pace is aimed at a point the judge chose, §13, never
+left wherever it lands inside a band). The narration JSON's `pace` (§4: the family, the bands, the judge's `target` point, the tolerance)
+and `pause_default_s` drive `T tts say`:
+- **the measure**: words a minute overall (first to last word) and while articulating (`wpm_articulation`: the same words over the span
+  with every pause of 0.25 s or more taken out), both from the words' times, read the same way in the references and in a narration (§13
+  "The fair measure": the older reading over speech-to-text segments, `wpm_speech`, counts pauses differently in the two and is kept only
+  as a fact). The articulation answers the tempo alone, the overall the pauses: two dials, each predictable;
+- every line's silent edges are trimmed, so the pause between lines is the planned one (a line's `pause_after`, else the default) plus
+  the voice's own breath at the join (its fit's `join_excess_s_at_1`, about 0.15 s for the run's narrator);
+- **the model's own speed setting first**: Alibaba's `rate` (0.5 to 2.0), set from the voice's fit (its articulation at speed 1, learned
+  from its last narration, `state.json → static.voice.fit`; else its older `native_wpm_speech` or its sample); when the measure misses the
+  point, every line is made once more at the corrected setting (billed again; the fit makes the next video right the first time);
 - **a tempo afterwards only for what the model did not reach**, and for every line of a model without a speed setting (Qwen3-TTS on
-  this PC has none): one factor for all lines, ffmpeg's rubberband with the pitch and the formants kept; a factor outside 0.85 to 1.35
-  is named (`tempo_outside_clean_range`: the voice is far from the set's pace; a voice described nearer it, or picked nearer it, needs
-  less);
-- the default pause is set so the words a minute overall land in their band (a line's own `pause_after` stays);
-- after every pass the joined narration is measured with **the references' own yardstick** (faster-whisper's words and segments, read the
-  way A1 read them: words a minute from the first word to the last, and over the spoken segments only), at most four passes. The
-  sidecar's `pace` holds the target, every pass, the measure, `within` and the method; `T narration-words` reads the pace again from its
-  own transcription. A narration outside its band after the passes is a fact for the brief and the agent's call (another voice nearer
-  the set's pace), never shipped as if it matched.
+  this PC has none): one factor for all lines, ffmpeg's rubberband with the pitch and the formants kept, its first value from the voice's
+  fit; a factor outside 0.85 to 1.35 is named (`tempo_outside_clean_range`: the voice is far from the family's pace);
+- the default pause between lines is set for the overall point (first from the fit, then from each pass's measure); a line's own
+  `pause_after` stays;
+- after every pass the joined narration is measured with **the references' own yardstick** (faster-whisper's timed words), until both
+  measures sit within the tolerance of their points (`narration.pace_tol`, 1.5 %), at most four passes. A point the plan's own pauses
+  cannot reach (the default pause would have to go under its floor) is named in `unreachable` with its cause: the judge's forecast (§13)
+  catches it before the narration is made, by cutting planned pauses the family does not hold. The sidecar's `pace` holds the point, the
+  bands, every pass, `on_target`, `within`, the method and the voice's new fit; `T narration-words` reads the pace again from its own
+  transcription. A narration off its point after the passes is a fact for the judge (J2, §13), never shipped as if it matched.
 The made lines stay as they came (`video-NN/line-NN.wav`); the paced ones are in `video-NN/paced/`, and the image spans and the captions
 follow the paced narration. A narration is never stretched to fit a length: the length comes from the words at the set's pace (§4).
 
