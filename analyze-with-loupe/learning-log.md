@@ -1402,3 +1402,8 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   carry `pause_floor_s` and `pause_ceiling_s` for the default pause (the judge keeps every default join heard clearly as a pause; a line
   that runs on into the next takes a short `pause_after`), read by the loop and the forecast. Static §4, §6, §13; t02: the plan's floor
   holds and the measured file is the narration.
+- **Measured after the change (18:35):** the judge's J2 design (24 flow joins, 25 beats, 12 held, 6 long, floor 0.22 s, ceiling
+  0.27 s) re-joined in one pass at the voice's fit (tempo 1.0751, default 0.22 s): the loop read 211.8 articulating and 172.6 overall
+  (-0.8 %, the floor binding, as the toolkit's forecast said: 172.5), and `T narration-words` read the same numbers to the decimal
+  (24.1 pauses a minute, median 0.44 s, 6.4 long per 10 min); the 23 lines it listed each read as their script when cut from the
+  delivered file and heard alone.
