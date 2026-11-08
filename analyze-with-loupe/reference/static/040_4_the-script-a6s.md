@@ -15,9 +15,12 @@ numbers); `T tts say` brings the narration to them and measures it (§6 "The pac
   seconds × words a minute / 60; 530 s at 165 words a minute is about 1,460 words), since the narration is brought to that pace whatever
   the voice's own speed (§6). A spelled-out year or number counts as the words it is spoken as ("eighteen twelve" is two). (Before the
   pace was set, 2026-11-06 to 11-08, scripts were sized at the voice's own speed, which ran about 12 % under its sample's: video 02 of
-  the run of 2026-11-06 said 1,154 words in 530 s, 131 words a minute against the set's 160–174.)
+  the run of 2026-11-06 said 1,154 words in 530 s: by the references' yardstick 125 words a minute overall and 152 while speaking, its
+  median pause 0.83 s, against the set's 160–174, 178–196 and 0.42–0.5 s; its own lines paced by `T tts say` measured 164 and 190,
+  pauses 0.5 s.)
 - **Lines**: one sentence or one breath each, as the references break them; a reveal gets its own line and a longer pause before it
-  (`pause_after` of the line before, 0.5–0.9 s); the default pause is the config's.
+  (`pause_after` of the line before: the set's longest pauses, `T static profile`'s `pause_s_max`, 0.78–0.96 s on the run of
+  2026-11-06), only where the set pauses so; every other pause is the set's median (`pause_default_s`).
 - **Emotion**: most lines `neutral`, the voice's own delivery, the wording carrying the feeling; a line tagged with an emotion the run's
   voice holds a clip for (§6) takes that clip's tone. A **strong** line (`"strong": true, "delivery": "<the feeling in words, e.g. quiet
   disbelief, slower, a catch in the voice>"`) is made by the voice-design model (§6), for the peaks only (the user, 2026-11-05: "not make

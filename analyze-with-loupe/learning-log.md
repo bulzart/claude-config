@@ -1336,8 +1336,10 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   should drive the video generation not fixated or constrained terms or prefixed values"; then "if qwen 3.1 plus for example has the
   speed feature or word per minute then set it up in the model, only do manual tweaks if the model does not provied with what we want to
   achieve".
-- **Found:** video 02's narration said 1,154 words in 530.5 s: 131 words a minute overall and 143 while speaking, against the set's
-  160-174 and 178-196 (V01, V02, V03). Nothing set or checked the speed: the voice's own speed set it, the script was sized to that, and
+- **Found:** video 02's narration said 1,154 words in 530.5 s; read the way the references were read (faster-whisper words and
+  segments) it ran 125 words a minute overall and 152 while speaking, its median pause 0.83 s (longest 1.84 s), against the set's
+  160-174, 178-196 and 0.42-0.5 s (longest 0.78-0.96) (V01, V02, V03). Its own 107 lines paced by the new `T tts say` (rubberband
+  1.156, the default pause set) measured 164.4 and 189.6, pauses 0.5 s median, 0.96 s longest: inside every band (a copy, video 92). Nothing set or checked the speed: the voice's own speed set it, the script was sized to that, and
   the plan named "V02's template" and "V01's moves" as its reasons. The set's numbers sat in the cards and the spec, unused by any step.
 - **Changed:** `T static profile` (every analysed reference's measured numbers and the set's median, lowest and highest; `--refs` for a
   family), §1 "The set as a whole" with the new fields (retention, emotion over time, language, engagement, attachment, the social side,
