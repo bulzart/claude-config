@@ -17,7 +17,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (3.0 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (18.0 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (7.4 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (9.8 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.9 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (5.6 KB)
@@ -46,8 +46,10 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    locks' `voice` empty) or a clone picks a new one (`state.json → static.new_voice` true): five voice descriptions from the spec's voice
    profile, five different takes on it, and one line in the references' style that names no subject and nothing of static §11, then
    `T tts design --run RUN --text "<line>" --instruct "<voice 1>" --instruct "<voice 2>" --instruct "<voice 3>" --instruct "<voice 4>"
-   --instruct "<voice 5>"` (a clone's new narrator adds `--replace`). A locked narrator makes no samples (static §10).
-   A worker error is a blocker of the run: report its real text with `T static check` and stop.
+   --instruct "<voice 5>"` (a clone's new narrator adds `--replace`). A locked narrator makes no samples (static §10). The command
+   uses the run's engine (`state.json → static_tts`); with Alibaba (static §6 "With Alibaba"): each description at most 500 characters,
+   the line at most 200 and in English or Chinese, else `--engine local` with a line of 10 to 20 s (the pick is then cloned at Alibaba).
+   A worker or Alibaba error is a blocker of the run: report its real text with `T static check` and stop.
 4. **The one stop**, in plain chat (never AskUserQuestion: the pool is longer than four options), the last thing in the turn: the
    subjects numbered (title — hook line — why it fits — for facts the number of sources), the five voices when step 3 made them (number,
    the voice in a few words, and the full path of its file, as `T tts design` prints it, so the user can play it), and "Reply with N
@@ -55,8 +57,8 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    subjects than the count: ask once more. "You pick": the top-scored subjects and the voice that best fits the profile [I].
 5. **Store the picks:** `T static subjects --run RUN --add "<title 1>" --add "<title 2>"` (in video order; each gets the next video
    number), then, when step 3 made samples, `T tts voice --run RUN --sample K` (a clone's new narrator: `--replace`, then
-   `T state --run RUN set static.new_voice=false`), plus `--emotion NAME="<a line that carries it>"` (at most two) when the spec's
-   delivery swings (static §6).
+   `T state --run RUN set static.new_voice=false`), plus `--emotion NAME="<a line that carries it>"` (at most two; with Alibaba
+   `--emotion NAME="<the delivery in words>"`) when the spec's delivery swings (static §6).
 6. **Scripts** (static §4), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
    niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11). The length is yours, never the
    user's (the user, 2026-11-07): decided per video from the spec's length pattern (the references' lengths in `T static lock`'s

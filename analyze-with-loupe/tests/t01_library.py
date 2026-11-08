@@ -248,6 +248,15 @@ check("T static formats --run RUN" in _a5t and 'header "Formats", multiSelect' i
       and "**The CapCut project is the final**" in _s7t and "that export is the final" in rd(SKD / "awl-wrapup" / "SKILL.md")
       and "its export is the final" in rd(HOME / "commands" / "analyze-with-loupe.md"),
       "Static asks the format at A5 (the best fit first), stores it, makes the CapCut project at its export size, and that export is the final")
+# the narration engine (the user, 2026-11-08: "add qwen 3.1 tts plus from the alibaba provider and the user will just provide with the api
+# key when they pick it over our local model, the workflow will be the same")
+_st_s = rd(SKD / "awl-start" / "SKILL.md")
+check('header "Narration"' in _st_s and "static_tts=local|alibaba" in _st_s and "**With Alibaba**" in _s6t
+      and "DASHSCOPE_API_KEY" in rd(LIB / "reference" / "static" / "090_9_the-static-pc-setup-once-per-pc.md")
+      and "qwen-audio-3.1-tts-plus" in rd(HOME / "commands" / "analyze-with-loupe.md")
+      and "static.voice.engine" in rd(SKD / "awl-static-sound" / "SKILL.md") and "--engine local" in rd(SKD / "awl-static-plan" / "SKILL.md"),
+      "Static asks the narration engine at the start (Qwen3-TTS on this PC or Alibaba's qwen-audio-3.1-tts-plus on the user's key) and "
+      "keeps the same steps for both (static §6, §9, the start, plan and sound skills)")
 # more than one format (the user, 2026-11-08: "so we end up generating 2 video formats for the same content (2 capcut projects too ...)")
 _s2b = rd(LIB / "reference" / "static" / "025_2b_more-than-one-format.md").replace("\n", " ")
 _tpl_s = rd(LIB / "reference" / "production-agents" / "025_2s_spawning-static.md")

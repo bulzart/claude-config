@@ -1,15 +1,18 @@
 ## 6 The voice and the bed (A6s, S2)
 
-**The voice** (Qwen3-TTS 1.7B, bf16, design then clone): one voice per run, the same in every video, locked once picked (§10): more
-videos of the run and a clone that keeps it make no new samples; the toolkit refuses a new design or pick without `--replace`. The
-sample line names nothing religious or superstitious (§11).
+**The voice** (the run's engine, the user's pick at the start, `state.json → static_tts`: `local` = Qwen3-TTS 1.7B on this PC, bf16,
+design then clone; `alibaba` = Alibaba Cloud Model Studio's `qwen-audio-3.1-tts-plus` on the user's key, below): one voice per run, the
+same in every video, locked once picked (§10): more videos of the run and a clone that keeps it make no new samples; the toolkit refuses
+a new design or pick without `--replace`. The sample line names nothing religious or superstitious (§11). The steps below are the same
+for both engines; what differs with Alibaba is in its own paragraph.
 - Five samples at the stop of A6s (the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them so
   the user can hear them and pick the one they like to be the voice of the videos"): five voice descriptions written from the spec's
   voice profile (gender, age, tone, pace, accent; the references' register, five different takes on it), all speaking one line in the
   references' style: `T tts design --run RUN --text "<line>" --instruct "<voice 1>" … --instruct "<voice 5>"` (one sample per
   `--instruct`). The stop lists each with the full path of its file (`T tts design` prints them); the user listens and picks.
 - The pick becomes the run's voice: `T tts voice --run RUN --sample K`, plus at most two emotion clips when the spec's delivery swings
-  (`--emotion tense="<a line that carries it>"`): the same voice speaking that line, used as the reference for lines tagged with it.
+  (`--emotion tense="<a line that carries it>"`): the same voice speaking that line, used as the reference for lines tagged with it
+  (with Alibaba: the delivery in words, below).
 - **Strong lines** (§4; the user, 2026-11-05: "make strong lines with the voice-design model instead, though the voice may shift slightly
   from line to line"): `T tts say` makes a line marked `strong` with the VoiceDesign model, from the run's voice description word for word
   plus the line's `delivery`, with the picked sample's seed (`state.json → static.voice.seed`, or the line's own `seed`), so the timbre
@@ -21,6 +24,25 @@ sample line names nothing religious or superstitious (§11).
   (the timed words, the cues, the SRT, and per line what was heard against the script). A line that came out wrong (a missing or repeated
   word, the start repeating the reference's words, another speaker) is made again: `T tts say --only N`, at most twice, then noted.
 - The narration starts `lead_s` after the first frame and the video ends `tail_s` after it (config `static.narration`).
+
+**With Alibaba** (`static_tts=alibaba`; the user, 2026-11-08: "add qwen 3.1 tts plus from the alibaba provider and the user will just
+provide with the api key when they pick it over our local model, the workflow will be the same"). The key is the user environment
+variable `DASHSCOPE_API_KEY` (§9); nothing runs on this PC's GPU, so no memory guard or GPU wait applies.
+- **The five samples**: the same `T tts design` command; each description becomes a voice designed at Alibaba (at most 500 characters)
+  that says the sample line (at most 200 characters, English or Chinese); its preview is the sample file and its voice id is kept
+  beside it. A run in another language makes the samples on this PC (`T tts design --engine local`), and the pick is cloned at Alibaba
+  from its file (cloning works best on 10 to 20 s of speech: write a sample line that long). Voice creation is free; the voices stay on
+  the user's account (1,000 per account).
+- **The pick**: `T tts voice --run RUN --sample K` makes it the run's voice once Alibaba answers that it is usable (a designed sample as
+  it is, a local one cloned). With this engine `--emotion NAME="<the delivery in words>"` is the instruction sent with every line tagged
+  NAME, not a line to speak.
+- **The lines**: `T tts say` makes each line in that voice, a few at a time. A line's `delivery` (a strong line's), else its emotion's
+  instruction, goes with it as Alibaba's instruction, and its `seed` (else the voice's) as the seed. A strong line keeps the same voice
+  and only its delivery changes, so it stays close to the others; `voice_match` and the strong-line check above still apply. The same
+  pauses, loudness pass, sidecar and `T narration-words` follow.
+- **Cost**: per character (`config.json → static.tts.alibaba.price_usd_per_10k_chars`, about US$0.30 per 10,000 in Singapore; a
+  9-minute narration of about 6,700 characters is about US$0.20). The sidecar and each answer record the characters and the estimate. A
+  line made again is billed again: `--only N` makes only those lines, and a run that stopped part way names the missing ones.
 
 **The bed** (ACE-Step 1.5): an instrumental under every video, also when the references are voice only (the user, 2026-11-06: "make
 sure we try to generate instrumentals that fit the video content type and narration based on the data collected from the references, no

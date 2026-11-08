@@ -827,7 +827,7 @@ class _Mock(_BH):
 _srv = _HS(("127.0.0.1", 0), _Mock)
 _th.Thread(target=_srv.serve_forever, daemon=True).start()
 SENV = {**ENV, "AWL_TTS_STUB": "1", "AWL_MUSIC_STUB": "1", "AWL_TRANSCRIBE_STUB": "1", "OPENAI_API_KEY": _KEY,
-        "AWL_OPENAI_BASE_URL": f"http://127.0.0.1:{_srv.server_port}/v1"}
+        "AWL_OPENAI_BASE_URL": f"http://127.0.0.1:{_srv.server_port}/v1", "DASHSCOPE_API_KEY": ""}
 _outs = []
 
 
@@ -1655,6 +1655,160 @@ check(js.get("ok") and js["locks"]["niche"] == "History" and js["locks"]["style_
       "the clone takes its own niche, keeps the style reference and the narrator, numbers its videos from 01 and has no effort level")
 js, code = ts("clone-run", "--from", str(run_f), ok=False)
 check(code == 2 and "Static" in js.get("error", ""), "clone-run is for Static runs")
+
+# Narration by Alibaba Cloud (static_tts=alibaba; the user, 2026-11-08: "add qwen 3.1 tts plus from the alibaba provider and the user will
+# just provide with the api key when they pick it over our local model, the workflow will be the same"): a stand-in Model Studio server
+from http.server import ThreadingHTTPServer as _THS  # noqa: E402
+_DSKEY = "sk-ds-NEVER-PRINT-777"
+_DS_SEEN = []
+
+
+def _ds_tone(seconds, freq, sr=24000):
+    tt = np.arange(int(seconds * sr)) / sr
+    b = _io.BytesIO()
+    with wave.open(b, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes((0.3 * np.sin(2 * np.pi * freq * tt) * 32767).astype("<i2").tobytes())
+    return b.getvalue()
+
+
+class _DSMock(_BH):
+    def log_message(self, *a):
+        pass
+
+    def _send(self, code, body, ctype="application/json"):
+        data = body if isinstance(body, bytes) else json.dumps(body).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        n = int((re.findall(r"/audio/(\d+)\.wav", self.path) or ["0"])[0])
+        if n:
+            self._send(200, _ds_tone(0.7 + 0.05 * (n % 7), 200 + 7 * (n % 9)), "audio/wav")
+        else:
+            self._send(404, {"code": "NotFound"})
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+        _DS_SEEN.append({"path": self.path, "auth": self.headers.get("Authorization"), "body": body})
+        inp, k = body.get("input") or {}, len(_DS_SEEN)
+        if self.path.endswith("/customization"):
+            act = inp.get("action")
+            if act == "create_voice" and inp.get("voice_prompt"):
+                self._send(200, {"output": {"voice_id": f"{inp['target_model']}-vd-{inp['prefix']}-{k}", "preview_audio": {
+                    "data": _b64.b64encode(_ds_tone(1.6, 150 + 10 * k)).decode(), "sample_rate": 24000, "response_format": "wav"},
+                    "target_model": inp["target_model"]}, "usage": {"count": 1}, "request_id": f"rq{k}"})
+            elif act == "create_voice":
+                self._send(200, {"output": {"voice_id": f"{inp['target_model']}-{inp['prefix']}-{k}"}, "request_id": f"rq{k}"})
+            elif act == "query_voice":
+                self._send(200, {"output": {"status": "OK", "target_model": "qwen-audio-3.1-tts-plus"}, "request_id": f"rq{k}"})
+            else:
+                self._send(200, {"output": {"voice_list": []}, "request_id": f"rq{k}"})
+        elif self.path.endswith("/SpeechSynthesizer"):
+            if "FAILME" in (inp.get("text") or ""):
+                self._send(400, {"code": "InvalidParameter", "message": "the text was refused", "request_id": f"rq{k}"})
+                return
+            self._send(200, {"output": {"audio": {"data": "", "id": f"a{k}", "expires_at": 0,
+                                                  "url": f"http://127.0.0.1:{self.server.server_port}/audio/{k}.wav"},
+                                        "finish_reason": "stop"}, "usage": {"characters": len(inp.get("text") or "")}, "request_id": f"rq{k}"})
+        else:
+            self._send(404, {"code": "NotFound", "message": self.path})
+
+
+_dsrv = _THS(("127.0.0.1", 0), _DSMock)
+_th.Thread(target=_dsrv.serve_forever, daemon=True).start()
+AENV = {**SENV, "DASHSCOPE_API_KEY": _DSKEY, "AWL_DASHSCOPE_BASE_URL": f"http://127.0.0.1:{_dsrv.server_port}"}
+_aouts = []
+
+
+def ta(*args, ok=True, env=None):
+    js_, code_, out_ = t(*args, env=env or AENV, ok=ok)
+    _aouts.append(out_)
+    return js_, code_
+
+
+js, _ = ta("new-run", "--mode", "analyze", "--slug", "static-alibaba")
+AR = Path(js["run_dir"])
+ta("state", "--run", str(AR), "set", "analyze_submode=static", "static_images=prompts", "static_tts=alibaba", "audio_ingest=whisper",
+   "qc_fixes=off", "capcut_plan=free")
+_ins = ["a calm deep male narrator", "a warm female storyteller", "a gravelly older man", "a bright young woman, quick",
+        "a dry, wry middle-aged man"]
+_dargs = ["tts", "design", "--run", str(AR), "--text", "Most people never notice this."] + [x for i in _ins for x in ("--instruct", i)]
+js, code = ta(*_dargs, env={**AENV, "DASHSCOPE_API_KEY": ""}, ok=False)
+check(code == 2 and "DASHSCOPE_API_KEY" in str(js.get("error")) and not _DS_SEEN, "an Alibaba run without the key refuses before any call (exit 2)")
+js, code = ta(*_dargs, "--language", "german", ok=False)
+check(code == 2 and "English or Chinese" in str(js.get("error")) and not _DS_SEEN,
+      "Alibaba's voice design takes English or Chinese lines only: another language is told to design on this PC, nothing is sent")
+js, _ = ta(*_dargs)
+_dsm = json.loads((AR / "30-assets" / "voice" / "samples.json").read_text(encoding="utf-8"))
+_cv = [s["body"]["input"] for s in _DS_SEEN if s["path"].endswith("/customization")]
+with wave.open(str(js["samples"][0]["file"]), "rb") as _w:
+    _wfmt = (_w.getframerate(), _w.getnchannels(), _w.getsampwidth())
+check(js.get("engine") == "alibaba" and len(js.get("samples") or []) == 5 and all(Path(s["file"]).is_file() and s.get("voice_id") for s in js["samples"])
+      and [c["voice_prompt"] for c in _cv] == _ins and _wfmt == (24000, 1, 2)
+      and all(c["preview_text"] == "Most people never notice this." and c["language_hints"] == ["en"] and c["target_model"] == "qwen-audio-3.1-tts-plus"
+              and len(c["prefix"]) <= 10 and c["prefix"].isalnum() for c in _cv)
+      and all(s["auth"] == f"Bearer {_DSKEY}" for s in _DS_SEEN) and _dsm.get("engine") == "alibaba",
+      "tts design with Alibaba designs one voice per description (the sample line as its preview), keeps each preview as the sample file "
+      "(16-bit mono 24 kHz) and its voice id")
+_n0 = len(_DS_SEEN)
+js, _ = ta("tts", "voice", "--run", str(AR), "--sample", "2", "--emotion", "tense=Low and tense, a little slower")
+_av = json.loads((AR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
+check(js.get("ok") and _av["engine"] == "alibaba" and _av["alibaba"]["voice_id"] == js["voice"]["voice_id"] == _dsm["samples"][1]["voice_id"]
+      and _av["alibaba"]["kind"] == "design" and _av["instructions"] == {"tense": "Low and tense, a little slower"}
+      and [s["body"]["input"]["action"] for s in _DS_SEEN[_n0:]] == ["query_voice"] and (AR / "30-assets" / "voice" / "ref-neutral.wav").is_file(),
+      "tts voice with Alibaba keeps the picked sample's designed voice as the run's voice (checked usable, nothing made again) and an "
+      "emotion's delivery as its instruction")
+_alines = [{"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
+           {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "tense", "pause_after": 0.5},
+           {"n": 3, "text": "What they took that night is still a secret.", "strong": True, "delivery": "A hushed whisper, slower", "seed": 7}]
+(AR / "40-briefs" / "video-01-narration.json").write_text(json.dumps({"video": "01", "language": "english", "lines": _alines}), encoding="utf-8")
+_n0 = len(_DS_SEEN)
+js, _ = ta("tts", "say", "--run", str(AR), "--video", "01")
+_syn = {s["body"]["input"]["text"][:12]: s["body"]["input"] for s in _DS_SEEN[_n0:] if s["path"].endswith("/SpeechSynthesizer")}
+_aside = json.loads((AR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
+_chars = sum(len(x["text"]) for x in _alines)
+check(js.get("ok") and js.get("lines") == 3 and len(_syn) == 3
+      and all(v["voice"] == _av["alibaba"]["voice_id"] and v["format"] == "wav" and v["language_hints"] == ["en"] for v in _syn.values())
+      and "instruction" not in _syn["In 1959 a fa"] and _syn["In 1959 a fa"]["seed"] == _av["seed"] % 65536
+      and _syn["Nobody belie"]["instruction"] == "Low and tense, a little slower"
+      and _syn["What they to"]["instruction"] == "A hushed whisper, slower" and _syn["What they to"]["seed"] == 7
+      and _aside["engine"] == "alibaba" and all(r["made_by"] == "alibaba" for r in _aside["lines"]) and _aside["characters"] == _chars
+      and abs(_aside["cost_usd_estimate"] - _chars / 10000 * 0.3) < 1e-3 and js.get("loudness_lufs") is not None
+      and [x["n"] for x in js["voice_match"]["strong_lines"]] == [3] and (AR / "30-assets" / "narration" / "video-01.wav").is_file(),
+      "tts say with Alibaba makes every line in the run's voice (a line's delivery, else its emotion's, as the instruction, with its seed), "
+      "joins them at the target loudness and records the characters and the cost")
+_n0 = len(_DS_SEEN)
+js, _ = ta("tts", "say", "--run", str(AR), "--video", "01", "--only", "2")
+_aside2 = json.loads((AR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
+check(js.get("made_now") == [2] and len([s for s in _DS_SEEN[_n0:] if s["path"].endswith("/SpeechSynthesizer")]) == 1
+      and _aside2["characters"] == _chars and _aside2["lines"][0].get("request_id") == _aside["lines"][0].get("request_id")
+      and _aside2["lines"][1].get("request_id") != _aside["lines"][1].get("request_id"),
+      "--only makes just that line at Alibaba; the other lines keep what was recorded of them")
+_alines[1]["text"] = "FAILME " + _alines[1]["text"]
+(AR / "40-briefs" / "video-01-narration.json").write_text(json.dumps({"video": "01", "language": "english", "lines": _alines}), encoding="utf-8")
+js, code = ta("tts", "say", "--run", str(AR), "--video", "01", "--only", "2", ok=False)
+check(code == 1 and "--only 2" in str(js.get("error")) and "the text was refused" in str(js.get("error")),
+      "a line Alibaba refuses is reported with its error and the command that makes only the missing lines")
+_n0 = len(_DS_SEEN)
+ta("tts", "design", "--run", str(AR), "--engine", "local", "--replace", "--text", "Most people never notice this.", "--instruct", "a calm narrator")
+js, _ = ta("tts", "voice", "--run", str(AR), "--sample", "1", "--replace")
+_cl = [s["body"]["input"] for s in _DS_SEEN[_n0:]]
+_av2 = json.loads((AR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
+check(js.get("ok") and _av2["alibaba"]["kind"] == "clone" and _cl and _cl[0]["action"] == "create_voice"
+      and str(_cl[0].get("audio", "")).startswith("data:audio/wav;base64,") and "voice_prompt" not in _cl[0] and _cl[-1]["action"] == "query_voice",
+      "a sample made on this PC (tts design --engine local) is cloned at Alibaba from its file when picked")
+js, _ = ta("tts", "check", "--engine", "alibaba")
+check(js.get("ready") and js.get("key_present") is True and js.get("model") == "qwen-audio-3.1-tts-plus" and "price_usd_per_10k_chars" in js,
+      "tts check --engine alibaba reports the key's presence (never the key), the model, the price and that the account answers")
+check(not any(_DSKEY in o for o in _aouts)
+      and not any(_DSKEY in p.read_text(encoding="utf-8", errors="ignore") for p in AR.rglob("*") if p.is_file() and p.suffix in (".json", ".md", ".txt")),
+      "the DashScope key is never printed and never written to the run")
 
 # FLUX 3 Klein on this PC (static_images=klein, the user 2026-11-06): the same T image generate through the local worker (stubbed here), no key
 KENV = {**SENV, "AWL_IMAGE_STUB": "1", "OPENAI_API_KEY": ""}

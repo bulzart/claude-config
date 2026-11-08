@@ -223,7 +223,21 @@
       "attn": "sdpa",
       "device": "cuda:0",
       "language": "english",
-      "seed": 1105
+      "seed": 1105,
+      "alibaba": {
+        "model": "qwen-audio-3.1-tts-plus",
+        "region": "singapore",
+        "hosts": {"singapore": "https://dashscope-intl.aliyuncs.com", "beijing": "https://dashscope.aliyuncs.com"},
+        "workspace_hosts": {"singapore": "https://{workspace}.ap-southeast-1.maas.aliyuncs.com", "beijing": "https://{workspace}.cn-beijing.maas.aliyuncs.com"},
+        "synth_path": "/api/v1/services/audio/tts/SpeechSynthesizer",
+        "voice_path": "/api/v1/services/audio/tts/customization",
+        "sample_rate": 24000,
+        "timeout_s": 120,
+        "voice_wait_s": 60,
+        "parallel": 4,
+        "price_usd_per_10k_chars": {"singapore": 0.3, "beijing": 0.2},
+        "note": "static_tts=alibaba (the user, 2026-11-08). Alibaba Cloud Model Studio, Qwen-Audio-TTS, from its docs read 2026-11-08: the key in the user environment DASHSCOPE_API_KEY (keys differ by region); DASHSCOPE_WORKSPACE_ID (the console's Workspace Details) selects the workspace host, else the region's DashScope host; voice design (description to voice) is documented for Beijing and takes English or Chinese lines only; cloning takes WAV/MP3/M4A up to 10 MB, 10-20 s best; synthesis returns a link valid 24 hours; plus is billed per character (Singapore 0.3, Beijing 0.2 USD per 10,000; Singapore gives 10,000 free characters for 90 days); voice creation is free, 1,000 voices per account; 180 requests a minute"
+      }
     },
     "music": {
       "config": "acestep-v15-turbo",

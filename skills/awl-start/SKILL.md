@@ -20,7 +20,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Static (as soon as the sub-mode is Static):*
   - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB)
 - *Static, when `T static check` reports a part the run needs as not ready:*
-  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (7.5 KB)
+  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (8.5 KB)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
   - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)
@@ -68,7 +68,8 @@ Only these section files for this phase, nothing else unless a step below says s
      requirement alone. The pipeline plans to your requirement, keeps the model's official prompting, the QC stack and Loupe's samples
      and misses, and asks you once to confirm its reading of the plan."
    - **Static**: "Narrated still-image videos in the references' style on a new subject: the images by OpenAI with your key, by FLUX 3
-     Klein on this PC, or by you from my prompts; a local Qwen3-TTS voice; CapCut. No Higgsfield."
+     Klein on this PC, or by you from my prompts; the voice by Qwen3-TTS on this PC or by Alibaba's Qwen-Audio 3.1 TTS Plus on your
+     key; CapCut. No Higgsfield."
    **Free → two more things, asked in the same message batch.** (a) Header "Free: references": **"With references"** ("Analyse a
    folder of reference material first; the plan can follow, edit or avoid what they do") or **"Requirement only"** ("No references: the
    plan comes from your requirement and your assets"); `$ARGUMENTS` with `free` and a references folder means with references, `free`
@@ -106,9 +107,17 @@ Only these section files for this phase, nothing else unless a step below says s
    2026-11-06: "make him pick, if he picks pro then be free to pick any edit feature that pro has if we need them, if not then just the
    free ones"), none recommended: **"Free"** ("The edit uses only CapCut's free options, so every project exports without a
    subscription.") or **"Pro"** ("The edit may also use CapCut's Pro options the CapCut check showed working (such as the Pop Up and
-   Spring text intros); you export with an active CapCut Pro subscription."); `$ARGUMENTS` with `capcut free|pro` answers it. Then `T static check` (add `--offline` with
-   prompts or klein): a part the run needs that is not ready (the key with OpenAI; `images_klein` with FLUX 3 Klein; the TTS environment
-   always) is a blocker: report it with static §9's setup line and stop before any analysis. Music (ACE-Step 1.5) makes the bed under
+   Spring text intros); you export with an active CapCut Pro subscription."); `$ARGUMENTS` with `capcut free|pro` answers it. In the
+   same call, header "Narration" (the user, 2026-11-08: "add qwen 3.1 tts plus from the alibaba provider and the user will just provide
+   with the api key when they pick it over our local model, the workflow will be the same"), none recommended: **"Qwen3-TTS on this
+   PC"** ("I design five voice samples and make every line locally with Qwen3-TTS 1.7B; no cost; it needs this PC's TTS setup and memory.")
+   or **"Qwen-Audio 3.1 TTS Plus (Alibaba Cloud)"** ("The same steps on Alibaba Cloud with your key (DASHSCOPE_API_KEY on this PC): five
+   designed voices, your pick, every line in it; about US$0.30 per 10,000 characters, about US$0.20 for a 9-minute video; nothing runs on
+   this PC's GPU."); `$ARGUMENTS` with `narration local|alibaba` answers it. Then `T static check` (add `--offline` with
+   prompts or klein): a part the run needs that is not ready (the key with OpenAI; `images_klein` with FLUX 3 Klein; `tts` with the
+   narration on this PC, `tts_alibaba` with Alibaba) is a blocker: report it with static §9's setup line and stop before any analysis.
+   With Alibaba and no key, tell the user how to set `DASHSCOPE_API_KEY` themselves (static §9: never typed into the chat), wait for their
+   word, then `T static check` again (no restart needed). Music (ACE-Step 1.5) makes the bed under
    every video (static §6): when it is not ready, tell the user here with static §9's setup line; the videos then go without a bed (never
    a blocker).
 2b. **Own voiceover: the method (Create only; item 31), before the model menu.** When the sub-mode is Create, ask with AskUserQuestion
@@ -217,7 +226,7 @@ Only these section files for this phase, nothing else unless a step below says s
    - Create: store the voiceover choice (steps 2b, 5c) with the store line of `voiceover.md` §1 (`T state --run RUN set voiceover.enabled=true
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;
    - Create: store the memes choice (step 2c): `T state --run RUN set memes=include` or `memes=none`;
-   - Static: `T state --run RUN set analyze_submode=static static_images=api|klein|prompts audio_ingest=whisper` (no model is stored; item 36),
+   - Static: `T state --run RUN set analyze_submode=static static_images=api|klein|prompts static_tts=local|alibaba audio_ingest=whisper` (no model is stored; item 36),
      the effects folder: `T state --run RUN set static.effects_folder="<folder>"` or `static.effects_folder=none`, and the CapCut plan:
      `T state --run RUN set capcut_plan=free|pro`;
    - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`

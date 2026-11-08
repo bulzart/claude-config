@@ -1307,3 +1307,22 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   `by_format.<tag>` holds an extra format's captions size and band, labels and aimed zooms; `slideshow plan --format` lists what it
   lacks and the zooms aimed in the first format. Agents make every format of their video (the primary first); the contract has a
   Formats line. New section static §2b; t02 tests.
+
+## 2026-11-08 · Static: the narration by Alibaba Cloud as a second engine
+
+- **Asked:** "as for the narration, also add a second option beside qwen 3 1.7b tts, add qwen 3.1 tts plus from the alibaba provider and
+  the user will just provide with the api key when they pick it over our local model, the workflow will be the same".
+- **Found (Alibaba's docs, read 2026-11-08):** the model is `qwen-audio-3.1-tts-plus` (Model Studio, Qwen-Audio-TTS). One endpoint makes
+  and manages voices (`/api/v1/services/audio/tts/customization`, model `voice-enrollment`: create_voice with a `voice_prompt` designs a
+  voice and returns a base64 preview; with `audio` it clones; query_voice gives its status), one synthesises
+  (`/api/v1/services/audio/tts/SpeechSynthesizer`: text, voice, format, sample_rate, language_hints, seed, a natural-language
+  `instruction`; it returns a link valid 24 hours). Voice design is documented for Beijing and takes English or Chinese lines only;
+  plus is billed per character (Singapore US$0.30, Beijing US$0.20 per 10,000); voice creation is free, 1,000 voices per account.
+- **Changed:** a start question "Narration" (`state.json -> static_tts`: local | alibaba). `T tts design`, `T tts voice` and `T tts say`
+  keep their steps: with Alibaba the five samples are designed voices (the preview is the sample file, the voice id kept), the pick is
+  the run's voice (a sample made on this PC is cloned there), every line is made in it a few at a time with the line's delivery (or its
+  emotion's) as the instruction and its seed; then the same join, loudness pass, sidecar and voice match. The sidecar records the
+  characters and the cost; a line that did not come back is named with the `--only` that makes just it. The key lives only in the
+  user environment (`DASHSCOPE_API_KEY`, read from the stored user environment when set after Claude Code started), never printed or
+  written; `T tts check --engine alibaba` and `T static check` give its facts. config `static.tts.alibaba`; static §6, §9; the start,
+  plan, sound and wrap-up skills; t02 tests against a stand-in server.

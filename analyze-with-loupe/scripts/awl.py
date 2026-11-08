@@ -9661,11 +9661,223 @@ def _state_set(rd: Path, **pairs):
         write_json(p, st)
 
 
+# ---- the narration engine (Static): Qwen3-TTS on this PC (static_tts=local, the default) or Alibaba Cloud Model Studio's
+# qwen-audio-3.1-tts-plus (static_tts=alibaba; the user, 2026-11-08: "add qwen 3.1 tts plus from the alibaba provider and the user will
+# just provide with the api key when they pick it over our local model, the workflow will be the same"). The same steps either way: five
+# designed samples, the pick as the run's voice, every line in that voice. The key comes only from the user's environment
+# (DASHSCOPE_API_KEY): never printed, never written to a run, scrubbed from every error text.
+
+TTS_ENGINES = ("local", "alibaba")
+
+
+def _tts_engine(st: dict, override=None) -> str:
+    e = str(override or (st or {}).get("static_tts") or "local").strip().lower()
+    if e not in TTS_ENGINES:
+        fail(f"the narration engine is one of {', '.join(TTS_ENGINES)} (state.json -> static_tts), got {e!r}", 2)
+    return e
+
+
+def _user_env(name: str) -> str:
+    """A variable of the user's environment: this process's, else (Windows) the value stored for the user, so a variable the user set
+    after Claude Code started is found without a restart. Present but empty here counts as unset (no look further)."""
+    if name in os.environ:
+        return (os.environ.get(name) or "").strip()
+    if os.name == "nt":
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as h:
+                return str(winreg.QueryValueEx(h, name)[0] or "").strip()
+        except OSError:
+            return ""
+    return ""
+
+
+def _ds_cfg(key: str, default=None):
+    return (_scfg("tts.alibaba", {}) or {}).get(key, default)
+
+
+def _ds_key() -> str:
+    return _user_env("DASHSCOPE_API_KEY")
+
+
+def _ds_region() -> str:
+    return (os.environ.get("AWL_DASHSCOPE_REGION") or str(_ds_cfg("region", "singapore"))).strip().lower()
+
+
+def _ds_base() -> tuple:
+    """(base URL, how it was chosen): AWL_DASHSCOPE_BASE_URL (tests), else the region's workspace host when DASHSCOPE_WORKSPACE_ID is
+    set (the console's Workspace Details), else the region's DashScope host (config static.tts.alibaba)."""
+    if os.environ.get("AWL_DASHSCOPE_BASE_URL"):
+        return os.environ["AWL_DASHSCOPE_BASE_URL"].rstrip("/"), "override"
+    region, ws = _ds_region(), _user_env("DASHSCOPE_WORKSPACE_ID")
+    tpl = (_ds_cfg("workspace_hosts", {}) or {}).get(region)
+    if ws and tpl:
+        return str(tpl).replace("{workspace}", ws).rstrip("/"), "workspace"
+    host = (_ds_cfg("hosts", {}) or {}).get(region)
+    if not host:
+        fail(f"no Model Studio host for the region {region!r} (config static.tts.alibaba.hosts)", 2)
+    return str(host).rstrip("/"), "region"
+
+
+def _ds_scrub(text, key: str) -> str:
+    s = str(text or "")
+    return s.replace(key, "<DASHSCOPE_API_KEY>") if key else s
+
+
+def _ds_post(path: str, body: dict, key: str, timeout: float) -> tuple:
+    """(http status, parsed JSON or None, raw text with the key scrubbed, the statuses tried) of one Model Studio call. Only rate limits
+    and server errors are sent again, twice at most. The key travels only in the Authorization header. A timeout or a dropped connection
+    raises (whether a line was made and billed is then not known)."""
+    import urllib.error
+    import urllib.request
+    base, _how = _ds_base()
+    tries, status, raw = [], None, ""
+    for wait in (0, 5, 20):
+        if wait:
+            time.sleep(wait)
+        req = urllib.request.Request(base + path, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), method="POST",
+                                     headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                status, raw = r.status, r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            status = e.code
+            try:
+                raw = e.read().decode("utf-8", "replace")
+            except Exception:  # noqa: BLE001
+                raw = ""
+        tries.append(status)
+        if status not in (429, 500, 502, 503, 504):
+            break
+    try:
+        js = json.loads(raw)
+    except ValueError:
+        js = None
+    return status, js if isinstance(js, dict) else None, _ds_scrub(raw, key)[:600], tries
+
+
+def _ds_error(status, js, raw: str, key: str) -> str:
+    if js and (js.get("code") or js.get("message")):
+        return _ds_scrub(f"http {status} {js.get('code') or ''}: {js.get('message') or ''}", key).strip()
+    return f"http {status}: {raw[:300]}"
+
+
+def _ds_wav(src_bytes: bytes, dest: Path) -> None:
+    """Audio from Model Studio saved as 16-bit mono PCM WAV at the configured rate (the lines are joined sample by sample)."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.stem + ".dl" + dest.suffix)
+    tmp.write_bytes(src_bytes)
+    run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(tmp), "-ac", "1", "-ar", str(int(_ds_cfg("sample_rate", 24000))),
+         "-c:a", "pcm_s16le", str(dest)], check=True, timeout=300)
+    tmp.unlink(missing_ok=True)
+
+
+def _ds_fetch(url: str, timeout: float) -> bytes:
+    """The audio file of a synthesis (a signed link, valid 24 hours): fetched without the key."""
+    import urllib.request
+    with urllib.request.urlopen(urllib.request.Request(url, method="GET"), timeout=timeout) as r:
+        return r.read()
+
+
+def _ds_lang(lang: str) -> str:
+    s = str(lang or "english").strip().lower()
+    return STATIC_LANG_ISO.get(s, s[:2])
+
+
+def _ds_need_key() -> str:
+    key = _ds_key()
+    if not key:
+        fail("DASHSCOPE_API_KEY is not set on this PC: the user sets it once as a user environment variable (reference/static §9). "
+             "Nothing was sent.", 2)
+    return key
+
+
+def _ds_voice_ready(key: str, voice_id: str, timeout: float) -> dict:
+    """query_voice until the voice is usable: OK (a designed voice may answer with no status: usable at once), UNDEPLOYED (refused), or
+    still DEPLOYING after config voice_wait_s."""
+    t1, last = time.time(), {}
+    while True:
+        status, js, raw, _t = _ds_post(_ds_cfg("voice_path"), {"model": "voice-enrollment", "input": {"action": "query_voice",
+                                                                                                    "voice_id": voice_id}}, key, timeout)
+        st_ = str(((js or {}).get("output") or {}).get("status") or "")
+        last = {"http": status, "status": st_ or None}
+        if status == 200 and st_ in ("", "OK"):
+            return {"ok": True, **last}
+        if status != 200 or st_ == "UNDEPLOYED":
+            return {"ok": False, **last, "error": _ds_error(status, js, raw, key)}
+        if time.time() - t1 > float(_ds_cfg("voice_wait_s", 60)):
+            return {"ok": False, **last, "error": f"the voice was still {st_} after {_ds_cfg('voice_wait_s', 60)} s"}
+        time.sleep(1.0)
+
+
+def _ds_price() -> float | None:
+    p = (_ds_cfg("price_usd_per_10k_chars", {}) or {}).get(_ds_region())
+    return float(p) if p is not None else None
+
+
+def _ds_facts(key: str, online: bool) -> dict:
+    """The Alibaba engine's setup as facts (the key's presence, never the key): region, host, model, and whether the account answers
+    (list_voice: free)."""
+    base, how = _ds_base()
+    f = {"key_present": bool(key), "workspace_id_present": bool(_user_env("DASHSCOPE_WORKSPACE_ID")), "region": _ds_region(),
+         "host": base if how != "workspace" else "the workspace host", "host_from": how, "model": _ds_cfg("model"),
+         "price_usd_per_10k_chars": _ds_price(), "needed_for": "narration by Alibaba Cloud (static_tts=alibaba)"}
+    if key and online:
+        try:
+            status, js, raw, _t = _ds_post(_ds_cfg("voice_path"), {"model": "voice-enrollment", "input": {
+                "action": "list_voice", "page_size": 1, "page_index": 0}}, key, 30)
+            f["answers"] = status == 200
+            if status != 200:
+                f["error"] = _ds_error(status, js, raw, key)
+        except Exception as e:  # noqa: BLE001
+            f["answers"], f["error"] = False, type(e).__name__
+    return f
+
+
 def _tts_check(a):
+    if _tts_engine({}, getattr(a, "engine", None)) == "alibaba":
+        f = _ds_facts(_ds_key(), True)
+        out({"ok": bool(f.get("answers")), "ready": bool(f.get("answers")), "engine": "alibaba", **f})
     if os.environ.get("AWL_TTS_STUB"):
         out({"ok": True, "stub": True, "ready": True})
     res = _worker("tts", {"op": "check", "models": [_scfg("tts.design_model"), _scfg("tts.clone_model")], **_tts_job_base()}, timeout=600)
     out({"ok": bool(res.get("ok")), "ready": bool(res.get("ok")), **res})
+
+
+def _tts_design_alibaba(a, rd: Path, items: list, lang: str) -> dict:
+    """Five (or N) voices designed at Alibaba Cloud from their descriptions, each saying the sample line: the preview is the sample file,
+    the voice id is kept beside it (voice creation is free; the voices stay on the account, its quota is 1,000)."""
+    key = _ds_need_key()
+    code = _ds_lang(lang)
+    if code not in ("en", "zh"):
+        fail(f"Alibaba's voice design takes English or Chinese sample lines only (the run's language: {lang}). Make the samples on this "
+             "PC (`T tts design --engine local`); `T tts voice` then clones the picked one at Alibaba (reference/static §6)", 2)
+    if len(a.text) > 200:
+        fail(f"Alibaba's voice design takes a sample line of at most 200 characters (this one: {len(a.text)})", 2)
+    over = [it["n"] for it in items if len(it["instruct"]) > 500]
+    if over:
+        fail("Alibaba's voice design takes a description of at most 500 characters: --instruct " + ", ".join(map(str, over)), 2)
+    model, sr = _ds_cfg("model", "qwen-audio-3.1-tts-plus"), int(_ds_cfg("sample_rate", 24000))
+    timeout = float(_ds_cfg("timeout_s", 120))
+    stamp = re.sub(r"\D", "", rd.name)[-6:]
+    for it in items:
+        body = {"model": "voice-enrollment", "input": {"action": "create_voice", "target_model": model, "voice_prompt": it["instruct"],
+                                                       "preview_text": a.text, "prefix": f"v{it['n']}{stamp}"[:10], "language_hints": [code]},
+                "parameters": {"sample_rate": sr, "response_format": "wav"}}
+        try:
+            status, js, raw, tries = _ds_post(_ds_cfg("voice_path"), body, key, timeout)
+        except Exception as e:  # noqa: BLE001
+            fail(f"no answer from Alibaba's voice design for sample {it['n']} ({type(e).__name__}); the samples before it were made "
+                 "(the voices stay on the account)", 1, made=[x["n"] for x in items if x.get("voice_id")])
+        o = (js or {}).get("output") or {}
+        vid, b64 = o.get("voice_id"), (o.get("preview_audio") or {}).get("data")
+        if status != 200 or not vid or not b64:
+            fail(f"Alibaba's voice design did not make sample {it['n']}: " + _ds_error(status, js, raw, key), 1, tries=tries,
+                 made=[x["n"] for x in items if x.get("voice_id")])
+        _ds_wav(base64.b64decode(b64), Path(it["out"]))
+        it.update({"voice_id": vid, "engine": "alibaba", "target_model": model, "request_id": (js or {}).get("request_id"),
+                   "duration_s": (media_summary(Path(it["out"])) or {}).get("duration_s")})
+    return {"ok": True, "items": items, "engine": "alibaba", "model": model}
 
 
 def _tts_design(a):
@@ -9681,7 +9893,10 @@ def _tts_design(a):
     base = int(_scfg("tts.seed", 1105))
     items = [{"n": i + 1, "text": a.text, "instruct": ins, "out": str(vd / f"sample-{i + 1}.wav"), "seed": base + i + 1}
              for i, ins in enumerate(a.instruct)]
-    if os.environ.get("AWL_TTS_STUB"):
+    engine = _tts_engine(_st, getattr(a, "engine", None))
+    if engine == "alibaba":
+        res = _tts_design_alibaba(a, rd, items, lang)
+    elif os.environ.get("AWL_TTS_STUB"):
         for it in items:
             it["duration_s"] = _tone(Path(it["out"]), max(1.5, len(a.text.split()) / 2.6), 180 + 40 * it["n"])
         res = {"ok": True, "items": items, "stub": True}
@@ -9690,11 +9905,15 @@ def _tts_design(a):
             res = _worker("tts", {"op": "design", "model": _scfg("tts.design_model"), "language": lang, "items": items, **_tts_job_base()})
     if not res.get("ok"):
         fail("voice design failed: " + str(res.get("error"))[:600], 1, worker=res)
+    model = res.get("model") or _scfg("tts.design_model")
     write_json(vd / "samples.json", {"text": a.text, "language": lang, "samples": res.get("items") or items, "made": now_iso(),
-                                     "model": _scfg("tts.design_model")})
+                                     "model": model, "engine": engine})
     made = res.get("items") or items
-    out({"ok": True, "samples": [{"n": it["n"], "file": str(Path(it["out"]).resolve()), "instruct": it["instruct"], "seed": it.get("seed"),
-                                  "duration_s": it.get("duration_s"), "words_per_s": _sample_pace(a.text, it)} for it in made],
+    out({"ok": True, "engine": engine, "model": model,
+         "samples": [{"n": it["n"], "file": str(Path(it["out"]).resolve()), "instruct": it["instruct"], "seed": it.get("seed"),
+                      "duration_s": it.get("duration_s"), "words_per_s": _sample_pace(a.text, it),
+                      **({"voice_id": it.get("voice_id")} if it.get("voice_id") else {})} for it in made],
+         **({"cost_usd_estimate": 0.0} if engine == "alibaba" else {}),
          "note": f"give the user the {len(made)} samples to listen to, each with its full file path; their pick is stored with "
                  "`T tts voice --sample K`"})
 
@@ -9715,6 +9934,8 @@ def _tts_voice(a):
     pick = next((s for s in samples.get("samples", []) if int(s.get("n") or 0) == int(a.sample or 0)), None)
     if not pick or not Path(pick.get("out") or "").is_file():
         fail(f"sample {a.sample} not found in 30-assets/voice/samples.json", 2)
+    if _tts_engine(_st) == "alibaba":
+        _tts_voice_alibaba(a, rd, vd, samples, pick)
     ref = vd / "ref-neutral.wav"
     # nothing of the run's voice changes until the model has built the new one: it builds into a staging folder from the sample's own
     # file, and only a built voice replaces the reference, its text and the prompts (2026-11-07: a build the memory stopped had already
@@ -9762,6 +9983,54 @@ def _tts_voice(a):
     out({"ok": True, "voice": {"sample": int(a.sample), "prompts": prompts, "words_per_s": wps}, "emotion_clips": [e["out_wav"] for e in emotions],
          "note": "every narration of this run uses this voice (state.json -> static.voice); its words_per_s (the sample's words over its "
                  "seconds) sizes the scripts (reference/static §4)"})
+
+
+def _tts_voice_alibaba(a, rd: Path, vd: Path, samples: dict, pick: dict):
+    """The run's one voice at Alibaba Cloud: a sample designed there is that voice as it is; a sample made on this PC (its line in
+    another language than English or Chinese) is cloned there from its file. Each --emotion NAME=TEXT is, with this engine, the delivery
+    in words sent as the instruction of every line tagged NAME. Nothing of the run's voice changes until the voice answers as usable."""
+    key = _ds_need_key()
+    lang = samples.get("language") or _scfg("tts.language", "english")
+    model, timeout = pick.get("target_model") or _ds_cfg("model", "qwen-audio-3.1-tts-plus"), float(_ds_cfg("timeout_s", 120))
+    instructions = {}
+    for e in a.emotion or []:
+        if "=" not in e:
+            fail(f"--emotion takes NAME=TEXT, got {e!r}", 2)
+        name, text = e.split("=", 1)
+        instructions[re.sub(r"[^a-z0-9]+", "-", name.strip().lower()).strip("-")] = text.strip()
+    kind, vid = "design", pick.get("voice_id")
+    if not vid or pick.get("engine") != "alibaba":
+        kind = "clone"
+        data = Path(pick["out"]).read_bytes()
+        if len(data) > 10 * 1024 * 1024:
+            fail("Alibaba clones from a file of at most 10 MB", 2)
+        body = {"model": "voice-enrollment", "input": {"action": "create_voice", "target_model": model,
+                                                       "prefix": ("c" + re.sub(r"\D", "", rd.name)[-6:] + str(int(a.sample)))[:10],
+                                                       "audio": "data:audio/wav;base64," + base64.b64encode(data).decode("ascii"),
+                                                       "language_hints": [_ds_lang(lang)]}}
+        try:
+            status, js, raw, tries = _ds_post(_ds_cfg("voice_path"), body, key, timeout)
+        except Exception as e:  # noqa: BLE001
+            fail(f"no answer from Alibaba's voice cloning ({type(e).__name__}): the run's voice is unchanged", 1)
+        vid = ((js or {}).get("output") or {}).get("voice_id")
+        if status != 200 or not vid:
+            fail("Alibaba did not clone the sample (the run's voice is unchanged): " + _ds_error(status, js, raw, key), 1, tries=tries)
+    ready = _ds_voice_ready(key, vid, timeout)
+    if not ready["ok"]:
+        fail("the voice is not usable at Alibaba (the run's voice is unchanged): " + str(ready.get("error")), 1, voice_id=vid, **ready)
+    ref = vd / "ref-neutral.wav"
+    shutil.copy2(pick["out"], ref)
+    write_text(vd / "ref-neutral.txt", samples["text"])
+    wps = _sample_pace(samples["text"], pick)
+    _state_set(rd, **{"static.voice": {"sample": int(a.sample), "instruct": pick.get("instruct"), "seed": pick.get("seed"),
+                                        "ref_text": samples["text"], "language": lang, "words_per_s": wps, "ref_audio": str(ref),
+                                        "engine": "alibaba", "alibaba": {"voice_id": vid, "kind": kind, "target_model": model,
+                                                                         "region": _ds_region()},
+                                        "instructions": instructions, "set_at": now_iso()}})
+    out({"ok": True, "engine": "alibaba", "voice": {"sample": int(a.sample), "voice_id": vid, "kind": kind, "model": model,
+                                                    "words_per_s": wps, "instructions": instructions},
+         "note": "every narration of this run uses this voice (state.json -> static.voice); a line's delivery (its `delivery`, else its "
+                 "emotion's instruction) goes with it as Alibaba's instruction; its words_per_s sizes the scripts (reference/static §4)"})
 
 
 def _sample_pace(text: str, sample: dict) -> float | None:
@@ -9866,6 +10135,48 @@ def _strong_instruct(base: str, delivery: str) -> str:
     return f"{b}. {d}." if d else f"{b}."
 
 
+def _tts_say_alibaba(voice: dict, todo: list, lang: str) -> dict:
+    """The lines in the run's Alibaba voice, a few at a time (config parallel): each in the voice, its instruction the line's own
+    `delivery`, else its emotion's instruction (`T tts voice --emotion`), else none; its seed the line's, else the voice's (0..65535).
+    Every line that came back is kept; the lines that did not are listed and nothing is joined."""
+    from concurrent.futures import ThreadPoolExecutor
+    key = _ds_need_key()
+    al = voice.get("alibaba") or {}
+    model, vid = al.get("target_model") or _ds_cfg("model", "qwen-audio-3.1-tts-plus"), al["voice_id"]
+    code, sr, timeout = _ds_lang(lang), int(_ds_cfg("sample_rate", 24000)), float(_ds_cfg("timeout_s", 120))
+    by_emotion, price = voice.get("instructions") or {}, _ds_price()
+
+    def one(it):
+        instr = it.get("delivery") or by_emotion.get(it["emotion"]) or ""
+        seed = (int(it["seed"]) if it.get("seed") is not None else int(voice.get("seed") or 0)) % 65536
+        body = {"model": model, "input": {"text": it["text"], "voice": vid, "format": "wav", "sample_rate": sr, "language_hints": [code],
+                                          "seed": seed, **({"instruction": instr} if instr else {})}}
+        try:
+            status, js, raw, tries = _ds_post(_ds_cfg("synth_path"), body, key, timeout)
+        except Exception as e:  # noqa: BLE001
+            return {"n": it["n"], "ok": False, "error": f"no answer ({type(e).__name__}): whether the line was made and billed is not known"}
+        url = (((js or {}).get("output") or {}).get("audio") or {}).get("url")
+        if status != 200 or not url:
+            return {"n": it["n"], "ok": False, "error": _ds_error(status, js, raw, key), "tries": tries}
+        try:
+            _ds_wav(_ds_fetch(url, timeout), Path(it["out"]))
+        except Exception as e:  # noqa: BLE001
+            return {"n": it["n"], "ok": False, "error": f"the line was made but its audio could not be fetched ({type(e).__name__}); its "
+                                                        "link lasts 24 hours", "request_id": (js or {}).get("request_id")}
+        chars = int(((js or {}).get("usage") or {}).get("characters") or len(it["text"]))
+        return {"n": it["n"], "ok": True, "characters": chars, "request_id": (js or {}).get("request_id"), "seed": seed,
+                "instruction": instr or None, "cost_usd_estimate": round(chars / 10000 * price, 5) if price is not None else None}
+    with ThreadPoolExecutor(max_workers=max(1, int(_ds_cfg("parallel", 4)))) as ex:
+        res = list(ex.map(one, todo))
+    bad = [r for r in res if not r["ok"]]
+    if bad:
+        fail(f"{len(bad)} of {len(todo)} lines did not come back from Alibaba (the others are kept; make the missing ones with `--only "
+             + ",".join(str(r["n"]) for r in bad) + "`, without re-making the rest): " + "; ".join(f"line {r['n']}: {r['error']}"
+                                                                                                 for r in bad[:5]), 1, lines=bad,
+             made=[r["n"] for r in res if r["ok"]])
+    return {r["n"]: {k: v for k, v in r.items() if k not in ("n", "ok")} for r in res}
+
+
 def _tts_say(a):
     """A video's narration (Static): every line in the run's voice (its emotion's reference clip when the line names one; a line marked
     strong by the voice-design model, from the run's voice description plus the line's delivery and the picked sample's seed), joined with
@@ -9879,7 +10190,8 @@ def _tts_say(a):
     except (OSError, ValueError):
         fail(f"narration lines not found or not JSON: {lines_p} (reference/static §4)", 2)
     voice = (st.get("static") or {}).get("voice") or {}
-    if not voice.get("prompts"):
+    engine = voice.get("engine") or "local"     # the engine the run's voice was made with: every line of the run in that voice
+    if not (voice.get("prompts") if engine == "local" else (voice.get("alibaba") or {}).get("voice_id")):
         fail("the run has no voice yet: `T tts voice --sample K` after the user picked one", 2)
     lines = [ln for ln in spec.get("lines") or [] if str(ln.get("text") or "").strip()]
     if not lines:
@@ -9905,14 +10217,18 @@ def _tts_say(a):
         fail("--rejoin needs every line file; missing: " + ", ".join(str(n) for n in absent) + " (make them with --only)", 2)
     lang = spec.get("language") or voice.get("language") or _scfg("tts.language", "english")
     strong = [x for x in todo if x["strong"]]
-    if strong and not voice.get("instruct"):
+    if strong and engine == "local" and not voice.get("instruct"):
         fail("a strong line needs the run's voice description (state.json -> static.voice.instruct): `T tts voice --sample K` again", 2)
     for x in strong:
-        x["instruct"] = _strong_instruct(voice["instruct"], x["delivery"])
+        if engine == "local":
+            x["instruct"] = _strong_instruct(voice["instruct"], x["delivery"])
         x["seed"] = int(x["seed"]) if x.get("seed") is not None else voice.get("seed")
     cloned = [x for x in todo if not x["strong"]]
     t0 = time.time()
-    if todo:
+    made_info = {}
+    if todo and engine == "alibaba":
+        made_info = _tts_say_alibaba(voice, todo, lang)
+    elif todo:
         if os.environ.get("AWL_TTS_STUB"):
             for it in todo:
                 _tone(Path(it["out"]), max(0.8, len(it["text"].split()) / 2.6), 230 if it["strong"] else 200)
@@ -9930,6 +10246,11 @@ def _tts_say(a):
         if not res.get("ok"):
             fail("narration failed: " + str(res.get("error"))[:600], 1, worker=res)
     pause_default = float(_scfg("narration.pause_s", 0.35))
+    try:   # a line not made now keeps what the last narration recorded of it (its cost, its request, its instruction)
+        prev = {int(r["n"]): r for r in json.loads((rd / "30-assets" / "narration" / f"video-{nn}.json").read_text(encoding="utf-8"))
+                .get("lines") or []}
+    except (OSError, ValueError, KeyError, TypeError):
+        prev = {}
     sr0, frames, rows, pos = None, bytearray(), [], 0.0
     for ln in lines:
         sr, ch, sw, data = _wav_read(Path(ln["file"]))
@@ -9939,10 +10260,15 @@ def _tts_say(a):
             fail(f"line {ln['n']} has another sample format ({sr} Hz, {ch} ch) than line 1 ({sr0} Hz): re-make it", 1)
         dur = len(data) / (sr * ch * sw)
         rows.append({"n": ln["n"], "text": ln["text"], "emotion": ln.get("emotion") or "neutral", "file": ln["file"],
-                     "made_by": "design" if ln.get("strong") else "clone", "start": round(pos, 3), "end": round(pos + dur, 3)})
+                     "made_by": "alibaba" if engine == "alibaba" else ("design" if ln.get("strong") else "clone"),
+                     "strong": bool(ln.get("strong")), "start": round(pos, 3), "end": round(pos + dur, 3)})
         if ln.get("strong"):
             rows[-1].update({"delivery": str(ln.get("delivery") or "").strip(),
                              "seed": int(ln["seed"]) if ln.get("seed") is not None else voice.get("seed")})
+        if engine == "alibaba":
+            info = made_info.get(ln["n"]) or {k: v for k, v in (prev.get(ln["n"]) or {}).items()
+                                             if k in ("characters", "request_id", "seed", "instruction", "cost_usd_estimate")}
+            rows[-1].update(info)
         frames += data
         pos += dur
         gap = float(ln.get("pause_after", pause_default) or 0) if ln is not lines[-1] else 0.0
@@ -9966,21 +10292,29 @@ def _tts_say(a):
     vm = _voice_match(Path(voice.get("ref_audio") or ""), {r["n"]: r["file"] for r in rows}) if voice.get("ref_audio") else {}
     for r in rows:
         r.update(vm.get(r["n"]) or {})
-    cl = [r for r in rows if r["made_by"] == "clone" and r.get("timbre_sim") is not None]
+    cl = [r for r in rows if not r.get("strong") and r.get("timbre_sim") is not None]   # the voice's plain lines: the spread to compare to
     match = {"clone_lines": {"pitch_st": [min((r["pitch_st"] for r in cl if r.get("pitch_st") is not None), default=None),
                                           max((r["pitch_st"] for r in cl if r.get("pitch_st") is not None), default=None)],
                              "timbre_sim_min": min((r["timbre_sim"] for r in cl), default=None)},
              "strong_lines": [{"n": r["n"], "pitch_st": r.get("pitch_st"), "timbre_sim": r.get("timbre_sim"), "seed": r.get("seed")}
-                              for r in rows if r["made_by"] == "design"]}
+                              for r in rows if r.get("strong")]}
     side = {"video": nn, "file": str(final), "raw": str(raw), "duration_s": round(pos, 3), "language": lang, "lines": rows, "voice_match": match,
             "voice": {"sample": voice.get("sample"), "instruct": voice.get("instruct")}, "loudness_lufs": _ebur128(final),
             "loudness_target": target, "loudness_pass": {"passes": ln["passes"], "mode": ln["mode"],
                                                          "voice_chain": str(_scfg("narration.voice_chain", NARRATION_VOICE_CHAIN) or "")},
-            "made": now_iso(), "stub": bool(os.environ.get("AWL_TTS_STUB"))}
+            "engine": engine, "made": now_iso(), "stub": bool(os.environ.get("AWL_TTS_STUB")) and engine == "local"}
+    cost_now = None
+    if engine == "alibaba":
+        side["voice"].update({"voice_id": voice["alibaba"].get("voice_id"), "model": voice["alibaba"].get("target_model")})
+        side["characters"] = sum(int(r.get("characters") or 0) for r in rows)
+        side["cost_usd_estimate"] = round(sum(float(r.get("cost_usd_estimate") or 0) for r in rows), 4)
+        cost_now = round(sum(float(v.get("cost_usd_estimate") or 0) for v in made_info.values()), 4)
     write_json(final.with_suffix(".json"), side)
     out({"ok": True, "file": str(final), "sidecar": str(final.with_suffix(".json")), "duration_s": side["duration_s"], "lines": len(rows),
          "made_now": [t["n"] for t in todo], "loudness_lufs": side["loudness_lufs"], "elapsed_s": round(time.time() - t0, 1),
-         "voice_match": match,
+         "voice_match": match, "engine": engine,
+         **({"characters_now": sum(int(v.get("characters") or 0) for v in made_info.values()), "cost_usd_estimate_now": cost_now,
+             "cost_usd_estimate_narration": side["cost_usd_estimate"]} if engine == "alibaba" else {}),
          "note": "next: `T narration-words` (the words, the cues and the check against the script); a strong line far from the cloned "
                  "lines' numbers is made again with another seed (reference/static §6)"})
 
@@ -10315,10 +10649,13 @@ def _static_check(a):
                                  "root": os.environ.get("AWL_IMAGE_ROOT") or _kcfg("root") or None,
                                  "needed_for": "images by FLUX 3 Klein on this PC (static_images=klein)", **r}
     if os.environ.get("AWL_TTS_STUB"):
-        parts["tts"] = {"ready": True, "stub": True}
+        parts["tts"] = {"ready": True, "stub": True, "needed_for": "narration on this PC (static_tts=local)"}
     else:
         r = _worker("tts", {"op": "check", "models": [_scfg("tts.design_model"), _scfg("tts.clone_model")], **_tts_job_base()}, timeout=600)
-        parts["tts"] = {"ready": bool(r.get("ok")), "python": _worker_python("tts") or None, **r}
+        parts["tts"] = {"ready": bool(r.get("ok")), "python": _worker_python("tts") or None,
+                        "needed_for": "narration on this PC (static_tts=local)", **r}
+    ds = _ds_facts(_ds_key(), not a.offline)
+    parts["tts_alibaba"] = {"ready": bool(ds.get("key_present")) and ds.get("answers") is not False, **ds}
     if os.environ.get("AWL_MUSIC_STUB"):
         parts["music"] = {"ready": True, "stub": True}
     else:
@@ -10341,8 +10678,9 @@ def _static_check(a):
         parts["ffmpeg"] = {"ready": False, "error": str(e)[:200]}
     parts["capcut_cli"] = {"ready": bool(shutil.which("capcut")), "path": shutil.which("capcut")}
     out({"ok": True, "parts": parts, "note": "facts per part; which part a run needs (the API key only with static_images=api, images_klein only with "
-                                             "static_images=klein, music for the bed under every video) and what is a "
-                                             "blocker are the agent's call (reference/static §9 has the setup)"})
+                                             "static_images=klein, tts with static_tts=local, tts_alibaba with static_tts=alibaba, music "
+                                             "for the bed under every video) and what is a blocker are the agent's call (reference/static "
+                                             "§9 has the setup)"})
 
 
 # ---- the format (A5): the aspect, the export size the CapCut project is made at (its export is the final), the image size, the quality
@@ -12843,13 +13181,20 @@ def main():
     p.set_defaults(fn=cmd_fetch_image)
 
     p = sp.add_parser("tts", help="Static's voice (contract item 36): check | design (voice samples) | voice (the picked sample becomes the run's "
-                                  "voice) | say (a video's narration); Qwen3-TTS in its own environment (AWL_TTS_PYTHON), one GPU job at a time")
+                                  "voice) | say (a video's narration); the run's engine (state.json -> static_tts): local = Qwen3-TTS in its "
+                                  "own environment (AWL_TTS_PYTHON), one GPU job at a time; alibaba = Alibaba Cloud Model Studio's "
+                                  "qwen-audio-3.1-tts-plus on the user's key (DASHSCOPE_API_KEY)")
     p.add_argument("action", choices=["check", "design", "voice", "say"]); p.add_argument("--run")
+    p.add_argument("--engine", choices=list(TTS_ENGINES), help="check, design: local | alibaba (default the run's state.json -> static_tts, "
+                                                               "else local); design --engine local in an alibaba run makes the samples on "
+                                                               "this PC and `tts voice` clones the pick at Alibaba")
     p.add_argument("--text", help="design: the line every sample speaks")
     p.add_argument("--instruct", action="append", help="design: one voice described in words, repeatable (one sample each)")
     p.add_argument("--language", help="design: english | spanish | ... (default config static.tts.language)")
     p.add_argument("--sample", type=int, help="voice: the sample the user picked")
-    p.add_argument("--emotion", action="append", help="voice: NAME=TEXT, a reference clip of the same voice for lines tagged NAME, repeatable")
+    p.add_argument("--emotion", action="append", help="voice: NAME=TEXT, repeatable; local: a line the voice speaks in that emotion (its "
+                                                      "reference clip for lines tagged NAME); alibaba: the delivery in words, sent as the "
+                                                      "instruction of lines tagged NAME")
     p.add_argument("--replace", action="store_true", help="design/voice: the run's narrator is locked once picked; new samples or another "
                                                           "pick only with this (a clone that picks its voice again)")
     p.add_argument("--video", help="say: the video, NN"); p.add_argument("--lines-file", help="say: default 40-briefs/video-NN-narration.json")

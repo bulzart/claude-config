@@ -1,7 +1,7 @@
 ## 9 The Static PC (setup, once per PC)
 
-Static runs where Qwen3-TTS and ACE-Step 1.5 (the bed under every video) are installed, and FLUX 3 Klein when the images are made on
-the PC. `T static check` reports each part; a part a run needs and does not have is a blocker, reported at the start (never asked);
+Static runs where Qwen3-TTS (unless the narration is by Alibaba Cloud) and ACE-Step 1.5 (the bed under every video) are installed,
+and FLUX 3 Klein when the images are made on the PC. `T static check` reports each part; a part a run needs and does not have is a blocker, reported at the start (never asked);
 music alone is not: without it the user is told at the start and the videos go without a bed.
 - **The pipeline**: `git pull` of the `~/.claude` repository, as on any PC.
 - **Qwen3-TTS**: its own environment (Python 3.11 or 3.12; a CUDA build of torch and torchaudio from download.pytorch.org; `pip install -U
@@ -19,6 +19,14 @@ music alone is not: without it the user is told at the start and the videos go w
   = the clone's folder. Its models (about 10 GB) download on first use.
 - **OpenAI** (only for images by the API): the user environment variable `OPENAI_API_KEY`; the organisation may need verifying for image
   models. The key is never typed into the chat, printed or written to a run.
+- **Alibaba Cloud Model Studio** (only for narration by Alibaba, `static_tts=alibaba`; the user, 2026-11-08): an API key from the Model
+  Studio console of the run's region (Singapore by default, `config.json → static.tts.alibaba.region`; a Beijing key works only with
+  `beijing`, the region where Alibaba documents voice design), set once by the user as the user environment variable `DASHSCOPE_API_KEY`
+  (Windows: Settings, "Edit environment variables for your account"; or in their own PowerShell window
+  `[Environment]::SetEnvironmentVariable('DASHSCOPE_API_KEY', '<key>', 'User')`). Optional: `DASHSCOPE_WORKSPACE_ID` (the console's
+  Workspace Details) for the workspace's own host. The toolkit reads a variable the user set after Claude Code started from their stored
+  environment, so no restart is needed. The key is never typed into the chat, printed or written to a run. `T tts check --engine
+  alibaba` gives the facts: the key present or not, the region, the host, and whether the account answers.
 - **FLUX 3 Klein** (only for images made on the PC; an NVIDIA GPU with 8 GB or more): the ComfyUI Windows portable (0.41.0 or later), and
   in its `ComfyUI\models\` the int8 files of `black-forest-labs/flux-3-image-klein-comfy` on Hugging Face (gated: the user accepts the
   FLUX Kommunity License there and logs this PC in with `hf auth login`; the token never goes into the chat):

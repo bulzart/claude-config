@@ -13,11 +13,12 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (7.4 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (9.8 KB)
 - static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.0 KB)
 
 The main session runs S2 for every video, one at a time (one model on the GPU; the toolkit's lock holds a second one back), before any
-production agent starts (`awl-analyze-produce` A9s).
+production agent starts (`awl-analyze-produce` A9s). The narration uses the engine the run's voice was made with (`state.json →
+static.voice.engine`: `local`, or `alibaba` on the user's key, static §6 "With Alibaba": no GPU, billed per character).
 
 ## Step S2 (per video)
 
@@ -32,7 +33,8 @@ production agent starts (`awl-analyze-produce` A9s).
    "seventeen sixty-nine" as "1769"): each line's `numbers` gives the script's and the heard ones to compare by ear. Judge every line it
    lists (`lines_to_check`) from its missing, extra and repeated words and its numbers: a wrong line is made again
    with `T tts say --run RUN --video NN --only N`, then `narration-words` again; at most twice per line, then it stays and the brief notes it
-   (local and free; with QC fixes `off` nothing is made again).
+   (free on this PC; with Alibaba each line made again is billed again, a few hundredths of a cent; with QC fixes `off` nothing is made
+   again). With Alibaba a `tts say` that stopped part way names the missing lines: make only those with `--only`.
 3. **Length and pace:** the duration against the video's own target (`target_length_s` in `video-NN-narration.json`, the agent's from the
    references' pattern, static §4); more than about a tenth off it: shorten or extend lines of the script and
    `video-NN-narration.json` (static §4), then make those lines again.
@@ -58,7 +60,8 @@ facts of the setup, static §9).
 
 - Never change the run's voice between videos or make a line in another voice (a strong line is the run's voice description by the
   design model, static §6).
-- Never call ElevenLabs or Higgsfield for a Static voice or bed.
+- Never call ElevenLabs or Higgsfield for a Static voice or bed; Alibaba Cloud only through `T tts` with the run's engine set to it,
+  and never print, echo or write `DASHSCOPE_API_KEY`.
 - Never stretch or speed a narration to fit a length: rewrite the lines.
 - Never analyse the references' music beyond the numbers A3 already has (the user, 2026-11-06: "no need to analyze their instrumentals
   too"); never keep a bed's level at which a narration word is heard differently (a level costs nothing to change, whatever the QC fixes).
