@@ -43,6 +43,9 @@ under "Read now" the exact section files it needs: read those and nothing else. 
   3. awl-record        (X10: deliverables with the YouTube title and thumbnail, README row, result.json)
   With QC fixes `off` every image is made once and nothing is redone: the edit is still built and its facts recorded; result.json
   `qc` = "off: not checked (the user reviews at the end)".
+  The judge's record comes first (static §13): <RUN>/40-briefs/video-NN-judge.md holds what was decided and forecast for your video
+  (the prompts as J1 and J3 left them, the pace, the joins, the labels, the bed); read its part for your step before your first call,
+  send the plan as it is now, and name in your report every outcome that differs from what the record expects, with its cause.
   A long video is split (awl-analyze-produce A9b): when your spawn message says `images K1-K2: S3 only`, make and check only those images
   (and the thumbnail when it says so), write <RUN>/60-outputs/video-NN/images-K1-K2.json (each image's attempts, re-draws, cost, flags)
   and end with one JSON line {"video", "images": "K1-K2", "status", "cost_usd_estimate", "flagged"}; when it says `S4 and X10`, every image
