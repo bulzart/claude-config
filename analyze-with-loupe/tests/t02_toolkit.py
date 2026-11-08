@@ -959,6 +959,18 @@ check(_pw["wpm_articulation"] == 120.0 and _pw["wpm_overall"] == 80.0 and _pw["p
       and _pw["long_pauses_per_10min"] == 200.0 and _pw["pause_share"] == 0.333,
       f"the fair measure: words a minute over the span with every pause of 0.25 s or more taken out (a 0.2 s gap stays speech), the "
       f"pauses a minute, their median, the long ones per 10 minutes and their share ({_pw})")
+# the captions' words kept inside their own line's audio (static §6): a word timed in the silence before its line starts with the
+# line's voice, one timed past its line's end ends with it; lines without times, or words that are not the script's one for one, stay as heard
+_wlines = [{"n": 1, "text": "a b.", "start": 0.0, "end": 1.0}, {"n": 2, "text": "c d.", "start": 2.0, "end": 3.0}]
+_wl = _awl._words_in_lines([{"w": "a", "s": 0.1, "e": 0.5}, {"w": "b.", "s": 0.5, "e": 1.3},
+                            {"w": "c", "s": 1.6, "e": 2.3}, {"w": "d.", "s": 2.3, "e": 3.2}], _wlines)
+_wc = _awl.chunk_words(_wl, 3)
+check([(w["s"], w["e"]) for w in _wl] == [(0.1, 0.5), (0.5, 1.0), (2.0, 2.3), (2.3, 3.0)] and _wc[1]["start"] == 2.0
+      and _awl._words_in_lines(_wl[:3], _wlines) == _wl[:3]
+      and _awl._words_in_lines(_wl, [{"n": 1, "text": "a b."}, {"n": 2, "text": "c d."}]) == _wl,
+      f"the captions' words stay inside their own line's audio: a word heard in the silence before its line starts with the line's "
+      f"voice (2026-11-08: 'Day four.' 0.44 s early), one heard past its line ends with it; left as heard without line times or "
+      f"one-for-one words ({_wl}, {_wc})")
 _ptn = _awl._pace_targets({"wpm_articulation": [200, 224], "wpm_overall": [160, 185], "target": {"wpm_articulation": 211.9, "wpm_overall": 174.0},
                            "tolerance": 0.01})
 _pto = _awl._pace_targets({"wpm_speech": [178, 212], "wpm_overall": [170, 185]})
@@ -1003,6 +1015,13 @@ _nw8 = js.get("pace") or {}
 check(_nw8.get("measure") == "wpm_articulation" and "speak" in (_nw8.get("on_target") or {})
       and (_nw8.get("target") or {}).get("point") == {"wpm_articulation": 190.0, "wpm_overall": 160.0},
       "narration-words reads the pace again by the fair measure, against the plan's point and tolerance")
+_w8 = json.loads((SR / "30-assets" / "narration" / "video-08.words.json").read_text(encoding="utf-8"))["words"]
+_own8 = [l for l in json.loads((SR / "30-assets" / "narration" / "video-08.json").read_text(encoding="utf-8"))["lines"]
+         for _ in str(l["text"]).split()]
+check(isinstance((js.get("words_kept_in_their_line") or {}).get("moved"), int) and len(_own8) == len(_w8)
+      and all(l["start"] - 0.006 <= w["s"] and w["e"] <= l["end"] + 0.006 for w, l in zip(_w8, _own8)),
+      f"narration-words keeps every caption word inside its own line's audio (the stub crowds its words into the first second) and "
+      f"says how many it moved: {js.get('words_kept_in_their_line')}")
 _pl9 = [dict(x) for x in _pl8]
 _pl9[1]["pause_after"] = 1.5
 _pl9[4]["pause_after"] = 1.5

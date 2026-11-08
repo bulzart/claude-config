@@ -1407,3 +1407,13 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   (-0.8 %, the floor binding, as the toolkit's forecast said: 172.5), and `T narration-words` read the same numbers to the decimal
   (24.1 pauses a minute, median 0.44 s, 6.4 long per 10 min); the 23 lines it listed each read as their script when cut from the
   delivered file and heard alone.
+
+## 2026-11-08 · Static: captions never show before their line's voice
+- **Seen:** checking video 03's re-joined narration before its edit, the caption cues were timed from speech-to-text, which pulls the
+  first word after a long pause into the silence: "Inside." (the hook's reveal) 0.76 s before its voice, "Day four." 0.44 s inside the
+  planned 1.04 s pause, "Here's what" 0.37 s inside the 1.6 s one; 15 lines started more than 0.25 s early. The words would have
+  shown in the held pauses, before they are said.
+- **Changed:** `_words_in_lines` keeps every caption word inside its own line's audio (the joins are the narration's own silence; each
+  script word's line is known), in `T narration-words` (it reports `words_kept_in_their_line`) and in `T slideshow plan` (the edit's
+  captions). The pace still reads the words as heard, the references' yardstick. Video 03: 128 starts moved later, 5 ends earlier, the
+  1026 cues' words unchanged. Static §6; t02.

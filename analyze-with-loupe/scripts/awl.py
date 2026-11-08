@@ -3572,6 +3572,31 @@ def align_script(words: list, script: str) -> list:
     return [{"w": target[i], "s": round(timed[i][0], 2), "e": round(timed[i][1], 2)} for i in range(len(target))]
 
 
+def _words_in_lines(timed: list, lines: list) -> list:
+    """A joined narration's script words (align_script's, in the script's order) kept inside their own line's audio (static §6): the
+    joins are silence the narration put there, so no word of a line starts before its line's voice or ends after it. Speech-to-text
+    pulls the first word after a long silence into that silence (2026-11-08, video 03: "Day four." timed 0.44 s before its line after
+    a planned 1.04 s pause, "Here's what" 0.37 s before its line after the 1.6 s one), which would show the caption in the held pause.
+    Only the captions use these times: the pace keeps the words as heard (the references' yardstick). Left as they are when the lines
+    carry no times or their words are not the timed words one for one."""
+    if not timed or not lines:
+        return timed
+    if not all(isinstance(r.get("start"), (int, float)) and isinstance(r.get("end"), (int, float)) for r in lines):
+        return timed
+    counts = [len(str(r.get("text") or "").split()) for r in lines]
+    if sum(counts) != len(timed):
+        return timed
+    res, i = [], 0
+    for r, k in zip(lines, counts):
+        s0, e0 = float(r["start"]), float(r["end"])
+        for w in timed[i:i + k]:
+            s = min(max(float(w["s"]), s0), max(s0, e0 - 0.05))
+            e = max(min(float(w["e"]), e0), s + 0.05)
+            res.append({**w, "s": round(s, 2), "e": round(e, 2)})
+        i += k
+    return res
+
+
 def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur: float = 1.8, min_cue: float = 0.0) -> list:
     """Timed words grouped into caption cues of up to max_words. With min_cue (s), a cue that would be on screen for less than that
     (a quick 'he' or 'of' before the next word) takes the next word with it, up to twice max_words, never across a sentence end or a pause."""
@@ -10865,7 +10890,10 @@ def cmd_narration_words(a):
     tr = transcribe(str(wav16), work, a.whisper_model, lang)
     heard = [w for s in tr.get("segments", []) for w in s.get("words", [])]
     script = " ".join(r["text"] for r in side["lines"])
-    timed = align_script(heard, script) if heard else []
+    timed_heard = align_script(heard, script) if heard else []
+    timed = _words_in_lines(timed_heard, side.get("lines") or [])   # the captions: each word inside its own line's audio
+    shifts = [round(max(abs(x["s"] - y["s"]), abs(x["e"] - y["e"])), 2) for x, y in zip(timed_heard, timed)
+              if (x["s"], x["e"]) != (y["s"], y["e"])]
     per_line, k = [], 0
     for r in side["lines"]:
         hw = [_norm_word(w["w"]) for w in heard if r["start"] - 0.15 <= w["s"] <= r["end"] + 0.15]
@@ -10909,6 +10937,7 @@ def cmd_narration_words(a):
     else:
         pace["target"] = None
     out({"ok": True, "video": nn, "engine": tr.get("engine"), "words": len(timed), "cues": len(cues), "lines": per_line, "pace": pace,
+         "words_kept_in_their_line": {"moved": len(shifts), "largest_s": max(shifts) if shifts else 0.0},
          "lines_to_check": [x["n"] for x in off], "files": {"words": str(work.parent / f"video-{nn}.words.json"),
                                                              "cues": str(work.parent / f"video-{nn}.cues.json"), "srt": str(work.parent / f"video-{nn}.srt")},
          "note": "match is the share of a line's script words heard in its span (speech-to-text, not a verdict), numbers apart (each line's "
@@ -13021,7 +13050,8 @@ def _slideshow_plan(a):
     except (OSError, ValueError):
         timed_words = []
     try:
-        cues = (chunk_words(timed_words, tl["captions"]["words"], min_cue=tl["captions"]["min_cue_s"]) if timed_words else
+        cues = (chunk_words(_words_in_lines(timed_words, side.get("lines") or []), tl["captions"]["words"],
+                            min_cue=tl["captions"]["min_cue_s"]) if timed_words else
                 json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8")))
     except (OSError, ValueError):
         cues = []

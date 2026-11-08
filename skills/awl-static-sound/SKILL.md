@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (14.1 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (14.4 KB)
 - static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.4 KB)
 - static §13: `AWL/reference/static/130_13_the-judge.md` (11.3 KB)
 

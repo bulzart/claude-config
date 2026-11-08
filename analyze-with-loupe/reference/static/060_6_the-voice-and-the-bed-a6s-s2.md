@@ -23,6 +23,9 @@ for both engines; what differs with Alibaba is in its own paragraph.
 - A video's narration: `T tts say --run RUN --video NN` (every line, the pauses, the loudness); `T narration-words --run RUN --video NN`
   (the timed words, the cues, the SRT, and per line what was heard against the script). A line that came out wrong (a missing or repeated
   word, the start repeating the reference's words, another speaker) is made again: `T tts say --only N`, at most twice, then noted.
+  The cues keep every word inside its own line's audio (`words_kept_in_their_line`; `T slideshow plan` does the same for the edit's
+  captions): the joins are the narration's own silence, and speech-to-text pulls the first word after a long pause into it (2026-11-08,
+  video 03: "Inside." 0.76 s and "Day four." 0.44 s before their voice, shown in the held pause); the pace reads the words as heard.
 - The narration starts `lead_s` after the first frame and the video ends `tail_s` after it (config `static.narration`).
 
 **The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns, if the data tells that
