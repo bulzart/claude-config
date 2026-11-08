@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (7.6 KB)
+- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (8.4 KB)
 - static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.4 KB)
 - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
@@ -59,7 +59,10 @@ Only these section files for this phase, nothing else unless a step below says s
      --align 1 --y <1 − 2 × y_rel>` (plus `--shadow`, `--bg-color`/`--bg-alpha`, `--highlight-words … --keyword-color … --keyword-size …`
      as the look has them), the font with `T capcut-font --draft "<draft>" --font-file <font_file> --track subtitle` (it also writes the
      outline, box and shadow where CapCut 9.x draws them: `outlines_in_styles`), the entrance with `T capcut-text-anim --draft "<draft>"
-     --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s> --run RUN` (CapCut's own intro on every caption),
+     --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s> --run RUN` (CapCut's own intro on every caption);
+     with a `captions.word_box` (the spoken word on a rounded colour box, static §7) instead `T capcut-word-box --draft "<draft>" --run RUN
+     --video NN [--replace subtitle]`, then `T capcut-font` on each `wordcap-*` track of its answer and `T capcut-text-anim` only on
+     those ending in `-in`,
      the labels when the timeline has any (a map's place names, static §5 "Labels") with `T capcut-labels --draft "<draft>" --run RUN
      --video NN` (once per build), any other text with `capcut add-text` in its own look (its font with
      `T capcut-font --draft "<draft>" --font-file <file> --track text`), then

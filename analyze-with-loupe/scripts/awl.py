@@ -58,6 +58,7 @@ Subcommands (python awl.py <cmd> -h):
   capcut-prep    after capcut_clone_draft: set aside the template's identity/layout so `capcut register` rebuilds them
   capcut-font    Static: list the fonts on this PC (CapCut's own, then Windows') | set one font on a draft's texts (nothing else)
   capcut-labels  Static: the timeline's labels (a place's name on a map) as CapCut texts over their images, in the plan's labels_style
+  capcut-word-box Static: the captions as one CapCut text per word, the spoken word on the plan's rounded colour box
   capcut-repair  after capcut_save: house text style + register + sync-timelines + lint (one machine-wide lock),
                  then a proxy preview
   capcut-text-style  every CapCut text layer → the user's locked house preset (config capcut.text_style.learned),
@@ -6477,6 +6478,265 @@ def cmd_capcut_labels(a):
          "note": "read the project back (capcut_read_timeline): each label at its image's start for its span, its words letter for "
                  "letter, beside the place it names; run `T capcut-repair --draft ... --keep-text` after the last write"},
         0 if not failed else 1)
+
+
+# CapCut's em on a 16:9 canvas, as a share of the canvas height per size unit: 2026-11-09, the cover CapCut itself rendered of
+# 07_Nov_2026_fonttest (2560x1440; Anton, size 12): the line's ink 1145 x 107 px gives an em of 121.0 px from its width and 121.9 px
+# from its height (they agree within 1 %), 10.1 px per size unit on 1440. (CAPCUT_FONT_PER_SIZE, measured on 9:16 covers with the
+# System font, gives 177 px here: it is not used for word positions.) Only 16:9 is measured.
+CAPCUT_EM_PER_SIZE_16X9 = 0.00703
+WORD_BOX_PREFIX = "wordcap"
+WORD_BOX_KEYS = ("color", "alpha", "round_radius", "style", "gap_em")
+WORD_BOX_PAD = 0.14
+
+
+def _read_srt(p: Path) -> list:
+    """An SRT file's cues as {start, end, text} (seconds)."""
+    def ts(t):
+        h, m, rest = t.strip().split(":")
+        s, ms = rest.replace(".", ",").split(",")
+        return int(h) * 3600 + int(m) * 60 + int(s) + int(ms) / 1000
+    cues = []
+    for block in re.split(r"\r?\n\r?\n", p.read_text(encoding="utf-8-sig").strip()):
+        lines = [x for x in block.splitlines() if x.strip()]
+        k = next((i for i, x in enumerate(lines) if "-->" in x), None)
+        if k is None:
+            continue
+        a, b = lines[k].split("-->")
+        cues.append({"start": ts(a), "end": ts(b), "text": " ".join(lines[k + 1:]).strip()})
+    return cues
+
+
+def _norm_word(w: str) -> str:
+    return re.sub(r"[^0-9A-Z]", "", str(w).upper())
+
+
+def _word_box_plan(cues: list, words: list, offset: float, fps: int, min_frames: int = 1) -> tuple:
+    """Each caption's moments: the cue's words in order, the box on the word being spoken, from the narration's word times (+ offset)
+    on the frame grid. Returns (rows, problems): one row per cue {start, end, tokens, bounds[k] = the start of word k's box}."""
+    rows, problems, wi = [], [], 0
+    frame = 1.0 / max(1, int(fps))
+    snap = lambda t: round(round(t / frame) * frame, 6)  # noqa: E731
+    for ci, c in enumerate(cues):
+        toks = c["text"].split()
+        times = []
+        for t in toks:
+            if wi >= len(words):
+                problems.append({"cue": ci + 1, "text": c["text"], "error": "the narration's words ran out"})
+                break
+            w = words[wi]
+            if _norm_word(w.get("w")) != _norm_word(t):
+                problems.append({"cue": ci + 1, "text": c["text"], "token": t, "word": w.get("w"), "word_index": wi,
+                                 "error": "the cue's word is not the narration's next word"})
+            times.append(float(w["s"]) + offset)
+            wi += 1
+        cs, ce = snap(c["start"]), snap(c["end"])
+        bounds = [cs]
+        for k in range(1, len(toks)):
+            t = snap(min(max(times[k] if k < len(times) else cs, bounds[-1]), ce))
+            bounds.append(t)
+        # a word whose box would show for under min_frames passes the box straight to the next word
+        keep = [k for k in range(len(toks)) if (bounds[k + 1] if k + 1 < len(toks) else ce) - bounds[k] >= min_frames * frame - 1e-6]
+        rows.append({"cue": ci + 1, "start": cs, "end": ce, "tokens": toks, "bounds": bounds, "boxed": keep})
+    if wi != len(words):
+        problems.append({"error": f"the cues hold {wi} words, the narration {len(words)}"})
+    return rows, problems
+
+
+def _word_box_segments(rows: list, font_file: str, size: float, W: int, H: int, gap_em: float) -> tuple:
+    """Every caption word as its own text: its place on the line (x in CapCut's half-canvas units, the line centred) from the font's
+    advances at CapCut's measured em, and its stretches of time, boxed while it is spoken. Grouped by (slot, boxed, at the cue's start):
+    no two texts of a group overlap in time, so each group is one track."""
+    from PIL import ImageFont
+    em = CAPCUT_EM_PER_SIZE_16X9 * min(W, H) * float(size)
+    f = ImageFont.truetype(font_file, max(1, int(round(em))))
+    k_em = em / max(1, int(round(em)))
+    gap = gap_em * em
+    groups, widest = {}, 0.0
+    for r in rows:
+        toks, n = r["tokens"], len(r["tokens"])
+        if not n:
+            continue
+        widths = [f.getlength(t) * k_em for t in toks]
+        total = sum(widths) + gap * (n - 1)
+        widest = max(widest, total)
+        left, xs = -total / 2, []
+        for wdt in widths:
+            xs.append(round((left + wdt / 2) / (W / 2), 5))
+            left += wdt + gap
+        # the boxed word per moment: moment k runs from bounds[k]; a word not in `boxed` hands its box to the word before
+        ends = r["bounds"][1:] + [r["end"]]
+        owner = []
+        for k in range(n):
+            kk = k
+            while kk not in r["boxed"] and kk > 0:
+                kk -= 1
+            owner.append(kk if kk in r["boxed"] else (r["boxed"][0] if r["boxed"] else None))
+        for i in range(n):
+            spans = []
+            for k in range(n):
+                if ends[k] - r["bounds"][k] <= 0:
+                    continue
+                state = owner[k] == i
+                if spans and spans[-1]["boxed"] == state and abs(spans[-1]["end"] - r["bounds"][k]) < 1e-6:
+                    spans[-1]["end"] = ends[k]
+                else:
+                    spans.append({"start": r["bounds"][k], "end": ends[k], "boxed": state})
+            for sp in spans:
+                key = (i, sp["boxed"], abs(sp["start"] - r["start"]) < 1e-6)
+                groups.setdefault(key, []).append({"cue": r["cue"], "text": toks[i], "x": xs[i], **sp})
+    return groups, {"em_px": round(em, 2), "gap_px": round(gap, 2), "widest_line_px": round(widest, 1), "canvas": [W, H]}
+
+
+def _drop_text_tracks(content: dict, names: set) -> int:
+    """Remove the named text tracks with their text materials and the animations only they used."""
+    gone = [t for t in content.get("tracks", []) if t.get("type") == "text" and str(t.get("name") or "") in names]
+    if not gone:
+        return 0
+    mids, refs = set(), set()
+    for t in gone:
+        for s in t.get("segments", []):
+            mids.add(s.get("material_id"))
+            refs.update(s.get("extra_material_refs") or [])
+    content["tracks"] = [t for t in content.get("tracks", []) if t not in gone]
+    still = {r for t in content.get("tracks", []) for s in t.get("segments", []) for r in (s.get("extra_material_refs") or [])}
+    mats = content.get("materials", {})
+    mats["texts"] = [m for m in mats.get("texts", []) if m.get("id") not in mids]
+    for kind in ("material_animations",):
+        if kind in mats:
+            mats[kind] = [m for m in mats[kind] if m.get("id") not in refs or m.get("id") in still]
+    return len(gone)
+
+
+def cmd_capcut_word_box(a):
+    """Static (the user, 2026-11-09: "for every word that is spoken at the moment the narrator is speaking ... a color behind the word
+    and a round radius"): the captions as one CapCut text per word, each at its place on the centred line, the word being spoken on the
+    plan's coloured box with rounded corners (captions.word_box), the others plain, in the captions' look. CapCut draws a box behind a
+    whole text only, so each word is its own text and its box is always its own. The words' times are the narration's (words.json +
+    the timeline's narration_offset), on the frame grid; the line's layout from the font file at CapCut's measured em. --replace drops
+    the named caption tracks (and earlier word-box tracks) first. The font and the entrance follow with `T capcut-font` and
+    `T capcut-text-anim` per track (the answer lists them); then `T capcut-repair --keep-text`."""
+    rd, st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    d = Path(a.draft)
+    if not (d / "draft_content.json").is_file():
+        fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
+    tlp = _run_timeline_path(a)
+    try:
+        tl = json.loads(tlp.read_text(encoding="utf-8"))
+    except (OSError, ValueError, AttributeError):
+        fail(f"no timeline: run `T slideshow plan --run RUN --video {nn}` first", 2)
+    cap = tl.get("captions") or {}
+    wb = cap.get("word_box") or {}
+    missing = [k for k in WORD_BOX_KEYS if k not in wb] + [k for k in ("font_file", "size", "fill", "y_rel") if k not in cap]
+    if missing:
+        fail("captions.word_box / captions leave undecided: " + ", ".join(missing) + " (the plan's, static §5)", 2)
+    if not Path(str(cap["font_file"])).is_file():
+        fail(f"captions.font_file not found: {cap['font_file']}", 2)
+    tag = _fmt_tag(st, getattr(a, "format", None))
+    srt = Path(a.srt) if a.srt else rd / "60-outputs" / f"video-{nn}" / (tag or "") / "captions.srt"
+    if not srt.is_file():
+        fail(f"no captions file: {srt} (T slideshow plan writes it)", 2)
+    wfile = rd / "30-assets" / "narration" / f"video-{nn}.words.json"
+    try:
+        words = json.loads(wfile.read_text(encoding="utf-8"))
+        words = words.get("words", words) if isinstance(words, dict) else words
+    except (OSError, ValueError):
+        fail(f"no narration words: {wfile} (T narration-words)", 2)
+    if (d / ".locked").exists() or _capcut_running():
+        fail("CapCut is running: close it, then run this again", 3)
+    content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
+    cc = content.get("canvas_config") or {}
+    W, H = int(cc.get("width") or 0), int(cc.get("height") or 0)
+    if not W or not H:
+        fail("the draft has no canvas size (canvas_config)", 2)
+    aspect_note = None if abs(W / H - 16 / 9) < 0.01 else f"the em is measured on 16:9 only; this canvas is {W}x{H}: view the line before use"
+    fps = int(tl.get("fps") or 30)
+    rows, problems = _word_box_plan(_read_srt(srt), words, float(tl.get("narration_offset") or 0.0), fps)
+    if problems:
+        fail("the captions and the narration's words do not line up", 2, problems=problems[:8], count=len(problems))
+    groups, geo = _word_box_segments(rows, str(cap["font_file"]), float(cap["size"]), W, H, float(wb["gap_em"]))
+    if geo["widest_line_px"] > 0.92 * W:
+        fail("a caption line is wider than 92 % of the frame at this size", 2, **geo)
+    cli = _capcut_cli()
+    if a.replace:
+        drop = {x.strip() for x in a.replace.split(",") if x.strip()}
+        drop |= {str(t.get("name") or "") for t in content.get("tracks", []) if str(t.get("name") or "").startswith(WORD_BOX_PREFIX)}
+        dropped = 0
+        for p in _draft_contents(d):
+            c2 = json.loads(p.read_text(encoding="utf-8"))
+            dropped = max(dropped, _drop_text_tracks(c2, drop))
+            p.write_text(json.dumps(c2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    elif any(str(t.get("name") or "").startswith(WORD_BOX_PREFIX) for t in content.get("tracks", [])):
+        fail("the draft already has word-box caption tracks: pass --replace to build them again", 2)
+    y = round(1 - 2 * float(cap["y_rel"]), 4)
+    work = rd / "60-outputs" / f"video-{nn}" / (tag or "") / "word-box"
+    work.mkdir(parents=True, exist_ok=True)
+    # boxed tracks first, so the plain words of the line draw above a box's edge
+    order = sorted(groups, key=lambda k: (not k[1], k[0], not k[2]))
+    tracks, failed = [], []
+    for key in order:
+        i, boxed, first = key
+        name = f"{WORD_BOX_PREFIX}-{i + 1}-{'box' if boxed else 'word'}{'-in' if first else ''}"
+        ents = sorted(groups[key], key=lambda e: e["start"])
+        sp = work / f"{name}.srt"
+        sp.write_text("\n".join(f"{n + 1}\n{_srt_time(e['start'])} --> {_srt_time(e['end'])}\n{e['text']}\n" for n, e in enumerate(ents)),
+                      encoding="utf-8")
+        args = [cli, "import-srt", str(d), str(sp), "--track-name", name, "--font-size", str(cap["size"]), "--color", str(cap["fill"]),
+                "--align", "1", "--x", "0", "--y", str(y)]
+        if cap.get("stroke_color") and float(cap.get("stroke_width") or 0) > 0:
+            args += ["--border-width", str(cap["stroke_width"]), "--border-color", str(cap["stroke_color"])]
+        if cap.get("shadow"):
+            args.append("--shadow")
+        if boxed:
+            args += ["--bg-color", str(wb["color"]), "--bg-alpha", str(wb["alpha"]), "--bg-style", str(wb["style"]),
+                     "--bg-round-radius", str(wb["round_radius"])]
+        cp = run(args, timeout=600)
+        if cp.returncode != 0:
+            failed.append({"track": name, "error": str((_last_json(cp.stdout) or {}).get("error") or cp.stderr or cp.stdout)[-300:]})
+            continue
+        tracks.append({"track": name, "texts": len(ents), "boxed": boxed, "entrance": first, "entries": ents})
+    # each word at its place on the line, in every copy of the timeline
+    placed, unmatched = 0, []
+    for p in _draft_contents(d):
+        c2 = json.loads(p.read_text(encoding="utf-8"))
+        byname = {str(t.get("name") or ""): t for t in c2.get("tracks", []) if t.get("type") == "text"}
+        tmats = {m.get("id"): m for m in c2.get("materials", {}).get("texts", [])}
+        n_here = 0
+        for tr in tracks:
+            t = byname.get(tr["track"])
+            segs = sorted((t or {}).get("segments") or [], key=lambda s: int(s["target_timerange"]["start"]))
+            if len(segs) != len(tr["entries"]):
+                unmatched.append({"file": p.name, "track": tr["track"], "texts": len(segs), "planned": len(tr["entries"])})
+                continue
+            for s, e in zip(segs, tr["entries"]):
+                if abs(int(s["target_timerange"]["start"]) / 1e6 - e["start"]) > 0.002:
+                    unmatched.append({"file": p.name, "track": tr["track"], "at": e["start"], "segment_start": int(s["target_timerange"]["start"]) / 1e6})
+                    break
+                s.setdefault("clip", {}).setdefault("transform", {})["x"] = e["x"]
+                s["clip"]["transform"]["y"] = y
+                m = tmats.get(s.get("material_id"))
+                if m is not None and tr["boxed"]:
+                    # capcut-cli's import-srt leaves the box's size and offsets unset: CapCut's own values for a box (a text the
+                    # user styled in CapCut, config capcut.text_style.learned: 0.14 around the text, centred)
+                    m.update({"background_width": WORD_BOX_PAD, "background_height": WORD_BOX_PAD,
+                              "background_horizontal_offset": 0.0, "background_vertical_offset": 0.0, "background_fill": ""})
+                n_here += 1
+        p.write_text(json.dumps(c2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        placed = max(placed, n_here)
+    for tr in tracks:
+        tr.pop("entries", None)
+    ok = not failed and not unmatched
+    out({"ok": ok, "draft": str(d), "captions": len(rows), "texts": sum(t["texts"] for t in tracks), "placed": placed,
+         "boxed_texts": sum(t["texts"] for t in tracks if t["boxed"]), "tracks": tracks, "failed": failed[:5], "unmatched": unmatched[:5],
+         "geometry": geo, "word_box": {k: wb[k] for k in WORD_BOX_KEYS}, "aspect_note": aspect_note, "srt_folder": str(work),
+         "next": [f"T capcut-font --draft \"{d}\" --font-file \"{cap['font_file']}\" --track <each track>",
+                  "T capcut-text-anim --draft ... --track <each track ending in -in> --intro <captions.animation> "
+                  "--intro-duration <captions.animation_s> --run RUN",
+                  "T capcut-repair --draft ... --keep-text"],
+         "note": "read the project back: every caption word once at its cue's times, the box on the spoken word only; open it in CapCut "
+                 "to see the box's corners and padding as CapCut draws them (CapCut's own render was not seen for a rounded box)"},
+        0 if ok else 1)
 
 
 def _xfade_for(name: str) -> str:
@@ -14128,6 +14388,14 @@ def main():
     p.add_argument("--draft", required=True); p.add_argument("--run", required=True); p.add_argument("--video", required=True)
     p.add_argument("--format", help="an extra format's timeline (40-briefs/video-NN-timeline-<tag>.json; e.g. 9:16)")
     p.set_defaults(fn=cmd_capcut_labels)
+
+    p = sp.add_parser("capcut-word-box", help="Static: the captions as one CapCut text per word, the spoken word on the plan's "
+                                              "rounded colour box (captions.word_box), the line centred")
+    p.add_argument("--draft", required=True); p.add_argument("--run", required=True); p.add_argument("--video", required=True)
+    p.add_argument("--format", help="an extra format's timeline and captions")
+    p.add_argument("--srt", help="default: 60-outputs/video-NN/[<tag>/]captions.srt (T slideshow plan)")
+    p.add_argument("--replace", help="caption tracks to drop first, comma-separated (e.g. subtitle); earlier word-box tracks go too")
+    p.set_defaults(fn=cmd_capcut_word_box)
 
     p = sp.add_parser("edit-profile", help="a video's edit layer as numbers at its full frame rate: each shot's zoom, pan, pace and jitter, "
                                            "the picture's switches (short flashes), the caption entrances (gather only)")

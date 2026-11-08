@@ -2372,4 +2372,23 @@ check(len(js.get("copied") or []) == 2 and _ti and _ti[0]["off_aspect"] == 0.0 a
       "image intake takes the user's vNN-thumb file in as the video's thumbnail (its aspect against the thumbnail's size) and delivers it")
 _srv.shutdown()
 
+# --- the spoken word's box (the user, 2026-11-09): one text per caption word, the box on the word the narration is speaking
+_wcues = [{"start": 0.3, "end": 0.96, "text": "IT'S SEVEN"}, {"start": 0.96, "end": 1.62, "text": "FORTY"}]
+_wwords = [{"w": "It's", "s": 0.0, "e": 0.44}, {"w": "seven", "s": 0.44, "e": 0.66}, {"w": "forty", "s": 0.66, "e": 1.06}]
+_wrows, _wprob = _awl._word_box_plan(_wcues, _wwords, 0.3, 30)
+_wfont = Path(AWL).resolve().parent.parent / "fonts" / "LuckiestGuy-Regular.ttf"
+_wg, _wgeo = _awl._word_box_segments(_wrows, str(_wfont), 6, 2560, 1440, 0.4)
+_wflat = {(k, e["text"], e["start"], e["end"]) for k, v in _wg.items() for e in v}
+_wx = {e["text"]: e["x"] for v in _wg.values() for e in v}
+check(not _wprob and _wrows[0]["bounds"] == [0.3, 0.733333]
+      and _wflat == {((0, True, True), "IT'S", 0.3, 0.733333), ((1, False, True), "SEVEN", 0.3, 0.733333),
+                     ((0, False, False), "IT'S", 0.733333, 0.966667), ((1, True, False), "SEVEN", 0.733333, 0.966667),
+                     ((0, True, True), "FORTY", 0.966667, 1.633333)}
+      and _wx["IT'S"] < 0 < _wx["SEVEN"] and _wx["FORTY"] == 0.0 and abs(_wgeo["em_px"] - 60.74) < 0.01,
+      f"the word box: each word its own text at its place on the centred line, the box on the word being spoken from its narration time "
+      f"on the frame grid, a one-word caption boxed whole ({sorted(_wflat)}, {_wgeo})")
+_wbad, _wbadp = _awl._word_box_plan([{"start": 0.3, "end": 0.9, "text": "IT'S EIGHT"}], _wwords[:2], 0.3, 30)
+check(len(_wbadp) == 1 and _wbadp[0].get("token") == "EIGHT",
+      f"the word box refuses a caption word that is not the narration's next word ({_wbadp})")
+
 finish()

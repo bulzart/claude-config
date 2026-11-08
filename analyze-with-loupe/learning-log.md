@@ -1431,3 +1431,15 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
 - **Measured:** video 03's bed was tried at 21:39 at 15.4 GB free (commit limit 26.1 GB, page file system-managed). The guard stopped
   it at the start of diffusion, at 2.3 GB free with ACE-Step at 13.07 GB: 42 s, no file, nothing left running, the memory back at
   once. In stretch 3, a still tried at 13.53 GB free was stopped; stills passed from 15.3 GB.
+
+## 2026-11-09 · Static: the spoken word on a rounded box (word-box captions)
+- **Seen:** the user asked, with a CapCut screenshot, for the word being spoken to sit on a coloured box with slightly rounded corners,
+  the box moving word to word. CapCut draws a text's box behind the whole text, never behind one word of it.
+- **Changed:** `T capcut-word-box` builds the captions as one CapCut text per word, each at its place on the centred line, the box on the
+  word whose narration time is now (words.json + narration_offset, on the frame grid), the others plain; the plan's `captions.word_box`
+  (colour, alpha, round radius, style, gap) decides the look; `T capcut-text-anim` goes only on the tracks of a cue's start. Static §5,
+  §7 and awl-static-edit say so; t02 checks the timing, the box's word and the layout.
+- **Measured:** CapCut's em on a 16:9 canvas, from the cover it rendered of 07_Nov_2026_fonttest (Anton, size 12): 121.0 px from the
+  line's width and 121.9 px from its height, 0.00703 of the canvas height per size unit. The older CAPCUT_FONT_PER_SIZE (0.00575 of the
+  width, measured on 9:16 System-font covers) gives 177 px on this canvas: 46 % too large for 16:9, so it is not used for word places.
+  CapCut's own drawing of a rounded box is not yet seen on this PC (a 5-second check project, 09_Nov_2026_wordbox_check, shows it when opened).

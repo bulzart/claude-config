@@ -36,7 +36,13 @@
   subtitle` (it also writes the outline, box and shadow import-srt set on each caption where CapCut 9.x draws them: the outline into each
   style's strokes, their check_flag bits; without it CapCut shows the words with no outline); the entrance with `T capcut-text-anim --draft
   "<draft>" --track subtitle --intro <captions.animation> --intro-duration <captions.animation_s> --run RUN` (CapCut's own intro on every caption,
-  capped at each caption's length); the labels, when the timeline has any (a map's place names, §5 "Labels"), with `T capcut-labels
+  capped at each caption's length). **With a `word_box`** (the user, 2026-11-09: "for every word that is spoken at the moment the narrator
+  is speaking ... a color behind the word and a round radius"): CapCut draws a box behind a whole text only, so the captions are built
+  instead by `T capcut-word-box --draft "<draft>" --run RUN --video NN [--replace subtitle]`: one text per word at its place on the
+  centred line (the font's advances at CapCut's em, measured on its own 16:9 render), the box on the word the narration's word times say
+  is spoken, the others plain, no keyword colour (`highlight_words` empty: a coloured word on its box would vanish); then `T capcut-font`
+  on every `wordcap-*` track and `T capcut-text-anim` only on the tracks ending in `-in` (a cue's entrance: a word that takes or hands
+  on the box never pops again). The labels, when the timeline has any (a map's place names, §5 "Labels"), with `T capcut-labels
   --draft "<draft>" --run RUN --video NN` (each on the track "labels" over its image's span, its centre where the plan put it, in the
   plan's `labels_style`, its font with them; once per build); any other text with `capcut add-text`
   in its own look (its font with `T capcut-font ... --track text`, the add-text default); then `T capcut-repair --draft "<draft>" --keep-text`
