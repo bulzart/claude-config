@@ -2490,7 +2490,22 @@ def cmd_uploads(a):
 
 CONTRACT_SUBS = (("<RUN>", "run"), ("<AWL>", "library"), ("<model id>", "model"), ("<guide path>", "guide path"), ("<recreate|create>", "analyze_submode"),
                  ("<ask|auto|off>", "qc_fixes"), ("<up|down>", "loupe"), ("<whisper|frames-only>", "audio_ingest"), ("<voiceover>", "voiceover"),
-                 ("<memes>", "memes"), ("<api|klein|prompts>", "static_images"), ("<free|pro>", "capcut_plan"))
+                 ("<memes>", "memes"), ("<api|klein|prompts>", "static_images"), ("<free|pro>", "capcut_plan"), ("<formats>", "formats"))
+
+
+def _contract_formats(st: dict) -> str:
+    """The contract's Formats line (Static): the primary format and each extra one with its tag and where its work goes."""
+    prim = _static_fmt(st)
+    if not prim:
+        return ""
+    s = f"{prim.get('aspect')} at {prim.get('export')} (the primary: the plain paths and commands)"
+    extras = _extra_formats(st)
+    if not extras:
+        return s + "; one format"
+    return s + "; " + "; ".join(
+        f"{f.get('aspect')} at {f.get('export')} (tag {f.get('tag')}: `--format {f.get('tag')}` on image, slideshow and the capcut-* "
+        f"commands; its stills, record, captions and result in <RUN>/60-outputs/video-NN/{f.get('tag')}/, its timeline "
+        f"40-briefs/video-NN-timeline-{f.get('tag')}.json, its own CapCut project)" for f in extras)
 
 
 def _contract_memes(st: dict) -> str:
@@ -2560,7 +2575,7 @@ def cmd_contract(a):
     values = {"run": str(rd), "library": str(AWL_HOME), "model": model, "guide path": guide, "analyze_submode": str(st.get("analyze_submode") or ""),
               "qc_fixes": str(st.get("qc_fixes") or "auto"), "loupe": str(st.get("loupe") or "up"), "audio_ingest": str(st.get("audio_ingest") or ""),
               "voiceover": _contract_voiceover(st, rd), "memes": _contract_memes(st), "static_images": str(st.get("static_images") or ""),
-              "capcut_plan": str(st.get("capcut_plan") or "")}
+              "capcut_plan": str(st.get("capcut_plan") or ""), "formats": _contract_formats(st).replace("<RUN>", str(rd))}
     substituted, unresolved = {}, []
     for token, key in CONTRACT_SUBS:
         if values[key]:
@@ -5862,7 +5877,7 @@ def cmd_capcut_name(a):
     store = _capcut_store(a.store)
     if not store.is_dir():
         fail(f"CapCut drafts store not found: {store}", 2)
-    base = f"{d.day:02d}_{MONTHS_EN[d.month - 1]}_{d.year}_v{nn:02d}"
+    base = f"{d.day:02d}_{MONTHS_EN[d.month - 1]}_{d.year}_v{nn:02d}" + _fmt_sfx(_fmt_tag_norm(getattr(a, "format", None)))
     name, k = base, 1
     while (store / name).exists():
         k += 1
@@ -6201,10 +6216,9 @@ def cmd_capcut_motion(a):
         fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
     if (d / ".locked").exists() or _capcut_running():
         fail("CapCut is running: close it, then run this again", 3)
-    tlp = Path(a.timeline) if a.timeline else (_state_of(a.run)[0] / "40-briefs" / f"video-{_cf_nn(a.video)}-timeline.json"
-                                                if a.run and a.video else None)
+    tlp = _run_timeline_path(a)
     if not tlp or not tlp.is_file():
-        fail("capcut-motion needs --run and --video (the run's timeline) or --timeline <file>", 2)
+        fail("capcut-motion needs --run and --video (the run's timeline; --format for an extra format's) or --timeline <file>", 2)
     tl = json.loads(tlp.read_text(encoding="utf-8"))
     fps = int(tl.get("fps") or 30)
     rows = [{**r, **({} if "scale" in r else _still_motion(r))} for r in tl.get("images") or []]
@@ -6339,6 +6353,17 @@ def cmd_capcut_text_anim(a):
 LABEL_TRACK = "labels"
 
 
+def _run_timeline_path(a):
+    """--timeline FILE, else the run's timeline of the video: 40-briefs/video-NN-timeline.json, or an extra format's
+    40-briefs/video-NN-timeline-<tag>.json (--format)."""
+    if getattr(a, "timeline", None):
+        return Path(a.timeline)
+    if not (getattr(a, "run", None) and getattr(a, "video", None)):
+        return None
+    rd, st = _state_of(a.run)
+    return rd / "40-briefs" / f"video-{_cf_nn(a.video)}-timeline{_fmt_sfx(_fmt_tag(st, getattr(a, 'format', None)))}.json"
+
+
 def cmd_capcut_labels(a):
     """Static (the user, 2026-11-07: a map's place names "as CapCut text"): every label of the timeline (`T slideshow plan` takes them
     from the plan's images) placed as a CapCut text on the track "labels" over its image's span, its centre where the plan read it off
@@ -6351,9 +6376,9 @@ def cmd_capcut_labels(a):
     if not (d / "draft_content.json").is_file():
         fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
     try:
-        tl = json.loads((rd / "40-briefs" / f"video-{nn}-timeline.json").read_text(encoding="utf-8"))
+        tl = json.loads(_run_timeline_path(a).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        fail(f"no timeline: run `T slideshow plan --run RUN --video {nn}` first", 2)
+        fail(f"no timeline: run `T slideshow plan --run RUN --video {nn}` first (with --format for an extra format)", 2)
     rows = [r for r in tl.get("images") or [] if r.get("labels")]
     if not rows:
         out({"ok": True, "draft": str(d), "labels": 0, "note": "the timeline has no labels (the plan's images carry none)"})
@@ -6442,10 +6467,9 @@ def cmd_capcut_transitions(a):
         fail(f"not a CapCut draft (no draft_content.json): {d}", 2)
     if (d / ".locked").exists() or _capcut_running():
         fail("CapCut is running: close it, then run this again", 3)
-    tlp = Path(a.timeline) if a.timeline else (_state_of(a.run)[0] / "40-briefs" / f"video-{_cf_nn(a.video)}-timeline.json"
-                                                if a.run and a.video else None)
+    tlp = _run_timeline_path(a)
     if not tlp or not tlp.is_file():
-        fail("capcut-transitions needs --run and --video (the run's timeline) or --timeline <file>", 2)
+        fail("capcut-transitions needs --run and --video (the run's timeline; --format for an extra format's) or --timeline <file>", 2)
     tl = json.loads(tlp.read_text(encoding="utf-8"))
     rows, fps, cli = tl.get("images") or [], int(tl.get("fps") or 30), _capcut_cli()
     known = {x.get("slug") for x in _capcut_enum(cli, "--transitions")}
@@ -6623,9 +6647,9 @@ def cmd_capcut_effects(a):
     if (d / ".locked").exists() or _capcut_running():
         fail("CapCut is running: close it, then run this again", 3)
     rd = _state_of(a.run)[0] if a.run else None
-    tlp = Path(a.timeline) if a.timeline else (rd / "40-briefs" / f"video-{_cf_nn(a.video)}-timeline.json" if rd and a.video else None)
+    tlp = _run_timeline_path(a)
     if not tlp or not tlp.is_file():
-        fail("capcut-effects needs --run and --video (the run's timeline) or --timeline <file>", 2)
+        fail("capcut-effects needs --run and --video (the run's timeline; --format for an extra format's) or --timeline <file>", 2)
     tl = json.loads(tlp.read_text(encoding="utf-8"))
     fxs = tl.get("effects") or []
     if not fxs:
@@ -8651,12 +8675,13 @@ def _img_cost(usage: dict) -> float | None:
         return None
 
 
-def _img_where(rd: Path, nn: str, anchor: str | None) -> tuple:
-    """(folder of the files, the record file, the record's key of this image) for a video's image or a character anchor."""
+def _img_where(rd: Path, nn: str, anchor: str | None, tag: str = "") -> tuple:
+    """(folder of the files, the record file) for a video's image or a character anchor; an extra format's stills (tag, e.g. 9x16)
+    live in 60-outputs/video-NN/<tag>/ (the anchors are the video's, shared by every format)."""
     if anchor:
         d = rd / "30-assets" / "characters"
         return d, d / "anchors.json"
-    d = rd / "60-outputs" / f"video-{nn}" / "images"
+    d = rd / "60-outputs" / f"video-{nn}" / (f"{tag}/images" if tag else "images")
     return d, d.parent / "images.json"
 
 
@@ -8708,9 +8733,18 @@ def _img_tag(anchor, key_name: str, attempt: int) -> str:
     return f"{anchor}-a{attempt}" if anchor else (f"thumb-a{attempt}" if key_name == "thumb" else f"i{key_name}-a{attempt}")
 
 
-def _img_req_name(anchor, nn: str, key_name: str, attempt: int) -> str:
+def _img_req_name(anchor, nn: str, key_name: str, attempt: int, ftag: str = "") -> str:
     return (f"anchor-{anchor}-a{attempt}-image-request.json" if anchor else
-            f"video-{nn}-{_img_tag(None, key_name, attempt)}-image-request.json")
+            f"video-{nn}{_fmt_sfx(ftag)}-{_img_tag(None, key_name, attempt)}-image-request.json")
+
+
+def _img_format(a, st: dict, anchor, thumb: bool) -> str:
+    """The format tag an image command works on (--format): '' for the primary. An anchor and the thumbnail are the video's, made
+    once for every format."""
+    ftag = _fmt_tag(st, getattr(a, "format", None))
+    if ftag and (anchor or thumb):
+        fail("--format is for a video's stills: a character's anchor and the YouTube thumbnail are made once for every format", 2)
+    return ftag
 
 
 def _thumb_deliver(rd: Path, nn: str, f: Path) -> dict:
@@ -8751,22 +8785,23 @@ def _img_generate(a):
     missing = [str(r) for r in refs if not r.is_file()]
     if missing:
         fail("reference image(s) not found: " + "; ".join(missing), 2)
+    ftag = _img_format(a, st, anchor, thumb)
     engine = a.engine or ("klein" if st.get("static_images") == "klein" else "api")
     if engine == "klein":
-        _img_generate_klein(a, rd, st, anchor, nn, key_name, prompt, refs)
+        _img_generate_klein(a, rd, st, anchor, nn, key_name, prompt, refs, ftag)
     if len(refs) > 16:
         fail("the image API takes at most 16 reference images per request", 2)
     key = _oa_key()
     if not key:
         fail("OPENAI_API_KEY is not set in this environment: set it once on this PC (reference/static §9). Nothing was sent.", 2)
     model = a.model or _scfg("images.model", "gpt-image-2.5-sunburst")
-    fmt = _static_fmt(st)
+    fmt = _fmt_for(st, ftag)
     size = a.size or fmt.get("image_size") or _scfg("images.size", "1088x1920")
     quality = a.quality or fmt.get("quality") or _scfg("images.quality", "high")
     params = {"model": model, "prompt": prompt, "size": size, "quality": quality, "n": 1, "output_format": "png",
               "refs": [{"file": str(r.resolve()), "sha1": _sha1_file(r)} for r in refs]}
     fp = _fingerprint({"params": params})
-    folder, rec_p = _img_where(rd, nn, anchor)
+    folder, rec_p = _img_where(rd, nn, anchor, ftag)
     try:
         slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {"attempts": []}
     except (OSError, ValueError):
@@ -8777,10 +8812,10 @@ def _img_generate(a):
              "note": "this exact request already made this image: nothing was sent (--again asks for a new draw of the same request)"})
     attempt = 1 + max([int(x.get("attempt") or 0) for x in slot["attempts"]] or [0])
     tag = _img_tag(anchor, key_name, attempt)
-    reqf = rd / "50-requests" / _img_req_name(anchor, nn, key_name, attempt)
+    reqf = rd / "50-requests" / _img_req_name(anchor, nn, key_name, attempt, ftag)
     write_json(reqf, {"video": nn, "image": key_name, "attempt": attempt, "kind": "image", "provider": "openai",
-                      "endpoint": "edits" if refs else "generations", "params": params})
-    _img_ledger(rd, "begin", video=nn, attempt=tag, fp=fp, model=model, request_file=str(reqf))
+                      "endpoint": "edits" if refs else "generations", "params": params, "format": ftag or None})
+    _img_ledger(rd, "begin", video=nn, attempt=(f"{ftag}-" if ftag else "") + tag, fp=fp, model=model, request_file=str(reqf))
     body = {"model": model, "prompt": prompt, "size": size, "quality": quality, "n": 1, "output_format": "png"}
     if refs:
         body["images"] = [{"image_url": _data_url(r)} for r in refs]
@@ -8829,6 +8864,7 @@ def _img_generate(a):
                                       "request_file": str(reqf), "usage": usage, "cost_usd_estimate": cost}, use=f.name)
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name, job=str(js.get("created") or ""))
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "model": model, "quality": quality, "refs": len(refs),
+         "format": ftag or None,
          "usage": usage, "cost_usd_estimate": cost, "elapsed_s": round(time.time() - t0, 1), "tries": tries, "fingerprint": fp,
          "prompt_overlay_words": _overlay_words(prompt),
          **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
@@ -8857,14 +8893,14 @@ def _klein_stub_png(dest: Path, w: int, h: int, seed: int) -> None:
     Image.new("RGB", (w, h), ((seed * 53) % 256, (seed * 97) % 256, (seed * 29) % 256)).save(dest, format="PNG")
 
 
-def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, prompt: str, refs: list):
+def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, prompt: str, refs: list, ftag: str = ""):
     """One still made on this PC by FLUX 3 Image Klein (static_images=klein): the worker (scripts/image_worker.py) in the ComfyUI
     install's own Python (AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT), one GPU job at a time, ledgered like an API call (provider klein, no cost).
     The seed comes from the request and the attempt unless --seed names one, so a draw can be made again exactly."""
     max_refs = int(_kcfg("max_refs", 10))
     if len(refs) > max_refs:
         fail(f"FLUX 3 Klein takes at most {max_refs} reference images per image", 2)
-    fmt = _static_fmt(st)
+    fmt = _fmt_for(st, ftag)
     w, h = _parse_size(a.size or fmt.get("image_size") or _scfg("images.size", "1088x1920"))
     facts = _klein_size_facts(w, h)
     if not facts["valid"]:
@@ -8878,7 +8914,7 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
     params = {"engine": engine, "models": models, "prompt": prompt, "size": f"{w}x{h}", "steps": steps, "alpha": alpha,
               "upsample": upsample, "seed": a.seed, "refs": [{"file": str(r.resolve()), "sha1": _sha1_file(r)} for r in refs]}
     fp = _fingerprint({"params": params})
-    folder, rec_p = _img_where(rd, nn, anchor)
+    folder, rec_p = _img_where(rd, nn, anchor, ftag)
     try:
         slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {"attempts": []}
     except (OSError, ValueError):
@@ -8890,9 +8926,10 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
     attempt = 1 + max([int(x.get("attempt") or 0) for x in slot["attempts"]] or [0])
     seed = int(a.seed) if a.seed is not None else int(hashlib.sha256(f"{fp}:{attempt}".encode("utf-8")).hexdigest(), 16) % 2 ** 32
     tag = _img_tag(anchor, key_name, attempt)
-    reqf = rd / "50-requests" / _img_req_name(anchor, nn, key_name, attempt)
-    write_json(reqf, {"video": nn, "image": key_name, "attempt": attempt, "kind": "image", "provider": "klein", "params": params, "seed": seed})
-    _img_ledger(rd, "begin", video=nn, attempt=tag, fp=fp, model=engine, request_file=str(reqf), provider="klein")
+    reqf = rd / "50-requests" / _img_req_name(anchor, nn, key_name, attempt, ftag)
+    write_json(reqf, {"video": nn, "image": key_name, "attempt": attempt, "kind": "image", "provider": "klein", "params": params, "seed": seed,
+                      "format": ftag or None})
+    _img_ledger(rd, "begin", video=nn, attempt=(f"{ftag}-" if ftag else "") + tag, fp=fp, model=engine, request_file=str(reqf), provider="klein")
     f = folder / f"{tag}.png"
     timeout = float(a.timeout or _kcfg("timeout_s", 1800))
     job = {"op": "generate", "root": os.environ.get("AWL_IMAGE_ROOT") or _kcfg("root") or "", "models": models, "alpha": alpha,
@@ -8940,7 +8977,7 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name)
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "engine": engine, "seed": seed, "upsampled": upsample,
          "caption": one.get("caption"), "refs": len(refs), "cost_usd_estimate": 0.0, "elapsed_s": round(time.time() - t0, 1),
-         "fingerprint": fp, "stub": bool(res.get("stub")), "memory_retry": mem_retry, "peak_gb": res.get("peak_gb"),
+         "fingerprint": fp, "stub": bool(res.get("stub")), "memory_retry": mem_retry, "peak_gb": res.get("peak_gb"), "format": ftag or None,
          "prompt_overlay_words": _overlay_words(prompt),
          **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
          "note": "view the image before you use it (the QC of reference/static §8); caption is what the image model received; this attempt "
@@ -8959,6 +8996,7 @@ def _img_prompts(a):
     """The prompts file a user generates the images from (Static, prompts mode): one prompt per image, the file name to save it as, the
     character images to attach, the size, and how to hand the folder back."""
     rd, _st = _state_of(a.run)
+    ftag = _img_format(a, _st, None, False)
     vids = [_cf_nn(a.video)] if a.video else sorted({p.name[6:-12] for p in (rd / "40-briefs").glob("video-*-images.json")})
     if not vids:
         fail("no image plan: write 40-briefs/video-NN-images.json first (reference/static §5)", 2)
@@ -8968,15 +9006,24 @@ def _img_prompts(a):
         imgs = plan.get("images") or []
         if not imgs:
             fail(f"40-briefs/video-{nn}-images.json has no images", 2)
-        size = plan.get("size") or _static_fmt(_st).get("image_size") or _scfg("images.size", "1088x1920")
+        if ftag:
+            lacking = [int(im.get("image") or 0) for im in imgs if not str(_by_format(im, ftag).get("prompt") or "").strip()]
+            if lacking:
+                fail(f"video {nn}: images without their {ftag} prompt (by_format.{ftag}.prompt, static §5): "
+                     + ", ".join(str(k) for k in lacking), 2)
+        size = (None if ftag else plan.get("size")) or _fmt_for(_st, ftag).get("image_size") or _scfg("images.size", "1088x1920")
         _w, _h = _parse_size(size)
-        asp = _static_fmt(_st).get("aspect") or _aspect_of(_w, _h)[0]
+        asp = _fmt_for(_st, ftag).get("aspect") or _aspect_of(_w, _h)[0]
         shape = "vertical" if _h > _w else ("horizontal" if _w > _h else "square")
-        L = [f"# Video {nn}: {len(imgs)} image prompts", "",
+        pre = f"v{nn}{_fmt_sfx(ftag)}"
+        L = [f"# Video {nn}{f' in {asp}' if ftag else ''}: {len(imgs)} image prompts", "",
              f"Make every image **{shape} {asp}, {size}** (or the nearest {shape} size your tool offers) with GPT Image 2.5 or the image tool "
-             f"you use. Save each image under the name in its heading (`v{nn}-iKK`, png, jpg or webp). When the images of every video are done, "
+             f"you use. Save each image under the name in its heading (`{pre}-iKK`, png, jpg or webp). When the images of every video are done, "
              "put them all in ONE folder (sub-folders are fine) and send me its path: I copy them in and never move or change your files.", ""]
-        chars = plan.get("characters") or []
+        chars = [] if ftag else (plan.get("characters") or [])
+        if ftag and plan.get("characters"):
+            L += [f"Attach the same character photos or sheets as for the video's {_static_fmt(_st).get('aspect') or 'first'} images "
+                  f"(listed in video-{nn}-image-prompts.md).", ""]
         if chars:
             L += ["## Characters (keep each one the same in every image)", ""]
             for c in chars:
@@ -8987,13 +9034,13 @@ def _img_prompts(a):
             L.append("")
         for im in imgs:
             kk = f"{int(im.get('image') or 0):02d}"
-            L += [f"## v{nn}-i{kk}" + (f"  ·  {ts_label(float(im['start']))}–{ts_label(float(im['end']))}" if im.get("start") is not None and im.get("end") is not None else ""), ""]
+            L += [f"## {pre}-i{kk}" + (f"  ·  {ts_label(float(im['start']))}–{ts_label(float(im['end']))}" if im.get("start") is not None and im.get("end") is not None else ""), ""]
             if im.get("line"):
                 L.append(f"Narration over it: “{str(im['line']).strip()}”")
             if im.get("characters"):
                 L.append("Attach: " + ", ".join(str(c) for c in im["characters"]) + " (their photo or sheet, above)")
-            L += ["", "```", str(im.get("prompt") or "").strip(), "```", ""]
-        th = plan.get("thumbnail") or {}
+            L += ["", "```", str((_by_format(im, ftag).get("prompt") if ftag else im.get("prompt")) or "").strip(), "```", ""]
+        th = {} if ftag else (plan.get("thumbnail") or {})   # the YouTube thumbnail is the video's: made once, with the first format
         if th.get("prompt"):
             L += [f"## v{nn}-thumb  ·  the YouTube thumbnail, {th.get('size') or '1280x720'}", ""]
             if plan.get("title"):
@@ -9004,12 +9051,13 @@ def _img_prompts(a):
                 L.append("Attach: " + ", ".join(str(c) for c in th["characters"]) + " (their photo or sheet, above)")
             L += ["", "```", str(th["prompt"]).strip(), "```", ""]
             total += 1
-        dest = rd / "deliverables" / "prompts" / f"video-{nn}-image-prompts.md"
+        dest = rd / "deliverables" / "prompts" / f"video-{nn}{_fmt_sfx(ftag)}-image-prompts.md"
         write_text(dest, "\n".join(L))
         files.append(str(dest))
         total += len(imgs)
-    out({"ok": True, "files": files, "images": total,
-         "naming": "vNN-iKK for the stills and vNN-thumb for the thumbnail (png, jpg or webp), all in one folder; sub-folders fine",
+    out({"ok": True, "files": files, "images": total, "format": ftag or None,
+         "naming": (f"vNN-{ftag}-iKK for this format's stills" if ftag else "vNN-iKK for the stills and vNN-thumb for the thumbnail")
+                   + " (png, jpg or webp), all in one folder; sub-folders fine",
          "note": "give the user these files' paths and how to hand back the folder; `T image intake --folder <path>` copies them in"})
 
 
@@ -9018,14 +9066,16 @@ def _img_intake(a):
     Reports, as facts, what each video's plan expects and does not have, what came in that no plan names, names seen twice, files whose
     name holds no vNN-iKK, and each image's size and how far its aspect is from the run's format (9:16 when none is stored)."""
     rd, _st = _state_of(a.run)
+    ftag = _img_format(a, _st, None, False)
     src = Path(a.folder)
     if not src.is_dir():
         fail(f"folder not found: {src}", 2)
+    tag_name = re.compile(rf"(?i)(?:^|[^a-z0-9])v(\d{{1,3}})[-_ ]?{ftag}[-_ ]?i(\d{{1,3}})(?:[^0-9]|$)") if ftag else None
     found, unmatched = {}, []
     for f in sorted(src.rglob("*")):
         if f.is_file() and f.suffix.lower() in IMAGE_EXT:
-            mt = STATIC_THUMB_NAME.search(f.stem)
-            m = None if mt else STATIC_IMG_NAME.search(f.stem)
+            mt = None if ftag else STATIC_THUMB_NAME.search(f.stem)    # an extra format takes only its own stills, vNN-<tag>-iKK
+            m = None if mt else (tag_name if ftag else STATIC_IMG_NAME).search(f.stem)
             if mt:
                 found.setdefault((f"{int(mt.group(1)):02d}", "thumb"), []).append(f)
             elif m:
@@ -9039,11 +9089,11 @@ def _img_intake(a):
             continue
         plan = _img_plan(rd, nn)
         want[nn] = {f"{int(im.get('image') or 0):02d}" for im in (plan.get("images") or [])}
-        if (plan.get("thumbnail") or {}).get("prompt"):
+        if (plan.get("thumbnail") or {}).get("prompt") and not ftag:
             want[nn].add("thumb")
             tw, th_ = _parse_size((plan.get("thumbnail") or {}).get("size") or "1280x720")
             thumb_ratio[nn] = tw / th_
-    t_asp = _static_fmt(_st).get("aspect") if _static_fmt(_st).get("aspect") in STATIC_ASPECTS else "9:16"
+    t_asp = _fmt_for(_st, ftag).get("aspect") if _fmt_for(_st, ftag).get("aspect") in STATIC_ASPECTS else "9:16"
     t_ratio = STATIC_ASPECTS[t_asp][0] / STATIC_ASPECTS[t_asp][1]
     copied, dupes, extra = [], [], []
     for (nn, kk), fs in sorted(found.items()):
@@ -9055,7 +9105,7 @@ def _img_intake(a):
         f = max(fs, key=lambda x: x.stat().st_mtime)
         if len(fs) > 1:
             dupes.append({"video": nn, "image": kk, "files": [str(x) for x in fs], "taken": str(f)})
-        folder, rec_p = _img_where(rd, nn, None)
+        folder, rec_p = _img_where(rd, nn, None, ftag)
         folder.mkdir(parents=True, exist_ok=True)
         dest = folder / (f"thumb-user{f.suffix.lower()}" if kk == "thumb" else f"i{kk}-user{f.suffix.lower()}")
         shutil.copy2(f, dest)
@@ -9075,7 +9125,7 @@ def _img_intake(a):
         copied.append(row)
     missing = [{"video": nn, "image": kk} for nn, ks in sorted(want.items()) for kk in sorted(ks) if (nn, kk) not in found]
     out({"ok": True, "folder": str(src), "copied": copied, "missing": missing, "not_in_any_plan": extra, "named_twice": dupes,
-         "names_without_vNN_iKK": unmatched[:60], "unmatched_total": len(unmatched),
+         "format": ftag or None, "names_without_vNN_iKK": unmatched[:60], "unmatched_total": len(unmatched),
          "aspect": t_asp, "note": f"copies only (your folder is untouched); off_aspect is the share each image's aspect differs from the run's "
                                   f"{t_asp} (the edit crops to fill); view each image before the edit"})
 
@@ -9085,7 +9135,8 @@ def _img_use(a):
     anchor = re.sub(r"[^A-Za-z0-9_-]+", "", a.anchor or "") or None
     nn = "00" if anchor else _cf_nn(a.video)
     key_name = anchor or ("thumb" if getattr(a, "thumbnail", False) else f"{int(a.image or 0):02d}")
-    folder, rec_p = _img_where(rd, nn, anchor)
+    ftag = _img_format(a, _st, anchor, key_name == "thumb")
+    folder, rec_p = _img_where(rd, nn, anchor, ftag)
     try:
         slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {}
     except (OSError, ValueError):
@@ -9094,7 +9145,7 @@ def _img_use(a):
     if not pick:
         fail(f"no finished attempt {a.attempt} of {key_name} with a file on disk", 2)
     _img_record_add(rec_p, key_name, None, use=Path(pick["file"]).name)
-    out({"ok": True, "image": key_name, "uses": pick["file"],
+    out({"ok": True, "image": key_name, "uses": pick["file"], "format": ftag or None,
          **({"thumbnail": _thumb_deliver(rd, nn, Path(pick["file"]))} if key_name == "thumb" else {})})
 
 
@@ -9124,6 +9175,12 @@ def _ring_colour(im, box, pad: int = 6) -> tuple:
     return tuple(sorted(p[i] for p in px)[len(px) // 2] for i in range(3))
 
 
+def _plan_captions(plan: dict, tag: str) -> dict:
+    """The captions' look for a format: the plan's `captions`, with an extra format's own values (the plan's by_format.<tag>.captions:
+    its size and band on that canvas) over them."""
+    return {**(plan.get("captions") or {}), **((_by_format(plan, tag).get("captions") or {}) if tag else {})}
+
+
 def _img_brand(a):
     """A brand's real logo placed into a still, and stray marks covered (static §5 "Real things look like themselves"; the user,
     2026-11-07: "if there's a company, or a brand being talked about, their logo should appear somewhere"). A model redraws a logo
@@ -9141,7 +9198,8 @@ def _img_brand(a):
     if not a.logo and not a.cover:
         fail("brand needs --logo FILE --box x0,y0,x1,y1 and/or --cover x0,y0,x1,y1", 2)
     key_name = "thumb" if thumb else f"{int(a.image):02d}"
-    folder, rec_p = _img_where(rd, nn, None)
+    ftag = _img_format(a, _st, None, thumb)
+    folder, rec_p = _img_where(rd, nn, None, ftag)
     try:
         slot = (json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(key_name) or {}
     except (OSError, ValueError):
@@ -9189,10 +9247,7 @@ def _img_brand(a):
     attempt = 1 + max([int(x.get("attempt") or 0) for x in slot.get("attempts", [])] or [0])
     f = folder / f"{_img_tag(None, key_name, attempt)}.png"
     im.save(f, format="PNG")
-    try:
-        cap = json.loads((rd / "40-briefs" / f"video-{nn}-images.json").read_text(encoding="utf-8")).get("captions") or {}
-    except (OSError, ValueError):
-        cap = {}
+    cap = _plan_captions(_img_plan(rd, nn), ftag)
     band = None
     if cap.get("y_rel") is not None and not thumb:
         cy = float(cap["y_rel"]) * H
@@ -9201,7 +9256,7 @@ def _img_brand(a):
     _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "completed", "source": "brand", "file": str(f), "base": Path(base["file"]).name,
                                       "logo": placed, "covers": covers, "at": now_iso(), "size": [W, H], "cost_usd_estimate": 0.0},
                     use=f.name)
-    out({"ok": True, "file": str(f), "attempt": attempt, "base": base["file"], "logo": placed, "covers": covers,
+    out({"ok": True, "file": str(f), "attempt": attempt, "base": base["file"], "logo": placed, "covers": covers, "format": ftag or None,
          "caption_band_px": band, "boxes_reaching_the_caption_band": reach,
          **({"thumbnail": _thumb_deliver(rd, nn, f)} if thumb else {}),
          "note": "view the result at full size (the logo legible and on its surface, nothing of the patch showing); this attempt is now the "
@@ -9212,11 +9267,13 @@ def _img_text(a):
     """The text in a video's stills, as facts (static §8; 2026-11-07: eleven stills carried a made-up subtitle line along the bottom):
     every line RapidOCR reads in each still in use (or --image K), its box in the picture's pixels, its confidence, the letters it holds
     and whether it sits in the bottom third, where a subtitle-like line falls. Which line belongs to a sign, a page, a screen or a logo and
-    which one is a stray subtitle is the agent's reading (view the image). Writes 60-outputs/video-NN/image-text.json."""
+    which one is a stray subtitle is the agent's reading (view the image). Writes 60-outputs/video-NN/image-text.json (an extra format's:
+    60-outputs/video-NN/<tag>/image-text.json)."""
     global _OCR
     rd, _st = _state_of(a.run)
     nn = _cf_nn(a.video)
-    folder, rec_p = _img_where(rd, nn, None)
+    ftag = _img_format(a, _st, None, False)
+    folder, rec_p = _img_where(rd, nn, None, ftag)
     try:
         rec = json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}
     except (OSError, ValueError):
@@ -9257,7 +9314,7 @@ def _img_text(a):
                           "letters": sum(ch.isalpha() for ch in str(text)), "words": len(str(text).split()),
                           "in_bottom_third": bx[1] >= H * 2 / 3, "width_share": round((bx[2] - bx[0]) / W, 3)})
         rows.append({"image": int(k), "file": str(f), "lines": lines})
-    out_p = rd / "60-outputs" / f"video-{nn}" / "image-text.json"
+    out_p = rec_p.parent / "image-text.json"
     kept = []
     if a.image:
         # one still read again (after a redraw): its row replaces the old one and the other stills' rows stay in the file
@@ -9292,7 +9349,8 @@ def _img_fit(a):
     own anchors or one cast sheet is the agent's call."""
     rd, _st = _state_of(a.run)
     measured = {}
-    recs = list((rd / "60-outputs").glob("video-*/images.json")) + [rd / "30-assets" / "characters" / "anchors.json"]
+    recs = (list((rd / "60-outputs").glob("video-*/images.json")) + list((rd / "60-outputs").glob("video-*/*/images.json"))
+            + [rd / "30-assets" / "characters" / "anchors.json"])
     for rec_p in recs:
         try:
             imgs = json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}
@@ -10282,6 +10340,50 @@ def _static_fmt(st: dict) -> dict:
     return ((st or {}).get("static") or {}).get("format") or {}
 
 
+# ---- several formats of one video (the user, 2026-11-08: "if they pick both options then we should use the same plan we have for 16:9
+# such as narration,story,hooks,and literally everything ... but also in a 9:16 image version too ... so we end up generating 2 video
+# formats for the same content (2 capcut projects too, each one of them in their format)"). The first pick is the run's primary format
+# (state.json -> static.format, every path as before); each other one is an extra format with a tag such as 9x16
+# (state.json -> static.extra_formats), its stills, record, captions and result in 60-outputs/video-NN/<tag>/ and its timeline in
+# 40-briefs/video-NN-timeline-<tag>.json. The narration, the bed, the script, the moves, the joins, the title and the thumbnail are the
+# video's, made once.
+
+def _fmt_tag_norm(v) -> str:
+    """'9:16', '9x16' or '9×16' -> '9x16'; '' for none."""
+    return re.sub(r"[^0-9x]", "", str(v or "").strip().lower().replace(":", "x").replace("×", "x"))
+
+
+def _extra_formats(st: dict) -> list:
+    return list(((st or {}).get("static") or {}).get("extra_formats") or [])
+
+
+def _fmt_tag(st: dict, v) -> str:
+    """The format a command works on: '' for the run's primary format, else the tag of an extra format the run holds. A value naming
+    the primary's aspect is the primary; one the run does not hold is refused, with the run's formats."""
+    t = _fmt_tag_norm(v)
+    if not t or t == _fmt_tag_norm(_static_fmt(st).get("aspect")):
+        return ""
+    tags = [f.get("tag") for f in _extra_formats(st)]
+    if t not in tags:
+        fail(f"the run has no format {v!r}: its formats are " + ", ".join([_static_fmt(st).get("aspect") or "none (T static format)"]
+             + [x.replace("x", ":") for x in tags]) + " (`T static format --also` adds one)", 2)
+    return t
+
+
+def _fmt_for(st: dict, tag: str) -> dict:
+    """The format's own sizes: the primary (static.format) for '', else the extra format with that tag."""
+    return _static_fmt(st) if not tag else next((f for f in _extra_formats(st) if f.get("tag") == tag), {})
+
+
+def _fmt_sfx(tag: str) -> str:
+    return f"-{tag}" if tag else ""
+
+
+def _by_format(d: dict, tag: str) -> dict:
+    """A plan entry's own values for an extra format (its `by_format` block); {} for the primary."""
+    return dict(((d or {}).get("by_format") or {}).get(tag) or {}) if tag else {}
+
+
 def _move_margin(rd: Path) -> tuple:
     """The margin the images need so the largest move stays sharp, from the references' measured moves (10-media/*/edit-profile.json:
     a zoom of z needs max(z, 1/z) - 1, a pan of p % of the width or height needs p / 100), or the config's value when no reference was
@@ -10328,9 +10430,10 @@ def _static_formats(a):
     out({"ok": True, "references": refs, "aspects": by, "move_margin": margin, "move_margin_from": margin_from,
          "formats": [_format_sizes(asp, r, margin) for asp in aspects for r in (1440, 1080, 720)],
          "qualities": list(_scfg("images.qualities", ["low", "medium", "high", "xhigh", "max"])), "images": st.get("static_images"),
-         "current": _static_fmt(st) or None,
+         "current": _static_fmt(st) or None, "extra_formats": _extra_formats(st),
          "note": "facts for the format question (reference/static §2): the export is the CapCut canvas (its export is the final), image_size "
-                 "keeps it sharp through the moves, image_size_no_margin is smaller; `T static format` stores the pick"})
+                 "keeps it sharp through the moves, image_size_no_margin is smaller; `T static format` stores the first pick (the primary), "
+                 "`T static format --also` each other one (the same videos in that format too)"})
 
 
 def _static_format_set(a):
@@ -10357,9 +10460,26 @@ def _static_format_set(a):
            "image_aspect_off": round(abs(iw / ih - STATIC_ASPECTS[a.aspect][0] / STATIC_ASPECTS[a.aspect][1])
                                      / (STATIC_ASPECTS[a.aspect][0] / STATIC_ASPECTS[a.aspect][1]), 3),
            "image_experimental": bool(facts.get("experimental")), "set_at": now_iso()}
-    _state_set(rd, **{"static.format": fmt})
-    out({"ok": True, "format": fmt, "note": "the images (API or prompts file), the CapCut canvas (`T capcut-prep --canvas`) and the check render "
-                                            "follow it; the final is the CapCut project exported at the export size"})
+    extras = _extra_formats(st)
+    if getattr(a, "also", False):
+        # another format of the same videos (the user, 2026-11-08): the same plan, its own stills and CapCut project
+        prim = _static_fmt(st)
+        if not prim:
+            fail("--also adds a format beside the run's primary one: store the primary first (`T static format` without --also)", 2)
+        if a.aspect == prim.get("aspect"):
+            fail(f"{a.aspect} is the run's primary format already (to change its size, store it again without --also)", 2)
+        fmt["tag"] = _fmt_tag_norm(a.aspect)
+        extras = [f for f in extras if f.get("tag") != fmt["tag"]] + [fmt]
+        _state_set(rd, **{"static.extra_formats": extras})
+        out({"ok": True, "format": fmt, "primary": prim, "extra_formats": extras,
+             "note": f"every video of the run is also made in {a.aspect} (tag {fmt['tag']}): the same narration, script, moves and joins; its "
+                     f"stills from the plan's by_format prompts (`T image generate --format {fmt['tag']}`), its timeline "
+                     f"(`T slideshow plan --format {fmt['tag']}`) and its own CapCut project at {fmt['export']} (static §2, §5, §7)"})
+    extras = [f for f in extras if f.get("aspect") != a.aspect]   # a new primary is never also an extra
+    _state_set(rd, **{"static.format": fmt, "static.extra_formats": extras})
+    out({"ok": True, "format": fmt, "extra_formats": extras,
+         "note": "the images (API or prompts file), the CapCut canvas (`T capcut-prep --canvas`) and the check render follow it; the final "
+                 "is the CapCut project exported at the export size; another format of the same videos: `T static format --also`"})
 
 
 # ---- one channel per run (the user, 2026-11-07: one narrator, one niche and one visual style per run, "because we want to remain
@@ -11323,13 +11443,27 @@ def _static_line_starts(side: dict) -> dict:
 
 def _slideshow_plan(a):
     """40-briefs/video-NN-timeline.json from the image plan (each image starts at its narration line) and the narration's exact line times;
-    also the captions shifted onto the video's timeline (60-outputs/video-NN/captions.srt and .json) for CapCut and the preview."""
+    also the captions shifted onto the video's timeline (60-outputs/video-NN/captions.srt and .json) for CapCut and the preview.
+    --format TAG: the same plan in an extra format (40-briefs/video-NN-timeline-<tag>.json, its captions in 60-outputs/video-NN/<tag>/):
+    its own stills, its captions' size and band (by_format.<tag>.captions), and of each image only what is not tied to a point of the
+    first format's picture: a zoom aimed at a spot (scale/x/y) and the labels' places come from the image's by_format.<tag>, else the
+    image keeps its plain move and its labels are listed as undecided."""
     rd, _st = _state_of(a.run)
     nn = _cf_nn(a.video)
+    ftag = _fmt_tag(_st, getattr(a, "format", None))
     plan = _img_plan(rd, nn)
     imgs = plan.get("images") or []
     if not imgs:
         fail(f"no image plan for video {nn} (40-briefs/video-{nn}-images.json)", 2)
+    tied = []
+    if ftag:   # an extra format: the image's own values for it over what is not tied to the first format's picture
+        def _for_fmt(im):
+            own = _by_format(im, ftag)
+            if any(k in im for k in ("scale", "x", "y")) and not any(k in own for k in ("scale", "x", "y")):
+                tied.append(int(im.get("image") or 0))
+            base = {k: v for k, v in im.items() if k not in ("scale", "x", "y", "labels", "by_format")}
+            return {**base, **{k: v for k, v in own.items() if k != "prompt"}, "_labels_first": bool(im.get("labels"))}
+        imgs = [_for_fmt(im) for im in imgs]
     try:
         side = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -11337,11 +11471,11 @@ def _slideshow_plan(a):
     lead = float(plan.get("lead_s", _scfg("narration.lead_s", 0.3)))
     tail = float(plan.get("tail_s", _scfg("narration.tail_s", 0.8)))
     starts = _static_line_starts(side)
+    folder, rec_p = _img_where(rd, nn, None, ftag)
     try:
-        rec = json.loads((rd / "60-outputs" / f"video-{nn}" / "images.json").read_text(encoding="utf-8")).get("images") or {}
+        rec = json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}
     except (OSError, ValueError):
         rec = {}
-    folder = rd / "60-outputs" / f"video-{nn}" / "images"
     total = round(lead + float(side["duration_s"]) + tail, 3)
     rows, missing_files, unknown_lines, undecided = [], [], [], []
 
@@ -11378,6 +11512,8 @@ def _slideshow_plan(a):
                 undecided.append(f"image {int(kk)}: label {j + 1} needs text, x_rel and y_rel (0..1, its centre read off the picture)")
         if im.get("labels"):
             rows[-1]["labels"] = im["labels"]
+        elif im.get("_labels_first"):   # the first format labels this picture: this format's places are read off its own picture
+            undecided.append(f"image {int(kk)}: no labels for {ftag} (by_format.{ftag}.labels, read off its {ftag} picture)")
         if not im.get("motion") and not any(k in im for k in ("scale", "x", "y")):
             undecided.append(f"image {int(kk)}: no motion")
         elif str(im.get("motion") or "") not in ("", "none") and not im.get("amount") and not any(k in im for k in ("scale", "x", "y")):
@@ -11397,20 +11533,25 @@ def _slideshow_plan(a):
     short = [r["image"] for r in rows if r["end"] - r["start"] < 0.5]
     effects, fx_undecided = _fx_resolve(rd, plan, rows, starts, lead, total, fps)
     undecided += fx_undecided
-    lstyle = plan.get("labels_style") or {}
+    lstyle = {**(plan.get("labels_style") or {}), **(_by_format(plan, ftag).get("labels_style") or {})}
     if any(r.get("labels") for r in rows):
         undecided += [f"labels_style: no {k}" for k in LABEL_STYLE_KEYS if k not in lstyle]
     music = rd / "30-assets" / "music" / f"video-{nn}.wav"
-    cap = plan.get("captions") or {}
-    tl = {"video": nn, "size": plan.get("render_size") or _static_fmt(_st).get("preview") or _scfg("render.size", "720x1280"),
-          "export": _static_fmt(_st).get("export"), "fps": fps,
+    cap = _plan_captions(plan, ftag)
+    if ftag:   # the captions' size and band are the canvas's: no value of the first format's carries over to another aspect
+        own_cap = _by_format(plan, ftag).get("captions") or {}
+        undecided += [f"captions for {ftag}: no {k} (by_format.{ftag}.captions.{k})" for k in ("size", "y_rel") if k not in own_cap]
+    fmt = _fmt_for(_st, ftag)
+    tl = {"video": nn, "format": ftag or None, "aspect": fmt.get("aspect"),
+          "size": (None if ftag else plan.get("render_size")) or fmt.get("preview") or _scfg("render.size", "720x1280"),
+          "export": fmt.get("export"), "fps": fps,
           "narration": side["file"], "narration_offset": lead, "duration_s": total,
           "music": {"file": str(music), "gain": float(plan.get("music_gain", _scfg("music.gain", 0.22)))} if music.is_file() and plan.get("music", True) else None,
           "captions": {**cap, "y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3))),
                        "min_cue_s": float(cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2)))},
           "images": rows, "effects": effects, "made": now_iso(),
           **({"labels_style": lstyle} if any(r.get("labels") for r in rows) else {})}
-    tlp = rd / "40-briefs" / f"video-{nn}-timeline.json"
+    tlp = rd / "40-briefs" / f"video-{nn}-timeline{_fmt_sfx(ftag)}.json"
     write_json(tlp, tl)
     try:   # the cues are grouped again from the timed words at the plan's words at once, whatever narration-words was run with
         timed_words = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.words.json").read_text(encoding="utf-8")).get("words") or []
@@ -11424,14 +11565,16 @@ def _slideshow_plan(a):
     upper = str(cap.get("case") or "").lower() == "upper"
     shifted = [{**c, "start": round(c["start"] + lead, 3), "end": round(c["end"] + lead, 3), "text": str(c["text"]).upper() if upper else c["text"]}
                for c in cues]
-    od = rd / "60-outputs" / f"video-{nn}"
+    od = rd / "60-outputs" / f"video-{nn}" / ftag if ftag else rd / "60-outputs" / f"video-{nn}"
+    od.mkdir(parents=True, exist_ok=True)
     write_json(od / "captions.json", shifted)
     srt = []
     for i, c in enumerate(shifted, 1):
         srt += [str(i), f"{_srt_time(c['start'])} --> {_srt_time(c['end'])}", c["text"], ""]
     write_text(od / "captions.srt", "\n".join(srt))
-    out({"ok": not missing_files and not undecided, "timeline": str(tlp), "duration_s": total, "fps": fps, "images": len(rows),
-         "undecided": undecided,
+    out({"ok": not missing_files and not undecided, "timeline": str(tlp), "format": ftag or None, "export": fmt.get("export"),
+         "duration_s": total, "fps": fps, "images": len(rows), "undecided": undecided,
+         "moves_aimed_in_the_first_format": tied,
          "image_spans": [[r["image"], r["start"], r["end"]] for r in rows],
          "shorter_than_0_5s": short, "images_without_a_file": missing_files, "captions": len(shifted), "captions_srt": str(od / "captions.srt"),
          "captions_over_words": sum(1 for c in shifted if len(str(c["text"]).split()) > tl["captions"]["words"]),
@@ -11443,7 +11586,9 @@ def _slideshow_plan(a):
          "music": bool(tl["music"]),
          "note": "the cuts sit on the frame grid (each at or just before its line's start); edit motions or transitions in the timeline "
                  "file if the spec asks for others, then build the CapCut project from this timeline (no local render in Static: static "
-                 "§7); a caption over the words at once is a quick word that took the next one with it (captions.min_cue_s)"})
+                 "§7); a caption over the words at once is a quick word that took the next one with it (captions.min_cue_s); "
+                 "moves_aimed_in_the_first_format: images whose zoom aims at a spot of the first format's picture and that play their plain "
+                 "move here (view them: an aim of this format's own goes in the image's by_format)"})
 
 
 def _still_motion(r: dict) -> dict:
@@ -11543,11 +11688,12 @@ def _slideshow_render(a):
     Writes deliverables/video-NN-clean.mp4 and, with the captions burned in the house look, video-NN-preview.mp4 (the complete video)."""
     rd, _st = _state_of(a.run)
     nn = _cf_nn(a.video)
-    tlp = rd / "40-briefs" / f"video-{nn}-timeline.json"
+    ftag = _fmt_tag(_st, getattr(a, "format", None))
+    tlp = rd / "40-briefs" / f"video-{nn}-timeline{_fmt_sfx(ftag)}.json"
     try:
         tl = json.loads(tlp.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        fail(f"no timeline for video {nn}: `T slideshow plan` first", 2)
+        fail(f"no timeline for video {nn}{f' in {ftag}' if ftag else ''}: `T slideshow plan` first", 2)
     W, H = (int(x) for x in str(tl.get("size") or "720x1280").lower().split("x"))
     fps = int(tl.get("fps") or 30)
     rows = tl["images"]
@@ -11574,8 +11720,8 @@ def _slideshow_render(a):
         D.append(max(1, min(want, E[k - 1] - S[k - 1])))   # a join never reaches back past the previous image's own first frame
     dl = rd / "deliverables"
     dl.mkdir(parents=True, exist_ok=True)
-    clean = dl / f"video-{nn}-clean.mp4"
-    work = rd / "60-outputs" / f"video-{nn}" / "render"
+    clean = dl / f"video-{nn}{_fmt_sfx(ftag)}-clean.mp4"
+    work = rd / "60-outputs" / f"video-{nn}" / (f"{ftag}/render" if ftag else "render")
     work.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     args, fc = [find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error"], []
@@ -11684,7 +11830,7 @@ def _slideshow_render(a):
            "effects": {"overlays": len(fx), "sounds": len(sounds)}}
     if not a.no_captions:
         try:
-            cues = json.loads((rd / "60-outputs" / f"video-{nn}" / "captions.json").read_text(encoding="utf-8"))
+            cues = json.loads((rd / "60-outputs" / f"video-{nn}" / (f"{ftag}/captions.json" if ftag else "captions.json")).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             cues = []
         if cues:
@@ -11700,7 +11846,7 @@ def _slideshow_render(a):
                                      else "fade" if any(w in an for w in ("fade", "dissolve", "blur")) else "none")
             (work / "fonts").mkdir(exist_ok=True)
             (work / "captions.ass").write_text(build_ass(spec, W, H, work / "fonts"), encoding="utf-8")
-            prev = dl / f"video-{nn}-preview.mp4"
+            prev = dl / f"video-{nn}{_fmt_sfx(ftag)}-preview.mp4"
             cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(clean.resolve()), "-vf",
                       "subtitles=captions.ass:fontsdir=fonts", "-map", "0:v:0", "-map", "0:a?", *_encode_args(18), "-c:a", "copy",
                       str(prev.resolve())], cwd=str(work), timeout=7200)
@@ -12424,6 +12570,7 @@ def main():
 
     p = sp.add_parser("capcut-name"); p.add_argument("--video", required=True, help="the run's video number")
     p.add_argument("--date", help="YYYY-MM-DD (default: today)"); p.add_argument("--store", help="CapCut drafts dir")
+    p.add_argument("--format", help="Static: an extra format's project (its aspect or tag, e.g. 9:16): the name ends in -<tag>")
     p.set_defaults(fn=cmd_capcut_name)
 
     p = sp.add_parser("capcut-font", help="Static: --list the fonts on this PC (CapCut's own first) | set one font file on a draft's texts")
@@ -12437,11 +12584,13 @@ def main():
                                             "uniform scale, KFTypePositionX/Y), after the last capcut_save")
     p.add_argument("--draft", required=True); p.add_argument("--run"); p.add_argument("--video", help="NN")
     p.add_argument("--timeline", help="a timeline file instead of the run's 40-briefs/video-NN-timeline.json")
+    p.add_argument("--format", help="an extra format's timeline (40-briefs/video-NN-timeline-<tag>.json; e.g. 9:16)")
     p.set_defaults(fn=cmd_capcut_motion)
 
     p = sp.add_parser("capcut-transitions", help="Static: the timeline's joins as CapCut's own transitions (capcut-cli, verified catalogue)")
     p.add_argument("--draft", required=True); p.add_argument("--run"); p.add_argument("--video", help="NN")
     p.add_argument("--timeline", help="a timeline file instead of the run's 40-briefs/video-NN-timeline.json")
+    p.add_argument("--format", help="an extra format's timeline (40-briefs/video-NN-timeline-<tag>.json; e.g. 9:16)")
     p.set_defaults(fn=cmd_capcut_transitions)
 
     p = sp.add_parser("capcut-effects", help="Static: the timeline's effects (overlays, sounds from the effects folder) into the CapCut project "
@@ -12449,6 +12598,7 @@ def main():
     p.add_argument("--draft", required=True); p.add_argument("--run"); p.add_argument("--video", help="NN")
     p.add_argument("--timeline", help="a timeline file instead of the run's 40-briefs/video-NN-timeline.json")
     p.add_argument("--verified-from", help="a catalogue file instead of data/capcut-catalogue.json (tests)")
+    p.add_argument("--format", help="an extra format's timeline (40-briefs/video-NN-timeline-<tag>.json; e.g. 9:16)")
     p.set_defaults(fn=cmd_capcut_effects)
 
     p = sp.add_parser("effects", help="Static: the optional effects folder (sound effects, green-screen transitions, overlays) as facts: "
@@ -12480,6 +12630,7 @@ def main():
     p = sp.add_parser("capcut-labels", help="Static: the timeline's labels (a place's name on a map) as CapCut texts on the track "
                                             "'labels' over their images' spans, in the plan's labels_style")
     p.add_argument("--draft", required=True); p.add_argument("--run", required=True); p.add_argument("--video", required=True)
+    p.add_argument("--format", help="an extra format's timeline (40-briefs/video-NN-timeline-<tag>.json; e.g. 9:16)")
     p.set_defaults(fn=cmd_capcut_labels)
 
     p = sp.add_parser("edit-profile", help="a video's edit layer as numbers at its full frame rate: each shot's zoom, pan, pace and jitter, "
@@ -12541,6 +12692,8 @@ def main():
     p.add_argument("--quality", help="format: the image API's quality, low | medium | high | xhigh | max (prompts mode: none)")
     p.add_argument("--image-size", help="format: WxH instead of the computed image size (e.g. the size without the move margin)")
     p.add_argument("--export", help="format: WxH instead of the computed export size")
+    p.add_argument("--also", action="store_true", help="format: another format of the same videos beside the primary one (the user's "
+                                                       "second pick at A5: its own stills and CapCut project, the same plan)")
     p.set_defaults(fn=cmd_static)
 
     p = sp.add_parser("reuse-analysis", help="a reference another run already analysed is not analysed again: its media folder (and its card, "
@@ -12564,6 +12717,9 @@ def main():
                                     "references)")
     p.add_argument("action", choices=["generate", "prompts", "intake", "use", "brand", "text", "cast", "fit"]); p.add_argument("--run", required=True)
     p.add_argument("--n-refs", type=int, help="fit: the number of reference images a still would take (default every count from 0 to 4)")
+    p.add_argument("--format", help="generate, use, brand, text, prompts, intake: an extra format of the run (its aspect, e.g. 9:16, or tag "
+                                    "9x16; state.json -> static.extra_formats): its own stills in 60-outputs/video-NN/<tag>/ at its size; "
+                                    "default the primary format")
     p.add_argument("--video", help="the video, NN"); p.add_argument("--image", type=int, help="generate, use: the image's number in the video's plan")
     p.add_argument("--anchor", help="generate, use: a character's anchor image (its id, e.g. C1) instead of a video's image")
     p.add_argument("--thumbnail", action="store_true", help="generate, use: the video's YouTube thumbnail (thumb-aK) instead of a still; "
@@ -12640,6 +12796,8 @@ def main():
                                         "times) | render (clean and captioned preview mp4)")
     p.add_argument("action", choices=["plan", "render"]); p.add_argument("--run", required=True); p.add_argument("--video", required=True)
     p.add_argument("--no-captions", action="store_true", help="render: the clean file only")
+    p.add_argument("--format", help="an extra format of the run (its aspect, e.g. 9:16, or tag 9x16): its own timeline "
+                                    "(40-briefs/video-NN-timeline-<tag>.json), stills and captions; default the primary format")
     p.set_defaults(fn=cmd_slideshow)
 
     a = ap.parse_args()

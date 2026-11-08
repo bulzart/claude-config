@@ -1330,6 +1330,62 @@ else:
           "capcut-labels puts each label on the track 'labels' over its image's span, its centre in CapCut's units, in the plan's font")
     js, code, _ = t("capcut-labels", "--draft", str(_lbd / "lbl"), "--run", str(SR), "--video", "01", env=SENV, ok=False)
     check(code == 2 and "already has" in str(js.get("error")), "capcut-labels places the labels once per build (a second run is refused)")
+# the same video in a second format (the user, 2026-11-08: "if they pick both options then we should use the same plan ... but also in a
+# 9:16 image version too ... 2 capcut projects too"): SR's primary is 9:16; 16:9 rides beside it with its own stills and timeline
+js, code = ts("static", "format", "--run", str(SR), "--aspect", "9:16", "--res", "1080", "--also", ok=False)
+check(code == 2 and "primary" in str(js.get("error")), "static format --also refuses the primary's own aspect")
+js, _ = ts("static", "format", "--run", str(SR), "--aspect", "16:9", "--res", "720", "--also")
+_mf = js.get("format") or {}
+check(js.get("ok") and _mf.get("tag") == "16x9" and _mf.get("export") == "1280x720" and (js.get("primary") or {}).get("aspect") == "9:16",
+      "static format --also stores a second format beside the primary (tag 16x9, its own export), the primary kept")
+js, code = ts("image", "generate", "--run", str(SR), "--anchor", "C1", "--format", "16:9", "--prompt", "x", ok=False)
+check(code == 2 and "once for every format" in str(js.get("error")), "an anchor is made once for every format (--format refused)")
+_mfd = home.parent / "user-16x9"
+_mfd.mkdir(exist_ok=True)
+for _k in (1, 2, 3):
+    _PL.new("RGB", (1280, 720), (40 * _k, 90, 140)).save(_mfd / f"v01-16x9-i{_k:02d}.png")
+_PL.new("RGB", (1080, 1920), (9, 9, 9)).save(_mfd / "v01-i01.png")   # a first-format still in the same folder: not this format's
+js, _ = ts("image", "intake", "--run", str(SR), "--folder", str(_mfd), "--format", "16:9")
+check(js.get("ok") and len(js.get("copied") or []) == 3 and not js.get("missing") and js.get("aspect") == "16:9"
+      and all("16x9" in Path(c["file"]).parts for c in js["copied"]),
+      "image intake --format takes only that format's stills (vNN-16x9-iKK) into 60-outputs/video-01/16x9/")
+_plan_mf = json.loads(json.dumps(_plan_fx))
+_plan_mf["images"][0].update({"scale": [1.0, 1.25], "x": [0.0, -0.2], "y": [0.0, 0.0]})   # a zoom aimed at a spot of the 9:16 picture
+_plan_mf["images"][1]["labels"] = [{"text": "Roswell", "x_rel": 0.4, "y_rel": 0.3}]
+_plan_mf["images"][1]["motion"], _plan_mf["images"][1]["amount"] = "none", 0
+_plan_mf["labels_style"] = {"font_file": "C:/Windows/Fonts/arial.ttf", "size": 7, "fill": "#FFFFFF", "stroke_color": "#000000",
+                            "stroke_width": 0.12, "shadow": True}
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan_mf), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01", "--format", "16:9", ok=False)
+_u = js.get("undecided") or []
+check(js.get("ok") is False and any(u.startswith("captions for 16x9: no size") for u in _u)
+      and any(u.startswith("image 2: no labels for 16x9") for u in _u) and js.get("moves_aimed_in_the_first_format") == [1],
+      f"slideshow plan --format lists what the second format still needs (its captions' size and band, the labels read off its picture) "
+      f"and the zooms aimed at a spot of the first format's picture ({_u})")
+_plan_mf["by_format"] = {"16x9": {"captions": {"size": 7, "y_rel": 0.85}}}
+_plan_mf["images"][1]["by_format"] = {"16x9": {"labels": [{"text": "Roswell", "x_rel": 0.55, "y_rel": 0.25}]}}
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan_mf), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(SR), "--video", "01", "--format", "16:9")
+_tlf = json.loads((SR / "40-briefs" / "video-01-timeline-16x9.json").read_text(encoding="utf-8"))
+_tl0 = json.loads((SR / "40-briefs" / "video-01-timeline.json").read_text(encoding="utf-8"))
+_cap0 = json.loads((SR / "60-outputs" / "video-01" / "captions.json").read_text(encoding="utf-8"))
+check(js.get("ok") and _tlf["export"] == "1280x720" and _tlf["captions"]["y_rel"] == 0.85 and _tlf["captions"]["size"] == 7
+      and all("16x9" in Path(r["file"]).parts for r in _tlf["images"])
+      and [r["start"] for r in _tlf["images"]] == [r["start"] for r in _tl0["images"]]
+      and _tlf["images"][0]["scale"] == [1.0, 1.1] and _tlf["images"][0]["x"] == [0.0, 0.0]
+      and _tlf["images"][1]["labels"][0]["x_rel"] == 0.55 and js.get("captions") == len(_cap0)
+      and (SR / "60-outputs" / "video-01" / "16x9" / "captions.srt").is_file(),
+      "slideshow plan --format: the same cuts on the same lines, that format's stills and caption look, its own labels, a zoom aimed in "
+      "the first format played plain, its captions in 60-outputs/video-01/16x9/")
+_cs = home.parent / "store-16x9"
+_cs.mkdir(exist_ok=True)
+js, _ = ts("capcut-name", "--video", "1", "--format", "16:9", "--store", str(_cs), "--date", "2026-11-08")
+check(js.get("ok") and js.get("name") == "08_Nov_2026_v01-16x9", f"capcut-name --format names the second format's project ({js.get('name')})")
+js, _ = ts("contract", "--run", str(SR))
+_ct = (SR / "50-requests" / "agent-contract.md").read_text(encoding="utf-8")
+check("tag 16x9" in _ct and "--format 16x9" in _ct and "<formats>" not in _ct,
+      "the Static contract lists the run's formats, each extra one with its tag and where its work goes")
+(SR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_plan_fx), encoding="utf-8")
 (SR / "40-briefs" / "video-01-images.json").write_text(json.dumps({**_plan, "effects": [
     {"id": _ids["green.mp4"], "type": "overlay", "join": 2, "fit": "cover", "why": "x"},
     {"file": str(_fx / "nope.mp4"), "type": "sfx", "at_s": 1.0, "anchor_s": 0.0, "volume": 1.0, "why": "x"},
