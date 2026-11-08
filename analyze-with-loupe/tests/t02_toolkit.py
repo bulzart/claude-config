@@ -1969,13 +1969,17 @@ _dsm = json.loads((AR / "30-assets" / "voice" / "samples.json").read_text(encodi
 _cv = [s["body"]["input"] for s in _DS_SEEN if s["path"].endswith("/customization")]
 with wave.open(str(js["samples"][0]["file"]), "rb") as _w:
     _wfmt = (_w.getframerate(), _w.getnchannels(), _w.getsampwidth())
-check(js.get("engine") == "alibaba" and len(js.get("samples") or []) == 5 and all(Path(s["file"]).is_file() and s.get("voice_id") for s in js["samples"])
-      and [c["voice_prompt"] for c in _cv] == _ins and _wfmt == (24000, 1, 2)
-      and all(c["preview_text"] == "Most people never notice this." and c["language_hints"] == ["en"] and c["target_model"] == "qwen-audio-3.1-tts-plus"
-              and len(c["prefix"]) <= 10 and c["prefix"].isalnum() for c in _cv)
-      and all(s["auth"] == f"Bearer {_DSKEY}" for s in _DS_SEEN) and _dsm.get("engine") == "alibaba",
+_dchk = {"engine": js.get("engine") == "alibaba", "five samples": len(js.get("samples") or []) == 5,
+         "files and ids": all(Path(s["file"]).is_file() and s.get("voice_id") for s in js.get("samples") or []),
+         "one design per description, in order": [c.get("voice_prompt") for c in _cv] == _ins, "16-bit mono 24 kHz": _wfmt == (24000, 1, 2),
+         "fields": all(c.get("preview_text") == "Most people never notice this." and c.get("language_hints") == ["en"]
+                       and c.get("target_model") == "qwen-audio-3.1-tts-plus" and len(str(c.get("prefix"))) <= 10 and str(c.get("prefix")).isalnum()
+                       for c in _cv),
+         "key only in the header": all(s["auth"] == f"Bearer {_DSKEY}" for s in _DS_SEEN), "samples.json": _dsm.get("engine") == "alibaba"}
+check(all(_dchk.values()),
       "tts design with Alibaba designs one voice per description (the sample line as its preview), keeps each preview as the sample file "
-      "(16-bit mono 24 kHz) and its voice id")
+      f"(16-bit mono 24 kHz) and its voice id (not met: {[k for k, v in _dchk.items() if not v] or 'none'}; designs sent: "
+      f"{[str(c.get('voice_prompt'))[:14] for c in _cv]}; format {_wfmt})")
 _n0 = len(_DS_SEEN)
 js, _ = ta("tts", "voice", "--run", str(AR), "--sample", "2", "--emotion", "tense=Low and tense, a little slower")
 _av = json.loads((AR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
