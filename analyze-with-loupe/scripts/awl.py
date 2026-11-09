@@ -11118,7 +11118,7 @@ def _el_make_passage(P: dict, k: int, body: dict, key: str, folder: Path, ps: di
             "stitching": {s: (body[s] if s == "previous_request_ids" else True) for s in ("previous_request_ids", "previous_text", "next_text")
                           if s in body} or None,
             "body_sha": _el_body_sha(body), "made": now_iso(), "made_ts": time.time(), "alignment": bool(align),
-            "shortened": bool(ps.get("shortened"))}
+            "shortened": bool(ps.get("shortened")), "tries": res.get("tries")}
     write_json(folder / f"passage-{k:02d}.json", meta)
     return {"ok": True, **meta}
 
@@ -11481,6 +11481,8 @@ def _tts_say(a):
          "passages": {"made_now": [k for k in todo if k in made and k not in reused], "reused_probe": reused or None, "total": upto,
                       "planned": len(passages)},
          "partial": partial, "loudness_lufs": lufs, "true_peak_db": tp, "elapsed_s": round(time.time() - t0, 1),
+         "resent_after_a_drop": ([k for k in todo if k in made and len(made[k].get("tries") or []) > 1] or None),
+         "resent_note": ("a passage sent again after a dropped connection (this PC's web shield resets connections) may be billed twice: compare credits.before and credits.after with characters_now"),
          "voice_match": {k_: v for k_, v in match.items() if k_ != "each"}, "engine": "elevenlabs", "model_id": P["model"],
          "characters_now": spent,
          "credits": {"before": credits_before.get("left"), "after": credits_after.get("left"), "tier": credits_before.get("tier")} if todo else None,

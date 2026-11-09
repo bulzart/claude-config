@@ -985,9 +985,22 @@ for _vid, _vnm, _vlb in [("vGEORGE", "George - Warm, Captivating Storyteller", {
     _EL["voices"][_vid] = {"voice_id": _vid, "name": _vnm, "category": "premade", "labels": _vlb, "preview_url": f"{_ELURL}/preview/{_vid}.mp3"}
 
 
+def _once(rs):
+    """The requests as the toolkit meant them: one sent again with the same path, query and body right after (a dropped connection;
+    this PC's security software resets local connections: 14 of 60 on 2026-11-09, WinError 10054) counts once, as its last answer,
+    the one the toolkit received."""
+    out_ = []
+    for r in rs:
+        if out_ and (out_[-1]["path"], out_[-1]["query"], out_[-1]["body"]) == (r["path"], r["query"], r["body"]):
+            out_[-1] = r
+        else:
+            out_.append(r)
+    return out_
+
+
 def _el_tts(since=0, ok=True):
-    """The text-to-speech requests the stand-in answered (ok) or refused since a point of its record."""
-    return [r for r in _EL["seen"][since:] if r["path"].startswith("/v1/text-to-speech/") and (r["status"] == 200) == ok]
+    """The text-to-speech requests the stand-in answered (ok) or refused since a point of its record (a resend counted once)."""
+    return _once([r for r in _EL["seen"][since:] if r["path"].startswith("/v1/text-to-speech/") and (r["status"] == 200) == ok])
 
 
 def _frames(p):
@@ -1065,7 +1078,7 @@ check(code == 2 and "100 to 1000" in js.get("error", "") and len(_EL["seen"]) ==
       "tts design refuses a sample line shorter than ElevenLabs' Voice Design takes, before any call")
 js, _ = ts(*_dargs)
 _design = js
-_dreq = [r for r in _EL["seen"][_n:] if r["path"] == "/v1/text-to-voice/design"]
+_dreq = _once([r for r in _EL["seen"][_n:] if r["path"] == "/v1/text-to-voice/design"])
 check(len(js.get("samples", [])) == 5 and all(Path(s["file"]).is_file() and Path(s["file"]).is_absolute() for s in js["samples"])
       and "5 samples" in (js.get("note") or "") and "full file path" in (js.get("note") or "")
       and [s["seed"] for s in js["samples"]] == [1106, 1107, 1108, 1109, 1110] and all(s.get("generated_voice_id") for s in js["samples"])

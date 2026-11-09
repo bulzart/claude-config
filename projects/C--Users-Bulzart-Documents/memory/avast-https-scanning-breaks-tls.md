@@ -23,3 +23,5 @@ Avast "Web/Mail Shield" HTTPS scanning is on (verified 2026-11-05): every HTTPS 
 - Don't change the user's Avast settings yourself; disabling HTTPS scanning is their call.
 
 Related: [[local-ai-installs]]
+
+**2026-11-09: it also resets plain local HTTP (127.0.0.1):** 14 of 60 POSTs with ~800 KB answers were cut (WinError 10054, "forcibly closed") and the 60 took 268 s instead of about 1 s. The toolkit resends after a drop, so a test's stand-in sees the request twice: tests that count requests count an identical resend once (t02 `_once`). With ElevenLabs a resend after the audio was made bills it twice: `T tts say` records each passage's tries and lists `resent_after_a_drop` (video 03's real narration had none: 9,399 characters billed for 9,399 sent). Never change Avast's settings (the user's call).
