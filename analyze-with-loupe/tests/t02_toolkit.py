@@ -11,7 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from t00_common import check, finish, make_clip, make_image_pdf, make_text_pdf, t, temp_library  # noqa: E402
 
 home = temp_library("tk")
-ENV = {"AWL_HOME": str(home)}
+# never the user's ElevenLabs key: an empty variable stops the toolkit from looking up the one stored for the user (the ElevenLabs tests
+# set their own fake key and the stand-in's address)
+ENV = {"AWL_HOME": str(home), "ELEVEN_API_KEY": "", "ELEVENLABS_API_KEY": ""}
 refs = home.parent / "refs"
 clip = make_clip(refs / "clip-a.mp4", seconds=4.0, flash=(2.0, 2.3), audio=True)
 silent = make_clip(refs / "clip-b.mp4", seconds=3.0, flash=None, audio=False)
@@ -479,12 +481,20 @@ check(code == 0 and f["has_video"] and f["has_audio"] and f["bed"] == "muted" an
 js, _, _ = t("voiceover", "align", "--generated", str(vo_fx / "with-voiceover.mp4"), "--voiceover", str(take), "--out", str(vo_fx / "align-mixed"), env=ENV)
 check(abs(js["global_offset_s"] - off) <= 0.02 and js["global_corr"] >= 0.98,
       f"the mixed file's sound is the take: align reads r={js['global_corr']} at {js['global_offset_s']} s (near 1 at the mix offset)")
-js, _, _ = t("voiceover", "mix", "--picture", str(vo_fx / "gen.mp4"), "--voiceover", str(take), "--offset", "3.0", "--bed", "keep", "--tempo", "1.05", "--out", str(vo_fx / "late.mp4"), env=ENV)
+js, code, _ = t("voiceover", "mix", "--picture", str(vo_fx / "gen.mp4"), "--voiceover", str(take), "--offset", "0.5", "--bed", "keep", "--out", str(vo_fx / "kept.mp4"), env=ENV)
 f = js["facts"]
-check(f["bed"] == "kept" and f["bed_gain"] == 0.3 and f["tempo"] == 1.05 and f["vo_speech_cut_s"] > 1.5 and abs(f["vo_speech_end_on_picture_s"] - (3.6 / 1.05 + 3.0)) <= 0.1,
-      f"a take placed late is reported as cut speech ({f['vo_speech_cut_s']} s past the picture's end), not refused")
-js, code, _ = t("voiceover", "mix", "--picture", str(vo_fx / "gen.mp4"), "--voiceover", str(take), "--tempo", "3", "--out", str(vo_fx / "bad.mp4"), env=ENV, ok=False)
-check(code == 2 and "--tempo" in js.get("error", ""), "mix refuses a tempo outside 0.5-2.0 (exit 2)")
+check(code == 0 and f["bed"] == "kept" and f["bed_gain"] == 0.3 and f["vo_gain"] == 1.0 and f["vo_speech_cut_s"] == 0
+      and abs(f["vo_speech_end_on_picture_s"] - 4.1) <= 0.1,
+      "voiceover mix --bed keep lays the whole take on the picture at its own level, the picture's sound under it")
+# the take is an ElevenLabs generation and is never edited (the user, 2026-11-09: "do not edit the delivered generation without any
+# exception"): only placed, whole, at its own level
+js, code, _ = t("voiceover", "mix", "--picture", str(vo_fx / "gen.mp4"), "--voiceover", str(take), "--offset", "3.0", "--bed", "keep", "--out", str(vo_fx / "late.mp4"), env=ENV, ok=False)
+check(code == 2 and "past the picture's end" in js.get("error", "") and not (vo_fx / "late.mp4").exists(),
+      "a take whose speech would run past the picture's end is refused, never cut (exit 2)")
+js, code, _ = t("voiceover", "mix", "--picture", str(vo_fx / "gen.mp4"), "--voiceover", str(take), "--offset", "-0.5", "--bed", "mute", "--out", str(vo_fx / "early.mp4"), env=ENV, ok=False)
+check(code == 2 and "negative offset" in js.get("error", ""), "a negative offset (it would cut the take's start) is refused (exit 2)")
+js, code, _ = t("voiceover", "mix", "--picture", str(vo_fx / "gen.mp4"), "--voiceover", str(take), "--vo-gain", "0.8", "--bed", "mute", "--out", str(vo_fx / "quiet.mp4"), env=ENV, ok=False)
+check(code == 2 and "--vo-gain" in js.get("error", ""), "a gain on the take is refused: it plays at its own level (exit 2)")
 
 js, _, _ = t("status", "--run", run_v.name, "--no-loupe", env=ENV)
 check(js["voiceover"]["takes"] == ["01", "02-c1", "03-c2"] and js["voiceover"]["enabled"] is None, "status lists the recorded takes before the choice is stored")
@@ -777,8 +787,8 @@ check([x["product"] for x in _imgs] == [False, True] and [r[0] for r in _awl._pi
       "a registry row whose type cell says product is a product row (a character's is not), and an input labelled with its id is a product view")
 
 # --- Static (contract item 36, the user 2026-11-05): 1 fps without extras, the image API through a local mock (the key never printed or
-# written), the prompts file and the user's folder (copied, never moved), the voice and bed stubs, the narration's words, the local render,
-# the Static contract. No model, no network, no Higgsfield, no Loupe.
+# written), the prompts file and the user's folder (copied, never moved), the voice through an ElevenLabs stand-in, the bed stub, the
+# narration's words, the local render, the Static contract. No model, no network, no Higgsfield, no Loupe.
 import base64 as _b64  # noqa: E402
 import io as _io  # noqa: E402
 import threading as _th  # noqa: E402
@@ -831,8 +841,163 @@ class _Mock(_BH):
 
 _srv = _HS(("127.0.0.1", 0), _Mock)
 _th.Thread(target=_srv.serve_forever, daemon=True).start()
-SENV = {**ENV, "AWL_TTS_STUB": "1", "AWL_MUSIC_STUB": "1", "AWL_TRANSCRIBE_STUB": "1", "OPENAI_API_KEY": _KEY,
-        "AWL_OPENAI_BASE_URL": f"http://127.0.0.1:{_srv.server_port}/v1", "DASHSCOPE_API_KEY": ""}
+
+
+# ElevenLabs (Eleven v4; the user, 2026-11-09: "we will only use elevenlabs v4", "do not edit the delivered generation without any
+# exception") through a local stand-in: the fake key and the stand-in's address only in the child's environment, every request recorded
+from http.server import ThreadingHTTPServer as _THS  # noqa: E402
+_ELKEY = "sk_el_test_NEVER_PRINT_5151"
+_EL = {"seen": [], "refuse": {"pcm_44100"}, "used": 0, "limit": 1_000_000, "rid": 0, "allow": None, "delivered": {}, "voices": {},
+       "d": 0.065}   # d: the seconds a character takes (about 170 words a minute; the long passage tests speak faster)
+_EL_LOCK = _th.Lock()
+_EL_EDGE = 0.15        # the silence before and after every take the stand-in delivers
+
+
+def _el_pcm(seconds, sr, freq=170.0):
+    n = int(round(seconds * sr))
+    tt = np.arange(n) / sr
+    sig = 0.3 * np.sin(2 * np.pi * freq * tt) * (1.0 + 0.3 * np.sin(2 * np.pi * 3.0 * tt))
+    e = int(round(_EL_EDGE * sr))
+    sig[:e] = 0.0
+    sig[max(e, n - e):] = 0.0
+    return (sig * 32767).astype("<i2").tobytes()
+
+
+def _el_encode(fmt, seconds, freq=170.0):
+    """The stand-in's audio in the asked format: raw 16-bit PCM for pcm_<rate>, an MP3 for mp3_<rate>_<kbps>, as ElevenLabs delivers them."""
+    parts = fmt.split("_")
+    if parts[0] == "pcm":
+        return _el_pcm(seconds, int(parts[1]), freq)
+    cp = subprocess.run([ffmpeg(), "-loglevel", "error", "-f", "s16le", "-ar", parts[1], "-ac", "1", "-i", "pipe:0", "-c:a", "libmp3lame",
+                         "-b:a", f"{parts[2]}k", "-f", "mp3", "pipe:1"], input=_el_pcm(seconds, int(parts[1]), freq), capture_output=True, check=True)
+    return cp.stdout
+
+
+class _ELMock(_BH):
+    def log_message(self, *a):
+        pass
+
+    def _send(self, code, obj, headers=None, raw=None, ctype="application/json"):
+        data = raw if raw is not None else json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _rec(self, body=None):
+        from urllib.parse import parse_qs, urlparse
+        u = urlparse(self.path)
+        r = {"method": self.command, "path": u.path, "query": {k: v[0] for k, v in parse_qs(u.query).items()},
+             "key": self.headers.get("xi-api-key"), "body": body, "status": None}
+        with _EL_LOCK:
+            _EL["seen"].append(r)
+        return r
+
+    def _answer(self, r, code, obj, **kw):
+        r["status"] = code
+        self._send(code, obj, **kw)
+
+    def do_GET(self):
+        r = self._rec()
+        p = r["path"]
+        if p.startswith("/preview/"):
+            self._answer(r, 200, None, raw=_el_encode("mp3_44100_128", 2.0, 210.0), ctype="audio/mpeg")
+        elif r["key"] != _ELKEY:
+            self._answer(r, 401, {"detail": {"code": "invalid_api_key", "message": "Invalid API key"}})
+        elif p == "/v1/user/subscription":
+            self._answer(r, 200, {"tier": "free", "status": "free", "character_count": _EL["used"], "character_limit": _EL["limit"],
+                                  "next_character_count_reset_unix": 1796828594, "can_use_instant_voice_cloning": False,
+                                  "can_use_professional_voice_cloning": False, "voice_limit": 3, "voice_slots_used": 0})
+        elif p == "/v1/models":
+            self._answer(r, 200, [{"model_id": "eleven_v4", "name": "Eleven v4", "can_do_text_to_speech": True, "can_use_style": False,
+                                   "can_use_speaker_boost": False, "maximum_text_length_per_request": 10000, "requires_alpha_access": False,
+                                   "model_rates": {"character_cost_multiplier": 1.0, "cost_discount_multiplier": 1.0}},
+                                  {"model_id": "eleven_multilingual_v2", "can_do_text_to_speech": True, "can_use_style": True}])
+        elif p == "/v1/voices":
+            self._answer(r, 200, {"voices": list(_EL["voices"].values())})
+        elif p.startswith("/v1/voices/") and p.rsplit("/", 1)[-1] in _EL["voices"]:
+            self._answer(r, 200, _EL["voices"][p.rsplit("/", 1)[-1]])
+        elif p.startswith("/v1/voices/"):
+            self._answer(r, 404, {"detail": {"code": "voice_not_found", "message": "A voice with that id was not found."}})
+        else:
+            self._answer(r, 404, {"detail": {"code": "not_found", "message": p}})
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+        r = self._rec(body)
+        p, fmt = r["path"], r["query"].get("output_format") or "mp3_44100_128"
+        if r["key"] != _ELKEY:
+            self._answer(r, 401, {"detail": {"code": "invalid_api_key", "message": "Invalid API key"}})
+        elif fmt in _EL["refuse"] and p != "/v1/text-to-voice":
+            self._answer(r, 403, {"detail": {"code": "output_format_not_allowed", "message": f"output_format {fmt} needs the Pro tier"}})
+        elif p == "/v1/text-to-voice/design":
+            prev = [{"audio_base_64": _b64.b64encode(_el_encode(fmt, 2.0, 150.0 + 20 * k)).decode(), "media_type": "audio/mpeg",
+                     "generated_voice_id": f"gen-{body.get('seed')}-{k}", "duration_secs": 2.0, "language": "en"} for k in range(3)]
+            self._answer(r, 200, {"previews": prev, "text": body.get("text")})
+        elif p == "/v1/text-to-voice":
+            vid = "vd" + str(body.get("generated_voice_id")).replace("-", "")
+            _EL["voices"][vid] = {"voice_id": vid, "name": body.get("voice_name"), "category": "generated", "labels": {}, "preview_url": None}
+            self._answer(r, 200, {"voice_id": vid, "name": body.get("voice_name")})
+        elif p.startswith("/v1/text-to-speech/") and p.split("/")[3] not in _EL["voices"]:
+            self._answer(r, 404, {"detail": {"code": "voice_not_found", "message": "A voice with that id was not found."}})
+        elif p.startswith("/v1/text-to-speech/"):
+            text = str(body.get("text") or "")
+            with _EL_LOCK:
+                over = (_EL["allow"] is not None and _EL["allow"] <= 0) or _EL["used"] + len(text) > _EL["limit"]
+                if not over:
+                    _EL["used"] += len(text)
+                    _EL["rid"] += 1
+                    rid = f"req-{_EL['rid']}"
+                    if _EL["allow"] is not None:
+                        _EL["allow"] -= 1
+            if over:
+                self._answer(r, 402, {"detail": {"code": "insufficient_credits", "message": "You have no credits left for this request."}})
+                return
+            d = _EL["d"]
+            audio = _el_encode(fmt, 2 * _EL_EDGE + d * len(text), 160.0 + 10 * (int(rid.split("-")[1]) % 7))
+            _EL["delivered"][rid] = {"format": fmt, "audio": audio, "text": text}
+            al = {"characters": list(text), "character_start_times_seconds": [round(_EL_EDGE + i * d, 4) for i in range(len(text))],
+                  "character_end_times_seconds": [round(_EL_EDGE + (i + 1) * d, 4) for i in range(len(text))]}
+            r["rid"] = rid
+            self._answer(r, 200, {"audio_base64": _b64.b64encode(audio).decode(), "alignment": al, "normalized_alignment": al},
+                         headers={"request-id": rid, "character-cost": str(len(text))})
+        else:
+            self._answer(r, 404, {"detail": {"code": "not_found", "message": p}})
+
+
+class _ELSrv(_THS):
+    daemon_threads = True
+
+
+_elsrv = _ELSrv(("127.0.0.1", 0), _ELMock)
+_th.Thread(target=_elsrv.serve_forever, daemon=True).start()
+_ELURL = f"http://127.0.0.1:{_elsrv.server_port}"
+for _vid, _vnm, _vlb in [("vGEORGE", "George - Warm, Captivating Storyteller", {"gender": "male", "age": "middle_aged", "accent": "british",
+                                                                                "descriptive": "mature", "use_case": "narrative_story"}),
+                         ("vDANIEL", "Daniel - Steady Broadcaster", {"gender": "male", "age": "middle_aged", "accent": "british",
+                                                                     "descriptive": "formal", "use_case": "informative_educational"}),
+                         ("vBRIAN", "Brian - Deep, Resonant", {"gender": "male", "age": "middle_aged", "accent": "american", "use_case": "social_media"}),
+                         ("vSARAH", "Sarah - Mature, Reassuring", {"gender": "female", "age": "young", "accent": "american",
+                                                                   "use_case": "entertainment_tv"})]:
+    _EL["voices"][_vid] = {"voice_id": _vid, "name": _vnm, "category": "premade", "labels": _vlb, "preview_url": f"{_ELURL}/preview/{_vid}.mp3"}
+
+
+def _el_tts(since=0, ok=True):
+    """The text-to-speech requests the stand-in answered (ok) or refused since a point of its record."""
+    return [r for r in _EL["seen"][since:] if r["path"].startswith("/v1/text-to-speech/") and (r["status"] == 200) == ok]
+
+
+def _frames(p):
+    with wave.open(str(p), "rb") as w_:
+        return w_.getframerate(), w_.readframes(w_.getnframes())
+
+
+SENV = {**ENV, "AWL_MUSIC_STUB": "1", "AWL_TRANSCRIBE_STUB": "1", "OPENAI_API_KEY": _KEY,
+        "AWL_OPENAI_BASE_URL": f"http://127.0.0.1:{_srv.server_port}/v1", "ELEVEN_API_KEY": _ELKEY, "ELEVENLABS_API_KEY": "",
+        "AWL_ELEVENLABS_BASE_URL": _ELURL}
 _outs = []
 
 
@@ -872,18 +1037,59 @@ _fmt = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["fo
 check(_fmt["image_size"] == "1216x2160" and _fmt["export"] == "1080x1920" and _fmt["quality"] == "high" and _fmt["preview"] == "720x1280",
       "static format stores the pick in state.json -> static.format")
 
-js, _ = ts("tts", "design", "--run", str(SR), "--text", "Most people never notice this.", "--instruct", "a calm deep male narrator",
-           "--instruct", "a warm female storyteller", "--instruct", "a gravelly older man", "--instruct", "a bright young woman, quick",
-           "--instruct", "a dry, wry middle-aged man")
+# the narration by ElevenLabs, Eleven v4 (contract item 36; the user, 2026-11-09: "we will only use elevenlabs v4" and "no edits should be
+# done from our side on the elevenlabs generation ... do not edit the delivered generation without any exception"): the stand-in above
+# answers every call; the delivered audio is never changed, the pace and the pauses come only from the request
+js, _ = ts("tts", "check", "--offline")
+check(js.get("ok") and js.get("key_variable") == "ELEVEN_API_KEY" and js.get("model_id") == "eleven_v4"
+      and js["model_caps"].get("voice_settings") == ["stability", "similarity_boost"] and js["model_caps"].get("speed") is False
+      and "never edited" in str(js.get("rule")) and _ELKEY not in json.dumps(js),
+      "tts check --offline: the variable that holds the key (never the key), Eleven v4 with its two settings and no speed, the no-edit rule")
+js, _, _ = t("tts", "check", "--offline", env={**SENV, "ELEVEN_API_KEY": "", "ELEVENLABS_API_KEY": _ELKEY})
+check(js.get("key_variable") == "ELEVENLABS_API_KEY" and js.get("key_present") is True, "the key is read from ELEVEN_API_KEY, else ELEVENLABS_API_KEY")
+js, _, _ = t("tts", "check", "--offline", env={**SENV, "ELEVEN_API_KEY": "", "ELEVENLABS_API_KEY": ""})
+check(js.get("ok") is False and js.get("key_present") is False and js.get("key_variable") is None, "without either variable tts check says the key is not there")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "check")
+check(js.get("ready") and js.get("answers") is True and js.get("model_offered") is True
+      and (js.get("subscription") or {}).get("characters_left") == _EL["limit"] - _EL["used"] and len(_EL["seen"]) > _n
+      and all(r["key"] == _ELKEY for r in _EL["seen"][_n:]),
+      "tts check reads the account's plan and characters left and that Eleven v4 is offered to it; the key travels only in its header")
+_dtext = "Most people never notice this. It sits in plain sight every single day, and almost nobody ever stops to ask why it is there."
+_ins = ["a calm deep male narrator, a measured pace", "a warm female storyteller, an unhurried pace", "a gravelly older man, quick but measured",
+        "a bright young woman, a quick pace", "a dry, wry middle-aged man, steady"]
+_dargs = ["tts", "design", "--run", str(SR), "--text", _dtext] + [x for i in _ins for x in ("--instruct", i)]
+_n = len(_EL["seen"])
+js, code = ts("tts", "design", "--run", str(SR), "--text", "Too short.", "--instruct", "a calm deep male narrator", ok=False)
+check(code == 2 and "100 to 1000" in js.get("error", "") and len(_EL["seen"]) == _n,
+      "tts design refuses a sample line shorter than ElevenLabs' Voice Design takes, before any call")
+js, _ = ts(*_dargs)
 _design = js
+_dreq = [r for r in _EL["seen"][_n:] if r["path"] == "/v1/text-to-voice/design"]
 check(len(js.get("samples", [])) == 5 and all(Path(s["file"]).is_file() and Path(s["file"]).is_absolute() for s in js["samples"])
-      and "5 samples" in (js.get("note") or "") and "full file path" in (js.get("note") or ""),
-      "tts design makes one sample per voice description (the stop offers five) and gives each one's full file path to play")
-js, _ = ts("tts", "voice", "--run", str(SR), "--sample", "2", "--emotion", "tense=Something was wrong. Very wrong.")
-_st = json.loads((SR / "state.json").read_text(encoding="utf-8"))
-check(js.get("ok") and _st["static"]["voice"]["sample"] == 2 and set(_st["static"]["voice"]["prompts"]) == {"neutral", "tense"},
-      "tts voice makes the picked sample the run's voice, with its emotion clip (state.json -> static.voice)")
-js, code = ts("tts", "design", "--run", str(SR), "--text", "Another line.", "--instruct", "another voice", ok=False)
+      and "5 samples" in (js.get("note") or "") and "full file path" in (js.get("note") or "")
+      and [s["seed"] for s in js["samples"]] == [1106, 1107, 1108, 1109, 1110] and all(s.get("generated_voice_id") for s in js["samples"])
+      and [r["status"] for r in _dreq[:2]] == [403, 200] and _dreq[0]["query"].get("output_format") == "pcm_44100"
+      and _dreq[1]["query"].get("output_format") == "mp3_44100_192" and len([r for r in _dreq if r["status"] == 200]) == 5
+      and all(r["body"]["model_id"] == "eleven_ttv_v3" for r in _dreq) and all((s.get("pace") or {}).get("wpm_overall") for s in js["samples"]),
+      "tts design: one ElevenLabs Voice Design per description (the stop offers five), each sample's full file path and its pace read; a "
+      "format the plan refuses (PCM at 44.1 kHz) costs nothing and the next one is asked, once")
+_n = len(_EL["seen"])
+js, code = ts("tts", "voice", "--run", str(SR), "--sample", "2", "--emotion", "tense=Low and tense, a little slower", ok=False)
+check(code == 2 and "audio tags" in js.get("error", "") and len(_EL["seen"]) == _n,
+      "a delivery written as prose is refused before any call: Eleven v4 takes audio tags")
+js, code = ts("tts", "voice", "--run", str(SR), "--sample", "2", "--settings", '{"speed": 1.1}', ok=False)
+check(code == 2 and "speed" in js.get("error", "") and "no such setting" in js.get("error", "") and len(_EL["seen"]) == _n,
+      "a speed setting is refused before any call: Eleven v4 has none, and nothing is sped after generation")
+js, _ = ts("tts", "voice", "--run", str(SR), "--sample", "2", "--emotion", "tense=[tense, cautious]", "--settings",
+           '{"stability": 0.6, "similarity_boost": 0.8}')
+_vs = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
+check(js.get("ok") and _vs["engine"] == "elevenlabs" and _vs["kind"] == "design" and _vs["sample"] == 2 and _vs["seed"] == 1107
+      and _vs["voice_id"] == "vd" + _design["samples"][1]["generated_voice_id"].replace("-", "") and _vs["deliveries"] == {"tense": "[tense, cautious]"}
+      and _vs["settings"] == {"stability": 0.6, "similarity_boost": 0.8} and Path(_vs["ref_audio"]).is_file()
+      and [r["body"]["generated_voice_id"] for r in _EL["seen"][_n:] if r["path"] == "/v1/text-to-voice"] == [_design["samples"][1]["generated_voice_id"]],
+      "tts voice --sample saves the picked design at ElevenLabs as the run's voice, with its settings and its emotion's tags (state.json -> static.voice)")
+js, code = ts(*_dargs, ok=False)
 check(code == 2 and "locked" in js.get("error", ""), "tts design refuses new samples once the run's narrator is picked (one voice per run)")
 js, code = ts("tts", "voice", "--run", str(SR), "--sample", "3", ok=False)
 check(code == 2 and "locked" in js.get("error", "") and json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]["sample"] == 2,
@@ -892,68 +1098,87 @@ check(code == 2 and "locked" in js.get("error", "") and json.loads((SR / "state.
     {"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
     {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "tense", "pause_after": 0.5},
     {"n": 3, "text": "What they took that night is still a secret.", "emotion": "neutral"}]}), encoding="utf-8")
+_n = len(_EL["seen"])
+_d1 = _EL["d"]
+js, code, _ = t("tts", "say", "--run", str(SR), "--video", "01", env={**SENV, "ELEVEN_API_KEY": "", "ELEVENLABS_API_KEY": ""}, ok=False)
+check(code == 2 and "ELEVEN_API_KEY" in js.get("error", "") and len(_EL["seen"]) == _n, "tts say without the key refuses before any call (exit 2)")
 js, _ = ts("tts", "say", "--run", str(SR), "--video", "01")
 _side = json.loads((SR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
 _ln = _side["lines"]
-check(js.get("lines") == 3 and _ln[1]["start"] >= _ln[0]["end"] + 0.34 and _ln[2]["start"] >= _ln[1]["end"] + 0.49
-      and abs(js["duration_s"] - _ln[2]["end"]) < 0.01 and js.get("loudness_lufs") is not None,
-      "tts say joins the lines with their pauses (default and planned) and records each line's exact start and end, and the loudness")
-js, _ = ts("tts", "say", "--run", str(SR), "--video", "01", "--only", "2")
-check(js.get("made_now") == [2], "tts say --only makes just that line again")
+_q = _el_tts(_n)
+_t1 = "In 1959 a farmer found something strange in his field. [tense, cautious] Nobody believed him, until the soldiers came."
+_t2 = "What they took that night is still a secret."
+check(js.get("ok") and js.get("lines") == 3 and [p["lines"] for p in _side["passages"]] == [[1, 2], [3]]
+      and [r["body"]["text"] for r in _q] == [_t1, _t2] and _q[0]["body"].get("next_text") == _t2
+      and "previous_request_ids" not in _q[0]["body"] and "previous_text" not in _q[0]["body"]
+      and _q[1]["body"].get("previous_request_ids") == [_q[0]["rid"]] and "next_text" not in _q[1]["body"]
+      and all(r["body"]["model_id"] == "eleven_v4" and r["body"]["voice_settings"] == {"stability": 0.6, "similarity_boost": 0.8}
+              and r["body"]["language_code"] == "en" and r["path"].endswith("/with-timestamps") for r in _q)
+      and [r["body"]["seed"] for r in _q] == [1107001, 1107002],
+      "tts say makes the plan's passages in the run's voice: a line's delivery tags before it (its emotion's) and the passage ending with "
+      "it, each passage stitched to the ones just made (their request ids, the next passage's text), Eleven v4 with the voice's two "
+      "settings and a seed per passage")
+_nd1 = SR / "30-assets" / "narration" / "video-01"
+_sr1, _all1 = _frames(SR / "30-assets" / "narration" / "video-01.wav")
+_parts1 = [_frames(_nd1 / f"passage-{k:02d}.wav") for k in (1, 2)]
+check(_all1 == b"".join(f_ for _s, f_ in _parts1) and all(s_ == _sr1 for s_, _f in _parts1)
+      and (_nd1 / "passage-01.delivered.mp3").read_bytes() == _EL["delivered"][_q[0]["rid"]]["audio"]
+      and abs(_side["duration_s"] - len(_all1) / 2 / _sr1) < 0.002 and "gain_pass" not in _side and "never edited" in str(_side.get("rule"))
+      and isinstance(_side.get("loudness_lufs"), (int, float)) and js.get("loudness_lufs") == _side["loudness_lufs"],
+      "the narration is the delivered passages end to end, sample for sample: nothing cut, trimmed, added or gained (each MP3 kept as "
+      "delivered beside its decode); its loudness is only read")
+_i2 = _t1.index("Nobody")
+check(abs(_ln[0]["start"] - _EL_EDGE) < 0.002 and abs(_ln[1]["start"] - (_EL_EDGE + _i2 * _d1)) < 0.002
+      and abs(_ln[1]["end"] - (_EL_EDGE + len(_t1) * _d1)) < 0.002 and abs(_ln[2]["start"] - (_side["passages"][1]["start"] + _EL_EDGE)) < 0.002
+      and _ln[1].get("delivery") == "[tense, cautious]" and all(r.get("timing") == "elevenlabs" for r in _ln),
+      f"each line's start and end come from ElevenLabs' own character timing, at its passage's place in the narration ({_ln})")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "01")
+check((js.get("passages") or {}).get("made_now") == [] and not _el_tts(_n) and js.get("characters_now") == 0,
+      "tts say again makes nothing already made with its present text: no request, no character spent twice")
+js, _ = ts("tts", "say", "--run", str(SR), "--video", "01", "--only", "3")
+_q = _el_tts(_n)
+check((js.get("passages") or {}).get("made_now") == [2] and [r["body"]["text"] for r in _q] == [_t2]
+      and _q[0]["body"].get("previous_request_ids") == [json.loads((_nd1 / "passage-01.json").read_text(encoding="utf-8"))["request_id"]],
+      "tts say --only N makes again only the passage holding that line, still stitched to the passage before it")
 _before = [(r["start"], r["end"]) for r in json.loads((SR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))["lines"]]
+_n = len(_EL["seen"])
 js, _ = ts("tts", "say", "--run", str(SR), "--video", "01", "--rejoin")
 _side = json.loads((SR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
-check(js.get("made_now") == [] and [(r["start"], r["end"]) for r in _side["lines"]] == _before and _side["loudness_pass"]["passes"] == 2
-      and js.get("loudness_lufs") is not None and abs(js["loudness_lufs"] + 14) < 1.0,
-      f"tts say --rejoin makes no line, keeps every line's timing and brings the narration to the target in two passes ({js.get('loudness_lufs')} LUFS)")
+_ln = _side["lines"]
+check((js.get("passages") or {}).get("made_now") == [] and len(_EL["seen"]) == _n and [(r["start"], r["end"]) for r in _ln] == _before,
+      "tts say --rejoin makes no passage and asks nothing of ElevenLabs; every line keeps its timing")
 js, code = ts("tts", "say", "--run", str(SR), "--video", "01", "--rejoin", "--only", "2", ok=False)
 check(code == 2 and "--rejoin" in js.get("error", ""), "tts say refuses --rejoin together with --only")
-(SR / "40-briefs" / "video-02-narration.json").write_text(json.dumps({"video": "02", "language": "english", "lines": [
-    {"n": 1, "text": "The letter arrived thirty years too late.", "emotion": "neutral"},
-    {"n": 2, "text": "It was in his own handwriting.", "strong": True, "delivery": "Quiet disbelief, slower, a catch in the voice", "pause_after": 0.6},
-    {"n": 3, "text": "He had never written it.", "emotion": "neutral"}]}), encoding="utf-8")
+# a line's own delivery: audio tags only, never prose; a speed asked anywhere is refused before anything is sent
+_l2 = [{"n": 1, "text": "The letter arrived thirty years too late.", "emotion": "neutral"},
+       {"n": 2, "text": "It was in his own handwriting.", "delivery": "Quiet disbelief, slower, a catch in the voice", "pause_after": 0.6},
+       {"n": 3, "text": "He had never written it.", "emotion": "neutral"}]
+_p2 = SR / "40-briefs" / "video-02-narration.json"
+_p2.write_text(json.dumps({"video": "02", "language": "english", "lines": _l2}), encoding="utf-8")
+_n = len(_EL["seen"])
+js, code = ts("tts", "say", "--run", str(SR), "--video", "02", ok=False)
+check(code == 2 and "not audio tags" in js.get("error", "") and len(_EL["seen"]) == _n, "a line's delivery written as prose is refused before any call")
+_l2[1]["delivery"] = "[quiet disbelief, slower]"
+_p2.write_text(json.dumps({"video": "02", "language": "english", "lines": _l2, "pace": {"speed": 1.1, "wpm_articulation": [180, 200]}}), encoding="utf-8")
+js, code = ts("tts", "say", "--run", str(SR), "--video", "02", ok=False)
+check(code == 2 and "no speed" in js.get("error", "") and len(_EL["seen"]) == _n, "a plan asking a speed (pace.speed) is refused before any call")
+_p2.write_text(json.dumps({"video": "02", "language": "english", "lines": _l2, "voice_settings": {"speed": 1.1}}), encoding="utf-8")
+js, code = ts("tts", "say", "--run", str(SR), "--video", "02", ok=False)
+check(code == 2 and "no such setting" in js.get("error", "") and len(_EL["seen"]) == _n, "a plan's voice setting the model lacks (speed) is refused before any call")
+_p2.write_text(json.dumps({"video": "02", "language": "english", "lines": _l2}), encoding="utf-8")
 js, _ = ts("tts", "say", "--run", str(SR), "--video", "02")
 _r2 = {r["n"]: r for r in json.loads((SR / "30-assets" / "narration" / "video-02.json").read_text(encoding="utf-8"))["lines"]}
-_vs = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
-check([s["seed"] for s in _design["samples"]] == [1106, 1107, 1108, 1109, 1110] and _vs["seed"] == 1107 and _r2[2]["made_by"] == "design"
-      and _r2[2]["seed"] == 1107 and _r2[1]["made_by"] == "clone" and _r2[2].get("delivery", "").startswith("Quiet disbelief")
-      and all(isinstance(_r2[k].get("timbre_sim"), float) and _r2[k].get("pitch_st") is not None for k in (1, 2, 3))
-      and [x["n"] for x in js["voice_match"]["strong_lines"]] == [2] and js["voice_match"]["clone_lines"]["timbre_sim_min"] is not None,
-      "a strong line is made by the design model with the picked sample's seed; every line is measured against the run's voice (pitch, timbre)")
+check([r["body"]["text"] for r in _el_tts(_n)] == ["The letter arrived thirty years too late. [quiet disbelief, slower] It was in his own handwriting.",
+                                                   "He had never written it."]
+      and _r2[2].get("delivery") == "[quiet disbelief, slower]" and "delivery" not in _r2[3] and "voice_match" in js,
+      "a line's own delivery tags go before it and end its passage (a tag holds until the next one); the next passage reads in the voice's own way")
 js, _ = ts("narration-words", "--run", str(SR), "--video", "01")
 check(js.get("cues", 0) > 0 and len(js.get("lines", [])) == 3 and Path(js["files"]["srt"]).is_file() and "lines_to_check" in js,
       "narration-words gives the timed words, cues, an SRT and per line what was heard against the script")
 check("wpm_speech" in (js.get("pace") or {}) and (js["pace"].get("within") or {}).get("wpm_speech") is None,
       "narration-words reports the pace by the references' yardstick (no target in this plan: nothing to compare)")
-# the pace (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very sure
-# that the workflow really achieves a 178-191 words a minute"): Qwen3-TTS on this PC has no speed setting, so the lines get one tempo
-# (pitch kept) and the default pause is set, both measured with the references' yardstick until they land in the plan's bands
-_pl = [{"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
-       {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "neutral", "pause_after": 0.5},
-       {"n": 3, "text": "What they took that night is still a secret.", "emotion": "neutral"}]
-(SR / "40-briefs" / "video-07-narration.json").write_text(json.dumps({"video": "07", "language": "english", "lines": _pl,
-                                                                     "pace": {"wpm_speech": [178, 191], "wpm_overall": [160, 170]},
-                                                                     "pause_default_s": 0.1}), encoding="utf-8")
-js, _ = ts("tts", "say", "--run", str(SR), "--video", "07")
-_p7 = json.loads((SR / "30-assets" / "narration" / "video-07.json").read_text(encoding="utf-8"))
-_pm = (_p7.get("pace") or {}).get("measured") or {}
-with wave.open(str(SR / "30-assets" / "narration" / "video-07" / "line-01.wav"), "rb") as _w:
-    _raw1 = _w.getnframes() / _w.getframerate()
-check(js.get("ok") and (js.get("pace") or {}).get("within") == {"wpm_speech": True, "wpm_overall": True}
-      and 178 <= _pm.get("wpm_speech", 0) <= 191 and 160 <= _pm.get("wpm_overall", 0) <= 170
-      and 1.1 < _p7["pace"]["tempo"] < 1.3 and _p7["pace"]["method"] == "rubberband" and _p7["pace"]["model_rate"] is None
-      and abs(_raw1 - 10 / 2.6) < 0.05 and all("paced" in Path(r["file"]).parts and r.get("raw_file") for r in _p7["lines"])
-      and _p7["pause_default_s"] > 0.1 and abs(_p7["lines"][2]["start"] - _p7["lines"][1]["end"] - 0.5) < 0.01,
-      f"tts say brings a narration to the plan's pace: one tempo with the pitch kept and the default pause set, measured with the "
-      f"references' yardstick into both bands, the made lines untouched ({_pm.get('wpm_speech')} and {_pm.get('wpm_overall')} wpm, "
-      f"tempo {_p7['pace']['tempo']}, pause {_p7['pause_default_s']} s)")
-js, _ = ts("tts", "say", "--run", str(SR), "--video", "07", "--rejoin")
-check(js.get("made_now") == [] and (js.get("pace") or {}).get("within", {}).get("wpm_speech") is True,
-      "tts say --rejoin paces the existing lines again without making any")
-# the pace aimed at a point, and the judge's forecast (the user, 2026-11-08: "the problem was with this word "We didn't aim for 209.",
-# because every step should be taken carefully and thoroghfully, and nothing should turn out as unexpected"; static §6, §13): the fair
-# measure (the words over their span with every pause of 0.25 s or more taken out), the voice's learned fit, the point within its
-# tolerance, a point the plan's own pauses cannot reach named before and after, the image and bed plans' risks, the memory record
+# the fair measure, the captions' words in their own line, a plan's pace read as a point (static §6, §13)
 _pw = _awl._pace_of_words([{"s": 0.0, "e": 0.5}, {"s": 0.5, "e": 1.0}, {"s": 1.2, "e": 1.5}, {"s": 2.5, "e": 3.0}])
 check(_pw["wpm_articulation"] == 120.0 and _pw["wpm_overall"] == 80.0 and _pw["pauses_per_minute"] == 20.0 and _pw["pause_s_median"] == 1.0
       and _pw["long_pauses_per_10min"] == 200.0 and _pw["pause_share"] == 0.333,
@@ -978,38 +1203,69 @@ check(_ptn["measure"] == "wpm_articulation" and _ptn["target_speak"] == 211.9 an
       and _ptn["tol"] == 0.01 and _pto["measure"] == "wpm_speech" and _pto["target_speak"] == 195.0 and _pto["target_overall"] == 177.5
       and _pto["from_judge"] is False and _awl._pace_targets({}) is None,
       "a plan's pace is read as a point to aim at: the judge's with its tolerance, else each band's middle; an older plan keeps its measure")
-_fit7 = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"].get("fit") or {}
-check(_fit7.get("video") == "07" and abs(float(_fit7.get("wpm_articulation_at_1") or 0) - 156) < 4
-      and abs(float(_fit7.get("nonword_s_per_line_at_1") if _fit7.get("nonword_s_per_line_at_1") is not None else 9)) < 0.05,
-      f"a paced narration teaches the run's voice its fit (state.json -> static.voice.fit): its words a minute at speed 1 by the fair "
-      f"measure and the silence it adds beside the planned pauses ({_fit7.get('wpm_articulation_at_1')} wpm, the stub speaks 156)")
+# the probe and the forecast (static §13, J1): passage 1 made exactly as say would make it, measured, recorded, reused by say
 _pl8 = [{"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
         {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "neutral", "pause_after": 0.9},
-        {"n": 3, "text": "What they took that night is still a secret.", "emotion": "neutral"},
+        {"n": 3, "text": "What they took that night is still a secret.", "emotion": "neutral", "passage_break": True},
         {"n": 4, "text": "The papers were sealed for fifty years.", "emotion": "neutral"},
         {"n": 5, "text": "Then a single page went missing.", "emotion": "neutral", "pause_after": 0.6},
         {"n": 6, "text": "Nobody has found it since.", "emotion": "neutral"}]
-(SR / "40-briefs" / "video-08-narration.json").write_text(json.dumps({"video": "08", "language": "english", "lines": _pl8, "pause_default_s": 0.3,
+(SR / "40-briefs" / "video-08-narration.json").write_text(json.dumps({"video": "08", "language": "english", "lines": _pl8, "target_length_s": 20,
     "pace": {"refs": [], "wpm_articulation": [180, 200], "wpm_overall": [150, 170], "target": {"wpm_articulation": 190.0, "wpm_overall": 160.0},
              "tolerance": 0.015, "why": "test"}}), encoding="utf-8")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "probe", "--run", str(SR), "--video", "08")
+_q = _el_tts(_n)
+_pt8 = " ".join(x["text"] for x in _pl8[:3])
+_fit8 = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]["fit"]
+_prb = json.loads((SR / "30-assets" / "voice" / "probes.json").read_text(encoding="utf-8"))["probes"]
+check(js.get("ok") and js.get("passage") == 1 and js.get("lines") == [1, 2, 3] and [r["body"]["text"] for r in _q] == [_pt8]
+      and js.get("characters") == len(_pt8) and (js.get("measured") or {}).get("wpm_articulation") and js.get("reused_by_say") is True
+      and (js.get("off_by") or {}).get("wpm_articulation") is not None and _fit8["points"][-1]["from"] == "probe"
+      and _fit8["points"][-1]["video"] == "08" and _prb[-1]["passage"] == 1
+      and "speed" not in json.dumps({k: v for k, v in js.items() if k != "note"}),
+      "tts probe makes passage 1 exactly as say would and measures it by the references' yardstick against the plan's point, recorded for "
+      "the forecast (state.json -> static.voice.fit, 30-assets/voice/probes.json)")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "probe", "--run", str(SR), "--video", "08")
+check(js.get("ok") and js.get("characters") == 0 and len(_EL["seen"]) == _n, "the same probe asked again is read from its files: nothing asked of ElevenLabs")
 js, _ = ts("static", "forecast", "--run", str(SR), "--video", "08", "--part", "narration")
-_f8 = (js.get("narration") or {}).get("forecast") or {}
-check(js.get("ok") and _f8.get("overall_reachable") is True and abs(float(_f8.get("default_pause_s") or 0) - 0.368) < 0.03
-      and abs(float((_f8.get("predicted") or {}).get("wpm_overall") or 0) - 160) < 1.0 and (_f8.get("predicted") or {}).get("wpm_articulation") == 190.0
-      and (SR / "40-briefs" / "video-08-forecast.json").is_file(),
-      f"static forecast predicts a narration before it is made: from the voice's fit, the default pause that brings the overall pace to its "
-      f"point, and the pace and pauses it gives ({_f8.get('default_pause_s')} s, {(_f8.get('predicted') or {}).get('wpm_overall')} wpm)")
+_fn = js.get("narration") or {}
+_f8 = _fn.get("forecast") or {}
+_vid = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]["voice_id"]
+_same = [p for p in json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]["fit"]["points"]
+         if p["voice_id"] == _vid and not p.get("delivery") and p.get("settings") == {"stability": 0.6, "similarity_boost": 0.8}][-1]
+_w8n = sum(len(x["text"].split()) for x in _pl8)
+
+
+def _keys(o):
+    return ([k for k in o] + [kk for v in o.values() for kk in _keys(v)] if isinstance(o, dict)
+            else [kk for v in o for kk in _keys(v)] if isinstance(o, list) else [])
+
+
+check(js.get("ok") and _f8.get("from_point") == "same" and _same["from"] == "probe"
+      and abs(float((_f8.get("predicted") or {}).get("length_s") or 0) - round(_w8n * 60 / _same["wpm_delivered"], 1)) < 0.05
+      and (_fn.get("credits") or {}).get("characters_left") == _EL["limit"] - _EL["used"] and ((_fn.get("plan") or {}).get("passages") or {}).get("count") == 2
+      and "length_vs_target_s" in _f8 and (_f8.get("off_by") or {}).get("wpm_articulation") is not None and not [k for k in _keys(_fn) if "speed" in k],
+      "static forecast predicts the narration from the voice's measured point for these levers (its words a minute over the delivered "
+      "audio), with the passages and the characters they send against the account's; no speed anywhere")
+_n = len(_EL["seen"])
 js, _ = ts("tts", "say", "--run", str(SR), "--video", "08")
-_p8 = js.get("pace") or {}
-_m8 = _p8.get("measured") or {}
-check(js.get("ok") and _p8.get("measure") == "wpm_articulation" and _p8.get("on_target") == {"speak": True, "overall": True}
-      and abs(float(_m8.get("wpm_articulation") or 0) / 190 - 1) <= 0.015 and abs(float(_m8.get("wpm_overall") or 0) / 160 - 1) <= 0.015
-      and _p8.get("first_setting_from") == "the voice's fit" and _p8.get("passes", 9) <= 2 and _p8.get("unreachable") is None
-      and (_p8.get("target") or {}).get("point") == {"wpm_articulation": 190.0, "wpm_overall": 160.0}
-      and abs(float(_p8.get("pause_default_s") or 0) - float(_f8.get("default_pause_s") or 0)) < 0.03,
-      f"tts say aims at the judge's point, not anywhere in the band: the first setting from the voice's fit, both measures within the "
-      f"tolerance of their points, the pause the forecast predicted ({_m8.get('wpm_articulation')} and {_m8.get('wpm_overall')} wpm in "
-      f"{_p8.get('passes')} passes, pause {_p8.get('pause_default_s')} s)")
+_q = _el_tts(_n)
+_pm8 = json.loads((SR / "30-assets" / "narration" / "video-08" / "passage-01.json").read_text(encoding="utf-8"))
+check(js.get("ok") and (js.get("passages") or {}).get("reused_probe") == [1] and (js.get("passages") or {}).get("made_now") == [2]
+      and len(_q) == 1 and _q[0]["body"]["text"].startswith("The papers were sealed") and _q[0]["body"].get("previous_request_ids") == [_pm8["request_id"]]
+      and _pm8.get("reused_probe"),
+      "tts say uses the passage-1 probe made exactly as it would make it (nothing billed twice) and stitches passage 2 to it")
+_fit_before = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]["fit"]
+_n = len(_EL["seen"])
+js, _ = ts("tts", "probe", "--run", str(SR), "--video", "08", "--voice-id", "vDANIEL", "--delivery", "[quick, measured pace]")
+_q = _el_tts(_n)
+check(js.get("ok") and js.get("candidate") is True and len(_q) == 1 and _q[0]["path"].startswith("/v1/text-to-speech/vDANIEL/")
+      and _q[0]["body"]["text"].startswith("[quick, measured pace] In 1959")
+      and json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]["fit"] == _fit_before,
+      "tts probe measures a candidate voice and another pace tag without making them the run's: the levers are tried in the request, "
+      "never on the delivered audio")
 js, _ = ts("narration-words", "--run", str(SR), "--video", "08")
 _nw8 = js.get("pace") or {}
 check(_nw8.get("measure") == "wpm_articulation" and "speak" in (_nw8.get("on_target") or {})
@@ -1022,36 +1278,6 @@ check(isinstance((js.get("words_kept_in_their_line") or {}).get("moved"), int) a
       and all(l["start"] - 0.006 <= w["s"] and w["e"] <= l["end"] + 0.006 for w, l in zip(_w8, _own8)),
       f"narration-words keeps every caption word inside its own line's audio (the stub crowds its words into the first second) and "
       f"says how many it moved: {js.get('words_kept_in_their_line')}")
-_pl9 = [dict(x) for x in _pl8]
-_pl9[1]["pause_after"] = 1.5
-_pl9[4]["pause_after"] = 1.5
-(SR / "40-briefs" / "video-09-narration.json").write_text(json.dumps({"video": "09", "language": "english", "lines": _pl9, "pause_default_s": 0.3,
-    "pace": {"wpm_articulation": [180, 200], "wpm_overall": [165, 185], "target": {"wpm_articulation": 190.0, "wpm_overall": 175.0}}}),
-    encoding="utf-8")
-js, _ = ts("static", "forecast", "--run", str(SR), "--video", "09", "--part", "narration")
-_f9 = (js.get("narration") or {}).get("forecast") or {}
-check(_f9.get("overall_reachable") is False and float(_f9.get("seconds_over") or 0) > 1.0,
-      f"static forecast names an overall point the plan's own pauses cannot reach, before anything is made ({_f9.get('seconds_over')} s over)")
-js, _ = ts("tts", "say", "--run", str(SR), "--video", "09")
-_p9 = js.get("pace") or {}
-check(js.get("ok") and (_p9.get("on_target") or {}).get("speak") is True and (_p9.get("on_target") or {}).get("overall") is False
-      and "floor" in str(_p9.get("unreachable")),
-      f"tts say reports a point the planned pauses leave no room for as unreachable, with its cause, never as a pace that merely landed "
-      f"somewhere ({str(_p9.get('unreachable'))[:90]})")
-# the plan's own floor for the default pause (the judge keeps every default join heard clearly as a pause, static §13), and the
-# narration that plays is the very file its pace was measured on (2026-11-08: the raw join read 212.7, the delivered file 207.4)
-(SR / "40-briefs" / "video-10-narration.json").write_text(json.dumps({"video": "10", "language": "english", "lines": [dict(x) for x in _pl8],
-    "pause_default_s": 0.3, "pace": {"wpm_articulation": [180, 200], "wpm_overall": [150, 185],
-                                      "target": {"wpm_articulation": 190.0, "wpm_overall": 175.0}, "pause_floor_s": 0.3}}), encoding="utf-8")
-js, _ = ts("tts", "say", "--run", str(SR), "--video", "10")
-_p10 = js.get("pace") or {}
-_s10 = json.loads((SR / "30-assets" / "narration" / "video-10.json").read_text(encoding="utf-8"))
-check(js.get("ok") and _p10.get("pause_floor_s") == 0.3 and abs(float(_p10.get("pause_default_s") or 0) - 0.3) < 0.005
-      and (_p10.get("on_target") or {}).get("speak") is True and (_p10.get("on_target") or {}).get("overall") is False
-      and "(0.3 s)" in str(_p10.get("unreachable")) and not (SR / "30-assets" / "narration" / "video-10.pace.wav").exists()
-      and Path(_s10["file"]).is_file() and "as delivered" in str((_s10.get("pace") or {}).get("yardstick")),
-      f"the plan's own floor for the default pause holds (the loop names the point it then cannot reach), and the narration is the very "
-      f"file its pace was measured on ({_p10.get('pause_default_s')} s; {str(_p10.get('unreachable'))[:70]})")
 _s8 = json.loads((SR / "30-assets" / "narration" / "video-08.json").read_text(encoding="utf-8"))
 _h8 = []
 for _r8 in _s8["lines"]:
@@ -1060,11 +1286,133 @@ for _r8 in _s8["lines"]:
     _h8 += [{"w": w, "s": round(_r8["start"] + i * _st8, 3), "e": round(_r8["start"] + (i + 1) * _st8, 3)} for i, w in enumerate(_w8)]
 (SR / "30-assets" / "narration" / "video-08.words.json").write_text(json.dumps({"video": "08", "heard": _h8}), encoding="utf-8")
 js, _ = ts("tts", "fit", "--run", str(SR), "--video", "08")
-_fv = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"].get("fit") or {}
-check(js.get("ok") and _fv.get("video") == "08" and abs(float(_fv.get("wpm_articulation_at_1") or 0) - 156) < 4
-      and (_fv.get("breakdown") or {}).get("joins") == 5 and abs(float(_fv.get("join_excess_s_at_1") if _fv.get("join_excess_s_at_1") is not None else 9)) < 0.03,
-      f"tts fit learns the voice's fit again from a made narration and the words heard in it, with no model: its words a minute at speed 1 "
-      f"and the silence it adds at the joins ({_fv.get('wpm_articulation_at_1')} wpm, {_fv.get('join_excess_s_at_1')} s)")
+_fv = json.loads((SR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]["fit"]["points"]
+check(js.get("ok") and _fv[-1]["from"] == "narration-words" and _fv[-1]["video"] == "08" and _fv[-1].get("wpm_delivered")
+      and _fv[-1].get("wpm_articulation") and (js.get("point") or {}).get("passages") == 2,
+      f"tts fit learns the voice's point again from a made narration and the words heard in it, with no model ({_fv[-1].get('wpm_articulation')} wpm)")
+# a voice the account has (the premade ones on any plan): listed and measured from its own preview for free, then taken as the run's voice
+js, _ = ts("new-run", "--mode", "analyze", "--slug", "static-el")
+ER = Path(js["run_dir"])
+ts("state", "--run", str(ER), "set", "analyze_submode=static", "static_images=api", "audio_ingest=whisper", "qc_fixes=auto", "capcut_plan=free")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "voices", "--run", str(ER))
+check(js.get("ok") and js.get("count") == len(_EL["voices"]) and (ER / "30-assets" / "voice" / "voices.json").is_file()
+      and all("preview" not in v for v in js["voices"])
+      and not _el_tts(_n), "tts voices lists the account's voices with their labels, nothing billed")
+js, _ = ts("tts", "voices", "--run", str(ER), "--gender", "male", "--accent", "british", "--measure")
+_pv = [r for r in _EL["seen"][_n:] if r["path"].startswith("/preview/")]
+check([v["voice_id"] for v in js["voices"]] == ["vGEORGE", "vDANIEL"] and all(Path(v["preview"]["file"]).is_file()
+                                                                             and v["preview"].get("wpm_overall") for v in js["voices"])
+      and _pv and all(r["key"] is None for r in _pv) and not _el_tts(_n)
+      and json.loads((ER / "30-assets" / "voice" / "voices.json").read_text(encoding="utf-8"))["measured"] is True,
+      "tts voices --measure reads each listed voice's own preview by the references' yardstick: free (no text-to-speech call) and the "
+      "key never goes to the preview's host")
+js, _ = ts("tts", "voices", "--run", str(ER), "--search", "storyteller")
+check([v["voice_id"] for v in js["voices"]] == ["vGEORGE"], "tts voices --search keeps the voices whose name, labels or description hold the words")
+(ER / "40-briefs").mkdir(parents=True, exist_ok=True)
+(ER / "40-briefs" / "video-01-narration.json").write_text(json.dumps({"video": "01", "language": "english", "lines": _pl8[:3],
+    "pace": {"wpm_articulation": [180, 200], "target": {"wpm_articulation": 190.0}}}), encoding="utf-8")
+js, _ = ts("static", "forecast", "--run", str(ER), "--video", "01", "--part", "narration")
+check("no ElevenLabs voice" in str(((js.get("narration") or {}).get("forecast") or {}).get("note")), "the forecast says when the run has no ElevenLabs voice yet")
+js, code = ts("tts", "say", "--run", str(ER), "--video", "01", ok=False)
+check(code == 2 and "no ElevenLabs voice" in js.get("error", "") and "T tts voices" in js.get("error", ""), "tts say without a run voice says how to pick one")
+js, _ = ts("tts", "voice", "--run", str(ER), "--voice-id", "vGEORGE")
+_ev = json.loads((ER / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
+check(js.get("ok") and _ev["engine"] == "elevenlabs" and _ev["voice_id"] == "vGEORGE" and _ev["kind"] == "premade"
+      and (_ev.get("labels") or {}).get("accent") == "british" and Path(_ev.get("ref_audio") or "").is_file()
+      and _ev.get("ref_from") == "the voice's own preview at ElevenLabs",
+      "tts voice --voice-id takes a voice the account has as the run's voice, its own preview kept as the reference recording")
+js, code = ts("tts", "voice", "--run", str(ER), "--voice-id", "vNOPE", "--replace", ok=False)
+check(code == 1 and "not on the account" in js.get("error", "")
+      and json.loads((ER / "state.json").read_text(encoding="utf-8"))["static"]["voice"]["voice_id"] == "vGEORGE",
+      "a voice the account does not have is refused and the run's voice stays")
+js, _ = ts("static", "forecast", "--run", str(ER), "--video", "01", "--part", "narration")
+check("no measured point" in str(((js.get("narration") or {}).get("forecast") or {}).get("note"))
+      and ((js.get("narration") or {}).get("lever") or {}).get("voice_id") == "vGEORGE",
+      "before any probe the forecast names the free and the billed way to measure the voice")
+# the passages and a narration that stops early, in a run of their own (a voice the account has; the stand-in speaks fast here, so the
+# long plans stay quick)
+js, _ = ts("new-run", "--mode", "analyze", "--slug", "static-passages")
+PR = Path(js["run_dir"])
+ts("state", "--run", str(PR), "set", "analyze_submode=static", "static_images=api", "audio_ingest=whisper", "qc_fixes=auto", "capcut_plan=free")
+ts("static", "format", "--run", str(PR), "--aspect", "9:16", "--res", "1080", "--quality", "high")
+ts("tts", "voice", "--run", str(PR), "--voice-id", "vBRIAN")
+(PR / "40-briefs").mkdir(parents=True, exist_ok=True)
+_EL["d"] = 0.008
+# the passages (static §6 "Passages"): at most 850 characters, ending at a line marked passage_break, where a line's own delivery ends, and
+# when too long at the plan's largest pause in their second half; a pause asked of the model with tags_after; PCM taken as delivered
+_l12 = [{"n": i, "text": f"Line {i:02d} " + " ".join(["word"] * 27) + "."} for i in range(1, 19)]
+_l12[4]["passage_break"] = True
+_l12[8]["delivery"] = _l12[9]["delivery"] = "[slowly]"
+_l12[11]["tags_after"] = "[long pause]"
+_l12[12]["pause_after"] = 1.2
+_l12[13]["pause_after"] = _l12[14]["pause_after"] = 0.2
+for _v in ("12", "13", "14", "15"):
+    (PR / "40-briefs" / f"video-{_v}-narration.json").write_text(json.dumps({"video": _v, "language": "english", "lines": _l12}), encoding="utf-8")
+_EL["refuse"] = set()
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(PR), "--video", "12")
+_EL["refuse"] = {"pcm_44100"}
+_s12 = json.loads((PR / "30-assets" / "narration" / "video-12.json").read_text(encoding="utf-8"))
+_q = _el_tts(_n)
+_rids = [r["rid"] for r in _q]
+_tx = [r["body"]["text"] for r in _q]
+check(js.get("ok") and [p["lines"] for p in _s12["passages"]] == [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13], [14, 15, 16, 17, 18]]
+      and all(len(x) <= 850 for x in _tx) and _tx[1].count("[slowly]") == 1 and _tx[1].index("[slowly]") < _tx[1].index("Line 09")
+      and "[slowly]" not in _tx[2] and " [long pause] Line 13" in _tx[2]
+      and [r["body"].get("previous_request_ids") for r in _q] == [None, _rids[:1], _rids[:2], _rids[:3]]
+      and [("next_text" in r["body"]) for r in _q] == [True, True, True, False] and _s12.get("pause_after_not_placed") == [13, 14, 15],
+      "passages: at most 850 characters, ending at a passage_break, where a delivery ends (a run of lines sharing one tag carries it once), "
+      "and, too long, at the plan's largest pause in their second half; a pause asked with tags_after; up to three stitched request ids; a "
+      "planned pause_after is a hint, never a silence placed")
+_sr12, _all12 = _frames(PR / "30-assets" / "narration" / "video-12.wav")
+check(_sr12 == 44100 and _all12 == b"".join(_EL["delivered"][r]["audio"] for r in _rids)
+      and not list((PR / "30-assets" / "narration" / "video-12").glob("*.delivered.*")) and _s12["format"]["sample_rate"] == 44100,
+      "in PCM the narration's samples are the very bytes ElevenLabs delivered, end to end")
+# the characters run out (--budget, the account's, or ElevenLabs' own refusal): the narration is what was made, flagged partial
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(PR), "--video", "13", "--budget", "1300")
+_s13 = json.loads((PR / "30-assets" / "narration" / "video-13.json").read_text(encoding="utf-8"))
+check(js.get("ok") and (js.get("partial") or {}).get("lines_made") == [1, 5] and len(_el_tts(_n)) == 1
+      and ((js.get("partial") or {}).get("stopped") or {}).get("why") == "--budget" and (_s13.get("partial") or {}).get("passages_made") == 1
+      and [r["n"] for r in _s13["lines"]] == [1, 2, 3, 4, 5],
+      "tts say --budget stops before a passage the characters left do not cover: the narration is the passages made, flagged partial")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(PR), "--video", "13", "--budget", "500", "--fill")
+_s13 = json.loads((PR / "30-assets" / "narration" / "video-13.json").read_text(encoding="utf-8"))
+_q = _el_tts(_n)
+check(js.get("ok") and [r["n"] for r in _s13["lines"]] == [1, 2, 3, 4, 5, 6, 7, 8] and len(_q) == 1 and "next_text" not in _q[0]["body"]
+      and len(_q[0]["body"]["text"]) <= 500 and "[slowly]" not in _q[0]["body"]["text"] and _s13["passages"][1].get("shortened") is True
+      and ((_s13.get("partial") or {}).get("stopped") or {}).get("shortened_to_lines") == [6, 7, 8],
+      "tts say --fill makes the last passage from the whole lines that still fit: the narration stops at a line's end, never inside one")
+(PR / "40-briefs" / "video-13-images.json").write_text(json.dumps({"video": "13", "transition": "cut", "images": [
+    {"image": 1, "from_line": 1, "motion": "none"}, {"image": 2, "from_line": 6, "motion": "none"},
+    {"image": 3, "from_line": 9, "motion": "none"}, {"image": 4, "from_line": 14, "motion": "none"}]}), encoding="utf-8")
+js, code = ts("slideshow", "plan", "--run", str(PR), "--video", "13", ok=False)
+_tl13 = json.loads((PR / "40-briefs" / "video-13-timeline.json").read_text(encoding="utf-8"))
+check(code == 0 and (js.get("partial_narration") or {}).get("ends_at_line") == 8 and (js.get("partial_narration") or {}).get("images_left_out") == [3, 4]
+      and [s_[0] for s_ in js.get("image_spans") or []] == [1, 2] and _tl13.get("images_after_narration") == [3, 4],
+      "slideshow plan on a partial narration leaves out the images whose line comes after its end and lists them, without failing")
+_EL["allow"] = 1
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(PR), "--video", "14")
+_EL["allow"] = None
+check(js.get("ok") and (js.get("partial") or {}).get("lines_made") == [1, 5] and len(_el_tts(_n)) == 1
+      and len([r for r in _el_tts(_n, ok=False) if r["status"] == 402]) == 1 and "402" in str(((js.get("partial") or {}).get("stopped") or {}).get("why")),
+      "a passage ElevenLabs refuses for credits (402) ends the narration there: the passages made are kept, flagged partial")
+_EL["limit"] = _EL["used"] + 800
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(PR), "--video", "15")
+_EL["limit"] = 1_000_000
+_c1 = len(_el_tts(_n)[0]["body"]["text"]) if _el_tts(_n) else None
+check(((js.get("partial") or {}).get("stopped") or {}).get("why") == "the account's characters" and len(_el_tts(_n)) == 1
+      and (js.get("credits") or {}).get("before") == 800 and (js.get("credits") or {}).get("after") == 800 - (_c1 or 0),
+      "the account's characters left (read before the first passage) stop the narration before a passage they do not cover")
+_EL["d"] = 0.065
+check(not any(_ELKEY in o for o in _outs)
+      and not any(_ELKEY in p.read_text(encoding="utf-8", errors="ignore") for R_ in (SR, ER, PR) for p in R_.rglob("*")
+                  if p.is_file() and p.suffix in (".json", ".md", ".txt")),
+      "the ElevenLabs key is never printed and never written to a run")
 js, _ = ts("new-run", "--mode", "analyze", "--slug", "static-forecast")
 FR = Path(js["run_dir"])
 _fsl = "Flat 2D vector illustration with thick dark outlines."
@@ -1100,7 +1448,7 @@ try:
     _awl._model_memory_note("music", {"op": "make", "model": "acestep-v15"}, {"ok": False, "peak_gb": 12.83},
                             "[memguard] STOPPED the app to protect Windows: free RAM 4.4 GB, free commit 2.0 GB (app was using 12.8 GB).\n"
                             "[memguard] peak memory used by the app: 12.83 GB (cap 20.0 GB)", 14.8, 1)
-    _awl._model_memory_note("tts", {"op": "say", "model": "qwen3-tts"}, {"ok": True, "peak_gb": 12.68}, "", 15.1, 0)
+    _awl._model_memory_note("image", {"op": "generate", "model": "flux3-image-klein-int8"}, {"ok": True, "peak_gb": 12.68}, "", 15.1, 0)
     _mmj = json.loads(_mmp.read_text(encoding="utf-8"))["jobs"]
     _fmm = _awl._fc_memory("music", 3.0)
 finally:
@@ -1518,7 +1866,8 @@ _ef = {e["n"]: e for e in _tlx["effects"]}
 _cut2, _cut3 = _tlx["images"][1]["start"], _tlx["images"][2]["start"]
 check(js.get("ok") and js.get("undecided") == [] and -1 / 30 - 1e-6 <= _ef[1]["start"] - (_cut2 - 0.5) <= 1e-6 and _ef[1]["track"] == "fx1"
       and abs(_ef[2]["start"] - (_cut3 - 0.2)) < 1e-3 and _ef[2]["track"] == "sfx1" and _ef[1]["key_color"] == _g["key_green"]
-      and abs(_ef[3]["start"] - 0.3) < 1e-6 and _ef[3]["track"] == "fx2" and _ef[4]["track"] == "fx1" and _ef[3]["dur_s"] == 1.0,
+      and abs(_ef[3]["start"] - __import__("math").floor((0.3 + _ln[0]["start"]) * 30 + 1e-6) / 30) < 1e-6 and _ef[3]["track"] == "fx2"
+      and _ef[4]["track"] == "fx1" and _ef[3]["dur_s"] == 1.0,
       "slideshow plan puts each effect on the timeline: its anchor second on its moment (a cut, a line, a second), the scan's key colour, "
       "overlapping overlays on separate tracks")
 # a map's place names as CapCut text (the user, 2026-11-07: "Yes, as CapCut text"): slideshow plan carries each image's labels and lists
@@ -1881,210 +2230,6 @@ check(js.get("ok") and js["locks"]["niche"] == "History" and js["locks"]["style_
       "the clone takes its own niche, keeps the style reference and the narrator, numbers its videos from 01 and has no effort level")
 js, code = ts("clone-run", "--from", str(run_f), ok=False)
 check(code == 2 and "Static" in js.get("error", ""), "clone-run is for Static runs")
-
-# Narration by Alibaba Cloud (static_tts=alibaba; the user, 2026-11-08: "add qwen 3.1 tts plus from the alibaba provider and the user will
-# just provide with the api key when they pick it over our local model, the workflow will be the same"): a stand-in Model Studio server
-from http.server import ThreadingHTTPServer as _THS  # noqa: E402
-_DSKEY = "sk-ds-NEVER-PRINT-777"
-_DS_SEEN = []
-_DS_AUDIO = {}          # request number -> (words, rate): the stand-in speaks 2.6 words a second at rate 1, faster as rate rises
-_DS_LOCK = _th.Lock()
-_DS_DROP = {"n": 0}     # the next n requests are dropped without an answer
-
-
-def _ds_tone(seconds, freq, sr=24000):
-    tt = np.arange(int(seconds * sr)) / sr
-    b = _io.BytesIO()
-    with wave.open(b, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(sr)
-        w.writeframes((0.3 * np.sin(2 * np.pi * freq * tt) * 32767).astype("<i2").tobytes())
-    return b.getvalue()
-
-
-class _DSMock(_BH):
-    def log_message(self, *a):
-        pass
-
-    def _send(self, code, body, ctype="application/json"):
-        data = body if isinstance(body, bytes) else json.dumps(body).encode()
-        self.send_response(code)
-        self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
-    def do_GET(self):
-        n = int((re.findall(r"/audio/(\d+)\.wav", self.path) or ["0"])[0])
-        if n:
-            words, rate = _DS_AUDIO.get(n, (3, 1.0))
-            self._send(200, _ds_tone(max(0.3, words / 2.6 / rate), 200 + 7 * (n % 9)), "audio/wav")
-        else:
-            self._send(404, {"code": "NotFound"})
-
-    def do_POST(self):
-        body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
-        with _DS_LOCK:
-            drop = _DS_DROP["n"] > 0
-            if drop:
-                _DS_DROP["n"] -= 1
-        if drop:   # a dropped connection, no answer: the socket is reset as a busy PC or a web shield can do
-            import socket as _sk
-            import struct as _sx
-            self.connection.setsockopt(_sk.SOL_SOCKET, _sk.SO_LINGER, _sx.pack("ii", 1, 0))
-            self.connection.close()
-            self.close_connection = True
-            return
-        with _DS_LOCK:
-            _DS_SEEN.append({"path": self.path, "auth": self.headers.get("Authorization"), "body": body})
-            k = len(_DS_SEEN)
-        inp = body.get("input") or {}
-        _DS_AUDIO[k] = (len(str(inp.get("text") or "").split()), float(inp.get("rate") or 1.0))
-        if self.path.endswith("/customization"):
-            act = inp.get("action")
-            if act == "create_voice" and inp.get("voice_prompt"):
-                self._send(200, {"output": {"voice_id": f"{inp['target_model']}-vd-{inp['prefix']}-{k}", "preview_audio": {
-                    "data": _b64.b64encode(_ds_tone(1.6, 150 + 10 * k)).decode(), "sample_rate": 24000, "response_format": "wav"},
-                    "target_model": inp["target_model"]}, "usage": {"count": 1}, "request_id": f"rq{k}"})
-            elif act == "create_voice":
-                self._send(200, {"output": {"voice_id": f"{inp['target_model']}-{inp['prefix']}-{k}"}, "request_id": f"rq{k}"})
-            elif act == "query_voice":
-                self._send(200, {"output": {"status": "OK", "target_model": "qwen-audio-3.1-tts-plus"}, "request_id": f"rq{k}"})
-            else:
-                self._send(200, {"output": {"voice_list": []}, "request_id": f"rq{k}"})
-        elif self.path.endswith("/SpeechSynthesizer"):
-            if "FAILME" in (inp.get("text") or ""):
-                self._send(400, {"code": "InvalidParameter", "message": "the text was refused", "request_id": f"rq{k}"})
-                return
-            self._send(200, {"output": {"audio": {"data": "", "id": f"a{k}", "expires_at": 0,
-                                                  "url": f"http://127.0.0.1:{self.server.server_port}/audio/{k}.wav"},
-                                        "finish_reason": "stop"}, "usage": {"characters": len(inp.get("text") or "")}, "request_id": f"rq{k}"})
-        else:
-            self._send(404, {"code": "NotFound", "message": self.path})
-
-
-class _DSSrv(_THS):
-    request_queue_size = 64   # Python's default backlog of 5 made Windows reset parallel requests on a busy PC (2026-11-08)
-    daemon_threads = True
-
-    def handle_error(self, request, client_address):   # a dropped connection on purpose is not a test error
-        pass
-
-
-_dsrv = _DSSrv(("127.0.0.1", 0), _DSMock)
-_th.Thread(target=_dsrv.serve_forever, daemon=True).start()
-AENV = {**SENV, "DASHSCOPE_API_KEY": _DSKEY, "AWL_DASHSCOPE_BASE_URL": f"http://127.0.0.1:{_dsrv.server_port}"}
-_aouts = []
-
-
-def ta(*args, ok=True, env=None):
-    js_, code_, out_ = t(*args, env=env or AENV, ok=ok)
-    _aouts.append(out_)
-    return js_, code_
-
-
-js, _ = ta("new-run", "--mode", "analyze", "--slug", "static-alibaba")
-AR = Path(js["run_dir"])
-ta("state", "--run", str(AR), "set", "analyze_submode=static", "static_images=prompts", "static_tts=alibaba", "audio_ingest=whisper",
-   "qc_fixes=off", "capcut_plan=free")
-_ins = ["a calm deep male narrator", "a warm female storyteller", "a gravelly older man", "a bright young woman, quick",
-        "a dry, wry middle-aged man"]
-_dargs = ["tts", "design", "--run", str(AR), "--text", "Most people never notice this."] + [x for i in _ins for x in ("--instruct", i)]
-js, code = ta(*_dargs, env={**AENV, "DASHSCOPE_API_KEY": ""}, ok=False)
-check(code == 2 and "DASHSCOPE_API_KEY" in str(js.get("error")) and not _DS_SEEN, "an Alibaba run without the key refuses before any call (exit 2)")
-js, code = ta(*_dargs, "--language", "german", ok=False)
-check(code == 2 and "English or Chinese" in str(js.get("error")) and not _DS_SEEN,
-      "Alibaba's voice design takes English or Chinese lines only: another language is told to design on this PC, nothing is sent")
-_DS_DROP["n"] = 1       # a dropped connection along the way: it is sent again, the samples all come back
-js, _ = ta(*_dargs)
-check(_DS_DROP["n"] == 0 and len(js.get("samples") or []) == 5,
-      "a dropped connection to Alibaba (no answer) is sent again, at most three times, and the call goes on")
-_dsm = json.loads((AR / "30-assets" / "voice" / "samples.json").read_text(encoding="utf-8"))
-_cv = [s["body"]["input"] for s in _DS_SEEN if s["path"].endswith("/customization")]
-with wave.open(str(js["samples"][0]["file"]), "rb") as _w:
-    _wfmt = (_w.getframerate(), _w.getnchannels(), _w.getsampwidth())
-_dchk = {"engine": js.get("engine") == "alibaba", "five samples": len(js.get("samples") or []) == 5,
-         "files and ids": all(Path(s["file"]).is_file() and s.get("voice_id") for s in js.get("samples") or []),
-         "one design per description, in order": [c.get("voice_prompt") for c in _cv] == _ins, "16-bit mono 24 kHz": _wfmt == (24000, 1, 2),
-         "fields": all(c.get("preview_text") == "Most people never notice this." and c.get("language_hints") == ["en"]
-                       and c.get("target_model") == "qwen-audio-3.1-tts-plus" and len(str(c.get("prefix"))) <= 10 and str(c.get("prefix")).isalnum()
-                       for c in _cv),
-         "key only in the header": all(s["auth"] == f"Bearer {_DSKEY}" for s in _DS_SEEN), "samples.json": _dsm.get("engine") == "alibaba"}
-check(all(_dchk.values()),
-      "tts design with Alibaba designs one voice per description (the sample line as its preview), keeps each preview as the sample file "
-      f"(16-bit mono 24 kHz) and its voice id (not met: {[k for k, v in _dchk.items() if not v] or 'none'}; designs sent: "
-      f"{[str(c.get('voice_prompt'))[:14] for c in _cv]}; format {_wfmt})")
-_n0 = len(_DS_SEEN)
-js, _ = ta("tts", "voice", "--run", str(AR), "--sample", "2", "--emotion", "tense=Low and tense, a little slower")
-_av = json.loads((AR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
-check(js.get("ok") and _av["engine"] == "alibaba" and _av["alibaba"]["voice_id"] == js["voice"]["voice_id"] == _dsm["samples"][1]["voice_id"]
-      and _av["alibaba"]["kind"] == "design" and _av["instructions"] == {"tense": "Low and tense, a little slower"}
-      and [s["body"]["input"]["action"] for s in _DS_SEEN[_n0:]] == ["query_voice"] and (AR / "30-assets" / "voice" / "ref-neutral.wav").is_file(),
-      "tts voice with Alibaba keeps the picked sample's designed voice as the run's voice (checked usable, nothing made again) and an "
-      "emotion's delivery as its instruction")
-_alines = [{"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
-           {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "tense", "pause_after": 0.5},
-           {"n": 3, "text": "What they took that night is still a secret.", "strong": True, "delivery": "A hushed whisper, slower", "seed": 7}]
-(AR / "40-briefs" / "video-01-narration.json").write_text(json.dumps({"video": "01", "language": "english", "lines": _alines}), encoding="utf-8")
-_n0 = len(_DS_SEEN)
-js, _ = ta("tts", "say", "--run", str(AR), "--video", "01")
-_syn = {s["body"]["input"]["text"][:12]: s["body"]["input"] for s in _DS_SEEN[_n0:] if s["path"].endswith("/SpeechSynthesizer")}
-_aside = json.loads((AR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
-_chars = sum(len(x["text"]) for x in _alines)
-check(js.get("ok") and js.get("lines") == 3 and len(_syn) == 3
-      and all(v["voice"] == _av["alibaba"]["voice_id"] and v["format"] == "wav" and v["language_hints"] == ["en"] for v in _syn.values())
-      and "instruction" not in _syn["In 1959 a fa"] and _syn["In 1959 a fa"]["seed"] == _av["seed"] % 65536
-      and _syn["Nobody belie"]["instruction"] == "Low and tense, a little slower"
-      and _syn["What they to"]["instruction"] == "A hushed whisper, slower" and _syn["What they to"]["seed"] == 7
-      and _aside["engine"] == "alibaba" and all(r["made_by"] == "alibaba" for r in _aside["lines"]) and _aside["characters"] == _chars
-      and abs(_aside["cost_usd_estimate"] - _chars / 10000 * 0.3) < 1e-3 and js.get("loudness_lufs") is not None
-      and [x["n"] for x in js["voice_match"]["strong_lines"]] == [3] and (AR / "30-assets" / "narration" / "video-01.wav").is_file(),
-      "tts say with Alibaba makes every line in the run's voice (a line's delivery, else its emotion's, as the instruction, with its seed), "
-      "joins them at the target loudness and records the characters and the cost")
-_n0 = len(_DS_SEEN)
-js, _ = ta("tts", "say", "--run", str(AR), "--video", "01", "--only", "2")
-_aside2 = json.loads((AR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
-check(js.get("made_now") == [2] and len([s for s in _DS_SEEN[_n0:] if s["path"].endswith("/SpeechSynthesizer")]) == 1
-      and _aside2["characters"] == _chars and _aside2["lines"][0].get("request_id") == _aside["lines"][0].get("request_id")
-      and _aside2["lines"][1].get("request_id") != _aside["lines"][1].get("request_id"),
-      "--only makes just that line at Alibaba; the other lines keep what was recorded of them")
-_alines[1]["text"] = "FAILME " + _alines[1]["text"]
-(AR / "40-briefs" / "video-01-narration.json").write_text(json.dumps({"video": "01", "language": "english", "lines": _alines}), encoding="utf-8")
-js, code = ta("tts", "say", "--run", str(AR), "--video", "01", "--only", "2", ok=False)
-check(code == 1 and "--only 2" in str(js.get("error")) and "the text was refused" in str(js.get("error")),
-      "a line Alibaba refuses is reported with its error and the command that makes only the missing lines")
-# the pace with a model that has a speed setting (the user, 2026-11-08: "if qwen 3.1 plus for example has the speed feature ... set it
-# up in the model, only do manual tweaks if the model does not provied with what we want to achieve")
-_pal = [{"n": 1, "text": "In 1959 a farmer found something strange in his field.", "emotion": "neutral"},
-        {"n": 2, "text": "Nobody believed him, until the soldiers came.", "emotion": "neutral"},
-        {"n": 3, "text": "What they took that night is still a secret.", "emotion": "neutral"}]
-(AR / "40-briefs" / "video-03-narration.json").write_text(json.dumps({"video": "03", "language": "english", "lines": _pal,
-                                                                     "pace": {"wpm_speech": [178, 191]}}), encoding="utf-8")
-_n0 = len(_DS_SEEN)
-js, _ = ta("tts", "say", "--run", str(AR), "--video", "03")
-_rates = [s["body"]["input"].get("rate") for s in _DS_SEEN[_n0:] if s["path"].endswith("/SpeechSynthesizer")]
-_p3 = json.loads((AR / "30-assets" / "narration" / "video-03.json").read_text(encoding="utf-8")).get("pace") or {}
-_nat = json.loads((AR / "state.json").read_text(encoding="utf-8"))["static"]["voice"].get("native_wpm_speech")
-check(js.get("ok") and (_p3.get("within") or {}).get("wpm_speech") is True and _p3.get("method") == "model rate" and _p3.get("tempo") == 1.0
-      and len(_rates) == 6 and None not in _rates and len(set(_rates[:3])) == 1 and len(set(_rates[3:])) == 1 and _rates[3] != _rates[0]
-      and abs(_p3.get("model_rate", 0) - _rates[3]) < 1e-6 and _nat and abs(_nat - 156) < 4,
-      f"with Alibaba the model's own speed setting makes the pace (first from the voice's sample, then corrected once by measuring), no "
-      f"manual tempo, and the voice's own speed is learned for the next narration (rates {_rates[0]} then {_rates[3]}, learned {_nat} wpm)")
-_n0 = len(_DS_SEEN)
-ta("tts", "design", "--run", str(AR), "--engine", "local", "--replace", "--text", "Most people never notice this.", "--instruct", "a calm narrator")
-js, _ = ta("tts", "voice", "--run", str(AR), "--sample", "1", "--replace")
-_cl = [s["body"]["input"] for s in _DS_SEEN[_n0:]]
-_av2 = json.loads((AR / "state.json").read_text(encoding="utf-8"))["static"]["voice"]
-check(js.get("ok") and _av2["alibaba"]["kind"] == "clone" and _cl and _cl[0]["action"] == "create_voice"
-      and str(_cl[0].get("audio", "")).startswith("data:audio/wav;base64,") and "voice_prompt" not in _cl[0] and _cl[-1]["action"] == "query_voice",
-      "a sample made on this PC (tts design --engine local) is cloned at Alibaba from its file when picked")
-js, _ = ta("tts", "check", "--engine", "alibaba")
-check(js.get("ready") and js.get("key_present") is True and js.get("model") == "qwen-audio-3.1-tts-plus" and "price_usd_per_10k_chars" in js,
-      "tts check --engine alibaba reports the key's presence (never the key), the model, the price and that the account answers")
-check(not any(_DSKEY in o for o in _aouts)
-      and not any(_DSKEY in p.read_text(encoding="utf-8", errors="ignore") for p in AR.rglob("*") if p.is_file() and p.suffix in (".json", ".md", ".txt")),
-      "the DashScope key is never printed and never written to the run")
 
 # FLUX 3 Klein on this PC (static_images=klein, the user 2026-11-06): the same T image generate through the local worker (stubbed here), no key
 KENV = {**SENV, "AWL_IMAGE_STUB": "1", "OPENAI_API_KEY": ""}

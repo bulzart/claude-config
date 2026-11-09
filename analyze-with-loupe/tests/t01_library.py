@@ -248,26 +248,37 @@ check("T static formats --run RUN" in _a5t and 'header "Formats", multiSelect' i
       and "**The CapCut project is the final**" in _s7t and "that export is the final" in rd(SKD / "awl-wrapup" / "SKILL.md")
       and "its export is the final" in rd(HOME / "commands" / "analyze-with-loupe.md"),
       "Static asks the format at A5 (the best fit first), stores it, makes the CapCut project at its export size, and that export is the final")
-# the narration engine (the user, 2026-11-08: "add qwen 3.1 tts plus from the alibaba provider and the user will just provide with the api
-# key when they pick it over our local model, the workflow will be the same")
+# the narration engine (the user, 2026-11-09: "we will use elevenlabs", "we will only use elevenlabs v4", and "no edits should be done
+# from our side on the elevenlabs generation ... do not edit the delivered generation without any exception")
 _st_s = rd(SKD / "awl-start" / "SKILL.md")
-check('header "Narration"' in _st_s and "static_tts=local|alibaba" in _st_s and "**With Alibaba**" in _s6t
-      and "DASHSCOPE_API_KEY" in rd(LIB / "reference" / "static" / "090_9_the-static-pc-setup-once-per-pc.md")
-      and "qwen-audio-3.1-tts-plus" in rd(HOME / "commands" / "analyze-with-loupe.md")
-      and "static.voice.engine" in rd(SKD / "awl-static-sound" / "SKILL.md") and "--engine local" in rd(SKD / "awl-static-plan" / "SKILL.md"),
-      "Static asks the narration engine at the start (Qwen3-TTS on this PC or Alibaba's qwen-audio-3.1-tts-plus on the user's key) and "
-      "keeps the same steps for both (static §6, §9, the start, plan and sound skills)")
+_s9t = rd(LIB / "reference" / "static" / "090_9_the-static-pc-setup-once-per-pc.md")
+_snd = rd(SKD / "awl-static-sound" / "SKILL.md")
+_spl = rd(SKD / "awl-static-plan" / "SKILL.md")
+_s6n = re.sub(r"\s+", " ", _s6t)
+check("Eleven v4" in _s6t and "ELEVEN_API_KEY" in _s9t and "ELEVEN_API_KEY" in _s6t and "T tts voices" in _s6t and "T tts probe" in _s6t
+      and "T tts probe" in _spl and "Eleven v4" in rd(HOME / "commands" / "analyze-with-loupe.md")
+      and 'header "Narration"' not in _st_s and "static_tts=" not in _st_s,
+      "Static narrates with ElevenLabs' Eleven v4 only, on the user's ELEVEN_API_KEY (static §6, §9, the router, the plan skill); the "
+      "start asks no engine")
+_vdocs = [ROUTER, *SKILLS, LIB / "reference" / "static.md", *sorted((LIB / "reference" / "static").glob("*.md")),
+          *sorted((LIB / "reference" / "voiceover").glob("*.md")), *sorted(PA.glob("*.md"))]
+_gone = sorted({f"{p.name}: {w}" for p in _vdocs for w in ("DASHSCOPE_API_KEY", "qwen-audio-3.1-tts-plus", "static_tts=", "--engine local",
+                                                           "AWL_TTS_PYTHON", "tts_worker") if w in rd(p)}
+               | {f"{p.name}: a speed or tempo option" for p in _vdocs if re.search(r"T voiceover mix[^\n]*--tempo|T tts (say|probe)[^\n]*--speed", rd(p))})
+check(not _gone, "no Static or voiceover doc, skill or the router names a removed engine or asks a speed or tempo change: " + "; ".join(_gone))
+check("without any exception" in _s6n and "no speed" in _s6n and "**Passages**" in _s6t and "tags_after" in _s4t and "tags_after" in _s6t
+      and "never fixed by editing" in re.sub(r"\s+", " ", _snd),
+      "static §6 holds the user's rule (the delivered audio is never edited, 'without any exception'), Eleven v4's lack of a speed, the "
+      "passages and the pause tags; the sound skill never fixes a narration by editing it")
 # the whole set and the pace (the user, 2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy";
-# "we have to be very sure that the workflow really achieves a 178-191 words a minute"; "if qwen 3.1 plus ... has the speed feature ...
-# set it up in the model, only do manual tweaks if the model does not provied with what we want to achieve")
+# "we have to be very sure that the workflow really achieves a 178-191 words a minute"; 2026-11-09: "we should only try to speed it up by
+# instructing the elevenlabs tts model, or use different parameters")
 _s1t = rd(LIB / "reference" / "static" / "010_1_what-static-mines-from-the-refer.md")
 check("**The set as a whole**" in _s1t and "T static profile" in _s1t and "**Attachment**" in _s1t and "**The pace**" in _s2t
-      and "is the **whole set's**" in _s2t and "**The pace**" in _s6t and "model's own speed setting first" in _s6t.replace("\n", " ")
-      and "references' own yardstick" in _s6t.replace("\n", " ") and '"pace"' in _s4t
-      and "T static profile" in rd(SKD / "awl-analyze-study" / "SKILL.md") and "pace.within" in rd(SKD / "awl-static-sound" / "SKILL.md")
-      and "pause_default_s" in rd(SKD / "awl-static-plan" / "SKILL.md"),
-      "Static reads the references as one set (every field, the set's numbers, families apart, no single reference as the template) and "
-      "brings every narration to the set's pace, the model's own speed first, measured with the references' yardstick")
+      and "is the **whole set's**" in _s2t and "**The pace**" in _s6t and "references' yardstick" in _s6n and "wpm_delivered" in _s6n
+      and '"pace"' in _s4t and "T static profile" in rd(SKD / "awl-analyze-study" / "SKILL.md") and "pace.within" in _snd,
+      "Static reads the references as one set and aims every narration at the set's pace by the request's levers alone (the voice, "
+      "the tags, the settings, the words), measured with the references' yardstick")
 # more than one format (the user, 2026-11-08: "so we end up generating 2 video formats for the same content (2 capcut projects too ...)")
 _s2b = rd(LIB / "reference" / "static" / "025_2b_more-than-one-format.md").replace("\n", " ")
 _tpl_s = rd(LIB / "reference" / "production-agents" / "025_2s_spawning-static.md")
@@ -278,9 +289,10 @@ check("`--also`" in _s2t and "--same-as-primary" in _s2b and "--swap" in _s2b an
       and "static §2b" in rd(HOME / "commands" / "analyze-with-loupe.md"),
       "Static makes a video in every format the user picks: the same plan and narration, the primary's prompts with their frame words "
       "swapped, its own captions band, labels and aims, one CapCut project per format (static §2b, the contract's Formats line, the skills)")
-check('"strong": true' in _s4t and "never two in a row" in _s4t and "**Strong lines**" in _s6t and "timbre_sim" in _s6t
-      and "voice_match" in rd(SKD / "awl-static-sound" / "SKILL.md"),
-      "strong lines: the voice-design model at the references' peaks only, measured against the run's voice, made again or cloned when apart")
+check('"strong": true' in _s4t and "never two in a row" in _s4t and "audio tags" in _s4t and "voice_match" in _snd
+      and "passages_below" in _snd and "passages_below" in _s6t,
+      "strong lines: the references' peaks only, their delivery written as Eleven v4's audio tags; every passage measured against the "
+      "run's voice")
 # Static's text look is the references' (the user, 2026-11-05: "everything is data driven (from the references) and nothing is predefined")
 _se = rd(SKD / "awl-static-edit" / "SKILL.md")
 check("**Text look**" in _s2t and "never the house text style" in _s2t and "--keep-text" in _se and "T capcut-font --draft" in _se

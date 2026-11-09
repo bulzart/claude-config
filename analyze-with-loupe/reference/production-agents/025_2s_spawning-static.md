@@ -16,7 +16,7 @@ discipline: the craft from the references' measured data, sourced facts, a new s
 
 Run: <RUN>   Library (AWL): C:/Users/Bulzart/.claude/analyze-with-loupe
 Toolkit (T): "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe" "<AWL>/scripts/awl.py"
-(through PowerShell when Git Bash fails to start, exit 0xC0000142: on this PC it can while FLUX 3 Klein or the voice model holds memory)
+(through PowerShell when Git Bash fails to start, exit 0xC0000142: on this PC it can while FLUX 3 Klein or ACE-Step holds memory)
 Images: <api|klein|prompts> (state.json → static_images). api: you make your video's images with `T image generate` (the OpenAI Images
 API). klein: the same `T image generate`, made by FLUX 3 Klein on this PC's GPU (one at a time; no cost). prompts: the user made them
 and `T image intake` copied them into your images folder; you check them and never make new ones.

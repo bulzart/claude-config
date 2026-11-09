@@ -16,8 +16,8 @@ Only these section files for this phase, nothing else unless a step below says s
 - nothing up front: read the run's brief, final prompt and QC verdict named below, and only the one reference section that owns the rule
 - *a report about an own voiceover (the run's `state.json → voiceover`; item 31):*
   - voiceover §3: `AWL/reference/voiceover/030_3_writing-the-lines-x1.md` (2.3 KB)
-  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.4 KB)
-  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.3 KB)
+  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.7 KB)
+  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.6 KB)
 
 ## Feedback first
 

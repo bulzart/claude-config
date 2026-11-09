@@ -50,7 +50,8 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     the user, the prompts file; the YouTube title and thumbnail (static §12): write `RUN/deliverables/video-NN-title.txt` (the plan's `title`
     on its first line) and name it and `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row; the
     run's locks it kept (niche, style reference, narrator; static §10); `result.json` adds `static`: {format, images (count, source api|klein|user, re-draws), cost_usd_estimate (the sum of
-    the image calls), narration_s, voice sample, lines made again, bed, title, thumbnail}. No Higgsfield job, credit or flag fields.
+    the image calls), narration_s, voice (its ElevenLabs id and name), the narration's characters, passages made again, partial or whole, bed, title,
+    thumbnail}. No Higgsfield job, credit or flag fields.
     More than one format (static §2b): one README row per format (its CapCut project's name and full path, its export size, its stills'
     folder `60-outputs/video-NN/<tag>/images/`; the title and thumbnail named in each), and `result.json → static.formats`: one entry
     per format {aspect, tag (null for the primary), export, capcut_project, capcut_project_path, images (count, re-draws, own prompts),

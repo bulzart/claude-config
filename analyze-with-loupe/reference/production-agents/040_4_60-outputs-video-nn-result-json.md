@@ -8,7 +8,7 @@
  "qc": "accepted | regenerated once: <why> | declined fix: <why> | failed: <why> | off: not checked (the user reviews at the end)",
  "continuity": "counts: <item N/N/N …> | use: <part, contact, verdict> | permanence: <checkpoints ok | …> | anchor: <in frame from 0.0 s; max drift vs <neighbour> <px> | …> | timeline: <transitions, inserts, overlays, fades ok | …> | audio: <original, whole, hash match | …> | size: <A ×, B ×, agree | provisional> | evidence: <sheet and hash paths>",
  "sync": "within 0.10 s | fixed offset <s> | regenerated once: <why> | off: <why> | n/a (create)",
- "voiceover": "off | <method>: <voice>, <language>, <form>, take a<K>, <kept | laid back at <s> | sync pass <job id> | mixed at <s>, tempo <t>>, lips: <ok | …>, pronunciation: not checked (listen)",
+ "voiceover": "off | <method>: <voice>, <language>, <form>, take a<K>, <kept | laid back at <s> | sync pass <job id> | mixed at <s>>, lips: <ok | …>, pronunciation: not checked (listen)",
  "fix_proposal": null,
  "keeper_gaps": [],
  "judge": {"template": "<RUN>/40-briefs/video-NN-template.json | none: <why>", "cause": "<qc-consult cause, or empty>", "template_fix": "<qc-consult template_fix, or empty>",

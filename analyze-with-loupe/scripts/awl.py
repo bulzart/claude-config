@@ -8930,7 +8930,7 @@ def _vo_mix(a):
     if off < -0.0005:
         fail("a negative offset would cut the start of the take, and the delivered voice is never cut (the user, 2026-11-09): "
              "a take that starts later on the picture (the request) or another placement", 2)
-    if vs1 is not None and vs1 + off > dur + 0.02:
+    if vs1 is not None and vs1 + off > dur:
         fail(f"the take's speech runs {round(vs1 + off - dur, 2)} s past the picture's end and the delivered voice is never cut "
              "(the user, 2026-11-09): a shorter take (fewer words or a quicker delivery tag in the request) or a longer picture", 2)
     chain = [f"adelay={int(round(off * 1000))}:all=1"] if off > 0.0005 else []
@@ -10530,7 +10530,7 @@ def _el_audio_wav(data: bytes, fmt: str, dest: Path) -> float:
     ext = (str(fmt or "").split("_")[0] or "bin").replace("opus", "ogg")
     kept = dest.with_name(dest.stem + f".delivered.{ext}")
     kept.write_bytes(data)
-    run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(kept), "-ac", "1", "-c:a", "pcm_s16le", str(dest)],
+    run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(kept), "-c:a", "pcm_s16le", str(dest)],
         check=True, timeout=300)
     return (media_summary(dest) or {}).get("duration_s") or 0.0
 
@@ -10907,6 +10907,13 @@ def _tts_voice(a):
                            if cur.get(k) is not None} or None
         if not cur.get("engine") and cur.get("prompts"):
             rec["replaced"] = {**(rec["replaced"] or {}), "engine": "local (removed 2026-11-09)"}
+    try:   # the probes made with this voice as a candidate (T tts probe --voice-id) become its points for the forecast
+        cand = [p for p in json.loads((vd / "probes.json").read_text(encoding="utf-8")).get("probes") or []
+                if p.get("voice_id") == rec.get("voice_id")]
+    except (OSError, ValueError):
+        cand = []
+    if cand:
+        rec["fit"] = {"points": [{**p, "candidate": False} for p in cand][-12:], "learned": now_iso()}
     _state_set(rd, **{"static.voice": rec})
     out({"ok": True, "engine": "elevenlabs", "voice": {k: rec.get(k) for k in ("voice_id", "kind", "name", "labels", "sample", "model_id",
                                                                               "settings", "deliveries", "ref_audio")},
@@ -11616,6 +11623,43 @@ def cmd_tts(a):
      "fit": _tts_fit}[a.action](a)
 
 
+def _el_word_times(side: dict) -> list:
+    """The narration's script words timed by ElevenLabs itself: each passage's character timing (the first character of a word to its
+    last), placed at the passage's start in the narration. [{"w", "s", "e"}] in the script's order; [] when a passage has no timing or
+    its text does not match (speech-to-text then times the words). Exact for the delivered audio: the model's own clock, where the
+    transcriber starts words about a quarter second early and can miss quiet ones (video 03, 2026-11-09)."""
+    if side.get("engine") != "elevenlabs" or not side.get("passages"):
+        return []
+    by_p = {}
+    for r in side.get("lines") or []:
+        by_p.setdefault(int(r.get("passage") or 0), []).append(r)
+    res = []
+    for p in side["passages"]:
+        try:
+            al = json.loads(Path(p["file"]).with_suffix(".align.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError, KeyError):
+            return []
+        a = al.get("alignment") or {}
+        chars = [str(c) for c in a.get("characters") or []]
+        st_, en_ = a.get("character_start_times_seconds") or [], a.get("character_end_times_seconds") or []
+        text = str(al.get("text") or "")
+        if not chars or "".join(chars) != text or len(st_) != len(chars) or len(en_) != len(chars):
+            return []
+        lc = {int(n): v for n, v in (al.get("line_chars") or {}).items()}
+        off = float(p["start"])
+        for r in by_p.get(int(p["p"]), []):
+            if int(r["n"]) not in lc:
+                return []
+            i, end = int(lc[int(r["n"])][0]), int(lc[int(r["n"])][1])
+            for w in str(r["text"]).split():
+                j = text.find(w, i, end)
+                if j < 0:
+                    return []
+                res.append({"w": w, "s": round(off + float(st_[j]), 3), "e": round(off + float(en_[j + len(w) - 1]), 3)})
+                i = j + len(w)
+    return res
+
+
 def cmd_narration_words(a):
     """The words of a video's narration with their times (speech-to-text timing, the script's wording), the caption cues and an SRT, and how
     the heard words differ from the script per line (missing, extra, repeated): facts for the narration QC."""
@@ -11636,12 +11680,15 @@ def cmd_narration_words(a):
     heard = [w for s in tr.get("segments", []) for w in s.get("words", [])]
     script = " ".join(r["text"] for r in side["lines"])
     timed_heard = align_script(heard, script) if heard else []
-    timed = _words_in_lines(timed_heard, side.get("lines") or [])   # the captions: each word inside its own line's audio
+    timed = _el_word_times(side)   # the captions: ElevenLabs' own timing of every word when the narration has it
+    timing = "elevenlabs" if timed else "speech-to-text"
+    if not timed:   # else the transcriber's times, each word kept inside its own line's audio
+        timed = _words_in_lines(timed_heard, side.get("lines") or [])
     shifts = [round(max(abs(x["s"] - y["s"]), abs(x["e"] - y["e"])), 2) for x, y in zip(timed_heard, timed)
-              if (x["s"], x["e"]) != (y["s"], y["e"])]
+              if (x["s"], x["e"]) != (y["s"], y["e"])] if timing == "speech-to-text" else []
     per_line, k = [], 0
     for r in side["lines"]:
-        hw = [_norm_word(w["w"]) for w in heard if r["start"] - 0.15 <= w["s"] <= r["end"] + 0.15]
+        hw = [_norm_word(w["w"]) for w in heard if r["start"] - 0.15 <= (float(w["s"]) + float(w["e"])) / 2 <= r["end"] + 0.15]
         sw = [_norm_word(x) for x in r["text"].split()]
         # numbers are compared apart: speech-to-text writes a spoken "seventeen sixty-nine" as "1769" (and "Saint" as "St")
         sc, hc = _match_words(sw), _match_words(hw)
@@ -11656,7 +11703,8 @@ def cmd_narration_words(a):
     plan_cap = _img_plan(rd, nn).get("captions") or {}   # the plan's text look sets the words at once (static §2)
     cues = chunk_words(timed, int(a.words or plan_cap.get("words") or _scfg("captions.words", 3)),
                        min_cue=float(plan_cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2)))) if timed else []
-    write_json(work.parent / f"video-{nn}.words.json", {"video": nn, "engine": tr.get("engine"), "words": timed, "heard": heard})
+    write_json(work.parent / f"video-{nn}.words.json", {"video": nn, "engine": tr.get("engine"), "timing": timing, "words": timed,
+                                                         "heard": heard})
     write_json(work.parent / f"video-{nn}.cues.json", cues)
     srt = []
     for i, c in enumerate(cues, 1):
@@ -11681,7 +11729,8 @@ def cmd_narration_words(a):
                              (bool(pace.get("wpm_overall")) and abs(pace["wpm_overall"] / pt["target_overall"] - 1) <= pt["tol"])}
     else:
         pace["target"] = None
-    out({"ok": True, "video": nn, "engine": tr.get("engine"), "words": len(timed), "cues": len(cues), "lines": per_line, "pace": pace,
+    out({"ok": True, "video": nn, "engine": tr.get("engine"), "timing": timing, "words": len(timed), "cues": len(cues),
+         "lines": per_line, "pace": pace,
          "words_kept_in_their_line": {"moved": len(shifts), "largest_s": max(shifts) if shifts else 0.0},
          "lines_to_check": [x["n"] for x in off], "files": {"words": str(work.parent / f"video-{nn}.words.json"),
                                                              "cues": str(work.parent / f"video-{nn}.cues.json"), "srt": str(work.parent / f"video-{nn}.srt")},

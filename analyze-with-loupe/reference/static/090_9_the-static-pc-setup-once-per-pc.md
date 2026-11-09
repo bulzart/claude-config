@@ -1,17 +1,12 @@
 ## 9 The Static PC (setup, once per PC)
 
-Static runs where Qwen3-TTS (unless the narration is by Alibaba Cloud) and ACE-Step 1.5 (the bed under every video) are installed,
-and FLUX 3 Klein when the images are made on the PC. `T static check` reports each part; a part a run needs and does not have is a blocker, reported at the start (never asked);
-music alone is not: without it the user is told at the start and the videos go without a bed.
+Static runs where ACE-Step 1.5 (the bed under every video) is installed, FLUX 3 Klein when the images are made on the PC, and with the
+ElevenLabs key set (the narration is ElevenLabs' Eleven v4: nothing of it runs on this PC). `T static check` reports each part; a part
+a run needs and does not have is a blocker, reported at the start (never asked); music alone is not: without it the user is told at the
+start and the videos go without a bed.
 - **The pipeline**: `git pull` of the `~/.claude` repository, as on any PC.
-- **Qwen3-TTS**: its own environment (Python 3.11 or 3.12; a CUDA build of torch and torchaudio from download.pytorch.org; `pip install -U
-  qwen-tts`; flash-attn is optional and not used: `sdpa`), then the user environment variable `AWL_TTS_PYTHON` = that environment's
-  `python.exe` (and `AWL_TTS_DEVICE` when not `cuda:0`). The models (VoiceDesign and Base, 1.7B) download on first use. Optional, about
-  8x faster: `faster-qwen3-tts` in that environment (it brings `qwen-tts-hf` in place of `qwen-tts`; pin `transformers==5.15.1`, the
-  version its README tests); the worker then makes the audio with it on CUDA in bf16 and names the engine in every answer. A seed gives
-  the same take again only on the engine that made it; `AWL_TTS_ENGINE=qwen-tts` forces qwen-tts.
 - **Memory guard** (a Windows PC where loading a model can exhaust memory: each load commits about 13 GB of RAM plus page file):
-  `AWL_TTS_PYTHON`, `AWL_MUSIC_PYTHON` and `AWL_IMAGE_PYTHON` may name a small `.cmd` that starts the environment's `python.exe` inside a memory guard (a
+  `AWL_MUSIC_PYTHON` and `AWL_IMAGE_PYTHON` may name a small `.cmd` that starts the environment's `python.exe` inside a memory guard (a
   hard cap and a watchdog that stops the job before Windows runs out). Keep such a `.cmd`: pointing the variable at `python.exe`
   instead removes the guard, and everything still seems to work.
 - **ACE-Step 1.5** (the bed under every video): `git clone https://github.com/ace-step/ACE-Step-1.5`, `uv sync` in it (or the Windows portable
@@ -19,14 +14,16 @@ music alone is not: without it the user is told at the start and the videos go w
   = the clone's folder. Its models (about 10 GB) download on first use.
 - **OpenAI** (only for images by the API): the user environment variable `OPENAI_API_KEY`; the organisation may need verifying for image
   models. The key is never typed into the chat, printed or written to a run.
-- **Alibaba Cloud Model Studio** (only for narration by Alibaba, `static_tts=alibaba`; the user, 2026-11-08): an API key from the Model
-  Studio console of the run's region (Singapore by default, `config.json → static.tts.alibaba.region`; a Beijing key works only with
-  `beijing`, the region where Alibaba documents voice design), set once by the user as the user environment variable `DASHSCOPE_API_KEY`
-  (Windows: Settings, "Edit environment variables for your account"; or in their own PowerShell window
-  `[Environment]::SetEnvironmentVariable('DASHSCOPE_API_KEY', '<key>', 'User')`). Optional: `DASHSCOPE_WORKSPACE_ID` (the console's
-  Workspace Details) for the workspace's own host. The toolkit reads a variable the user set after Claude Code started from their stored
-  environment, so no restart is needed. The key is never typed into the chat, printed or written to a run. `T tts check --engine
-  alibaba` gives the facts: the key present or not, the region, the host, and whether the account answers.
+- **ElevenLabs** (the narration of every Static video; the user, 2026-11-09: "we will only use elevenlabs v4"): an API key of the user's
+  ElevenLabs account, set once by the user as the user environment variable `ELEVEN_API_KEY` (the toolkit also reads `ELEVENLABS_API_KEY`;
+  Windows: Settings, "Edit environment variables for your account", or in their own PowerShell window
+  `[Environment]::SetEnvironmentVariable('ELEVEN_API_KEY', '<key>', 'User')`). The toolkit reads a variable set after Claude Code started
+  from the stored environment, so no restart is needed; the key is never typed into the chat, printed or written to a run. `T tts check`
+  gives the facts: which variable holds the key, the plan, its characters used and left, whether it may clone, and what Eleven v4 honours
+  (`config.json → static.tts.elevenlabs`). The plan sets what is possible (ElevenLabs' docs and pricing, read 2026-11-09): Eleven v4 bills
+  one credit a character; the Free plan has 10,000 a month, no voice cloning, no 44.1 kHz PCM (it gets MP3 at 128 kbps) and no commercial
+  licence ("commercial usage rights are only available with paid plans"); 192 kbps MP3 needs Creator, 44.1 kHz PCM needs Pro. The
+  Qwen3-TTS environments and models were removed from this PC on 2026-11-09; no local voice model is used.
 - **FLUX 3 Klein** (only for images made on the PC; an NVIDIA GPU with 8 GB or more): the ComfyUI Windows portable (0.41.0 or later), and
   in its `ComfyUI\models\` the int8 files of `black-forest-labs/flux-3-image-klein-comfy` on Hugging Face (gated: the user accepts the
   FLUX Kommunity License there and logs this PC in with `hf auth login`; the token never goes into the chat):

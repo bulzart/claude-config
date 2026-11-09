@@ -1,87 +1,92 @@
 ## 6 The voice and the bed (A6s, S2)
 
-**The voice** (the run's engine, the user's pick at the start, `state.json → static_tts`: `local` = Qwen3-TTS 1.7B on this PC, bf16,
-design then clone; `alibaba` = Alibaba Cloud Model Studio's `qwen-audio-3.1-tts-plus` on the user's key, below): one voice per run, the
-same in every video, locked once picked (§10): more videos of the run and a clone that keeps it make no new samples; the toolkit refuses
-a new design or pick without `--replace`. The sample line names nothing religious or superstitious (§11). The steps below are the same
-for both engines; what differs with Alibaba is in its own paragraph.
-- Five samples at the stop of A6s (the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them so
-  the user can hear them and pick the one they like to be the voice of the videos"): five voice descriptions written from the spec's
-  voice profile (gender, age, tone, pace, accent; the references' register, five different takes on it), all speaking one line in the
-  references' style: `T tts design --run RUN --text "<line>" --instruct "<voice 1>" … --instruct "<voice 5>"` (one sample per
-  `--instruct`). The stop lists each with the full path of its file (`T tts design` prints them); the user listens and picks.
-- The pick becomes the run's voice: `T tts voice --run RUN --sample K`, plus at most two emotion clips when the spec's delivery swings
-  (`--emotion tense="<a line that carries it>"`): the same voice speaking that line, used as the reference for lines tagged with it
-  (with Alibaba: the delivery in words, below).
-- **Strong lines** (§4; the user, 2026-11-05: "make strong lines with the voice-design model instead, though the voice may shift slightly
-  from line to line"): `T tts say` makes a line marked `strong` with the VoiceDesign model, from the run's voice description word for word
-  plus the line's `delivery`, with the picked sample's seed (`state.json → static.voice.seed`, or the line's own `seed`), so the timbre
-  stays as close as the model allows. The sidecar gives every line's pitch against the run's voice (`pitch_st`, semitones) and its timbre
-  similarity (`timbre_sim`, 0 to 1), and `voice_match` the cloned lines' spread. A strong line more than a semitone outside the cloned
-  lines' pitch range, or under their lowest timbre similarity, is made again with another seed (the line's `seed`, then `--only N`), at
-  most twice; still apart, it becomes a cloned line (`strong` false, its emotion clip when the voice has one), noted in the brief.
-- A video's narration: `T tts say --run RUN --video NN` (every line, the pauses, the loudness); `T narration-words --run RUN --video NN`
-  (the timed words, the cues, the SRT, and per line what was heard against the script). A line that came out wrong (a missing or repeated
-  word, the start repeating the reference's words, another speaker) is made again: `T tts say --only N`, at most twice, then noted.
-  The cues keep every word inside its own line's audio (`words_kept_in_their_line`; `T slideshow plan` does the same for the edit's
-  captions): the joins are the narration's own silence, and speech-to-text pulls the first word after a long pause into it (2026-11-08,
-  video 03: "Inside." 0.76 s and "Day four." 0.44 s before their voice, shown in the held pause); the pace reads the words as heard.
+**The voice** (ElevenLabs, model Eleven v4 `eleven_v4`, on the user's key; the user, 2026-11-09: "we will no longer use a locl model for
+audio generation, we will use elevenlabs" and "we will only use elevenlabs v4"; the local Qwen3-TTS and the Alibaba engine were removed
+that day): one voice per run, the same in every video, locked once picked (§10): more videos of the run and a clone that keeps it make
+no new samples; the toolkit refuses a new design or pick without `--replace`. The sample line names nothing religious or superstitious
+(§11). Nothing of the narration runs on this PC (no GPU, no memory guard); the key is the user environment variable `ELEVEN_API_KEY`
+(§9), and `T tts check` gives the account's plan, its characters left and what the model honours.
+- **Five samples at the stop of A6s** (the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them
+  so the user can hear them and pick the one they like to be the voice of the videos"): five candidates written from the spec's voice
+  profile (gender, age, tone, pace, accent; the references' register, five different takes on it). Each is a voice the account has
+  (`T tts voices --run RUN --measure`, filtered by `--gender`, `--accent`, `--age`, `--use-case`: ElevenLabs' list of the account's
+  voices, each voice's own preview recording read with the references' yardstick: its words a minute overall and while articulating,
+  its pauses, its pitch; free) or a Voice Design sample (`T tts design --run RUN --text "<a line of 100 to 1,000 characters>"
+  --instruct "<voice 1>" …`, the pace in the description's words, e.g. "a quick, measured pace"; billed per character of the line, once
+  per design; a designed voice may read less expressively on Eleven v4 than in its sample, ElevenLabs' docs). The stop lists each with
+  the full path of its file and its measured pace; the user listens and picks. A preview is made by an older model on its own text, so
+  its pace is a first reading only: the voice's pace on Eleven v4 with the video's own words is the probe's (below).
+- **The pick** becomes the run's voice: `T tts voice --run RUN --voice-id ID` (an account voice; its preview kept as the voice's
+  reference recording), `--sample K` (a design, saved to the account) or `--clone FILE …` (an Instant Voice Clone, when the plan allows
+  it: not on the Free plan); `--settings '{"stability": S, "similarity_boost": M}'` the voice's own settings, and at most two
+  `--emotion NAME="[tags]"` when the spec's delivery swings: the audio tags sent where a line of that emotion begins.
+- **What Eleven v4 takes** (ElevenLabs' docs, read 2026-11-09; `config.json → static.tts.elevenlabs.models.eleven_v4`): two voice
+  settings only, `stability` (0 to 1, default 0.5: higher holds the delivery steadier from passage to passage, lower is more expressive)
+  and `similarity_boost` (0 to 1, default 0.75: how close the read stays to the voice); **no speed, no style, no SSML pause**: any other
+  setting is refused, never dropped silently. Delivery and pace are **audio tags**, natural-language words in brackets before the clause
+  they colour, holding until the next tag: "[Building tension, measured pace]", "[Quick, light, playful pace]", "[slowly]", "[tense,
+  cautious]", "[softly]"; pauses "[short pause]", "[pause]", "[long pause]", and the punctuation (ellipses slow a line down; full stops
+  and dashes give rests). A tag must describe something heard ("[pacing]" or "[standing]" are not performed), its adherence is not
+  perfect, it can be taken for a sound effect, and no tag has a documented length: every lever is measured on the voice before a
+  narration leans on it (the probe, below). Words outside the brackets are spoken ("he said quietly" is said). Tags are billed as text.
+- **The rule** (the user, 2026-11-09: "no edits should be done from our side on the elevenlabs generation, whether speeding up the audio generation, nor making cuts in it, we should only try to speed it up by instructing the elevenlabs tts model, or use different parameters to achieve our goal by leveraging the elevenlabs official guide we attained during the research phase, or for example do 2 or more different generations that differ in speed and use them for a certain need such as the video having some parts for slow pace narrations too, but do not edit the delivered generation without any exception"): the delivered audio is used exactly as it came. No tempo or speed change, no
+  stretch, no trim or cut, no compressor or voice chain, no loudness pass or gain, no fade, no silence added between passages. Pace,
+  pauses and length are set only in the request: the voice, the settings, the words and their punctuation, and the tags; a part told at
+  another pace (a slow, quiet stretch) is asked at that pace (its lines' own `delivery`), never slowed afterwards. The narration's
+  loudness is read and recorded (`loudness_lufs`, `true_peak_db` in the sidecar), and the CapCut project plays it at its own level (§7).
+- **Passages** (`T tts say`): Eleven v4 "works best when used for paragraphs or passages of text" (ElevenLabs), so the lines are sent in
+  passages of up to `config.json → static.tts.elevenlabs.passage_chars` (850; the plan's `tts.passage_chars` overrides) characters. A
+  passage ends after a line marked `passage_break`, and after a line whose own delivery is not the narration's unless the next line
+  shares it (a tag holds until the next one, so a line's own delivery ends with its passage); when the next line would pass the size, it
+  ends at the largest planned `pause_after` in its second half (a `pause_after` is only that hint now: no silence is ever placed). Each
+  passage starts with the delivery in force (the narration's `delivery`, a line's own, or its emotion's), a line's `tags_after` (e.g.
+  "[long pause]") follows its words, and each passage is stitched to its neighbours (ElevenLabs' request stitching: the request ids of up
+  to three passages just before it made in the last 110 minutes, else the previous passage's text; the next passage's text); its seed is
+  the voice's (or the plan's `tts.seed`) times 1,000 plus its number. The timestamps endpoint gives each line's start and end
+  (speech-to-text for a line its timing misses, flagged); the passages are placed end to end exactly as delivered (`video-NN.wav`; each
+  passage kept as `video-NN/passage-PP.wav`, an MP3 also as delivered beside its decoded WAV, its request in `passage-PP.json`).
+- **A video's narration**: `T tts say --run RUN --video NN` makes the passages not yet made with their present text (nothing is billed
+  twice: `--only N,M` makes again the passages holding those lines, `--again` all of them, `--rejoin` none: it places the made ones end
+  to end again and reads them); a passage-1 probe made exactly as `say` would make passage 1 is that passage. `T narration-words --run
+  RUN --video NN` gives the timed words, the cues, the SRT, and per line what was heard against the script. A line that came out wrong (a
+  missing or repeated word, another speaker, a tag spoken aloud) is made again with its passage (`--only <the line>`, billed), at most
+  twice, then noted; a passage whose timbre sits far from the others (`voice_match.passages_below`, against the voice's reference
+  recording) the same. The cues keep every word inside its own line's audio (`words_kept_in_their_line`; `T slideshow plan` does the
+  same for the edit's captions): speech-to-text can pull the first word after a long pause into the silence before it (2026-11-08,
+  video 03: "Inside." 0.76 s and "Day four." 0.44 s before their voice).
+- **Characters** (credits): Eleven v4 bills one credit per character of the text sent, tags included (the account's `GET /v1/models`,
+  2026-11-09: `character_cost_multiplier` 1.0); each passage's cost is recorded (`characters`, from ElevenLabs' cost header when it sends
+  one). `T static forecast --part narration` gives the characters the plan sends against the characters left. `say` reads the characters
+  left before it starts and makes a passage only when it fits (`--budget N` caps the call); when they run out it stops before the
+  passage that does not fit (`--fill`: that passage made from its whole lines that still fit) and the narration is the passages made: a
+  **partial narration**, flagged in the sidecar (`partial`: the lines made, the passage it stopped at and why). The timeline then leaves
+  out the images and effects after the last narrated line (`T slideshow plan`: `images_after_narration`), and the wrap-up names it.
 - The narration starts `lead_s` after the first frame and the video ends `tail_s` after it (config `static.narration`).
 
-**The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns, if the data tells that
-the best speed is 160 words with pauses and 178-191 while speaking per minute then thats what we should use too ... we have to be very
-sure that the workflow really achieves a 178-191 words a minute"; "if qwen 3.1 plus for example has the speed feature or word per minute
-then set it up in the model, only do manual tweaks if the model does not provied with what we want to achieve"; then "every step should
-be taken carefully and thoroghfully, and nothing should turn out as unexpected": the pace is aimed at a point the judge chose, §13, never
-left wherever it lands inside a band). The narration JSON's `pace` (§4: the family, the bands, the judge's `target` point, the tolerance)
-and `pause_default_s` drive `T tts say`:
+**The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very
+sure that the workflow really achieves" it; then "every step should be taken carefully and thoroghfully, and nothing should turn out as
+unexpected": the pace is aimed at a point the judge chose, §13, never left wherever it lands inside a band; and 2026-11-09: "do it in
+the generation directly by giving the detailed specs and parameters"). The narration JSON's `pace` (§4: the family, the bands, the
+judge's `target` point, the tolerance) is what the narration is aimed at and measured against:
 - **the measure**: words a minute overall (first to last word) and while articulating (`wpm_articulation`: the same words over the span
   with every pause of 0.25 s or more taken out), both from the words' times, read the same way in the references and in a narration (§13
-  "The fair measure": the older reading over speech-to-text segments, `wpm_speech`, counts pauses differently in the two and is kept only
-  as a fact). The articulation answers the tempo alone, the overall the pauses: two dials, each predictable;
-- every line's silent edges are trimmed, so the pause between lines is the planned one (a line's `pause_after`, else the default) plus
-  the voice's own breath at the join (its fit's `join_excess_s_at_1`, about 0.15 s for the run's narrator);
-- **the model's own speed setting first**: Alibaba's `rate` (0.5 to 2.0), set from the voice's fit (its articulation at speed 1, learned
-  from its last narration, `state.json → static.voice.fit`; else its older `native_wpm_speech` or its sample); when the measure misses the
-  point, every line is made once more at the corrected setting (billed again; the fit makes the next video right the first time);
-- **a tempo afterwards only for what the model did not reach**, and for every line of a model without a speed setting (Qwen3-TTS on
-  this PC has none): one factor for all lines, ffmpeg's rubberband with the pitch and the formants kept, its first value from the voice's
-  fit; a factor outside 0.85 to 1.35 is named (`tempo_outside_clean_range`: the voice is far from the family's pace);
-- the default pause between lines is set for the overall point (first from the fit, then from each pass's measure), between the plan's
-  `pace.pause_floor_s` and `pace.pause_ceiling_s` (else the config's 0.12 and 1.5 s); a line's own `pause_after` stays. The judge sets
-  the floor so every default join is heard clearly as a pause: a default whose heard gap (the pause plus the voice's breath) sits near
-  the 0.25 s mark is counted as a pause in one reading and as speech in the next (2026-11-08: a default of 0.215 s read 212.7 words a
-  minute articulating once and 207.4 the next time); a line that runs on into the next (its sentence or its list goes on) takes a short
-  `pause_after` of its own instead;
-- after every pass the narration **as delivered** (the voice chain and the two loudness passes applied: the file the video plays and
-  `T narration-words` reads) is measured with **the references' own yardstick** (faster-whisper's timed words), until both
-  measures sit within the tolerance of their points (`narration.pace_tol`, 1.5 %), at most four passes; the last pass's file is the
-  narration, so what was measured is what plays. A point the plan's own pauses
-  cannot reach (the default pause would have to go under its floor) is named in `unreachable` with its cause: the judge's forecast (§13)
-  catches it before the narration is made, by cutting planned pauses the family does not hold. The sidecar's `pace` holds the point, the
-  bands, every pass, `on_target`, `within`, the method and the voice's new fit; `T narration-words` reads the pace again from its own
-  transcription. A narration off its point after the passes is a fact for the judge (J2, §13), never shipped as if it matched.
-The made lines stay as they came (`video-NN/line-NN.wav`); the paced ones are in `video-NN/paced/`, and the image spans and the captions
-follow the paced narration. A narration is never stretched to fit a length: the length comes from the words at the set's pace (§4).
-
-**With Alibaba** (`static_tts=alibaba`; the user, 2026-11-08: "add qwen 3.1 tts plus from the alibaba provider and the user will just
-provide with the api key when they pick it over our local model, the workflow will be the same"). The key is the user environment
-variable `DASHSCOPE_API_KEY` (§9); nothing runs on this PC's GPU, so no memory guard or GPU wait applies.
-- **The five samples**: the same `T tts design` command; each description becomes a voice designed at Alibaba (at most 500 characters)
-  that says the sample line (at most 200 characters, English or Chinese); its preview is the sample file and its voice id is kept
-  beside it. A run in another language makes the samples on this PC (`T tts design --engine local`), and the pick is cloned at Alibaba
-  from its file (cloning works best on 10 to 20 s of speech: write a sample line that long). Voice creation is free; the voices stay on
-  the user's account (1,000 per account).
-- **The pick**: `T tts voice --run RUN --sample K` makes it the run's voice once Alibaba answers that it is usable (a designed sample as
-  it is, a local one cloned). With this engine `--emotion NAME="<the delivery in words>"` is the instruction sent with every line tagged
-  NAME, not a line to speak.
-- **The lines**: `T tts say` makes each line in that voice, a few at a time. A line's `delivery` (a strong line's), else its emotion's
-  instruction, goes with it as Alibaba's instruction, and its `seed` (else the voice's) as the seed. A strong line keeps the same voice
-  and only its delivery changes, so it stays close to the others; `voice_match` and the strong-line check above still apply. The same
-  pauses, loudness pass, sidecar and `T narration-words` follow.
-- **Cost**: per character (`config.json → static.tts.alibaba.price_usd_per_10k_chars`, about US$0.30 per 10,000 in Singapore; a
-  9-minute narration of about 6,700 characters is about US$0.20). The sidecar and each answer record the characters and the estimate. A
-  line made again is billed again: `--only N` makes only those lines, and a run that stopped part way names the missing ones.
+  "The fair measure"; the older segment reading `wpm_speech` is kept only as a fact), on the narration as delivered;
+- **the levers, all before generation**: the voice (its own pace on Eleven v4 is the main one: a voice reads about as fast as the audio
+  it was made from), the delivery and pace tags (the narration's `delivery` leads every passage, e.g. "[quick, measured pace]"), the
+  settings, and the words (shorter sentences and fewer commas read quicker; ellipses, dashes and full stops add rests). Each is measured
+  first: `T tts voices --measure` (free, the voices' own previews: a first reading), then `T tts probe --run RUN --video NN [--voice-id
+  <a candidate>] [--delivery "<tags>"] [--settings '<json>']`: passage 1 made exactly as `say` would send it and read with the
+  references' yardstick (articulating, overall, and `wpm_delivered`: the words over the delivered audio, its own silences in, the length a
+  narration of these words will have); billed, and used by `say` as passage 1 when the plan's levers are the probe's, so it is paid once.
+  A probe of another voice or tag is a candidate in `30-assets/voice/probes.json`; the run voice's points fill `state.json →
+  static.voice.fit`. Two probes that differ in pace may serve different parts (a slow section asked slow). The probes are run by the
+  main session (the judge never generates, §13);
+- **the decision** is the judge's (J1, §13), from the forecast (`T static forecast --part narration`: the point measured for the plan's
+  levers, the predicted pace and length against the plan's point, the family and the characters left); after the narration the
+  measured pace against the point is J2's. A miss is changed only through the request (another tag, setting or wording, the passages
+  made again, billed) or kept and recorded with its reason; nothing is ever done to the delivered audio. `T tts fit` learns the voice's
+  point again from a made narration and `T narration-words`' heard words (the next video's forecast).
+A narration is never fitted to a length afterwards: the length comes from the words at the voice's measured pace (§4).
 
 **The bed** (ACE-Step 1.5): an instrumental under every video, also when the references are voice only (the user, 2026-11-06: "make
 sure we try to generate instrumentals that fit the video content type and narration based on the data collected from the references, no

@@ -50,7 +50,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Analyze Mode (the CapCut project):*
   - capcut-assembly §5: `AWL/reference/capcut-assembly/060_5_qc-of-the-project.md` (1.9 KB)
 - *an own voiceover (the plan has a Voiceover block; item 31):*
-  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.3 KB) (the fix routes)
+  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.6 KB) (the fix routes)
   - voiceover §10: `AWL/reference/voiceover/100_10_qc-of-a-voiceover-x9.md` (1.4 KB)
 - *a `result.json` field this phase writes (a fix proposal under QC fixes `ask`, the keeper's gaps, the voiceover verdict):*
   - production-agents §4: `AWL/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.8 KB)

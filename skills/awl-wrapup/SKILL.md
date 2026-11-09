@@ -97,8 +97,8 @@ references do not hold, add one line offering to write the rule into the section
 ### 6b. Upscale the finals with Topaz (after the user's approval, both modes)
 **Not in Static** (item 36: no Higgsfield). A Static wrap-up reports, in place of credits and flags, the OpenAI cost estimate (the sum of
 the videos' `result.json → static.cost_usd_estimate`; 0 when FLUX 3 Klein made them on this PC), the images' source and re-draws, the
-narration's cost with Alibaba (each `30-assets/narration/video-NN.json → cost_usd_estimate`; none on this PC), and every narration
-line made again.
+narration's ElevenLabs characters (each `30-assets/narration/video-NN.json → characters`, one credit a character on Eleven v4, and the
+account's characters left by `T tts check`), a partial narration with the line it stops at, and every narration passage made again.
 
 
 Once the generated videos and the editing are done, and after the feedback question, offer the

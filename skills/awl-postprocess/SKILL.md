@@ -31,7 +31,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Edit Mode or Recreate (the sync check):*
   - generation-system §5c.5: `AWL/reference/generation-system/290_5c.5_measure-it-after-the-merge.md` (2.3 KB)
 - *an own voiceover (the plan has a Voiceover block; item 31):*
-  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.3 KB)
+  - voiceover §8: `AWL/reference/voiceover/080_8_after-the-generation-x8-by-metho.md` (3.6 KB)
   - voiceover §9: `AWL/reference/voiceover/090_9_in-the-capcut-project.md` (1.6 KB)
 
 Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the edited pictures first, then run step 1 (restore the original audio) once over the joined picture. (2) Recreate: `--audio` is the reference's `files_audio` file and `--audio-offset` its inventory `audio_offset` (fields `audio_path` and `audio_offset` of `RUN/00-inventory/inventory.json`, linked by `T split-audio`); a reference with inserts uses `T restore-audio --generated <edit> --source <own.mp4>` as the plan says. (3) Analyze Mode: stop after step 5 (the clean video) and go to `awl-qc` for the picture checks; once the picture passes, come back here for step 6 (the CapCut project), then `awl-qc` again for the project checks. (4) An own voiceover (item 31): step 5b once the picture passed, then `awl-qc` for the voice, then step 6.

@@ -8,7 +8,8 @@ correlation near 1 at an offset near 0. Numbers only: you read them and decide.
 
 - **native.** Align the clean picture against the take. Its sound is the take (near 1 at near 0): keep it, nothing is mixed. The model altered
   it (another voice, added sound, a shift): lay the exact take back with `T voiceover mix --picture <clean> --voiceover <the take> --offset
-  <global_offset_s> --bed mute --out 60-outputs/video-NN/with-voiceover.mp4` (the same take, so the driven lips stay on it). Lips that do not
+  <global_offset_s> --bed mute --out 60-outputs/video-NN/with-voiceover.mp4` (the same take, so the driven lips stay on it; an offset of 0 or more: a
+  negative one is refused, it would cut the take's head, and the fix is a sync pass as in lipsync). Lips that do not
   follow the words (X9) are a finding: the fix is a sync pass on the same clip (as in lipsync), under the QC-fixes choice (item 27), or one
   regeneration.
 - **lipsync.** The first generation passes its picture checks (X9) first. Then the sync pass: write `50-requests/video-NN-sync-request.json`
@@ -19,8 +20,10 @@ correlation near 1 at an offset near 0. Numbers only: you read them and decide.
   file is the clean picture from here on. A video in the overlay form (no visible speaker) gets no sync
   pass: it is mixed as in overlay.
 - **overlay.** `T voiceover mix --picture <clean> --voiceover <the take> --offset <the voice's planned start, usually 0> --bed keep --bed-gain 0.3 --out 60-outputs/video-NN/with-voiceover.mp4`
-  (`--tempo` for a take a little long, §4 step 4). It also writes `with-voiceover.vo-track.wav` (the take as placed, the picture's length)
-  for the CapCut track, and reports `vo_speech_end_on_picture_s` and `vo_speech_cut_s` (above 0 is cut speech).
+  (the take is only placed: an offset of 0 or more, at its own level, whole; the mix refuses a gain, a negative offset and speech past the
+  picture's end, since the delivered take is never edited, the user, 2026-11-09; a take that does not fit is taken again, §4 step 4). It
+  also writes `with-voiceover.vo-track.wav` (the take as placed, silence after it to the picture's length) for the CapCut track, and
+  reports `vo_speech_end_on_picture_s`.
 - **The fallback**, only when a sync pass is refused, flagged or failed twice: align the take to the model's own speech, read the offset as
   for `T sync-check` (one steady offset is usable, drift is not), and mix it with `--bed mute` at that offset; the lips are then only as close
   as the model's own speech was. Say so in the brief, in `result.json → voiceover` and in the wrap-up.

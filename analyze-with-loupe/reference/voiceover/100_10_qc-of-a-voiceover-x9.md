@@ -1,7 +1,7 @@
 ## 10. QC of a voiceover (X9)
 
 - **The soundtrack** (native, lipsync): your reading of `T voiceover align`: the delivered sound is the take (near 1 at near 0), or it was
-  laid back (§8). **overlay**: the mix facts (`vo_speech_cut_s` 0, the final has audio).
+  laid back (§8). **overlay**: the mix facts (`vo_speech_cut_s` 0: the mix refuses to cut the take; the final has audio).
 - **Lips** (native and lipsync, on-camera): 30 fps dense ranges around three phrase starts and one pause of at least 0.4 s: the planned
   speaker's mouth opens within about 0.1 s of each phrase start and rests in the pause, and no listener mouths the words. Off: native → the
   sync pass or one regeneration (§8, under the QC-fixes choice); lipsync → one more sync pass, or the fallback.

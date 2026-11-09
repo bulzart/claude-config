@@ -18,7 +18,8 @@ reference speaks to it; "V02's template" or "V01's moves" is never the reason fo
   articulating (`wpm_articulation`) and overall (`wpm_overall`) as the family's median (the point a video aims at) and range, and the
   pause pattern (pauses a minute, their median and 90th percentile, the long ones of 0.8 s or more per 10 minutes, their share), all from
   `T static profile --refs <family>`; `wpm_speech` (the older segment reading) only as a fact. Each video's narration JSON carries them
-  (§4), the judge checks the plan against them before anything is made (§13), and the narration is aimed at the point and measured (§6).
+  (§4), the judge checks the plan against them before anything is made (§13), and the narration is aimed at the point by the voice, its tags and the words chosen before it is made, then
+  measured (§6).
 - **Retention, emotion, language, engagement, attachment, the social side, content style** (§1): each as the set's pattern with its
   counts and numbers (a re-hook every N s, the emotion peaks as shares of the length, "you" and questions a minute, the calls to action
   and where they fall), so the scripts (§4), the pictures (§5) and the edit (§7) follow the set, not one video.

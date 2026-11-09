@@ -20,7 +20,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - higgsfield-mcp §1: `AWL/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)
 - `models_explore {action:"get", model_id}` once (A8.2)
 - *an own voiceover (`state.json → voiceover.enabled` true; item 31; the takes in X1, a `voiceover` blocker):*
-  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.4 KB)
+  - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.7 KB)
 - *Static (item 36): production-agents §1, §3 and §5 above, and §2s in place of §2, the Higgsfield section and `models_explore`:*
   - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (11.1 KB)
 

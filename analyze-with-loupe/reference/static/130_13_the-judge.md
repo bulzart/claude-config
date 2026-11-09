@@ -29,12 +29,13 @@ briefs), and the PC's model-memory record.
 
 **The forecast** (`T static forecast --run RUN --video NN [--part narration|images|music] [--from K --to K]`, facts only, written to
 `40-briefs/video-NN-forecast.json`):
-- *Narration*: the plan's words, lines and planned pauses (how many, how long, how many of `LONG_PAUSE_S` 0.8 s or more), the strong lines
-  (their share and any two in a row), the target point and bands, the family's numbers, the voice's fit (learned from its last narration:
-  its words a minute while articulating at tempo 1, the silence it adds at a join, its own pauses inside lines; `T tts fit` learns it
-  again from a made narration), and from them the speed factor the point needs (inside the clean range or not), the pause between lines
-  the overall point needs (reachable or not, and by how many seconds not), and the predicted pace and pause pattern against the family's
-  (pauses a minute, median, 90th percentile, long ones per 10 minutes, their share), and the length against the target.
+- *Narration*: the plan's words, lines and characters, the lines with their own delivery and with pause tags, the passages and the
+  characters they send (their tags included) against the account's characters left (read when the key is set: which line whole passages
+  reach), the target point and bands, the family's numbers, the levers (the voice, the narration's delivery, the settings) and the
+  voice's point measured for them (`same`, or the voice's latest as `nearest`: a probe's or a made narration's; `T tts fit` learns it
+  again): its words a minute while articulating and overall, over the delivered audio (`wpm_delivered`: the length a narration of these
+  words will have), its pauses; and from them the predicted pace, length and pause pattern against the point, the target length and the
+  family's numbers. No speed and no pause between lines is calculated: Eleven v4 has no speed, and nothing is placed after it (§6).
 - *Images*: per image the facts that tend to spoil a still on this PC: things that carry writing in the scene (a sign, a screen, a chart,
   a report, a map, a thermometer …) with no exact words planned, digits in the scene, words of §11, words that ask for panels or a split,
   a missing style lock, clean-picture or one-scene sentence, overlay words, a label on a moving image, missing anchors, three or more
@@ -47,7 +48,7 @@ briefs), and the PC's model-memory record.
 **Memory is a fact, never a gate** (the user, 2026-11-07, after a lighter voice model was used because the free memory looked short:
 "we've already generated prior voices such as the first one used in the video02 with the same memory we have now"): a forecast's
 headroom (the free commit against a job's measured peak plus the guard's floor) says when a job is likeliest to fit (in a gap, with
-nothing else running), never whether it is tried, and never turns a job into a lighter one. Every still, narration and bed is tried;
+nothing else running), never whether it is tried, and never turns a job into a lighter one. Every still and bed is tried (the narration runs at ElevenLabs, not on this PC);
 only a real guard stop (its "STOPPED the app to protect Windows" line) shows it does not fit. Then the job waits until the free
 commit is at least 1 GB above where the stopped attempt started (the user is told the guard's line; nothing of theirs is closed and
 the guard is never changed), or, for a bed, goes on without, named. 2026-11-08, video 03: the bed tried at 15.4 GB free was stopped
@@ -58,11 +59,8 @@ span with every pause of 0.25 s or more taken out, `wpm_articulation`), from the
 speech-to-text segments, `wpm_speech`) counts pauses differently in a natural recording (its segments run long and hold most of its
 pauses) and in a joined narration (its segments end at the lines): 2026-11-08, video 03 read 208.5 by segments and 213.8 by the fair
 measure against a family median of 211.9 by the same fair measure. The judge sets and judges the speaking pace by `wpm_articulation`.
-Two cautions from the same video's re-join: the pace is measured on the narration as delivered (the voice chain and the loudness passes
-applied; the raw join read 212.7 where the delivered file read 207.4), so the loop and `T narration-words` read the same file; and a
-join heard near the 0.25 s mark (a default of 0.215 s plus the voice's breath) is counted as a pause in one reading and as speech in the
-next, so the judge keeps every default join clearly on one side: `pace.pause_floor_s` (§4, §6) high enough that a default join is
-heard as a pause, and a short `pause_after` of its own on a line that runs on into the next.
+The pace is read on the narration as delivered, the file that plays (2026-11-08, the same video: its raw join read 212.7 where the
+processed file read 207.4; since 2026-11-09 nothing is done to the delivered audio, so the two are one file).
 
 **The checkpoints** (each writes its decisions into `40-briefs/video-NN-judge.md`: the decision, the numbers it rests on, the
 predicted result; and afterwards the measured result against it):
@@ -70,11 +68,15 @@ predicted result; and afterwards the measured result against it):
    forecast of every part and decides:
    - the narration's `pace` (§4): `refs` (the family), the bands by the fair measure, the `target` point (the family's median of
      `wpm_articulation` and of `wpm_overall`, unless a reason in the data), the `tolerance`;
+   - the levers that reach the point (§6 "The pace"): the narration's `delivery` (pace and register tags), the `voice_settings`, the
+     words (sentence length and punctuation), each measured first on a probe (passage 1 exactly as `say` will send it; another lever set
+     is another probe): the judge names the lever sets, the main session runs `T tts probe` for each (billed; the judge never generates)
+     and continues the judge with the measures; as few probes as the characters left allow (the forecast's `credits`), the narrator never
+     changed (a lock);
    - the pauses: the long pauses the family holds (its `long_pauses_per_10min` times the video's minutes, at the strongest turns:
-     the reveals, the chapter starts) as `pause_after`, a short `pause_after` where a line runs on into the next, every other join the
-     default the pace loop sets, kept over `pace.pause_floor_s` so each is heard clearly as a pause; the forecast must then show the
-     point reachable and the predicted pause pattern near the family's (a planned pause the family does not hold is cut);
-   - the strong lines (at most one in five, never two in a row, §4), the length against the family's (§4);
+     the reveals, the chapter starts) asked as `tags_after` ("[long pause]") or punctuation, every other rest the voice's own, the
+     probe's pause pattern read against the family's (a pause the family does not hold is not asked);
+   - the strong lines (their own `delivery` tags; at most one in five, never two in a row, §4), the length against the family's (§4);
    - every image prompt the forecast marks: a thing that would carry writing gets its exact words when the story needs them (a label
      is CapCut text, §5) or is described as plain and blank ("a blank white screen", "a chart of plain coloured bars with no writing");
      digits leave the scene words; a split word becomes one scene; a §11 word becomes a secular description; a missing sentence is put
@@ -85,9 +87,10 @@ predicted result; and afterwards the measured result against it):
    It then runs the forecast again and writes the predicted numbers it expects.
 2. **J2, after the narration** (S2, before the images; `awl-static-sound`): the measured pace and pauses (`T tts say`'s `pace`, then `T
    narration-words`) against J1's forecast and point: on the point within the tolerance, the pause pattern near the family's, the
-   length; the image spans against the seconds a still. A miss is explained from the numbers (the fit, the planned pauses) and corrected
-   with what costs nothing (`T tts say --rejoin` after a change of the plan's pauses or point: no line is made again; spans by moving
-   `from_line`); a line made again follows the run's QC fixes. The fit learned by the narration is the next video's forecast.
+   length, and a partial narration (the characters ran out) named; the image spans against the seconds a still. A miss is explained from
+   the numbers (the point measured, the levers) and changed only through the request: another delivery tag, setting or wording and the
+   passages made again (billed, by the run's QC fixes), or kept and recorded with its reason; the delivered audio is never edited (the
+   user, 2026-11-09). Spans are moved by `from_line` (free). The point learned by the narration is the next video's forecast.
 3. **J3, between image stretches** (S3; the main session spawns the judge when an image agent reports, before the next is spawned):
    the stretch's report and flags and the stills it names, viewed; what went wrong is traced to its prompt words (the caption the
    upsampler wrote is in each attempt) and the next stretches' prompts are changed so it does not happen again (prevention costs no
@@ -112,7 +115,8 @@ Run: <RUN>. Toolkit T: "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312
 <what happened since the last checkpoint: the agent's report, the measured numbers, or "nothing generated yet">
 Do: `T static profile --run <RUN> --refs <refs>` and `T static forecast --run <RUN> --video <NN> [--part … --from … --to …]`; read them
 with the plan files; decide every change yourself (never ask anyone), edit only the plan files your checkpoint owns (J1: the narration
-JSON's pace and pauses, the image plan's prompts and characters, music.json's track; J2: the narration JSON's pauses and point; J3: the
+JSON's pace, delivery, settings and pause tags, the image plan's prompts and characters, music.json's track; J2: the narration
+JSON's levers for passages made again; J3: the
 image prompts of the stretches not made yet; J4: music.json's track; J5: the image plan's motion, labels and joins), run the forecast
 again, and append your decisions to <RUN>/40-briefs/video-<NN>-judge.md (each: what, why with the numbers, the predicted result).
 Never generate anything, never change a lock, a start choice or the memory guard, never leave the references' numbers. Heavy work (a

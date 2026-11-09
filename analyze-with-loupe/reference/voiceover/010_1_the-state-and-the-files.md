@@ -8,11 +8,11 @@ resume never asks it again.
 | `enabled` | `true` or `false`: the user's answer (Free: `true` only when the requirement asked for it) |
 | `method` | `native`, `lipsync` or `overlay` (§2): how the take meets the picture |
 | `source` | `elevenlabs` (the pipeline voices each video's lines with the chosen voice) or `file` (the user's own finished voiceover files, one per video, client assets) |
-| `model_id` | the ElevenLabs model: `eleven_v4` when `list_models` has it (it takes the emotion tags), else `eleven_v3` |
+| `model_id` | the ElevenLabs model: `eleven_v4` (the user, 2026-11-09: "we will only use elevenlabs v4"; it takes the emotion tags); `list_models` without it is a blocker, reported |
 | `voice_id`, `voice_name` | the run's voice; `voices` maps a character to its own voice, `{"<character>": {"voice_id": "…", "voice_name": "…"}}`, when the user gave pairs |
 | `language`, `language_name`, `language_official` | the ISO 639-1 code, its name, and whether it is in the model's official language list (`list_models`) |
 | `preference` | the user's words for accent, dialect or delivery (`Scottish accent`, `Kosovar Albanian (Gheg dialect)`, …), or null |
-| `settings`, `output_format` | `{"stability": 0.5, "similarity_boost": 0.75, "style": 0, "speed": 1.0, "use_speaker_boost": true}`; `mp3_44100_128` (192 kbps needs the Creator tier, PCM 44.1 kHz the Pro tier) |
+| `settings`, `output_format` | `{"stability": 0.5, "similarity_boost": 0.75}` (Eleven v4 takes these two only: no speed, no style, no speaker boost; ElevenLabs' docs, 2026-11-09); `mp3_44100_128` (192 kbps needs the Creator tier, PCM 44.1 kHz the Pro tier) |
 | `tier`, `characters_left_at_start` | from `check_subscription` at the start |
 | `videos` | Free only: the video numbers the requirement gives a voiceover (absent: every video) |
 | `files` | written by `T voiceover record`: one entry per video or clip (`01`, `02-c1`) with the current take's file, sidecar, length, speech span, form and attempt |
@@ -20,7 +20,7 @@ resume never asks it again.
 **Store** (`awl-start` step 6, `awl-free-plan` step 5): `T state --run RUN set voiceover.enabled=true voiceover.method=native|lipsync|overlay
 voiceover.source=elevenlabs voiceover.model_id=<id> voiceover.voice_id=<id> "voiceover.voice_name=<name>" voiceover.language=<iso>
 "voiceover.language_name=<name>" voiceover.language_official=true|false "voiceover.preference=<the user's words>" voiceover.output_format=mp3_44100_128
-voiceover.tier=<tier> voiceover.characters_left_at_start=<n>`, plus `voiceover.settings='{"stability":0.5,"similarity_boost":0.75,"style":0,"speed":1.0,"use_speaker_boost":true}'`,
+voiceover.tier=<tier> voiceover.characters_left_at_start=<n>`, plus `voiceover.settings='{"stability":0.5,"similarity_boost":0.75}'`,
 `voiceover.voices='{"<character>":{"voice_id":"…","voice_name":"…"}}'` for `character = voice` pairs and `voiceover.preference=null` without a
 preference; the user's own files: `voiceover.source=file`, the language keys and no voice keys.
 

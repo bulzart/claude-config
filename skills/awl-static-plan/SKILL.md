@@ -15,13 +15,13 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run; skip when already read)
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
-- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (4.8 KB)
+- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (6.1 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (18.5 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (14.4 KB)
-- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (5.9 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (16.2 KB)
+- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (6.0 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.0 KB)
-- static §13: `AWL/reference/static/130_13_the-judge.md` (12.6 KB)
+- static §13: `AWL/reference/static/130_13_the-judge.md` (13.0 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
@@ -44,32 +44,33 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    `RUN/20-analysis/static-subjects.md` (each candidate: title, hook line, why it fits, the scores, the sources).
 3. **Five voice samples** (static §6; the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them
    so the user can hear them and pick the one they like to be the voice of the videos"), only when the run has no narrator yet (the
-   locks' `voice` empty) or a clone picks a new one (`state.json → static.new_voice` true): five voice descriptions from the spec's voice
-   profile, five different takes on it, each naming the set's pace in words ("brisk, about 185 words a minute"), and one line in the
-   references' style that names no subject and nothing of static §11, then
-   `T tts design --run RUN --text "<line>" --instruct "<voice 1>" --instruct "<voice 2>" --instruct "<voice 3>" --instruct "<voice 4>"
-   --instruct "<voice 5>"` (a clone's new narrator adds `--replace`). A locked narrator makes no samples (static §10). The command
-   uses the run's engine (`state.json → static_tts`); with Alibaba (static §6 "With Alibaba"): each description at most 500 characters,
-   the line at most 200 and in English or Chinese, else `--engine local` with a line of 10 to 20 s (the pick is then cloned at Alibaba).
-   A worker or Alibaba error is a blocker of the run: report its real text with `T static check` and stop.
+   locks' `voice` empty) or a clone picks a new one (`state.json → static.new_voice` true): five candidates from the spec's voice
+   profile, five different takes on it: voices the account has, `T tts voices --run RUN --measure` (filtered by `--gender`, `--accent`,
+   `--age`, `--use-case`; each voice's own ElevenLabs preview read with the references' yardstick; free), and, when they do not cover
+   the profile, Voice Design samples: `T tts design --run RUN --text "<a line of 100 to 1,000 characters in the references' style that
+   names no subject and nothing of static §11>" --instruct "<voice 1>" …` (each description 20 to 1,000 characters, naming the set's pace
+   in words, "a quick, measured pace"; billed per character of the line, once per design; a clone's new narrator adds `--replace`). A
+   locked narrator makes no samples (static §10). An ElevenLabs error is a blocker of the run: report its real text with `T tts check`
+   and stop.
 4. **The one stop**, in plain chat (never AskUserQuestion: the pool is longer than four options), the last thing in the turn: the
    subjects numbered (title — hook line — why it fits — for facts the number of sources), the five voices when step 3 made them (number,
-   the voice in a few words, its own speed in words a minute (`T tts design`'s `wpm`) next to the set's, said plainly: every narration
-   is brought to the set's pace, so a voice near it needs the least change, and the full path of its file, as `T tts design` prints it,
-   so the user can play it), and "Reply with N
+   the voice in a few words, its pace while articulating in words a minute (its preview's or sample's, as `T tts voices` or `T tts
+   design` print it) next to the set's, said plainly: Eleven v4 has no speed setting and nothing is sped afterwards, so a voice near the
+   set's pace is the one that reaches it, and the full path of its file, so the user can play it), and "Reply with N
    subject numbers and one voice number, or 'you pick'." (no voice number when the narrator is locked). Then stop and wait. Fewer
    subjects than the count: ask once more. "You pick": the top-scored subjects and the voice that best fits the profile [I].
 5. **Store the picks:** `T static subjects --run RUN --add "<title 1>" --add "<title 2>"` (in video order; each gets the next video
-   number), then, when step 3 made samples, `T tts voice --run RUN --sample K` (a clone's new narrator: `--replace`, then
-   `T state --run RUN set static.new_voice=false`), plus `--emotion NAME="<a line that carries it>"` (at most two; with Alibaba
-   `--emotion NAME="<the delivery in words>"`) when the spec's delivery swings (static §6).
+   number), then, when step 3 made samples, `T tts voice --run RUN --voice-id ID` (an account voice) or `--sample K` (a design) (a
+   clone's new narrator: `--replace`, then `T state --run RUN set static.new_voice=false`), plus `--emotion NAME="[tags]"` (at most two:
+   the audio tags sent where a line of that emotion begins) when the spec's delivery swings (static §6).
 6. **Scripts** (static §4), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
    niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11). The length is yours, never the
    user's (the user, 2026-11-07): decided per video from the spec's length pattern (the references' lengths in `T static lock`'s
    `reference_lengths`, what drives them), written as `target_length_s` and `length_why` in the narration JSON, the script sized to it
    at the set's overall pace (static §4: words = seconds × words a minute / 60). The narration JSON also carries the spec's `pace`
-   (`wpm_speech` and `wpm_overall` as the set's or the family's bands from `T static profile`, with `why`) and `pause_default_s` (the
-   set's median pause), and `pause_after` only where the set pauses longer (before a reveal). The beats, the hooks, the emotions, the
+   (`wpm_articulation` and `wpm_overall` as the family's bands from `T static profile`, with `why`; static §4) and the long pauses the
+   family holds as a line's `tags_after` ("[long pause]") where the set pauses longer (before a reveal); its `delivery`,
+   `voice_settings` and the pace point are J1's (step 9). The beats, the hooks, the emotions, the
    language and the calls to action follow the spec's whole-set patterns (static §2), never one reference's. The copy test and the
    sharpness gate (creative-direction §5.0, §6) pass before a script is final.
 7. **Image plans** (static §5), per video: `RUN/40-briefs/video-NN-images.json`: the characters (photo, or the sheet prompt of one with
@@ -100,9 +101,12 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
 9. **The judge, J1** (static §13; the user, 2026-11-08: "it evaluates the situation and decides way before generation happens";
    "nothing should turn out as unexpected"), per video, before any line, image or bed is made: spawn the judge (§13's prompt,
    checkpoint J1, `model: "opus"`; the video's family and its references from the spec) and wait for it. It reads `T static forecast`
-   and the family's numbers, decides the pace point, the pauses, the strong lines, every prompt the forecast marks and the bed's
-   caption, sections and timing, edits those plan files itself and writes `RUN/40-briefs/video-NN-judge.md` with each decision, its
-   numbers and the result it forecasts. Read its record: a decision that breaks a lock or a rule of this phase is undone and the judge
+   and the family's numbers, decides the pace point, the narration's levers (its delivery and pace tags, the settings, the wording), the
+   pause tags, the strong lines, every prompt the forecast marks and the bed's caption, sections and timing, edits those plan files itself
+   and writes `RUN/40-briefs/video-NN-judge.md` with each decision, its numbers and the result it forecasts. The probes are this
+   session's (the judge never generates, static §13): `T tts probe --run RUN --video NN` with the plan's levers before the judge starts
+   (passage 1, billed, used by `say` as passage 1), and one more probe for each lever set the judge names to compare, the judge then
+   continued with the measures; as few as the account's characters allow (the forecast's `credits`). Read its record: a decision that breaks a lock or a rule of this phase is undone and the judge
    is continued with why.
 10. Show one line per video (number, subject, title, length, images, bed or none, the judge's forecast pace) and go on without waiting.
 

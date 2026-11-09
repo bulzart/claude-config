@@ -52,5 +52,6 @@ narrator, with the paths inside them pointed at the new run. The subjects, the n
 the ledger and the CapCut projects stay with the old run. The clone starts at A5 with one AskUserQuestion call: its niche (never the old
 one; "Other" for any), the narrator (keep it, first; or five new samples) and the visual style (keep the reference, first; or name
 another), and the count. A style picked again rewrites the spec's style lock and text look from that reference's card. A narrator
-picked again makes five new samples (`T tts design --run RUN --replace …`, then `T tts voice --run RUN --sample K --replace`). Nothing is
+picked again gets five new samples (account voices by `T tts voices --run RUN --measure`, designs by `T tts design --run RUN
+--replace …`), then `T tts voice --run RUN --voice-id ID --replace` (or `--sample K --replace`). Nothing is
 analysed twice.

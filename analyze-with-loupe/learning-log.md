@@ -1450,3 +1450,27 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   changed only draft_content.json and draft_info.json got the old captions back from it. The toolkit now writes every root document
   (template-2.tmp too) and never the nested Timelines/<id>/ copies, which `T capcut-repair` fills from the root (sync-timelines
   --nested refuses a nested copy that is newer and different, an edit made in CapCut).
+
+## 2026-11-09: the narration moves to ElevenLabs Eleven v4, and the delivered audio is never edited (Static)
+
+- **The user:** "remove our alibaba qwen 3 tts from the static mode and the pipeline as a whole we will no longer use a locl model for
+  audio generation, we will use elevenlabs"; "we will only use elevenlabs v4"; "do not edit the delivered generation without any
+  exception" (no speed-up, cut, trim, gain or compressor; pace only by instructing the model or other parameters, per ElevenLabs' guide;
+  several takes at different paces for different parts allowed). Qwen3-TTS was uninstalled (12.9 GB) and the Alibaba engine removed.
+- **Eleven v4's facts (its docs, read 2026-11-09, and the account's GET /v1/models):** no speed, no style, no SSML; only stability and
+  similarity_boost; 1 credit a character (v4 Turbo 0.5); pace from the voice, the words and bracket tags; no tag has a documented length.
+  The Free plan refuses 44.1 kHz PCM and 192 kbps MP3 (delivered: mp3_44100_128) and has no cloning and no Music API. The cost header is
+  `character-cost`; the context sent for stitching (previous_request_ids, next_text) is not billed.
+- **Built:** `T tts voices --measure` (the account's voices with their own previews measured, free), `T tts probe` (passage 1 as `say`
+  would send it, reused by `say`), passages of up to 850 characters stitched and placed end to end exactly as delivered, a partial
+  narration when the characters run out (`--fill`), the timeline leaving out the images after it, `voiceover mix` refusing a gain, a
+  negative offset or speech past the picture's end, and the captions timed by ElevenLabs' own character timing.
+- **Measured on video 03:** George (premade) at stability 0.5: passage 1 212.7 wpm while speaking against the point 211.9, but the whole
+  narration 198.0 (passages 176-209) and 145.5 overall against 174.0, with 38.7 long pauses per 10 minutes against the family's 6.3:
+  "[long pause]" gave 1.6-2.6 s at a passage's end where 0.92 s was planned, and the voice rests 0.85-1.2 s between many sentences. One
+  passage probe does not hold for the whole narration: probe a second passage from the middle before spending the rest. The narration
+  came out at -23.5 LUFS as delivered (the old chain raised it to -14). The transcriber started words 0.25-0.7 s early and missed one
+  quiet sentence that ElevenLabs' own timing holds: captions now take ElevenLabs' timing.
+- **The bed:** ACE-Step's load climbs to about 13 GB of commit memory; the guard stops it under 3 GB free, so a long bed needs about 16 GB
+  free at the start. After a restart Windows' page file is back at 6.5 GB (commit limit 22.4 GB, 24.1 on 2026-11-05); with this
+  session's helpers running, about 10.5 GB was free and both tries were stopped.
