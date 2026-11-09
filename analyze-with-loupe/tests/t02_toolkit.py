@@ -2389,6 +2389,12 @@ check(not _wprob and _wrows[0]["bounds"] == [0.3, 0.733333]
       and _wx["IT'S"] < 0 < _wx["SEVEN"] and _wx["FORTY"] == 0.0 and abs(_wgeo["em_px"] - 88.23) < 0.01,
       f"the word box: each word its own text at its place on the centred line, the box on the word being spoken from its narration time "
       f"on the frame grid, a one-word caption boxed whole ({sorted(_wflat)}, {_wgeo})")
+_fw = [{"w": w, "s": s, "e": s + 0.2} for w, s in (("one", 0.0), ("two,", 0.25), ("three", 0.5), ("four", 0.75), ("five.", 1.0),
+                                                      ("six", 2.5), ("seven", 2.75), ("eight", 3.0), ("nine", 3.25))]
+_fc = _awl.chunk_words_fill(_fw, 3, 3, 0.8)
+check([c["text"] for c in _fc] == ["one two, three four five.", "six seven eight nine"]
+      and " ".join(c["text"] for c in _fc).split() == [x["w"] for x in _fw],
+      f"captions filled to 3 words across commas, never across a long pause; a short last group joins the one before it ({_fc})")
 _wbad, _wbadp = _awl._word_box_plan([{"start": 0.3, "end": 0.9, "text": "IT'S EIGHT"}], _wwords[:2], 0.3, 30)
 check(len(_wbadp) == 1 and _wbadp[0].get("token") == "EIGHT",
       f"the word box refuses a caption word that is not the narration's next word ({_wbadp})")

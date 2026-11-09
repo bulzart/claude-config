@@ -7,7 +7,8 @@ check, §6>,
 "highlight_words": ["…"], "animation": "<a text intro slug the catalogue shows drawn>", "animation_s": <seconds>, "word_box": <null, or
 the spoken word's box (§7): {"color": "#…", "alpha": <0-1>, "round_radius": <0-1>, "style": 0, "gap_em": <the words' gap>, "pad": <the
 box past its word, CapCut's 0.14 by default>, "v_offset": <the box's vertical offset; CapCut boxes the descent too, so it sits low at 0>,
-"why": "…"}>},
+"why": "…"}>, "min_words": <null, or with a word box the fewest words a caption shows: each caption filled to `words` across commas
+and short pauses, never across a long pause (0.8 s), a short last group joining the one before it>},
 "characters": [{"id":
 "C1", "name": "…", "photo": "<path or null>", "sheet_prompt": "<when no photo>"}], "images": [{"image": 1, "from_line": 1, "prompt": "…",
 "characters": ["C1"], "motion": "<zoom-in | zoom-out | pan-left | pan-right | pan-up | pan-down | none>", "amount": <the change>,

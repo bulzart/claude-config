@@ -3633,6 +3633,35 @@ def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur:
     return res
 
 
+def chunk_words_fill(words: list, max_words: int = 3, min_words: int = 3, break_gap: float = 0.8) -> list:
+    """Timed words grouped into cues of max_words, filled across commas, sentence ends and short pauses (the word box shows which word is
+    spoken, so the next words may show early; the user, 2026-11-09: "make it at least 3"); a cue never runs across a pause of break_gap s
+    or more (a long pause, a chapter's dip). A stretch's last cue of fewer than min_words joins the cue before it in that stretch."""
+    stretches, cur = [], []
+    for w in words:
+        if cur and w["s"] - cur[-1]["e"] >= break_gap:
+            stretches.append(cur)
+            cur = []
+        cur.append(w)
+    if cur:
+        stretches.append(cur)
+    events = []
+    for st in stretches:
+        groups = [st[k:k + max_words] for k in range(0, len(st), max_words)]
+        if len(groups) > 1 and len(groups[-1]) < min_words:
+            last = groups.pop()
+            groups[-1] = groups[-1] + last
+        events += groups
+    res = []
+    starts = [round(ev[0]["s"], 2) for ev in events]
+    for i, ev in enumerate(events):
+        start = starts[i]
+        end = max(ev[-1]["e"] + (0.05 if i + 1 < len(events) else 0.0), start + 0.25)
+        if i + 1 < len(events):
+            end = min(end, starts[i + 1])
+        res.append({"start": start, "end": round(max(end, start + 0.01), 2), "text": " ".join(w["w"] for w in ev), "preset": "caption"})
+    return res
+
 def cmd_captions(a):
     """Burn exact, frame-consistent text with libass: explicit events (--spec) and/or speech-timed
     captions (--from-speech, optionally forced to the intended wording with --script)."""
@@ -13397,8 +13426,11 @@ def _slideshow_plan(a):
     except (OSError, ValueError):
         timed_words = []
     try:
-        cues = (chunk_words(_words_in_lines(timed_words, side.get("lines") or []), tl["captions"]["words"],
-                            min_cue=tl["captions"]["min_cue_s"]) if timed_words else
+        _tw = _words_in_lines(timed_words, side.get("lines") or []) if timed_words else []
+        cues = ((chunk_words_fill(_tw, tl["captions"]["words"], int(tl["captions"]["min_words"]),
+                                  float(tl["captions"].get("break_gap_s", LONG_PAUSE_S)))
+                 if tl["captions"].get("min_words") else
+                 chunk_words(_tw, tl["captions"]["words"], min_cue=tl["captions"]["min_cue_s"])) if timed_words else
                 json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8")))
     except (OSError, ValueError):
         cues = []
