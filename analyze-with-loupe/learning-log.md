@@ -1554,3 +1554,22 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   The toolkit gathers the facts for it: a stopped job's answer carries `guard_stopped` and the guard's line, and `T music make
   --quantization` names the full-precision try it follows (`int8_after`, from the PC's record since Windows started; `int8_note`
   when there is none).
+
+## 2026-11-09 · Static: the speed-up only on the user's yes; video 03 delivered after the restart
+
+- **The user:** "from now on the speech speedup from now on should only happen on user's permission, we do deliver all the work and then
+  tell the user we're on these stats and for example target was 200wpm but we achieved 180 and we need a bit of speedup, it goes to the
+  capcut looks at the project and only speedup on their permission never else, even though speedup is the last option we should try to
+  achieve it directly on the generation", and "in our video case just return it to normal, no speedup". Built: static §6 ("the last
+  resort for the pace, only on the user's yes"), §7, §8, §13 J2 (J2 writes the speed-up that would close a miss, for the wrap-up to
+  offer), the sound and wrap-up skills, the router's item 36, the config note, and `T tts tempo --user-ok "<their words>"` (refused
+  without it, recorded in the sidecar). Video 03 back to as delivered with `T tts say --rejoin`: 762.24 s, 199.3 / 146.7 words a minute.
+- **The page file did it:** after the restart with the fixed 12-16 GB page file, 19.95 GB was free at rest. FLUX 3 Klein at its usual
+  reserve made the 11 redraws (and one more for 103) at about 11.9 GB, 95-140 s each; ACE-Step made the 763 s bed at full precision in
+  82 s (low-commit loading), no guard stop.
+- **A redraw can bring a new flaw:** still 103's attempt 2 put the paramedic's green cap and ponytail on June. Naming each woman's hair
+  in the prompt (June's short white curly hair uncovered, the paramedic bareheaded) and setting them a little apart fixed it.
+- **The bed's level is judged by ear, per video:** at the default 0.22 the quiet line "Her skin is hot. And dry." ([quiet alarm,
+  slowly]) lost "and dry" under the bed; 0.18 keeps every word (5.6 LU under the voice).
+- **The bed needs its own audio track:** `capcut_add_audio` without a `trackIndex` put it on the narration's track and
+  `capcut_validate` refused the overlap: `capcut_add_track` (audio) first (the static-edit skill says so now).

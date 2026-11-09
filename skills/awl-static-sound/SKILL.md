@@ -13,9 +13,9 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (20.1 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (7.2 KB)
-- static §13: `AWL/reference/static/130_13_the-judge.md` (15.2 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (21.6 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (7.5 KB)
+- static §13: `AWL/reference/static/130_13_the-judge.md` (15.9 KB)
 
 The main session runs S2 for every video, one at a time, before any production agent starts (`awl-analyze-produce` A9s). The narration
 is ElevenLabs' Eleven v4 in the run's voice (`state.json → static.voice`, static §6): nothing of it runs on this PC, every passage is
