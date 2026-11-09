@@ -217,26 +217,47 @@
       "note": "Static's sampling of the references: every reference flat at this rate, nothing denser (no extra frames around cuts, motion or the first second); Static has no effort level (the user, 2026-11-07: \"remove the effort idea completely (on static mode), just do 2fps when on static mode\"); the edit layer is measured at the full frame rate by edit-profile"
     },
     "tts": {
-      "design_model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
-      "clone_model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
-      "dtype": "bfloat16",
-      "attn": "sdpa",
-      "device": "cuda:0",
+      "engine": "elevenlabs",
       "language": "english",
       "seed": 1105,
-      "alibaba": {
-        "model": "qwen-audio-3.1-tts-plus",
-        "region": "singapore",
-        "hosts": {"singapore": "https://dashscope-intl.aliyuncs.com", "beijing": "https://dashscope.aliyuncs.com"},
-        "workspace_hosts": {"singapore": "https://{workspace}.ap-southeast-1.maas.aliyuncs.com", "beijing": "https://{workspace}.cn-beijing.maas.aliyuncs.com"},
-        "synth_path": "/api/v1/services/audio/tts/SpeechSynthesizer",
-        "voice_path": "/api/v1/services/audio/tts/customization",
-        "sample_rate": 24000,
-        "timeout_s": 120,
-        "voice_wait_s": 60,
-        "parallel": 4,
-        "price_usd_per_10k_chars": {"singapore": 0.3, "beijing": 0.2},
-        "note": "static_tts=alibaba (the user, 2026-11-08). Alibaba Cloud Model Studio, Qwen-Audio-TTS, from its docs read 2026-11-08: the key in the user environment DASHSCOPE_API_KEY (keys differ by region); DASHSCOPE_WORKSPACE_ID (the console's Workspace Details) selects the workspace host, else the region's DashScope host; voice design (description to voice) is documented for Beijing and takes English or Chinese lines only; cloning takes WAV/MP3/M4A up to 10 MB, 10-20 s best; synthesis returns a link valid 24 hours; plus is billed per character (Singapore 0.3, Beijing 0.2 USD per 10,000; Singapore gives 10,000 free characters for 90 days); voice creation is free, 1,000 voices per account; 180 requests a minute"
+      "elevenlabs": {
+        "why": "the user, 2026-11-09: \"we will use elevenlabs\", \"we will only use elevenlabs v4\", and \"no edits should be done from our side on the elevenlabs generation ... do not edit the delivered generation without any exception\". Facts from ElevenLabs' docs read 2026-11-09 (overview/models, the Eleven v4 page, best practices, the text-to-speech API reference, request stitching) and the account's GET /v1/models the same day (eleven_v4: character_cost_multiplier 1.0, maximum_text_length_per_request 10000, can_use_style false, can_use_speaker_boost false)",
+        "base_url": "https://api.elevenlabs.io",
+        "key_env": ["ELEVEN_API_KEY", "ELEVENLABS_API_KEY"],
+        "model_id": "eleven_v4",
+        "output_format": "pcm_44100",
+        "fallback_formats": ["mp3_44100_192", "mp3_44100_128", "pcm_24000"],
+        "formats_note": "PCM and WAV at 44.1 kHz need the Pro plan and 192 kbps MP3 the Creator plan (ElevenLabs' docs): a refused format costs nothing and the next one is asked; an MP3 is kept as delivered beside its decoded WAV",
+        "timestamps": true,
+        "timeout_s": 240,
+        "passage_chars": 850,
+        "passage_note": "Eleven v4 works best on paragraphs or passages (ElevenLabs' v4 blog); their troubleshooting page keeps a generation under 800-900 characters; each passage is stitched to the ones before it (previous_request_ids) and the passages are placed end to end exactly as delivered",
+        "design_model_id": "eleven_ttv_v3",
+        "design_path": "/v1/text-to-voice/design",
+        "save_design_path": "/v1/text-to-voice",
+        "design_text_chars": [100, 1000],
+        "design_description_chars": [20, 1000],
+        "design_params": {},
+        "models": {
+          "eleven_v4": {
+            "voice_settings": ["stability", "similarity_boost"],
+            "ranges": {"stability": [0.0, 1.0], "similarity_boost": [0.0, 1.0]},
+            "defaults": {"stability": 0.5, "similarity_boost": 0.75},
+            "speed": false,
+            "style": false,
+            "ssml_breaks": false,
+            "speaker_boost": false,
+            "audio_tags": true,
+            "stitching": "ids",
+            "stitch_max_ids": 3,
+            "seed": true,
+            "language_code": true,
+            "max_chars": 10000,
+            "credits_per_character": 1.0,
+            "pace_levers": "the voice (its own pace: the audio it was made from, or its design description), the words and their punctuation (ellipses slow a line down; full stops and dashes give rests), and audio tags in brackets (delivery and pace, e.g. [Building tension, measured pace], [Quick, light, playful pace], [slowly]; pauses [short pause], [pause], [long pause]); tag adherence is not perfect and no tag has a documented length, so each lever is measured on the voice first (T tts probe); passages of different paces may be asked for different parts",
+            "source": "elevenlabs.io/docs: overview/models, overview/capabilities/text-to-speech/eleven-v4, .../best-practices, api-reference/text-to-speech/convert and convert-with-timestamps, guides request-stitching; read 2026-11-09"
+          }
+        }
       }
     },
     "music": {
@@ -257,8 +278,7 @@
       "tail_s": 0.8,
       "pause_s": 0.35,
       "loudness_lufs": -14.0,
-      "voice_chain": "acompressor=threshold=-30dB:ratio=3:attack=1:release=80:knee=4",
-      "voice_chain_note": "a gentle compressor before the two loudnorm passes, so the narration file (what the CapCut project plays) reaches loudness_lufs: measured 2026-11-06, without it -15.5 LUFS, with it -14.1; an empty string turns it off"
+      "narration_note": "the narration is ElevenLabs' delivered audio, placed as delivered: no voice chain, no gain, no trim, no added silence (the user, 2026-11-09); pause_s is only the hint of where a passage may end when a plan has no pause marks; loudness_lufs is the local render's mix target, never applied to the narration"
     },
     "captions": {
       "words": 3,

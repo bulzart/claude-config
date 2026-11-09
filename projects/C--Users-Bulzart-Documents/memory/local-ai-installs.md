@@ -1,6 +1,6 @@
 ---
 name: local-ai-installs
-description: "Qwen3-TTS 1.7B (3 variants) + ACE-Step 1.5 (2026-11-05) and FLUX 3 Image Klein int8 in a ComfyUI portable (2026-11-06) on this PC under Documents\\AI; this is the /analyze-with-loupe \"Static PC\"; AI jobs must run under the memory guard (two Windows crashes)"
+description: "ACE-Step 1.5 (2026-11-05; Qwen3-TTS installed then, uninstalled 2026-11-09) and FLUX 3 Image Klein int8 in a ComfyUI portable (2026-11-06) on this PC under Documents\\AI; this is the /analyze-with-loupe \"Static PC\"; AI jobs must run under the memory guard (two Windows crashes)"
 metadata:
   node_type: memory
   type: project
@@ -26,3 +26,5 @@ Installed 2026-11-05 in `C:\Users\Bulzart\Documents\AI\` (user: file generation 
 - Git Bash forks can fail under memory pressure: prefer PowerShell.
 
 Related: [[avast-https-scanning-breaks-tls]], [[analyze-with-loupe-command]]
+
+**2026-11-09: Qwen3-TTS uninstalled** (the user: "we will no longer use a locl model for audio generation, we will use elevenlabs"; "also uninstall its whole open weights from our pc too"): `Documents\AI\Qwen3-TTS` (models and both environments), the HF cache copies, `tools\qwen_tts_python.cmd`, the TTS example jobs and the user variable `AWL_TTS_PYTHON` are gone (12.9 GB freed); the Qwen lines above are history. The narration is ElevenLabs: [[awl-elevenlabs-v4-no-edit]]. ACE-Step and FLUX 3 Klein stay.
