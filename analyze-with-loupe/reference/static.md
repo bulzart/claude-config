@@ -22,14 +22,14 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 2b | More than one format (A5, S3, S4, X10) | `025_2b_more-than-one-format.md` | 4.5 |
 | 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 2.8 |
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 6.5 |
-| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 18.8 |
-| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 19.1 |
+| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 19.2 |
+| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 20.1 |
 | 7 | The edit (S4) | `070_7_the-edit-s4.md` | 8.8 |
-| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 7.1 |
-| 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 10.0 |
+| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 7.2 |
+| 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 10.3 |
 | 10 | One channel per run | `100_10_one-channel-per-run.md` | 6.2 |
 | 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 3.1 |
-| 11b | Nothing indecent, gory or distressing | `115_11b_nothing-indecent-gory-or-distres.md` | 3.9 |
+| 11b | Nothing indecent, gory or distressing | `115_11b_nothing-indecent-gory-or-distres.md` | 4.6 |
 | 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 6.1 |
-| 13 | The judge (A6s, S2, S3, S4) | `130_13_the-judge.md` | 14.8 |
+| 13 | The judge (A6s, S2, S3, S4) | `130_13_the-judge.md` | 15.2 |
 <!-- sections:end -->

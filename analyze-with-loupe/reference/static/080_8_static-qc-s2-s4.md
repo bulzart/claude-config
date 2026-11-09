@@ -46,7 +46,8 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
   a figure that reads as clergy or as an idol, a symbol in a pattern) and every script line and caption read for them; a hit is a
   regenerate reason by QC fixes (off: named in the brief and the wrap-up).
 - **Nothing indecent, gory or distressing** (§11b): every image and the thumbnail viewed for skin where clothes belong (a bare chest or
-  legs, underwear, only a towel), a shower, bath or bed scene, blood, a wound, a corpse, a face in agony, terror or tears, and every
+  legs, underwear, only a towel), a shower, bath or bed scene, blood, a wound, a corpse, a face in agony, terror or tears, a person
+  lying limp or with closed eyes on a floor, a stretcher or a sickbed (it reads as dead or unconscious: 2026-11-09, still 97), and every
   script line and caption read for graphic detail or swearing; a hit is a regenerate reason by QC fixes (off: named in the brief and the
   wrap-up). A person whose prompt does not name the clothes from top to bottom is looked at twice (2026-11-09: a man "under a cool
   shower ... and his T-shirt" came back with nothing below the shirt).

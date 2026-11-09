@@ -57,7 +57,8 @@ outside the references', and a capped speed-up as J2's last resort.
    J1's forecast and point and decides: spans by `from_line` (free); a miss of the point changed through the request first (another
    delivery tag, pause tag, setting or wording, the passages made again, billed, by the run's QC fixes); only when the request levers
    cannot reach it, the last resort: `T tts tempo --run RUN --video NN --tempo X --why "<the levers tried and their measures>"` (one
-   speed-up, at most config `static.narration.tempo_max` 1.05, pitch and formants kept), then `T narration-words` and the spans again;
+   speed-up, at most config `static.narration.tempo_max` 1.05, pitch and formants kept; the level rule read again on the sped file, its
+   answer's `level`), then `T narration-words` and the spans again;
    else kept with its reason. Then `T tts fit --run RUN --video NN` (after `narration-words`): the voice's point learned again
    (`state.json → static.voice.fit`), what the next video's forecast reads.
 5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made, when every image is made
@@ -67,7 +68,9 @@ outside the references', and a capped speed-up as J2's last resort.
    memory headroom a fact and never a gate (static §13 "Memory is a fact"): the bed is tried; after a real guard stop the user is told
    its line, the bed is tried once more before the edit, and still stopped the video goes on without a bed, noted (nothing of the
    user's is closed, the guard is never changed). Each track's `duration` =
-   lead + the narration's duration + tail (config `static.narration`), then `T music make --run RUN` (every track in one model load; a
+   lead + the narration's duration + tail (config `static.narration`), then `T music make --run RUN` (add `--quantization
+   int8_weight_only` when the forecast's free commit cannot hold the full-precision model: ACE-Step's own int8, the user's allowance,
+   static §6; every track in one model load; a
    track over ACE-Step's 600 s is made in sections and joined with crossfades, static §6: the plan's own `sections` per part of the
    story, else equal ones).
    Then per video `T music measure --run RUN --video NN`, judged as static §6 and §8 say: a voice heard in the bed alone, or an arc that

@@ -141,7 +141,10 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   (it would add props every later image copies), so its sheet prompt is the full description itself. A character's photo or anchor
   rides as a reference (at most 10). The seed comes from the request and the attempt and is recorded; `--again` draws with a new one.
   The model's peak sits a few hundred MB from the memory guard's floor on this PC: a job the guard stops is run once more by the
-  toolkit once the commit memory is back (`memory_retry` in the answer); image calls run in the foreground (Claude Code ends background
+  toolkit once the commit memory is back (`memory_retry` in the answer). When the free commit memory is short, `--reserve-vram GB`
+  holds more of the GPU back for that call (config `static.klein.reserve_vram_gb`, 5, otherwise): the job commits less, the picture is
+  the same, the call is slower (2026-11-09 at 10.6 GB free: 9 GB let a still with no reference through in 452 s instead of about 90 s;
+  a still with one reference was still stopped at 7.7 GB); the agent's call from the free memory, recorded in each attempt; image calls run in the foreground (Claude Code ends background
   commands when memory runs low, and their GPU lock with them), and one image agent works at a time (three at once stopped a third of
   the stills, 2026-11-07). While it makes images nothing else heavy runs on this PC, the main session included: no test suite, no second
   image call, no model load (2026-11-07: the toolkit's tests run beside the images were one cause of six guard stops).

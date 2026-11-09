@@ -24,7 +24,10 @@ start and the videos go without a bed.
   lasts until the next restart. So after a restart the same jobs that ran the day before are stopped (2026-11-09, after the 03:37
   restart: 10.75 GB free at rest; the beds of 11-06 and 11-07 were made while the page file was grown). A fixed page file large enough
   for the jobs (the user's setting: System Properties, Advanced, Performance Settings, Advanced, Virtual memory, a custom size on C:,
-  then a restart) keeps that headroom across restarts; the guard and its floor stay as they are.
+  then a restart) keeps that headroom across restarts; the guard and its floor stay as they are. On this PC (the user, 2026-11-09:
+  "set the bed alocation it need", then the admin prompt approved): C: is a fixed page file of 12,288 MB at least and 16,384 MB at most
+  (C: had 17.7 GB free), from the next restart: Windows refused to grow the running page file at once (NtCreatePagingFile
+  0xC00000F1), so the commit limit changes only after the restart.
 - **ACE-Step 1.5** (the bed under every video): `git clone https://github.com/ace-step/ACE-Step-1.5`, `uv sync` in it (or the Windows portable
   package); never `pip install ace-step` (that is version 1). Then `AWL_MUSIC_PYTHON` = its `.venv\Scripts\python.exe` and `AWL_MUSIC_ROOT`
   = the clone's folder. Its models (about 10 GB) download on first use.

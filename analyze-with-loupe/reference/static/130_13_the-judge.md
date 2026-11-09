@@ -51,14 +51,18 @@ briefs), and the PC's model-memory record.
 **Memory is a fact, never a gate** (the user, 2026-11-07, after a lighter voice model was used because the free memory looked short:
 "we've already generated prior voices such as the first one used in the video02 with the same memory we have now"): a forecast's
 headroom (the free commit against a job's measured peak plus the guard's floor) says when a job is likeliest to fit (in a gap, with
-nothing else running), never whether it is tried, and never turns a job into a lighter one. Every still and bed is tried (the narration runs at ElevenLabs, not on this PC);
+nothing else running), never whether it is tried, and never turns a job into another engine (the two levers at the end of this
+paragraph are the only lighter settings, and the user's). Every still and bed is tried (the narration runs at ElevenLabs, not on this PC);
 only a real guard stop (its "STOPPED the app to protect Windows" line) shows it does not fit. Then the job waits until the free
 commit is at least 1 GB above where the stopped attempt started (the user is told the guard's line; nothing of theirs is closed and
 the guard is never changed), or, for a bed, goes on without, named. 2026-11-08, video 03: the bed tried at 15.4 GB free was stopped
 at 2.3 GB with ACE-Step at 13.07 GB; a still tried at 13.53 GB was stopped, and stills passed from 15.3 GB. 2026-11-09 (§9 "What a
 job needs"): ACE-Step's own loading held its model twice; the low-commit loading needs about 10.7 GB, so that bed fits from about
 13.6 GB free; and the free commit at rest falls after a restart (the page file shrinks back), which is when a job that ran before is
-stopped: the forecast's headroom is read against the free commit now, never against a past day's.
+stopped: the forecast's headroom is read against the free commit now, never against a past day's. Two levers lower a job's need
+without another engine, the agent's call from the free commit now: FLUX 3 Klein's `--reserve-vram` (the same pixels, slower, §5) and
+ACE-Step's own int8 quantization of the music model (`T music make --quantization int8_weight_only`, the user's allowance of
+2026-11-09, §6).
 
 **The fair measure of pace** (§6 "The pace"): words a minute overall (first to last word) and while articulating (the same words over the
 span with every pause of 0.25 s or more taken out, `wpm_articulation`), from the words' times. The older reading (words over the

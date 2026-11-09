@@ -1404,11 +1404,12 @@ _pre = PR / "30-assets" / "narration" / "video-12.pre-tempo.wav"
 js2, _ = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.02", "--why", "a smaller step")
 _s12u = json.loads((PR / "30-assets" / "narration" / "video-12.json").read_text(encoding="utf-8"))
 check(_c1 and _c2 and js.get("ok") and _pre.is_file() and abs(_s12t["duration_s"] - _d0 / 1.04) < 0.05
+      and (js.get("level") or {}).get("read_after_tempo") == 1.04 and (_s12t.get("level") or {}).get("read_after_tempo") == 1.04
       and all(abs(r["start"] - _l0[r["n"]] / 1.04) < 0.01 for r in _s12t["lines"]) and "rubberband" in _s12t["tempo"]["filter"]
       and "formant=preserved" in _s12t["tempo"]["filter"] and abs(_s12u["duration_s"] - _d0 / 1.02) < 0.05
       and abs(((_awl.media_summary(PR / "30-assets" / "narration" / "video-12.wav") or {}).get("duration_s") or 0) - _d0 / 1.02) < 0.1,
       "tts tempo: the pace's last resort, refused above the cap or without the judge's record of the levers tried; the narration before it "
-      "kept, a later tempo from it (never stacked); pitch and formants kept; the line times follow")
+      "kept, a later tempo from it (never stacked); pitch and formants kept; the line times follow; the level rule read again on the sped file")
 # the characters run out (--budget, the account's, or ElevenLabs' own refusal): the narration is what was made, flagged partial
 _n = len(_EL["seen"])
 js, _ = ts("tts", "say", "--run", str(PR), "--video", "13", "--budget", "1300")
@@ -1464,15 +1465,17 @@ _fcs = "Nothing is laid over the picture: no captions, no titles, no labels, no 
     {"image": 3, "from_line": 3, "prompt": f"Two scenes side by side: an old church on a hill. {_fcs}", "motion": "none"},
     {"image": 4, "from_line": 4, "prompt": f"A map of the coast. {_fsl} {_fcs}", "motion": "pan-left", "label_note": "the city's name"},
     {"image": 5, "from_line": 5, "prompt": f"The man stands barefoot under a cool shower in his small bathroom, water streaming over his "
-                                           f"T-shirt. {_fsl} {_fcs}", "motion": "none"}]}),
+                                           f"T-shirt. {_fsl} {_fcs}", "motion": "none"},
+    {"image": 6, "from_line": 6, "prompt": f"The elderly woman lies face up on the tiled floor, her eyes closed. {_fsl} {_fcs}",
+     "motion": "none"}]}),
     encoding="utf-8")
-js, _ = ts("static", "forecast", "--run", str(FR), "--video", "01", "--part", "images", "--from", "1", "--to", "5")
+js, _ = ts("static", "forecast", "--run", str(FR), "--video", "01", "--part", "images", "--from", "1", "--to", "6")
 _fic = (js.get("images") or {}).get("counts") or {}
 _fi5 = next((r for r in (js.get("images") or {}).get("rows") or [] if r.get("image") == 5), {})
 check(js.get("ok") and _fic.get("text_carriers_without_planned_text") == [1, 4] and _fic.get("digits_in_scene") == [1]
       and _fic.get("religion_or_superstition_words") == [3] and _fic.get("split_words") == [3] and _fic.get("style_lock_missing") == [3]
       and _fic.get("label_on_moving_image") == [4] and _fic.get("clean_sentence_missing") == []
-      and _fic.get("nudity_gore_or_distress_words") == [5] and _fi5.get("nudity_gore_or_distress_words") == ["bathroom", "shower"],
+      and _fic.get("nudity_gore_or_distress_words") == [5, 6] and _fi5.get("nudity_gore_or_distress_words") == ["bathroom", "shower"],
       f"static forecast lists each image prompt's facts that tend to spoil a still, before it is drawn: a thing that carries writing with no "
       f"words planned, digits, a split, words of static §11 and of §11b (a shower: the man came back with nothing below his shirt), a "
       f"missing style lock, a label on a moving image; 'no signs' is kept out ({_fic})")
@@ -1611,6 +1614,11 @@ ts("image", "use", "--run", str(SR), "--video", "01", "--image", "3", "--attempt
 (SR / "40-briefs" / "music.json").write_text(json.dumps({"tracks": [{"video": "01", "caption": "dark ambient drone", "duration": 12}]}), encoding="utf-8")
 js, _ = ts("music", "make", "--run", str(SR))
 check(js.get("made") and Path(js["made"][0]["file"]).is_file(), "music make writes the bed of the planned track (stub)")
+_jq, _cq = ts("music", "make", "--run", str(SR), "--quantization", "int8_weight_only")
+_jq2, _cq2 = ts("music", "make", "--run", str(SR), "--quantization", "int4", ok=False)
+check(_jq.get("ok") and _cq2 == 2,
+      "music make takes ACE-Step's own int8 quantization of the music model for a bed the memory cannot hold at full precision (the "
+      "user, 2026-11-09), and refuses a mode ACE-Step does not have")
 _bed = Path(js["made"][0]["file"]) if js.get("made") else None
 _bcodec = [s.get("codec_name") for s in json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_streams", "-of", "json", str(_bed)],
                                                                 capture_output=True, text=True).stdout or "{}").get("streams", [])] if _bed else []

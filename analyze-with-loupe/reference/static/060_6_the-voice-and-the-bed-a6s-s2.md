@@ -47,6 +47,9 @@ no new samples; the toolkit refuses a new design or pick without `--replace`. Th
     levers tried and what they measured>"` speeds the whole narration up by X (above 1, at most `config static.narration.tempo_max`,
     1.05), its pitch and formants kept (rubberband; refused without it), after J2 has tried the request levers (§13); the narration
     before it stays as `video-NN.pre-tempo.wav`, a later tempo starts from it, and the lines', passages' and words' times follow.
+    The level rule then reads the sped narration again, since a time-stretch changes the loudness (video 03, 2026-11-09: -23.6 LUFS
+    as delivered, -25.5 after 1.05 with its true peak from -1.1 to -2.5 dBTP, then one +1.5 dB gain to -24.0; the sped file before the
+    gain kept as `video-NN.pre-level.wav`).
   The CapCut project plays the narration at its own level (§7).
 - **Passages** (`T tts say`): Eleven v4 "works best when used for paragraphs or passages of text" (ElevenLabs), so the lines are sent in
   passages of up to `config.json → static.tts.elevenlabs.passage_chars` (850; the plan's `tts.passage_chars` overrides) characters. A
@@ -135,6 +138,11 @@ sounds, curious and bouncy. `40-briefs/music.json` (A6s), one track per video:
 narration + tail, set in S2>, "bpm": <n>, "seed": <n>, "why": "<each choice and the data it rests on>"}]}`, then in S2 `T music make
 --run RUN` (every track in one model load; instrumental). The file carries its own fades (the track's `fade_in`, `fade_out`) and is
 saved as 16-bit PCM WAV, the format the CapCut effects check showed playing (ACE-Step writes 32-bit float; the toolkit converts it).
+**When the memory cannot hold it at full precision** (§9 "What a job needs"; the forecast's memory, §13): `T music make --run RUN
+--quantization int8_weight_only` has ACE-Step quantize its music model to int8 (the user, 2026-11-09: "int8 quantization of the ace
+step 1.5 model if possible"; about 2.2 GB less, the full-size weights released before the next model loads), and the bed's sidecar
+names it. Measured that day at 10.7 GB free: int8 loaded and began generating where full precision was stopped loading, and was then
+stopped at 8.69 GB; at full precision the bed needs about 13.6 GB free, int8 a little over 11.5.
 **A long bed** (the user, 2026-11-07: "if acestep 1.5 max is 10 minutes, then we could do 2x8minutes for a 16minutes video i guess, or
 5x5 for a 25 minutes"): ACE-Step makes at most 600 s per piece on this PC (`config.json → static.music.max_s`), so a longer track is made
 in sections and joined end to end with crossfades (`crossfade_s`, default 4 s) into the one file the edit uses: either the agent's own

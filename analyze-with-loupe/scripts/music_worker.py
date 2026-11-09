@@ -169,14 +169,35 @@ def op_generate(job):
             loading = f"ACE-Step's own (the low-commit loading could not be set up: {type(e).__name__}: {e})"
     from acestep.handler import AceStepHandler
     from acestep.inference import GenerationConfig, GenerationParams, generate_music
+    quant = job.get("quantization") or None   # ACE-Step's own DiT quantization (torchao): int8_weight_only | fp8_weight_only | w8a8_dynamic
+    if quant:
+        # the user, 2026-11-09: "int8 quantization of the ace step 1.5 model if possible": the music model is loaded, then quantized by
+        # ACE-Step itself; the full-size weights it leaves in PyTorch's cache are released at once, before the next model loads (on this
+        # PC a cached GPU block is still commit memory)
+        orig_q = AceStepHandler._apply_dit_quantization
+
+        def _quantize_then_release(self, quantization):
+            orig_q(self, quantization)
+            import gc
+            import torch
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        AceStepHandler._apply_dit_quantization = _quantize_then_release
     dit = AceStepHandler()
     t0 = time.time()
     init = dit.initialize_service(project_root=str(job.get("root") or "."), config_path=str(job.get("config") or "acestep-v15-turbo"),
                                   device=str(job.get("device") or "cuda"), use_flash_attention=False, compile_model=False,
-                                  offload_to_cpu=False, offload_dit_to_cpu=False, quantization=None)
+                                  offload_to_cpu=False, offload_dit_to_cpu=False, quantization=quant)
     msg, ok = (init if isinstance(init, tuple) and len(init) == 2 else (str(init), True))
     if not ok:
-        return {"ok": False, "error": f"initialize_service: {msg}", "loading": loading}
+        return {"ok": False, "error": f"initialize_service: {msg}", "loading": loading, "quantization": quant}
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:  # noqa: BLE001
+        pass
     load_s = round(time.time() - t0, 1)
     made, failed = [], []
     for tr in job["tracks"]:
@@ -200,7 +221,7 @@ def op_generate(job):
             made.append({"video": tr["video"], "out": str(dest), "sample_rate": res.audios[0].get("sample_rate"), "seconds": round(time.time() - t1, 1)})
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
-    return {"ok": bool(made) and not failed, "made": made, "failed": failed, "load_s": load_s, "loading": loading}
+    return {"ok": bool(made) and not failed, "made": made, "failed": failed, "load_s": load_s, "loading": loading, "quantization": quant}
 
 
 def main():

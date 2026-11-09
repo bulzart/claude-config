@@ -9420,7 +9420,8 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
     f = folder / f"{tag}.png"
     timeout = float(a.timeout or _kcfg("timeout_s", 1800))
     job = {"op": "generate", "root": os.environ.get("AWL_IMAGE_ROOT") or _kcfg("root") or "", "models": models, "alpha": alpha,
-           "reserve_vram_gb": _kcfg("reserve_vram_gb", 5), "comfy_args": list(_kcfg("comfy_args", []) or []),
+           "reserve_vram_gb": (float(a.reserve_vram) if getattr(a, "reserve_vram", None) is not None else _kcfg("reserve_vram_gb", 5)),
+           "comfy_args": list(_kcfg("comfy_args", []) or []),
            "timeout_per_image": timeout, "images": [{"prompt": prompt, "out": str(f), "width": w, "height": h, "seed": seed,
                                                      "steps": steps, "upsample": upsample, "refs": [str(r.resolve()) for r in refs]}]}
     t0 = time.time()
@@ -9451,7 +9452,8 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
         _img_ledger(rd, "set", fp=fp, status="failed", note=err[:200])
         _img_record_add(rec_p, key_name, {"attempt": attempt, "status": "failed", "fingerprint": fp, "at": now_iso(), "request_file": str(reqf),
                                           "engine": engine, "seed": seed, "error": err, "memory_retry": mem_retry,
-                                          "refs_count": len(refs), "peak_gb": res.get("peak_gb")})
+                                          "refs_count": len(refs), "peak_gb": res.get("peak_gb"),
+                                          "reserve_vram_gb": job["reserve_vram_gb"]})
         fail(f"no image from FLUX 3 Klein: {err}", 1, fingerprint=fp, seed=seed, log_tail=str(res.get("log_tail") or "")[-1200:] or None,
              memory_retry=mem_retry, refs_count=len(refs), peak_gb=res.get("peak_gb"))
     wh = _img_size(f)
@@ -9460,12 +9462,13 @@ def _img_generate_klein(a, rd: Path, st: dict, anchor, nn: str, key_name: str, p
                                       "upsampled": upsample, "caption": one.get("caption"), "refs": [r["file"] for r in params["refs"]],
                                       "request_file": str(reqf), "seconds": one.get("seconds"), "cost_usd_estimate": 0.0,
                                       "stub": bool(res.get("stub")), "memory_retry": mem_retry, "refs_count": len(refs),
-                                      "peak_gb": res.get("peak_gb"), "same_as_primary": origin}, use=f.name)
+                                      "peak_gb": res.get("peak_gb"), "same_as_primary": origin,
+                                      "reserve_vram_gb": job["reserve_vram_gb"]}, use=f.name)
     _img_ledger(rd, "set", fp=fp, status="completed", note=f.name)
     out({"ok": True, "file": str(f), "attempt": attempt, "size": wh, "engine": engine, "seed": seed, "upsampled": upsample,
          "caption": one.get("caption"), "refs": len(refs), "cost_usd_estimate": 0.0, "elapsed_s": round(time.time() - t0, 1),
          "fingerprint": fp, "stub": bool(res.get("stub")), "memory_retry": mem_retry, "peak_gb": res.get("peak_gb"), "format": ftag or None,
-         "same_as_primary": origin,
+         "same_as_primary": origin, "reserve_vram_gb": job["reserve_vram_gb"],
          "prompt_overlay_words": _overlay_words(prompt),
          **({"thumbnail": _thumb_deliver(rd, nn, f)} if key_name == "thumb" else {}),
          "note": "view the image before you use it (the QC of reference/static §8); caption is what the image model received; this attempt "
@@ -10084,6 +10087,9 @@ def _model_memory_note(kind: str, job: dict, res: dict, stderr: str, free_before
             said = str((res.get("loading") if isinstance(res, dict) else None)
                        or ("low-commit" if not isinstance(job, dict) or job.get("low_commit", True) else "ace-step"))
             row["loading"] = "low-commit" if said.lower().startswith("low-commit") else "ace-step"
+            q = (res.get("quantization") if isinstance(res, dict) else None) or (job.get("quantization") if isinstance(job, dict) else None)
+            if q:
+                row["quantization"] = q
         p = _model_memory_path()
         with FileLock(p.with_name(".model-memory.json.lock"), timeout=30.0, stale=120.0):
             rows = []
@@ -11296,26 +11302,26 @@ def _el_level_decision(lufs, tp, fam: dict, ceiling: float, min_step: float) -> 
                          f"constant volume change of {gain:+.2f} dB toward their median {fam['median']}")}
 
 
-def _el_level(rd: Path, P: dict, final: Path, lufs, tp) -> dict:
+def _el_level(rd: Path, P: dict, final: Path, lufs, tp, kept_as: str = "delivered") -> dict:
     """The narration's level (the user, 2026-11-09: "allow only volume changing if it is too low or too high in comparison with the
     references data mined and analysed"): read against the references named in the plan's pace.refs; when outside their range, the
-    delivered narration is kept as video-NN.delivered.wav and video-NN.wav becomes it with one constant gain (ffmpeg volume, nothing
-    else). Returns the facts for the sidecar."""
+    narration before the gain is kept as video-NN.<kept_as>.wav (the delivered audio; after a speed-up, the sped one, "pre-level") and
+    video-NN.wav becomes it with one constant gain (ffmpeg volume, nothing else). Returns the facts for the sidecar."""
     fam = _ref_lufs(rd, (P["spec"].get("pace") or {}).get("refs") or [])
     d = _el_level_decision(lufs, tp, fam, float(_scfg("narration.true_peak_db", -1.0)), float(_scfg("narration.level_min_step_db", 0.5)))
     rec = {"lufs_delivered": lufs, "true_peak_delivered": tp, "references": fam or None, **d}
+    kept = final.with_name(f"{final.stem}.{kept_as}.wav")
     if d["gain_db"]:
-        kept = final.with_name(final.stem + ".delivered.wav")
         os.replace(final, kept)
         cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(kept), "-af", f"volume={d['gain_db']:.3f}dB",
                   "-c:a", "pcm_s16le", str(final)], timeout=900)
         if cp.returncode != 0:
             os.replace(kept, final)
-            fail("the volume change failed (the narration is as delivered): " + (cp.stderr or "")[-300:])
-        rec["file_delivered"] = str(kept)
+            fail("the volume change failed (the narration is as it was): " + (cp.stderr or "")[-300:])
+        rec["file_delivered" if kept_as == "delivered" else "file_before_gain"] = str(kept)
         rec["lufs_after"], rec["true_peak_after"] = _true_peak_and_loudness(final)
     else:
-        final.with_name(final.stem + ".delivered.wav").unlink(missing_ok=True)
+        kept.unlink(missing_ok=True)
     return rec
 
 
@@ -11489,6 +11495,7 @@ def _tts_say(a):
                                                        f"passage 1 needs {stopped['needs']})" if stopped else ""), 1, stopped=stopped)
     final = rd / "30-assets" / "narration" / f"video-{nn}.wav"
     final.with_name(final.stem + ".pre-tempo.wav").unlink(missing_ok=True)   # a new narration: an older speed-up no longer applies
+    final.with_name(final.stem + ".pre-level.wav").unlink(missing_ok=True)   # nor the level read after it
     J = _el_concat(P, made, upto, nd, final)
     lufs, tp = _true_peak_and_loudness(final)
     level = _el_level(rd, P, final, lufs, tp)   # a volume change only outside the references' range (the user, 2026-11-09)
@@ -11747,6 +11754,17 @@ def _tts_tempo(a):
     for p in side.get("passages") or []:
         p["start"], p["end"] = round(float(p["start"]) * k, 3), round(float(p["end"]) * k, 3)
     lufs, tp = _true_peak_and_loudness(final)
+    # the level rule again on the sped narration (a time-stretch changes the loudness: video 03, 2026-11-09, -23.6 LUFS as delivered,
+    # -25.5 after 1.05, its true peak from -1.1 to -2.5 dBTP): one constant gain only outside the references' range (static §6)
+    spec_p = rd / "40-briefs" / f"video-{nn}-narration.json"
+    try:
+        spec = json.loads(spec_p.read_text(encoding="utf-8")) if spec_p.is_file() else {}
+    except (OSError, ValueError):
+        spec = {}
+    level = _el_level(rd, {"spec": spec}, final, lufs, tp, kept_as="pre-level")
+    side["level"] = {**level, "read_after_tempo": x}
+    if level.get("lufs_after") is not None:
+        lufs, tp = level["lufs_after"], level["true_peak_after"]
     rows = side.get("lines") or []
     m = _measure_pace(final, [{"n": r["n"], "text": r["text"]} for r in rows], {r["n"]: (r["start"], r["end"]) for r in rows},
                       side.get("language") or "english", final.parent / f"video-{nn}")
@@ -11758,7 +11776,8 @@ def _tts_tempo(a):
     pt = _pace_targets((json.loads((rd / "40-briefs" / f"video-{nn}-narration.json").read_text(encoding="utf-8")).get("pace") or {})
                        if (rd / "40-briefs" / f"video-{nn}-narration.json").is_file() else {})
     out({"ok": True, "video": nn, "file": str(final), "tempo": x, "cap": cap, "duration_s": side["duration_s"],
-         "measured": side["tempo"]["measured"], "loudness_lufs": lufs, "true_peak_db": tp, "pre_tempo_file": str(pre),
+         "measured": side["tempo"]["measured"], "loudness_lufs": lufs, "true_peak_db": tp, "level": side["level"],
+         "pre_tempo_file": str(pre),
          "target": ({pt["measure"]: pt["target_speak"], "wpm_overall": pt["target_overall"]} if pt else None),
          "note": "next: `T narration-words` again (the words' times follow the speed-up), then `T slideshow plan` (the images follow the lines)"})
 
@@ -12101,7 +12120,8 @@ def cmd_music(a):
         root = os.environ.get("AWL_MUSIC_ROOT") or _scfg("music.root") or ""
         with _gpu_lock():
             res = _worker("music", {"op": "generate", "root": root, "config": _scfg("music.config", "acestep-v15-turbo"),
-                                    "device": _scfg("music.device", "cuda"), "steps": int(_scfg("music.inference_steps", 8)), "tracks": jobs},
+                                    "device": _scfg("music.device", "cuda"), "steps": int(_scfg("music.inference_steps", 8)), "tracks": jobs,
+                                    **({"quantization": a.quantization} if getattr(a, "quantization", None) else {})},
                           cwd=root or None)
     if not res.get("ok"):
         fail("music failed: " + str(res.get("error"))[:600], 1, worker=res)
@@ -12116,12 +12136,13 @@ def cmd_music(a):
             fmt = _bed_pcm16(f)
             write_json(f.with_suffix(".json"), {**t_, "made": now_iso(), "model": _scfg("music.config", "acestep-v15-turbo"),
                                                 "stub": bool(os.environ.get("AWL_MUSIC_STUB")), "format": fmt,
-                                                **({"loading": res["loading"]} if res.get("loading") else {})})
+                                                **({"loading": res["loading"]} if res.get("loading") else {}),
+                                                **({"quantization": res["quantization"]} if res.get("quantization") else {})})
             made.append({"video": t_["video"], "file": str(f), "duration_s": (media_summary(f) or {}).get("duration_s"),
                          "codec": fmt.get("codec"), "converted_from": fmt.get("from"), "sections": len(t_.get("parts") or []) or 1,
                          **({"section_s": [p["duration"] for p in t_["sections"]], "crossfade_s": t_["crossfade_s"]} if t_.get("parts") else {})})
     out({"ok": bool(made), "made": made, "asked": len(tracks),
-         **({"loading": res["loading"], "load_s": res.get("load_s")} if res.get("loading") else {}),
+         **({"loading": res["loading"], "load_s": res.get("load_s"), "quantization": res.get("quantization")} if res.get("loading") else {}),
          "note": "next, per video: `T music measure --run RUN --video NN` (the bed alone and under the narration as CapCut plays it)"})
 
 
@@ -12738,7 +12759,9 @@ FC_EXPOSURE = re.compile(r"\b(showers?|showering|baths?|bathing|bathtubs?|bathro
                          r"(?:wrapped in|only) (?:a |his |her |their )?towels?|blood\w*|bleed\w*|wounds?|wounded|injur\w*|gash\w*|"
                          r"bruis\w*|corpses?|dead bod(?:y|ies)|gore|gory|severed|vomit\w*|toilets?|urin\w*|syringes?|drunk\w*|"
                          r"scream\w*|sob|sobs|sobbing|weep\w*|wail\w*|agony|agoni[sz]\w*|terrified|terror|horrified|panick\w*|"
-                         r"despair\w*|suicid\w*|self[- ]harm\w*|collaps\w*|unconscious|fainted|fainting)\b", re.I)
+                         r"despair\w*|suicid\w*|self[- ]harm\w*|collaps\w*|unconscious|fainted|fainting|eyes (?:half )?closed|"
+                         r"(?:lies|lying|laid)\b[^.;]{0,40}?\bon the (?:\w+ )?(?:floor|tiles|ground|stretcher)|"
+                         r"onto the (?:\w+ )?(?:floor|tiles|ground))\b", re.I)
 FC_SPLIT = re.compile(r"\b(split|side[- ]by[- ]side|panels?|before and after|comparison|versus|vs\.?|left half|right half|two scenes|"
                       r"inset|collage|grid of)\b", re.I)
 FC_VOCALS = re.compile(r"\b(vocals?|voices?|sing\w*|singers?|choirs?|lyrics?|rap\w*|chants?|humming)\b", re.I)
@@ -15212,6 +15235,10 @@ def main():
     p.add_argument("--seed", type=int, help="generate, FLUX 3 Klein: a seed (default one from the request and the attempt, recorded)")
     p.add_argument("--no-upsample", action="store_true", help="generate, FLUX 3 Klein: the prompt already is a full scene caption, so "
                                                               "Black Forest Labs' prompt upsampler is skipped")
+    p.add_argument("--reserve-vram", type=float, dest="reserve_vram",
+                   help="generate, FLUX 3 Klein: the GPU memory in GB ComfyUI leaves unused for this call (default config "
+                        "static.klein.reserve_vram_gb): more held back is less commit memory for the job on this PC (Windows counts GPU "
+                        "memory as commit) and slower, the same pixels; the agent's call from the free commit memory (static §9)")
     p.add_argument("--model", help="generate: default config static.images.model")
     p.add_argument("--size", help="generate: WxH, both divisible by 16 (default the run's format, state.json -> static.format)")
     p.add_argument("--quality", help="generate: low | medium | high | xhigh | max (default the run's format)")
@@ -15300,6 +15327,10 @@ def main():
     p.add_argument("--plan", help="make: default 40-briefs/music.json")
     p.add_argument("--video", help="make: only this video's track; measure: the video (required)")
     p.add_argument("--gain", type=float, help="measure: the level to test (default the image plan's music_gain, else config static.music.gain)")
+    p.add_argument("--quantization", choices=["int8_weight_only", "fp8_weight_only", "w8a8_dynamic"],
+                   help="make: ACE-Step's own quantization of its music model (the user, 2026-11-09: \"int8 quantization of the ace step "
+                        "1.5 model if possible\"), for a bed the free commit memory cannot hold at full precision (static §9); the "
+                        "agent's call from the memory forecast, recorded in the bed's sidecar")
     p.set_defaults(fn=cmd_music)
 
     p = sp.add_parser("slideshow", help="Static's local render (contract item 36): plan (the timeline from the image plan and the narration's line "

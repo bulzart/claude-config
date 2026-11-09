@@ -61,7 +61,8 @@ stack a tall frame into panels, above all with no reference image).
    photo or anchor of each character it shows; at most 16, with FLUX 3 Klein 10; three or more characters with FLUX 3 Klein: their own
    anchors when `T image fit --run RUN --n-refs N`, read right before the call, shows headroom for them, else their one cast sheet,
    `T image cast --run RUN --ids C2,C3,C4`). The size and quality (the API's) are the run's format (`state.json → static.format`); never another
-   size. The prompt never holds the words caption, subtitle, lower third or text overlay (static §5: the model then draws a made-up
+   size. With FLUX 3 Klein and the free commit memory short, `--reserve-vram GB` (more than config `static.klein.reserve_vram_gb`)
+   holds more of the GPU back: the same pixels, a slower call (static §5). The prompt never holds the words caption, subtitle, lower third or text overlay (static §5: the model then draws a made-up
    subtitle) and ends on the clean-picture sentence; the answer's `prompt_overlay_words` must be empty, else rewrite the prompt. Every
    image call runs in the foreground (never a background loop: Claude Code ends background commands when memory runs low).
 3. **View the image** (Read the file) and check it (static §8); after the stills, `T image text --run RUN --video NN` lists every line

@@ -13,6 +13,11 @@ No subject, line, caption, picture, thumbnail or sound of a Static video shows, 
   happens, an accident's aftermath, an animal hurt or its carcass;
 - **extreme distress**: a face or a body in agony, terror, panic, sobbing or screaming, despair or a breakdown; suicide and self-harm,
   spoken or shown; cruelty;
+- **someone as if dead, unconscious or gravely ill** (the user, the same day, on still 97, June lying face up on the bathroom floor with
+  her eyes closed while water is poured on her arm: "it seems like the grandma has died or laying down very sick or uncounsiesness,and
+  is a bit distressful, content like this should be avoided", then of 93-97: "and similar images"): nobody lies limp or flat with
+  closed or half-closed eyes on a floor, a stretcher or a sickbed; a person being cared for is awake, eyes open, sitting up where the
+  story allows (propped against a bath, upright in a chair or on the stretcher);
 - **what a family audience is not shown or told**: vomit, excrement, urine, a toilet in use; drugs and drunkenness; graphic medical
   detail (a needle in skin, an operation, a wound being treated); swearing, slurs and crude jokes; a person humiliated.
 
@@ -27,8 +32,9 @@ How it applies (as §11 does):
   barefoot under a cool shower ... water streaming over him and his T-shirt" named the shirt only, and the shower made the rest bare).
   A line about an undressed moment is shown by its dressed moment or by its thing: "A cool shower." becomes the shower running in the
   empty bathroom, or the man after it, dressed, his hair wet and a towel round his neck. A medical moment shows the care, never the
-  harm: the helper's hands, the cool cloths, the patient resting with a calm face; never a wound, a contorted face or a collapse as it
-  happens. Feelings stay in the references' register and short of extremes (worry, alarm, relief, a frown; never agony or terror).
+  harm: the helper's hands, the cool cloths, the patient awake with eyes open and sitting up; never a wound, a contorted face, a
+  collapse as it happens, or a person lying limp with their eyes closed (video 03's cooling on the bathroom floor, 93-97, is drawn with
+  June sitting against the bath, awake, while he cools her). Feelings stay in the references' register and short of extremes (worry, alarm, relief, a frown; never agony or terror).
   The prompt names what is there, never what must stay out (a prompt that says "no blood" tends to draw some).
 - **The thumbnail** (§12): the same; its face's feeling reads at a glance (surprise, worry, curiosity), never terror or pain.
 - **The bed** (§6): no screams, sobs or sounds of pain in its caption or its sound.
