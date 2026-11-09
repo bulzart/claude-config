@@ -62,7 +62,8 @@ outside the references', and a capped speed-up as J2's last resort.
    (`state.json → static.voice.fit`), what the next video's forecast reads.
 5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made, when every image is made
    or in a gap between image stretches (two local models never share the GPU and the commit memory; 2026-11-08 the guard stopped
-   ACE-Step at 2.0 GB free commit): first **J4** (static §13): `T static forecast --run RUN --video NN --part music` right before, its
+   ACE-Step at 2.0 GB free commit; since 2026-11-09 it loads the low-commit way, the answer's `loading`, and needs about 13.6 GB free
+   commit, static §9 "What a job needs"): first **J4** (static §13): `T static forecast --run RUN --video NN --part music` right before, its
    memory headroom a fact and never a gate (static §13 "Memory is a fact"): the bed is tried; after a real guard stop the user is told
    its line, the bed is tried once more before the edit, and still stopped the video goes on without a bed, noted (nothing of the
    user's is closed, the guard is never changed). Each track's `duration` =

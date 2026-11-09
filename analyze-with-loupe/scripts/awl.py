@@ -10080,6 +10080,10 @@ def _model_memory_note(kind: str, job: dict, res: dict, stderr: str, free_before
                "ok": bool(isinstance(res, dict) and res.get("ok")), "peak_gb": res.get("peak_gb") if isinstance(res, dict) else None,
                "guard_stopped": bool(stop), "free_commit_gb_at_stop": float(stop[-1][1]) if stop else None,
                "free_commit_gb_before": free_before, "exit": code}
+        if kind == "music":   # how the models were loaded (static §9 "What a job needs"): the worker's answer, else what the job asked
+            said = str((res.get("loading") if isinstance(res, dict) else None)
+                       or ("low-commit" if not isinstance(job, dict) or job.get("low_commit", True) else "ace-step"))
+            row["loading"] = "low-commit" if said.lower().startswith("low-commit") else "ace-step"
         p = _model_memory_path()
         with FileLock(p.with_name(".model-memory.json.lock"), timeout=30.0, stale=120.0):
             rows = []
@@ -12111,11 +12115,13 @@ def cmd_music(a):
         if f.is_file():
             fmt = _bed_pcm16(f)
             write_json(f.with_suffix(".json"), {**t_, "made": now_iso(), "model": _scfg("music.config", "acestep-v15-turbo"),
-                                                "stub": bool(os.environ.get("AWL_MUSIC_STUB")), "format": fmt})
+                                                "stub": bool(os.environ.get("AWL_MUSIC_STUB")), "format": fmt,
+                                                **({"loading": res["loading"]} if res.get("loading") else {})})
             made.append({"video": t_["video"], "file": str(f), "duration_s": (media_summary(f) or {}).get("duration_s"),
                          "codec": fmt.get("codec"), "converted_from": fmt.get("from"), "sections": len(t_.get("parts") or []) or 1,
                          **({"section_s": [p["duration"] for p in t_["sections"]], "crossfade_s": t_["crossfade_s"]} if t_.get("parts") else {})})
     out({"ok": bool(made), "made": made, "asked": len(tracks),
+         **({"loading": res["loading"], "load_s": res.get("load_s")} if res.get("loading") else {}),
          "note": "next, per video: `T music measure --run RUN --video NN` (the bed alone and under the narration as CapCut plays it)"})
 
 
@@ -12725,6 +12731,14 @@ FC_RELIGION = re.compile(r"\b(church\w*|chapels?|cathedrals?|mosques?|synagogues
                          r"saints?|spirits?|ghosts?|ghostly|gods?|goddess\w*|idols?|demons?|devils?|heaven\w*|hell|incense|rosar\w+|"
                          r"bibles?|qurans?|korans?|scriptures?|worship\w*|hymns?|choirs?|chants?|organs?|gospel|miracles?|curses?|omens?|"
                          r"amulets?|charms?|horoscopes?|zodiac|fortune[- ]tell\w*|spells?|witch\w*|magic\w*)\b", re.I)
+# static §11b (the user, 2026-11-09): words that tend to bring nudity, gore or extreme distress into a still or a bed; a fact for the
+# judge (a reading such as "blood pressure pills" is the judge's to keep)
+FC_EXPOSURE = re.compile(r"\b(showers?|showering|baths?|bathing|bathtubs?|bathrooms?|naked|nude|nudity|undress\w*|underwear|lingerie|"
+                         r"bikinis?|swimsuits?|swimwear|swim(?:ming)? trunks|topless|shirtless|bare[- ]chested|saunas?|"
+                         r"(?:wrapped in|only) (?:a |his |her |their )?towels?|blood\w*|bleed\w*|wounds?|wounded|injur\w*|gash\w*|"
+                         r"bruis\w*|corpses?|dead bod(?:y|ies)|gore|gory|severed|vomit\w*|toilets?|urin\w*|syringes?|drunk\w*|"
+                         r"scream\w*|sob|sobs|sobbing|weep\w*|wail\w*|agony|agoni[sz]\w*|terrified|terror|horrified|panick\w*|"
+                         r"despair\w*|suicid\w*|self[- ]harm\w*|collaps\w*|unconscious|fainted|fainting)\b", re.I)
 FC_SPLIT = re.compile(r"\b(split|side[- ]by[- ]side|panels?|before and after|comparison|versus|vs\.?|left half|right half|two scenes|"
                       r"inset|collage|grid of)\b", re.I)
 FC_VOCALS = re.compile(r"\b(vocals?|voices?|sing\w*|singers?|choirs?|lyrics?|rap\w*|chants?|humming)\b", re.I)
@@ -12761,17 +12775,28 @@ def _fc_memory(kind: str, floor: float) -> dict:
         jobs = [j for j in json.loads(_model_memory_path().read_text(encoding="utf-8")).get("jobs") or [] if j.get("kind") == kind]
     except (OSError, ValueError):
         jobs = []
-    ok_pk = [float(j["peak_gb"]) for j in jobs if j.get("ok") and j.get("peak_gb") is not None]
-    stop_pk = [float(j["peak_gb"]) for j in jobs if j.get("guard_stopped") and j.get("peak_gb") is not None]
+    # music jobs made before the low-commit loading (2026-11-09) held each model twice: their peaks are a fact of the old loading, kept apart
+    cur = [j for j in jobs if j.get("loading") == "low-commit"] if kind == "music" else []
+    older = [j for j in jobs if j.get("loading") != "low-commit"] if cur else []
+    base = cur or jobs
+    ok_pk = [float(j["peak_gb"]) for j in base if j.get("ok") and j.get("peak_gb") is not None]
+    stop_pk = [float(j["peak_gb"]) for j in base if j.get("guard_stopped") and j.get("peak_gb") is not None]
     peak = max(ok_pk + stop_pk) if (ok_pk or stop_pk) else None
     free = _free_commit_gb()
     need = round(peak + floor, 2) if peak is not None else None
-    return {"jobs_recorded": len(jobs), "finished_peak_gb_max": max(ok_pk) if ok_pk else None,
-            "guard_stops": len([j for j in jobs if j.get("guard_stopped")]), "stopped_peaks_gb": stop_pk[-5:],
-            "last": jobs[-1] if jobs else None, "free_commit_gb_now": free, "guard_floor_gb": floor, "need_gb": need,
-            "headroom_gb": round(free - need, 2) if need is not None and free is not None else None,
-            "note": ("a stopped job's peak is where it was stopped, so the need is at least that; the guard stops a job when the free "
-                     "commit memory falls under its floor")}
+    res = {"jobs_recorded": len(jobs), "finished_peak_gb_max": max(ok_pk) if ok_pk else None,
+           "guard_stops": len([j for j in base if j.get("guard_stopped")]), "stopped_peaks_gb": stop_pk[-5:],
+           "last": jobs[-1] if jobs else None, "free_commit_gb_now": free, "guard_floor_gb": floor, "need_gb": need,
+           "headroom_gb": round(free - need, 2) if need is not None and free is not None else None,
+           "note": ("a stopped job's peak is where it was stopped, so the need is at least that; the guard stops a job when the free "
+                    "commit memory falls under its floor")}
+    if cur:
+        res["loading"] = "low-commit"
+        res["older_loading"] = {"jobs": len(older),
+                                "finished_peak_gb_max": max([float(j["peak_gb"]) for j in older if j.get("ok") and j.get("peak_gb")] or [0]) or None,
+                                "stopped_peaks_gb": [float(j["peak_gb"]) for j in older if j.get("guard_stopped") and j.get("peak_gb")][-5:],
+                                "note": "jobs with ACE-Step's own loading (each model held twice while loading), not counted in need_gb"}
+    return res
 
 
 def _forecast_narration(rd: Path, st: dict, nn: str) -> dict:
@@ -12895,6 +12920,7 @@ def _forecast_images(rd: Path, st: dict, nn: str, a) -> dict:
         scene = pr[:cut]
         risk = sorted({m.group(0).lower() for m in FC_TEXT_RISK.finditer(scene) if not _fc_neg(scene, m)})
         rel = sorted({m.group(0).lower() for m in FC_RELIGION.finditer(pr) if not _fc_neg(pr, m)})
+        exp = sorted({m.group(0).lower() for m in FC_EXPOSURE.finditer(scene) if not _fc_neg(scene, m)})
         spl = sorted({m.group(0).lower() for m in FC_SPLIT.finditer(scene) if not _fc_neg(scene, m)})
         chars = list(im.get("characters") or [])
         rows.append({"image": k, "span_s": spans.get(k), "characters": chars,
@@ -12905,7 +12931,7 @@ def _forecast_images(rd: Path, st: dict, nn: str, a) -> dict:
                      "overlay_words": _overlay_words(pr), "text_carriers_in_scene": risk,
                      "digits_in_scene": re.findall(r"\b\d[\d.,:]*\b", scene)[:6],
                      "exact_text_planned": ("The only text in the picture is" in pr) or bool(re.search(r"\"[^\"]{1,40}\"", scene)),
-                     "religion_or_superstition_words": rel, "split_words": spl,
+                     "religion_or_superstition_words": rel, "nudity_gore_or_distress_words": exp, "split_words": spl,
                      "labels_planned": bool(im.get("labels") or im.get("chapter_label") or im.get("label_note")),
                      "moves": im.get("motion") not in (None, "none"),
                      "label_on_moving_image": bool(im.get("labels") or im.get("chapter_label") or im.get("label_note"))
@@ -12956,6 +12982,7 @@ def _forecast_images(rd: Path, st: dict, nn: str, a) -> dict:
                        "text_carriers_without_planned_text": [r["image"] for r in rows if r["text_carriers_in_scene"] and not r["exact_text_planned"]],
                        "digits_in_scene": [r["image"] for r in rows if r["digits_in_scene"]],
                        "religion_or_superstition_words": [r["image"] for r in rows if r["religion_or_superstition_words"]],
+                       "nudity_gore_or_distress_words": [r["image"] for r in rows if r["nudity_gore_or_distress_words"]],
                        "split_words": [r["image"] for r in rows if r["split_words"]],
                        "label_on_moving_image": [r["image"] for r in rows if r["label_on_moving_image"]],
                        "anchors_missing": [r["image"] for r in rows if r["anchors_missing"]],
@@ -12979,10 +13006,11 @@ def _forecast_music(rd: Path, st: dict, nn: str) -> dict:
     secs = t.get("sections") or []
     xf = float(_scfg("music.crossfade_s", 4.0))
     caps = [str(t.get("caption") or "")] + [str(s.get("caption") or "") for s in secs]
-    voc, rel = set(), set()
+    voc, rel, exp = set(), set(), set()
     for c in caps:
         voc |= {m.group(0).lower() for m in FC_VOCALS.finditer(c) if not _fc_neg(c, m)}
         rel |= {m.group(0).lower() for m in FC_RELIGION.finditer(c) if not _fc_neg(c, m)}
+        exp |= {m.group(0).lower() for m in FC_EXPOSURE.finditer(c) if not _fc_neg(c, m)}
     dur = t.get("duration")
     res = {"duration_s": dur, "bpm": t.get("bpm"), "sections": len(secs),
            "sections_sum_s": round(sum(float(s.get("duration") or 0) for s in secs), 2) if secs else None,
@@ -12990,6 +13018,7 @@ def _forecast_music(rd: Path, st: dict, nn: str) -> dict:
            "section_over_max": [i + 1 for i, s in enumerate(secs) if float(s.get("duration") or 0) > float(_scfg("music.max_s", 600))],
            "needs_sections": bool(dur) and float(dur) > float(_scfg("music.max_s", 600)),
            "vocal_words_not_negated": sorted(voc), "religion_or_superstition_words": sorted(rel),
+           "nudity_gore_or_distress_words": sorted(exp),
            "made": (rd / "30-assets" / "music" / f"video-{nn}.wav").is_file()}
     res["memory"] = _fc_memory("music", float(_kcfg("guard_floor_gb", 3.0)))
     return res
@@ -12998,7 +13027,7 @@ def _forecast_music(rd: Path, st: dict, nn: str) -> dict:
 def _static_forecast(a):
     """What a video's plan will give, before it is generated (static §13): the narration's pace and pauses against the family's numbers
     from the voice's learned fit, each image prompt's facts that tend to spoil a still (text carriers, overlay words, split words, words
-    of static §11, missing style or clean sentences, references against memory), this run's image history, the bed's sections and
+    of static §11 and §11b, missing style or clean sentences, references against memory), this run's image history, the bed's sections and
     caption, and each local model's memory record against the free memory now. Writes 40-briefs/video-NN-forecast.json (the parts asked;
     the others kept). Facts and calculations only: the judge decides."""
     rd, st = _state_of(a.run)

@@ -9,6 +9,8 @@ and the style are carried, the subject is new; the copy test applies: one yes ma
   a subject it made (`T static subjects --run RUN` lists them).
 - **No religion and no superstition** (§11): a subject about either, or whose telling needs either, is not in the pool at all (never
   told with it cut out); the pool holds subjects whose story stands with none of it.
+- **Nothing indecent, gory or distressing** (§11b): a subject whose story needs nudity, gore, an injury or extreme distress to be told
+  is not in the pool; one where such a fact is incidental is told without it.
 - **Factual niches stay factual.** When the references tell real facts (history, science, psychology, biographies, true crime), every
   subject is real and every claim the script makes is sourced: at least two independent sources per subject found with WebSearch and
   WebFetch (at most four searches per subject), written to the video's fact sheet; a claim no source holds is cut, never invented.
@@ -21,6 +23,6 @@ and the style are carried, the subject is new; the copy test applies: one yes ma
   references do not cover.
 - **Brand guardrails** of the documents apply as in every mode (`brand-guardrails.md` §4).
 - **The pool**: the requested count plus three candidates at least (never under five), each scored 1–5 on stop power (the hook it allows),
-  curiosity gap, fit to the spec, freshness (not already everywhere in the niche), image-ability (stills can carry it), and for facts
+  curiosity gap, fit to the spec (above all to the niche's references, §1 "The run's niche within the set"), freshness (not already everywhere in the niche), image-ability (stills can carry it), and for facts
   source strength; ties go to stop power. Each candidate: a title, its hook line, why it fits (one line), and for facts its sources' count.
 

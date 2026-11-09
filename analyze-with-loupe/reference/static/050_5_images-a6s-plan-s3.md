@@ -63,7 +63,10 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   them with the same `--swap` pairs (§2b), no text, letters, numbers, logos or watermarks in the picture unless the
   story needs a sign or a page (then the exact words), no added sticker or emoji (contract item 6), and a secular scene described in
   positive terms with nothing religious or superstitious in it (§11: a palace throne hall, never a cathedral; a "red X" mark, never a
-  "red cross"; the prompt names what is there, never what must stay out). One picture, never a split picture, a side-by-side or panels
+  "red cross"; the prompt names what is there, never what must stay out). Every person is dressed for the scene with the clothes named
+  from top to bottom, and the moment shown is never an undressed, injured or agonised one (§11b: "A cool shower." is the shower running
+  in the empty bathroom, or the man after it, dressed, his hair wet; a medical moment shows the care, never the harm). One picture,
+  never a split picture, a side-by-side or panels
   (§8): two ideas share one place (2026-11-07: "a split picture" of a full hotel and an empty spare room came back as two panels with a
   seam; one street with the hotel and the house next door read as one scene). A map is centred on the region its pins mark and says
   where they stand, not the places' names (2026-11-07: the cities' names were written onto the map, one over the wrong continent, and

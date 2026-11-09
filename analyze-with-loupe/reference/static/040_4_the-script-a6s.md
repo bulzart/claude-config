@@ -1,14 +1,16 @@
 ## 4 The script (A6s)
 
 `40-briefs/video-NN-script.md` (readable: the beats, the devices used, the sources) and `40-briefs/video-NN-narration.json`, the lines the
-voice speaks: `{"video": "NN", "language": "english", "pace": {"refs": ["<the family's references>"], "wpm_articulation": [<low>,
+voice speaks: `{"video": "NN", "language": "english", "pace": {"refs": ["<the references the point rests on: the niche's within the
+family, else the family's>"], "wpm_articulation": [<low>,
 <high>], "wpm_overall": [<low>, <high>], "target": {"wpm_articulation": <the point>, "wpm_overall": <the point>}, "tolerance": 0.015,
 "pauses": {<the family's pauses a minute, median, p90, long ones per 10 minutes: the pattern the plan follows>}, "why": "<the numbers>"},
 "delivery": "<audio tags leading every passage, e.g. [quick, measured pace]; or none: the voice's own way>", "voice_settings":
 {"stability": <0 to 1>, "similarity_boost": <0 to 1>}, "tts": {"passage_chars": <optional>, "seed": <optional>}, "lines": [{"n": 1,
 "text": "…", "emotion": "neutral", "delivery": "<a line's own only: [tags]>", "tags_after": "<only where the family holds a long pause:
-[long pause]>", "passage_break": <only where a passage must end>}, …]}`. The pace, the point and the pauses are the family's measured
-numbers (§2, §6 "The pace": the fair measure), chosen and checked by the judge before a passage is made (§13, J1); the levers that reach
+[long pause]>", "passage_break": <only where a passage must end>}, …]}`. The pace, the point and the pauses are the measured numbers
+of the niche's references within the family, the family's beside them (§1 "The run's niche within the set", §2, §6 "The pace": the
+fair measure), chosen and checked by the judge before a passage is made (§13, J1); the levers that reach
 the point are the voice, the delivery tags, the settings and the words, measured on a probe first, and `T tts say` measures the
 narration as delivered. Eleven v4 has no speed: a `pace.speed` is refused, and nothing is sped, cut, trimmed or gained afterwards (the
 user, 2026-11-09). A `pause_after` (plans written before 2026-11-09) and `pause_default_s` are only hints of where a passage may end: no
@@ -27,8 +29,9 @@ silence is placed (§6 "Passages").
   median pause 0.83 s, against the set's 160–174, 178–196 and 0.42–0.5 s; its own lines paced by `T tts say` measured 164 and 190,
   pauses 0.5 s.)
 - **Lines**: one sentence or one breath each, as the references break them; a reveal gets its own line. **Long pauses are counted, not
-  sprinkled**: the family holds `long_pauses_per_10min` pauses of 0.8 s or more (`T static profile --refs <family>`; F3 of the run of
-  2026-11-06: median 6.3, the survival references 8.8), so a video of M minutes gets about that rate times M/10 long pauses, at its
+  sprinkled**: the niche's references hold `long_pauses_per_10min` pauses of 0.8 s or more (`T static profile --refs <them>`, the
+  family's beside it; F3 of the run of 2026-11-06: median 6.3, its survival references, the run's niche, 8.8), so a video of M minutes
+  gets about that rate times M/10 long pauses, at its
   strongest turns (a reveal, a chapter's start), each asked of the model in the request (the line's `tags_after`: "[long pause]", or
   "[pause]" for a shorter one; or its punctuation: an ellipsis, a dash) and measured on the probe against the family's long pauses
   (their 90th percentile and longest), since no tag has a documented length; every other rest is the voice's own at the punctuation,
@@ -49,6 +52,8 @@ silence is placed (§6 "Passages").
   brackets are spoken).
 - **No religion and no superstition** (§11): no line names or alludes to either; a fact that needs one to be told is cut or told without
   it. The subject is the run's niche (§10), told in the references' craft.
+- **Nothing indecent, gory or distressing** (§11b): a hard fact is told plainly and briefly, never by its graphic side (how many people
+  died may be said; how a body was found, an injury or someone's suffering is not); no swearing.
 - **Fact sheet** (factual niches): `40-briefs/video-NN-facts.md`, every claim of the script with its source URLs.
 - The copy test (`creative-direction.md` §5.0) and the sharpness gate pass before the script is final.
 

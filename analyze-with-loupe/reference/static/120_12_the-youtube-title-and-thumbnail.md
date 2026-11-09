@@ -41,7 +41,8 @@ pattern each choice follows>"}`. The title follows the titles' pattern for this 
 reference's title); its words are the narration's promise, never more than the video keeps. The thumbnail follows the thumbnails'
 pattern, in the run's style lock (§10: the same look as the video's stills), with its subject's most legible moment (the face and the
 feeling, the object, the contrast the hook opens); words on it only when the references' thumbnails carry words, as few as they use,
-spelled out exactly in `text` and in the prompt; nothing religious or superstitious (§11), no sticker, emoji, arrow badge or logo
+spelled out exactly in `text` and in the prompt; nothing religious or superstitious (§11), nothing indecent, gory or distressing
+(§11b: a face's feeling that reads at a glance, never terror or pain), no sticker, emoji, arrow badge or logo
 (item 6), no reference's own picture or subject.
 
 **Making it (S3, the production agent)**: with the stills, by the run's images source: API or FLUX 3 Klein, `T image generate --run RUN
@@ -52,7 +53,7 @@ takes the user's `vNN-thumb` file in.
 
 **QC (§8)**: the thumbnail viewed at full size and at feed size: the subject and the feeling read at a glance; its words, when it has
 them, letter by letter as `text` says (a misspelt word is a redraw by QC fixes; FLUX 3 Klein draws short words, a long phrase less
-reliably: few words, large); the run's style; nothing of §11; nothing of item 6. The title: its words against the video's narration
+reliably: few words, large); the run's style; nothing of §11 or §11b; nothing of item 6. The title: its words against the video's narration
 (it promises what the video keeps).
 
 **The record (X10)**: `deliverables/video-NN-title.txt` (the title on its first line), the thumbnail in `deliverables/`, and both in the

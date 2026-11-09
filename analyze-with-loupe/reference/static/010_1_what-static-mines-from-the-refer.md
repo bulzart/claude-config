@@ -15,6 +15,20 @@ video generation not fixated or constrained terms or prefixed values"). Every re
 spec (§2) reads them together: what recurs across the set (counted: "5 of 8 hooks open with a question"), what the numbers say as the
 set's median and range, what differs and why (a 45 s Short and a 9-minute history are two families, each read by its own numbers), and
 what a viewer gets from it. No single reference is the template of a video; the one the user names at A5 sets only the look (§10).
+
+**The run's niche within the set** (the user, 2026-11-09: "references are studied as a whole set and even if i pick a specific niche
+but the references are mixed niches, the strategy plan of the next video still is based on leveraging and carefully implementing by the
+patterns of the whole references data set but it drived mostly from the niche we chose but without ignoring what it learned from the
+whole set patterns and understanding too and leveraging and implementing what it decides to from them too"). When the set mixes
+niches, the references of the run's niche (§10; their field read from the cards, the agent's reading with its reason) are the main
+source of each video's plan: its hook, telling, devices, retention, emotion, language, engagement, length, pace and pauses come mostly
+from them (`T static profile --run RUN --refs <the niche's references>`, within the video's family when the set holds kinds). The
+whole set stays the second source and is never ignored: a pattern most of the set shares across its niches is kept unless the niche's
+references show otherwise, and where they are too few or silent on a point (one reference, no bed, no call to action), the family's or
+the set's pattern decides. Each value of a plan says which it follows, with both numbers ("the niche's 3 references open on a
+question, the set's 6 of 9: kept"). A niche no reference is about takes the whole set's craft. (The run of 2026-11-06, niche
+"Survival scenarios": its survival references V07, V09 and V13 sit in the family F3 of seven; video 03 still took F3's numbers, and
+the long pauses show the difference: F3's median 6.3 per 10 minutes, the survival references' 8.8.)
 `T static profile --run RUN` gives the measured numbers of every analysed reference side by side with the set's median, lowest and
 highest (`--refs V01,V04` for a family): the voice's pace while speaking and overall, the pauses, the pitch, the loudness, the words a
 sentence, the questions, "you" and numbers a minute, the first word and the first cut, the seconds a shot, the cuts, the moving shots

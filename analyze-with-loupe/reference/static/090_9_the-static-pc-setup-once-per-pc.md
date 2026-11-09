@@ -5,10 +5,26 @@ ElevenLabs key set (the narration is ElevenLabs' Eleven v4: nothing of it runs o
 a run needs and does not have is a blocker, reported at the start (never asked); music alone is not: without it the user is told at the
 start and the videos go without a bed.
 - **The pipeline**: `git pull` of the `~/.claude` repository, as on any PC.
-- **Memory guard** (a Windows PC where loading a model can exhaust memory: each load commits about 13 GB of RAM plus page file):
+- **Memory guard** (a Windows PC where loading a model can exhaust memory):
   `AWL_MUSIC_PYTHON` and `AWL_IMAGE_PYTHON` may name a small `.cmd` that starts the environment's `python.exe` inside a memory guard (a
   hard cap and a watchdog that stops the job before Windows runs out). Keep such a `.cmd`: pointing the variable at `python.exe`
   instead removes the guard, and everything still seems to work.
+- **What a job needs** (the user, 2026-11-09: "this used to work though and i dont know why ace step has to always get 16gb of free
+  memory while we did generate before with even lower memory, find the solution, verify it and then mark it on the pipeline";
+  measured that day with the guard's `--log`, RTX 3060 12 GB, 16 GB RAM): with Windows' WDDM driver the GPU's memory counts as commit
+  memory, so a model on the GPU is charged as commit once; a weights file opened the safetensors way (a copy-on-write map) is charged
+  at its full size before a byte is read, so a model loaded that way is charged twice while it moves to the GPU. ACE-Step's own loading
+  held its 4.46 GB music model twice (the job at 9.8 GB still loading, 13-15.4 GB at its peak); `music_worker.py` therefore loads the
+  low-commit way (each tensor read from its file when asked, straight onto the GPU at the working precision; every weight checked
+  identical to the file, 1,352 of 1,352; `T music make`'s answer and the bed's sidecar say `loading`): about 8 GB once loaded and
+  about 10.7 GB at most while it makes a 283 s piece, so a bed needs about 13.6 GB free commit with the guard's 3 GB floor (FLUX 3
+  Klein about 14.4 GB with one reference, §5).
+- **The page file sets the headroom.** Windows' system-managed page file starts small (6.5 GB here) and grows only when the commit
+  runs out, which the guard never lets happen; a growth (Windows' "Virtual Memory Minimum Too Low" event: 2026-11-05, 11-07, 11-08)
+  lasts until the next restart. So after a restart the same jobs that ran the day before are stopped (2026-11-09, after the 03:37
+  restart: 10.75 GB free at rest; the beds of 11-06 and 11-07 were made while the page file was grown). A fixed page file large enough
+  for the jobs (the user's setting: System Properties, Advanced, Performance Settings, Advanced, Virtual memory, a custom size on C:,
+  then a restart) keeps that headroom across restarts; the guard and its floor stay as they are.
 - **ACE-Step 1.5** (the bed under every video): `git clone https://github.com/ace-step/ACE-Step-1.5`, `uv sync` in it (or the Windows portable
   package); never `pip install ace-step` (that is version 1). Then `AWL_MUSIC_PYTHON` = its `.venv\Scripts\python.exe` and `AWL_MUSIC_ROOT`
   = the clone's folder. Its models (about 10 GB) download on first use.

@@ -1474,3 +1474,36 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
 - **The bed:** ACE-Step's load climbs to about 13 GB of commit memory; the guard stops it under 3 GB free, so a long bed needs about 16 GB
   free at the start. After a restart Windows' page file is back at 6.5 GB (commit limit 22.4 GB, 24.1 on 2026-11-05); with this
   session's helpers running, about 10.5 GB was free and both tries were stopped.
+
+## 2026-11-09 · Static: why a bed needed 16 GB free, and the low-commit loading
+
+- **The user:** "this used to work though and i dont know why ace step has to always get 16gb of free memory while we did generate
+  before with even lower memory, find the solution, verify it and then mark it on the pipeline".
+- **Measured** (the memory guard's `--log`, a load test of ACE-Step's own `initialize_service` and a 283 s piece): loading the 4.46 GB
+  music model put a 4.66 GB charge on the job in half a second while free RAM did not move (safetensors maps the file copy-on-write,
+  and Windows charges such a view at its full size), then the GPU copy grew the charge again (WDDM counts GPU memory as commit): the
+  job stood at 9.8 GB still loading, 13-15.4 GB at its peak.
+- **Built:** `music_worker.py` `_low_commit_loading`: transformers and safetensors read each tensor with a plain file read when asked
+  (one tensor in memory at a time) and AutoModel loads straight onto the GPU at the working precision ACE-Step converts to anyway.
+  Checked: every tensor of the three model files identical to safetensors' own (1,352 of 1,352), and on the GPU the music model
+  677 of 677 and the text encoder 310 of 310 against the files, no part outside them. The job now holds about 8 GB loaded and about
+  10.7 GB at most while making a 283 s piece: a bed needs about 13.6 GB free with the guard's floor.
+- **The other half:** the page file is system-managed (6.5 GB at boot); Windows grew it on 2026-11-05, 11-07 and 11-08 ("Virtual Memory
+  Minimum Too Low") and a growth lasts until the next restart, so the beds of 11-06 and 11-07 were made while it was grown, and after
+  the 2026-11-09 restart about 10.75 GB is free at rest: too little for a bed or a FLUX 3 Klein still until the page file is set larger
+  (the user's setting) or programs are closed. Static §9 "What a job needs".
+
+## 2026-11-09 · Static: nothing indecent, gory or distressing (§11b), and the run's niche within the set
+
+- **The user:** "in the video03 the image67 the guy is seen showering by shortless and that implies a bit of nudity, similar cases of
+  nudity, or extreme emotional distress or gore or socialy not acceptable and not favorited to be shown or talked should be strictly
+  avoided just like we did with superstitious and religious figures".
+- **The miss:** the line "A cool shower." got an undressing moment whose prompt named the shirt only; FLUX 3 Klein's upsampler wrote
+  "removing his navy shorts and black sandals". S3 flagged it, QC fixes were off, and no rule covered nudity; S4 hid it with a crop.
+- **Built:** static §11b (subjects, scripts, prompts with every person's clothes named top to bottom, an undressed moment shown by its
+  dressed moment or its thing, the thumbnail, the bed, QC) and `T static forecast`'s `nudity_gore_or_distress_words`; still 67 is now
+  the cool shower running in the empty bathroom.
+- **The user, the same message:** "even if i pick a specific niche but the references are mixed niches, the strategy plan of the next
+  video still is based on leveraging and carefully implementing by the patterns of the whole references data set but it drived mostly
+  from the niche we chose". Static §1 "The run's niche within the set": the plan mostly from the niche's references (named in the spec
+  after A5), the family's and the set's patterns beside them; the judge's point from the niche's references within the family.

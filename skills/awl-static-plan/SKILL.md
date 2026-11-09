@@ -20,6 +20,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (16.2 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (6.0 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
+- static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (3.9 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.0 KB)
 - static §13: `AWL/reference/static/130_13_the-judge.md` (13.0 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
@@ -39,7 +40,7 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
 2. **The subject pool** (static §3, §10): `T static lock --run RUN` first (the locks: the niche, the style reference, the narrator, the
    subjects made). The requested count plus three at least (never under five), all of the run's niche, told in the references' craft,
    never a reference's own subject and never one the run made or one so close it retells it, nothing religious or superstitious
-   (static §11), scored as §3 says. A factual niche: research every candidate (WebSearch, then WebFetch on the strongest
+   (static §11) and nothing indecent, gory or distressing (static §11b), scored as §3 says. A factual niche: research every candidate (WebSearch, then WebFetch on the strongest
    results; at most four searches per candidate) and keep only the candidates two independent sources hold. Write
    `RUN/20-analysis/static-subjects.md` (each candidate: title, hook line, why it fits, the scores, the sources).
 3. **Five voice samples** (static §6; the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them
@@ -64,20 +65,23 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    clone's new narrator: `--replace`, then `T state --run RUN set static.new_voice=false`), plus `--emotion NAME="[tags]"` (at most two:
    the audio tags sent where a line of that emotion begins) when the spec's delivery swings (static §6).
 6. **Scripts** (static §4), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
-   niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11). The length is yours, never the
+   niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11), and no graphic detail,
+   suffering or swearing (static §11b: a hard fact told plainly and briefly). The length is yours, never the
    user's (the user, 2026-11-07): decided per video from the spec's length pattern (the references' lengths in `T static lock`'s
    `reference_lengths`, what drives them), written as `target_length_s` and `length_why` in the narration JSON, the script sized to it
-   at the set's overall pace (static §4: words = seconds × words a minute / 60). The narration JSON also carries the spec's `pace`
-   (`wpm_articulation` and `wpm_overall` as the family's bands from `T static profile`, with `why`; static §4) and the long pauses the
-   family holds as a line's `tags_after` ("[long pause]") where the set pauses longer (before a reveal); its `delivery`,
-   `voice_settings` and the pace point are J1's (step 9). The beats, the hooks, the emotions, the
-   language and the calls to action follow the spec's whole-set patterns (static §2), never one reference's. The copy test and the
+   at the planned overall pace (static §4: words = seconds × words a minute / 60). The narration JSON also carries the spec's `pace`
+   (`wpm_articulation` and `wpm_overall` as the family's bands from `T static profile`, the point from the niche's references within
+   it, with `why`; static §1, §4) and the long pauses the niche's references hold as a line's `tags_after` where they pause longer
+   (before a reveal); its `delivery`, `voice_settings` and the pace point are J1's (step 9). The beats, the hooks, the emotions, the
+   language and the calls to action follow the spec's patterns: mostly the niche's references', the whole set's kept where they hold
+   across niches or where the niche's references are silent (static §1 "The run's niche within the set", §2), never one reference's. The copy test and the
    sharpness gate (creative-direction §5.0, §6) pass before a script is final.
 7. **Image plans** (static §5), per video: `RUN/40-briefs/video-NN-images.json`: the characters (photo, or the sheet prompt of one with
    none), one image per stretch of lines (`from_line`), every prompt with the spec's style lock word for word (the style reference's
    look, the same in every video of the run: static §10) and §5's composition, each company or brand the story is about with its
    official logo where the story brings it in and once more later (static §5 "Real things look like themselves": `T fetch-image --kind
-   logo`, the image's `logo` field, its surface plain and blank in the prompt), a secular scene with nothing of static §11 in it, the
+   logo`, the image's `logo` field, its surface plain and blank in the prompt), a secular scene with nothing of static §11 in it, every
+   person dressed for the scene with the clothes named from top to bottom and no undressed, injured or agonised moment (static §11b), the
    video's `title` and `thumbnail` (static §12: the references' title and thumbnail patterns, the thumbnails' size, the run's style
    lock), each
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times
@@ -100,7 +104,8 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    toolkit makes equal sections.
 9. **The judge, J1** (static §13; the user, 2026-11-08: "it evaluates the situation and decides way before generation happens";
    "nothing should turn out as unexpected"), per video, before any line, image or bed is made: spawn the judge (§13's prompt,
-   checkpoint J1, `model: "opus"`; the video's family and its references from the spec) and wait for it. It reads `T static forecast`
+   checkpoint J1, `model: "opus"`; the video's family, its references and the niche's references in it, from the spec) and wait
+   for it. It reads `T static forecast`
    and the family's numbers, decides the pace point, the narration's levers (its delivery and pace tags, the settings, the wording), the
    pause tags, the strong lines, every prompt the forecast marks and the bed's caption, sections and timing, edits those plan files itself
    and writes `RUN/40-briefs/video-NN-judge.md` with each decision, its numbers and the result it forecasts. The probes are this
@@ -112,7 +117,9 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
 
 **More videos** (static §10; `/analyze-with-loupe more <run> [N]`, or the user asking for more after a wrap-up; always in the session's
 run, never a new one): no start question is asked; references new to the run's folder are taken in first (static §10 "New
-references": the inventory again, A1–A4 for them only), and nothing else is analysed again. `T static lock --run RUN` (the locks; a run made before the locks existed is asked its niche once,
+references": the inventory again, A1–A4 for them only), and nothing else is analysed again; a spec that does not yet name the
+niche's references gets them first (static §2 "The niche's references": the references whose field is the run's niche, read from
+their cards, and their patterns and numbers beside the set's). `T static lock --run RUN` (the locks; a run made before the locks existed is asked its niche once,
 with its subjects as context, and locks it with its style reference: the reference its style lock came from), the count when it is not
 given (AskUserQuestion, header "Videos"), then steps 2 and 4–9 for the new videos only: no voice samples (the narrator is locked), the
 stop asks only for the subjects, `T static subjects --add` gives them the next numbers, and their scripts, image plans, titles and
@@ -125,6 +132,7 @@ thumbnails keep the run's style lock and text look. Then `awl-analyze-produce` A
   user, their folder.
 - One channel per run (static §10): the niche, the visual style and the narrator are the user's picks, locked; another niche is a clone.
 - Nothing religious or superstitious in a subject, a line, a prompt, a title or a thumbnail (static §11).
+- Nothing indecent, gory or distressing in a subject, a line, a prompt, a title or a thumbnail (static §11b; the user, 2026-11-09).
 - No Higgsfield and no Loupe in Static: no model menu, `T prompt-template`, `T qc-brief` or `T qc-consult`.
 
 ## Never (this phase)
@@ -136,7 +144,7 @@ thumbnails keep the run's style lock and text look. Then `awl-analyze-produce` A
 - Never put text, a sticker or an emoji into an image prompt unless the story needs that text (item 6; a thumbnail's words only as the
   references' thumbnails carry them, static §12).
 - Never offer a subject outside the run's niche or one the run made; never a new narrator or visual style inside a run (a clone changes
-  them, static §10); never anything religious or superstitious (static §11).
+  them, static §10); never anything religious or superstitious (static §11), indecent, gory or distressing (static §11b).
 
 ## Hand-off
 

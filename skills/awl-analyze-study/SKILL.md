@@ -191,13 +191,17 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     style family, each named with its look in words; "Other" takes any reference by its id. A run with one reference skips this question
     and takes that one (said in one line).
   Then `T static lock --run RUN --niche "<niche>" --style-ref <V>`, and write the spec's style lock and text look from that reference's
-  card (static §2, §10: its captions when it has them, else the most common look of the references that have them).
+  card (static §2, §10: its captions when it has them, else the most common look of the references that have them). Then the spec's
+  **niche's references** (the user, 2026-11-09; static §1 "The run's niche within the set", §2): the references whose field is the
+  picked niche, read from their cards with the reason (none when the niche is new to the set: the whole set's craft leads), each
+  field's pattern for them beside the set's and the family's, and their numbers (`T static profile --run RUN --refs <them>`).
 - **Static, a clone** (`state.json → cloned_from`; `/analyze-with-loupe clone <run>`, static §10): nothing is analysed; one
   AskUserQuestion call: header "Niche" (as above; never the old niche, `cloned_from.niche`), header "Narrator": **"Keep the narrator"**
   (the voice in a few words and the full path of `30-assets/voice/ref-neutral.wav`) or **"Pick a new narrator"** (five new samples at
   A6s), header "Visual style": **"Keep <V>'s style"** or another reference (as above), and header "Videos". Store with
   `T static lock --run RUN --niche "<niche>" [--style-ref <V> --replace]`; a new style rewrites the spec's style lock and text look from
-  that reference's card; a new narrator: `T state --run RUN set static.new_voice=true` (A6s makes the samples).
+  that reference's card; a new narrator: `T state --run RUN set static.new_voice=true` (A6s makes the samples); the new niche's
+  references are written into the spec as above (static §2).
 - Store the answer in `requested_videos`.
 
 ## Rules this phase owns (contract items 18, 20, 21, 35)

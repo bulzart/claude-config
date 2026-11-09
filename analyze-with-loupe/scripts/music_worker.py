@@ -15,6 +15,10 @@ device, ...) -> (message, ok); generate_music(dit, llm=None, GenerationParams(ta
 duration, bpm, inference_steps, seed, fade_in_duration, fade_out_duration), GenerationConfig(batch_size=1, use_random_seed=False,
 audio_format="wav"), save_dir) -> result with .success, .error and .audios[i]["path"]. Without the planning language model (llm None)
 the music model runs alone. The instrumental flag of GenerationParams is not read by generate_music: "[Instrumental]" lyrics are.
+
+Loading (2026-11-09): the models load through _low_commit_loading (each tensor read when asked, straight onto the GPU), which keeps the
+job's commit memory to the models' own size on this PC; job "low_commit": false loads them ACE-Step's own way. The answer's "loading"
+says which ran.
 """
 import json
 import os
@@ -56,7 +60,113 @@ def op_check(job):
     return res
 
 
+def _low_commit_loading(torch, device: str) -> None:
+    """ACE-Step's models loaded without their files charged in full (the user, 2026-11-09: "find the solution, verify it").
+
+    On this PC (Windows, WDDM) the GPU's memory counts as commit memory, and safetensors' own safe_open maps a whole file copy-on-write,
+    which Windows charges at its full size before a byte is read: loading the 4.46 GB music model held the file's 4.66 GB charge and the
+    GPU copy's together, a 13-15 GB peak that the memory guard stopped (measured 2026-11-09 with the guard's --log). Here each tensor is
+    read with a plain file read when transformers or safetensors.torch asks for it (one tensor's bytes in memory at a time; every tensor of
+    the three model files checked identical to safetensors' own, 1,352 of 1,352), and AutoModel.from_pretrained loads straight onto the
+    GPU at the working precision ACE-Step converts to anyway (the text encoder's bf16 file never passes through 32-bit floats). The
+    models, their precision and the output are ACE-Step's own; only the loading's memory changes."""
+    import safetensors.torch as st_torch
+    import transformers
+    import transformers.modeling_utils as mu
+
+    kinds = {"F64": torch.float64, "F32": torch.float32, "F16": torch.float16, "BF16": torch.bfloat16, "I64": torch.int64,
+             "I32": torch.int32, "I16": torch.int16, "I8": torch.int8, "U8": torch.uint8, "BOOL": torch.bool}
+    for name, attr in (("F8_E4M3", "float8_e4m3fn"), ("F8_E5M2", "float8_e5m2"), ("U16", "uint16"), ("U32", "uint32"),
+                       ("U64", "uint64")):
+        if hasattr(torch, attr):
+            kinds[name] = getattr(torch, attr)
+
+    class _Slice:
+        def __init__(self, src, key):
+            self._src, self._key = src, key
+
+        def get_dtype(self):
+            return self._src._hdr[self._key]["dtype"]
+
+        def get_shape(self):
+            return list(self._src._hdr[self._key]["shape"])
+
+        def __getitem__(self, idx):
+            t = self._src.get_tensor(self._key)
+            return t if idx is Ellipsis else t[idx]
+
+    class ReadOpen:
+        """safe_open's API (metadata, keys, offset_keys, get_slice, get_tensor, the context) over plain file reads."""
+
+        def __init__(self, filename, framework="pt", device="cpu"):
+            self._fh = open(filename, "rb")
+            n = int.from_bytes(self._fh.read(8), "little")
+            hdr = json.loads(self._fh.read(n))
+            self._meta = hdr.pop("__metadata__", None)
+            self._hdr, self._base, self._device = hdr, 8 + n, device
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self._fh.close()
+            return False
+
+        def metadata(self):
+            return self._meta
+
+        def keys(self):
+            return list(self._hdr)
+
+        def offset_keys(self):
+            return sorted(self._hdr, key=lambda k: self._hdr[k]["data_offsets"][0])
+
+        def get_slice(self, key):
+            return _Slice(self, key)
+
+        def get_tensor(self, key):
+            info = self._hdr[key]
+            begin, end = info["data_offsets"]
+            kind = kinds[info["dtype"]]
+            if end > begin:
+                buf = bytearray(end - begin)
+                self._fh.seek(self._base + begin)
+                if self._fh.readinto(buf) != end - begin:
+                    raise OSError(f"short read of {key}")
+                t = torch.frombuffer(buf, dtype=kind)
+            else:
+                t = torch.empty(0, dtype=kind)
+            t = t.reshape(info["shape"])
+            dev = f"cuda:{self._device}" if isinstance(self._device, int) else self._device
+            return t if dev is None or str(dev) == "cpu" else t.to(dev)
+
+    mu.safe_open = ReadOpen
+    st_torch.safe_open = ReadOpen
+    if not (torch.cuda.is_available() and str(device).startswith("cuda")):
+        return
+    seen = {}
+    orig = transformers.AutoModel.from_pretrained
+
+    def from_pretrained(*args, **kw):
+        kw.setdefault("device_map", {"": device})
+        if "dtype" in kw or "torch_dtype" in kw:
+            seen.setdefault("dtype", kw.get("dtype", kw.get("torch_dtype")))
+        else:   # ACE-Step converts every model to its working precision after loading: the same weights, loaded at it
+            kw["dtype"] = seen.get("dtype") or (torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16)
+        return orig(*args, **kw)
+
+    transformers.AutoModel.from_pretrained = from_pretrained
+
+
 def op_generate(job):
+    loading = "ACE-Step's own"
+    if job.get("low_commit", True):
+        try:
+            import torch
+            _low_commit_loading(torch, str(job.get("device") or "cuda"))
+            loading = "low-commit: each tensor read from its file when asked, straight onto the GPU at the working precision"
+        except Exception as e:  # noqa: BLE001
+            loading = f"ACE-Step's own (the low-commit loading could not be set up: {type(e).__name__}: {e})"
     from acestep.handler import AceStepHandler
     from acestep.inference import GenerationConfig, GenerationParams, generate_music
     dit = AceStepHandler()
@@ -66,7 +176,7 @@ def op_generate(job):
                                   offload_to_cpu=False, offload_dit_to_cpu=False, quantization=None)
     msg, ok = (init if isinstance(init, tuple) and len(init) == 2 else (str(init), True))
     if not ok:
-        return {"ok": False, "error": f"initialize_service: {msg}"}
+        return {"ok": False, "error": f"initialize_service: {msg}", "loading": loading}
     load_s = round(time.time() - t0, 1)
     made, failed = [], []
     for tr in job["tracks"]:
@@ -90,7 +200,7 @@ def op_generate(job):
             made.append({"video": tr["video"], "out": str(dest), "sample_rate": res.audios[0].get("sample_rate"), "seconds": round(time.time() - t1, 1)})
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
-    return {"ok": bool(made) and not failed, "made": made, "failed": failed, "load_s": load_s}
+    return {"ok": bool(made) and not failed, "made": made, "failed": failed, "load_s": load_s, "loading": loading}
 
 
 def main():

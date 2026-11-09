@@ -1462,21 +1462,27 @@ _fcs = "Nothing is laid over the picture: no captions, no titles, no labels, no 
     {"image": 1, "from_line": 1, "prompt": f"A kitchen wall where a thermometer reads 38 degrees. {_fsl} {_fcs}", "motion": "zoom-in"},
     {"image": 2, "from_line": 2, "prompt": f"A quiet street at dawn with no signs and no posters. {_fsl} {_fcs}", "motion": "none"},
     {"image": 3, "from_line": 3, "prompt": f"Two scenes side by side: an old church on a hill. {_fcs}", "motion": "none"},
-    {"image": 4, "from_line": 4, "prompt": f"A map of the coast. {_fsl} {_fcs}", "motion": "pan-left", "label_note": "the city's name"}]}),
+    {"image": 4, "from_line": 4, "prompt": f"A map of the coast. {_fsl} {_fcs}", "motion": "pan-left", "label_note": "the city's name"},
+    {"image": 5, "from_line": 5, "prompt": f"The man stands barefoot under a cool shower in his small bathroom, water streaming over his "
+                                           f"T-shirt. {_fsl} {_fcs}", "motion": "none"}]}),
     encoding="utf-8")
-js, _ = ts("static", "forecast", "--run", str(FR), "--video", "01", "--part", "images", "--from", "1", "--to", "4")
+js, _ = ts("static", "forecast", "--run", str(FR), "--video", "01", "--part", "images", "--from", "1", "--to", "5")
 _fic = (js.get("images") or {}).get("counts") or {}
+_fi5 = next((r for r in (js.get("images") or {}).get("rows") or [] if r.get("image") == 5), {})
 check(js.get("ok") and _fic.get("text_carriers_without_planned_text") == [1, 4] and _fic.get("digits_in_scene") == [1]
       and _fic.get("religion_or_superstition_words") == [3] and _fic.get("split_words") == [3] and _fic.get("style_lock_missing") == [3]
-      and _fic.get("label_on_moving_image") == [4] and _fic.get("clean_sentence_missing") == [],
+      and _fic.get("label_on_moving_image") == [4] and _fic.get("clean_sentence_missing") == []
+      and _fic.get("nudity_gore_or_distress_words") == [5] and _fi5.get("nudity_gore_or_distress_words") == ["bathroom", "shower"],
       f"static forecast lists each image prompt's facts that tend to spoil a still, before it is drawn: a thing that carries writing with no "
-      f"words planned, digits, a split, words of static §11, a missing style lock, a label on a moving image; 'no signs' is kept out ({_fic})")
+      f"words planned, digits, a split, words of static §11 and of §11b (a shower: the man came back with nothing below his shirt), a "
+      f"missing style lock, a label on a moving image; 'no signs' is kept out ({_fic})")
 (FR / "40-briefs" / "music.json").write_text(json.dumps({"tracks": [{"video": "01", "caption": "slow ambient pads under a distant choir, no vocals",
     "duration": 700, "bpm": 70, "sections": [{"caption": "calm", "duration": 300}, {"caption": "tense", "duration": 300},
                                              {"caption": "release", "duration": 108}]}]}), encoding="utf-8")
 js, _ = ts("static", "forecast", "--run", str(FR), "--video", "01", "--part", "music")
 _fmu = js.get("music") or {}
 check(js.get("ok") and _fmu.get("vocal_words_not_negated") == ["choir"] and _fmu.get("religion_or_superstition_words") == ["choir"]
+      and _fmu.get("nudity_gore_or_distress_words") == []
       and _fmu.get("needs_sections") is True and _fmu.get("sections") == 3 and _fmu.get("sections_sum_s") == 708.0
       and _fmu.get("sections_should_sum_s") == 708.0 and _fmu.get("made") is False and "headroom_gb" in (_fmu.get("memory") or {}),
       f"static forecast reads a bed's plan before it is made: a voice the caption asks for (a choir; 'no vocals' is kept out), the sections "
@@ -1485,18 +1491,27 @@ _mmp = Path(_tf.mkdtemp(prefix="awl-mm-")) / ".model-memory.json"
 _mm_orig = _awl._model_memory_path
 _awl._model_memory_path = lambda: _mmp
 try:
-    _awl._model_memory_note("music", {"op": "make", "model": "acestep-v15"}, {"ok": False, "peak_gb": 12.83},
+    _awl._model_memory_note("music", {"op": "make", "model": "acestep-v15", "low_commit": False}, {"ok": False, "peak_gb": 12.83},
                             "[memguard] STOPPED the app to protect Windows: free RAM 4.4 GB, free commit 2.0 GB (app was using 12.8 GB).\n"
                             "[memguard] peak memory used by the app: 12.83 GB (cap 20.0 GB)", 14.8, 1)
     _awl._model_memory_note("image", {"op": "generate", "model": "flux3-image-klein-int8"}, {"ok": True, "peak_gb": 12.68}, "", 15.1, 0)
     _mmj = json.loads(_mmp.read_text(encoding="utf-8"))["jobs"]
     _fmm = _awl._fc_memory("music", 3.0)
+    _awl._model_memory_note("music", {"op": "generate"}, {"ok": False, "peak_gb": 8.27},
+                            "[memguard] STOPPED the app to protect Windows: free RAM 7.8 GB, free commit 2.6 GB (app was using 8.0 GB).", 10.6, 1)
+    _mmj2 = json.loads(_mmp.read_text(encoding="utf-8"))["jobs"]
+    _fmm2 = _awl._fc_memory("music", 3.0)
 finally:
     _awl._model_memory_path = _mm_orig
 check(len(_mmj) == 2 and _mmj[0]["guard_stopped"] is True and _mmj[0]["free_commit_gb_at_stop"] == 2.0 and _mmj[0]["free_commit_gb_before"] == 14.8
       and _mmj[1]["ok"] is True and _mmj[1]["guard_stopped"] is False and _fmm["guard_stops"] == 1 and _fmm["need_gb"] == 15.83,
       "every local model job's memory facts go to the PC's record (its peak, a guard stop with the free memory then, the free memory before "
       "it), and the forecast reads the next job's need from it (the stopped peak plus the guard's floor)")
+check(_mmj[0].get("loading") == "ace-step" and _mmj2[-1].get("loading") == "low-commit" and "loading" not in _mmj[1]
+      and _fmm2["need_gb"] == 11.27 and _fmm2.get("loading") == "low-commit"
+      and (_fmm2.get("older_loading") or {}).get("stopped_peaks_gb") == [12.83],
+      "a music job's record says how its models were loaded, and once a low-commit job is recorded the bed's need is read from those "
+      f"jobs alone, the older loading's peaks kept apart as a fact ({_fmm2.get('need_gb')}, {_fmm2.get('older_loading')})")
 # the whole set as numbers: a reference's measured files read into one table with the set's median and range
 _md = SR / "10-media" / "R01"
 _md.mkdir(parents=True, exist_ok=True)

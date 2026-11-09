@@ -282,6 +282,35 @@ check("**The set as a whole**" in _s1t and "T static profile" in _s1t and "**Att
       and '"pace"' in _s4t and "T static profile" in rd(SKD / "awl-analyze-study" / "SKILL.md") and "pace.within" in _snd,
       "Static reads the references as one set and aims every narration at the set's pace by the request's levers alone (the voice, "
       "the tags, the settings, the words), measured with the references' yardstick")
+# the run's niche within the set (the user, 2026-11-09: "it drived mostly from the niche we chose but without ignoring what it learned
+# from the whole set patterns")
+_s13j = rd(LIB / "reference" / "static" / "130_13_the-judge.md")
+check("**The run's niche within the set**" in _s1t and "**The niche's references**" in _s2t
+      and "references of the run's niche" in rd(LIB / "reference" / "static" / "100_10_one-channel-per-run.md")
+      and "niche's references" in _s13j and "niche's references" in rd(SKD / "awl-static-plan" / "SKILL.md")
+      and "**niche's references**" in rd(SKD / "awl-analyze-study" / "SKILL.md")
+      and "mostly from the references of the run's niche" in rd(HOME / "commands" / "analyze-with-loupe.md"),
+      "a Static video's plan comes mostly from the references of the run's niche, the whole set's patterns kept beside them (static §1, "
+      "§2, §10, §13, the plan and study skills, item 36)")
+# nothing indecent, gory or distressing (the user, 2026-11-09, on video 03's still 67: "similar cases of nudity, or extreme emotional
+# distress or gore ... should be strictly avoided just like we did with superstitious and religious figures")
+_s11b = rd(LIB / "reference" / "static" / "115_11b_nothing-indecent-gory-or-distres.md")
+_s11b_by = [f for f in ("005_0_the-team-who-works-a-static-run.md", "030_3_a-new-subject-a6s.md", "040_4_the-script-a6s.md",
+                        "050_5_images-a6s-plan-s3.md", "060_6_the-voice-and-the-bed-a6s-s2.md", "080_8_static-qc-s2-s4.md",
+                        "120_12_the-youtube-title-and-thumbnail.md", "130_13_the-judge.md")
+            if "§11b" not in rd(LIB / "reference" / "static" / f)]
+check("## 11b Nothing indecent, gory or distressing" in _s11b and "implied included" in _s11b and "from top to bottom" in _s11b
+      and "nudity_gore_or_distress_words" in _s11b and not _s11b_by
+      and "static §11b" in rd(SKD / "awl-static-plan" / "SKILL.md") and "static §11b" in rd(SKD / "awl-static-images" / "SKILL.md")
+      and "Static has two" in rd(HOME / "commands" / "analyze-with-loupe.md") and "static §11b" in rd(HOME / "commands" / "analyze-with-loupe.md"),
+      "static §11b: no nudity (implied included), gore, injury or extreme distress in a subject, line, picture, thumbnail or bed; every "
+      f"person's clothes named top to bottom; cited by §0, §3-§6, §8, §12, §13, the plan and images skills and the router {_s11b_by}")
+# what a model job needs on this PC (the user, 2026-11-09: "find the solution, verify it and then mark it on the pipeline")
+_s9t = rd(LIB / "reference" / "static" / "090_9_the-static-pc-setup-once-per-pc.md")
+check("**What a job needs**" in _s9t and "**The page file sets the headroom.**" in _s9t
+      and "_low_commit_loading" in rd(LIB / "scripts" / "music_worker.py") and "low-commit" in _snd,
+      "ACE-Step loads the low-commit way (no weights file charged in full beside its GPU copy), and static §9 says what a job needs and "
+      "why a restart lowers the headroom")
 # more than one format (the user, 2026-11-08: "so we end up generating 2 video formats for the same content (2 capcut projects too ...)")
 _s2b = rd(LIB / "reference" / "static" / "025_2b_more-than-one-format.md").replace("\n", " ")
 _tpl_s = rd(LIB / "reference" / "production-agents" / "025_2s_spawning-static.md")

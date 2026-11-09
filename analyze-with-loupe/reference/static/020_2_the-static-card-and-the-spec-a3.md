@@ -10,13 +10,17 @@ after the cards, `T static profile --run RUN` (`20-analysis/set-profile.md`), th
 together: what recurs (with its count), the numbers as the set's median and range, the differences and what they follow. When the set
 holds different kinds (Shorts and long videos, a story and a list), each kind is a family read by its own numbers (`T static profile
 --run RUN --refs …`), and a video takes its family's. A value from one reference only is named as that, with the reason no other
-reference speaks to it; "V02's template" or "V01's moves" is never the reason for a value of the run.
+reference speaks to it; "V02's template" or "V01's moves" is never the reason for a value of the run. **The niche's references**
+(written after A5; §1 "The run's niche within the set"): the spec names the references of the run's niche and, for every field below,
+gives their pattern beside the set's and the family's: the niche's numbers are what a video aims at, the others the context they are
+read in; a spec written before 2026-11-09 gets this block before the run's next videos are planned.
 - **Narration template**: the beats in order with their share of the length (hook 0–5 %, setup, escalation 1…n, the reveal, the payoff,
   the closing line), as the set builds them; the line length; the pace and the pauses (below).
 - **The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very
-  sure that the workflow really achieves" it): per family, by the fair measure (§6 "The pace", §13): the words a minute while
-  articulating (`wpm_articulation`) and overall (`wpm_overall`) as the family's median (the point a video aims at) and range, and the
-  pause pattern (pauses a minute, their median and 90th percentile, the long ones of 0.8 s or more per 10 minutes, their share), all from
+  sure that the workflow really achieves" it): per family and, within it, for the niche's references, by the fair measure (§6 "The
+  pace", §13): the words a minute while articulating (`wpm_articulation`) and overall (`wpm_overall`) as the niche's references' median
+  (the point a video aims at; weighed with the family's by the judge when they are too few to carry it alone, §13) beside the family's
+  median and range, and the pause pattern (pauses a minute, their median and 90th percentile, the long ones of 0.8 s or more per 10 minutes, their share), all from
   `T static profile --refs <family>`; `wpm_speech` (the older segment reading) only as a fact. Each video's narration JSON carries them
   (§4), the judge checks the plan against them before anything is made (§13), and the narration is aimed at the point by the voice, its tags and the words chosen before it is made, then
   measured (§6).

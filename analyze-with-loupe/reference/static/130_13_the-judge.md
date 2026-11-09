@@ -19,11 +19,13 @@ against that forecast, and a miss is explained and corrected (or recorded with i
 checkpoint of each video; in a session without agents, the main session takes the role itself with the same brief. It decides on its
 own and never asks the user (the user, 2026-10-28 and 2026-11-08); it never generates an image, a line or a bed, never changes the
 run's locks (the niche, the style lock, the narrator), the user's start choices (formats, images' source, QC fixes, CapCut plan) or
-the memory guard, and never leaves the references' data: a target is a measured number of the set or of the video's family (the
-family's median unless the data gives a reason for another of its numbers, written with that reason), never a stock value or a taste.
+the memory guard, and never leaves the references' data: a target is a measured number of the references, mostly of the run's
+niche's references within the video's family, the family's and the set's numbers beside it (§1 "The run's niche within the set"; their
+median unless the data gives a reason for another of their numbers, written with that reason; when the niche's references are too few
+to carry a number alone, the judge weighs it with the family's and writes how), never a stock value or a taste.
 
-**Its information.** `20-analysis/static-spec.md` and the cards (the craft), `T static profile --run RUN --refs <the family>` (the
-family's numbers: the pace by the fair measure, the pauses, the seconds a still), the video's plan files (`40-briefs/video-NN-*`), `T
+**Its information.** `20-analysis/static-spec.md` and the cards (the craft), `T static profile --run RUN --refs <the family>` and
+`--refs <the niche's references in it>` (their numbers: the pace by the fair measure, the pauses, the seconds a still), the video's plan files (`40-briefs/video-NN-*`), `T
 static forecast --run RUN --video NN` (what the plan will give: below), the run's history (`60-outputs/video-*/images*.json` notes, the
 briefs), and the PC's model-memory record.
 
@@ -37,11 +39,12 @@ briefs), and the PC's model-memory record.
   words will have), its pauses; and from them the predicted pace, length and pause pattern against the point, the target length and the
   family's numbers. No speed and no pause between lines is calculated: Eleven v4 has no speed, and nothing is placed after it (§6).
 - *Images*: per image the facts that tend to spoil a still on this PC: things that carry writing in the scene (a sign, a screen, a chart,
-  a report, a map, a thermometer …) with no exact words planned, digits in the scene, words of §11, words that ask for panels or a split,
+  a report, a map, a thermometer …) with no exact words planned, digits in the scene, words of §11 and of §11b (a shower, a bath,
+  blood, a wound, a scream: `nudity_gore_or_distress_words`), words that ask for panels or a split,
   a missing style lock, clean-picture or one-scene sentence, overlay words, a label on a moving image, missing anchors, three or more
   references, the span against the family's seconds a still; the references' memory against the free memory now; FLUX 3 Klein's seconds
   an image on this run and the hours for the stretch; and this run's image history (what the upsampler added, what was flagged).
-- *Bed*: the duration, the sections against what they must add up to, words in the captions that ask for vocals or §11 (a word only
+- *Bed*: the duration, the sections against what they must add up to, words in the captions that ask for vocals, §11 or §11b (a word only
   negated, "no vocals", is not counted), and the music model's memory record (the highest peak, the guard's stops) against the free
   commit memory now and the guard's floor.
 
@@ -52,7 +55,10 @@ nothing else running), never whether it is tried, and never turns a job into a l
 only a real guard stop (its "STOPPED the app to protect Windows" line) shows it does not fit. Then the job waits until the free
 commit is at least 1 GB above where the stopped attempt started (the user is told the guard's line; nothing of theirs is closed and
 the guard is never changed), or, for a bed, goes on without, named. 2026-11-08, video 03: the bed tried at 15.4 GB free was stopped
-at 2.3 GB with ACE-Step at 13.07 GB; a still tried at 13.53 GB was stopped, and stills passed from 15.3 GB.
+at 2.3 GB with ACE-Step at 13.07 GB; a still tried at 13.53 GB was stopped, and stills passed from 15.3 GB. 2026-11-09 (§9 "What a
+job needs"): ACE-Step's own loading held its model twice; the low-commit loading needs about 10.7 GB, so that bed fits from about
+13.6 GB free; and the free commit at rest falls after a restart (the page file shrinks back), which is when a job that ran before is
+stopped: the forecast's headroom is read against the free commit now, never against a past day's.
 
 **The fair measure of pace** (§6 "The pace"): words a minute overall (first to last word) and while articulating (the same words over the
 span with every pause of 0.25 s or more taken out, `wpm_articulation`), from the words' times. The older reading (words over the
@@ -66,21 +72,24 @@ processed file read 207.4; since 2026-11-09 nothing is done to the delivered aud
 predicted result; and afterwards the measured result against it):
 1. **J1, before any generation** (A6s step 9, after the scripts, image plans and bed are written; `awl-static-plan`): reads the
    forecast of every part and decides:
-   - the narration's `pace` (§4): `refs` (the family), the bands by the fair measure, the `target` point (the family's median of
-     `wpm_articulation` and of `wpm_overall`, unless a reason in the data), the `tolerance`;
+   - the narration's `pace` (§4): `refs` (the niche's references within the family, else the family), the family's bands by the fair
+     measure, the `target` point (the niche's references' median of `wpm_articulation` and of `wpm_overall`, the family's beside it,
+     unless a reason in the data), the `tolerance`;
    - the levers that reach the point (§6 "The pace"): the narration's `delivery` (pace and register tags), the `voice_settings`, the
      words (sentence length and punctuation), each measured first on a probe (passage 1 exactly as `say` will send it; another lever set
      is another probe): the judge names the lever sets, the main session runs `T tts probe` for each (billed; the judge never generates)
      and continues the judge with the measures; as few probes as the characters left allow (the forecast's `credits`), the narrator never
      changed (a lock);
-   - the pauses: the long pauses the family holds (its `long_pauses_per_10min` times the video's minutes, at the strongest turns:
+   - the pauses: the long pauses the niche's references hold, the family's beside them (their `long_pauses_per_10min` times the
+     video's minutes, at the strongest turns:
      the reveals, the chapter starts) asked as `tags_after` ("[pause]": 0.76 s with George, 2026-11-09; "[long pause]" ran 1.6-2.6 s,
      over the family's 0.92 s, §6 "what the levers did") or punctuation, every other rest the voice's own, the
      probe's pause pattern read against the family's (a pause the family does not hold is not asked);
    - the strong lines (their own `delivery` tags; at most one in five, never two in a row, §4), the length against the family's (§4);
    - every image prompt the forecast marks: a thing that would carry writing gets its exact words when the story needs them (a label
      is CapCut text, §5) or is described as plain and blank ("a blank white screen", "a chart of plain coloured bars with no writing");
-     digits leave the scene words; a split word becomes one scene; a §11 word becomes a secular description; a missing sentence is put
+     digits leave the scene words; a split word becomes one scene; a §11 word becomes a secular description; a §11b word becomes the
+     dressed or calm moment (every person's clothes named top to bottom; the care, never the harm); a missing sentence is put
      back; a still whose references the memory cannot hold rides with a cast sheet (§5);
    - the bed: its caption and sections fixed where the forecast marks them; when it runs (when the images are done, or in a gap
      between image stretches once the narration is final, with nothing else holding memory; the memory forecast read again right
@@ -117,7 +126,8 @@ You are the judge of a /analyze-with-loupe Static run (narrated still-picture vi
 Read first: C:/Users/Bulzart/.claude/analyze-with-loupe/reference/static/130_13_the-judge.md (your brief: follow it exactly), then
 <RUN>/20-analysis/static-spec.md and only the sections of static §4, §5 or §6 your checkpoint touches.
 Run: <RUN>. Toolkit T: "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe" "C:/Users/Bulzart/.claude/analyze-with-loupe/scripts/awl.py"
-(through PowerShell). The video's family: <family name> (<refs>); the run's QC fixes: <ask|auto|off>.
+(through PowerShell). The video's family: <family name> (<refs>); the run's niche and its references in the family: <niche> (<refs>,
+or none: then the family's numbers lead); the run's QC fixes: <ask|auto|off>.
 <what happened since the last checkpoint: the agent's report, the measured numbers, or "nothing generated yet">
 Do: `T static profile --run <RUN> --refs <refs>` and `T static forecast --run <RUN> --video <NN> [--part … --from … --to …]`; read them
 with the plan files; decide every change yourself (never ask anyone), edit only the plan files your checkpoint owns (J1: the narration

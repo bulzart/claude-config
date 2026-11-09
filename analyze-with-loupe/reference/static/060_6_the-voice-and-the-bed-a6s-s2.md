@@ -119,7 +119,8 @@ need to analyze their instrumentals too"). It is written from what the run alrea
   true case, a myth …): the palette;
 - **the narration**: the spec's register and delivery in words (calm, wry, warm, ominous …), its pace (words per minute, the pauses) and
   the voice's pitch: the music leaves the narrator's band clear (no lead melody or busy part where the voice sits) and has no vocals,
-  and nothing sacred or ritual (no hymn, choir singing sacred words, chant or church organ: §11);
+  and nothing sacred or ritual (no hymn, choir singing sacred words, chant or church organ: §11), and no screams, sobs or sounds of
+  pain (§11b);
 - **the story's arc over time**: this video's beats (its script) at the narration's line times (the hook, the rise, the turn, the fall
   or payoff, the close) and each line's emotion: where the bed holds, builds, drops or darkens;
 - **the pictures' rhythm**: the seconds per still and the cuts (§2), which a pulse can sit under without fighting;

@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 6df6fb40-e7ad-4b91-b765-6c6c020da849
-  modified: 2026-11-06T07:09:42.325Z
+  modified: 2026-11-09T06:44:31.674Z
 ---
 
 Installed 2026-11-05 in `C:\Users\Bulzart\Documents\AI\` (user: file generation is all that matters, no web UI needed):
@@ -26,5 +26,7 @@ Installed 2026-11-05 in `C:\Users\Bulzart\Documents\AI\` (user: file generation 
 - Git Bash forks can fail under memory pressure: prefer PowerShell.
 
 Related: [[avast-https-scanning-breaks-tls]], [[analyze-with-loupe-command]]
+
+**2026-11-09: why ACE-Step "needed 16 GB" and the fix** (the user: "this used to work though ... find the solution, verify it and then mark it on the pipeline"): measured with memguard `--log`. safetensors maps a weights file copy-on-write, which Windows charges at full size before a byte is read, and WDDM charges the GPU copy again, so ACE-Step's own loading held its 4.46 GB DiT twice (9.8 GB still loading, 13-15.4 GB peak). `music_worker.py` `_low_commit_loading` (plain per-tensor reads + `device_map` straight to cuda at the working dtype; weights verified identical 1,352/1,352, on GPU 677+310): ~8 GB loaded, ~10.7 GB generating a 283 s piece → a bed needs ~13.6 GB free commit (Klein ~14.4 GB with 1 ref; its ComfyUI loading not changed). The other half: the page file is system-managed (6.5 GB at boot, C: has only 17.7 GB free); Windows grew it on 11-05/07/08 ("Virtual Memory Minimum Too Low" events) and that growth lasts only until restart, so after the 2026-11-09 03:37 restart free commit at rest was ~10.75 GB and both ACE-Step and Klein are stopped by the guard. A fixed larger page file is the user's call (offered, not done). Static §9 "What a job needs".
 
 **2026-11-09: Qwen3-TTS uninstalled** (the user: "we will no longer use a locl model for audio generation, we will use elevenlabs"; "also uninstall its whole open weights from our pc too"): `Documents\AI\Qwen3-TTS` (models and both environments), the HF cache copies, `tools\qwen_tts_python.cmd`, the TTS example jobs and the user variable `AWL_TTS_PYTHON` are gone (12.9 GB freed); the Qwen lines above are history. The narration is ElevenLabs: [[awl-elevenlabs-v4-no-edit]]. ACE-Step and FLUX 3 Klein stay.

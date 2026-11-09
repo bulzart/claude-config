@@ -9,7 +9,8 @@ A Static run is one channel. Its **locks** are set once and kept by every video 
 - **The niche** (A5, the user's pick: philosophy, math, history, storytelling, persuasion …; `T static lock --run RUN --niche
   "<niche>"`). Every subject of the run comes from it (§3). The references give the craft (the hook, the telling, the devices, the
   pacing, the edit, the sound, the text look), never the field: a run that studied history references may make philosophy videos in
-  their way.
+  their way. When the set holds references of the run's niche, they give most of the craft and the whole set the rest (§1 "The run's
+  niche within the set"; the user, 2026-11-09).
 - **The visual style** (A5: the user names the one reference whose visuals they like; `T static lock --run RUN --style-ref <V>`). Its
   picture style is the run's style lock (§2, §5: every image of every video, by the API, FLUX 3 Klein or the user), and when it shows
   captions, its text look is the run's text look (font family, weight, size, colours, outline, case, position, highlight, entrance;

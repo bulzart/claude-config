@@ -32,6 +32,8 @@ with that in mind:
 - the edit uses only what this PC's CapCut was shown to play, within the run's CapCut plan (§7, §9);
 - one channel: every video of the run in its niche, its visual style and its narrator, as the user picked them (§10);
 - nothing religious or superstitious, ever, in a subject, a line, a caption, a picture or a sound (§11);
+- nothing indecent, gory or distressing, ever: no nudity (implied included), no gore or injury, no extreme distress, nothing a family
+  audience is not shown or told (§11b);
 - the hard rules stand: no sticker or emoji added (contract item 6), the user's folders read-only (item 34), Static's own (item 36).
 
 The sections that follow say how each role works; this one says who is working. creative-direction §1–§4 (the roles, the goal, the
