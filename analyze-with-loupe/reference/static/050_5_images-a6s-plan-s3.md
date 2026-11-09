@@ -5,7 +5,9 @@ check, §6>,
 "captions": {"y_rel": <from the spec>, "words": <n>, "font_file": "<a file from T capcut-font --list>", "size": <n>, "fill": "#…",
 "stroke_color": "#…", "stroke_width": <n>, "shadow": false, "box_color": null, "bold": true, "case": "upper", "highlight_color": "#…",
 "highlight_words": ["…"], "animation": "<a text intro slug the catalogue shows drawn>", "animation_s": <seconds>, "word_box": <null, or
-the spoken word's box (§7): {"color": "#…", "alpha": <0-1>, "round_radius": <0-1>, "style": 0, "gap_em": <the words' gap>, "why": "…"}>},
+the spoken word's box (§7): {"color": "#…", "alpha": <0-1>, "round_radius": <0-1>, "style": 0, "gap_em": <the words' gap>, "pad": <the
+box past its word, CapCut's 0.14 by default>, "v_offset": <the box's vertical offset; CapCut boxes the descent too, so it sits low at 0>,
+"why": "…"}>},
 "characters": [{"id":
 "C1", "name": "…", "photo": "<path or null>", "sheet_prompt": "<when no photo>"}], "images": [{"image": 1, "from_line": 1, "prompt": "…",
 "characters": ["C1"], "motion": "<zoom-in | zoom-out | pan-left | pan-right | pan-up | pan-down | none>", "amount": <the change>,

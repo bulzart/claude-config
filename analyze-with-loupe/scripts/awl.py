@@ -6797,7 +6797,7 @@ def cmd_capcut_word_box(a):
                 if m is not None and tr["boxed"]:
                     # capcut-cli's import-srt leaves the box's size and offsets unset: CapCut's own values for a box (a text the
                     # user styled in CapCut, config capcut.text_style.learned: 0.14 around the text, centred)
-                    m.update({"background_width": WORD_BOX_PAD, "background_height": WORD_BOX_PAD,
+                    m.update({"background_width": float(wb.get("pad", WORD_BOX_PAD)), "background_height": float(wb.get("pad", WORD_BOX_PAD)),
                               "background_horizontal_offset": 0.0, "background_vertical_offset": float(wb.get("v_offset") or 0.0),
                               "background_fill": ""})
                 n_here += 1
