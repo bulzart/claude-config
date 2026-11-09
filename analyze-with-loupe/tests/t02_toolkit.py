@@ -1396,13 +1396,19 @@ js, code = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.2
 _c1 = code == 2 and "at most" in js.get("error", "")
 js, code = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.04", ok=False)
 _c2 = code == 2 and "--why" in js.get("error", "")
+js, code = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.04", "--why", "levers tried", ok=False)
+_c3 = code == 2 and "--user-ok" in js.get("error", "")
 _d0 = _s12["duration_s"]
 _l0 = {r["n"]: r["start"] for r in _s12["lines"]}
-js, _ = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.04", "--why", "probes A-F tried; overall 5 % under the point")
+js, _ = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.04", "--why", "probes A-F tried; overall 5 % under the point",
+           "--user-ok", "the user, after watching it: yes, a little faster")
 _s12t = json.loads((PR / "30-assets" / "narration" / "video-12.json").read_text(encoding="utf-8"))
 _pre = PR / "30-assets" / "narration" / "video-12.pre-tempo.wav"
-js2, _ = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.02", "--why", "a smaller step")
+js2, _ = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.02", "--why", "a smaller step", "--user-ok", "the user: yes")
 _s12u = json.loads((PR / "30-assets" / "narration" / "video-12.json").read_text(encoding="utf-8"))
+check(_c3 and (_s12t.get("tempo") or {}).get("user_ok") == "the user, after watching it: yes, a little faster",
+      "tts tempo is refused without the user's own words of permission (--user-ok) and records them (the user, 2026-11-09: \"only speedup "
+      "on their permission never else\")")
 check(_c1 and _c2 and js.get("ok") and _pre.is_file() and abs(_s12t["duration_s"] - _d0 / 1.04) < 0.05
       and (js.get("level") or {}).get("read_after_tempo") == 1.04 and (_s12t.get("level") or {}).get("read_after_tempo") == 1.04
       and all(abs(r["start"] - _l0[r["n"]] / 1.04) < 0.01 for r in _s12t["lines"]) and "rubberband" in _s12t["tempo"]["filter"]

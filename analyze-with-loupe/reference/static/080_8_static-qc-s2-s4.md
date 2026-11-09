@@ -12,7 +12,7 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
   (a bracket's words heard as speech) and no sound effect where a delivery tag was meant; the duration within the spec's range; the
   pace on the judge's point within its tolerance and inside the bands (`tts say`'s and `narration-words`' `pace.on_target` and
   `pace.within`; §6 "The pace") and the pause pattern against the forecast; the loudness against the references' (the sidecar's `level`: as delivered inside their range, else one gain toward their median
-  within the true-peak ceiling, §6); a speed-up only as J2's last resort, capped and with its `--why` (§13); one
+  within the true-peak ceiling, §6); a speed-up only on the user's yes after delivery, capped, with its `--why` and `--user-ok` (§6, §13); one
   speaker throughout; each passage's timbre against the others (`voice_match.passages_below`, §6); a partial narration (`partial`)
   named with where it stops. A fix is a passage made again through the request (§6), never an edit of the delivered audio.
 - **The bed** (`T music measure`, §6): no word heard in it alone; the narration's words heard the same with it under it at the project's

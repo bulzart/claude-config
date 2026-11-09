@@ -21,7 +21,7 @@ The main session runs S2 for every video, one at a time, before any production a
 is ElevenLabs' Eleven v4 in the run's voice (`state.json → static.voice`, static §6): nothing of it runs on this PC, every passage is
 billed at one credit a character, and the delivered audio is not edited (the user, 2026-11-09: "do not edit the delivered generation
 without any exception") but for the two exceptions the user then allowed (static §6 "The rule"): one gain only when its loudness sits
-outside the references', and a capped speed-up as J2's last resort.
+outside the references', and a capped speed-up made only on the user's yes after they have seen the delivered project.
 
 ## Step S2 (per video)
 
@@ -55,11 +55,13 @@ outside the references', and a capped speed-up as J2's last resort.
    split images in `video-NN-images.json` (their prompts with them).
 4b. **The judge, J2** (static §13): spawn the judge with the narration's measured pace, pauses, length and spans; it reads them against
    J1's forecast and point and decides: spans by `from_line` (free); a miss of the point changed through the request first (another
-   delivery tag, pause tag, setting or wording, the passages made again, billed, by the run's QC fixes); only when the request levers
-   cannot reach it, the last resort: `T tts tempo --run RUN --video NN --tempo X --why "<the levers tried and their measures>"` (one
-   speed-up, at most config `static.narration.tempo_max` 1.05, pitch and formants kept; the level rule read again on the sped file, its
-   answer's `level`), then `T narration-words` and the spans again;
-   else kept with its reason. Then `T tts fit --run RUN --video NN` (after `narration-words`): the voice's point learned again
+   delivery tag, pause tag, setting or wording, the passages made again, billed, by the run's QC fixes); what the request levers
+   cannot reach is kept as delivered with its reason, and J2 writes the speed-up that would close it (at most config
+   `static.narration.tempo_max` 1.05) for the wrap-up to offer: never made here (the user, 2026-11-09: "only speedup on their
+   permission never else"). On the user's later yes, after they have looked at the delivered project: `T tts tempo --run RUN --video NN
+   --tempo X --why "<the levers tried and their measures>" --user-ok "<the user's words>"` (pitch and formants kept; the level rule read
+   again on the sped file, its answer's `level`), then `T narration-words`, the spans, the bed's length and the project again.
+   Then `T tts fit --run RUN --video NN` (after `narration-words`): the voice's point learned again
    (`state.json → static.voice.fit`), what the next video's forecast reads.
 5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made, when every image is made
    or in a gap between image stretches (two local models never share the GPU and the commit memory; 2026-11-08 the guard stopped
@@ -95,7 +97,9 @@ An ElevenLabs error is reported with its real text (the key never shown). Narrat
 - Never edit the delivered narration (the user, 2026-11-09): no stretch, trim, cut, compressor, loudness pass, fade or added silence.
   Its pace, pauses and length come from the request (the voice, the settings, the words, the audio tags; static §6); a length that is
   off is a script rewritten and its passages made again. The only two changes allowed (the user, 2026-11-09) are the level rule's one
-  gain (outside the references' loudness only) and J2's capped last-resort speed-up (`T tts tempo`, pitch kept, after the levers).
+  gain (outside the references' loudness only) and a capped speed-up (`T tts tempo`, pitch kept) made only on the user's own yes
+  after they have looked at the delivered project, never on the agent's or the judge's call (the user, 2026-11-09: "only speedup on
+  their permission never else").
 - Never analyse the references' music beyond the numbers A3 already has (the user, 2026-11-06: "no need to analyze their instrumentals
   too"); never keep a bed's level at which a narration word is heard differently (a level costs nothing to change, whatever the QC fixes).
 

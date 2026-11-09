@@ -268,7 +268,8 @@ _gone = sorted({f"{p.name}: {w}" for p in _vdocs for w in ("DASHSCOPE_API_KEY", 
 check(not _gone, "no Static or voiceover doc, skill or the router names a removed engine or asks a speed or tempo change: " + "; ".join(_gone))
 _snd1 = re.sub(r"\s+", " ", _snd)
 check("without any exception" in _s6n and "no speed" in _s6n and "**Passages**" in _s6t and "tags_after" in _s4t and "tags_after" in _s6t
-      and "the last resort" in _s6n and "tempo_max" in _s6n and "one constant gain toward their median" in _s6n and "after the levers" in _snd1
+      and "the last resort" in _s6n and "tempo_max" in _s6n and "one constant gain toward their median" in _s6n
+      and "only on the user's own yes" in _snd1
       and "T tts tempo" in _snd1 and "pitch and formants kept" in _snd1,
       "static §6 holds the user's rule (the delivered audio is not edited, 'without any exception'), Eleven v4's lack of a speed, the "
       "passages and the pause tags, and the two changes the user then allowed (one gain only outside the references' loudness; a capped, "
@@ -327,6 +328,18 @@ check("**A survival pose is shown, never dropped**" in _s11bn and "head up, eyes
       and "FC_INTIMATE" in rd(LIB / "scripts" / "awl.py"),
       "static §11b keeps a survival pose and draws the person clearly alive in it (head up or turned, eyes open, moving), and no line "
       "names an intimate part of the body (the forecast marks such a line); §4, §5, §8, §13 and the plan and images skills carry both")
+# the speed-up only on the user's permission (the user, 2026-11-09: "only speedup on their permission never else, even though speedup
+# is the last option we should try to achieve it directly on the generation")
+_wrp = re.sub(r"\s+", " ", rd(SKD / "awl-wrapup" / "SKILL.md"))
+_s6p = re.sub(r"\s+", " ", rd(LIB / "reference" / "static" / "060_6_the-voice-and-the-bed-a6s-s2.md"))
+check("**the last resort for the pace, only on the user's yes**" in _s6p and "--user-ok" in _s6p
+      and "only speedup on their permission never else" in re.sub(r"\s+", " ", rd(LIB / "reference" / "static" / "130_13_the-judge.md"))
+      and "never on the agent's or the judge's call" in re.sub(r"\s+", " ", rd(SKD / "awl-static-sound" / "SKILL.md"))
+      and 'header "Speed-up"' in _wrp and "made only on their yes" in _wrp
+      and "made only on the user's yes" in rd(HOME / "commands" / "analyze-with-loupe.md")
+      and '"--user-ok"' in rd(LIB / "scripts" / "awl.py"),
+      "a speed-up is never the agent's call: the pace is reached in the generation, a miss is delivered with its numbers, and the wrap-up "
+      "asks the user, who looks at the project first (static §6, §13 J2, the sound and wrap-up skills, the router, `T tts tempo --user-ok`)")
 # ACE-Step's int8 only after a full-precision guard stop (the user, 2026-11-09, yes to "always try full precision first, and use int8
 # only after the guard stops it")
 _s6n2 = re.sub(r"\s+", " ", rd(LIB / "reference" / "static" / "060_6_the-voice-and-the-bed-a6s-s2.md"))

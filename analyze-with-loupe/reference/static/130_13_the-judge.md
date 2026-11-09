@@ -108,11 +108,11 @@ predicted result; and afterwards the measured result against it):
    narration-words`) against J1's forecast and point: on the point within the tolerance, the pause pattern near the family's, the
    length, and a partial narration (the characters ran out) named; the image spans against the seconds a still. A miss is explained from
    the numbers (the point measured, the levers) and changed through the request first: another delivery tag, setting or wording and the
-   passages made again (billed, by the run's QC fixes). Only when those cannot reach the point (the voice is locked; the tags and pause
-   tags tried and measured), the last resort the user allowed (2026-11-09): one speed-up of the whole narration, the tempo that brings
-   the speaking measure to the point and at most `config static.narration.tempo_max` (1.05), pitch and formants kept (`T tts tempo
-   --tempo X --why "<the levers tried and their measures>"`, then `T narration-words` and `T slideshow plan` again), else the miss kept
-   and recorded with its reason. Nothing else is ever done to the delivered audio but the level rule (§6: one gain only when the
+   passages made again (billed, by the run's QC fixes). What those cannot reach (the voice is locked; the tags and pause tags tried
+   and measured) is kept as delivered and recorded with its reason, and J2 writes the speed-up that would close it (the tempo that
+   brings the speaking measure to the point, at most `config static.narration.tempo_max`, 1.05) for the wrap-up to offer: it is made
+   only on the user's yes after they have looked at the delivered project (§6; the user, 2026-11-09: "only speedup on their
+   permission never else"), then `T narration-words`, `T slideshow plan` and the project again. Nothing else is ever done to the delivered audio but the level rule (§6: one gain only when the
    narration sits outside the references' loudness). Spans are moved by `from_line` (free). The point learned by the narration is the
    next video's forecast.
 3. **J3, between image stretches** (S3; the main session spawns the judge when an image agent reports, before the next is spawned):

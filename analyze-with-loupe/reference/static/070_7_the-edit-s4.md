@@ -65,7 +65,7 @@
   entrance.
 - Loudness: the narration is ElevenLabs' delivered audio (the user, 2026-11-09: "do not edit the delivered generation without any
   exception": no compressor, loudness pass or fade), but for the level rule (§6: one constant gain only when it sits outside the
-  references' measured loudness, never past -1 dBTP) and the capped last-resort speed-up (§6, §13 J2); its loudness is recorded
+  references' measured loudness, never past -1 dBTP) and a capped speed-up the user said yes to after delivery (§6, §13 J2); its loudness is recorded
   (`loudness_lufs`, `true_peak_db` and `level` in the narration's sidecar), the CapCut project plays it at 1.0, and the bed sits under it at the plan's gain, judged
   against the narration as it is (§6 "The bed's check and level").
 - **The export** is the user's, in CapCut (no tool exports a CapCut project): each project at its format's export size, 30 fps; the

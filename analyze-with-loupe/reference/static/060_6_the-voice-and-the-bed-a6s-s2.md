@@ -40,16 +40,23 @@ no new samples; the toolkit refuses a new design or pick without `--replace`. Th
     `config static.narration.true_peak_db` (-1 dBTP: no limiter, no compressor), and none when the voice's own peaks leave under
     `level_min_step_db` (0.5 dB) of room (the sidecar's `level`; the delivered file kept as `video-NN.delivered.wav`). 2026-11-09, video
     03: -23.5 LUFS against the family's -21.5 to -14.0 (median -18.9), +4.6 dB wanted, its true peak -1.1 dBTP left 0.1 dB: as delivered;
-  - **the last resort for the pace**: "also add the speed tweak to the audio if we cannot achieve what we aim for by the model
-    directly, but just speeding allowed up until a certain point ... only do it after we cannot do it through tweaking parameters in the
-    elevenlabs directly ... just the speed, no compresion or something else that might change the voice quality or lose its color and
-    pitch, and also no cuts,trims or similar, just carefull speed up": `T tts tempo --run RUN --video NN --tempo X --why "<the request
-    levers tried and what they measured>"` speeds the whole narration up by X (above 1, at most `config static.narration.tempo_max`,
-    1.05), its pitch and formants kept (rubberband; refused without it), after J2 has tried the request levers (§13); the narration
-    before it stays as `video-NN.pre-tempo.wav`, a later tempo starts from it, and the lines', passages' and words' times follow.
-    The level rule then reads the sped narration again, since a time-stretch changes the loudness (video 03, 2026-11-09: -23.6 LUFS
-    as delivered, -25.5 after 1.05 with its true peak from -1.1 to -2.5 dBTP, then one +1.5 dB gain to -24.0; the sped file before the
-    gain kept as `video-NN.pre-level.wav`).
+  - **the last resort for the pace, only on the user's yes**: "also add the speed tweak to the audio if we cannot achieve what we aim
+    for by the model directly, but just speeding allowed up until a certain point ... just the speed, no compresion or something else
+    that might change the voice quality or lose its color and pitch, and also no cuts,trims or similar, just carefull speed up"; then,
+    the same day: "from now on the speech speedup from now on should only happen on user's permission, we do deliver all the work and
+    then tell the user we're on these stats and for example target was 200wpm but we achieved 180 and we need a bit of speedup, it goes
+    to the capcut looks at the project and only speedup on their permission never else, even though speedup is the last option we
+    should try to achieve it directly on the generation". The pace is reached in the generation (the request levers, J1 and J2, §13);
+    a miss the levers could not close is delivered as it is, and the wrap-up gives the user the numbers (the measured pace, speaking
+    and overall, against the point) and the speed-up that would close it. Only after the user has looked at the project and said yes:
+    `T tts tempo --run RUN --video NN --tempo X --why "<the request levers tried and what they measured>" --user-ok "<the user's
+    words>"` speeds the whole narration up by X (above 1, at most `config static.narration.tempo_max`, 1.05), its pitch and formants
+    kept (rubberband; refused without it, and refused without `--user-ok`); the narration before it stays as `video-NN.pre-tempo.wav`,
+    a later tempo starts from it, the lines', passages' and words' times follow, and the project is built again. The level rule then
+    reads the sped narration again, since a time-stretch changes the loudness (video 03, 2026-11-09: -23.6 LUFS as delivered, -25.5
+    after 1.05 with its true peak from -1.1 to -2.5 dBTP, then one +1.5 dB gain to -24.0; the sped file before the gain kept as
+    `video-NN.pre-level.wav`). That speed-up was the user's own call; they then had it taken back ("in our video case just return it
+    to normal, no speedup"): `T tts say --rejoin` puts the passages back end to end exactly as delivered.
   The CapCut project plays the narration at its own level (§7).
 - **Passages** (`T tts say`): Eleven v4 "works best when used for paragraphs or passages of text" (ElevenLabs), so the lines are sent in
   passages of up to `config.json → static.tts.elevenlabs.passage_chars` (850; the plan's `tts.passage_chars` overrides) characters. A
@@ -101,8 +108,8 @@ judge's `target` point, the tolerance) is what the narration is aimed at and mea
 - **the decision** is the judge's (J1, §13), from the forecast (`T static forecast --part narration`: the point measured for the plan's
   levers, the predicted pace and length against the plan's point, the family and the characters left); after the narration the
   measured pace against the point is J2's. A miss is changed through the request first (another tag, setting or wording, the passages
-  made again, billed); only when the request levers cannot reach the point, the capped speed-up (`T tts tempo`, above) with the
-  levers tried in its `--why`, or the miss kept and recorded with its reason. `T tts fit` learns the voice's point again from a made
+  made again, billed); what the request levers cannot reach is delivered as it is, recorded with its reason, and offered in the
+  wrap-up as the capped speed-up that would close it (above), made only on the user's yes. `T tts fit` learns the voice's point again from a made
   narration and `T narration-words`' heard words (the next video's forecast).
 - **what the levers did** (video 03, George on Eleven v4, 2026-11-09; two test passages, the opening and a dense middle, measured
   speaking / overall wpm, the family's point 211.9 / 174.0): no tag 213.7 / 161.4 and 187.2 / 144.8; "[quick, measured pace]" 213.4 /

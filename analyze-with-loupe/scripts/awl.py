@@ -10430,8 +10430,9 @@ _EL_REFUSED_FORMATS: set = set()   # output formats the account's plan refused i
 EL_STITCH_FRESH_S = 6600           # request ids younger than this are sent for stitching (ElevenLabs: "no older than two hours")
 EL_NO_EDIT = ("the delivered audio is never edited (the user, 2026-11-09, \"without any exception\"): no speed change, cut, trim, "
               "compression, fade or added silence; pace, pauses and length come only from the request (the voice, the settings, the words "
-              "and the audio tags, per ElevenLabs' guide); the one exception the user allowed: a constant volume change when the "
-              "narration is outside the references' measured loudness range, never past the true-peak ceiling")
+              "and the audio tags, per ElevenLabs' guide); the two exceptions the user allowed: a constant volume change when the "
+              "narration is outside the references' measured loudness range, never past the true-peak ceiling, and one capped "
+              "pitch-kept speed-up made only on the user's own yes after they have seen the delivered project")
 
 
 def _el_cfg(key: str, default=None):
@@ -11754,7 +11755,10 @@ def _tts_tempo(a):
     elevenlabs directly ... just the speed, no compresion or something else that might change the voice quality or lose its color and
     pitch, and also no cuts,trims or similar, just carefull speed up"): the whole narration sped up by --tempo (above 1, at most config
     static.narration.tempo_max), its pitch and formants kept, nothing else (no trim, gain, compressor or fade). --why is the judge's
-    record of the request levers tried first and what they measured (J2, static §13). The narration before it stays as
+    record of the request levers tried first and what they measured (J2, static §13). --user-ok carries the user's own words of
+    permission (the user, 2026-11-09: "from now on the speech speedup ... should only happen on user's permission, we do deliver all the
+    work and then tell the user we're on these stats ... and only speedup on their permission never else"): the speed-up is offered in
+    the wrap-up after the delivered project was seen, never made on the agent's call. The narration before it stays as
     video-NN.pre-tempo.wav and a later --tempo starts from that file (never one speed-up on another); the lines', passages' and words'
     times follow; the pace is read again with the references' yardstick."""
     rd, _st = _state_of(a.run)
@@ -11772,6 +11776,10 @@ def _tts_tempo(a):
     if not str(a.why or "").strip():
         fail("--why names the request levers tried first and what they measured (the voice, the delivery and pace tags, the pause tags, the "
              "settings, the words): the speed-up comes only after them (the user, 2026-11-09; static §13 J2)", 2)
+    if not str(getattr(a, "user_ok", "") or "").strip():
+        fail("--user-ok carries the user's own words of permission: a speed-up is made only on the user's yes, after the delivered project "
+             "and the pace's numbers were shown to them in the wrap-up (the user, 2026-11-09: \"only speedup on their permission never "
+             "else\"; static §6)", 2)
     af = _tempo_filter(x)
     final = Path(side["file"])
     pre = final.with_name(final.stem + ".pre-tempo.wav")
@@ -11807,7 +11815,8 @@ def _tts_tempo(a):
     m = _measure_pace(final, [{"n": r["n"], "text": r["text"]} for r in rows], {r["n"]: (r["start"], r["end"]) for r in rows},
                       side.get("language") or "english", final.parent / f"video-{nn}")
     m.pop("_words", None)
-    side["tempo"] = {"value": x, "cap": cap, "why": str(a.why).strip(), "filter": af, "pre_tempo_file": str(pre), "at": now_iso(),
+    side["tempo"] = {"value": x, "cap": cap, "why": str(a.why).strip(), "user_ok": str(a.user_ok).strip(), "filter": af,
+                     "pre_tempo_file": str(pre), "at": now_iso(),
                      "measured": {k_: m.get(k_) for k_ in PACE_MEASURED_KEYS}}
     side["loudness_lufs"], side["true_peak_db"] = lufs, tp
     write_json(sp, side)
@@ -15329,8 +15338,10 @@ def main():
                                   "speed and the delivered audio is never edited: the pace is the voice's, the words' and the audio tags'")
     p.add_argument("action", choices=["check", "voices", "design", "voice", "probe", "say", "fit", "tempo"]); p.add_argument("--run")
     p.add_argument("--tempo", type=float, help="tempo: the speed-up, above 1 and at most config static.narration.tempo_max (pitch and "
-                                               "formants kept; only after the request levers, static §13 J2)")
+                                               "formants kept; only on the user's yes after delivery, --user-ok; static §6, §13 J2)")
     p.add_argument("--why", help="tempo: the request levers tried first and what they measured (the judge's record)")
+    p.add_argument("--user-ok", dest="user_ok", help="tempo: the user's own words of permission (required: the speed-up is made only on "
+                                                     "the user's yes after they have seen the delivered project, static §6)")
     p.add_argument("--offline", action="store_true", help="check: the setup facts without asking ElevenLabs")
     p.add_argument("--measure", action="store_true", help="voices: read each listed voice's own preview with the references' yardstick "
                                                           "(free: ElevenLabs' public samples)")

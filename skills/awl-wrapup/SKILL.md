@@ -99,6 +99,12 @@ references do not hold, add one line offering to write the rule into the section
 the videos' `result.json → static.cost_usd_estimate`; 0 when FLUX 3 Klein made them on this PC), the images' source and re-draws, the
 narration's ElevenLabs characters (each `30-assets/narration/video-NN.json → characters`, one credit a character on Eleven v4, and the
 account's characters left by `T tts check`), a partial narration with the line it stops at, and every narration passage made again.
+It also gives each narration's pace against its point (static §6, §13 J2: the measured words a minute while speaking and overall, the
+point, the niche's and the family's numbers beside it) and, when the request levers left it off the point, the speed-up that would close
+it (at most `config static.narration.tempo_max`, 1.05). The user looks at the project in CapCut first; the speed-up is asked with
+AskUserQuestion (header "Speed-up") and made only on their yes (the user, 2026-11-09: "only speedup on their permission never else"):
+`T tts tempo … --user-ok "<their words>"`, then `T narration-words`, `T slideshow plan`, the bed's length (`music.json`, `T music make`
+again when it no longer covers the narration) and a new CapCut project, reported as a new build.
 
 
 Once the generated videos and the editing are done, and after the feedback question, offer the

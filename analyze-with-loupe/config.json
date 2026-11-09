@@ -281,7 +281,7 @@
       "true_peak_db": -1.0,
       "level_min_step_db": 0.5,
       "tempo_max": 1.05,
-      "tempo_note": "the pace's last resort (the user, 2026-11-09): a speed-up of at most 5 %, pitch and formants kept, only after the request levers; `T tts tempo`",
+      "tempo_note": "the pace's last resort (the user, 2026-11-09): a speed-up of at most 5 %, pitch and formants kept, made only on the user's yes after they have seen the delivered project, never the agent's call (`T tts tempo --user-ok`); the pace is reached in the generation first",
       "narration_note": "the narration is ElevenLabs' delivered audio, placed as delivered: no voice chain, no gain, no trim, no added silence (the user, 2026-11-09); pause_s is only the hint of where a passage may end when a plan has no pause marks; loudness_lufs is the local render's mix target, never applied to the narration"
     },
     "captions": {
