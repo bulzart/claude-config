@@ -1507,3 +1507,32 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   video still is based on leveraging and carefully implementing by the patterns of the whole references data set but it drived mostly
   from the niche we chose". Static §1 "The run's niche within the set": the plan mostly from the niche's references (named in the spec
   after A5), the family's and the set's patterns beside them; the judge's point from the niche's references within the family.
+
+## 2026-11-09 · Static: video 03 finished on the narration side; the two memory levers; nobody shown as if dead
+
+- **The user:** "okay speed it up a little bit to come closer to its groups samples (due to the lack of credits, if we'd had more we
+  could try the direct model steering first but whatever...)". `T tts tempo --tempo 1.05` (the cap, pitch and formants kept). Read
+  again by speech-to-text: 200.7-210.7 words a minute speaking and 153.3-154.7 overall, against the family's 211.9 and 174.0 and the
+  niche's 224.5 and 170.9: the speaking pace is now close to the family's; the overall pace stays lower because of George's long rests.
+- **A speed-up lowers the level:** the time-stretch took the narration from -23.6 to -25.5 LUFS, outside the references' range. `T tts
+  tempo` now ends with the level rule (here one +1.5 dB gain to -24.0 LUFS, true peak -1.0; the sped file before the gain kept as
+  `video-NN.pre-level.wav`). Static §6.
+- **The rest of the narration** was made on the user's second ElevenLabs account (the key used per command, never written down;
+  1,023 characters, 3,203 left), so video 03 now has every line: 728.61 s after the speed-up, 128 stills, CapCut project
+  09_Nov_2026_v03-2 (09_Nov_2026_v03 no longer matches the narration).
+- **The user on memory:** "set the bed alocation it need or try to load a smaller model if it has such as an int8", then "when i said
+  int8 i meant int8 quantization of the ace step 1.5 model if possible". Built: `T music make --quantization int8_weight_only`
+  (ACE-Step's own int8 through torchao, the full-size weights freed once quantised) and `T image generate --reserve-vram GB` (FLUX 3
+  Klein keeps less on the GPU: less commit, the same pixels, slower). Measured at about 10.6 GB free: Klein with a 9 GB reserve made a
+  still without a reference in 452 s, a still with one reference was stopped at 7.7 GB, the int8 bed reached the generation and was
+  stopped at 8.69 GB. What holds is the page file: set to 12,288-16,384 MB on C: with the user's approval, from the next restart
+  (Windows refused it live, 0xC00000F1). Static §5, §6, §9.
+- **Why 128 stills were made and the bed was not** (the user: "then how did we generate the 120images for v03 with the current setup
+  and yet we cant run a instrumental audio generator??"): the stills were made on 2026-11-08 from 16:14 with 15.6-15.9 GB free, just
+  after Windows had grown the page file at 15:06; the bed tried at 21:40 had 15.3 GB while the old loading needed about 16; after the
+  2026-11-09 03:37 restart the growth was gone and about 10.6 GB was free, too little for either.
+- **The user on still 97, then 93-97:** "it seems like the grandma has died or laying down very sick or uncounsiesness,and is a bit
+  distressful, content like this should be avoided", and "and similar images". §11b now says it: nobody shown as if dead, unconscious
+  or gravely ill (lying limp, eyes closed, on a floor, a stretcher or a sickbed); a person cared for is awake, eyes open, sitting up.
+  The forecast's word list also reads lying on a floor, eyes closed, unconscious, fainted and collapse. Video 03's prompts 88, 92, 93,
+  94, 95, 97, 103 and 119 were rewritten that way, and 28, 41 and 77 for their own faults; they are drawn after the restart.
