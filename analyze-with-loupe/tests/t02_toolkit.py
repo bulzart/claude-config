@@ -1546,12 +1546,14 @@ if code == 3:
 else:
     _c = json.loads((_lbd / "lbl" / "draft_content.json").read_text(encoding="utf-8"))
     _segs = [s for tr in _c["tracks"] if tr.get("name") == "labels" for s in tr["segments"]]
+    _segs2 = [s for tr in _c["tracks"] if tr.get("name") == "labels-2" for s in tr["segments"]]
     _tl2 = json.loads((SR / "40-briefs" / "video-01-timeline.json").read_text(encoding="utf-8"))["images"][1]
-    check(code == 0 and js.get("labels") == 2 and len(_segs) == 2
-          and all(abs(s["target_timerange"]["start"] / 1e6 - _tl2["start"]) < 1e-3 for s in _segs)
+    check(code == 0 and js.get("labels") == 2 and len(_segs) == 1 and len(_segs2) == 1 and js.get("tracks") == ["labels", "labels-2"]
+          and all(abs(s["target_timerange"]["start"] / 1e6 - _tl2["start"]) < 1e-3 for s in _segs + _segs2)
           and abs(_segs[0]["clip"]["transform"]["x"] - (-0.04)) < 1e-6 and abs(_segs[0]["clip"]["transform"]["y"] - 0.4) < 1e-6
           and js.get("font"),
-          "capcut-labels puts each label on the track 'labels' over its image's span, its centre in CapCut's units, in the plan's font")
+          "capcut-labels puts each label over its image's span, its centre in CapCut's units, in the plan's font, two labels shown at "
+          "once on tracks of their own (labels, labels-2: a track never holds two texts at one moment)")
     js, code, _ = t("capcut-labels", "--draft", str(_lbd / "lbl"), "--run", str(SR), "--video", "01", env=SENV, ok=False)
     check(code == 2 and "already has" in str(js.get("error")), "capcut-labels places the labels once per build (a second run is refused)")
 # the same video in a second format (the user, 2026-11-08: "if they pick both options then we should use the same plan ... but also in a
@@ -2384,7 +2386,7 @@ check(not _wprob and _wrows[0]["bounds"] == [0.3, 0.733333]
       and _wflat == {((0, True, True), "IT'S", 0.3, 0.733333), ((1, False, True), "SEVEN", 0.3, 0.733333),
                      ((0, False, False), "IT'S", 0.733333, 0.966667), ((1, True, False), "SEVEN", 0.733333, 0.966667),
                      ((0, True, True), "FORTY", 0.966667, 1.633333)}
-      and _wx["IT'S"] < 0 < _wx["SEVEN"] and _wx["FORTY"] == 0.0 and abs(_wgeo["em_px"] - 60.74) < 0.01,
+      and _wx["IT'S"] < 0 < _wx["SEVEN"] and _wx["FORTY"] == 0.0 and abs(_wgeo["em_px"] - 88.23) < 0.01,
       f"the word box: each word its own text at its place on the centred line, the box on the word being spoken from its narration time "
       f"on the frame grid, a one-word caption boxed whole ({sorted(_wflat)}, {_wgeo})")
 _wbad, _wbadp = _awl._word_box_plan([{"start": 0.3, "end": 0.9, "text": "IT'S EIGHT"}], _wwords[:2], 0.3, 30)

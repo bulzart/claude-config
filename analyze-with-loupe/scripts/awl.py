@@ -6439,8 +6439,8 @@ def cmd_capcut_text_anim(a):
                         s.setdefault("extra_material_refs", []).append(mid)
                         n_here += 1
                 p.write_text(json.dumps(c2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-                cloned = max(cloned, n_here)
-                kept = max(kept, k_here - (1 if done else 0))
+                if p == d / "draft_content.json":  # the counts are the main timeline's; its mirrors get the same copies
+                    cloned, kept = n_here, k_here - (1 if done else 0)
             out({"ok": True, "draft": str(d), "track": a.track, "intro": a.intro, "intro_duration_s": float(a.intro_duration),
                  "texts": len(segs), "animated": done + cloned, "by_capcut_cli": done, "copied": cloned, "already_animated": kept,
                  "failed": [], "note": "CapCut shows the entrance once it has fetched the effect (the plan's captions.animation)"})
@@ -6506,16 +6506,24 @@ def cmd_capcut_labels(a):
     if (d / ".locked").exists() or _capcut_running():
         fail("CapCut is running: close it, then run this again", 3)
     content = json.loads((d / "draft_content.json").read_text(encoding="utf-8"))
-    if any(str(tr.get("name") or "") == LABEL_TRACK for tr in content.get("tracks", [])):
+    if any(str(tr.get("name") or "") == LABEL_TRACK or str(tr.get("name") or "").startswith(LABEL_TRACK + "-")
+           for tr in content.get("tracks", [])):
         fail(f"the draft already has a {LABEL_TRACK!r} track: the labels are placed once per build", 2)
     cli = _capcut_cli()
     placed, failed = [], []
+    lanes = []  # labels shown at once (a map's places) each on a track of its own: labels, labels-2, ... (two texts never share a moment)
     for r in rows:
         start, dur = float(r["start"]), float(r["end"]) - float(r["start"])
         for lb in r["labels"]:
             x, y = round(2 * float(lb["x_rel"]) - 1, 4), round(1 - 2 * float(lb["y_rel"]), 4)
+            lane = next((k for k, end in enumerate(lanes) if end <= start + 1e-6), None)
+            if lane is None:
+                lanes.append(0.0)
+                lane = len(lanes) - 1
+            lanes[lane] = start + dur
+            track = LABEL_TRACK if lane == 0 else f"{LABEL_TRACK}-{lane + 1}"
             cp = run([cli, "add-text", str(d), f"{start:.6f}s", f"{dur:.6f}s", str(lb["text"]), "--font-size", str(style["size"]),
-                      "--color", str(style["fill"]), "--x", str(x), "--y", str(y), "--track-name", LABEL_TRACK], timeout=120)
+                      "--color", str(style["fill"]), "--x", str(x), "--y", str(y), "--track-name", track], timeout=120)
             res = _last_json(cp.stdout) or {}
             sid = res.get("segment_id")
             if cp.returncode != 0 or not sid:
@@ -6528,15 +6536,16 @@ def cmd_capcut_labels(a):
             if cp2.returncode != 0:
                 failed.append({"image": r["image"], "text": lb["text"], "error": "text-style: " + str(cp2.stderr or cp2.stdout or "")[-300:]})
             placed.append({"image": r["image"], "text": lb["text"], "start": round(start, 6), "dur": round(dur, 6), "x": x, "y": y,
-                           "segment": sid})
+                           "segment": sid, "track": track})
     font = None
-    if placed:
+    for track in sorted({p["track"] for p in placed}):
         cp = run([sys.executable, str(Path(__file__).resolve()), "capcut-font", "--draft", str(d), "--font-file", str(style["font_file"]),
-                  "--track", LABEL_TRACK], timeout=300)
+                  "--track", track], timeout=300)
         font = _last_json(cp.stdout) or {"ok": False, "error": str(cp.stderr or cp.stdout or "")[-300:]}
         if not font.get("ok"):
-            failed.append({"step": "capcut-font", "error": str(font.get("error"))[:300]})
-    out({"ok": not failed, "draft": str(d), "track": LABEL_TRACK, "labels": len(placed), "placed": placed, "failed": failed[:5],
+            failed.append({"step": "capcut-font", "track": track, "error": str(font.get("error"))[:300]})
+    out({"ok": not failed, "draft": str(d), "track": LABEL_TRACK, "tracks": sorted({p["track"] for p in placed}), "labels": len(placed),
+         "placed": placed, "failed": failed[:5],
          "labels_on_moving_images": [r["image"] for r in rows if str(r.get("motion") or "none") != "none"],
          "font": (font or {}).get("family"),
          "note": "read the project back (capcut_read_timeline): each label at its image's start for its span, its words letter for "
@@ -6544,11 +6553,16 @@ def cmd_capcut_labels(a):
         0 if not failed else 1)
 
 
-# CapCut's em on a 16:9 canvas, as a share of the canvas height per size unit: 2026-11-09, the cover CapCut itself rendered of
-# 07_Nov_2026_fonttest (2560x1440; Anton, size 12): the line's ink 1145 x 107 px gives an em of 121.0 px from its width and 121.9 px
-# from its height (they agree within 1 %), 10.1 px per size unit on 1440. (CAPCUT_FONT_PER_SIZE, measured on 9:16 covers with the
-# System font, gives 177 px here: it is not used for word positions.) Only 16:9 is measured.
-CAPCUT_EM_PER_SIZE_16X9 = 0.00703
+# CapCut sets a text's LINE (the font's ascent + descent) at CAPCUT_FONT_PER_SIZE x size x canvas width, so a font's em is that over
+# its line height in em. Checked 2026-11-09 on two of CapCut's own renders of a 2560x1440 canvas: Anton (line 1.467 em) at size 12,
+# the cover of 07_Nov_2026_fonttest: em 120.4 px predicted, 121.0 / 121.9 px measured from the line's width / height; Luckiest Guy
+# (line 1.001 em) at size 6, the user's screenshots of video 03: cap height 63 px predicted, 61 px measured. (The first word-box build
+# took Anton's em as every font's and drew the caption words 1.45 x wider than placed: they ran into each other.)
+def _capcut_em_px(font_file: str, size: float, canvas_w: int) -> float:
+    from PIL import ImageFont
+    asc, desc = ImageFont.truetype(font_file, 1000).getmetrics()
+    return CAPCUT_FONT_PER_SIZE * float(size) * float(canvas_w) / ((asc + desc) / 1000)
+
 WORD_BOX_PREFIX = "wordcap"
 WORD_BOX_KEYS = ("color", "alpha", "round_radius", "style", "gap_em")
 WORD_BOX_PAD = 0.14
@@ -6571,7 +6585,7 @@ def _read_srt(p: Path) -> list:
     return cues
 
 
-def _norm_word(w: str) -> str:
+def _wb_norm(w: str) -> str:
     return re.sub(r"[^0-9A-Z]", "", str(w).upper())
 
 
@@ -6589,7 +6603,7 @@ def _word_box_plan(cues: list, words: list, offset: float, fps: int, min_frames:
                 problems.append({"cue": ci + 1, "text": c["text"], "error": "the narration's words ran out"})
                 break
             w = words[wi]
-            if _norm_word(w.get("w")) != _norm_word(t):
+            if _wb_norm(w.get("w")) != _wb_norm(t):
                 problems.append({"cue": ci + 1, "text": c["text"], "token": t, "word": w.get("w"), "word_index": wi,
                                  "error": "the cue's word is not the narration's next word"})
             times.append(float(w["s"]) + offset)
@@ -6612,7 +6626,7 @@ def _word_box_segments(rows: list, font_file: str, size: float, W: int, H: int, 
     advances at CapCut's measured em, and its stretches of time, boxed while it is spoken. Grouped by (slot, boxed, at the cue's start):
     no two texts of a group overlap in time, so each group is one track."""
     from PIL import ImageFont
-    em = CAPCUT_EM_PER_SIZE_16X9 * min(W, H) * float(size)
+    em = _capcut_em_px(font_file, size, W)
     f = ImageFont.truetype(font_file, max(1, int(round(em))))
     k_em = em / max(1, int(round(em)))
     gap = gap_em * em
@@ -6714,7 +6728,6 @@ def cmd_capcut_word_box(a):
     W, H = int(cc.get("width") or 0), int(cc.get("height") or 0)
     if not W or not H:
         fail("the draft has no canvas size (canvas_config)", 2)
-    aspect_note = None if abs(W / H - 16 / 9) < 0.01 else f"the em is measured on 16:9 only; this canvas is {W}x{H}: view the line before use"
     fps = int(tl.get("fps") or 30)
     rows, problems = _word_box_plan(_read_srt(srt), words, float(tl.get("narration_offset") or 0.0), fps)
     if problems:
@@ -6727,7 +6740,7 @@ def cmd_capcut_word_box(a):
         drop = {x.strip() for x in a.replace.split(",") if x.strip()}
         drop |= {str(t.get("name") or "") for t in content.get("tracks", []) if str(t.get("name") or "").startswith(WORD_BOX_PREFIX)}
         dropped = 0
-        for p in _draft_contents(d):
+        for p in _draft_all_copies(d):
             c2 = json.loads(p.read_text(encoding="utf-8"))
             dropped = max(dropped, _drop_text_tracks(c2, drop))
             p.write_text(json.dumps(c2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -6762,6 +6775,7 @@ def cmd_capcut_word_box(a):
         tracks.append({"track": name, "texts": len(ents), "boxed": boxed, "entrance": first, "entries": ents})
     # each word at its place on the line, in every copy of the timeline
     placed, unmatched = 0, []
+    # capcut-cli writes the project root's documents; the nested copies take them at `T capcut-repair` (sync-timelines --nested)
     for p in _draft_contents(d):
         c2 = json.loads(p.read_text(encoding="utf-8"))
         byname = {str(t.get("name") or ""): t for t in c2.get("tracks", []) if t.get("type") == "text"}
@@ -6784,7 +6798,8 @@ def cmd_capcut_word_box(a):
                     # capcut-cli's import-srt leaves the box's size and offsets unset: CapCut's own values for a box (a text the
                     # user styled in CapCut, config capcut.text_style.learned: 0.14 around the text, centred)
                     m.update({"background_width": WORD_BOX_PAD, "background_height": WORD_BOX_PAD,
-                              "background_horizontal_offset": 0.0, "background_vertical_offset": 0.0, "background_fill": ""})
+                              "background_horizontal_offset": 0.0, "background_vertical_offset": float(wb.get("v_offset") or 0.0),
+                              "background_fill": ""})
                 n_here += 1
         p.write_text(json.dumps(c2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         placed = max(placed, n_here)
@@ -6793,7 +6808,7 @@ def cmd_capcut_word_box(a):
     ok = not failed and not unmatched
     out({"ok": ok, "draft": str(d), "captions": len(rows), "texts": sum(t["texts"] for t in tracks), "placed": placed,
          "boxed_texts": sum(t["texts"] for t in tracks if t["boxed"]), "tracks": tracks, "failed": failed[:5], "unmatched": unmatched[:5],
-         "geometry": geo, "word_box": {k: wb[k] for k in WORD_BOX_KEYS}, "aspect_note": aspect_note, "srt_folder": str(work),
+         "geometry": geo, "word_box": {k: wb[k] for k in WORD_BOX_KEYS}, "srt_folder": str(work),
          "next": [f"T capcut-font --draft \"{d}\" --font-file \"{cap['font_file']}\" --track <each track>",
                   "T capcut-text-anim --draft ... --track <each track ending in -in> --intro <captions.animation> "
                   "--intro-duration <captions.animation_s> --run RUN",
@@ -7935,10 +7950,18 @@ def _house_text_material(m: dict, st: dict, font_path: str, size: float) -> bool
 
 
 def _draft_contents(d: Path) -> list:
-    """The root draft_content.json, its draft_info.json mirror (the macOS name, which capcut-cli keeps identical when it exists) and
-    CapCut 9.x's nested timeline copies: every copy a text, font or link fix is written into."""
-    return [p for p in [d / "draft_content.json", d / "draft_info.json", *sorted((d / "Timelines").glob("*/draft_content.json"))]
-            if p.is_file()]
+    """The project root's timeline documents, every copy a text, font, link or caption fix is written into: draft_content.json, its
+    draft_info.json mirror (the macOS name, which capcut-cli keeps identical when it exists) and the template-2.tmp CapCut 9.7 writes
+    when the user opens the project (capcut-cli reads it as the timeline when it is there: 2026-11-09 a caption rebuild that changed
+    only the first two read the old captions back from it). CapCut 9.x's nested copies (Timelines/<id>/) are never written here:
+    `T capcut-repair` copies the root into them (capcut-cli sync-timelines --nested), which refuses when a nested copy is newer and
+    different, i.e. edited in CapCut since (2026-11-09: these commands also wrote the nested draft_content.json, which then looked
+    newer than the root and blocked that copy)."""
+    return [p for p in [d / "draft_content.json", d / "draft_info.json", d / "template-2.tmp"] if p.is_file()]
+
+
+def _draft_all_copies(d: Path) -> list:
+    return _draft_contents(d)
 
 
 def _timeline_texts(content: dict) -> list:

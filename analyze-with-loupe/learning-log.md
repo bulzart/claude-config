@@ -1439,7 +1439,14 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   word whose narration time is now (words.json + narration_offset, on the frame grid), the others plain; the plan's `captions.word_box`
   (colour, alpha, round radius, style, gap) decides the look; `T capcut-text-anim` goes only on the tracks of a cue's start. Static §5,
   §7 and awl-static-edit say so; t02 checks the timing, the box's word and the layout.
-- **Measured:** CapCut's em on a 16:9 canvas, from the cover it rendered of 07_Nov_2026_fonttest (Anton, size 12): 121.0 px from the
-  line's width and 121.9 px from its height, 0.00703 of the canvas height per size unit. The older CAPCUT_FONT_PER_SIZE (0.00575 of the
-  width, measured on 9:16 System-font covers) gives 177 px on this canvas: 46 % too large for 16:9, so it is not used for word places.
-  CapCut's own drawing of a rounded box is not yet seen on this PC (a 5-second check project, 09_Nov_2026_wordbox_check, shows it when opened).
+- **Measured:** CapCut sets a text's LINE (the font's ascent + descent) at 0.00575 x size x canvas width (CAPCUT_FONT_PER_SIZE, first
+  measured on 9:16 System-font covers), so a font's em is that over its line height in em. Two of CapCut's own renders of a 2560x1440
+  canvas agree: Anton (line 1.467 em) at size 12 on the cover of 07_Nov_2026_fonttest, em 120.4 px predicted, 121.0 / 121.9 measured;
+  Luckiest Guy (line 1.001 em) at size 6 on the user's screenshots, cap height 63 px predicted, 61 measured. The first build took
+  Anton's em (10.1 px a size unit) for every font and drew the caption words 1.45 x wider than placed: the user's screenshots showed
+  them running into each other ("the captions seem like they're all over each other"). CapCut's box reaches about 0.35 em past its
+  word on each side and covers the whole line, the descent included, so it sits low on capitals; the words are 0.7 em apart.
+- **Also seen:** opening a project in CapCut 9.7 writes a root template-2.tmp, which capcut-cli reads as the timeline: a rebuild that
+  changed only draft_content.json and draft_info.json got the old captions back from it. The toolkit now writes every root document
+  (template-2.tmp too) and never the nested Timelines/<id>/ copies, which `T capcut-repair` fills from the root (sync-timelines
+  --nested refuses a nested copy that is newer and different, an edit made in CapCut).

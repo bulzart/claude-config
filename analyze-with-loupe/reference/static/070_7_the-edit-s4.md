@@ -43,7 +43,7 @@
   is spoken, the others plain, no keyword colour (`highlight_words` empty: a coloured word on its box would vanish); then `T capcut-font`
   on every `wordcap-*` track and `T capcut-text-anim` only on the tracks ending in `-in` (a cue's entrance: a word that takes or hands
   on the box never pops again). The labels, when the timeline has any (a map's place names, §5 "Labels"), with `T capcut-labels
-  --draft "<draft>" --run RUN --video NN` (each on the track "labels" over its image's span, its centre where the plan put it, in the
+  --draft "<draft>" --run RUN --video NN` (each on the track "labels" over its image's span, labels shown at once on tracks of their own: labels-2, …; its centre where the plan put it, in the
   plan's `labels_style`, its font with them; once per build); any other text with `capcut add-text`
   in its own look (its font with `T capcut-font ... --track text`, the add-text default); then `T capcut-repair --draft "<draft>" --keep-text`
   (register, the media links CapCut 9.3+ opens a clip by, sync, lint). Never `capcut lint --fix` on a project: besides the links it copies
