@@ -13,9 +13,9 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (16.2 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.7 KB)
-- static §13: `AWL/reference/static/130_13_the-judge.md` (13.0 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (20.1 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (7.2 KB)
+- static §13: `AWL/reference/static/130_13_the-judge.md` (15.2 KB)
 
 The main session runs S2 for every video, one at a time, before any production agent starts (`awl-analyze-produce` A9s). The narration
 is ElevenLabs' Eleven v4 in the run's voice (`state.json → static.voice`, static §6): nothing of it runs on this PC, every passage is
@@ -65,12 +65,14 @@ outside the references', and a capped speed-up as J2's last resort.
    or in a gap between image stretches (two local models never share the GPU and the commit memory; 2026-11-08 the guard stopped
    ACE-Step at 2.0 GB free commit; since 2026-11-09 it loads the low-commit way, the answer's `loading`, and needs about 13.6 GB free
    commit, static §9 "What a job needs"): first **J4** (static §13): `T static forecast --run RUN --video NN --part music` right before, its
-   memory headroom a fact and never a gate (static §13 "Memory is a fact"): the bed is tried; after a real guard stop the user is told
-   its line, the bed is tried once more before the edit, and still stopped the video goes on without a bed, noted (nothing of the
-   user's is closed, the guard is never changed). Each track's `duration` =
-   lead + the narration's duration + tail (config `static.narration`), then `T music make --run RUN` (add `--quantization
-   int8_weight_only` when the forecast's free commit cannot hold the full-precision model: ACE-Step's own int8, the user's allowance,
-   static §6; every track in one model load; a
+   memory headroom a fact and never a gate (static §13 "Memory is a fact"): the bed is tried at full precision; after a real guard
+   stop (the answer's `worker.guard_stopped` and `worker.guard_line`) the user is told its line and the bed is tried once in
+   ACE-Step's int8 (below), once more before the edit when that is stopped too, and still stopped the video goes on without a bed,
+   noted (nothing of the user's is closed, the guard is never changed). Each track's `duration` =
+   lead + the narration's duration + tail (config `static.narration`), then `T music make --run RUN` (full precision first, always;
+   `--quantization int8_weight_only`, ACE-Step's own int8, only after the guard stopped that try: the user, 2026-11-09, "always try
+   full precision first, and use int8 only after the guard stops it", never from the forecast alone; its answer's `int8_after`
+   names the stopped try; static §6; every track in one model load; a
    track over ACE-Step's 600 s is made in sections and joined with crossfades, static §6: the plan's own `sections` per part of the
    story, else equal ones).
    Then per video `T music measure --run RUN --video NN`, judged as static §6 and §8 say: a voice heard in the bed alone, or an arc that

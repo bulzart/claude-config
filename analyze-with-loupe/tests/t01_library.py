@@ -311,6 +311,32 @@ check("**What a job needs**" in _s9t and "**The page file sets the headroom.**" 
       and "_low_commit_loading" in rd(LIB / "scripts" / "music_worker.py") and "low-commit" in _snd,
       "ACE-Step loads the low-commit way (no weights file charged in full beside its GPU copy), and static §9 says what a job needs and "
       "why a restart lowers the headroom")
+# the survival pose and the spoken words of §11b (the user, 2026-11-09, yes to "add that a survival pose is shown with the person
+# clearly alive: head up, eyes open, moving", and yes to taking "at her groin" out of video 03's line 180)
+_s11bn = re.sub(r"\s+", " ", _s11b)
+_s13n = re.sub(r"\s+", " ", _s13j)
+check("**A survival pose is shown, never dropped**" in _s11bn and "head up, eyes open, moving" in _s11bn
+      and "No line names an intimate part of the body" in _s11bn and "intimate_body_words" in _s11bn
+      and "survival pose passes only when the person reads clearly alive"
+      in re.sub(r"\s+", " ", rd(LIB / "reference" / "static" / "080_8_static-qc-s2-s4.md"))
+      and "a survival pose low on the ground" in re.sub(r"\s+", " ", rd(LIB / "reference" / "static" / "050_5_images-a6s-plan-s3.md"))
+      and "no intimate part of the body named" in re.sub(r"\s+", " ", rd(LIB / "reference" / "static" / "040_4_the-script-a6s.md"))
+      and "intimate_body_words" in _s13n and "the survival fact stays" in _s13n
+      and "survival pose" in re.sub(r"\s+", " ", rd(SKD / "awl-static-plan" / "SKILL.md"))
+      and "survival pose" in re.sub(r"\s+", " ", rd(SKD / "awl-static-images" / "SKILL.md"))
+      and "FC_INTIMATE" in rd(LIB / "scripts" / "awl.py"),
+      "static §11b keeps a survival pose and draws the person clearly alive in it (head up or turned, eyes open, moving), and no line "
+      "names an intimate part of the body (the forecast marks such a line); §4, §5, §8, §13 and the plan and images skills carry both")
+# ACE-Step's int8 only after a full-precision guard stop (the user, 2026-11-09, yes to "always try full precision first, and use int8
+# only after the guard stops it")
+_s6n2 = re.sub(r"\s+", " ", rd(LIB / "reference" / "static" / "060_6_the-voice-and-the-bed-a6s-s2.md"))
+_snd2 = re.sub(r"\s+", " ", rd(SKD / "awl-static-sound" / "SKILL.md"))
+check("full precision is always tried first, and int8 only after the memory guard stopped that try" in _s6n2 and "int8_after" in _s6n2
+      and "only after the guard stopped a full-precision try" in _s13n and "never from the forecast alone" in _s13n
+      and "full precision first, always" in _snd2 and "only after the guard stopped that try" in _snd2
+      and "when the forecast's free commit cannot hold" not in _snd2,
+      "ACE-Step's int8 comes only after the memory guard stopped a full-precision try of the bed, never from the forecast alone (static "
+      "§6, §13, the sound skill), and the answer names the try it follows")
 # more than one format (the user, 2026-11-08: "so we end up generating 2 video formats for the same content (2 capcut projects too ...)")
 _s2b = rd(LIB / "reference" / "static" / "025_2b_more-than-one-format.md").replace("\n", " ")
 _tpl_s = rd(LIB / "reference" / "production-agents" / "025_2s_spawning-static.md")

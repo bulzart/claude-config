@@ -53,7 +53,8 @@ silence is placed (§6 "Passages").
 - **No religion and no superstition** (§11): no line names or alludes to either; a fact that needs one to be told is cut or told without
   it. The subject is the run's niche (§10), told in the references' craft.
 - **Nothing indecent, gory or distressing** (§11b): a hard fact is told plainly and briefly, never by its graphic side (how many people
-  died may be said; how a body was found, an injury or someone's suffering is not); no swearing.
+  died may be said; how a body was found, an injury or someone's suffering is not); no swearing; no intimate part of the body named,
+  even as a first-aid fact (the tip told by its other places: "her head, her neck and under her arms").
 - **Fact sheet** (factual niches): `40-briefs/video-NN-facts.md`, every claim of the script with its source URLs.
 - The copy test (`creative-direction.md` §5.0) and the sharpness gate pass before the script is final.
 

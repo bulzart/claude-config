@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- anomaly-catalog §4: `AWL/reference/anomaly-catalog/220_4_the-qc-stack-x9-in-order.md` (6.8 KB)
+- anomaly-catalog §4: `AWL/reference/anomaly-catalog/220_4_the-qc-stack-x9-in-order.md` (7.3 KB)
 - anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
 - *a product handled, prepared, used, poured or counted on screen:*
   - anomaly-catalog §2.1: `AWL/reference/anomaly-catalog/040_2.1_counts-and-conservation.md` (3.2 KB)
@@ -24,9 +24,9 @@ Only these section files for this phase, nothing else unless a step below says s
   - anomaly-catalog §2.6: `AWL/reference/anomaly-catalog/090_2.6_liquids-powders-and-materials.md` (1.8 KB)
   - anomaly-catalog §2.8: `AWL/reference/anomaly-catalog/110_2.8_body-mechanics-at-the-product.md` (1.5 KB)
 - *a placed or contents product (size, label, blend, posture checks):*
-  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.8 KB)
+  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
   - anomaly-catalog §2.9: `AWL/reference/anomaly-catalog/120_2.9_orientation-label-and-parts.md` (3.4 KB)
-  - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (9.2 KB)
+  - anomaly-catalog §2.15: `AWL/reference/anomaly-catalog/180_2.15_blend-a-render-not-a-paste.md` (9.6 KB)
   - anomaly-catalog §2.16: `AWL/reference/anomaly-catalog/190_2.16_posture-support-and-place.md` (3.9 KB)
 - *a person is swapped (skin tone face vs hands):*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)

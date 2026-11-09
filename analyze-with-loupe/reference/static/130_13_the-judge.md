@@ -31,7 +31,8 @@ briefs), and the PC's model-memory record.
 
 **The forecast** (`T static forecast --run RUN --video NN [--part narration|images|music] [--from K --to K]`, facts only, written to
 `40-briefs/video-NN-forecast.json`):
-- *Narration*: the plan's words, lines and characters, the lines with their own delivery and with pause tags, the passages and the
+- *Narration*: the plan's words, lines and characters, the lines with their own delivery and with pause tags, the lines that name an
+  intimate part of the body (`intimate_body_words`, §11b), the passages and the
   characters they send (their tags included) against the account's characters left (read when the key is set: which line whole passages
   reach), the target point and bands, the family's numbers, the levers (the voice, the narration's delivery, the settings) and the
   voice's point measured for them (`same`, or the voice's latest as `nearest`: a probe's or a made narration's; `T tts fit` learns it
@@ -60,9 +61,10 @@ at 2.3 GB with ACE-Step at 13.07 GB; a still tried at 13.53 GB was stopped, and 
 job needs"): ACE-Step's own loading held its model twice; the low-commit loading needs about 10.7 GB, so that bed fits from about
 13.6 GB free; and the free commit at rest falls after a restart (the page file shrinks back), which is when a job that ran before is
 stopped: the forecast's headroom is read against the free commit now, never against a past day's. Two levers lower a job's need
-without another engine, the agent's call from the free commit now: FLUX 3 Klein's `--reserve-vram` (the same pixels, slower, §5) and
-ACE-Step's own int8 quantization of the music model (`T music make --quantization int8_weight_only`, the user's allowance of
-2026-11-09, §6).
+without another engine: FLUX 3 Klein's `--reserve-vram` (the same pixels, slower, §5; the agent's call from the free commit now) and
+ACE-Step's own int8 quantization of the music model (`T music make --quantization int8_weight_only`, §6), only after the guard
+stopped a full-precision try of that bed (the user, 2026-11-09, yes to "always try full precision first, and use int8 only after the
+guard stops it"), never from the forecast alone.
 
 **The fair measure of pace** (§6 "The pace"): words a minute overall (first to last word) and while articulating (the same words over the
 span with every pause of 0.25 s or more taken out, `wpm_articulation`), from the words' times. The older reading (words over the
@@ -90,10 +92,13 @@ predicted result; and afterwards the measured result against it):
      over the family's 0.92 s, §6 "what the levers did") or punctuation, every other rest the voice's own, the
      probe's pause pattern read against the family's (a pause the family does not hold is not asked);
    - the strong lines (their own `delivery` tags; at most one in five, never two in a row, §4), the length against the family's (§4);
+   - every line the forecast marks with `intimate_body_words` (§11b): told by its other places ("her head, her neck and under her
+     arms");
    - every image prompt the forecast marks: a thing that would carry writing gets its exact words when the story needs them (a label
      is CapCut text, §5) or is described as plain and blank ("a blank white screen", "a chart of plain coloured bars with no writing");
      digits leave the scene words; a split word becomes one scene; a §11 word becomes a secular description; a §11b word becomes the
-     dressed or calm moment (every person's clothes named top to bottom; the care, never the harm); a missing sentence is put
+     dressed or calm moment (every person's clothes named top to bottom; the care, never the harm; a lying-down pose that is the
+     survival fact stays, the person clearly alive in it: head up or turned, eyes open, moving); a missing sentence is put
      back; a still whose references the memory cannot hold rides with a cast sheet (§5);
    - the bed: its caption and sections fixed where the forecast marks them; when it runs (when the images are done, or in a gap
      between image stretches once the narration is final, with nothing else holding memory; the memory forecast read again right
@@ -117,7 +122,8 @@ predicted result; and afterwards the measured result against it):
 4. **J4, right before the bed** (S2's bed step, when the images are done or in a gap between image stretches): the memory forecast
    again, recorded as a fact and never a gate ("Memory is a fact" above), so the bed is tried. Only a real guard stop shows it does
    not fit: the user is told the guard's line (a closed program frees the memory; the guard is never changed and nothing of the
-   user's is closed), the bed is tried once more before the edit, and still stopped the video goes on without a bed, named (never a
+   user's is closed), the bed is tried once in ACE-Step's int8 (`--quantization int8_weight_only`, §6: only after that stop), once
+   more before the edit when that is stopped too, and still stopped the video goes on without a bed, named (never a
    blocker); after it: `T music measure` against the bed's plan.
 5. **J5, before the edit** (S4; the edit agent's first step reads `video-NN-judge.md`): the labels, moves and joins the plan carries
    against the spec's numbers (the push-ins as many as the family's moving shots allow, the dips at the chapters), decided before the

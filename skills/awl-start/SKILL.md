@@ -18,9 +18,9 @@ Only these section files for this phase, nothing else unless a step below says s
 - *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
 - effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (3.0 KB) (every run, step 5d)
 - *Static (as soon as the sub-mode is Static):*
-  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB)
+  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.8 KB)
 - *Static, when `T static check` reports a part the run needs as not ready:*
-  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (8.1 KB)
+  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (10.3 KB)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
   - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)

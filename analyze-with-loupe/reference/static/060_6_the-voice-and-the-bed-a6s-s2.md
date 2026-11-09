@@ -138,10 +138,14 @@ sounds, curious and bouncy. `40-briefs/music.json` (A6s), one track per video:
 narration + tail, set in S2>, "bpm": <n>, "seed": <n>, "why": "<each choice and the data it rests on>"}]}`, then in S2 `T music make
 --run RUN` (every track in one model load; instrumental). The file carries its own fades (the track's `fade_in`, `fade_out`) and is
 saved as 16-bit PCM WAV, the format the CapCut effects check showed playing (ACE-Step writes 32-bit float; the toolkit converts it).
-**When the memory cannot hold it at full precision** (§9 "What a job needs"; the forecast's memory, §13): `T music make --run RUN
---quantization int8_weight_only` has ACE-Step quantize its music model to int8 (the user, 2026-11-09: "int8 quantization of the ace
-step 1.5 model if possible"; about 2.2 GB less, the full-size weights released before the next model loads), and the bed's sidecar
-names it. Measured that day at 10.7 GB free: int8 loaded and began generating where full precision was stopped loading, and was then
+**When the memory cannot hold it at full precision** (§9 "What a job needs"; the forecast's memory, §13): full precision is always
+tried first, and int8 only after the memory guard stopped that try (the user, 2026-11-09, yes to "always try full precision first,
+and use int8 only after the guard stops it": never from the forecast alone). Then `T music make --run RUN --quantization
+int8_weight_only` has ACE-Step quantize its music model to int8 (the user, the same day: "int8 quantization of the ace step 1.5 model
+if possible"; about 2.2 GB less, the full-size weights released before the next model loads); its answer and the bed's sidecar name
+it with the full-precision try it follows (`int8_after`: when, the guard's stop and the free commit then, from the PC's memory
+record since Windows started; null when the record holds none). A stopped full-precision answer carries the guard's line
+(`worker.guard_stopped`, `worker.guard_line`). Measured that day at 10.7 GB free: int8 loaded and began generating where full precision was stopped loading, and was then
 stopped at 8.69 GB; at full precision the bed needs about 13.6 GB free, int8 a little over 11.5.
 **A long bed** (the user, 2026-11-07: "if acestep 1.5 max is 10 minutes, then we could do 2x8minutes for a 16minutes video i guess, or
 5x5 for a 25 minutes"): ACE-Step makes at most 600 s per piece on this PC (`config.json → static.music.max_s`), so a longer track is made

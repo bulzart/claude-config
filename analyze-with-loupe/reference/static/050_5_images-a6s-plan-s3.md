@@ -65,7 +65,8 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   positive terms with nothing religious or superstitious in it (§11: a palace throne hall, never a cathedral; a "red X" mark, never a
   "red cross"; the prompt names what is there, never what must stay out). Every person is dressed for the scene with the clothes named
   from top to bottom, and the moment shown is never an undressed, injured or agonised one (§11b: "A cool shower." is the shower running
-  in the empty bathroom, or the man after it, dressed, his hair wet; a medical moment shows the care, never the harm). One picture,
+  in the empty bathroom, or the man after it, dressed, his hair wet; a medical moment shows the care, never the harm; a survival pose
+  low on the ground shows the person clearly alive in it: head up or turned so the open eyes show, mid-move). One picture,
   never a split picture, a side-by-side or panels
   (§8): two ideas share one place (2026-11-07: "a split picture" of a full hotel and an empty spare room came back as two panels with a
   seam; one street with the hotel and the house next door read as one scene). A map is centred on the region its pins mark and says

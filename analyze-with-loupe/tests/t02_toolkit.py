@@ -1479,6 +1479,17 @@ check(js.get("ok") and _fic.get("text_carriers_without_planned_text") == [1, 4] 
       f"static forecast lists each image prompt's facts that tend to spoil a still, before it is drawn: a thing that carries writing with no "
       f"words planned, digits, a split, words of static §11 and of §11b (a shower: the man came back with nothing below his shirt), a "
       f"missing style lock, a label on a moving image; 'no signs' is kept out ({_fic})")
+(FR / "40-briefs" / "video-01-narration.json").write_text(json.dumps({"video": "01", "lines": [
+    {"n": 1, "text": "She collapsed on the cool bathroom floor."},
+    {"n": 2, "text": "Cold cloths on her head, her neck, under her arms, at her groin."},
+    {"n": 3, "text": "You lie flat in the ditch, hands over your neck."}]}), encoding="utf-8")
+js, _ = ts("static", "forecast", "--run", str(FR), "--video", "01", "--part", "narration")
+_fnp = (js.get("narration") or {}).get("plan") or {}
+check(js.get("ok") and _fnp.get("intimate_body_words") == [{"line": 2, "words": ["groin"]}],
+      "static forecast marks a narration line that names an intimate part of the body (static §11b: 'at her groin' was spoken in video "
+      f"03) and leaves the plain survival facts unmarked: a collapse, a bathroom floor, lying flat in a ditch ({_fnp.get('intimate_body_words')})")
+check(bool(_awl.FC_EXPOSURE.search("a cold cloth on her groin")) and not _awl.FC_INTIMATE.search("a breaststroke past the buoy"),
+      "an image prompt that names an intimate part of the body is marked too, and a word that only contains one is not")
 (FR / "40-briefs" / "music.json").write_text(json.dumps({"tracks": [{"video": "01", "caption": "slow ambient pads under a distant choir, no vocals",
     "duration": 700, "bpm": 70, "sections": [{"caption": "calm", "duration": 300}, {"caption": "tense", "duration": 300},
                                              {"caption": "release", "duration": 108}]}]}), encoding="utf-8")
@@ -1619,6 +1630,49 @@ _jq2, _cq2 = ts("music", "make", "--run", str(SR), "--quantization", "int4", ok=
 check(_jq.get("ok") and _cq2 == 2,
       "music make takes ACE-Step's own int8 quantization of the music model for a bed the memory cannot hold at full precision (the "
       "user, 2026-11-09), and refuses a mode ACE-Step does not have")
+# int8 only after the guard stopped a full-precision try (the user, 2026-11-09): the answer names the try it follows, as a fact
+_mm_run = SR.parent / ".model-memory.json"
+_mm_run.unlink(missing_ok=True)
+_jq0, _ = ts("music", "make", "--run", str(SR), "--quantization", "int8_weight_only")
+check(_jq0.get("ok") and _jq0.get("int8_after") is None and "full precision first" in str(_jq0.get("int8_note")),
+      "an int8 bed with no full-precision try stopped by the guard since Windows started says so (static §6: full precision first)")
+_mm_o2 = _awl._model_memory_path
+_awl._model_memory_path = lambda: _mm_run
+try:
+    _awl._model_memory_note("music", {"op": "generate"}, {"ok": False, "peak_gb": 8.27},
+                            "[memguard] STOPPED the app to protect Windows: free RAM 7.8 GB, free commit 2.6 GB (app was using 8.0 GB).", 10.6, 1)
+finally:
+    _awl._model_memory_path = _mm_o2
+_jq3, _ = ts("music", "make", "--run", str(SR), "--quantization", "int8_weight_only")
+_bs3 = (json.loads(Path(_jq3["made"][0]["file"]).with_suffix(".json").read_text(encoding="utf-8")) if _jq3.get("made") else {})
+check((_jq3.get("int8_after") or {}).get("guard_stopped") is True and (_jq3.get("int8_after") or {}).get("free_commit_gb_at_stop") == 2.6
+      and "int8_note" not in _jq3 and (_bs3.get("int8_after") or {}).get("guard_stopped") is True,
+      "an int8 bed names the full-precision try the guard stopped before it (when, the free commit then) in its answer and its sidecar")
+_mm_run.unlink(missing_ok=True)
+_run_o, _mmp_o3, _rr_o = _awl.run, _awl._model_memory_path, _awl.runs_root
+_mm_w = Path(_tf.mkdtemp(prefix="awl-mmw-")) / ".model-memory.json"
+
+
+class _FakeCP:
+    returncode, stdout = 1, ""
+    stderr = ("[memguard] STOPPED the app to protect Windows: free RAM 7.8 GB, free commit 2.6 GB (app was using 8.0 GB).\n"
+              "[memguard] peak memory used by the app: 8.27 GB (cap 16.0 GB)")
+
+
+_env_mp = os.environ.get("AWL_MUSIC_PYTHON")
+os.environ["AWL_MUSIC_PYTHON"] = sys.executable
+_awl.run, _awl._model_memory_path, _awl.runs_root = (lambda *a_, **k_: _FakeCP()), (lambda: _mm_w), (lambda: _mm_w.parent)
+try:
+    _wr = _awl._worker("music", {"op": "generate"})
+finally:
+    _awl.run, _awl._model_memory_path, _awl.runs_root = _run_o, _mmp_o3, _rr_o
+    if _env_mp is None:
+        os.environ.pop("AWL_MUSIC_PYTHON", None)
+    else:
+        os.environ["AWL_MUSIC_PYTHON"] = _env_mp
+check(_wr.get("ok") is False and _wr.get("guard_stopped") is True and _wr.get("peak_gb") == 8.27
+      and _wr.get("guard_line") == "STOPPED the app to protect Windows: free RAM 7.8 GB, free commit 2.6 GB",
+      "a local model job the memory guard stopped says so in its answer with the guard's line, the fact the int8 step follows (static §6)")
 _bed = Path(js["made"][0]["file"]) if js.get("made") else None
 _bcodec = [s.get("codec_name") for s in json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_streams", "-of", "json", str(_bed)],
                                                                 capture_output=True, text=True).stdout or "{}").get("streams", [])] if _bed else []

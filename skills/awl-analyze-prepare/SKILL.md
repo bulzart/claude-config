@@ -19,7 +19,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - brand-guardrails §2: `AWL/reference/brand-guardrails/020_2_rule-kinds-and-what-each-does-to.md` (4.9 KB)
 - anomaly-catalog §1: `AWL/reference/anomaly-catalog/020_1_the-affordance-sheet-asset-regis.md` (7.6 KB)
 - *only when a product has no supplied spec and its size must come from the standard-size table:*
-  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (11.8 KB)
+  - anomaly-catalog §2.7: `AWL/reference/anomaly-catalog/100_2.7_scale-and-proportion-the-size-re.md` (12.3 KB)
 - `AWL/pipeline/preprocessing.md` — only when a prep step reports an error
 
 ## 3. Analyze Mode

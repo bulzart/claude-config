@@ -13,16 +13,16 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.6 KB) (who works the run; skip when already read)
-- static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.5 KB)
-- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (6.1 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (18.5 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (16.2 KB)
-- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (6.0 KB)
+- static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.8 KB) (who works the run; skip when already read)
+- static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (2.8 KB)
+- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (6.5 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (19.2 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (20.1 KB)
+- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (6.2 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
-- static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (3.9 KB)
-- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.0 KB)
-- static §13: `AWL/reference/static/130_13_the-judge.md` (13.0 KB)
+- static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (4.6 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.1 KB)
+- static §13: `AWL/reference/static/130_13_the-judge.md` (15.2 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
@@ -66,7 +66,8 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    the audio tags sent where a line of that emotion begins) when the spec's delivery swings (static §6).
 6. **Scripts** (static §4), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
    niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11), and no graphic detail,
-   suffering or swearing (static §11b: a hard fact told plainly and briefly). The length is yours, never the
+   suffering or swearing, and no intimate part of the body named, even as a first-aid fact (static §11b: a hard fact told plainly and
+   briefly; the tip told by its other places). The length is yours, never the
    user's (the user, 2026-11-07): decided per video from the spec's length pattern (the references' lengths in `T static lock`'s
    `reference_lengths`, what drives them), written as `target_length_s` and `length_why` in the narration JSON, the script sized to it
    at the planned overall pace (static §4: words = seconds × words a minute / 60). The narration JSON also carries the spec's `pace`
@@ -81,7 +82,9 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    look, the same in every video of the run: static §10) and §5's composition, each company or brand the story is about with its
    official logo where the story brings it in and once more later (static §5 "Real things look like themselves": `T fetch-image --kind
    logo`, the image's `logo` field, its surface plain and blank in the prompt), a secular scene with nothing of static §11 in it, every
-   person dressed for the scene with the clothes named from top to bottom and no undressed, injured or agonised moment (static §11b), the
+   person dressed for the scene with the clothes named from top to bottom and no undressed, injured or agonised moment, nobody as if
+   dead, and a survival pose low on the ground kept and drawn with the person clearly alive: head up or turned so the open eyes show,
+   mid-move (static §11b), the
    video's `title` and `thumbnail` (static §12: the references' title and thumbnail patterns, the thumbnails' size, the run's style
    lock), each
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times

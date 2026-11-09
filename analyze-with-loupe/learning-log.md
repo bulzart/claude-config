@@ -1536,3 +1536,21 @@ _Entries before 2026-10-20 are inherited from the library at `C:/Users/Bulzart/.
   or gravely ill (lying limp, eyes closed, on a floor, a stretcher or a sickbed); a person cared for is awake, eyes open, sitting up.
   The forecast's word list also reads lying on a floor, eyes closed, unconscious, fainted and collapse. Video 03's prompts 88, 92, 93,
   94, 95, 97, 103 and 119 were rewritten that way, and 28, 41 and 77 for their own faults; they are drawn after the restart.
+
+## 2026-11-09 · Static: the spoken words of §11b, survival poses, and ACE-Step's int8 only after a stop
+
+- **The user**, after "i don't get this ... explain in a nutshell" about video 03's line "Cold cloths on her head, her neck, under her
+  arms, at her groin.": yes to "ElevenLabs re-reads only that part of the narration (lines 168–185), as "...her head, her neck and
+  under her arms."". The miss: §11b's Scripts part covered graphic detail and swearing, not an intimate part of the body, and the
+  forecast read no narration line for it. Built: static §11b and §4 ("No line names an intimate part of the body, even as a first-aid
+  fact"), the forecast's `intimate_body_words` (a narrow list, `FC_INTIMATE`, so a collapse or a bathroom floor is not marked) and the
+  same words in the image prompts' list; video 03's passage 12 made again (815 characters), the speed-up and the level again, and
+  the project rebuilt as 09_Nov_2026_v03-3.
+- **The user:** yes to "add that a survival pose is shown with the person clearly alive: head up, eyes open, moving" (the risk named:
+  the "as if dead" rule pushing the planner away from "lie face down in a ditch, hands over your head"). Static §11b, §5, §8, §13 J1
+  and the plan and images skills: a pose low on the ground is kept and drawn with the person clearly alive in it.
+- **The user:** yes to "always try full precision first, and use int8 only after the guard stops it". Static §6, §13 (the memory
+  paragraph and J4) and the sound skill: int8 only after a full-precision try of the bed was stopped, never from the forecast alone.
+  The toolkit gathers the facts for it: a stopped job's answer carries `guard_stopped` and the guard's line, and `T music make
+  --quantization` names the full-precision try it follows (`int8_after`, from the PC's record since Windows started; `int8_note`
+  when there is none).

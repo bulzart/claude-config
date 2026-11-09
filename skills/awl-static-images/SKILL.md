@@ -13,11 +13,11 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (18.5 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (5.7 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (19.2 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (7.2 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
-- static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (3.9 KB)
-- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.0 KB)
+- static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (4.6 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.1 KB)
 - *the plan has characters:*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - *the style lock is illustrated, painted or cartoon:*
@@ -141,7 +141,8 @@ video's spawn message `format <tag>, images K1-K2` means that format's stills K1
   what must stay out.
 - Never a person undressed or in an undressing moment, an injury, blood or a face in agony in a still or a thumbnail (static §11b):
   every person's clothes are named from top to bottom in the prompt, and a still that shows skin where clothes belong is a failure
-  (step 3).
+  (step 3); nor a person lying limp or still with closed eyes, while a survival pose low on the ground is drawn with the person
+  clearly alive in it (head up or turned so the open eyes show, mid-move).
 
 ## Hand-off
 

@@ -10065,12 +10065,50 @@ def _worker(kind: str, job: dict, timeout: float = 7200, cwd=None) -> dict:
     pk = re.findall(r"peak memory used by the app: ([\d.]+) GB", cp.stderr or "")
     if pk and isinstance(res, dict):
         res.setdefault("peak_gb", float(pk[-1]))   # the memory guard's measure of the job: what one needs on this PC (static §5)
+    stop = re.findall(r"STOPPED the app to protect Windows: free RAM ([\d.]+) GB, free commit ([\d.]+) GB", cp.stderr or "")
+    if stop and isinstance(res, dict):   # the guard's stop as a fact of the answer (static §6: ACE-Step's int8 only after one)
+        res.setdefault("guard_stopped", True)
+        res.setdefault("guard_line", f"STOPPED the app to protect Windows: free RAM {stop[-1][0]} GB, free commit {stop[-1][1]} GB")
     _model_memory_note(kind, job, res, cp.stderr or "", free_before, cp.returncode)
     return res
 
 
 def _model_memory_path() -> Path:
     return runs_root() / ".model-memory.json"
+
+
+def _windows_started_ts():
+    """When Windows last started, as a timestamp (None where it cannot be read): what Windows grew since then is gone after a restart."""
+    try:
+        import ctypes
+        k = ctypes.windll.kernel32
+        k.GetTickCount64.restype = ctypes.c_ulonglong
+        return time.time() - k.GetTickCount64() / 1000.0
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _last_full_music_try():
+    """The PC's last full-precision ACE-Step generation since Windows started, from the model-memory record: when, whether the memory
+    guard stopped it, the free commit then and before (static §6: ACE-Step's int8 only after the guard stopped a full-precision try).
+    A fact for the answer; None when the record holds none since the start."""
+    try:
+        rows = json.loads(_model_memory_path().read_text(encoding="utf-8")).get("jobs") or []
+    except (OSError, ValueError):
+        return None
+    started = _windows_started_ts()
+    for r in reversed(rows):
+        if r.get("kind") != "music" or r.get("op") != "generate" or r.get("quantization"):
+            continue
+        try:
+            t = dt.datetime.fromisoformat(str(r.get("at"))).timestamp()
+        except ValueError:
+            continue
+        if started is not None and t < started:
+            return None
+        return {"at": r.get("at"), "guard_stopped": bool(r.get("guard_stopped")), "free_commit_gb_at_stop": r.get("free_commit_gb_at_stop"),
+                "free_commit_gb_before": r.get("free_commit_gb_before"), "peak_gb": r.get("peak_gb"), "ok": bool(r.get("ok"))}
+    return None
 
 
 def _model_memory_note(kind: str, job: dict, res: dict, stderr: str, free_before, code) -> None:
@@ -12112,6 +12150,13 @@ def cmd_music(a):
             tracks.append(base)
     if not tracks:
         fail("no track to make (the plan is empty, or --video names none of it)", 2)
+    q_asked = getattr(a, "quantization", None)
+    int8_after = _last_full_music_try() if q_asked else None   # the full-precision try this int8 bed follows (static §6): a fact
+    int8_note = None
+    if q_asked and not (int8_after or {}).get("guard_stopped"):
+        int8_note = (("no full-precision try of a bed since Windows started in the PC's memory record" if not int8_after else
+                      "the last full-precision try since Windows started was not stopped by the guard")
+                     + " (static §6, the user, 2026-11-09: full precision first, int8 only after the guard stopped it)")
     if os.environ.get("AWL_MUSIC_STUB"):
         for j in jobs:   # 32-bit float, as ACE-Step writes it, so the conversion below runs in the tests too
             _tone(Path(j["out"]), j["duration"], 110, 48000, codec="pcm_f32le")
@@ -12137,12 +12182,14 @@ def cmd_music(a):
             write_json(f.with_suffix(".json"), {**t_, "made": now_iso(), "model": _scfg("music.config", "acestep-v15-turbo"),
                                                 "stub": bool(os.environ.get("AWL_MUSIC_STUB")), "format": fmt,
                                                 **({"loading": res["loading"]} if res.get("loading") else {}),
-                                                **({"quantization": res["quantization"]} if res.get("quantization") else {})})
+                                                **({"quantization": res["quantization"]} if res.get("quantization") else {}),
+                                                **({"int8_after": int8_after} if q_asked else {})})
             made.append({"video": t_["video"], "file": str(f), "duration_s": (media_summary(f) or {}).get("duration_s"),
                          "codec": fmt.get("codec"), "converted_from": fmt.get("from"), "sections": len(t_.get("parts") or []) or 1,
                          **({"section_s": [p["duration"] for p in t_["sections"]], "crossfade_s": t_["crossfade_s"]} if t_.get("parts") else {})})
     out({"ok": bool(made), "made": made, "asked": len(tracks),
          **({"loading": res["loading"], "load_s": res.get("load_s"), "quantization": res.get("quantization")} if res.get("loading") else {}),
+         **({"int8_after": int8_after, **({"int8_note": int8_note} if int8_note else {})} if q_asked else {}),
          "note": "next, per video: `T music measure --run RUN --video NN` (the bed alone and under the narration as CapCut plays it)"})
 
 
@@ -12755,6 +12802,7 @@ FC_RELIGION = re.compile(r"\b(church\w*|chapels?|cathedrals?|mosques?|synagogues
 # static §11b (the user, 2026-11-09): words that tend to bring nudity, gore or extreme distress into a still or a bed; a fact for the
 # judge (a reading such as "blood pressure pills" is the judge's to keep)
 FC_EXPOSURE = re.compile(r"\b(showers?|showering|baths?|bathing|bathtubs?|bathrooms?|naked|nude|nudity|undress\w*|underwear|lingerie|"
+                         r"groins?|crotch\w*|genital\w*|private parts|buttock\w*|breasts?|nipples?|"
                          r"bikinis?|swimsuits?|swimwear|swim(?:ming)? trunks|topless|shirtless|bare[- ]chested|saunas?|"
                          r"(?:wrapped in|only) (?:a |his |her |their )?towels?|blood\w*|bleed\w*|wounds?|wounded|injur\w*|gash\w*|"
                          r"bruis\w*|corpses?|dead bod(?:y|ies)|gore|gory|severed|vomit\w*|toilets?|urin\w*|syringes?|drunk\w*|"
@@ -12762,6 +12810,10 @@ FC_EXPOSURE = re.compile(r"\b(showers?|showering|baths?|bathing|bathtubs?|bathro
                          r"despair\w*|suicid\w*|self[- ]harm\w*|collaps\w*|unconscious|fainted|fainting|eyes (?:half )?closed|"
                          r"(?:lies|lying|laid)\b[^.;]{0,40}?\bon the (?:\w+ )?(?:floor|tiles|ground|stretcher)|"
                          r"onto the (?:\w+ )?(?:floor|tiles|ground))\b", re.I)
+# static §11b Scripts (the user, 2026-11-09, yes to taking "at her groin" out of video 03's line 180): the words of a narration line that
+# name an intimate part of the body or nudity; only these, so the script's plain survival facts (a collapse, a bathroom floor) are not marked
+FC_INTIMATE = re.compile(r"\b(groins?|crotch\w*|genital\w*|private parts|buttock\w*|breasts?|nipples?|underwear|lingerie|naked|nude|nudity)\b",
+                         re.I)
 FC_SPLIT = re.compile(r"\b(split|side[- ]by[- ]side|panels?|before and after|comparison|versus|vs\.?|left half|right half|two scenes|"
                       r"inset|collage|grid of)\b", re.I)
 FC_VOCALS = re.compile(r"\b(vocals?|voices?|sing\w*|singers?|choirs?|lyrics?|rap\w*|chants?|humming)\b", re.I)
@@ -12838,9 +12890,12 @@ def _forecast_narration(rd: Path, st: dict, nn: str) -> dict:
     own = [int(ln.get("n") or i) for i, ln in enumerate(lines, 1) if str(ln.get("delivery") or "").strip()]
     after = [int(ln.get("n") or i) for i, ln in enumerate(lines, 1) if str(ln.get("tags_after") or "").strip()]
     numeric = [int(ln.get("n") or i) for i, ln in enumerate(lines[:-1], 1) if "pause_after" in ln]
+    intimate = [{"line": int(ln.get("n") or i), "words": sorted({m.group(0).lower() for m in FC_INTIMATE.finditer(str(ln["text"]))})}
+                for i, ln in enumerate(lines, 1) if FC_INTIMATE.search(str(ln["text"]))]
     res = {"plan": {"words": words, "lines": len(lines), "characters": sum(len(str(ln["text"]).strip()) + 1 for ln in lines),
                     "words_per_line_median": statistics.median(per_line) if per_line else None,
                     "own_delivery_lines": own, "pause_tag_lines": after, "numeric_pause_after_not_placed": len(numeric),
+                    "intimate_body_words": intimate,
                     "target_length_s": spec.get("target_length_s")}}
     pace = spec.get("pace") or {}
     pt = _pace_targets(pace)
@@ -15329,8 +15384,9 @@ def main():
     p.add_argument("--gain", type=float, help="measure: the level to test (default the image plan's music_gain, else config static.music.gain)")
     p.add_argument("--quantization", choices=["int8_weight_only", "fp8_weight_only", "w8a8_dynamic"],
                    help="make: ACE-Step's own quantization of its music model (the user, 2026-11-09: \"int8 quantization of the ace step "
-                        "1.5 model if possible\"), for a bed the free commit memory cannot hold at full precision (static §9); the "
-                        "agent's call from the memory forecast, recorded in the bed's sidecar")
+                        "1.5 model if possible\"), only after the memory guard stopped a full-precision try of the bed (the user, "
+                        "2026-11-09: \"always try full precision first, and use int8 only after the guard stops it\"; static §6), never "
+                        "from the forecast alone; the answer and the bed's sidecar name the try it follows (int8_after)")
     p.set_defaults(fn=cmd_music)
 
     p = sp.add_parser("slideshow", help="Static's local render (contract item 36): plan (the timeline from the image plan and the narration's line "

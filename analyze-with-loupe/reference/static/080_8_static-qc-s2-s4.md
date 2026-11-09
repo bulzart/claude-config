@@ -47,8 +47,9 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
   regenerate reason by QC fixes (off: named in the brief and the wrap-up).
 - **Nothing indecent, gory or distressing** (§11b): every image and the thumbnail viewed for skin where clothes belong (a bare chest or
   legs, underwear, only a towel), a shower, bath or bed scene, blood, a wound, a corpse, a face in agony, terror or tears, a person
-  lying limp or with closed eyes on a floor, a stretcher or a sickbed (it reads as dead or unconscious: 2026-11-09, still 97), and every
-  script line and caption read for graphic detail or swearing; a hit is a regenerate reason by QC fixes (off: named in the brief and the
+  lying limp or with closed eyes on a floor, a stretcher or a sickbed (it reads as dead or unconscious: 2026-11-09, still 97; a
+  survival pose passes only when the person reads clearly alive: head up or turned, eyes open, moving), and every script line and
+  caption read for graphic detail, swearing or an intimate part of the body named (2026-11-09, video 03 line 180: "at her groin"); a hit is a regenerate reason by QC fixes (off: named in the brief and the
   wrap-up). A person whose prompt does not name the clothes from top to bottom is looked at twice (2026-11-09: a man "under a cool
   shower ... and his T-shirt" came back with nothing below the shirt).
 - **One channel** (§10): the video's subject is of the run's niche, its images in the run's style lock, its captions in the run's text
