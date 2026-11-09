@@ -10380,9 +10380,10 @@ PACE_MEASURED_KEYS = ("wpm_articulation", "wpm_speech", "wpm_overall", "pauses_p
 EL_KEY_VARS = ("ELEVEN_API_KEY", "ELEVENLABS_API_KEY")
 _EL_REFUSED_FORMATS: set = set()   # output formats the account's plan refused in this process (not asked again)
 EL_STITCH_FRESH_S = 6600           # request ids younger than this are sent for stitching (ElevenLabs: "no older than two hours")
-EL_NO_EDIT = ("the delivered audio is never edited (the user, 2026-11-09, \"without any exception\"): no speed change, cut, trim, gain, "
+EL_NO_EDIT = ("the delivered audio is never edited (the user, 2026-11-09, \"without any exception\"): no speed change, cut, trim, "
               "compression, fade or added silence; pace, pauses and length come only from the request (the voice, the settings, the words "
-              "and the audio tags, per ElevenLabs' guide)")
+              "and the audio tags, per ElevenLabs' guide); the one exception the user allowed: a constant volume change when the "
+              "narration is outside the references' measured loudness range, never past the true-peak ceiling")
 
 
 def _el_cfg(key: str, default=None):
@@ -10965,20 +10966,16 @@ def _el_passages(lines: list, voice: dict, spec: dict, max_chars: int, pause_hin
     words rest, never a silence placed). The same plan always gives the same passages."""
     base = str(spec.get("delivery") or "").strip()
 
-    def size(ln):
-        d = _el_delivery(ln, voice, spec)
-        ta = str(ln.get("tags_after") or "").strip()
-        return len(str(ln["text"]).strip()) + 1 + (len(d) + 1 if d else 0) + (len(ta) + 1 if ta else 0)
+    def size(group):   # the passage's text as it would be sent: each delivery's tag once, where it begins
+        return len(_el_passage_text(group, voice, spec)[0])
 
     groups, cur = [], []
     for i, ln in enumerate(lines):
         nxt = lines[i + 1] if i + 1 < len(lines) else None
-        cur_chars = sum(size(c) for c in cur)
-        if cur and cur_chars + size(ln) > max_chars:
-            acc, cands = 0, []
+        if cur and size(cur + [ln]) > max_chars:
+            cur_chars, cands = size(cur), []
             for j, c in enumerate(cur):
-                acc += size(c)
-                if acc >= cur_chars / 2:
+                if size(cur[: j + 1]) >= cur_chars / 2:
                     cands.append((float(c.get("pause_after", pause_hint) or 0), j))
             _p, j = max(cands) if cands else (0.0, len(cur) - 1)
             groups.append(cur[: j + 1])
@@ -11044,8 +11041,9 @@ def _el_plan(rd: Path, st: dict, nn: str, lines_file=None, voice=None, delivery=
             "lang": lang, "plan_file": lines_p, "max_chars": max_chars, "problems": problems}
 
 
-def _el_body_sha(body: dict) -> str:
-    return hashlib.sha256(json.dumps(body, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+def _el_body_sha(body: dict, voice_id: str) -> str:
+    """The request's fingerprint: its body and the voice it is sent to (the voice is in the path, not the body)."""
+    return hashlib.sha256(json.dumps({"voice_id": voice_id, **body}, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
 
 
 def _el_body(P: dict, k: int, made: dict, ps: dict | None = None) -> dict:
@@ -11117,7 +11115,7 @@ def _el_make_passage(P: dict, k: int, body: dict, key: str, folder: Path, ps: di
             "model_id": body.get("model_id"), "output_format": fmt, "language_code": body.get("language_code"),
             "stitching": {s: (body[s] if s == "previous_request_ids" else True) for s in ("previous_request_ids", "previous_text", "next_text")
                           if s in body} or None,
-            "body_sha": _el_body_sha(body), "made": now_iso(), "made_ts": time.time(), "alignment": bool(align),
+            "body_sha": _el_body_sha(body, vid), "made": now_iso(), "made_ts": time.time(), "alignment": bool(align),
             "shortened": bool(ps.get("shortened")), "tries": res.get("tries")}
     write_json(folder / f"passage-{k:02d}.json", meta)
     return {"ok": True, **meta}
@@ -11242,6 +11240,81 @@ def _true_peak_and_loudness(p: Path) -> tuple:
     return (float(i[-1]) if i else None), (float(tp[-1]) if tp and tp[-1] != "-inf" else None)
 
 
+def _ref_lufs(rd: Path, refs: list) -> dict:
+    """The named references' integrated loudness as A1 measured it (10-media/<ref>/video.json, `integrated_lufs`: the whole mix the
+    viewer hears), with their median, lowest and highest."""
+    def find(o):
+        if isinstance(o, dict):
+            if isinstance(o.get("integrated_lufs"), (int, float)):
+                return float(o["integrated_lufs"])
+            for v in o.values():
+                r = find(v)
+                if r is not None:
+                    return r
+        elif isinstance(o, list):
+            for v in o:
+                r = find(v)
+                if r is not None:
+                    return r
+        return None
+    each = {}
+    for v in refs or []:
+        p = rd / "10-media" / str(v) / "video.json"
+        try:
+            x = find(json.loads(p.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            x = None
+        if x is not None:
+            each[str(v)] = x
+    vals = sorted(each.values())
+    return ({"refs": list(each), "each": each, "median": round(statistics.median(vals), 2), "low": vals[0], "high": vals[-1]}
+            if vals else {})
+
+
+def _el_level_decision(lufs, tp, fam: dict, ceiling: float, min_step: float) -> dict:
+    """What the narration's level calls for against the references (facts and one calculation): inside their measured range, nothing;
+    outside it, the constant gain toward their median, less when the loudest true peak would pass the ceiling (no limiter, no
+    compressor); a gain under min_step (the room the voice's own peaks leave) is not applied. {"gain_db": 0.0, ...} when nothing."""
+    if lufs is None or not fam:
+        return {"gain_db": 0.0, "decision": "no reading" if lufs is None else "no references' loudness to compare with"}
+    if fam["low"] <= lufs <= fam["high"]:
+        return {"gain_db": 0.0, "decision": f"inside the references' range ({fam['low']} to {fam['high']} LUFS): as delivered"}
+    want = round(float(fam["median"]) - float(lufs), 2)
+    gain, limited = want, "the references' median"
+    if tp is not None and want > 0 and tp + want > ceiling:
+        gain, limited = round(ceiling - tp, 2), f"the true peak ({tp} dBTP; ceiling {ceiling})"
+    if abs(gain) < min_step:
+        return {"gain_db": 0.0, "wanted_db": want, "limited_by": limited,
+                "decision": (f"{'under' if lufs < fam['low'] else 'over'} the references' range ({fam['low']} to {fam['high']} LUFS) but "
+                             f"the voice's own peaks leave {max(gain, 0.0)} dB of room: as delivered (no limiter or compressor exists here)")}
+    return {"gain_db": gain, "wanted_db": want, "limited_by": limited,
+            "decision": (f"{'under' if lufs < fam['low'] else 'over'} the references' range ({fam['low']} to {fam['high']} LUFS): one "
+                         f"constant volume change of {gain:+.2f} dB toward their median {fam['median']}")}
+
+
+def _el_level(rd: Path, P: dict, final: Path, lufs, tp) -> dict:
+    """The narration's level (the user, 2026-11-09: "allow only volume changing if it is too low or too high in comparison with the
+    references data mined and analysed"): read against the references named in the plan's pace.refs; when outside their range, the
+    delivered narration is kept as video-NN.delivered.wav and video-NN.wav becomes it with one constant gain (ffmpeg volume, nothing
+    else). Returns the facts for the sidecar."""
+    fam = _ref_lufs(rd, (P["spec"].get("pace") or {}).get("refs") or [])
+    d = _el_level_decision(lufs, tp, fam, float(_scfg("narration.true_peak_db", -1.0)), float(_scfg("narration.level_min_step_db", 0.5)))
+    rec = {"lufs_delivered": lufs, "true_peak_delivered": tp, "references": fam or None, **d}
+    if d["gain_db"]:
+        kept = final.with_name(final.stem + ".delivered.wav")
+        os.replace(final, kept)
+        cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(kept), "-af", f"volume={d['gain_db']:.3f}dB",
+                  "-c:a", "pcm_s16le", str(final)], timeout=900)
+        if cp.returncode != 0:
+            os.replace(kept, final)
+            fail("the volume change failed (the narration is as delivered): " + (cp.stderr or "")[-300:])
+        rec["file_delivered"] = str(kept)
+        rec["lufs_after"], rec["true_peak_after"] = _true_peak_and_loudness(final)
+    else:
+        final.with_name(final.stem + ".delivered.wav").unlink(missing_ok=True)
+    return rec
+
+
 def _el_voice_or_fail(st: dict) -> dict:
     voice = (st.get("static") or {}).get("voice") or {}
     if voice.get("engine") != "elevenlabs" or not voice.get("voice_id"):
@@ -11349,7 +11422,7 @@ def _tts_say(a):
         made.pop(k, None)
         ps = passages[k - 1]
         body = _el_body(P, k, made)
-        sha = _el_body_sha(body)
+        sha = _el_body_sha(body, vid)
         hit = None
         if k == 1:
             for pj in probes:
@@ -11357,7 +11430,7 @@ def _tts_say(a):
                     pm = json.loads(pj.read_text(encoding="utf-8"))
                 except (OSError, ValueError):
                     continue
-                if pm.get("body_sha") == sha and Path(pm.get("file") or "").is_file():
+                if pm.get("body_sha") == sha and pm.get("voice_id") == vid and Path(pm.get("file") or "").is_file():
                     hit = pm
                     break
         if hit:   # the probe was this very request: its delivered audio is passage 1 (nothing billed twice)
@@ -11411,8 +11484,10 @@ def _tts_say(a):
         fail("no passage of the narration is made" + (f": {stopped['why']} ({stopped.get('characters_left')} characters left, "
                                                        f"passage 1 needs {stopped['needs']})" if stopped else ""), 1, stopped=stopped)
     final = rd / "30-assets" / "narration" / f"video-{nn}.wav"
+    final.with_name(final.stem + ".pre-tempo.wav").unlink(missing_ok=True)   # a new narration: an older speed-up no longer applies
     J = _el_concat(P, made, upto, nd, final)
     lufs, tp = _true_peak_and_loudness(final)
+    level = _el_level(rd, P, final, lufs, tp)   # a volume change only outside the references' range (the user, 2026-11-09)
     by_n = {ln["n"]: ln for ln in P["lines"]}
     rows = []
     for r in J["rows"]:
@@ -11472,15 +11547,17 @@ def _tts_say(a):
     side = {"video": nn, "file": str(final), "duration_s": J["total"], "format": J["format"], "language": P["lang"], "lines": rows,
             "passages": pmeta, "voice_match": match, "engine": "elevenlabs", "model_id": P["model"],
             "voice": {k_: P["voice"].get(k_) for k_ in ("voice_id", "kind", "name", "sample", "settings")},
-            "voice_settings": P["settings"] or None, "delivery": lever["delivery"], "loudness_lufs": lufs, "true_peak_db": tp,
-            "loudness_note": "read only: " + EL_NO_EDIT, "made": now_iso(), "pace": pace_rec,
+            "voice_settings": P["settings"] or None, "delivery": lever["delivery"], "loudness_lufs": level.get("lufs_after", lufs),
+            "true_peak_db": level.get("true_peak_after", tp), "level": level, "made": now_iso(), "pace": pace_rec,
             "characters": sum(int(made[k].get("characters") or 0) for k in range(1, upto + 1)), "partial": partial,
             "pause_after_not_placed": numeric or None, "rule": EL_NO_EDIT}
     write_json(final.with_suffix(".json"), side)
     out({"ok": True, "file": str(final), "sidecar": str(final.with_suffix(".json")), "duration_s": side["duration_s"], "lines": len(rows),
          "passages": {"made_now": [k for k in todo if k in made and k not in reused], "reused_probe": reused or None, "total": upto,
                       "planned": len(passages)},
-         "partial": partial, "loudness_lufs": lufs, "true_peak_db": tp, "elapsed_s": round(time.time() - t0, 1),
+         "partial": partial, "loudness_lufs": side["loudness_lufs"], "true_peak_db": side["true_peak_db"],
+         "level": {k_: level.get(k_) for k_ in ("lufs_delivered", "gain_db", "wanted_db", "limited_by", "decision")},
+         "elapsed_s": round(time.time() - t0, 1),
          "resent_after_a_drop": ([k for k in todo if k in made and len(made[k].get("tries") or []) > 1] or None),
          "resent_note": ("a passage sent again after a dropped connection (this PC's web shield resets connections) may be billed twice: compare credits.before and credits.after with characters_now"),
          "voice_match": {k_: v for k_, v in match.items() if k_ != "each"}, "engine": "elevenlabs", "model_id": P["model"],
@@ -11524,7 +11601,7 @@ def _tts_probe(a):
         fail(f"the plan has {len(P['passages'])} passages (static §6 \"Passages\"); --passage {k} is not one", 2)
     ps = P["passages"][k - 1]
     body = _el_body(P, k, {})
-    sha = _el_body_sha(body)
+    sha = _el_body_sha(body, P["voice"]["voice_id"])
     pd = rd / "30-assets" / "narration" / f"video-{nn}-probe" / sha[:12]
     meta_p = pd / f"passage-{k:02d}.json"
     spent, credits = 0, {}
@@ -11532,7 +11609,7 @@ def _tts_probe(a):
         r = json.loads(meta_p.read_text(encoding="utf-8")) if meta_p.is_file() else None
     except ValueError:
         r = None
-    if not (r and r.get("body_sha") == sha and Path(r.get("file") or "").is_file()):
+    if not (r and r.get("body_sha") == sha and r.get("voice_id") == P["voice"]["voice_id"] and Path(r.get("file") or "").is_file()):
         key = _el_need_key()
         credits = _el_credits(key)
         if credits.get("left") is not None and len(body["text"]) > credits["left"]:
@@ -11611,6 +11688,77 @@ def _tts_fit(a):
          "note": "the voice's point for the forecast (`T static forecast --part narration`, static §13)"})
 
 
+def _tempo_filter(x: float) -> str:
+    """The speed-up's filter: ffmpeg's rubberband, the tempo changed with the pitch and formants kept (quality pitch mode, soft
+    detector), the same setting the pipeline used before 2026-11-09. No fallback (atempo colours a voice more): without rubberband the
+    speed-up is refused."""
+    if " rubberband " not in (run([find_tool("ffmpeg"), "-hide_banner", "-filters"], timeout=60).stdout or ""):
+        fail("this PC's ffmpeg has no rubberband filter: the speed-up keeps the pitch and formants only with it (a full ffmpeg build); "
+             "nothing was changed", 1)
+    return f"rubberband=tempo={x:.4f}:pitch=1:formant=preserved:transients=mixed:detector=soft:pitchq=quality"
+
+
+def _tts_tempo(a):
+    """The pace's last resort (the user, 2026-11-09: "also add the speed tweak to the audio if we cannot achieve what we aim for by the
+    model directly, but just speeding allowed up until a certain point in order to match the aimed wpm speed and the narration pace that
+    the pipeline aims for based on the references analyzed, but only do it after we cannot do it through tweaking parameters in the
+    elevenlabs directly ... just the speed, no compresion or something else that might change the voice quality or lose its color and
+    pitch, and also no cuts,trims or similar, just carefull speed up"): the whole narration sped up by --tempo (above 1, at most config
+    static.narration.tempo_max), its pitch and formants kept, nothing else (no trim, gain, compressor or fade). --why is the judge's
+    record of the request levers tried first and what they measured (J2, static §13). The narration before it stays as
+    video-NN.pre-tempo.wav and a later --tempo starts from that file (never one speed-up on another); the lines', passages' and words'
+    times follow; the pace is read again with the references' yardstick."""
+    rd, _st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    sp = rd / "30-assets" / "narration" / f"video-{nn}.json"
+    try:
+        side = json.loads(sp.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"no narration for video {nn}: `T tts say` first", 2)
+    cap = float(_scfg("narration.tempo_max", 1.05))
+    x = float(a.tempo or 0)
+    if not 1.0 < x <= cap + 1e-9:
+        fail(f"--tempo takes a speed-up above 1 and at most {cap} (config static.narration.tempo_max; the user, 2026-11-09: \"just speeding "
+             "allowed up until a certain point\")", 2, cap=cap)
+    if not str(a.why or "").strip():
+        fail("--why names the request levers tried first and what they measured (the voice, the delivery and pace tags, the pause tags, the "
+             "settings, the words): the speed-up comes only after them (the user, 2026-11-09; static §13 J2)", 2)
+    af = _tempo_filter(x)
+    final = Path(side["file"])
+    pre = final.with_name(final.stem + ".pre-tempo.wav")
+    old_x = float((side.get("tempo") or {}).get("value") or 1.0)
+    if not pre.is_file():
+        os.replace(final, pre)
+    sr, ch, _sw, _d = _wav_read(pre)
+    cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(pre), "-af", af, "-ar", str(sr), "-ac", str(ch),
+              "-c:a", "pcm_s16le", str(final)], timeout=1800)
+    if cp.returncode != 0 or not final.is_file():
+        if not final.is_file():
+            shutil.copy2(pre, final)
+        fail("the speed-up failed (the narration is as it was): " + (cp.stderr or "")[-300:], 1)
+    k = old_x / x
+    side["duration_s"] = round(float(side["duration_s"]) * k, 3)
+    for r in side.get("lines") or []:
+        r["start"], r["end"] = round(float(r["start"]) * k, 3), round(float(r["end"]) * k, 3)
+    for p in side.get("passages") or []:
+        p["start"], p["end"] = round(float(p["start"]) * k, 3), round(float(p["end"]) * k, 3)
+    lufs, tp = _true_peak_and_loudness(final)
+    rows = side.get("lines") or []
+    m = _measure_pace(final, [{"n": r["n"], "text": r["text"]} for r in rows], {r["n"]: (r["start"], r["end"]) for r in rows},
+                      side.get("language") or "english", final.parent / f"video-{nn}")
+    m.pop("_words", None)
+    side["tempo"] = {"value": x, "cap": cap, "why": str(a.why).strip(), "filter": af, "pre_tempo_file": str(pre), "at": now_iso(),
+                     "measured": {k_: m.get(k_) for k_ in PACE_MEASURED_KEYS}}
+    side["loudness_lufs"], side["true_peak_db"] = lufs, tp
+    write_json(sp, side)
+    pt = _pace_targets((json.loads((rd / "40-briefs" / f"video-{nn}-narration.json").read_text(encoding="utf-8")).get("pace") or {})
+                       if (rd / "40-briefs" / f"video-{nn}-narration.json").is_file() else {})
+    out({"ok": True, "video": nn, "file": str(final), "tempo": x, "cap": cap, "duration_s": side["duration_s"],
+         "measured": side["tempo"]["measured"], "loudness_lufs": lufs, "true_peak_db": tp, "pre_tempo_file": str(pre),
+         "target": ({pt["measure"]: pt["target_speak"], "wpm_overall": pt["target_overall"]} if pt else None),
+         "note": "next: `T narration-words` again (the words' times follow the speed-up), then `T slideshow plan` (the images follow the lines)"})
+
+
 def cmd_tts(a):
     """Static's voice (contract item 36), by ElevenLabs (Eleven v4): check (the setup) | voices (the account's voices, their previews
     measured, free) | design (voice samples) | voice (the run's voice) | probe (one passage made and measured before a narration) | say
@@ -11619,10 +11767,10 @@ def cmd_tts(a):
     edited."""
     if a.action != "check" and not a.run:
         fail(f"tts {a.action} needs --run", 2)
-    if a.action in ("say", "probe", "fit") and not a.video:
+    if a.action in ("say", "probe", "fit", "tempo") and not a.video:
         fail(f"tts {a.action} needs --video NN", 2)
     {"check": _tts_check, "voices": _tts_voices, "design": _tts_design, "voice": _tts_voice, "say": _tts_say, "probe": _tts_probe,
-     "fit": _tts_fit}[a.action](a)
+     "fit": _tts_fit, "tempo": _tts_tempo}[a.action](a)
 
 
 def _el_word_times(side: dict) -> list:
@@ -11649,6 +11797,7 @@ def _el_word_times(side: dict) -> list:
             return []
         lc = {int(n): v for n, v in (al.get("line_chars") or {}).items()}
         off = float(p["start"])
+        tx = float((side.get("tempo") or {}).get("value") or 1.0)   # a speed-up shortens every time inside
         for r in by_p.get(int(p["p"]), []):
             if int(r["n"]) not in lc:
                 return []
@@ -11657,7 +11806,7 @@ def _el_word_times(side: dict) -> list:
                 j = text.find(w, i, end)
                 if j < 0:
                     return []
-                res.append({"w": w, "s": round(off + float(st_[j]), 3), "e": round(off + float(en_[j + len(w) - 1]), 3)})
+                res.append({"w": w, "s": round(off + float(st_[j]) / tx, 3), "e": round(off + float(en_[j + len(w) - 1]) / tx, 3)})
                 i = j + len(w)
     return res
 
@@ -15067,7 +15216,10 @@ def main():
                                   "measured) | say (a video's narration, by passages placed end to end as delivered) | fit (the voice's point "
                                   "from a made narration); the key is the user's ELEVEN_API_KEY (or ELEVENLABS_API_KEY); Eleven v4 has no "
                                   "speed and the delivered audio is never edited: the pace is the voice's, the words' and the audio tags'")
-    p.add_argument("action", choices=["check", "voices", "design", "voice", "probe", "say", "fit"]); p.add_argument("--run")
+    p.add_argument("action", choices=["check", "voices", "design", "voice", "probe", "say", "fit", "tempo"]); p.add_argument("--run")
+    p.add_argument("--tempo", type=float, help="tempo: the speed-up, above 1 and at most config static.narration.tempo_max (pitch and "
+                                               "formants kept; only after the request levers, static §13 J2)")
+    p.add_argument("--why", help="tempo: the request levers tried first and what they measured (the judge's record)")
     p.add_argument("--offline", action="store_true", help="check: the setup facts without asking ElevenLabs")
     p.add_argument("--measure", action="store_true", help="voices: read each listed voice's own preview with the references' yardstick "
                                                           "(free: ElevenLabs' public samples)")

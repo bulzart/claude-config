@@ -23,12 +23,12 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 2.5 |
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 6.1 |
 | 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 18.5 |
-| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 16.2 |
-| 7 | The edit (S4) | `070_7_the-edit-s4.md` | 8.6 |
-| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 6.1 |
+| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 19.1 |
+| 7 | The edit (S4) | `070_7_the-edit-s4.md` | 8.8 |
+| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 6.5 |
 | 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 8.1 |
 | 10 | One channel per run | `100_10_one-channel-per-run.md` | 6.0 |
 | 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 3.1 |
 | 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 6.0 |
-| 13 | The judge (A6s, S2, S3, S4) | `130_13_the-judge.md` | 13.0 |
+| 13 | The judge (A6s, S2, S3, S4) | `130_13_the-judge.md` | 13.7 |
 <!-- sections:end -->

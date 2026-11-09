@@ -1343,6 +1343,15 @@ js, _ = ts("static", "forecast", "--run", str(ER), "--video", "01", "--part", "n
 check("no measured point" in str(((js.get("narration") or {}).get("forecast") or {}).get("note"))
       and ((js.get("narration") or {}).get("lever") or {}).get("voice_id") == "vGEORGE",
       "before any probe the forecast names the free and the billed way to measure the voice")
+_fam = {"refs": ["V1", "V2", "V3"], "median": -18.9, "low": -21.5, "high": -14.0}
+_d_in = _awl._el_level_decision(-17.0, -3.0, _fam, -1.0, 0.5)
+_d_lo = _awl._el_level_decision(-23.5, -6.0, _fam, -1.0, 0.5)
+_d_pk = _awl._el_level_decision(-23.5, -1.1, _fam, -1.0, 0.5)
+_d_hi = _awl._el_level_decision(-11.0, -0.5, _fam, -1.0, 0.5)
+check(_d_in["gain_db"] == 0.0 and "as delivered" in _d_in["decision"] and _d_lo["gain_db"] == 4.6 and _d_pk["gain_db"] == 0.0
+      and "room" in _d_pk["decision"] and _d_hi["gain_db"] == -7.9 and _awl._el_level_decision(-23.5, -1.1, {}, -1.0, 0.5)["gain_db"] == 0.0,
+      "the narration's level: inside the references' range as delivered; outside it one constant gain toward their median, never past the "
+      "true-peak ceiling (a voice whose peaks leave no room stays as delivered); nothing without the references' loudness")
 # the passages and a narration that stops early, in a run of their own (a voice the account has; the stand-in speaks fast here, so the
 # long plans stay quick)
 js, _ = ts("new-run", "--mode", "analyze", "--slug", "static-passages")
@@ -1382,6 +1391,24 @@ _sr12, _all12 = _frames(PR / "30-assets" / "narration" / "video-12.wav")
 check(_sr12 == 44100 and _all12 == b"".join(_EL["delivered"][r]["audio"] for r in _rids)
       and not list((PR / "30-assets" / "narration" / "video-12").glob("*.delivered.*")) and _s12["format"]["sample_rate"] == 44100,
       "in PCM the narration's samples are the very bytes ElevenLabs delivered, end to end")
+# the pace's last resort (the user, 2026-11-09): a capped speed-up, pitch kept, only with the judge's record of the levers tried first
+js, code = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.2", "--why", "levers tried", ok=False)
+_c1 = code == 2 and "at most" in js.get("error", "")
+js, code = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.04", ok=False)
+_c2 = code == 2 and "--why" in js.get("error", "")
+_d0 = _s12["duration_s"]
+_l0 = {r["n"]: r["start"] for r in _s12["lines"]}
+js, _ = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.04", "--why", "probes A-F tried; overall 5 % under the point")
+_s12t = json.loads((PR / "30-assets" / "narration" / "video-12.json").read_text(encoding="utf-8"))
+_pre = PR / "30-assets" / "narration" / "video-12.pre-tempo.wav"
+js2, _ = ts("tts", "tempo", "--run", str(PR), "--video", "12", "--tempo", "1.02", "--why", "a smaller step")
+_s12u = json.loads((PR / "30-assets" / "narration" / "video-12.json").read_text(encoding="utf-8"))
+check(_c1 and _c2 and js.get("ok") and _pre.is_file() and abs(_s12t["duration_s"] - _d0 / 1.04) < 0.05
+      and all(abs(r["start"] - _l0[r["n"]] / 1.04) < 0.01 for r in _s12t["lines"]) and "rubberband" in _s12t["tempo"]["filter"]
+      and "formant=preserved" in _s12t["tempo"]["filter"] and abs(_s12u["duration_s"] - _d0 / 1.02) < 0.05
+      and abs(((_awl.media_summary(PR / "30-assets" / "narration" / "video-12.wav") or {}).get("duration_s") or 0) - _d0 / 1.02) < 0.1,
+      "tts tempo: the pace's last resort, refused above the cap or without the judge's record of the levers tried; the narration before it "
+      "kept, a later tempo from it (never stacked); pitch and formants kept; the line times follow")
 # the characters run out (--budget, the account's, or ElevenLabs' own refusal): the narration is what was made, flagged partial
 _n = len(_EL["seen"])
 js, _ = ts("tts", "say", "--run", str(PR), "--video", "13", "--budget", "1300")

@@ -19,8 +19,9 @@ Only these section files for this phase, nothing else unless a step below says s
 
 The main session runs S2 for every video, one at a time, before any production agent starts (`awl-analyze-produce` A9s). The narration
 is ElevenLabs' Eleven v4 in the run's voice (`state.json → static.voice`, static §6): nothing of it runs on this PC, every passage is
-billed at one credit a character, and the delivered audio is never edited (the user, 2026-11-09: "do not edit the delivered generation
-without any exception").
+billed at one credit a character, and the delivered audio is not edited (the user, 2026-11-09: "do not edit the delivered generation
+without any exception") but for the two exceptions the user then allowed (static §6 "The rule"): one gain only when its loudness sits
+outside the references', and a capped speed-up as J2's last resort.
 
 ## Step S2 (per video)
 
@@ -31,9 +32,9 @@ without any exception").
    as `say` would make it is used as passage 1 (nothing paid twice); `--only N` makes again the passages holding those lines, `--again`
    all of them, `--rejoin` none. **The pace** (static §6 "The pace", §13): the narration JSON's `pace` carries the judge's point (J1) and
    its levers (the voice, `delivery`, `voice_settings`, the words) were measured on the probe; the answer's `pace.on_target` and
-   `pace.within` are the facts for J2 (below): a narration off its point is never shipped unexplained and never fixed by editing the
-   audio. A partial narration (`partial`: the characters ran out) is named in the brief and the wrap-up; the timeline leaves out the
-   images after it.
+   `pace.within` are the facts for J2 (below): a narration off its point is never shipped unexplained. The answer's `level` is the
+   loudness rule's (static §6: as delivered inside the references' range, else one gain toward their median within -1 dBTP). A partial
+   narration (`partial`: the characters ran out) is named in the brief and the wrap-up; the timeline leaves out the images after it.
    Run it in the foreground; it may run past ten minutes and continue in the background on its own, which is fine once started.
    **Passages** (static §6): read `voice_match`; a passage whose timbre sits far from the others (`passages_below`) is made again
    (`--only <one of its lines>`, billed), at most twice, by the run's QC fixes, noted.
@@ -53,10 +54,12 @@ without any exception").
    end with the tail). Keep every span within the spec's range of seconds per still and none under about 2 s: move `from_line`, merge or
    split images in `video-NN-images.json` (their prompts with them).
 4b. **The judge, J2** (static §13): spawn the judge with the narration's measured pace, pauses, length and spans; it reads them against
-   J1's forecast and point and decides: spans by `from_line` (free); a miss of the point changed only through the request (another
-   delivery tag, setting or wording, the passages made again, billed, by the run's QC fixes) or kept with its reason, never an edit of the
-   delivered audio. Then `T tts fit --run RUN --video NN` (after `narration-words`): the voice's point learned again (`state.json →
-   static.voice.fit`), what the next video's forecast reads.
+   J1's forecast and point and decides: spans by `from_line` (free); a miss of the point changed through the request first (another
+   delivery tag, pause tag, setting or wording, the passages made again, billed, by the run's QC fixes); only when the request levers
+   cannot reach it, the last resort: `T tts tempo --run RUN --video NN --tempo X --why "<the levers tried and their measures>"` (one
+   speed-up, at most config `static.narration.tempo_max` 1.05, pitch and formants kept), then `T narration-words` and the spans again;
+   else kept with its reason. Then `T tts fit --run RUN --video NN` (after `narration-words`): the voice's point learned again
+   (`state.json → static.voice.fit`), what the next video's forecast reads.
 5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made, when every image is made
    or in a gap between image stretches (two local models never share the GPU and the commit memory; 2026-11-08 the guard stopped
    ACE-Step at 2.0 GB free commit): first **J4** (static §13): `T static forecast --run RUN --video NN --part music` right before, its
@@ -83,9 +86,10 @@ An ElevenLabs error is reported with its real text (the key never shown). Narrat
   delivery tags, static §6).
 - Never call ElevenLabs for a Static narration except through `T tts` (never the ElevenLabs MCP or connector for it), never Higgsfield,
   and never print, echo or write `ELEVEN_API_KEY` or `ELEVENLABS_API_KEY`.
-- Never edit the delivered narration, without any exception (the user, 2026-11-09): no speed or tempo change, stretch, trim, cut,
-  compressor, loudness pass, gain, fade or added silence. Its pace, pauses and length come only from the request (the voice, the
-  settings, the words, the audio tags; static §6); a length that is off is a script rewritten and its passages made again.
+- Never edit the delivered narration (the user, 2026-11-09): no stretch, trim, cut, compressor, loudness pass, fade or added silence.
+  Its pace, pauses and length come from the request (the voice, the settings, the words, the audio tags; static §6); a length that is
+  off is a script rewritten and its passages made again. The only two changes allowed (the user, 2026-11-09) are the level rule's one
+  gain (outside the references' loudness only) and J2's capped last-resort speed-up (`T tts tempo`, pitch kept, after the levers).
 - Never analyse the references' music beyond the numbers A3 already has (the user, 2026-11-06: "no need to analyze their instrumentals
   too"); never keep a bed's level at which a narration word is heard differently (a level costs nothing to change, whatever the QC fixes).
 

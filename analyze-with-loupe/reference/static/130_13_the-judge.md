@@ -74,7 +74,8 @@ predicted result; and afterwards the measured result against it):
      and continues the judge with the measures; as few probes as the characters left allow (the forecast's `credits`), the narrator never
      changed (a lock);
    - the pauses: the long pauses the family holds (its `long_pauses_per_10min` times the video's minutes, at the strongest turns:
-     the reveals, the chapter starts) asked as `tags_after` ("[long pause]") or punctuation, every other rest the voice's own, the
+     the reveals, the chapter starts) asked as `tags_after` ("[pause]": 0.76 s with George, 2026-11-09; "[long pause]" ran 1.6-2.6 s,
+     over the family's 0.92 s, §6 "what the levers did") or punctuation, every other rest the voice's own, the
      probe's pause pattern read against the family's (a pause the family does not hold is not asked);
    - the strong lines (their own `delivery` tags; at most one in five, never two in a row, §4), the length against the family's (§4);
    - every image prompt the forecast marks: a thing that would carry writing gets its exact words when the story needs them (a label
@@ -88,9 +89,14 @@ predicted result; and afterwards the measured result against it):
 2. **J2, after the narration** (S2, before the images; `awl-static-sound`): the measured pace and pauses (`T tts say`'s `pace`, then `T
    narration-words`) against J1's forecast and point: on the point within the tolerance, the pause pattern near the family's, the
    length, and a partial narration (the characters ran out) named; the image spans against the seconds a still. A miss is explained from
-   the numbers (the point measured, the levers) and changed only through the request: another delivery tag, setting or wording and the
-   passages made again (billed, by the run's QC fixes), or kept and recorded with its reason; the delivered audio is never edited (the
-   user, 2026-11-09). Spans are moved by `from_line` (free). The point learned by the narration is the next video's forecast.
+   the numbers (the point measured, the levers) and changed through the request first: another delivery tag, setting or wording and the
+   passages made again (billed, by the run's QC fixes). Only when those cannot reach the point (the voice is locked; the tags and pause
+   tags tried and measured), the last resort the user allowed (2026-11-09): one speed-up of the whole narration, the tempo that brings
+   the speaking measure to the point and at most `config static.narration.tempo_max` (1.05), pitch and formants kept (`T tts tempo
+   --tempo X --why "<the levers tried and their measures>"`, then `T narration-words` and `T slideshow plan` again), else the miss kept
+   and recorded with its reason. Nothing else is ever done to the delivered audio but the level rule (§6: one gain only when the
+   narration sits outside the references' loudness). Spans are moved by `from_line` (free). The point learned by the narration is the
+   next video's forecast.
 3. **J3, between image stretches** (S3; the main session spawns the judge when an image agent reports, before the next is spawned):
    the stretch's report and flags and the stills it names, viewed; what went wrong is traced to its prompt words (the caption the
    upsampler wrote is in each attempt) and the next stretches' prompts are changed so it does not happen again (prevention costs no

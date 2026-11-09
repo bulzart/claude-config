@@ -6,10 +6,13 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
 - **Narration**: `narration-words` lists the lines to check (the heard share of their words under the threshold; a heard word counts in
   the line that holds its middle). The captions take ElevenLabs' own word timing (its answer's `timing: elevenlabs`); the transcriber
   starts words about a quarter second early and can miss quiet ones (video 03, 2026-11-09: "Day one. By ten, ..." spoken and timed by
-  ElevenLabs, never heard by it), so a listed line is checked against the audio and ElevenLabs' timing before it is called wrong; no tag spoken aloud
+  ElevenLabs, never heard by it), so a listed line is checked against the audio and ElevenLabs' timing before it is called wrong. A
+  passage in `tts say`'s `resent_after_a_drop` (this PC's web shield resets connections) may be billed twice: its credits before and
+  after against `characters_now` say, and the brief names it; no tag spoken aloud
   (a bracket's words heard as speech) and no sound effect where a delivery tag was meant; the duration within the spec's range; the
   pace on the judge's point within its tolerance and inside the bands (`tts say`'s and `narration-words`' `pace.on_target` and
-  `pace.within`; §6 "The pace") and the pause pattern against the forecast; the loudness as read (a fact: nothing is done to it); one
+  `pace.within`; §6 "The pace") and the pause pattern against the forecast; the loudness against the references' (the sidecar's `level`: as delivered inside their range, else one gain toward their median
+  within the true-peak ceiling, §6); a speed-up only as J2's last resort, capped and with its `--why` (§13); one
   speaker throughout; each passage's timbre against the others (`voice_match.passages_below`, §6); a partial narration (`partial`)
   named with where it stops. A fix is a passage made again through the request (§6), never an edit of the delivered audio.
 - **The bed** (`T music measure`, §6): no word heard in it alone; the narration's words heard the same with it under it at the project's

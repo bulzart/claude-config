@@ -29,11 +29,25 @@ no new samples; the toolkit refuses a new design or pick without `--replace`. Th
   and dashes give rests). A tag must describe something heard ("[pacing]" or "[standing]" are not performed), its adherence is not
   perfect, it can be taken for a sound effect, and no tag has a documented length: every lever is measured on the voice before a
   narration leans on it (the probe, below). Words outside the brackets are spoken ("he said quietly" is said). Tags are billed as text.
-- **The rule** (the user, 2026-11-09: "no edits should be done from our side on the elevenlabs generation, whether speeding up the audio generation, nor making cuts in it, we should only try to speed it up by instructing the elevenlabs tts model, or use different parameters to achieve our goal by leveraging the elevenlabs official guide we attained during the research phase, or for example do 2 or more different generations that differ in speed and use them for a certain need such as the video having some parts for slow pace narrations too, but do not edit the delivered generation without any exception"): the delivered audio is used exactly as it came. No tempo or speed change, no
-  stretch, no trim or cut, no compressor or voice chain, no loudness pass or gain, no fade, no silence added between passages. Pace,
-  pauses and length are set only in the request: the voice, the settings, the words and their punctuation, and the tags; a part told at
-  another pace (a slow, quiet stretch) is asked at that pace (its lines' own `delivery`), never slowed afterwards. The narration's
-  loudness is read and recorded (`loudness_lufs`, `true_peak_db` in the sidecar), and the CapCut project plays it at its own level (§7).
+- **The rule** (the user, 2026-11-09: "no edits should be done from our side on the elevenlabs generation, whether speeding up the audio generation, nor making cuts in it, we should only try to speed it up by instructing the elevenlabs tts model, or use different parameters to achieve our goal by leveraging the elevenlabs official guide we attained during the research phase, or for example do 2 or more different generations that differ in speed and use them for a certain need such as the video having some parts for slow pace narrations too, but do not edit the delivered generation without any exception"): the delivered audio is used exactly as it came. No
+  stretch, no trim or cut, no compressor or voice chain, no loudness pass, no fade, no silence added between passages. Pace, pauses and
+  length are set in the request: the voice, the settings, the words and their punctuation, and the tags; a part told at another pace (a
+  slow, quiet stretch) is asked at that pace (its lines' own `delivery`), never slowed afterwards. Two exceptions, both the user's
+  (2026-11-09), each a single constant change of the whole narration and nothing else:
+  - **the level**: "allow only volume changing if it is too low or too high in comparison with the references data mined and analysed":
+    `T tts say` reads the narration's loudness against the references named in its `pace.refs` (their `integrated_lufs` from A1); inside
+    their range it stays as delivered; outside, one constant gain toward their median, never past a true peak of
+    `config static.narration.true_peak_db` (-1 dBTP: no limiter, no compressor), and none when the voice's own peaks leave under
+    `level_min_step_db` (0.5 dB) of room (the sidecar's `level`; the delivered file kept as `video-NN.delivered.wav`). 2026-11-09, video
+    03: -23.5 LUFS against the family's -21.5 to -14.0 (median -18.9), +4.6 dB wanted, its true peak -1.1 dBTP left 0.1 dB: as delivered;
+  - **the last resort for the pace**: "also add the speed tweak to the audio if we cannot achieve what we aim for by the model
+    directly, but just speeding allowed up until a certain point ... only do it after we cannot do it through tweaking parameters in the
+    elevenlabs directly ... just the speed, no compresion or something else that might change the voice quality or lose its color and
+    pitch, and also no cuts,trims or similar, just carefull speed up": `T tts tempo --run RUN --video NN --tempo X --why "<the request
+    levers tried and what they measured>"` speeds the whole narration up by X (above 1, at most `config static.narration.tempo_max`,
+    1.05), its pitch and formants kept (rubberband; refused without it), after J2 has tried the request levers (§13); the narration
+    before it stays as `video-NN.pre-tempo.wav`, a later tempo starts from it, and the lines', passages' and words' times follow.
+  The CapCut project plays the narration at its own level (§7).
 - **Passages** (`T tts say`): Eleven v4 "works best when used for paragraphs or passages of text" (ElevenLabs), so the lines are sent in
   passages of up to `config.json → static.tts.elevenlabs.passage_chars` (850; the plan's `tts.passage_chars` overrides) characters. A
   passage ends after a line marked `passage_break`, and after a line whose own delivery is not the narration's unless the next line
@@ -83,9 +97,19 @@ judge's `target` point, the tolerance) is what the narration is aimed at and mea
   main session (the judge never generates, §13);
 - **the decision** is the judge's (J1, §13), from the forecast (`T static forecast --part narration`: the point measured for the plan's
   levers, the predicted pace and length against the plan's point, the family and the characters left); after the narration the
-  measured pace against the point is J2's. A miss is changed only through the request (another tag, setting or wording, the passages
-  made again, billed) or kept and recorded with its reason; nothing is ever done to the delivered audio. `T tts fit` learns the voice's
-  point again from a made narration and `T narration-words`' heard words (the next video's forecast).
+  measured pace against the point is J2's. A miss is changed through the request first (another tag, setting or wording, the passages
+  made again, billed); only when the request levers cannot reach the point, the capped speed-up (`T tts tempo`, above) with the
+  levers tried in its `--why`, or the miss kept and recorded with its reason. `T tts fit` learns the voice's point again from a made
+  narration and `T narration-words`' heard words (the next video's forecast).
+- **what the levers did** (video 03, George on Eleven v4, 2026-11-09; two test passages, the opening and a dense middle, measured
+  speaking / overall wpm, the family's point 211.9 / 174.0): no tag 213.7 / 161.4 and 187.2 / 144.8; "[quick, measured pace]" 213.4 /
+  169.9 and 192.4 / 152.7; "[quickly, steady narration]" 214.7 / 174.9 (the opening on the point) and 196.4 / 153.8; "[quickly, steady
+  narration with short pauses]" 225.8 / 171.2 and 194.4 / 153.0; on the middle "[fast, brisk narration]" 196.8 / 158.9 (pause median
+  0.46 s, the family's 0.44) and stability 0.3 no change (197.6 / 154.6); Daniel no tag 199.8 / 154.6 and 175.4 / 140.1 (slower than
+  George on v4, though his preview read faster). The dense passage (1.50 syllables a word against the opening's 1.32; the family's 1.43)
+  is read at the same syllables a minute, so it stays slower in words: a firmer tag on dense passages, the lighter one elsewhere. Pause
+  tags after "Day one." (ElevenLabs' timing): "[pause]" 0.76 s, "[short pause]" 0.76 s, an ellipsis 0.08 s (no rest); "[long pause]"
+  gave 1.6-2.6 s in the narration (the family's long pause is 0.92 s heard), so a section turn is "[pause]".
 A narration is never fitted to a length afterwards: the length comes from the words at the voice's measured pace (§4).
 
 **The bed** (ACE-Step 1.5): an instrumental under every video, also when the references are voice only (the user, 2026-11-06: "make

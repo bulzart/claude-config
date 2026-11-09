@@ -266,10 +266,13 @@ _gone = sorted({f"{p.name}: {w}" for p in _vdocs for w in ("DASHSCOPE_API_KEY", 
                                                            "AWL_TTS_PYTHON", "tts_worker") if w in rd(p)}
                | {f"{p.name}: a speed or tempo option" for p in _vdocs if re.search(r"T voiceover mix[^\n]*--tempo|T tts (say|probe)[^\n]*--speed", rd(p))})
 check(not _gone, "no Static or voiceover doc, skill or the router names a removed engine or asks a speed or tempo change: " + "; ".join(_gone))
+_snd1 = re.sub(r"\s+", " ", _snd)
 check("without any exception" in _s6n and "no speed" in _s6n and "**Passages**" in _s6t and "tags_after" in _s4t and "tags_after" in _s6t
-      and "never fixed by editing" in re.sub(r"\s+", " ", _snd),
-      "static §6 holds the user's rule (the delivered audio is never edited, 'without any exception'), Eleven v4's lack of a speed, the "
-      "passages and the pause tags; the sound skill never fixes a narration by editing it")
+      and "the last resort" in _s6n and "tempo_max" in _s6n and "one constant gain toward their median" in _s6n and "after the levers" in _snd1
+      and "T tts tempo" in _snd1 and "pitch and formants kept" in _snd1,
+      "static §6 holds the user's rule (the delivered audio is not edited, 'without any exception'), Eleven v4's lack of a speed, the "
+      "passages and the pause tags, and the two changes the user then allowed (one gain only outside the references' loudness; a capped, "
+      "pitch-keeping speed-up only as the last resort after the request levers); the sound skill names both")
 # the whole set and the pace (the user, 2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy";
 # "we have to be very sure that the workflow really achieves a 178-191 words a minute"; 2026-11-09: "we should only try to speed it up by
 # instructing the elevenlabs tts model, or use different parameters")

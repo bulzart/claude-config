@@ -63,9 +63,10 @@
   narration and bed, `T capcut-motion`, `capcut-transitions`, `capcut-effects` and `capcut-labels` with `--format <tag>`, and its
   captions from `60-outputs/video-NN/<tag>/captions.srt` at the timeline's `size` and `y_rel`, in the run's font, outline, colours and
   entrance.
-- Loudness: the narration is ElevenLabs' delivered audio, never changed (the user, 2026-11-09: "do not edit the delivered generation
-  without any exception": no compressor, loudness pass, gain or fade); its loudness is read and recorded (`loudness_lufs`,
-  `true_peak_db` in the narration's sidecar), the CapCut project plays it at 1.0, and the bed sits under it at the plan's gain, judged
+- Loudness: the narration is ElevenLabs' delivered audio (the user, 2026-11-09: "do not edit the delivered generation without any
+  exception": no compressor, loudness pass or fade), but for the level rule (§6: one constant gain only when it sits outside the
+  references' measured loudness, never past -1 dBTP) and the capped last-resort speed-up (§6, §13 J2); its loudness is recorded
+  (`loudness_lufs`, `true_peak_db` and `level` in the narration's sidecar), the CapCut project plays it at 1.0, and the bed sits under it at the plan's gain, judged
   against the narration as it is (§6 "The bed's check and level").
 - **The export** is the user's, in CapCut (no tool exports a CapCut project): each project at its format's export size, 30 fps; the
   wrap-up says so, and that file is the final.
