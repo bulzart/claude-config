@@ -1,6 +1,6 @@
 ---
 name: kling4-music-mix-balance
-description: music added to moved kling4 videos: scene sound x0.30, meme insert sound full, music from the run's own references, new files only (user 2026-11-10)
+description: music added to moved kling4 videos: scene sound x0.15, meme insert sound full, music from the run's own references, new files only (user 2026-11-10)
 metadata:
   type: feedback
 ---
