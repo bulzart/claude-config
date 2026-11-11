@@ -2695,6 +2695,7 @@ _wbad, _wbadp = _awl._word_box_plan([{"start": 0.3, "end": 0.9, "text": "IT'S EI
 check(len(_wbadp) == 1 and _wbadp[0].get("token") == "EIGHT",
       f"the word box refuses a caption word that is not the narration's next word ({_wbadp})")
 
+
 # >>> language, narration model and approach tests (begin)
 
 # =====================================================================================================================================
@@ -3067,7 +3068,8 @@ _q = _el_tts(_n)
 _s1 = json.loads((LR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
 check(js.get("ok") and _q and all(r["body"]["language_code"] == "es" and r["body"]["model_id"] == "eleven_v4" for r in _q) and _s1["language"] == "es"
       and _s1["language_code"] == "es" and _s1["unit"] == "words" and js["language"] == {"code": "es", "name": "Spanish", "official": True, "unit": "words"}
-      and _s1["pace"]["measured"]["unit"] == "words" and _s1["pace"]["measured"]["words"] == sum(len(x["text"].split()) for x in _lg_nar["01"]["lines"]),
+      and _s1["pace"]["measured"]["unit"] == "words" and _s1["pace"]["measured"]["words"] == sum(len(x["text"].split()) for x in _lg_nar["01"]["lines"])
+      and _s1["pace"]["unit"] == "words" and _s1["pace"]["units_agree"] is True and _s1["pace"]["target"]["unit"] == "words",
       "tts say sends a Spanish narration with language_code es in the run's model; the sidecar and the pace say Spanish and words")
 js, _ = ts("narration-words", "--run", str(LR), "--video", "01")
 check(js["unit"] == "words" and js["language"]["code"] == "es" and all(x["numbers"]["compared"] is False and x["unit"] == "words" for x in js["lines"])
@@ -3081,9 +3083,11 @@ _s2 = json.loads((LR / "30-assets" / "narration" / "video-02.json").read_text(en
 _ln2 = [len(_awl._units(x["text"], _i["ja"])) for x in _lg_nar["02"]["lines"]]
 check(js.get("ok") and _q and all(r["body"]["language_code"] == "ja" for r in _q) and _s2["language"] == "ja" and _s2["unit"] == "characters"
       and _ln2 == [10, 11, 11] and _s2["pace"]["measured"]["unit"] == "characters" and _s2["pace"]["measured"]["words"] == 32
-      and js["language"]["unit"] == "characters" and (_s2["pace"]["measured"]["wpm_articulation"] or 0) > 300,
+      and js["language"]["unit"] == "characters" and (_s2["pace"]["measured"]["wpm_articulation"] or 0) > 300
+      and js["pace"]["unit"] == "characters" and js["pace"]["units_agree"] is False and js["pace"]["target"]["unit"] == "words"
+      and _s2["pace"]["units_agree"] is False,
       "a Japanese narration (its language from the video's record: the narration JSON names none) is sent with language_code ja and its pace "
-      "counts letters: 32 of them, over 300 a minute")
+      "counts letters: 32 of them, over 300 a minute; the plan's target still counts words (not converted yet): units_agree says so")
 js, _ = ts("narration-words", "--run", str(LR), "--video", "02")
 _w2 = json.loads((LR / "30-assets" / "narration" / "video-02.words.json").read_text(encoding="utf-8"))
 _c2 = json.loads((LR / "30-assets" / "narration" / "video-02.cues.json").read_text(encoding="utf-8"))
@@ -3160,8 +3164,9 @@ js, _ = ts("static", "forecast", "--run", str(LR), "--video", "02", "--part", "n
 _f2 = js["narration"]
 check(_f2["plan"]["unit"] == "characters" and _f2["plan"]["language"] == "ja" and _f2["plan"]["words"] == 32 and _f2["plan"]["lines_without_gloss"] == []
       and _f2["forecast"]["unit"] == "characters" and "letters" in _f2["forecast"]["against_family_note"] and _f2["forecast"]["from_point"] == "same"
-      and _f2["lever"]["language"] == "ja",
-      "the forecast of a Japanese narration counts letters and says its numbers are not the references' units")
+      and _f2["lever"]["language"] == "ja" and _f2["target"]["unit"] == "words" and _f2["target"]["units_agree"] is False,
+      "the forecast of a Japanese narration counts letters and says its numbers are not the references' units; the plan's target still counts "
+      "words (units_agree false)")
 js, _ = ts("static", "forecast", "--run", str(LR), "--video", "07", "--part", "narration")
 _f7 = js["narration"]
 check(_f7["plan"]["language"] == "en" and _f7["plan"]["unit"] == "words" and "lines_without_gloss" not in _f7["plan"] and _f7["plan"]["words"] == 17
@@ -3187,6 +3192,13 @@ js, _ = ts("static", "units", "--run", str(LR), "--video", "02")
 check(js["pace"]["converted_from_ratio"] == 2.1333 and js["pace"]["converted"]["wpm_articulation"] == _cv["wpm_articulation"]
       and js["pace"]["converted"]["target"] == _cv["target"] and js["pace"]["converted"]["units_ratio"] == 2.1333,
       "a pace that already carries its units_ratio is converted from its own English numbers, never twice")
+js, _ = ts("static", "forecast", "--run", str(LR), "--video", "02", "--part", "narration")
+_t2 = js["narration"]["target"]
+check(_t2["unit"] == "characters" and _t2["units_agree"] is True and abs(_t2["point"]["wpm_articulation"] - 405.3) < 0.11,
+      "once the converted pace is written back (unit and units_ratio) the forecast's target counts letters like the video does")
+js, _ = ts("narration-words", "--run", str(LR), "--video", "02")
+check(js["pace"]["units_agree"] is True and js["pace"]["target"]["unit"] == "characters" and js["pace"]["unit"] == "characters",
+      "narration-words compares the narration's letters a minute with a target counted in letters")
 js, _ = ts("static", "units", "--run", str(LR), "--video", "01")
 check(js["ratio"]["overall"] == 1.0 and js["lines_without_gloss"] == [5] and js["pace"]["converted"]["wpm_articulation"] == [170.0, 190.0]
       and js["unit"] == "words" and js["native_units"] == 28 and js["gloss_words"] == 24,

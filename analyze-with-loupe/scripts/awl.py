@@ -11469,7 +11469,7 @@ def _tts_voices(a):
                 m = _el_measure_file(f, lang, pdir / row["voice_id"])
                 row["preview"] = {"file": str(f), **{k: m.get(k) for k in ("duration_s", "words", "wpm_overall", "wpm_articulation",
                                                                           "pauses_per_minute", "pause_s_median", "pause_share",
-                                                                          "pitch_hz", "heard")}}
+                                                                          "pitch_hz", "heard", "unit")}}
             except Exception as e:  # noqa: BLE001
                 row["preview"] = {"error": type(e).__name__}
     write_json(_voice_dir(rd) / "voices.json", {"listed": now_iso(), "filters": {k: v for k, v in {**want, "search": a.search}.items() if v},
@@ -11526,7 +11526,7 @@ def _tts_design(a):
                       "generated_voice_id": p0.get("generated_voice_id"), "design_model_id": model,
                       "other_previews": [p.get("generated_voice_id") for p in prev[1:]],
                       "characters": _el_char_cost(res, a.text), "request_id": (res.get("headers") or {}).get("request-id"),
-                      "pace": {k: m.get(k) for k in ("wpm_articulation", "wpm_overall", "words", "pitch_hz")}})
+                      "pace": {k: m.get(k) for k in ("wpm_articulation", "wpm_overall", "words", "pitch_hz", "unit")}})
     write_json(vd / "samples.json", {"text": a.text, "language": lang, "samples": items, "made": now_iso(), "model": model,
                                      "engine": "elevenlabs"})
     out({"ok": True, "engine": "elevenlabs", "model": model,
