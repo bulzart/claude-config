@@ -10,7 +10,7 @@ the new directory i,e their run folder or others just copy them and not move". C
 or edit-source folders is moved, renamed, deleted or overwritten; a file needed elsewhere is copied. Only the toolkit's own derived folders
 are added there (`files_audio/`, `videos_without_audio/`, Edit Mode's `final/`).
 
-**Why:** at 23:30:59 on 2026-10-27 all 15 videos of `Documents.10` went to the Recycle Bin in one batch while loupe run
+**Why:** at 23:30:59 on 2026-10-27 all 15 videos of `Documents\27.10` went to the Recycle Bin in one batch while loupe run
 `20261027-224009-27` (and an /analyze-then-pick run abandoned 18 s earlier) used the folder; a loupe run started at 23:33 inventoried an empty
 folder; the videos were copied back from Downloads at 23:39. Who deleted them is not on record (session transcripts are not read).
 

@@ -94,10 +94,10 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   points, solid or `dash`ed, `cap` round or butt, with a `head` and/or `tail` mark at its last and first point: `open`, `filled`, `bar` (a
   short perpendicular tick, as a dimension line ends on the thing it measures) or `dot`; an `arrow` is a line with a `head`), an
   `ellipse` or `rect` (a `box`), a `polygon`, or
-  `text` (its `at` point, `align`, `font_file`, `size`, `fill`, `stroke_color`), with `stroke` and `width`, `fill` and `fill_alpha`,
-  `alpha`, and its animation: `in` (`draw` along the path from its start or end, with the dash pattern fixed to the path so the dashes
+  `text` (its `at` point, `align`, `font_file`, `size`, `fill`, `stroke_color`), with `stroke` and `width`, `fill` and `fill_alpha` (a shape
+  names both `stroke` and `fill`, `null` for none), `alpha`, and its animation: `in` (`draw` along the path from its start or end, with the dash pattern fixed to the path so the dashes
   appear in place; `wipe` from an edge or the centre; `fade`; `grow`; `pop`; `type` for text), its `start_s`, `dur_s`, `ease` (linear,
-  in, out, inout); an optional `out` (fade or wipe); an optional `boil` (a few pixels of hand-drawn wobble renewed every few frames: the
+  in, out, inout); an optional `out` (fade, or a wipe that names its `from` as an `in` wipe does); an optional `boil` (a few pixels of hand-drawn wobble renewed every few frames: the
   "frame by frame" look). All coordinates are shares of the frame (x from the left, y from the top, as a label's), all sizes shares of
   its short side, all times seconds (an element's from its drawing's start). Nothing has a stock value: every colour, width, dash, speed
   and moment is the agent's, from the references' annotation pattern (§2) or, where they draw nothing, the agent's own inside the style

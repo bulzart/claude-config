@@ -23,7 +23,7 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 2b | More than one format (A5, S3, S4, X10) | `025_2b_more-than-one-format.md` | 4.5 |
 | 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 3.7 |
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 8.9 |
-| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 25.3 |
+| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 25.4 |
 | 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 30.5 |
 | 7 | The edit (S4) | `070_7_the-edit-s4.md` | 13.2 |
 | 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 9.7 |
