@@ -37,7 +37,8 @@ Follow, for this video only, by invoking these skills one after the other when y
 unavailable or the name is not found, Read C:/Users/Bulzart/.claude/skills/<name>/SKILL.md and follow it). Each skill lists
 under "Read now" the exact section files it needs: read those and nothing else. Never read the command file or a whole reference:
   1. awl-static-images (S3: with Images api or klein make, view and check every image of your plan and the video's YouTube thumbnail
-     and fix by QC fixes; with Images prompts view and check the user's images and list what fails)
+     and fix by QC fixes; with Images prompts view and check the user's images and list what fails; then, for each still that needs
+     one, its drawings: `T draw grid|words|render`, static §5 "Drawings")
   2. awl-static-edit   (S4: the timeline, the CapCut project made directly at the run's format: the final, no local render; the
      edit checks read the project back)
   3. awl-record        (X10: deliverables with the YouTube title and thumbnail, README row, result.json)
@@ -79,6 +80,11 @@ Hard rules:
   values: decided from the references' measured pattern (their edit profiles), never a stock amount, and only what
   <AWL>/data/capcut-catalogue.md shows drawn by this PC's CapCut (and marked free while the CapCut plan is free).
 - A map's place names (the plan's `labels`, static §5) reach CapCut only through `T capcut-labels`, never drawn by the image model.
+- Drawn annotations (the plan's `drawings`, static §5 "Drawings"; the user, 2026-11-11: you can draw and animate over a still): positions
+  read off `T draw grid`, starts timed with `T draw words`, rendered by `T draw render` and looked at in its previews; they reach CapCut
+  only through `T slideshow plan` and `T capcut-effects` (overlays on the `draw` tracks), never by hand with the CapCut MCP or capcut-cli
+  and never drawn by the image model; the image under a drawing holds still (`motion` none); a drawing explains the picture and is never
+  a sticker, emoji, icon, badge or decorative arrow (item 6); it is local work, made and corrected whatever the QC fixes say.
 - Effects from the user's effects folder (the plan's `effects`, when the run has a folder) reach CapCut only through `T capcut-effects`
   (never capcut-cli or the MCP by hand); one it refuses is planned again without it. The effects folder is read-only like the references.
 - One channel (<AWL>/reference/static/100_10_one-channel-per-run.md): your video keeps the run's niche, its style lock (every still and

@@ -6,7 +6,10 @@
   than `captions.min_cue_s` (0.2 s, a quick "he" or "of") takes the next word with it, never across a sentence end (`captions_over_words`
   counts them). Its `undecided` lists a move, an amount or a join the plan left out (nothing has a stock value: decide it in the plan, §5),
   `edges_show` an image whose move would show its edge. The plan's effects (§5) are on the timeline too (`effects`: each one's start, in
-  point, length and track).
+  point, length and track). So are the plan's **drawings** (§5 "Drawings"): each clip `T draw render --run RUN --video NN` made and
+  left current is an overlay entry on a track of its own (`draw1`, `draw2` …; `drawings` in the timeline file), and the answer lists
+  `drawings_not_rendered` (no clip, or one older than its spec), `drawings_on_moving_images`, `drawings_past_their_image`,
+  `drawings_in_caption_band` and `drawings_undecided`: facts to fix in the plan, never changed here.
 - **No local render** (the user, 2026-11-07: "no need to generate a ffmpeg video simulation version, just do it in capcut directly"):
   the timeline goes straight into the CapCut project; no check copies and no capcut-cli proxy preview are made, and the edit's checks
   read the project back (§8). (`T slideshow render` still exists for a local copy the user asks for: at the format's check size, each
@@ -27,7 +30,9 @@
   chroma key and screen blend; the overlay silent and its sound, when wanted, on an audio track of its own, since CapCut played an
   overlay's sound at volume 0; each sound effect on an audio track at its volume with its fades; it refuses an effect that needs
   something the check did not verify, listed in `refused`: plan that moment again without it, and never write an effect with the
-  CapCut MCP); these three and `T capcut-text-anim` take `--run` and refuse an option the catalogue shows CapCut not drawing, or a Pro
+  CapCut MCP); the **drawings** are in the same timeline list and go in by the same command, each clip on its track `draw1`, `draw2` …
+  as an overlay with its own transparency (the QuickTime Animation, PNG-in-MOV or ProRes 4444 file the catalogue lists as playing
+  here), covering the canvas, silent, above the stills and below the captions (§5 "Drawings"); these three and `T capcut-text-anim` take `--run` and refuse an option the catalogue shows CapCut not drawing, or a Pro
   one while the run's CapCut plan is free (`state.json → capcut_plan`); then the captions in the run's text look, the same in every video
   of the run (the plan's `captions`, §2, §5, §10):
   `capcut import-srt "<draft>" "<RUN>/60-outputs/video-NN/captions.srt" --font-size <size> --color <fill> --border-width <stroke_width>

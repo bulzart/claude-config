@@ -41,13 +41,22 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
 - **Real things** (§5): every logo the plan places is the official file on its surface, legible at the export size and outside the
   caption band, the patch under it not showing; no other brand's mark is left in the picture (`T image brand --cover`); a known person
   keeps their anchor's likeness in every still.
+- **Drawings** (§5 "Drawings"; the agent's own look at the previews of `T draw render`, at the grid's coordinates, before the edit): the
+  drawing sits on what it explains (each leader ends on the thing it names, each highlight covers that region and little else); it starts
+  when its word is said (`T draw words`) and each element arrives in the order the narration names things; it keeps off the captions'
+  band (`in_caption_band`) and does not hide the subject (`fill_share`); its words are letter for letter the plan's, legible at the
+  export size, in the video's language and a font with every glyph (`text_missing_glyphs`, `text_refused`); its colours and line look
+  are the references' pattern or the run's style lock (§10); it ends inside its image's span (`past_the_image`, `ends_after_drawing`);
+  the image under it does not move (`on_moving_image`); nothing of §11/§11b, no sticker, icon, emoji or decorative arrow, no
+  subtitle-like text. A drawing that fails is corrected in the plan and rendered again: local work, free, whatever the QC fixes say.
 - **The edit**, read back from the CapCut project (no local render, §7): `capcut_read_timeline`: each image at its line's start for its
   span, contiguous from 0 to the timeline's duration (no gap, no overlap, so no black frame), the narration and the bed on their tracks at
   their offsets and gains; the labels (§5): each on the track "labels" over its image's span, its words letter for letter, beside the
   place it names (the picture viewed with the label positions), no labelled image moving; `T capcut-motion`: every image keyed with
   the timeline's `moves` (the moves themselves are the plan's, from the
   references' measured pattern, and `edges_show` was empty); `T capcut-transitions`: every join the timeline's; each effect on its track
-  at its moment, the `refused` list of `capcut-effects` empty; the captions: as many as `captions.srt` and the same words as the
+  at its moment (each drawing on its track `draw1`, `draw2` … at its start, covering the canvas), the `refused` list of `capcut-effects`
+  empty; the captions: as many as `captions.srt` and the same words as the
   narration, the texts' look against the plan's `captions` (font, size, colours, outline, position, intro) as `capcut_read_timeline`
   gives them; the CapCut lint without `media-unlinked`. What only playing shows (a keyed overlay's leftover green, a transition's look)
   is named in the brief for the user's look in CapCut. The house text check (`capcut-text-style`) is not used in Static.

@@ -27,9 +27,13 @@ Only these section files for this phase, nothing else unless a step below says s
 0. **The judge's record first** (static §13, J5): read `RUN/40-briefs/video-NN-judge.md`: the moves, joins, labels and the bed's level
    decided and forecast for this video are what the project carries; a value the timeline gives that differs from the record is traced
    to its cause and named in the brief before the project is built (nothing lands by accident).
-1. **The timeline:** `T slideshow plan --run RUN --video NN` → `RUN/40-briefs/video-NN-timeline.json` and the captions on the video's
+1. **The timeline:** with drawings in the plan (static §5 "Drawings"), first `T draw render --run RUN --video NN` (every clip made and
+   current, its previews viewed: `T draw list --run RUN --video NN` shows which are not), then `T slideshow plan --run RUN --video NN` →
+   `RUN/40-briefs/video-NN-timeline.json` and the captions on the video's
    timeline (`RUN/60-outputs/video-NN/captions.srt`; a word that would flash for under `captions.min_cue_s` shares its cue with the next,
-   `captions_over_words`). Read `image_spans` (every cut on the frame grid), `moves`, `effects`, `undecided`, `edges_show`,
+   `captions_over_words`). Read `image_spans` (every cut on the frame grid), `moves`, `effects`, `drawings` (each clip as an overlay on
+   its track `draw1`, `draw2` …) with `drawings_not_rendered`, `drawings_on_moving_images`, `drawings_past_their_image`,
+   `drawings_in_caption_band` and `drawings_undecided`, `undecided`, `edges_show`,
    `shorter_than_0_5s` and `images_without_a_file`: a gap, an undecided move, join or effect setting, or an edge that shows is fixed in the
    image plan (static §5: every value is decided there from the spec's measured pattern, the CapCut catalogue and, for effects, the effects
    folder's facts; there is no stock value) or in the images, then plan again.
@@ -51,8 +55,10 @@ Only these section files for this phase, nothing else unless a step below says s
    - the moves: `T capcut-motion --draft "<draft>" --run RUN --video NN` (the timeline's values as KFTypeScaleX with uniform scale and
      KFTypePositionX/Y; never `capcut_add_keyframe` for a move: CapCut 9.7 ignores its UNIFORM_SCALE keys);
    - the joins: `T capcut-transitions --draft "<draft>" --run RUN --video NN` (the timeline's transition slugs; never `capcut_add_transition`);
-   - the effects, when the timeline has any: `T capcut-effects --draft "<draft>" --run RUN --video NN` (each overlay on its own video
-     track above the stills, each sound on an audio track, by the ways the CapCut effects check verified). Its `refused` must be empty: a
+   - the effects and the drawings, when the timeline has any (both are overlays of its `effects` list): `T capcut-effects --draft
+     "<draft>" --run RUN --video NN` (each overlay on its own video track above the stills, a drawing on `draw1`, `draw2` … as a clip
+     with its own transparency covering the canvas, each sound on an audio track, by the ways the CapCut effects check verified). Its
+     `refused` must be empty: a
      refused effect needs something this PC's CapCut was not shown to play; plan that moment without it (static §5), `T slideshow plan`
      again, and run this again on a fresh clone (never write an effect by hand with the MCP or capcut-cli);
    - **a video in another language** (`state.json → static.video_info[NN].language`, static §7 "Captions in another language"), before
@@ -79,11 +85,11 @@ Only these section files for this phase, nothing else unless a step below says s
    CapCut is open: blocker `capcut_running` (result.json).
 4. **Project checks** (capcut-assembly §5, static §8), on the project itself: `capcut_read_timeline`: every image at the timeline's start
    and span, contiguous from 0 to the timeline's `duration_s` with no gap or overlap; the narration at `narration_offset` and the bed at
-   0 at its gain on their tracks; each effect on its `fx`/`sfx` track at its start. `T capcut-motion`'s answer: every image keyed, its
+   0 at its gain on their tracks; each effect on its `fx`/`sfx` track and each drawing on its `draw` track at its start. `T capcut-motion`'s answer: every image keyed, its
    values the timeline's `moves`; `T capcut-transitions`': every join the timeline's. The captions: the project's caption count and words
    against `captions.srt` (the narration's words), every text's look against the timeline's `captions` (font, size, colours, outline,
    position, intro). The repair's lint with no `media-unlinked` and its link step's `media_without_entry` empty.
-5. The video's brief, block S4: the timeline's facts (`T slideshow plan`'s answer: images, spans, moves, joins, captions, effects), the
+5. The video's brief, block S4: the timeline's facts (`T slideshow plan`'s answer: images, spans, moves, joins, captions, effects, drawings), the
    project's name, path and export size (the final: the user exports it from CapCut at that size, 30 fps), what the checks read back,
    and anything left to set by hand in CapCut. For a video in another language also its language and unit, the font the captions and
    labels use and why (any `font_missing_glyphs` and the replacement), whether the word box was placed or the plain caption look
@@ -109,6 +115,9 @@ Then invoke Skill `awl-record`.
   join and effect is the plan's, decided from the references' measured pattern.
 - Never move, rename or change a file of the user's effects folder (it is read-only, like the references): `T capcut-effects` copies what
   it uses into the draft.
+- Never place a drawing by hand with the CapCut MCP or capcut-cli, never draw one with the image model, and never let one cover the
+  captions' band or sit on a moving image: drawings go through `T draw render`, `T slideshow plan` and `T capcut-effects` (static §5
+  "Drawings"); a drawing is never a sticker, emoji, icon, badge or decorative arrow (item 6).
 - Never move an image off its line to fill a gap, and never stretch the narration: fix the plan.
 
 ## Hand-off

@@ -51,7 +51,9 @@ Only these section files for this phase, nothing else unless a step below says s
   --transcript 10-media/<V>/transcript.json --cuts 10-media/<V>/cuts.json --voice` (the bed and the voice as numbers). The moves, joins
   and caption entrances come from `10-media/<V>/edit-profile.json` (`T edit-profile`, A1), never from the 2 fps sheets; view one caption
   entrance and one cut densely (`T frames … --range a-b --fps 30 --sheet`) to see what its numbers describe. The spec's motion, joins and
-  entrance are matched to `AWL/data/capcut-catalogue.md` (static §2, §9: only what CapCut drew on this PC). Every card has every field
+  entrance are matched to `AWL/data/capcut-catalogue.md` (static §2, §9: only what CapCut drew on this PC). Each card also records the
+  reference's **drawn annotations** (static §1; the user, 2026-11-11: lines, arrows, circles, highlights and words drawn on over a still,
+  each with its times, look and lead on the spoken word), read on the frames viewed densely, or "none". Every card has every field
   of static §1, the retention, emotion, language (the language the reference speaks included), engagement, attachment, social,
   content-style and approach fields included, so the set can be read as a whole (the references may be in one language or a mix: each
   is read in its own).
@@ -158,7 +160,9 @@ Write, following the protocol §5–§6:
   (the set's bands while speaking and overall, the pauses), seconds per still, retention, emotion over time, language, engagement,
   attachment, the social side, content style, the approaches seen (static §2: counted across the set and the niche's references), the
   niche candidates (fields, never a title or story form), the visual styles (each reference's, grouped, with a storyboard sheet
-  each), the caption pattern, motion and transitions, the voice profile, the bed brief, the devices, what is left behind; each value
+  each), the caption pattern, motion and transitions, the drawn-annotation pattern (static §2: how often, which kinds, their look and
+  speed as numbers, their lead on the spoken word; empty when no reference draws), the voice profile, the bed brief, the devices, what
+  is left behind; each value
   with the counts and numbers of the set it rests on, families read apart when the set holds different kinds; the style lock and the
   text look are written after A5 from the reference the user picks (static §10: the look only); no directions, ranking or craft sheet.
 - **With examples:** `20-analysis/house-approach.md` (protocol §9.3): the user's consistent approach,

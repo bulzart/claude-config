@@ -307,6 +307,28 @@ check("pronunciation: not checked" in _t11s["awl-wrapup"].replace("**", "").repl
       and "word_box_supported: false" in _t11s["awl-static-edit"],
       "the record and the wrap-up name each video's approach, language and model, the captions' fallback and the pronunciation nobody here "
       "has heard")
+# drawn and animated annotations (the user, 2026-11-11: "the agents editing the video should also to be able to draw, and animate too, like
+# combining flux klein image + drawing or animation along with other edit capabilities ... a drawing animation (those width, height...
+# lines are drawn and animated frame by frame)"): specified by the agent, rendered by the toolkit as transparent clips, placed by the
+# verified overlay path; never a sticker
+_t11d = {n: re.sub(r"\s+", " ", rd(LIB / "reference" / "static" / f)) for n, f in (
+    ("s1", "010_1_what-static-mines-from-the-refer.md"), ("s2", "020_2_the-static-card-and-the-spec-a3.md"),
+    ("s5", "050_5_images-a6s-plan-s3.md"), ("s7", "070_7_the-edit-s4.md"), ("s8", "080_8_static-qc-s2-s4.md"),
+    ("s13", "130_13_the-judge.md"))}
+_t11ds = {n: re.sub(r"\s+", " ", rd(SKD / n / "SKILL.md")) for n in ("awl-static-images", "awl-static-edit", "awl-record", "awl-analyze-study")}
+_t11dr = re.sub(r"\s+", " ", router)
+check("**Drawings**" in _t11d["s5"] and "T draw grid" in _t11d["s5"] and "T draw words" in _t11d["s5"] and "T draw render" in _t11d["s5"]
+      and '"motion": "none"' in _t11d["s5"] and "`undecided`" in _t11d["s5"] and "**Drawn annotations**" in _t11d["s1"]
+      and "**Drawn annotations**" in _t11d["s2"] and "`draw1`" in _t11d["s7"] and "drawings_on_moving_images" in _t11d["s7"]
+      and "**Drawings**" in _t11d["s8"] and "in_caption_band" in _t11d["s8"] and "drawings" in _t11d["s13"],
+      "the agents can draw and animate over a still: the spec and its rules in static §5, the references' annotation pattern in §1 and §2, the "
+      "overlay tracks and facts in §7, the QC and the judge (§8, §13)")
+check("**draw and animate**" in _t11dr and "not a sticker" in _t11dr and "T draw render" in _t11dr
+      and "5d. **Drawings**" in _t11ds["awl-static-images"] and "T draw render" in _t11ds["awl-static-edit"] and "`draw1`" in _t11ds["awl-static-edit"]
+      and "drawings" in _t11ds["awl-record"] and "drawn annotations" in _t11ds["awl-analyze-study"]
+      and "T draw" in re.sub(r"\s+", " ", rd(PA / "025_2s_spawning-static.md")),
+      "the router, the production agent's contract and the skills name the drawings: the router says a drawn annotation is not a sticker (item 6), "
+      "S3 draws and renders, S4 places them on the draw tracks, the record and the study carry them")
 # the whole set and the pace (the user, 2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy";
 # "we have to be very sure that the workflow really achieves a 178-191 words a minute"; 2026-11-09: "we should only try to speed it up by
 # instructing the elevenlabs tts model, or use different parameters")

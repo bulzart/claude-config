@@ -1,6 +1,6 @@
 ---
 name: awl-static-images
-description: /analyze-with-loupe Static step S3: a video's stills and YouTube thumbnail, made by OpenAI or FLUX 3 Klein and checked, or the user's taken in. Internal to that command.
+description: /analyze-with-loupe Static step S3: a video's stills and YouTube thumbnail, made by OpenAI or FLUX 3 Klein and checked, or the user's taken in, and its drawn annotations. Internal to that command.
 user-invocable: false
 ---
 
@@ -90,6 +90,19 @@ stack a tall frame into panels, above all with no reference image).
    The labels' text is spelled as the narration says it, in the video's language; the label font holds a glyph for every character
    (`T static language --run RUN --language <code> --font <font_file> --text <a file of the labels' texts>`: `font_missing_glyphs` empty,
    else another font of `T capcut-font --list`, the reason in the plan, static §5).
+5d. **Drawings** (static §5 "Drawings"; the user, 2026-11-11: you can draw and animate over a still): where the narration elaborates
+   something a drawn layer shows better than the still does (a measurement, a mechanism, a comparison, a count, a route: the references'
+   annotation pattern, static §2, or your own reason where they draw nothing), once the still is made and viewed:
+   `T draw grid --run RUN --video NN --image K` (view the gridded copy and read each point as shares of the frame; `--crop x0,y0,x1,y1
+   --step S` magnifies a part with a finer grid to trace a small region),
+   `T draw words --run RUN --video NN --image K` (when each word is spoken), then write `"drawings": [...]` into the image's plan entry
+   (the spec of static §5: elements with their strokes, dashes, fills and text, each `in` animation with its seconds and ease, an
+   optional `out` and `boil`, and a `why`) and set that image's `"motion": "none"`; `T draw render --run RUN --video NN` (`--drawing
+   D1` for one) renders the clips and three previews: view each `D*-sheet.png`, read the facts (`undecided`, `outside_frame`,
+   `in_caption_band`, `fill_share`, `text_missing_glyphs`, `text_refused`, `ends_after_drawing`, `past_the_image`, `on_moving_image`,
+   `overlaps`) and correct the spec until the drawing sits on what it explains and starts on its word. Words in a script that needs
+   shaping go in as labels (5c) instead. Local and free: made and corrected whatever the QC fixes say, and named in the brief (ids,
+   images, why). An extra format's drawings (`by_format.<tag>.drawings`) are read off that format's own grid (`--format <tag>`).
 6. **The YouTube thumbnail** (static §12), after the stills: its prompt file `RUN/40-briefs/video-NN-thumb-prompt.txt` (the plan's
    `thumbnail.prompt`, the style lock, its exact words when it has any, in the video's language: in a script the model draws badly the
    thumbnail goes without the words and the record names them, static §12), then `T image generate --run RUN --video NN --thumbnail --size

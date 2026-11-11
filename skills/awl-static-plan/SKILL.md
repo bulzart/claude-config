@@ -102,7 +102,9 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    video's `title` (in the video's language, in the recorded title form, with `title_gloss`) and `thumbnail` (static §12: the
    references' title and thumbnail patterns, the thumbnails' size, the run's style lock; its words in the video's language), the labels
    in the video's language (static §5 "Labels": CapCut text whose font covers every character: `T static language --language L --font
-   <file> --text <file>`), each
+   <file> --text <file>`), the places where a drawn annotation will elaborate the narration (static §5 "Drawings": the drawings
+   themselves, with their positions, are written at S3 by the video's own agent once the stills exist, so an image it will draw on is
+   kept still here, `"motion": "none"`, with the reason in the judge's record), each
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times
    this still's seconds, the references' order of moves; a join and the caption entrance from `AWL/data/capcut-catalogue.md`, only what it
    shows drawn, and only options marked free while the run's CapCut plan is free, `state.json → capcut_plan`), the `captions` block: the spec's text look (static §2: font file, size, colours, outline, box, case, highlight, the

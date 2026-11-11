@@ -62,6 +62,14 @@ and their amounts, the captions a minute, the bed. For every reference, collect 
   flash; the cut signature's frames that change and its brightness), light leaks, grain, a vignette, glitches, read densely where a
   signature shows one (`T frames … --range a-b --fps 30 --sheet`); stickers, emojis and badges (a like or subscribe button) are noted and
   never re-made (contract item 6).
+- **Drawn annotations** (the user, 2026-11-11: agents that edit a video can draw and animate; his example is a pen sketch of an arm
+  with three dashed white curved lines drawn on, frame by frame, from its muscle regions out to the hand-lettered words "Width",
+  "Height" and "Depth", and the regions filled red, blue and green): lines, arrows, circles, boxes, coloured highlights and words
+  drawn over a still to explain what the voice says, as the frames show them, each with its times: what it points at and says, how
+  it is drawn (solid or dashed, straight or curved, its colours, its width against the frame, the lettering of its words), how it
+  appears and leaves (drawn on along its path and how fast, wiped, faded, popped, typed), whether it wobbles frame by frame, and how
+  long after the spoken word it starts; counted per reference and per minute, read on frames viewed densely (`T frames … --range a-b
+  --fps 30 --sheet`). They are not stickers (item 6): a drawing explains the picture, an icon or a badge decorates it.
 - **The text on screen** (the captions and any other text): on screen or not; words at once; where it sits (`ocr.json` rows); its look,
   read on the frames: the font (the family as seen, the weight), the size against the frame, the fill, the outline, the shadow, a box,
   upper case or not, the highlighted words and their colour, how it appears (the edit profile's caption entrances: each word's height,

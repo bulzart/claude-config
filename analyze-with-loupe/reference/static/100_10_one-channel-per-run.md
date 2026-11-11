@@ -53,8 +53,10 @@ the whole set, pushing off what the niche references' story was about (a surviva
 how-to in the survival references' craft: the hook, the devices, the retention, the pace). The agents keep **room of their own**: an
 approach no reference shows is allowed when it stays inside the niche, keeps the references' craft and passes the copy test
 (`creative-direction.md` §5.0), and the agent writes why. **Variety across the run**: a video's approach differs from the one before
-it in at least two of story form, point of view, time frame and title form, unless the data says one form is the niche's strength and
-the reason is written; `T static subjects --run RUN` lists the approaches made (a fact: the agent decides), and the pool of A6s (§3)
+it in at least two of story form, time frame and title form, unless the data says one form is the niche's strength and the reason is
+written. **The point of view is never varied for variety's sake** (the user, 2026-11-11: "don't push point of view changes ... that has
+to be decided based on the references, the other changes suffice"): each video's point of view follows what the references do (their
+second-person "you" or third-person telling, and where each is used, §1, §2), decided per video from that data; `T static subjects --run RUN` lists the approaches made (a fact: the agent decides), and the pool of A6s (§3)
 shows each candidate with its approach beside the last video's. **Rewording a niche** (never to another field): `T static lock --run
 RUN --reword "<wording>" --why "<reason>"`, allowed after videos exist and recorded in `static.niche.reworded`. (The run of
 2026-11-06 locked its niche as "Survival scenarios: 'how to survive when X' and 'N days of X' stories told to 'you', with real survival

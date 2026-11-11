@@ -135,8 +135,11 @@ predicted result; and afterwards the measured result against it):
    user's is closed), the bed is tried once in ACE-Step's int8 (`--quantization int8_weight_only`, §6: only after that stop), once
    more before the edit when that is stopped too, and still stopped the video goes on without a bed, named (never a
    blocker); after it: `T music measure` against the bed's plan.
-5. **J5, before the edit** (S4; the edit agent's first step reads `video-NN-judge.md`): the labels, moves and joins the plan carries
-   against the spec's numbers (the push-ins as many as the family's moving shots allow, the dips at the chapters), decided before the
+5. **J5, before the edit** (S4; the edit agent's first step reads `video-NN-judge.md`): the labels, drawings, moves and joins the plan
+   carries against the spec's numbers (the push-ins as many as the family's moving shots allow, the dips at the chapters; the drawings
+   as many and as long as the references' annotation pattern shows, §2, or, where they draw nothing, only where the narration
+   elaborates something a drawn layer shows better, each with its reason), read with `T draw list` and the `drawings_*` facts of `T
+   slideshow plan` (a clip not rendered, a drawing on a moving image, past its image or in the caption band), decided before the
    project is built.
 
 **Judge prompt** (the main session fills the `<…>`):

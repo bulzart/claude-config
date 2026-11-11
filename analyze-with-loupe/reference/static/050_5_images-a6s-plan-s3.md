@@ -18,7 +18,7 @@ and short pauses, never across a long pause (0.8 s), a short last group joining 
 in `<…>` is decided from the spec (no stock value exists: `T slideshow plan` lists what is undecided). The size and quality are the run's
 format (`state.json → static.format`, picked at A5, §2); a plan's own `"size"` changes it for that video only. `captions` is the spec's
 text look (§2) with this video's highlighted words: the CapCut project takes it. With more than one format (§2b) the plan is the primary's, and an extra format's own values sit in `"by_format": {"<tag>": {…}}`: the plan's `captions`
-(`size`, `y_rel`) and `labels_style`, an image's `labels`, `scale`, `x`, `y` (and, in prompts mode only, a `prompt` the swaps do not fit).
+(`size`, `y_rel`) and `labels_style`, an image's `labels`, `drawings`, `scale`, `x`, `y` (and, in prompts mode only, a `prompt` the swaps do not fit).
 
 - **Moves and joins** (the spec's measured pattern, §2): each image's `motion` with its `amount` (a zoom's change: 0.2 zooms from 1.0 to
   1.2 or back; a pan travels the margin of a scale of 1 + amount), or its own `scale`, `x` and `y` pairs at its start and end (scale 1 =
@@ -43,8 +43,9 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   a sound's `starts` or `loudest at` lands on its moment (a click file with half a second of silence before it has `starts` 0.53).
   Effects that overlap go on separate tracks (`fx1`, `fx2`, `sfx1` …); a file used twice is fine. `T slideshow plan` lists every effect
   setting the plan left out in `undecided`, and nothing has a stock value. Never a sticker, emoji, icon or badge as an overlay (a like or
-  subscribe button, an arrow), even when the folder holds one (contract item 6): overlays are transitions and treatments of the whole
-  picture (a wipe, a flash, a light leak, grain, a glow).
+  subscribe button, a decorative arrow), even when the folder holds one (contract item 6): the effects folder's overlays are transitions
+  and treatments of the whole picture (a wipe, a flash, a light leak, grain, a glow). A drawn annotation that explains the picture
+  (Drawings, below) is a different thing: it is made by the toolkit from the agent's spec, not taken from the folder.
 
 - **Count and cuts**: an image starts on a narration line (`from_line`); the spec's seconds per still decide how many lines one image
   covers. A reveal, a new place or a new person starts a new image. A long video holds many (12 minutes at 5 s a still: about 144); its
@@ -83,6 +84,39 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   label stays where it is put and does not follow a move, so an image with labels has the motion `none` (`T slideshow plan` lists any
   that moves in `labels_on_moving_images`). A label on a pin that sits in the wrong place makes the error plain: the pins are checked
   against the places first (§8), and a wrong pin is a redraw reason by QC fixes.
+- **Drawings** (the user, 2026-11-11: "the agents editing the video should also to be able to draw, and animate too, like combining flux
+  klein image + drawing or animation along with other edit capabilities ... a static image but also a drawing animation (those width,
+  height... lines are drawn and animated frame by frame) elaborating the results"): an animated vector layer over one still for a stretch
+  of its span, drawn by the toolkit from the agent's spec and placed in CapCut as an overlay (§7). Once the still is made and viewed, its
+  plan entry gets `"drawings": [{"id": "D1", "start_s": <from the image's start>, "dur_s": <the clip's length>, "why": "<the narration's
+  point it elaborates, and the references' annotation pattern or the agent's own reason>", "elements": […]}]` (an extra format's own in
+  `by_format.<tag>.drawings`, positions read off that format's still). An element is a `line` (a path, straight or `smooth` through its
+  points, solid or `dash`ed, `cap` round or butt, with a `head` and/or `tail` mark at its last and first point: `open`, `filled`, `bar` (a
+  short perpendicular tick, as a dimension line ends on the thing it measures) or `dot`; an `arrow` is a line with a `head`), an
+  `ellipse` or `rect` (a `box`), a `polygon`, or
+  `text` (its `at` point, `align`, `font_file`, `size`, `fill`, `stroke_color`), with `stroke` and `width`, `fill` and `fill_alpha`,
+  `alpha`, and its animation: `in` (`draw` along the path from its start or end, with the dash pattern fixed to the path so the dashes
+  appear in place; `wipe` from an edge or the centre; `fade`; `grow`; `pop`; `type` for text), its `start_s`, `dur_s`, `ease` (linear,
+  in, out, inout); an optional `out` (fade or wipe); an optional `boil` (a few pixels of hand-drawn wobble renewed every few frames: the
+  "frame by frame" look). All coordinates are shares of the frame (x from the left, y from the top, as a label's), all sizes shares of
+  its short side, all times seconds (an element's from its drawing's start). Nothing has a stock value: every colour, width, dash, speed
+  and moment is the agent's, from the references' annotation pattern (§2) or, where they draw nothing, the agent's own inside the style
+  lock (§10); a missing one is listed in `undecided` and the drawing is not rendered.
+  How it is made: view the still, then `T draw grid --run RUN --video NN --image K` gives a copy with a labelled grid every 10 %, to read
+  each point as shares (`--crop x0,y0,x1,y1 --step S` magnifies a part with a finer grid, its labels still the frame's shares, to trace a
+  small region such as a muscle for a filled polygon); `T draw words --run RUN --video NN --image K` gives every spoken word's time from the image's start, so a line
+  starts when its word is said (the references' lead); write the drawing; `T draw render --run RUN --video NN` renders each clip and
+  three previews over the still (30 %, 65 % and 100 % of the animation) with their sheet, and lists facts: `undecided`, `outside_frame`,
+  `in_caption_band`, `fill_share`, `text_missing_glyphs`, `text_refused`, `ends_after_drawing`, `past_the_image`, `on_moving_image`,
+  `overlaps`; view the sheet and correct the spec until the drawing sits on what it explains. Rules: the image holds still while it is
+  drawn on (`"motion": "none"`: a drawing does not follow a move, as a label does not; `T slideshow plan` lists any in
+  `drawings_on_moving_images`); a drawing keeps off the captions' band and does not hide the thing it explains (a fill covers little,
+  its `fill_share` is a fact to weigh); words in a drawing are the video's language, spelled as the narration says them, in a font that
+  holds every glyph, and a script that needs shaping (right to left, Indic, Thai, Lao, Khmer, Burmese: `text_refused`) goes in as CapCut
+  label text instead (Labels above); nothing religious or superstitious (§11), nothing indecent, gory or distressing (§11b), no
+  subtitle-like text, no sticker, emoji, icon, badge or decorative arrow (item 6): a drawing explains the picture, it does not decorate
+  it. A drawing is local work (no model, no credits): the agent makes and corrects it whatever the run's QC fixes say, and notes it in
+  the brief.
 - **No subtitle-like text, ever** (the user, 2026-11-07: "try to push no captions or subtitles style text in any image generation at
   all, it can have text over objects, books, logos, brands, inside screens, or whatever, just not subtitles style text whatsoever"):
   a prompt never holds the words caption, subtitle, lower third, title bar or text overlay, not even to keep a band clear: the model

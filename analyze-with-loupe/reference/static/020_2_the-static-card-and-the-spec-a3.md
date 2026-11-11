@@ -69,6 +69,14 @@ read in; a spec written before 2026-11-09 gets this block before the run's next 
   check verified (`AWL/data/capcut-catalogue.md`, Effects). An effect the references never show is used only where it plays the part of a
   device they do show (a green-screen wipe for their quick slide at a turn, a whoosh where their slide carries one); without a folder,
   CapCut's own transitions and no sound effects. Name the numbers each choice rests on.
+- **Drawn annotations** (§1; the user, 2026-11-11): the references' drawn layers as a pattern: how often (per minute, and in which
+  kinds of moment: a measurement, a mechanism, a comparison, a count, a route), the kinds they use (dashed leaders, arrows, circles,
+  highlights, words), their looks as numbers read off the frames (the line width and the dash against the frame's short side, the
+  colours, the lettering), how they appear and how fast (the draw-on seconds, the wipe or pop), whether they wobble, their hold, and
+  their lead on the spoken word in seconds. The niche's references first, the whole set's beside them (§1 "The run's niche within the
+  set"). Where the references draw nothing, the pattern is empty and the video's drawings are the agent's own: allowed wherever the
+  narration elaborates something a drawn layer shows better than the still does, inside the run's style lock (§10), each with its
+  written reason (§5 "Drawings"); never a sticker, icon or badge.
 - **Voice profile**: the numbers of §1 and the delivery in words; the five sample voices are written from it (§6).
 - **Bed brief** (§6; a bed goes under every video, also when the references are voice only): the content type and its register, the
   narration's pace, pitch and delivery, the arc the beats make, the pictures' rhythm, and the references' own sound as the audio profile's
