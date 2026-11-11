@@ -338,7 +338,7 @@ without the move margin; `T static format` stores it in `state.json → static.f
 zoom. **Strong lines**: a line marked `strong` carries its own delivery as audio tags (where the run's model reads them), only at the references' peaks; its passage ends after it,
 and the sidecar measures every passage's timbre against the run's voice (`reference/static.md` §4, §6). **The text look** is the references' (the user: "everything is data
 driven (from the references) and nothing is predefined"): font, size, colours, outline, box, case, highlight and animation come from the spec;
-`capcut import-srt` takes them as flags, `T capcut-font` sets the font family (`--list` gives the fonts on the PC, CapCut's own first) and writes the
+`capcut import-srt` takes them as flags, `T capcut-font` sets the font family (`--list` gives the fonts on the PC, CapCut's own first; `T fetch-font` downloads an extra open-licence font into `fonts/` when none suits the video, the user, 2026-11-11) and writes the
 outline, box and shadow where CapCut 9.x draws them (each style's strokes, the check_flag bits: import-srt sets them on the material only), and
 `T capcut-repair --keep-text` never applies the house style. In every mode `T capcut-repair` also writes each
 clip's `local_material_id` after `register` (CapCut 9.3 and later open a local clip by it; without it the clip shows as missing). No

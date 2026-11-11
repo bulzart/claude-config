@@ -15,14 +15,14 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (4.7 KB) (who works the run; skip when already read)
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (3.7 KB)
-- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (8.8 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (21.0 KB)
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (29.8 KB)
-- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (10.7 KB)
+- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (8.9 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (25.3 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (30.5 KB)
+- static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (11.0 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (6.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (7.4 KB)
-- static §13: `AWL/reference/static/130_13_the-judge.md` (17.6 KB)
+- static §13: `AWL/reference/static/130_13_the-judge.md` (18.1 KB)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
@@ -107,7 +107,7 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    kept still here, `"motion": "none"`, with the reason in the judge's record), each
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times
    this still's seconds, the references' order of moves; a join and the caption entrance from `AWL/data/capcut-catalogue.md`, only what it
-   shows drawn, and only options marked free while the run's CapCut plan is free, `state.json → capcut_plan`), the `captions` block: the spec's text look (static §2: font file, size, colours, outline, box, case, highlight, the
+   shows drawn, and only options marked free while the run's CapCut plan is free, `state.json → capcut_plan`), the `captions` block: the spec's text look (static §2: font file (an extra open-licence font may be downloaded when no listed font is a good match: `T fetch-font`, static §7 "Extra fonts"), size, colours, outline, box, case, highlight, the
    entrance as `animation` and `animation_s`) with this video's highlighted words; with an effects folder, the `effects` the spec's effects
    pattern calls for (static §2, §5 "Effects": each overlay or sound from `00-inventory/effects.md`, its moment and anchor second, how it
    is blended, its fit and volume, and why; only the ways the catalogue's Effects part shows playing). Nothing is left to a stock value:

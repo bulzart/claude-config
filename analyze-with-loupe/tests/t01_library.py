@@ -329,6 +329,13 @@ check("**draw and animate**" in _t11dr and "not a sticker" in _t11dr and "T draw
       and "T draw" in re.sub(r"\s+", " ", rd(PA / "025_2s_spawning-static.md")),
       "the router, the production agent's contract and the skills name the drawings: the router says a drawn annotation is not a sticker (item 6), "
       "S3 draws and renders, S4 places them on the draw tracks, the record and the study carry them")
+# extra fonts (the user, 2026-11-11: "add a permission for the agents to download extra fonts on capcut if the available ones do not seem a
+# good match for the video"): open licences only, copied into the library with a row, by one command
+check("**Extra fonts**" in _t11d["s7"] and "T fetch-font" in _t11d["s7"] and "Apache" in _t11d["s7"] and "fonts/README.md" in _t11d["s7"]
+      and "T fetch-font" in re.sub(r"\s+", " ", rd(PA / "025_2s_spawning-static.md")) and "T fetch-font" in _t11ds["awl-static-edit"]
+      and "download an extra font" in _t11dr and "T fetch-font" in re.sub(r"\s+", " ", rd(LIB / "fonts" / "README.md")),
+      "the agents may download an extra font when no listed one suits the video: static §7 names the permission, the open licences and the "
+      "command, the agent contract, the edit skill, the router and the font library's README carry it")
 # the whole set and the pace (the user, 2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy";
 # "we have to be very sure that the workflow really achieves a 178-191 words a minute"; 2026-11-09: "we should only try to speed it up by
 # instructing the elevenlabs tts model, or use different parameters")

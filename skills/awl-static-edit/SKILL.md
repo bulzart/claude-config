@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (10.6 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (8.6 KB)
+- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (13.2 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (9.7 KB)
 - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
 - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.2 KB)
@@ -61,6 +61,10 @@ Only these section files for this phase, nothing else unless a step below says s
      `refused` must be empty: a
      refused effect needs something this PC's CapCut was not shown to play; plan that moment without it (static §5), `T slideshow plan`
      again, and run this again on a fresh clone (never write an effect by hand with the MCP or capcut-cli);
+   - **a font that is not a good match** (the captions', the labels' or a drawing's: none of `T capcut-font --list` suits the video's
+     tone, the references' lettering or its script): download another, open licence only: `T fetch-font --family "<Family>" [--weight
+     W] --text <the texts' file> --why "<reason>"` (static §7 "Extra fonts": the user, 2026-11-11), view a specimen of it first, use it
+     as any library font and name it with the reason in the brief;
    - **a video in another language** (`state.json → static.video_info[NN].language`, static §7 "Captions in another language"), before
      the captions and the labels: `T static language --run RUN --language <code> --font <the look's font_file> --text
      RUN/60-outputs/video-NN/captions.srt` (and again with the labels' texts): `font_missing_glyphs` must be empty, else another file of

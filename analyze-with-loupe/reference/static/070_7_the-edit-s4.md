@@ -61,6 +61,19 @@
   whose file is gone shows in CapCut's default font. So the captions' and labels' `font_file` is a copy in the library's `fonts/`
   folder: `T capcut-font --list` lists it first and gives every font's `kept_by`; a font from CapCut's cache under an open licence
   (SIL Open Font License) is copied there first with its row in `fonts/README.md`, one whose licence is not known is not used.
+- **Extra fonts** (the user, 2026-11-11: "add a permission for the agents to download extra fonts on capcut if the available ones do
+  not seem a good match for the video"): when no font of `T capcut-font --list` is a good match for the video, the agent may
+  download another, whenever it needs one (the plan's text look at A6s, a drawing's lettering at S3, a script the listed fonts lack at
+  S4). What it may fetch is a font file under an open licence, the SIL Open Font License 1.1 or the Apache License 2.0 (the library's
+  rule, `fonts/README.md`); one whose licence is not confirmed is not used. CapCut's own cloud fonts can be downloaded only by CapCut's
+  app, which no tool here drives, so the files come from the open font source: `T fetch-font --family "<Family>" [--weight 700]
+  [--subset latin] [--text <the video's texts>] --why "<which video and why the listed fonts do not fit>"` reads the family's
+  licence, subsets and weights from Fontsource, takes the subset whose file holds every character of `--text`, refuses any other
+  licence, never overwrites a file, copies the font into the library's `fonts/` folder with its row in `fonts/README.md` (file,
+  family, licence, source, subset, the run) and answers with its full path and `font_missing_glyphs`; a font from another open
+  source is added with `--url … --licence … --licence-source …`. The font is then used as any library font (`T capcut-font
+  --font-file <it>`) and named in the brief with the reason; the choice of the family is the agent's: it views a specimen against the
+  references' lettering and the video's tone before it takes one.
 - **Captions in another language** (the user, 2026-11-11: the video's language, §6; the captions are the narration's own words, never
   the glosses): the SRT is made from the heard words of the narration in the video's language. A language written with spaces is
   grouped by `captions.words` as before; one written without them (Japanese, Chinese, Thai, Lao, Khmer, Burmese; `T static language

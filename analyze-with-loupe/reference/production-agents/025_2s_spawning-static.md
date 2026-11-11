@@ -80,6 +80,10 @@ Hard rules:
   values: decided from the references' measured pattern (their edit profiles), never a stock amount, and only what
   <AWL>/data/capcut-catalogue.md shows drawn by this PC's CapCut (and marked free while the CapCut plan is free).
 - A map's place names (the plan's `labels`, static §5) reach CapCut only through `T capcut-labels`, never drawn by the image model.
+- Fonts: you may download an extra font when no font of `T capcut-font --list` is a good match for the video (the user, 2026-11-11):
+  `T fetch-font --family "<Family>" [--weight W] [--subset S] --text <your texts' file> --why "<the reason>"`, open licences only (SIL
+  OFL 1.1 or Apache 2.0), copied into the library's `fonts/` with its row (static §7 "Extra fonts"); view a specimen of it against the
+  references' lettering first and name the font and the reason in your brief.
 - Drawn annotations (the plan's `drawings`, static §5 "Drawings"; the user, 2026-11-11: you can draw and animate over a still): positions
   read off `T draw grid`, starts timed with `T draw words`, rendered by `T draw render` and looked at in its previews; they reach CapCut
   only through `T slideshow plan` and `T capcut-effects` (overlays on the `draw` tracks), never by hand with the CapCut MCP or capcut-cli

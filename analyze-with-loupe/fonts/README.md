@@ -6,8 +6,7 @@ templates sit in its cache (`%LOCALAPPDATA%\CapCut\User Data\Cache\AITextTemplat
 whose file is gone shows in CapCut's default font. So a Static plan points its captions and labels at a copy in this folder
 (`T capcut-font --list` lists it first, with `kept_by` for every font; reference/static §7).
 
-Every font here is under the SIL Open Font License 1.1 or the Apache License 2.0, which allow copying and use in videos. Another open
-font is added the same way, with its row.
+Every font here is under the SIL Open Font License 1.1 or the Apache License 2.0, which allow copying and use in videos. Another open font is added with T fetch-font (the agents may fetch one when no listed font suits a video: the user, 2026-11-11, reference/static §7 "Extra fonts"), which writes its row under a dated section; a font whose licence is not open is not added.
 
 ## Copied from CapCut's template cache (2026-11-07)
 

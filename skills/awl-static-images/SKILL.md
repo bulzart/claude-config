@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (21.0 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (8.6 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (25.3 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (9.7 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (6.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (7.4 KB)
@@ -100,7 +100,8 @@ stack a tall frame into panels, above all with no reference image).
    optional `out` and `boil`, and a `why`) and set that image's `"motion": "none"`; `T draw render --run RUN --video NN` (`--drawing
    D1` for one) renders the clips and three previews: view each `D*-sheet.png`, read the facts (`undecided`, `outside_frame`,
    `in_caption_band`, `fill_share`, `text_missing_glyphs`, `text_refused`, `ends_after_drawing`, `past_the_image`, `on_moving_image`,
-   `overlaps`) and correct the spec until the drawing sits on what it explains and starts on its word. Words in a script that needs
+   `overlaps`) and correct the spec until the drawing sits on what it explains and starts on its word. Its lettering font is a file
+   of `T capcut-font --list`, or an extra open-licence font when none suits (`T fetch-font`, static §7 "Extra fonts"). Words in a script that needs
    shaping go in as labels (5c) instead. Local and free: made and corrected whatever the QC fixes say, and named in the brief (ids,
    images, why). An extra format's drawings (`by_format.<tag>.drawings`) are read off that format's own grid (`--format <tag>`).
 6. **The YouTube thumbnail** (static §12), after the stills: its prompt file `RUN/40-briefs/video-NN-thumb-prompt.txt` (the plan's

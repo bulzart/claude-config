@@ -41,9 +41,9 @@ Only these section files for this phase, nothing else unless a step below says s
   brand-guardrails §3 (the product and video-physics sections are not read):*
   - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (4.7 KB) (who works the run: read at the start, again only
     after a compaction)
-  - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (11.6 KB)
-  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (12.2 KB)
-  - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (10.7 KB) (the niche, the visual style and the narrator, A5)
+  - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (12.7 KB)
+  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (13.3 KB)
+  - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (11.0 KB) (the niche, the visual style and the narrator, A5)
 
 ### A3. Video analysis (as continuous sequences)
 - **Static:** each card is the Static card (static §1–§2) in place of the product and physics fields: read `video.md`, `timeline.md`

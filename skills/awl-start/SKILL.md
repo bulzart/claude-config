@@ -22,7 +22,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *Static, when `T static check` reports a part the run needs as not ready:*
   - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (11.9 KB)
 - *Static, when the narration model the user picks is not set up (`set_up: false`):*
-  - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (29.8 KB) (its bullet "The models": the set-up procedure)
+  - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (30.5 KB) (its bullet "The models": the set-up procedure)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
   - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)

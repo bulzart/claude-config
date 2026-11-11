@@ -47,7 +47,8 @@ read in; a spec written before 2026-11-09 gets this block before the run's next 
 - **Style lock** (written once the user has picked, A5): one sentence every image prompt of the run carries (the medium, the light, the
   palette, the grain, the era), from the reference the user picked (`state.json → static.style_ref`); a set of one reference: that one.
 - **Text look** (the user, 2026-11-05: "the agents are free to chose any font preset, size, color and family or whatever they like while editing the video and are not constrained like we do with recreate"; "everything is data driven (from the references) and nothing is predefined"; never the house text style of the video modes): for the captions and any other text the
-  references show, the font (the family seen, or the closest from `T capcut-font --list`, CapCut's own fonts first), the weight, the
+  references show, the font (the family seen, or the closest from `T capcut-font --list`, CapCut's own fonts first; when none of the
+  listed fonts is a good match for the video, an extra open-licence font may be downloaded: `T fetch-font`, §7 "Extra fonts"), the weight, the
   size in CapCut's units for the export canvas (from the text's height on the frames), the fill, the outline (colour, width), the
   shadow, the box, the case, the words at once, the lines, the position (y_rel, alignment), the highlight (colour, size, which words),
   the entrance (from the edit profile's caption entrances, below). The run's text look is the style reference's when it shows captions
