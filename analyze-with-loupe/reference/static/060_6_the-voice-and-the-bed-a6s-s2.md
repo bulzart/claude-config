@@ -145,7 +145,9 @@ itself) and what is carried over is their craft (§4); the video is made in the 
   `T static units --run RUN --video NN` gives the ratio of the script's units to its glosses' English words and the references' English
   points converted by it (§4, §13). The speech-to-text reading of the narration (the heard words, the pace, the cues, the timed words)
   is made with the language's own Whisper code (`T static language` gives it; a language Whisper does not list is read with its
-  automatic detection, said in the answer). A reference written without spaces counts characters, so the set's words-based medians leave
+  automatic detection, said in the answer) and with the model of the config's `whisper_model`, `medium` for every speech step (the
+  user, 2026-11-11: "use medium for everything"; the multilingual 769M-parameter model, about 3 times slower than `small`; the answer's
+  `model_fallback` says when it could not be loaded and another model read instead). A reference written without spaces counts characters, so the set's words-based medians leave
   it out (`T static profile` lists it with the reason).
 - **What stays English**: the glosses, the judge's records, the briefs, the forecast and every instruction. **What is in the video's
   language**: the narration, the title, the thumbnail's words, the captions, the labels (§5, §7, §12).

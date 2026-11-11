@@ -206,9 +206,9 @@ Only these section files for this phase, nothing else unless a step below says s
 5b. **Audio.** Ask once, with AskUserQuestion (header "Audio ingest"), in the same message batch as the other start questions,
    whether the videos' audio is processed as text for this run (contract item 24). Both modes ask it (not Static: its audio is `whisper`, item 36). Never pick for the user and
    never mark one option as recommended; the two options, with these descriptions:
-   - **Whisper speech-to-text**: "Every video's audio is transcribed locally (faster-whisper `small`, int8 on the CPU): about real
-     time per video plus about 8 s to load the model once per batch (measured 2026-10-20 on this machine: a 15 s clip in 10 s, a 9 s
-     clip in 18 s including the load). The transcript feeds the cards (what is said, the spoken hook, the address), the sync anchors
+   - **Whisper speech-to-text**: "Every video's audio is transcribed locally (faster-whisper `medium`, the config's `whisper_model`,
+     int8 on the CPU): about 0.7 s of work per second of audio plus about 5 s to load the model once per batch (measured 2026-11-11 on
+     this machine: an 11.8 s clip in 13 s including the load; the smaller `small` model took 4.4 s but wrote one word wrong). The transcript feeds the cards (what is said, the spoken hook, the address), the sync anchors
      of spoken lines, the caption timing of the text plan and the speech share of the sound profile."
    - **Frames only**: "No speech-to-text runs and no transcript is written. Every speech field of the cards, plans and briefs reads
      `audio not ingested` (what was said is unknown, not absent); the hook, the address and the sync anchors come from the frames,

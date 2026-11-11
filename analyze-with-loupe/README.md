@@ -192,8 +192,8 @@ changed for 20 minutes while its lane holds a submitted job is continued by its 
 reports one edited after its ledger entry (29); a planner fork writes only its own video's files and a status note (30).
 
 ## Audio ingest (contract item 24)
-At the start the user chooses, once per run, whether the videos' audio is processed as text: **Whisper speech-to-text** (faster-whisper `small`, int8 on the CPU, about real time per
-video plus about 8 s of model load; the transcript is written once per video as `10-media/<V>/transcript.json` and `.txt` and feeds the cards, the sync anchors of spoken lines, the
+At the start the user chooses, once per run, whether the videos' audio is processed as text: **Whisper speech-to-text** (faster-whisper `medium`, int8 on the CPU, the config's `whisper_model` since 2026-11-11 for every speech step in any language: about 0.7 s of work per
+second of audio plus about 5 s of model load; the transcript is written once per video as `10-media/<V>/transcript.json` and `.txt` and feeds the cards, the sync anchors of spoken lines, the
 caption timing and the sound profile's speech share) or **frames only** (no speech-to-text, no transcript file; every speech field of every card, plan and brief says `audio not
 ingested`, never `no speech`: what was said is unknown, not absent). The answer is `state.json → audio_ingest` (`whisper` | `frames-only`) and the only source of the choice: no
 script or skill picks a default, `T prep-all` stops without it, `T prep-video` takes `--audio-ingest`, `T captions --from-speech` refuses in a frames-only run. Whatever needs the

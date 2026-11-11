@@ -63,8 +63,9 @@
   `static.captions.chars_unspaced` when the plan has none), at the characters' times, and its `highlight_words` is left empty (a word is
   not a separate token there). `case: "upper"` changes only letters that have a case (the Turkish and Azerbaijani dotted i first); a script
   without case stays as it is. The font holds a glyph for every character of the captions and the labels: `T capcut-font`, `T
-  capcut-labels` and `T capcut-word-box` list `font_missing_glyphs` (the characters the file lacks), and a font that lacks some is
-  replaced for that video's texts by another file of `T capcut-font --list` (kept under `fonts/` first, as Fonts says), the reason in the
+  capcut-labels` and `T capcut-word-box` list `font_missing_glyphs` (the characters the file lacks; a font whose character table is in a format the reader does
+  not know, only cmap formats 4 and 12 are read, gives `font_glyphs_error` instead: look at the text in that font or pick another),
+  and a font that lacks some is replaced for that video's texts by another file of `T capcut-font --list` (kept under `fonts/` first, as Fonts says), the reason in the
   plan. **The word box** places a row of words one by one from left to right, so for a language written without spaces or from right to
   left `T capcut-word-box` stops with `word_box_supported: false` and its reason, and the video takes the plain caption look by
   `capcut import-srt` as above (the run's font, size, outline, colours and entrance), named in the brief and the record; the box comes

@@ -906,6 +906,8 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
             try:
                 model = WhisperModel(name, device="cpu", compute_type="int8", local_files_only=True)
                 res["model"] = name
+                if name != model_name:      # the named model could not be loaded: say so, the words below are another model's
+                    res["model_fallback"] = {"asked": model_name, "used": name}
                 break
             except Exception:
                 continue
@@ -11332,8 +11334,8 @@ def _tts_models(a):
          "models": res_rows, **extra,
          "note": "ElevenLabs' own list: the user picks the narration model (`T tts model --run RUN --model-id ID`) and the language "
                  "(`T static language`); a model whose facts are not recorded (`set_up` null) is set up from ElevenLabs' docs first "
-                 "(static §6); a language outside the chosen model's list is not official: ElevenLabs may still voice it and the user listens "
-                 "to the first passage"})
+                 "(static §6); a language outside the chosen model's list is not official: ElevenLabs may still voice it, its first passage "
+                 "is made as a probe and read against its script, and the wrap-up names its pronunciation as not checked"})
 
 
 def _tts_model(a):
@@ -14128,8 +14130,8 @@ def _static_language(a):
         facts = _language_facts(lang, st, rd, model, text, font)
         out({"ok": True, **facts, "language": facts,   # the facts at the top and under `language`
              "note": "facts: the choice of the video's language is the user's; a language outside the model's list is not official "
-                     "(ElevenLabs may still voice it: the user listens to the first passage); the script is written natively in it, each line "
-                     "with an English gloss"})
+                     "(ElevenLabs may still voice it: its first passage is made as a probe and read against its script, and the wrap-up "
+                     "names its pronunciation as not checked); the script is written natively in it, each line with an English gloss"})
     if not rd:
         fail("--plan needs --run (the run the languages are stored in)", 2)
     names = [x.strip() for x in re.split(r"[,;]", str(plan)) if x.strip()]

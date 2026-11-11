@@ -205,7 +205,7 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   **Then the language**, one more AskUserQuestion call (the first holds four questions; static §6 "The language of a video"; the user,
   2026-11-11: "it has to ask user which language has the video's content to be"): header "Language", "In which language should the
   videos be made?": **"English"** (the references' language, or the one most of them speak: said), then up to three languages the
-  conversation, the assets, the documents or the references' mix point to; "Other": any language by name or ISO code, or one language
+  conversation, the assets, the documents or the references' mix point to; "Other": any language of the live list by name or ISO code (one no ElevenLabs model lists is refused), or one language
   per video ("1 English, 2 Spanish"). Before the question, print in chat, compactly, the languages the run's narration model lists
   (`state.json → static.tts_model`; the ElevenLabs MCP's `list_models` row for it, loaded as `voiceover.md` §2 step 3 says, else `T
   tts models --run RUN`). Store with `T static language --run RUN --plan "<L1>[,<L2>…]"` (one language: every video of the batch);
