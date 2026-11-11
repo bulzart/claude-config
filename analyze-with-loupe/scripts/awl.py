@@ -7180,7 +7180,11 @@ def cmd_capcut_word_box(a):
     whole text only, so each word is its own text and its box is always its own. The words' times are the narration's (words.json +
     the timeline's narration_offset), on the frame grid; the line's layout from the font file at CapCut's measured em. --replace drops
     the named caption tracks (and earlier word-box tracks) first. The font and the entrance follow with `T capcut-font` and
-    `T capcut-text-anim` per track (the answer lists them); then `T capcut-repair --keep-text`."""
+    `T capcut-text-anim` per track (the answer lists them); then `T capcut-repair --keep-text`. The box needs a language written with
+    spaces between words and left to right (the video's own: the narration's, else its record; the captions' letters decide the
+    direction): for one written without spaces (Japanese, Chinese, Thai ...) or right to left (Arabic, Hebrew ...) it stops with
+    exit 2 and `word_box_supported: false`, and the plain caption path is used instead (static §7). The answer lists
+    `font_missing_glyphs`: the characters of the captions the font file has no glyph for."""
     rd, st = _state_of(a.run)
     nn = _cf_nn(a.video)
     d = Path(a.draft)
@@ -11730,7 +11734,11 @@ def _el_passages(lines: list, voice: dict, spec: dict, max_chars: int, pause_hin
 def _el_plan(rd: Path, st: dict, nn: str, lines_file=None, voice=None, delivery=None, settings=None, soft: bool = False) -> dict:
     """What a video's narration sends, built the same way for say, probe and the forecast: the plan, its lines, the voice, the model and
     what it honours, the voice settings, the passages and the language. Wrong deliveries (not audio tags), a setting the model lacks or a
-    passage over the model's characters stop it before anything is sent (soft: listed under "problems" instead)."""
+    passage over the model's characters stop it before anything is sent (soft: listed under "problems" instead). The model is the
+    narration's own (`model_id`), else the run's pick (state.json -> static.tts_model), else the voice's, else the config's; the language
+    is the narration JSON's `language`, else the video's record (static.video_info.<NN>.language), else the narrator's, else the
+    config's, resolved by _lang_info (a language it cannot place stops here, before anything is sent) and sent as `language_code` only
+    when the model takes one and lists the language."""
     lines_p = Path(lines_file) if lines_file else rd / "40-briefs" / f"video-{nn}-narration.json"
     try:
         spec = json.loads(lines_p.read_text(encoding="utf-8"))
@@ -12139,7 +12147,9 @@ def _tts_say(a):
     When the account's characters (or --budget) run out, the passages that fit are made (--fill: the last one from the whole lines that
     still fit) and the narration is those: a partial narration, flagged in the sidecar (`partial`). The sidecar holds each line's start
     and end in the narration file, each passage's request, the loudness as read, and the pace by the references' yardstick against the
-    plan's point: facts for the judge (static §13)."""
+    plan's point: facts for the judge (static §13). The video is spoken in its own language (see _el_plan) by the run's model (the
+    narration's `model_id` wins): the sidecar names the language, its code and the unit the pace counts in (words, or letters for a
+    language written without spaces), and the answer says whether the model lists the language (`language.official`)."""
     rd, st = _state_of(a.run)
     nn = _cf_nn(a.video)
     P = _el_plan(rd, st, nn, a.lines_file)
@@ -13766,7 +13776,11 @@ def _forecast_narration(rd: Path, st: dict, nn: str) -> dict:
     """The narration's forecast (static §13, J1) from the plan and the voice's measured points: the words, the passages and the characters
     they send (against the account's characters left, read when the key is set), and the pace and length a narration of these words with
     these levers (the voice, the delivery tags, the settings) will have, against the plan's point and the family. Eleven v4 has no speed
-    and the delivered audio is never edited: the levers are the voice, the tags, the settings and the words."""
+    and the delivered audio is never edited: the levers are the voice, the tags, the settings and the words. In the video's language
+    (the narration JSON's, else the video's record): `plan.language` and `plan.unit` (words, or letters for a language written without
+    spaces; every count is in it), the voice's point is the one of this voice, model and language (a new one has none: a probe), and
+    the word lists of static §11 and §11b and the intimate-parts list are read on each line's English `gloss` (else on its text);
+    `plan.lines_without_gloss` lists the lines of a non-English narration that have none."""
     p = rd / "40-briefs" / f"video-{nn}-narration.json"
     try:
         spec = json.loads(p.read_text(encoding="utf-8"))
@@ -14103,7 +14117,8 @@ def _static_language(a):
     if font and not Path(font).is_file():
         fail(f"font file not found: {font}", 2)
     if not plan:
-        out({"ok": True, "language": _language_facts(lang, st, rd, model, text, font),
+        facts = _language_facts(lang, st, rd, model, text, font)
+        out({"ok": True, **facts, "language": facts,   # the facts at the top and under `language`
              "note": "facts: the choice of the video's language is the user's; a language outside the model's list is not official "
                      "(ElevenLabs may still voice it: the user listens to the first passage); the script is written natively in it, each line "
                      "with an English gloss"})
@@ -14276,7 +14291,10 @@ def _static_profile(a):
     pauses, pitch, energy, loudness), its words (sentences, words a sentence, questions, "you", numbers a minute, its first line), its
     hook (the first word, the first cut), its cutting (shots, seconds a shot, cuts a 10 s, moving shots and their amounts, short shots,
     captions a minute) and its bed's numbers; then for every number the set's median, lowest and highest (over --refs when given).
-    Writes 20-analysis/set-profile.json and .md. Which references belong together and what a number means for a video are the agent's."""
+    Each reference's detected language and unit are listed where its transcript has them; a reference counted in letters (a language
+    written without spaces) is left out of the words-based medians (`words_based_medians_exclude`, with the reason) and stays in the
+    others. Writes 20-analysis/set-profile.json and .md. Which references belong together and what a number means for a video are the
+    agent's."""
     rd, _st = _state_of(a.run)
     inv = _jload(rd / "00-inventory" / "inventory.json")
     items = [it for it in inv.get("items") or [] if it.get("kind") == "video" and not it.get("ignored") and not it.get("duplicate_of")]
@@ -15045,7 +15063,10 @@ def _slideshow_plan(a):
     --format TAG: the same plan in an extra format (40-briefs/video-NN-timeline-<tag>.json, its captions in 60-outputs/video-NN/<tag>/):
     its own stills, its captions' size and band (by_format.<tag>.captions), and of each image only what is not tied to a point of the
     first format's picture: a zoom aimed at a spot (scale/x/y) and the labels' places come from the image's by_format.<tag>, else the
-    image keeps its plain move and its labels are listed as undecided."""
+    image keeps its plain move and its labels are listed as undecided. The captions follow the video's language (the narration's):
+    a language written without spaces is captioned in letters (the plan's captions.chars, else config static.captions.chars_unspaced,
+    joined with no space; the word box's filling, min_words, is not used for it) and `case: upper` capitals follow the language
+    (Turkish and Azeri keep their dotted İ); the timeline's captions block says its unit and language."""
     rd, _st = _state_of(a.run)
     nn = _cf_nn(a.video)
     ftag = _fmt_tag(_st, getattr(a, "format", None))

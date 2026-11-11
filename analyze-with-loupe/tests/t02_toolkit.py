@@ -2695,4 +2695,638 @@ _wbad, _wbadp = _awl._word_box_plan([{"start": 0.3, "end": 0.9, "text": "IT'S EI
 check(len(_wbadp) == 1 and _wbadp[0].get("token") == "EIGHT",
       f"the word box refuses a caption word that is not the narration's next word ({_wbadp})")
 
+# >>> language, narration model and approach tests (begin)
+
+# =====================================================================================================================================
+# The video's language, the narration model and what each video is (the user, 2026-11-11: "videos language: it has to ask user which
+# language has the video's content to be (languages have to be pulled live from elevenlabs mcp, user also has to be able to pick which
+# elevenlabs model he wants to use too, not always v4, he might use v4 turbo or other) and then the user choses of which language it wants
+# to be the next video, even though all references might be in english or mixed, we still analyse them and understand, but make the content
+# in a specific language the user wants"; and the niche as a family of content, an approach per video): ElevenLabs' live list through the
+# stand-in above; a Spanish, a Japanese, an Arabic and a Turkish script beside the English one. No model, no network beyond the stand-in.
+LG_ES = "Cuando llegó el calor, nadie lo esperaba."
+LG_JA = "その日、町は静かだった。"
+LG_AR = "كان الصباح هادئا."
+LG_EN = "When the heat came, nobody expected it."
+LG_CACHE = home / "runs" / ".elevenlabs-models.json"
+_LG_FONT = Path(AWL).resolve().parent.parent / "fonts" / "LuckiestGuy-Regular.ttf"   # the library's font: Latin letters only
+_NOKEY = {**SENV, "ELEVEN_API_KEY": "", "ELEVENLABS_API_KEY": ""}
+# only Eleven v4 has its facts recorded in this temp library, whatever the real config has recorded for other models since: the tests that
+# set up a second model do it here, in the copy
+_cfg_p = home / "config.json"
+_cfg = json.loads(_cfg_p.read_text(encoding="utf-8"))
+_cfg["static"]["tts"]["elevenlabs"]["models"] = {"eleven_v4": _cfg["static"]["tts"]["elevenlabs"]["models"]["eleven_v4"]}
+_cfg_p.write_text(json.dumps(_cfg, indent=1), encoding="utf-8")
+
+# --- 5.1 / 5.5: a language the toolkit has no list for stops, names the way to get one, and never guesses a code from a name's letters
+js, code, _ = t("static", "language", "--language", "arabic", env=SENV, ok=False)
+check(code == 2 and "T tts models" in js.get("error", "") and not LG_CACHE.exists(),
+      "a language the toolkit cannot place (no copy of ElevenLabs' list yet, not one of the pipeline's names) stops with exit 2 and names `T tts models`")
+js, _ = ts("static", "language", "--language", "english")
+_lgj = js["language"]
+check(_lgj["code"] == "en" and _lgj["name"] == "English" and _lgj["spaced"] is True and _lgj["direction"] == "ltr" and _lgj["unit"] == "words"
+      and _lgj["whisper"] == "en" and _lgj["in_model"] is None and _lgj["official"] is None and ts("static", "language", "--language", "es")[0]["language"]["code"] == "es",
+      "the pipeline's own names and codes resolve with no list (English: words, left to right, whisper 'en'; whether the model's list holds it is unknown: null)")
+js, code, _ = t("static", "language", "--language", "arabic", "--plan", "es", env=SENV, ok=False)
+check(code == 2 and "--plan and --language" in js.get("error", ""), "--plan and --language together are refused")
+js, code, _ = t("static", "language", env=SENV, ok=False)
+check(code == 2 and "--language L" in js.get("error", ""), "static language needs --language or --plan")
+
+# --- 5.6: ElevenLabs' live list through the toolkit's key (a free read), kept in the library; the key is never printed
+js, code, _ = t("tts", "models", "--refresh", env=_NOKEY, ok=False)
+check(code == 1 and "ELEVEN_API_KEY" in js.get("error", "") and not LG_CACHE.exists(),
+      "tts models without the key stops with exit 1 and the existing wording, and keeps no list")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "models")
+_msd = {m["model_id"]: m for m in js["models"]}
+_gets = [r for r in _EL["seen"][_n:] if r["path"] == "/v1/models"]
+check(js.get("ok") and js["source"] == "toolkit-api" and js["from_cache"] is False and js["count"] == 5 and len(_gets) == 1 and _gets[0]["key"] == _ELKEY
+      and _ELKEY not in json.dumps(js) and LG_CACHE.is_file() and json.loads(LG_CACHE.read_text(encoding="utf-8"))["source"] == "toolkit-api"
+      and [m["model_id"] for m in json.loads(LG_CACHE.read_text(encoding="utf-8"))["models"]] == [m["model_id"] for m in _EL["models"]]
+      and len(_EL_V4) == 94 and _msd["eleven_v4"]["languages"] == 94 and _msd["eleven_multilingual_v2"]["languages"] == len(_EL_V2) == 29
+      and _msd["eleven_v4"]["language_names_sample"][:3] == ["Afrikaans", "Amharic", "Arabic"] and _msd["eleven_v4"]["max_chars"] == 10000
+      and js.get("pulled_at") and Path(js["cache_file"]) == LG_CACHE,
+      "tts models reads ElevenLabs' live list (one GET /v1/models, the key in its header only), keeps the rows as the API gave them in the "
+      "library, and prints each model with its language count and a sample of the names")
+check(_msd["eleven_v4"]["set_up"]["voice_settings"] == ["stability", "similarity_boost"] and _msd["eleven_v4"]["notes"] == []
+      and _msd["eleven_v4_turbo"]["set_up"] is None and any("not set up" in x for x in _msd["eleven_v4_turbo"]["notes"])
+      and any("no speech from text" in x for x in _msd["eleven_english_sts_v2"]["notes"]) and _msd["eleven_english_sts_v2"]["can_do_text_to_speech"] is False
+      and any("alpha access" in x for x in _msd["eleven_alpha_test"]["notes"]) and _msd["eleven_alpha_test"]["requires_alpha_access"] is True,
+      "tts models says per model whether its facts are recorded in config (set_up: the recorded facts, or null), and notes what is not set up, "
+      "what makes no speech from text and what needs alpha access")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "models", "--language", "ja")
+check(js["from_cache"] is True and not [r for r in _EL["seen"][_n:] if r["path"] == "/v1/models"]
+      and {m["model_id"] for m in js["models"] if m["lists_language"]} == {"eleven_v4", "eleven_v4_turbo", "eleven_multilingual_v2"}
+      and js["language"]["code"] == "ja" and js["language"]["listed_by"] == ["eleven_v4", "eleven_v4_turbo", "eleven_multilingual_v2"],
+      "a copy of the list younger than the window is used with no call; --language marks the models that list the language (the "
+      "text-to-speech ones in listed_by)")
+js, _ = ts("tts", "models", "--language", "albanian")
+check(js["language"]["code"] is None and js["language"]["listed_by"] == [] and "albanian" in js["language"]["note"] and not any(m["lists_language"] for m in js["models"]),
+      "a language no model lists is answered as one (no model lists it), not as an error")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "models", "--refresh", "--model-id", "eleven_v4")
+check(js["from_cache"] is False and len([r for r in _EL["seen"][_n:] if r["path"] == "/v1/models"]) == 1 and js["model_languages"]["count"] == 94
+      and js["model_languages"]["languages"][:2] == ["af Afrikaans", "am Amharic"] and "zh Mandarin Chinese" in js["model_languages"]["languages"],
+      "--refresh asks ElevenLabs again; --model-id adds that model's whole language list (code and name)")
+
+# --- 5.1: a name or a code of the list, with the facts of the language; the code is never made from the name's first letters
+_awl._el_models_cache_path = lambda: LG_CACHE
+_lgi = {q: _awl._lang_info(q, model_id="eleven_v4") for q in ("arabic", "AR", "Japanese", "mandarin", "chinese", "Kirghiz", "swedish", "sw", "pt-BR",
+                                                              "filipino", "javanese", "kurdish", "Fula", "thai", "he")}
+check(_lgi["arabic"]["code"] == _lgi["AR"]["code"] == "ar" and _lgi["arabic"]["name"] == "Arabic" and _lgi["arabic"]["direction"] == "rtl"
+      and _lgi["arabic"]["spaced"] is True and _lgi["arabic"]["unit"] == "words" and _lgi["arabic"]["in_model"] is True and _lgi["arabic"]["official"] is True
+      and _lgi["Japanese"]["code"] == "ja" and _lgi["Japanese"]["spaced"] is False and _lgi["Japanese"]["unit"] == "characters"
+      and _lgi["mandarin"]["code"] == _lgi["chinese"]["code"] == "zh" and _lgi["mandarin"]["name"] == "Mandarin Chinese" and _lgi["mandarin"]["spaced"] is False
+      and _lgi["Kirghiz"]["code"] == "ky" and _lgi["Fula"]["code"] == "ff" and _lgi["kurdish"]["code"] == "ckb" and _lgi["kurdish"]["direction"] == "rtl"
+      and _lgi["pt-BR"]["code"] == "pt" and _lgi["thai"]["spaced"] is False and _lgi["he"]["direction"] == "rtl" and _lgi["he"]["scripts"] == ["Hebrew"],
+      "a language is a code or a name of ElevenLabs' list (case and accents aside, or one word of the name): its code, name, whether it is "
+      "written with spaces, its direction and the unit a pace counts in it")
+check(_lgi["swedish"]["code"] == "sv" and _lgi["sw"]["code"] == "sw" and _lgi["sw"]["name"] == "Swahili"
+      and "T tts models" in _awl._lang_info("swedishh", soft=True)["error"] and _awl._lang_info("klingon", soft=True)["code"] is None
+      and _awl._lang_info("xx", soft=True)["error"],
+      "'swedish' is sv and 'sw' is Swahili: a code is never made from the first letters of a name, and a name or code the list does not hold is "
+      "an error that names `T tts models`")
+js, code, _ = t("static", "language", "--language", "klingon", env=SENV, ok=False)
+check(code == 2 and "T tts models" in js.get("error", ""), "an unknown language stops the command with exit 2")
+_lgw = {c: _awl._lang_info(c)["whisper"] for c in ("jv", "fil", "zh", "yue", "ceb", "ja", "en")}
+check(not _awl._whisper_langs() or (_lgw["jv"] == "jw" and _lgw["fil"] == "tl" and _lgw["zh"] == "zh" and _lgw["ja"] == "ja" and _lgw["en"] == "en"
+                                    and _lgw["yue"] == "yue" and _lgw["ceb"] == "auto"),
+      f"the code speech-to-text takes follows faster-whisper's own list: Javanese is jw, Filipino is tl, Cebuano (not in it) is auto ({_lgw})")
+_li_ar, _li_ja, _li_es = _awl._lang_info("ar", text=LG_AR), _awl._lang_info("ja", text=LG_JA), _awl._lang_info("es", text=LG_ES)
+check(_li_ar["scripts"] == ["Arabic"] and _li_ar["direction"] == "rtl" and _li_ja["scripts"] == ["Hiragana", "Han"] and _li_ja["direction"] == "ltr"
+      and _li_es["scripts"] == ["Latin"] and _li_es["direction"] == "ltr" and _awl._lang_info("en", text=LG_AR)["direction"] == "rtl"
+      and _awl._lang_info("ja")["scripts"] == ["Han", "Hiragana", "Katakana"] and _awl._lang_info("ar")["scripts"] == ["Arabic"],
+      "with a text the scripts and the direction are read from its letters (a Japanese text: Hiragana and Han; an Arabic one: right to left); "
+      "without one, from the closed table of languages written right to left or without spaces")
+check(_awl._lang_info("thai", model_id="eleven_multilingual_v2")["in_model"] is False and _awl._lang_info("thai", model_id="eleven_multilingual_v2")["official"] is False
+      and _awl._lang_info("spanish", model_id="eleven_multilingual_v2")["in_model"] is True
+      and _awl._lang_info("spanish", model_id="eleven_no_such_model")["in_model"] is None and _awl._lang_info("thai", model_id="eleven_v4")["in_model"] is True
+      and _awl._lang_info("mandarin", model_id="eleven_multilingual_v2")["name"] == "Chinese",
+      "whether the model's own list holds the language (in_model, official): Thai is in Eleven v4's list and not in Multilingual v2's "
+      "(ElevenLabs may still voice it); a model the list does not know: null; the name is the model's own")
+
+# --- 5.2: units, tokens, captions, alignment in the language of the text (Spanish, Japanese, Arabic, English)
+_i = {c: _awl._lang_info(c) for c in ("es", "ja", "ar", "en", "fr", "th", "tr")}
+check(len(_awl._units(LG_ES, _i["es"])) == 7 and len(_awl._units(LG_JA, _i["ja"])) == 10 and len(_awl._units(LG_AR, _i["ar"])) == 3
+      and len(_awl._units(LG_EN, _i["en"])) == 7 and _awl._units(LG_JA, _i["ja"])[:3] == ["そ", "の", "日"] and _awl._units("a  b\nc", None) == ["a", "b", "c"]
+      and _awl._units("Quoi ? Rien ! — dit-il", _i["fr"]) == ["Quoi", "Rien", "dit-il"]
+      and _awl._units("Quoi ? Rien ! — dit-il", _i["en"]) == ["Quoi", "?", "Rien", "!", "—", "dit-il"] and _awl._units("a b", None) == ["a", "b"]
+      and _awl._units("สวัสดีครับ", _i["th"]) == ["ส", "ว", "ส", "ด", "ค", "ร", "บ"] and _awl._units("ab 12, 3", {"spaced": False}) == ["a", "b", "1", "2", "3"],
+      "units: the words of a spaced language (English keeps every whitespace piece, as the counts always were; another language leaves out a "
+      "dash or a '?' standing alone), the letters and digits of one written without spaces, no space and no punctuation")
+check(_awl._tokens(LG_ES, _i["es"]) == LG_ES.split() and _awl._tokens(LG_JA, _i["ja"]) == ["そ", "の", "日、", "町", "は", "静", "か", "だ", "っ", "た。"]
+      and [x[1:] for x in _awl._token_spans("「ありがとう」と言った。 次", _i["ja"])] == [(0, 2), (2, 3), (3, 4), (4, 5), (5, 7), (7, 8), (8, 9), (9, 10), (10, 12), (13, 14)]
+      and _awl._tokens("สวัสดี", _i["th"]) == ["ส", "วั", "ส", "ดี"],
+      "the pieces a text is timed in: its words, or for a language written without spaces a letter with the marks and punctuation after it "
+      "(an opening quote goes with the next letter)")
+_jt = _awl._tokens(LG_JA, _i["ja"])
+_jw = [{"w": tk, "s": round(0.1 * k, 2), "e": round(0.1 * k + 0.08, 2)} for k, tk in enumerate(_jt)]
+_jc = _awl.chunk_words(_jw, 4, info=_i["ja"])
+_jf = _awl.chunk_words_fill(_jw, 5, 3, 0.8, info=_i["ja"])
+_ew = [{"w": w_, "s": round(0.2 * k, 2), "e": round(0.2 * k + 0.15, 2)} for k, w_ in enumerate(LG_ES.split())]
+check([c["text"] for c in _jc] == ["その日、", "町は静か", "だった。"] and [c["text"] for c in _jf] == ["その日、町は", "静かだった。"]
+      and [c["text"] for c in _awl.chunk_words(_ew, 3, info=_i["es"])] == ["Cuando llegó el", "calor,", "nadie lo esperaba."]
+      and [c["text"] for c in _awl.chunk_words(_ew, 3)] == [c["text"] for c in _awl.chunk_words(_ew, 3, info=_i["es"])],
+      "captions: a language written without spaces is cut by letters (max_words counts them), a cue ends after 、 or 。 and its text is joined "
+      "with no space; a spaced language is cut as before")
+_jh = [{"w": "その日", "s": 0.0, "e": 0.3}, {"w": "町は", "s": 0.3, "e": 0.5}, {"w": "静かだった", "s": 0.5, "e": 1.0}]
+_ja_t = _awl.align_script(_jh, LG_JA, _i["ja"])
+_jl = [{"n": 1, "text": LG_JA, "start": 0.2, "end": 0.9}]
+_jk = _awl._words_in_lines(_ja_t, _jl, _i["ja"])
+check([w["w"] for w in _ja_t] == _jt and _ja_t[2] == {"w": "日、", "s": 0.2, "e": 0.3} and _ja_t[9]["e"] == 1.0
+      and len(_jk) == 10 and all(0.2 <= w["s"] and w["e"] <= 0.9 for w in _jk) and _awl._words_in_lines(_ja_t, _jl) == _ja_t,
+      "a Japanese script is aligned with the heard words letter by letter (each heard word cut into its letters, its seconds shared), and its "
+      "words are kept inside their line's audio; without the language the words are counted as before")
+_pj = _awl._pace_of_words([{"w": "その日", "s": 0.0, "e": 1.0}, {"w": "町は", "s": 1.0, "e": 2.0}], "characters")
+_pe = _awl._pace_of([{"start": 0.0, "end": 2.0, "text": "その日 町は", "words": [{"w": "その日", "s": 0.0, "e": 1.0}, {"w": "町は", "s": 1.0, "e": 2.0}]}], "characters")
+check(_pj["wpm_overall"] == 150.0 and _pj["unit"] == "characters" and _awl._pace_of_words([{"s": 0.0, "e": 1.0}, {"s": 1.0, "e": 2.0}])["wpm_overall"] == 60.0
+      and _pe["words"] == 5 and _pe["unit"] == "characters" and _pe["wpm_speech"] == 150.0
+      and _awl._pace_of([{"start": 0.0, "end": 2.0, "text": "uno dos", "words": [{"w": "uno", "s": 0.0, "e": 1.0}, {"w": "dos", "s": 1.0, "e": 2.0}]}])["unit"] == "words"
+      and "unit" in _awl.PACE_MEASURED_KEYS,
+      "the pace counts letters for a language written without spaces (5 letters in 2 s: 150 a minute) and words for the others; every record "
+      "says its unit (the wpm_* keys keep their names)")
+
+# --- 5.3: the caption word and the narration word compared in any script; capitals the way the language writes them
+check(_awl._wb_norm("IT'S") == _awl._wb_norm("it's") == "its" and _awl._wb_norm("STRASSE") == _awl._wb_norm("Straße")
+      and _awl._wb_norm("İSTANBUL") == _awl._wb_norm("istanbul") == "istanbul" and _awl._wb_norm("هادئاً") == _awl._wb_norm("هادئا") == "هادئا"
+      and _awl._wb_norm("¿Qué pasó?") == "quépasó" and _awl._wb_norm("その日、") == "その日"
+      and _awl._wb_norm("SICAKTI.", "tr") == _awl._wb_norm("sıcaktı", "tr") == "sıcaktı" and _awl._wb_norm("KİMSE", "tr") == _awl._wb_norm("kimse", "tr") == "kimse"
+      and _awl._wb_norm("IŞIK", "tr") == _awl._wb_norm("Işık", "tr") == "ışık" and _awl._wb_norm("SICAKTI") != _awl._wb_norm("sıcaktı"),
+      "the word box compares a caption word and a narration word by their letters and digits in any script, without case or marks; in Turkish "
+      "and Azeri a capital I is the dotless one and İ the dotted one, so a caption in capitals matches the word as spoken")
+check(_awl._upper_for("istanbul i", "tr") == "İSTANBUL İ" and _awl._upper_for("istanbul", "en") == "ISTANBUL" and _awl._upper_for("straße", "de") == "STRASSE"
+      and _awl._upper_for("kaip i\u0307", "lt") == "KAIP I" and _awl._upper_for("istanbul", None) == "ISTANBUL" and _awl._upper_for("ısı", "tr") == "ISI",
+      "capitals: str.upper(), with the dotted İ for Turkish and Azeri and Lithuanian's rule for the dot above")
+
+# --- 5.4: the font file's own glyphs (a cmap reader, no library)
+_g_lg = _awl._font_glyphs(_LG_FONT)
+_r_es, _r_ja, _r_ar = (_awl._font_report(_LG_FONT, x) for x in (LG_ES, LG_JA, LG_AR))
+check(ord("a") in _g_lg and ord("ó") in _g_lg and ord("日") not in _g_lg and 100 < len(_g_lg) < 1000 and _r_es == {"font_missing_glyphs": [], "font_covers": True}
+      and _r_ja["font_covers"] is False and "日" in _r_ja["font_missing_glyphs"] and "。" in _r_ja["font_missing_glyphs"]
+      and _r_ar["font_missing_glyphs"] == sorted(set("كانالصباحهادئا")) and _awl._font_report(_LG_FONT, " \n\t")["font_covers"] is True,
+      "font_missing_glyphs: the characters of a text the font file has no glyph for (Luckiest Guy draws Spanish and no Japanese or Arabic)")
+_bad_font = home.parent / "not-a-font.ttf"
+_bad_font.write_bytes(b"this is not a font file at all")
+_rb = _awl._font_report(_bad_font, "abc")
+check(_rb["font_missing_glyphs"] is None and _rb["font_covers"] is None and _rb["font_glyphs_error"], "a file that is not a font is reported, not guessed at")
+_cjk = next((p for p in (r"C:\Windows\Fonts\msyh.ttc", r"C:\Windows\Fonts\msgothic.ttc", r"C:\Windows\Fonts\YuGothR.ttc", r"C:\Windows\Fonts\meiryo.ttc")
+             if Path(p).is_file()), None)
+_arab = next((p for p in (r"C:\Windows\Fonts\arial.ttf", r"C:\Windows\Fonts\segoeui.ttf", r"C:\Windows\Fonts\tahoma.ttf") if Path(p).is_file()), None)
+if _cjk and _arab:
+    check(_awl._font_report(_cjk, LG_JA + LG_ES)["font_covers"] is True and _awl._font_report(_arab, LG_AR + LG_ES)["font_covers"] is True
+          and _awl._font_report(_arab, LG_JA)["font_covers"] is False and len(_awl._font_glyphs(_cjk)) > 5000,
+          f"a collection and a TrueType font of this PC are read too: {Path(_cjk).name} draws the Japanese, {Path(_arab).name} the Arabic")
+else:
+    print("SKIP  font glyphs of this PC's fonts: no CJK or Arabic font file found")
+_ja_txt = home.parent / "ja-script.txt"
+_ja_txt.write_text(LG_JA, encoding="utf-8")
+js, _ = ts("static", "language", "--language", "japanese", "--text", str(_ja_txt), "--font", str(_LG_FONT))
+_lgj = js["language"]
+check(_lgj["code"] == "ja" and _lgj["spaced"] is False and _lgj["unit"] == "characters" and _lgj["scripts"] == ["Hiragana", "Han"] and _lgj["text_units"] == 10
+      and _lgj["font_covers"] is False and "日" in _lgj["font_missing_glyphs"] and _lgj["narrator_verified"] is None and _lgj["verified_languages"] is None
+      and _lgj["listed_by"] == ["eleven_v4", "eleven_v4_turbo", "eleven_multilingual_v2"] and _lgj["whisper"] == "ja",
+      "static language --language --text --font: the language's facts, the units of the text, and which characters the font has no glyph for")
+
+# --- 5.7: the run's narration model, picked from the live list; a model whose facts are not recorded is not set up
+js, _ = ts("new-run", "--mode", "analyze", "--slug", "static-lang")
+LR = Path(js["run_dir"])
+ts("state", "--run", str(LR), "set", "analyze_submode=static", "static_images=api", "audio_ingest=whisper", "qc_fixes=auto", "capcut_plan=free")
+ts("static", "format", "--run", str(LR), "--aspect", "9:16", "--res", "1080", "--quality", "high")
+js, _ = ts("tts", "voice", "--run", str(LR), "--voice-id", "vSARAH")
+
+
+def _lr_static():
+    return json.loads((LR / "state.json").read_text(encoding="utf-8")).get("static") or {}
+
+
+check(js.get("ok") and [x["language"] for x in _lr_static()["voice"]["verified_languages"]] == ["en", "es"],
+      "tts voice --voice-id keeps the languages ElevenLabs says the voice is verified in, as its answer gave them")
+js, _ = ts("tts", "voices", "--run", str(LR), "--search", "sarah")
+check([v["verified_languages"] and [x["language"] for x in v["verified_languages"]] for v in js["voices"]] == [["en", "es"]],
+      "tts voices lists each voice's verified languages")
+for _mid, _why in (("eleven_nope", "not a model of ElevenLabs"), ("eleven_english_sts_v2", "makes no speech from text"), ("eleven_v4_turbo", "not set up")):
+    js, code = ts("tts", "model", "--run", str(LR), "--model-id", _mid, ok=False)
+    check(code == 2 and _why in js.get("error", "") and "tts_model" not in _lr_static(),
+          f"tts model {_mid}: refused with exit 2 ({_why}); nothing is stored")
+check("eleven_v4" in (js.get("set_up") or []) and "static §6" in js.get("error", ""),
+      "a model that is not set up says why: its facts are recorded from ElevenLabs' docs first (static §6), and which models are set up")
+js, _ = ts("tts", "model", "--run", str(LR), "--model-id", "eleven_v4", "--source", "elevenlabs-mcp")
+_tm = _lr_static()["tts_model"]
+check(js.get("ok") and _tm["model_id"] == "eleven_v4" and _tm["name"] == "Eleven v4" and _tm["languages"] == 94 and _tm["source"] == "elevenlabs-mcp"
+      and _tm["pulled_at"] == json.loads(LG_CACHE.read_text(encoding="utf-8"))["pulled_at"] and _tm["set_at"] and "af Afrikaans" in js["languages_list"]
+      and js["previous"] is None and js["caps"]["language_code"] is True,
+      "tts model stores state.json -> static.tts_model (model, name, how many languages it lists, where the list came from, when pulled, "
+      "when set) after checking it against the list and the recorded facts")
+_cfg = json.loads(_cfg_p.read_text(encoding="utf-8"))
+_cm = _cfg["static"]["tts"]["elevenlabs"]["models"]
+_cm["eleven_v4_turbo"], _cm["eleven_multilingual_v2"] = dict(_cm["eleven_v4"]), dict(_cm["eleven_v4"])   # their facts recorded (from ElevenLabs' docs, in a real library)
+_cfg_p.write_text(json.dumps(_cfg, indent=1), encoding="utf-8")
+js, _ = ts("tts", "models", "--run", str(LR))
+_msd = {m["model_id"]: m for m in js["models"]}
+check(_msd["eleven_v4_turbo"]["set_up"] and not any("not set up" in x for x in _msd["eleven_v4_turbo"]["notes"]) and _msd["eleven_v4"]["chosen_for_run"] is True
+      and _msd["eleven_v4_turbo"]["chosen_for_run"] is False and js["run_model"]["model_id"] == "eleven_v4",
+      "once a model's facts are recorded it is set up; tts models --run marks the model the run picked")
+js, _ = ts("tts", "model", "--run", str(LR), "--model-id", "eleven_v4_turbo")
+_tm = _lr_static()["tts_model"]
+check(_tm["model_id"] == "eleven_v4_turbo" and _tm["source"] == "toolkit-api" and js["previous"]["model_id"] == "eleven_v4" and _tm["languages"] == 94
+      and ts("tts", "check", "--offline", "--run", str(LR))[0]["model_id"] == "eleven_v4_turbo"
+      and ts("tts", "check", "--offline")[0]["model_id"] == "eleven_v4"
+      and t("static", "check", "--offline", "--run", str(LR), env={**SENV, "AWL_IMAGE_STUB": "1"})[0]["parts"]["tts"]["model_id"] == "eleven_v4_turbo",
+      "the run's model (Eleven v4 Turbo here) is the one tts check and static check report for the run; without --run the config's")
+_stx = {"static": {"tts_model": {"model_id": "m2"}}}
+check(_awl._el_model({"model_id": "m1"}, {"model_id": "m3"}, _stx, {"model_id": "m0"}) == "m1"
+      and _awl._el_model(None, {"model_id": "m3"}, _stx, {"model_id": "m0"}) == "m0" and _awl._el_model(None, {"model_id": "m3"}, _stx) == "m2"
+      and _awl._el_model(None, {"model_id": "m3"}, {"static": {}}) == "m3" and _awl._el_model(None, None, None) == _awl._el_cfg("model_id"),
+      "the model that speaks a video: the narration's own, else the run's pick, else the voice's, else the config's")
+ts("tts", "model", "--run", str(LR), "--model-id", "eleven_v4")
+
+# --- 5.12 / 5.16: the niche family, what each video is (its approach and language), and the language plan stored before any subject exists
+js, code = ts("static", "language", "--run", str(LR), "--plan", "es,ja", ok=False)
+check(code == 0 and js["language_plan"]["from_video"] == 1, "a language plan is stored before the niche or any subject exists (video 1 is the next)")
+ts("static", "lock", "--run", str(LR), "--niche", "Survival scenarios and how-tos")
+_pl = js["language_plan"]
+check([x["code"] for x in _pl["languages"]] == ["es", "ja"] and _pl["languages"][0]["name"] == "Spanish" and _pl["languages"][1]["unit"] == "characters"
+      and all(x["official"] is True and x["model_id"] == "eleven_v4" for x in _pl["languages"]) and _pl["languages"][1]["spaced"] is False
+      and _pl["set_at"] and [x["code"] for x in _lr_static()["language_plan"]["languages"]] == ["es", "ja"]
+      and [x["narrator_verified"] for x in js["languages"]] == [True, False] and [x["listed_by"][0] for x in js["languages"]] == ["eleven_v4", "eleven_v4"],
+      "static language --plan resolves every language (name or code), stores static.language_plan {from_video, languages}, and prints each one's "
+      "facts with narrator_verified (the narrator is verified in Spanish, not in Japanese)")
+js, code = ts("static", "language", "--run", str(LR), "--plan", "es,klingon", ok=False)
+check(code == 2 and "T tts models" in js.get("error", "") and [x["code"] for x in _lr_static()["language_plan"]["languages"]] == ["es", "ja"],
+      "a plan with a language the toolkit cannot place stores nothing (exit 2)")
+js, code = ts("static", "language", "--plan", "es", ok=False)
+check(code == 2 and "--run" in js.get("error", ""), "--plan needs --run")
+js, _ = ts("static", "subjects", "--run", str(LR), "--add", "Seven days without water", "--add", "The night the grid failed",
+           "--add", "A city that learned to wait", "--story-form", "counted days", "--pov", "second person", "--time-frame", "seven days",
+           "--scale", "one city", "--title-form", "N days of X", "--pillar", "water")
+_ad = js["added"]
+check([(a_["language"] or {}).get("code") for a_ in _ad] == ["es", "ja", None] and _ad[2]["note"] == "pass --language" and "note" not in _ad[0]
+      and all(a_["approach"]["story_form"] == "counted days" and a_["approach"]["point_of_view"] == "second person" and a_["approach"]["scale"] == "one city"
+              and a_["approach"]["why"] is None and a_["approach"]["series"] is None for a_ in _ad)
+      and _lr_static()["video_info"]["02"]["language"]["code"] == "ja" and "language" not in _lr_static()["video_info"]["03"]
+      and _lr_static()["video_info"]["01"]["approach"]["pillar"] == "water" and js["subjects"][1]["language"]["unit"] == "characters",
+      "static subjects --add takes each video's language from the plan (video 1 the first language, video 2 the second), a video outside a plan "
+      "of several is added with no language and says 'pass --language'; the approach fields are kept for every title added in the call")
+js, _ = ts("static", "subjects", "--run", str(LR), "--set", "03", "--language", "turkish", "--angle", "the one night the grid failed")
+check(js["edited"]["language"]["code"] == "tr" and js["edited"]["approach"]["angle"] == "the one night the grid failed"
+      and js["edited"]["approach"]["story_form"] == "counted days" and js["subjects"][2]["language"]["name"] == "Turkish",
+      "static subjects --set NN edits a video's language and approach fields (the other fields stay)")
+js, code = ts("static", "subjects", "--run", str(LR), "--set", "9", "--angle", "x", ok=False)
+check(code == 2 and "3 subject" in js.get("error", ""), "--set names a video the run does not have: refused")
+js, code = ts("static", "subjects", "--run", str(LR), "--set", "01", ok=False)
+check(code == 2 and "needs something to set" in js.get("error", ""), "--set with nothing to set is refused")
+js, code = ts("static", "subjects", "--run", str(LR), "--angle", "x", ok=False)
+check(code == 2 and "--add" in js.get("error", ""), "approach fields without --add or --set are refused, never dropped")
+js, _ = ts("static", "subjects", "--run", str(LR), "--add", "A cold house in July", "--language", "arabic", "--story-form", "a real case retold",
+           "--pov", "third person", "--pillar", "heat", "--approach-why", "V02's numbers")
+check(js["added"][0]["language"]["code"] == "ar" and js["added"][0]["language"]["direction"] == "rtl" and js["added"][0]["approach"]["why"] == "V02's numbers"
+      and "note" not in js["added"][0], "--language on --add is used (a plan, if any, is ignored)")
+js, _ = ts("static", "language", "--run", str(LR), "--plan", "thai")
+check(js["language_plan"]["from_video"] == 5 and [x["code"] for x in js["language_plan"]["languages"]] == ["th"] and js["languages"][0]["narrator_verified"] is False,
+      "a new plan starts at the next video (4 subjects exist: 5) and replaces the old one")
+js, _ = ts("static", "subjects", "--run", str(LR), "--add", "What the river kept", "--add", "Heat on the water")
+check([a_["language"]["code"] for a_ in js["added"]] == ["th", "th"] and all(a_["approach"] is None for a_ in js["added"])
+      and js["added"][0]["video"] == "05" and js["added"][1]["video"] == "06",
+      "a plan of one language applies to every video of the batch")
+js, _ = ts("static", "subjects", "--run", str(LR), "--add", "The farmer's field", "--language", "english")
+js, _ = ts("static", "subjects", "--run", str(LR))
+check([x["language"]["code"] if x["language"] else None for x in js["subjects"]] == ["es", "ja", "tr", "ar", "th", "th", "en"]
+      and js["subjects"][2]["approach"]["angle"] and js["subjects"][4]["approach"] is None and js["language_plan"]["from_video"] == 5,
+      "the listing shows each video's approach and language")
+js, _ = ts("static", "lock", "--run", str(LR))
+check(js["tts_model"]["model_id"] == "eleven_v4" and js["locks"]["tts_model"] == js["tts_model"] and js["language_plan"]["from_video"] == 5
+      and [x["video"] for x in js["approaches_made"]] == ["01", "02", "03", "04"] and js["approaches_made"][3]["story_form"] == "a real case retold"
+      and js["approaches_made"][0]["time_frame"] == "seven days" and "why" not in js["approaches_made"][0]
+      and [x["code"] for x in js["languages_made"]] == ["es", "ja", "tr", "ar", "th", "th", "en"] and all(x["recorded"] for x in js["languages_made"])
+      and js["video_info"][0]["language"] == "es" and js["video_info"][2]["approach"]["angle"] and js["locks"]["next_video"] == "08",
+      "static lock shows the narration model, the language plan, and per video its approach and language (approaches_made, languages_made)")
+js, _ = ts("static", "lock", "--run", str(SR))
+check([x["code"] for x in js["languages_made"]] == ["en"] * len(js["locks"]["subjects"]) and not any(x["recorded"] for x in js["languages_made"])
+      and js["approaches_made"] == [] and js["video_info"] == [] and js["language_plan"] is None and js["tts_model"] is None,
+      "videos made before languages were recorded are English and have no recorded approach")
+js, code = ts("static", "lock", "--run", str(LR), "--reword", "Survival scenarios", ok=False)
+check(code == 2 and "--why" in js.get("error", ""), "--reword needs --why")
+js, code = ts("static", "lock", "--run", str(LR), "--reword", "x", "--why", "y", "--niche", "z", ok=False)
+check(code == 2 and "together" in js.get("error", ""), "--reword and --niche together are refused")
+js, _ = ts("static", "lock", "--run", str(LR), "--reword", "Survival scenarios, how-tos and aftermaths", "--why", "the references also tell what comes after")
+_nc = _lr_static()["niche"]
+check(js["changed"] == ["static.niche"] and js["locks"]["niche"] == "Survival scenarios, how-tos and aftermaths" and _nc["name"] == js["locks"]["niche"]
+      and _nc["reworded"][0]["from"] == "Survival scenarios and how-tos" and _nc["reworded"][0]["to"] == _nc["name"] and _nc["set_at"]
+      and _nc["reworded"][0]["why"] == "the references also tell what comes after" and _nc["reworded"][0]["at"] and js["locks"]["niche_reworded"] == _nc["reworded"],
+      "--reword sharpens the locked niche's wording after videos exist: the old wording, the new, the reason and the time are kept")
+js, _ = ts("static", "lock", "--run", str(LR), "--reword", "Survival scenarios, how-tos and aftermaths", "--why", "again")
+js2, code = ts("static", "lock", "--run", str(LR), "--niche", "Survival scenarios and how-tos", ok=False)
+check(js["changed"] == [] and len(_lr_static()["niche"]["reworded"]) == 1 and code == 2 and "clone-run" in js2.get("error", ""),
+      "the same wording again changes nothing; the niche's first wording is not the locked one any more (another niche is a clone)")
+js, _ = ts("static", "lock", "--run", str(CR), "--reword", "History of X", "--why", "sharper")
+check(_awl._niche_name(json.loads((CR / "state.json").read_text(encoding="utf-8"))["static"]) == "History of X"
+      and json.loads((CR / "state.json").read_text(encoding="utf-8"))["static"]["niche"]["reworded"][0]["from"] == "History",
+      "--reword works on a clone's niche too (its wording only: the field stays the one it asked)")
+
+# --- 5.8 / 5.9 / 5.2: each video narrated in its own language (the narration's, else the video's record, else the narrator's), the model it
+# names, the pace counted in its unit, the voice's points kept per model and language
+(LR / "40-briefs").mkdir(parents=True, exist_ok=True)
+
+
+def _lg_lines(rows):
+    return [{"n": i, "text": t_, **({"gloss": g_} if g_ else {})} for i, (t_, g_) in enumerate(rows, 1)]
+
+
+_LG_PACE = {"wpm_articulation": [170, 190], "wpm_overall": [140, 160], "target": {"wpm_articulation": 180.0, "wpm_overall": 150.0}, "tolerance": 0.02,
+            "refs": ["V1"]}
+_lg_nar = {
+    "01": {"language": "es", "pace": _LG_PACE, "lines": _lg_lines([
+        (LG_ES, "When the heat arrived, nobody expected it."), ("La ciudad se quedó sin agua.", "The city ran out of water."),
+        ("Le pusieron paños fríos en la ingle.", "They put cold cloths at her groin."), ("La iglesia estaba vacía.", "The church was empty."),
+        ("Y entonces todo cambió.", None)])},
+    "02": {"pace": {"wpm_articulation": [180, 200], "wpm_overall": [150, 170], "target": {"wpm_articulation": 190.0, "wpm_overall": 160.0},
+                    "tolerance": 0.02, "refs": ["V1"]},
+           "lines": _lg_lines([(LG_JA, "That day, the town was quiet."), ("誰も何も気づかなかった。", "Nobody noticed anything."),
+                               ("しかし、空が変わり始めた。", "But the sky began to change.")])},
+    "03": {"lines": _lg_lines([("İstanbul'da hava çok sıcaktı.", "It was very hot in Istanbul."), ("Şehirde kimse uyumadı.", "Nobody slept in the city."),
+                               ("Sabaha kadar bekledik.", "We waited until morning.")])},
+    "04": {"lines": _lg_lines([(LG_AR, "The morning was calm."), ("لم يتوقع أحد ما سيحدث.", None)])},
+    "05": {"model_id": "eleven_multilingual_v2", "lines": _lg_lines([("วันนั้นเมืองเงียบสงบ", "That day the city was quiet."),
+                                                                      ("ไม่มีใครรู้เรื่องอะไร", "Nobody knew anything.")])},
+    "07": {"language": "english", "lines": _lg_lines([("In 1959 a farmer found something strange in his field.", None),
+                                                      ("Nobody believed him, until the soldiers came.", None)])},
+    "08": {"language": "ja", "pace": {"wpm_articulation": [180, 200]}, "lines": _lg_lines([(LG_JA, None)])},
+}
+for _k, _v in _lg_nar.items():
+    (LR / "40-briefs" / f"video-{_k}-narration.json").write_text(json.dumps({"video": _k, **_v}, ensure_ascii=False), encoding="utf-8")
+js, _ = ts("static", "forecast", "--run", str(LR), "--video", "01", "--part", "narration")
+_f1 = js["narration"]
+check("no measured point for this voice with eleven_v4 in Spanish yet" in str((_f1.get("forecast") or {}).get("note")) and _f1["lever"]["language"] == "es"
+      and _f1["lever"]["model_id"] == "eleven_v4" and _f1["plan"]["language"] == "es" and _f1["plan"]["unit"] == "words",
+      "the forecast of a Spanish narration says there is no measured point for this voice with this model in Spanish yet, and its lever names the "
+      "language")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(LR), "--video", "01")
+_q = _el_tts(_n)
+_s1 = json.loads((LR / "30-assets" / "narration" / "video-01.json").read_text(encoding="utf-8"))
+check(js.get("ok") and _q and all(r["body"]["language_code"] == "es" and r["body"]["model_id"] == "eleven_v4" for r in _q) and _s1["language"] == "es"
+      and _s1["language_code"] == "es" and _s1["unit"] == "words" and js["language"] == {"code": "es", "name": "Spanish", "official": True, "unit": "words"}
+      and _s1["pace"]["measured"]["unit"] == "words" and _s1["pace"]["measured"]["words"] == sum(len(x["text"].split()) for x in _lg_nar["01"]["lines"]),
+      "tts say sends a Spanish narration with language_code es in the run's model; the sidecar and the pace say Spanish and words")
+js, _ = ts("narration-words", "--run", str(LR), "--video", "01")
+check(js["unit"] == "words" and js["language"]["code"] == "es" and all(x["numbers"]["compared"] is False and x["unit"] == "words" for x in js["lines"])
+      and js["pace"]["unit"] == "words" and js["timing"] == "elevenlabs" and js["words"] == sum(len(x["text"].split()) for x in _lg_nar["01"]["lines"]),
+      "narration-words in Spanish: words, ElevenLabs' own timing, spoken numbers not matched (numbers.compared false: the spoken forms are "
+      "English's)")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(LR), "--video", "02")
+_q = _el_tts(_n)
+_s2 = json.loads((LR / "30-assets" / "narration" / "video-02.json").read_text(encoding="utf-8"))
+_ln2 = [len(_awl._units(x["text"], _i["ja"])) for x in _lg_nar["02"]["lines"]]
+check(js.get("ok") and _q and all(r["body"]["language_code"] == "ja" for r in _q) and _s2["language"] == "ja" and _s2["unit"] == "characters"
+      and _ln2 == [10, 11, 11] and _s2["pace"]["measured"]["unit"] == "characters" and _s2["pace"]["measured"]["words"] == 32
+      and js["language"]["unit"] == "characters" and (_s2["pace"]["measured"]["wpm_articulation"] or 0) > 300,
+      "a Japanese narration (its language from the video's record: the narration JSON names none) is sent with language_code ja and its pace "
+      "counts letters: 32 of them, over 300 a minute")
+js, _ = ts("narration-words", "--run", str(LR), "--video", "02")
+_w2 = json.loads((LR / "30-assets" / "narration" / "video-02.words.json").read_text(encoding="utf-8"))
+_c2 = json.loads((LR / "30-assets" / "narration" / "video-02.cues.json").read_text(encoding="utf-8"))
+_srt2 = (LR / "30-assets" / "narration" / "video-02.srt").read_text(encoding="utf-8")
+check(js["unit"] == "characters" and js["timing"] == "elevenlabs" and js["words"] == 32 == len(_w2["words"]) and _w2["unit"] == "characters"
+      and [x["script_words"] for x in js["lines"]] == [10, 11, 11] and all(x["unit"] == "characters" and x["numbers"]["compared"] is False for x in js["lines"])
+      and js["pace"]["unit"] == "characters" and "".join(w["w"] for w in _w2["words"]).replace("、", "").replace("。", "") == "".join(
+          ch for x in _lg_nar["02"]["lines"] for ch in x["text"] if ch not in "、。")
+      and len(_c2) >= 3 and all(" " not in c["text"] for c in _c2) and max(len(_awl._units(c["text"], _i["ja"])) for c in _c2) <= 20
+      and "".join(c["text"] for c in _c2) == "".join(w["w"] for w in _w2["words"]) and "その日、" in _srt2,
+      "narration-words in Japanese: one timed piece per letter (ElevenLabs' character timing), the script's and the heard pieces counted in "
+      "letters, cues of letters joined with no space")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(LR), "--video", "03")
+check(all(r["body"]["language_code"] == "tr" for r in _el_tts(_n)) and json.loads((LR / "30-assets" / "narration" / "video-03.json").read_text(encoding="utf-8"))["language"] == "tr",
+      "a Turkish narration is sent with language_code tr")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(LR), "--video", "04")
+_s4 = json.loads((LR / "30-assets" / "narration" / "video-04.json").read_text(encoding="utf-8"))
+check(all(r["body"]["language_code"] == "ar" for r in _el_tts(_n)) and _s4["language"] == "ar" and _s4["unit"] == "words",
+      "an Arabic narration is sent with language_code ar; it is counted in words (written with spaces, right to left)")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(LR), "--video", "05")
+_q = _el_tts(_n)
+_s5 = json.loads((LR / "30-assets" / "narration" / "video-05.json").read_text(encoding="utf-8"))
+check(js.get("ok") and _q and all(r["body"]["model_id"] == "eleven_multilingual_v2" and "language_code" not in r["body"] for r in _q)
+      and _s5["model_id"] == "eleven_multilingual_v2" and _s5["unit"] == "characters" and js["language"]["official"] is False and js["model_id"] == "eleven_multilingual_v2",
+      "a narration that names its own model (model_id) is made by it; Thai is not in Eleven Multilingual v2's list, so no language_code is sent "
+      "(the model hears the language from the text) and the answer says it is not official")
+_n = len(_EL["seen"])
+js, _ = ts("tts", "say", "--run", str(LR), "--video", "07")
+_q = _el_tts(_n)
+_s7 = json.loads((LR / "30-assets" / "narration" / "video-07.json").read_text(encoding="utf-8"))
+check(_q and all(r["body"]["language_code"] == "en" and r["body"]["model_id"] == "eleven_v4" for r in _q) and _s7["language"] == "english"
+      and _s7["language_code"] == "en" and _s7["unit"] == "words",
+      "an English narration is sent exactly as before: language_code en, the run's model, language 'english' in the sidecar")
+js, code = ts("static", "subjects", "--run", str(LR), "--set", "02", "--language", "spanish", ok=False)
+check(code == 2 and "narration exists" in js.get("error", "") and _lr_static()["video_info"]["02"]["language"]["code"] == "ja",
+      "a video's language cannot change once its narration exists")
+js, _ = ts("static", "subjects", "--run", str(LR), "--set", "02", "--pillar", "water")
+check(js["edited"]["approach"]["pillar"] == "water", "its approach still can")
+_fitp = _lr_static()["voice"]["fit"]["points"]
+check({(p["language"], p["unit"]) for p in _fitp} == {("es", "words"), ("ja", "characters"), ("tr", "words"), ("ar", "words"), ("th", "characters"), ("en", "words")}
+      and all(p["model_id"] for p in _fitp) and {p["model_id"] for p in _fitp if p["language"] == "th"} == {"eleven_multilingual_v2"},
+      "the voice's measured points keep their model, their language and their unit")
+_pts = [{"voice_id": "v1", "model_id": "eleven_v4", "wpm_articulation": 190}, {"voice_id": "v1", "model_id": "eleven_v4", "language": "es", "wpm_articulation": 200},
+        {"voice_id": "v1", "model_id": "eleven_v4_turbo", "language": "en", "wpm_articulation": 210}, {"voice_id": "v1", "language": "en", "wpm_articulation": 180},
+        {"voice_id": "v2", "model_id": "eleven_v4", "language": "en", "wpm_articulation": 150}]
+
+
+def _lv(lg, mid, **kw):
+    return {"voice_id": "v1", "delivery": None, "settings": {}, "model_id": mid, "language": lg, **kw}
+
+
+check(_awl._el_point({"points": _pts}, _lv("en", "eleven_v4")) == (_pts[3], "same") and _awl._el_point({"points": _pts}, _lv("es", "eleven_v4")) == (_pts[1], "same")
+      and _awl._el_point({"points": _pts}, _lv("en", "eleven_v4_turbo")) == (_pts[2], "same") and _awl._el_point({"points": _pts}, _lv("ja", "eleven_v4")) == (None, None)
+      and _awl._el_point({"points": _pts}, _lv("en", "eleven_flash_v2_5")) == (None, None)
+      and _awl._el_point({"points": _pts}, _lv("es", "eleven_v4", delivery="[slowly]")) == (_pts[1], "nearest")
+      and _awl._el_point({"points": _pts}, {**_lv("en", "eleven_v4"), "voice_id": "v2"}) == (_pts[4], "same"),
+      "a voice's measured point is looked up by the voice, the model and the language (a point with no language is English, one with no model "
+      "the config's): a new language or model has none and needs a probe")
+
+# --- 5.11: the forecast reads the §11 / §11b / intimate word lists on a line's English gloss; the plan names its language and unit
+js, _ = ts("static", "forecast", "--run", str(LR), "--video", "01", "--part", "narration")
+_f1 = js["narration"]
+_pl1 = _f1["plan"]
+check((_f1.get("forecast") or {}).get("from_point") == "same" and (_f1["forecast"].get("point") or {}).get("unit") == "words"
+      and _pl1["language"] == "es" and _pl1["unit"] == "words" and _pl1["words"] == 28 and _pl1["lines_without_gloss"] == [5]
+      and _pl1["intimate_body_words"] == [{"line": 3, "words": ["groin"]}] and _pl1["religion_or_superstition_words"] == [{"line": 4, "words": ["church"]}]
+      and _pl1["nudity_gore_or_distress_words"] == [{"line": 3, "words": ["groin"]}],
+      "the forecast of a Spanish narration: its language and unit, the lines without an English gloss, and the word lists run on each line's "
+      "gloss (a Spanish 'ingle' and 'iglesia' are found through 'groin' and 'church'); the voice's Spanish point is used")
+js, _ = ts("static", "forecast", "--run", str(LR), "--video", "02", "--part", "narration")
+_f2 = js["narration"]
+check(_f2["plan"]["unit"] == "characters" and _f2["plan"]["language"] == "ja" and _f2["plan"]["words"] == 32 and _f2["plan"]["lines_without_gloss"] == []
+      and _f2["forecast"]["unit"] == "characters" and "letters" in _f2["forecast"]["against_family_note"] and _f2["forecast"]["from_point"] == "same"
+      and _f2["lever"]["language"] == "ja",
+      "the forecast of a Japanese narration counts letters and says its numbers are not the references' units")
+js, _ = ts("static", "forecast", "--run", str(LR), "--video", "07", "--part", "narration")
+_f7 = js["narration"]
+check(_f7["plan"]["language"] == "en" and _f7["plan"]["unit"] == "words" and "lines_without_gloss" not in _f7["plan"] and _f7["plan"]["words"] == 17
+      and _f7["forecast"]["from_point"] == "same" and "against_family_note" not in _f7["forecast"] and _f7["plan"]["intimate_body_words"] == [],
+      "an English narration's forecast is as before (no gloss list), with its language and unit added")
+
+# --- 5.10: a narration's units against its English gloss, and the plan's pace converted by their ratio
+js, _ = ts("static", "units", "--run", str(LR), "--video", "02")
+_u2 = js
+_cv = _u2["pace"]["converted"]
+check(_u2["unit"] == "characters" and _u2["native_units"] == 32 and _u2["gloss_words"] == 15 and _u2["ratio"]["overall"] == 2.1333 and _u2["ratio"]["line_median"] == 1.8333
+      and _u2["lines"][0] == {"n": 1, "units": 10, "gloss_words": 6, "ratio": 1.6667} and _u2["lines_without_gloss"] == []
+      and all(abs(a_ - b_) < 0.11 for a_, b_ in zip(_cv["wpm_articulation"] + _cv["wpm_overall"], [384.0, 426.7, 320.0, 362.7]))
+      and abs(_cv["target"]["wpm_articulation"] - 405.3) < 0.11 and abs(_cv["target"]["wpm_overall"] - 341.3) < 0.11
+      and _cv["unit"] == "characters" and _cv["units_ratio"] == 2.1333 and _cv["tolerance"] == 0.02 and _cv["refs"] == ["V1"]
+      and _u2["pace"]["given"]["wpm_articulation"] == [180, 200] and _u2["pace"]["converted_from_ratio"] == 1.0,
+      "static units: the lines' letters over their gloss words (32 over 15: ratio 2.1333, per-line median 1.8333) and the plan's pace "
+      "converted by that ratio, its unit and ratio set (arithmetic only)")
+_nar2 = json.loads((LR / "40-briefs" / "video-02-narration.json").read_text(encoding="utf-8"))
+_nar2["pace"] = _cv
+(LR / "40-briefs" / "video-02-narration.json").write_text(json.dumps(_nar2, ensure_ascii=False), encoding="utf-8")
+js, _ = ts("static", "units", "--run", str(LR), "--video", "02")
+check(js["pace"]["converted_from_ratio"] == 2.1333 and js["pace"]["converted"]["wpm_articulation"] == _cv["wpm_articulation"]
+      and js["pace"]["converted"]["target"] == _cv["target"] and js["pace"]["converted"]["units_ratio"] == 2.1333,
+      "a pace that already carries its units_ratio is converted from its own English numbers, never twice")
+js, _ = ts("static", "units", "--run", str(LR), "--video", "01")
+check(js["ratio"]["overall"] == 1.0 and js["lines_without_gloss"] == [5] and js["pace"]["converted"]["wpm_articulation"] == [170.0, 190.0]
+      and js["unit"] == "words" and js["native_units"] == 28 and js["gloss_words"] == 24,
+      "a Spanish narration's ratio is the lines' words over their gloss words (24 over 24); a line without a gloss is left out of it and listed")
+js, _ = ts("static", "units", "--run", str(LR), "--video", "07")
+check(js["ratio"]["overall"] == 1.0 and js["lines_without_gloss"] == [] and "English" in js["note"] and js["pace"]["converted"] is None,
+      "English: ratio 1, nothing is converted")
+js, _ = ts("static", "units", "--run", str(LR), "--video", "08")
+check(js["ratio"]["overall"] == 1.0 and js["lines_without_gloss"] == [1] and "no line has a gloss" in js["note"] and js["unit"] == "characters"
+      and js["pace"]["converted"]["wpm_articulation"] == [180.0, 200.0] and js["pace"]["converted"]["units_ratio"] == 1.0,
+      "a narration with no gloss at all: ratio 1, nothing converted, every line listed as without a gloss")
+js, code = ts("static", "units", "--run", str(LR), "--video", "99", ok=False)
+check(code == 2 and "narration lines not found" in js.get("error", ""), "static units without a narration plan: refused")
+
+# --- 5.2 / 5.3 / 5.4: the captions of a Japanese, an Arabic and a Turkish video; the word box where the language can take it
+_lg_cap = {"font_file": str(_LG_FONT), "size": 6, "fill": "#FFFFFF", "stroke_color": "#000000", "stroke_width": 0.1,
+           "word_box": {"color": "#E0B000", "alpha": 1.0, "round_radius": 0.5, "style": 0, "gap_em": 0.4}}
+_lg_ls = {"font_file": str(_LG_FONT), "size": 7, "fill": "#FFFFFF", "stroke_color": "#000000", "stroke_width": 0.12, "shadow": True}
+
+
+def _lg_plan(nn, n_img, **kw):
+    return {"video": nn, "transition": "cut", "images": [{"image": k, "from_line": k, "motion": "none"} for k in range(1, n_img + 1)], **kw}
+
+
+_p2 = _lg_plan("02", 3, captions=_lg_cap, labels_style=_lg_ls)
+_p2["images"][1]["labels"] = [{"text": "東京", "x_rel": 0.5, "y_rel": 0.4}]
+(LR / "40-briefs" / "video-02-images.json").write_text(json.dumps(_p2, ensure_ascii=False), encoding="utf-8")
+(LR / "40-briefs" / "video-03-images.json").write_text(json.dumps(_lg_plan("03", 3, captions={**_lg_cap, "case": "upper"}), ensure_ascii=False), encoding="utf-8")
+(LR / "40-briefs" / "video-04-images.json").write_text(json.dumps(_lg_plan("04", 2, captions=_lg_cap), ensure_ascii=False), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(LR), "--video", "02", ok=False)
+_tl2 = json.loads((LR / "40-briefs" / "video-02-timeline.json").read_text(encoding="utf-8"))
+_cues2 = _awl._read_srt(LR / "60-outputs" / "video-02" / "captions.srt")
+check(js["language"]["code"] == "ja" and js["language"]["unit"] == "characters" and _tl2["captions"]["chars"] == 10 and _tl2["captions"]["unit"] == "characters"
+      and _tl2["captions"]["language"] == "ja" and len(_cues2) == js["captions"] >= 3 and all(" " not in c["text"] for c in _cues2)
+      and "".join(c["text"] for c in _cues2) == "".join(w["w"] for w in _w2["words"]) and _cues2[0]["text"].startswith("その日、"),
+      "slideshow plan for a Japanese video: captions of letters (config static.captions.chars_unspaced), joined with no space, the cut after "
+      "a 、 or 。; the timeline's captions block says its unit and language")
+_p2b = json.loads(json.dumps(_p2))
+_p2b["captions"]["chars"] = 6
+(LR / "40-briefs" / "video-02-images.json").write_text(json.dumps(_p2b, ensure_ascii=False), encoding="utf-8")
+js, _ = ts("slideshow", "plan", "--run", str(LR), "--video", "02", ok=False)
+_cues2b = _awl._read_srt(LR / "60-outputs" / "video-02" / "captions.srt")
+check(json.loads((LR / "40-briefs" / "video-02-timeline.json").read_text(encoding="utf-8"))["captions"]["chars"] == 6 and len(_cues2b) > len(_cues2)
+      and max(len(_awl._units(c["text"], _i["ja"])) for c in _cues2b) <= 12,
+      "the plan's captions.chars sets the letters a cue holds")
+(LR / "40-briefs" / "video-02-images.json").write_text(json.dumps(_p2, ensure_ascii=False), encoding="utf-8")
+js, _ = ts("narration-words", "--run", str(LR), "--video", "02", "--words", "4")
+_c2c = json.loads((LR / "30-assets" / "narration" / "video-02.cues.json").read_text(encoding="utf-8"))
+check(len(_c2c) > len(_c2) and max(len(_awl._units(c["text"], _i["ja"])) for c in _c2c) <= 8, "--words is the letters a caption holds in a language written without spaces")
+_wb_d = home.parent / "wb-draft"
+_wb_d.mkdir(exist_ok=True)
+(_wb_d / "draft_content.json").write_text(json.dumps({"canvas_config": {"width": 1080, "height": 1920}}), encoding="utf-8")
+ts("slideshow", "plan", "--run", str(LR), "--video", "02", ok=False)
+js, code, _ = t("capcut-word-box", "--draft", str(_wb_d), "--run", str(LR), "--video", "02", env=SENV, ok=False)
+check(code == 2 and js.get("word_box_supported") is False and js["why"] == "written without spaces between words" and js["language"]["code"] == "ja"
+      and js["language"]["spaced"] is False and "plain caption path" in js["error"] and "Nothing was changed" in js["error"],
+      "capcut-word-box stops for a language written without spaces: exit 2, word_box_supported false, why, and the plain caption path")
+ts("narration-words", "--run", str(LR), "--video", "04")
+ts("slideshow", "plan", "--run", str(LR), "--video", "04", ok=False)
+js, code, _ = t("capcut-word-box", "--draft", str(_wb_d), "--run", str(LR), "--video", "04", env=SENV, ok=False)
+check(code == 2 and js.get("word_box_supported") is False and js["why"] == "written right to left" and js["language"]["code"] == "ar" and js["language"]["direction"] == "rtl",
+      "capcut-word-box stops for a language written right to left (Arabic): exit 2, word_box_supported false")
+ts("slideshow", "plan", "--run", str(LR), "--video", "03", ok=False)
+_tr_srt = home.parent / "tr.srt"
+_tr_srt.write_text("1\n00:00:00,300 --> 00:00:01,000\nİSTANBUL'DA HAVA ÇOK\n", encoding="utf-8")
+js, code, _ = t("capcut-word-box", "--draft", str(_wb_d), "--run", str(LR), "--video", "03", "--srt", str(_tr_srt), env=SENV, ok=False)
+check(code == 2 and js.get("word_box_supported") is None and "no narration words" in js.get("error", ""),
+      "a Turkish video (left to right, with spaces) passes the word box's language gate: the command goes on to its next check")
+ts("narration-words", "--run", str(LR), "--video", "03")
+ts("slideshow", "plan", "--run", str(LR), "--video", "03", ok=False)
+_tr_cues = _awl._read_srt(LR / "60-outputs" / "video-03" / "captions.srt")
+_tr_words = json.loads((LR / "30-assets" / "narration" / "video-03.words.json").read_text(encoding="utf-8"))["words"]
+_tr_rows, _tr_prob = _awl._word_box_plan(_tr_cues, _tr_words, 0.3, 30, info=_i["tr"])
+_tr_rows0, _tr_prob0 = _awl._word_box_plan(_tr_cues, _tr_words, 0.3, 30)
+check(any("KİMSE" in c["text"] for c in _tr_cues) and not any("KIMSE" in c["text"] for c in _tr_cues) and _tr_cues[0]["text"] == "İSTANBUL'DA HAVA ÇOK"
+      and not _tr_prob and sum(len(r["tokens"]) for r in _tr_rows) == len(_tr_words) == 10 and _tr_prob0,
+      "Turkish captions in capitals keep the dotted İ (KİMSE, not KIMSE), and the word box matches each caption word to the narration's when "
+      "it knows the language (without it the dotless ı of 'sıcaktı' and the I of 'SICAKTI' would not meet)")
+_jd = home.parent / "Draft_ja_font"
+_jd.mkdir(exist_ok=True)
+_jc = json.dumps({"id": "TL-JA", "name": "Draft_ja_font", "materials": {"texts": [
+    {"id": "A", "font_size": 12.0, "font_path": "x.ttf", "check_flag": 7, "content": json.dumps({"text": LG_JA, "styles": [{"range": [0, 11], "size": 12.0}]})}]},
+    "tracks": [{"type": "text", "name": "subtitle", "segments": [{"material_id": "A"}]}]}, ensure_ascii=False)
+(_jd / "draft_content.json").write_text(_jc, encoding="utf-8")
+(_jd / "draft_info.json").write_text(_jc, encoding="utf-8")
+js, code, _ = t("capcut-font", "--draft", str(_jd), "--font-file", str(_LG_FONT), "--track", "subtitle", env=SENV, ok=False)
+if code == 3:
+    print("SKIP  capcut-font's font_missing_glyphs: CapCut is running on this machine")
+else:
+    check(code == 0 and js["font_covers"] is False and "日" in js["font_missing_glyphs"] and "。" in js["font_missing_glyphs"],
+          "capcut-font lists the characters of the texts it set that the font file has no glyph for")
+    if _cjk:
+        js, code, _ = t("capcut-font", "--draft", str(_jd), "--font-file", _cjk, "--track", "subtitle", env=SENV, ok=False)
+        check(code == 0 and js["font_covers"] is True and js["font_missing_glyphs"] == [], f"and none for a font that draws them ({Path(_cjk).name})")
+_lbd2 = home.parent / "labels-ja"
+subprocess.run([shutil.which("capcut.cmd") or shutil.which("capcut") or "capcut", "init", "jlbl", "--drafts", str(_lbd2), "--width", "1080", "--height", "1920"],
+               capture_output=True, text=True)
+js, code, _ = t("capcut-labels", "--draft", str(_lbd2 / "jlbl"), "--run", str(LR), "--video", "02", env=SENV, ok=False)
+if code in (3, 2):
+    print(f"SKIP  capcut-labels' font_missing_glyphs: exit {code} ({str(js.get('error'))[:80]})")
+else:
+    check(js.get("font_missing_glyphs") == ["京", "東"] and js.get("font_covers") is False and js.get("labels") in (0, 1),
+          "capcut-labels lists the characters of its labels the font file has no glyph for")
+
+# --- 5.13: the set's profile in any language: each reference's detected language and unit, the words-based medians without the references
+# counted in letters
+(LR / "00-inventory").mkdir(parents=True, exist_ok=True)
+(LR / "00-inventory" / "inventory.json").write_text(json.dumps({"role": "references", "items": [
+    {"id": "R01", "kind": "video", "path": "a.mp4", "rel": "a.mp4"}, {"id": "R02", "kind": "video", "path": "b.mp4", "rel": "b.mp4"}]}), encoding="utf-8")
+for _rid, _lang, _wpm, _len in (("R01", "en", 175.0, 60.0), ("R02", "ja", 320.0, 80.0)):
+    _md = LR / "10-media" / _rid
+    _md.mkdir(parents=True, exist_ok=True)
+    (_md / "video.json").write_text(json.dumps({"probe": {"duration_s": _len, "aspect": "9:16"}, "speech": {"n_words": 180, "wpm_speech_only": _wpm}}), encoding="utf-8")
+    (_md / "audio-profile.json").write_text(json.dumps({"voice": {"words_per_minute": _wpm, "words": 175}}), encoding="utf-8")
+    (_md / "transcript.json").write_text(json.dumps({"language": _lang, "segments": [{"text": "Did you know this? You never noticed it." if _lang == "en" else LG_JA}]},
+                                                    ensure_ascii=False), encoding="utf-8")
+js, _ = ts("static", "profile", "--run", str(LR))
+_sp = json.loads((LR / "20-analysis" / "set-profile.json").read_text(encoding="utf-8"))
+check(_sp["references"]["R01"]["language"] == "en" and _sp["references"]["R01"]["unit"] == "words" and _sp["references"]["R02"]["language"] == "ja"
+      and _sp["references"]["R02"]["unit"] == "characters" and _sp["languages"] == {"en": ["R01"], "ja": ["R02"]}
+      and _sp["set"]["wpm_overall"]["n"] == 1 and _sp["set"]["wpm_overall"]["median"] == 175.0 and _sp["set"]["length_s"]["n"] == 2
+      and _sp["set"]["wpm_speech"]["n"] == 1 and "characters" in _sp["words_based_medians_exclude"]["R02"] and "R01" not in _sp["words_based_medians_exclude"]
+      and js["words_based_medians_exclude"] == _sp["words_based_medians_exclude"] and "Languages heard" in (LR / "20-analysis" / "set-profile.md").read_text(encoding="utf-8")
+      and "language" not in _sp["set"] and "unit" not in _sp["set"],
+      "static profile: each reference's detected language and unit; the set's words-based medians leave out the reference counted in letters "
+      "(listed with the reason) while its other numbers stay in")
+
+# --- 5.12: a clone keeps the narration model and starts with no approaches, no languages and no language plan
+(LR / "20-analysis").mkdir(parents=True, exist_ok=True)
+(LR / "20-analysis" / "static-spec.md").write_text("# Static spec\n", encoding="utf-8")
+js, _ = ts("clone-run", "--from", str(LR))
+_cl = json.loads((Path(js["run_dir"]) / "state.json").read_text(encoding="utf-8"))
+check("tts_model" in js["kept"] and "video_info" in js["reset"] and "language_plan" in js["reset"] and (_cl["static"].get("tts_model") or {}).get("model_id") == "eleven_v4"
+      and "video_info" not in _cl["static"] and "language_plan" not in _cl["static"] and "subjects" not in _cl["static"] and "niche" not in _cl["static"]
+      and "tts_model" in _cl["cloned_from"]["kept"] and {"video_info", "language_plan"} <= set(_cl["cloned_from"]["reset"])
+      and (_cl["static"].get("voice") or {}).get("voice_id") == "vSARAH",
+      "clone-run keeps the narration model and the narrator; each video's approach and language and the language plan start empty")
+check(not any(_ELKEY in o for o in _outs) and _ELKEY not in LG_CACHE.read_text(encoding="utf-8")
+      and not any(_ELKEY in p.read_text(encoding="utf-8", errors="ignore") for p in LR.rglob("*") if p.is_file() and p.suffix in (".json", ".md", ".txt", ".srt")),
+      "the ElevenLabs key is never printed and never written to the run or the library's copy of the list")
+# <<< language, narration model and approach tests (end)
+
 finish()
