@@ -27,3 +27,5 @@ Set up 2026-11-05 (user: "install that tooling here too and anything else needed
 - Never `pip install -U av` past 18 in Python312 until faster-whisper stops passing `metadata_errors`.
 
 Related: [[local-ai-installs]], [[loupe-web-app]], [[analyze-with-loupe-command]]
+
+**2026-11-11 disk and Whisper:** C: had 5.3 GB free of 231 GB (the fixed 12-16 GB page file takes its share), so the user had every CapCut project deleted except video 03's final `09_Nov_2026_v03-4` and the template `_analyze-stack-template` (never delete the template: `capcut_clone_draft` copies it); that freed to 9.6 GB, then the Whisper `medium` model (`Systran/faster-whisper-medium`, 1.43 GB, in the HF cache, `faster_whisper.utils.download_model("medium")`, 146 s) left 7.7 GB. The pipeline still uses `small` (config `whisper_model`; `transcribe()` falls back to small/base/tiny silently and records the model it used): on the same 11.8 s German clip small took 4.4 s and wrote "Alleranfang", medium took 13.1 s and got all 22 words. Check C: free space before a big download or a long video's CapCut project (about 750 MB each).
