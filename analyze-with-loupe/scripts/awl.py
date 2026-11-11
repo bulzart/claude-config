@@ -10886,7 +10886,9 @@ def _pause_breakdown(words: list, spans: dict, lines: list, gaps: dict) -> dict:
 def _pace_targets(p: dict) -> dict:
     """The narration JSON's `pace` read as what the toolkit aims at (static §6 "The pace", §13): the speaking measure
     (`wpm_articulation`, or the older `wpm_speech` for a plan written before 2026-11-08), its band and the overall band, and the target
-    point the judge chose (`pace.target`), else each band's middle. None when the plan has no speaking pace."""
+    point the judge chose (`pace.target`), else each band's middle. None when the plan has no speaking pace. `unit` is what the plan's
+    numbers count (its `pace.unit`: 'words' unless the pace was converted to letters, `T static units`): a measured pace is compared
+    with them only when it counts the same."""
     p = p or {}
     tgt = p.get("target") or {}
     mk = "wpm_articulation" if (p.get("wpm_articulation") is not None or tgt.get("wpm_articulation") is not None) else "wpm_speech"
@@ -10895,7 +10897,7 @@ def _pace_targets(p: dict) -> dict:
     to = tgt.get("wpm_overall") if tgt.get("wpm_overall") is not None else ((bo[0] + bo[1]) / 2 if bo else None)
     if ts is None:
         return None
-    return {"measure": mk, "band_speak": bs, "band_overall": bo, "target_speak": float(ts),
+    return {"measure": mk, "band_speak": bs, "band_overall": bo, "target_speak": float(ts), "unit": str(p.get("unit") or "words"),
             "target_overall": float(to) if to is not None else None, "from_judge": bool(tgt),
             "tol": float(p.get("tolerance") or _scfg("narration.pace_tol", 0.015)),
             # the default pause's limits: the plan's (the judge keeps every default join heard clearly as a pause, static §13), else
@@ -12277,8 +12279,9 @@ def _tts_say(a):
     if pt:
         mk, ts_, to_, tol = pt["measure"], pt["target_speak"], pt["target_overall"], pt["tol"]
         bs, bo = pt["band_speak"], pt["band_overall"]
-        pace_rec = {"measure": mk, "target": {mk: bs, "wpm_overall": bo, "point": {mk: ts_, "wpm_overall": to_}, "tolerance": tol,
-                                              "from_judge": pt.get("from_judge")},
+        pace_rec = {"measure": mk, "unit": unit, "units_agree": pt["unit"] == unit,
+                    "target": {mk: bs, "wpm_overall": bo, "point": {mk: ts_, "wpm_overall": to_}, "tolerance": tol,
+                               "from_judge": pt.get("from_judge"), "unit": pt["unit"]},
                     "measured": {k_: m.get(k_) for k_ in PACE_MEASURED_KEYS},
                     "on_target": {"speak": bool(m.get(mk)) and abs(m[mk] / ts_ - 1) <= tol,
                                   "overall": to_ is None or (bool(m.get("wpm_overall")) and abs(m["wpm_overall"] / to_ - 1) <= tol)},
@@ -12327,7 +12330,8 @@ def _tts_say(a):
          "language": {k_: (P.get("lang_info") or {}).get(k_) for k_ in ("code", "name", "official", "unit")},
          "characters_now": spent,
          "credits": {"before": credits_before.get("left"), "after": credits_after.get("left"), "tier": credits_before.get("tier")} if todo else None,
-         "pace": ({k_: pace_rec.get(k_) for k_ in ("measure", "target", "measured", "on_target", "within", "off_by", "lever", "method")}
+         "pace": ({k_: pace_rec.get(k_) for k_ in ("measure", "unit", "units_agree", "target", "measured", "on_target", "within", "off_by",
+                                                   "lever", "method")}
                   if pace_rec else {"target": None, "note": "the narration JSON has no `pace` (static §4, §6)"}),
          "pause_after_not_placed": (f"{len(numeric)} lines carry a numeric pause_after: Eleven v4 makes its own pauses and none is placed "
                                     "afterwards; a pause is asked with a line's tags_after (e.g. \"[long pause]\") or its punctuation "
@@ -12420,7 +12424,9 @@ def _tts_probe(a):
          "measured": {k_: point.get(k_) for k_ in ("wpm_articulation", "wpm_overall", "wpm_delivered", "pauses_per_minute",
                                                    "pause_s_median", "inside_pause_s_median", "words", "unit")},
          "model_id": P["model"], "language": {k_: (P.get("lang_info") or {}).get(k_) for k_ in ("code", "name", "official", "unit")},
-         "target": ({pt["measure"]: pt["target_speak"], "wpm_overall": pt["target_overall"], "tolerance": pt["tol"]} if pt else None),
+         "target": ({pt["measure"]: pt["target_speak"], "wpm_overall": pt["target_overall"], "tolerance": pt["tol"], "unit": pt["unit"]}
+                    if pt else None),
+         "units_agree": (pt["unit"] == ((P.get("lang_info") or {}).get("unit") or "words")) if pt else None,
          "off_by": ({pt["measure"]: round(point["wpm_articulation"] / pt["target_speak"] - 1, 4)} if pt and point.get("wpm_articulation")
                     else None),
          "narration_at_this_pace": pred, "file": str(f), "characters": spent,
@@ -12684,7 +12690,8 @@ def cmd_narration_words(a):
         mk, b_sp, b_ov = pt["measure"], pt["band_speak"], pt["band_overall"]
         pace["measure"] = mk
         pace["target"] = {mk: b_sp, "wpm_overall": b_ov, "point": {mk: pt["target_speak"], "wpm_overall": pt["target_overall"]},
-                          "tolerance": pt["tol"]}
+                          "tolerance": pt["tol"], "unit": pt["unit"]}
+        pace["units_agree"] = pt["unit"] == pace.get("unit")   # a pace counted in letters is compared with a target counted in letters
         pace["within"] = {mk: (b_sp[0] <= pace[mk] <= b_sp[1]) if b_sp and pace.get(mk) else None,
                           "wpm_overall": (b_ov[0] <= pace["wpm_overall"] <= b_ov[1]) if b_ov and pace.get("wpm_overall") else None}
         pace["on_target"] = {"speak": bool(pace.get(mk)) and abs(pace[mk] / pt["target_speak"] - 1) <= pt["tol"],
@@ -13816,7 +13823,8 @@ def _forecast_narration(rd: Path, st: dict, nn: str) -> dict:
     pt = _pace_targets(pace)
     res["target"] = ({"measure": pt["measure"], "point": {pt["measure"]: pt["target_speak"], "wpm_overall": pt["target_overall"]},
                       "bands": {pt["measure"]: pt["band_speak"], "wpm_overall": pt["band_overall"]}, "tolerance": pt["tol"],
-                      "from_judge": pt["from_judge"]} if pt else None)
+                      "from_judge": pt["from_judge"], "unit": pt["unit"], "units_agree": pt["unit"] == (info.get("unit") or "words")}
+                     if pt else None)
     if pace.get("refs"):
         res["family"] = _fc_family(rd, pace["refs"])
     voice = (st.get("static") or {}).get("voice") or {}
