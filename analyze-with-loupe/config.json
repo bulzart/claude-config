@@ -384,7 +384,7 @@
       "note": "The optional effects folder (the user, 2026-11-06: sound effects, green-screen transitions, overlays): `T effects scan` measures every file once (cached in runs/_effects-cache by path, size and time) at scan_fps on a scan_width copy, and draws contact sheets of sheet_frames frames per file, sheet_rows files per sheet. Facts only: what each effect is used for, where and how loud is the plan's (reference/static section 5)."
     },
     "drawings": {
-      "ssaa": 2,
+      "ssaa": 4,
       "codec_order": ["qtrle", "png-mov", "prores4444"],
       "preview_points": [0.3, 0.65, 1.0],
       "grid_step": 0.1,

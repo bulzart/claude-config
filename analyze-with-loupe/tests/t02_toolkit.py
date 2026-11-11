@@ -3416,6 +3416,20 @@ check(_R.n == 36 and _f0.max() == 0 and _fm[:, :int(_half_x * 0.6)].max() > 200 
       and _fl[:, int(0.85 * 360):].max() > 200 and _runs >= 8 and not all(_on),
       f"a dashed curved line drawn on: {_R.n} frames for 1.2 s at 30 fps, frame 0 empty, half way the stroke reaches the middle of its path and "
       f"nothing past it, the last frame holds the whole path, the dashes leave gaps ({_runs} dashes counted along it)")
+# a thick curved stroke has a smooth edge (the user's CapCut export of the demo, 2026-11-11, showed a comb of small teeth along a ring's edges:
+# PIL's wide polyline rounds each short segment's corners to whole pixels and more supersampling did not remove it; the stroke is a disc per sample now)
+_Rr = _awl._DrawRender(_dspec([{"type": "ellipse", "box": [0.1, 0.1, 0.9, 0.9], "stroke": "#ff1744", "width": 0.02, "fill": None,
+                                "in": {"kind": "none", "start_s": 0.0}}], dur=0.5), 720, 720, 30, ss=4)
+_re = []
+for _row in _dalpha(_Rr.frame(5))[300:420]:
+    _full = _dnp.where(_row >= 250)[0]
+    if len(_full):
+        _re.append(_full[0] - float(_row[:_full[0]].sum()) / 255.0)
+_re = _dnp.array(_re)
+_rough = float(_dnp.std(_re[2:] - 2 * _re[1:-1] + _re[:-2])) if len(_re) > 3 else 99.0
+check(len(_re) == 120 and _rough < 0.3,
+      f"a thick curved stroke (a ring) has a smooth edge: the sub-pixel left edge's second difference varies {_rough:.3f} px over 120 rows "
+      f"(the wide-polyline stroke gave 1.0 to 1.2 px: a comb of teeth)")
 _RE = _awl._DrawRender(_dspec([_dline(dash=None, **{"in": {"kind": "draw", "start_s": 0.0, "dur_s": 1.0, "ease": "linear", "from": "end"}})]), 360, 640, 30)
 _fe = _dalpha(_RE.frame(15))
 check(_fe[:, int(_half_x + 20):].max() > 200 and _fe[:, :int(_half_x * 0.6)].max() == 0,

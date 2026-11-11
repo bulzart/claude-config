@@ -15298,7 +15298,7 @@ DRAW_CAPS = ("round", "butt")
 DRAW_ALIGN = {"left": "ls", "center": "ms", "right": "rs"}
 # the scripts Pillow draws right without a shaping engine (letters that neither join nor reorder); any other is refused (a CapCut label)
 DRAW_TEXT_SCRIPTS = {"Latin", "Cyrillic", "Greek", "Armenian", "Georgian", "Han", "Hiragana", "Katakana", "Hangul", "Bopomofo"}
-DRAW_RENDERER = 1           # in the spec hash: a change to how a frame is drawn makes every clip stale
+DRAW_RENDERER = 2           # in the spec hash: a change to how a frame is drawn makes every clip stale (2: a disc per sample for a round-capped stroke, 2026-11-11)
 DRAW_TRACK = "draw"         # the CapCut track prefix of the drawings (draw1, draw2 ...), apart from the effect overlays' fx
 DRAW_POP_PEAK = 1.12        # pop: grow to this, then settle at 1 (the contract's kind, not a look value)
 DRAW_MARK_ANGLE = 28.0      # an open or filled arrow head's half angle in degrees
@@ -15840,11 +15840,16 @@ class _DrawRender:
         pa = (float(np.interp(a, s, path[:, 0])), float(np.interp(a, s, path[:, 1])))
         pb = (float(np.interp(b, s, path[:, 0])), float(np.interp(b, s, path[:, 1])))
         pts = [pa] + [(float(x), float(y)) for x, y in path[i0:i1]] + [pb]
-        dr.line(pts, fill=col, width=w, joint="curve")
         if cap == "round" and w > 2:
+            # a disc at every sample (the path's points lie 1.5 supersampled px apart, so the discs overlap into one smooth stroke and its
+            # round caps): PIL's wide polyline (ImageDraw.line with a width) rounds each short segment's corners to whole pixels and
+            # leaves a comb of small teeth along the edges of a curved stroke, which more supersampling does not remove (seen in the
+            # user's CapCut export of the demo, 2026-11-11: a ring's edge roughness 0.45 px; with discs 0.27 px at ssaa 2, 0.13 px at 4)
             r = w / 2
-            for x, y in (pa, pb):
+            for x, y in pts:
                 dr.ellipse([x - r, y - r, x + r, y + r], fill=col)
+            return
+        dr.line(pts, fill=col, width=w, joint="curve")
 
     def _mark(self, dr, tip, d, m, col, w, cap):
         sz = m["size"]

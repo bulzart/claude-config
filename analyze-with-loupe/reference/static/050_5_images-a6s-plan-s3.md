@@ -91,7 +91,7 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   plan entry gets `"drawings": [{"id": "D1", "start_s": <from the image's start>, "dur_s": <the clip's length>, "why": "<the narration's
   point it elaborates, and the references' annotation pattern or the agent's own reason>", "elements": […]}]` (an extra format's own in
   `by_format.<tag>.drawings`, positions read off that format's still). An element is a `line` (a path, straight or `smooth` through its
-  points, solid or `dash`ed, `cap` round or butt, with a `head` and/or `tail` mark at its last and first point: `open`, `filled`, `bar` (a
+  points, solid or `dash`ed, `cap` round or butt (round on a thick curve: a butt end leaves the edge rough), with a `head` and/or `tail` mark at its last and first point: `open`, `filled`, `bar` (a
   short perpendicular tick, as a dimension line ends on the thing it measures) or `dot`; an `arrow` is a line with a `head`), an
   `ellipse` or `rect` (a `box`), a `polygon`, or
   `text` (its `at` point, `align`, `font_file`, `size`, `fill`, `stroke_color`), with `stroke` and `width`, `fill` and `fill_alpha` (a shape
