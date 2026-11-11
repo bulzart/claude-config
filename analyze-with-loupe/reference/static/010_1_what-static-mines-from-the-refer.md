@@ -26,7 +26,9 @@ from them (`T static profile --run RUN --refs <the niche's references>`, within 
 whole set stays the second source and is never ignored: a pattern most of the set shares across its niches is kept unless the niche's
 references show otherwise, and where they are too few or silent on a point (one reference, no bed, no call to action), the family's or
 the set's pattern decides. Each value of a plan says which it follows, with both numbers ("the niche's 3 references open on a
-question, the set's 6 of 9: kept"). A niche no reference is about takes the whole set's craft. (The run of 2026-11-06, niche
+question, the set's 6 of 9: kept"). A niche no reference is about takes the whole set's craft. The same two sources feed a video's
+**approach** (§10, the user, 2026-11-11): the niche's references' approaches first, the whole set's other story families beside them,
+and the agent's own where neither fits: the field is the lock, the approach is chosen per video. (The run of 2026-11-06, niche
 "Survival scenarios": its survival references V07, V09 and V13 sit in the family F3 of seven; video 03 still took F3's numbers, and
 the long pauses show the difference: F3's median 6.3 per 10 minutes, the survival references' 8.8.)
 `T static profile --run RUN` gives the measured numbers of every analysed reference side by side with the set's median, lowest and
@@ -75,7 +77,12 @@ and their amounts, the captions a minute, the bed. For every reference, collect 
 - **Emotion over time**: the arc (curiosity, tension, awe, laughter, relief, sympathy, a wince), where each peak falls as a share of the
   length, and how the words, the voice (pace, pitch, pauses), the pictures and the bed carry it; how often the mood turns.
 - **The language**: the person and the tense, the words a sentence, the questions, "you" and numbers a minute (`T static profile`), the
-  specificity (dates, sums, names), the humour (deadpan tags, callbacks, irony) and how often it lands, slang, the reading level.
+  specificity (dates, sums, names), the humour (deadpan tags, callbacks, irony) and how often it lands, slang, the reading level. The
+  language the reference speaks is a fact too (the transcript's detected language, `10-media/<V>/`): the references may be English, or
+  a mix, and are all studied the same way, each in its own language (the user, 2026-11-11: "even though all references might be in
+  english or mixed, we still analyse them and understand"); their pace numbers count their own unit (words, or characters for a
+  language written without spaces) and the set's medians by words leave a reference of the other unit out, with the reason (`T static
+  profile`). The patterns are carried to the run's videos in the language each video is made in (§4, §6).
 - **Engagement**: each call to action (subscribe, comment, like) with its time and wording, the questions put to the viewer, the ending
   (a loop back to the hook, a teaser of the next video, a question for the comments).
 - **Attachment**: what makes a viewer care: a recurring protagonist, the narrator as a persona, the viewer cast as the hero ("POV: you"),
@@ -84,6 +91,11 @@ and their amounts, the captions a minute, the bed. For every reference, collect 
   harmless argument), the title and thumbnail as a pair (§12), a series or a time-box promise ("in 9 Minutes"), the comment bait.
 - **The content style**: a story, an explainer, a list or a scenario; factual or invented; how serious and how playful; the angle on the
   subject (the underdog, the hidden cost, the "what if").
+- **The approach** (the user, 2026-11-11, §10): how this reference tells its subject, as the fields a run's video will choose among:
+  its story form (counted days, hour by hour, a real case retold, a life path, "what happens if", myth against fact, a guide …), its
+  point of view (you, third person, we, an expert), the time frame it counts and the scale it tells at (one person to a species), the
+  pillar inside its field (the sub-topic: heat, a book, a battle …) and its title form (§12). One line each, read from the transcript
+  and the title; the spec counts them across the set and across the niche's references (§2).
 - **Why it holds** [I]: one paragraph per reference, from the facts above: what kept a viewer to the end and what made them come back.
 - **The subject**: what each video is about, and what kind of subject it is (a book, a person, an event, a fact list, a story), to be
   left behind (§3), and its field (history, philosophy, psychology …): a candidate for the run's niche, which the user picks at A5 (§10).

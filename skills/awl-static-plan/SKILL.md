@@ -41,27 +41,37 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    subjects made). The requested count plus three at least (never under five), all of the run's niche, told in the references' craft,
    never a reference's own subject and never one the run made or one so close it retells it, nothing religious or superstitious
    (static §11) and nothing indecent, gory or distressing (static §11b), scored as §3 says. A factual niche: research every candidate (WebSearch, then WebFetch on the strongest
-   results; at most four searches per candidate) and keep only the candidates two independent sources hold. Write
-   `RUN/20-analysis/static-subjects.md` (each candidate: title, hook line, why it fits, the scores, the sources).
+   results; at most four searches per candidate) and keep only the candidates two independent sources hold. **Each candidate comes
+   with its approach** (static §3, §10; the user, 2026-11-11: the niche is a family, each video an approach): story form, angle, point
+   of view, time frame, scale, title form and pillar, drawn from the spec's "approaches seen", from the whole set's other story
+   families, or the agent's own inside the niche (its reason written); the pool is varied on purpose, none repeats the last video's
+   approach without a written reason (`T static subjects --run RUN` lists the approaches made), and a pool is never "N days of X"
+   alone. Write `RUN/20-analysis/static-subjects.md` (each candidate: title, approach, hook line, why it fits, the scores, the
+   sources).
 3. **Five voice samples** (static §6; the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them
    so the user can hear them and pick the one they like to be the voice of the videos"), only when the run has no narrator yet (the
    locks' `voice` empty) or a clone picks a new one (`state.json → static.new_voice` true): five candidates from the spec's voice
    profile, five different takes on it: voices the account has, `T tts voices --run RUN --measure` (filtered by `--gender`, `--accent`,
    `--age`, `--use-case`; each voice's own ElevenLabs preview read with the references' yardstick; free), and, when they do not cover
    the profile, Voice Design samples: `T tts design --run RUN --text "<a line of 100 to 1,000 characters in the references' style that
-   names no subject and nothing of static §11>" --instruct "<voice 1>" …` (each description 20 to 1,000 characters, naming the set's pace
+   names no subject and nothing of static §11, in the language of the batch's first video (`state.json → static.language_plan`; its
+   English reading goes to the stop)>" --instruct "<voice 1>" …` (each description 20 to 1,000 characters, naming the set's pace
    in words, "a quick, measured pace"; billed per character of the line, once per design; a clone's new narrator adds `--replace`). A
    locked narrator makes no samples (static §10). An ElevenLabs error is a blocker of the run: report its real text with `T tts check`
    and stop.
 4. **The one stop**, in plain chat (never AskUserQuestion: the pool is longer than four options), the last thing in the turn: the
-   subjects numbered (title — hook line — why it fits — for facts the number of sources), the five voices when step 3 made them (number,
+   subjects numbered (title, in English for the user to read: the video's own title is written in its language at step 7 — approach
+   in one line, with the last video's beside it — hook line — why it fits — for facts the number of sources), the five voices when step 3 made them (number,
    the voice in a few words, its pace while articulating in words a minute (its preview's or sample's, as `T tts voices` or `T tts
    design` print it) next to the set's, said plainly: Eleven v4 has no speed setting and nothing is sped afterwards, so a voice near the
    set's pace is the one that reaches it, and the full path of its file, so the user can play it), and "Reply with N
-   subject numbers and one voice number, or 'you pick'." (no voice number when the narrator is locked). Then stop and wait. Fewer
-   subjects than the count: ask once more. "You pick": the top-scored subjects and the voice that best fits the profile [I].
-5. **Store the picks:** `T static subjects --run RUN --add "<title 1>" --add "<title 2>"` (in video order; each gets the next video
-   number), then, when step 3 made samples, `T tts voice --run RUN --voice-id ID` (an account voice) or `--sample K` (a design) (a
+   subject numbers and one voice number, or 'you pick'; you may also rewrite a subject's approach." (no voice number when the narrator
+   is locked). Then stop and wait. Fewer subjects than the count: ask once more. "You pick": the top-scored subjects and the voice
+   that best fits the profile [I].
+5. **Store the picks:** `T static subjects --run RUN --add "<title 1>" --story-form "…" --angle "…" --pov "…" --time-frame "…"
+   --scale "…" --title-form "…" --pillar "…" --approach-why "…" [--language <L>]` once per subject, in video order (each gets the
+   next video number; the language is the batch's plan, `T static language --run RUN --plan`, unless `--language` names another for
+   that video; `T static subjects --set NN …` edits a made-up approach before its narration exists), then, when step 3 made samples, `T tts voice --run RUN --voice-id ID` (an account voice) or `--sample K` (a design) (a
    clone's new narrator: `--replace`, then `T state --run RUN set static.new_voice=false`), plus `--emotion NAME="[tags]"` (at most two:
    the audio tags sent where a line of that emotion begins) when the spec's delivery swings (static §6).
 6. **Scripts** (static §4), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
@@ -70,7 +80,11 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    briefly; the tip told by its other places). The length is yours, never the
    user's (the user, 2026-11-07): decided per video from the spec's length pattern (the references' lengths in `T static lock`'s
    `reference_lengths`, what drives them), written as `target_length_s` and `length_why` in the narration JSON, the script sized to it
-   at the planned overall pace (static §4: words = seconds × words a minute / 60). The narration JSON also carries the spec's `pace`
+   at the planned overall pace (static §4: words = seconds × words a minute / 60; the units of the video's language, `T static units`).
+   **The video's language and approach** (static §4, §6, §10): the script is written natively in the video's language (the recorded one,
+   `state.json → static.video_info`), every line with its English `gloss`, and follows the recorded approach (its story form, point of
+   view, time frame and scale decide the beats and who "you" is); the narration JSON's `language` is that language's ISO code. The
+   narration JSON also carries the spec's `pace`
    (`wpm_articulation` and `wpm_overall` as the family's bands from `T static profile`, the point from the niche's references within
    it, with `why`; static §1, §4) and the long pauses the niche's references hold as a line's `tags_after` where they pause longer
    (before a reveal); its `delivery`, `voice_settings` and the pace point are J1's (step 9). The beats, the hooks, the emotions, the
@@ -85,8 +99,10 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    person dressed for the scene with the clothes named from top to bottom and no undressed, injured or agonised moment, nobody as if
    dead, and a survival pose low on the ground kept and drawn with the person clearly alive: head up or turned so the open eyes show,
    mid-move (static §11b), the
-   video's `title` and `thumbnail` (static §12: the references' title and thumbnail patterns, the thumbnails' size, the run's style
-   lock), each
+   video's `title` (in the video's language, in the recorded title form, with `title_gloss`) and `thumbnail` (static §12: the
+   references' title and thumbnail patterns, the thumbnails' size, the run's style lock; its words in the video's language), the labels
+   in the video's language (static §5 "Labels": CapCut text whose font covers every character: `T static language --language L --font
+   <file> --text <file>`), each
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times
    this still's seconds, the references' order of moves; a join and the caption entrance from `AWL/data/capcut-catalogue.md`, only what it
    shows drawn, and only options marked free while the run's CapCut plan is free, `state.json → capcut_plan`), the `captions` block: the spec's text look (static §2: font file, size, colours, outline, box, case, highlight, the
@@ -107,8 +123,10 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    toolkit makes equal sections.
 9. **The judge, J1** (static §13; the user, 2026-11-08: "it evaluates the situation and decides way before generation happens";
    "nothing should turn out as unexpected"), per video, before any line, image or bed is made: spawn the judge (§13's prompt,
-   checkpoint J1, `model: "opus"`; the video's family, its references and the niche's references in it, from the spec) and wait
-   for it. It reads `T static forecast`
+   checkpoint J1, `model: "opus"`; the video's family, its references and the niche's references in it, from the spec; the video's
+   approach and the last video's, its language with its unit and whether the model lists it, and the run's narration model, all from
+   `state.json → static.video_info` and `static.tts_model`) and wait for it. For a video in another language it runs `T static units
+   --run RUN --video NN` first (the references' English points converted by the script's ratio, static §4). It reads `T static forecast`
    and the family's numbers, decides the pace point, the narration's levers (its delivery and pace tags, the settings, the wording), the
    pause tags, the strong lines, every prompt the forecast marks and the bed's caption, sections and timing, edits those plan files itself
    and writes `RUN/40-briefs/video-NN-judge.md` with each decision, its numbers and the result it forecasts. The probes are this
@@ -124,16 +142,20 @@ references": the inventory again, A1–A4 for them only), and nothing else is an
 niche's references gets them first (static §2 "The niche's references": the references whose field is the run's niche, read from
 their cards, and their patterns and numbers beside the set's). `T static lock --run RUN` (the locks; a run made before the locks existed is asked its niche once,
 with its subjects as context, and locks it with its style reference: the reference its style lock came from), the count when it is not
-given (AskUserQuestion, header "Videos"), then steps 2 and 4–9 for the new videos only: no voice samples (the narrator is locked), the
-stop asks only for the subjects, `T static subjects --add` gives them the next numbers, and their scripts, image plans, titles and
-thumbnails keep the run's style lock and text look. Then `awl-analyze-produce` A9s for the new videos only.
+given (AskUserQuestion, header "Videos"), the language of each new video (AskUserQuestion, header "Language", as A5 says: `T static
+language --run RUN --plan "<L1>[,<L2>…]"`; the narration model stays the run's), then steps 2 and 4–9 for the new videos only: no
+voice samples (the narrator is locked), the pool's candidates carry their approaches beside the last video's (step 2), the stop asks
+only for the subjects, `T static subjects --add … --story-form …` gives them the next numbers, their approaches and their
+languages, and their scripts, image plans, titles and thumbnails keep the run's style lock and text look. Then `awl-analyze-produce` A9s for the new videos only.
 
 ## Rules this phase owns (contract item 36)
 
 - Static keeps the references' delivery and changes their subject; a factual niche stays factual and sourced; the user picks the
   subjects (and, the first time, the voice) at one stop. The run's other stops are a QC-fix proposal (`ask`) and, with images by the
   user, their folder.
-- One channel per run (static §10): the niche, the visual style and the narrator are the user's picks, locked; another niche is a clone.
+- One channel per run (static §10): the niche (a field, never a title or story form), the visual style and the narrator are the user's
+  picks, locked; another niche is a clone. Each video has an approach and a language of its own, recorded with its subject (static
+  §10, §6; the user, 2026-11-11); the agents keep room for their own creativity inside the niche.
 - Nothing religious or superstitious in a subject, a line, a prompt, a title or a thumbnail (static §11).
 - Nothing indecent, gory or distressing in a subject, a line, a prompt, a title or a thumbnail (static §11b; the user, 2026-11-09).
 - No Higgsfield and no Loupe in Static: no model menu, `T prompt-template`, `T qc-brief` or `T qc-consult`.
@@ -148,6 +170,9 @@ thumbnails keep the run's style lock and text look. Then `awl-analyze-produce` A
   references' thumbnails carry them, static §12).
 - Never offer a subject outside the run's niche or one the run made; never a new narrator or visual style inside a run (a clone changes
   them, static §10); never anything religious or superstitious (static §11), indecent, gory or distressing (static §11b).
+- Never lock or write a title form or a story form into the niche (a niche is a field, static §10), never give every video of a run the
+  same approach without the written reason, and never write a video's script by translating an English one: it is written natively in
+  the video's language with an English gloss per line (static §4).
 
 ## Hand-off
 

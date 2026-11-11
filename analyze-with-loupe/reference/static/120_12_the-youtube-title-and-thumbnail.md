@@ -38,7 +38,16 @@ patterns. The thumbnails are reference material like the videos: studied, never 
 **The plan (A6s)**: each video's image plan carries `"title": "<the video's YouTube title>"` and
 `"thumbnail": {"prompt": "<the picture>", "size": "<W>x<H>", "text": "<its exact words, or null>", "characters": ["C1"], "why": "<the
 pattern each choice follows>"}`. The title follows the titles' pattern for this video's subject and hook, written fresh (never a
-reference's title); its words are the narration's promise, never more than the video keeps. The thumbnail follows the thumbnails'
+reference's title); its words are the narration's promise, never more than the video keeps. **The title form is the video's** (the user,
+2026-11-11, §10: the niche is a family, each video an approach): the `title_form` recorded with the subject (`state.json →
+static.video_info`: "How …", "Why …", "N days …", a "you" premise, a question, "The ENTIRE history of …") picks the pattern among the
+references' title patterns the spec counts (§2), so a run's titles are not all one wording; the length is the references' in the
+language's own unit (about the same content: words, or characters for a language written without spaces) and never over YouTube's 100
+characters. **In the video's language** (§6): the title, and the thumbnail's `text` when it has words, are written natively in the
+language the video is spoken in, not translated from English; the plan keeps `"title_gloss"` (the English reading) and the thumbnail
+`text`'s reading in `why`. A thumbnail word is drawn by the image model only in a script it draws reliably, else it is CapCut text (§5
+"Labels") on the clean picture; the font covers every character of the words (`T static language --language L --font <file> --text
+<file>`). The thumbnail follows the thumbnails'
 pattern, in the run's style lock (§10: the same look as the video's stills), with its subject's most legible moment (the face and the
 feeling, the object, the contrast the hook opens); words on it only when the references' thumbnails carry words, as few as they use,
 spelled out exactly in `text` and in the prompt; nothing religious or superstitious (§11), nothing indecent, gory or distressing
@@ -56,6 +65,7 @@ them, letter by letter as `text` says (a misspelt word is a redraw by QC fixes; 
 reliably: few words, large); the run's style; nothing of §11 or §11b; nothing of item 6. The title: its words against the video's narration
 (it promises what the video keeps).
 
-**The record (X10)**: `deliverables/video-NN-title.txt` (the title on its first line), the thumbnail in `deliverables/`, and both in the
+**The record (X10)**: `deliverables/video-NN-title.txt` (the title on its first line, and its English reading on a second line
+beginning "English: " when the video is in another language), the thumbnail in `deliverables/`, and both in the
 video's README row and its result.json. A video in more than one format (§2b) has one title and one thumbnail, made with the primary and
 named in every format's row.

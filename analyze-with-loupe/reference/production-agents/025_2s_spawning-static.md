@@ -82,7 +82,14 @@ Hard rules:
 - Effects from the user's effects folder (the plan's `effects`, when the run has a folder) reach CapCut only through `T capcut-effects`
   (never capcut-cli or the MCP by hand); one it refuses is planned again without it. The effects folder is read-only like the references.
 - One channel (<AWL>/reference/static/100_10_one-channel-per-run.md): your video keeps the run's niche, its style lock (every still and
-  the thumbnail), its text look and its narrator; never another.
+  the thumbnail), its text look and its narrator; never another. Your video's own approach and language (recorded in `state.json →
+  static.video_info`, the main session names them here: approach <story form, angle, point of view, time frame, scale, title form,
+  pillar>; language <name, ISO code, unit, whether the model <id> lists it>): the title, the thumbnail's words, the labels and the
+  captions are in that language and the plan's words (`title_gloss` is the English reading, never shown); text that must be drawn in a
+  picture is exactly the plan's words in that language, and a script the image model does not draw reliably is CapCut text instead
+  (static §5 "Labels"); the captions' font covers every character (`T static language --language <code> --font <file> --text <file>`),
+  and for a language the word box cannot place (written without spaces, or right to left) the plain caption look is used and named in
+  the brief.
 - Nothing religious or superstitious, ever (<AWL>/reference/static/110_11_no-religion-and-no-superstition.md): no religious figure,
   place, symbol, idol, rite or superstition in a still, the thumbnail, the title or a caption; a prompt describes a secular scene and never
   names what must stay out; an image that shows one is a regenerate reason by QC fixes (off: named in the brief and result.json).

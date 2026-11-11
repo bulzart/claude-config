@@ -2,8 +2,8 @@
 
 **The card** (`20-analysis/cards/<V>.md`, one per reference): the fields of §1 in this order: title and thumbnail · hook · telling
 (structure as a beat list with times) · devices · retention · emotion over time · language · pictures (seconds per still, style,
-framing, motion, transitions, effects) · captions · sound · engagement · attachment · the social side · content style · subject, its
-kind and its field · why it holds (one paragraph, [I]). Every speech field reads from the transcript.
+framing, motion, transitions, effects) · captions · sound · engagement · attachment · the social side · content style · approach ·
+subject, its kind and its field · why it holds (one paragraph, [I]). Every speech field reads from the transcript.
 
 **The Static spec** (`20-analysis/static-spec.md`, one per run; Static's craft sheet) is the **whole set's** (§1 "The set as a whole"):
 after the cards, `T static profile --run RUN` (`20-analysis/set-profile.md`), then every field below written from all the references
@@ -33,8 +33,15 @@ read in; a spec written before 2026-11-09 gets this block before the run's next 
   will not pick any length for the video btw, it will be the pipeline's choice based on the references data, based on what ai agents
   understands and mine and patterns collected from that"): each video's length is decided from this pattern at A6s (§4).
 - **Seconds per still**: the median and the range the references use; when a still changes (on a new line, on a reveal, mid-line).
-- **Niche candidates**: the fields the references are about (§1) and the fields their craft would carry, for the user's pick at A5; the
-  pick is the run's niche (`state.json → static.niche`, §10) and every subject comes from it.
+- **Niche candidates**: the fields the references are about (§1) and the fields their craft would carry, for the user's pick at A5; a
+  candidate is a **field and the kind of stories in it** ("Survival scenarios and how-tos"), never a title wording or one story form
+  ("N days of X": that is an approach, below); the pick is the run's niche (`state.json → static.niche`, §10) and every subject comes
+  from it.
+- **Approaches seen** (the user, 2026-11-11, §10): per story family and for the niche's references, the approaches the cards record,
+  counted: the story forms, the points of view, the time frames and scales, the pillars and the title forms ("story form: counted
+  days 2 of 3 survival references, hour by hour 1; point of view: you 3 of 3; title forms: 'How …' 2, a time box 1"), so that a
+  video's approach is chosen from data (the niche's references' first, the whole set's other story families beside them) and the
+  agents can see which approaches the set never shows, where their own may go (§10 "room of their own").
 - **Visual styles**: each reference's picture style in a few words and its text look, grouped into the families the set holds, with one
   storyboard sheet per family (its full path), for the user's pick of one reference at A5 (§10).
 - **Style lock** (written once the user has picked, A5): one sentence every image prompt of the run carries (the medium, the light, the

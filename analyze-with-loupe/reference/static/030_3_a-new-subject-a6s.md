@@ -21,8 +21,16 @@ and the style are carried, the subject is new; the copy test applies: one yes ma
   - several characters: a subject they can share.
 - **No characters**: the subject comes from the run's niche and the references' data (what their audience reacts to), a subject the
   references do not cover.
+- **A subject comes with its approach** (the user, 2026-11-11, §10: the niche is a family, each video an approach): the same subject
+  can be told several ways, so each candidate of the pool is written with the approach it would be told in (`story_form`, `angle`,
+  `point_of_view`, `time_frame`, `scale`, `title_form`, `pillar`, and why), drawn from the approaches the spec lists (§2) and from the
+  whole set's other story families, or the agent's own inside the niche. The pool is varied on purpose: its candidates do not all
+  share one story form or one title form, and none repeats the approach of the last video of the run unless the data says it is the
+  niche's strength (the reason written). `T static subjects --run RUN` lists the approaches already made.
 - **Brand guardrails** of the documents apply as in every mode (`brand-guardrails.md` §4).
 - **The pool**: the requested count plus three candidates at least (never under five), each scored 1–5 on stop power (the hook it allows),
   curiosity gap, fit to the spec (above all to the niche's references, §1 "The run's niche within the set"), freshness (not already everywhere in the niche), image-ability (stills can carry it), and for facts
-  source strength; ties go to stop power. Each candidate: a title, its hook line, why it fits (one line), and for facts its sources' count.
+  source strength; ties go to stop power. Each candidate: a title (a working title in English, for the user to read: the video's own
+  title is written in its language at the plan, §12), its approach (above), its hook line, why it fits (one line), and for facts its
+  sources' count.
 

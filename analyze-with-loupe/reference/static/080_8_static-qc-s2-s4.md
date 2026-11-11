@@ -15,6 +15,15 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
   within the true-peak ceiling, §6); a speed-up only on the user's yes after delivery, capped, with its `--why` and `--user-ok` (§6, §13); one
   speaker throughout; each passage's timbre against the others (`voice_match.passages_below`, §6); a partial narration (`partial`)
   named with where it stops. A fix is a passage made again through the request (§6), never an edit of the delivered audio.
+- **The video's language and approach** (the user, 2026-11-11; §4, §6, §10, §12): every line's English `gloss` is there when the
+  language is not English (`lines_without_gloss` of the forecast empty); the script, the title, the thumbnail's words, the captions and
+  the labels are in the video's language and the same words as the narration says; the figures, dates and names are said as that
+  language says them; `narration-words` compares numbers only in English (`numbers.compared` false elsewhere: the agent reads them);
+  the captions' font covers every character (`font_missing_glyphs` empty, else another font of the same look, noted) and, for a
+  language the word box cannot place (written without spaces or right to left), the plain caption look is used and named in the brief
+  and the wrap-up; the pronunciation is "not checked: listen" in the wrap-up, with the language named, whenever the language is outside
+  the narration model's own list (`official` false) and for a first passage in a new language; the video's approach is the one
+  recorded and differs from the last video's as §10 says, or the reason is written.
 - **The bed** (`T music measure`, §6): no word heard in it alone; the narration's words heard the same with it under it at the project's
   gain; its level over the lines rising and falling with the story's beats, not against them; still heard in the pauses.
 - **Every image, viewed** (Read the file): it shows what its line says; the character matches their photo or anchor (face, hair, build,

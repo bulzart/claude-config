@@ -52,8 +52,9 @@ Only these section files for this phase, nothing else unless a step below says s
   and caption entrances come from `10-media/<V>/edit-profile.json` (`T edit-profile`, A1), never from the 2 fps sheets; view one caption
   entrance and one cut densely (`T frames … --range a-b --fps 30 --sheet`) to see what its numbers describe. The spec's motion, joins and
   entrance are matched to `AWL/data/capcut-catalogue.md` (static §2, §9: only what CapCut drew on this PC). Every card has every field
-  of static §1, the retention, emotion, language, engagement, attachment, social and content-style fields included, so the set can be
-  read as a whole.
+  of static §1, the retention, emotion, language (the language the reference speaks included), engagement, attachment, social,
+  content-style and approach fields included, so the set can be read as a whole (the references may be in one language or a mix: each
+  is read in its own).
 - Follow `AWL/reference/analysis-protocol/` (the sections named in Read now) exactly. For each video:
   - read `video.md` and `timeline.md`;
   - view **every** storyboard sheet in order, reading the timeline beside it;
@@ -155,7 +156,8 @@ Write, following the protocol §5–§6:
   `20-analysis/set-profile.md`; `--refs` for a family), then `20-analysis/static-spec.md` (static §2) from the **whole set** (the user,
   2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy"): the narration template, the pace
   (the set's bands while speaking and overall, the pauses), seconds per still, retention, emotion over time, language, engagement,
-  attachment, the social side, content style, the niche candidates, the visual styles (each reference's, grouped, with a storyboard sheet
+  attachment, the social side, content style, the approaches seen (static §2: counted across the set and the niche's references), the
+  niche candidates (fields, never a title or story form), the visual styles (each reference's, grouped, with a storyboard sheet
   each), the caption pattern, motion and transitions, the voice profile, the bed brief, the devices, what is left behind; each value
   with the counts and numbers of the set it rests on, families read apart when the set holds different kinds; the style lock and the
   text look are written after A5 from the reference the user picks (static §10: the look only); no directions, ranking or craft sheet.
@@ -186,7 +188,10 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
     order) is the primary, stored with `T static format --run RUN --aspect A --res R [--quality Q] [--image-size WxH]`, each other one
     with the same command and `--also`;
   - header "Niche", "Which niche is this channel about? Every video of this run stays in it.", none recommended: up to four of the spec's
-    niche candidates (the references' own field first), each with one line on what its videos would be; "Other" takes any niche;
+    niche candidates (the references' own field first), each with one line on the kind of stories in it and two or three approaches
+    its videos could take (from the spec's "Approaches seen": counted days, "what happens if", a case retold …); a niche is a
+    **field**, never a title wording or one story form (the user, 2026-11-11; static §10 "The niche is a family, each video an
+    approach"), so a candidate never reads "N days of X" or "How to …" alone; "Other" takes any field;
   - header "Visual style", "Which reference's visuals should every video have?", none recommended: up to four references, one per visual
     style family, each named with its look in words; "Other" takes any reference by its id. A run with one reference skips this question
     and takes that one (said in one line).
@@ -194,14 +199,30 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   card (static §2, §10: its captions when it has them, else the most common look of the references that have them). Then the spec's
   **niche's references** (the user, 2026-11-09; static §1 "The run's niche within the set", §2): the references whose field is the
   picked niche, read from their cards with the reason (none when the niche is new to the set: the whole set's craft leads), each
-  field's pattern for them beside the set's and the family's, and their numbers (`T static profile --run RUN --refs <them>`).
+  field's pattern for them beside the set's and the family's, and their numbers (`T static profile --run RUN --refs <them>`); and the
+  spec's **approaches seen** (static §2): the story forms, points of view, time frames, scales, pillars and title forms the cards
+  record, counted across the set and across the niche's references.
+  **Then the language**, one more AskUserQuestion call (the first holds four questions; static §6 "The language of a video"; the user,
+  2026-11-11: "it has to ask user which language has the video's content to be"): header "Language", "In which language should the
+  videos be made?": **"English"** (the references' language, or the one most of them speak: said), then up to three languages the
+  conversation, the assets, the documents or the references' mix point to; "Other": any language by name or ISO code, or one language
+  per video ("1 English, 2 Spanish"). Before the question, print in chat, compactly, the languages the run's narration model lists
+  (`state.json → static.tts_model`; the ElevenLabs MCP's `list_models` row for it, loaded as `voiceover.md` §2 step 3 says, else `T
+  tts models --run RUN`). Store with `T static language --run RUN --plan "<L1>[,<L2>…]"` (one language: every video of the batch);
+  it resolves each language against the live list and gives its facts: `official` false (the model's list does not hold it) is said in
+  one line, as ElevenLabs still voices it without a pronunciation guarantee and the user listens to the first passage; `unit`
+  (words, or characters for a language written without spaces), `direction` and `spaced` say what the captions can do (static §7);
+  `narrator_verified` says whether the locked narrator's voice is verified for it (said in one line when it is not: the narrator is a
+  lock, a clone may pick another).
 - **Static, a clone** (`state.json → cloned_from`; `/analyze-with-loupe clone <run>`, static §10): nothing is analysed; one
   AskUserQuestion call: header "Niche" (as above; never the old niche, `cloned_from.niche`), header "Narrator": **"Keep the narrator"**
   (the voice in a few words and the full path of `30-assets/voice/ref-neutral.wav`) or **"Pick a new narrator"** (five new samples at
   A6s), header "Visual style": **"Keep <V>'s style"** or another reference (as above), and header "Videos". Store with
   `T static lock --run RUN --niche "<niche>" [--style-ref <V> --replace]`; a new style rewrites the spec's style lock and text look from
   that reference's card; a new narrator: `T state --run RUN set static.new_voice=true` (A6s makes the samples); the new niche's
-  references are written into the spec as above (static §2).
+  references are written into the spec as above (static §2). Then a second AskUserQuestion call: header "Narration model":
+  **"Keep <model>"** (the run's, `static.tts_model`, kept by the clone) or another from the live list (the options as the start's
+  question gives them, `awl-start`; stored with `T tts model --run RUN --model-id <id> --source …`), and header "Language" (as above).
 - Store the answer in `requested_videos`.
 
 ## Rules this phase owns (contract items 18, 20, 21, 35)

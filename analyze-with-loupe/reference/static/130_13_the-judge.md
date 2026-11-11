@@ -18,8 +18,9 @@ against that forecast, and a miss is explained and corrected (or recorded with i
 **Who.** An Opus agent with the brief below (`subagent_type: general-purpose`, `model: "opus"`), spawned by the main session at each
 checkpoint of each video; in a session without agents, the main session takes the role itself with the same brief. It decides on its
 own and never asks the user (the user, 2026-10-28 and 2026-11-08); it never generates an image, a line or a bed, never changes the
-run's locks (the niche, the style lock, the narrator), the user's start choices (formats, images' source, QC fixes, CapCut plan) or
-the memory guard, and never leaves the references' data: a target is a measured number of the references, mostly of the run's
+run's locks (the niche, the style lock, the narrator), the user's start choices (formats, images' source, QC fixes, CapCut plan, the
+narration model) or the video's language and approach as the user picked them (it may refine an approach's wording, never its story
+form or point of view without the reason written) or the memory guard, and never leaves the references' data: a target is a measured number of the references, mostly of the run's
 niche's references within the video's family, the family's and the set's numbers beside it (§1 "The run's niche within the set"; their
 median unless the data gives a reason for another of their numbers, written with that reason; when the niche's references are too few
 to carry a number alone, the judge weighs it with the family's and writes how), never a stock value or a taste.
@@ -78,9 +79,15 @@ processed file read 207.4; since 2026-11-09 nothing is done to the delivered aud
 predicted result; and afterwards the measured result against it):
 1. **J1, before any generation** (A6s step 9, after the scripts, image plans and bed are written; `awl-static-plan`): reads the
    forecast of every part and decides:
+   - the video's **approach and language** as recorded (`T static subjects --run RUN`, `state.json → static.video_info`): the family
+     the video takes (the approach's story form, the story family of the spec it follows), the variety against the last video's
+     approach (§10), and the language the narration, the title and the captions are written in, with its model (§6);
    - the narration's `pace` (§4): `refs` (the niche's references within the family, else the family), the family's bands by the fair
      measure, the `target` point (the niche's references' median of `wpm_articulation` and of `wpm_overall`, the family's beside it,
-     unless a reason in the data), the `tolerance`;
+     unless a reason in the data), the `tolerance`; for a video in another language the references' English points converted by the
+     measured ratio of the script's units to its English glosses' words (`T static units --run RUN --video NN`: the same content a
+     minute), written with the ratio and `"unit"` (§4), the forecast then read in that unit; the model's own levers (§6 "The models"):
+     a model with a `speed` setting has it as a request lever, one with audio tags has them, and each is measured on a probe;
    - the levers that reach the point (§6 "The pace"): the narration's `delivery` (pace and register tags), the `voice_settings`, the
      words (sentence length and punctuation), each measured first on a probe (passage 1 exactly as `say` will send it; another lever set
      is another probe): the judge names the lever sets, the main session runs `T tts probe` for each (billed; the judge never generates)
@@ -93,7 +100,9 @@ predicted result; and afterwards the measured result against it):
      probe's pause pattern read against the family's (a pause the family does not hold is not asked);
    - the strong lines (their own `delivery` tags; at most one in five, never two in a row, §4), the length against the family's (§4);
    - every line the forecast marks with `intimate_body_words` (§11b): told by its other places ("her head, her neck and under her
-     arms");
+     arms"); for a video in another language the forecast runs the §11, §11b and intimate-word lists on each line's English gloss
+     (`lines_without_gloss` names the lines that have none: the judge reads those in their language itself) and the judge reads the
+     language's own text too: the word lists are English;
    - every image prompt the forecast marks: a thing that would carry writing gets its exact words when the story needs them (a label
      is CapCut text, §5) or is described as plain and blank ("a blank white screen", "a chart of plain coloured bars with no writing");
      digits leave the scene words; a split word becomes one scene; a §11 word becomes a secular description; a §11b word becomes the
@@ -137,7 +146,9 @@ Read first: C:/Users/Bulzart/.claude/analyze-with-loupe/reference/static/130_13_
 <RUN>/20-analysis/static-spec.md and only the sections of static §4, §5 or §6 your checkpoint touches.
 Run: <RUN>. Toolkit T: "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe" "C:/Users/Bulzart/.claude/analyze-with-loupe/scripts/awl.py"
 (through PowerShell). The video's family: <family name> (<refs>); the run's niche and its references in the family: <niche> (<refs>,
-or none: then the family's numbers lead); the run's QC fixes: <ask|auto|off>.
+or none: then the family's numbers lead); the video's approach: <story form, angle, point of view, time frame, scale, title form,
+pillar> and the last video's: <the same, or none>; the video's language: <name and ISO code, its unit (words or characters), and
+whether the narration model lists it> and the run's narration model: <model id>; the run's QC fixes: <ask|auto|off>.
 <what happened since the last checkpoint: the agent's report, the measured numbers, or "nothing generated yet">
 Do: `T static profile --run <RUN> --refs <refs>` and `T static forecast --run <RUN> --video <NN> [--part … --from … --to …]`; read them
 with the plan files; decide every change yourself (never ask anyone), edit only the plan files your checkpoint owns (J1: the narration
@@ -145,7 +156,8 @@ JSON's pace, delivery, settings and pause tags, the image plan's prompts and cha
 JSON's levers for passages made again; J3: the
 image prompts of the stretches not made yet; J4: music.json's track; J5: the image plan's motion, labels and joins), run the forecast
 again, and append your decisions to <RUN>/40-briefs/video-<NN>-judge.md (each: what, why with the numbers, the predicted result).
-Never generate anything, never change a lock, a start choice or the memory guard, never leave the references' numbers. Heavy work (a
+Never generate anything, never change a lock, a start choice, the video's language or the memory guard, never leave the references'
+numbers (a language other than English converts them by the script's ratio, `T static units`, and says so). Heavy work (a
 model, a test suite) never runs while FLUX 3 Klein makes images.
 Final message: one line per decision and the forecast numbers you expect.
 ```
