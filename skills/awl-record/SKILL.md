@@ -48,10 +48,16 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     full path, the format (export size, image size, quality), the images
     (`60-outputs/video-NN/images/`, api, klein or user), the narration (`30-assets/narration/video-NN.wav`), the bed or none and, with images by
     the user, the prompts file; the YouTube title and thumbnail (static §12): write `RUN/deliverables/video-NN-title.txt` (the plan's `title`
-    on its first line) and name it and `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row; the
-    run's locks it kept (niche, style reference, narrator; static §10); `result.json` adds `static`: {format, images (count, source api|klein|user, re-draws), cost_usd_estimate (the sum of
-    the image calls), narration_s, voice (its ElevenLabs id and name), the narration's characters, passages made again, partial or whole, bed, title,
-    thumbnail}. No Higgsfield job, credit or flag fields.
+    on its first line, and for a video in another language a second line "English: <the plan's `title_gloss`>") and name it and
+    `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row; the
+    run's locks it kept (niche, style reference, narrator; static §10) and this video's own approach and language (story form, angle,
+    point of view, time frame, title form, pillar; the language's name, code and unit; the narration model: `state.json →
+    static.video_info`, `static.tts_model`); `result.json` adds `static`: {format, images (count, source api|klein|user, re-draws), cost_usd_estimate (the sum of
+    the image calls), narration_s, voice (its ElevenLabs id and name), model (the narration's ElevenLabs model id), language {code, name,
+    official, unit}, approach {story_form, angle, point_of_view, time_frame, scale, title_form, pillar}, the narration's characters,
+    passages made again, partial or whole, bed, title, title_gloss, thumbnail, captions (word box placed, or the plain look and why), font
+    (any replacement for missing glyphs), pronunciation ("not checked (listen)" when the language is outside the model's list or is the
+    first in the run, static §8)}. No Higgsfield job, credit or flag fields.
     More than one format (static §2b): one README row per format (its CapCut project's name and full path, its export size, its stills'
     folder `60-outputs/video-NN/<tag>/images/`; the title and thumbnail named in each), and `result.json → static.formats`: one entry
     per format {aspect, tag (null for the primary), export, capcut_project, capcut_project_path, images (count, re-draws, own prompts),

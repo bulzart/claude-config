@@ -851,6 +851,33 @@ _EL = {"seen": [], "refuse": {"pcm_44100"}, "used": 0, "limit": 1_000_000, "rid"
        "d": 0.065}   # d: the seconds a character takes (about 170 words a minute; the long passage tests speak faster)
 _EL_LOCK = _th.Lock()
 _EL_EDGE = 0.15        # the silence before and after every take the stand-in delivers
+# ElevenLabs' list of models as its live answer gives it (GET /v1/models, read 2026-11-11): Eleven v4's 94 languages as code and name,
+# the other models list subsets; the language and model tests resolve against it through `T tts models`
+_EL_V4_LANGS = ("af Afrikaans|am Amharic|ar Arabic|hy Armenian|as Assamese|ast Asturian|az Azerbaijani|be Belarusian|bn Bengali|bs Bosnian|"
+                "bg Bulgarian|my Burmese|yue Cantonese|ca Catalan|ceb Cebuano|ny Chichewa|hr Croatian|cs Czech|da Danish|nl Dutch|en English|"
+                "et Estonian|fil Filipino|fi Finnish|fr French|ff Fula (Pulaar)|gl Galician|ka Georgian|de German|el Greek|gu Gujarati|"
+                "ha Hausa|he Hebrew|hi Hindi|hu Hungarian|is Icelandic|id Indonesian|ga Irish|it Italian|ja Japanese|jv Javanese|"
+                "kam Kamba|kn Kannada|kk Kazakh|ky Kirghiz|ko Korean|lo Lao|lv Latvian|ln Lingala|lt Lithuanian|lg Luganda|lb Luxembourgish|"
+                "mk Macedonian|ms Malay|ml Malayalam|mt Maltese|zh Mandarin Chinese|mi Maori|mr Marathi|mn Mongolian|ne Nepali|no Norwegian|"
+                "oc Occitan|or Odia|ps Pashto|fa Persian|pl Polish|pt Portuguese|pa Punjabi|ro Romanian|ru Russian|sr Serbian|sn Shona|"
+                "sd Sindhi|sk Slovak|sl Slovenian|so Somali|ckb Sorani Kurdish|es Spanish|sw Swahili|sv Swedish|tg Tajik|ta Tamil|"
+                "te Telugu|th Thai|tr Turkish|uk Ukrainian|ur Urdu|uz Uzbek|vi Vietnamese|cy Welsh|wo Wolof|yo Yoruba|zu Zulu")
+_EL_V4 = [{"language_id": it.split(" ", 1)[0], "name": it.split(" ", 1)[1]} for it in _EL_V4_LANGS.split("|")]
+_EL_V2_CODES = set("en ja zh de hi fr ko pt it es id nl tr fil pl sv bg ro ar cs el fi hr ms sk da ta uk ru".split())
+_EL_V2 = [{**x, "name": "Chinese" if x["language_id"] == "zh" else x["name"]} for x in _EL_V4 if x["language_id"] in _EL_V2_CODES]
+_EL["models"] = [
+    {"model_id": "eleven_v4", "name": "Eleven v4", "can_do_text_to_speech": True, "can_use_style": False, "can_use_speaker_boost": False,
+     "maximum_text_length_per_request": 10000, "requires_alpha_access": False, "languages": _EL_V4,
+     "model_rates": {"character_cost_multiplier": 1.0, "cost_discount_multiplier": 1.0}},
+    {"model_id": "eleven_v4_turbo", "name": "Eleven v4 Turbo", "can_do_text_to_speech": True, "can_use_style": False,
+     "can_use_speaker_boost": False, "maximum_text_length_per_request": 10000, "requires_alpha_access": False, "languages": _EL_V4},
+    {"model_id": "eleven_multilingual_v2", "name": "Eleven Multilingual v2", "can_do_text_to_speech": True, "can_use_style": True,
+     "can_use_speaker_boost": True, "maximum_text_length_per_request": 10000, "requires_alpha_access": False, "languages": _EL_V2},
+    {"model_id": "eleven_english_sts_v2", "name": "Eleven English v2", "can_do_text_to_speech": False, "can_use_style": True,
+     "can_use_speaker_boost": True, "maximum_text_length_per_request": 5000, "requires_alpha_access": False,
+     "languages": [{"language_id": "en", "name": "English"}]},
+    {"model_id": "eleven_alpha_test", "name": "Eleven Alpha Test", "can_do_text_to_speech": True, "can_use_style": False,
+     "can_use_speaker_boost": False, "maximum_text_length_per_request": 4000, "requires_alpha_access": True, "languages": _EL_V4[:5]}]
 
 
 def _el_pcm(seconds, sr, freq=170.0):
@@ -912,10 +939,7 @@ class _ELMock(_BH):
                                   "next_character_count_reset_unix": 1796828594, "can_use_instant_voice_cloning": False,
                                   "can_use_professional_voice_cloning": False, "voice_limit": 3, "voice_slots_used": 0})
         elif p == "/v1/models":
-            self._answer(r, 200, [{"model_id": "eleven_v4", "name": "Eleven v4", "can_do_text_to_speech": True, "can_use_style": False,
-                                   "can_use_speaker_boost": False, "maximum_text_length_per_request": 10000, "requires_alpha_access": False,
-                                   "model_rates": {"character_cost_multiplier": 1.0, "cost_discount_multiplier": 1.0}},
-                                  {"model_id": "eleven_multilingual_v2", "can_do_text_to_speech": True, "can_use_style": True}])
+            self._answer(r, 200, _EL["models"])
         elif p == "/v1/voices":
             self._answer(r, 200, {"voices": list(_EL["voices"].values())})
         elif p.startswith("/v1/voices/") and p.rsplit("/", 1)[-1] in _EL["voices"]:
@@ -983,6 +1007,10 @@ for _vid, _vnm, _vlb in [("vGEORGE", "George - Warm, Captivating Storyteller", {
                          ("vSARAH", "Sarah - Mature, Reassuring", {"gender": "female", "age": "young", "accent": "american",
                                                                    "use_case": "entertainment_tv"})]:
     _EL["voices"][_vid] = {"voice_id": _vid, "name": _vnm, "category": "premade", "labels": _vlb, "preview_url": f"{_ELURL}/preview/{_vid}.mp3"}
+# the languages ElevenLabs says a voice is verified in (its own answer: the voice list and the voice carry them)
+_EL["voices"]["vSARAH"]["verified_languages"] = [
+    {"language": "en", "model_id": "eleven_v4", "accent": "american", "locale": "en-US", "preview_url": None},
+    {"language": "es", "model_id": "eleven_v4", "accent": "mexican", "locale": "es-MX", "preview_url": None}]
 
 
 def _once(rs):

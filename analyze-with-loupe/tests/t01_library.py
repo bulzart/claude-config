@@ -258,8 +258,8 @@ _s6n = re.sub(r"\s+", " ", _s6t)
 check("Eleven v4" in _s6t and "ELEVEN_API_KEY" in _s9t and "ELEVEN_API_KEY" in _s6t and "T tts voices" in _s6t and "T tts probe" in _s6t
       and "T tts probe" in _spl and "Eleven v4" in rd(HOME / "commands" / "analyze-with-loupe.md")
       and 'header "Narration"' not in _st_s and "static_tts=" not in _st_s,
-      "Static narrates with ElevenLabs' Eleven v4 only, on the user's ELEVEN_API_KEY (static §6, §9, the router, the plan skill); the "
-      "start asks no engine")
+      "Static narrates with ElevenLabs on the user's ELEVEN_API_KEY, in Eleven v4 unless the user picks another model (the user, 2026-11-11: "
+      "\"not always v4\"; static §6, §9, the router, the plan skill); the start asks a model, never an engine")
 _vdocs = [ROUTER, *SKILLS, LIB / "reference" / "static.md", *sorted((LIB / "reference" / "static").glob("*.md")),
           *sorted((LIB / "reference" / "voiceover").glob("*.md")), *sorted(PA.glob("*.md"))]
 _gone = sorted({f"{p.name}: {w}" for p in _vdocs for w in ("DASHSCOPE_API_KEY", "qwen-audio-3.1-tts-plus", "static_tts=", "--engine local",
@@ -274,6 +274,39 @@ check("without any exception" in _s6n and "no speed" in _s6n and "**Passages**" 
       "static §6 holds the user's rule (the delivered audio is not edited, 'without any exception'), Eleven v4's lack of a speed, the "
       "passages and the pause tags, and the two changes the user then allowed (one gain only outside the references' loudness; a capped, "
       "pitch-keeping speed-up only as the last resort after the request levers); the sound skill names both")
+# the niche is a family and each video an approach; the video's language; the narration model (the user, 2026-11-11: "the idea is not to
+# always product the exact same form of content, but rather have an niche in a family of content ... not always in the same direction and
+# approach of story and content", "it has to ask user which language has the video's content to be", "user also has to be able to pick
+# which elevenlabs model he wants to use too, not always v4, he might use v4 turbo or other")
+_t11 = {n: re.sub(r"\s+", " ", rd(LIB / "reference" / "static" / f)) for n, f in (
+    ("s3", "030_3_a-new-subject-a6s.md"), ("s5", "050_5_images-a6s-plan-s3.md"), ("s8", "080_8_static-qc-s2-s4.md"),
+    ("s10", "100_10_one-channel-per-run.md"), ("s12", "120_12_the-youtube-title-and-thumbnail.md"), ("s13", "130_13_the-judge.md"))}
+_t11s = {n: re.sub(r"\s+", " ", rd(SKD / n / "SKILL.md")) for n in ("awl-start", "awl-analyze-study", "awl-static-edit", "awl-record", "awl-wrapup")}
+_s4w, _s6w, _s7w, _s9w = (re.sub(r"\s+", " ", x) for x in (_s4t, _s6t, _s7t, _s9t))
+check("**The niche is a family, each video an approach**" in _t11["s10"] and "`story_form`" in _t11["s10"] and "`pillar`" in _t11["s10"]
+      and "--reword" in _t11["s10"] and "static.niche.reworded" in _t11["s10"] and "A subject comes with its approach" in _t11["s3"]
+      and "approach and language" in _t11["s13"] and "title_form" in _t11["s12"],
+      "the niche is a family of content and every video has its own approach (story form, angle, point of view, time frame, scale, title "
+      "form, pillar), never one locked wording; the niche may be reworded inside its field; the pool, the title and the judge carry the "
+      "approach (static §3, §10, §12, §13)")
+check('header "Language"' in _t11s["awl-analyze-study"] and "T static language --run RUN --plan" in _t11s["awl-analyze-study"]
+      and "**The language of a video**" in _s6w and "official" in _s6w and "T static units" in _s6w and "T static units" in _s4w
+      and "gloss" in _s4w and "natively" in _s4w and "**A video in another language**" in _t11["s5"]
+      and "**Captions in another language**" in _s7w and "word_box_supported: false" in _s7w and "font_missing_glyphs" in _s7w
+      and "title_gloss" in _t11["s12"],
+      "every video has its own language, asked at A5, with More videos and at a clone, from the narration model's live list: written "
+      "natively with an English gloss, the pace converted by the measured ratio, the captions' font checked for glyphs and the word box "
+      "left out for a language it cannot place (static §4-§7, §12)")
+check('header "Narration model"' in _t11s["awl-start"] and "mcp__elevenlabs__list_models" in _t11s["awl-start"]
+      and "T tts models" in _t11s["awl-start"] and "T tts model --run RUN --model-id" in _t11s["awl-start"] and "**The models**" in _s6w
+      and "not set up" in _s6w and "mcp__elevenlabs__list_models" in _s9w and 'header "Narration model"' in _t11s["awl-analyze-study"],
+      "the narration model is the user's pick from ElevenLabs' live list (the MCP's list_models, else T tts models), asked at the start and at "
+      "a clone; a model with no recorded facts is set up from the docs before it is used (static §6, §9)")
+check("pronunciation: not checked" in _t11s["awl-wrapup"].replace("**", "").replace('"', "") and "language" in _t11s["awl-record"]
+      and "approach" in _t11s["awl-record"] and "font_missing_glyphs" in _t11s["awl-static-edit"]
+      and "word_box_supported: false" in _t11s["awl-static-edit"],
+      "the record and the wrap-up name each video's approach, language and model, the captions' fallback and the pronunciation nobody here "
+      "has heard")
 # the whole set and the pace (the user, 2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy";
 # "we have to be very sure that the workflow really achieves a 178-191 words a minute"; 2026-11-09: "we should only try to speed it up by
 # instructing the elevenlabs tts model, or use different parameters")

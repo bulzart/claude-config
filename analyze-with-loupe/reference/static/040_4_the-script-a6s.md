@@ -13,8 +13,8 @@ family, else the family's>"], "wpm_articulation": [<low>,
 of the niche's references within the family, the family's beside them (§1 "The run's niche within the set", §2, §6 "The pace": the
 fair measure), chosen and checked by the judge before a passage is made (§13, J1); the levers that reach
 the point are the voice, the delivery tags, the settings and the words, measured on a probe first, and `T tts say` measures the
-narration as delivered. Eleven v4 has no speed: a `pace.speed` is refused, and nothing is sped, cut, trimmed or gained afterwards (the
-user, 2026-11-09). A `pause_after` (plans written before 2026-11-09) and `pause_default_s` are only hints of where a passage may end: no
+narration as delivered. A `pace.speed` is refused: a model that has a speed takes it as its voice setting `speed` in `voice_settings` (a
+request lever, §6), Eleven v4 has none, and nothing is sped, cut, trimmed or gained afterwards (the user, 2026-11-09). A `pause_after` (plans written before 2026-11-09) and `pause_default_s` are only hints of where a passage may end: no
 silence is placed (§6 "Passages").
 
 - **The video's language and approach** (the user, 2026-11-11: "make the content in a specific language the user wants" and an

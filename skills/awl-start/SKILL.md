@@ -18,9 +18,11 @@ Only these section files for this phase, nothing else unless a step below says s
 - *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
 - effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (3.0 KB) (every run, step 5d)
 - *Static (as soon as the sub-mode is Static):*
-  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.8 KB)
+  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (4.7 KB)
 - *Static, when `T static check` reports a part the run needs as not ready:*
-  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (10.3 KB)
+  - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (11.9 KB)
+- *Static, when the narration model the user picks is not set up (`set_up: false`):*
+  - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (29.8 KB) (its bullet "The models": the set-up procedure)
 - *Create (the voiceover method, step 2b, and the voice, language and style, step 5c, when the user takes a method):*
   - voiceover §1: `AWL/reference/voiceover/010_1_the-state-and-the-files.md` (3.0 KB)
   - voiceover §2: `AWL/reference/voiceover/020_2_the-choice-at-the-start-create-f.md` (5.5 KB)
@@ -68,8 +70,8 @@ Only these section files for this phase, nothing else unless a step below says s
      requirement alone. The pipeline plans to your requirement, keeps the model's official prompting, the QC stack and Loupe's samples
      and misses, and asks you once to confirm its reading of the plan."
    - **Static**: "Narrated still-image videos in the references' style on a new subject: the images by OpenAI with your key, by FLUX 3
-     Klein on this PC, or by you from my prompts; the voice by ElevenLabs (Eleven v4) on your key; CapCut. No
-     Higgsfield."
+     Klein on this PC, or by you from my prompts; the voice by ElevenLabs on your key, in the model you pick, in the language you pick
+     per video; CapCut. No Higgsfield."
    **Free → two more things, asked in the same message batch.** (a) Header "Free: references": **"With references"** ("Analyse a
    folder of reference material first; the plan can follow, edit or avoid what they do") or **"Requirement only"** ("No references: the
    plan comes from your requirement and your assets"); `$ARGUMENTS` with `free` and a references folder means with references, `free`
@@ -107,12 +109,25 @@ Only these section files for this phase, nothing else unless a step below says s
    2026-11-06: "make him pick, if he picks pro then be free to pick any edit feature that pro has if we need them, if not then just the
    free ones"), none recommended: **"Free"** ("The edit uses only CapCut's free options, so every project exports without a
    subscription.") or **"Pro"** ("The edit may also use CapCut's Pro options the CapCut check showed working (such as the Pop Up and
-   Spring text intros); you export with an active CapCut Pro subscription."); `$ARGUMENTS` with `capcut free|pro` answers it. Then `T static check` (add `--offline` with
+   Spring text intros); you export with an active CapCut Pro subscription."); `$ARGUMENTS` with `capcut free|pro` answers it. In the
+   same call, header "Narration model" (the user, 2026-11-11: "the user has to be asked on which elevenlabs model they want to use too
+   (based on elevenlabs mcp live pull)" and "not always v4, he might use v4 turbo or other"), none recommended. **Pull the live list
+   first, never write it from memory** (static §6 "The models"): load `mcp__elevenlabs__list_models` with ToolSearch (as `voiceover.md`
+   §2 step 3 loads its tools) and call it; when it fails (on this PC: an SSL certificate error, static §9) run `T tts models` (the same
+   live list through the toolkit's key, free; `--language L` marks the models that list a language). Print the models that can do text
+   to speech in chat before the question, compactly: name, `model_id`, how many languages, the characters one request takes, and
+   whether it is set up (`T tts models` gives `set_up`; with the MCP's rows a model is set up when `config.json →
+   static.tts.elevenlabs.models` holds its id). The options are four of them **you choose** from that list (the models a creator is
+   most likely to want: the latest flagship, its low-latency variant, and the other families the list shows), each described by what
+   the list says (its description line, its language count, its request limit) and whether it is set up; any other listed model is
+   picked by name or id in the Other box; `$ARGUMENTS` with `tts-model <model id>` answers it. A model that is not set up is set up
+   before the run is created, from ElevenLabs' docs, as static §6 "The models" says (a stop only when the docs cannot be read: the
+   user is told and picks another). The answer is stored in step 6. Then `T static check` (add `--offline` with
    prompts or klein): a part the run needs that is not ready (the key with OpenAI; `images_klein` with FLUX 3 Klein; `tts`, the ElevenLabs
-   key and Eleven v4, for every Static run: the narration is ElevenLabs', static §6) is a blocker: report it with static §9's setup line
+   key and the run's model, for every Static run: the narration is ElevenLabs', static §6) is a blocker: report it with static §9's setup line
    and stop before any analysis. With no ElevenLabs key, tell the user how to set `ELEVEN_API_KEY` themselves (static §9: never typed
    into the chat), wait for their word, then `T static check` again (no restart needed); say once the account's characters left (`tts`
-   gives them; Eleven v4 bills one credit a character of a script, static §6). Music (ACE-Step 1.5) makes the bed under
+   gives them; the model bills at its `credits_per_character`, one a character on Eleven v4, static §6). Music (ACE-Step 1.5) makes the bed under
    every video (static §6): when it is not ready, tell the user here with static §9's setup line; the videos then go without a bed (never
    a blocker).
 2b. **Own voiceover: the method (Create only; item 31), before the model menu.** When the sub-mode is Create, ask with AskUserQuestion
@@ -221,9 +236,10 @@ Only these section files for this phase, nothing else unless a step below says s
    - Create: store the voiceover choice (steps 2b, 5c) with the store line of `voiceover.md` §1 (`T state --run RUN set voiceover.enabled=true
      voiceover.method=native|lipsync|overlay …`); "No, the model's own audio": `T state --run RUN set voiceover.enabled=false`;
    - Create: store the memes choice (step 2c): `T state --run RUN set memes=include` or `memes=none`;
-   - Static: `T state --run RUN set analyze_submode=static static_images=api|klein|prompts audio_ingest=whisper` (no model is stored; item 36),
-     the effects folder: `T state --run RUN set static.effects_folder="<folder>"` or `static.effects_folder=none`, and the CapCut plan:
-     `T state --run RUN set capcut_plan=free|pro`;
+   - Static: `T state --run RUN set analyze_submode=static static_images=api|klein|prompts audio_ingest=whisper` (no video model is stored; item 36),
+     the effects folder: `T state --run RUN set static.effects_folder="<folder>"` or `static.effects_folder=none`, the CapCut plan:
+     `T state --run RUN set capcut_plan=free|pro`, and the narration model: `T tts model --run RUN --model-id <id> --source
+     elevenlabs-mcp|toolkit-api` (the source the live list came from; it refuses a model that is not set up, static §6);
    - Free: store `T state --run RUN set analyze_submode=free free_references=yes|no` and write the requirement, verbatim, to `RUN/00-inventory/requirement.md`
      (first line `# Requirement (the user's words)`, then the text; a file the user named is copied, a PDF through `T doc-text`);
    - start Loupe (not in Static: no Loupe call there, item 36): `T loupe ensure` (it starts the web app detached when it is down; the JSON line has `library_size`, the number of QC samples the keeper

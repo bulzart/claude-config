@@ -93,6 +93,19 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   painting"). Words appear only on the things that carry them in the scene (a sign, a page, a screen, a
   logo, a package), and a name stays out of the prompt unless it is meant to be written (a cast's names in a prompt got written onto
   a cheque).
+- **A video in another language** (the user, 2026-11-11: "make the content in a specific language the user wants", §6 "The language of
+  a video"): the prompts stay English (the image models are prompted in English, and the style lock is the same words in every video
+  of the run); what changes is every word a viewer is to read. A sign, a page, a screen or a book the story shows carries the plan's
+  words in the video's language, exactly as the plan has them (the prompt quotes them: a sign that reads "…"), and the thumbnail's
+  words are in that language too (§12). A script the model turns into made-up marks is not drawn by it: the surface is described
+  blank and the words go on as CapCut text over it the way Labels does, or the scene is told without the words. Whether the model
+  draws a script right is read off the first still that carries words in it (view it: letters that are not the plan's are a redraw
+  reason, §8). Labels are spelled as the narration says them, a place's name as that audience uses it, and the label font and the
+  caption font each hold a glyph for every character they show: `T static language --run RUN --language <code> --font <file> --text
+  <file>` lists the characters a font lacks (`font_missing_glyphs`), and a font that lacks some is replaced, for those texts only, by a
+  file of `T capcut-font --list` that has them, the reason written in the plan. `T image text` reads with RapidOCR, whose stock models
+  read English and Chinese text: a line in another script may go unread, so in such a video the bottom third of every still is
+  viewed for a made-up line, and an empty `lines` is never taken as proof there is none.
 - **Scale and depth**, when a character's reference image rides with other people, animals or buildings in the frame: the models tend to
   draw the referenced character larger than the rest (2026-11-06: an emperor three times the size of the courtier seated behind him, a
   horse and rider towering over the soldiers, a pony-sized horse merging into his coat). Say each one's real size and place in words: life-size, the

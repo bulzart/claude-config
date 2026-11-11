@@ -39,11 +39,11 @@ Only these section files for this phase, nothing else unless a step below says s
 - anomaly-catalog §2.14: `AWL/reference/anomaly-catalog/170_2.14_solidity-collision-and-occlusion.md` (3.4 KB)
 - *Static (item 36): these three, and of the list above only analysis-protocol §0–§2 and §4–§9, creative-direction §1–§4 and
   brand-guardrails §3 (the product and video-physics sections are not read):*
-  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (3.8 KB) (who works the run: read at the start, again only
+  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (4.7 KB) (who works the run: read at the start, again only
     after a compaction)
-  - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (10.1 KB)
-  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (11.4 KB)
-  - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (6.2 KB) (the niche, the visual style and the narrator, A5)
+  - static §1: `AWL/reference/static/010_1_what-static-mines-from-the-refer.md` (11.6 KB)
+  - static §2: `AWL/reference/static/020_2_the-static-card-and-the-spec-a3.md` (12.2 KB)
+  - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (10.7 KB) (the niche, the visual style and the narrator, A5)
 
 ### A3. Video analysis (as continuous sequences)
 - **Static:** each card is the Static card (static §1–§2) in place of the product and physics fields: read `video.md`, `timeline.md`
@@ -210,7 +210,8 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   (`state.json → static.tts_model`; the ElevenLabs MCP's `list_models` row for it, loaded as `voiceover.md` §2 step 3 says, else `T
   tts models --run RUN`). Store with `T static language --run RUN --plan "<L1>[,<L2>…]"` (one language: every video of the batch);
   it resolves each language against the live list and gives its facts: `official` false (the model's list does not hold it) is said in
-  one line, as ElevenLabs still voices it without a pronunciation guarantee and the user listens to the first passage; `unit`
+  one line, as ElevenLabs still voices it without a pronunciation guarantee (its first passage is a probe read against its script,
+  and the wrap-up names the pronunciation as not checked, static §6, §8); `unit`
   (words, or characters for a language written without spaces), `direction` and `spaced` say what the captions can do (static §7);
   `narrator_verified` says whether the locked narrator's voice is verified for it (said in one line when it is not: the narrator is a
   lock, a clone may pick another).

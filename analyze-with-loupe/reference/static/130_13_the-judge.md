@@ -39,7 +39,8 @@ briefs), and the PC's model-memory record.
   voice's point measured for them (`same`, or the voice's latest as `nearest`: a probe's or a made narration's; `T tts fit` learns it
   again): its words a minute while articulating and overall, over the delivered audio (`wpm_delivered`: the length a narration of these
   words will have), its pauses; and from them the predicted pace, length and pause pattern against the point, the target length and the
-  family's numbers. No speed and no pause between lines is calculated: Eleven v4 has no speed, and nothing is placed after it (§6).
+  family's numbers. No speed-up and no pause between lines is calculated: a model's own `speed` setting is a lever of the request (§6),
+  never a change of the delivered audio, and nothing is placed after it (§6).
 - *Images*: per image the facts that tend to spoil a still on this PC: things that carry writing in the scene (a sign, a screen, a chart,
   a report, a map, a thermometer …) with no exact words planned, digits in the scene, words of §11 and of §11b (a shower, a bath,
   blood, a wound, a scream: `nudity_gore_or_distress_words`), words that ask for panels or a split,

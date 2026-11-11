@@ -56,6 +56,20 @@
   whose file is gone shows in CapCut's default font. So the captions' and labels' `font_file` is a copy in the library's `fonts/`
   folder: `T capcut-font --list` lists it first and gives every font's `kept_by`; a font from CapCut's cache under an open licence
   (SIL Open Font License) is copied there first with its row in `fonts/README.md`, one whose licence is not known is not used.
+- **Captions in another language** (the user, 2026-11-11: the video's language, §6; the captions are the narration's own words, never
+  the glosses): the SRT is made from the heard words of the narration in the video's language. A language written with spaces is
+  grouped by `captions.words` as before; one written without them (Japanese, Chinese, Thai, Lao, Khmer, Burmese; `T static language
+  --language <code>` says `spaced: false` and its unit) is grouped by `captions.chars`, the characters a caption holds (config
+  `static.captions.chars_unspaced` when the plan has none), at the characters' times, and its `highlight_words` is left empty (a word is
+  not a separate token there). `case: "upper"` changes only letters that have a case (the Turkish and Azerbaijani dotted i first); a script
+  without case stays as it is. The font holds a glyph for every character of the captions and the labels: `T capcut-font`, `T
+  capcut-labels` and `T capcut-word-box` list `font_missing_glyphs` (the characters the file lacks), and a font that lacks some is
+  replaced for that video's texts by another file of `T capcut-font --list` (kept under `fonts/` first, as Fonts says), the reason in the
+  plan. **The word box** places a row of words one by one from left to right, so for a language written without spaces or from right to
+  left `T capcut-word-box` stops with `word_box_supported: false` and its reason, and the video takes the plain caption look by
+  `capcut import-srt` as above (the run's font, size, outline, colours and entrance), named in the brief and the record; the box comes
+  back on the next video in a language it can place. Nothing here renders a project (no local render), so how CapCut shapes a right-to-left
+  or joined script is the user's first look at it, which the wrap-up names.
 - **An extra format** (§2b): its own CapCut project by the same steps, each command with `--format <tag>`:
   `T slideshow plan` (its timeline `40-briefs/video-NN-timeline-<tag>.json`: the same cuts, moves, joins and effects, its own stills,
   labels, aimed zooms and caption size and band; its `undecided` lists what its `by_format` still lacks), `T capcut-name` (the name

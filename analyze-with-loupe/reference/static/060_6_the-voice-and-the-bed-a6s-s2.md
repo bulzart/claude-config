@@ -1,11 +1,14 @@
 ## 6 The voice and the bed (A6s, S2)
 
-**The voice** (ElevenLabs, model Eleven v4 `eleven_v4`, on the user's key; the user, 2026-11-09: "we will no longer use a locl model for
-audio generation, we will use elevenlabs" and "we will only use elevenlabs v4"; the local Qwen3-TTS and the Alibaba engine were removed
-that day): one voice per run, the same in every video, locked once picked (§10): more videos of the run and a clone that keeps it make
-no new samples; the toolkit refuses a new design or pick without `--replace`. The sample line names nothing religious or superstitious
-(§11). Nothing of the narration runs on this PC (no GPU, no memory guard); the key is the user environment variable `ELEVEN_API_KEY`
-(§9), and `T tts check` gives the account's plan, its characters left and what the model honours.
+**The voice** (ElevenLabs, on the user's key; the user, 2026-11-09: "we will no longer use a locl model for audio generation, we will use
+elevenlabs" (the local Qwen3-TTS and the Alibaba engine were removed that day), and 2026-11-11: "user also has to be able to pick which
+elevenlabs model he wants to use too, not always v4, he might use v4 turbo or other": the run's **narration model** is the user's pick
+at the start from ElevenLabs' live list ("The models", below), Eleven v4 `eleven_v4` unless they pick another; the 2026-11-09 words "we
+will only use elevenlabs v4" gave way to that pick): one voice per run, the same in every video and in every language, locked once picked
+(§10): more videos of the run and a clone that keeps it make no new samples; the toolkit refuses a new design or pick without
+`--replace`. The sample line names nothing religious or superstitious (§11). Nothing of the narration runs on this PC (no GPU, no
+memory guard); the key is the user environment variable `ELEVEN_API_KEY` (§9), and `T tts check` gives the account's plan, its
+characters left and what the run's model honours.
 - **Five samples at the stop of A6s** (the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them
   so the user can hear them and pick the one they like to be the voice of the videos"): five candidates written from the spec's voice
   profile (gender, age, tone, pace, accent; the references' register, five different takes on it). Each is a voice the account has
@@ -15,13 +18,38 @@ no new samples; the toolkit refuses a new design or pick without `--replace`. Th
   --instruct "<voice 1>" …`, the pace in the description's words, e.g. "a quick, measured pace"; billed per character of the line, once
   per design; a designed voice may read less expressively on Eleven v4 than in its sample, ElevenLabs' docs). The stop lists each with
   the full path of its file and its measured pace; the user listens and picks. A preview is made by an older model on its own text, so
-  its pace is a first reading only: the voice's pace on Eleven v4 with the video's own words is the probe's (below).
+  its pace is a first reading only: the voice's pace on the run's model with the video's own words is the probe's (below). The samples
+  are heard in the language of the run's first video (the user, 2026-11-11: "we need the voices to be in that language too"): a Voice
+  Design sample line is written natively in it (`T tts design --language <it>`), a listed voice carries the languages ElevenLabs gives
+  for it (`verified_languages`, where the API has them) beside its preview, and a preview that is in another language than the video's
+  is said so at the stop.
 - **The pick** becomes the run's voice: `T tts voice --run RUN --voice-id ID` (an account voice; its preview kept as the voice's
   reference recording), `--sample K` (a design, saved to the account) or `--clone FILE …` (an Instant Voice Clone, when the plan allows
   it: not on the Free plan); `--settings '{"stability": S, "similarity_boost": M}'` the voice's own settings, and at most two
   `--emotion NAME="[tags]"` when the spec's delivery swings: the audio tags sent where a line of that emotion begins.
-- **What Eleven v4 takes** (ElevenLabs' docs, read 2026-11-09; `config.json → static.tts.elevenlabs.models.eleven_v4`): two voice
-  settings only, `stability` (0 to 1, default 0.5: higher holds the delivery steadier from passage to passage, lower is more expressive)
+- **The models** (the user, 2026-11-11: "the user has to be asked on which elevenlabs model they want to use too (based on elevenlabs
+  mcp live pull)"): the run's narration model is picked at the start (`awl-start`, the question "Narration model") from ElevenLabs'
+  live list of the models that can do text to speech. The list is pulled live, never written from memory: the ElevenLabs MCP's
+  `list_models` first (the `elevenlabs` server's tool `mcp__elevenlabs__list_models`: each row's `model_id`, name, languages, request
+  limit and `can_do_text_to_speech`), and when the MCP does not
+  answer (on this PC: the web shield's certificate error) `T tts models`, the same `GET /v1/models` through the toolkit's own key (a
+  free read; it keeps the list in `<runs_root>/.elevenlabs-models.json` for the language checks and prints each model with its
+  language count, its request limit and whether it is set up). The pick is stored with `T tts model --run RUN --model-id ID --source
+  elevenlabs-mcp|toolkit-api` (`state.json → static.tts_model`); the model is the run's, like the narrator, and another one for a
+  single video is the user's word only: a narration JSON's own `model_id` then overrides it (the order: the narration's, the run's, the
+  voice's, the config's). A model changes what a request can carry, so every model's facts are
+  recorded in `config.json → static.tts.elevenlabs.models.<id>`: its voice settings and their ranges, whether it takes `speed`, `style`,
+  SSML breaks, speaker boost or audio tags, its request stitching (and how many ids), a seed, `language_code`, its `max_chars`, its
+  credits per character, its pace levers and the docs the record was read from with the date. The toolkit refuses what the record says
+  the model does not take (a setting, a tag or a pace key it lacks is refused, never dropped silently), and the judge's levers (§13) are
+  the record's. **A model with no record is "not set up"** (`T tts models` shows `set_up: false`; `T tts model` refuses it): before it is
+  used its facts are read from ElevenLabs' docs (the model's overview and capability pages, the text-to-speech and with-timestamps API
+  pages, the request-stitching guide), never from memory, written into the config with their `source` and date, and `T tts check --run
+  RUN` then shows what the run's model honours; only then is the pick stored. A voice's measured points (`state.json →
+  static.voice.fit`) are per voice, model and language: a new model or a new language has no measured point yet, so its first passage
+  is a probe (below, "The pace").
+- **What Eleven v4 takes** (the model recorded first; ElevenLabs' docs, read 2026-11-09; `config.json →
+  static.tts.elevenlabs.models.eleven_v4`): two voice settings only, `stability` (0 to 1, default 0.5: higher holds the delivery steadier from passage to passage, lower is more expressive)
   and `similarity_boost` (0 to 1, default 0.75: how close the read stays to the voice); **no speed, no style, no SSML pause**: any other
   setting is refused, never dropped silently. Delivery and pace are **audio tags**, natural-language words in brackets before the clause
   they colour, holding until the next tag: "[Building tension, measured pace]", "[Quick, light, playful pace]", "[slowly]", "[tense,
@@ -59,14 +87,18 @@ no new samples; the toolkit refuses a new design or pick without `--replace`. Th
     to normal, no speedup"): `T tts say --rejoin` puts the passages back end to end exactly as delivered.
   The CapCut project plays the narration at its own level (§7).
 - **Passages** (`T tts say`): Eleven v4 "works best when used for paragraphs or passages of text" (ElevenLabs), so the lines are sent in
-  passages of up to `config.json → static.tts.elevenlabs.passage_chars` (850; the plan's `tts.passage_chars` overrides) characters. A
+  passages of up to `config.json → static.tts.elevenlabs.passage_chars` (850; the plan's `tts.passage_chars` overrides) characters,
+  never over the run's model's own `max_chars` a request (a model with a smaller limit stops a passage that passes it before anything
+  is sent). A
   passage ends after a line marked `passage_break`, and after a line whose own delivery is not the narration's unless the next line
   shares it (a tag holds until the next one, so a line's own delivery ends with its passage); when the next line would pass the size, it
   ends at the largest planned `pause_after` in its second half (a `pause_after` is only that hint now: no silence is ever placed). Each
   passage starts with the delivery in force (the narration's `delivery`, a line's own, or its emotion's), a line's `tags_after` (e.g.
-  "[long pause]") follows its words, and each passage is stitched to its neighbours (ElevenLabs' request stitching: the request ids of up
-  to three passages just before it made in the last 110 minutes, else the previous passage's text; the next passage's text); its seed is
-  the voice's (or the plan's `tts.seed`) times 1,000 plus its number. The timestamps endpoint gives each line's start and end
+  "[long pause]") follows its words, and each passage is stitched to its neighbours as the model's record says (ElevenLabs' request
+  stitching; Eleven v4, `stitching: ids`: the request ids of up to its `stitch_max_ids`, three, passages just before it made in the last
+  110 minutes, else the previous passage's text; the next passage's text; a model recorded `text` sends the neighbours' text only, one
+  recorded `none` sends each passage alone); its seed is the voice's (or the plan's `tts.seed`) times 1,000 plus its number, for a model
+  that takes a seed. The timestamps endpoint gives each line's start and end
   (speech-to-text for a line its timing misses, flagged); the passages are placed end to end exactly as delivered (`video-NN.wav`; each
   passage kept as `video-NN/passage-PP.wav`, an MP3 also as delivered beside its decoded WAV, its request in `passage-PP.json`).
 - **A video's narration**: `T tts say --run RUN --video NN` makes the passages not yet made with their present text (nothing is billed
@@ -87,6 +119,44 @@ no new samples; the toolkit refuses a new design or pick without `--replace`. Th
   out the images and effects after the last narrated line (`T slideshow plan`: `images_after_narration`), and the wrap-up names it.
 - The narration starts `lead_s` after the first frame and the video ends `tail_s` after it (config `static.narration`).
 
+**The language of a video** (the user, 2026-11-11: "it has to ask user which language has the video's content to be ... even though all
+references might be in english or mixed, we still analyse them and understand, but make the content in a specific language the user
+wants"; "the languages have to be called from Elevenlabs mcp since we need the voices to be in that language too, and the video builds
+the content around that language"). The references are read in whatever language they are in (A1 detects each one's speech language
+itself) and what is carried over is their craft (§4); the video is made in the language the user picks:
+- **The choice**: asked at A5 after the count, again with More videos and for a clone (`awl-analyze-study`, §10), once per video or
+  once for the batch ("1 English, 2 Spanish"). The options are the languages of the run's narration model, from the live list (the
+  ElevenLabs MCP's `list_models` rows, or `T tts models --run RUN --language L`, which marks the models that list a language). A language
+  given by name or by ISO code is resolved by `T static language --run RUN --language L` against that list, never by guessing a code from
+  a name's first letters: its code and name, whether the model lists it (`in_model`; one it does not list is `official: false`:
+  ElevenLabs may still speak it, so the first passage is made as a probe and what speech-to-text hears of it is read against its script
+  before the rest is made, and the wrap-up names its pronunciation as not checked, for the user to listen to; a language that no
+  ElevenLabs model lists cannot be resolved and is refused, so "Other" is a language of the live list), whether it is written with spaces,
+  its direction and its **unit**. `T static language --run RUN --plan "English,Spanish"` records the batch's languages (`static.language_plan`:
+  each video added after it takes the next one) and `T static subjects --add … --language L` states one video's; a video's language is
+  fixed once its narration exists (`T static subjects --set` refuses a change): another language is a new video.
+- **The voice** is the run's narrator in every language (a lock, §10). When ElevenLabs lists verified languages for it
+  (`verified_languages`), the video's language is checked against them: one that is not there is a fact the stop reports (the voice may
+  keep its own accent into it) where the language is asked and at the voice stop, and the wrap-up names the pronunciation as not checked
+  (§8). The request sends `language_code` only when the run's model
+  honours it and lists the code; the narration JSON's `language` names the language and the text is written natively (§4).
+- **The unit of the pace**: another language has words of another size, and some (Japanese, Chinese, Thai, Lao, Khmer, Burmese) have
+  no spaces between words. The pace's `unit` is `words` or `characters`; the keys keep their names (`wpm_articulation`, `wpm_overall`).
+  `T static units --run RUN --video NN` gives the ratio of the script's units to its glosses' English words and the references' English
+  points converted by it (§4, §13). The speech-to-text reading of the narration (the heard words, the pace, the cues, the timed words)
+  is made with the language's own Whisper code (`T static language` gives it; a language Whisper does not list is read with its
+  automatic detection, said in the answer). A reference written without spaces counts characters, so the set's words-based medians leave
+  it out (`T static profile` lists it with the reason).
+- **What stays English**: the glosses, the judge's records, the briefs, the forecast and every instruction. **What is in the video's
+  language**: the narration, the title, the thumbnail's words, the captions, the labels (§5, §7, §12).
+- **The fit points** (`state.json → static.voice.fit`, and the forecast's point) are per voice, model and language: the first video in a
+  new language or on a new model has no measured point, the forecast says so, and the judge asks for a probe before it commits the pace
+  (J1, §13).
+- **Characters** (credits): the forecast counts the characters of the native text against the characters left (`credits`:
+  `characters_to_send`, `characters_left`), so a language that writes the same story in more or fewer characters than English costs more
+  or less; a model whose record has `credits_per_character` under 1 (v4 Turbo: 0.5, ElevenLabs' live list) spends fewer credits than
+  characters, and what a passage cost is the sidecar's `characters`, from ElevenLabs' own cost header.
+
 **The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very
 sure that the workflow really achieves" it; then "every step should be taken carefully and thoroghfully, and nothing should turn out as
 unexpected": the pace is aimed at a point the judge chose, §13, never left wherever it lands inside a band; and 2026-11-09: "do it in
@@ -96,8 +166,12 @@ judge's `target` point, the tolerance) is what the narration is aimed at and mea
   with every pause of 0.25 s or more taken out), both from the words' times, read the same way in the references and in a narration (§13
   "The fair measure"; the older segment reading `wpm_speech` is kept only as a fact), on the narration as delivered;
 - **the levers, all before generation**: the voice (its own pace on Eleven v4 is the main one: a voice reads about as fast as the audio
-  it was made from), the delivery and pace tags (the narration's `delivery` leads every passage, e.g. "[quick, measured pace]"), the
-  settings, and the words (shorter sentences and fewer commas read quicker; ellipses, dashes and full stops add rests). Each is measured
+  it was made from), the delivery and pace tags where the run's model reads them (the narration's `delivery` leads every passage, e.g.
+  "[quick, measured pace]"), the settings (and a `speed` or `style` setting where the model's record has one: a request lever like any
+  other, sent in the generation and never applied to the delivered audio; SSML break tags are not used, the text is spoken text only,
+  §4), and the words (shorter sentences and fewer
+  commas read quicker; ellipses, dashes and full stops add rests). The levers are the run's model's: the numbers below are Eleven v4's
+  (a model whose record lacks the audio tags has no `delivery`, and a tag sent to it is refused before anything is billed). Each is measured
   first: `T tts voices --measure` (free, the voices' own previews: a first reading), then `T tts probe --run RUN --video NN [--voice-id
   <a candidate>] [--delivery "<tags>"] [--settings '<json>']`: passage 1 made exactly as `say` would send it and read with the
   references' yardstick (articulating, overall, and `wpm_delivered`: the words over the delivered audio, its own silences in, the length a

@@ -56,9 +56,12 @@ Subcommands (python awl.py <cmd> -h):
   last-frame     exact last frame of a clip as a lossless PNG: the hand-off start frame for the next clip
   capcut-name    free CapCut project name DD_Mon_YYYY_vNN for an Analyze Mode video
   capcut-prep    after capcut_clone_draft: set aside the template's identity/layout so `capcut register` rebuilds them
-  capcut-font    Static: list the fonts on this PC (CapCut's own, then Windows') | set one font on a draft's texts (nothing else)
+  capcut-font    Static: list the fonts on this PC (CapCut's own, then Windows') | set one font on a draft's texts (nothing else); lists
+                 font_missing_glyphs (the characters of those texts the font file has no glyph for)
   capcut-labels  Static: the timeline's labels (a place's name on a map) as CapCut texts over their images, in the plan's labels_style
-  capcut-word-box Static: the captions as one CapCut text per word, the spoken word on the plan's rounded colour box
+                 (font_missing_glyphs listed)
+  capcut-word-box Static: the captions as one CapCut text per word, the spoken word on the plan's rounded colour box (a language written
+                 without spaces or right to left: exit 2, word_box_supported false, the plain caption path; font_missing_glyphs listed)
   capcut-repair  after capcut_save: house text style + register + sync-timelines + lint (one machine-wide lock),
                  then a proxy preview
   capcut-text-style  every CapCut text layer → the user's locked house preset (config capcut.text_style.learned),
@@ -74,16 +77,27 @@ Subcommands (python awl.py <cmd> -h):
                  prep-all (the reference sampling) and the produce phase (agents at once, the pilot) read it; never QC
   static         Static (contract item 36): check the setup on this PC (key present, image model, FLUX 3 Klein, TTS, music, whisper,
                  ffmpeg, capcut-cli) | formats (facts for the format question: the references' aspects, sizes per aspect and resolution)
-                 | format (store the pick) | lock (the run's niche and style reference, once; the locks shown) | subjects (in video
-                 order; --add appends the next ones) | context (the references' real YouTube titles and thumbnails, context.txt)
+                 | format (store the pick) | lock (the run's niche family and style reference, once; the locks shown; --reword
+                 "<new>" --why "<reason>" sharpens the niche's wording; also the narration model, each video's approach and language,
+                 the language plan) | subjects (in video order, each with its approach and language; --add appends the next ones with
+                 --story-form --angle --pov --time-frame --scale --title-form --pillar --series --approach-why --language; --set NN edits
+                 one) | language (a language's facts: --language L [--model-id ID] [--text FILE|--srt FILE] [--font FILE]; --plan
+                 "L1[,L2,...]" stores the batch's languages) | units (a narration's units against its English gloss and the plan's pace
+                 converted by their ratio) | context (the references' real YouTube titles and thumbnails, context.txt) | profile |
+                 forecast
   reuse-analysis a reference another run already analysed (the same file) gets that analysis here instead of a second one
-  clone-run      Static: a new run with a Static run's analysis copied (inventory, media, cards, spec, characters, voice); its niche,
-                 subjects, videos and ledger are not (the clone asks its niche)
+  clone-run      Static: a new run with a Static run's analysis copied (inventory, media, cards, spec, characters, voice, the narration
+                 model); its niche, subjects, each video's approach and language, language plan, videos and ledger are not (the clone
+                 asks its niche, model and language)
   image          Static stills: generate (OpenAI Images API with the key only from OPENAI_API_KEY, or FLUX 3 Klein on this PC with
                  static_images=klein; ledgered) | prompts (the file a user makes them from) | intake (the user's folder, copied in) | use
                  (which attempt the edit takes)
-  tts            Static voice (ElevenLabs Eleven v4): check | design (voice samples) | voice (the run's voice) | say (narration) | probe | fit
-  narration-words Static: a narration's timed words, caption cues, SRT and per-line differences from the script
+  tts            Static voice (ElevenLabs, the model the run picked; Eleven v4 by default): check | models (ElevenLabs' live model list and
+                 languages, a free read, kept in the library: runs/.elevenlabs-models.json) | model (the run's narration model, from that
+                 list: --model-id ID [--source elevenlabs-mcp|toolkit-api|offline]) | design (voice samples) | voice (the run's voice) |
+                 say (narration) | probe | fit
+  narration-words Static: a narration's timed words, caption cues, SRT and per-line differences from the script (in the video's
+                 language: letters, not words, for a language written without spaces)
   music          Static bed under every video (ACE-Step 1.5 in its own environment): check | make | measure (the bed alone and under
                  the narration as CapCut plays it: a voice in it, its level, the narration's words with it)
   slideshow      Static: plan (timeline from the image plan and the narration) | render (clean and captioned preview mp4)
@@ -109,10 +123,12 @@ import os
 import re
 import shutil
 import statistics
+import struct
 import subprocess
 import sys
 import threading
 import time
+import unicodedata
 import webbrowser
 import zipfile
 from pathlib import Path
@@ -929,7 +945,11 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
                         res["segments"].append({"start": round(st, 2), "end": round(en, 2),
                                                 "text": " ".join(m.group(9).split()), "words": []})
                 res.update({"engine": "ffmpeg-whisper", "model": model_file.name})
-    words = sum(len(s["text"].split()) for s in res["segments"])
+    # what a pace counts in the language heard: words, or letters for a language written without spaces (a Japanese segment has one
+    # "word": its letters are what the speech holds)
+    unit = "characters" if str(res.get("language") or "").lower().split("-")[0] in LANG_UNSPACED else "words"
+    words = sum(len(_units(s["text"], {"spaced": False} if unit == "characters" else None)) for s in res["segments"])
+    res["unit"] = unit
     res["has_speech"] = words >= 2
     res["n_words"] = words
     speech = sum(s["end"] - s["start"] for s in res["segments"])
@@ -3519,6 +3539,397 @@ def _norm_word(w: str) -> str:
     return re.sub(r"[^\w']+", "", w.lower())
 
 
+# ---- the video's language (Static; the user, 2026-11-11: "videos language: it has to ask user which language has the video's content to
+# be (languages have to be pulled live from elevenlabs mcp, user also has to be able to pick which elevenlabs model he wants to use too,
+# not always v4, he might use v4 turbo or other) and then the user choses of which language it wants to be the next video, even though
+# all references might be in english or mixed, we still analyse them and understand, but make the content in a specific language the user
+# wants"). The languages and the models are ElevenLabs' own live list (`T tts models` keeps a copy in the library: EL_MODELS_CACHE); the
+# toolkit resolves a name or an ISO code against it, and counts, times and captions a text by what its language is written like. It
+# records and converts; which language a video is made in, and what a pace should be in it, are the agent's and the user's.
+
+EL_MODELS_CACHE = ".elevenlabs-models.json"
+# Linguistic facts (not names of niches, products or brands), by the code ElevenLabs lists a language with: the languages written right
+# to left (with their script) and those written without spaces between words (with their scripts). Any other language is read left to
+# right with spaces; a text's own letters decide a direction when a text is given (_lang_info).
+LANG_RTL = {"ar": "Arabic", "fa": "Arabic", "ur": "Arabic", "ps": "Arabic", "sd": "Arabic", "ckb": "Arabic", "ug": "Arabic",
+            "he": "Hebrew", "iw": "Hebrew", "yi": "Hebrew", "dv": "Thaana"}
+LANG_UNSPACED = {"ja": ["Han", "Hiragana", "Katakana"], "zh": ["Han"], "yue": ["Han"], "th": ["Thai"], "lo": ["Lao"], "km": ["Khmer"],
+                 "my": ["Myanmar"], "bo": ["Tibetan"], "dz": ["Tibetan"]}
+RTL_SCRIPTS = {"Arabic", "Hebrew", "Syriac", "Thaana", "Nko"}
+# ElevenLabs' code -> the code Whisper's tokenizer knows the language by (the rest are the same); a language Whisper has no code for is "auto"
+LANG_WHISPER_ALIAS = {"jv": "jw", "fil": "tl", "iw": "he", "nb": "no"}
+# the scripts a text's letters are counted in (the first word of a letter's Unicode name; 'CJK' is Han): a closed list, so a letter-like
+# symbol never becomes a script
+SCRIPT_NAMES = {"LATIN", "GREEK", "CYRILLIC", "ARMENIAN", "HEBREW", "ARABIC", "SYRIAC", "THAANA", "NKO", "DEVANAGARI", "BENGALI", "GURMUKHI",
+                "GUJARATI", "ORIYA", "TAMIL", "TELUGU", "KANNADA", "MALAYALAM", "SINHALA", "THAI", "LAO", "TIBETAN", "MYANMAR", "GEORGIAN",
+                "HANGUL", "ETHIOPIC", "KHMER", "MONGOLIAN", "HIRAGANA", "KATAKANA", "BOPOMOFO", "CHEROKEE", "TIFINAGH", "ADLAM", "COPTIC",
+                "GLAGOLITIC"}
+# a caption cue ends after a mark that closes a clause or a sentence (the Latin ones, and those of CJK, Arabic, Armenian and Devanagari
+# text); "..." as a typographic ellipsis is left out on purpose: an English cue never ended after it
+CAP_BREAK = re.compile(r"[.!?,;:、。！？，；：։،؛؟।॥]$")
+CAP_BREAK_STRONG = re.compile(r"[.!?;:。！？；：։؛؟।॥]$")
+
+
+def _fold(s) -> str:
+    """A name or a code compared without case, accents or extra spaces ('Português' is 'portugues')."""
+    t = unicodedata.normalize("NFKD", str(s or ""))
+    return " ".join("".join(c for c in t if not unicodedata.combining(c)).casefold().split())
+
+
+def _script_of(ch: str):
+    """The script of a letter by the first word of its Unicode name ('LATIN SMALL LETTER A' -> Latin, 'CJK UNIFIED IDEOGRAPH-4E00' ->
+    Han); None for a character with no name or one that belongs to no script (a modifier, a symbol)."""
+    try:
+        words = unicodedata.name(ch).split()
+    except ValueError:
+        return None
+    first = words[0]
+    if first in ("FULLWIDTH", "HALFWIDTH") and len(words) > 1:
+        first = words[1]
+    if first == "CJK":
+        return "Han"
+    return first.title() if first in SCRIPT_NAMES else None
+
+
+def _script_counts(text) -> dict:
+    """{script: letters} of a text: the letters (Unicode category L) counted by their script."""
+    res = {}
+    for ch in str(text or ""):
+        if unicodedata.category(ch)[0] == "L":
+            s = _script_of(ch)
+            if s:
+                res[s] = res.get(s, 0) + 1
+    return res
+
+
+def _el_models_cache_path() -> Path:
+    return runs_root() / EL_MODELS_CACHE
+
+
+def _el_models_cache() -> dict:
+    """The library's copy of ElevenLabs' live model list ({"pulled_at", "source", "models": [rows as the API gave them]}), written by
+    `T tts models`; {} when none was pulled yet."""
+    try:
+        c = json.loads(_el_models_cache_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return c if isinstance(c, dict) and isinstance(c.get("models"), list) else {}
+
+
+def _lang_index(cache: dict) -> dict:
+    """The languages of every model in the cache: {"by_code": {code: [names]}, "by_name": {folded name: {codes}}}. A name also answers to
+    itself without its bracket and to the bracket's words ('Fula (Pulaar)': fula, pulaar)."""
+    by_code, by_name = {}, {}
+    for row in (cache or {}).get("models") or []:
+        for lg in (row.get("languages") or []) if isinstance(row, dict) else []:
+            if not isinstance(lg, dict) or not str(lg.get("language_id") or "").strip():
+                continue
+            names = by_code.setdefault(str(lg["language_id"]).strip().lower(), [])
+            nm = str(lg.get("name") or "").strip()
+            if nm and nm not in names:
+                names.append(nm)
+    for code, names in by_code.items():
+        for nm in names:
+            keys = {_fold(nm), _fold(re.sub(r"\s*\([^)]*\)", " ", nm))} | {_fold(x) for x in re.findall(r"\(([^)]*)\)", nm)}
+            for k in keys:
+                if k:
+                    by_name.setdefault(k, set()).add(code)
+    return {"by_code": by_code, "by_name": by_name}
+
+
+_WHISPER_LANGS = None
+
+
+def _whisper_langs() -> tuple:
+    """faster-whisper's own supported-language tuple (its tokenizer's _LANGUAGE_CODES), read from the package's source so that no model
+    library is loaded for it; the import itself when the source cannot be read; () when faster-whisper is not installed."""
+    global _WHISPER_LANGS
+    if _WHISPER_LANGS is None:
+        codes = ()
+        try:
+            import importlib.util
+            spec = importlib.util.find_spec("faster_whisper")
+            src = Path(spec.origin).parent / "tokenizer.py" if spec and spec.origin else None
+            m = re.search(r"_LANGUAGE_CODES\s*=\s*\((.*?)\n\)", src.read_text(encoding="utf-8"), re.S) if src and src.is_file() else None
+            codes = tuple(re.findall(r"\"([a-z]+)\"", m.group(1))) if m else ()
+            if not codes:
+                from faster_whisper.tokenizer import _LANGUAGE_CODES  # type: ignore
+                codes = tuple(str(x) for x in _LANGUAGE_CODES)
+        except Exception:  # noqa: BLE001
+            codes = ()
+        _WHISPER_LANGS = codes
+    return _WHISPER_LANGS
+
+
+def _whisper_code(code: str) -> str:
+    """The language code faster-whisper takes for an ElevenLabs language code (jv -> jw, fil -> tl ...), 'auto' for a language its tuple
+    does not hold. Without faster-whisper there is nothing to decide by: the code as it stands (the ffmpeg fallback reads no language)."""
+    c = LANG_WHISPER_ALIAS.get(code, code)
+    langs = _whisper_langs()
+    return c if (not langs or c in langs) else "auto"
+
+
+def _run_state(run) -> dict:
+    """A run's state.json as a dict ({} for none): a state dict as it is, else the run folder's (a path, a name or a stamp prefix)."""
+    if isinstance(run, dict):
+        return run
+    if not run:
+        return {}
+    try:
+        rd = resolve_run(run, must_exist=False)
+        return json.loads((rd / "state.json").read_text(encoding="utf-8")) if rd else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _run_tts_model(st: dict):
+    """The narration model the run picked at the start (state.json -> static.tts_model.model_id), else None."""
+    return (((st or {}).get("static") or {}).get("tts_model") or {}).get("model_id") or None
+
+
+def _lang_resolve(language, model_id=None, st=None, text=None) -> tuple:
+    """(info, None), or (None, why not): the resolution _lang_info and its soft callers share. A language is a code or a name of
+    ElevenLabs' live list (the library's copy, `T tts models`: a name without case or accents, or one word of it), else one of the
+    pipeline's names (STATIC_LANG_ISO) or the codes of those; a code is never made from the first letters of a name."""
+    raw = language
+    if isinstance(raw, dict):
+        raw = raw.get("code") or raw.get("name")
+    s = " ".join(str(raw or "").split())
+    if not s:
+        return None, "no language given"
+    cache = _el_models_cache()
+    idx = _lang_index(cache)
+    low = _fold(s)
+    mm = re.fullmatch(r"([a-z]{2,3})(?:[-_][a-z0-9]{2,8})*", low)
+    base = mm.group(1) if mm else None
+    code = how = None
+    if base and base in idx["by_code"]:
+        code, how = base, "a code in ElevenLabs' list of languages"
+    elif low in idx["by_name"]:
+        cs = sorted(idx["by_name"][low])
+        if len(cs) > 1:
+            return None, f"{s!r} names more than one language in ElevenLabs' list ({', '.join(cs)}): give the ISO code"
+        code, how = cs[0], "a name in ElevenLabs' list of languages"
+    elif low in STATIC_LANG_ISO:
+        code, how = STATIC_LANG_ISO[low], "one of the pipeline's language names"
+    elif base and base in STATIC_LANG_CODES:
+        code, how = base, "the code of one of the pipeline's language names"
+    else:
+        qw = set(low.split())
+        hits = sorted({c for nm, cs in idx["by_name"].items() if qw and qw <= set(re.findall(r"\w+", nm)) for c in cs})
+        if len(hits) == 1:
+            code, how = hits[0], "a word of a name in ElevenLabs' list of languages"
+        elif len(hits) > 1:
+            return None, (f"{s!r} is a word of more than one language in ElevenLabs' list ({', '.join(hits)}): give the ISO code or the "
+                          "full name")
+    if code is None:
+        have = (f"the library's copy of ElevenLabs' list ({len(idx['by_code'])} languages, pulled {cache.get('pulled_at')})"
+                if idx["by_code"] else "the library (no copy of ElevenLabs' list of languages is kept yet)")
+        return None, (f"{s!r} is not a language the toolkit can place: it is not a code or a name in {have}, nor one of the pipeline's "
+                      f"names ({', '.join(STATIC_LANG_ISO)}). Run `T tts models` (a free read of ElevenLabs' live list; it keeps the "
+                      "languages of every model) and give a name or an ISO code from it; a code is never made from the first letters of a "
+                      "name ('swedish' is sv, 'sw' is Swahili)")
+    mid = model_id or _run_tts_model(st) or _el_cfg("model_id")
+    row = next((r for r in cache.get("models") or [] if isinstance(r, dict) and r.get("model_id") == mid), None)
+    mlangs = [lg for lg in (row or {}).get("languages") or [] if isinstance(lg, dict)]
+    in_model = (code in {str(lg.get("language_id")).strip().lower() for lg in mlangs}) if mlangs else None
+    name = next((lg.get("name") for lg in mlangs if str(lg.get("language_id")).strip().lower() == code and lg.get("name")), None)
+    name = (name or (idx["by_code"].get(code) or [None])[0]
+            or next((k.title() for k, v in STATIC_LANG_ISO.items() if v == code), None) or code.upper())
+    counts = _script_counts(text) if text else {}
+    if counts:
+        scripts = [k for k, _n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))]
+        direction = "rtl" if sum(n for k, n in counts.items() if k in RTL_SCRIPTS) * 2 > sum(counts.values()) else "ltr"
+    else:
+        scripts = list(LANG_UNSPACED.get(code) or ([LANG_RTL[code]] if code in LANG_RTL else []))
+        direction = "rtl" if code in LANG_RTL else "ltr"
+    spaced = code not in LANG_UNSPACED
+    return {"code": code, "name": name, "spaced": spaced, "direction": direction, "scripts": scripts, "whisper": _whisper_code(code),
+            "unit": "words" if spaced else "characters", "in_model": in_model, "official": in_model, "model_id": mid,
+            "resolved_from": how}, None
+
+
+def _lang_info(language, *, text=None, model_id=None, run=None, soft: bool = False) -> dict:
+    """The facts of a language, for counting, timing and captioning a video in it: {code, name, spaced (written with spaces between
+    words), direction ('ltr' | 'rtl'), scripts (the Unicode scripts of the text, else the language's), whisper (the code faster-whisper
+    takes, else 'auto'), unit ('words' | 'characters': what a pace counts), in_model (whether the model's live list holds the language;
+    None when the list is not known), official (the same: a language outside the model's list is not official, ElevenLabs may still
+    voice it), model_id}. `language` is a name or an ISO code (or a stored language object); the model is model_id, else the run's
+    (state.json -> static.tts_model), else the config's. A language it cannot place stops with exit 2 and names `T tts models`;
+    soft returns {"error": ...} with the defaults instead. Facts; the choice of the language is the user's."""
+    info, err = _lang_resolve(language, model_id, _run_state(run), text)
+    if err:
+        if soft:
+            counts = _script_counts(text) if text else {}
+            return {"code": None, "name": str(language), "spaced": True,
+                    "direction": "rtl" if sum(n for k, n in counts.items() if k in RTL_SCRIPTS) * 2 > sum(counts.values()) else "ltr",
+                    "scripts": [k for k, _n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))], "whisper": "auto",
+                    "unit": "words", "in_model": None, "official": None, "model_id": model_id, "error": err}
+        fail(err, 2)
+    return info
+
+
+def _video_lang_raw(st: dict, nn: str, *layers):
+    """The language a video is made in, as the run records it: the first of the layers given (a narration JSON's or sidecar's
+    `language`), else the video's own record (state.json -> static.video_info.<NN>.language), else the narrator's, else config
+    static.tts.language (english). A video with no record anywhere is English, as every video was before languages were recorded."""
+    for v in layers:
+        if v:
+            return v
+    s = (st or {}).get("static") or {}
+    vi = (s.get("video_info") or {}).get(nn) or {}
+    return vi.get("language") or (s.get("voice") or {}).get("language") or _scfg("tts.language", "english")
+
+
+def _video_lang(st: dict, nn: str, *layers, text=None, model_id=None, soft: bool = False) -> dict:
+    """_lang_info of a video's language (_video_lang_raw), in the run's model."""
+    return _lang_info(_video_lang_raw(st, nn, *layers), text=text, model_id=model_id, run=st, soft=soft)
+
+
+def _lang_record(info: dict, model_id=None) -> dict:
+    """The language object kept in state.json (static.video_info.<NN>.language, static.language_plan.languages): what the video's
+    counting, timing and captions read, and whether the model lists it."""
+    return {"code": info["code"], "name": info["name"], "official": info.get("official"), "spaced": info["spaced"],
+            "direction": info["direction"], "unit": info["unit"], "model_id": model_id or info.get("model_id")}
+
+
+def _unspaced(info) -> bool:
+    return bool(info) and info.get("spaced") is False
+
+
+def _is_letter_or_digit(c: str) -> bool:
+    return unicodedata.category(c)[0] in ("L", "N")
+
+
+def _units(text, info=None) -> list:
+    """The units a pace counts in a text: for a language written without spaces one per letter or digit (Unicode categories L and N: no
+    space, no punctuation); else its words, the text's whitespace-separated pieces (English, and a text with no language given, keep
+    every piece as the counts always were; another language leaves out a piece with no letter or digit, a dash or a '?' standing alone)."""
+    t = str(text or "")
+    if _unspaced(info):
+        return [c for c in t if _is_letter_or_digit(c)]
+    ws = t.split()
+    if not info or info.get("code") in (None, "en"):
+        return ws
+    return [w for w in ws if any(_is_letter_or_digit(c) for c in w)]
+
+
+def _n_units(text, info=None) -> int:
+    return len(_units(text, info))
+
+
+def _token_spans(text, info=None) -> list:
+    """[(piece, start, end)] of a text in the pieces it is timed and captioned in: its whitespace-separated words, or for a language
+    written without spaces one piece per letter or digit with the marks and punctuation that follow it (an opening bracket or quote goes
+    with the next one); text[start:end] is the piece."""
+    t = str(text or "")
+    if not _unspaced(info):
+        return [(m.group(), m.start(), m.end()) for m in re.finditer(r"\S+", t)]
+    toks, pend, gap = [], None, True
+    for i, c in enumerate(t):
+        if _is_letter_or_digit(c):
+            toks.append([pend if pend is not None else i, i + 1])
+            pend, gap = None, False
+        elif c.isspace():
+            pend, gap = None, True
+        elif gap or not toks:
+            if pend is None:
+                pend = i
+        elif unicodedata.category(c) in ("Ps", "Pi"):
+            pend, gap = i, True
+        else:
+            toks[-1][1] = i + 1
+    return [(t[a:b], a, b) for a, b in toks]
+
+
+def _tokens(text, info=None) -> list:
+    """The pieces a text is timed in (see _token_spans); a spaced language's are exactly text.split()."""
+    return [x[0] for x in _token_spans(text, info)] if _unspaced(info) else str(text or "").split()
+
+
+def _upper_for(text, code=None) -> str:
+    """A caption text in capitals the way the language writes them: str.upper(), with the dotted capital I Turkish and Azeri write for
+    'i' (Python gives 'I'), and Lithuanian's rule that a capital loses the dot above a soft-dotted letter."""
+    t = str(text)
+    c = str(code or "").lower().split("-")[0]
+    if c in ("tr", "az"):
+        t = t.replace("i", "İ")
+    elif c == "lt":
+        t = re.sub("(?<=[ijį])̇", "", t)
+    return t.upper()
+
+
+_FONT_GLYPHS = {}
+
+
+def _font_glyphs(font_file) -> set:
+    """The code points a TrueType or OpenType font file has a glyph for: its 'cmap' table's Unicode subtables of formats 4 and 12 (the
+    rest are skipped), read with no library (fontTools is not installed here). A WOFF (compressed) or a file with no cmap raises ValueError."""
+    p = Path(font_file)
+    stt = p.stat()
+    key = (str(p.resolve()), stt.st_mtime_ns, stt.st_size)
+    if key in _FONT_GLYPHS:
+        return _FONT_GLYPHS[key]
+    d = p.read_bytes()
+    base = struct.unpack(">I", d[12:16])[0] if d[:4] == b"ttcf" else 0          # a collection: its first font
+    if d[base:base + 4] not in (b"\x00\x01\x00\x00", b"OTTO", b"true", b"typ1"):
+        raise ValueError("not a TrueType or OpenType font file (a WOFF is compressed)")
+    cmap = None
+    for k in range(struct.unpack(">H", d[base + 4:base + 6])[0]):
+        tag, _cs, off, _ln = struct.unpack(">4sIII", d[base + 12 + 16 * k:base + 28 + 16 * k])
+        if tag == b"cmap":
+            cmap = off
+            break
+    if cmap is None:
+        raise ValueError("the font file has no cmap table")
+    got = set()
+    for k in range(struct.unpack(">H", d[cmap + 2:cmap + 4])[0]):
+        plat, enc, off = struct.unpack(">HHI", d[cmap + 4 + 8 * k:cmap + 12 + 8 * k])
+        if not (plat == 0 or (plat == 3 and enc in (1, 10))):
+            continue
+        sub = cmap + off
+        fmt = struct.unpack(">H", d[sub:sub + 2])[0]
+        if fmt == 4:
+            seg = struct.unpack(">H", d[sub + 6:sub + 8])[0] // 2
+            o = sub + 14
+            ends = struct.unpack(f">{seg}H", d[o:o + 2 * seg])
+            starts = struct.unpack(f">{seg}H", d[o + 2 * seg + 2:o + 4 * seg + 2])
+            deltas = struct.unpack(f">{seg}h", d[o + 4 * seg + 2:o + 6 * seg + 2])
+            ro_at = o + 6 * seg + 2
+            offs = struct.unpack(f">{seg}H", d[ro_at:ro_at + 2 * seg])
+            for i in range(seg):
+                if starts[i] == 0xFFFF:
+                    continue
+                for c in range(starts[i], min(ends[i], 0xFFFE) + 1):
+                    if offs[i] == 0:
+                        g = (c + deltas[i]) & 0xFFFF
+                    else:
+                        at = ro_at + 2 * i + offs[i] + 2 * (c - starts[i])
+                        g = struct.unpack(">H", d[at:at + 2])[0] if at + 2 <= len(d) else 0
+                        g = (g + deltas[i]) & 0xFFFF if g else 0
+                    if g:
+                        got.add(c)
+        elif fmt == 12:
+            for j in range(struct.unpack(">I", d[sub + 12:sub + 16])[0]):
+                s0, e0, g0 = struct.unpack(">III", d[sub + 16 + 12 * j:sub + 28 + 12 * j])
+                if e0 - s0 <= 0x110000:
+                    got.update(c for c in range(s0, e0 + 1) if g0 + (c - s0))
+    _FONT_GLYPHS[key] = got
+    return got
+
+
+def _font_report(font_file, text) -> dict:
+    """Whether a font file has a glyph for every character of a text: {"font_missing_glyphs": [the characters without one, in order of
+    their code points], "font_covers": bool}; a space, a control or a format character needs none. {"font_glyphs_error": ...} when the
+    font file cannot be read. A fact for the agent (a font that lacks a script draws boxes or the default font's letters)."""
+    try:
+        have = _font_glyphs(font_file)
+    except (OSError, ValueError, struct.error) as e:
+        return {"font_missing_glyphs": None, "font_covers": None, "font_glyphs_error": f"{type(e).__name__}: {e}"[:200]}
+    miss = sorted({c for c in str(text or "") if not c.isspace() and unicodedata.category(c) not in ("Cc", "Cf", "Cs") and ord(c) not in have})
+    return {"font_missing_glyphs": miss, "font_covers": not miss}
+
+
 _NUM_PARTS = sorted(("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen "
                      "eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred thousand million billion oh").split(),
                     key=len, reverse=True)
@@ -3547,12 +3958,34 @@ def _is_number_token(w: str) -> bool:
     return True
 
 
-def align_script(words: list, script: str) -> list:
-    """Keep the intended wording, borrow timing from ASR words (difflib alignment + interpolation)."""
+def _split_heard(words: list, info) -> list:
+    """Speech-to-text words of a language written without spaces cut into the pieces its script is timed in (one letter or digit each,
+    with what follows it), the word's seconds shared between them evenly: the transcriber's words are several letters long, the
+    script's pieces one. A piece the script cannot hold (a mark alone) is dropped."""
+    res = []
+    for w in words:
+        toks = _tokens(w["w"], info)
+        if len(toks) <= 1:
+            if toks:
+                res.append({**w, "w": toks[0]})
+            continue
+        s0, e0 = float(w["s"]), float(w["e"])
+        step = (e0 - s0) / len(toks)
+        res += [{**w, "w": t_, "s": round(s0 + k * step, 3), "e": round(s0 + (k + 1) * step, 3)} for k, t_ in enumerate(toks)]
+    return res
+
+
+def align_script(words: list, script: str, info=None) -> list:
+    """Keep the intended wording, borrow timing from ASR words (difflib alignment + interpolation). A language written without spaces
+    (info, _lang_info) is aligned piece by piece: its letters, not its words (_tokens)."""
     import difflib
-    target = script.split()
+    target = _tokens(script, info)
     if not words:
         return []
+    if _unspaced(info):
+        words = _split_heard(words, info)
+        if not words:
+            return []
     a = [_norm_word(w["w"]) for w in words]
     b = [_norm_word(t) for t in target]
     sm = difflib.SequenceMatcher(a=a, b=b, autojunk=False)
@@ -3575,18 +4008,19 @@ def align_script(words: list, script: str) -> list:
     return [{"w": target[i], "s": round(timed[i][0], 2), "e": round(timed[i][1], 2)} for i in range(len(target))]
 
 
-def _words_in_lines(timed: list, lines: list) -> list:
+def _words_in_lines(timed: list, lines: list, info=None) -> list:
     """A joined narration's script words (align_script's, in the script's order) kept inside their own line's audio (static §6): the
     joins are silence the narration put there, so no word of a line starts before its line's voice or ends after it. Speech-to-text
     pulls the first word after a long silence into that silence (2026-11-08, video 03: "Day four." timed 0.44 s before its line after
     a planned 1.04 s pause, "Here's what" 0.37 s before its line after the 1.6 s one), which would show the caption in the held pause.
     Only the captions use these times: the pace keeps the words as heard (the references' yardstick). Left as they are when the lines
-    carry no times or their words are not the timed words one for one."""
+    carry no times or their words are not the timed words one for one. info (_lang_info): a language written without spaces is
+    counted in its pieces (_tokens), not in words."""
     if not timed or not lines:
         return timed
     if not all(isinstance(r.get("start"), (int, float)) and isinstance(r.get("end"), (int, float)) for r in lines):
         return timed
-    counts = [len(str(r.get("text") or "").split()) for r in lines]
+    counts = [len(_tokens(str(r.get("text") or ""), info)) for r in lines]
     if sum(counts) != len(timed):
         return timed
     res, i = [], 0
@@ -3600,13 +4034,16 @@ def _words_in_lines(timed: list, lines: list) -> list:
     return res
 
 
-def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur: float = 1.8, min_cue: float = 0.0) -> list:
+def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur: float = 1.8, min_cue: float = 0.0, info=None) -> list:
     """Timed words grouped into caption cues of up to max_words. With min_cue (s), a cue that would be on screen for less than that
-    (a quick 'he' or 'of' before the next word) takes the next word with it, up to twice max_words, never across a sentence end or a pause."""
+    (a quick 'he' or 'of' before the next word) takes the next word with it, up to twice max_words, never across a sentence end or a pause.
+    info (_lang_info): for a language written without spaces the timed pieces are letters (_tokens), max_words counts them, and a cue's
+    text is its pieces joined with no space."""
+    sep = "" if _unspaced(info) else " "
     events, cur = [], []
     for w in words:
         if cur and (len(cur) >= max_words or w["s"] - cur[-1]["e"] > max_gap or w["e"] - cur[0]["s"] > max_dur
-                    or re.search(r"[.!?,;:]$", cur[-1]["w"])):
+                    or CAP_BREAK.search(cur[-1]["w"])):
             events.append(cur)
             cur = []
         cur.append(w)
@@ -3617,7 +4054,7 @@ def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur:
         while i < len(events):
             ev = list(events[i])
             while (i + 1 < len(events) and len(ev) + len(events[i + 1]) <= 2 * max_words and events[i + 1][0]["s"] - ev[0]["s"] < min_cue
-                   and events[i + 1][0]["s"] - ev[-1]["e"] <= max_gap and not re.search(r"[.!?;:]$", ev[-1]["w"])):
+                   and events[i + 1][0]["s"] - ev[-1]["e"] <= max_gap and not CAP_BREAK_STRONG.search(ev[-1]["w"])):
                 i += 1
                 ev += events[i]
             merged.append(ev)
@@ -3630,14 +4067,16 @@ def chunk_words(words: list, max_words: int = 3, max_gap: float = 0.35, max_dur:
         end = max(ev[-1]["e"] + (0.05 if i + 1 < len(events) else 0.0), start + 0.25)   # at least 0.25 s on screen ...
         if i + 1 < len(events):
             end = min(end, starts[i + 1])   # ... but never overlapping the next caption (a short word next to a quick one stays shorter)
-        res.append({"start": start, "end": round(max(end, start + 0.01), 2), "text": " ".join(w["w"] for w in ev), "preset": "caption"})
+        res.append({"start": start, "end": round(max(end, start + 0.01), 2), "text": sep.join(w["w"] for w in ev), "preset": "caption"})
     return res
 
 
-def chunk_words_fill(words: list, max_words: int = 3, min_words: int = 3, break_gap: float = 0.8) -> list:
+def chunk_words_fill(words: list, max_words: int = 3, min_words: int = 3, break_gap: float = 0.8, info=None) -> list:
     """Timed words grouped into cues of max_words, filled across commas, sentence ends and short pauses (the word box shows which word is
     spoken, so the next words may show early; the user, 2026-11-09: "make it at least 3"); a cue never runs across a pause of break_gap s
-    or more (a long pause, a chapter's dip). A stretch's last cue of fewer than min_words joins the cue before it in that stretch."""
+    or more (a long pause, a chapter's dip). A stretch's last cue of fewer than min_words joins the cue before it in that stretch.
+    info (_lang_info): for a language written without spaces the pieces are letters and a cue's text is joined with no space."""
+    sep = "" if _unspaced(info) else " "
     stretches, cur = [], []
     for w in words:
         if cur and w["s"] - cur[-1]["e"] >= break_gap:
@@ -3660,7 +4099,7 @@ def chunk_words_fill(words: list, max_words: int = 3, min_words: int = 3, break_
         end = max(ev[-1]["e"] + (0.05 if i + 1 < len(events) else 0.0), start + 0.25)
         if i + 1 < len(events):
             end = min(end, starts[i + 1])
-        res.append({"start": start, "end": round(max(end, start + 0.01), 2), "text": " ".join(w["w"] for w in ev), "preset": "caption"})
+        res.append({"start": start, "end": round(max(end, start + 0.01), 2), "text": sep.join(w["w"] for w in ev), "preset": "caption"})
     return res
 
 def cmd_captions(a):
@@ -6214,7 +6653,9 @@ def _text_outline_into_styles(m: dict, c: dict) -> bool:
 def cmd_capcut_font(a):
     """Static (contract item 36): --list the fonts on this PC (CapCut's own first), or set one font file on every text of a draft (or of
     one track), the text's own size, colours, outline, box and ranges kept: the font family capcut-cli's text flags cannot set. The
-    outline, box and shadow capcut-cli set on the material are also written where CapCut 9.x draws them from (_text_outline_into_styles)."""
+    outline, box and shadow capcut-cli set on the material are also written where CapCut 9.x draws them from (_text_outline_into_styles).
+    The answer lists `font_missing_glyphs`: the characters of the texts it set that the font file has no glyph for (_font_glyphs reads the
+    font's cmap), since a video in another language needs a font that has its script."""
     if a.list:
         rows = _font_files()
         if a.family:
@@ -6237,7 +6678,7 @@ def cmd_capcut_font(a):
     except Exception:  # noqa: BLE001
         family = ff.stem
     font = str(ff).replace("\\", "/")
-    files, names = [], set()
+    files, names, seen_text = [], set(), []
     for p in _draft_contents(d):
         content = json.loads(p.read_text(encoding="utf-8"))
         tracks = content.get("tracks", [])
@@ -6256,6 +6697,7 @@ def cmd_capcut_font(a):
                 c = json.loads(m.get("content") or "{}")
             except Exception:  # noqa: BLE001
                 c = {}
+            seen_text.append(str(c.get("text") or "") if isinstance(c, dict) else "")
             out_line = _text_outline_into_styles(m, c)
             for s in c.get("styles") or []:
                 s["font"] = {"id": "", "path": font}
@@ -6270,8 +6712,11 @@ def cmd_capcut_font(a):
     if a.track and not any(f["texts_set"] for f in files):
         fail(f"no text on a track named {a.track!r}; the draft's text tracks: {sorted(names)}", 2)
     out({"ok": True, "draft": str(d), "font": font, "family": family, "track": a.track, "files": files, "font_kept_by": _font_kept_by(ff),
+         **_font_report(ff, "".join(seen_text)),
          "note": "then capcut_save is not needed (the file is written); run `T capcut-repair --draft ... --keep-text` after the last save; "
-                 "a font CapCut downloaded or bundled is copied into the library's fonts folder first (static §7), so the project keeps it"})
+                 "a font CapCut downloaded or bundled is copied into the library's fonts folder first (static §7), so the project keeps it; "
+                 "font_missing_glyphs lists the characters of those texts the font file has no glyph for (a font that lacks a script draws "
+                 "boxes or another font's letters: the language's font is the agent's pick)"})
 
 
 CAPCUT_MOVE_PROPS = ("UNIFORM_SCALE", "KFTypeScaleX", "KFTypeScaleY", "KFTypePositionX", "KFTypePositionY")
@@ -6514,7 +6959,9 @@ def cmd_capcut_labels(a):
     from the plan's images) placed as a CapCut text on the track "labels" over its image's span, its centre where the plan read it off
     the picture (x_rel, y_rel from the top left, turned into CapCut's half-canvas units, y up), in the plan's labels_style: size and
     fill by capcut-cli `add-text`, outline and shadow by `text-style`, the font by `T capcut-font --track labels`. A label does not
-    follow a move: a labelled image that moves is listed in labels_on_moving_images (the plan's to change), never changed here."""
+    follow a move: a labelled image that moves is listed in labels_on_moving_images (the plan's to change), never changed here. The
+    answer lists `font_missing_glyphs`: the characters of the labels the font file has no glyph for (a label in another language needs
+    a font that has its script)."""
     rd, _st = _state_of(a.run)
     nn = _cf_nn(a.video)
     d = Path(a.draft)
@@ -6578,6 +7025,7 @@ def cmd_capcut_labels(a):
          "placed": placed, "failed": failed[:5],
          "labels_on_moving_images": [r["image"] for r in rows if str(r.get("motion") or "none") != "none"],
          "font": (font or {}).get("family"),
+         **_font_report(style["font_file"], "".join(str(lb.get("text") or "") for r in rows for lb in r["labels"])),
          "note": "read the project back (capcut_read_timeline): each label at its image's start for its span, its words letter for "
                  "letter, beside the place it names; run `T capcut-repair --draft ... --keep-text` after the last write"},
         0 if not failed else 1)
@@ -6615,25 +7063,34 @@ def _read_srt(p: Path) -> list:
     return cues
 
 
-def _wb_norm(w: str) -> str:
-    return re.sub(r"[^0-9A-Z]", "", str(w).upper())
+def _wb_norm(w: str, code=None) -> str:
+    """A caption word and a narration word compared without case or marks: every letter and digit of any script (a caption in capitals
+    against the word as spoken; \\W also drops a letter's combining marks and every punctuation mark). code: Turkish and Azeri keep
+    their two i's apart (a capital I is the dotless one, İ the dotted one), so a caption in capitals matches the word as spoken."""
+    s = str(w)
+    if str(code or "").lower().split("-")[0] in ("tr", "az"):
+        s = s.replace("İ", "i").replace("I", "ı")
+    return re.sub(r"[\W_]+", "", s.casefold())
 
 
-def _word_box_plan(cues: list, words: list, offset: float, fps: int, min_frames: int = 1) -> tuple:
+def _word_box_plan(cues: list, words: list, offset: float, fps: int, min_frames: int = 1, info=None) -> tuple:
     """Each caption's moments: the cue's words in order, the box on the word being spoken, from the narration's word times (+ offset)
-    on the frame grid. Returns (rows, problems): one row per cue {start, end, tokens, bounds[k] = the start of word k's box}."""
+    on the frame grid. Returns (rows, problems): one row per cue {start, end, tokens, bounds[k] = the start of word k's box}. info
+    (_lang_info) cuts a cue into the pieces its language is timed in (_tokens); the command itself takes only languages written with
+    spaces, left to right."""
     rows, problems, wi = [], [], 0
     frame = 1.0 / max(1, int(fps))
     snap = lambda t: round(round(t / frame) * frame, 6)  # noqa: E731
+    code = (info or {}).get("code")
     for ci, c in enumerate(cues):
-        toks = c["text"].split()
+        toks = _tokens(c["text"], info)
         times = []
         for t in toks:
             if wi >= len(words):
                 problems.append({"cue": ci + 1, "text": c["text"], "error": "the narration's words ran out"})
                 break
             w = words[wi]
-            if _wb_norm(w.get("w")) != _wb_norm(t):
+            if _wb_norm(w.get("w"), code) != _wb_norm(t, code):
                 problems.append({"cue": ci + 1, "text": c["text"], "token": t, "word": w.get("w"), "word_index": wi,
                                  "error": "the cue's word is not the narration's next word"})
             times.append(float(w["s"]) + offset)
@@ -6745,6 +7202,21 @@ def cmd_capcut_word_box(a):
     srt = Path(a.srt) if a.srt else rd / "60-outputs" / f"video-{nn}" / (tag or "") / "captions.srt"
     if not srt.is_file():
         fail(f"no captions file: {srt} (T slideshow plan writes it)", 2)
+    # the word box is one CapCut text per word on a centred line, left to right: a language written without spaces has no words to
+    # place, and one written right to left would draw its words in the wrong order; both use the plain caption path (static §7)
+    cues_text = " ".join(c["text"] for c in _read_srt(srt))
+    try:
+        said = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.json").read_text(encoding="utf-8")).get("language")
+    except (OSError, ValueError):
+        said = None
+    linfo = _video_lang(st, nn, said, text=cues_text, soft=True)
+    why_not = ("written without spaces between words" if not linfo["spaced"]
+               else "written right to left" if linfo["direction"] == "rtl" else None)
+    if why_not:
+        fail(f"capcut-word-box does not take these captions: they are in {linfo['name']}, a language {why_not}. The word box is one CapCut text "
+             "per word placed left to right along a centred line, which this language cannot take: use the plain caption path (the "
+             "captions as one text per cue from captions.srt, static §7). Nothing was changed.", 2, word_box_supported=False,
+             why=why_not, language={k: linfo.get(k) for k in ("code", "name", "spaced", "direction", "scripts", "unit")})
     wfile = rd / "30-assets" / "narration" / f"video-{nn}.words.json"
     try:
         words = json.loads(wfile.read_text(encoding="utf-8"))
@@ -6759,7 +7231,7 @@ def cmd_capcut_word_box(a):
     if not W or not H:
         fail("the draft has no canvas size (canvas_config)", 2)
     fps = int(tl.get("fps") or 30)
-    rows, problems = _word_box_plan(_read_srt(srt), words, float(tl.get("narration_offset") or 0.0), fps)
+    rows, problems = _word_box_plan(_read_srt(srt), words, float(tl.get("narration_offset") or 0.0), fps, info=linfo)
     if problems:
         fail("the captions and the narration's words do not line up", 2, problems=problems[:8], count=len(problems))
     groups, geo = _word_box_segments(rows, str(cap["font_file"]), float(cap["size"]), W, H, float(wb["gap_em"]))
@@ -6838,7 +7310,9 @@ def cmd_capcut_word_box(a):
     ok = not failed and not unmatched
     out({"ok": ok, "draft": str(d), "captions": len(rows), "texts": sum(t["texts"] for t in tracks), "placed": placed,
          "boxed_texts": sum(t["texts"] for t in tracks if t["boxed"]), "tracks": tracks, "failed": failed[:5], "unmatched": unmatched[:5],
-         "geometry": geo, "word_box": {k: wb[k] for k in WORD_BOX_KEYS}, "srt_folder": str(work),
+         "geometry": geo, "word_box": {k: wb[k] for k in WORD_BOX_KEYS}, "srt_folder": str(work), "word_box_supported": True,
+         "language": {k: linfo.get(k) for k in ("code", "name", "spaced", "direction", "scripts", "unit")},
+         **_font_report(cap["font_file"], cues_text),
          "next": [f"T capcut-font --draft \"{d}\" --font-file \"{cap['font_file']}\" --track <each track>",
                   "T capcut-text-anim --draft ... --track <each track ending in -in> --intro <captions.animation> "
                   "--intro-duration <captions.animation_s> --run RUN",
@@ -9027,6 +9501,7 @@ STATIC_TRANSITIONS = {"cut": "fade", "fade": "fade", "dissolve": "dissolve", "fa
                       "smoothleft": "smoothleft", "smoothright": "smoothright", "circleopen": "circleopen", "zoomin": "zoomin"}
 STATIC_LANG_ISO = {"english": "en", "spanish": "es", "german": "de", "italian": "it", "portuguese": "pt", "french": "fr",
                    "russian": "ru", "japanese": "ja", "korean": "ko", "chinese": "zh"}
+STATIC_LANG_CODES = set(STATIC_LANG_ISO.values())   # the codes of those names: a code the pipeline has always known (no list of ElevenLabs needed)
 
 
 def _scfg(key: str, default=None):
@@ -10292,49 +10767,70 @@ PAUSE_MIN_S = 0.25          # a gap between two words this long or longer is a p
 LONG_PAUSE_S = 0.8           # a long pause: the held breath before a reveal or a chapter
 
 
-def _pace_of(segments: list) -> dict:
+def _pace_of(segments: list, unit: str = "words") -> dict:
     """A narration's pace by the yardstick the references were measured with, from the words' times: words a minute from the first word
     to the last (overall), words a minute while articulating (the same words over that span with every pause of PAUSE_MIN_S or more
     taken out: `wpm_articulation`, read the same way in a natural recording and in a joined narration), and the pauses (how many a
     minute, their median, 90th percentile and longest, the long ones of LONG_PAUSE_S or more per 10 minutes, their share of the span).
     `wpm_speech` (words over the speech-to-text segments) is kept as the older reading: in the references the segments run long and
     hold most of their pauses (2026-11-08: 88 of 125 s of pauses inside segments in one reference), in a joined narration they end at
-    the lines, so it reads the two differently; the speaking pace is set and judged by `wpm_articulation` (static §6)."""
+    the lines, so it reads the two differently; the speaking pace is set and judged by `wpm_articulation` (static §6).
+    unit: 'words', or 'characters' for a language written without spaces: every `words` and `wpm_*` number then counts letters and
+    digits (the keys keep their names; `unit` says what they count)."""
     ws = [w for s in segments for w in s.get("words") or []]
-    seg_words = sum(len(str(s.get("text") or "").split()) for s in segments)
+    chars = unit == "characters"
+    info = {"spaced": False} if chars else None
+    seg_words = sum(len(_units(s.get("text"), info)) if chars else len(str(s.get("text") or "").split()) for s in segments)
     speech = sum(float(s["end"]) - float(s["start"]) for s in segments)
-    res = {"words": len(ws), "wpm_speech": round(seg_words / (speech / 60), 1) if speech > 1 else None}
+    n = sum(len(_units(w.get("w"), info)) for w in ws) if chars else len(ws)
+    res = {"words": n, "wpm_speech": round(seg_words / (speech / 60), 1) if speech > 1 else None, "unit": unit}
     if len(ws) >= 2:
-        res.update(_pace_of_words(ws))
+        res.update(_pace_of_words(ws, unit))
     return res
 
 
-def _pace_of_words(ws: list) -> dict:
-    """_pace_of's numbers from a list of timed words ({"s", "e"} each, in order)."""
+def _pace_of_words(ws: list, unit: str = "words") -> dict:
+    """_pace_of's numbers from a list of timed words ({"s", "e"} each, in order; with "w" for unit 'characters', whose count is the
+    letters and digits of the words' text)."""
     span = float(ws[-1]["e"]) - float(ws[0]["s"])
     gaps = [float(ws[i]["s"]) - float(ws[i - 1]["e"]) for i in range(1, len(ws))]
     pauses = sorted(g for g in gaps if g >= PAUSE_MIN_S)
     art = span - sum(pauses)
     mins = span / 60 if span > 0 else None
-    return {"wpm_overall": round(len(ws) / mins, 1) if mins else None, "span_s": round(span, 2),
-            "wpm_articulation": round(len(ws) / (art / 60), 1) if art > 1 else None,
+    n = sum(len(_units(w.get("w"), {"spaced": False})) for w in ws) if unit == "characters" else len(ws)
+    return {"wpm_overall": round(n / mins, 1) if mins else None, "span_s": round(span, 2),
+            "wpm_articulation": round(n / (art / 60), 1) if art > 1 else None,
             "pauses_per_minute": round(len(pauses) / mins, 1) if mins else None,
             "pause_s_median": round(statistics.median(pauses), 2) if pauses else None,
             "pause_s_p90": round(pauses[min(len(pauses) - 1, int(len(pauses) * 0.9))], 2) if pauses else None,
             "pause_s_max": round(max(pauses), 2) if pauses else None,
             "long_pauses_per_10min": round(sum(1 for g in pauses if g >= LONG_PAUSE_S) / (span / 600), 1) if span > 0 else None,
-            "pause_share": round(sum(pauses) / span, 3) if span > 0 else None, "pause_s_total": round(sum(pauses), 2)}
+            "pause_share": round(sum(pauses) / span, 3) if span > 0 else None, "pause_s_total": round(sum(pauses), 2), "unit": unit}
 
 
-def _measure_pace(wav: Path, lines: list, spans: dict, lang: str, workdir: Path) -> dict:
+def _whisper_lang(lang, info=None) -> str:
+    """The language code speech-to-text is asked for (faster-whisper's, else 'auto'): from info (_lang_info) when the caller has it, else
+    from the language as named. A language the toolkit cannot place is 'auto' here (a reading never stops for it; the commands that make
+    or plan a narration refuse such a language before anything is spent)."""
+    if info:
+        return info.get("whisper") or "auto"
+    if not str(lang or "").strip():
+        return "auto"
+    return _lang_info(lang, soft=True).get("whisper") or "auto"
+
+
+def _measure_pace(wav: Path, lines: list, spans: dict, lang: str, workdir: Path, info=None) -> dict:
     """The joined narration's pace with the references' yardstick: speech-to-text (faster-whisper, the same call that read them) on the
     file, then _pace_of; the timed words ride along under "_words" (the pause breakdown reads them). Tests (AWL_TRANSCRIBE_STUB): the lines'
-    own spans as the segments, their words spread evenly."""
+    own spans as the segments, their words spread evenly. The language (lang, or info from _lang_info) sets the code speech-to-text is
+    asked for and the unit the numbers count (words, or letters for a language written without spaces)."""
+    info = info or _lang_info(lang, soft=True)
+    unit = info.get("unit") or "words"
     if os.environ.get("AWL_TRANSCRIBE_STUB"):
         segs = []
         for ln in lines:
             s, e = spans[ln["n"]]
-            ws = str(ln["text"]).split()
+            ws = _units(ln["text"], info) if unit == "characters" else str(ln["text"]).split()
             step = (e - s) / max(1, len(ws))
             segs.append({"start": s, "end": e, "text": ln["text"],
                          "words": [{"w": w, "s": round(s + i * step, 3), "e": round(s + (i + 1) * step, 3)} for i, w in enumerate(ws)]})
@@ -10344,9 +10840,9 @@ def _measure_pace(wav: Path, lines: list, spans: dict, lang: str, workdir: Path)
         wav16 = work / "pace-16k.wav"
         run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(wav), "-ac", "1", "-ar", "16000", str(wav16)],
             check=True, timeout=600)
-        tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), STATIC_LANG_ISO.get(str(lang or "").lower(), "auto"))
+        tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), _whisper_lang(lang, info))
         segs = tr.get("segments") or []
-    res = _pace_of(segs)
+    res = _pace_of(segs, unit)
     res["_words"] = [w for s in segs for w in s.get("words") or [] if w.get("s") is not None and w.get("e") is not None]
     return res
 
@@ -10406,7 +10902,7 @@ def _pace_targets(p: dict) -> dict:
 
 
 PACE_MEASURED_KEYS = ("wpm_articulation", "wpm_speech", "wpm_overall", "pauses_per_minute", "pause_s_median", "pause_s_p90", "pause_s_max",
-                      "long_pauses_per_10min", "pause_share", "words")
+                      "long_pauses_per_10min", "pause_share", "words", "unit")   # unit: what `words` and every wpm_* count (words | characters)
 
 
 # ---- the narration engine (Static): ElevenLabs, Eleven v4 (the user, 2026-11-09: "remove our alibaba qwen 3 tts from the static mode
@@ -10608,8 +11104,12 @@ def _el_first_ok(method: str, path: str, key: str, body: dict, timeout=None) -> 
     return res, fmt
 
 
-def _el_model(spec: dict | None = None, voice: dict | None = None) -> str:
-    return str((spec or {}).get("model_id") or (voice or {}).get("model_id") or _el_cfg("model_id"))
+def _el_model(spec: dict | None = None, voice: dict | None = None, st: dict | None = None, narration: dict | None = None) -> str:
+    """The ElevenLabs model that speaks a video: the narration's own (its `tts.model_id`, or `model_id` at the top of the narration
+    JSON: one video), else the model the run picked at the start (state.json -> static.tts_model), else the run's voice's, else the
+    config's (Eleven v4)."""
+    return str((spec or {}).get("model_id") or (narration or {}).get("model_id") or _run_tts_model(st)
+               or (voice or {}).get("model_id") or _el_cfg("model_id"))
 
 
 def _el_caps(model_id: str) -> dict:
@@ -10656,14 +11156,17 @@ def _el_credits(key: str) -> dict:
     return {"used": used, "limit": lim, "left": lim - used, "tier": s.get("tier"), "resets_unix": s.get("next_character_count_reset_unix")}
 
 
-def _el_facts(key: str, online: bool) -> dict:
-    """The ElevenLabs setup as facts (which variable holds the key, never the key): the model in use and what it honours, and when online
-    the account's plan, its characters used and left, whether it may clone voices, and whether the model is offered to the account."""
-    model = str(_el_cfg("model_id"))
+def _el_facts(key: str, online: bool, model_id=None) -> dict:
+    """The ElevenLabs setup as facts (which variable holds the key, never the key): the model in use (model_id: the run's, else the
+    config's) and what it honours, and when online the account's plan, its characters used and left, whether it may clone voices, and
+    whether the model is offered to the account."""
+    model = str(model_id or _el_cfg("model_id"))
     f = {"key_present": bool(key), "key_variable": _el_key_name(), "key_variables_read": list(_el_key_vars()),
          "base": "the ElevenLabs API" if not os.environ.get("AWL_ELEVENLABS_BASE_URL") else "override",
          "model_id": model, "design_model_id": _el_cfg("design_model_id"), "output_formats": _el_formats(),
-         "model_caps": _el_caps(model), "needed_for": "the narration of every Static video (ElevenLabs, Eleven v4)", "rule": EL_NO_EDIT}
+         "model_caps": _el_caps(model),
+         "needed_for": "the narration of every Static video (ElevenLabs, " + ("Eleven v4" if model == "eleven_v4" else model) + ")",
+         "rule": EL_NO_EDIT}
     if key and online:
         try:
             sub = _el_call("GET", "/v1/user/subscription", key, timeout=30)
@@ -10695,9 +11198,185 @@ def _el_facts(key: str, online: bool) -> dict:
 
 
 def _tts_check(a):
-    f = _el_facts(_el_key(), not getattr(a, "offline", False))
+    """The setup as facts: the key, the account, the model and what it honours. With --run the model is the run's (state.json ->
+    static.tts_model), else the config's."""
+    mid = _run_tts_model(_state_of(a.run)[1]) if getattr(a, "run", None) else None
+    f = _el_facts(_el_key(), not getattr(a, "offline", False), mid)
     ready = bool(f.get("key_present")) and bool(f.get("model_caps")) and f.get("answers") is not False and f.get("model_offered") is not False
     out({"ok": ready, "ready": ready, "engine": "elevenlabs", **f})
+
+
+EL_CAPS_NEEDED = ("voice_settings", "audio_tags", "stitching", "seed", "language_code", "max_chars")   # what the toolkit reads of a model's recorded facts
+
+
+def _el_models_pull(key: str) -> tuple:
+    """(rows, None) of ElevenLabs' GET /v1/models (a free read, the key in its header only), or (None, why not)."""
+    try:
+        res = _el_call("GET", "/v1/models", key, timeout=60)
+    except Exception as e:  # noqa: BLE001
+        return None, f"no answer ({type(e).__name__})"
+    if res["status"] != 200:
+        return None, _el_error(res, key)
+    try:
+        js = json.loads((res.get("data") or b"").decode("utf-8", "replace"))
+    except ValueError:
+        return None, "the answer was not JSON"
+    rows = js if isinstance(js, list) else (js.get("models") if isinstance(js, dict) else None)
+    if not isinstance(rows, list):
+        return None, "the answer held no list of models"
+    return [r for r in rows if isinstance(r, dict)], None
+
+
+def _el_models_cache_write(rows: list, source: str) -> dict:
+    """The library's copy of ElevenLabs' model list, rows as the API gave them (every model's languages included)."""
+    cache = {"pulled_at": now_iso(), "source": source, "models": rows}
+    p = _el_models_cache_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with FileLock(p.with_name(p.name + ".lock"), timeout=30.0, stale=120.0):
+        write_json(p, cache)
+    return cache
+
+
+def _el_model_notes(row: dict, caps: dict) -> list:
+    """Facts about a model's live row against the facts recorded for it in config (never a verdict): what is not set up, what the
+    recorded facts lack, and where the live row differs from them."""
+    notes = []
+    if not row.get("can_do_text_to_speech"):
+        notes.append("makes no speech from text (a speech-to-speech model)")
+    if row.get("requires_alpha_access"):
+        notes.append("needs alpha access")
+    if not caps:
+        notes.append("not set up: its facts (voice settings and their ranges, audio tags, stitching, seed, language_code, max_chars) are "
+                     "recorded from ElevenLabs' docs in config static.tts.elevenlabs.models first (static §6)")
+        return notes
+    lack = [k for k in EL_CAPS_NEEDED if k not in caps]
+    if lack:
+        notes.append("its recorded facts lack: " + ", ".join(lack))
+    if caps.get("unverified"):
+        notes.append(f"its recorded facts name {len(caps['unverified'])} point(s) ElevenLabs' docs did not settle (`unverified`): "
+                     "each is measured on the voice first (a probe) before it is relied on")
+    live_max = row.get("maximum_text_length_per_request")
+    if live_max is not None and caps.get("max_chars") is not None and int(live_max) != int(caps["max_chars"]):
+        notes.append(f"the live row takes {live_max} characters a request, the recorded facts {caps['max_chars']}")
+    for live_k, cap_k in (("can_use_style", "style"), ("can_use_speaker_boost", "speaker_boost")):
+        if row.get(live_k) is not None and cap_k in caps and bool(row[live_k]) != bool(caps[cap_k]):
+            notes.append(f"the live row says {live_k}={row[live_k]}, the recorded facts {cap_k}={caps[cap_k]}")
+    return notes
+
+
+def _tts_models(a):
+    """ElevenLabs' live model list (a free read: GET /v1/models with the user's key), kept in the library
+    (runs/.elevenlabs-models.json, rows as the API gave them) so that a language or a model can be resolved against it with no call. Per
+    model: its id and name, whether it makes speech from text, how many languages it lists and a few of their names, the characters a
+    request takes, whether it needs alpha access, `set_up` (the facts recorded for it in config static.tts.elevenlabs.models, null when
+    none) and `notes` (what is not set up or differs from the live row). --language L marks which models list it; --model-id ID adds that
+    model's whole language list (for the question that asks the user the language); --run marks the model the run picked. The list is
+    asked again when the copy is older than config static.tts.elevenlabs.models_fresh_minutes or with --refresh; without a key and
+    without a fresh copy it stops with exit 1. The key is never printed. The pick is the user's (`T tts model`)."""
+    st = _state_of(a.run)[1] if getattr(a, "run", None) else {}
+    cache = _el_models_cache()
+    age = None
+    try:
+        age = (dt.datetime.now().astimezone() - dt.datetime.fromisoformat(str(cache.get("pulled_at")))).total_seconds() if cache else None
+    except ValueError:
+        age = None
+    fresh = bool(cache) and not getattr(a, "refresh", False) and age is not None and 0 <= age <= 60 * float(_el_cfg("models_fresh_minutes", 10))
+    if not fresh:
+        key = _el_key()
+        if not key:
+            fail(" or ".join(_el_key_vars()) + " is not set on this PC: the user sets the ElevenLabs API key once as a user environment "
+                 "variable (reference/static §9). Nothing was sent.", 1)
+        rows, err = _el_models_pull(key)
+        if err:
+            fail("ElevenLabs did not list its models: " + err, 1)
+        cache = _el_models_cache_write(rows, "toolkit-api")
+    rows = [r for r in cache.get("models") or [] if isinstance(r, dict)]
+    chosen = _run_tts_model(st)
+    want_lang = getattr(a, "language", None)
+    linfo = None
+    if want_lang:
+        linfo = _lang_info(want_lang, soft=True)
+    res_rows = []
+    for r in rows:
+        langs = [lg for lg in r.get("languages") or [] if isinstance(lg, dict)]
+        caps = _el_caps(str(r.get("model_id")))
+        row = {"model_id": r.get("model_id"), "name": r.get("name"), "can_do_text_to_speech": r.get("can_do_text_to_speech"),
+               "languages": len(langs), "language_names_sample": [lg.get("name") for lg in langs[:8]],
+               "max_chars": r.get("maximum_text_length_per_request"), "requires_alpha_access": r.get("requires_alpha_access"),
+               "set_up": caps or None, "unverified": (caps.get("unverified") or []) if caps else [], "notes": _el_model_notes(r, caps)}
+        if linfo is not None:
+            row["lists_language"] = bool(linfo.get("code")) and linfo["code"] in {str(lg.get("language_id")).lower() for lg in langs}
+        if chosen:
+            row["chosen_for_run"] = r.get("model_id") == chosen
+        res_rows.append(row)
+    extra = {}
+    if linfo is not None:
+        extra["language"] = {"asked": want_lang, "code": linfo.get("code"), "name": linfo.get("name"),
+                             "listed_by": [x["model_id"] for x in res_rows if x.get("lists_language") and x.get("can_do_text_to_speech")],
+                             **({"note": linfo["error"]} if linfo.get("error") else {})}
+    if getattr(a, "model_id", None):
+        m = next((r for r in rows if r.get("model_id") == a.model_id), None)
+        if m is None:
+            fail(f"--model-id {a.model_id!r} is not a model of ElevenLabs' list: " + ", ".join(str(r.get("model_id")) for r in rows), 2)
+        extra["model_languages"] = {"model_id": a.model_id, "count": len(m.get("languages") or []),
+                                    "languages": [f"{lg.get('language_id')} {lg.get('name')}" for lg in m.get("languages") or []
+                                                  if isinstance(lg, dict)]}
+    out({"ok": True, "source": cache.get("source") if fresh else "toolkit-api", "from_cache": fresh, "pulled_at": cache.get("pulled_at"),
+         "cache_file": str(_el_models_cache_path()), "count": len(res_rows), "run_model": (st.get("static") or {}).get("tts_model") or None,
+         "models": res_rows, **extra,
+         "note": "ElevenLabs' own list: the user picks the narration model (`T tts model --run RUN --model-id ID`) and the language "
+                 "(`T static language`); a model whose facts are not recorded (`set_up` null) is set up from ElevenLabs' docs first "
+                 "(static §6); a language outside the chosen model's list is not official: ElevenLabs may still voice it and the user listens "
+                 "to the first passage"})
+
+
+def _tts_model(a):
+    """The run's narration model, picked by the user from ElevenLabs' live list (`T tts models`): checked against the library's copy of
+    that list (else a live read when the key is set) as a model that makes speech from text, and against the facts recorded for it in
+    config static.tts.elevenlabs.models (a model with none is not set up: stop, exit 2: its facts are recorded from ElevenLabs' docs
+    first, static §6). Stores state.json -> static.tts_model {model_id, name, languages (how many it lists), source, pulled_at, set_at}.
+    --source says where the list the user chose from came from: elevenlabs-mcp (the connector's list_models), toolkit-api (this
+    toolkit's read, the default when it checked the pick) or offline (no list could be read; the pick is stored unchecked against the
+    list, still only when its facts are recorded). Every video of the run is spoken by this model unless its narration JSON names
+    another (`model_id`); a language is read against its list."""
+    rd, st = _state_of(a.run)
+    mid = str(getattr(a, "model_id", None) or "").strip()
+    if not mid:
+        fail("tts model needs --model-id ID (one of `T tts models`)", 2)
+    src = getattr(a, "source", None)
+    cache = _el_models_cache()
+    rows = [r for r in cache.get("models") or [] if isinstance(r, dict)]
+    if not rows and src in (None, "toolkit-api") and _el_key():   # no copy yet: the live list
+        rows, err = _el_models_pull(_el_key())
+        if err:
+            fail("ElevenLabs did not list its models: " + err, 1)
+        cache = _el_models_cache_write(rows, "toolkit-api")
+    if not rows and src in (None, "toolkit-api"):
+        fail("no list of ElevenLabs' models to check the pick against: `T tts models` first (a free read, the key in ELEVEN_API_KEY), or "
+             "--source elevenlabs-mcp | offline when the list could not be read here", 2)
+    row = next((r for r in rows if r.get("model_id") == mid), None)
+    if rows and row is None:
+        fail(f"{mid!r} is not a model of ElevenLabs' list: " + ", ".join(str(r.get("model_id")) for r in rows), 2)
+    if row is not None and not row.get("can_do_text_to_speech"):
+        fail(f"{mid!r} makes no speech from text (can_do_text_to_speech is false: it converts speech to speech): pick a text-to-speech model", 2)
+    caps = _el_caps(mid)
+    if not caps:
+        have = [k for k, v in ((_el_cfg("models", {}) or {}).items()) if v]
+        fail(f"{mid!r} is not set up: its facts must be recorded from ElevenLabs' docs first (voice settings and their ranges, audio tags, "
+             "request stitching, seed, language_code, the characters a request takes, how its pace is set), in config "
+             f"static.tts.elevenlabs.models.{mid} (static §6). The models set up: {', '.join(have) or 'none'}. Nothing was stored.", 2,
+             set_up=have)
+    src = src or ("toolkit-api" if rows else "offline")
+    rec = {"model_id": mid, "name": (row or {}).get("name") or caps.get("name") or mid,
+           "languages": len((row or {}).get("languages") or []) if row else None, "source": src,
+           "pulled_at": cache.get("pulled_at") if rows else None, "set_at": now_iso()}
+    _state_set(rd, **{"static.tts_model": rec})
+    langs = [f"{lg.get('language_id')} {lg.get('name')}" for lg in (row or {}).get("languages") or [] if isinstance(lg, dict)]
+    out({"ok": True, "run": rd.name, "tts_model": rec, "previous": (st.get("static") or {}).get("tts_model") or None,
+         "caps": caps, "unverified": caps.get("unverified") or [], "notes": _el_model_notes(row or {}, caps) if row else [],
+         "languages_list": langs,
+         "note": "every video of the run is spoken by this model unless its narration JSON names another (model_id); the language is "
+                 "read against this model's list (`T static language --language L`): a language outside it is not official"})
 
 
 def _el_char_cost(res: dict, text: str) -> int:
@@ -10718,9 +11397,10 @@ def _el_measure_file(f: Path, lang: str, work: Path) -> dict:
     wav16 = work / (f.stem + "-16k.wav")
     run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(f), "-ac", "1", "-ar", "16000", str(wav16)], check=True,
         timeout=600)
-    tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), STATIC_LANG_ISO.get(str(lang or "").lower(), "auto"))
+    info = _lang_info(lang, soft=True) if str(lang or "").strip() else {}
+    tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), _whisper_lang(lang, info or None))
     segs = tr.get("segments") or []
-    m = dict(_pace_of(segs))
+    m = dict(_pace_of(segs, info.get("unit") or "words"))
     m["heard"] = " ".join(str(s.get("text") or "").strip() for s in segs)[:400]
     m["duration_s"] = (media_summary(f) or {}).get("duration_s")
     m["pitch_hz"] = _pitch_median_hz(wav16)
@@ -10760,7 +11440,7 @@ def _tts_voices(a):
         row = {"voice_id": v.get("voice_id"), "name": v.get("name"), "category": v.get("category"),
                "gender": lb.get("gender"), "age": lb.get("age"), "accent": lb.get("accent"), "descriptive": lb.get("descriptive"),
                "use_case": lb.get("use_case"), "description": v.get("description") or lb.get("description"),
-               "preview_url": v.get("preview_url")}
+               "preview_url": v.get("preview_url"), "verified_languages": v.get("verified_languages") or None}
         if any(w and str(row.get(k) or "").lower() != str(w).lower() for k, w in want.items()):
             continue
         if a.search and not all(t in " ".join(str(x or "") for x in row.values()).lower() for t in str(a.search).lower().split()):
@@ -10872,7 +11552,7 @@ def _tts_voice(a):
     if cur.get("voice_id") and not a.replace:
         fail("the run's narrator is locked (state.json -> static.voice): every video of a run keeps one voice; another only with "
              "--replace, when the user picks the voice again (a clone)", 2)
-    model = _el_cfg("model_id")
+    model = _run_tts_model(st) or _el_cfg("model_id")   # the model the run picked at the start, else the config's
     caps = _el_caps(model)
     deliveries = {}
     for e in a.emotion or []:
@@ -10935,7 +11615,9 @@ def _tts_voice(a):
         rec.update({"voice_id": js["voice_id"], "kind": js.get("category") or "account", "name": js.get("name"),
                     "labels": {k: lb.get(k) for k in ("gender", "age", "accent", "descriptive", "use_case") if lb.get(k)},
                     "language": a.language or _scfg("tts.language", "english"), "ref_audio": str(ref) if ref else None,
-                    "ref_from": "the voice's own preview at ElevenLabs" if ref else None})
+                    "ref_from": "the voice's own preview at ElevenLabs" if ref else None,
+                    # the languages ElevenLabs says the voice is verified in (its answer, as given): `T static language` reads them
+                    **({"verified_languages": js["verified_languages"]} if isinstance(js.get("verified_languages"), list) else {})})
     else:
         files = [Path(p) for p in a.clone]
         missing = [str(p) for p in files if not p.is_file()]
@@ -11007,12 +11689,13 @@ def _el_passage_text(group: list, voice: dict, spec: dict) -> tuple:
     return " ".join(parts), spans, " ".join(str(ln["text"]).strip() for ln in group), tags
 
 
-def _el_passages(lines: list, voice: dict, spec: dict, max_chars: int, pause_hint: float) -> list:
+def _el_passages(lines: list, voice: dict, spec: dict, max_chars: int, pause_hint: float, info=None) -> list:
     """The narration's lines grouped into the passages the model reads (static §6 "Passages"): consecutive lines up to max_chars
     characters. A passage ends after a line marked passage_break, and after a line whose delivery is not the narration's own unless the
     next line shares it (an audio tag holds until the next one, so a line's own delivery ends with its passage); before a line that would
     pass max_chars it ends where the plan marks the largest pause in its second half (a planned pause_after is a hint of where the
-    words rest, never a silence placed). The same plan always gives the same passages."""
+    words rest, never a silence placed). The same plan always gives the same passages. A passage's `words` counts its units in the
+    video's language (info, _lang_info): words, or letters for a language written without spaces."""
     base = str(spec.get("delivery") or "").strip()
 
     def size(group):   # the passage's text as it would be sent: each delivery's tag once, where it begins
@@ -11040,7 +11723,7 @@ def _el_passages(lines: list, voice: dict, spec: dict, max_chars: int, pause_hin
     for k, g in enumerate(groups, 1):
         text, spans, spoken, tags = _el_passage_text(g, voice, spec)
         res.append({"p": k, "lines": [int(ln["n"]) for ln in g], "text": text, "spoken": spoken, "line_chars": spans, "tags": tags,
-                    "words": len(spoken.split())})
+                    "words": len(_units(spoken, info))})
     return res
 
 
@@ -11063,13 +11746,17 @@ def _el_plan(rd: Path, st: dict, nn: str, lines_file=None, voice=None, delivery=
         fail(f"{lines_p.name} has no lines", 2)
     for i, ln in enumerate(lines, 1):
         ln["n"] = int(ln.get("n") or i)
-    model = _el_model(spec.get("tts"), voice)
+    model = _el_model(spec.get("tts"), voice, st, spec)
     caps = _el_caps(model)
     problems = []
     if not caps:
-        fail(f"no facts for the model {model!r} in config static.tts.elevenlabs.models: its settings cannot be checked", 2)
+        fail(f"no facts for the model {model!r} in config static.tts.elevenlabs.models: its settings cannot be checked (a model is set up "
+             "from ElevenLabs' docs before it is used, static §6; `T tts models` lists the models and which are set up)", 2)
     if (spec.get("pace") or {}).get("speed") is not None:
-        problems.append("the narration JSON sets pace.speed, but Eleven v4 has no speed setting and " + EL_NO_EDIT)
+        problems.append("the narration JSON sets pace.speed, but " + ("Eleven v4" if model == "eleven_v4" else model)
+                        + " has no speed setting and " + EL_NO_EDIT if not caps.get("speed") else
+                        "the narration JSON sets pace.speed: a model's own speed is its voice setting `speed` (voice_settings), never a "
+                        "speed-up of the delivered audio; " + EL_NO_EDIT)
     for ln in lines:
         for what, d in (("delivery", _el_delivery(ln, voice, spec)), ("tags_after", str(ln.get("tags_after") or "").strip())):
             if d and not caps.get("audio_tags"):
@@ -11077,17 +11764,23 @@ def _el_plan(rd: Path, st: dict, nn: str, lines_file=None, voice=None, delivery=
             elif d and not _el_tags_ok(d):
                 problems.append(f"line {ln['n']}: its {what} is not audio tags ([words] only): {d[:80]!r}")
     vs = _el_settings(caps, voice.get("settings"), spec.get("voice_settings"))
+    # the video's language: the narration JSON's, else the video's own record, else the narrator's, else the config's; a language the
+    # toolkit cannot place stops here, before anything is sent (soft: listed under "problems")
+    raw_lang = _video_lang_raw(st, nn, spec.get("language"))
+    info = _lang_info(raw_lang, model_id=model, run=st, soft=soft)
+    if info.get("error"):
+        problems.append(info["error"])
+    lang = raw_lang if isinstance(raw_lang, str) else (info.get("code") or str(raw_lang))
     max_chars = int((spec.get("tts") or {}).get("passage_chars") or _el_cfg("passage_chars", 850))
     hint = float(spec.get("pause_default_s") or _scfg("narration.pause_s", 0.35))
-    passages = _el_passages(lines, voice, spec, max_chars, hint)
+    passages = _el_passages(lines, voice, spec, max_chars, hint, info)
     over = [p["p"] for p in passages if len(p["text"]) > int(caps.get("max_chars") or 10 ** 9)]
     if over:
         problems.append(f"passages over the model's {caps.get('max_chars')} characters a request: " + ", ".join(map(str, over)))
     if problems and not soft:
         fail("the narration's requests are not right (nothing was sent): " + "; ".join(problems[:6]), 2, count=len(problems))
-    lang = spec.get("language") or voice.get("language") or _scfg("tts.language", "english")
     return {"spec": spec, "lines": lines, "voice": voice, "model": model, "caps": caps, "settings": vs, "passages": passages,
-            "lang": lang, "plan_file": lines_p, "max_chars": max_chars, "problems": problems}
+            "lang": lang, "lang_info": info, "plan_file": lines_p, "max_chars": max_chars, "problems": problems}
 
 
 def _el_body_sha(body: dict, voice_id: str) -> str:
@@ -11106,8 +11799,9 @@ def _el_body(P: dict, k: int, made: dict, ps: dict | None = None) -> dict:
     if caps.get("seed", True):
         base = int((P["spec"].get("tts") or {}).get("seed") or P["voice"].get("seed") or _scfg("tts.seed", 1105))
         body["seed"] = (base * 1000 + k) % 4294967295
-    if caps.get("language_code"):
-        body["language_code"] = _el_lang_code(P["lang"])
+    li = P.get("lang_info") or {}
+    if caps.get("language_code") and li.get("code") and li.get("in_model") is not False:   # a language outside the model's list is left to the model
+        body["language_code"] = li["code"]
     if _el_cfg("apply_text_normalization"):
         body["apply_text_normalization"] = _el_cfg("apply_text_normalization")
     stitch = str(caps.get("stitching") or "none")
@@ -11126,11 +11820,6 @@ def _el_body(P: dict, k: int, made: dict, ps: dict | None = None) -> dict:
         if k < len(P["passages"]):
             body["next_text"] = P["passages"][k]["spoken"]
     return body
-
-
-def _el_lang_code(lang: str) -> str:
-    s = str(lang or "english").strip().lower()
-    return STATIC_LANG_ISO.get(s, s[:2])
 
 
 def _el_make_passage(P: dict, k: int, body: dict, key: str, folder: Path, ps: dict | None = None) -> dict:
@@ -11201,19 +11890,20 @@ def _el_line_times(text: str, line_chars: dict, alignment) -> dict:
     return res
 
 
-def _el_heard_line_times(wav: Path, lines_text: dict, line_order: list, lang: str, work: Path) -> dict:
+def _el_heard_line_times(wav: Path, lines_text: dict, line_order: list, lang: str, work: Path, info=None) -> dict:
     """A passage's line times from speech-to-text, for lines ElevenLabs' timing does not cover: the passage's words heard with their times
-    (faster-whisper), the script's words laid on them (align_script), each line from its first word's start to its last word's end."""
+    (faster-whisper, asked in the video's language), the script's words laid on them (align_script), each line from its first word's
+    start to its last word's end. info (_lang_info): a language written without spaces is laid on letter by letter."""
     work.mkdir(parents=True, exist_ok=True)
     wav16 = work / (wav.stem + "-16k.wav")
     run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(wav), "-ac", "1", "-ar", "16000", str(wav16)], check=True,
         timeout=600)
-    tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), STATIC_LANG_ISO.get(str(lang or "").lower(), "auto"))
+    tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), _whisper_lang(lang, info))
     heard = [w for s in tr.get("segments") or [] for w in s.get("words") or []]
-    timed = align_script(heard, " ".join(lines_text[n] for n in line_order)) if heard else []
+    timed = align_script(heard, " ".join(lines_text[n] for n in line_order), info) if heard else []
     res, i = {}, 0
     for n in line_order:
-        k = len(lines_text[n].split())
+        k = len(_tokens(lines_text[n], info))
         seg = timed[i:i + k]
         i += k
         if seg:
@@ -11258,7 +11948,8 @@ def _el_concat(P: dict, made: dict, upto: int, folder: Path, dest: Path) -> dict
         missing = [n for n in m["lines"] if n not in times]
         how = "elevenlabs"
         if missing:
-            heard = _el_heard_line_times(Path(m["file"]), texts, m["lines"], P["lang"], folder / "heard" / f"passage-{k:02d}")
+            heard = _el_heard_line_times(Path(m["file"]), texts, m["lines"], P["lang"], folder / "heard" / f"passage-{k:02d}",
+                                         P.get("lang_info"))
             for n in missing:
                 if n in heard:
                     times[n] = heard[n]
@@ -11376,15 +12067,20 @@ def _el_voice_or_fail(st: dict) -> dict:
 
 
 def _el_lever(P: dict) -> dict:
-    """What sets the pace of a narration on Eleven v4, before it is made: the voice, the narration's own delivery tags and the settings."""
+    """What sets the pace of a narration, before it is made: the voice, the model, the language it is spoken in, the narration's own
+    delivery tags and the settings (a voice's pace differs with the model and with the language: a point measured in one is not another's)."""
     return {"voice_id": P["voice"].get("voice_id"), "delivery": str(P["spec"].get("delivery") or "").strip() or None,
-            "settings": P["settings"] or {}, "model_id": P["model"]}
+            "settings": P["settings"] or {}, "model_id": P["model"], "language": (P.get("lang_info") or {}).get("code") or "en"}
 
 
 def _el_point(fit: dict, lever: dict) -> tuple:
-    """The voice's measured point for these levers (the same voice, delivery and settings: the latest), else the voice's latest point
-    (`nearest`), else (None, None)."""
-    pts = [p for p in (fit or {}).get("points") or [] if p.get("voice_id") == lever.get("voice_id")]
+    """The voice's measured point for these levers: of the same voice, model and language (a point made before languages were recorded
+    is English; one without a model is the config's), the one with the same delivery and settings (the latest: `same`), else the
+    latest of them (`nearest`); (None, None) when the voice has none in this model and language (a new language or model needs a probe)."""
+    dflt = _el_cfg("model_id")
+    pts = [p for p in (fit or {}).get("points") or [] if p.get("voice_id") == lever.get("voice_id")
+           and (p.get("model_id") or dflt) == (lever.get("model_id") or dflt)
+           and (p.get("language") or "en") == (lever.get("language") or "en")]
     same = [p for p in pts if (p.get("delivery") or None) == (lever.get("delivery") or None)
             and (p.get("settings") or {}) == (lever.get("settings") or {})]
     if same:
@@ -11392,11 +12088,12 @@ def _el_point(fit: dict, lever: dict) -> tuple:
     return (pts[-1], "nearest") if pts else (None, None)
 
 
-def _el_point_from(words_heard: list, lever: dict, passages: list, words: int, chars: int, src: str, nn: str) -> dict:
+def _el_point_from(words_heard: list, lever: dict, passages: list, words: int, chars: int, src: str, nn: str, unit: str = "words") -> dict:
     """A measured point of the voice (static §13): the words a minute while articulating and overall by the references' yardstick, the
     words a minute over the delivered audio itself (its own silences included: the length a narration of these words will have), the
-    pauses the model made inside the passages, and at each join the silence heard there (the model's own edges, nothing placed)."""
-    pw = _pace_of_words(words_heard) if len(words_heard) >= 2 else {}
+    pauses the model made inside the passages, and at each join the silence heard there (the model's own edges, nothing placed). unit:
+    what `words` and the wpm_* numbers count ('words', or 'characters' for a language written without spaces); the point records it."""
+    pw = _pace_of_words(words_heard, unit) if len(words_heard) >= 2 else {}
     psec = sum(float(p["end"]) - float(p["start"]) for p in passages)
     inside, joins = [], []
     for i, p in enumerate(passages):
@@ -11413,17 +12110,20 @@ def _el_point_from(words_heard: list, lever: dict, passages: list, words: int, c
             "inside_pauses_per_minute": round(len(inside) / (psec / 60), 1) if psec > 1 else None,
             "inside_pause_s_median": round(statistics.median(inside), 2) if inside else None,
             "join_silence_s_median": round(statistics.median(joins), 3) if joins else None,
-            "words": words, "characters": chars, "passages": len(passages), "video": nn, "from": src, "learned": now_iso()}
+            "words": words, "unit": unit, "characters": chars, "passages": len(passages), "video": nn, "from": src, "learned": now_iso()}
 
 
 def _el_fit_add(rd: Path, st: dict, point: dict) -> dict:
     fit = dict((((st.get("static") or {}).get("voice") or {}).get("fit") or {}))
     if any("speed" in p or "voice_id" not in p for p in fit.get("points") or []):   # points of the removed engines: not this voice's
         fit = {}
+    dflt = _el_cfg("model_id")
 
-    def same(p):
-        return (p.get("voice_id"), p.get("delivery"), p.get("settings") or {}, p.get("from"), p.get("video")) == (
-            point.get("voice_id"), point.get("delivery"), point.get("settings") or {}, point.get("from"), point.get("video"))
+    def same(p):   # the same voice, model, language, delivery and settings, from the same source for the same video
+        return (p.get("voice_id"), p.get("model_id") or dflt, p.get("language") or "en", p.get("delivery"), p.get("settings") or {},
+                p.get("from"), p.get("video")) == (
+            point.get("voice_id"), point.get("model_id") or dflt, point.get("language") or "en", point.get("delivery"),
+            point.get("settings") or {}, point.get("from"), point.get("video"))
     fit = {k: v for k, v in fit.items() if k in ("points",)}
     fit["points"] = [p for p in fit.get("points") or [] if not same(p)][-11:] + [point]
     fit["learned"] = now_iso()
@@ -11507,7 +12207,7 @@ def _tts_say(a):
                 if fit_g:
                     text, spans_, spoken, tags = _el_passage_text(fit_g, P["voice"], P["spec"])
                     short = {"p": k, "lines": [ln["n"] for ln in fit_g], "text": text, "spoken": spoken, "line_chars": spans_,
-                             "tags": tags, "words": len(spoken.split()), "shortened": True}
+                             "tags": tags, "words": len(_units(spoken, P.get("lang_info"))), "shortened": True}
                     sbody = _el_body(P, k, made, ps=short)
                     sbody.pop("next_text", None)
                     r = _el_make_passage(P, k, sbody, key, nd, ps=short)
@@ -11553,12 +12253,14 @@ def _tts_say(a):
                    "passages_planned": len(passages), "stopped": stopped,
                    "note": "the narration ends at line " + str(covered[-1]) + "; the timeline leaves out the images after it"}
     pt = _pace_targets(P["spec"].get("pace") or {})
-    m = _measure_pace(final, [{"n": r["n"], "text": r["text"]} for r in rows], {r["n"]: (r["start"], r["end"]) for r in rows}, P["lang"], nd)
+    m = _measure_pace(final, [{"n": r["n"], "text": r["text"]} for r in rows], {r["n"]: (r["start"], r["end"]) for r in rows}, P["lang"], nd,
+                      P.get("lang_info"))
     words_heard = m.pop("_words", [])
     lever = _el_lever(P)
-    words = sum(len(r["text"].split()) for r in rows)
+    unit = (P.get("lang_info") or {}).get("unit") or "words"
+    words = sum(len(_units(r["text"], P.get("lang_info"))) for r in rows)
     point = _el_point_from(words_heard, lever, [J["passages"][k] for k in range(1, upto + 1)], words,
-                           sum(len(made[k]["spoken"]) for k in range(1, upto + 1)), "narration", nn)
+                           sum(len(made[k]["spoken"]) for k in range(1, upto + 1)), "narration", nn, unit)
     if point.get("wpm_articulation"):
         _el_fit_add(rd, st, point)
     pace_rec = None
@@ -11594,7 +12296,8 @@ def _tts_say(a):
                                              "file")} | J["passages"][k] for k in range(1, upto + 1)]
     numeric = [ln["n"] for ln in P["lines"][:-1] if "pause_after" in ln]
     credits_after = _el_credits(key) if todo else {}
-    side = {"video": nn, "file": str(final), "duration_s": J["total"], "format": J["format"], "language": P["lang"], "lines": rows,
+    side = {"video": nn, "file": str(final), "duration_s": J["total"], "format": J["format"], "language": P["lang"],
+            "language_code": (P.get("lang_info") or {}).get("code"), "unit": unit, "lines": rows,
             "passages": pmeta, "voice_match": match, "engine": "elevenlabs", "model_id": P["model"],
             "voice": {k_: P["voice"].get(k_) for k_ in ("voice_id", "kind", "name", "sample", "settings")},
             "voice_settings": P["settings"] or None, "delivery": lever["delivery"], "loudness_lufs": level.get("lufs_after", lufs),
@@ -11611,6 +12314,7 @@ def _tts_say(a):
          "resent_after_a_drop": ([k for k in todo if k in made and len(made[k].get("tries") or []) > 1] or None),
          "resent_note": ("a passage sent again after a dropped connection (this PC's web shield resets connections) may be billed twice: compare credits.before and credits.after with characters_now"),
          "voice_match": {k_: v for k_, v in match.items() if k_ != "each"}, "engine": "elevenlabs", "model_id": P["model"],
+         "language": {k_: (P.get("lang_info") or {}).get(k_) for k_ in ("code", "name", "official", "unit")},
          "characters_now": spent,
          "credits": {"before": credits_before.get("left"), "after": credits_after.get("left"), "tier": credits_before.get("tier")} if todo else None,
          "pace": ({k_: pace_rec.get(k_) for k_ in ("measure", "target", "measured", "on_target", "within", "off_by", "lever", "method")}
@@ -11679,11 +12383,12 @@ def _tts_probe(a):
                            al.get("alignment"))
     texts = {ln["n"]: str(ln["text"]).strip() for ln in P["lines"]}
     spans = {n: times.get(n, (0.0, dur)) for n in ps["lines"]}
-    m = _measure_pace(f, [{"n": n, "text": texts[n]} for n in ps["lines"]], spans, P["lang"], pd)
+    m = _measure_pace(f, [{"n": n, "text": texts[n]} for n in ps["lines"]], spans, P["lang"], pd, P.get("lang_info"))
     words_heard = m.pop("_words", [])
     if not m.get("wpm_articulation"):
         fail("the probe's pace could not be read (too few words heard)", 1, measured=m)
-    point = _el_point_from(words_heard, _el_lever(P), [{"start": 0.0, "end": dur}], ps["words"], len(ps["spoken"]), "probe", nn)
+    point = _el_point_from(words_heard, _el_lever(P), [{"start": 0.0, "end": dur}], ps["words"], len(ps["spoken"]), "probe", nn,
+                           (P.get("lang_info") or {}).get("unit") or "words")
     point.update({"passage": k, "lines": [ps["lines"][0], ps["lines"][-1]], "file": str(f), "candidate": candidate,
                   "voice_name": voice.get("name"), "timing": "elevenlabs" if times else "speech-to-text"})
     if not candidate:
@@ -11703,7 +12408,8 @@ def _tts_probe(a):
     out({"ok": True, "video": nn, "passage": k, "lines": ps["lines"], "voice_id": voice.get("voice_id"), "candidate": candidate,
          "delivery": point.get("delivery"), "settings": point.get("settings"), "text_sent": body["text"][:300],
          "measured": {k_: point.get(k_) for k_ in ("wpm_articulation", "wpm_overall", "wpm_delivered", "pauses_per_minute",
-                                                   "pause_s_median", "inside_pause_s_median", "words")},
+                                                   "pause_s_median", "inside_pause_s_median", "words", "unit")},
+         "model_id": P["model"], "language": {k_: (P.get("lang_info") or {}).get(k_) for k_ in ("code", "name", "official", "unit")},
          "target": ({pt["measure"]: pt["target_speak"], "wpm_overall": pt["target_overall"], "tolerance": pt["tol"]} if pt else None),
          "off_by": ({pt["measure"]: round(point["wpm_articulation"] / pt["target_speak"] - 1, 4)} if pt and point.get("wpm_articulation")
                     else None),
@@ -11726,13 +12432,14 @@ def _tts_fit(a):
         fail(f"video {nn} needs its narration and `T narration-words` first", 2)
     if len(heard) < 2 or side.get("engine") != "elevenlabs" or not side.get("passages"):
         fail("no heard words with times, or the narration was not made by ElevenLabs by passages: `T tts say`, then `T narration-words`", 2)
-    hw = [{"s": float(w["s"]), "e": float(w["e"])} for w in heard if w.get("s") is not None and w.get("e") is not None]
+    info = _video_lang(st, nn, side.get("language"), soft=True)   # the video's language: its words are counted as it is written
+    hw = [{"w": w.get("w"), "s": float(w["s"]), "e": float(w["e"])} for w in heard if w.get("s") is not None and w.get("e") is not None]
     lever = {"voice_id": (side.get("voice") or {}).get("voice_id"), "delivery": side.get("delivery"),
-             "settings": side.get("voice_settings") or {}, "model_id": side.get("model_id")}
+             "settings": side.get("voice_settings") or {}, "model_id": side.get("model_id"), "language": info.get("code") or "en"}
     plist = [{"start": p["start"], "end": p["end"]} for p in side.get("passages") or []]
-    words = sum(len(str(r["text"]).split()) for r in side.get("lines") or [])
+    words = sum(len(_units(r["text"], info)) for r in side.get("lines") or [])
     chars = sum(len(str(r["text"])) + 1 for r in side.get("lines") or [])
-    point = _el_point_from(hw, lever, plist, words, chars, "narration-words", nn)
+    point = _el_point_from(hw, lever, plist, words, chars, "narration-words", nn, info.get("unit") or "words")
     fit = _el_fit_add(rd, st, point)
     out({"ok": True, "video": nn, "point": point, "points": len(fit.get("points") or []),
          "note": "the voice's point for the forecast (`T static forecast --part narration`, static §13)"})
@@ -11813,7 +12520,7 @@ def _tts_tempo(a):
         lufs, tp = level["lufs_after"], level["true_peak_after"]
     rows = side.get("lines") or []
     m = _measure_pace(final, [{"n": r["n"], "text": r["text"]} for r in rows], {r["n"]: (r["start"], r["end"]) for r in rows},
-                      side.get("language") or "english", final.parent / f"video-{nn}")
+                      side.get("language") or "english", final.parent / f"video-{nn}", _video_lang(_st, nn, side.get("language"), soft=True))
     m.pop("_words", None)
     side["tempo"] = {"value": x, "cap": cap, "why": str(a.why).strip(), "user_ok": str(a.user_ok).strip(), "filter": af,
                      "pre_tempo_file": str(pre), "at": now_iso(),
@@ -11830,24 +12537,28 @@ def _tts_tempo(a):
 
 
 def cmd_tts(a):
-    """Static's voice (contract item 36), by ElevenLabs (Eleven v4): check (the setup) | voices (the account's voices, their previews
-    measured, free) | design (voice samples) | voice (the run's voice) | probe (one passage made and measured before a narration) | say
-    (a video's narration, by passages placed end to end as delivered) | fit (the voice's point learned again from a made narration,
-    static §13). Eleven v4 has no speed: the pace is the voice's own with the words and audio tags given; the delivered audio is never
-    edited."""
-    if a.action != "check" and not a.run:
+    """Static's voice (contract item 36), by ElevenLabs (the model the run picked, Eleven v4 by default): check (the setup) | models
+    (ElevenLabs' live model list, a free read, kept in the library; which are set up) | model (the run's narration model, picked from
+    that list) | voices (the account's voices, their previews measured, free) | design (voice samples) | voice (the run's voice) |
+    probe (one passage made and measured before a narration) | say (a video's narration, by passages placed end to end as delivered) |
+    fit (the voice's point learned again from a made narration, static §13). A model has the settings its recorded facts name (config
+    static.tts.elevenlabs.models; Eleven v4: no speed): the pace is the voice's own with the words and audio tags given; the delivered
+    audio is never edited."""
+    if a.action not in ("check", "models") and not a.run:
         fail(f"tts {a.action} needs --run", 2)
     if a.action in ("say", "probe", "fit", "tempo") and not a.video:
         fail(f"tts {a.action} needs --video NN", 2)
-    {"check": _tts_check, "voices": _tts_voices, "design": _tts_design, "voice": _tts_voice, "say": _tts_say, "probe": _tts_probe,
-     "fit": _tts_fit, "tempo": _tts_tempo}[a.action](a)
+    {"check": _tts_check, "models": _tts_models, "model": _tts_model, "voices": _tts_voices, "design": _tts_design, "voice": _tts_voice,
+     "say": _tts_say, "probe": _tts_probe, "fit": _tts_fit, "tempo": _tts_tempo}[a.action](a)
 
 
-def _el_word_times(side: dict) -> list:
+def _el_word_times(side: dict, info=None) -> list:
     """The narration's script words timed by ElevenLabs itself: each passage's character timing (the first character of a word to its
     last), placed at the passage's start in the narration. [{"w", "s", "e"}] in the script's order; [] when a passage has no timing or
     its text does not match (speech-to-text then times the words). Exact for the delivered audio: the model's own clock, where the
-    transcriber starts words about a quarter second early and can miss quiet ones (video 03, 2026-11-09)."""
+    transcriber starts words about a quarter second early and can miss quiet ones (video 03, 2026-11-09). info (_lang_info): a language
+    written without spaces is timed letter by letter (_token_spans: a letter or digit with the marks and punctuation after it), since
+    it has no words to find."""
     if side.get("engine") != "elevenlabs" or not side.get("passages"):
         return []
     by_p = {}
@@ -11872,6 +12583,12 @@ def _el_word_times(side: dict) -> list:
             if int(r["n"]) not in lc:
                 return []
             i, end = int(lc[int(r["n"])][0]), int(lc[int(r["n"])][1])
+            if _unspaced(info):
+                if text[i:end] != str(r["text"]):   # the line is where the passage says, as it was sent
+                    return []
+                for tok, a0, b0 in _token_spans(str(r["text"]), info):
+                    res.append({"w": tok, "s": round(off + float(st_[i + a0]) / tx, 3), "e": round(off + float(en_[i + b0 - 1]) / tx, 3)})
+                continue
             for w in str(r["text"]).split():
                 j = text.find(w, i, end)
                 if j < 0:
@@ -11883,7 +12600,10 @@ def _el_word_times(side: dict) -> list:
 
 def cmd_narration_words(a):
     """The words of a video's narration with their times (speech-to-text timing, the script's wording), the caption cues and an SRT, and how
-    the heard words differ from the script per line (missing, extra, repeated): facts for the narration QC."""
+    the heard words differ from the script per line (missing, extra, repeated): facts for the narration QC. The video's language
+    (the sidecar's, else the video's record) sets the code speech-to-text is asked for, the unit (words, or letters for a language
+    written without spaces: the script's and the heard pieces are then letters, the captions hold --words letters (config
+    static.captions.chars_unspaced) joined with no space) and whether spoken numbers are matched (English only: `numbers.compared`)."""
     import difflib
     rd, _st = _state_of(a.run)
     nn = _cf_nn(a.video)
@@ -11896,36 +12616,48 @@ def cmd_narration_words(a):
     work.mkdir(parents=True, exist_ok=True)
     wav16 = work / "narration-16k.wav"
     run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", side["file"], "-ac", "1", "-ar", "16000", str(wav16)], check=True, timeout=600)
-    lang = STATIC_LANG_ISO.get(str(side.get("language") or "").lower(), "auto")
-    tr = transcribe(str(wav16), work, a.whisper_model, lang)
+    info = _video_lang(_st, nn, side.get("language"), soft=True)
+    english, unsp = info.get("code") in (None, "en"), _unspaced(info)
+    tr = transcribe(str(wav16), work, a.whisper_model, _whisper_lang(side.get("language"), info))
     heard = [w for s in tr.get("segments", []) for w in s.get("words", [])]
     script = " ".join(r["text"] for r in side["lines"])
-    timed_heard = align_script(heard, script) if heard else []
-    timed = _el_word_times(side)   # the captions: ElevenLabs' own timing of every word when the narration has it
+    timed_heard = align_script(heard, script, info) if heard else []
+    timed = _el_word_times(side, info)   # the captions: ElevenLabs' own timing of every word when the narration has it
     timing = "elevenlabs" if timed else "speech-to-text"
     if not timed:   # else the transcriber's times, each word kept inside its own line's audio
-        timed = _words_in_lines(timed_heard, side.get("lines") or [])
+        timed = _words_in_lines(timed_heard, side.get("lines") or [], info)
     shifts = [round(max(abs(x["s"] - y["s"]), abs(x["e"] - y["e"])), 2) for x, y in zip(timed_heard, timed)
               if (x["s"], x["e"]) != (y["s"], y["e"])] if timing == "speech-to-text" else []
     per_line, k = [], 0
     for r in side["lines"]:
-        hw = [_norm_word(w["w"]) for w in heard if r["start"] - 0.15 <= (float(w["s"]) + float(w["e"])) / 2 <= r["end"] + 0.15]
-        sw = [_norm_word(x) for x in r["text"].split()]
-        # numbers are compared apart: speech-to-text writes a spoken "seventeen sixty-nine" as "1769" (and "Saint" as "St")
-        sc, hc = _match_words(sw), _match_words(hw)
+        in_span = [w for w in heard if r["start"] - 0.15 <= (float(w["s"]) + float(w["e"])) / 2 <= r["end"] + 0.15]
+        if unsp:   # letters, both sides
+            hw = [_norm_word(c) for w in in_span for c in _units(w["w"], info)]
+            sw = [_norm_word(c) for c in _units(r["text"], info)]
+        else:
+            hw = [_norm_word(w["w"]) for w in in_span]
+            sw = [_norm_word(x) for x in r["text"].split()]
+            if not english:   # a dash or a '?' standing alone is no word
+                hw, sw = [x for x in hw if x], [x for x in sw if x]
+        # numbers are compared apart: speech-to-text writes a spoken "seventeen sixty-nine" as "1769" (and "Saint" as "St"); the
+        # spoken forms are English's, so another language's are not matched
+        sc, hc = (_match_words(sw), _match_words(hw)) if english else (sw, hw)
         sm = difflib.SequenceMatcher(a=sc, b=hc, autojunk=False)
         miss = [x for tag, i1, i2, _j1, _j2 in sm.get_opcodes() if tag in ("delete", "replace") for x in sc[i1:i2]]
         extra = [x for tag, _i1, _i2, j1, j2 in sm.get_opcodes() if tag in ("insert", "replace") for x in hc[j1:j2]]
         rep = [w for i, w in enumerate(hw[1:], 1) if w and w == hw[i - 1]]
-        per_line.append({"n": r["n"], "script_words": len(sw), "heard_words": len(hw), "missing": miss[:12], "extra": extra[:12],
-                         "repeated": rep[:6], "match": round(sm.ratio(), 3) if (sc or hc) else 1.0,
-                         "numbers": {"script": [x for x in sw if _is_number_token(x)], "heard": [x for x in hw if _is_number_token(x)]}})
+        nums = ({"compared": True, "script": [x for x in sw if _is_number_token(x)], "heard": [x for x in hw if _is_number_token(x)]} if english else
+                {"compared": False, "script": [x for x in sw if any(ch.isdigit() for ch in x)],
+                 "heard": [x for x in hw if any(ch.isdigit() for ch in x)]})
+        per_line.append({"n": r["n"], "script_words": len(sw), "heard_words": len(hw), "unit": info.get("unit"), "missing": miss[:12],
+                         "extra": extra[:12], "repeated": rep[:6], "match": round(sm.ratio(), 3) if (sc or hc) else 1.0, "numbers": nums})
         k += len(sw)
     plan_cap = _img_plan(rd, nn).get("captions") or {}   # the plan's text look sets the words at once (static §2)
-    cues = chunk_words(timed, int(a.words or plan_cap.get("words") or _scfg("captions.words", 3)),
-                       min_cue=float(plan_cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2)))) if timed else []
+    at_once = int(a.words or (plan_cap.get("chars") or _scfg("captions.chars_unspaced", 10) if unsp
+                              else plan_cap.get("words") or _scfg("captions.words", 3)))
+    cues = chunk_words(timed, at_once, min_cue=float(plan_cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2))), info=info) if timed else []
     write_json(work.parent / f"video-{nn}.words.json", {"video": nn, "engine": tr.get("engine"), "timing": timing, "words": timed,
-                                                         "heard": heard})
+                                                         "heard": heard, "unit": info.get("unit"), "language": info.get("code")})
     write_json(work.parent / f"video-{nn}.cues.json", cues)
     srt = []
     for i, c in enumerate(cues, 1):
@@ -11936,7 +12668,7 @@ def cmd_narration_words(a):
         tgt = json.loads((rd / "40-briefs" / f"video-{nn}-narration.json").read_text(encoding="utf-8")).get("pace") or {}
     except (OSError, ValueError):
         tgt = {}
-    pace = _pace_of(tr.get("segments") or [])
+    pace = _pace_of(tr.get("segments") or [], info.get("unit") or "words")
     pt = _pace_targets(tgt)
     if pt:
         mk, b_sp, b_ov = pt["measure"], pt["band_speak"], pt["band_overall"]
@@ -11951,6 +12683,7 @@ def cmd_narration_words(a):
     else:
         pace["target"] = None
     out({"ok": True, "video": nn, "engine": tr.get("engine"), "timing": timing, "words": len(timed), "cues": len(cues),
+         "unit": info.get("unit"), "language": {k_: info.get(k_) for k_ in ("code", "name", "spaced", "direction", "unit")},
          "lines": per_line, "pace": pace,
          "words_kept_in_their_line": {"moved": len(shifts), "largest_s": max(shifts) if shifts else 0.0},
          "lines_to_check": [x["n"] for x in off], "files": {"words": str(work.parent / f"video-{nn}.words.json"),
@@ -12062,7 +12795,7 @@ def _music_measure(a):
     run([ff, "-nostdin", "-y", "-loglevel", "error", "-i", str(placed), "-i", str(bed), "-filter_complex",
          f"[1:a]aresample=48000,{stereo(bed)}volume={gain},atrim=0:{total:.3f},apad=whole_dur={total:.3f}[b];"
          f"[0:a][b]amix=inputs=2:normalize=0:duration=first[o]", "-map", "[o]", str(mixed)], check=True, timeout=600)
-    lang = STATIC_LANG_ISO.get(str(side.get("language") or "").lower(), "auto")
+    lang = _whisper_lang(side.get("language"))   # the video's language as speech-to-text knows it ('auto' when the narration names none)
     wm = cfg_get("whisper_model", "small")       # the model narration-words reads with, so its words can stand in below
     tr_bed = transcribe(str(bed), work, wm, lang)
     w_alone, w_n, w_from = _heard_words(tr_bed), None, "transcribed now"
@@ -12242,7 +12975,7 @@ def _static_check(a):
         parts["images_klein"] = {"ready": bool(r.get("ok")), "python": _worker_python("image") or None,
                                  "root": os.environ.get("AWL_IMAGE_ROOT") or _kcfg("root") or None,
                                  "needed_for": "images by FLUX 3 Klein on this PC (static_images=klein)", **r}
-    el = _el_facts(_el_key(), not a.offline)
+    el = _el_facts(_el_key(), not a.offline, _run_tts_model(_state_of(a.run)[1]) if getattr(a, "run", None) else None)   # the run's model
     parts["tts"] = {"ready": bool(el.get("key_present")) and el.get("answers") is not False and el.get("model_offered") is not False,
                     **el}
     if os.environ.get("AWL_MUSIC_STUB"):
@@ -12521,13 +13254,60 @@ def _static_locks(rd: Path, st: dict) -> dict:
     s = st.get("static") or {}
     subj = s.get("subjects") or []
     v = s.get("voice") or {}
-    return {"niche": _niche_name(s), "style_ref": s.get("style_ref"), "reference_lengths": _ref_lengths(rd),
+    nic = s.get("niche")
+    return {"niche": _niche_name(s), "niche_reworded": (nic.get("reworded") if isinstance(nic, dict) else None) or None,
+            "style_ref": s.get("style_ref"), "reference_lengths": _ref_lengths(rd),
             "voice": {"engine": v.get("engine"), "voice_id": v.get("voice_id"), "name": v.get("name"), "kind": v.get("kind"),
                       "sample": v.get("sample"), "instruct": v.get("instruct"), "seed": v.get("seed"),
                       "file": v.get("ref_audio") or str(_voice_dir(rd) / "ref-neutral.wav")} if v else None,
+            "tts_model": s.get("tts_model"), "language_plan": s.get("language_plan"),
             "subjects": [{"video": f"{i:02d}", "title": t_} for i, t_ in enumerate(subj, 1)], "next_video": f"{len(subj) + 1:02d}",
+            "video_info": _video_info_summary(subj, s.get("video_info")),
+            "approaches_made": _approaches_made(subj, s.get("video_info")), "languages_made": _languages_made(subj, s.get("video_info")),
             "format": (s.get("format") or {}).get("export"), "images": st.get("static_images"), "capcut_plan": st.get("capcut_plan"),
             "qc_fixes": st.get("qc_fixes"), "spec": str(rd / "20-analysis" / "static-spec.md"), "cloned_from": st.get("cloned_from")}
+
+
+# ---- what each video is: its approach (how it tells its subject inside the niche family) and its language, recorded with its subject
+# (state.json -> static.video_info.<NN>; the user, 2026-11-11: "the idea is not to always product the exact same form of content, but
+# rather have an niche in a family of content such as 'how to survive when X' or 'N days of X' but not lock 'N days of X' only ... we lock
+# the niche family and then it build taking from the whole set of reference but pushing of what the niche references story was about but
+# not always in the same direction and approach of story and content but always inside that niche family"). The toolkit records and lists
+# them; whether the approaches differ enough, and which one a video takes, is the agent's call.
+
+APPROACH_FIELDS = (("story_form", "story_form"), ("angle", "angle"), ("pov", "point_of_view"), ("time_frame", "time_frame"),
+                   ("scale", "scale"), ("title_form", "title_form"), ("pillar", "pillar"), ("series", "series"), ("approach_why", "why"))
+
+
+def _video_info_summary(subj: list, vi: dict) -> list:
+    """Per video that has a record: {video, title, approach (its fields, or None), language (its code, or None)}, in video order."""
+    res = []
+    for i, t_ in enumerate(subj, 1):
+        rec = (vi or {}).get(f"{i:02d}")
+        if rec:
+            res.append({"video": f"{i:02d}", "title": t_, "approach": rec.get("approach") or None,
+                        "language": (rec.get("language") or {}).get("code") if isinstance(rec.get("language"), dict) else rec.get("language")})
+    return res
+
+
+def _approaches_made(subj: list, vi: dict) -> list:
+    """The approaches recorded so far, one row per video that has one, for the agent to read before it makes the next (the toolkit
+    lists; whether they differ enough is the agent's)."""
+    return [{"video": r["video"], "title": r["title"], **{k: r["approach"].get(k) for k in
+            ("story_form", "angle", "point_of_view", "time_frame", "scale", "title_form", "pillar", "series")}}
+            for r in _video_info_summary(subj, vi) if r.get("approach")]
+
+
+def _languages_made(subj: list, vi: dict) -> list:
+    """The language of every video of the run, in video order: the recorded one, else English (a video with no record was made before
+    languages were recorded)."""
+    res = []
+    for i, t_ in enumerate(subj, 1):
+        lg = ((vi or {}).get(f"{i:02d}") or {}).get("language")
+        code = lg.get("code") if isinstance(lg, dict) else lg
+        res.append({"video": f"{i:02d}", "code": code or "en", "name": (lg.get("name") if isinstance(lg, dict) else None) or
+                    (None if code else "English"), "recorded": bool(code)})
+    return res
 
 
 def _lock_change(what: str, cur, new, a, made: bool, rd: Path):
@@ -12543,15 +13323,39 @@ def _lock_change(what: str, cur, new, a, made: bool, rd: Path):
 
 
 def _static_lock(a):
-    """The run's channel locks (contract item 36): --niche (the field every subject of the run stays in) and --style-ref (the reference
-    whose look the images and the captions keep) are recorded once and refused when another value comes later (_lock_change); without
-    them it prints the locks: niche, style reference, voice, the subjects made with their video numbers, the next video number."""
+    """The run's channel locks (contract item 36): --niche (the FIELD every subject of the run stays in: a family of content such as
+    "survival scenarios and how-tos", never a title wording or a story form) and --style-ref (the reference whose look the images and
+    the captions keep) are recorded once and refused when another value comes later (_lock_change). --reword "<new wording>" --why
+    "<reason>" sharpens the locked niche's wording (the same field, recorded in state.json -> static.niche.reworded, allowed after
+    videos exist); without these it prints the locks: niche, style reference, voice, the narration model (tts_model), the language
+    plan, the subjects made with their video numbers, each video's approach and language (video_info, approaches_made,
+    languages_made) and the next video number."""
     rd, st = _state_of(a.run)
     if st.get("analyze_submode") != "static":
         fail("static lock is for a Static run (analyze_submode=static)", 2)
     s = st.get("static") or {}
     made = bool(st.get("videos")) or bool(s.get("subjects"))
     changes = {}
+    if getattr(a, "reword", None):
+        # the niche is a field of content (a family of stories), never a title wording or a story form: its words may be sharpened
+        # without making another channel, at any time, with the reason recorded; whether the new wording still names the same field is
+        # the agent's call (a different field is a clone, `T clone-run`)
+        if a.niche:
+            fail("--reword and --niche together: --niche locks a niche once, --reword sharpens the wording of the locked one", 2)
+        cur = _niche_name(s)
+        if not cur:
+            fail("the run's niche is not locked yet: `T static lock --run RUN --niche \"<the niche>\"` first (--reword sharpens a locked one)", 2)
+        new = " ".join(str(a.reword).split())
+        why = " ".join(str(getattr(a, "why", None) or "").split())
+        if not new:
+            fail("--reword takes the new wording", 2)
+        if not why:
+            fail("--reword needs --why: the reason the wording changes (recorded with it)", 2)
+        if new != cur:
+            nic = dict(s["niche"]) if isinstance(s.get("niche"), dict) else {"name": cur, "set_at": None}
+            nic["reworded"] = list(nic.get("reworded") or []) + [{"from": cur, "to": new, "why": why, "at": now_iso()}]
+            nic["name"] = new
+            changes["static.niche"] = nic
     if a.niche:
         new = " ".join(str(a.niche).split())
         cur = _niche_name(s)
@@ -12572,17 +13376,80 @@ def _static_lock(a):
     if changes:
         _state_set(rd, **changes)
         st = json.loads((rd / "state.json").read_text(encoding="utf-8"))
-    out({"ok": True, "run": rd.name, "changed": sorted(changes), "locks": _static_locks(rd, st),
-         "note": "every video of this run keeps these: subjects from its niche, the style reference's look for the images and the "
-                 "captions, one narrator; another niche is a clone of the run (`T clone-run --from <run>`)"})
+    locks = _static_locks(rd, st)
+    out({"ok": True, "run": rd.name, "changed": sorted(changes), "locks": locks,
+         # the model, what each video is and the language plan also at the top, where the questions' answers are read
+         **{k: locks[k] for k in ("tts_model", "video_info", "approaches_made", "languages_made", "language_plan")},
+         "note": "every video of this run keeps these: subjects from its niche family (a field of content: how a video tells its subject "
+                 "is its own approach, `T static subjects --story-form ...`), the style reference's look for the images and the captions, "
+                 "one narrator; the niche's wording may be sharpened (`--reword \"<new>\" --why \"<reason>\"`, the same field); another "
+                 "niche is a clone of the run (`T clone-run --from <run>`)"})
+
+
+def _plan_language(plan, v: int):
+    """The language the run's language plan gives video number v (`T static language --plan`): languages[v - from_video] when that is
+    in range, else the single language when the plan holds exactly one (it applies to every video of the batch); else None (no plan,
+    or a video outside a plan of several). A copy of the plan's language object."""
+    langs = (plan or {}).get("languages") or []
+    if not langs:
+        return None
+    i = v - int((plan or {}).get("from_video") or 1)
+    if 0 <= i < len(langs):
+        return dict(langs[i])
+    return dict(langs[0]) if len(langs) == 1 else None
 
 
 def _static_subjects(a):
     """The run's subjects in video order (contract item 36): --add appends new ones (the first pick and every 'more videos' later), each
-    with the next video number; a subject the run already has is refused; adding needs the niche lock. Without --add it lists them."""
+    with the next video number; a subject the run already has is refused; adding needs the niche lock. Without --add it lists them,
+    each with its approach and its language. What each video is (the user, 2026-11-11: the videos of a niche family differ in form,
+    point of view and length, and each is made in the language the user picks) is recorded with its subject: the approach fields
+    --story-form --angle --pov --time-frame --scale --title-form --pillar --series --approach-why and --language are kept for every
+    title added in that call (state.json -> static.video_info.<NN>); without --language the language comes from the run's language
+    plan (`T static language --plan`: languages[v - from_video], else the plan's single language), else the subject is added with no
+    language (`language: null`: pass --language; a video with no language anywhere is English, as before). --set NN edits video NN's
+    approach and language the same way (its language only while its narration does not exist yet)."""
     rd, st = _state_of(a.run)
     s = st.get("static") or {}
-    subj, added = list(s.get("subjects") or []), []
+    subj, added, edited = list(s.get("subjects") or []), [], None
+    vi = {k: dict(v) for k, v in (s.get("video_info") or {}).items() if isinstance(v, dict)}
+    model = _run_tts_model(st) or _el_cfg("model_id")
+    given = {}
+    for flag, field in APPROACH_FIELDS:
+        v = getattr(a, flag, None)
+        if v is not None and " ".join(str(v).split()):
+            given[field] = " ".join(str(v).split())
+    lang_arg, set_n = getattr(a, "language", None), getattr(a, "set_video", None)
+    if (given or lang_arg) and not (a.add or set_n is not None):
+        fail("the approach fields and --language go with --add (the titles added in that call) or --set NN (a video that exists)", 2)
+
+    def approach_with(old):   # the approach a video has (every field, None where unset) with the fields given laid over it
+        ap = dict(old) if old else {f: None for _k, f in APPROACH_FIELDS}
+        ap.update(given)
+        return ap
+    if set_n is not None:
+        if a.add:
+            fail("--set edits a video that exists and --add adds new ones: one at a time", 2)
+        m = re.fullmatch(r"\s*0*(\d{1,3})\s*", str(set_n))
+        n = int(m.group(1)) if m else 0
+        if not 1 <= n <= len(subj):
+            fail(f"--set {set_n}: " + (f"the run has {len(subj)} subject(s), videos 01 to {len(subj):02d}" if subj else "the run has no subject yet"), 2)
+        nn = f"{n:02d}"
+        if not given and not lang_arg:
+            fail("--set needs something to set: --language and/or an approach field (--story-form --angle --pov --time-frame --scale "
+                 "--title-form --pillar --series --approach-why)", 2)
+        rec = dict(vi.get(nn) or {})
+        if lang_arg:
+            if (rd / "30-assets" / "narration" / f"video-{nn}.json").is_file():
+                fail(f"video {nn}'s language cannot change: its narration exists already (30-assets/narration/video-{nn}.json, made in "
+                     f"{(rec.get('language') or {}).get('name') or 'its language'}); a video in another language is another video", 2)
+            rec["language"] = _lang_record(_lang_info(lang_arg, model_id=model, run=st), model)
+        if given:
+            rec["approach"] = approach_with(rec.get("approach"))
+        vi[nn] = rec
+        _state_set(rd, **{"static.video_info": vi})
+        edited = {"video": nn, "title": subj[n - 1], "approach": rec.get("approach"), "language": rec.get("language")}
+    lang_rec = _lang_record(_lang_info(lang_arg, model_id=model, run=st), model) if (lang_arg and a.add) else None
     for t_ in a.add or []:
         t2 = " ".join(str(t_).split())
         if not t2:
@@ -12591,13 +13458,25 @@ def _static_subjects(a):
         if t2.casefold() in low:
             fail(f"{t2!r} is already a subject of this run (video {low.index(t2.casefold()) + 1:02d}): pick another", 2)
         subj.append(t2)
-        added.append({"video": f"{len(subj):02d}", "title": t2})
+        nn = f"{len(subj):02d}"
+        lang_obj = dict(lang_rec) if lang_rec else _plan_language(s.get("language_plan"), len(subj))
+        rec = {}
+        if given:
+            rec["approach"] = approach_with(None)
+        if lang_obj:
+            rec["language"] = lang_obj
+        if rec:
+            vi[nn] = rec
+        added.append({"video": nn, "title": t2, "approach": rec.get("approach"), "language": lang_obj,
+                      **({"note": "pass --language"} if not lang_obj else {})})
     if added:
         if not _niche_name(s):
             fail("the run's niche is not locked yet: `T static lock --run RUN --niche \"<the user's niche>\"` first", 2)
-        _state_set(rd, **{"static.subjects": subj})
-    out({"ok": True, "niche": _niche_name(s), "subjects": [{"video": f"{i:02d}", "title": x} for i, x in enumerate(subj, 1)],
-         "added": added})
+        _state_set(rd, **({"static.subjects": subj, "static.video_info": vi} if vi else {"static.subjects": subj}))
+    out({"ok": True, "niche": _niche_name(s),
+         "subjects": [{"video": f"{i:02d}", "title": x, "approach": (vi.get(f"{i:02d}") or {}).get("approach"),
+                       "language": (vi.get(f"{i:02d}") or {}).get("language")} for i, x in enumerate(subj, 1)],
+         "added": added, **({"edited": edited} if edited else {}), "language_plan": s.get("language_plan")})
 
 
 def _thumb_sheets(items: list, out_dir: Path, per: int = 12) -> list:
@@ -12894,18 +13773,31 @@ def _forecast_narration(rd: Path, st: dict, nn: str) -> dict:
     except (OSError, ValueError):
         return {"error": f"no narration plan: {p}"}
     lines = [ln for ln in spec.get("lines") or [] if str(ln.get("text") or "").strip()]
-    words = sum(len(str(ln["text"]).split()) for ln in lines)
-    per_line = [len(str(ln["text"]).split()) for ln in lines]
+    info = _video_lang(st, nn, spec.get("language"), model_id=_el_model(spec.get("tts"), None, st, spec), soft=True)
+    words = sum(len(_units(ln["text"], info)) for ln in lines)
+    per_line = [len(_units(ln["text"], info)) for ln in lines]
     own = [int(ln.get("n") or i) for i, ln in enumerate(lines, 1) if str(ln.get("delivery") or "").strip()]
     after = [int(ln.get("n") or i) for i, ln in enumerate(lines, 1) if str(ln.get("tags_after") or "").strip()]
     numeric = [int(ln.get("n") or i) for i, ln in enumerate(lines[:-1], 1) if "pause_after" in ln]
-    intimate = [{"line": int(ln.get("n") or i), "words": sorted({m.group(0).lower() for m in FC_INTIMATE.finditer(str(ln["text"]))})}
-                for i, ln in enumerate(lines, 1) if FC_INTIMATE.search(str(ln["text"]))]
-    res = {"plan": {"words": words, "lines": len(lines), "characters": sum(len(str(ln["text"]).strip()) + 1 for ln in lines),
+
+    def reading(ln):   # the words the §11/§11b lists read: a line's English gloss when it has one (the lists are English), else its text
+        return str(ln.get("gloss") or ln["text"])
+
+    def found(rx):
+        return [{"line": int(ln.get("n") or i), "words": sorted({m.group(0).lower() for m in rx.finditer(reading(ln))})}
+                for i, ln in enumerate(lines, 1) if rx.search(reading(ln))]
+    intimate = found(FC_INTIMATE)
+    res = {"plan": {"words": words, "unit": info.get("unit"), "language": info.get("code") or "en", "lines": len(lines),
+                    "characters": sum(len(str(ln["text"]).strip()) + 1 for ln in lines),
                     "words_per_line_median": statistics.median(per_line) if per_line else None,
                     "own_delivery_lines": own, "pause_tag_lines": after, "numeric_pause_after_not_placed": len(numeric),
-                    "intimate_body_words": intimate,
+                    "intimate_body_words": intimate, "religion_or_superstition_words": found(FC_RELIGION),
+                    "nudity_gore_or_distress_words": found(FC_EXPOSURE),
                     "target_length_s": spec.get("target_length_s")}}
+    if info.get("code") not in (None, "en"):   # the lists above read a line's English gloss: a line with none is read as written
+        res["plan"]["lines_without_gloss"] = [int(ln.get("n") or i) for i, ln in enumerate(lines, 1) if not str(ln.get("gloss") or "").strip()]
+    if info.get("error"):
+        res["plan"]["language_error"] = info["error"]
     pace = spec.get("pace") or {}
     pt = _pace_targets(pace)
     res["target"] = ({"measure": pt["measure"], "point": {pt["measure"]: pt["target_speak"], "wpm_overall": pt["target_overall"]},
@@ -12941,13 +13833,18 @@ def _forecast_narration(rd: Path, st: dict, nn: str) -> dict:
     point, how = _el_point(voice.get("fit") or {}, lever)
     if point and point.get("wpm_delivered"):
         length = words * 60 / float(point["wpm_delivered"])
-        pred = {"from_point": how, "point": {k: point.get(k) for k in ("wpm_articulation", "wpm_overall", "wpm_delivered", "pauses_per_minute",
-                                                                       "pause_s_median", "pause_share", "join_silence_s_median", "words",
-                                                                       "from", "video", "learned")},
+        pred = {"from_point": how, "unit": info.get("unit") or "words",
+                "point": {k: point.get(k) for k in ("wpm_articulation", "wpm_overall", "wpm_delivered", "pauses_per_minute",
+                                                    "pause_s_median", "pause_share", "join_silence_s_median", "words", "unit",
+                                                    "from", "video", "learned")},
                 "predicted": {"wpm_articulation": point.get("wpm_articulation"), "wpm_overall": round(words * 60 / length, 1),
                               "length_s": round(length, 1), "pauses_per_minute": point.get("pauses_per_minute"),
                               "pause_s_median": point.get("pause_s_median"), "pause_share": point.get("pause_share")},
-                "how": "Eleven v4 has no speed: the voice, the delivery and pace tags, the settings and the words set the pace; " + EL_NO_EDIT}
+                "how": (("Eleven v4 has no speed" if P["model"] == "eleven_v4" else f"{P['model']} has no speed set in the pace")
+                        + ": the voice, the delivery and pace tags, the settings and the words set the pace; " + EL_NO_EDIT)}
+        if info.get("unit") == "characters":
+            pred["against_family_note"] = ("the video's numbers count letters (a language written without spaces); the references' are in "
+                                           "their own units: `T static units` converts the plan's pace by the plan's own ratio")
         if pt and point.get("wpm_articulation"):
             pred["off_by"] = {pt["measure"]: round(float(point["wpm_articulation"]) / pt["target_speak"] - 1, 4)}
             pred["articulation_on_point"] = abs(float(point["wpm_articulation"]) / pt["target_speak"] - 1) <= pt["tol"]
@@ -12961,7 +13858,10 @@ def _forecast_narration(rd: Path, st: dict, nn: str) -> dict:
                                   for k in ("wpm_articulation", "wpm_overall", "pauses_per_minute", "pause_s_median", "pause_share") if k in fam}
         res["forecast"] = pred
     elif pt:
-        res["forecast"] = {"note": "no measured point for this voice yet: `T tts voices --run RUN --measure` (each voice's own preview, "
+        new_ground = lever.get("language") != "en" or P["model"] != str(_el_cfg("model_id"))   # a point is the voice's in a model and a language
+        res["forecast"] = {"note": "no measured point for this voice" + (f" with {P['model']} in {info.get('name') or lever.get('language')}"
+                                                                         if new_ground else "") +
+                                   " yet: `T tts voices --run RUN --measure` (each voice's own preview, "
                                    "free) and `T tts probe --run RUN --video NN` (passage 1 made and measured, billed, reused by `say`)"}
     side = rd / "30-assets" / "narration" / f"video-{nn}.json"
     if side.is_file():
@@ -13137,15 +14037,162 @@ def _static_forecast(a):
                  "40-briefs/video-NN-judge.md; after the generation, the measured result is read against this forecast"})
 
 
+def _voice_verified(rd, st: dict):
+    """The languages ElevenLabs says the run's narrator is verified in (the voice's answer as given: [{"language", "model_id", "accent",
+    "locale", ...}]), from the run's voice record, else from the account's voice list the run kept (30-assets/voice/voices.json); None
+    when the run has no narrator or none of them holds the list."""
+    v = ((st or {}).get("static") or {}).get("voice") or {}
+    if isinstance(v.get("verified_languages"), list):
+        return v["verified_languages"]
+    try:
+        rows = json.loads((_voice_dir(Path(rd)) / "voices.json").read_text(encoding="utf-8")).get("voices") or []
+    except (OSError, ValueError, TypeError):
+        return None
+    row = next((r for r in rows if v.get("voice_id") and r.get("voice_id") == v["voice_id"]), None)
+    return row.get("verified_languages") if row and isinstance(row.get("verified_languages"), list) else None
+
+
+def _language_facts(language, st: dict, rd, model_id=None, text=None, font=None) -> dict:
+    """What `T static language` says of one language: _lang_info's facts (in the model's list or not, official), the models of ElevenLabs'
+    list that make speech in it, the narrator's verified languages (null when not known) and whether it is verified in this one, and
+    with a text and a font file whether the font has a glyph for every character of the text. Facts only."""
+    info = _lang_info(language, text=text, model_id=model_id, run=st)
+    cache = _el_models_cache()
+    listed = [str(r.get("model_id")) for r in cache.get("models") or [] if isinstance(r, dict) and r.get("can_do_text_to_speech")
+              and info["code"] in {str(lg.get("language_id")).strip().lower() for lg in r.get("languages") or [] if isinstance(lg, dict)}]
+    ver = _voice_verified(rd, st) if rd else None
+    nv = None if ver is None else any(info["code"] in {str(x.get("language") or "").lower().split("-")[0],
+                                                       str(x.get("locale") or "").lower().split("-")[0]}
+                                      for x in ver if isinstance(x, dict))
+    res = {**info, "listed_by": listed, "verified_languages": ver, "narrator_verified": nv}
+    if text is not None:
+        res["text_units"] = len(_units(text, info))
+    if font and text is not None:
+        res.update(_font_report(font, text))
+    elif font:
+        res["font_note"] = "give --text or --srt (the words the font must draw) to check its glyphs"
+    return res
+
+
+def _static_language(a):
+    """The facts of a language for a Static video (the user, 2026-11-11: "videos language: it has to ask user which language has the
+    video's content to be (languages have to be pulled live from elevenlabs mcp ...)"; "we need the voices to be in that language too").
+    --language L (a name or an ISO code of ElevenLabs' list, resolved against the library's copy of it: `T tts models`): its code and
+    name, whether it is written with spaces and left to right, the unit a pace counts in it (words, or characters), the code
+    speech-to-text takes, whether the model's list holds it (--model-id, else the run's model, else the config's: `in_model`,
+    `official`), the models that list it, the narrator's verified languages (`narrator_verified`, null when not known) and, with
+    --text FILE or --srt FILE (a script or the captions) and --font FILE, which characters of the text the font has no glyph for.
+    --plan "L1[,L2,...]" (with --run) stores the batch's languages before any subject exists (state.json -> static.language_plan:
+    {from_video: the next video's number, languages: [{code, name, official, spaced, direction, unit, model_id}]}): one language
+    applies to every video of the batch, several go to the videos in order (`T static subjects --add` takes each from the plan unless
+    it is given --language); it prints the facts of each. A language it cannot place stops with exit 2 and names `T tts models`."""
+    plan, lang = getattr(a, "plan", None), getattr(a, "language", None)
+    if plan and lang:
+        fail("--plan and --language together: --plan stores the batch's languages, --language reads one language's facts", 2)
+    if not plan and not lang:
+        fail("static language needs --language L (one language's facts) or --plan \"L1[,L2,...]\" with --run (the batch's languages, stored)", 2)
+    rd, st = (_state_of(a.run) if a.run else (None, {}))
+    model = getattr(a, "model_id", None) or _run_tts_model(st)
+    text = None
+    if getattr(a, "text", None) or getattr(a, "srt", None):
+        tp = Path(a.text or a.srt)
+        if not tp.is_file():
+            fail(f"no such file: {tp}", 2)
+        text = (" ".join(c["text"] for c in _read_srt(tp)) if a.srt else tp.read_text(encoding="utf-8-sig", errors="replace"))
+    font = getattr(a, "font", None)
+    if font and not Path(font).is_file():
+        fail(f"font file not found: {font}", 2)
+    if not plan:
+        out({"ok": True, "language": _language_facts(lang, st, rd, model, text, font),
+             "note": "facts: the choice of the video's language is the user's; a language outside the model's list is not official "
+                     "(ElevenLabs may still voice it: the user listens to the first passage); the script is written natively in it, each line "
+                     "with an English gloss"})
+    if not rd:
+        fail("--plan needs --run (the run the languages are stored in)", 2)
+    names = [x.strip() for x in re.split(r"[,;]", str(plan)) if x.strip()]
+    if not names:
+        fail("--plan takes the batch's languages: \"es\" or \"es,ja,ar\" (names or ISO codes)", 2)
+    mid = model or _el_cfg("model_id")
+    facts = [_language_facts(n_, st, rd, mid) for n_ in names]    # every language is resolved before anything is stored
+    rec = {"from_video": len(((st.get("static") or {}).get("subjects")) or []) + 1,
+           "languages": [_lang_record(f, mid) for f in facts], "set_at": now_iso()}
+    _state_set(rd, **{"static.language_plan": rec})
+    out({"ok": True, "run": rd.name, "language_plan": rec, "languages": facts,
+         "note": ("one language: every video of the batch is made in it; " if len(facts) == 1 else
+                  f"{len(facts)} languages: video {rec['from_video']:02d} in the first, the next in the next one, in order; ") +
+                 "`T static subjects --add` takes each video's language from this plan unless it is given --language"})
+
+
+def _static_units(a):
+    """A narration's units in its own language against its English gloss, and the plan's pace converted by their ratio (static §4, §13):
+    from 40-briefs/video-NN-narration.json, each line's units (_units: words, or letters for a language written without spaces) and the
+    words of its English `gloss`, the ratio of the two (overall: the lines' units over their gloss words; and the median of the lines'),
+    and the plan's `pace` (written by the judge in the references' units) with every number of its wpm_articulation / wpm_overall /
+    wpm_speech bands and its target times the overall ratio, `unit` and `units_ratio` set: the block to write back as the plan's pace
+    when the judge agrees. English, or no gloss: ratio 1 (nothing is converted). A pace that already carries `units_ratio` is converted
+    from its own English numbers (never twice). Arithmetic only: the pace is the judge's."""
+    rd, st = _state_of(a.run)
+    if not a.video:
+        fail("static units needs --video NN", 2)
+    nn = _cf_nn(a.video)
+    p = rd / "40-briefs" / f"video-{nn}-narration.json"
+    try:
+        spec = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"narration lines not found or not JSON: {p} (reference/static §4)", 2)
+    info = _video_lang(st, nn, spec.get("language"), model_id=_el_model(spec.get("tts"), None, st, spec))
+    lines = [ln for ln in spec.get("lines") or [] if str(ln.get("text") or "").strip()]
+    rows = []
+    for i, ln in enumerate(lines, 1):
+        gl = str(ln.get("gloss") or "").strip()
+        gw, u = (len(gl.split()) if gl else None), len(_units(ln["text"], info))
+        rows.append({"n": int(ln.get("n") or i), "units": u, "gloss_words": gw, "ratio": round(u / gw, 4) if gw else None})
+    english = info["code"] == "en"
+    have = [r for r in rows if r["gloss_words"]]
+    tot_u, tot_g = sum(r["units"] for r in have), sum(r["gloss_words"] for r in have)
+    ratio = round(tot_u / tot_g, 4) if (not english and tot_g) else 1.0
+    med = round(statistics.median([r["ratio"] for r in have]), 4) if (have and not english) else 1.0
+    pace = spec.get("pace") or {}
+    base = float(pace.get("units_ratio") or 1.0)
+    factor = ratio / base if base else ratio
+
+    def conv(v):
+        if isinstance(v, bool) or v is None:
+            return v
+        if isinstance(v, (int, float)):
+            return round(float(v) * factor, 1)
+        if isinstance(v, (list, tuple)) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v):
+            return [round(float(x) * factor, 1) for x in v]
+        return v
+    converted = None
+    if pace:
+        converted = {k: (conv(v) if k in ("wpm_articulation", "wpm_speech", "wpm_overall") else
+                         {kk: (conv(vv) if kk in ("wpm_articulation", "wpm_speech", "wpm_overall") else vv) for kk, vv in v.items()}
+                         if k == "target" and isinstance(v, dict) else v) for k, v in pace.items()}
+        converted.update({"unit": info["unit"], "units_ratio": ratio})
+    out({"ok": True, "video": nn, "language": {k: info.get(k) for k in ("code", "name", "spaced", "direction", "unit")}, "unit": info["unit"],
+         "native_units": sum(r["units"] for r in rows), "gloss_words": tot_g or None,
+         "lines_without_gloss": [r["n"] for r in rows if not r["gloss_words"]] if not english else [],
+         "ratio": {"overall": ratio, "line_median": med, "from_lines": len(have) if not english else None}, "lines": rows,
+         "pace": {"given": pace or None, "converted": converted, "converted_from_ratio": base},
+         "note": ("English: ratio 1, the pace's numbers stand" if english else
+                  "no line has a gloss: ratio 1, nothing is converted (each line's English `gloss` is what the ratio is made from)"
+                  if not tot_g else "ratio = the lines' units over their English gloss words; `pace.converted` is the plan's pace times the "
+                  "overall ratio, in this language's unit: the judge writes it back (with unit and units_ratio) when it agrees")})
+
+
 def cmd_static(a):
     """Static (contract item 36): check (the setup on this PC) | formats (facts for the format question) | format (store the pick) |
-    lock (the run's niche and style reference, and the locks shown) | subjects (the run's subjects in video order; --add appends) |
+    lock (the run's niche and style reference, and the locks shown; --reword sharpens the niche's wording) | subjects (the run's
+    subjects in video order; --add appends, with each video's approach and language; --set NN edits one) | language (a language's
+    facts; --plan stores the batch's languages) | units (a narration's units against its English gloss, the pace converted) |
     context (the references' real titles: from context.txt with their thumbnails, else from the file names) | profile (the set's
     numbers) | forecast (what a video's plan will give, before it is generated: static §13)."""
-    if a.action != "check" and not a.run:
+    if a.action not in ("check", "language") and not a.run:
         fail(f"static {a.action} needs --run", 2)
     {"check": _static_check, "formats": _static_formats, "format": _static_format_set, "lock": _static_lock,
-     "subjects": _static_subjects, "context": _static_context, "profile": _static_profile, "forecast": _static_forecast}[a.action](a)
+     "subjects": _static_subjects, "language": _static_language, "units": _static_units, "context": _static_context,
+     "profile": _static_profile, "forecast": _static_forecast}[a.action](a)
 
 
 def _jload(p: Path) -> dict:
@@ -13201,6 +14248,9 @@ def _ref_numbers(md: Path) -> dict:
     if len(tw) >= 2:   # the pace and the pauses by the words' times: the same reading a narration gets (static §6 "The pace")
         pw = _pace_of_words(tw)
         r.update({k: pw[k] for k in ("wpm_articulation", "pause_s_p90", "long_pauses_per_10min", "pause_share")})
+    if tj.get("language"):   # the language speech-to-text heard in the reference, and what a pace counts in it
+        lg = str(tj["language"]).lower().split("-")[0]
+        r.update({"language": lg, "unit": "characters" if lg in LANG_UNSPACED else "words"})
     text = " ".join(str(s.get("text") or "") for s in segs)
     toks = re.findall(r"[A-Za-z0-9$%'’.,-]+", text)
     if toks and dur:
@@ -13214,6 +14264,10 @@ def _ref_numbers(md: Path) -> dict:
                   "numbers_per_minute": round(sum(any(c.isdigit() for c in t) for t in toks) / mins, 2),
                   "first_line": (sents[0][:160] if sents else None)})
     return r
+
+
+PROFILE_WORD_KEYS = ("wpm_overall", "wpm_speech", "wpm_articulation", "words", "words_per_sentence_median", "you_per_100_words",
+                     "numbers_per_minute")   # the numbers a count of words makes: not comparable with a reference counted in letters
 
 
 def _static_profile(a):
@@ -13238,16 +14292,27 @@ def _static_profile(a):
         refs[it["id"]] = {"file": Path(str(it.get("rel") or it.get("path") or "")).name, **_ref_numbers(md)}
     if not refs:
         fail("no analysed reference" + (f" among {', '.join(sorted(want))}" if want else "") + " (A1 first)", 2)
-    keys = [k for k in next(iter(refs.values())) if k not in ("file", "aspect", "first_line")]
+    keys = [k for k in next(iter(refs.values())) if k not in ("file", "aspect", "first_line", "language", "unit")]
+    # a reference in a language written without spaces counts letters, not words: its words-based numbers are not in the set's
+    # medians (they stay in its own row, with its unit)
+    chars_refs = sorted(v for v, r in refs.items() if r.get("unit") == "characters")
     stats = {}
     for k in keys:
-        vals = [float(r[k]) for r in refs.values() if isinstance(r.get(k), (int, float)) and not isinstance(r.get(k), bool)]
+        vals = [float(r[k]) for v, r in refs.items() if isinstance(r.get(k), (int, float)) and not isinstance(r.get(k), bool)
+                and not (k in PROFILE_WORD_KEYS and v in chars_refs)]
         if vals:
             stats[k] = {"median": round(statistics.median(vals), 2), "low": round(min(vals), 2), "high": round(max(vals), 2), "n": len(vals)}
     aspects = {}
     for v, r in refs.items():
         aspects.setdefault(str(r.get("aspect")), []).append(v)
+    languages = {}
+    for v, r in refs.items():
+        if r.get("language"):
+            languages.setdefault(r["language"], []).append(v)
+    words_excluded = {v: "its unit is characters (a language written without spaces: " + str(refs[v].get("language")) + "): its words-based "
+                         "numbers (" + ", ".join(PROFILE_WORD_KEYS) + ") are in its own row, not in the set's medians" for v in chars_refs}
     res = {"run": rd.name, "made": now_iso(), "references": refs, "set": stats, "by_aspect": aspects, "not_analysed": not_analysed,
+           "languages": languages or None, "words_based_medians_exclude": words_excluded or None,
            "refs_asked": sorted(want) or None,
            "note": "measured numbers of every analysed reference and the set's median, lowest and highest; the spec reads the set as a "
                    "whole (static §2), and a family of references that differ in kind (a Short and a long video) is read by its own "
@@ -13263,11 +14328,15 @@ def _static_profile(a):
     for v, r in refs.items():
         L.append(f"| {v} | " + " | ".join("" if r.get(c) is None else str(r[c]) for c in cols) + " |")
     L.append("| **set** | " + " | ".join((f"{stats[c]['median']} ({stats[c]['low']}–{stats[c]['high']})" if c in stats else "") for c in cols) + " |")
+    if languages:
+        L += ["", "Languages heard (speech-to-text): " + "; ".join(f"{lg}: {', '.join(vs)}" for lg, vs in languages.items())]
+    L += [f"- {v}: {why}" for v, why in words_excluded.items()]
     L += ["", "First lines:", ""] + [f"- {v}: {r.get('first_line') or '(none)'}" for v, r in refs.items()]
     if not_analysed:
         L += ["", "Not analysed yet (no 10-media/<V>/video.json): " + ", ".join(not_analysed)]
     write_text(rd / "20-analysis" / f"set-profile{tag}.md", "\n".join(L) + "\n")
     out({"ok": True, "references": len(refs), "not_analysed": not_analysed, "set": stats, "by_aspect": aspects,
+         "languages": languages or None, "words_based_medians_exclude": words_excluded or None,
          "files": [str(rd / "20-analysis" / f"set-profile{tag}.json"), str(rd / "20-analysis" / f"set-profile{tag}.md")],
          "note": res["note"]})
 
@@ -13347,8 +14416,10 @@ def cmd_clone_run(a):
     """A Static run's analysis in a new run (contract item 36; the user, 2026-11-07: "/analyze-with-loupe clone <run> ... will just clone
     all the references data such as frames, text, voice and everything processed there and then ask for the niche"): the inventory, the
     media (frames, storyboards, transcripts, the audio and edit profiles), the cards and the spec, the characters and the run's voice
-    are copied, the paths inside them pointed at the new run; the subjects, the niche, every video's files, the ledger and the CapCut
-    projects are not. The new run asks its niche (and keeps or re-picks the voice and the style reference) at A5."""
+    are copied, the paths inside them pointed at the new run, and so is the narration model the run picked (state.json ->
+    static.tts_model); the subjects, the niche, what each video was (video_info: its approach and language), the language plan, every
+    video's files, the ledger and the CapCut projects are not. The new run asks its niche (and keeps or re-picks the voice, the narration
+    model, the style reference and the language) at A5."""
     src, st = _state_of(a.from_run)
     if st.get("analyze_submode") != "static":
         fail("clone-run copies a Static run's analysis (analyze_submode=static)", 2)
@@ -13391,13 +14462,15 @@ def cmd_clone_run(a):
             f.write_bytes(new.encode("utf-8"))
             rewritten += 1
     s_old = st.get("static") or {}
-    kept = {k: s_old[k] for k in ("format", "effects_folder", "voice", "style_ref") if k in s_old}
+    # kept: the format, the effects folder, the narrator and the narration model (the clone asks again whether to keep it), the style
+    # reference; reset: the niche, the subjects, what each video was (its approach and language) and the language plan
+    kept = {k: s_old[k] for k in ("format", "effects_folder", "voice", "style_ref", "tts_model") if k in s_old}
     nst = {k: st[k] for k in CLONE_STATE_KEEP if k in st}
     nst.update({"run_id": dst.name, "created": now_iso(), "updated": now_iso(), "stage": "analyzed", "next_step": "count",
                 "next_skill": "awl-analyze-study", "requested_videos": None, "videos": [], "notes": [], "submissions": [], "effort": None,
                 "static": kept, "cloned_from": {"run": src.name, "at": now_iso(), "niche": _niche_name(s_old), "kept": sorted(kept),
-                                                "reset": ["niche", "subjects", "videos", "submissions", "briefs", "outputs", "deliverables",
-                                                          "CapCut projects"]}})
+                                                "reset": ["niche", "subjects", "video_info", "language_plan", "videos", "submissions",
+                                                          "briefs", "outputs", "deliverables", "CapCut projects"]}})
     text = json.dumps(nst, ensure_ascii=False)
     for o, n_ in pairs[2:]:
         text = text.replace(o, n_)
@@ -13405,8 +14478,8 @@ def cmd_clone_run(a):
                                                            json.dumps(str(dst).replace("\\", "/"))[1:-1])))
     out({"ok": True, "run_dir": str(dst), "from": str(src), "copied_files": copied, "paths_rewritten_in": rewritten,
          "kept": sorted(kept), "reset": nst["cloned_from"]["reset"], "old_niche": _niche_name(s_old),
-         "next": "A5 of the clone (awl-analyze-study): the new niche (asked), the voice and the style reference kept or picked again, the "
-                 "count; nothing is analysed again"})
+         "next": "A5 of the clone (awl-analyze-study): the new niche (asked), the voice, the narration model and the style reference kept "
+                 "or picked again, the language, the count; nothing is analysed again"})
 
 
 # ---- the optional effects folder (Static; the user, 2026-11-06: "a folder of effects (optional) that can have: sound effects, and green
@@ -14076,6 +15149,8 @@ def _slideshow_plan(a):
         undecided += [f"labels_style: no {k}" for k in LABEL_STYLE_KEYS if k not in lstyle]
     music = rd / "30-assets" / "music" / f"video-{nn}.wav"
     cap = _plan_captions(plan, ftag)
+    linfo = _video_lang(_st, nn, side.get("language"), soft=True)   # the captions follow the video's language (its unit, its capitals)
+    unsp = _unspaced(linfo)
     if ftag:   # the captions' size and band are the canvas's: no value of the first format's carries over to another aspect
         own_cap = _by_format(plan, ftag).get("captions") or {}
         undecided += [f"captions for {ftag}: no {k} (by_format.{ftag}.captions.{k})" for k in ("size", "y_rel") if k not in own_cap]
@@ -14086,7 +15161,10 @@ def _slideshow_plan(a):
           "narration": side["file"], "narration_offset": lead, "duration_s": total,
           "music": {"file": str(music), "gain": float(plan.get("music_gain", _scfg("music.gain", 0.22)))} if music.is_file() and plan.get("music", True) else None,
           "captions": {**cap, "y_rel": float(cap.get("y_rel", _scfg("captions.y_rel", 0.72))), "words": int(cap.get("words", _scfg("captions.words", 3))),
-                       "min_cue_s": float(cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2)))},
+                       "min_cue_s": float(cap.get("min_cue_s", _scfg("captions.min_cue_s", 0.2))), "unit": linfo.get("unit"),
+                       "language": linfo.get("code") or "en",
+                       # a language written without spaces has no words to count: a cue holds this many letters
+                       **({"chars": int(cap.get("chars", _scfg("captions.chars_unspaced", 10)))} if unsp else {})},
           "images": rows, "effects": effects, "made": now_iso(),
           **({"partial_narration": partial, "images_after_narration": beyond, "effects_after_narration": fx_after}
              if partial else {}),
@@ -14098,17 +15176,21 @@ def _slideshow_plan(a):
     except (OSError, ValueError):
         timed_words = []
     try:
-        _tw = _words_in_lines(timed_words, side.get("lines") or []) if timed_words else []
-        cues = ((chunk_words_fill(_tw, tl["captions"]["words"], int(tl["captions"]["min_words"]),
-                                  float(tl["captions"].get("break_gap_s", LONG_PAUSE_S)))
-                 if tl["captions"].get("min_words") else
-                 chunk_words(_tw, tl["captions"]["words"], min_cue=tl["captions"]["min_cue_s"])) if timed_words else
-                json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8")))
+        _tw = _words_in_lines(timed_words, side.get("lines") or [], linfo) if timed_words else []
+        if unsp:   # letters, a cue holds captions.chars of them; the word box's filling (min_words) belongs to languages with words
+            cues = chunk_words(_tw, tl["captions"]["chars"], min_cue=tl["captions"]["min_cue_s"], info=linfo) if timed_words else \
+                json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8"))
+        else:
+            cues = ((chunk_words_fill(_tw, tl["captions"]["words"], int(tl["captions"]["min_words"]),
+                                      float(tl["captions"].get("break_gap_s", LONG_PAUSE_S)))
+                     if tl["captions"].get("min_words") else
+                     chunk_words(_tw, tl["captions"]["words"], min_cue=tl["captions"]["min_cue_s"])) if timed_words else
+                    json.loads((rd / "30-assets" / "narration" / f"video-{nn}.cues.json").read_text(encoding="utf-8")))
     except (OSError, ValueError):
         cues = []
     upper = str(cap.get("case") or "").lower() == "upper"
-    shifted = [{**c, "start": round(c["start"] + lead, 3), "end": round(c["end"] + lead, 3), "text": str(c["text"]).upper() if upper else c["text"]}
-               for c in cues]
+    shifted = [{**c, "start": round(c["start"] + lead, 3), "end": round(c["end"] + lead, 3),
+                "text": _upper_for(c["text"], linfo.get("code")) if upper else c["text"]} for c in cues]
     od = rd / "60-outputs" / f"video-{nn}" / ftag if ftag else rd / "60-outputs" / f"video-{nn}"
     od.mkdir(parents=True, exist_ok=True)
     write_json(od / "captions.json", shifted)
@@ -14121,7 +15203,8 @@ def _slideshow_plan(a):
          "moves_aimed_in_the_first_format": tied,
          "image_spans": [[r["image"], r["start"], r["end"]] for r in rows],
          "shorter_than_0_5s": short, "images_without_a_file": missing_files, "captions": len(shifted), "captions_srt": str(od / "captions.srt"),
-         "captions_over_words": sum(1 for c in shifted if len(str(c["text"]).split()) > tl["captions"]["words"]),
+         "captions_over_words": sum(1 for c in shifted if len(_units(c["text"], linfo)) > (tl["captions"]["chars"] if unsp else tl["captions"]["words"])),
+         "language": {k_: linfo.get(k_) for k_ in ("code", "name", "spaced", "direction", "unit")},
          "moves": [[r["image"], r["motion"], r["scale"], r["x"], r["y"]] for r in rows],
          "edges_show": [r["image"] for r in rows if r.get("edge_shows")],
          "labels": [[r["image"], lb.get("text"), lb.get("x_rel"), lb.get("y_rel")] for r in rows for lb in r.get("labels") or []],
@@ -15121,7 +16204,8 @@ def main():
     p.add_argument("--format", help="Static: an extra format's project (its aspect or tag, e.g. 9:16): the name ends in -<tag>")
     p.set_defaults(fn=cmd_capcut_name)
 
-    p = sp.add_parser("capcut-font", help="Static: --list the fonts on this PC (CapCut's own first) | set one font file on a draft's texts")
+    p = sp.add_parser("capcut-font", help="Static: --list the fonts on this PC (CapCut's own first) | set one font file on a draft's texts "
+                                          "(and list font_missing_glyphs: the characters of those texts the font has no glyph for)")
     p.add_argument("--list", action="store_true", help="list the font files (family, style, file, source)")
     p.add_argument("--family", help="list: only families containing this")
     p.add_argument("--draft", help="the CapCut draft folder"); p.add_argument("--font-file", help="the font file (from --list)")
@@ -15176,13 +16260,15 @@ def main():
     p.set_defaults(fn=cmd_capcut_text_anim)
 
     p = sp.add_parser("capcut-labels", help="Static: the timeline's labels (a place's name on a map) as CapCut texts on the track "
-                                            "'labels' over their images' spans, in the plan's labels_style")
+                                            "'labels' over their images' spans, in the plan's labels_style (lists font_missing_glyphs)")
     p.add_argument("--draft", required=True); p.add_argument("--run", required=True); p.add_argument("--video", required=True)
     p.add_argument("--format", help="an extra format's timeline (40-briefs/video-NN-timeline-<tag>.json; e.g. 9:16)")
     p.set_defaults(fn=cmd_capcut_labels)
 
     p = sp.add_parser("capcut-word-box", help="Static: the captions as one CapCut text per word, the spoken word on the plan's "
-                                              "rounded colour box (captions.word_box), the line centred")
+                                              "rounded colour box (captions.word_box), the line centred; a language written without spaces "
+                                              "or right to left stops it (exit 2, word_box_supported false: the plain caption path); lists "
+                                              "font_missing_glyphs")
     p.add_argument("--draft", required=True); p.add_argument("--run", required=True); p.add_argument("--video", required=True)
     p.add_argument("--format", help="an extra format's timeline and captions")
     p.add_argument("--srt", help="default: 60-outputs/video-NN/[<tag>/]captions.srt (T slideshow plan)")
@@ -15235,19 +16321,49 @@ def main():
 
     p = sp.add_parser("static", help="Static (contract item 36): check (key present, image model answers, FLUX 3 Klein's install and files, TTS "
                                      "and music environments, whisper, ffmpeg filters, capcut-cli) | formats (facts for the format question "
-                                     "at A5) | format (store the pick)")
-    p.add_argument("action", choices=["check", "formats", "format", "lock", "subjects", "context", "profile", "forecast"])
+                                     "at A5) | format (store the pick) | lock (the niche family and the style reference; --reword) | "
+                                     "subjects (each video's approach and language) | language (a language's facts; --plan stores the batch's "
+                                     "languages) | units (a narration's units against its English gloss) | context | profile | forecast")
+    p.add_argument("action", choices=["check", "formats", "format", "lock", "subjects", "language", "units", "context", "profile", "forecast"])
     p.add_argument("--run")
+    p.add_argument("--reword", help="lock: the locked niche's new wording (the same field of content, sharpened; recorded, allowed after "
+                                    "videos exist); needs --why")
+    p.add_argument("--why", help="lock --reword: the reason the wording changes (recorded with it)")
+    p.add_argument("--set", dest="set_video", metavar="NN", help="subjects: edit video NN's approach and language (its language only while "
+                                                                  "30-assets/narration/video-NN.json does not exist)")
+    p.add_argument("--story-form", dest="story_form", help="subjects: the approach's story form: the shape of the telling (counted days, hour "
+                                                           "by hour, a real case retold, a life path, what-happens-if, myth versus fact, a "
+                                                           "step-by-step guide ...) or a story family of the references (F1, F2 ...)")
+    p.add_argument("--angle", help="subjects: what the video shows or argues about its subject (the twist, the one decision, the mechanism)")
+    p.add_argument("--pov", help="subjects: the point of view (second person 'you', third person, 'we', an expert)")
+    p.add_argument("--time-frame", dest="time_frame", help="subjects: the span the video counts (minutes, hours, days, years)")
+    p.add_argument("--scale", help="subjects: one person, a family, a town, a country, a species ...")
+    p.add_argument("--title-form", dest="title_form", help="subjects: a pattern of the references' titles ('How ...', 'Why ...', 'N days ...', "
+                                                            "a 'you' premise, a question)")
+    p.add_argument("--pillar", help="subjects: the sub-topic inside the niche (heat, water, fire ...)")
+    p.add_argument("--series", help="subjects: an optional named recurring form")
+    p.add_argument("--approach-why", dest="approach_why", help="subjects: what the approach rests on (the references' numbers, or the reason)")
+    p.add_argument("--language", help="subjects: the language of the title(s) added in this call (a name or an ISO code of ElevenLabs' list); "
+                                      "language: the language whose facts are printed")
+    p.add_argument("--plan", help="language: the batch's languages \"L1[,L2,...]\" stored before any subject exists (static.language_plan): one "
+                                  "applies to every video of the batch, several to the videos in order; needs --run")
+    p.add_argument("--model-id", dest="model_id", help="language: the model whose list is read (default the run's, else the config's)")
+    p.add_argument("--text", help="language: a text file (a script) whose letters set the scripts and the direction, and whose characters the "
+                                  "--font must have glyphs for")
+    p.add_argument("--srt", help="language: an SRT file (the captions), read as --text is")
+    p.add_argument("--font", help="language: a font file (TTF or OTF) checked against --text or --srt")
     p.add_argument("--refs", help="profile: only these references, e.g. V01,V04 (a family the agent reads apart); default every analysed one")
     p.add_argument("--video", help="forecast: the video, NN")
     p.add_argument("--part", choices=["narration", "images", "music", "all"], default="all", help="forecast: which part (default all)")
     p.add_argument("--from", dest="from_image", type=int, help="forecast --part images: the first image of a stretch")
     p.add_argument("--to", dest="to_image", type=int, help="forecast --part images: the last image of a stretch")
     p.add_argument("--file", help="context: the context file (default: context.txt in the references folder)")
-    p.add_argument("--niche", help="lock: the run's niche, the user's pick (every subject of the run stays in it)")
+    p.add_argument("--niche", help="lock: the run's niche, the user's pick: the FIELD of content every subject of the run stays in (a family "
+                                   "of stories, never a title wording, a story form or a length)")
     p.add_argument("--style-ref", help="lock: the reference whose look the images and the captions keep (V01, V07 ...)")
     p.add_argument("--replace", action="store_true", help="lock: change a set niche or style reference (only before the run's first video)")
-    p.add_argument("--add", action="append", help="subjects: one new subject, repeatable (each gets the next video number)")
+    p.add_argument("--add", action="append", help="subjects: one new subject, repeatable (each gets the next video number; the approach "
+                                                  "fields and --language below are kept for every title added in the call)")
     p.add_argument("--offline", action="store_true", help="check: do not ask the image API whether the model answers")
     p.add_argument("--aspect", help="format: 9:16 | 16:9 | 1:1 | 4:5 | 3:4 | 4:3")
     p.add_argument("--res", type=int, help="format: the export's short side, e.g. 1440, 1080 or 720 (default 1080)")
@@ -15266,7 +16382,8 @@ def main():
     p.set_defaults(fn=cmd_reuse_analysis)
 
     p = sp.add_parser("clone-run", help="Static (contract item 36): a new run with a Static run's analysis copied (inventory, media, cards, "
-                                        "spec, characters, voice); its subjects, niche, videos and ledger are not: the clone asks its niche")
+                                        "spec, characters, voice, the narration model); its subjects, niche, each video's approach and "
+                                        "language, language plan, videos and ledger are not: the clone asks its niche, model and language")
     p.add_argument("--from", dest="from_run", required=True, help="the Static run to clone (a name, a stamp prefix or a path)")
     p.add_argument("--slug", help="the new run's name after the stamp (default: the old one's + -clone)")
     p.set_defaults(fn=cmd_clone_run)
@@ -15331,12 +16448,22 @@ def main():
     p.add_argument("--width", type=int, help="--commons: the width of the PNG rendering (an SVG always comes as a PNG; default 2400)")
     p.set_defaults(fn=cmd_fetch_image)
 
-    p = sp.add_parser("tts", help="Static's voice by ElevenLabs (Eleven v4; contract item 36): check | voices (the account's voices, their "
-                                  "previews measured, free) | design (voice samples) | voice (the run's voice) | probe (one passage made and "
-                                  "measured) | say (a video's narration, by passages placed end to end as delivered) | fit (the voice's point "
-                                  "from a made narration); the key is the user's ELEVEN_API_KEY (or ELEVENLABS_API_KEY); Eleven v4 has no "
-                                  "speed and the delivered audio is never edited: the pace is the voice's, the words' and the audio tags'")
-    p.add_argument("action", choices=["check", "voices", "design", "voice", "probe", "say", "fit", "tempo"]); p.add_argument("--run")
+    p = sp.add_parser("tts", help="Static's voice by ElevenLabs (the model the run picked, Eleven v4 by default; contract item 36): check | "
+                                  "models (ElevenLabs' live model list, a free read, kept in the library) | model (the run's narration "
+                                  "model, picked from that list) | voices (the account's voices, their previews measured, free) | design "
+                                  "(voice samples) | voice (the run's voice) | probe (one passage made and measured) | say (a video's "
+                                  "narration, by passages placed end to end as delivered) | fit (the voice's point from a made narration); "
+                                  "the key is the user's ELEVEN_API_KEY (or ELEVENLABS_API_KEY); Eleven v4 has no speed and the delivered "
+                                  "audio is never edited: the pace is the voice's, the words' and the audio tags'")
+    p.add_argument("action", choices=["check", "models", "model", "voices", "design", "voice", "probe", "say", "fit", "tempo"]); p.add_argument("--run")
+    p.add_argument("--model-id", dest="model_id", help="model: the ElevenLabs model id the user picked from `T tts models` (it must be set up "
+                                                       "in config static.tts.elevenlabs.models); models: also print that model's whole "
+                                                       "language list")
+    p.add_argument("--source", choices=["elevenlabs-mcp", "toolkit-api", "offline"],
+                   help="model: where the list the user chose from came from (the connector's list_models, this toolkit's read, or no list "
+                        "could be read); default toolkit-api when the pick was checked against the list")
+    p.add_argument("--refresh", action="store_true", help="models: ask ElevenLabs again even when the library's copy of the list is "
+                                                          "fresher than config static.tts.elevenlabs.models_fresh_minutes")
     p.add_argument("--tempo", type=float, help="tempo: the speed-up, above 1 and at most config static.narration.tempo_max (pitch and "
                                                "formants kept; only on the user's yes after delivery, --user-ok; static §6, §13 J2)")
     p.add_argument("--why", help="tempo: the request levers tried first and what they measured (the judge's record)")
@@ -15353,7 +16480,8 @@ def main():
     p.add_argument("--search", help="voices: words that must all be in the voice's name, labels or description")
     p.add_argument("--text", help="design: the line every sample speaks (config static.tts.elevenlabs.design_text_chars)")
     p.add_argument("--instruct", action="append", help="design: one voice described in words, repeatable (one sample each)")
-    p.add_argument("--language", help="design, voice, voices: english | spanish | ... (default config static.tts.language)")
+    p.add_argument("--language", help="design, voice, voices: english | spanish | ... (default config static.tts.language); models: mark the "
+                                      "models that list this language (a name or an ISO code of ElevenLabs' list)")
     p.add_argument("--sample", type=int, help="voice: the designed sample the user picked (saved to the account)")
     p.add_argument("--voice-id", help="voice: a voice the account has (premade, saved or added); probe: a candidate voice measured without "
                                       "becoming the run's")
@@ -15379,9 +16507,11 @@ def main():
     p.set_defaults(fn=cmd_tts)
 
     p = sp.add_parser("narration-words", help="Static: a narration's words and times (speech-to-text timing, the script's wording), caption cues, "
-                                              "an SRT, and per line how the heard words differ from the script (facts)")
+                                              "an SRT, and per line how the heard words differ from the script (facts); in the video's "
+                                              "language: letters, not words, for a language written without spaces")
     p.add_argument("--run", required=True); p.add_argument("--video", required=True)
-    p.add_argument("--words", type=int, help="words per caption (default config static.captions.words)")
+    p.add_argument("--words", type=int, help="words per caption (default config static.captions.words); for a language written without "
+                                             "spaces the letters per caption (default config static.captions.chars_unspaced)")
     p.add_argument("--min-match", type=float, default=0.85, help="list the lines whose heard share of their script words is below this")
     p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"))
     p.set_defaults(fn=cmd_narration_words)

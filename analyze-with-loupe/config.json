@@ -221,7 +221,7 @@
       "language": "english",
       "seed": 1105,
       "elevenlabs": {
-        "why": "the user, 2026-11-09: \"we will use elevenlabs\", \"we will only use elevenlabs v4\", and \"no edits should be done from our side on the elevenlabs generation ... do not edit the delivered generation without any exception\". Facts from ElevenLabs' docs read 2026-11-09 (overview/models, the Eleven v4 page, best practices, the text-to-speech API reference, request stitching) and the account's GET /v1/models the same day (eleven_v4: character_cost_multiplier 1.0, maximum_text_length_per_request 10000, can_use_style false, can_use_speaker_boost false)",
+        "why": "the user, 2026-11-09: \"we will use elevenlabs\", \"we will only use elevenlabs v4\" (since 2026-11-11 the model is the user's pick from the live list: \"not always v4, he might use v4 turbo or other\"; the models below are the ones whose facts are recorded, the others are set up from the docs when picked), and \"no edits should be done from our side on the elevenlabs generation ... do not edit the delivered generation without any exception\". Facts from ElevenLabs' docs read 2026-11-09 (overview/models, the Eleven v4 page, best practices, the text-to-speech API reference, request stitching) and the account's GET /v1/models the same day (eleven_v4: character_cost_multiplier 1.0, maximum_text_length_per_request 10000, can_use_style false, can_use_speaker_boost false)",
         "base_url": "https://api.elevenlabs.io",
         "key_env": ["ELEVEN_API_KEY", "ELEVENLABS_API_KEY"],
         "model_id": "eleven_v4",
@@ -238,6 +238,8 @@
         "design_text_chars": [100, 1000],
         "design_description_chars": [20, 1000],
         "design_params": {},
+        "models_fresh_minutes": 10,
+        "models_note": "ElevenLabs' live model list (GET /v1/models, a free read) is kept in the library (runs/.elevenlabs-models.json) by `T tts models`; a copy younger than this many minutes is used as it is, `--refresh` asks again. The user picks the narration model from that list at the start (`T tts model`); a model is usable only when its facts are recorded below (the entry's keys follow eleven_v4's: voice_settings, ranges, defaults, speed, style, ssml_breaks, speaker_boost, audio_tags, stitching, stitch_max_ids, seed, language_code, max_chars, credits_per_character, pace_levers, source), read from ElevenLabs' docs and the live row (static section 6)",
         "models": {
           "eleven_v4": {
             "voice_settings": ["stability", "similarity_boost"],
@@ -256,6 +258,80 @@
             "credits_per_character": 1.0,
             "pace_levers": "the voice (its own pace: the audio it was made from, or its design description), the words and their punctuation (ellipses slow a line down; full stops and dashes give rests), and audio tags in brackets (delivery and pace, e.g. [Building tension, measured pace], [Quick, light, playful pace], [slowly]; pauses [short pause], [pause], [long pause]); tag adherence is not perfect and no tag has a documented length, so each lever is measured on the voice first (T tts probe); passages of different paces may be asked for different parts",
             "source": "elevenlabs.io/docs: overview/models, overview/capabilities/text-to-speech/eleven-v4, .../best-practices, api-reference/text-to-speech/convert and convert-with-timestamps, guides request-stitching; read 2026-11-09"
+          },
+          "eleven_v4_turbo": {
+            "name": "Eleven v4 Turbo",
+            "voice_settings": ["stability", "similarity_boost"],
+            "ranges": {"stability": [0.0, 1.0], "similarity_boost": [0.0, 1.0]},
+            "defaults": {"stability": 0.5, "similarity_boost": 0.75},
+            "speed": false,
+            "style": false,
+            "ssml_breaks": false,
+            "speaker_boost": false,
+            "audio_tags": true,
+            "stitching": "none",
+            "stitch_max_ids": 3,
+            "seed": true,
+            "language_code": true,
+            "max_chars": 10000,
+            "credits_per_character": 0.5,
+            "pace_levers": "audio tags in brackets, as Eleven v4 (with Stability and Similarity the only levers ElevenLabs documents for Turbo by name); the voice's own pace and the words and punctuation as for v4 (the docs' advice is written for v4 and not extended to Turbo by name); each lever is measured on the voice first (T tts probe)",
+            "unverified": [
+              "request stitching: the stitching guide shows Eleven v4 and names only Eleven v3 as unsupported; Turbo is not named, so each passage is sent alone until a probe shows better",
+              "speed and SSML breaks: not found for Turbo (the docs give it v4's two settings: 'Both use Stability and Similarity'); none is sent",
+              "the docs' request limit (the live row's 10000 is used)",
+              "whether the REST text-to-speech endpoint serves it: the models page ties it to the Text to Dialogue websocket while the live row says it makes speech from text; the first probe tells"
+            ],
+            "source": "elevenlabs.io/docs: overview/models, overview/capabilities/text-to-speech/eleven-v4, api-reference/text-to-speech/convert, eleven-api/choosing-the-right-model; the live GET /v1/models row (94 languages, 10000 characters, character_cost_multiplier 0.5); read 2026-11-11"
+          },
+          "eleven_multilingual_v2": {
+            "name": "Eleven Multilingual v2",
+            "voice_settings": ["stability", "similarity_boost", "style", "use_speaker_boost", "speed"],
+            "ranges": {"stability": [0.0, 1.0], "similarity_boost": [0.0, 1.0], "speed": [0.7, 1.2]},
+            "defaults": {"stability": 0.5, "similarity_boost": 0.75, "style": 0.0, "use_speaker_boost": true, "speed": 1.0},
+            "speed": true,
+            "style": true,
+            "ssml_breaks": true,
+            "speaker_boost": true,
+            "audio_tags": false,
+            "stitching": "none",
+            "stitch_max_ids": 3,
+            "seed": true,
+            "language_code": false,
+            "max_chars": 10000,
+            "credits_per_character": 1.0,
+            "pace_levers": "the speed setting (0.7 to 1.2, default 1.0), the style setting, the voice's own pace, and the words and punctuation (dashes and ellipses are less consistent than SSML breaks, which the toolkit does not send: the text is spoken text only); no audio tags, so the narration has no delivery and no tags_after; each lever is measured on the voice first (T tts probe)",
+            "unverified": [
+              "audio tags: the docs name them for Eleven v3 and v4 only, so none is sent",
+              "request stitching: not stated for this model, so each passage is sent alone",
+              "the style setting's range (the docs give none; the default 0 is used)"
+            ],
+            "source": "elevenlabs.io/docs: overview/models, api-reference/text-to-speech/convert (language_code: not supported for multilingual_v2 models), best-practices/prompting/controls, help-center pages on the pace and on pauses; the live GET /v1/models row (29 languages, 10000 characters, can_use_style and can_use_speaker_boost true, character_cost_multiplier 1.0); read 2026-11-11"
+          },
+          "eleven_flash_v2_5": {
+            "name": "Eleven Flash v2.5",
+            "voice_settings": ["stability", "similarity_boost", "speed"],
+            "ranges": {"stability": [0.0, 1.0], "similarity_boost": [0.0, 1.0], "speed": [0.7, 1.2]},
+            "defaults": {"stability": 0.5, "similarity_boost": 0.75, "speed": 1.0},
+            "speed": true,
+            "style": false,
+            "ssml_breaks": true,
+            "speaker_boost": false,
+            "audio_tags": false,
+            "stitching": "none",
+            "stitch_max_ids": 3,
+            "seed": true,
+            "language_code": false,
+            "max_chars": 40000,
+            "credits_per_character": 0.5,
+            "pace_levers": "the speed setting (0.7 to 1.2, default 1.0), the voice's own pace, and the words and punctuation (dashes and ellipses are less consistent than SSML breaks, which the toolkit does not send: the text is spoken text only); no style setting and no audio tags, so the narration has no delivery and no tags_after; each lever is measured on the voice first (T tts probe)",
+            "unverified": [
+              "audio tags: the docs name them for Eleven v3 and v4 only, so none is sent",
+              "request stitching: not stated for this model, so each passage is sent alone",
+              "language_code: the docs do not say whether Flash v2.5 honours it (a code a model does not support is ignored), so none is sent",
+              "text normalisation is weaker than Multilingual v2's (numbers, dates and currencies can be read awkwardly, ElevenLabs' docs): the script writes numbers as the words they are spoken as"
+            ],
+            "source": "elevenlabs.io/docs: overview/models, api-reference/text-to-speech/convert, best-practices/prompting/controls, help-center pages on the pace and on pauses; the live GET /v1/models row (32 languages, 40000 characters, character_cost_multiplier 0.5); read 2026-11-11"
           }
         }
       }
@@ -288,7 +364,9 @@
       "words": 3,
       "y_rel": 0.72,
       "min_cue_s": 0.2,
-      "min_cue_note": "a cue that would be on screen for less than this (a quick 'he' or 'of') takes the next word with it, up to twice the words at once; 0 turns it off; the plan's captions block can set its own"
+      "min_cue_note": "a cue that would be on screen for less than this (a quick 'he' or 'of') takes the next word with it, up to twice the words at once; 0 turns it off; the plan's captions block can set its own",
+      "chars_unspaced": 10,
+      "chars_unspaced_note": "a language written without spaces between words (Japanese, Chinese, Thai, Lao, Khmer, Burmese ...) has no words to count: a caption cue holds this many letters, joined with no space (a cue of 3 English words is about 15 to 20 letters, and a Chinese or Japanese character is about twice as wide as a Latin one); the plan's captions block can set its own as `chars`"
     },
     "render": {
       "size": "720x1280",

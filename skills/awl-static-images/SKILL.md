@@ -13,11 +13,11 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (19.4 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (7.5 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (21.0 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (8.6 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (6.1 KB)
-- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (6.1 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (7.4 KB)
 - *the plan has characters:*
   - anomaly-catalog §2.17: `AWL/reference/anomaly-catalog/200_2.17_identity-the-swapped-face-matche.md` (3.2 KB)
 - *the style lock is illustrated, painted or cartoon:*
@@ -66,8 +66,12 @@ stack a tall frame into panels, above all with no reference image).
    subtitle) and ends on the clean-picture sentence; the answer's `prompt_overlay_words` must be empty, else rewrite the prompt. Every
    image call runs in the foreground (never a background loop: Claude Code ends background commands when memory runs low).
 3. **View the image** (Read the file) and check it (static §8); after the stills, `T image text --run RUN --video NN` lists every line
-   of letters in them (a long line across the bottom third that no sign, page or screen carries is a made-up subtitle: a failure). A
-   failure, by QC fixes: `auto` change the prompt or the references by the
+   of letters in them (a long line across the bottom third that no sign, page or screen carries is a made-up subtitle: a failure).
+   **A video in another language** (`state.json → static.video_info[NN].language`, static §5 "A video in another language"): the prompts
+   stay English; a sign, page or screen that must carry words carries the plan's words in the video's language, quoted in the prompt; the
+   first still with words in it is viewed for letters that are not the plan's (a script the model cannot draw: the surface goes blank and
+   the words become CapCut text, as Labels do); and since `T image text` reads English and Chinese text only, an empty `lines` proves
+   nothing for another script: the bottom third of every still is viewed. A failure, by QC fixes: `auto` change the prompt or the references by the
    diagnosis and draw again (`--again` only when nothing but the draw changes), at most two re-draws per image, then the best one,
    flagged; `ask` the proposal and stop (the contract's QC fixes rule, blocker `qc_fix_permission`); `off` keep it, noted.
 4. `moderation_blocked` (the API): rewrite the prompt (or drop the reference that sets it off) before any new call; refused again: show
@@ -83,8 +87,12 @@ stack a tall frame into panels, above all with no reference image).
 5c. **Labels** (static §5 "Labels"): a map or route whose line names places, once made and viewed (its pins where the places are,
    else a redraw reason by QC fixes): read each label's centre off the picture beside its pin and write it into the image's plan entry
    (`"labels": [{"text", "x_rel", "y_rel"}]`, the motion `none`) and the plan's `labels_style`; the edit places them (`T capcut-labels`).
+   The labels' text is spelled as the narration says it, in the video's language; the label font holds a glyph for every character
+   (`T static language --run RUN --language <code> --font <font_file> --text <a file of the labels' texts>`: `font_missing_glyphs` empty,
+   else another font of `T capcut-font --list`, the reason in the plan, static §5).
 6. **The YouTube thumbnail** (static §12), after the stills: its prompt file `RUN/40-briefs/video-NN-thumb-prompt.txt` (the plan's
-   `thumbnail.prompt`, the style lock, its exact words when it has any), then `T image generate --run RUN --video NN --thumbnail --size
+   `thumbnail.prompt`, the style lock, its exact words when it has any, in the video's language: in a script the model draws badly the
+   thumbnail goes without the words and the record names them, static §12), then `T image generate --run RUN --video NN --thumbnail --size
    <the plan's thumbnail.size> --prompt-file RUN/40-briefs/video-NN-thumb-prompt.txt [--ref <photo or anchor> …]`; view it at full size
    and its `-small.png` (the feed size) and check it as static §8 says; re-draws by QC fixes as in step 3; another attempt:
    `T image use --run RUN --video NN --thumbnail --attempt M`. The one in use is in `RUN/deliverables/video-NN-thumbnail.png`.

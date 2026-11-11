@@ -97,7 +97,10 @@ videos only (their numbers from `T static subjects`); the videos already in `sta
 ### A9b. Produce in parallel (production agents)
 
 - **Static runs:** the contract is production-agents §2s's (`T contract` picks it); the agents never load Higgsfield tools; a QC-fix
-  proposal is about image re-draws, with the cost from `cost_usd_estimate`.
+  proposal is about image re-draws, with the cost from `cost_usd_estimate`. Each spawn message also names the video's own approach and
+  language, read from `state.json → static.video_info` (`T static subjects --run RUN`): the approach's story form, angle, point of view,
+  time frame, title form and pillar, and the language's name, ISO code, unit and whether the run's narration model lists it (the
+  contract's "One channel" rule refers to them, static §10).
   **A long video** (more than about 40 stills in its plan, e.g. a 12-minute video at 5 s a still holds about 144): its stills are split
   across image agents, each a stretch of about 30–40 in plan order (spawn message `Video NN, images K1-K2: S3 only`; the one with the
   last stretch also makes the thumbnail, `… and the thumbnail`): with the API all at once within the agents-at-once count; with FLUX 3

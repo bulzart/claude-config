@@ -45,9 +45,10 @@ references' title patterns the spec counts (§2), so a run's titles are not all 
 language's own unit (about the same content: words, or characters for a language written without spaces) and never over YouTube's 100
 characters. **In the video's language** (§6): the title, and the thumbnail's `text` when it has words, are written natively in the
 language the video is spoken in, not translated from English; the plan keeps `"title_gloss"` (the English reading) and the thumbnail
-`text`'s reading in `why`. A thumbnail word is drawn by the image model only in a script it draws reliably, else it is CapCut text (§5
-"Labels") on the clean picture; the font covers every character of the words (`T static language --language L --font <file> --text
-<file>`). The thumbnail follows the thumbnails'
+`text`'s reading in `why`. A thumbnail word is drawn by the image model only in a script it draws reliably (viewed letter by letter,
+below); in one it draws badly the thumbnail is made without the words, its picture carrying the hook, and the README names the words
+for the user to put on it (a thumbnail is a picture file, not a CapCut project: no label tool reaches it, and a misdrawn word is never
+delivered). The thumbnail follows the thumbnails'
 pattern, in the run's style lock (§10: the same look as the video's stills), with its subject's most legible moment (the face and the
 feeling, the object, the contrast the hook opens); words on it only when the references' thumbnails carry words, as few as they use,
 spelled out exactly in `text` and in the prompt; nothing religious or superstitious (§11), nothing indecent, gory or distressing

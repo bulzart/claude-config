@@ -1,7 +1,7 @@
 ## 9 The Static PC (setup, once per PC)
 
 Static runs where ACE-Step 1.5 (the bed under every video) is installed, FLUX 3 Klein when the images are made on the PC, and with the
-ElevenLabs key set (the narration is ElevenLabs' Eleven v4: nothing of it runs on this PC). `T static check` reports each part; a part
+ElevenLabs key set (the narration is ElevenLabs', in the model the user picks: nothing of it runs on this PC). `T static check` reports each part; a part
 a run needs and does not have is a blocker, reported at the start (never asked); music alone is not: without it the user is told at the
 start and the videos go without a bed.
 - **The pipeline**: `git pull` of the `~/.claude` repository, as on any PC.
@@ -33,13 +33,26 @@ start and the videos go without a bed.
   = the clone's folder. Its models (about 10 GB) download on first use.
 - **OpenAI** (only for images by the API): the user environment variable `OPENAI_API_KEY`; the organisation may need verifying for image
   models. The key is never typed into the chat, printed or written to a run.
-- **ElevenLabs** (the narration of every Static video; the user, 2026-11-09: "we will only use elevenlabs v4"): an API key of the user's
+- **ElevenLabs** (the narration of every Static video, in the run's narration model: Eleven v4 unless the user picks another, §6 "The
+  models"; the user, 2026-11-11: "not always v4, he might use v4 turbo or other"): an API key of the user's
   ElevenLabs account, set once by the user as the user environment variable `ELEVEN_API_KEY` (the toolkit also reads `ELEVENLABS_API_KEY`;
   Windows: Settings, "Edit environment variables for your account", or in their own PowerShell window
   `[Environment]::SetEnvironmentVariable('ELEVEN_API_KEY', '<key>', 'User')`). The toolkit reads a variable set after Claude Code started
   from the stored environment, so no restart is needed; the key is never typed into the chat, printed or written to a run. `T tts check`
-  gives the facts: which variable holds the key, the plan, its characters used and left, whether it may clone, and what Eleven v4 honours
-  (`config.json → static.tts.elevenlabs`). The plan sets what is possible (ElevenLabs' docs and pricing, read 2026-11-09): Eleven v4 bills
+  gives the facts: which variable holds the key, the plan, its characters used and left, whether it may clone, and what the run's model
+  honours (`config.json → static.tts.elevenlabs`). **The live model list** is the first source of the models and languages the user
+  is offered (§6 "The models", "The language of a video"): the ElevenLabs MCP's `list_models` (the `mcp__elevenlabs__list_models` tool,
+  loaded with ToolSearch like the voiceover's tools), and, when it does not answer, `T tts models` (the same `GET /v1/models` through the
+  key above, free). On this PC the `elevenlabs` MCP server (the local one started with `uvx`, whose tools are `mcp__elevenlabs__…`; not
+  the claude.ai ElevenLabs connector) failed `list_models` on 2026-11-11 with "[SSL: CERTIFICATE_VERIFY_FAILED] … unable to get local
+  issuer certificate" (the antivirus's web shield re-signs the traffic with its own root and that server's HTTP client trusts only
+  certifi's public roots) and, behind that, with `401 invalid_api_key` for the old key its entry held. The user had it fixed that day: its
+  entry in their `~/.claude.json` now has `ELEVENLABS_API_KEY` = `${ELEVEN_API_KEY}` (Claude Code fills it from its own environment: the
+  key the toolkit uses) and `SSL_CERT_FILE` = `C:\Users\Bulzart\AppData\Local\elevenlabs-mcp\ca-bundle.pem` (certifi's roots plus the
+  shield's root; `make-ca-bundle.ps1` beside it builds it again, e.g. after a reinstall of the antivirus); a server that was running
+  before such a change is started again with `/mcp`, Reconnect. Whenever the MCP still does not answer, `T tts models` does (the
+  toolkit's own call trusts the Windows store). The pipeline never edits that configuration. The plan sets what is
+  possible (ElevenLabs' docs and pricing, read 2026-11-09): Eleven v4 bills
   one credit a character; the Free plan has 10,000 a month, no voice cloning, no 44.1 kHz PCM (it gets MP3 at 128 kbps) and no commercial
   licence ("commercial usage rights are only available with paid plans"); 192 kbps MP3 needs Creator, 44.1 kHz PCM needs Pro. The
   Qwen3-TTS environments and models were removed from this PC on 2026-11-09; no local voice model is used.

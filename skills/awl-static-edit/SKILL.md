@@ -13,8 +13,8 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (8.8 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (7.5 KB)
+- static §7: `AWL/reference/static/070_7_the-edit-s4.md` (10.6 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (8.6 KB)
 - capcut-assembly §1: `AWL/reference/capcut-assembly/010_1_tools-and-rules.md` (3.3 KB)
 - capcut-assembly §2: `AWL/reference/capcut-assembly/020_2_create-the-project.md` (0.8 KB)
 - capcut-assembly §4: `AWL/reference/capcut-assembly/050_4_after-every-save-capcut-cli.md` (3.2 KB)
@@ -55,6 +55,13 @@ Only these section files for this phase, nothing else unless a step below says s
      track above the stills, each sound on an audio track, by the ways the CapCut effects check verified). Its `refused` must be empty: a
      refused effect needs something this PC's CapCut was not shown to play; plan that moment without it (static §5), `T slideshow plan`
      again, and run this again on a fresh clone (never write an effect by hand with the MCP or capcut-cli);
+   - **a video in another language** (`state.json → static.video_info[NN].language`, static §7 "Captions in another language"), before
+     the captions and the labels: `T static language --run RUN --language <code> --font <the look's font_file> --text
+     RUN/60-outputs/video-NN/captions.srt` (and again with the labels' texts): `font_missing_glyphs` must be empty, else another file of
+     `T capcut-font --list` that holds them replaces the font for those texts (the reason in the plan and the brief); a language
+     written without spaces (`spaced: false`) or from right to left (`direction: rtl`) takes no `word_box` (`T capcut-word-box` stops
+     with `word_box_supported: false`): its captions are the plain `capcut import-srt` look below with `highlight_words` left empty,
+     named in the brief;
    - the captions in the references' look (static §7; the timeline's `captions` block): `capcut import-srt "<draft>"
      "RUN/60-outputs/video-NN/captions.srt" --font-size <size> --color <fill> --border-width <stroke_width> --border-color <stroke_color>
      --align 1 --y <1 − 2 × y_rel>` (plus `--shadow`, `--bg-color`/`--bg-alpha`, `--highlight-words … --keyword-color … --keyword-size …`
@@ -78,7 +85,9 @@ Only these section files for this phase, nothing else unless a step below says s
    position, intro). The repair's lint with no `media-unlinked` and its link step's `media_without_entry` empty.
 5. The video's brief, block S4: the timeline's facts (`T slideshow plan`'s answer: images, spans, moves, joins, captions, effects), the
    project's name, path and export size (the final: the user exports it from CapCut at that size, 30 fps), what the checks read back,
-   and anything left to set by hand in CapCut.
+   and anything left to set by hand in CapCut. For a video in another language also its language and unit, the font the captions and
+   labels use and why (any `font_missing_glyphs` and the replacement), whether the word box was placed or the plain caption look
+   took its place and why, and that how CapCut shapes the script (a right-to-left or joined one) was not seen: nothing here renders it.
 6. **Each extra format** (static §2b), after the primary's project: steps 1, 3, 4 and 5 again with `--format <tag>` on every command
    that takes it. First its own values in the plan, read off its stills: `by_format.<tag>.captions` (`size`, `y_rel`; set at S3), the
    labels' places, and an aim of its own for each image `T slideshow plan --format <tag>` lists in `moves_aimed_in_the_first_format`

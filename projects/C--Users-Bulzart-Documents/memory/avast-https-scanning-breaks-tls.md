@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 6df6fb40-e7ad-4b91-b765-6c6c020da849
-  modified: 2026-11-05T12:18:05.595Z
+  modified: 2026-11-11T09:55:25.427Z
 ---
 
 Avast "Web/Mail Shield" HTTPS scanning is on (verified 2026-11-05): every HTTPS cert (github.com, pypi.org, download.pytorch.org, huggingface.co) is issued by "CN=Avast Web/Mail Shield Root". Tools with their own CA bundle fail with `invalid peer certificate: UnknownIssuer` / SSL verify errors. git, PowerShell Invoke-RestMethod, curl.exe and winget work (Windows store).
@@ -20,6 +20,7 @@ Avast "Web/Mail Shield" HTTPS scanning is on (verified 2026-11-05): every HTTPS 
 - Node and Claude Code already trust Avast's root: Avast sets `NODE_EXTRA_CA_CERTS=C:\ProgramData\Avast Software\Avast\wscert.pem` itself.
 - **Broken replies (found 2026-11-05):** for some Cloudflare-fronted servers Avast hands back `transfer-encoding: chunked` with a body that is not chunked. Claude Code (Bun) reports `InvalidHTTPResponse`, Node `HPE_INVALID_CHUNK_SIZE`. This breaks the Higgsfield MCP (`mcp.higgsfield.ai`, OAuth discovery) and the plugin HTTP MCP servers. The claude.ai connectors (through Anthropic's proxy) and api.anthropic.com (Content-Length replies) work. No client-side fix: the user must exclude these sites from HTTPS scanning or turn it off (their call). Test afterwards with `claude mcp get higgsfield`.
 - **`SSLKEYLOGFILE`:** Avast injects `SSLKEYLOGFILE=\\.\aswMonFltProxy\<id>` into every process. uv's Python 3.14 (the one `uvx elevenlabs-mcp` gets) aborts with `OPENSSL_Uplink(...,08): no OPENSSL_Applink` as soon as it makes a TLS context. The 3.11 venvs and python.org 3.12 are fine. Fix per server: env `SSLKEYLOGFILE=""`. Note: `python -I` hides the crash (it ignores the variable).
+- **elevenlabs MCP (fixed 2026-11-11 at the user's request):** the server (`uvx elevenlabs-mcp`, Python 3.14, httpx + certifi) trusts only certifi's roots, so the instance Claude Code started failed `list_models` with `[SSL: CERTIFICATE_VERIFY_FAILED] ... unable to get local issuer certificate` (Avast re-signs; a copy of the server I started from a script sometimes got a genuine chain: interception varies by process), and its old key (ending 6c5167) was rejected, `401 invalid_api_key`. Fix in `~/.claude.json`, `mcpServers.elevenlabs.env`: `SSL_CERT_FILE=C:\Users\Bulzart\AppData\Local\elevenlabs-mcp\ca-bundle.pem` (certifi's roots + Avast's `wscert.pem`; `make-ca-bundle.ps1` beside it rebuilds it; `wscert.pem` alone would fail whenever Avast does not re-sign) and `ELEVENLABS_API_KEY=${ELEVEN_API_KEY}` (Claude Code fills it from its environment: the pipeline's key). A running server keeps its old env: `/mcp`, Reconnect (or restart Claude Code). Test without Claude Code: spawn the server as the config says, send MCP `initialize`, then `tools/call list_models`; never print the key.
 - Don't change the user's Avast settings yourself; disabling HTTPS scanning is their call.
 
 Related: [[local-ai-installs]]

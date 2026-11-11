@@ -1,5 +1,5 @@
 ---
-description: Analyze a folder of reference material (or take videos to edit), learn what makes it work, then generate new vertical 9:16 720p videos through Higgsfield MCP with model-specific prompting — one video at a time; or (Static) narrated still-image videos from OpenAI images, FLUX 3 Klein images made on this PC or yours, an ElevenLabs Eleven v4 voice and CapCut, without Higgsfield.
+description: Analyze a folder of reference material (or take videos to edit), learn what makes it work, then generate new vertical 9:16 720p videos through Higgsfield MCP with model-specific prompting — one video at a time; or (Static) narrated still-image videos from OpenAI images, FLUX 3 Klein images made on this PC or yours, an ElevenLabs voice (the model you pick, in the language you pick for each video) and CapCut, without Higgsfield.
 argument-hint: "analyze <references-folder> assets <asset files/folders…> [examples <folder>] | edit <video files/folders…> [examples <folder>] | resume [run-dir] | more <static run> [N] | clone <static run>"
 disable-model-invocation: true
 disallowed-tools:

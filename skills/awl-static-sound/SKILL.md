@@ -13,13 +13,15 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (21.6 KB)
-- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (7.5 KB)
-- static §13: `AWL/reference/static/130_13_the-judge.md` (15.9 KB)
+- static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (29.8 KB)
+- static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (8.6 KB)
+- static §13: `AWL/reference/static/130_13_the-judge.md` (17.6 KB)
 
 The main session runs S2 for every video, one at a time, before any production agent starts (`awl-analyze-produce` A9s). The narration
-is ElevenLabs' Eleven v4 in the run's voice (`state.json → static.voice`, static §6): nothing of it runs on this PC, every passage is
-billed at one credit a character, and the delivered audio is not edited (the user, 2026-11-09: "do not edit the delivered generation
+is ElevenLabs' in the run's voice (`state.json → static.voice`) and the run's narration model (`state.json → static.tts_model`: Eleven v4
+unless the user picked another, static §6 "The models"), in each video's own language (`state.json → static.video_info`, static §6
+"The language of a video"): nothing of it runs on this PC, every passage is billed at the model's credits a character (one on Eleven v4),
+and the delivered audio is not edited (the user, 2026-11-09: "do not edit the delivered generation
 without any exception") but for the two exceptions the user then allowed (static §6 "The rule"): one gain only when its loudness sits
 outside the references', and a capped speed-up made only on the user's yes after they have seen the delivered project.
 
@@ -30,7 +32,13 @@ outside the references', and a capped speed-up made only on the user's yes after
    delivered), its sidecar (each line's start and end, each passage's request, the loudness as read) and the passages in
    `RUN/30-assets/narration/video-NN/`. It makes only the passages not yet made with their present text; a passage-1 probe made exactly
    as `say` would make it is used as passage 1 (nothing paid twice); `--only N` makes again the passages holding those lines, `--again`
-   all of them, `--rejoin` none. **The pace** (static §6 "The pace", §13): the narration JSON's `pace` carries the judge's point (J1) and
+   all of them, `--rejoin` none. The requests are the run's model's: `T tts say` refuses a tag, a setting or a pace key the model's
+   record says it lacks before anything is billed. **A language the model does not list** (`official: false` in `T static language`,
+   or a model or language with no measured point yet): the first passage is made as a probe (`T tts probe --run RUN --video NN`, billed
+   for that passage only, which `say` then keeps as passage 1), read by `T narration-words` against its script, and the rest is made
+   only when the heard words match; a text the model cannot speak is a blocker reported with the numbers (the user picks another
+   language or model), never asked mid-run. **The pace** (static §6 "The pace", §13): the narration JSON's `pace` carries the judge's point (J1; in the
+   language's own unit, `T static units`) and
    its levers (the voice, `delivery`, `voice_settings`, the words) were measured on the probe; the answer's `pace.on_target` and
    `pace.within` are the facts for J2 (below): a narration off its point is never shipped unexplained. The answer's `level` is the
    loudness rule's (static §6: as delivered inside the references' range, else one gain toward their median within -1 dBTP). A partial
@@ -38,10 +46,12 @@ outside the references', and a capped speed-up made only on the user's yes after
    Run it in the foreground; it may run past ten minutes and continue in the background on its own, which is fine once started.
    **Passages** (static §6): read `voice_match`; a passage whose timbre sits far from the others (`passages_below`) is made again
    (`--only <one of its lines>`, billed), at most twice, by the run's QC fixes, noted.
-2. `T narration-words --run RUN --video NN` (its `pace` is the second reading of the pace, against the same bands) → the timed words, `video-NN.cues.json`, `video-NN.srt` (as many words at once as the image
-   plan's `captions.words`; a word that would be on screen under `captions.min_cue_s`, 0.2 s, takes the next word with it; no cue
-   overlaps the next), and per line what was heard against the script; numbers are compared apart (speech-to-text writes a spoken
-   "seventeen sixty-nine" as "1769"): each line's `numbers` gives the script's and the heard ones to compare by ear. Judge every line it
+2. `T narration-words --run RUN --video NN` (its `pace` is the second reading of the pace, against the same bands; it reads the speech in the
+   video's language, with that language's own Whisper code) → the timed words, `video-NN.cues.json`, `video-NN.srt` (as many words at once as the image
+   plan's `captions.words`, or `captions.chars` characters for a language written without spaces; a word that would be on screen under `captions.min_cue_s`, 0.2 s, takes the next word with it; no cue
+   overlaps the next), and per line what was heard against the script; numbers are compared apart in English (speech-to-text writes a
+   spoken "seventeen sixty-nine" as "1769"): each line's `numbers` gives the script's and the heard ones to compare by ear (in another
+   language `numbers.compared` is false: its spoken numbers are read from the heard text itself). Judge every line it
    lists (`lines_to_check`) from its missing, extra and repeated words and its numbers: a wrong line (a missing or repeated word, a tag
    spoken aloud, another speaker) is made again with its passage: `T tts say --run RUN --video NN --only N` (billed: the passage's
    characters), then `narration-words` again; at most twice per line, then it stays and the brief notes it (with QC fixes `off` nothing
@@ -92,8 +102,11 @@ An ElevenLabs error is reported with its real text (the key never shown). Narrat
 
 - Never change the run's voice between videos or make a passage in another voice (a strong line is the run's voice with its own
   delivery tags, static §6).
-- Never call ElevenLabs for a Static narration except through `T tts` (never the ElevenLabs MCP or connector for it), never Higgsfield,
-  and never print, echo or write `ELEVEN_API_KEY` or `ELEVENLABS_API_KEY`.
+- Never call ElevenLabs for a Static narration except through `T tts` (never the ElevenLabs MCP or connector for it: the MCP's
+  `list_models` is only the read of the live model and language lists, static §6), never Higgsfield, and never print, echo or write
+  `ELEVEN_API_KEY` or `ELEVENLABS_API_KEY`.
+- Never change the run's narration model between videos of a run on the agent's own call: the model is the run's (the user's pick at the
+  start, or at a clone), like the voice.
 - Never edit the delivered narration (the user, 2026-11-09): no stretch, trim, cut, compressor, loudness pass, fade or added silence.
   Its pace, pauses and length come from the request (the voice, the settings, the words, the audio tags; static §6); a length that is
   off is a script rewritten and its passages made again. The only two changes allowed (the user, 2026-11-09) are the level rule's one

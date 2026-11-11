@@ -85,8 +85,10 @@ repeated from an agent's provisional reading (the agent's own word; the tool pri
 
 Offer, in one line, the next useful step (more videos, a different direction, regenerate a flagged
 video). Static (static §10, §12): the table also names each video's YouTube title and its thumbnail (full paths:
-`deliverables/video-NN-title.txt`, `deliverables/video-NN-thumbnail.png`), and the offer names the two ways on: more videos of this
-channel's niche (`/analyze-with-loupe more <RUN>`) or a clone of the analysis for another niche (`/analyze-with-loupe clone <RUN>`). With QC fixes `off` (item 27) the feedback question is the review: say first, in one line, that no video was checked. Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header
+`deliverables/video-NN-title.txt`, `deliverables/video-NN-thumbnail.png`), each with its approach (story form, point of view, time frame,
+title form) and its language, and the offer names the two ways on: more videos of this channel's niche (`/analyze-with-loupe more <RUN>`:
+the language of each new video is asked, and the subjects come with their approaches) or a clone of the analysis for another niche
+(`/analyze-with-loupe clone <RUN>`: the niche, the narration model and the language are asked again). With QC fixes `off` (item 27) the feedback question is the review: say first, in one line, that no video was checked. Then, once every video is delivered, **ask for feedback** with AskUserQuestion (header
 "Feedback"), "Watch the videos: is any of them not right?": **"All good"**; **"I'll watch them
 later"** (any later message about them is handled as item 22 says); **"Some need fixes"** → ask in plain
 chat which video and what is wrong, disliked or illogical. "Other" lets the user type it
@@ -97,8 +99,12 @@ references do not hold, add one line offering to write the rule into the section
 ### 6b. Upscale the finals with Topaz (after the user's approval, both modes)
 **Not in Static** (item 36: no Higgsfield). A Static wrap-up reports, in place of credits and flags, the OpenAI cost estimate (the sum of
 the videos' `result.json → static.cost_usd_estimate`; 0 when FLUX 3 Klein made them on this PC), the images' source and re-draws, the
-narration's ElevenLabs characters (each `30-assets/narration/video-NN.json → characters`, one credit a character on Eleven v4, and the
-account's characters left by `T tts check`), a partial narration with the line it stops at, and every narration passage made again.
+narration's ElevenLabs characters (each `30-assets/narration/video-NN.json → characters`, at the run's model's credits per character, one
+on Eleven v4, and the account's characters left by `T tts check`), a partial narration with the line it stops at, and every narration
+passage made again. For each video in another language, or the first in a language of the run: its language, unit and narration model,
+and **"pronunciation: not checked, listen"** whenever the language is outside the model's own list (`official` false) or is the run's
+first video in it (static §8: nothing here hears the voice); the captions' look (the word box placed, or the plain look and why, static
+§7), any font replaced for missing glyphs, and that how CapCut shapes a right-to-left or joined script was not seen.
 It also gives each narration's pace against its point (static §6, §13 J2: the measured words a minute while speaking and overall, the
 point, the niche's and the family's numbers beside it) and, when the request levers left it off the point, the speed-up that would close
 it (at most `config static.narration.tempo_max`, 1.05). The user looks at the project in CapCut first; the speed-up is asked with
