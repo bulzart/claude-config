@@ -382,6 +382,21 @@
       "sheet_rows": 10,
       "jobs": 4,
       "note": "The optional effects folder (the user, 2026-11-06: sound effects, green-screen transitions, overlays): `T effects scan` measures every file once (cached in runs/_effects-cache by path, size and time) at scan_fps on a scan_width copy, and draws contact sheets of sheet_frames frames per file, sheet_rows files per sheet. Facts only: what each effect is used for, where and how loud is the plan's (reference/static section 5)."
+    },
+    "drawings": {
+      "ssaa": 2,
+      "codec_order": ["qtrle", "png-mov", "prores4444"],
+      "preview_points": [0.3, 0.65, 1.0],
+      "grid_step": 0.1,
+      "grid_long_side_px": 1280,
+      "boil_seed": 1105,
+      "notes": "Drawings over a still (the user, 2026-11-11: \"the agents editing the video should also to be able to draw, and animate too, like combining flux klein image + drawing or animation along with other edit capabilities ... (those width, height... lines are drawn and animated frame by frame)\"). `T draw render` draws the plan's images[K].drawings with Pillow at ssaa times the canvas, reduces them and pipes the frames to ffmpeg as a transparent clip the canvas's size, in the first codec of codec_order the CapCut effects check lists as playing; three previews at preview_points (shares of the animated span) and a sheet; boil is seeded from boil_seed, so the same spec renders the same frames. `T draw grid` draws gridlines every grid_step of the canvas on the still at grid_long_side_px. No look value lives here: every colour, width, dash, easing, timing and place is the agent's, in the plan."
+    },
+    "fonts": {
+      "open_licences": ["OFL-1.1", "Apache-2.0"],
+      "max_mb": 5,
+      "subset_order": ["latin", "latin-ext", "cyrillic", "cyrillic-ext", "greek", "greek-ext", "vietnamese", "devanagari"],
+      "note": "Extra fonts (the user, 2026-11-11: \"add a permission for the agents to download extra fonts on capcut if the available ones do not seem a good match for the video\"): `T fetch-font` takes a font from Fontsource (its API's licence and subsets) or a URL with its licence named, only under open_licences (fonts/README.md: every font here is under the SIL Open Font License 1.1 or the Apache License 2.0), at most max_mb, into the library's fonts folder with its README row; with a text the subsets are tried in subset_order. Which font suits a video is the agent's reading."
     }
   }
 }

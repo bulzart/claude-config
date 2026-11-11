@@ -89,6 +89,9 @@ Subcommands (python awl.py <cmd> -h):
   clone-run      Static: a new run with a Static run's analysis copied (inventory, media, cards, spec, characters, voice, the narration
                  model); its niche, subjects, each video's approach and language, language plan, videos and ledger are not (the clone
                  asks its niche, model and language)
+  fetch-font     Static: an extra open font (the user, 2026-11-11: the agents may download one when the listed fonts do not suit a
+                 video) from Fontsource (--family) or a URL with its licence named, licence-gated (config static.fonts), into the
+                 library's fonts folder with its fonts/README.md row; never over an existing file
   image          Static stills: generate (OpenAI Images API with the key only from OPENAI_API_KEY, or FLUX 3 Klein on this PC with
                  static_images=klein; ledgered) | prompts (the file a user makes them from) | intake (the user's folder, copied in) | use
                  (which attempt the edit takes)
@@ -100,7 +103,11 @@ Subcommands (python awl.py <cmd> -h):
                  language: letters, not words, for a language written without spaces)
   music          Static bed under every video (ACE-Step 1.5 in its own environment): check | make | measure (the bed alone and under
                  the narration as CapCut plays it: a voice in it, its level, the narration's words with it)
-  slideshow      Static: plan (timeline from the image plan and the narration) | render (clean and captioned preview mp4)
+  slideshow      Static: plan (timeline from the image plan and the narration; the plan's rendered drawings merged into its
+                 effects on the draw tracks) | render (clean and captioned preview mp4)
+  draw           Static drawings over a still (the user, 2026-11-11: "draw, and animate too"): grid (the still with labelled
+                 gridlines in canvas shares; --crop a magnified part) | words (an image's heard words and their seconds) | render
+                 (the plan's images[K].drawings as transparent canvas-size clips + sidecar + previews; --spec standalone) | list
   effects        Static: the optional effects folder as facts (scan: sounds, overlays, keying, contact sheets)
   capcut-effects Static: the timeline's overlays and sounds into the CapCut project, by the ways the CapCut effects check verified
 
@@ -6567,7 +6574,8 @@ def cmd_capcut_repair(a):
     out(res, 0 if ok else 1)
 
 
-FONTS_DIR = Path(__file__).resolve().parent.parent / "fonts"
+# the library's fonts folder; AWL_FONTS_DIR points the tests at a temp copy (T fetch-font writes there, capcut-font --list reads it)
+FONTS_DIR = Path(os.environ.get("AWL_FONTS_DIR") or (Path(__file__).resolve().parent.parent / "fonts"))
 # where a font file lives decides whether a project keeps finding it (2026-11-07: CapCut's own fonts sit in its version folder, which an
 # update replaces, and the fonts it downloads sit in its cache, which it may clear: a project then shows its texts in the default font)
 FONT_KEPT_BY = {"library": "this library's fonts folder: kept across CapCut updates and cache clears",
@@ -7566,7 +7574,7 @@ def cmd_capcut_effects(a):
     prep = (rd / "30-assets" / "effects" / f"video-{_cf_nn(a.video)}") if rd and a.video else d / "fx-prepared"
     items, refused = [], []
     pro_ok = _capcut_pro_ok(rd)
-    for e in sorted(fxs, key=lambda e: (e["type"] != "overlay", str(e.get("track")), e["start"])):
+    for e in sorted(fxs, key=lambda e: (e["type"] != "overlay", bool(e.get("drawing")), str(e.get("track")), e["start"])):
         e = {**e, "_facts": scan.get(str(e.get("id"))) or {}}
         method, why_not = _fx_method(e, ver, pro_ok)
         if method is None:
@@ -10498,6 +10506,213 @@ def cmd_fetch_image(a):
     write_json(dst.with_suffix(dst.suffix + ".source.json"), meta)
     out({"ok": True, **meta, "note": "view it; a logo goes into the stills with `T image brand`, a photo rides with an anchor's sheet "
                                      "(`T image generate --anchor C1 --ref <photo>`); the source and licence are recorded beside the file"})
+
+
+# ---- extra fonts (the user, 2026-11-11: "add a permission for the agents to download extra fonts on capcut if the available ones do not
+# seem a good match for the video"): an open font fetched into the library's fonts folder, its licence gated by config static.fonts,
+# its row written into fonts/README.md. Which font suits a video is the agent's reading; the toolkit fetches, checks and records.
+
+FONT_WEIGHT_NAMES = {100: "Thin", 200: "ExtraLight", 300: "Light", 400: "Regular", 500: "Medium", 600: "SemiBold", 700: "Bold",
+                     800: "ExtraBold", 900: "Black"}
+FONT_MAGIC = (b"\x00\x01\x00\x00", b"OTTO", b"true", b"ttcf")
+FONT_README_HEAD = "| file | family | licence | source | subset | for run |"
+
+
+def _fcfg(key: str, default=None):
+    return _scfg(f"fonts.{key}", default)
+
+
+def _http_get_capped(url: str, cap: int, timeout: float = 60.0) -> bytes:
+    """A download of at most cap bytes (one more is read to tell a larger file); ValueError past the cap."""
+    import urllib.request
+    try:
+        import truststore  # this PC's antivirus re-signs TLS: the Windows store holds its root
+        truststore.inject_into_ssl()
+    except Exception:  # noqa: BLE001
+        pass
+    import urllib.error
+    req = urllib.request.Request(url, headers={"User-Agent": FETCH_UA})
+    for i in range(3):   # a connection reset (this PC's security software resets some) is tried again; an HTTP answer is not
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = r.read(cap + 1)
+            break
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, ConnectionError, TimeoutError):
+            if i == 2:
+                raise
+            time.sleep(0.5)
+    if len(data) > cap:
+        raise ValueError(f"larger than config static.fonts.max_mb ({cap / 1048576:.1f} MB)")
+    return data
+
+
+def _font_file_check(data: bytes, tmp: Path) -> tuple:
+    """(glyphs, error): the bytes are a TrueType or OpenType font (its magic) whose cmap _font_glyphs reads; tmp holds them meanwhile."""
+    if data[:4] not in FONT_MAGIC:
+        return None, "not a TrueType or OpenType font file (its first bytes are " + repr(data[:4]) + ")"
+    tmp.write_bytes(data)
+    try:
+        return _font_glyphs(tmp), None
+    except (OSError, ValueError, struct.error) as e:
+        return None, f"its glyph table cannot be read ({type(e).__name__}: {e})"[:200]
+
+
+def _font_readme_row(fdir: Path, row: list, why: str) -> str:
+    """The font's row in fonts/README.md under that day's '## Downloaded (YYYY-MM-DD): ...' section of fetched fonts (made the first
+    time, before the closing 'Not here:' paragraph), the file's own LF line endings kept. Returns the row written."""
+    p = fdir / "README.md"
+    text = p.read_bytes().decode("utf-8") if p.is_file() else "# fonts\n"
+    lines = text.split("\n")
+    day = dt.date.today().isoformat()
+    line_row = "| " + " | ".join(str(x).replace("|", "/") for x in row) + " |"
+    head_i = next((i for i, ln in enumerate(lines) if ln.startswith(f"## Downloaded ({day})")
+                   and FONT_README_HEAD in lines[i + 1:i + 6]), None)
+    if head_i is not None:
+        j = lines.index(FONT_README_HEAD, head_i) + 2
+        while j < len(lines) and lines[j].startswith("|"):
+            j += 1
+        lines.insert(j, line_row)
+    else:
+        sec = [f"## Downloaded ({day}): {why or 'extra fonts for a video'}", "",
+               "Fetched with `T fetch-font` (the user, 2026-11-11: the agents may download a font when no listed one suits a video); "
+               "open licences only (config static.fonts.open_licences).", "", FONT_README_HEAD, "|---|---|---|---|---|---|", line_row, ""]
+        k = next((i for i, ln in enumerate(lines) if ln.startswith("Not here:")), None)
+        if k is None:
+            while lines and lines[-1] == "":
+                lines.pop()
+            lines += [""] + sec
+        else:
+            lines[k:k] = sec
+    out_t = "\n".join(lines)
+    if not out_t.endswith("\n"):
+        out_t += "\n"
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_bytes(out_t.encode("utf-8"))
+    _replace(tmp, p)
+    return line_row
+
+
+def cmd_fetch_font(a):
+    """An open font from Fontsource (--family, its API's licence and subsets) or from a URL with its licence named (--url --licence
+    --licence-source, recorded as claimed) into the library's fonts folder: the licence passes config static.fonts.open_licences or nothing
+    is fetched (exit 2); the file is at most static.fonts.max_mb, a TrueType or OpenType font whose glyphs can be read, never written over
+    an existing file (that one is kept and reported); with --text the subsets are tried in config static.fonts.subset_order and the first
+    whose file has every character is taken (else the one missing the fewest, listed). Its row goes into fonts/README.md. Facts only."""
+    import tempfile
+    import urllib.error
+    family = str(a.family or "").strip()
+    if not family:
+        fail("fetch-font needs --family (the font's family name, e.g. \"Caveat Brush\")", 2)
+    open_l = [str(x) for x in (_fcfg("open_licences") or ["OFL-1.1", "Apache-2.0"])]
+    cap = int(float(_fcfg("max_mb", 5)) * 1048576)
+    weight = int(a.weight or 400)
+    style = str(a.style or "normal").lower()
+    text = None
+    if a.text:
+        try:
+            text = Path(a.text).read_text(encoding="utf-8")
+        except OSError as e:
+            fail(f"cannot read --text {a.text}: {e}", 2)
+    fdir = FONTS_DIR
+    fdir.mkdir(parents=True, exist_ok=True)
+    meta, tried, cands = {}, [], []
+    if a.url:
+        if not a.licence or not a.licence_source:
+            fail("fetch-font --url needs --licence (its SPDX id, e.g. OFL-1.1) and --licence-source (the page that states it)", 2)
+        lic, lic_src, lic_how = str(a.licence).strip(), str(a.licence_source).strip(), "claimed"
+        if lic.lower() not in {x.lower() for x in open_l}:
+            fail(f"the licence {lic} is not an open licence of config static.fonts.open_licences ({', '.join(open_l)}): nothing fetched "
+                 "(fonts/README.md: every font here is under the SIL Open Font License 1.1 or the Apache License 2.0)", 2, licence=lic)
+        cands = [(a.subset or None, str(a.url))]
+        fid = slugify(family, 80)
+    else:
+        fid = re.sub(r"[^a-z0-9]+", "-", family.lower()).strip("-")
+        api = (os.environ.get("AWL_FONTSOURCE_API") or "https://api.fontsource.org/v1").rstrip("/")
+        cdn = (os.environ.get("AWL_FONTSOURCE_CDN") or "https://cdn.jsdelivr.net/fontsource/fonts").rstrip("/")
+        murl = f"{api}/fonts/{fid}"
+        try:
+            meta = json.loads(_http_get_capped(murl, 4 * 1048576, 30).decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            fail(f"Fontsource has no font {fid!r} (HTTP {e.code} from {murl}): check the family's name", 2)
+        except Exception as e:  # noqa: BLE001
+            fail(f"Fontsource did not answer ({murl}): {type(e).__name__}: {e}"[:300], 1)
+        lic = meta.get("license")
+        lic = str((lic.get("type") or lic.get("id")) if isinstance(lic, dict) else lic or "").strip()
+        lic_src, lic_how = murl, "Fontsource's metadata"
+        if lic.lower() not in {x.lower() for x in open_l}:
+            fail(f"{meta.get('family') or family} is under {lic or 'no stated licence'}, not an open licence of config static.fonts.open_licences "
+                 f"({', '.join(open_l)}): nothing fetched (fonts/README.md: every font here is under the SIL Open Font License 1.1 or the "
+                 "Apache License 2.0)", 2, licence=lic or None)
+        family = str(meta.get("family") or family)
+        weights = [int(w) for w in meta.get("weights") or []]
+        styles = [str(s) for s in meta.get("styles") or []]
+        subsets = [str(s) for s in meta.get("subsets") or []]
+        if weights and weight not in weights:
+            fail(f"{family} has no weight {weight}: its weights are {weights}", 2)
+        if styles and style not in styles:
+            fail(f"{family} has no style {style}: its styles are {styles}", 2)
+        if a.subset:
+            if subsets and a.subset not in subsets:
+                fail(f"{family} has no subset {a.subset}: its subsets are {subsets}", 2)
+            order = [a.subset]
+        elif text:
+            pref = [s for s in (_fcfg("subset_order") or ["latin", "latin-ext", "cyrillic", "cyrillic-ext", "greek", "greek-ext",
+                                                           "vietnamese", "devanagari"]) if s in subsets]
+            order = pref + [s for s in subsets if s not in pref]
+        else:
+            order = ["latin"] if "latin" in subsets or not subsets else [str(meta.get("defSubset") or subsets[0])]
+        cands = [(s, f"{cdn}/{fid}@latest/{s}-{weight}-{style}.ttf") for s in order]
+    best = None
+    with tempfile.TemporaryDirectory() as td:
+        for k, (sub, url) in enumerate(cands):
+            try:
+                data = _http_get_capped(url, cap, 60)
+            except ValueError as e:
+                fail(f"the font file is {e}: nothing written", 2, url=url)
+            except Exception as e:  # noqa: BLE001
+                tried.append({"subset": sub, "url": url, "error": f"{type(e).__name__}: {e}"[:200]})
+                continue
+            glyphs, err = _font_file_check(data, Path(td) / f"cand-{k}.ttf")
+            if err:
+                tried.append({"subset": sub, "url": url, "error": err})
+                continue
+            miss = sorted({c for c in (text or "") if not c.isspace() and unicodedata.category(c) not in ("Cc", "Cf", "Cs")
+                           and ord(c) not in glyphs}) if text else []
+            tried.append({"subset": sub, "url": url, "bytes": len(data), "font_missing_glyphs": miss if text else None})
+            if best is None or len(miss) < len(best[3]):
+                best = (sub, url, data, miss)
+            if not miss:
+                break
+    if best is None:
+        bad = next((x for x in tried if "error" in x and "font" in x["error"]), None)
+        fail(("the file is " + bad["error"] + ": refused, nothing written") if bad else "no font file could be fetched", 2 if bad else 1, tried=tried)
+    sub, url, data, miss = best
+    wname = FONT_WEIGHT_NAMES.get(weight, str(weight)) + ("Italic" if style == "italic" else "")
+    fname = f"{re.sub(r'[^A-Za-z0-9]+', '', family)}-{wname}" + (f"-{sub}" if sub and sub != "latin" else "") + ".ttf"
+    dst = fdir / fname
+    kept = dst.is_file()
+    row = None
+    if not kept:
+        tmp = dst.with_name(dst.name + ".tmp")
+        tmp.write_bytes(data)
+        _replace(tmp, dst)
+        rn = Path(a.run).name if getattr(a, "run", None) else "-"
+        row = _font_readme_row(fdir, [fname, f"{family} {weight}" + (" italic" if style == "italic" else ""),
+                                      lic + (" (claimed)" if lic_how == "claimed" else ""), url, sub or "-", rn], a.why)
+    listed = next((f for f in _font_files() if Path(f["file"]).resolve() == dst.resolve()), None)
+    others = [s for s in (meta.get("subsets") or []) if s != sub]
+    out({"ok": True, "file": str(dst), "family": family, "weight": weight, "style": style, "licence": lic, "licence_source": lic_src,
+         "licence_from": lic_how, "category": meta.get("category"), "variable": meta.get("variable"), "subset": sub,
+         "subsets_available": others, "url": url, "bytes": dst.stat().st_size if kept else len(data), "kept": kept,
+         **({"font_missing_glyphs": miss, "font_covers": not miss} if text else {}), "tried": tried, "readme_row": row,
+         "listed_by_capcut_font": bool(listed and listed.get("source") == "library"), "listed_as": listed,
+         "why": a.why, "run": getattr(a, "run", None),
+         "note": "kept: a file of that name was already in the fonts folder (it is never written over; nothing fetched replaced it). "
+                 "Fontsource's subset files are split by Unicode ranges: a text that mixes basic Latin with latin-ext letters (or "
+                 "another script) can need letters no single subset file holds; font_missing_glyphs lists them, and the agent picks "
+                 "another font or the subset. Then point the plan's captions or labels (or a drawing's font_file) at the file"})
 
 
 def cmd_image(a):
@@ -14961,6 +15176,8 @@ def _fx_resolve(rd: Path, plan: dict, rows: list, starts: dict, lead: float, tot
         r = {"n": n, "type": typ, "file": str(path), "id": f.get("id"), "kind": kind, "moment_s": round(moment, 6), "start": start,
              "end": round(end, 6), "in_s": round(in_s, 6), "dur_s": round(end - start, 6), "head_cut_s": round(head, 6),
              "why": e.get("why")}
+        if e.get("drawing"):   # a drawing's clip (T draw render, merged by T slideshow plan): its own track prefix
+            r.update({"drawing": str(e["drawing"]), "image": e.get("image")})
         if not e.get("why"):
             undecided.append(f"{tag}: no why (the reason, from the references' joins and hits)")
         if typ == "overlay":
@@ -14988,9 +15205,11 @@ def _fx_resolve(rd: Path, plan: dict, rows: list, starts: dict, lead: float, tot
             r.update({"volume": float(e.get("volume") or 0.0), "fade_in_s": float(e.get("fade_in_s") or 0.0),
                       "fade_out_s": float(e.get("fade_out_s") or 0.0), "file_duration_s": file_dur, "has_audio": True})
         res.append(r)
-    for typ, prefix in (("overlay", "fx"), ("sfx", "sfx")):   # overlapping effects of a kind go on separate tracks, in start order
+    # overlapping effects of a kind go on separate tracks, in start order; a drawing's clip is an overlay of its own kind (draw1, draw2
+    # ...), so an effect overlay and a drawing never share a track name
+    for typ, prefix, drawn in (("overlay", "fx", False), ("overlay", DRAW_TRACK, True), ("sfx", "sfx", False)):
         ends = []
-        for r in sorted((x for x in res if x["type"] == typ), key=lambda x: x["start"]):
+        for r in sorted((x for x in res if x["type"] == typ and bool(x.get("drawing")) == drawn), key=lambda x: x["start"]):
             k = next((i for i, e_ in enumerate(ends) if e_ <= r["start"] + 1e-6), None)
             if k is None:
                 ends.append(r["end"])
@@ -15061,6 +15280,1340 @@ def _fx_render_chain(fx: list, base: str, first_input: int, W: int, H: int, fps:
     return lines, cur
 
 
+# ---- drawings: animated annotations over a still (the user, 2026-11-11: "the agents editing the video should also to be able to draw,
+# and animate too, like combining flux klein image + drawing or animation along with other edit capabilities ... (those width,
+# height... lines are drawn and animated frame by frame)"). A drawing is one transparent clip the canvas's size, rendered here with
+# Pillow from the plan's `images[K].drawings` (lines, arrows, ellipses, rects, polygons, text; their in / out animations and boil) and
+# placed in CapCut by the overlay path the effects check verified (`T slideshow plan` merges it into the timeline's effects). The
+# renderer draws exactly what the agent specified and prints facts; every colour, width, dash, timing and place is the agent's.
+
+DRAW_TYPES = ("line", "arrow", "ellipse", "rect", "polygon", "text")
+DRAW_SHAPES = ("ellipse", "rect", "polygon")
+DRAW_IN_KINDS = ("draw", "wipe", "fade", "grow", "pop", "type", "none")
+DRAW_OUT_KINDS = ("fade", "wipe", "none")
+DRAW_EASES = ("linear", "in", "out", "inout")
+DRAW_FROM = {"draw": ("start", "end"), "wipe": ("left", "right", "top", "bottom", "center")}
+DRAW_MARKS = ("open", "filled", "bar", "dot")
+DRAW_CAPS = ("round", "butt")
+DRAW_ALIGN = {"left": "ls", "center": "ms", "right": "rs"}
+# the scripts Pillow draws right without a shaping engine (letters that neither join nor reorder); any other is refused (a CapCut label)
+DRAW_TEXT_SCRIPTS = {"Latin", "Cyrillic", "Greek", "Armenian", "Georgian", "Han", "Hiragana", "Katakana", "Hangul", "Bopomofo"}
+DRAW_RENDERER = 1           # in the spec hash: a change to how a frame is drawn makes every clip stale
+DRAW_TRACK = "draw"         # the CapCut track prefix of the drawings (draw1, draw2 ...), apart from the effect overlays' fx
+DRAW_POP_PEAK = 1.12        # pop: grow to this, then settle at 1 (the contract's kind, not a look value)
+DRAW_MARK_ANGLE = 28.0      # an open or filled arrow head's half angle in degrees
+_DRAW_COLOR = re.compile(r"#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")
+
+
+def _dcfg(key: str, default=None):
+    return _scfg(f"drawings.{key}", default)
+
+
+def _draw_num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(float(v))
+
+
+def _draw_rgba(c, alpha=1.0) -> tuple:
+    """#RRGGBB or #RRGGBBAA as an RGBA tuple, its alpha times `alpha`."""
+    c = str(c).lstrip("#")
+    a = int(c[6:8], 16) if len(c) == 8 else 255
+    return (int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16), int(round(a * max(0.0, min(1.0, float(alpha))))))
+
+
+def _draw_ease(p: float, ease) -> float:
+    """The contract's cubic eases: in t^3, out 1-(1-t)^3, inout a smoothstep-like cubic; linear as it is."""
+    p = max(0.0, min(1.0, float(p)))
+    if ease == "in":
+        return p ** 3
+    if ease == "out":
+        return 1 - (1 - p) ** 3
+    if ease == "inout":
+        return 4 * p ** 3 if p < 0.5 else 1 - (-2 * p + 2) ** 3 / 2
+    return p
+
+
+def _draw_parse_wh(v) -> tuple:
+    m = re.fullmatch(r"\s*(\d+)\s*[xX×]\s*(\d+)\s*", str(v or ""))
+    if not m or int(m.group(1)) < 16 or int(m.group(2)) < 16:
+        return None
+    return int(m.group(1)), int(m.group(2))
+
+
+def _draw_validate(d, standalone: bool = False) -> dict:
+    """A drawing spec checked against the contract: {"undecided": [{drawing, element, field, need}] (a required field the agent left
+    out), "invalid": [...] (an unknown type, kind or ease, a colour that is not #RRGGBB(AA), dur_s <= 0, start_s < 0, a kind on a type
+    it does not apply to, a font file that is not there, an id used twice), "text_refused": [...] (a script that needs shaping),
+    "outside": [...] (coordinates outside 0..1: allowed, listed)}. Nothing is filled in: a missing value is listed, never chosen.
+    standalone (T draw render --spec): start_s and why are not needed (no image, no plan)."""
+    und, bad, refused, outside = [], [], [], []
+    if not isinstance(d, dict):
+        return {"undecided": [], "invalid": [{"drawing": None, "element": None, "field": None, "need": "a drawing object"}],
+                "text_refused": [], "outside": []}
+    did = d.get("id")
+
+    def U(i, f, need):
+        und.append({"drawing": did, "element": i, "field": f, "need": need})
+
+    def B(i, f, need):
+        bad.append({"drawing": did, "element": i, "field": f, "need": need})
+
+    def colour(i, f, v, nullable=True):
+        if v is None:
+            return nullable
+        if not isinstance(v, str) or not _DRAW_COLOR.match(v):
+            B(i, f, f"a colour #RRGGBB or #RRGGBBAA, not {v!r}")
+            return False
+        return True
+
+    def share(i, f, v, lo=0.0, hi=1.0, req=True, above=False):
+        if v is None:
+            if req:
+                U(i, f, f"a number {lo}..{hi}" if hi is not None else ("a number above 0" if above else f"a number >= {lo}"))
+            return False
+        if not _draw_num(v) or (above and float(v) <= 0) or (not above and float(v) < lo) or (hi is not None and float(v) > hi):
+            B(i, f, (f"a number {lo}..{hi}" if hi is not None else ("a number above 0" if above else f"a number >= {lo}")) + f", not {v!r}")
+            return False
+        return True
+
+    def point(i, f, p):
+        if not (isinstance(p, (list, tuple)) and len(p) == 2 and all(_draw_num(x) for x in p)):
+            B(i, f, f"[x, y] as shares of the canvas, not {p!r}")
+            return False
+        if not all(0.0 <= float(x) <= 1.0 for x in p):
+            outside.append({"drawing": did, "element": i, "field": f, "value": [float(p[0]), float(p[1])]})
+        return True
+
+    if not did:
+        U(None, "id", '"D" + a number, unique in the video')
+    elif not re.fullmatch(r"D\d+", str(did)):
+        B(None, "id", f'"D" + a number, not {did!r}')
+    if not standalone:
+        if d.get("start_s") is None:
+            U(None, "start_s", "seconds from the image's start")
+        else:
+            share(None, "start_s", d.get("start_s"), 0.0, None)
+        if not str(d.get("why") or "").strip():
+            U(None, "why", "the narration's point it elaborates and what it rests on (the references' device, numbers) or the agent's reason")
+    if d.get("dur_s") is None:
+        U(None, "dur_s", "the clip's length in seconds")
+    else:
+        share(None, "dur_s", d.get("dur_s"), 0.0, None, above=True)
+    els = d.get("elements")
+    if not isinstance(els, list) or not els:
+        U(None, "elements", "a list of lines, arrows, ellipses, rects, polygons or texts")
+        els = []
+    for n, e in enumerate(els, 1):
+        if not isinstance(e, dict):
+            B(n, None, "an element object")
+            continue
+        t = e.get("type")
+        if t is None:
+            U(n, "type", " | ".join(DRAW_TYPES))
+        elif t not in DRAW_TYPES:
+            B(n, "type", " | ".join(DRAW_TYPES) + f", not {t!r}")
+            t = None
+        if t in ("line", "arrow", "polygon"):
+            need = 3 if t == "polygon" else 2
+            pts = e.get("points")
+            if pts is None:
+                U(n, "points", f"{need} or more [x, y]")
+            elif not isinstance(pts, list) or len(pts) < need:
+                B(n, "points", f"{need} or more [x, y]")
+            else:
+                for j, p in enumerate(pts):
+                    point(n, f"points[{j}]", p)
+            if e.get("smooth") is not None:
+                share(n, "smooth", e.get("smooth"))
+        if t in ("ellipse", "rect"):
+            bx = e.get("box")
+            if bx is None:
+                U(n, "box", "[x0, y0, x1, y1] as shares of the canvas")
+            elif not (isinstance(bx, (list, tuple)) and len(bx) == 4 and all(_draw_num(x) for x in bx)) or bx[2] <= bx[0] or bx[3] <= bx[1]:
+                B(n, "box", f"[x0, y0, x1, y1] with x1 > x0 and y1 > y0, not {bx!r}")
+            else:
+                point(n, "box[0:2]", bx[:2])
+                point(n, "box[2:4]", bx[2:])
+            if t == "rect" and e.get("radius") is not None:
+                share(n, "radius", e.get("radius"), 0.0, None)
+        if t in ("line", "arrow"):
+            if e.get("stroke") is None:
+                U(n, "stroke", "a colour #RRGGBB(AA): a line is its stroke")
+            else:
+                colour(n, "stroke", e["stroke"])
+            if e.get("width") is None:
+                U(n, "width", "the stroke's width, a share of the canvas's short side")
+            else:
+                share(n, "width", e.get("width"), 0.0, None, above=True)
+            for mk in ("head", "tail"):
+                m = e.get(mk)
+                if mk == "head" and t == "arrow" and m is None:
+                    U(n, "head", '{"size": share of the short side, "style": open | filled | bar | dot}')
+                    continue
+                if m is None:
+                    continue
+                if not isinstance(m, dict):
+                    B(n, mk, '{"size", "style"}')
+                    continue
+                if m.get("size") is None:
+                    U(n, f"{mk}.size", "a share of the canvas's short side")
+                else:
+                    share(n, f"{mk}.size", m.get("size"), 0.0, None, above=True)
+                if m.get("style") is None:
+                    U(n, f"{mk}.style", " | ".join(DRAW_MARKS))
+                elif m.get("style") not in DRAW_MARKS:
+                    B(n, f"{mk}.style", " | ".join(DRAW_MARKS) + f", not {m.get('style')!r}")
+        if t in DRAW_SHAPES:
+            for k_ in ("stroke", "fill"):
+                if k_ not in e:
+                    U(n, k_, "a colour #RRGGBB(AA) or null")
+            colour(n, "stroke", e.get("stroke"))
+            colour(n, "fill", e.get("fill"))
+            if "stroke" in e and "fill" in e and e.get("stroke") is None and e.get("fill") is None:
+                B(n, "stroke", "a stroke or a fill (both are null)")
+            if e.get("stroke") is not None:
+                if e.get("width") is None:
+                    U(n, "width", "the stroke's width, a share of the canvas's short side")
+                else:
+                    share(n, "width", e.get("width"), 0.0, None, above=True)
+            if e.get("fill_alpha") is not None:
+                share(n, "fill_alpha", e.get("fill_alpha"))
+        if t in ("line", "arrow") or t in DRAW_SHAPES:
+            ds = e.get("dash")
+            if ds is not None and not (isinstance(ds, (list, tuple)) and len(ds) == 2 and all(_draw_num(x) and float(x) > 0 for x in ds)):
+                B(n, "dash", f"[on, off] as shares of the short side (both above 0) or null, not {ds!r}")
+            if e.get("cap") is not None and e.get("cap") not in DRAW_CAPS:
+                B(n, "cap", " | ".join(DRAW_CAPS) + f", not {e.get('cap')!r}")
+        if t == "text":
+            tx = e.get("text")
+            if not isinstance(tx, str) or not tx.strip():
+                U(n, "text", "the words drawn")
+            if e.get("at") is None:
+                U(n, "at", "[x, y]: the baseline's start, centre or end (align)")
+            else:
+                point(n, "at", e.get("at"))
+            if e.get("align") is None:
+                U(n, "align", " | ".join(DRAW_ALIGN))
+            elif e.get("align") not in DRAW_ALIGN:
+                B(n, "align", " | ".join(DRAW_ALIGN) + f", not {e.get('align')!r}")
+            if not e.get("font_file"):
+                U(n, "font_file", "a font file of `T capcut-font --list`")
+            elif not Path(str(e["font_file"])).is_file():
+                B(n, "font_file", f"a font file that exists, not {e['font_file']!r}")
+            if e.get("size") is None:
+                U(n, "size", "the text's size, a share of the canvas's short side")
+            else:
+                share(n, "size", e.get("size"), 0.0, None, above=True)
+            if e.get("fill") is None:
+                U(n, "fill", "the text's colour #RRGGBB(AA)")
+            else:
+                colour(n, "fill", e.get("fill"))
+            if e.get("stroke_color") is not None:
+                colour(n, "stroke_color", e.get("stroke_color"))
+                if e.get("stroke_width") is None:
+                    U(n, "stroke_width", "the outline's width, a share of the short side")
+                else:
+                    share(n, "stroke_width", e.get("stroke_width"), 0.0, None)
+            if isinstance(tx, str) and tx.strip():
+                sc = _script_counts(tx)
+                other = sorted(s for s in sc if s not in DRAW_TEXT_SCRIPTS)
+                if other:
+                    rtl = [s for s in other if s in RTL_SCRIPTS]
+                    refused.append({"drawing": did, "element": n, "scripts": other,
+                                    "reason": ("written right to left with joined letters" if rtl else "its letters are shaped (joined, "
+                                               "reordered or stacked)") + ": the renderer has no shaping engine; the words go in as "
+                                               "CapCut label text (T capcut-labels, static §5)"})
+        if e.get("alpha") is not None:
+            share(n, "alpha", e.get("alpha"))
+        ti = e.get("in")
+        if not isinstance(ti, dict):
+            U(n, "in", '{"kind", "start_s", "dur_s", "ease", "from"}')
+        else:
+            k = ti.get("kind")
+            if k is None:
+                U(n, "in.kind", " | ".join(DRAW_IN_KINDS))
+            elif k not in DRAW_IN_KINDS:
+                B(n, "in.kind", " | ".join(DRAW_IN_KINDS) + f", not {k!r}")
+                k = None
+            if k == "draw" and t == "text":
+                B(n, "in.kind", "draw is for a stroke (line, arrow, ellipse, rect, polygon): a text appears by type, fade, wipe, grow or pop")
+            if k == "type" and t not in (None, "text"):
+                B(n, "in.kind", "type is for a text")
+            if ti.get("start_s") is None:
+                U(n, "in.start_s", "seconds from the drawing's start")
+            else:
+                share(n, "in.start_s", ti.get("start_s"), 0.0, None)
+            if ti.get("ease") is not None and ti.get("ease") not in DRAW_EASES:
+                B(n, "in.ease", " | ".join(DRAW_EASES) + f", not {ti.get('ease')!r}")
+            if k not in (None, "none"):
+                if ti.get("dur_s") is None:
+                    U(n, "in.dur_s", "seconds")
+                else:
+                    share(n, "in.dur_s", ti.get("dur_s"), 0.0, None, above=True)
+                if ti.get("ease") is None:
+                    U(n, "in.ease", " | ".join(DRAW_EASES))
+            if k in DRAW_FROM:
+                if ti.get("from") is None:
+                    U(n, "in.from", " | ".join(DRAW_FROM[k]))
+                elif ti.get("from") not in DRAW_FROM[k]:
+                    B(n, "in.from", " | ".join(DRAW_FROM[k]) + f", not {ti.get('from')!r}")
+        to = e.get("out")
+        if to is not None:
+            if not isinstance(to, dict):
+                B(n, "out", '{"kind", "start_s", "dur_s", "ease"} or null')
+            else:
+                k = to.get("kind")
+                if k is None:
+                    U(n, "out.kind", " | ".join(DRAW_OUT_KINDS))
+                elif k not in DRAW_OUT_KINDS:
+                    B(n, "out.kind", " | ".join(DRAW_OUT_KINDS) + f", not {k!r}")
+                    k = None
+                if to.get("start_s") is None:
+                    U(n, "out.start_s", "seconds from the drawing's start")
+                else:
+                    share(n, "out.start_s", to.get("start_s"), 0.0, None)
+                if to.get("ease") is not None and to.get("ease") not in DRAW_EASES:
+                    B(n, "out.ease", " | ".join(DRAW_EASES) + f", not {to.get('ease')!r}")
+                if k not in (None, "none"):
+                    if to.get("dur_s") is None:
+                        U(n, "out.dur_s", "seconds")
+                    else:
+                        share(n, "out.dur_s", to.get("dur_s"), 0.0, None, above=True)
+                    if to.get("ease") is None:
+                        U(n, "out.ease", " | ".join(DRAW_EASES))
+                if k == "wipe":
+                    if to.get("from") is None:
+                        U(n, "out.from", " | ".join(DRAW_FROM["wipe"]))
+                    elif to.get("from") not in DRAW_FROM["wipe"]:
+                        B(n, "out.from", " | ".join(DRAW_FROM["wipe"]) + f", not {to.get('from')!r}")
+        bo = e.get("boil")
+        if bo is not None:
+            if not isinstance(bo, dict):
+                B(n, "boil", '{"amount", "every"} or null')
+            else:
+                if bo.get("amount") is None:
+                    U(n, "boil.amount", "a share of the short side")
+                else:
+                    share(n, "boil.amount", bo.get("amount"), 0.0, None)
+                ev = bo.get("every")
+                if ev is None:
+                    U(n, "boil.every", "frames between new displacements (1 or more)")
+                elif not (isinstance(ev, int) and not isinstance(ev, bool) and ev >= 1):
+                    B(n, "boil.every", f"a whole number of frames >= 1, not {ev!r}")
+    return {"undecided": und, "invalid": bad, "text_refused": refused, "outside": outside}
+
+
+def _draw_fonts_of(d) -> list:
+    rows = []
+    for e in (d.get("elements") or []) if isinstance(d, dict) else []:
+        if isinstance(e, dict) and e.get("type") == "text" and e.get("font_file"):
+            p = Path(str(e["font_file"]))
+            try:
+                s = p.stat()
+                rows.append([str(p).replace("\\", "/"), s.st_size, s.st_mtime_ns])
+            except OSError:
+                rows.append([str(p).replace("\\", "/"), None, None])
+    return sorted(rows)
+
+
+def _draw_hash(d, W: int, H: int, fps: int, codec: str) -> str:
+    """The clip's spec hash: sha256 of the drawing's spec (its start_s and why move or explain the clip and change no pixel, so they
+    are left out), the canvas, the fps, the codec, the font files' sizes and times, the supersampling, the boil seed and the renderer's
+    version. A clip is reused while its sidecar holds this hash."""
+    spec = {k: v for k, v in (d or {}).items() if k not in ("start_s", "why")} if isinstance(d, dict) else d
+    payload = {"spec": spec, "canvas": [int(W), int(H)], "fps": int(fps), "codec": codec, "fonts": _draw_fonts_of(d),
+               "ssaa": int(_dcfg("ssaa", 2)), "boil_seed": int(_dcfg("boil_seed", 1105)), "renderer": DRAW_RENDERER}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def _draw_codec() -> tuple:
+    """(codec, note): the first codec of config static.drawings.codec_order that the CapCut effects check lists as playing
+    (data/capcut-catalogue.json -> effects: alpha_video.codecs, alpha_<codec>.plays); when it lists none, the first of the order and a
+    note that says so."""
+    order = [c for c in (_dcfg("codec_order") or ["qtrle", "png-mov", "prores4444"]) if c in FX_ALPHA_CODECS] or ["qtrle"]
+    ver = _fx_catalogue()
+    av = ver.get("alpha_video") or {}
+    plays = set(av.get("codecs") or []) if av.get("plays") else set()
+    plays |= {c for c in FX_ALPHA_CODECS if (ver.get(f"alpha_{c}") or {}).get("plays")}
+    for c in order:
+        if c in plays:
+            return c, None
+    return order[0], ("the CapCut catalogue lists no alpha codec CapCut plays (data/capcut-catalogue.json -> effects; the CapCut effects "
+                      f"check, static §9): {order[0]}, the first of config static.drawings.codec_order, is not verified on this PC")
+
+
+def _draw_boil_offsets(seed: int, did, idx: int, group: int, k: int, amount_px: float):
+    """k displacement vectors, each at most amount_px long (uniform in the disc), the same for the same (seed, drawing id, element
+    index, frame group): the boil is deterministic."""
+    import numpy as np
+    h = hashlib.sha256(f"{int(seed)}|{did}|{int(idx)}|{int(group)}".encode()).digest()
+    rng = np.random.default_rng(int.from_bytes(h[:8], "big"))
+    ang = rng.uniform(0, 2 * math.pi, k)
+    rad = float(amount_px) * np.sqrt(rng.uniform(0, 1, k))
+    return np.stack([rad * np.cos(ang), rad * np.sin(ang)], axis=1)
+
+
+def _draw_path(pts, smooth: float, closed: bool, step: float):
+    """Points sampled about every `step` px along straight segments (smooth 0) or a Catmull-Rom curve through the points (smooth 1),
+    in between for a share; a closed path ends on its first point."""
+    import numpy as np
+    P = np.asarray(pts, float)
+    n = len(P)
+    segs = n if closed else n - 1
+    out_ = []
+    for i in range(segs):
+        p1, p2 = P[i], P[(i + 1) % n]
+        p0 = P[(i - 1) % n] if closed else P[max(i - 1, 0)]
+        p3 = P[(i + 2) % n] if closed else P[min(i + 2, n - 1)]
+        m = max(2, int(math.ceil(float(np.hypot(*(p2 - p1))) / max(0.5, step))))
+        tt = np.linspace(0.0, 1.0, m, endpoint=False)[:, None]
+        seg = p1 + (p2 - p1) * tt
+        if smooth > 0:
+            cr = 0.5 * (2 * p1 + (-p0 + p2) * tt + (2 * p0 - 5 * p1 + 4 * p2 - p3) * tt ** 2 + (-p0 + 3 * p1 - 3 * p2 + p3) * tt ** 3)
+            seg = seg + float(smooth) * (cr - seg)
+        out_.append(seg)
+    out_.append(P[0:1] if closed else P[-1:])
+    return np.vstack(out_)
+
+
+def _draw_rect_pts(x0, y0, x1, y1, r):
+    """A rect's outline from its top-left corner (after the radius) clockwise, its corners rounded by r."""
+    r = max(0.0, min(r, (x1 - x0) / 2, (y1 - y0) / 2))
+    if r <= 0:
+        return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+    pts = []
+    for cx, cy, a0 in ((x1 - r, y0 + r, -90), (x1 - r, y1 - r, 0), (x0 + r, y1 - r, 90), (x0 + r, y0 + r, 180)):
+        for j in range(13):
+            a = math.radians(a0 + 90 * j / 12)
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
+
+
+def _draw_paste(fr, lay, ox, oy) -> None:
+    """A layer composited onto the frame at (ox, oy), the parts outside the frame cut off."""
+    W, H = fr.size
+    x0, y0 = int(round(ox)), int(round(oy))
+    cx0, cy0 = max(0, -x0), max(0, -y0)
+    cx1, cy1 = min(lay.width, W - x0), min(lay.height, H - y0)
+    if cx1 <= cx0 or cy1 <= cy0:
+        return
+    if (cx0, cy0, cx1, cy1) != (0, 0, lay.width, lay.height):
+        lay = lay.crop((cx0, cy0, cx1, cy1))
+    fr.alpha_composite(lay, dest=(x0 + cx0, y0 + cy0))
+
+
+def _draw_units(text: str) -> list:
+    """The end index of each character a `type` shows in turn: a letter with the combining marks that follow it is one."""
+    ends = []
+    for i, c in enumerate(text):
+        if unicodedata.category(c).startswith("M") and ends:
+            ends[-1] = i + 1
+        else:
+            ends.append(i + 1)
+    return ends
+
+
+class _DrawRender:
+    """One drawing's frames: each element prepared once (its path in supersampled pixels, arc lengths, dash anchors, its region of the
+    canvas), each frame from the elements' states (in/out progress, boil group); a layer is drawn only when its state changes, at
+    config static.drawings.ssaa times the canvas and reduced (premultiplied), then composited in the spec's order. RGBA, straight alpha."""
+
+    def __init__(self, d: dict, W: int, H: int, fps: int, ss: int = None, seed: int = None):
+        self.W, self.H, self.fps = int(W), int(H), int(fps)
+        self.k = max(1, int(ss if ss is not None else _dcfg("ssaa", 2)))
+        self.seed = int(seed if seed is not None else _dcfg("boil_seed", 1105))
+        self.S = min(self.W, self.H)
+        self.id = str(d.get("id"))
+        self.dur = float(d["dur_s"])
+        self.n = max(1, int(round(self.dur * self.fps)))
+        self.els = [self._prep(i, e) for i, e in enumerate(d["elements"])]
+        self._base, self._final = {}, {}
+
+    # -- preparation
+    def _prep(self, i: int, e: dict) -> dict:
+        import numpy as np
+        from PIL import ImageFont
+        W, H, S, k = self.W, self.H, self.S, self.k
+        t = e["type"]
+        el = {"i": i, "type": t, "spec": e, "in": e["in"], "out": e.get("out") or None, "alpha": float(e.get("alpha", 1.0)),
+              "boil": e.get("boil") or None}
+        bo = el["boil"]
+        el["boil_px"] = float(bo["amount"]) * S * k if bo else 0.0
+        el["every"] = int(bo["every"]) if bo else 1
+        if t == "text":
+            size = max(1, int(round(float(e["size"]) * S * k)))
+            font = ImageFont.truetype(str(e["font_file"]), size)
+            sw = int(round(float(e.get("stroke_width") or 0) * S * k)) if e.get("stroke_color") else 0
+            x, y = float(e["at"][0]) * W * k, float(e["at"][1]) * H * k
+            L = font.getlength(e["text"])
+            x0 = x - (L / 2 if e["align"] == "center" else L if e["align"] == "right" else 0.0)
+            bb = font.getbbox(e["text"], anchor="ls", stroke_width=sw)
+            el.update({"font": font, "sw": sw, "x0": x0, "y": y, "pivot": (x / k, y / k), "text": e["text"],
+                       "ends": _draw_units(e["text"]), "fill": _draw_rgba(e["fill"]),
+                       "stroke_fill": _draw_rgba(e["stroke_color"]) if sw else None,
+                       "bb": [x0 + bb[0], y + bb[1], x0 + bb[2], y + bb[3]], "margin": el["boil_px"] + 2 * k})
+        else:
+            step = 1.5 * k
+            if t in ("line", "arrow"):
+                ctrl = [(float(p[0]) * W * k, float(p[1]) * H * k) for p in e["points"]]
+                path, closed = _draw_path(ctrl, float(e.get("smooth") or 0.0), False, step), False
+            elif t == "polygon":
+                ctrl = [(float(p[0]) * W * k, float(p[1]) * H * k) for p in e["points"]]
+                path, closed = _draw_path(ctrl, float(e.get("smooth") or 0.0), True, step), True
+            elif t == "rect":
+                bx = [float(v) for v in e["box"]]
+                ctrl = _draw_rect_pts(bx[0] * W * k, bx[1] * H * k, bx[2] * W * k, bx[3] * H * k, float(e.get("radius") or 0) * S * k)
+                path, closed = _draw_path(ctrl, 0.0, True, step), True
+                ctrl = ctrl[:8]
+            else:   # ellipse: from its top, clockwise
+                bx = [float(v) for v in e["box"]]
+                cx, cy = (bx[0] + bx[2]) / 2 * W * k, (bx[1] + bx[3]) / 2 * H * k
+                ra, rb = (bx[2] - bx[0]) / 2 * W * k, (bx[3] - bx[1]) / 2 * H * k
+                per = math.pi * (3 * (ra + rb) - math.sqrt(max(0.0, (3 * ra + rb) * (ra + 3 * rb))))
+                th = np.linspace(-math.pi / 2, 3 * math.pi / 2, max(48, int(per / step)) + 1)
+                path, closed = np.stack([cx + ra * np.cos(th), cy + rb * np.sin(th)], axis=1), True
+                ctrl = [None] * 8
+            seg = np.hypot(*np.diff(path, axis=0).T)
+            s = np.concatenate([[0.0], np.cumsum(seg)])
+            w = max(1, int(round(float(e.get("width") or 0) * S * k))) if e.get("stroke") else 0
+            dash = [float(e["dash"][0]) * S * k, float(e["dash"][1]) * S * k] if e.get("dash") else None
+            marks = {m: {"size": float(e[m]["size"]) * S * k, "style": e[m]["style"]} for m in ("head", "tail")
+                     if isinstance(e.get(m), dict)}
+            fill = _draw_rgba(e["fill"], float(e.get("fill_alpha", 1.0))) if e.get("fill") else None
+            el.update({"path": path, "s": s, "total": float(s[-1]), "closed": closed, "nctrl": max(4, len(ctrl)), "w": w, "dash": dash,
+                       "cap": e.get("cap") or "round", "stroke": _draw_rgba(e["stroke"]) if e.get("stroke") else None, "fill": fill,
+                       "marks": marks})
+            xs, ys = path[:, 0], path[:, 1]
+            el["bb"] = [float(xs.min()), float(ys.min()), float(xs.max()), float(ys.max())]
+            el["pivot"] = ((el["bb"][0] + el["bb"][2]) / 2 / k, (el["bb"][1] + el["bb"][3]) / 2 / k)
+            el["margin"] = w / 2 + el["boil_px"] + max([m["size"] for m in marks.values()] or [0]) + 2 * k
+        # the element's whole extent (output px, unboiled, stroke and marks in): the facts' bbox
+        m0 = el["margin"] - el["boil_px"] - 2 * k
+        bb = el["bb"]
+        el["extent"] = [(bb[0] - m0) / k, (bb[1] - m0) / k, (bb[2] + m0) / k, (bb[3] + m0) / k]
+        # the region its layer covers: the extent plus the boil, cut to the canvas (to three canvases for a grow or a pop, which
+        # scale the layer about its pivot)
+        mg = el["margin"]
+        lo_x, lo_y, hi_x, hi_y = (-W, -H, 2 * W, 2 * H) if el["in"].get("kind") in ("grow", "pop") else (0, 0, W, H)
+        el["region"] = (max(lo_x, int(math.floor((bb[0] - mg) / k))), max(lo_y, int(math.floor((bb[1] - mg) / k))),
+                        min(hi_x, int(math.ceil((bb[2] + mg) / k))), min(hi_y, int(math.ceil((bb[3] + mg) / k))))
+        return el
+
+    # -- states
+    def state(self, el: dict, i: int):
+        """(p_in, p_out, boil group) of an element at frame i, or None when it is not shown."""
+        t = i / self.fps
+        ti = el["in"]
+        t0, kind = float(ti["start_s"]), ti["kind"]
+        if t < t0 - 1e-9:
+            return None
+        dur = float(ti.get("dur_s") or 0) if kind != "none" else 0.0
+        p_in = 1.0 if dur <= 0 else _draw_ease((t - t0) / dur, ti.get("ease"))
+        p_out = 0.0
+        o = el["out"]
+        if o:
+            o0 = float(o["start_s"])
+            if t >= o0 - 1e-9:
+                if o["kind"] == "none":
+                    return None
+                od = float(o["dur_s"])
+                if t >= o0 + od - 1e-9:
+                    return None
+                p_out = _draw_ease((t - o0) / od, o.get("ease"))
+        g = i // el["every"] if el["boil_px"] > 0 else 0
+        return (round(p_in, 6), round(p_out, 6), g)
+
+    def _boiled(self, el: dict, g: int):
+        import numpy as np
+        if el["boil_px"] <= 0:
+            return el["path"]
+        K = el["nctrl"]
+        off = _draw_boil_offsets(self.seed, self.id, el["i"], g, K, el["boil_px"])
+        if el["closed"]:
+            off[-1] = off[0]
+        u = np.linspace(0.0, el["total"] or 1.0, K)
+        return el["path"] + np.stack([np.interp(el["s"], u, off[:, 0]), np.interp(el["s"], u, off[:, 1])], axis=1)
+
+    # -- drawing
+    def _piece(self, dr, path, s, a, b, col, w, cap):
+        import numpy as np
+        i0, i1 = int(np.searchsorted(s, a, side="right")), int(np.searchsorted(s, b, side="left"))
+        pa = (float(np.interp(a, s, path[:, 0])), float(np.interp(a, s, path[:, 1])))
+        pb = (float(np.interp(b, s, path[:, 0])), float(np.interp(b, s, path[:, 1])))
+        pts = [pa] + [(float(x), float(y)) for x, y in path[i0:i1]] + [pb]
+        dr.line(pts, fill=col, width=w, joint="curve")
+        if cap == "round" and w > 2:
+            r = w / 2
+            for x, y in (pa, pb):
+                dr.ellipse([x - r, y - r, x + r, y + r], fill=col)
+
+    def _mark(self, dr, tip, d, m, col, w, cap):
+        sz = m["size"]
+        dx, dy = d
+        if m["style"] == "dot":
+            r = sz / 2
+            dr.ellipse([tip[0] - r, tip[1] - r, tip[0] + r, tip[1] + r], fill=col)
+            return
+        if m["style"] == "bar":
+            nx, ny = -dy * sz / 2, dx * sz / 2
+            a, b = (tip[0] - nx, tip[1] - ny), (tip[0] + nx, tip[1] + ny)
+            dr.line([a, b], fill=col, width=w)
+            if cap == "round" and w > 2:
+                for x, y in (a, b):
+                    dr.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=col)
+            return
+        wings = []
+        for sg in (1, -1):
+            c, s_ = math.cos(math.radians(DRAW_MARK_ANGLE)), sg * math.sin(math.radians(DRAW_MARK_ANGLE))
+            bx, by = -(dx * c - dy * s_), -(dx * s_ + dy * c)
+            wings.append((tip[0] + bx * sz, tip[1] + by * sz))
+        if m["style"] == "filled":
+            dr.polygon([tip, wings[0], wings[1]], fill=col)
+        else:
+            for wpt in wings:
+                dr.line([tip, wpt], fill=col, width=w)
+                if cap == "round" and w > 2:
+                    dr.ellipse([wpt[0] - w / 2, wpt[1] - w / 2, wpt[0] + w / 2, wpt[1] + w / 2], fill=col)
+            if cap == "round" and w > 2:
+                dr.ellipse([tip[0] - w / 2, tip[1] - w / 2, tip[0] + w / 2, tip[1] + w / 2], fill=col)
+
+    def _dir(self, path, s, at_end: bool, back: float):
+        import numpy as np
+        total = float(s[-1])
+        back = min(total, max(back, 1.0))
+        if at_end:
+            tip = path[-1]
+            q = (float(np.interp(total - back, s, path[:, 0])), float(np.interp(total - back, s, path[:, 1])))
+            v = (tip[0] - q[0], tip[1] - q[1])
+        else:
+            tip = path[0]
+            q = (float(np.interp(back, s, path[:, 0])), float(np.interp(back, s, path[:, 1])))
+            v = (tip[0] - q[0], tip[1] - q[1])
+        L = math.hypot(*v) or 1.0
+        return (float(tip[0]), float(tip[1])), (v[0] / L, v[1] / L)
+
+    def base_layer(self, el: dict, p: float, g: int):
+        """The element drawn at progress p (draw: the stroke's share of its length; type: the share of its characters; other kinds 1)
+        and boil group g, reduced to the canvas's pixels: (layer, x, y) or None when nothing shows."""
+        from PIL import Image, ImageDraw
+        k = self.k
+        rx0, ry0, rx1, ry1 = el["region"]
+        if rx1 <= rx0 or ry1 <= ry0:
+            return None
+        kind = el["in"]["kind"]
+        if el["type"] == "text":
+            ends = el["ends"]
+            nch = len(ends) if kind != "type" else int(math.floor(p * len(ends) + 1e-9))
+            if nch <= 0:
+                return None
+            im = Image.new("RGBA", ((rx1 - rx0) * k, (ry1 - ry0) * k), el["fill"][:3] + (0,))
+            dr = ImageDraw.Draw(im)
+            ox, oy = 0.0, 0.0
+            if el["boil_px"] > 0:
+                ox, oy = (float(v) for v in _draw_boil_offsets(self.seed, self.id, el["i"], g, 1, el["boil_px"])[0])
+            dr.text((el["x0"] + ox - rx0 * k, el["y"] + oy - ry0 * k), el["text"][:ends[nch - 1]], font=el["font"], fill=el["fill"],
+                    anchor="ls", stroke_width=el["sw"], stroke_fill=el["stroke_fill"])
+        else:
+            if kind == "draw" and p <= 0 and el["fill"] is None:
+                return None
+            col0 = (el["stroke"] or el["fill"])[:3] + (0,)
+            im = Image.new("RGBA", ((rx1 - rx0) * k, (ry1 - ry0) * k), col0)
+            dr = ImageDraw.Draw(im)
+            path = self._boiled(el, g).copy()
+            path[:, 0] -= rx0 * k
+            path[:, 1] -= ry0 * k
+            if el["fill"] is not None:   # a fill is shown whole from the element's in.start_s (draw animates the stroke only)
+                dr.polygon([(float(x), float(y)) for x, y in path], fill=el["fill"])
+            if el["stroke"] is not None:
+                total, s = el["total"], el["s"]
+                if kind == "draw":
+                    L = p * total
+                    lo, hi = (0.0, L) if el["in"].get("from") == "start" else (total - L, total)
+                else:
+                    lo, hi = 0.0, total
+                if hi - lo > 1e-6:
+                    if el["dash"]:   # the dash pattern anchored at the path's first point: dashes appear in place, never slide
+                        on, off = el["dash"]
+                        per = on + off
+                        m = int(lo // per)
+                        while m * per < hi:
+                            a, b = max(lo, m * per), min(hi, m * per + on)
+                            if b > a:
+                                self._piece(dr, path, s, a, b, el["stroke"], el["w"], el["cap"])
+                            m += 1
+                    else:
+                        self._piece(dr, path, s, lo, hi, el["stroke"], el["w"], el["cap"])
+                    full = hi - lo >= total - 1e-6
+                    for mk, m_ in el["marks"].items():   # a mark shows once the stroke has reached its end
+                        at_end = mk == "head"
+                        if kind == "draw" and not full:
+                            reached = (hi >= total - 1e-6) if at_end else (lo <= 1e-6)
+                            if not reached:
+                                continue
+                        tip, dv = self._dir(path, s, at_end, max(m_["size"] * 0.6, el["w"]))
+                        self._mark(dr, tip, dv, m_, el["stroke"], el["w"], el["cap"])
+        lay = im.convert("RGBa").reduce(k).convert("RGBA") if k > 1 else im
+        return lay, float(rx0), float(ry0)
+
+    def layer(self, el: dict, st: tuple):
+        """The element at its state: its base layer, masked by a wipe, faded, scaled by a grow or a pop: (layer, x, y) or None."""
+        from PIL import Image, ImageChops, ImageDraw
+        p_in, p_out, g = st
+        kind = el["in"]["kind"]
+        bkey = (p_in if kind in ("draw", "type") else 1.0, g)
+        c = self._base.get(el["i"])
+        if c and c[0] == bkey:
+            base = c[1]
+        else:
+            base = self.base_layer(el, bkey[0], g)
+            self._base[el["i"]] = (bkey, base)
+        if base is None:
+            return None
+        lay, ox, oy = base
+        x0, y0, x1, y1 = el["extent"]
+        bw, bh = x1 - x0, y1 - y0
+
+        def rect_of(frm, q):   # the share q of the extent from an edge (or from its centre)
+            if frm == "left":
+                return (x0, y0, x0 + q * bw, y1)
+            if frm == "right":
+                return (x1 - q * bw, y0, x1, y1)
+            if frm == "top":
+                return (x0, y0, x1, y0 + q * bh)
+            if frm == "bottom":
+                return (x0, y1 - q * bh, x1, y1)
+            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+            return (cx - q * bw / 2, cy - q * bh / 2, cx + q * bw / 2, cy + q * bh / 2)
+        masks = []
+        if kind == "wipe" and p_in < 1:
+            mk = Image.new("L", lay.size, 0)
+            r = rect_of(el["in"]["from"], p_in)
+            ImageDraw.Draw(mk).rectangle([r[0] - ox, r[1] - oy, r[2] - ox, r[3] - oy], fill=255)
+            masks.append(mk)
+        o = el["out"]
+        if o and o["kind"] == "wipe" and p_out > 0:
+            mk = Image.new("L", lay.size, 255)
+            r = rect_of(o["from"], p_out)
+            ImageDraw.Draw(mk).rectangle([r[0] - ox, r[1] - oy, r[2] - ox, r[3] - oy], fill=0)
+            masks.append(mk)
+        f = el["alpha"] * (p_in if kind == "fade" else 1.0) * ((1.0 - p_out) if o and o["kind"] == "fade" else 1.0)
+        if masks or f < 0.999:
+            lay = lay.copy()
+            a = lay.getchannel("A")
+            for mk in masks:
+                a = ImageChops.multiply(a, mk)
+            if f < 0.999:
+                a = a.point([int(round(v * max(0.0, f))) for v in range(256)])
+            lay.putalpha(a)
+        if kind in ("grow", "pop"):
+            q = p_in
+            sc = q if kind == "grow" else (DRAW_POP_PEAK * q / 0.7 if q < 0.7 else DRAW_POP_PEAK - (DRAW_POP_PEAK - 1) * (q - 0.7) / 0.3)
+            if sc <= 0.002:
+                return None
+            if abs(sc - 1.0) > 1e-4:
+                px, py = el["pivot"]
+                nw, nh = max(1, int(round(lay.width * sc))), max(1, int(round(lay.height * sc)))
+                lay = lay.convert("RGBa").resize((nw, nh), Image.BICUBIC).convert("RGBA")
+                ox, oy = px + (ox - px) * sc, py + (oy - py) * sc
+        return lay, ox, oy
+
+    def states(self, i: int) -> tuple:
+        return tuple(self.state(el, i) for el in self.els)
+
+    def frame(self, i: int, sts: tuple = None):
+        """Frame i of the clip as an RGBA image (straight alpha) the canvas's size."""
+        from PIL import Image
+        sts = sts if sts is not None else self.states(i)
+        fr = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        for el, st in zip(self.els, sts):
+            if st is None:
+                continue
+            c = self._final.get(el["i"])
+            if c and c[0] == st:
+                res = c[1]
+            else:
+                res = self.layer(el, st)
+                self._final[el["i"]] = (st, res)
+            if res is not None:
+                _draw_paste(fr, *res)
+        return fr
+
+
+def _draw_still_canvas(still, W: int, H: int):
+    """The still as the canvas shows it at scale 1 (cover, centred), RGBA; a mid-grey canvas when there is no still."""
+    from PIL import Image
+    if not still or not Path(str(still)).is_file():
+        return Image.new("RGBA", (W, H), (128, 128, 128, 255))
+    with Image.open(str(still)) as im:
+        im = im.convert("RGB")
+        sw, sh = im.size
+        k = max(W / sw, H / sh)
+        vw, vh = W / k, H / k
+        box = ((sw - vw) / 2, (sh - vh) / 2, (sw + vw) / 2, (sh + vh) / 2)
+        return im.resize((W, H), Image.LANCZOS, box=box).convert("RGBA")
+
+
+def _draw_element_facts(R: _DrawRender, d: dict, band) -> list:
+    """Facts of each element (no verdicts): its seconds, its extent as shares, whether a part is outside the canvas or in the
+    captions' band, the share of the canvas its fill covers, the font's missing glyphs, whether it ends after the drawing."""
+    from PIL import Image, ImageDraw
+    rows = []
+    q = 4
+    for el in R.els:
+        e = el["spec"]
+        x0, y0, x1, y1 = el["extent"]
+        bb = [round(x0 / R.W, 4), round(y0 / R.H, 4), round(x1 / R.W, 4), round(y1 / R.H, 4)]
+        st = float(e["in"]["start_s"])
+        o = el["out"]
+        end = (float(o["start_s"]) + (float(o.get("dur_s") or 0) if o["kind"] != "none" else 0.0)) if o else float(d["dur_s"])
+        in_end = st + (float(e["in"].get("dur_s") or 0) if e["in"]["kind"] != "none" else 0.0)
+        fs = None
+        if el["type"] != "text" and el["fill"] is not None:
+            mk = Image.new("L", (max(1, R.W // q), max(1, R.H // q)), 0)
+            ImageDraw.Draw(mk).polygon([(float(x) / R.k / q, float(y) / R.k / q) for x, y in el["path"]], fill=255)
+            fs = round(sum(mk.histogram()[128:]) / float(mk.width * mk.height), 4)
+        row = {"element": el["i"] + 1, "type": el["type"], "start_s": round(st, 3), "end_s": round(end, 3), "in_end_s": round(in_end, 3),
+               "bbox": bb, "outside_frame": bb[0] < 0 or bb[1] < 0 or bb[2] > 1 or bb[3] > 1,
+               "in_caption_band": (bb[1] < band["y1"] and bb[3] > band["y0"]) if band else None, "fill_share": fs,
+               "ends_after_drawing": max(end, in_end) > float(d["dur_s"]) + 1e-6}
+        if el["type"] == "text":
+            fr = _font_report(e["font_file"], e["text"])
+            row.update({"text": e["text"], "text_missing_glyphs": fr.get("font_missing_glyphs"), "text_refused": None})
+        rows.append(row)
+    return rows
+
+
+def _draw_preview_times(d: dict, fps: int, at=None) -> list:
+    """The seconds the previews show: --at's, else config static.drawings.preview_points (shares) of the animated span (the first
+    element's in start to the last element's in end)."""
+    n = max(1, int(round(float(d["dur_s"]) * fps)))
+    if at:
+        ts_ = [float(x) for x in at]
+    else:
+        s0 = min(float(e["in"]["start_s"]) for e in d["elements"])
+        s1 = max(float(e["in"]["start_s"]) + (float(e["in"].get("dur_s") or 0) if e["in"]["kind"] != "none" else 0.0) for e in d["elements"])
+        ts_ = [s0 + float(p) * (s1 - s0) for p in (_dcfg("preview_points") or [0.3, 0.65, 1.0])]
+    return [(round(t, 3), min(n - 1, max(0, int(round(t * fps))))) for t in ts_]
+
+
+def _draw_render_clip(d: dict, W: int, H: int, fps: int, clip: Path, pv_dir: Path, still, at=None, force: bool = False,
+                      band=None, extra_side: dict = None) -> dict:
+    """Render one validated drawing: the clip (frames piped to ffmpeg as raw RGBA, no frame files), its sidecar (spec hash, facts) and
+    three previews over the still with a sheet; reused while the hash is the same and the file exists. Returns the facts."""
+    from PIL import Image, ImageDraw
+    codec, cnote = _draw_codec()
+    ext, vargs, _a = FX_ALPHA_CODECS[codec]
+    clip = clip.with_suffix(ext)
+    side_p = clip.with_name(clip.name + ".json")
+    h = _draw_hash(d, W, H, fps, codec)
+    did = str(d["id"])
+    pv_dir.mkdir(parents=True, exist_ok=True)
+    previews = [pv_dir / f"{did}-p{j + 1}.png" for j in range(3)]
+    sheet = pv_dir / f"{did}-sheet.png"
+    try:
+        side = json.loads(side_p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        side = {}
+    reused = (not force) and clip.is_file() and side.get("spec_hash") == h
+    times = _draw_preview_times(d, fps, at)
+    R = _DrawRender(d, W, H, fps)
+    t_start = time.time()
+    grabs = {}
+    if not reused:
+        clip.parent.mkdir(parents=True, exist_ok=True)
+        tmp = clip.with_name(clip.stem + ".tmp" + clip.suffix)
+        import tempfile
+        with tempfile.TemporaryFile() as errf:
+            pr = subprocess.Popen([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgba",
+                                   "-s", f"{W}x{H}", "-r", str(fps), "-i", "-", *vargs, "-an", str(tmp)],
+                                  stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=errf)
+            want = {j for _t, j in times}
+            prev_st, prev_bytes, broke = None, None, None
+            try:
+                for i in range(R.n):
+                    sts = R.states(i)
+                    if sts != prev_st or prev_bytes is None or i in want:
+                        fr = R.frame(i, sts)
+                        prev_bytes, prev_st = fr.tobytes(), sts
+                        if i in want:
+                            grabs[i] = fr
+                    pr.stdin.write(prev_bytes)
+            except (BrokenPipeError, OSError) as ex:
+                broke = ex
+            try:
+                pr.stdin.close()
+            except OSError:
+                pass
+            pr.wait()
+            errf.seek(0)
+            err = errf.read().decode("utf-8", "replace")
+        if pr.returncode != 0 or broke or not tmp.is_file():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+            raise RuntimeError(f"ffmpeg could not write {clip.name} ({codec}): {err[-400:] or broke}")
+        _replace(tmp, clip)
+    render_s = round(time.time() - t_start, 2)
+    if reused and all(p.is_file() for p in previews) and sheet.is_file() and not at:
+        pass
+    else:
+        base = _draw_still_canvas(still, W, H)
+        shots = []
+        for j, (t_, i) in enumerate(times[:3]):
+            fr = grabs[i] if i in grabs else R.frame(i)
+            comp = base.copy()
+            comp.alpha_composite(fr)
+            comp.convert("RGB").save(previews[j])
+            shots.append((t_, comp))
+        cw = 640
+        chh = int(round(cw * H / W))
+        sh_ = Image.new("RGB", (cw * len(shots), chh + 34), (24, 24, 24))
+        dr = ImageDraw.Draw(sh_)
+        for j, (t_, comp) in enumerate(shots):
+            sh_.paste(comp.convert("RGB").resize((cw, chh), Image.LANCZOS), (j * cw, 0))
+            dr.text((j * cw + 8, chh + 6), f"{did}  p{j + 1}  {t_:.2f} s of {float(d['dur_s']):.2f} s", font=_font(18), fill=(235, 235, 235))
+        sh_.save(sheet)
+    info = media_summary(clip)
+    facts = _draw_element_facts(R, d, band)
+    res = {"id": did, "file": str(clip), "codec": codec, "codec_note": cnote, "bytes": clip.stat().st_size, "frames": R.n,
+           "frames_in_file": info.get("nb_frames"), "pix_fmt": info.get("pix_fmt"), "fps": fps, "size": f"{W}x{H}",
+           "duration_s": round(R.n / fps, 6), "spec_hash": h, "reused": bool(reused), "render_s": None if reused else render_s,
+           "ssaa": R.k, "previews": [str(p) for p in previews], "sheet": str(sheet),
+           "preview_at_s": [t_ for t_, _i in times[:3]], "elements": facts, "caption_band": band}
+    if extra_side:
+        res.update(extra_side)
+    write_json(side_p, {**res, "made": side.get("made") if reused else now_iso(), "checked": now_iso()})
+    res["sidecar"] = str(side_p)
+    return res
+
+
+def _draw_items(plan: dict, ftag: str) -> list:
+    """The plan's drawings in image order: {image, d, own} (own: an extra format's own by_format.<tag>.drawings; else the primary's,
+    its positions not read off that format's picture)."""
+    res = []
+    for im in plan.get("images") or []:
+        own = _by_format(im, ftag).get("drawings") if ftag else None
+        for d in (own if own is not None else im.get("drawings")) or []:
+            res.append({"image": int(im.get("image") or 0), "d": d, "own": (not ftag) or own is not None})
+    return res
+
+
+def _draw_paths(rd: Path, nn: str, ftag: str, did) -> tuple:
+    return (rd / "30-assets" / "drawings" / f"video-{nn}" / f"{ftag + '-' if ftag else ''}{did}.mov",
+            rd / "60-outputs" / f"video-{nn}" / (f"{ftag}/draw" if ftag else "draw"))
+
+
+def _draw_still_of(rd: Path, nn: str, ftag: str, k: int):
+    folder, rec_p = _img_where(rd, nn, None, ftag)
+    try:
+        use = ((json.loads(rec_p.read_text(encoding="utf-8")).get("images") or {}).get(f"{int(k):02d}") or {}).get("use")
+    except (OSError, ValueError):
+        use = None
+    f = folder / use if use else None
+    return f if f and f.is_file() else None
+
+
+def _draw_canvas_of(st: dict, ftag: str) -> tuple:
+    fmt = _fmt_for(st, ftag)
+    wh = _draw_parse_wh(fmt.get("export"))
+    if not wh:
+        fail("the run has no format's export size (state.json -> static.format.export): `T static format` first", 2)
+    return wh
+
+
+def _draw_caption_band(plan: dict, ftag: str, W: int, H: int) -> dict:
+    """The band the captions can take, as shares of the height: the plan's captions.y_rel (else config static.captions.y_rel) +- half
+    of one caption line at the plan's size (CapCut's line is CAPCUT_FONT_PER_SIZE x size x the canvas width), else +- 0.1."""
+    cap = _plan_captions(plan, ftag)
+    src = "the plan's captions.y_rel" if "y_rel" in cap else "config static.captions.y_rel"
+    y = float(cap.get("y_rel", _scfg("captions.y_rel", 0.72)))
+    if cap.get("size"):
+        half = CAPCUT_FONT_PER_SIZE * float(cap["size"]) * W / H / 2
+        how = (f"{src} {y} +- half of one caption line at the plan's size {cap['size']} (CapCut's line = {CAPCUT_FONT_PER_SIZE} x size x "
+               f"the canvas width = {CAPCUT_FONT_PER_SIZE * float(cap['size']) * W:.0f} px); a cue that wraps takes more")
+    else:
+        half = 0.1
+        how = f"{src} {y} +- 0.1 (the plan's captions name no size)"
+    return {"y0": round(y - half, 4), "y1": round(y + half, 4), "how": how}
+
+
+def _draw_spans(rd: Path, nn: str, ftag: str, plan: dict) -> tuple:
+    """({image: {start, end, motion}} on the video's timeline, where from): the timeline's (T slideshow plan) when it exists, else the
+    plan's lines on the narration, as `T slideshow plan` places them (its cuts on the frame grid); ({}, ...) with no narration."""
+    tlp = rd / "40-briefs" / f"video-{nn}-timeline{_fmt_sfx(ftag)}.json"
+    try:
+        tl = json.loads(tlp.read_text(encoding="utf-8"))
+        return ({int(r["image"]): {"start": float(r["start"]), "end": float(r["end"]), "motion": str(r.get("motion") or "none")}
+                 for r in tl.get("images") or []}, f"the timeline {tlp.name}", float(tl.get("narration_offset") or 0.0))
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    try:
+        side = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}, "none (no narration yet)", None
+    lead = float(plan.get("lead_s", _scfg("narration.lead_s", 0.3)))
+    tail = float(plan.get("tail_s", _scfg("narration.tail_s", 0.8)))
+    starts = _static_line_starts(side)
+    total = round(lead + float(side["duration_s"]) + tail, 3)
+    fps = int(_scfg("render.fps", 30))
+    rows = []
+    for im in plan.get("images") or []:
+        if im.get("start") is not None and im.get("from_line") is None:
+            s = float(im["start"])
+        elif int(im.get("from_line") or 0) in starts:
+            s = lead + starts[int(im["from_line"])] + float(im.get("offset_s") or 0.0)
+        else:
+            continue
+        mo = im.get("motion") or ("custom" if any(k_ in im for k_ in ("scale", "x", "y")) else "none")
+        rows.append([s, int(im.get("image") or 0), str(mo)])
+    rows.sort()
+    res = {}
+    for i, (s, k, mo) in enumerate(rows):
+        s = 0.0 if i == 0 else round(math.floor(s * fps + 1e-6) / fps, 6)
+        rows[i][0] = s
+    for i, (s, k, mo) in enumerate(rows):
+        res[k] = {"start": s, "end": rows[i + 1][0] if i + 1 < len(rows) else total, "motion": mo}
+    return res, "the plan's lines on the narration (no timeline yet: T slideshow plan)", lead
+
+
+def _draw_und_text(u: dict) -> str:
+    where = f"drawing {u.get('drawing') or '?'}" + (f" element {u['element']}" if u.get("element") else "")
+    return f"{where}: no {u.get('field')} ({u.get('need')})"
+
+
+def _draw_cmd_render(a):
+    """T draw render: every drawing of a video's plan (or --drawing D1,D2), or one spec standalone (--spec --canvas --out)."""
+    fps = int(a.fps or _scfg("render.fps", 30))
+    at = [float(x) for x in str(a.at).split(",") if x.strip()] if a.at else None
+    if a.spec:   # standalone: a drawing object, no run
+        wh = _draw_parse_wh(a.canvas)
+        if not wh or not a.out:
+            fail("draw render --spec needs --canvas WxH and --out DIR", 2)
+        try:
+            d = json.loads(Path(a.spec).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as ex:
+            fail(f"cannot read the spec {a.spec}: {ex}", 2)
+        if a.id:
+            d = {**d, "id": a.id}
+        v = _draw_validate(d, standalone=True)
+        if v["undecided"] or v["invalid"] or v["text_refused"]:
+            out({"ok": False, "rendered": [], "undecided": v["undecided"], "invalid": v["invalid"], "text_refused": v["text_refused"],
+                 "outside": v["outside"], "note": "nothing rendered: every field the contract names as required is the agent's decision"}, 1)
+        od = Path(a.out)
+        res = _draw_render_clip(d, wh[0], wh[1], fps, od / f"{d['id']}.mov", od, a.still, at, bool(a.force))
+        out({"ok": True, "rendered": [res], "outside": v["outside"],
+             "note": "facts, no verdict: view the sheet; a drawing's look (colours, widths, dashes, timing, places) is the agent's"})
+    if not a.run or not a.video:
+        fail("draw render needs --run and --video (or --spec, --canvas and --out for a standalone drawing)", 2)
+    rd, st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    ftag = _fmt_tag(st, getattr(a, "format", None))
+    plan = _img_plan(rd, nn)
+    if not plan.get("images"):
+        fail(f"no image plan for video {nn} (40-briefs/video-{nn}-images.json)", 2)
+    W, H = _draw_canvas_of(st, ftag)
+    items = _draw_items(plan, ftag)
+    want = {x.strip() for x in str(a.drawing).split(",") if x.strip()} if a.drawing else None
+    if want:
+        unknown = sorted(want - {str((it["d"] or {}).get("id")) for it in items})
+        if unknown:
+            fail("the plan has no drawing " + ", ".join(unknown) + (f" (for {ftag})" if ftag else ""), 2)
+    if not items:
+        out({"ok": True, "rendered": [], "note": f"the plan's images carry no drawings (images[K].drawings{' or by_format.' + ftag + '.drawings' if ftag else ''})"})
+    spans, spans_from, _lead = _draw_spans(rd, nn, ftag, plan)
+    band = _draw_caption_band(plan, ftag, W, H)
+    ids = {}
+    for it in items:
+        ids.setdefault(str((it["d"] or {}).get("id")), []).append(it["image"])
+    rendered, und, bad, refused, outside, not_rendered = [], [], [], [], [], []
+    for it in items:
+        d, k = it["d"], it["image"]
+        did = str((d or {}).get("id"))
+        if want and did not in want:
+            continue
+        v = _draw_validate(d)
+        if len(ids.get(did, [])) > 1:
+            v["invalid"].append({"drawing": did, "element": None, "field": "id", "need": f"an id unique in the video (images {ids[did]})"})
+        und += [{**u, "image": k} for u in v["undecided"]]
+        bad += [{**u, "image": k} for u in v["invalid"]]
+        refused += [{**u, "image": k} for u in v["text_refused"]]
+        outside += [{**u, "image": k} for u in v["outside"]]
+        if v["undecided"] or v["invalid"] or v["text_refused"]:
+            not_rendered.append({"id": did, "image": k})
+            continue
+        sp = spans.get(k)
+        same = [x for x in items if x["image"] == k and x is not it and isinstance(x["d"], dict)]
+        s0, s1 = float(d["start_s"]), float(d["start_s"]) + float(d["dur_s"])
+        ov = [str(x["d"].get("id")) for x in same if _draw_num(x["d"].get("start_s")) and _draw_num(x["d"].get("dur_s"))
+              and float(x["d"]["start_s"]) < s1 and float(x["d"]["start_s"]) + float(x["d"]["dur_s"]) > s0]
+        extra = {"image": k, "starts_in_image_at_s": s0, "ends_at_s": round(s1, 6),
+                 "image_span": [sp["start"], sp["end"]] if sp else None,
+                 "past_the_image": (s1 > sp["end"] - sp["start"] + 1e-6) if sp else None,
+                 "image_motion": sp["motion"] if sp else None, "overlaps": ov,
+                 "positions_not_read_off_this_format": bool(ftag) and not it["own"]}
+        clip, pv = _draw_paths(rd, nn, ftag, did)
+        still = _draw_still_of(rd, nn, ftag, k)
+        res = _draw_render_clip(d, W, H, fps, clip, pv, still, at, bool(a.force), band, extra)
+        res["still"] = str(still) if still else None
+        rendered.append(res)
+    out({"ok": not not_rendered, "video": nn, "format": ftag or None, "canvas": f"{W}x{H}", "rendered": rendered,
+         "not_rendered": not_rendered, "undecided": und, "invalid": bad, "text_refused": refused, "outside": outside,
+         "on_moving_image": [r["id"] for r in rendered if r.get("image_motion") not in (None, "none")],
+         "image_spans_from": spans_from,
+         "note": "facts, no verdict: view each sheet (and the previews) before the timeline takes the clip; a drawing does not follow its "
+                 "image's move (on_moving_image); then `T slideshow plan` merges the current clips into the timeline's effects"},
+        0 if not not_rendered else 1)
+
+
+def _draw_cmd_grid(a):
+    """T draw grid: the still in use as the canvas shows it (cover, centred), long side config static.drawings.grid_long_side_px, with
+    labelled gridlines in canvas shares; --crop x0,y0,x1,y1 magnifies that part with a finer grid, its labels still in canvas shares."""
+    from PIL import Image, ImageDraw
+    rd, st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    if not a.image:
+        fail("draw grid needs --image K", 2)
+    ftag = _fmt_tag(st, getattr(a, "format", None))
+    W, H = _draw_canvas_of(st, ftag)
+    k_img = int(a.image)
+    still = _draw_still_of(rd, nn, ftag, k_img)
+    if still is None:
+        fail(f"image {k_img} has no still in use (T image generate / use{' --format ' + ftag if ftag else ''})", 2)
+    if a.crop:
+        try:
+            cx0, cy0, cx1, cy1 = (float(x) for x in str(a.crop).split(","))
+        except ValueError:
+            fail("--crop takes x0,y0,x1,y1 as shares of the canvas", 2)
+        if not (0 <= cx0 < cx1 <= 1 and 0 <= cy0 < cy1 <= 1):
+            fail("--crop takes x0,y0,x1,y1 within 0..1 with x1 > x0 and y1 > y0", 2)
+    else:
+        cx0, cy0, cx1, cy1 = 0.0, 0.0, 1.0, 1.0
+    gstep = float(_dcfg("grid_step", 0.1))
+    if a.step:
+        step = float(a.step)
+    elif a.crop:   # a finer grid in the same proportion to the view: the default step times the crop's longer share, a round value
+        raw = gstep * max(cx1 - cx0, cy1 - cy0)
+        step = min((s_ for s_ in (0.005, 0.01, 0.02, 0.025, 0.05, 0.1) if s_ >= raw * 0.999), default=0.1)
+    else:
+        step = gstep
+    if not (0.001 <= step <= 0.5):
+        fail("--step takes a share of the canvas between 0.001 and 0.5", 2)
+    dec = next((n_ for n_ in range(1, 5) if abs(round(step, n_) - step) < 1e-9), 4)
+    with Image.open(str(still)) as im:
+        im = im.convert("RGB")
+        sw, sh = im.size
+        kk = max(W / sw, H / sh)
+        vw, vh = W / kk, H / kk
+        vx0, vy0 = (sw - vw) / 2, (sh - vh) / 2
+        box = (vx0 + cx0 * vw, vy0 + cy0 * vh, vx0 + cx1 * vw, vy0 + cy1 * vh)
+        long_px = int(_dcfg("grid_long_side_px", 1280))
+        cw, ch = (cx1 - cx0) * W, (cy1 - cy0) * H
+        f = long_px / max(cw, ch)
+        ow, oh = max(1, int(round(cw * f))), max(1, int(round(ch * f)))
+        view = im.resize((ow, oh), Image.LANCZOS, box=box)
+    dr = ImageDraw.Draw(view)
+    fl, fs = _font(16), _font(12)
+    xs = [round(m * step, 6) for m in range(int(math.ceil(cx0 / step - 1e-9)), int(math.floor(cx1 / step + 1e-9)) + 1)]
+    ys = [round(m * step, 6) for m in range(int(math.ceil(cy0 / step - 1e-9)), int(math.floor(cy1 / step + 1e-9)) + 1)]
+    xs = [v for v in xs if cx0 < v < cx1]
+    ys = [v for v in ys if cy0 < v < cy1]
+    X = {v: (v - cx0) / (cx1 - cx0) * ow for v in xs}
+    Y = {v: (v - cy0) / (cy1 - cy0) * oh for v in ys}
+    for v, x in X.items():
+        dr.line([(x, 0), (x, oh)], fill=(0, 0, 0), width=3)
+        dr.line([(x, 0), (x, oh)], fill=(255, 255, 255), width=1)
+    for v, y in Y.items():
+        dr.line([(0, y), (ow, y)], fill=(0, 0, 0), width=3)
+        dr.line([(0, y), (ow, y)], fill=(255, 255, 255), width=1)
+    lab = lambda v: f"{v:.{dec}f}"   # noqa: E731
+    for v, x in X.items():
+        dr.text((x + 3, 2), lab(v), font=fl, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
+    for v, y in Y.items():
+        dr.text((3, y + 2), lab(v), font=fl, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
+    for i, (vx, x) in enumerate(X.items()):
+        for j, (vy, y) in enumerate(Y.items()):
+            if i % 2 == 1 and j % 2 == 1:
+                dr.text((x + 3, y + 3), f"{lab(vx)},{lab(vy)}", font=fs, fill=(255, 255, 0), stroke_width=2, stroke_fill=(0, 0, 0))
+    _c, pv = _draw_paths(rd, nn, ftag, "D0")
+    pv.mkdir(parents=True, exist_ok=True)
+    name = f"i{k_img:02d}-grid.png" if not a.crop else f"i{k_img:02d}-grid-{cx0:.3f}_{cy0:.3f}_{cx1:.3f}_{cy1:.3f}.png"
+    view.save(pv / name)
+    out({"ok": True, "file": str(pv / name), "still": str(still), "still_size": [sw, sh], "canvas": f"{W}x{H}", "format": ftag or None,
+         "crop": [cx0, cy0, cx1, cy1] if a.crop else None, "step": step, "size": [ow, oh],
+         "view_box_in_still_px": [round(b, 1) for b in box],
+         "note": "x, y are shares of the canvas (0 = left / top, 1 = right / bottom) of the still as CapCut shows it at scale 1 (cover, "
+                 "centred, no move); the labels on the top and left edges are the gridlines' shares, every other crossing reads 'x,y'"
+                 + (" (in canvas shares, not the crop's)" if a.crop else "") + f"; sizes (widths, dashes, text, boil) are shares of the "
+                 f"canvas's short side ({min(W, H)} px)"})
+
+
+def _draw_cmd_words(a):
+    """T draw words: the heard words of an image's span (or the whole video) with their seconds from the video's and the image's
+    start and their narration line, from the narration's timed words (30-assets/narration/video-NN.words.json)."""
+    rd, st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    ftag = _fmt_tag(st, getattr(a, "format", None))
+    try:
+        side = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        fail(f"no narration for video {nn}: `T tts say` first", 2)
+    try:
+        words = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.words.json").read_text(encoding="utf-8")).get("words") or []
+    except (OSError, ValueError):
+        fail(f"no timed words for video {nn}: `T narration-words --run RUN --video {nn}` first", 2)
+    plan = _img_plan(rd, nn)
+    spans, spans_from, lead = _draw_spans(rd, nn, ftag, plan)
+    if lead is None:
+        lead = float(plan.get("lead_s", _scfg("narration.lead_s", 0.3)))
+    lines = side.get("lines") or []
+    info = _video_lang(st, nn, side.get("language"), soft=True)
+    counts = [len(_tokens(str(r.get("text") or ""), info)) for r in lines]
+    by_count = sum(counts) == len(words)
+    line_of = []
+    for j, r in enumerate(lines):
+        line_of += [r.get("n")] * (counts[j] if by_count else 0)
+    order = sorted(spans.items(), key=lambda kv: kv[1]["start"])
+
+    def image_at(t):
+        for k, sp in order:
+            if sp["start"] - 1e-6 <= t < sp["end"]:
+                return k
+        return order[-1][0] if order and t >= order[-1][1]["start"] else None
+    if a.image and int(a.image) not in spans:
+        fail(f"image {a.image} has no span (images with spans: {[k for k, _ in order]}; {spans_from})", 2)
+    rows = []
+    for j, w in enumerate(words):
+        s, e = round(float(w["s"]) + lead, 3), round(float(w["e"]) + lead, 3)
+        if by_count:
+            ln = line_of[j]
+        else:
+            mid = (float(w["s"]) + float(w["e"])) / 2
+            ln = next((r.get("n") for r in lines if float(r.get("start") or 0) - 0.15 <= mid <= float(r.get("end") or 0) + 0.15), None)
+        k = int(a.image) if a.image else image_at(s)
+        if a.image:
+            sp = spans[k]
+            if not (s < sp["end"] and e > sp["start"]):
+                continue
+        sp = spans.get(k) if k is not None else None
+        rows.append({"w": w.get("w"), "s": s, "e": e, "line": ln, "image": k,
+                     "s_image": round(s - sp["start"], 3) if sp else None, "e_image": round(e - sp["start"], 3) if sp else None})
+    out({"ok": True, "video": nn, "image": int(a.image) if a.image else None,
+         "image_span": [spans[int(a.image)]["start"], spans[int(a.image)]["end"]] if a.image else None,
+         "spans": {str(k): [sp["start"], sp["end"]] for k, sp in order}, "spans_from": spans_from, "narration_offset": lead,
+         "words": rows, "count": len(rows), "lines_by": "the lines' word counts" if by_count else "the word's middle inside a line's span",
+         "note": "s, e: seconds from the video's start (the narration's time plus its offset); s_image, e_image: from the image's start, "
+                 "the clock of a drawing's start_s; a drawing's elements count from the drawing's start"})
+
+
+def _draw_cmd_list(a):
+    """T draw list: every drawing of the plan with its image, its seconds (from the image's start, and from the video's when the timeline
+    exists), whether its clip exists and is current (the spec hash), its previews. Facts only."""
+    rd, st = _state_of(a.run)
+    nn = _cf_nn(a.video)
+    ftag = _fmt_tag(st, getattr(a, "format", None))
+    plan = _img_plan(rd, nn)
+    W, H = _draw_canvas_of(st, ftag)
+    fps = int(_scfg("render.fps", 30))
+    codec, _n = _draw_codec()
+    tlp = rd / "40-briefs" / f"video-{nn}-timeline{_fmt_sfx(ftag)}.json"
+    try:
+        tl_rows = {int(r["image"]): r for r in json.loads(tlp.read_text(encoding="utf-8")).get("images") or []}
+    except (OSError, ValueError, KeyError, TypeError):
+        tl_rows = None
+    rows = []
+    for it in _draw_items(plan, ftag):
+        d, k = it["d"] if isinstance(it["d"], dict) else {}, it["image"]
+        did = d.get("id")
+        clip, pv = _draw_paths(rd, nn, ftag, did)
+        clip = clip.with_suffix(FX_ALPHA_CODECS[codec][0])
+        try:
+            side = json.loads(clip.with_name(clip.name + ".json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            side = {}
+        s0 = float(d["start_s"]) if _draw_num(d.get("start_s")) else None
+        du = float(d["dur_s"]) if _draw_num(d.get("dur_s")) else None
+        r = tl_rows.get(k) if tl_rows else None
+        prev = [pv / f"{did}-p{j}.png" for j in (1, 2, 3)] + [pv / f"{did}-sheet.png"]
+        rows.append({"id": did, "image": k, "start_s": s0, "end_s": round(s0 + du, 6) if s0 is not None and du is not None else None,
+                     "video_start": round(float(r["start"]) + s0, 6) if r and s0 is not None else None,
+                     "video_end": round(float(r["start"]) + s0 + du, 6) if r and s0 is not None and du is not None else None,
+                     "elements": len(d.get("elements") or []), "clip": str(clip), "clip_exists": clip.is_file(),
+                     "current": clip.is_file() and side.get("spec_hash") == _draw_hash(d, W, H, fps, codec),
+                     "previews": [str(p) for p in prev if p.is_file()], "own_for_format": it["own"]})
+    out({"ok": True, "video": nn, "format": ftag or None, "drawings": rows, "count": len(rows), "timeline": str(tlp) if tl_rows else None,
+         "note": "current = the clip's sidecar holds the spec hash of the plan's drawing now; a stale or missing clip: `T draw render`"})
+
+
+def _draw_merge(rd: Path, nn: str, ftag: str, st: dict, imgs: list, rows: list, fps: int) -> tuple:
+    """The plan's drawings for `T slideshow plan`: an effects entry per current clip (an overlay with its own transparency, cover, silent,
+    at its image's start plus its start_s; `drawing` sends it to the draw tracks), and the facts. Returns (entries, facts, undecided)."""
+    byk = {int(im.get("image") or 0): im for im in imgs}
+    facts = {"drawings": [], "drawings_not_rendered": [], "drawings_on_moving_images": [], "drawings_past_their_image": [],
+             "drawings_in_caption_band": [], "drawings_undecided": []}
+    if ftag:
+        facts["drawings_positions_not_read_off_this_format"] = []
+    if not any(im.get("drawings") for im in imgs):
+        facts["drawings"] = {"count": 0, "items": []}
+        return [], facts, []
+    wh = _draw_parse_wh(_fmt_for(st, ftag).get("export"))
+    codec, _n = _draw_codec()
+    entries, und, ids = [], [], {}
+    for r in rows:
+        for d in byk.get(int(r["image"]), {}).get("drawings") or []:
+            if isinstance(d, dict):
+                ids.setdefault(str(d.get("id")), []).append(int(r["image"]))
+    for r in rows:
+        im = byk.get(int(r["image"])) or {}
+        for d in im.get("drawings") or []:
+            k = int(r["image"])
+            v = _draw_validate(d)
+            did = str((d or {}).get("id")) if isinstance(d, dict) else "?"
+            if len(ids.get(did, [])) > 1:
+                v["invalid"].append({"drawing": did, "element": None, "field": "id", "need": f"an id unique in the video (images {ids[did]})"})
+            und += [f"image {k}: {_draw_und_text(u)}" for u in v["undecided"] if u.get("element") is None]
+            facts["drawings_undecided"] += [f"image {k}: {_draw_und_text(u)}" for u in v["undecided"] if u.get("element") is not None]
+            facts["drawings_undecided"] += [f"image {k}: drawing {u.get('drawing')}" + (f" element {u['element']}" if u.get("element") else "")
+                                            + f": {u.get('field')} is not valid ({u.get('need')})" for u in v["invalid"]]
+            facts["drawings_undecided"] += [f"image {k}: drawing {u.get('drawing')} element {u['element']}: text refused ({u['reason']})"
+                                            for u in v["text_refused"]]
+            s0 = float(d["start_s"]) if isinstance(d, dict) and _draw_num(d.get("start_s")) else None
+            du = float(d["dur_s"]) if isinstance(d, dict) and _draw_num(d.get("dur_s")) else None
+            row = {"id": did, "image": k, "start": round(float(r["start"]) + s0, 6) if s0 is not None else None,
+                   "end": round(float(r["start"]) + s0 + du, 6) if s0 is not None and du is not None else None,
+                   "rendered": False, "current": False}
+            if str(r.get("motion") or "none") != "none":
+                facts["drawings_on_moving_images"].append(did)
+            if s0 is not None and du is not None and s0 + du > float(r["end"]) - float(r["start"]) + 1e-6:
+                facts["drawings_past_their_image"].append(did)
+            if ftag and not im.get("_drawings_own"):
+                facts["drawings_positions_not_read_off_this_format"].append(did)
+            blocked = v["undecided"] or v["invalid"] or v["text_refused"]
+            clip = _draw_paths(rd, nn, ftag, did)[0].with_suffix(FX_ALPHA_CODECS[codec][0])
+            try:
+                side = json.loads(clip.with_name(clip.name + ".json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                side = {}
+            row["rendered"] = clip.is_file()
+            row["current"] = bool(row["rendered"] and wh and not blocked and side.get("spec_hash") == _draw_hash(d, wh[0], wh[1], fps, codec))
+            facts["drawings"].append(row)
+            if not row["current"]:
+                facts["drawings_not_rendered"].append({"id": did, "image": k, "reason": "the spec leaves fields undecided or invalid" if blocked
+                                                       else "no clip" if not row["rendered"] else "stale: the spec hash differs (T draw render)"})
+                continue
+            if any(x.get("in_caption_band") for x in side.get("elements") or []):
+                facts["drawings_in_caption_band"].append(did)
+            entries.append({"file": str(clip), "type": "overlay", "blend": "normal", "fit": "cover", "volume": 0, "anchor_s": 0.0,
+                            "at_s": round(float(r["start"]) + s0, 6), "dur_s": float(side.get("duration_s") or du), "why": d.get("why"),
+                            "drawing": did, "image": k})
+    facts["drawings"] = {"count": len(facts["drawings"]), "items": facts["drawings"]}
+    return entries, facts, und
+
+
+def cmd_draw(a):
+    """Static drawings (the user, 2026-11-11: draw and animate over a still): grid | words | render | list."""
+    {"grid": _draw_cmd_grid, "words": _draw_cmd_words, "render": _draw_cmd_render, "list": _draw_cmd_list}[a.action](a)
+
+
 # ---- the local render: stills with motion, transitions, the narration and the bed, loudness; the preview with the captions burned
 
 def _static_line_starts(side: dict) -> dict:
@@ -15091,7 +16644,8 @@ def _slideshow_plan(a):
             if any(k in im for k in ("scale", "x", "y")) and not any(k in own for k in ("scale", "x", "y")):
                 tied.append(int(im.get("image") or 0))
             base = {k: v for k, v in im.items() if k not in ("scale", "x", "y", "labels", "by_format")}
-            return {**base, **{k: v for k, v in own.items() if k != "prompt"}, "_labels_first": bool(im.get("labels"))}
+            return {**base, **{k: v for k, v in own.items() if k != "prompt"}, "_labels_first": bool(im.get("labels")),
+                    "_drawings_own": "drawings" in own}
         imgs = [_for_fmt(im) for im in imgs]
     try:
         side = json.loads((rd / "30-assets" / "narration" / f"video-{nn}.json").read_text(encoding="utf-8"))
@@ -15166,7 +16720,11 @@ def _slideshow_plan(a):
     for i, r in enumerate(rows):
         r["end"] = rows[i + 1]["start"] if i + 1 < len(rows) else total
     short = [r["image"] for r in rows if r["end"] - r["start"] < 0.5]
-    effects, fx_undecided = _fx_resolve(rd, plan, rows, starts, lead, total, fps)
+    # the plan's drawings (T draw render): each current clip joins the effects in memory (the plan's file is not changed)
+    dr_entries, dr_facts, dr_undecided = _draw_merge(rd, nn, ftag, _st, imgs, rows, fps)
+    undecided += dr_undecided
+    effects, fx_undecided = _fx_resolve(rd, {**plan, "effects": list(plan.get("effects") or []) + dr_entries} if dr_entries else plan,
+                                        rows, starts, lead, total, fps)
     fx_after = []
     if partial:   # an effect on a line after the partial narration's end is left out with its images, listed
         for u in list(fx_undecided):
@@ -15197,6 +16755,8 @@ def _slideshow_plan(a):
                        # a language written without spaces has no words to count: a cue holds this many letters
                        **({"chars": int(cap.get("chars", _scfg("captions.chars_unspaced", 10)))} if unsp else {})},
           "images": rows, "effects": effects, "made": now_iso(),
+          "drawings": [{"id": e["drawing"], "image": e.get("image"), "start": e["start"], "end": e["end"], "file": e["file"],
+                        "track": e.get("track")} for e in effects if e.get("drawing")],
           **({"partial_narration": partial, "images_after_narration": beyond, "effects_after_narration": fx_after}
              if partial else {}),
           **({"labels_style": lstyle} if any(r.get("labels") for r in rows) else {})}
@@ -15241,6 +16801,7 @@ def _slideshow_plan(a):
          "labels": [[r["image"], lb.get("text"), lb.get("x_rel"), lb.get("y_rel")] for r in rows for lb in r.get("labels") or []],
          "labels_on_moving_images": [r["image"] for r in rows if r.get("labels") and str(r.get("motion") or "none") != "none"],
          "effects": [[e["n"], e["type"], Path(e["file"]).name, e["start"], e["end"], e.get("track")] for e in effects],
+         **dr_facts,
          "music": bool(tl["music"]),
          "partial_narration": ({"ends_at_line": last_line, "images_left_out": beyond, "effects_left_out": fx_after}
                                if partial else None),
@@ -15406,7 +16967,9 @@ def _slideshow_render(a):
     missing_fx = [e["n"] for e in fx_all if not Path(str(e.get("file"))).is_file()]
     if missing_fx:
         fail("effects whose file is gone: " + ", ".join(str(x) for x in missing_fx), 2)
-    fx = sorted((e for e in fx_all if e["type"] == "overlay"), key=lambda e: (int(str(e.get("track") or "fx1")[2:] or 1), e["start"]))
+    # in track order, the drawings (draw1, draw2 ...) over the effect overlays
+    fx = sorted((e for e in fx_all if e["type"] == "overlay"),
+                key=lambda e: (bool(e.get("drawing")), int(re.sub(r"\D", "", str(e.get("track") or "fx1")) or 1), e["start"]))
     ver = _fx_catalogue()
     if fx and ver:   # draw what CapCut will play: an overlay CapCut gets as an alpha file made here is drawn from that same file
         try:
@@ -16479,6 +18042,26 @@ def main():
     p.add_argument("--width", type=int, help="--commons: the width of the PNG rendering (an SVG always comes as a PNG; default 2400)")
     p.set_defaults(fn=cmd_fetch_image)
 
+    p = sp.add_parser("fetch-font", help="Static: an extra open font into the library's fonts folder (the user, 2026-11-11: \"add a permission "
+                                         "for the agents to download extra fonts on capcut if the available ones do not seem a good match "
+                                         "for the video\"): from Fontsource by --family (its licence and subsets read from its API), or "
+                                         "--url with --licence and --licence-source (recorded as claimed); only the licences of config "
+                                         "static.fonts.open_licences pass; never written over an existing file; its row goes into "
+                                         "fonts/README.md; `T capcut-font --list` then lists it with source library")
+    p.add_argument("--family", required=True, help="the font's family name as Fontsource lists it, e.g. \"Caveat Brush\"")
+    p.add_argument("--weight", type=int, help="100..900 (default 400)")
+    p.add_argument("--style", choices=["normal", "italic"], help="default normal")
+    p.add_argument("--subset", help="a Fontsource subset (latin, latin-ext, cyrillic, greek, vietnamese ...); default latin, or with --text the "
+                                    "first of config static.fonts.subset_order whose file has every character")
+    p.add_argument("--text", help="a text file (the words the font must draw: a script, the captions); its characters choose the subset and "
+                                  "are checked against the file's glyphs (font_missing_glyphs)")
+    p.add_argument("--why", help="which video and why the listed fonts do not fit (the README section's heading the first time that day)")
+    p.add_argument("--run", help="the run it is for (written in its README row)")
+    p.add_argument("--url", help="a font file's address instead of Fontsource (needs --licence and --licence-source)")
+    p.add_argument("--licence", help="--url: the font's licence as an SPDX id (OFL-1.1, Apache-2.0)")
+    p.add_argument("--licence-source", dest="licence_source", help="--url: the page that states the licence")
+    p.set_defaults(fn=cmd_fetch_font)
+
     p = sp.add_parser("tts", help="Static's voice by ElevenLabs (the model the run picked, Eleven v4 by default; contract item 36): check | "
                                   "models (ElevenLabs' live model list, a free read, kept in the library) | model (the run's narration "
                                   "model, picked from that list) | voices (the account's voices, their previews measured, free) | design "
@@ -16568,6 +18151,34 @@ def main():
     p.add_argument("--format", help="an extra format of the run (its aspect, e.g. 9:16, or tag 9x16): its own timeline "
                                     "(40-briefs/video-NN-timeline-<tag>.json), stills and captions; default the primary format")
     p.set_defaults(fn=cmd_slideshow)
+
+    p = sp.add_parser("draw", help="Static drawings (the user, 2026-11-11: \"the agents editing the video should also to be able to draw, "
+                                   "and animate too, like combining flux klein image + drawing or animation along with other edit "
+                                   "capabilities ... (those width, height... lines are drawn and animated frame by frame)\"): an animated "
+                                   "vector layer over one still (lines and arrows drawn on, dashed or solid, with a head or tail mark: open, "
+                                   "filled, bar or dot; ellipses, rects, polygons, filled highlights; text) rendered as a transparent clip the "
+                                   "canvas's size and merged into the timeline's effects by `T slideshow plan` | grid (the still in use with "
+                                   "labelled gridlines in canvas shares; --crop magnifies a part with a finer grid) | words (the heard words "
+                                   "of an image's span with their seconds) | render (the plan's images[K].drawings, or --spec standalone) | "
+                                   "list. Facts only: every colour, width, dash, timing and place is the agent's")
+    p.add_argument("action", choices=["grid", "words", "render", "list"]); p.add_argument("--run")
+    p.add_argument("--video", help="the video, NN"); p.add_argument("--image", type=int, help="grid (required), words: the image's number")
+    p.add_argument("--format", help="an extra format of the run (its aspect, e.g. 9:16, or tag 9x16): its stills, canvas and "
+                                    "by_format.<tag>.drawings (else the primary's drawings, listed as not read off this format)")
+    p.add_argument("--step", type=float, help="grid: the gridlines' spacing as a share of the canvas (default config "
+                                              "static.drawings.grid_step; with --crop a finer round step in the crop's proportion)")
+    p.add_argument("--crop", help="grid: x0,y0,x1,y1 (shares of the canvas): a magnified view of that part, long side config "
+                                  "static.drawings.grid_long_side_px, its labels still in canvas shares")
+    p.add_argument("--drawing", help="render: only these drawings, e.g. D1,D3")
+    p.add_argument("--force", action="store_true", help="render: render again even when the clip's spec hash is current")
+    p.add_argument("--at", help="render: the previews' seconds from the drawing's start, e.g. 0.5,1.2,3.0 (default config "
+                                "static.drawings.preview_points of the animated span)")
+    p.add_argument("--spec", help="render standalone (tests, demos): a drawing object as JSON, no run")
+    p.add_argument("--canvas", help="render --spec: WxH, e.g. 1080x1920"); p.add_argument("--fps", type=int, help="render --spec: default config static.render.fps")
+    p.add_argument("--still", help="render --spec: the picture the previews are drawn over (default a mid-grey canvas)")
+    p.add_argument("--out", help="render --spec: the folder for the clip, its sidecar and the previews")
+    p.add_argument("--id", help="render --spec: the drawing's id when the spec has none (or to rename it)")
+    p.set_defaults(fn=cmd_draw)
 
     a = ap.parse_args()
     if getattr(a, "run", None) and a.cmd not in ("caught-flag", "qc-consult", "qc-brief", "plan-hints", "prompt-template"):

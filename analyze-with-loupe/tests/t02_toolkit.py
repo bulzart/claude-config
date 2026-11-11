@@ -3341,4 +3341,505 @@ check(not any(_ELKEY in o for o in _outs) and _ELKEY not in LG_CACHE.read_text(e
       "the ElevenLabs key is never printed and never written to the run or the library's copy of the list")
 # <<< language, narration model and approach tests (end)
 
+# --- drawings over a still (the user, 2026-11-11: "the agents editing the video should also to be able to draw, and animate too ... (those
+# width, height... lines are drawn and animated frame by frame)"): the spec checked (nothing chosen for the agent), the frames drawn as the
+# spec says (draw-on with dashes in place, wipe, fade, grow, pop, type, out, boil, marks, fills), the clip and its facts, grid / words / list,
+# the timeline's merge (draw tracks, facts), an extra format, standalone canvases, the cost
+import subprocess as _dsp  # noqa: E402
+import time as _dtime  # noqa: E402
+import wave as _dwave  # noqa: E402
+import numpy as _dnp  # noqa: E402
+from PIL import Image as _DIm  # noqa: E402
+
+_DFONT = "C:/Windows/Fonts/arial.ttf"
+_dtmp = home.parent / "draw-tests"
+_dtmp.mkdir(parents=True, exist_ok=True)
+
+
+def _dline(**kw):
+    e = {"type": "line", "points": [[0.1, 0.5], [0.5, 0.3], [0.9, 0.5]], "smooth": 1.0, "stroke": "#ffffff", "width": 0.01,
+         "dash": [0.04, 0.03], "in": {"kind": "draw", "start_s": 0.0, "dur_s": 1.0, "ease": "linear", "from": "start"}}
+    e.update(kw)
+    return e
+
+
+def _dspec(els, dur=1.2, did="D1", **kw):
+    return {"id": did, "start_s": 0.2, "dur_s": dur, "why": "test", "elements": els, **kw}
+
+
+def _dalpha(fr):
+    return _dnp.asarray(fr)[..., 3].astype(int)
+
+
+# 1. the spec checked: every missing decision listed with the drawing, the element and the field; unknown kinds and bad colours invalid
+_v = _awl._draw_validate({"elements": [{"type": "line", "points": [[0.1, 0.1], [0.2, 0.2]], "in": {"kind": "draw", "start_s": 0}},
+                                       {"type": "rect", "box": [0.1, 0.1, 0.2, 0.2], "stroke": "#ff0000", "in": {"kind": "fade", "start_s": 0, "dur_s": 1}},
+                                       {"type": "text", "text": "Width", "at": [0.5, 0.5], "in": {"kind": "type", "start_s": 0, "dur_s": 1, "ease": "out"}},
+                                       {"type": "arrow", "points": [[0, 0], [1, 1]], "stroke": "#fff", "width": 0.01,
+                                        "in": {"kind": "spin", "start_s": 0, "dur_s": 1, "ease": "bouncy"}},
+                                       {"type": "squiggle"},
+                                       {"type": "polygon", "points": [[0.1, 0.1], [0.2, 0.1], [0.15, 1.3]], "stroke": None, "fill": "#00ff00",
+                                        "in": {"kind": "wipe", "start_s": -1, "dur_s": 0, "ease": "in", "from": "diagonal"}}]})
+_uf = {(u["element"], u["field"]) for u in _v["undecided"]}
+_bf = {(u["element"], u["field"]) for u in _v["invalid"]}
+check({(None, "id"), (None, "start_s"), (None, "dur_s"), (None, "why"), (1, "stroke"), (1, "width"), (1, "in.dur_s"), (1, "in.ease"),
+       (1, "in.from"), (2, "fill"), (2, "width"), (3, "align"), (3, "font_file"), (3, "size"), (3, "fill"), (4, "head")} <= _uf
+      and {(4, "stroke"), (4, "in.kind"), (4, "in.ease"), (5, "type"), (6, "in.start_s"), (6, "in.dur_s"), (6, "in.from")} <= _bf
+      and _v["outside"] and _v["outside"][0]["field"] == "points[2]" and (6, "in.from") not in _uf,
+      f"draw: the spec check lists every decision left out (the drawing, the element, the field) and invalid values (unknown kind or ease, "
+      f"a 3-digit colour, start_s < 0, dur_s 0), coordinates outside 0..1 listed apart ({len(_uf)} undecided, {len(_bf)} invalid)")
+_v2 = _awl._draw_validate(_dspec([{"type": "text", "text": "Width", "at": [0.5, 0.5], "align": "left", "font_file": _DFONT, "size": 0.05,
+                                   "fill": "#ffffff", "in": {"kind": "draw", "start_s": 0, "dur_s": 1, "ease": "out", "from": "start"}},
+                                  _dline(**{"in": {"kind": "type", "start_s": 0, "dur_s": 1, "ease": "out"}}),
+                                  _dline(head={"size": 0.02, "style": "star"}, tail={"size": 0.02})]))
+check({(1, "in.kind"), (2, "in.kind"), (3, "head.style")} <= {(u["element"], u["field"]) for u in _v2["invalid"]}
+      and (3, "tail.style") in {(u["element"], u["field"]) for u in _v2["undecided"]},
+      "draw: a kind on a type it does not fit (draw on a text, type on a line) and an unknown mark style are invalid; a mark without a style is undecided")
+_dsp_bad = _dtmp / "bad-spec.json"
+_dsp_bad.write_text(json.dumps({"id": "D1", "dur_s": 1.0, "elements": [{"type": "line", "points": [[0.1, 0.1], [0.5, 0.5]], "stroke": "#ffffff",
+                                                                          "in": {"kind": "draw", "start_s": 0, "dur_s": 0.5, "from": "start"}}]}), encoding="utf-8")
+js, code, _ = t("draw", "render", "--spec", str(_dsp_bad), "--canvas", "320x240", "--out", str(_dtmp / "bad"), env=ENV, ok=False)
+check(code == 1 and not js.get("rendered") and {u["field"] for u in js.get("undecided") or []} == {"width", "in.ease"}
+      and not (_dtmp / "bad" / "D1.mov").exists(),
+      "draw render renders nothing for a spec with a decision left out (exit 1, the fields listed: width and in.ease, never a default)")
+
+# 2. a dashed curved line drawn on: frame count, frame 0 empty, the reveal point, the whole path at the end, the dashes' gaps
+_R = _awl._DrawRender(_dspec([_dline()]), 360, 640, 30)
+_el = _R.els[0]
+_f0, _fm, _fl = _dalpha(_R.frame(0)), _dalpha(_R.frame(15)), _dalpha(_R.frame(_R.n - 1))
+_pp = _el["path"] / _R.k
+_sm = _el["s"] / _el["s"][-1]
+_half_x = float(_dnp.interp(0.5, _sm, _pp[:, 0]))
+_on = [_fl[min(639, int(round(y))), min(359, int(round(x)))] > 128 for x, y in _pp[::2]]
+_runs = sum(1 for a_, b_ in zip(_on, _on[1:]) if a_ and not b_)
+check(_R.n == 36 and _f0.max() == 0 and _fm[:, :int(_half_x * 0.6)].max() > 200 and _fm[:, int(_half_x + 20):].max() == 0
+      and _fl[:, int(0.85 * 360):].max() > 200 and _runs >= 8 and not all(_on),
+      f"a dashed curved line drawn on: {_R.n} frames for 1.2 s at 30 fps, frame 0 empty, half way the stroke reaches the middle of its path and "
+      f"nothing past it, the last frame holds the whole path, the dashes leave gaps ({_runs} dashes counted along it)")
+_RE = _awl._DrawRender(_dspec([_dline(dash=None, **{"in": {"kind": "draw", "start_s": 0.0, "dur_s": 1.0, "ease": "linear", "from": "end"}})]), 360, 640, 30)
+_fe = _dalpha(_RE.frame(15))
+check(_fe[:, int(_half_x + 20):].max() > 200 and _fe[:, :int(_half_x * 0.6)].max() == 0,
+      "draw from the end grows the stroke from the path's last point")
+# dashes stay in place: a dash drawn at frame 10 is still there (same pixels) at frame 20
+_a10, _a20 = _dalpha(_R.frame(10)), _dalpha(_R.frame(20))
+check(int(((_a10 > 200) & (_a20 < 50)).sum()) == 0, "the dash pattern is anchored at the path's start: a drawn dash never moves as the line grows")
+
+# 3. wipe, fade, grow, pop, type; out; fills with fill_alpha; marks
+_rect = {"type": "rect", "box": [0.2, 0.2, 0.8, 0.8], "stroke": None, "fill": "#ff0000", "fill_alpha": 0.5}
+_Rw = _awl._DrawRender(_dspec([{**_rect, "in": {"kind": "wipe", "start_s": 0, "dur_s": 1.0, "ease": "linear", "from": "left"}}]), 200, 200, 30)
+_w = _dalpha(_Rw.frame(15))
+check(_w[100, 60] > 100 and _w[100, 140] == 0 and abs(int(_dalpha(_Rw.frame(35))[100, 100]) - 128) <= 3,
+      f"wipe from the left reveals the left part first; a fill at fill_alpha 0.5 is alpha {int(_dalpha(_Rw.frame(35))[100, 100])}")
+_Rf = _awl._DrawRender(_dspec([{**_rect, "fill_alpha": 1.0, "in": {"kind": "fade", "start_s": 0, "dur_s": 1.0, "ease": "linear"},
+                                "out": {"kind": "fade", "start_s": 1.0, "dur_s": 0.1, "ease": "linear"}}]), 200, 200, 30)
+_fa = [int(_dalpha(_Rf.frame(i))[100, 100]) for i in (0, 9, 15, 27)]
+check(_fa[0] == 0 and 70 < _fa[1] < 85 and 120 < _fa[2] < 135 and _fa[3] > 220 and _dalpha(_Rf.frame(34)).max() == 0,
+      f"fade ramps the alpha with the eased progress ({_fa}), and the out fade leaves the frame empty after it ends")
+_Rg = _awl._DrawRender(_dspec([{**_rect, "fill_alpha": 1.0, "in": {"kind": "grow", "start_s": 0, "dur_s": 1.0, "ease": "linear"}}]), 200, 200, 30)
+_Rp = _awl._DrawRender(_dspec([{**_rect, "fill_alpha": 1.0, "in": {"kind": "pop", "start_s": 0, "dur_s": 1.0, "ease": "linear"}}]), 200, 200, 30)
+_cols = lambda a: int((a.max(axis=0) > 128).sum())   # noqa: E731
+_gw = [_cols(_dalpha(_Rg.frame(i))) for i in (6, 15, 30)]
+_pw = [_cols(_dalpha(_Rp.frame(i))) for i in (21, 30)]
+check(_gw[0] < _gw[1] < _gw[2] and abs(_gw[2] - 120) <= 2 and abs(_gw[1] - 60) <= 3 and _pw[0] > _pw[1] + 8 and abs(_pw[1] - 120) <= 2,
+      f"grow scales from the centre ({_gw} px wide), pop overshoots then settles ({_pw})")
+_txt = {"type": "text", "text": "ABCDEF", "at": [0.1, 0.6], "align": "left", "font_file": _DFONT, "size": 0.2, "fill": "#ffffff",
+        "in": {"kind": "type", "start_s": 0, "dur_s": 1.0, "ease": "linear"}}
+_Rt = _awl._DrawRender(_dspec([_txt]), 400, 200, 30)
+_ext = []
+for _i in (6, 12, 18, 24, 31):
+    _c = _dnp.nonzero(_dalpha(_Rt.frame(_i)).max(axis=0) > 128)[0]
+    _ext.append((int(_c.min()), int(_c.max())) if len(_c) else None)
+check(all(_ext) and len({e[0] for e in _ext}) == 1 and all(_ext[i][1] < _ext[i + 1][1] for i in range(4)),
+      f"type shows the letters in order, each where the whole text puts it (left edge fixed, right edge growing: {_ext})")
+_tc = dict(_txt, align="center", at=[0.5, 0.6])
+_Rtc = _awl._DrawRender(_dspec([_tc]), 400, 200, 30)
+_c1 = _dnp.nonzero(_dalpha(_Rtc.frame(12)).max(axis=0) > 128)[0]
+_c2 = _dnp.nonzero(_dalpha(_Rtc.frame(35)).max(axis=0) > 128)[0]
+check(len(_c1) and abs(int(_c1.min()) - int(_c2.min())) <= 1 and int(_c1.max()) < int(_c2.max()),
+      "a centred text typed in keeps its letters where the whole centred text puts them (no re-centring while it types)")
+_Ro = _awl._DrawRender(_dspec([{**_rect, "fill_alpha": 1.0, "in": {"kind": "none", "start_s": 0},
+                                "out": {"kind": "wipe", "start_s": 0.5, "dur_s": 0.5, "ease": "linear", "from": "left"}}]), 200, 200, 30)
+_ow = _dalpha(_Ro.frame(22))
+check(_dalpha(_Ro.frame(5))[100, 60] == 255 and _ow[100, 60] == 0 and _ow[100, 140] == 255 and _dalpha(_Ro.frame(31)).max() == 0,
+      "an out wipe from the left hides the left part first and the element is gone after it")
+for _sty in ("filled", "open", "bar", "dot"):
+    _Ra = _awl._DrawRender(_dspec([{"type": "arrow", "points": [[0.1, 0.5], [0.9, 0.5]], "stroke": "#ffffff", "width": 0.01,
+                                    "head": {"size": 0.08, "style": _sty}, "tail": {"size": 0.08, "style": "bar"},
+                                    "in": {"kind": "draw", "start_s": 0, "dur_s": 1.0, "ease": "linear", "from": "start"}}]), 400, 400, 30)
+    _am, _ae = _dalpha(_Ra.frame(20)), _dalpha(_Ra.frame(32))
+    _tip_m = int(_am[185:196, 330:362].max()) if _sty != "dot" else int(_am[205:215, 355:362].max())
+    _tip_e = int(_ae[185:196, 330:362].max()) if _sty != "dot" else int(_ae[205:215, 355:362].max())
+    _tail = int(_am[200 - 14:200 - 6, 36:44].max())
+    check(_tip_m == 0 and _tip_e > 128 and _tail > 128,
+          f"an arrow's {_sty} head shows once the stroke reaches its end (none at 2/3 of the draw, there at the end); a bar tail is there from the start")
+
+# 4. boil: deterministic, never past its amount
+_o1 = _awl._draw_boil_offsets(1105, "D1", 0, 7, 9, 3.0)
+_o2 = _awl._draw_boil_offsets(1105, "D1", 0, 7, 9, 3.0)
+_o3 = _awl._draw_boil_offsets(1105, "D1", 0, 8, 9, 3.0)
+_Rb = _awl._DrawRender(_dspec([_dline(boil={"amount": 0.004, "every": 3})]), 360, 640, 30)
+_elb = _Rb.els[0]
+_mx = max(float(_dnp.hypot(*(_Rb._boiled(_elb, g_) - _elb["path"]).T).max()) for g_ in range(12))
+_Rb2 = _awl._DrawRender(_dspec([_dline(boil={"amount": 0.004, "every": 3})]), 360, 640, 30)
+check(_dnp.array_equal(_o1, _o2) and not _dnp.array_equal(_o1, _o3) and _mx <= _elb["boil_px"] + 1e-6 and _mx > 0.3 * _elb["boil_px"]
+      and _Rb.frame(33).tobytes() == _Rb2.frame(33).tobytes() and _Rb.frame(33).tobytes() == _Rb.frame(35).tobytes()
+      and _Rb.frame(33).tobytes() != _Rb.frame(36).tobytes(),
+      f"boil is seeded (the same frame twice is the same bytes, a new displacement every 3 frames) and moves the path at most its amount "
+      f"({_mx:.2f} of {_elb['boil_px']:.2f} supersampled px)")
+
+# 5. the codec: the first of the order the catalogue lists as playing, else the first of the order and a note
+_cat_o = _awl._fx_catalogue
+try:
+    _awl._fx_catalogue = lambda: {"alpha_video": {"plays": True, "codec": "prores4444", "codecs": ["prores4444", "png-mov"]}}
+    _cA = _awl._draw_codec()
+    _awl._fx_catalogue = lambda: {"alpha_video": {"plays": False}, "alpha_qtrle": {"plays": False}}
+    _cB = _awl._draw_codec()
+finally:
+    _awl._fx_catalogue = _cat_o
+check(_cA == ("png-mov", None) and _cB[0] == "qtrle" and "no alpha codec" in (_cB[1] or ""),
+      f"draw takes the first codec of static.drawings.codec_order the CapCut catalogue lists as playing ({_cA[0]}), else the first and says so")
+
+# 6. standalone render: a vertical and a horizontal canvas; the clip probed; reuse by hash and --force; previews and sheet
+_dstill = _dtmp / "still.png"
+_DIm.new("RGB", (1200, 1200), (20, 20, 24)).save(_dstill)
+_full = _dspec([_dline(width=0.006, dash=[0.02, 0.012], tail={"size": 0.03, "style": "bar"}, boil={"amount": 0.0015, "every": 3}),
+                {**_rect, "box": [0.3, 0.3, 0.5, 0.45], "fill_alpha": 0.85, "in": {"kind": "wipe", "start_s": 0.1, "dur_s": 0.5, "ease": "out", "from": "left"}},
+                {**_txt, "text": "Width", "at": [0.6, 0.55], "size": 0.06, "in": {"kind": "pop", "start_s": 1.0, "dur_s": 0.3, "ease": "out"}}], dur=2.0)
+(_dtmp / "full.json").write_text(json.dumps(_full), encoding="utf-8")
+_dres = {}
+for _cv in ("1080x1920", "2560x1440"):
+    _t0 = _dtime.time()
+    js, code, _ = t("draw", "render", "--spec", str(_dtmp / "full.json"), "--canvas", _cv, "--still", str(_dstill), "--out", str(_dtmp / _cv), env=ENV, ok=False)
+    _dres[_cv] = (js, code, round(_dtime.time() - _t0, 2))
+_rv = (_dres["1080x1920"][0].get("rendered") or [{}])[0]
+_rh = (_dres["2560x1440"][0].get("rendered") or [{}])[0]
+_pv = _awl.media_summary(_rv["file"]) if _rv.get("file") else {}
+check(_dres["1080x1920"][1] == 0 and _rv.get("codec") == "qtrle" and _pv.get("codec") == "qtrle" and _pv.get("pix_fmt") == "argb"
+      and (_pv.get("width"), _pv.get("height")) == (1080, 1920) and _pv.get("nb_frames") == 60 == _rv.get("frames") and not _pv.get("has_audio")
+      and _rh.get("size") == "2560x1440" and _awl.media_summary(_rh["file"]).get("nb_frames") == 60
+      and all(Path(p).is_file() for p in _rv.get("previews") or []) and len(_rv.get("previews") or []) == 3 and Path(_rv.get("sheet") or "").is_file()
+      and _DIm.open(_rv["sheet"]).size[0] == 1920 and Path(_rv["file"] + ".json").is_file(),
+      f"draw render --spec: a 1080x1920 and a 2560x1440 clip (qtrle, argb, 60 frames, no sound: the catalogue lists no codec here, so the "
+      f"first of the order), its sidecar, three previews over the still and the sheet of three 640 px views")
+check(_dres["1080x1920"][2] < 60, f"a 2 s 1080x1920 drawing (a dashed boiling line, a wiped fill, a popped word) renders in {_dres['1080x1920'][2]} s "
+      f"(its frames {_rv.get('render_s')} s; 2560x1440: {_dres['2560x1440'][2]} s)")
+js, _, _ = t("draw", "render", "--spec", str(_dtmp / "full.json"), "--canvas", "1080x1920", "--out", str(_dtmp / "1080x1920"), env=ENV)
+_mt = Path(_rv["file"]).stat().st_mtime_ns
+js2, _, _ = t("draw", "render", "--spec", str(_dtmp / "full.json"), "--canvas", "1080x1920", "--out", str(_dtmp / "1080x1920"), "--force", env=ENV)
+check(js["rendered"][0]["reused"] is True and js["rendered"][0]["spec_hash"] == _rv["spec_hash"] and js2["rendered"][0]["reused"] is False
+      and Path(_rv["file"]).stat().st_mtime_ns != _mt,
+      "the same spec reuses its clip (the spec hash in the sidecar); --force renders it again")
+
+
+def _dframe(p, i, w, h):
+    cp = _dsp.run([_awl.find_tool("ffmpeg"), "-nostdin", "-v", "error", "-i", str(p), "-vf", f"select=eq(n\\,{i})", "-frames:v", "1",
+                   "-f", "rawvideo", "-pix_fmt", "rgba", "-"], capture_output=True)
+    return cp.stdout
+
+
+_fb1 = _dframe(_rv["file"], 40, 1080, 1920)
+(_dtmp / "full-b.json").write_text(json.dumps(_full), encoding="utf-8")
+js, _, _ = t("draw", "render", "--spec", str(_dtmp / "full-b.json"), "--canvas", "1080x1920", "--out", str(_dtmp / "again"), env=ENV)
+_fb2 = _dframe(js["rendered"][0]["file"], 40, 1080, 1920)
+_fa40 = _dnp.frombuffer(_fb1, _dnp.uint8).reshape(1920, 1080, 4) if len(_fb1) == 1080 * 1920 * 4 else None
+check(len(_fb1) == 1080 * 1920 * 4 and _fb1 == _fb2 and js["rendered"][0]["spec_hash"] == _rv["spec_hash"] and _fa40 is not None
+      and _fa40[..., 3].max() == 255 and _fa40[0, 0, 3] == 0,
+      "the same spec renders the same frame bytes in another folder (the boil is seeded), with its transparency kept in the file")
+# a text's glyphs and a script the renderer refuses
+(_dtmp / "glyph.json").write_text(json.dumps(_dspec([{**_txt, "text": "Width 京", "in": {"kind": "fade", "start_s": 0, "dur_s": 0.2, "ease": "linear"}}], dur=0.4)), encoding="utf-8")
+js, code, _ = t("draw", "render", "--spec", str(_dtmp / "glyph.json"), "--canvas", "320x240", "--out", str(_dtmp / "glyph"), env=ENV, ok=False)
+_gel = ((js.get("rendered") or [{}])[0].get("elements") or [{}])[0]
+check(code == 0 and _gel.get("text_missing_glyphs") == ["京"] and _gel.get("text_refused") is None,
+      "a text element's facts list the characters its font file has no glyph for")
+(_dtmp / "rtl.json").write_text(json.dumps(_dspec([{**_txt, "text": "عرض", "in": {"kind": "fade", "start_s": 0, "dur_s": 0.2, "ease": "linear"}}], dur=0.4),
+                                           ensure_ascii=False), encoding="utf-8")
+js, code, _ = t("draw", "render", "--spec", str(_dtmp / "rtl.json"), "--canvas", "320x240", "--out", str(_dtmp / "rtl"), env=ENV, ok=False)
+check(code == 1 and (js.get("text_refused") or [{}])[0].get("scripts") == ["Arabic"] and "CapCut label" in (js.get("text_refused") or [{}])[0].get("reason", "")
+      and not (_dtmp / "rtl" / "D1.mov").exists(),
+      "a text in a script that needs shaping (Arabic) is refused with the reason and the way it goes in instead (a CapCut label)")
+
+# 7. a run: grid (and a magnified crop), words, render, list; the timeline's merge; the extra format
+js, _, _ = t("new-run", "--mode", "analyze", "--slug", "drawings", env=ENV)
+DR = Path(js["run_dir"])
+t("state", "--run", str(DR), "set", "analyze_submode=static", "static_images=api", env=ENV)
+t("static", "format", "--run", str(DR), "--aspect", "9:16", "--res", "1080", env=ENV)
+t("static", "format", "--run", str(DR), "--aspect", "16:9", "--res", "720", "--also", env=ENV)
+_nd = DR / "30-assets" / "narration"
+_nd.mkdir(parents=True, exist_ok=True)
+with _dwave.open(str(_nd / "video-01.wav"), "wb") as _w_:
+    _w_.setnchannels(1)
+    _w_.setsampwidth(2)
+    _w_.setframerate(48000)
+    _w_.writeframes((0.2 * _dnp.sin(2 * _dnp.pi * 180 * _dnp.arange(int(6.0 * 48000)) / 48000) * 32767).astype("<i2").tobytes())
+_dl = [{"n": 1, "start": 0.0, "end": 2.8, "text": "The arm has three sides."}, {"n": 2, "start": 3.0, "end": 5.8, "text": "Width, height and depth."}]
+(_nd / "video-01.json").write_text(json.dumps({"file": str(_nd / "video-01.wav"), "duration_s": 6.0, "lines": _dl, "engine": "test"}), encoding="utf-8")
+_dw = [{"w": w_, "s": round(0.1 + 0.5 * j, 2), "e": round(0.5 + 0.5 * j, 2)} for j, w_ in enumerate("The arm has three sides.".split())]
+_dw += [{"w": w_, "s": round(3.1 + 0.6 * j, 2), "e": round(3.6 + 0.6 * j, 2)} for j, w_ in enumerate("Width, height and depth.".split())]
+(_nd / "video-01.words.json").write_text(json.dumps({"words": _dw}), encoding="utf-8")
+(_nd / "video-01.cues.json").write_text(json.dumps([{"start": 0.1, "end": 2.6, "text": "The arm has"}]), encoding="utf-8")
+for _tag, _size in (("", (1216, 2160)), ("16x9", (1280, 720))):
+    _imd = DR / "60-outputs" / "video-01" / (f"{_tag}/images" if _tag else "images")
+    _imd.mkdir(parents=True, exist_ok=True)
+    _recs = {}
+    for _k in (1, 2):
+        _im_ = _DIm.new("RGB", _size, (30 + 40 * _k, 30, 40))
+        _im_.save(_imd / f"i0{_k}-a1.png")
+        _recs[f"0{_k}"] = {"attempts": [{"attempt": 1, "status": "completed", "file": str(_imd / f"i0{_k}-a1.png")}], "use": f"i0{_k}-a1.png"}
+    (_imd.parent / "images.json").write_text(json.dumps({"images": _recs}), encoding="utf-8")
+_d1 = _dspec([_dline(width=0.008)], did="D1", dur=1.0)
+_d2 = _dspec([{**_rect, "box": [0.1, 0.4, 0.5, 0.55], "in": {"kind": "fade", "start_s": 0, "dur_s": 0.3, "ease": "linear"}}], did="D2", dur=1.5)
+_d2["start_s"] = 0.5
+_d3 = _dspec([_dline(width=0.008)], did="D3", dur=4.0)
+_d4 = _dspec([_dline(width=0.008)], did="D4", dur=0.5)
+_d4["start_s"] = 2.5
+_dplan = {"video": "01", "captions": {"y_rel": 0.72, "size": 10, "words": 3},
+          "images": [{"image": 1, "from_line": 1, "prompt": "an arm", "motion": "none", "drawings": [_d1, _d2, _d4],
+                      "by_format": {"16x9": {"drawings": [dict(_d1, elements=[_dline(width=0.008, points=[[0.2, 0.5], [0.5, 0.3], [0.8, 0.5]])])]}}},
+                     {"image": 2, "from_line": 2, "prompt": "the arm again", "motion": "zoom-in", "amount": 0.1, "transition": "cut",
+                      "drawings": [_d3]}]}
+(DR / "40-briefs").mkdir(parents=True, exist_ok=True)
+(DR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_dplan), encoding="utf-8")
+js, _, _ = t("draw", "grid", "--run", str(DR), "--video", "01", "--image", "1", env=ENV)
+_gi = _DIm.open(js["file"]) if js.get("file") else None
+check(js.get("ok") and _gi is not None and _gi.size == (720, 1280) and js["canvas"] == "1080x1920" and js["still_size"] == [1216, 2160]
+      and Path(js["file"]).name == "i01-grid.png" and "shares of the canvas" in js["note"],
+      f"draw grid: the still in use as the canvas shows it, long side 1280 px, with labelled gridlines in canvas shares ({js.get('size')})")
+js, _, _ = t("draw", "grid", "--run", str(DR), "--video", "01", "--image", "1", "--crop", "0.2,0.4,0.6,0.6", env=ENV)
+_gc = _DIm.open(js["file"]) if js.get("file") else None
+check(js.get("ok") and _gc is not None and max(_gc.size) == 1280 and abs(_gc.size[0] / _gc.size[1] - (0.4 * 1080) / (0.2 * 1920)) < 0.01
+      and js["step"] < 0.1 and js["crop"] == [0.2, 0.4, 0.6, 0.6] and "not the crop's" in js["note"],
+      f"draw grid --crop magnifies that part (long side 1280 px) with a finer step ({js.get('step')}), its labels in canvas shares")
+js, _, _ = t("draw", "words", "--run", str(DR), "--video", "01", "--image", "2", env=ENV)
+_wd = js.get("words") or []
+check(js.get("ok") and [w_["w"] for w_ in _wd] == "Width, height and depth.".split() and _wd[0]["line"] == 2
+      and abs(_wd[0]["s"] - (3.1 + 0.3)) < 1e-6 and abs(_wd[0]["s_image"] - (3.4 - js["image_span"][0])) < 1e-6 and js["narration_offset"] == 0.3,
+      f"draw words: the heard words of image 2's span with their seconds from the video's start (narration + 0.3 s lead) and from the "
+      f"image's start, and their line ({js.get('image_span')})")
+js, code, _ = t("draw", "words", "--run", str(DR), "--video", "02", env=ENV, ok=False)
+check(code == 2 and "tts say" in js.get("error", ""), "draw words with no narration names `T tts say`")
+js, code, _ = t("draw", "render", "--run", str(DR), "--video", "01", env=ENV, ok=False)
+_rr = {r["id"]: r for r in js.get("rendered") or []}
+check(code == 0 and set(_rr) == {"D1", "D2", "D3", "D4"} and _rr["D1"]["overlaps"] == ["D2"] and _rr["D3"]["image_motion"] == "zoom-in"
+      and js["on_moving_image"] == ["D3"] and _rr["D3"]["past_the_image"] is True and _rr["D1"]["past_the_image"] is False
+      and Path(_rr["D1"]["file"]).name == "D1.mov" and Path(_rr["D1"]["file"]).parent.name == "video-01"
+      and Path(_rr["D1"]["previews"][0]).parent == DR / "60-outputs" / "video-01" / "draw"
+      and _rr["D2"]["elements"][0]["in_caption_band"] is False and _rr["D1"]["elements"][0]["in_caption_band"] is False
+      and (_rr["D2"]["caption_band"] or {}).get("y0") is not None,
+      "draw render --run renders every drawing of the plan (30-assets/drawings/video-01/D1.mov, previews in 60-outputs/video-01/draw) with "
+      "its facts: overlaps, the image's move, past the image, the captions' band")
+# D4 made stale, a D5 never rendered
+_dplan["images"][0]["drawings"][2] = dict(_d4, dur_s=0.6)
+_dplan["images"][1]["drawings"].append(_dspec([_dline(width=0.008)], did="D5", dur=0.5))
+(DR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_dplan), encoding="utf-8")
+js, _, _ = t("draw", "list", "--run", str(DR), "--video", "01", env=ENV)
+_ls = {r["id"]: r for r in js.get("drawings") or []}
+check(js.get("count") == 5 and _ls["D1"]["current"] and not _ls["D4"]["current"] and _ls["D4"]["clip_exists"] and not _ls["D5"]["clip_exists"]
+      and len(_ls["D1"]["previews"]) == 4 and _ls["D2"]["start_s"] == 0.5 and _ls["D2"]["end_s"] == 2.0,
+      "draw list: each drawing's image and seconds, whether its clip exists and is current (D4's spec changed: stale), its previews")
+js, _, _ = t("slideshow", "plan", "--run", str(DR), "--video", "01", ok=False, env=ENV)
+_tld = json.loads((DR / "40-briefs" / "video-01-timeline.json").read_text(encoding="utf-8"))
+_dfx = {e["drawing"]: e for e in _tld["effects"] if e.get("drawing")}
+_i1 = _tld["images"][0]
+_i2 = _tld["images"][1]
+_nr = {x["id"]: x["reason"] for x in js.get("drawings_not_rendered") or []}
+check(set(_dfx) == {"D1", "D2", "D3"} and _dfx["D1"]["track"] == "draw1" and _dfx["D2"]["track"] == "draw2" and _dfx["D3"]["track"] == "draw1"
+      and all(e["blend"] == "normal" and e["fit"] == "cover" and e["volume"] == 0.0 and e["type"] == "overlay" for e in _dfx.values())
+      and abs(_dfx["D2"]["start"] - (_i1["start"] + 0.5)) < 1 / 30 + 1e-6 and abs(_dfx["D2"]["dur_s"] - 1.5) < 1e-6 and _dfx["D3"]["image"] == 2
+      and abs(_dfx["D3"]["start"] - (_i2["start"] + 0.2)) < 1 / 30 + 1e-6
+      and [d_["id"] for d_ in _tld["drawings"]] == ["D1", "D2", "D3"] and {d_["track"] for d_ in _tld["drawings"]} == {"draw1", "draw2"}
+      and _nr.get("D4", "").startswith("stale") and _nr.get("D5") == "no clip" and js["drawings"]["count"] == 5
+      and js["drawings_on_moving_images"] == ["D3", "D5"] and js["drawings_past_their_image"] == ["D3"] and js["drawings_in_caption_band"] == []
+      and js.get("undecided") == [] and js.get("ok"),
+      f"slideshow plan merges each current drawing into the effects (an overlay with its own transparency, cover, silent, at its image's "
+      f"start plus its start_s), overlapping drawings on draw1 / draw2, the timeline's drawings list, and the facts: a stale and a missing "
+      f"clip, drawings on a moving image or past their image ({_nr})")
+check(json.loads((DR / "40-briefs" / "video-01-images.json").read_text(encoding="utf-8")).get("effects") is None,
+      "the plan's own effects list is untouched (the drawings are merged in memory)")
+_dplan["images"][1]["drawings"].append({"elements": [_dline()]})
+(DR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_dplan), encoding="utf-8")
+js, _, _ = t("slideshow", "plan", "--run", str(DR), "--video", "01", ok=False, env=ENV)
+check(js.get("ok") is False and any(u.startswith("image 2: drawing ?: no id") for u in js.get("undecided") or [])
+      and any(u.startswith("image 2: drawing ?: no why") for u in js.get("undecided") or []),
+      f"slideshow plan lists a drawing's own fields left out in undecided ({[u for u in js.get('undecided') or [] if 'drawing' in u]})")
+_dplan["images"][1]["drawings"].pop()
+(DR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_dplan), encoding="utf-8")
+# the extra format: its own drawings for image 1, the primary's for image 2 (positions not read off this format)
+js, code, _ = t("draw", "render", "--run", str(DR), "--video", "01", "--format", "16:9", env=ENV, ok=False)
+_rf = {r["id"]: r for r in js.get("rendered") or []}
+check(code == 0 and js["canvas"] == "1280x720" and Path(_rf["D1"]["file"]).name == "16x9-D1.mov" and _rf["D1"]["positions_not_read_off_this_format"] is False
+      and _rf["D3"]["positions_not_read_off_this_format"] is True and "D2" not in _rf and _rf["D1"]["size"] == "1280x720"
+      and Path(_rf["D1"]["previews"][0]).parent == DR / "60-outputs" / "video-01" / "16x9" / "draw",
+      "draw render --format: the format's own drawings (by_format.16x9.drawings) at its canvas, the primary's where it has none, listed as "
+      "not read off this format")
+js, _, _ = t("slideshow", "plan", "--run", str(DR), "--video", "01", "--format", "16:9", ok=False, env=ENV)
+_tlf_d = json.loads((DR / "40-briefs" / "video-01-timeline-16x9.json").read_text(encoding="utf-8"))
+check({d_["id"] for d_ in _tlf_d.get("drawings") or []} == {"D1", "D3", "D5"} and js.get("drawings_positions_not_read_off_this_format") == ["D3", "D5"]
+      and all(Path(d_["file"]).name.startswith("16x9-") for d_ in _tlf_d["drawings"]),
+      "slideshow plan --format merges that format's clips and lists the drawings whose positions were not read off its picture")
+# the CapCut project takes a drawing as it takes an overlay (capcut-effects, capcut-cli add-video on the draw track)
+ts_ok = shutil.which("capcut.cmd") or shutil.which("capcut")
+if not ts_ok:
+    print("SKIP  capcut-effects with a drawing: no capcut-cli on this machine")
+else:
+    _cdd = home.parent / "draw-drafts"
+    subprocess.run([ts_ok, "init", "drw", "--drafts", str(_cdd), "--width", "1080", "--height", "1920"], capture_output=True, text=True)
+    _verd = home.parent / "verified-draw.json"
+    _verd.write_text(json.dumps({"effects": {"cover_scale": {"plays": True}, "alpha_video": {"plays": True, "codec": "qtrle", "codecs": ["qtrle"]}}}),
+                     encoding="utf-8")
+    js, code, _ = t("capcut-effects", "--draft", str(_cdd / "drw"), "--run", str(DR), "--video", "01", "--verified-from", str(_verd), env=ENV, ok=False)
+    if code == 3:
+        print("SKIP  capcut-effects with a drawing: CapCut is running on this machine")
+    else:
+        _cdc = json.loads((_cdd / "drw" / "draft_content.json").read_text(encoding="utf-8"))
+        _ctr = {tr.get("name"): tr for tr in _cdc["tracks"]}
+        _cw = {w_["track"]: w_ for w_ in js.get("written") or []}
+        _cs = (_ctr.get("draw1") or {}).get("segments") or [{}]
+        check(code == 0 and {"draw1", "draw2"} <= set(_ctr) and all(w_["method"] == "plain" for w_ in js["written"]) and len(js["written"]) == 3
+              and abs(float(_cs[0].get("clip", {}).get("scale", {}).get("x", 0)) - 1.0) < 1e-6 and _cs[0].get("volume") == 0.0,
+              f"capcut-effects writes the drawings like any overlay with its own transparency: add-video on draw1 / draw2, scale 1 (the clip is "
+              f"the canvas), silent ({sorted(_cw)})")
+# the local check copy draws a drawing as it draws any alpha overlay
+_dplan["images"][1]["drawings"] = [_d3]
+_dplan["images"][0]["drawings"] = [_dspec([{**_rect, "box": [0.0, 0.0, 1.0, 0.5], "fill": "#00ff00", "fill_alpha": 1.0,
+                                             "in": {"kind": "none", "start_s": 0}}], did="D1", dur=1.0)]
+(DR / "40-briefs" / "video-01-images.json").write_text(json.dumps(_dplan), encoding="utf-8")
+t("draw", "render", "--run", str(DR), "--video", "01", env=ENV)
+js, _, _ = t("slideshow", "plan", "--run", str(DR), "--video", "01", env=ENV)
+js, _, _ = t("slideshow", "render", "--run", str(DR), "--video", "01", "--no-captions", env=ENV, ok=False)
+_cl_ = Path(js.get("clean") or "")
+if _cl_.is_file():
+    _fr_d = _dsp.run([_awl.find_tool("ffmpeg"), "-nostdin", "-v", "error", "-ss", "0.5", "-i", str(_cl_), "-frames:v", "1", "-f", "rawvideo",
+                      "-pix_fmt", "rgb24", "-"], capture_output=True).stdout
+    _fd_ = _dnp.frombuffer(_fr_d, _dnp.uint8).reshape(1280, 720, 3).astype(int)
+    _top, _bot = _fd_[100:500].mean(axis=(0, 1)), _fd_[800:1200].mean(axis=(0, 1))
+else:
+    _top = _bot = None
+check(js.get("ok") and _top is not None and _top[1] > 200 and _top[0] < 60 and _bot[1] < 80,
+      f"slideshow render draws a drawing's clip over its still like any alpha overlay (the green top half at 0.5 s: {_top}, the still below: {_bot})")
+
+# --- extra fonts (the user, 2026-11-11: "add a permission for the agents to download extra fonts on capcut if the available ones do not
+# seem a good match for the video"): fetch-font through a stand-in for Fontsource's API and CDN (no network), into a temp fonts folder
+import datetime as _ffdt  # noqa: E402
+import threading as _ffth  # noqa: E402
+from http.server import BaseHTTPRequestHandler as _FFBH, ThreadingHTTPServer as _FFHS  # noqa: E402
+
+_FF_LATIN = (Path(_awl.__file__).resolve().parent.parent / "fonts" / "PermanentMarker-Regular.ttf").read_bytes()   # no Cyrillic letters
+_FF_CYR = Path("C:/Windows/Fonts/arial.ttf").read_bytes()                                                            # Cyrillic letters
+_FF_META = {"test-hand": {"id": "test-hand", "family": "Test Hand", "license": "OFL-1.1", "category": "handwriting", "variable": False,
+                          "weights": [400, 700], "styles": ["normal"], "subsets": ["cyrillic", "latin", "latin-ext"], "defSubset": "latin"},
+            "paid-face": {"id": "paid-face", "family": "Paid Face", "license": "Commercial", "weights": [400], "styles": ["normal"],
+                          "subsets": ["latin"]},
+            "huge-font": {"id": "huge-font", "family": "Huge Font", "license": "Apache-2.0", "weights": [400], "styles": ["normal"],
+                          "subsets": ["latin"]},
+            "broken-font": {"id": "broken-font", "family": "Broken Font", "license": "OFL-1.1", "weights": [400], "styles": ["normal"],
+                            "subsets": ["latin"]}}
+_FF_SEEN = []
+
+
+class _FFMock(_FFBH):
+    def log_message(self, *a):
+        pass
+
+    def _send(self, code, data, ctype="application/octet-stream"):
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        _FF_SEEN.append(self.path)
+        p = self.path
+        if p.startswith("/api/fonts/"):
+            m = _FF_META.get(p.rsplit("/", 1)[-1])
+            self._send(200, json.dumps(m).encode(), "application/json") if m else self._send(404, b'{"error": "not found"}', "application/json")
+        elif p.startswith("/cdn/test-hand@latest/"):
+            name = p.rsplit("/", 1)[-1]
+            self._send(200, _FF_CYR if name.startswith("cyrillic-") else _FF_LATIN)
+        elif p.startswith("/cdn/huge-font@latest/"):
+            self._send(200, b"\x00\x01\x00\x00" + b"\0" * (6 * 1048576))
+        elif p.startswith("/cdn/broken-font@latest/") or p == "/files/page.ttf":
+            self._send(200, b"<html>not a font</html>", "text/html")
+        elif p == "/files/open.ttf":
+            self._send(200, _FF_LATIN)
+        else:
+            self._send(404, b"no")
+
+
+_ffsrv = _FFHS(("127.0.0.1", 0), _FFMock)
+_ffsrv.daemon_threads = True
+_ffth.Thread(target=_ffsrv.serve_forever, daemon=True).start()
+_FFURL = f"http://127.0.0.1:{_ffsrv.server_port}"
+_ffdir = home.parent / "fonts-lib"
+_ffdir.mkdir(parents=True, exist_ok=True)
+shutil.copy(Path(_awl.__file__).resolve().parent.parent / "fonts" / "README.md", _ffdir / "README.md")
+_FFENV = {**ENV, "AWL_FONTS_DIR": str(_ffdir), "AWL_FONTSOURCE_API": f"{_FFURL}/api", "AWL_FONTSOURCE_CDN": f"{_FFURL}/cdn"}
+_ffday = _ffdt.date.today().isoformat()
+
+
+def _ffreadme():
+    return (_ffdir / "README.md").read_bytes().decode("utf-8")
+
+
+js, code, _ = t("fetch-font", "--family", "Paid Face", env=_FFENV, ok=False)
+check(code == 2 and js.get("licence") == "Commercial" and "not an open licence" in js.get("error", "")
+      and not any(p_.name.startswith("PaidFace") for p_ in _ffdir.iterdir()) and not any("/cdn/paid-face" in s for s in _FF_SEEN),
+      "fetch-font refuses a font whose licence is not an open one of config static.fonts.open_licences (exit 2, the licence named, "
+      "its file never asked for)")
+js, code, _ = t("fetch-font", "--family", "Test Hand", "--weight", "700", "--why", "video 03: a hand-lettered label font for the drawings",
+                env=_FFENV, ok=False)
+_ffr = _ffreadme()
+check(code == 0 and Path(js.get("file") or "").name == "TestHand-Bold.ttf" and (_ffdir / "TestHand-Bold.ttf").read_bytes() == _FF_LATIN
+      and js.get("licence") == "OFL-1.1" and js.get("licence_source", "").endswith("/api/fonts/test-hand") and js.get("subset") == "latin"
+      and sorted(js.get("subsets_available") or []) == ["cyrillic", "latin-ext"] and js.get("category") == "handwriting" and js.get("kept") is False
+      and f"## Downloaded ({_ffday}): video 03: a hand-lettered label font for the drawings" in _ffr
+      and "| TestHand-Bold.ttf | Test Hand 700 | OFL-1.1 | " in _ffr and "\r" not in _ffr
+      and _ffr.index(f"## Downloaded ({_ffday})") < _ffr.index("Not here:") and js.get("listed_by_capcut_font") is True,
+      "fetch-font --family takes Fontsource's file (latin, the weight asked) into the fonts folder, records the licence from Fontsource's "
+      "metadata, writes its row under that day's section of fonts/README.md (LF, before 'Not here:'), and capcut-font --list lists it as library")
+js, _, _ = t("capcut-font", "--list", "--family", "Permanent", env=_FFENV)
+check(any(Path(f_["file"]).name == "TestHand-Bold.ttf" and f_["source"] == "library" for f_ in js.get("fonts") or []),
+      "capcut-font --list lists the fetched file with source library")
+_ffb = (_ffdir / "TestHand-Bold.ttf").stat().st_mtime_ns
+js, code, _ = t("fetch-font", "--family", "Test Hand", "--weight", "700", env=_FFENV, ok=False)
+check(code == 0 and js.get("kept") is True and js.get("readme_row") is None and (_ffdir / "TestHand-Bold.ttf").stat().st_mtime_ns == _ffb
+      and _ffreadme().count("TestHand-Bold.ttf") == 1,
+      "fetch-font never writes over a font file that is there: it is kept and reported, no second README row")
+(_ffcy := home.parent / "cyr.txt").write_text("Ширина, высота", encoding="utf-8")
+js, code, _ = t("fetch-font", "--family", "Test Hand", "--text", str(_ffcy), "--run", str(DR), env=_FFENV, ok=False)
+_fft = [(x.get("subset"), len(x.get("font_missing_glyphs") or [])) for x in js.get("tried") or []]
+check(code == 0 and js.get("subset") == "cyrillic" and Path(js.get("file") or "").name == "TestHand-Regular-cyrillic.ttf"
+      and js.get("font_missing_glyphs") == [] and js.get("font_covers") is True and _fft[0][0] == "latin" and _fft[0][1] > 0
+      and _fft[-1] == ("cyrillic", 0) and f"| cyrillic | {DR.name} |" in _ffreadme() and _ffreadme().count(f"## Downloaded ({_ffday})") == 1,
+      f"fetch-font --text tries the subsets in config order and takes the first whose file draws every character ({_fft}); the run is in "
+      "its row, under the same day's section")
+(_ffla := home.parent / "lat.txt").write_text("Width, Height", encoding="utf-8")
+js, code, _ = t("fetch-font", "--family", "Test Hand", "--text", str(_ffla), env=_FFENV, ok=False)
+check(code == 0 and js.get("subset") == "latin" and Path(js.get("file") or "").name == "TestHand-Regular.ttf" and len(js.get("tried") or []) == 1,
+      "fetch-font --text with Latin words takes the latin file, the first it tries")
+js, code, _ = t("fetch-font", "--family", "Open Thing", "--url", f"{_FFURL}/files/open.ttf", env=_FFENV, ok=False)
+check(code == 2 and "--licence" in js.get("error", ""), "fetch-font --url without a licence and its source is refused")
+js, code, _ = t("fetch-font", "--family", "Open Thing", "--url", f"{_FFURL}/files/open.ttf", "--licence", "CC-BY-NC-4.0",
+                "--licence-source", "https://example.org/terms", env=_FFENV, ok=False)
+check(code == 2 and js.get("licence") == "CC-BY-NC-4.0" and not (_ffdir / "OpenThing-Regular.ttf").exists(),
+      "fetch-font --url with a licence that is not open is refused")
+js, code, _ = t("fetch-font", "--family", "Open Thing", "--url", f"{_FFURL}/files/open.ttf", "--licence", "Apache-2.0",
+                "--licence-source", "https://example.org/licence", env=_FFENV, ok=False)
+check(code == 0 and js.get("licence_from") == "claimed" and (_ffdir / "OpenThing-Regular.ttf").is_file()
+      and "| OpenThing-Regular.ttf | Open Thing 400 | Apache-2.0 (claimed) |" in _ffreadme(),
+      "fetch-font --url with an open licence and its source takes the file and records the licence as claimed")
+js, code, _ = t("fetch-font", "--family", "Huge Font", env=_FFENV, ok=False)
+check(code == 2 and "max_mb" in js.get("error", "") and not any(p_.name.startswith("HugeFont") for p_ in _ffdir.iterdir()),
+      "fetch-font refuses a file larger than config static.fonts.max_mb and writes nothing")
+js, code, _ = t("fetch-font", "--family", "Broken Font", env=_FFENV, ok=False)
+js2, code2, _ = t("fetch-font", "--family", "Page Font", "--url", f"{_FFURL}/files/page.ttf", "--licence", "OFL-1.1", "--licence-source", "x",
+                  env=_FFENV, ok=False)
+check(code == 2 and "not a TrueType" in js.get("error", "") and code2 == 2 and "not a TrueType" in js2.get("error", "")
+      and not any(p_.name.startswith(("BrokenFont", "PageFont")) or p_.suffix == ".tmp" for p_ in _ffdir.iterdir()),
+      "fetch-font refuses a file that is not a TrueType or OpenType font (a web page) and leaves nothing behind")
+js, code, _ = t("fetch-font", "--family", "No Such Family", env=_FFENV, ok=False)
+check(code == 2 and "no font 'no-such-family'" in js.get("error", ""), "fetch-font names a family Fontsource does not have")
+_ffsrv.shutdown()
+# <<< drawings and extra fonts tests (end)
+
 finish()
