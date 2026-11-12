@@ -45,7 +45,13 @@
   is speaking ... a color behind the word and a round radius"): CapCut draws a box behind a whole text only, so the captions are built
   instead by `T capcut-word-box --draft "<draft>" --run RUN --video NN [--replace subtitle]`: one text per word at its place on the
   centred line (the font's advances at CapCut's em, measured on its own 16:9 render), the box on the word the narration's word times say
-  is spoken, the others plain, no keyword colour (`highlight_words` empty: a coloured word on its box would vanish); then `T capcut-font`
+  is spoken, the others plain, no keyword colour (`highlight_words` empty: a coloured word on its box would vanish). **The box's colour is the
+  video's own** (the user, 2026-11-12: "make it so that it is dynamic and in accordance with the video's colors and not fixed"): `word_box.color`
+  is chosen for each video from that video's own palette, never copied from the last video's plan. A first pick is written at A6s from the
+  style lock's palette; J5 settles it once the stills exist, from their dominant and accent colours (a few viewed stills or a scratch colour
+  reading: facts for the judge's call): a colour of the video's palette that still stands out from the pictures behind the caption band (white
+  word, black outline and box all legible; a box near the picture's own colour would vanish), its reason and the colours it was read from in
+  `word_box.why`. The shape (radius, pad, gap, v_offset), the font and the size stay the run's text look; then `T capcut-font`
   on every `wordcap-*` track and `T capcut-text-anim` only on the tracks ending in `-in` (a cue's entrance: a word that takes or hands
   on the box never pops again). The labels, when the timeline has any (a map's place names, §5 "Labels"), with `T capcut-labels
   --draft "<draft>" --run RUN --video NN` (each on the track "labels" over its image's span, labels shown at once on tracks of their own: labels-2, …; its centre where the plan put it, in the

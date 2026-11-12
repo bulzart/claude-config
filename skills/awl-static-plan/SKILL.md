@@ -108,7 +108,7 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times
    this still's seconds, the references' order of moves; a join and the caption entrance from `AWL/data/capcut-catalogue.md`, only what it
    shows drawn, and only options marked free while the run's CapCut plan is free, `state.json → capcut_plan`), the `captions` block: the spec's text look (static §2: font file (an extra open-licence font may be downloaded when no listed font is a good match: `T fetch-font`, static §7 "Extra fonts"), size, colours, outline, box, case, highlight, the
-   entrance as `animation` and `animation_s`) with this video's highlighted words; with an effects folder, the `effects` the spec's effects
+   entrance as `animation` and `animation_s`) with this video's highlighted words (a `word_box`'s colour is the video's own, a first pick from its style lock's palette, never the last video's by default: static §7; J5 settles it from the finished stills); with an effects folder, the `effects` the spec's effects
    pattern calls for (static §2, §5 "Effects": each overlay or sound from `00-inventory/effects.md`, its moment and anchor second, how it
    is blended, its fit and volume, and why; only the ways the catalogue's Effects part shows playing). Nothing is left to a stock value:
    `T slideshow plan` lists what is undecided. The count follows the spec's seconds per still at the script's length; the narration's

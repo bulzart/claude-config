@@ -70,6 +70,9 @@ def main():
                "captions": {"mask_terms": ["shit"], "highlight_words": ["wild"], "replace": [["Kai Sinat", "Kai Cenat"]]}}
         out = run / "60-outputs" / "S01"
         out.mkdir(parents=True)
+        sfx_file = Path("C:/Users/Bulzart/Documents/sound_effects/vine boom.mp3")
+        if sfx_file.is_file():                                  # one sound effect on its own lane (skipped on a PC without the folder)
+            edl["sfx"] = [{"file": str(sfx_file).replace("\\", "/"), "at": {"seg": "s1", "t": 1.2}, "volume": 0.7, "why": "test"}]
         (out / "edl.json").write_text(json.dumps(edl), encoding="utf-8")
         r = cc("edl-check", "--run", run, "--edl", out / "edl.json", "--make-censor", env=env)
         check(r.get("ok"), "edl-check ok: " + json.dumps(r.get("warnings")))
@@ -90,22 +93,26 @@ def main():
         if capcut:
             store = tmp / "drafts"
             store.mkdir()
-            subprocess.run([capcut, "init", "cctest", "--drafts", str(store), "--ratio", "9:16"], capture_output=True, shell=False)
-            clip = tmp / "one.mp4"
-            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30", "-f", "lavfi", "-i",
-                            "sine=frequency=440:sample_rate=48000", "-t", "9.1", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", str(clip)], check=True)
-            at = 0.0
-            for p in res["pieces"]:
-                subprocess.run([capcut, "add-video", str(store / "cctest"), str(clip), f"{p['at']}s", f"{p['dur_out']}s", "-q"], capture_output=True)
+            r = cc("capcut-compose", "--run", run, "--video", "S01", "--name", "cctest", "--store", store, env=env)
+            check(r.get("ok") and r.get("video_segments_retargeted") == 5, "capcut-compose: one command, 5 video segments pointed at the real chunk files " + json.dumps(r)[:700])
+            c = json.loads((store / "cctest" / "draft_content.json").read_text(encoding="utf-8"))
+            vids = c["materials"].get("videos", [])
+            check(vids and all(m["path"].endswith(("chunk.mp4", ".mp4")) and "placeholder" not in m["path"] for m in vids), "no video material points at the placeholder")
+            check(not (store / "cctest" / "assets" / "video").exists(), "no media file was copied into the draft's assets/video")
             r = cc("capcut-finish", "--run", run, "--draft", store / "cctest", "--video", "S01", env=env)
-            check(r.get("ok"), "capcut-finish ok on an isolated draft")
+            check(r.get("ok"), "capcut-finish ok on the composed draft")
             c = json.loads((store / "cctest" / "draft_content.json").read_text(encoding="utf-8"))
             texts = c["materials"].get("texts", [])
             check(len(texts) == len(json.loads((out / "captions.json").read_text(encoding="utf-8"))["cues"]), "one text per caption cue in the draft")
             seg0 = [t for t in c["tracks"] if t["type"] == "video"][0]["segments"][0]
             check(any(k["property_type"] == "KFTypeScaleX" for k in seg0.get("common_keyframes", [])), "the zoom keyframes are on the first clip")
+            lint = subprocess.run([capcut, "lint", str(store / "cctest")], capture_output=True, text=True)
+            check('"errors":0' in lint.stdout.replace(" ", ""), "capcut lint: 0 errors")
+            if sfx_file.is_file():
+                check(any(t["type"] == "audio" and t.get("segments") for t in c["tracks"]), "the sound effect is on an audio track")
+            # NOT tested here: compose into the real CapCut store (its `auto` seeding from the newest app-authored project); the first real build is that check
         else:
-            print("skip capcut-finish (capcut-cli not on PATH)")
+            print("skip capcut-compose/finish (capcut-cli not on PATH)")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("FAILED: %d" % check.failed if check.failed else "ALL PASSED")

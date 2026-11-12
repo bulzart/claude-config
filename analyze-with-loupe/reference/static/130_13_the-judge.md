@@ -140,7 +140,8 @@ predicted result; and afterwards the measured result against it):
    as many and as long as the references' annotation pattern shows, §2, or, where they draw nothing, only where the narration
    elaborates something a drawn layer shows better, each with its reason), read with `T draw list` and the `drawings_*` facts of `T
    slideshow plan` (a clip not rendered, a drawing on a moving image, past its image or in the caption band), decided before the
-   project is built.
+   project is built. Also the caption word box's colour (`captions.word_box.color`, §7: the video's own, from its finished stills'
+   palette and standing out from them, never the last video's by default; the judge writes the colours it read and why in `word_box.why`).
 
 **Judge prompt** (the main session fills the `<…>`):
 

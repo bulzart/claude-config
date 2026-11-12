@@ -24,6 +24,7 @@ import os
 import re
 import shutil
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -843,6 +844,131 @@ def draft_files(d: Path) -> list:
     return [p for p in (d / "draft_content.json", d / "draft_info.json", d / "template-2.tmp") if p.is_file()]
 
 
+def make_placeholder(run: Path, need_s: float) -> Path:
+    """A tiny black video with silent audio, long enough for any piece: `capcut compile` takes it as the media of every video item (its
+    copy into the draft is 350 KB), and the real chunk path replaces it afterwards. The chunk files are never copied into a draft."""
+    dst = run_paths(run)["assets"] / "compose" / "placeholder.mp4"
+    have = ffprobe_facts(dst).get("duration_s") if dst.is_file() else 0
+    if have and have >= need_s:
+        return dst
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    secs = max(200, int(math.ceil(need_s)) + 10)
+    cp = run_cmd([find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-f", "lavfi", "-i", "color=c=black:s=64x36:r=30",
+                  "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", str(secs), "-c:v", "libx264", "-preset", "veryfast", "-crf", "45",
+                  "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "16k", str(dst)], timeout=300)
+    if cp.returncode != 0 or not dst.is_file():
+        fail("could not make the placeholder media: " + (cp.stderr or "")[-300:], 1)
+    return dst
+
+
+def retarget_media(d: Path, pieces: list, probes: dict) -> dict:
+    """After `capcut compile`: every video segment of the main track points at its real chunk file, with the real duration and size. The pieces
+    are matched to the main track's segments by their start time (compile builds a track's items one after the other)."""
+    done = 0
+    for p in draft_files(d):
+        content = json.loads(p.read_text(encoding="utf-8"))
+        main = next((t for t in content.get("tracks", []) if t.get("type") == "video"), None)
+        segs = sorted((main or {}).get("segments") or [], key=lambda s: int((s.get("target_timerange") or {}).get("start") or 0))
+        mats = {m.get("id"): m for m in content.get("materials", {}).get("videos") or []}
+        n = 0
+        for piece, seg in zip(pieces, segs):
+            m = mats.get(seg.get("material_id"))
+            if not m:
+                continue
+            pr = probes[piece["file"]]
+            m["path"] = piece["file"]
+            m["material_name"] = Path(piece["file"]).name if piece["kind"] == "censor" else f"{piece['chunk']}.mp4"
+            m["duration"] = int(round(float(pr.get("duration_s") or 0) * 1e6))
+            m["width"], m["height"] = int(pr.get("width") or m.get("width") or 0), int(pr.get("height") or m.get("height") or 0)
+            if pr.get("has_audio") is not None:
+                m["has_audio"] = bool(pr["has_audio"])
+            n += 1
+        if n:
+            shutil.copyfile(p, p.with_name(p.name + ".compose.bak"))
+            write_text(p, json.dumps(content, ensure_ascii=False))
+        if p.name == "draft_content.json":
+            done = n
+    return {"video_segments_retargeted": done}
+
+
+def cmd_capcut_compose(a):
+    """The whole CapCut project in one command (no per-tool calls): resolved.json -> a `capcut compile` spec (main video track, one audio track
+    per sound-effect lane) -> the draft in the CapCut drafts store -> the placeholder media replaced by the real chunk files. Then `capcut-finish`."""
+    run = resolve_run(a.run)
+    vdir = run_paths(run)["outputs"] / a.video
+    resolved, plan = read_json(vdir / "resolved.json"), read_json(vdir / "mcp-plan.json")
+    if not resolved or not plan:
+        fail(f"no resolved.json / mcp-plan.json in {vdir} (run edl-check)")
+    if capcut_running():
+        out({"ok": False, "action": "CapCut is running: close it and run this again (nothing was changed)"}, 3)
+    t_start = time.time()
+    store = Path(a.store) if a.store else capcut_store()
+    if not store.is_dir():
+        fail(f"CapCut drafts store not found: {store}")
+    cli = capcut_cli()
+    name = a.name
+    if not name:
+        d_ = dt.date.today()
+        base = f"{d_.day:02d}_{MONTHS[d_.month - 1]}_{d_.year}_{slug(a.channel or load_state(run).get('channel') or 'stream').replace('-', '')}_{a.video}"
+        name, k = base, 1
+        while (store / name).exists():
+            k += 1
+            name = f"{base}-{k}"
+    elif (store / name).exists():
+        fail(f"{store / name} already exists")
+    canvas = resolved["canvas"]
+    ratio = {(1080, 1920): "9:16", (1920, 1080): "16:9"}.get((canvas["width"], canvas["height"]), "original")
+    pieces = resolved["pieces"]
+    ph = make_placeholder(run, max(p["dur_src"] for p in pieces) if pieces else 1.0)
+    probes = {p["file"]: ffprobe_facts(p["file"]) for p in pieces}
+    missing = [f for f, pr in probes.items() if not pr.get("duration_s")]
+    if missing:
+        fail(f"media not readable: {missing[:3]}")
+    items = []
+    for p in pieces:
+        it = {"ref": f"p{p['piece']}", "path": str(ph).replace("\\", "/"), "start": p["at"], "duration": p["dur_out"], "sourceStart": round(p["src_from"], 6),
+              "width": int(probes[p["file"]].get("width") or 0), "height": int(probes[p["file"]].get("height") or 0),
+              "scale": p["layout"]["scale"], "x": p["layout"]["posX"], "y": p["layout"]["posY"]}
+        if abs(float(p.get("speed") or 1.0) - 1.0) > 1e-6:
+            it["speed"] = float(p["speed"])
+        if abs(float(p.get("volume") if p.get("volume") is not None else 1.0) - 1.0) > 1e-6:
+            it["volume"] = float(p["volume"])
+        items.append(it)
+    tracks = [{"type": "video", "name": "main", "items": items}]
+    lanes = {}
+    for o in plan["ops"]:
+        if o["op"] == "add_audio":
+            lanes.setdefault(o["track"], []).append({"ref": f"{o['track']}-{len(lanes.get(o['track'], [])) + 1}", "path": o["file"].replace("\\", "/"),
+                                                      "start": o["atSec"], "duration": o["durSec"], "volume": o["volume"]})
+    for lane in sorted(lanes):
+        tracks.append({"type": "audio", "name": lane, "items": lanes[lane]})
+    spec = {"name": name, "width": canvas["width"], "height": canvas["height"], "fps": canvas["fps"], "ratio": ratio, "tracks": tracks}
+    spec_path = vdir / "compose-spec.json"
+    write_json(spec_path, spec)
+    # No --template by default: capcut-cli then seeds the draft from the store's newest app-authored project (its version markers and settings, none of its
+    # content: the way `capcut init` seeded this PC's CapCut 9.7 skeleton). A template FOLDER keeps its own clips (the _analyze-stack-template has two),
+    # which is why it is not the default here.
+    args = [cli, "compile", str(spec_path), "--out", str(store / name)]
+    if a.template:
+        args += ["--template", str(a.template)]
+    cp = run_cmd(args, timeout=600)
+    d = store / name
+    if cp.returncode != 0 or not (d / "draft_content.json").is_file():
+        fail("capcut compile failed: " + ((cp.stderr or "") + (cp.stdout or ""))[-500:], 1)
+    res = retarget_media(d, pieces, probes)
+    # the placeholder copy is not referenced any more
+    try:
+        (d / "assets" / "video" / ph.name).unlink(missing_ok=True)
+        if not any((d / "assets" / "video").iterdir()):
+            (d / "assets" / "video").rmdir()
+    except OSError:
+        pass
+    left = [str(x) for x in (d / "assets").rglob("*") if x.is_file() and x.suffix.lower() in (".mp4", ".mov") and x.stat().st_size > 5_000_000] if (d / "assets").is_dir() else []
+    out({"ok": res["video_segments_retargeted"] == len(pieces) and not left, "draft": str(d), "name": name, "pieces": len(pieces), "sfx_lanes": len(lanes),
+         **res, "big_media_copied_into_the_draft": left, "seconds": round(time.time() - t_start, 1),
+         "next": f"T capcut-finish --run RUN --draft \"{d}\" --video {a.video}"})
+
+
 def kf_multi(prop: str, keys: list) -> dict:
     return {"id": str(uuid.uuid4()).upper(), "material_id": "", "property_type": prop,
             "keyframe_list": [{"id": str(uuid.uuid4()).upper(), "curveType": "Line", "time_offset": int(t), "left_control": {"x": 0.0, "y": 0.0},
@@ -1038,7 +1164,16 @@ def register(sub) -> None:
     p.add_argument("--video", required=True)
     p.set_defaults(func=cmd_capcut_name)
 
-    p = sub.add_parser("capcut-finish", help="after the last MCP save: zoom keys, transitions, bg blur, captions, font, intro, repair")
+    p = sub.add_parser("capcut-compose", help="the whole CapCut project in one command from resolved.json (capcut compile + the real chunk paths)")
+    p.add_argument("--run", required=True)
+    p.add_argument("--video", required=True)
+    p.add_argument("--name", help="the project name (default: a free DD_Mon_YYYY_<channel>_<video>)")
+    p.add_argument("--channel")
+    p.add_argument("--store", help="the CapCut drafts folder (default: the real store)")
+    p.add_argument("--template", help="a template folder (it keeps its own clips); default: capcut-cli seeds from the store's newest app-authored project")
+    p.set_defaults(func=cmd_capcut_compose)
+
+    p = sub.add_parser("capcut-finish", help="after capcut-compose (or the last MCP save): zoom keys, transitions, bg blur, captions, font, intro, repair")
     p.add_argument("--run", required=True)
     p.add_argument("--draft", required=True)
     p.add_argument("--video", required=True)
