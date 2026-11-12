@@ -206,6 +206,24 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   field's pattern for them beside the set's and the family's, and their numbers (`T static profile --run RUN --refs <them>`); and the
   spec's **approaches seen** (static §2): the story forms, points of view, time frames, scales, pillars and title forms the cards
   record, counted across the set and across the niche's references.
+  **Then the length**, one more AskUserQuestion call, always after the niche is locked and before any subject, script or image plan
+  (the user, 2026-11-12: the length is asked way before generation and planning; when no niche is locked yet, the niche family is
+  locked first, as above, and then the length is asked; when the niche is already locked, `more <run>`, it is asked straight after
+  the count; static §2 "Length", §4, §10). The numbers first, printed in one short block from the run's data: the niche's
+  references' lengths (the references the spec names as the niche's: each, the shortest, the median, the longest, from `T static lock
+  --run RUN` → `reference_lengths.each` read for those ids; the whole set's beside them when the niche is new to the set) and what
+  their length follows (the spec's Length). Header "Length", "How long should each video be?", two options, **"Standard"** first
+  (the length the niche's references run: its median in minutes, "about N min, the niche's references run A to B min"; each video's
+  own length is then the agent's from that pattern, as before, static §4) and **"My own length"** (the user's number: the total ("15
+  minutes") or the change from standard ("2 minutes longer", "3 less"), the same for every video of the batch, or one per video
+  ("1 12 min, 2 8 min") through "Other"); a "My own length" answered with no number is asked once in plain chat. A length the
+  format cannot carry (a Short under a minute in a long video's format, or the reverse) is said in one line with the nearest that
+  fits, and the user decides. Store it with `T state --run RUN set 'static.length_plan={"mode":"standard"|"own","minutes":<N or
+  null>,"offset_minutes":<±N or null>,"per_video":{"1":<minutes>,…},"standard":{"median_s":…,"shortest_s":…,"longest_s":…,"refs":[…]}}'`
+  (`mode` "standard" with no number; "own" with `minutes` or `offset_minutes` or `per_video`). The plan then follows it (static §4
+  "The length", `awl-static-plan` step 6): **standard** is the agent's per-video length from the niche's pattern, **own** is the
+  user's number as the video's `target_length_s` (an offset is added to the agent's standard for that video). Nothing in the run is
+  planned or generated before this is stored.
   **Then the language**, one more AskUserQuestion call (the first holds four questions; static §6 "The language of a video"; the user,
   2026-11-11: "it has to ask user which language has the video's content to be"): header "Language", "In which language should the
   videos be made?": **"English"** (the references' language, or the one most of them speak: said), then up to three languages the
@@ -228,6 +246,8 @@ Then run `T state --run RUN set stage=analyzed next_step=count`.
   references are written into the spec as above (static §2). Then a second AskUserQuestion call: header "Narration model":
   **"Keep <model>"** (the run's, `static.tts_model`, kept by the clone) or another from the live list (the options as the start's
   question gives them, `awl-start`; stored with `T tts model --run RUN --model-id <id> --source …`), and header "Language" (as above).
+  The length is asked between the two calls' answers and the plan, as above, with the new niche's references' lengths (header
+  "Length", the same two options), before A6s.
 - Store the answer in `requested_videos`.
 
 ## Rules this phase owns (contract items 18, 20, 21, 35)

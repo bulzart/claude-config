@@ -316,8 +316,10 @@ subject (`T static subjects --story-form …`, §3, §10). The ElevenLabs **mode
 ElevenLabs MCP's `list_models`, else `T tts models`; `T tts model` stores it; a model with no recorded facts is set up from ElevenLabs' docs
 first, §6) and each video has a **language** of its own (asked at A5 and with More videos and at a clone; `T static language`): the content is
 written natively in it with an English gloss per line, whatever language the references are in (§4, §6, §7); nothing religious or superstitious ever (§11); every video also gets a YouTube title and a
-thumbnail (§12: `T image generate --thumbnail`, `deliverables/video-NN-title.txt` and `video-NN-thumbnail.png`). Each video's length is
-the agent's, from the references' lengths and what drives them (`target_length_s` in the narration JSON; the user picks none); a bed
+thumbnail (§12: `T image generate --thumbnail`, `deliverables/video-NN-title.txt` and `video-NN-thumbnail.png`). The length is asked
+at A5, after the niche is locked and before any planning (the user, 2026-11-12): standard (the niche's references' length, each video's own the
+agent's from their lengths and what drives them) or the user's own (a total, or minutes more or less than standard; `static.length_plan`,
+`target_length_s` in the narration JSON); a bed
 over ACE-Step's 600 s is made in sections joined with crossfades (`T music make`), and a long video's stills are split across image
 agents (A9b). `awl-static-plan` (A6s) reads the characters (a known person: sourced
 facts; an ordinary role: a story of their world; a cartoon: a children's story), builds a scored pool of new subjects (sourced, two sources each, in a factual

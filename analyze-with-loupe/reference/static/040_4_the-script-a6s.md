@@ -33,10 +33,17 @@ silence is placed (§6 "Passages").
   Japanese, Chinese, Thai …) and the English points converted by it; the judge writes the converted point into `pace` with the ratio
   and `"unit"` (§13 J1). The length in minutes and the number of pauses stay the references'; the script's size is the converted
   point times the length.
-- **The length** is the agent's, per video, from the spec's length pattern (§2), never asked of the user: where this subject sits among
-  the references (a subject with as much to tell as their longest runs as long; one beat-light subject as short as their shortest), the
-  beats the template needs and how long the references let each run. It is written into `video-NN-narration.json` as
-  `"target_length_s"` with `"length_why"` (the references' numbers it rests on), and the script is sized to it.
+- **The length** follows the user's pick, asked at A5 before any planning (the user, 2026-11-12; `state.json → static.length_plan`,
+  §2 "Length"). **Standard**: the agent's, per video, from the spec's length pattern: where this subject sits among the niche's
+  references (a subject with as much to tell as their longest runs as long; one beat-light subject as short as their shortest), the
+  beats the template needs and how long the references let each run, about the niche's median unless the subject says otherwise.
+  **Own**: the user's number is the video's length (a total for every video of the batch, or the one given for that video); an offset
+  ("2 minutes longer") is added to the length the standard would give that video. The beats, the hook, the pace and the pauses stay
+  the references' per minute, so a longer video gets more beats at their depth, never slower or padded lines, and a shorter one fewer
+  beats, never a rushed pace; when the subject cannot hold the asked length at the references' depth (the facts run out), that is
+  said at the stop with the length it does hold, never padded with repeats or invented claims. It is written into
+  `video-NN-narration.json` as `"target_length_s"` with `"length_why"` (the user's pick, or the references' numbers it rests on), and
+  the script is sized to it.
 - **The template of the spec**: the hook in the first line (spoken within the first second), every beat in its share, the payoff, the
   closing line or loop; the length: the target, as the words at the plan's overall point (`pace.target.wpm_overall`: words =
   seconds × words a minute / 60; 530 s at 165 words a minute is about 1,460 words), the voice, its tags and the words chosen and

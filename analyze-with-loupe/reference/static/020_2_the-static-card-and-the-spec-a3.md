@@ -29,9 +29,11 @@ read in; a spec written before 2026-11-09 gets this block before the run's next 
   and where they fall), so the scripts (§4), the pictures (§5) and the edit (§7) follow the set, not one video.
 - **Length**: the references' lengths (each, the shortest, the median, the longest: `T static lock --run RUN` lists them) and what their
   length follows, read from the cards: the kind of subject and how much it holds, the number of beats and how long each runs, how deep
-  each beat goes, the format (a Short under a minute, a long video of many minutes). No user picks it (the user, 2026-11-07: "the user
-  will not pick any length for the video btw, it will be the pipeline's choice based on the references data, based on what ai agents
-  understands and mine and patterns collected from that"): each video's length is decided from this pattern at A6s (§4).
+  each beat goes, the format (a Short under a minute, a long video of many minutes). The user picks it once, at A5 and before any
+  planning, after the niche is locked (the user, 2026-11-12; it replaced 2026-11-07's "the user will not pick any length"): the
+  **standard** (the niche's references' median and range from this pattern, each video's own length the agent's from it) or **their
+  own** (a total, or a few minutes more or less than the standard, for the batch or per video); `state.json → static.length_plan`.
+  Each video's length is then decided at A6s (§4) from the user's pick and this pattern.
 - **Seconds per still**: the median and the range the references use; when a still changes (on a new line, on a reveal, mid-line).
 - **Niche candidates**: the fields the references are about (§1) and the fields their craft would carry, for the user's pick at A5; a
   candidate is a **field and the kind of stories in it** ("Survival scenarios and how-tos"), never a title wording or one story form

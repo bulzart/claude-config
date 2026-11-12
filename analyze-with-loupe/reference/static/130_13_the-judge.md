@@ -99,7 +99,8 @@ predicted result; and afterwards the measured result against it):
      the reveals, the chapter starts) asked as `tags_after` ("[pause]": 0.76 s with George, 2026-11-09; "[long pause]" ran 1.6-2.6 s,
      over the family's 0.92 s, §6 "what the levers did") or punctuation, every other rest the voice's own, the
      probe's pause pattern read against the family's (a pause the family does not hold is not asked);
-   - the strong lines (their own `delivery` tags; at most one in five, never two in a row, §4), the length against the family's (§4);
+   - the strong lines (their own `delivery` tags; at most one in five, never two in a row, §4), the length against the user's pick (`static.length_plan`; the standard's against the family's, §4) and the
+     forecast's predicted length against it;
    - every line the forecast marks with `intimate_body_words` (§11b): told by its other places ("her head, her neck and under her
      arms"); for a video in another language the forecast runs the §11, §11b and intimate-word lists on each line's English gloss
      (`lines_without_gloss` names the lines that have none: the judge reads those in their language itself) and the judge reads the

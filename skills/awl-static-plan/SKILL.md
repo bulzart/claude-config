@@ -28,7 +28,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 
-Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset registry (A2b), `state.json → requested_videos` (A5).
+Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset registry (A2b), `state.json → requested_videos` and `static.length_plan` (A5). A run with no `static.length_plan` (made before 2026-11-12, or A5 not answered) asks the length first (`awl-analyze-study` A5 "Then the length"), before the pool is drawn.
 
 ### A6s. Static: the plan (main session; the run's one stop)
 1. **Characters.** Every character of the asset registry gets an id (C1, C2 …), who they are (a known real person, an ordinary role, a
@@ -77,9 +77,10 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
 6. **Scripts** (static §4), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
    niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11), and no graphic detail,
    suffering or swearing, and no intimate part of the body named, even as a first-aid fact (static §11b: a hard fact told plainly and
-   briefly; the tip told by its other places). The length is yours, never the
-   user's (the user, 2026-11-07): decided per video from the spec's length pattern (the references' lengths in `T static lock`'s
-   `reference_lengths`, what drives them), written as `target_length_s` and `length_why` in the narration JSON, the script sized to it
+   briefly; the tip told by its other places). The length follows the user's pick, asked at A5 before this phase
+   (`state.json → static.length_plan`; the user, 2026-11-12; static §4 "The length": standard = yours per video from the spec's
+   length pattern, the niche's references' lengths in `T static lock`'s `reference_lengths`; own = the user's number or offset),
+   written as `target_length_s` and `length_why` in the narration JSON, the script sized to it
    at the planned overall pace (static §4: words = seconds × words a minute / 60; the units of the video's language, `T static units`).
    **The video's language and approach** (static §4, §6, §10): the script is written natively in the video's language (the recorded one,
    `state.json → static.video_info`), every line with its English `gloss`, and follows the recorded approach (its story form, point of
@@ -144,7 +145,7 @@ references": the inventory again, A1–A4 for them only), and nothing else is an
 niche's references gets them first (static §2 "The niche's references": the references whose field is the run's niche, read from
 their cards, and their patterns and numbers beside the set's). `T static lock --run RUN` (the locks; a run made before the locks existed is asked its niche once,
 with its subjects as context, and locks it with its style reference: the reference its style lock came from), the count when it is not
-given (AskUserQuestion, header "Videos"), the language of each new video (AskUserQuestion, header "Language", as A5 says: `T static
+given (AskUserQuestion, header "Videos"), the length (AskUserQuestion, header "Length": standard or the user's own, as A5 says; the niche is already locked, so it is asked straight after the count and before anything is planned; stored again in `static.length_plan` for these videos), the language of each new video (AskUserQuestion, header "Language", as A5 says: `T static
 language --run RUN --plan "<L1>[,<L2>…]"`; the narration model stays the run's), then steps 2 and 4–9 for the new videos only: no
 voice samples (the narrator is locked), the pool's candidates carry their approaches beside the last video's (step 2), the stop asks
 only for the subjects, `T static subjects --add … --story-form …` gives them the next numbers, their approaches and their

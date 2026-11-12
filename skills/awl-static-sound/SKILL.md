@@ -57,7 +57,7 @@ outside the references', and a capped speed-up made only on the user's yes after
    characters), then `narration-words` again; at most twice per line, then it stays and the brief notes it (with QC fixes `off` nothing
    is made again). A `tts say` that stopped part way (no answer, or the characters ran out) keeps what was made: `T tts say` again makes
    only the missing passages.
-3. **Length and pace:** the duration against the video's own target (`target_length_s` in `video-NN-narration.json`, the agent's from the
+3. **Length and pace:** the duration against the video's own target (`target_length_s` in `video-NN-narration.json`: the user's pick at A5 or, for the standard, the agent's from the
    references' pattern, static §4); more than about a tenth off it: shorten or extend lines of the script and
    `video-NN-narration.json` (static §4), then make those passages again (billed; never an edit of the audio).
 4. **The images meet the narration:** each image spans from its `from_line`'s start to the next image's (the first from 0, the last to the

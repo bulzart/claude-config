@@ -26,6 +26,9 @@ A Static run is one channel. Its **locks** are set once and kept by every video 
   format --also`, §2b).
 - **Not a lock: each video's approach and language** (below and §6): they are asked or decided per video, and recorded with its
   subject, so one channel can hold videos in several languages and in several approaches inside the one niche.
+- **Not a lock: the length** (the user, 2026-11-12): asked at A5 once the niche is locked and before anything is planned or generated
+  (static §2 "Length", §4): standard (the niche's references' length) or the user's own, per batch or per video, kept in
+  `static.length_plan`; every `more <run>` asks it again for its new videos.
 The toolkit refuses another niche or style reference once one is set (`--replace` only before the run's first video): another niche
 is another run, a clone.
 
@@ -66,7 +69,8 @@ scenarios and how-tos".)
 **More videos** (the user: "the next videos he decides to generate in that claude code run session he will only be suggested to pick
 subjects of that niche he firstly picked"): `/analyze-with-loupe more <run> [N]`, or the user asking for more after a wrap-up. No start
 question is asked again and nothing already analysed is analysed again (new references first: below): the count when it is not given
-(AskUserQuestion, header "Videos"), then the language of each new video (header "Language", §6; the narration model stays the run's),
+(AskUserQuestion, header "Videos"), then the length (header "Length": standard or the user's own, §2, §4; the niche is locked, so it
+comes straight after the count and before any planning), then the language of each new video (header "Language", §6; the narration model stays the run's),
 then A6s for the new videos only. Their pool holds subjects of the locked niche the run has not made (`T static subjects --run RUN`
 lists the made ones with their approaches and languages; never one of them, never one so close it retells it), each with its approach
 beside the last video's (above), the one stop shows the subjects alone (no voice samples: the narrator is locked), each pick is added
