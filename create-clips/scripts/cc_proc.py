@@ -737,6 +737,36 @@ def glob_escape(s: str) -> str:
     return re.sub(r"([\[\]*?])", r"[\1]", s)
 
 
+def sync_sessions(inbox: Path, root: Path) -> int:
+    """The extension writes session.json when a recording starts and overwrites it when it ends (the stream ended, the user stopped it, a
+    limit was reached). Copy a newer one into its run (00-inventory/session.json) and record the end in state.json (recording.ended_at,
+    reason, chunks, stream_ended) so /create-clips knows whether the recording is complete. Returns the number of runs updated."""
+    n = 0
+    if not inbox.is_dir():
+        return 0
+    for chd in inbox.iterdir():
+        if not chd.is_dir():
+            continue
+        for sess in chd.iterdir():
+            sj, run = sess / "session.json", root / sess.name
+            if not (sess.is_dir() and sj.is_file() and (run / "state.json").is_file()):
+                continue
+            dst = run / "00-inventory" / "session.json"
+            try:
+                if dst.is_file() and dst.stat().st_mtime_ns >= sj.stat().st_mtime_ns:
+                    continue
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(sj, dst)
+                data = read_json(sj, {}) or {}
+                rec = {"started_at": data.get("started_at"), "ended_at": data.get("ended_at"), "reason": data.get("reason"),
+                       "chunks": data.get("chunks"), "chunk_seconds": data.get("chunk_seconds"), "quality_pref": data.get("quality_pref")}
+                update_state(run, recording=rec, stream_ended=bool(data.get("ended_at")))
+                n += 1
+            except OSError:
+                continue
+    return n
+
+
 def _check_ready(c: dict, seen: dict, now: float, stable_s: float, sidecar_wait: float) -> str:
     p = c["path"]
     try:
@@ -767,13 +797,17 @@ def cmd_watch(a):
     say(f"[watch] inbox {inbox} -> runs {root} (whisper: {(cfg_get('whisper', {}) or {}).get('model')} on "
         f"{os.environ.get('CC_WHISPER_DEVICE') or (cfg_get('whisper', {}) or {}).get('device')}); Ctrl+C stops")
     interrupted = False
-    last_work = time.time()
+    last_work, last_sync = time.time(), 0.0
     idle_unload = float((cfg_get("whisper", {}) or {}).get("idle_unload_s", 600) or 0)
     with WatchLock(root / ".watch.lock") as lock:
         try:
             while True:
                 lock.touch()
                 now = time.time()
+                if now - last_sync > 10:                                   # the recorder's session.json (start, end, reason) follows into the run
+                    last_sync = now
+                    for _ in range(sync_sessions(inbox, root)):
+                        say("[watch] a recording's session.json changed: the run's recording info is updated")
                 if idle_unload and now - last_work > idle_unload:        # a background watcher does not keep the 1.5 GB model while nothing arrives
                     from cc_audio import unload_transcriber
                     if unload_transcriber():

@@ -15,7 +15,8 @@ user-invocable: false
 1. **Arguments** (`$ARGUMENTS`): the run folder (a path, or a session name under `runs_root`), then optional `only=shorts|long`, `notes="..."` (what the user knows: the guest, the topic, what they want), `streamer="Name"`.
    No run given: `T status` lists the runs; with exactly one run that has chunks, take it, otherwise report the list and stop (that is the only time to ask).
 2. **The run**: `T status --run <arg>` (stages per chunk, free space, totals). Take what is there: a chunk with stage `failed` or `pending` is listed and skipped; `T chunks --run RUN` is the table.
-   The recording may still be growing (a watcher running): the chunk table at this moment is the run for this pass; record it (`T state --run RUN set snapshot_chunks=<n>`) and use only those chunks. No processed chunk at all: stop and say what to run (`T watch`).
+   The recording may still be growing (a watcher running): `T state --run RUN get recording` and `get stream_ended` say whether the recorder has ended it (the stream ended, it was stopped, a limit was reached: `reason`); when it has not ended, the chunk table at this moment is the run for this pass.
+   Record the chunks used (`T state --run RUN set snapshot_chunks=<n>`) and use only those chunks. No processed chunk at all: stop and say what to run (`T watch`).
 3. **Facts to hold**: channel, date, number of chunks and total length, the title and category changes (`00-inventory/stream-meta.json`), the source quality (`probe.json` of a chunk), gaps and skipped ads, free space on the drive.
    Read `RUN/00-inventory/stream.md` once (the table of numbers per chunk).
 4. **Tools**: `T doctor` must show ffmpeg and ffprobe working; `T sfx-scan --run RUN` catalogues the sound-effects folder (`30-assets/sfx.md`; it fails plainly when the folder is missing). CapCut running is noted (the build needs it closed), not a blocker yet.

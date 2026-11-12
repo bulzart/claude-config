@@ -69,6 +69,8 @@ about that long after the moment, because of the stream's delay), so index i is 
 `[10j, 10j+10)` and `samples[].t` is the chunk offset the message is aligned to. The chat file is therefore saved about `lag_hint_s` after the chunk ends (still before its mp4).
 
 `session.json`: `{"schema":"tcr-session/1","channel","session","started_at","ended_at","reason","quality_pref","chunk_seconds","chat":true,"stream":{...},"chunks":N}`.
+`reason` is set when the recording ends: `stream-ended` (the extension stops by itself when the stream ends), `stop` (the user), `low-disk`, `limit` (the optional GB cap), `error`. `cc.py watch` copies a changed
+session.json into the run (`00-inventory/session.json`) and records `recording` and `stream_ended` in `state.json`, which `/create-clips` reads to know whether the recording is complete.
 
 ## 2. The run folder (made by `cc.py`, numbered like an analyze-with-loupe run)
 
