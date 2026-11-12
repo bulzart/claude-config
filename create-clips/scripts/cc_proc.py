@@ -616,7 +616,8 @@ def cmd_doctor(a):
         except SystemExit:
             chk(tool, False, "not found on PATH")
     chk("python", True, f"{sys.version.split()[0]} {sys.executable}", hard=False)
-    for mod, hard in (("PIL", True), ("numpy", True), ("faster_whisper", True), ("ctranslate2", False), ("av", False), ("cv2", False), ("librosa", False)):
+    for mod, hard in (("PIL", True), ("numpy", True), ("faster_whisper", True), ("ctranslate2", False), ("av", False), ("cv2", False), ("librosa", False),
+                      ("rapidocr_onnxruntime", False)):          # the last one only reads the score and clock of a game broadcast (hud-read, hud-scan)
         try:
             m = __import__(mod)
             v = getattr(m, "__version__", "ok")

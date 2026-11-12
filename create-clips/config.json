@@ -46,6 +46,9 @@
   "agents": {
     "research_max": 4,
     "scan_max": 6,
+    "scan_model": "haiku",
+    "scan_chunks_streamer": 6,
+    "scan_chunks_game": 5,
     "produce_max": 4
   },
   "awl_home": "C:/Users/Bulzart/.claude/analyze-with-loupe"

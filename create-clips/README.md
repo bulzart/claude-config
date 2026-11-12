@@ -2,7 +2,12 @@
 
 Twitch livestream -> **Twitch Chunk Recorder** (Chrome extension, `C:\Users\Bulzart\Documents\twitch-chunk-recorder`) saves 3-minute MP4 chunks ->
 **`cc.py watch`** (this toolkit) turns each chunk into frame sheets, a Whisper transcript and per-second numbers inside a run folder ->
-**`/create-clips <run folder>`** (Claude Code command) researches the streamer, mines the stream's moments and builds CapCut projects (shorts and long-form).
+**`/create-clips <run folder>`** (Claude Code command) researches the stream, mines its moments and builds CapCut projects (shorts and long-form).
+
+The command has **two modes**, chosen from the stream (or by `mode=streamer|game`), each with its own logic:
+- **streamer clipping**: a person is the show (jokes, reactions, arguments, chat, lingo): research of the streamer, their audience and the topic, moments, shorts and hour-long videos.
+- **game clipping**: a broadcast of a match (BLAST Premier CS2, a Dota 2 game, Valorant, League ...): research of the game, the event and the teams, then **rounds and fights** as the units
+  (how much of each to take, which to drop, which small ones to keep because a viewer would lose the detail), shorts of the best plays, condensed-match videos.
 
 This file is the **contract** between the three parts. Everything that crosses a part (file names, JSON fields, times) is defined here.
 
@@ -12,7 +17,9 @@ This file is the **contract** between the three parts. Everything that crosses a
    Do not use the `!` prefix of the Claude prompt for it: that runs through Git Bash, which cannot start on this PC. The extension then starts `cc.py watch` in the background when you press Record. Or start it by hand in a PowerShell window: `& "C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe" "C:\Users\Bulzart\.claude\create-clips\scripts\cc.py" watch`.
 3. **Record**: open a streamer's Twitch page and press the **Record** button the extension puts at the bottom right of the page (or type the login in the extension's popup, or put channels on the auto-record list).
    Chunks land in `Downloads\twitch-chunks\...` every 3 minutes and the processor turns each one into sheets and a transcript inside `C:\Users\Bulzart\Documents\stream-clips\runs\<session>`.
-4. **Clip**: in Claude Code, `/create-clips <that run folder>` (optionally `notes="guest was X, topic Y"`). Read `RUN\deliverables\README.md` at the end; open the CapCut projects, check the first frame, export.
+4. **Clip**: in Claude Code, `/create-clips <that run folder>` (optionally `notes="guest was X, topic Y"`, `mode=streamer|game`, `game="Counter-Strike 2"`, `only=shorts|long`). The mode is read from the stream when you do not say it.
+   Read `RUN\deliverables\README.md` at the end (game mode also writes `RUN\deliverables\rounds.md`: every round or fight with what was done with it); open the CapCut projects, check the first frame, export.
+   Models: the scan agents run on Haiku (`config.json -> agents.scan_model`); research, planning, editing and the main session use whatever you picked with `/model`. Nothing asks you which.
 Space: source quality (1080p60, about 8 Mbps) is about 3.6 GB per hour of stream, 720p60 about 1.5 GB. C: has only about 8 GB free until the new 1 TB M.2 SSD the user is buying (2026-11-12) is installed; then set Chrome's
 download folder (chrome://settings/downloads) to the SSD and tell the toolkit once: `T config set inbox_dir=<ssd>/twitch-chunks runs_root=<ssd>/stream-clips/runs` (`T config` shows both and their free space; existing runs stay where they are).
 
@@ -92,7 +99,8 @@ RUN\
       transcript.json           Whisper medium words; transcript.txt: the same as readable lines
       timeline.md               per-second table (speech, loudness, motion, chat)
       digest.json               the chunk's row of stream.md as data
-  20-analysis\                  /create-clips: streamer profile, audience, stream brief, moments, richness, portfolio
+  20-analysis\                  /create-clips: recon, the context brief, clip criteria, lexicon, the block files, moments, richness, portfolio
+                                game mode adds: hud\ (regions.json, the score and clock readings, states.txt), match-map.md, game-profile.md (a game the library lacks), rounds.json (every round or fight with its keep verdict)
   30-assets\                    /create-clips and cc.py: extra frames, dense sheets, censor clips, caption files, sfx.json
   40-briefs\                    /create-clips: one brief per planned video
   60-outputs\<video>\           /create-clips: EDL, captions, build plan, CapCut project name, report
@@ -135,16 +143,23 @@ stage (the /create-clips stage), next_skill, videos:{}}`.
 ## 3. cc.py commands (gather-only: they measure, extract and record; they never judge, rank or decide)
 
 Processing (`scripts/cc_proc.py`): `new-run`, `ingest`, `watch`, `status`, `doctor`, `chunks`, `locate`, `window`, `frame`, `sheet`, `stream-table`.
-Editing and run state (`scripts/cc_edit.py`): `state` (get/set dotted keys), `blocks` (chunk blocks for scan agents), `words` (spoken words with start times), `sfx-scan`, `layout-calc`, `grid-frame`
-(a full-resolution frame with a 10% grid), `censor` (a blurred copy of only a span and optionally only a region), `edl-check` (resolve an EDL: pieces, the CapCut MCP plan, the finish plan, facts at every cut),
-`captions` (cues from the transcript words of the resolved pieces: masking, spelling replacements), `capcut-name`, `capcut-finish` (zoom keyframes, transitions, captions, font, entrance, repair).
+Editing and run state (`scripts/cc_edit.py`): `config` (show, `get <dotted key>`, `set`), `state` (get/set dotted keys), `blocks` (chunk blocks for scan agents), `words` (spoken words with start times), `sfx-scan`, `layout-calc`, `grid-frame`
+(a full-resolution frame with a 10% grid), `censor` (a blurred copy of only a span and optionally only a region), `edl-check` (resolve an EDL: pieces, the CapCut plan, the finish plan, facts at every cut),
+`captions` (cues from the transcript words of the resolved pieces: masking, spelling replacements), `capcut-name`, `capcut-compose` (the whole CapCut project in one command from the resolved EDL, on `data/compose-template`, the chunks used in place),
+`capcut-finish` (zoom keyframes, transitions, captions, font, entrance, repair).
+On-screen reading for game matches (`scripts/cc_hud.py`, `docs/hud.md`): `hud-read` (OCR of one region at one time), `hud-scan` (OCR of a region over a range: the score, the clock), `region-series` (numbers of regions over time: a kill-feed burst, a replay badge).
+Game tabulation (`scripts/cc_game.py`): `hud-states` (the changes of the score as one time-ordered table), `hud-slice` (one reader's readings inside a rec range), `units-merge` (the block files as one `rounds.json`),
+`units-verdict` (the planner's keep decisions written next to the cards), `units-check` (facts about round and fight cards: missing fields, overlaps, score changes no unit holds, uncovered stretches),
+`units-table` (rounds.json as `deliverables/rounds.md` for the user).
 `--run` takes a run folder path or a bare session name under `runs_root`.
 
-The command, its phase skills (`~/.claude/skills/cc-*`) and the references (`reference/*.md`) are described in `~/.claude/commands/create-clips.md`; `tests/test_edit.py` is the edit toolkit's regression test.
+The command, its phase skills (`~/.claude/skills/cc-*`: profile, scan, plan and build skills for each mode, plus the shared start, produce and wrap-up) and the references (`reference/*.md`, `reference/games/*.md`) are described in `~/.claude/commands/create-clips.md`;
+`tests/run-all.py` runs every test (`test_edit.py` the edit toolkit, `test_game.py` the game tabulation, `test_hud.py` the screen reading, `test_proc.py` the processor, `test_native_host.py` the Chrome helper, `test_docs.py` that every file and skill the docs name exists).
 
 ## 4. Rules that hold everywhere
 
-- Scripts gather, agents decide: no verdict, label, rank or gate comes from a script (numbers, facts, peaks lists are fine).
+- Scripts gather, agents decide: no verdict, label, rank or gate comes from a script (numbers, facts, peaks lists are fine). In game mode the screen readers and `units-check` report values, changes and gaps; whether a round was a clutch or should be kept is an agent's call.
+- Models: the scan agents (the fast analysis pass) use Haiku (`config.json -> agents.scan_model`, batch sizes `scan_chunks_streamer` 6 and `scan_chunks_game` 5); research, planning, production and the main session inherit the model the user picked with `/model`. The planner re-checks what it will use (the second look), so a fast scan never decides alone.
 - Never move, rename, delete or overwrite a chunk's `chunk.mp4` after `ingest`; the editing side only reads it. Frames are the only media a script deletes (after their sheet is built), plus the 16 kHz wav after transcription.
 - Whisper stays on the CPU by default (the GPU is reserved for FLUX Klein and ACE-Step with their memory guard); the GPU is an opt-in (`whisper.device`), measured at ~10x faster.
 - Free space is checked per drive: `doctor` and `watch` report it and refuse to start a chunk below `min_free_gb` (3 GB) on the runs drive (C: has about 8 GB until the new SSD is in).

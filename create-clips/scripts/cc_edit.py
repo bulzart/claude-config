@@ -126,9 +126,14 @@ def cmd_config(a):
         write_json(CONFIG_PATH, cfg)
         notes.append("existing runs and chunks are not moved; the browser's download folder (chrome://settings/downloads) decides where new chunks land: set it to the same drive as inbox_dir")
         out({"ok": True, "set": [kv.split("=", 1)[0] for kv in pairs], "notes": notes})
+    if a.key:                                                       # `config get agents.scan_model`: one value of config.json, dotted
+        cur = cfg
+        for part in a.key.split("."):
+            cur = cur.get(part) if isinstance(cur, dict) else None
+        out({"ok": True, "key": a.key, "value": cur})
     out({"ok": True, "config": str(CONFIG_PATH), "runs_root": str(runs_root()), "runs_free_gb": free_gb(runs_root()), "inbox_dir": str(inbox_dir()),
          "inbox_free_gb": free_gb(inbox_dir()), "min_free_gb": cfg.get("min_free_gb"), "sfx_dir": cfg.get("sfx_dir"),
-         "whisper": {k: (cfg.get("whisper") or {}).get(k) for k in ("model", "device", "compute_type", "language")}})
+         "whisper": {k: (cfg.get("whisper") or {}).get(k) for k in ("model", "device", "compute_type", "language")}, "agents": cfg.get("agents")})
 
 
 # --------------------------------------------------------------------------- state / blocks
@@ -287,11 +292,18 @@ def cmd_layout_calc(a):
 
 # --------------------------------------------------------------------------- frames with a grid
 
+_PROBES: dict = {}
+
+
 def chunk_probe(run: Path, cid: str) -> dict:
-    p = chunk_dir(run, cid) / "probe.json"
-    pr = read_json(p, None)
+    """The ffprobe facts of a chunk: its probe.json, else one ffprobe (remembered for the rest of this command: an hour-long EDL asks for it once per piece)."""
+    key = (str(run), cid)
+    if key in _PROBES:
+        return _PROBES[key]
+    pr = read_json(chunk_dir(run, cid) / "probe.json", None)
     if not pr or not pr.get("width"):
         pr = ffprobe_facts(chunk_dir(run, cid) / "chunk.mp4")
+    _PROBES[key] = pr
     return pr
 
 
@@ -920,7 +932,10 @@ def cmd_capcut_compose(a):
     ratio = {(1080, 1920): "9:16", (1920, 1080): "16:9"}.get((canvas["width"], canvas["height"]), "original")
     pieces = resolved["pieces"]
     ph = make_placeholder(run, max(p["dur_src"] for p in pieces) if pieces else 1.0)
-    probes = {p["file"]: ffprobe_facts(p["file"]) for p in pieces}
+    probes = {}                                     # one ffprobe per distinct file (a long video has hundreds of pieces over a few dozen chunks)
+    for p in pieces:
+        if p["file"] not in probes:
+            probes[p["file"]] = ffprobe_facts(p["file"])
     missing = [f for f, pr in probes.items() if not pr.get("duration_s")]
     if missing:
         fail(f"media not readable: {missing[:3]}")
@@ -945,12 +960,14 @@ def cmd_capcut_compose(a):
     spec = {"name": name, "width": canvas["width"], "height": canvas["height"], "fps": canvas["fps"], "ratio": ratio, "tracks": tracks}
     spec_path = vdir / "compose-spec.json"
     write_json(spec_path, spec)
-    # No --template by default: capcut-cli then seeds the draft from the store's newest app-authored project (its version markers and settings, none of its
-    # content: the way `capcut init` seeded this PC's CapCut 9.7 skeleton). A template FOLDER keeps its own clips (the _analyze-stack-template has two),
-    # which is why it is not the default here.
+    # The default template is data/compose-template: an EMPTY draft that carries this PC's CapCut 9.7 version markers (a copy of the _analyze-stack-template
+    # with its four segments removed and its media files dropped; 60 KB). capcut-cli's own `auto` falls back to its bundled CapCut 6.5.0 (mac) skeleton when
+    # the store has no app-authored project, which is the case here, and a template folder that still holds clips would keep them and push the main track aside.
+    own = CC_HOME / "data" / "compose-template"
+    tmpl = a.template or (str(own) if (own / "draft_content.json").is_file() else None)
     args = [cli, "compile", str(spec_path), "--out", str(store / name)]
-    if a.template:
-        args += ["--template", str(a.template)]
+    if tmpl:
+        args += ["--template", str(tmpl)]
     cp = run_cmd(args, timeout=600)
     d = store / name
     if cp.returncode != 0 or not (d / "draft_content.json").is_file():
@@ -965,7 +982,7 @@ def cmd_capcut_compose(a):
         pass
     left = [str(x) for x in (d / "assets").rglob("*") if x.is_file() and x.suffix.lower() in (".mp4", ".mov") and x.stat().st_size > 5_000_000] if (d / "assets").is_dir() else []
     out({"ok": res["video_segments_retargeted"] == len(pieces) and not left, "draft": str(d), "name": name, "pieces": len(pieces), "sfx_lanes": len(lanes),
-         **res, "big_media_copied_into_the_draft": left, "seconds": round(time.time() - t_start, 1),
+         "template": str(tmpl) if tmpl else "auto (capcut-cli's own choice)", **res, "big_media_copied_into_the_draft": left, "seconds": round(time.time() - t_start, 1),
          "next": f"T capcut-finish --run RUN --draft \"{d}\" --video {a.video}"})
 
 
@@ -1170,7 +1187,7 @@ def register(sub) -> None:
     p.add_argument("--name", help="the project name (default: a free DD_Mon_YYYY_<channel>_<video>)")
     p.add_argument("--channel")
     p.add_argument("--store", help="the CapCut drafts folder (default: the real store)")
-    p.add_argument("--template", help="a template folder (it keeps its own clips); default: capcut-cli seeds from the store's newest app-authored project")
+    p.add_argument("--template", help="a template folder, or auto/bundled (capcut-cli's own choices); default: data/compose-template, an empty draft with this PC's CapCut 9.7 version markers. A folder that holds clips keeps them")
     p.set_defaults(func=cmd_capcut_compose)
 
     p = sub.add_parser("capcut-finish", help="after capcut-compose (or the last MCP save): zoom keys, transitions, bg blur, captions, font, intro, repair")

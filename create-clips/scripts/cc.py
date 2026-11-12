@@ -1,9 +1,10 @@
 """create-clips toolkit entry point: `python cc.py <command> ...` (every command prints one JSON object on its last line).
 
-Commands live in two modules, each exposing register(sub):
+Commands live in four modules, each exposing register(sub):
   cc_proc.py  chunk processing: new-run, ingest, watch, status, doctor, chunks, locate, window, frame, sheet, stream-table
-  cc_edit.py  editing helpers:  state, blocks, words, sfx-scan, layout-calc, grid-frame, censor, edl-check, captions, capcut-name, capcut-finish
+  cc_edit.py  editing helpers:  config, state, blocks, words, sfx-scan, layout-calc, grid-frame, censor, edl-check, captions, capcut-name, capcut-compose, capcut-finish
   cc_hud.py   on-screen reading for game matches: hud-read, hud-scan (OCR of a region over time), region-series (numbers of a region over time)
+  cc_game.py  game-mode tabulation: hud-states (the score's changes as one table), hud-slice (one reader inside a range), units-merge, units-verdict, units-check (facts about round/fight cards), units-table (rounds.json as a table for the user)
 (native_host.py is the Chrome native-messaging host that starts and reports on `watch`; install-background.ps1 registers it, opt-in.)
 Scripts gather, agents decide: nothing here judges, ranks or decides.
 """
@@ -18,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cc_common import fail  # noqa: E402
 
-MODULES = ("cc_proc", "cc_edit", "cc_hud")
+MODULES = ("cc_proc", "cc_edit", "cc_hud", "cc_game")
 
 
 def build_parser() -> argparse.ArgumentParser:

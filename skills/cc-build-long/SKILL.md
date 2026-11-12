@@ -22,7 +22,8 @@ user-invocable: false
    the captions block (`size` 6, bottom, the lexicon in `replace`). Where the chunk table shows a recording gap or skipped ads between two chunks inside one run, treat it as a jump and place the cut deliberately.
 4. **Check**: `T edl-check --run RUN --edl OUT/edl.json --make-censor`; fix every warning and every cut that lands inside a word (an hour has hundreds of cuts: only the cuts between segments are facts you must clear; the chunk joins inside a straight run are seamless);
    `T captions --run RUN --resolved OUT/resolved.json` (always; read `silent_stretches_over_4s`). View each blurred file's preview and the frames around it.
-5. **Build** with `CC/reference/capcut-build.md` steps 2 to 10 (canvas 1920x1080). A long video has many pieces: do the plan in order, read the timeline back after the first five and at the end; keep the sound effects few. No proxy preview of the whole hour: look at three frames from the project's start, middle and end only if a render is cheap; otherwise the timeline read-back is the check.
+5. **Build** with `CC/reference/capcut-build.md` (canvas 1920x1080): `T capcut-compose` builds all the pieces in one command (CapCut closed: if it is open, stop with `ready-to-build`), then `T capcut-finish`; keep the sound effects few.
+   No proxy preview of the whole hour: the read-back (`capcut segments`: the clip count, the order, the total length; `capcut texts`; `capcut lint`) is the check, and three frames from the start, middle and end of a proxy only if a render is cheap.
    `OUT/report.md` and `OUT/posting.md` (title, description, hashtags, chapters with rec-to-output timestamps: the output time of a segment is its `at` in `resolved.json`).
 6. `T state --run RUN set videos.<id>.status=built videos.<id>.project="<name>" videos.<id>.duration_s=<n>` (or `failed` with the reason). C: free space is small: say in the report the project's size and the chunks it uses.
 

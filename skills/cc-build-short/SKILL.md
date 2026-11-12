@@ -21,7 +21,7 @@ user-invocable: false
    sound effects that match the situation (`RUN/30-assets/sfx.md`), the captions block (the brief's lexicon in `replace`; the key words in `highlight_words`). The length follows the content: up to 180 s, usually 15 to 60.
 4. **Check**: `T edl-check --run RUN --edl OUT/edl.json --make-censor`: fix the EDL until there are no warnings, no cut inside a word, no refused transition, every blurred file made; look at `T censor --run RUN --from T --to T --region ... --preview-only` for each blurred span (view the file), and at the frames just before and after it.
    Then `T captions --run RUN --resolved OUT/resolved.json` (always).
-5. **Build** with `CC/reference/capcut-build.md` steps 2 to 10: name, clone and prep (1080x1920), tracks, the plan's operations (no `atSec` on the main track), validate, save (CapCut closed: if it is open, stop here with `ready-to-build`), `T capcut-finish`, the checks, a proxy preview of 3 frames, `OUT/report.md` and `OUT/posting.md`.
+5. **Build** with `CC/reference/capcut-build.md`: `T capcut-compose` (the whole project in one command; CapCut closed: if it is open, stop here with `ready-to-build`), `T capcut-finish`, the checks (`capcut segments`, `capcut texts`, `capcut lint`), a proxy preview of 3 frames, `OUT/report.md` and `OUT/posting.md`.
 6. `T state --run RUN set videos.<id>.status=built videos.<id>.project="<name>" videos.<id>.duration_s=<n>` (or `failed` with `videos.<id>.error="..."`).
 
 ## Never

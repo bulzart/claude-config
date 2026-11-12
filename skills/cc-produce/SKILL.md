@@ -13,10 +13,11 @@ user-invocable: false
 
 ## Steps
 1. **CapCut**: `Get-Process CapCut -ErrorAction SilentlyContinue`. Running is a blocker notice, not a question: the agents still write their edit plans, but cannot save a project. Tell the user once, in a line, to close CapCut; the videos stay `ready-to-build` and a later `/create-clips <run> resume` builds them.
-2. **Waves**: spawn production agents (general-purpose, one per video, the best videos first, at most `config.json -> agents.produce_max` = 4 at once; shorts and long-form share the slots; as one finishes, the next starts). Never two agents on one video. Spawn each wave in one message so they run together.
+2. **Waves**: spawn production agents (general-purpose, no `model` argument: they use the model the user picked; one per video, the best videos first, at most `config.json -> agents.produce_max` = 4 at once; shorts and long-form share the slots; as one finishes, the next starts).
+   Never two agents on one video. Spawn each wave in one message so they run together.
 3. **The contract** each agent gets (write it in full; the agent never sees this skill or the command file):
    - the run path, the video id and kind, its brief `RUN/40-briefs/<id>-brief.md`, its output folder `RUN/60-outputs/<id>/`;
-   - invoke Skill `cc-build-short` (kind short) or `cc-build-long` (kind long) and follow it (if the Skill tool or the name is not available, Read `C:/Users/Bulzart/.claude/skills/<name>/SKILL.md`);
+   - invoke the build skill of the run's mode (`T state --run RUN get mode`): streamer mode `cc-build-short` (kind short) or `cc-build-long` (kind long); game mode `cc-build-game` (both kinds) and follow it (if the Skill tool or the name is not available, Read `C:/Users/Bulzart/.claude/skills/<name>/SKILL.md`);
    - read `RUN/20-analysis/brief.md` first; the rest only as its skill says;
    - the rules in one place: only cuts, captions (always), VFX (zoom, a short transition, a blur where safety says) and matching sound effects; religion and superstition avoided, gore, distress, nudity and personal data kept and blurred only where seen (`CC/reference/safety.md`, which it reads);
      the chunks are read-only; CapCut closed for every save (if it is open: finish the plan, set `videos.<id>.status=ready-to-build`, stop); never ask the user anything, never spawn agents; every file it names in a report is a full path from the drive letter;

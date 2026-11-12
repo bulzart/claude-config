@@ -99,6 +99,9 @@ def main():
             vids = c["materials"].get("videos", [])
             check(vids and all(m["path"].endswith(("chunk.mp4", ".mp4")) and "placeholder" not in m["path"] for m in vids), "no video material points at the placeholder")
             check(not (store / "cctest" / "assets" / "video").exists(), "no media file was copied into the draft's assets/video")
+            ver = subprocess.run([capcut, "version", str(store / "cctest")], capture_output=True, text=True).stdout
+            check('"app_version":"9.7.0"' in ver.replace(" ", "") and '"os":"windows"' in ver.replace(" ", ""),
+                  "the composed draft carries the CapCut 9.7 / windows version markers (the empty template), not capcut-cli's bundled 6.5.0 / mac skeleton")
             r = cc("capcut-finish", "--run", run, "--draft", store / "cctest", "--video", "S01", env=env)
             check(r.get("ok"), "capcut-finish ok on the composed draft")
             c = json.loads((store / "cctest" / "draft_content.json").read_text(encoding="utf-8"))
@@ -110,7 +113,18 @@ def main():
             check('"errors":0' in lint.stdout.replace(" ", ""), "capcut lint: 0 errors")
             if sfx_file.is_file():
                 check(any(t["type"] == "audio" and t.get("segments") for t in c["tracks"]), "the sound effect is on an audio track")
-            # NOT tested here: compose into the real CapCut store (its `auto` seeding from the newest app-authored project); the first real build is that check
+            # an hour-long video has hundreds of pieces: 150 here; the facts of a chunk are read once, not once per piece (it took 24 s for 300 pieces before)
+            big = {"schema": "cc-edl/1", "video": "L02", "kind": "long", "layout": {"mode": "native"},
+                   "segments": [{"id": f"b{i}", "rec_from": round((i * 0.15) % 20 + 0.5, 2), "rec_to": round((i * 0.15) % 20 + 1.0, 2)} for i in range(150)]}
+            out2 = run / "60-outputs" / "L02"
+            out2.mkdir(parents=True)
+            (out2 / "edl.json").write_text(json.dumps(big), encoding="utf-8")
+            r = cc("edl-check", "--run", run, "--edl", out2 / "edl.json", env=env)
+            n = r.get("totals", {}).get("pieces", 0)
+            check(r.get("ok") and n >= 150, f"edl-check of a {n}-piece EDL ok")
+            r = cc("capcut-compose", "--run", run, "--video", "L02", "--name", "cctest2", "--store", store, env=env)
+            check(r.get("ok") and r.get("video_segments_retargeted") == n and r.get("seconds", 99) < 10, f"capcut-compose of {n} pieces: all retargeted, {r.get('seconds')} s (under 10) " + json.dumps(r)[:200])
+            # NOT tested here: opening the composed project in CapCut 9.7 itself (no tool here can); the first real build is that check
         else:
             print("skip capcut-compose/finish (capcut-cli not on PATH)")
     finally:
