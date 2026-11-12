@@ -10,3 +10,6 @@
 2026-11-12 13:02:14 host started (pid 36764, args ['chrome-extension://abc/'])
 2026-11-12 13:02:14 watcher started (pid 32240)
 2026-11-12 13:02:14 host stopped
+2026-11-12 13:54:14 host started (pid 35072, args ['chrome-extension://clnbfkmjckffkfgnhnfacicbalpieddp/', '--parent-window=0'])
+2026-11-12 13:54:14 watcher started (pid 16124)
+2026-11-12 13:54:14 host stopped
