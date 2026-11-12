@@ -1,0 +1,51 @@
+{
+  "runs_root": "C:/Users/Bulzart/Documents/stream-clips/runs",
+  "inbox_dir": "C:/Users/Bulzart/Downloads/twitch-chunks",
+  "sfx_dir": "C:/Users/Bulzart/Documents/sound_effects",
+  "min_free_gb": 3,
+  "chunk_seconds_nominal": 180,
+  "frames": {
+    "interval_s": 0.75,
+    "cols": 5,
+    "rows": 6,
+    "cell_w": 240,
+    "cell_h": 135,
+    "jpeg_quality": 86,
+    "overview_every": 10,
+    "overview_cols": 6
+  },
+  "audio": {
+    "rms_window_s": 0.5,
+    "keep_wav": false,
+    "loud_jump_db": 10,
+    "silence_db": -50
+  },
+  "whisper": {
+    "model": "medium",
+    "device": "cpu",
+    "compute_type": "int8",
+    "language": "en",
+    "beam_size": 5,
+    "vad_filter": true,
+    "condition_on_previous_text": false,
+    "initial_prompt": "",
+    "local_files_only": true,
+    "cuda_dll_dir": "C:/Users/Bulzart/Documents/AI/ACE-Step-1.5/.venv/Lib/site-packages/torch/lib"
+  },
+  "chat": {
+    "lag_hint_s": 8
+  },
+  "capcut": {
+    "drafts_dir": "",
+    "template_draft": "_analyze-stack-template",
+    "short_canvas": [1080, 1920],
+    "long_canvas": [1920, 1080],
+    "fps": 30
+  },
+  "agents": {
+    "research_max": 4,
+    "scan_max": 6,
+    "produce_max": 4
+  },
+  "awl_home": "C:/Users/Bulzart/.claude/analyze-with-loupe"
+}

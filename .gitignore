@@ -23,6 +23,7 @@
 !/analyze-then-generate/
 !/analyze-with-loupe/
 !/analyze-stack/
+!/create-clips/
 # plugin settings only (which plugins and marketplaces are installed); their downloaded code, caches and marketplace clones stay out
 !/plugins/
 /plugins/*
@@ -52,4 +53,6 @@ __pycache__/
 /analyze-with-loupe/_backups/
 /analyze-stack/runs/
 /analyze-stack/samples/
+/create-clips/runs/
+/create-clips/data/sfx-cache.json
 /loupe/data/
