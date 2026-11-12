@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: e45fa635-1cdc-405a-830c-5be655ad54a5
-  modified: 2026-11-12T11:55:41.596Z
+  modified: 2026-11-12T12:49:42.462Z
 ---
 
 Built 2026-11-12 on the user's brief (clip farming for Kai Cenat, cQx, Ninja, Speed, Fanum, Adin Ross and similar).
@@ -15,7 +15,9 @@ Built 2026-11-12 on the user's brief (clip farming for Kai Cenat, cQx, Ninja, Sp
 - Rules from the user: edit = cuts, captions (non-negotiable), VFX, matching sound effects; religion and superstition avoided; gore/distress/nudity (and personal data) kept and blurred only in the section and region where seen (`cc.py censor`, ffmpeg-made blurred span replaces the span); shorts up to 3 min, long-form about 1 h but never cutting a story in half, count by richness; shorts and long-form built at the same time (up to 4 production agents).
 - Findings that shaped it: Twitch segments are fMP4 with EXT-X-MAP (not TS); the playback token lasts about 20 min; anonymous viewers get stitched ads (`Amazon|id` segments with their own init); C: has only ~8 GB free (user 2026-11-12: "we will buy a new 1 TB M.2 SSD, no worries": when it is installed set Chrome's download folder to it and run `cc.py config set inbox_dir=... runs_root=...`; defaults are source quality, no size cap, a free-space guard via the native host); `capcut add-video` copies media into the draft (never use it, use the MCP); git bash forks fail (PowerShell).
 - The user's flow (2026-11-12): open a streamer's Twitch page, press the extension's Record pill on the page, chunks every 3 min, a background script (`scripts/native_host.py` started through Chrome native messaging, or the `CreateClipsWatcher` logon task; both opt-in via `scripts/install-background.ps1`, never installed by me) processes each chunk with sheets and Whisper medium. The Chrome MCP was not connected in this session, so the real Twitch page was not inspected.
-- Not verified: no live Twitch download was run (the permission classifier denied polling a third party's stream); CapCut layouts (`fill` scale/pos, `bg-blur`) not opened in CapCut; the MCP clone/add_video path not run against the real store.
+- Verified: extension 437 unit/integration checks + 56 checks in real headless Chrome 157 against a local fake Twitch; processor 65 checks with real Whisper medium (about 147 s CPU per 180 s chunk); edit toolkit 17 checks; native host protocol 10 checks; a real chunk went through processor then edit tools; the extension's real output files were accepted by the processor.
+- Not verified: no live Twitch download was run (the permission classifier denied polling a third party's stream) and the Chrome MCP was not connected, so Twitch's real page/ads/end-of-stream signals are from one earlier playlist probe; the Record pill may sit over the chat Send button (draggable); CapCut layouts (`fill` scale/pos, `bg-blur`) not opened in CapCut; the MCP clone/add_video path not run against the real store; `install-background.ps1` never run (registry/scheduled task are the user's opt-in).
+- Extension id `clnbfkmjckffkfgnhnfacicbalpieddp` (pinned key, file `twitch-chunk-recorder\native-host\extension-id.txt`).
 
 **Why:** the user wants streams turned into posted-ready CapCut projects with agents that understand the streamer and the topic.
 **How to apply:** use `cc.py doctor` first; keep processing on CPU unless the user says otherwise; keep chunks read-only; never push to a remote; the Twitch extension and the toolkit are not in git (the toolkit is under `~/.claude/create-clips`, tracked by the auto-commit hook).

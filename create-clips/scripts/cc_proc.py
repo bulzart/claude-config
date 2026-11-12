@@ -857,6 +857,10 @@ def cmd_watch(a):
         except KeyboardInterrupt:
             interrupted = True
             say("[watch] stopped (Ctrl+C); an interrupted chunk resumes at the next start")
+        try:
+            sync_sessions(inbox, root)                  # a run made during this pass gets its recording info too
+        except Exception as e:  # noqa: BLE001
+            say(f"[watch] could not sync session.json: {e}")
     out({"ok": True, "processed": processed, "skipped_incomplete": skipped_incomplete, "interrupted": interrupted})
 
 
