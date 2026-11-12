@@ -99,7 +99,9 @@ def make_chat(path: Path, n: int, dur: int, peak_at: int):
 
 
 def expected_frames(dur: float, interval=0.75) -> int:
-    return int(math.floor((dur - 0.01) / interval)) + 1
+    if dur <= 0.1:
+        return 1 if dur > 0 else 0
+    return int(math.floor((dur - 0.1) / interval)) + 1       # a frame within 0.1 s of the chunk's end is not taken
 
 
 def label_distance(sheet_img, x0, y0, cw, ch, text) -> float:

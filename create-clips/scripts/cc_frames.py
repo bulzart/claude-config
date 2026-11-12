@@ -22,10 +22,11 @@ PTS_RE = re.compile(r"pts_time:\s*([0-9.eE+-]+)")
 
 
 def n_frames(duration_s: float | None, interval: float) -> int:
-    """Frames of a chunk: i = 0 .. floor((duration - 0.01) / interval)."""
-    if not duration_s or duration_s <= 0.01:
-        return 0
-    return int(math.floor((duration_s - 0.01) / interval)) + 1
+    """Frames of a chunk: i = 0 .. floor((duration - 0.1) / interval). A frame within 0.1 s of the end is not taken (it is the next chunk's first
+    frame, and a chunk of 180.04 s would otherwise get a ninth sheet holding one frame)."""
+    if not duration_s or duration_s <= 0.1:
+        return 1 if duration_s and duration_s > 0 else 0
+    return int(math.floor((duration_s - 0.1) / interval)) + 1
 
 
 def extract_batch(chunk, start_s: float, step_s: float, count: int, out_dir: Path, w: int, h: int, timeout: float = 900) -> dict:
