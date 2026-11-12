@@ -260,12 +260,23 @@ def ingest_chunk(run: Path, src: Path | None, index: int | None = None, sidecar:
                 raise FileNotFoundError(f"no chunk file to move ({src})")
             cdir.mkdir(parents=True, exist_ok=True)
             try:
-                os.replace(src, dest)
-            except OSError:
+                os.replace(src, dest)                  # the inbox and the runs are on one drive: a rename, no copy
+            except PermissionError:
+                raise                                   # the file is still open elsewhere: this stage fails, the watcher tries again later
+            except OSError:                             # another drive: copy to a .part file, rename it, then drop the source
                 need = src.stat().st_size / 1e9 + min_free
                 if free_gb(run) < need:
                     raise RuntimeError("the inbox and the runs are on different drives and there is no room to copy the chunk")
-                shutil.move(str(src), str(dest))
+                part = dest.with_name("chunk.mp4.part")
+                try:
+                    shutil.copyfile(src, part)
+                    os.replace(part, dest)
+                finally:
+                    part.unlink(missing_ok=True)
+                try:
+                    src.unlink()
+                except OSError:
+                    log(f"copied the chunk but could not delete {src}", show=True)
                 row["moved_by_copy"] = True
         elif src and src.is_file() and src.resolve() != dest.resolve():
             log(f"duplicate: {dest} already exists, the file {src} is left where it is", show=True)
@@ -393,7 +404,7 @@ def _finish(run: Path, row: dict, secs: dict, skipped: list, errors: list, state
     fj = read_json(chunk_dir(run, row["id"]) / "frames.json")
     if fj:
         leftover = fj.get("leftover_frames")
-    return {"ok": row["status"] == "done", "chunk": row["id"], "run": str(run), "status": row["status"], "stages": row["stages"],
+    return {"ok": row["status"] != "failed", "chunk": row["id"], "run": str(run), "status": row["status"], "stages": row["stages"],
             "skipped": skipped, "seconds": secs, "rec_start_s": row.get("rec_start_s"), "duration_s": row.get("duration_s"),
             "frames": row.get("frames"), "sheets": row.get("sheets"), "words": row.get("words"), "language": row.get("language"),
             "model": row.get("model"), "device": row.get("device"), "frames_deleted": (leftover == 0) if leftover is not None else None,
@@ -756,11 +767,17 @@ def cmd_watch(a):
     say(f"[watch] inbox {inbox} -> runs {root} (whisper: {(cfg_get('whisper', {}) or {}).get('model')} on "
         f"{os.environ.get('CC_WHISPER_DEVICE') or (cfg_get('whisper', {}) or {}).get('device')}); Ctrl+C stops")
     interrupted = False
+    last_work = time.time()
+    idle_unload = float((cfg_get("whisper", {}) or {}).get("idle_unload_s", 600) or 0)
     with WatchLock(root / ".watch.lock") as lock:
         try:
             while True:
                 lock.touch()
                 now = time.time()
+                if idle_unload and now - last_work > idle_unload:        # a background watcher does not keep the 1.5 GB model while nothing arrives
+                    from cc_audio import unload_transcriber
+                    if unload_transcriber():
+                        say(f"[watch] idle for {int(idle_unload)} s: Whisper model unloaded (the next chunk loads it again)")
                 cands = scan_inbox(inbox)
                 states = {c["path"]: _check_ready(c, seen, now, a.stable, a.sidecar_wait) for c in cands}
                 ready = [c for c in cands if states[c["path"]] == "ready" and c["path"] not in dead and now >= blocked_until.get(c["path"], 0)]
@@ -788,6 +805,7 @@ def cmd_watch(a):
                             f"{res.get('seconds')} free {free_gb(run)} GB")
                         if res.get("ok"):
                             refresh_stale(run, limit=1)
+                    last_work = time.time()
                     continue
                 waiting = any(s in ("unstable", "waiting-sidecar") for s in states.values())
                 if not waiting:                 # idle: re-make one chunk whose rec start moved, if any

@@ -223,6 +223,17 @@ def get_transcriber(wcfg: dict | None = None) -> Transcriber:
     return _TRANSCRIBER
 
 
+def unload_transcriber() -> bool:
+    """Free the Whisper model's memory (a watcher that has been idle for a while drops it; the next chunk loads it again). True when a model was loaded."""
+    t = _TRANSCRIBER
+    if t is not None and t.model is not None:
+        t.model = None
+        import gc
+        gc.collect()
+        return True
+    return False
+
+
 def empty_transcript(rec_start_s: float, duration_s: float | None, note: str) -> dict:
     return {"engine": None, "model": None, "device": None, "language": None, "language_probability": None, "rec_start_s": round(rec_start_s, 3),
             "duration_s": duration_s, "segments": [], "n_words": 0, "speech_seconds": 0.0, "wpm_speech_only": None, "note": note}

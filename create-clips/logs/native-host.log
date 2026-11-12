@@ -1,0 +1,9 @@
+2026-11-12 12:53:48 host started (pid 30724, args ['chrome-extension://abc/'])
+2026-11-12 12:53:49 watcher started (pid 32880)
+2026-11-12 12:53:49 host stopped
+2026-11-12 12:54:20 host started (pid 12876, args ['chrome-extension://abc/'])
+2026-11-12 12:54:21 watcher started (pid 31240)
+2026-11-12 12:54:21 host stopped
+2026-11-12 12:55:50 host started (pid 27428, args ['chrome-extension://abc/'])
+2026-11-12 12:55:51 watcher started (pid 34844)
+2026-11-12 12:55:51 host stopped

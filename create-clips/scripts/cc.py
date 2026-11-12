@@ -2,7 +2,8 @@
 
 Commands live in two modules, each exposing register(sub):
   cc_proc.py  chunk processing: new-run, ingest, watch, status, doctor, chunks, locate, window, frame, sheet, stream-table
-  cc_edit.py  editing helpers:  sfx-scan, edl-check, layout-calc, captions, censor, zoom-keys, capcut-name, capcut-draft-info
+  cc_edit.py  editing helpers:  state, blocks, words, sfx-scan, layout-calc, grid-frame, censor, edl-check, captions, capcut-name, capcut-finish
+(native_host.py is the Chrome native-messaging host that starts and reports on `watch`; install-background.ps1 registers it, opt-in.)
 Scripts gather, agents decide: nothing here judges, ranks or decides.
 """
 from __future__ import annotations

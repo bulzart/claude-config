@@ -8,10 +8,13 @@ This file is the **contract** between the three parts. Everything that crosses a
 
 ## Quick start
 1. **Once**: `chrome://extensions` -> Developer mode -> Load unpacked -> `C:\Users\Bulzart\Documents\twitch-chunk-recorder`. Check `T doctor` (ffmpeg, Whisper medium cached, free space).
-2. **Start the processor** in a PowerShell window and leave it running: `& "C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe" "C:\Users\Bulzart\.claude\create-clips\scripts\cc.py" watch`
-3. **Record**: open the extension on a Twitch channel (or type the login), pick the quality, press Record (or put the channels on the auto-record list). Chunks land in `Downloads\twitch-chunks\...` and the processor turns each one into sheets and a transcript inside `C:\Users\Bulzart\Documents\stream-clips\runs\<session>`.
+2. **Let the processor start by itself** (one time, opt-in, removable): `powershell -ExecutionPolicy Bypass -File C:\Users\Bulzart\.claude\create-clips\scripts\install-background.ps1 -Mode native`
+   (the extension then starts `cc.py watch` in the background when you press Record). Or start it by hand in a PowerShell window: `& "C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe" "C:\Users\Bulzart\.claude\create-clips\scripts\cc.py" watch`.
+3. **Record**: open a streamer's Twitch page and press the **Record** button the extension puts at the bottom right of the page (or type the login in the extension's popup, or put channels on the auto-record list).
+   Chunks land in `Downloads\twitch-chunks\...` every 3 minutes and the processor turns each one into sheets and a transcript inside `C:\Users\Bulzart\Documents\stream-clips\runs\<session>`.
 4. **Clip**: in Claude Code, `/create-clips <that run folder>` (optionally `notes="guest was X, topic Y"`). Read `RUN\deliverables\README.md` at the end; open the CapCut projects, check the first frame, export.
-C: has only about 8 GB free (2026-11-12): 720p60 is about 1.5 GB per hour of stream, 1080p60 about 3.6 GB per hour; free space before a long stream.
+Space: source quality (1080p60, about 8 Mbps) is about 3.6 GB per hour of stream, 720p60 about 1.5 GB. C: has only about 8 GB free until the new 1 TB M.2 SSD the user is buying (2026-11-12) is installed; then set Chrome's
+download folder (chrome://settings/downloads) to the SSD and tell the toolkit once: `T config set inbox_dir=<ssd>/twitch-chunks runs_root=<ssd>/stream-clips/runs` (`T config` shows both and their free space; existing runs stay where they are).
 
 ## Paths and names
 
@@ -142,5 +145,5 @@ The command, its phase skills (`~/.claude/skills/cc-*`) and the references (`ref
 - Scripts gather, agents decide: no verdict, label, rank or gate comes from a script (numbers, facts, peaks lists are fine).
 - Never move, rename, delete or overwrite a chunk's `chunk.mp4` after `ingest`; the editing side only reads it. Frames are the only media a script deletes (after their sheet is built), plus the 16 kHz wav after transcription.
 - Whisper stays on the CPU by default (the GPU is reserved for FLUX Klein and ACE-Step with their memory guard); the GPU is an opt-in (`whisper.device`), measured at ~10x faster.
-- C: is nearly full (8 GB free at 2026-11-12): `doctor` and `watch` report free space and refuse to start a chunk below `min_free_gb`.
+- Free space is checked per drive: `doctor` and `watch` report it and refuse to start a chunk below `min_free_gb` (3 GB) on the runs drive (C: has about 8 GB until the new SSD is in).
 - No emoji in any file this toolkit or a command writes. Religion and superstition are avoided in what a video says or shows; gore, distress, nudity and personal data are kept but blurred, only where seen.

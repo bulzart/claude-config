@@ -46,6 +46,11 @@ def font(size: int, bold: bool = True):
     return _FONTS[key]
 
 
+def label_font(cw: int):
+    """The cell label font: 12 px bold, 11 px in the narrow cells of a portrait source (so the whole 'h:mm:ss.cc  +off' fits)."""
+    return font(11) if cw < 150 else font(12)
+
+
 def chat_ref() -> float:
     return float(cfg_get("frames.chat_bar_ref", 20))
 
@@ -108,7 +113,7 @@ def render_sheet(cells: list, *, title: str, legend: str | None, cols: int, cw: 
     nrows = max(1, math.ceil(n / cols))
     sheet = Image.new("RGB", (cols * cw, HEAD_H + nrows * (ch + LABEL_H)), BG)
     dr = ImageDraw.Draw(sheet)
-    hf, lf, tf = font(17), font(12), font(12)
+    hf, lf, tf = font(17), font(12), label_font(cw)
     dr.text((8, 4), _fit(dr, title, hf, cols * cw - 16), fill=(240, 240, 240), font=hf)
     leg = (legend or LEGEND).replace("{ref}", f"{chat_ref():g}")
     dr.text((8, 25), _fit(dr, leg, lf, cols * cw - 16), fill=(170, 170, 170), font=lf)

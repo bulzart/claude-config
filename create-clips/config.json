@@ -29,6 +29,7 @@
     "vad_filter": true,
     "condition_on_previous_text": false,
     "initial_prompt": "",
+    "idle_unload_s": 600,
     "local_files_only": true,
     "cuda_dll_dir": "C:/Users/Bulzart/Documents/AI/ACE-Step-1.5/.venv/Lib/site-packages/torch/lib"
   },

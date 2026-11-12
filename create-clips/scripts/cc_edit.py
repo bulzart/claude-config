@@ -1,6 +1,7 @@
 """create-clips editing helpers (used by /create-clips agents). Gather-only: they measure, convert, write what an agent decided; they never judge.
 
 Commands (see README.md for the contract; times are rec times):
+  config         show the effective folders and free space, or set config.json keys (e.g. after a new drive is installed)
   state          read/write run state (dotted keys)
   blocks         split the recorded chunks into blocks of N chunks (for scan agents), with the numbers that size them
   sfx-scan       catalogue the sound-effects folder (name, duration, levels) -> RUN/30-assets/sfx.json + sfx.md
@@ -87,6 +88,46 @@ def parse_floats(text: str, n: int) -> list:
     if len(v) != n:
         fail(f"expected {n} numbers in {text!r}")
     return v
+
+
+# --------------------------------------------------------------------------- config
+
+def cmd_config(a):
+    """Show the effective folders and free space, or set config.json keys (dotted; values JSON or text): e.g. after a new drive is installed,
+    `config set inbox_dir=D:/twitch-chunks runs_root=D:/stream-clips/runs` (existing runs stay where they are; /create-clips takes any run path)."""
+    from cc_common import CONFIG_PATH, free_gb, inbox_dir, runs_root
+    cfg = read_json(CONFIG_PATH, {}) or {}
+    if a.action == "set":
+        pairs = ([a.key] if a.key else []) + list(a.pairs or [])
+        if not pairs:
+            fail("config set needs key=value pairs")
+        notes = []
+        for kv in pairs:
+            if "=" not in kv:
+                fail(f"config set needs key=value, got {kv!r}")
+            k, v = kv.split("=", 1)
+            try:
+                v = json.loads(v)
+            except ValueError:
+                pass
+            cur = cfg
+            parts = k.split(".")
+            for p in parts[:-1]:
+                cur = cur.setdefault(p, {})
+            old = cur.get(parts[-1])
+            cur[parts[-1]] = v
+            if k in ("runs_root", "inbox_dir", "sfx_dir") and isinstance(v, str):
+                try:
+                    Path(v).mkdir(parents=True, exist_ok=True) if k != "sfx_dir" else None
+                    notes.append(f"{k}: {old} -> {v} ({free_gb(v)} GB free there)")
+                except OSError as e:
+                    notes.append(f"{k}: could not create {v}: {e}")
+        write_json(CONFIG_PATH, cfg)
+        notes.append("existing runs and chunks are not moved; the browser's download folder (chrome://settings/downloads) decides where new chunks land: set it to the same drive as inbox_dir")
+        out({"ok": True, "set": [kv.split("=", 1)[0] for kv in pairs], "notes": notes})
+    out({"ok": True, "config": str(CONFIG_PATH), "runs_root": str(runs_root()), "runs_free_gb": free_gb(runs_root()), "inbox_dir": str(inbox_dir()),
+         "inbox_free_gb": free_gb(inbox_dir()), "min_free_gb": cfg.get("min_free_gb"), "sfx_dir": cfg.get("sfx_dir"),
+         "whisper": {k: (cfg.get("whisper") or {}).get(k) for k in ("model", "device", "compute_type", "language")}})
 
 
 # --------------------------------------------------------------------------- state / blocks
@@ -931,6 +972,12 @@ def register(sub) -> None:
     p.add_argument("key", nargs="?")
     p.add_argument("pairs", nargs="*", help="set: key=value (value JSON or text)")
     p.set_defaults(func=cmd_state)
+
+    p = sub.add_parser("config", help="show the effective folders and free space, or `set key=value ...` in config.json (e.g. a new drive)")
+    p.add_argument("action", nargs="?", choices=["get", "set"], default="get")
+    p.add_argument("key", nargs="?")
+    p.add_argument("pairs", nargs="*")
+    p.set_defaults(func=cmd_config)
 
     p = sub.add_parser("blocks", help="split the chunks into blocks of N for scan agents")
     p.add_argument("--run", required=True)

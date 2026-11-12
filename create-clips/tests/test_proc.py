@@ -106,10 +106,10 @@ def label_distance(sheet_img, x0, y0, cw, ch, text) -> float:
     """Mean abs difference between the label strip text row under a cell and the same text drawn fresh (same font and place)."""
     from PIL import Image, ImageDraw
     import numpy as np
-    from cc_sheets import TEXT_H, font
+    from cc_sheets import TEXT_H, label_font
     crop = sheet_img.crop((x0, y0 + ch, x0 + cw, y0 + ch + TEXT_H)).convert("L")
     ref = Image.new("RGB", (cw, TEXT_H), (0, 0, 0))
-    ImageDraw.Draw(ref).text((5, 0), text, fill=(245, 245, 245), font=font(12))
+    ImageDraw.Draw(ref).text((5, 0), text, fill=(245, 245, 245), font=label_font(cw))
     return float(np.abs(np.asarray(crop, dtype=np.int16) - np.asarray(ref.convert("L"), dtype=np.int16)).mean())
 
 
@@ -167,6 +167,8 @@ def main():
                "-c:a", "aac", data / "short10.mp4")
             ff("-ss", 100, "-t", 20, "-i", ref, "-an", "-vf", "scale=1280:720,fps=30", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
                data / "noaudio.mp4")
+            ff("-ss", 200, "-t", 10, "-i", ref, "-vf", "scale=720:1280,fps=30", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+               "-c:a", "aac", data / "portrait.mp4")
         # a synthetic 30 s clip whose brightness encodes its time (ramp 0..255 every 2 s), 60 fps, for the time-accuracy check
         ff("-f", "lavfi", "-i", "color=c=black:size=640x360:rate=60:duration=30,geq=lum='255*mod(T,2)/2':cb=128:cr=128",
            "-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000:duration=30", "-c:v", "libx264", "-preset", "veryfast", "-crf", "6",
@@ -265,29 +267,34 @@ def main():
         cols, (cw, ch) = fj["cols"], fj["cell"]
         worst = 0.0
         bad = []
+        checked = 0
         for sh in sorted({f["sheet"] for f in fj["frames"]}):
             img = Image.open(cdir / "sheets" / f"sheet-{sh:02d}.jpg").convert("L")
             for j2, fr in enumerate([f for f in fj["frames"] if f["sheet"] == sh]):
                 r, c = divmod(j2, cols)
                 x0, y0 = c * cw, HEAD_H + r * (ch + LABEL_H)
                 patch = np.asarray(img.crop((x0 + cw // 4, y0 + ch // 4, x0 + 3 * cw // 4, y0 + 3 * ch // 4)), dtype=np.float64).mean()
-                want = 255 * ((fr["t"]) % 2) / 2
+                y_code = 255 * ((fr["t"]) % 2) / 2                 # the luma code the generator wrote (limited range on decode: 16..235 -> 0..255)
+                if y_code < 20 or y_code > 230:                    # clipped ends of the ramp say nothing about the time
+                    continue
+                want = (y_code - 16) * 255 / 219
                 d = abs(patch - want)
-                d = min(d, 256 - d)
                 worst = max(worst, d)
-                if d > 6:
+                checked += 1
+                if d > 7:
                     bad.append((fr["i"], round(float(patch), 1), round(want, 1)))
-        check("ramp: every sheet cell shows the frame at its labelled time (within 6 of 255 levels = 0.05 s)", not bad, f"worst {worst:.1f}, bad {bad[:4]}")
+        check("ramp: every sheet cell shows the frame at its labelled time (within 7 levels = 0.05 s of the ramp)", not bad and checked > 25, f"checked {checked}, worst {worst:.1f}, bad {bad[:4]}")
         rc, so, se, j = run_cc(["ingest", "--run", run_r, "--chunk", cdir / "chunk.mp4"], tiny)
         check("ramp: a later ingest makes the skipped transcript and the chunk is done", j and j["status"] == "done" and j["stages"]["transcript"] is True, json.dumps(j)[:200])
         tj = json.loads((cdir / "transcript.json").read_text(encoding="utf-8"))
         check("ramp: a tone has no speech: empty transcript, still a valid file", tj["engine"] == "faster-whisper" and isinstance(tj["segments"], list))
 
         # ---------------------------------------------------------------- short chunk, chunk without audio, corrupt chunk
-        for name, src, dur, with_audio in (("short", data / "short10.mp4", 10, True), ("noaudio", data / "noaudio.mp4", 20, False)):
+        for idx, (name, src, dur, with_audio) in enumerate((("short", data / "short10.mp4", 10, True), ("noaudio", data / "noaudio.mp4", 20, False),
+                                                           ("portrait", data / "portrait.mp4", 10, True))):
             if not src.exists():
                 continue
-            ses = f"20261112-14000{0 if name == 'short' else 1}-{name}"
+            ses = f"20261112-1400{idx:02d}-{name}"
             sd = inbox / name / ses
             sd.mkdir(parents=True)
             shutil.copyfile(src, sd / "chunk-0001.mp4")
@@ -303,6 +310,8 @@ def main():
                   and (cdir / "sheets" / "overview.jpg").is_file())
             check(f"{name}: timeline rows = {math.ceil(d)}", data_rows(cdir / "timeline.md") == math.ceil(d))
             check_sheet_labels(cdir, fj, name)
+            if name == "portrait":
+                check("portrait: the 6 x 5 grid of 138 x 245 cells is used", fj["cols"] == 6 and fj["cell"] == [138, 245] and fj["per_sheet"] == 30, json.dumps(fj["cell"]))
             au = json.loads((cdir / "audio.json").read_text(encoding="utf-8"))
             if not with_audio:
                 tj = json.loads((cdir / "transcript.json").read_text(encoding="utf-8"))
@@ -341,7 +350,8 @@ def main():
             rc, so, se, j = run_cc(["watch", "--once", "--interval", "0.5", "--stable", "0.6", "--sidecar-wait", "1"], tiny)
             run_w = runs / ses
             rows = json.loads((run_w / "00-inventory" / "chunks.json").read_text(encoding="utf-8")) if (run_w / "00-inventory" / "chunks.json").exists() else []
-            check("watch: chunks 1 and 2 ingested in number order", j and [p["chunk"] for p in j["processed"]] == ["C0001", "C0002"] and all(p["status"] == "done" for p in j["processed"]),
+            mine = [p for p in (j or {}).get("processed", []) if p["session"] == ses]     # the inbox also holds the refused chunk of another session
+            check("watch: chunks 1 and 2 ingested in number order", [p["chunk"] for p in mine] == ["C0001", "C0002"] and all(p["status"] == "done" for p in mine),
                   json.dumps(j)[:300])
             check("watch: the .crdownload chunk is left alone and reported", (sd / "chunk-0004.mp4").exists() and any("chunk-0004" in x for x in j["skipped_incomplete"])
                   and not (run_w / "10-media" / "C0004").exists(), json.dumps(j)[:300])
@@ -371,7 +381,9 @@ def main():
             check("sheet across the boundary: 8 frames, one sheet, no frame files left", j and j["ok"] and j["frames"] == 8 and len(sheets_out) == 1 and Path(sheets_out[0]).is_file()
                   and j["leftover_frames"] == 0 and not [p for p in (run_w / "30-assets" / "sheets").glob(".tmp-*")], json.dumps(j)[:240])
             rc, so, se, j = run_cc(["sheet", "--run", run_w, "--from", 0, "--to", 100000, "--step", 5], env)
-            check("sheet clamps to the recording", j and j["ok"] and j["frames"] == math.ceil((d1 + probe_dur(run_w / "10-media" / "C0002" / "chunk.mp4")) / 5) - 0 or j["frames"] > 0, json.dumps(j)[:200])
+            total_rec = d1 + probe_dur(run_w / "10-media" / "C0002" / "chunk.mp4")
+            check("sheet clamps to the recording", j and j["ok"] and j["frames"] == math.ceil(total_rec / 5 - 1e-9) and abs(j["rec_to"] - (j["frames"] * 5)) < 1e-6,
+                  json.dumps(j)[:200])
             rc, so, se, j = run_cc(["stream-table", "--run", run_w], env)
             md = (run_w / "00-inventory" / "stream.md").read_text(encoding="utf-8")
             check("stream-table: a row per chunk, percentiles, top-10 lists", "| C0001 |" in md and "| C0002 |" in md and "Plain percentiles" in md and "Ten largest seconds by chat rate" in md)
