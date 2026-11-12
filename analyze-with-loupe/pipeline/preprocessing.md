@@ -26,11 +26,11 @@ applied with judgement.
 | Audio | **FFmpeg** (16 kHz mono WAV, `ebur128`, `silencedetect`, `astats` RMS per 0.5 s) | Deterministic loudness, silences and energy curve |
 | Speech | **faster-whisper** `small`, int8 CPU, local cache, word timestamps + VAD. Fallback: **FFmpeg's built-in whisper.cpp filter** (`ggml-base.en.bin`) | Word-level timing is a meaningful advantage over FFmpeg-only ASR (the fallback has segment timing only). Runs offline (`local_files_only`) |
 | On-screen text sample | **RapidOCR** (onnxruntime CPU) on ~12 frames per video | Extracts the on-screen text with the numbers that describe it (first and last time, frames it was seen in, share of the frames scanned, row of the frame, confidence, spelling facts such as an @ or a URL pattern); no label is put on any text: the agent decides what is a caption, a fixed overlay, a handle, a watermark or noise (feeds the text policy) |
-| Output format | **FFmpeg** (lanczos scale-to-cover + crop, or blurred pad on request) | Exact 720×1280 without stretching |
+| Output format | **FFmpeg** (lanczos scale-to-cover + crop, or plain black bars on request; never a blurred fill) | Exact 720×1280 without stretching |
 | Overlay text | **CapCut text layers** through the capcut MCP (`reference/capcut-assembly.md`), over the clean generated video | Editable in the video's CapCut project; the generation itself never carries overlay text |
 | Deterministic text (fallback) | **FFmpeg + libass** (`subtitles` filter, fonts copied beside the `.ass`) | Only when the CapCut MCP is unavailable |
 | Multi-clip joins, hand-off frames | **FFmpeg** (`concat` with `cut` / `continuous` seams; `last-frame` as a lossless PNG) | Continuous seams drop the next clip's repeated first frame; the clips' own fps is kept |
-| Edit clean-up | **FFmpeg** `delogo` / `crop` | Small static overlays only; large text goes to the edit model |
+| Edit clean-up | **FFmpeg** `crop` | A static text band the 9:16 reframe crops away; every overlay is removed by the edit model's named clause, never blurred, smeared or covered (item 37) |
 | Audio split (intake; Edit Mode and Analyze **Recreate**: audio + silent copy; **Create**: audio only, `--audio-only`) | **FFmpeg** stream copy: audio → `<given path>/files_audio/`, video-only copy → `<given path>/videos_without_audio/` | Only silent videos are uploaded to Higgsfield (fewer flags). The untouched original audio is kept for the final |
 | Audio restoration | **FFmpeg** (Higgsfield media-pipeline rules: offset-aware `adelay`/`atrim` + `apad`/`atrim`, `-t` exact; AAC 256 kb/s) | The generated picture gets the original audio from `files_audio`. Verified: 0 ms lag; waveform correlation 0.99+ against the original |
 | Transfers | **requests** (Python) PUT/GET | Higgsfield presigned upload and public result download, with retries |
@@ -103,7 +103,7 @@ awl.py capcut-repair --draft "<store>/<name>" --preview "<preview.mp4>"  → aft
 awl.py capcut-text-style --draft "<store>/<name>" [--check | --learn [--text N] [--replace]]   → font System, size 10 (11 when the video has only a little text: ≤ 5 words on screen at once, every line ≤ 82% of the width at 11; config capcut.text_style.short_text), the user's locked preset (config capcut.text_style.learned)
 awl.py strip-inserts --video "<reference>" --inserts 13.0-15.0 --out "<dir>"  → own.mp4, own-silent.mp4, map.json (split points)
 awl.py captions --video "<in>" --out "<out>" --spec captions.json | --from-speech [--script "…"]   (fallback only)
-awl.py clean --video "<in>" --out "<out>" --delogo "x,y,w,h@t0-t1" [--crop "x,y,w,h"]
+awl.py clean --video "<in>" --out "<out>" --crop "x,y,w,h"   → keeps that region of the picture; `--delogo` was removed (it smeared the picture, item 37)
 awl.py qc --video "<final>" --out "<dir>" --mode analyze|edit [--allowed-text "a|b"] [--expect-duration s] [--expect-aspect 9:16] [--expect-size WxH] [--dense "label:a-b" …] [--dense-fps 30]   → storyboard + measurements beside the expected values (size, duration, aspect, audio, black and frozen spans, the on-screen text its OCR saw beside the planned text), dense checkpoint sheets; no pass or fail
 awl.py scale --product-cm H [--distance d --distance-basis "<how d was derived>" --lens f] [--frame img.png --product-px y0-y1 --ref-cm h --ref-px y0-y1 [--depth-ratio r]] [--out scale.json]   # size reckoning, arithmetic only: expected size per shot; observed size as a multiple of the expected one, per estimate; no verdict
 awl.py model-menu --mode analyze|edit --live-ids "<ids from models_explore>"   (the numbered table of every model, pinned first; it picks nothing)
@@ -133,4 +133,4 @@ The long poles are OCR (~2–5 s per frame) and ASR (~real-time with `small`). F
 - OCR misses stylised or animated text and stickers; always read overlays by eye as well.
 - ASR can mis-hear names and brand words; verify them against the lips and the context. Captions use
   `--script` to force the intended wording.
-- `delogo` smears textured backgrounds; use it only for small overlays on simple backgrounds.
+- Nothing is blurred, smeared or covered locally (item 37): `clean --delogo` was removed; an overlay, small or large, is removed by the edit model's named clause.

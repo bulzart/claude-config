@@ -191,6 +191,7 @@ Notes on the order. (1) An Edit Mode source cut into segments (E5): concat the e
 - Never generate what the edit makes, never build a Create video's project from one joined take when its edit plan cuts the takes, and
   never deliver it without its takes as the clean originals (item 35).
 - Never place a sticker or an emoji (a graphic, or in a text layer) in a CapCut project, in any mode, whatever tool offers one (item 6).
+- Never blur, soften, smear or cover any part of a clip or a CapCut project: `conform --mode pad` is plain black bars, there is no blur filter, effect, transition or canvas background and no mask that hides a thing, and no speech is bleeped or muted to censor it (item 37).
 
 ## Hand-off
 

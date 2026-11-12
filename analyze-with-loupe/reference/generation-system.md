@@ -50,6 +50,6 @@ Stored as section files in `generation-system/` (next to this file); **read only
 | 7 | Translating the plan into the selected model's language | `320_7_translating-the-plan-into-the-se.md` | 2.7 |
 | 8 | Pre-generation QC pass (mental render, first frame → last frame) | `330_8_pre-generation-qc-pass-mental-re.md` | 7.0 |
 | 9 | Post-generation QC (after download) | `340_9_post-generation-qc-after-downloa.md` | 8.6 |
-| 9b | What must not survive, and what is fine (all modes) | `350_9b_what-must-not-survive-and-what-i.md` | 4.7 |
+| 9b | What must not survive, and what is fine (all modes) | `350_9b_what-must-not-survive-and-what-i.md` | 4.8 |
 | 10 | The short brief (printed at X6) | `360_10_the-short-brief-printed-at-x6.md` | 2.9 |
 <!-- sections:end -->

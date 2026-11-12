@@ -274,6 +274,7 @@ Only these section files for this phase, nothing else unless a step below says s
   rebuild the action, the source action script written out in order.
 - Never write a cut, a transition or any word of the edit into a Create take's prompt, and never describe a reference's overlay or
   layout in it (item 35).
+- Never write "blur", "blurred and unreadable", "defocus", "pixelate", "cover" or "censor" as an effect or a fix into a prompt, and never ask for a bar, a box or a patch over a thing: a banned element is removed by a named clause ("Remove only …", "it becomes a plain unbranded … of the same colour") (item 37).
 
 ## Hand-off
 

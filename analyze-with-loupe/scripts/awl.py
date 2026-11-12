@@ -47,9 +47,9 @@ Subcommands (python awl.py <cmd> -h):
   sync-check     do the output's actions happen at the source's moments (the original audio's timing)?
                  offset, drift, duration difference, side-by-side sheet; fix hint (trim / audio start / regenerate)
   finalize       approved Edit Mode result → <given path>/final/<original name>.mp4
-  conform        exact 720x1280 (9:16) output without stretching: scale-to-cover + focus crop, or pad
+  conform        exact 720x1280 (9:16) output without stretching: scale-to-cover + focus crop, or pad with plain black bars (never a blurred fill)
   captions       burn exact, frame-consistent text with libass (explicit events or speech-timed)
-  clean          local Edit-Mode clean-up: delogo small static overlays, crop away static text bands
+  clean          local Edit-Mode clean-up: crop away a static text band (nothing is ever blurred, smeared or covered: contract item 37)
   trim           frame-accurate trim (removes generated dead space at head/tail)
   concat         normalise clips to 720x1280 and join them in order (multi-clip videos; cut or continuous seams; pieces cut from a
                  clip, e.g. c1a c2 c1b, are fine) + <out>.join.json: which seconds each piece (its clip and attempt) fills, for Loupe
@@ -3169,7 +3169,7 @@ def _encode_args(crf: int = 18) -> list:
 
 
 def cmd_conform(a):
-    """Bring a clip to exactly WxH (default 720x1280) without stretching: scale-to-cover + focus crop (or --mode pad).
+    """Bring a clip to exactly WxH (default 720x1280) without stretching: scale-to-cover + focus crop (or --mode pad: plain black bars, never a blurred fill, contract item 37).
     It reports `lost_fraction`, the share of the picture the crop removes, and never refuses a crop: --dry-run reports it
     without writing anything, so that the agent can decide first (a large loss is a reason to use Higgsfield `reframe` or to
     regenerate from a 9:16 start frame instead)."""
@@ -3183,13 +3183,12 @@ def cmd_conform(a):
             _carry_join(src, a.out)
         out({"ok": True, "file": a.out, "action": "none (already exact)", "lost_fraction": 0.0, **({"dry_run": True} if a.dry_run else {})})
     ff = find_tool("ffmpeg")
-    if a.mode == "pad":
+    if a.mode == "pad":          # plain black bars: nothing in the picture is blurred, smeared or covered (contract item 37)
         s = min(W / iw, H / ih)
-        vf = (f"split[a][b];[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},gblur=sigma=30,"
-              f"eq=brightness=-0.06[bg];[b]scale={int(round(iw * s / 2)) * 2}:{int(round(ih * s / 2)) * 2}:flags=lanczos[fg];"
-              f"[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1")
-        lost, action = 0.0, "scale-to-fit + blurred fill (no crop, no stretch)"
-        cmd = [ff, "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-filter_complex", vf,
+        vf = (f"scale={int(round(iw * s / 2)) * 2}:{int(round(ih * s / 2)) * 2}:flags=lanczos,"
+              f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1")
+        lost, action = 0.0, "scale-to-fit + plain black bars (no crop, no stretch, no blur)"
+        cmd = [ff, "-nostdin", "-y", "-loglevel", "error", "-i", str(src), "-vf", vf, "-map", "0:v:0",
                "-map", "0:a?", *_encode_args(a.crf), "-c:a", "aac", "-b:a", "192k", a.out]
     else:
         s = max(W / iw, H / ih)
@@ -3435,24 +3434,20 @@ def _rect(spec: str, W: int, H: int) -> tuple:
 
 
 def cmd_clean(a):
-    """Local clean-up before an edit: delogo small static overlays (handles, watermarks, corner bugs)
-    and/or crop away a static text band. Large captions over the subject belong to the edit model."""
+    """Local clean-up before an edit: crop away a static text band. Nothing is blurred, smeared or covered (contract item 37): `--delogo`
+    was removed because it smeared the picture over the mark; a handle, a watermark, a corner bug or a caption is taken out by the edit
+    model's own clause ("Remove only ... and reconstruct ..."), never by a local filter."""
+    if a.delogo:
+        fail("--delogo was removed: the pipeline never blurs, smears or covers any part of a picture (contract item 37); the edit model "
+             "removes an overlay by a named clause ('Remove only <the mark> from @Video1 and reconstruct the revealed area ...')", 2)
     info = media_summary(a.video)
     W, H = info["display_width"], info["display_height"]
     filters = []
-    for d in a.delogo or []:
-        x, y, w, h, t0, t1 = _rect(d, W, H)
-        x, y = max(1, x), max(1, y)
-        w, h = min(w, W - x - 2), min(h, H - y - 2)
-        f = f"delogo=x={x}:y={y}:w={w}:h={h}"
-        if t0 is not None:
-            f += f":enable='between(t,{t0},{t1})'"
-        filters.append(f)
     if a.crop:
         x, y, w, h, _, _ = _rect(a.crop, W, H)
         filters.append(f"crop={w // 2 * 2}:{h // 2 * 2}:{x}:{y}")
     if not filters:
-        fail("give --delogo and/or --crop", 2)
+        fail("give --crop", 2)
     cp = run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", a.video, "-vf",
               ",".join(filters + ["setsar=1"]), "-map", "0:v:0", "-map", "0:a?", *_encode_args(a.crf),
               "-c:a", "copy", a.out], timeout=3600)
@@ -8687,7 +8682,7 @@ def main():
     p.add_argument("--out", help="write the full profile as JSON"); p.set_defaults(fn=cmd_seams)
 
     p = sp.add_parser("clean"); p.add_argument("--video", required=True); p.add_argument("--out", required=True)
-    p.add_argument("--delogo", action="append", help="x,y,w,h[@t0-t1] (0-1 fractions or pixels); repeatable")
+    p.add_argument("--delogo", action="append", help=argparse.SUPPRESS)          # removed (contract item 37): refuses with a message
     p.add_argument("--crop", help="x,y,w,h (0-1 fractions or pixels) — keep this region")
     p.add_argument("--crf", type=int, default=18); p.set_defaults(fn=cmd_clean)
 

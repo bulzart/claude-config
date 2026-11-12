@@ -62,6 +62,8 @@
    shot is a **regenerate** reason; the retry follows `generation-system.md` §3b.1 item 7 (separate clips on
    the reference's own cuts). The shot list and the evidence path go in the verdict and in `result.json`.
 
+5j. **No blur or censoring** (command item 37; every mode): on the storyboards and, for any suspect area, on a full-resolution frame, nothing in the take is blurred, pixelated, mosaicked, smeared, covered by a bar, box or patch, or censored (a face, a plate, a label, a brand, a body part, a text). The camera's own focus, depth of field and motion blur are the scene's and are not a finding, and fine print on a product may be soft as long as it never turns into wrong letters (§2.9). One found is a **regenerate** reason with the operation named ("Remove only …", "render it plain and unbranded"), never a local blur or cover; the evidence path goes in the verdict.
+
 6. **Scale**: the product against a hand or face on two or three sheets.
 7. **Ownership** after every hand-off; who uses what.
 8. **Verdict** (`generation-system.md` §9): **regenerate** on any break in §2.1–§2.5, §2.8–§2.10,

@@ -233,6 +233,7 @@ Item 21 (brand guardrails) is applied through the audit and operations above; it
 - Never send an Edit Mode or Recreate request, the first one included, without the fidelity lock
   (item 19): the change scoped with "only", the full keep-list, the exclusions and, for models that
   rebuild the action, the source action script written out in order.
+- Never plan a blur, pixelation, smear, cover or censor on a person, a brand, a text or anything else; a source's own censor effect is read as an overlay and not re-made (item 37).
 
 ## Hand-off
 

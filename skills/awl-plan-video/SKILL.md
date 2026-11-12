@@ -442,6 +442,7 @@ a blocker with the real error (`voiceover.md` §4 step 8).
   and never let the model's own voice stand in for a take (item 31).
 - Never plan a Create take with a cut, a transition or any editorial addition inside it, never plan one generation per shot, and never
   put the edit plan into a prompt (item 35).
+- Never plan, write or accept a blur, a pixelation, a smear, a cover or any censoring of a picture, by a tool or a prompt line, before or after a generation, whatever a guardrail or a model guide says: the thing a rule bans is dismissed with its reference or removed by a named clause (item 37).
 
 ## Hand-off
 

@@ -16,6 +16,9 @@
     the look is always the house text style (§3, step 2).
   - Never call `capcut_transcribe`, `capcut_add_captions` or `capcut_clear_captions`: overlay text
     is placed event by event.
+  - Never a blur or a cover (command item 37): no filter, effect, transition, mask or canvas background whose job is to blur, defocus, pixelate, mosaic, frost or hide,
+    whatever the live catalogs list (read the names in `capcut_list_filters`, `capcut_list_transitions` and `capcut_list_masks` before choosing one); a mask only shapes a
+    layout panel; no blurred fill behind a clip that does not fill the canvas.
 - **capcut-cli** (`capcut` 0.25, on PATH) provides the repair lines and the proxy preview (§4).
 - **CapCut must be closed to save.** `capcut_save` and the repair lines refuse while CapCut runs, or
   when the draft changed on disk.

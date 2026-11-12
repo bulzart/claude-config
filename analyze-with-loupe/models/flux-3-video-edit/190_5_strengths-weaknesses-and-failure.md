@@ -3,7 +3,7 @@
 | failure mode | typical trigger | mitigation |
 |---|---|---|
 | Source captions, usernames, watermarks survive | Not named; untargeted text persists [OFFICIAL] | Removal pass naming each element (§3.11d); 9:16 reframe first |
-| Text residue or ghosting after removal | Animated or stylized captions [INFERRED] | Second removal pass; local `delogo` for static marks; regenerate if it persists |
+| Text residue or ghosting after removal | Animated or stylized captions [INFERRED] | Second removal pass naming the mark; regenerate if it persists |
 | Added element lands small or far | Unplaced add [OFFICIAL] | Size, look, landmark placement |
 | Floating or sliding subject after a re-set | No contact surfaces [OFFICIAL] | Name the surfaces touched |
 | Unrequested detail changes (morphing, slop) | Over-long or shot-describing prompt [OFFICIAL] | Shortest change-only prompt; "Keep <x> exactly as it is"; compare frames |

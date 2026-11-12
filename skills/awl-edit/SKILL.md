@@ -305,6 +305,7 @@ In Edit Mode the X9 findings are the QC notes of the review: there is no automat
 - Never re-edit an Edit Mode video from a previous output: re-edits always start from the original
   source.
 - Edit Mode: never spend credits before the "Go" gate of the run.
+- Never blur, pixelate, smear or cover anything in an Edit Mode source or result, and never use `clean --delogo` (removed): an overlay goes by the edit model's named clause (item 37).
 
 ## Hand-off
 

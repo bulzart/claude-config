@@ -59,6 +59,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - Never move, rename or change the user's files (intake copies them).
 - Never send a refused request again unchanged; never draw an image again when nothing in it was wrong.
 - Never put text, a logo, a sticker or an emoji into an image the story does not need (item 6).
+- Never ask the image API for, or accept, an image with a blurred, pixelated or covered area as an effect (item 37).
 
 ## Hand-off
 

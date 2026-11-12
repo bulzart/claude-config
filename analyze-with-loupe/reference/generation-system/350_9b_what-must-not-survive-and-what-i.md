@@ -7,7 +7,7 @@ ownership floor, rows 1–6), and what the generation service **refuses to rende
 block, not a rule). The pipeline has **no content rules of its own**: alcohol, weapons, gore,
 profanity, meme faces and everything else a brand might dislike stay exactly as the reference
 shows them unless the client's guardrails name them (`brand-guardrails.md`), and nothing is ever
-blurred, pixelated, softened or removed on the pipeline's initiative.
+blurred, pixelated, mosaicked, covered, censored, softened or smeared (item 37: not by the pipeline, not for a guardrail), and nothing is removed on the pipeline's initiative.
 
 | Must not survive: fix it | Fine: leave it, never flag it |
 |---|---|
@@ -29,9 +29,9 @@ document, only the floor (rows 1–6) and the service blocks apply, and the righ
 alone in full.
 
 **Fixes are autonomous and cost-aware:**
-- **Small static leftovers** (a watermark, a corner logo, a sticker remnant): fix them locally and
-  for free with `awl.py clean --delogo` on the clean video before CapCut. An Edit Mode source is cleaned
-  before upload (`text-and-format.md` §2.2); a Recreate source never is: the clean-plate lines and the
+- **Small static leftovers** (a watermark, a corner logo, a sticker remnant): the same corrected regeneration that names the item;
+  no local filter blurs, smears or covers it (item 37). An Edit Mode source is cleaned
+  before upload by the edit model's own clause (`text-and-format.md` §2.2); a Recreate source never is: the clean-plate lines and the
   character-swap script carry its captions.
 - **Everything else on the left:** one corrected regeneration that names the item explicitly
   ("Replace only…", "Remove only…").

@@ -19,7 +19,8 @@ and search for another only when an operation needs it, a newer or better tool i
    its own track (a higher `trackRenderIndex` on top), placed and sized (`posX`, `posY`, `scale`), cropped with a mask
    (`capcut_add_mask`, a shape from `capcut_list_masks`) and kept in sync on the timeline; a divider or a border is added here.
 6. **Transitions** (`capcut_add_transition`, from `capcut_list_transitions`) where the edit plan has them, and the **finishing
-   treatment** as a filter (`capcut_add_filter`, from `capcut_list_filters`), on top of the light and colours the takes already have.
+   treatment** as a filter (`capcut_add_filter`, from `capcut_list_filters`), on top of the light and colours the takes already have. None is a blur, defocus,
+   pixelate or mosaic, and a mask only shapes a panel (command item 37).
 7. **Graphics.** A supplied graphic (an arrow, a badge, a logo among the client's assets) as `capcut_add_image` on an upper track.
    Never a sticker or an emoji, as a graphic or in a text layer (the user, 2026-11-03; command item 6), whatever the live list offers.
 8. **Reverse playback and CapCut's effect library** (glitches, glows, particles, motion-graphics templates) had no MCP tool when this

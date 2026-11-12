@@ -248,6 +248,7 @@ Only these section files for this phase, nothing else unless a step below says s
     in the picture is a regenerate reason with the operation named; in a text layer, a CapCut
     fix. A removed element that turns out to have been handled is reported and the pick is
     replaced by the next runner-up when the run allows it.
+  - **No blur or censoring** (item 37; `anomaly-catalog.md` §4 step 5j): on the storyboards, and at full resolution for any suspect area, nothing in a take, a start frame, a guide or the CapCut preview is blurred, pixelated, mosaicked, smeared, covered by a bar, box or patch, or censored (a face, a plate, a label, a brand, a body part, a text). One found is a regenerate reason in the picture, with the operation named ("Remove only …", "render it plain and unbranded"), and a re-edit in the CapCut project (no blur filter, effect, transition, mask or canvas fill); never a local blur or cover. The camera's own focus, depth of field and motion blur are the scene's and are not a finding.
   - **House approach** (when examples exist): the video follows the rules its plan applied.
   - **Contents** (`generation-system.md` §9): every vessel of the product's category shows the
     product's contents. A glass of water beside the can is a regenerate reason, never a note.
@@ -457,6 +458,7 @@ Only these section files for this phase, nothing else unless a step below says s
   never leave drift or a moved action unreported. Never fix sync by stretching or looping the
   original audio.
 - Never accept a Create take with a cut, a transition or an editorial element inside it as fixable by covering it in CapCut (item 35).
+- Never pass a take, a start frame, a guide or a CapCut project in which something is blurred, pixelated, smeared, covered or censored, and never fix one by blurring or covering it: regenerate or re-edit (item 37).
 
 ## Hand-off
 

@@ -154,6 +154,29 @@ check(code == 0 and js.get("dry_run") is True and js.get("lost_fraction", 0) > 0
       f"conform --dry-run reports a large loss ({js.get('lost_fraction')}) and writes nothing; it does not refuse")
 js, code, _ = t("conform", "--video", str(wide), "--out", str(home.parent / "conformed-wide.mp4"), env=ENV)
 check(code == 0 and js.get("ok") is True and js.get("output") == "720x1280" and (home.parent / "conformed-wide.mp4").exists(), "conform crops a 16:9 clip to 720x1280 without refusing (the loss is the agent's call)")
+# --- no blurring or censoring, ever (the user, 2026-11-12; command item 37): the pad is plain black bars, --delogo is gone, the source holds no blur filter
+import re as _re
+import subprocess as _sp
+from t00_common import ffmpeg as _ff
+padded = home.parent / "padded-wide.mp4"
+js, code, _ = t("conform", "--video", str(wide), "--out", str(padded), "--mode", "pad", env=ENV)
+_png = home.parent / "padded-wide.png"
+_sp.run([_ff(), "-y", "-loglevel", "error", "-ss", "1", "-i", str(padded), "-frames:v", "1", str(_png)], check=True)
+from PIL import Image as _Image
+_im = _Image.open(_png).convert("RGB")
+_bar, _pic = _im.getpixel((360, 20)), _im.getpixel((360, 640))
+check(code == 0 and js.get("ok") is True and js.get("output") == "720x1280" and "plain black bars" in js.get("action", "") and "blur" not in js.get("action", "").replace("no blur", "")
+      and max(_bar) <= 12 and abs(_pic[0] - 0x30) <= 12,
+      f"conform --mode pad letterboxes with plain black bars and no blurred fill (bar pixel {_bar}, picture pixel {_pic})")
+js, code, _ = t("clean", "--video", str(wide), "--out", str(home.parent / "cleaned-delogo.mp4"), "--delogo", "0.1,0.1,0.2,0.1", ok=False, env=ENV)
+check(code == 2 and js.get("ok") is False and "removed" in js.get("error", "") and not (home.parent / "cleaned-delogo.mp4").exists(),
+      "clean --delogo is refused with a message and writes nothing (it smeared the picture over a mark)")
+js, code, _ = t("clean", "--video", str(wide), "--out", str(home.parent / "cleaned-crop.mp4"), "--crop", "0,0.1,1,0.8", env=ENV)
+check(code == 0 and js.get("ok") is True and not any("delogo" in f or "blur" in f for f in js.get("filters", [])) and (home.parent / "cleaned-crop.mp4").exists(),
+      "clean --crop still keeps a region of the picture and applies no blur or delogo filter")
+_awl_src = Path(os.environ.get("AWL_UNDER_TEST") or Path(__file__).resolve().parent.parent / "scripts" / "awl.py").read_bytes().decode("utf-8")
+_bad = sorted(set(_re.findall(r"gblur|boxblur|avgblur|smartblur|dblur|bilateral|pixelize|delogo=|removelogo|cv2\.inpaint|GaussianBlur|ImageFilter\.\w*(?:Blur|Median)\w*", _awl_src)))
+check(not _bad, "the toolkit's source holds no blur, smear or cover filter: " + ", ".join(_bad))
 js, _, _ = t("model-menu", "--mode", "analyze", env=ENV)
 check("quick_picks" not in js and isinstance(js.get("pinned"), list) and js.get("count") and "numbers" in js, "model-menu lists every model with the pins first and picks nothing")
 js, _, _ = t("scale", "--product-cm", "15.5", "--product-px", "100-300", "--ref-cm", "30", "--ref-px", "50-450", "--distance", "1.2", "--distance-basis", "the desk edge", "--lens", "26", env=ENV)

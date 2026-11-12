@@ -117,6 +117,7 @@ at X9, the flag record), the CapCut assembly and the deliverables. Nothing is as
 - Never read Loupe's data folder or its database; the samples reach this phase only through `T qc-brief` here and the keeper later.
 - Never offer, suggest or ask an own voiceover the requirement did not ask for (item 31), never pick its voice or language for the user
   when the requirement leaves them open (they are asked in the confirmation), and never re-sync a `recreate`-kind video's lips to a new voice.
+- Never plan a blurred, pixelated, covered or censored element, effect or transition in any video of the plan (item 37).
 
 ## Hand-off
 

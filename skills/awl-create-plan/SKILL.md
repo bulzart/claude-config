@@ -127,6 +127,7 @@ Only these section files for this phase, nothing else unless a step below says s
   (`creative-direction.md` §5.0).
 - Never plan a Create video whose look depends on an editorial element baked into a generation (a caption, a sticker, a split screen,
   a transition, a speed effect, a decorative effect), and never plan one generation per shot (item 35).
+- Never plan a blurred, pixelated, covered or censored element, effect or transition in a Create video (item 37).
 
 ## Hand-off
 

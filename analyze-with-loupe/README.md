@@ -325,6 +325,18 @@ picks it). Settings: `config.json → static`.
 sync` (never `pip install ace-step`, which is v1) named by `AWL_MUSIC_PYTHON` and `AWL_MUSIC_ROOT`; `OPENAI_API_KEY` for images by the API. No key or path of
 these is in the library: they live in the PC's environment.
 
+## No blurring or censoring, ever (contract item 37)
+The user, 2026-11-12: "no blurring or censoring whatsoever", "the pipeline should never blur anything in the video, before or after the generation", whatever a guardrail,
+a model guide or a service block says. In every mode nothing in a picture is blurred, pixelated, mosaicked, softened, smeared, defocused, covered or censored, by a tool
+or by a prompt line, in a start frame, a guide or reference image, a source, a take, a copy of a take or a CapCut project; no speech is bleeped or muted to censor it.
+- **Tools:** `conform --mode pad` is plain black bars (it was a blurred fill); `clean --delogo` was removed (it smeared the picture over a mark, and now refuses with a message)
+  while `clean --crop` stays; the CapCut sections allow no blur, defocus, pixelate or mosaic filter, effect, transition or canvas background, and a mask only shapes a layout panel.
+- **Prompts:** no "blurred and unreadable", "defocus", "pixelate", "cover" or "censor" as an effect or a fix (Kling's own line that background text "must be blurred and
+  unreadable" is not used). A thing a client rule or the copyright floor names is dismissed with its reference, or removed in the generation by a named clause ("Remove only …",
+  "it becomes a plain unbranded … of the same colour"), the face swapped, the count reduced; what no clause can remove is reported, never hidden.
+- **QC:** a blur, mosaic or censor bar found in a take, a start frame, a guide or a CapCut project is a defect (regenerate or re-edit, item 27), never covered; the camera's own
+  focus, depth of field and motion blur in a shot are the scene's and are not a finding. A blur or bar baked into a reference is read as a source overlay and not re-made.
+
 ## Recreate: the whole source in one generation when it fits (2026-11-05)
 The user: a 14 or 15 s video on a model whose maximum is 15 s is one generation, never two; split only when necessary (a change of place or ambience, other
 specific cases), and a longer video takes 2, 3 or more generations by its data; "do not do it hardcoded, because models change often". `generation-system.md`

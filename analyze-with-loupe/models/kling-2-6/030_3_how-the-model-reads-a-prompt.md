@@ -65,7 +65,7 @@ Official formats [OFFICIAL S1]:
 Policy: **Edit Mode** removes all source text unless the user keeps specific text; **Analyze Mode** may add intentional new text, by default in deterministic post (FFmpeg/libass); reference wording, usernames and watermarks are never copied.
 
 - **(a) Reliability:** no official 2.6 text-rendering claim; Kling introduced "native-level text output" with 3.0 [OFFICIAL S5]. Treat any 2.6 in-frame text as pseudo-text [INFERRED].
-- **(b) Clean plate:** clean start frames of captions, handles, watermarks and signage; describe carriers as blank (plain signs, unlabelled packaging, screens with abstract colour); frame text-bearing surfaces out or defocus them; quoted strings only for spoken or sung lines (Kling uses quotes to mark sound content) [OFFICIAL S1]; end with "No captions, subtitles, signage text, logos or watermarks appear." [INFERRED].
+- **(b) Clean plate:** clean start frames of captions, handles, watermarks and signage; describe carriers as blank (plain signs, unlabelled packaging, screens with abstract colour); frame text-bearing surfaces out; quoted strings only for spoken or sung lines (Kling uses quotes to mark sound content) [OFFICIAL S1]; end with "No captions, subtitles, signage text, logos or watermarks appear." [INFERRED].
 - **(c) Intentional text:** not on this model — add in post, or use Kling 3.0 / Seedance 2.5 for scene text [INFERRED]. An approved label already in the start frame may stay; keep motion slow and verify it [INFERRED].
 - **(d) Source text in edits:** N/A — no edit mode [HF S2].
 

@@ -47,7 +47,7 @@ appear in any frame").
 - (a) Genjutsu preserves untargeted content, so the source's captions, usernames and watermarks
     survive by default [INFERRED from "preserving the rest"].
 - (b) **Edit Mode policy removes them.**
-    - Remove small static overlays locally first (`awl.py clean --delogo …`).
+    - Small static overlays go through the same explicit removal clause as large ones (no local filter blurs or smears them, item 37).
     - For large captions, add an explicit removal clause to the brief ("Remove all on-screen caption
       text and usernames and reconstruct the background behind them"). Its effectiveness is
       **unverified**: QC with OCR afterwards.

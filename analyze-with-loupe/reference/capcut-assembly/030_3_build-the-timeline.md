@@ -67,7 +67,7 @@ Inputs:
    fade). A crop that carries its own backdrop (the window behind a banner) is never left on screen after
    the element is gone (CE-026).
 3. **Only what the reference does:** a transition only where the reference has one
-   (`capcut_add_transition`, from the catalog), and a short fade on an insert's sound when it
+   (`capcut_add_transition`, from the catalog; never a blur, defocus or mosaic one, command item 37), and a short fade on an insert's sound when it
    clicks (`capcut_add_audio_fade`).
 4. **Create:** the sound layer (§3b) and, with an own voiceover (item 31), the voice as its method places it (`voiceover.md` §9: native
    and lipsync keep the clip's own audio, which is the take, at 1.0; overlay puts the take on its own track over the clean clip's ambience,

@@ -59,6 +59,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - Never use `capcut_transcribe`, `capcut_add_captions` or `capcut_clear_captions`; never the house text style (no `capcut-text-style`;
   `capcut-repair` always with `--keep-text`): the look is the references'; never `capcut_save` with force.
 - Never move an image off its line to fill a gap, and never stretch the narration: fix the plan.
+- Never place a blur, a pixelation, a bar or any censoring in the CapCut project or the check render (item 37).
 
 ## Hand-off
 

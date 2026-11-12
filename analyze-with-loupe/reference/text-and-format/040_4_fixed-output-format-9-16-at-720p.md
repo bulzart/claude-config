@@ -22,7 +22,7 @@ stretched.
    - otherwise regenerate with the source as a video reference in a 9:16 generation.
 5. **The output is not 9:16 when it should have been** → treat it as a failure. Conform only when the
    crop is subject-safe; otherwise regenerate with corrected parameters.
-6. **Padding** (`conform --mode pad`, blurred fill) only when the user asks for it.
+6. **Padding** (`conform --mode pad`, plain black bars; never a blurred fill, item 37) only when the user asks for it.
 
 ### 4.2 Post-processing order
 `hf-get` → `restore-audio` → `conform` → `trim` (dead head/tail) → `concat` (multi-clip videos) →

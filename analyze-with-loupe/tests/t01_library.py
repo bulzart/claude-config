@@ -398,4 +398,28 @@ check("**No sticker or emoji added, ever**" in router and "capcut_add_sticker" n
       "no sticker or emoji, ever (the user, 2026-11-03): in the router's item 6, the text policy, the plan, X8, the CapCut sections and QC; the sticker "
       "tool is neither allowed nor named")
 
+# no blurring or censoring, ever (the user, 2026-11-12; command item 37): the router, every skill that touches a picture, the CapCut rules and checks, QC step 5j,
+# and no prompt line anywhere asks a model to blur
+_touch = ("awl-plan-video", "awl-write-request", "awl-inputs", "awl-postprocess", "awl-qc", "awl-edit", "awl-recreate-plan", "awl-create-plan", "awl-free-plan",
+          "awl-static-edit", "awl-static-images")
+check("37. **No blurring or censoring, ever**" in router and "item 37 → every skill" in router
+      and all("(item 37)" in rd(SKD / n / "SKILL.md") for n in _touch)
+      and "command item 37" in tools and "command item 37" in rd(CA / "060_5_qc-of-the-project.md") and "command item 37" in rd(sec3c)
+      and "5j. **No blur or censoring**" in rd(LIB / "reference" / "anomaly-catalog" / "220_4_the-qc-stack-x9-in-order.md")
+      and "No blur or censoring" in rd(SKD / "awl-qc" / "SKILL.md") and "No blurring or censoring, ever (contract item 37)" in rd(LIB / "README.md"),
+      "no blurring or censoring, ever (the user, 2026-11-12): the router's item 37, " + str(len(_touch)) + " phase skills, the CapCut rules and checks, QC step 5j and the README")
+# the old instructions that blurred, smeared or defocused are gone from every guide and reference (the words of a prohibition are fine)
+_OLD = ("blurred pad on request", "(`conform --mode pad`, blurred fill)", "or defocus them", "local blur/inpaint is a last resort", "awl.py clean --delogo",
+        "(FFmpeg `delogo`", "local `delogo`", "clean --delogo \"", "Remove small static overlays locally first")
+_hits = []
+for _root in (LIB / "models", LIB / "reference", LIB / "pipeline", LIB / "higgsfield"):
+    for _f in _root.rglob("*.md"):
+        _t = " ".join(rd(_f).split())          # a phrase that a line break splits is still found
+        _hits += [f"{_f.relative_to(LIB)}: {_o!r}" for _o in _OLD if _o in _t]
+        if "must be blurred and unreadable" in _t and _f.name != "200_3.11_visible-text.md":
+            _hits.append(f"{_f.relative_to(LIB)}: 'must be blurred and unreadable'")
+_kl = rd(LIB / "models" / "kling-4-0" / "200_3.11_visible-text.md")
+check(not _hits and "never writes a blur into a prompt" in _kl and "No real brands, organization names, logos, or watermarks may appear" in _kl,
+      "no guide or reference asks for a blurred fill, a defocus, a local blur or a delogo (Kling's own blur line is quoted once, with the note that the library never uses it): " + "; ".join(_hits[:4]))
+
 finish()
