@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: e45fa635-1cdc-405a-830c-5be655ad54a5
-  modified: 2026-11-12T13:08:36.980Z
+  modified: 2026-11-12T13:13:28.299Z
 ---
 
 Built 2026-11-12 on the user's brief (clip farming for Kai Cenat, cQx, Ninja, Speed, Fanum, Adin Ross and similar).
@@ -19,6 +19,8 @@ Built 2026-11-12 on the user's brief (clip farming for Kai Cenat, cQx, Ninja, Sp
 - Verified: extension 437 unit/integration checks + 56 checks in real headless Chrome 157 against a local fake Twitch; processor 65 checks with real Whisper medium (about 147 s CPU per 180 s chunk); edit toolkit 17 checks; native host protocol 10 checks; a real chunk went through processor then edit tools; the extension's real output files were accepted by the processor.
 - Not verified: no live Twitch download was run (the permission classifier denied polling a third party's stream) and the Chrome MCP was not connected, so Twitch's real page/ads/end-of-stream signals are from one earlier playlist probe; the Record pill may sit over the chat Send button (draggable); CapCut layouts (`fill` scale/pos, `bg-blur`) not opened in CapCut; the MCP clone/add_video path not run against the real store; `install-background.ps1` never run (registry/scheduled task are the user's opt-in).
 - Extension id `clnbfkmjckffkfgnhnfacicbalpieddp` (pinned key, file `twitch-chunk-recorder\native-host\extension-id.txt`).
+
+- The `!` prefix of the Claude prompt runs through Git Bash, which cannot start on this PC (fork errors, 2026-11-12): never tell this user to use `!`; give a double-clickable `.cmd` (`scripts/install-background.cmd`) or a PowerShell line to paste.
 
 **Why:** the user wants streams turned into posted-ready CapCut projects with agents that understand the streamer and the topic.
 **How to apply:** use `cc.py doctor` first; keep processing on CPU unless the user says otherwise; keep chunks read-only; never push to a remote; the Twitch extension and the toolkit are not in git (the toolkit is under `~/.claude/create-clips`, tracked by the auto-commit hook).

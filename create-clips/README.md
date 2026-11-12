@@ -8,8 +8,8 @@ This file is the **contract** between the three parts. Everything that crosses a
 
 ## Quick start
 1. **Once**: `chrome://extensions` -> Developer mode -> Load unpacked -> `C:\Users\Bulzart\Documents\twitch-chunk-recorder`. Check `T doctor` (ffmpeg, Whisper medium cached, free space).
-2. **Let the processor start by itself** (one time, opt-in, removable): `powershell -ExecutionPolicy Bypass -File C:\Users\Bulzart\.claude\create-clips\scripts\install-background.ps1 -Mode native`
-   (the extension then starts `cc.py watch` in the background when you press Record). Or start it by hand in a PowerShell window: `& "C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe" "C:\Users\Bulzart\.claude\create-clips\scripts\cc.py" watch`.
+2. **Let the processor start by itself** (one time, opt-in, removable): double-click `C:\Users\Bulzart\.claude\create-clips\scripts\install-background.cmd` in Explorer (it registers the Chrome helper and a logon task; `uninstall-background.cmd` undoes it).
+   Do not use the `!` prefix of the Claude prompt for it: that runs through Git Bash, which cannot start on this PC. The extension then starts `cc.py watch` in the background when you press Record. Or start it by hand in a PowerShell window: `& "C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe" "C:\Users\Bulzart\.claude\create-clips\scripts\cc.py" watch`.
 3. **Record**: open a streamer's Twitch page and press the **Record** button the extension puts at the bottom right of the page (or type the login in the extension's popup, or put channels on the auto-record list).
    Chunks land in `Downloads\twitch-chunks\...` every 3 minutes and the processor turns each one into sheets and a transcript inside `C:\Users\Bulzart\Documents\stream-clips\runs\<session>`.
 4. **Clip**: in Claude Code, `/create-clips <that run folder>` (optionally `notes="guest was X, topic Y"`). Read `RUN\deliverables\README.md` at the end; open the CapCut projects, check the first frame, export.
