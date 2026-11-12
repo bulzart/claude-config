@@ -23,6 +23,13 @@ CHUNK_RE = re.compile(r"^C(\d{4,})$")
 
 
 def _stdio_utf8() -> None:
+    for name in ("stdout", "stderr"):
+        if getattr(sys, name) is None:          # pythonw.exe (the logon task) has no console: write to a log file instead of crashing
+            try:
+                (CC_HOME / "logs").mkdir(parents=True, exist_ok=True)
+                setattr(sys, name, open(CC_HOME / "logs" / "background.log", "a", encoding="utf-8", errors="replace", buffering=1))
+            except OSError:
+                setattr(sys, name, open(os.devnull, "w", encoding="utf-8"))
     for s in (sys.stdout, sys.stderr):
         try:
             s.reconfigure(encoding="utf-8", errors="replace")

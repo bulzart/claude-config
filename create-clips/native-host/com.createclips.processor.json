@@ -1,0 +1,9 @@
+{
+    "name":  "com.createclips.processor",
+    "description":  "Create-clips processor link for the Twitch Chunk Recorder",
+    "path":  "C:\\Users\\Bulzart\\.claude\\create-clips\\native-host\\native_host.bat",
+    "type":  "stdio",
+    "allowed_origins":  [
+                            "chrome-extension://clnbfkmjckffkfgnhnfacicbalpieddp/"
+                        ]
+}
