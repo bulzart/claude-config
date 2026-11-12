@@ -53,3 +53,4 @@
 - [Kling4 music mix balance](kling4-music-mix-balance.md) — user 2026-11-10: music from the run's own references on moved kling4 videos; scene sound x0.15, meme insert sound full, new files only
 - [No blur, no censoring, ever](no-blur-no-censor-ever.md) — user 2026-11-12: /analyze-with-loupe item 37; pad = black bars, `clean --delogo` removed, no blur in CapCut or prompts, QC 5j; guardrails never excuse it
 - [Neuro LLM long-form on Windows](neuro-llm-longform-windows-port.md) — 2026-11-12: pack v02 ported natively (no WSL) at ~/glare-work/Neuro/llm-longform-win + skill glare-neuro-llm-longform-win; source env.sh first, never doctor/run_gates mid-render, faster-whisper replaces whisper, short paths only
+- [Variants run 2026-11-12](awl-variants-run-2026-11-12.md) — 30 variants (A/B/C) of 10 videos, then the 12.11 run (5 refs x 2 clients); remote-swap wording fails, no dark-skinned woman/deep-brown man characters left
