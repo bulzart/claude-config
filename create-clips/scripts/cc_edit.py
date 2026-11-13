@@ -458,10 +458,12 @@ def cmd_censor(a):
 DEFAULT_CAPTIONS = {
     "short": {"style": "word-box", "font_file": "Montserrat-Bold.otf", "size": "auto", "size_em_pct": wb.DEFAULT_EM_PCT, "color": "#FFFFFF", "stroke_color": "#000000",
               "stroke_width": 0.1, "y_rel": 0.66, "max_words": 3, "max_chars": 18, "case": "upper", "highlight_words": [], "highlight_color": wb.DEFAULT_COLOR,
-              "highlight_size": 1.15, "box": dict(wb.DEFAULT_BOX), "intro": "fade-in", "intro_s": 0.1, "mask_terms": [], "replace": [], "min_cue_s": 0.25, "gap_break_s": 0.5},
+              "highlight_size": 1.15, "box": dict(wb.DEFAULT_BOX), "word_box_max_words": 3000, "intro": "fade-in", "intro_s": 0.1, "mask_terms": [], "replace": [],
+              "min_cue_s": 0.25, "gap_break_s": 0.5},
     "long": {"style": "word-box", "font_file": "Montserrat-Bold.otf", "size": "auto", "size_em_pct": wb.DEFAULT_EM_PCT, "color": "#FFFFFF", "stroke_color": "#000000",
              "stroke_width": 0.08, "y_rel": 0.88, "max_words": 5, "max_chars": 32, "case": "as-is", "highlight_words": [], "highlight_color": wb.DEFAULT_COLOR,
-             "highlight_size": 1.1, "box": dict(wb.DEFAULT_BOX), "intro": None, "intro_s": 0.0, "mask_terms": [], "replace": [], "min_cue_s": 0.4, "gap_break_s": 0.8},
+             "highlight_size": 1.1, "box": dict(wb.DEFAULT_BOX), "word_box_max_words": 3000, "intro": None, "intro_s": 0.0, "mask_terms": [], "replace": [],
+             "min_cue_s": 0.4, "gap_break_s": 0.8},
 }
 PLAIN_CAPTIONS = {"short": {"highlight_color": "#FFD700"},
                   "long": {"max_words": 7, "max_chars": 42, "highlight_color": "#FFD700"}}
@@ -779,6 +781,12 @@ def plan_edl(run: Path, edl: dict, make_files: bool) -> tuple:
               "chunks_used": sorted({p["chunk"] for p in pieces if p["kind"] == "plain"}),
               "censored_spans": sum(1 for p in pieces if p["kind"] == "censor")}
     caps = merge_captions(run, kind, edl.get("captions"))         # the look, the user's picks at the start and the run's captions setting (finish.json and resolved.json carry them)
+    if caps["style"] == "word-box" and caps["enabled"]:
+        n_spoken = len(_resolved_words(run, {"pieces": pieces}))
+        if n_spoken > int(caps.get("word_box_max_words") or 3000):    # one CapCut text per word and state: an hour of speech would be tens of thousands of texts
+            caps = merge_captions(run, kind, {**(edl.get("captions") or {}), "style": "plain"})
+            caps["style_reason"] = (f"{n_spoken} spoken words would need about {int(n_spoken * 2.5)} CapCut texts for the word box, over captions.word_box_max_words "
+                                    f"({int((edl.get('captions') or {}).get('word_box_max_words') or 3000)}): the plain look is used (raise the limit in the EDL's captions block to force the word box)")
     resolved = {"schema": "cc-resolved/1", "video": vid, "kind": kind, "canvas": {"width": canvas[0], "height": canvas[1], "fps": fps},
                 "segments": seg_info, "pieces": pieces, "joins": joins, "totals": totals, "warnings": warnings, "captions": caps}
     ops = [{"op": "add_video", "track": "main", "file": p["file"], "srcStartSec": round(p["src_from"], 3), "durSec": round(p["dur_src"], 3),
@@ -1233,6 +1241,40 @@ def sh(args: list, timeout: float = 900):
     return {"exit": cp.returncode, "result": last_json(cp.stdout) or (cp.stdout or "").strip()[-500:], "stderr": (cp.stderr or "").strip()[-300:]}
 
 
+def prune_draft_history(d: Path) -> int:
+    """capcut-cli keeps an undo snapshot of the WHOLE draft (3 documents) after every write, in <draft>/.capcut-cli-history: with one `import-srt` per caption track
+    that made the first word-box project 74 MB of snapshots for a 5 MB draft, and an hour-long one would fill the drive. Nothing here uses `capcut restore`: the
+    snapshots of THIS draft folder are removed (only *.snap files directly inside .capcut-cli-history). Returns the bytes freed."""
+    h = Path(d) / ".capcut-cli-history"
+    freed = 0
+    if h.is_dir():
+        for f in h.glob("*.snap"):
+            try:
+                freed += f.stat().st_size
+                f.unlink()
+            except OSError:
+                pass
+        try:
+            h.rmdir()
+        except OSError:
+            pass
+    return freed
+
+
+def prune_draft_backups(d: Path) -> int:
+    """After a finish that succeeded: the *.bak copies the build tools left beside the draft's documents (draft_content.json.bak, .compose.bak, .font.bak, .link.bak and the
+    same for draft_info.json and template-2.tmp) are dropped, because a draft with thousands of caption texts is tens of MB and a dozen copies of it are not worth the
+    drive's space; the build can be redone from the plan files with `capcut-compose`. Only files directly in the draft folder whose name ends in .bak. Returns the bytes freed."""
+    freed = 0
+    for f in Path(d).glob("*.bak"):
+        try:
+            freed += f.stat().st_size
+            f.unlink()
+        except OSError:
+            pass
+    return freed + prune_draft_history(d)
+
+
 def cmd_capcut_finish(a):
     run = resolve_run(a.run)
     d = Path(a.draft)
@@ -1284,9 +1326,9 @@ def cmd_capcut_finish(a):
         size, size_info = caption_size(caps, finish["canvas"], font_path)
         if caps.get("style") == "word-box":               # the spoken word on a rounded colour box: one CapCut text per word and state (cc_wordbox.py)
             cj = read_json(vdir / "captions.json") or {}
-            if not cj.get("cues"):
-                fail(f"captions are on (word-box look) and {vdir / 'captions.json'} has no cues: run `captions` again")
-            r = wb.apply_word_box(d, vdir, {**caps, "size": size}, cj["cues"], finish["canvas"], font_path, cli, awl, run, sh, draft_files)
+            if not cj.get("cues") or cj.get("style") != "word-box":
+                fail(f"captions are on (word-box look) and {vdir / 'captions.json'} has no word-box cues: run `captions` again")
+            r = wb.apply_word_box(d, vdir, {**caps, "size": size}, cj["cues"], finish["canvas"], font_path, cli, awl, run, sh, draft_files, after_write=lambda: prune_draft_history(d))
             steps.extend(r["steps"])
             if not r["ok"] and r.get("error"):
                 steps.append({"step": "captions-word-box", "exit": 1, "error": r["error"], "geometry": r.get("geometry")})
@@ -1305,7 +1347,12 @@ def cmd_capcut_finish(a):
                                                                  "--intro-duration", str(caps.get("intro_s") or 0.1), "--run", str(run)], 300)})
     steps.append({"step": "repair", **sh([*awl, "capcut-repair", "--draft", str(d), "--keep-text"], 1800)})
     bad = [s for s in steps if s.get("exit") not in (None, 0) and s["step"] != "repair"] + ([s for s in steps if s["step"] == "repair" and s.get("exit") not in (0,)])
-    out({"ok": not bad and not failed and not any(s.get("pieces_without_a_clip") for s in steps), "draft": str(d), "video": a.video, "steps": steps})
+    ok = not bad and not failed and not any(s.get("pieces_without_a_clip") for s in steps)
+    if ok:                                           # a finished build: the undo snapshots and the .bak copies are dropped (a draft with thousands of caption texts is tens of MB each)
+        steps.append({"step": "cleanup", "freed_mb": round(prune_draft_backups(d) / 1048576, 1), "note": "capcut-cli's undo snapshots and the *.bak copies of this draft's documents; the plan files in the video's output folder rebuild it"})
+    else:
+        prune_draft_history(d)                       # the snapshots are never needed; the .bak copies stay for the failure
+    out({"ok": ok, "draft": str(d), "video": a.video, "steps": steps})
 
 
 # --------------------------------------------------------------------------- register

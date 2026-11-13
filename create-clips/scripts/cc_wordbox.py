@@ -297,7 +297,7 @@ def drop_text_tracks(content: dict, keep_prefix_of=(WORD_BOX_PREFIX, "subtitle")
     return len(gone)
 
 
-def apply_word_box(d: Path, vdir: Path, caps: dict, cues: list, canvas: dict, font_file: str, cli: str, awl: list, run, sh, draft_files) -> dict:
+def apply_word_box(d: Path, vdir: Path, caps: dict, cues: list, canvas: dict, font_file: str, cli: str, awl: list, run, sh, draft_files, after_write=None) -> dict:
     """Write the word-box captions into the draft: one track per (word index, boxed, entrance) with capcut-cli's import-srt (the box flags on the boxed
     ones), each text moved to its place on the line and the box's padding written into the draft's own JSON (capcut-cli leaves them unset), then the font on
     every text and the entrance on the tracks that start a caption. Returns {"ok", "steps", ...}; the caller runs capcut-repair afterwards."""
@@ -332,6 +332,8 @@ def apply_word_box(d: Path, vdir: Path, caps: dict, cues: list, canvas: dict, fo
         if boxed:
             args += ["--bg-color", box["color"], "--bg-alpha", str(box["alpha"]), "--bg-style", str(box["style"]), "--bg-round-radius", str(box["round_radius"])]
         r = sh(args, 600)
+        if after_write:                                # capcut-cli keeps an undo snapshot of the whole draft after every write: the caller drops it (hundreds of MB over 15 tracks)
+            after_write()
         if r["exit"] != 0:
             failed.append({"track": name, "error": str((r.get("result") if isinstance(r.get("result"), dict) else {}).get("error") or r.get("stderr") or r.get("result"))[-300:]})
             continue

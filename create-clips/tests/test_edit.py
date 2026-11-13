@@ -36,6 +36,11 @@ def check(cond, msg):
 check.failed = 0
 
 
+def r_cues(out_dir) -> int:
+    """The number of caption cues `captions` wrote for a video (captions.json next to its EDL)."""
+    return len(json.loads((Path(out_dir) / "captions.json").read_text(encoding="utf-8"))["cues"])
+
+
 def main():
     tmp = Path(tempfile.mkdtemp(prefix="cc-edit-test-"))
     try:
@@ -93,6 +98,26 @@ def main():
         check(res_on["captions"].get("enabled") is True and fin["captions"].get("enabled") is True,
               "captions are ON when the run has no `captions` key: resolved.json and finish.json say enabled")
 
+        # the word-box look needs a text per word and state: too many spoken words, or a language it cannot take, fall back to the plain look with the reason written down
+        e4 = {"schema": "cc-edl/1", "video": "S04", "kind": "short", "layout": {"mode": "fill", "focus": [0.5, 0.5]}, "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}],
+              "captions": {"word_box_max_words": 3}}
+        o4 = run / "60-outputs" / "S04"
+        o4.mkdir(parents=True)
+        (o4 / "edl.json").write_text(json.dumps(e4), encoding="utf-8")
+        cc("edl-check", "--run", run, "--edl", o4 / "edl.json", env=env)
+        res4 = json.loads((o4 / "resolved.json").read_text(encoding="utf-8"))
+        check(res4["captions"]["style"] == "plain" and "spoken words" in res4["captions"].get("style_reason", ""),
+              "more spoken words than captions.word_box_max_words: the plain look is used, with the reason: " + str(res4["captions"].get("style_reason"))[:120])
+        e4["captions"] = {}
+        (o4 / "edl.json").write_text(json.dumps(e4), encoding="utf-8")
+        cc("state", "--run", run, "set", "settings.whisper.language=ja", env=env)
+        cc("edl-check", "--run", run, "--edl", o4 / "edl.json", env=env)
+        res4 = json.loads((o4 / "resolved.json").read_text(encoding="utf-8"))
+        check(res4["captions"]["style"] == "plain" and "without spaces" in res4["captions"].get("style_reason", ""), "a language written without spaces (ja): the plain look, with the reason")
+        cc("state", "--run", run, "set", "settings.whisper.language=en", env=env)
+        cc("edl-check", "--run", run, "--edl", o4 / "edl.json", env=env)
+        check(json.loads((o4 / "resolved.json").read_text(encoding="utf-8"))["captions"]["style"] == "word-box", "English: the word-box look is the default")
+
         # block sizing: a short recording still gets side-by-side agents
         r = cc("blocks", "--run", run, "--chunks", 10, env=env)
         check(r.get("ok") and len(r["blocks"]) == 1 and r["blocks"][0]["chunks"] == ["C0001", "C0002"], "blocks: two chunks are one block by default")
@@ -139,6 +164,8 @@ def main():
                   "the composed draft carries the CapCut 9.7 / windows version markers (the empty template), not capcut-cli's bundled 6.5.0 / mac skeleton")
             r = cc("capcut-finish", "--run", run, "--draft", store / "cctest", "--video", "S01", env=env)
             check(r.get("ok"), "capcut-finish ok on the composed draft")
+            check(any(s.get("step") == "cleanup" for s in r.get("steps", [])) and not (store / "cctest" / ".capcut-cli-history").exists() and not list((store / "cctest").glob("*.bak")),
+                  "after a good finish capcut-cli's undo snapshots and the *.bak copies are gone (the word-box look made them 100+ MB per project)")
             meta_p = store / "cctest" / "draft_meta_info.json"
             meta = json.loads(meta_p.read_text(encoding="utf-8"))
             pool = [e for g in meta.get("draft_materials", []) for e in g.get("value", [])]
@@ -162,14 +189,50 @@ def main():
             tm = {m["id"]: m for m in texts}
             boxed = [tm[s["material_id"]] for t in c["tracks"] if t["type"] == "text" and t["name"].endswith(("-box", "-box-in")) for s in t["segments"]]
             plain = [tm[s["material_id"]] for t in c["tracks"] if t["type"] == "text" and t["name"].endswith(("-word", "-word-in")) for s in t["segments"]]
-            print("DEBUG boxed material keys:", {k: v for k, v in boxed[0].items() if k.startswith(("background", "border", "check_flag", "font_path", "text_color", "has_"))} if boxed else None)
-            print("DEBUG plain material keys:", {k: v for k, v in plain[0].items() if k.startswith(("background", "check_flag"))} if plain else None)
+            check(boxed and all(m.get("background_color", "").upper() == "#FF7A1A" and float(m.get("background_alpha") or 0) > 0 and abs(float(m.get("background_round_radius") or 0) - 0.3) < 1e-6
+                                and float(m.get("background_width")) == 0.08 and float(m.get("background_vertical_offset")) == 0.15 and int(m.get("check_flag") or 0) & 16 for m in boxed),
+                  f"the spoken word's text is on the preset box: orange #FF7A1A, rounded 0.3, padding 0.08, a little low, the box flag set ({len(boxed)} boxed texts)")
+            check(plain and all(not float(m.get("background_alpha") or 0) and int(m.get("check_flag") or 0) & 8 and not int(m.get("check_flag") or 0) & 16 for m in plain)
+                  and all(str(m.get("font_path", "")).endswith("Montserrat-Bold.otf") for m in boxed + plain),
+                  f"the other words are plain with the outline ({len(plain)} texts) and every text has the font")
+            ys = {round(float(s["clip"]["transform"]["y"]), 4) for t in c["tracks"] if t["type"] == "text" for s in t["segments"]}
+            xs = [float(s["clip"]["transform"]["x"]) for t in c["tracks"] if t["type"] == "text" for s in t["segments"]]
+            check(len(ys) == 1 and ys == {round(1 - 2 * 0.66, 4)} and min(xs) < 0 < max(xs) and all(-1 < x < 1 for x in xs), f"every caption text is on one baseline (y {ys}) and the words sit left and right of the centre")
             seg0 = [t for t in c["tracks"] if t["type"] == "video"][0]["segments"][0]
             check(any(k["property_type"] == "KFTypeScaleX" for k in seg0.get("common_keyframes", [])), "the zoom keyframes are on the first clip")
             lint = subprocess.run([capcut, "lint", str(store / "cctest")], capture_output=True, text=True)
             check('"errors":0' in lint.stdout.replace(" ", ""), "capcut lint: 0 errors")
             if sfx_file.is_file():
                 check(any(t["type"] == "audio" and t.get("segments") for t in c["tracks"]), "the sound effect is on an audio track")
+            # the look is free: any font family and any highlight colour (the agent picks them to match the video), and the old plain look is still there
+            def small_edl(video, caps):
+                e = {"schema": "cc-edl/1", "video": video, "kind": "short", "layout": {"mode": "fill", "focus": [0.5, 0.5]},
+                     "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}, {"id": "s2", "rec_from": 12.0, "rec_to": 14.5}], "captions": caps}
+                o = run / "60-outputs" / video
+                o.mkdir(parents=True, exist_ok=True)
+                (o / "edl.json").write_text(json.dumps(e), encoding="utf-8")
+                return o
+            o2 = small_edl("S02", {"font_family": "Luckiest Guy", "highlight_color": "#22AAFF", "box": {"round_radius": 0.45}})
+            r = cc("edl-check", "--run", run, "--edl", o2 / "edl.json", env=env)
+            r = cc("captions", "--run", run, "--resolved", o2 / "resolved.json", env=env)
+            check(r.get("ok") and str(r.get("font_file", "")).endswith("LuckiestGuy-Regular.ttf") and r["size"]["vs_guide"] == "inside" and r.get("highlight_color") == "#22AAFF",
+                  "captions: a font FAMILY is looked up on the PC and its size is automatic (the em inside the guide) " + json.dumps({k: r.get(k) for k in ("font_file", "size")})[:300])
+            r = cc("capcut-compose", "--run", run, "--video", "S02", "--name", "cctest5", "--store", store, env=env)
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest5", "--video", "S02", env=env)
+            c5 = json.loads((store / "cctest5" / "draft_content.json").read_text(encoding="utf-8"))
+            tm5 = {m["id"]: m for m in c5["materials"].get("texts", [])}
+            boxed5 = [tm5[s["material_id"]] for t in c5["tracks"] if t["type"] == "text" and t["name"].endswith(("-box", "-box-in")) for s in t["segments"]]
+            check(r.get("ok") and boxed5 and all(m["background_color"].upper() == "#22AAFF" and abs(float(m["background_round_radius"]) - 0.45) < 1e-6
+                                                  and str(m["font_path"]).endswith("LuckiestGuy-Regular.ttf") for m in boxed5),
+                  "a free font family and highlight colour reach the draft: Luckiest Guy on a blue #22AAFF box with radius 0.45 " + str(r)[:200])
+            o3 = small_edl("S03", {"style": "plain"})
+            cc("edl-check", "--run", run, "--edl", o3 / "edl.json", env=env)
+            r = cc("captions", "--run", run, "--resolved", o3 / "resolved.json", env=env)
+            check(r.get("ok") and r.get("style") == "plain" and "word_box" not in r, "style plain: the old one-text-per-caption look is still available")
+            cc("capcut-compose", "--run", run, "--video", "S03", "--name", "cctest6", "--store", store, env=env)
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest6", "--video", "S03", env=env)
+            c6 = json.loads((store / "cctest6" / "draft_content.json").read_text(encoding="utf-8"))
+            check(r.get("ok") and [t["name"] for t in c6["tracks"] if t["type"] == "text"] == ["subtitle"] and len(c6["materials"]["texts"]) == r_cues(o3), "style plain: one text per caption cue on the subtitle track")
             # an hour-long video has hundreds of pieces: 150 here; the facts of a chunk are read once, not once per piece (it took 24 s for 300 pieces before)
             big = {"schema": "cc-edl/1", "video": "L02", "kind": "long", "layout": {"mode": "native"},
                    "segments": [{"id": f"b{i}", "rec_from": round((i * 0.15) % 20 + 0.5, 2), "rec_to": round((i * 0.15) % 20 + 1.0, 2)} for i in range(150)]}
