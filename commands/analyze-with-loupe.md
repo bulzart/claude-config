@@ -86,7 +86,7 @@ only what it needs and the context of a run does not rot. The skills are interco
 4. **A phase boundary is a safe cut.** Everything a later phase needs is in `RUN/state.json` and the run files, not in this conversation. When many phases lie behind you and the context is
    long, tell the user in one line that they may run `/compact` (or open a new session and send `/analyze-with-loupe resume <RUN>`); nothing is lost. After a compaction, or on resume,
    **re-invoke the skill named in `state.json → next_skill`**: its text may have been summarised away. Inside the per-video loop a run resumes at the video level
-   (`state.json` holds `video` and `next_skill`; the ledger and the files on disk show the step reached). **Read `RUN/todo.md` first** (item 38): it says where inside the phase the work stood and what is open.
+   (`state.json` holds `video` and `next_skill`; the ledger and the files on disk show the step reached). **Read `RUN/todo.md` first** (item 38): it says where inside the phase the work stood and what is open. A run made before the to-do existed has none: write it now from `state.json`, the ledger and the files on disk, then go on.
 5. **Agents never receive this file.** A production agent gets a contract that names the skills to invoke (Skill tool; if it is unavailable or the name is not found, Read
    `C:/Users/Bulzart/.claude/skills/<name>/SKILL.md` and follow it); it reads the same section lists as the main session and nothing else. An analysis agent is briefed by the prompt
    in `reference/analysis-protocol/` §7.
