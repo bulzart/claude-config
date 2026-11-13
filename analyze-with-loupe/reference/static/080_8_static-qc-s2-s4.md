@@ -1,8 +1,9 @@
 ## 8 Static QC (S2–S4)
 
 The agent views and listens through the facts; `qc_fixes` (ask, auto, off) decides fixes as in every sub-mode (contract item 27).
-Every check also reads the judge's forecast (§13, `40-briefs/video-NN-judge.md` and `video-NN-forecast.json`): a measured value is
-judged against what was chosen and forecast for it, and a miss beyond its tolerance is traced to its cause before it is accepted.
+Every check also reads the forecast and the decisions written for the video (§13, `40-briefs/video-NN-brief.md` and
+`video-NN-forecast.json`): a measured value is judged against what was chosen and forecast for it, and a miss beyond its tolerance is traced
+to its cause before it is accepted. The agent is skeptical of its own result (§13) and may have fresh reviewers look at it cold.
 - **Narration**: `narration-words` lists the lines to check (the heard share of their words under the threshold; a heard word counts in
   the line that holds its middle). The captions take ElevenLabs' own word timing (its answer's `timing: elevenlabs`); the transcriber
   starts words about a quarter second early and can miss quiet ones (video 03, 2026-11-09: "Day one. By ten, ..." spoken and timed by
@@ -10,7 +11,7 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
   passage in `tts say`'s `resent_after_a_drop` (this PC's web shield resets connections) may be billed twice: its credits before and
   after against `characters_now` say, and the brief names it; no tag spoken aloud
   (a bracket's words heard as speech) and no sound effect where a delivery tag was meant; the duration within the spec's range; the
-  pace on the judge's point within its tolerance and inside the bands (`tts say`'s and `narration-words`' `pace.on_target` and
+  pace on the plan's point within its tolerance and inside the bands (`tts say`'s and `narration-words`' `pace.on_target` and
   `pace.within`; §6 "The pace") and the pause pattern against the forecast; the loudness against the references' (the sidecar's `level`: as delivered inside their range, else one gain toward their median
   within the true-peak ceiling, §6); a speed-up only on the user's yes after delivery, capped, with its `--why` and `--user-ok` (§6, §13); one
   speaker throughout; each passage's timbre against the others (`voice_match.passages_below`, §6); a partial narration (`partial`)
@@ -29,8 +30,7 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
 - **Every image, viewed** (Read the file): it shows what its line says; the character matches their photo or anchor (face, hair, build,
   clothing, age); hands, faces, bodies and counts are right (`anomaly-catalog.md` §2.13 for illustrated, painted and cartoon pictures, §2.17 for identity); its size and aspect the format's (`off_aspect` for the user's
   images); no stray text, letters, logos or watermarks; the style lock holds across the set; the caption band is free of faces and key detail;
-  one picture, not panels with a seam; it does its planned `job` (§5, §4b: a human beat shows the face and the feeling, a reveal its one
-  new thing); the sizes of people, animals and things against each other as in life (§5); no subtitle-like
+  one picture, not panels with a seam; it does what the plan wanted of it (§5, §4b); the sizes of people, animals and things against each other as in life (§5); no subtitle-like
   line (`T image text --run RUN --video NN` lists every line of letters it reads, with its box and whether it sits in the bottom third:
   a long line across the bottom or over the picture that no sign, page or screen carries is a made-up subtitle, a redraw reason, its
   prompt checked for caption words first, §5; letters cut off by the bottom edge, only their tops showing, are one too and the check

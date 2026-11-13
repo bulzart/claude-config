@@ -41,7 +41,7 @@ characters left and what the run's model honours.
   recorded in `config.json → static.tts.elevenlabs.models.<id>`: its voice settings and their ranges, whether it takes `speed`, `style`,
   SSML breaks, speaker boost or audio tags, its request stitching (and how many ids), a seed, `language_code`, its `max_chars`, its
   credits per character, its pace levers and the docs the record was read from with the date. The toolkit refuses what the record says
-  the model does not take (a setting, a tag or a pace key it lacks is refused, never dropped silently), and the judge's levers (§13) are
+  the model does not take (a setting, a tag or a pace key it lacks is refused, never dropped silently), and the agent's levers (§13) are
   the record's. **A model with no record is "not set up"** (`T tts models` shows `set_up: false`; `T tts model` refuses it): before it is
   used its facts are read from ElevenLabs' docs (the model's overview and capability pages, the text-to-speech and with-timestamps API
   pages, the request-stitching guide), never from memory, written into the config with their `source` and date, and `T tts check --run
@@ -74,7 +74,7 @@ characters left and what the run's model honours.
     the same day: "from now on the speech speedup from now on should only happen on user's permission, we do deliver all the work and
     then tell the user we're on these stats and for example target was 200wpm but we achieved 180 and we need a bit of speedup, it goes
     to the capcut looks at the project and only speedup on their permission never else, even though speedup is the last option we
-    should try to achieve it directly on the generation". The pace is reached in the generation (the request levers, J1 and J2, §13);
+    should try to achieve it directly on the generation". The pace is reached in the generation (the request levers, the checks before and after the narration, §13);
     a miss the levers could not close is delivered as it is, and the wrap-up gives the user the numbers (the measured pace, speaking
     and overall, against the point) and the speed-up that would close it. Only after the user has looked at the project and said yes:
     `T tts tempo --run RUN --video NN --tempo X --why "<the request levers tried and what they measured>" --user-ok "<the user's
@@ -149,11 +149,11 @@ itself) and what is carried over is their craft (§4); the video is made in the 
   user, 2026-11-11: "use medium for everything"; the multilingual 769M-parameter model, about 3 times slower than `small`; the answer's
   `model_fallback` says when it could not be loaded and another model read instead). A reference written without spaces counts characters, so the set's words-based medians leave
   it out (`T static profile` lists it with the reason).
-- **What stays English**: the glosses, the judge's records, the briefs, the forecast and every instruction. **What is in the video's
+- **What stays English**: the glosses, the briefs and decision records, the forecast and every instruction. **What is in the video's
   language**: the narration, the title, the thumbnail's words, the captions, the labels (§5, §7, §12).
 - **The fit points** (`state.json → static.voice.fit`, and the forecast's point) are per voice, model and language: the first video in a
-  new language or on a new model has no measured point, the forecast says so, and the judge asks for a probe before it commits the pace
-  (J1, §13).
+  new language or on a new model has no measured point, the forecast says so, and you ask for a probe before you commit the pace
+  (§13, the check before any generation).
 - **Characters** (credits): the forecast counts the characters of the native text against the characters left (`credits`:
   `characters_to_send`, `characters_left`), so a language that writes the same story in more or fewer characters than English costs more
   or less; a model whose record has `credits_per_character` under 1 (v4 Turbo: 0.5, ElevenLabs' live list) spends fewer credits than
@@ -161,9 +161,9 @@ itself) and what is carried over is their craft (§4); the video is made in the 
 
 **The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very
 sure that the workflow really achieves" it; then "every step should be taken carefully and thoroghfully, and nothing should turn out as
-unexpected": the pace is aimed at a point the judge chose, §13, never left wherever it lands inside a band; and 2026-11-09: "do it in
+unexpected": the pace is aimed at a point the agent chose on purpose, §13, never left wherever it lands inside a band; and 2026-11-09: "do it in
 the generation directly by giving the detailed specs and parameters"). The narration JSON's `pace` (§4: the family, the bands, the
-judge's `target` point, the tolerance) is what the narration is aimed at and measured against:
+`target` point, the tolerance) is what the narration is aimed at and measured against:
 - **the measure**: words a minute overall (first to last word) and while articulating (`wpm_articulation`: the same words over the span
   with every pause of 0.25 s or more taken out), both from the words' times, read the same way in the references and in a narration (§13
   "The fair measure"; the older segment reading `wpm_speech` is kept only as a fact), on the narration as delivered;
@@ -180,10 +180,10 @@ judge's `target` point, the tolerance) is what the narration is aimed at and mea
   narration of these words will have); billed, and used by `say` as passage 1 when the plan's levers are the probe's, so it is paid once.
   A probe of another voice or tag is a candidate in `30-assets/voice/probes.json`; the run voice's points fill `state.json →
   static.voice.fit`. Two probes that differ in pace may serve different parts (a slow section asked slow). The probes are run by the
-  main session (the judge never generates, §13);
-- **the decision** is the judge's (J1, §13), from the forecast (`T static forecast --part narration`: the point measured for the plan's
-  levers, the predicted pace and length against the plan's point, the family and the characters left); after the narration the
-  measured pace against the point is J2's. A miss is changed through the request first (another tag, setting or wording, the passages
+  main session, and no fresh reviewer ever generates (§13);
+- **the decision** is the agent's (§13, the check before any generation), from the forecast (`T static forecast --part narration`: the
+  point measured for the plan's levers, the predicted pace and length against the plan's point, the family and the characters left);
+  after the narration the measured pace is read against the point (§13, the check after the narration). A miss is changed through the request first (another tag, setting or wording, the passages
   made again, billed); what the request levers cannot reach is delivered as it is, recorded with its reason, and offered in the
   wrap-up as the capped speed-up that would close it (above), made only on the user's yes. `T tts fit` learns the voice's point again from a made
   narration and `T narration-words`' heard words (the next video's forecast).
@@ -233,10 +233,9 @@ stopped at 8.69 GB; at full precision the bed needs about 13.6 GB free, int8 a l
 **A long bed** (the user, 2026-11-07: "if acestep 1.5 max is 10 minutes, then we could do 2x8minutes for a 16minutes video i guess, or
 5x5 for a 25 minutes"): ACE-Step makes at most 600 s per piece on this PC (`config.json → static.music.max_s`), so a longer track is made
 in sections and joined end to end with crossfades (`crossfade_s`, default 4 s) into the one file the edit uses: either the agent's own
-`"sections": [{"caption": "<this part's mood, the same instruments and tempo>", "duration": <s>}, …]` (one per part of the story, taken
-from the blueprint's emotion map when the plan is written (§4b, the user, 2026-11-13: built in from the start): the calm, the unease,
-the dread, the low and the lift, the peak, the close, each at its place in the narration, so the bed thins before a reveal and lifts
-where hope or warmth arrives; the section lengths add up to the track's duration plus one crossfade per join), or, without them, the fewest
+`"sections": [{"caption": "<this part's mood, the same instruments and tempo>", "duration": <s>}, …]` (one per part of the story, following the story's feeling as the plan was thought through (§4b, the user, 2026-11-13: from the start),
+each at its place in the narration, so the bed supports what the part does; the section lengths add up to the track's duration plus one
+crossfade per join), or, without them, the fewest
 equal sections of at most `max_section_s` (480 s) under the track's caption. The fade-in is on the first section, the fade-out on the
 last; the pieces stay in `30-assets/music/parts/`. `T music measure`'s level per second shows each join: no drop or jump around it.
 

@@ -31,17 +31,15 @@ with that in mind:
   as a native speaker of the video's language would for that language's audience: not a translation, but the same hook, the same
   beats and the same craft, in that language's own sentences, number words, units and idioms (§4, §6).
 - **Viewer-engagement and community specialist** (the user, 2026-11-13: "viewer professional user engagement, and attention hooker and
-  also all other fields"). You design why a stranger stays, feels something, comments and sends it on: the thread of a person they come
-  to care about, the question they cannot help answering, the loop they need closed, the ask that feels like part of the story, the
-  title, thumbnail, description and pinned comment that promise the same thing the video keeps (§4b, §12).
-- **Sound designer** (the bed and the story's own sounds). You score the emotion map: where the bed thins before a reveal, where a
-  sound the story names is heard, where silence does the work (§6, §7).
+  also all other fields"). You think about why a stranger clicks, stays, feels something, finishes and passes it on, and shape the story,
+  the pictures, the sound and the words around the video for that, as this niche and subject call for (§4b, §12).
+- **Sound designer** (the bed and the story's own sounds). You score the story's feeling: where the bed thins, where a sound the story
+  names is heard, where silence does the work (§6, §7).
 
 **When the team works** (the user, 2026-11-13: "this has to be in early stages of planning and video development, and not just check
-and edit and do double effort after the whole video story is already crafted and finished"). Every role above speaks **at the start**:
-at the subject pool (what story material a subject holds) and at the blueprint (§4b), before the first line, picture or sound is made;
-the script, the stills, the bed and the edit are then made from what was decided. A check later only confirms the plan carried it; the
-craft is never a rewrite of a finished story.
+and edit and do double effort after the whole video story is already crafted and finished"). Every role above speaks **at the start**: at
+the subject and in the plan, before the first line, picture or sound is made; the script, the stills, the bed and the edit are then made
+from what was decided. The work judges itself as it goes (§13); it is never a rewrite of a finished story.
 
 **The ambition** is the best video the references' craft allows on the new subject: one a viewer watches to the end and sends on.
 **The discipline** is what gets it there, and it is never traded for the ambition:

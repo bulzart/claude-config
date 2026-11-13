@@ -1,8 +1,8 @@
 ## 4 The script (A6s)
 
-**The script is written to the video's engagement blueprint** (§4b: made before the first line, checked by J0): its beats, thread, open
-loops, re-hooks, human layer, asks and ending are the plan the lines serve, and `script.md` names the blueprint's beat over each section.
-This section says how the lines themselves are written; it never replaces that design, and a finished script is not patched to add it.
+**The script is written to the design made first** (§4b: what will hold and attach a viewer in this subject and niche, thought through before
+the first line): the lines serve it, and `script.md` may name what each section is for. This section says how the lines themselves are
+written; it never replaces that design, and a finished script is not patched to add it.
 
 `40-briefs/video-NN-script.md` (readable: the beats, the devices used, the sources) and `40-briefs/video-NN-narration.json`, the lines the
 voice speaks: `{"video": "NN", "language": "<the video's language: its ISO code from the model's live list (`T tts models`), or its name; english
@@ -15,7 +15,7 @@ family, else the family's>"], "wpm_articulation": [<low>,
 "text": "…", "gloss": "<its English reading: required when the language is not English>", "emotion": "neutral", "delivery": "<a line's own only: [tags]>", "tags_after": "<only where the family holds a long pause:
 [long pause]>", "passage_break": <only where a passage must end>}, …]}`. The pace, the point and the pauses are the measured numbers
 of the niche's references within the family, the family's beside them (§1 "The run's niche within the set", §2, §6 "The pace": the
-fair measure), chosen and checked by the judge before a passage is made (§13, J1); the levers that reach
+fair measure), chosen and checked by the agent before a passage is made (§13, the check before any generation); the levers that reach
 the point are the voice, the delivery tags, the settings and the words, measured on a probe first, and `T tts say` measures the
 narration as delivered. A `pace.speed` is refused: a model that has a speed takes it as its voice setting `speed` in `voice_settings` (a
 request lever, §6), Eleven v4 has none, and nothing is sped, cut, trimmed or gained afterwards (the user, 2026-11-09). A `pause_after` (plans written before 2026-11-09) and `pause_default_s` are only hints of where a passage may end: no
@@ -25,7 +25,7 @@ silence is placed (§6 "Passages").
   approach per video, §10): the script is written **natively** in the video's language, for that language's audience, never a
   line-by-line translation of an English script: its sentences, idioms, number words, units, dates and place names are the ones that
   audience uses (a temperature in °C for most of the world, °F where the story's place uses it; a year said the way that language says
-  it). Each line carries an English `gloss`, a faithful reading kept for the record: the user reads it, the judge's forecast runs its
+  it). Each line carries an English `gloss`, a faithful reading kept for the record: the user reads it, the forecast runs its
   word lists on it (§13), and it is never spoken, shown or captioned. The references' patterns (hook, beats, devices, retention,
   emotion, pauses, the length in minutes) carry over in meaning, not in wording; the hook is rebuilt in the language, as the references
   build theirs. The script follows the approach recorded for the video (`state.json → static.video_info`, §10): its story form, point
@@ -34,8 +34,8 @@ silence is placed (§6 "Passages").
 - **The pace in another language** (§6 "The pace"): the references' pace numbers count English words a minute, and another language
   has words of another size. The point is kept as the same **content a minute**: `T static units --run RUN --video NN` gives the ratio
   of this script's units to its glosses' English words (a unit is a word, or a character for a language written without spaces:
-  Japanese, Chinese, Thai …) and the English points converted by it; the judge writes the converted point into `pace` with the ratio
-  and `"unit"` (§13 J1). The length in minutes and the number of pauses stay the references'; the script's size is the converted
+  Japanese, Chinese, Thai …) and the English points converted by it; the agent writes the converted point into `pace` with the ratio
+  and `"unit"` (§13, the check before any generation). The length in minutes and the number of pauses stay the references'; the script's size is the converted
   point times the length.
 - **The length** follows the user's pick, asked at A5 before any planning (the user, 2026-11-12; `state.json → static.length_plan`,
   §2 "Length"). **Standard**: the agent's, per video, from the spec's length pattern: where this subject sits among the niche's
@@ -48,8 +48,8 @@ silence is placed (§6 "Passages").
   said at the stop with the length it does hold, never padded with repeats or invented claims. It is written into
   `video-NN-narration.json` as `"target_length_s"` with `"length_why"` (the user's pick, or the references' numbers it rests on), and
   the script is sized to it.
-- **The template of the spec**: the hook in the first line (spoken within the first second), every beat in its share (the blueprint's
-  map, §4b), the payoff, the closing line or loop; the length: the target, as the words at the plan's overall point (`pace.target.wpm_overall`: words =
+- **The template of the spec**: the hook in the first line (spoken within the first second), every beat in its share (as the design made first
+  lays them out, §4b), the payoff, the closing line or loop; the length: the target, as the words at the plan's overall point (`pace.target.wpm_overall`: words =
   seconds × words a minute / 60; 530 s at 165 words a minute is about 1,460 words), the voice, its tags and the words chosen and
   measured so the narration speaks at that point (§6: nothing is sped or slowed afterwards). A spelled-out year or number counts as the words it is spoken as ("eighteen twelve" is two). (Before the
   pace was set, 2026-11-06 to 11-08, scripts were sized at the voice's own speed, which ran about 12 % under its sample's: video 02 of
@@ -64,13 +64,13 @@ silence is placed (§6 "Passages").
   "[pause]" for a shorter one; or its punctuation: an ellipsis, a dash) and measured on the probe against the family's long pauses
   (their 90th percentile and longest), since no tag has a documented length; every other rest is the voice's own at the punctuation,
   and no silence is placed afterwards (§6). (2026-11-08: video 03 planned 56 pauses of 0.5-1.2 s and
-  measured 33 long ones per 10 minutes, five times the family's median: the overall point then forced the voice faster.) The judge's
-  forecast (§13, J1) shows the pattern the plan will give against the family's before a line is made.
+  measured 33 long ones per 10 minutes, five times the family's median: the overall point then forced the voice faster.) The
+  forecast (§13) shows the pattern the plan will give against the family's before a line is made.
 - **Emotion**: most lines `neutral`, the voice's own delivery, the wording carrying the feeling; a line tagged with an emotion the run's
   voice holds tags for (§6: `T tts voice --emotion NAME="[tags]"`) takes those tags. A **strong** line (`"strong": true, "delivery":
   "[<the feeling as audio tags, e.g. quiet disbelief, slower>]"`: Eleven v4's audio tags, §6) is for the peaks only (the user,
   2026-11-05: "not make big strong emotion changes unexpectedly, but yeah make room for it"): where the references' narrator peaks (the
-  hook's turn, the reveal, the payoff: the peaks of the blueprint's emotion map, §4b), at most one line in five and never two in a row unless the references do; its delivery in the
+  hook's turn, the reveal, the payoff: the peaks of the story's feeling, §4b), at most one line in five and never two in a row unless the references do; its delivery in the
   references' register (no shouting a reference never does); the line before leads into it (its wording, a pause tag) and the line
   after comes back down, so the feeling never jumps unannounced. Its tag holds until the next one, so its passage ends after it (§6
   "Passages"). The narration's own `delivery` (the tags that lead every passage) and a section's own deliveries (a slow, quiet stretch
@@ -83,10 +83,9 @@ silence is placed (§6 "Passages").
 - **Nothing indecent, gory or distressing** (§11b): a hard fact is told plainly and briefly, never by its graphic side (how many people
   died may be said; how a body was found, an injury or someone's suffering is not); no swearing; no intimate part of the body named,
   even as a first-aid fact (the tip told by its other places: "her head, her neck and under her arms").
-- **Fact sheet** (factual niches): `40-briefs/video-NN-facts.md`, every claim of the script with its source URLs, the story material
-  of §3 (the people's accounts, with their sources and exact quotes) beside the claims, and each real person's moment told as theirs.
-- **Told to hold, not only to inform** (§4b): the lines carry the blueprint's thread, loops, turns, questions and asks where it put them;
-  a fact does a job (a scene, a number at human scale, a turn or a tool); the narrator's dry wit stays inside the references' register;
-  nothing is invented to make it livelier (the truth rule).
+- **Fact sheet** (factual niches): `40-briefs/video-NN-facts.md`, every claim of the script with its source URLs, and what else the
+  research found that gives the story life (§3), each with its source and, for a quote, its exact words.
+- **Told to hold, not only to inform** (§4b): the lines carry what the design made first decided; nothing is there only because it is true
+  and dull, and nothing is invented to make it livelier (the truth rule).
 - The copy test (`creative-direction.md` §5.0) and the sharpness gate pass before the script is final.
 

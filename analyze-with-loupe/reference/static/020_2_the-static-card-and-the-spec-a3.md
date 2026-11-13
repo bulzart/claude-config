@@ -19,10 +19,10 @@ read in; a spec written before 2026-11-09 gets this block before the run's next 
 - **The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very
   sure that the workflow really achieves" it): per family and, within it, for the niche's references, by the fair measure (§6 "The
   pace", §13): the words a minute while articulating (`wpm_articulation`) and overall (`wpm_overall`) as the niche's references' median
-  (the point a video aims at; weighed with the family's by the judge when they are too few to carry it alone, §13) beside the family's
+  (the point a video aims at; weighed with the family's by the agent when they are too few to carry it alone, §13) beside the family's
   median and range, and the pause pattern (pauses a minute, their median and 90th percentile, the long ones of 0.8 s or more per 10 minutes, their share), all from
   `T static profile --refs <family>`; `wpm_speech` (the older segment reading) only as a fact. Each video's narration JSON carries them
-  (§4), the judge checks the plan against them before anything is made (§13), and the narration is aimed at the point by the voice, its tags and the words chosen before it is made, then
+  (§4), the agent checks its plan against them before anything is made (§13), and the narration is aimed at the point by the voice, its tags and the words chosen before it is made, then
   measured (§6).
 - **Retention, emotion, language, engagement, attachment, the social side, content style** (§1): each as the set's pattern with its
   counts and numbers (a re-hook every N s, the emotion peaks as shares of the length, "you" and questions a minute, the calls to action

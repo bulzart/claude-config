@@ -14,11 +14,10 @@
   the timeline goes straight into the CapCut project; no check copies and no capcut-cli proxy preview are made, and the edit's checks
   read the project back (§8). (`T slideshow render` still exists for a local copy the user asks for: at the format's check size, each
   still drawn with an exact sub-pixel resample per frame, the captions burned in, the frames counted.)
-- **Motion**: the plan's moves and joins (§5), as the references make them; effects only as the references use them (§2). They sit on
-  the blueprint's beats (§4b: the push-ins at dread, scale and a reveal's first still, the dips at the chapters, a story sound where
-  the story names one, from the user's sounds folder and never a meme or a death sound, the silence or dip before a reveal) and were
-  decided when the plan was written (§5, §6): the edit builds what the plan decided, and J5 confirms it; nothing is invented here to
-  liven a stretch the plan left plain.
+- **Motion**: the plan's moves and joins (§5), as the references make them; effects only as the references use them (§2). They sit
+  on the story's own beats as the plan thought them through (§4b; a story sound only where the story names one, from the user's sounds
+  folder and never a meme or a death sound) and were decided when the plan was written (§5, §6): the edit builds what the plan decided,
+  after its own check of it (§13, before the edit); nothing is invented here to liven a stretch the plan left plain.
 - **The CapCut project is the final** (the user, 2026-11-05: "export it as the final"): it mirrors the timeline at the format's export
   size, the images at their full size (`reference/capcut-assembly.md` §1–§2, §4): `T capcut-name`, `capcut_clone_draft`,
   `T capcut-prep --draft "<draft>" --canvas <state.json → static.format.export>`; each image with `capcut_add_image` at its start for its duration on the main
@@ -52,8 +51,8 @@
   is spoken, the others plain, no keyword colour (`highlight_words` empty: a coloured word on its box would vanish). **The box's colour is the
   video's own** (the user, 2026-11-12: "make it so that it is dynamic and in accordance with the video's colors and not fixed"): `word_box.color`
   is chosen for each video from that video's own palette, never copied from the last video's plan. A first pick is written at A6s from the
-  style lock's palette; J5 settles it once the stills exist, from their dominant and accent colours (a few viewed stills or a scratch colour
-  reading: facts for the judge's call): a colour of the video's palette that still stands out from the pictures behind the caption band (white
+  style lock's palette; it is settled once the stills exist (§13, before the edit), from their dominant and accent colours (a few viewed stills or a scratch colour
+  reading: facts for your call): a colour of the video's palette that still stands out from the pictures behind the caption band (white
   word, black outline and box all legible; a box near the picture's own colour would vanish), its reason and the colours it was read from in
   `word_box.why`. The shape (radius, pad, gap, v_offset), the font and the size stay the run's text look; then `T capcut-font`
   on every `wordcap-*` track and `T capcut-text-anim` only on the tracks ending in `-in` (a cue's entrance: a word that takes or hands
@@ -108,7 +107,7 @@
   entrance.
 - Loudness: the narration is ElevenLabs' delivered audio (the user, 2026-11-09: "do not edit the delivered generation without any
   exception": no compressor, loudness pass or fade), but for the level rule (§6: one constant gain only when it sits outside the
-  references' measured loudness, never past -1 dBTP) and a capped speed-up the user said yes to after delivery (§6, §13 J2); its loudness is recorded
+  references' measured loudness, never past -1 dBTP) and a capped speed-up the user said yes to after delivery (§6, §13 after the narration); its loudness is recorded
   (`loudness_lufs`, `true_peak_db` and `level` in the narration's sidecar), the CapCut project plays it at 1.0, and the bed sits under it at the plan's gain, judged
   against the narration as it is (§6 "The bed's check and level").
 - **The export** is the user's, in CapCut (no tool exports a CapCut project): each project at its format's export size, 30 fps; the
