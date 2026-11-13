@@ -103,7 +103,7 @@ An ElevenLabs error is reported with its real text (the key never shown). Narrat
 - Never change the run's voice between videos or make a passage in another voice (a strong line is the run's voice with its own
   delivery tags, static §6).
 - Never call ElevenLabs for a Static narration except through `T tts` (never the ElevenLabs MCP or connector for it: the MCP's
-  `list_models` is only the read of the live model and language lists, static §6), never Higgsfield, and never print, echo or write
+  `list_models` is only the read of the live model and language lists, static §6), and never print, echo or write
   `ELEVEN_API_KEY` or `ELEVENLABS_API_KEY`.
 - Never change the run's narration model between videos of a run on the agent's own call: the model is the run's (the user's pick at the
   start, or at a clone), like the voice.

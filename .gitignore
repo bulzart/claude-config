@@ -24,6 +24,7 @@
 !/analyze-with-loupe/
 !/analyze-stack/
 !/create-clips/
+!/create-static/
 # plugin settings only (which plugins and marketplaces are installed); their downloaded code, caches and marketplace clones stay out
 !/plugins/
 /plugins/*
@@ -56,4 +57,6 @@ __pycache__/
 /create-clips/runs/
 /create-clips/data/sfx-cache.json
 /create-clips/data/font-cache.json
+/create-static/runs/
+/create-static/_backups/
 /loupe/data/

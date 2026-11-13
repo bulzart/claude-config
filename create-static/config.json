@@ -1,0 +1,525 @@
+{
+  "schema_version": 1,
+  "home": "C:/Users/Bulzart/.claude/create-static",
+  "python": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe",
+  "runs_root": "C:/Users/Bulzart/.claude/create-static/runs",
+  "whisper_model": "medium",
+  "whisper_model_note": "the faster-whisper model every speech-to-text step reads with: the references' audio (extracting and analysing) and each narration's checks and every other extraction, in any language (the user, 2026-11-11: \"always medium for narration checks, extracting and analysing no matter the language\", then, asked whether the references could stay on small: \"use medium for everything\"). medium is the multilingual 769M-parameter model, 1.43 GB in the Hugging Face cache (Systran/faster-whisper-medium), int8 on the CPU: about 0.7 s of work per second of audio plus about 5 s to load it, about 3 times slower than small (11.8 s German clip, load included: 13.1 s against 4.4 s; medium wrote all 22 words, small wrote 'Alleranfang'). transcribe() falls back to small, base, then tiny when the named model cannot be loaded and says so in its answer (model_fallback)",
+  "tools": {},
+  "output": {
+    "aspect_ratio": "9:16",
+    "resolution": "720p",
+    "size": "720x1280",
+    "note": "Fixed for every Higgsfield generation in both modes; never asked. Model-specific mapping lives in models/index.json (output_9x16_720p)."
+  },
+  "higgsfield": {
+    "mcp_server": "higgsfield",
+    "tool_prefix": "mcp__higgsfield__",
+    "default_resolution": "720p",
+    "confirm_cost_above_credits": 150
+  },
+  "analysis": {
+    "baseline_fps": 5.0,
+    "dense_fps": 10.0,
+    "static_threshold": 2.5,
+    "max_baseline_frames": 1800,
+    "ocr_frames": 10,
+    "jobs": 2
+  },
+  "production": {
+    "max_parallel_agents": 5,
+    "max_parallel_jobs": 5,
+    "note": "Analyze Mode (Recreate, Create, Free and Static): one production agent per video, at most max_parallel_agents at once; the ledger allows one job in flight per video lane and at most max_parallel_jobs per run (reference/production-agents.md). Edit Mode stays one video at a time."
+  },
+  "capcut": {
+    "drafts_dir": "C:/Users/Bulzart/AppData/Local/CapCut/User Data/Projects/com.lveditor.draft",
+    "template_draft": "_analyze-stack-template",
+    "pro": false,
+    "pro_note": "This PC's default for a run that has no CapCut plan of its own. Each Static run asks the user which plan they export with (state.json -> capcut_plan, free | pro; the user, 2026-11-06: \"make him pick, if he picks pro then be free to pick any edit feature that pro has if we need them, if not then just the free ones\"), and that pick wins. free (false): only what data/capcut-catalogue.md marks free, so the export is never blocked; CapCut lists what blocked an export in User Data/Cache/FeedbackOtherInfo.json, which `T capcut-check measure` reads. pro (true): every option CapCut drew may be used.",
+    "note": "Every Static video is ONE CapCut project DD_Mon_YYYY_vNN made by one composition (T capcut-build, reference/capcut-build.md). Same store and template as the capcut MCP server's CAPCUT_DRAFTS_DIR / CAPCUT_TEMPLATE_DRAFT; the composition starts from data/compose-template.",
+    "text_style": {
+      "font": "System",
+      "size": 10,
+      "short_text": {
+        "size": 11,
+        "max_words_at_once": 5,
+        "max_line_width": 0.82,
+        "note": "The user, 2026-10-29: \"our standard text size is 10 but when there's only few text to be placed then use font size 11\". One size per video: 11 when at no moment more than max_words_at_once words are on screen (every text layer shown at that moment counted, so a caption split into two layers counts whole) and, at size 11, every line stays within max_line_width of the frame width; otherwise 10 for every text of the video. awl.py capcut-text-style counts and measures it (CapCut's System font; CapCut draws size s with a font of about 0.00575*s times the frame width, measured on CapCut's own renders) and reports it as 'sizing'. null turns the rule off."
+      },
+      "preset": "the user's chosen CapCut preset, learned from 03_Oct_2026_v09 on 2026-10-03 (white text, black outline 0.06); stored in 'learned'",
+      "fill": "#FFFFFF",
+      "stroke": {
+        "color": "#000000",
+        "width": 0.06
+      },
+      "learned": {
+        "from": "03_Oct_2026_v09 / text 06245FC5-2444-4184-8E8A-991EBCD388C3",
+        "at": "2026-10-03T18:51:45+02:00",
+        "font_path": "C:/Users/Bulzart/AppData/Local/CapCut/Apps/9.5.0.4050/Resources/Font/SystemFont/en.ttf",
+        "material": {
+          "global_alpha": 1.0,
+          "letter_spacing": 0.0,
+          "line_spacing": 0.02,
+          "has_shadow": false,
+          "shadow_color": "#000000",
+          "shadow_alpha": 0.8,
+          "shadow_smoothing": 1.0,
+          "shadow_distance": 4.0,
+          "shadow_point": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "shadow_angle": -45.0,
+          "shadow_thickness_projection_enable": false,
+          "shadow_thickness_projection_angle": 0.0,
+          "shadow_thickness_projection_distance": 0.0,
+          "border_alpha": 1.0,
+          "border_color": "#000000",
+          "border_width": 0.08,
+          "border_mode": 0,
+          "style_name": "",
+          "text_color": "#ffffff",
+          "text_alpha": 1.0,
+          "font_name": "",
+          "font_title": "none",
+          "font_id": "",
+          "font_resource_id": "",
+          "font_url": "",
+          "use_effect_default_color": false,
+          "ktv_color": "",
+          "bold_width": 0.0,
+          "italic_degree": 0,
+          "underline": false,
+          "underline_width": 0.05,
+          "underline_offset": 0.22,
+          "check_flag": 15,
+          "font_category_name": "",
+          "font_source_platform": 0,
+          "font_third_resource_id": "",
+          "font_category_id": "",
+          "fonts": [],
+          "background_color": "#000000",
+          "background_alpha": 1.0,
+          "background_style": 0,
+          "background_round_radius": 0.0,
+          "background_width": 0.14,
+          "background_height": 0.14,
+          "background_vertical_offset": 0.0,
+          "background_horizontal_offset": 0.0,
+          "background_fill": "",
+          "font_team_id": "",
+          "text_preset_resource_id": "",
+          "preset_id": "",
+          "preset_name": "",
+          "preset_category": "",
+          "preset_category_id": "",
+          "preset_index": 0,
+          "preset_has_set_alignment": false
+        },
+        "style": {
+          "fill": {
+            "alpha": 1.0,
+            "content": {
+              "render_type": "solid",
+              "solid": {
+                "alpha": 1.0,
+                "color": [
+                  1.0,
+                  1.0,
+                  1.0
+                ]
+              }
+            }
+          },
+          "strokes": [
+            {
+              "alpha": 1.0,
+              "content": {
+                "render_type": "solid",
+                "solid": {
+                  "alpha": 1.0,
+                  "color": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              },
+              "width": 0.05999999865889549
+            }
+          ],
+          "useLetterColor": true
+        },
+        "segment_refs": []
+      },
+      "note": "Every CapCut text layer of every /analyze-with-loupe video uses this style: font System, size 10 (11 when the video has only a little text: 'short_text'), and the user's chosen preset in 'learned' (applied by awl.py capcut-text-style, run by capcut-repair after every save). 'locked': true = the user chose it for all videos (2026-10-03); never re-learn or replace it unless the user explicitly asks for a different preset (awl.py capcut-text-style --learn --replace). fill/stroke above are only the fallback look if 'learned' were ever missing.",
+      "locked": true
+    },
+    "store_lock": "C:/Users/Bulzart/.claude/analyze-with-loupe/runs/.capcut-store.lock",
+    "store_lock_note": "one lock file for every toolkit that writes CapCut's shared project index (root_meta_info.json): compile and repair here, the repair of the Loupe toolkit and the clip toolkit's build all take it"
+  },
+  "static": {
+    "note": "Analyze -> Static (contract item 36): narrated still-image videos. No Higgsfield and no Loupe. Per PC, in the environment only: OPENAI_API_KEY (images by the API), AWL_IMAGE_PYTHON and AWL_IMAGE_ROOT (images by FLUX 3 Klein on the PC), AWL_TTS_PYTHON (+ AWL_TTS_DEVICE), AWL_MUSIC_PYTHON and AWL_MUSIC_ROOT (reference/static section 9).",
+    "analysis_fps": 1,
+    "images": {
+      "model": "gpt-image-2.5-sunburst",
+      "size": "1088x1920",
+      "quality": "high",
+      "qualities": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "limits": {
+        "multiple": 16,
+        "max_edge": 3840,
+        "min_pixels": 655360,
+        "max_pixels": 8294400,
+        "experimental_above_pixels": 3686400,
+        "ratio_min": 0.3333,
+        "ratio_max": 3.0,
+        "as_of": "2026-11-05",
+        "note": "OpenAI's documented custom sizes for GPT Image 2 and 2.5 (API reference): both edges divisible by 16, the aspect between 1:3 and 3:1, no edge over 3840, the total pixels in this range; above 2560x1440 they are called experimental. size and quality above are the fallback when a run has no state.json -> static.format"
+      },
+      "timeout_s": 300,
+      "api_base": "https://api.openai.com/v1",
+      "prices_usd_per_1m": {
+        "text_in": 5.0,
+        "image_in": 8.0,
+        "image_out": 30.0,
+        "as_of": "2026-11-05",
+        "note": "OpenAI's GPT Image 2.5 token prices; the cost a call reports is an estimate from its usage"
+      }
+    },
+    "klein": {
+      "engine": "flux3-image-klein-int8",
+      "models": {
+        "unet": "flux3-image-klein-int8-convrot.safetensors",
+        "text_encoder": "qwen3vl_4b_int8_convrot.safetensors",
+        "vae": "flux2-vae.safetensors",
+        "upsampler": "qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors"
+      },
+      "steps": 16,
+      "alpha": 16.0,
+      "upsample": true,
+      "anchor_upsample": false,
+      "reserve_vram_gb": 5,
+      "comfy_args": [],
+      "max_refs": 10,
+      "limits": {
+        "multiple": 16,
+        "min_edge": 64,
+        "max_edge": 4096
+      },
+      "timeout_s": 1800,
+      "peak_gb_by_refs": {
+        "0": 11.3,
+        "1": 11.4,
+        "2": 11.9,
+        "3": 12.3,
+        "4": 12.5
+      },
+      "guard_floor_gb": 3.0,
+      "retry_free_commit_gb": 15.0,
+      "retry_wait_s": 180,
+      "peak_note": "peak_gb_by_refs: the memory guard's peak of one FLUX 3 Klein job at 2560x1440 by the number of reference images (each taken at 1 MP), measured on this PC 2026-11-07 from the guard's own lines (0: 11.29, 1: 11.41, 2: 11.85, 3: 12.28, 4: 12.45 GB at most); `T image fit` prefers the run's own measured peaks (each attempt's peak_gb, or the peak in a stopped job's error). A job needs its peak plus guard_floor_gb (the guard stops a model when free commit falls under it) in free commit memory. After a guard stop the toolkit waits up to retry_wait_s for the larger of retry_free_commit_gb and that need, then runs the job once more.",
+      "note": "FLUX 3 Image Klein (distilled; int8, the build for GPUs without FP8 such as the RTX 30 series) made on this PC by scripts/image_worker.py in a private headless ComfyUI (AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT; reference/static section 9). steps 16 and no CFG are the checkpoint's defaults; alpha is the reference code's timestep shift since 2026-10-17 (ComfyUI's own default is 6.93); upsample runs Black Forest Labs' prompt upsampler first (their model card: always, unless the prompt already is a full caption); anchor_upsample false draws a character's anchor from its sheet prompt as written, since the upsampler adds props every later image then copies. reserve_vram_gb: Windows charges GPU memory to the process's commit, so ComfyUI leaves 5 GB of VRAM unused (peak 11.8 GB instead of about 15 GB at 1216x2160, same speed and pixels, measured 2026-11-06); comfy_args are extra ComfyUI flags. Licence: FLUX Kommunity License (non-commercial use, plus commercial outputs for a business under US$5M a year)."
+    },
+    "analysis": {
+      "fps": 2.0,
+      "note": "Static's sampling of the references: every reference flat at this rate, nothing denser (no extra frames around cuts, motion or the first second); Static has no effort level (the user, 2026-11-07: \"remove the effort idea completely (on static mode), just do 2fps when on static mode\"); the edit layer is measured at the full frame rate by edit-profile"
+    },
+    "tts": {
+      "engine": "elevenlabs",
+      "language": "english",
+      "seed": 1105,
+      "elevenlabs": {
+        "why": "the user, 2026-11-09: \"we will use elevenlabs\", \"we will only use elevenlabs v4\" (since 2026-11-11 the model is the user's pick from the live list: \"not always v4, he might use v4 turbo or other\"; the models below are the ones whose facts are recorded, the others are set up from the docs when picked), and \"no edits should be done from our side on the elevenlabs generation ... do not edit the delivered generation without any exception\". Facts from ElevenLabs' docs read 2026-11-09 (overview/models, the Eleven v4 page, best practices, the text-to-speech API reference, request stitching) and the account's GET /v1/models the same day (eleven_v4: character_cost_multiplier 1.0, maximum_text_length_per_request 10000, can_use_style false, can_use_speaker_boost false)",
+        "base_url": "https://api.elevenlabs.io",
+        "key_env": [
+          "ELEVEN_API_KEY",
+          "ELEVENLABS_API_KEY"
+        ],
+        "model_id": "eleven_v4",
+        "output_format": "pcm_44100",
+        "fallback_formats": [
+          "mp3_44100_192",
+          "mp3_44100_128",
+          "pcm_24000"
+        ],
+        "formats_note": "PCM and WAV at 44.1 kHz need the Pro plan and 192 kbps MP3 the Creator plan (ElevenLabs' docs): a refused format costs nothing and the next one is asked; an MP3 is kept as delivered beside its decoded WAV",
+        "timestamps": true,
+        "timeout_s": 240,
+        "passage_chars": 850,
+        "passage_note": "Eleven v4 works best on paragraphs or passages (ElevenLabs' v4 blog); their troubleshooting page keeps a generation under 800-900 characters; each passage is stitched to the ones before it (previous_request_ids) and the passages are placed end to end exactly as delivered",
+        "design_model_id": "eleven_ttv_v3",
+        "design_path": "/v1/text-to-voice/design",
+        "save_design_path": "/v1/text-to-voice",
+        "design_text_chars": [
+          100,
+          1000
+        ],
+        "design_description_chars": [
+          20,
+          1000
+        ],
+        "design_params": {},
+        "models_fresh_minutes": 10,
+        "models_note": "ElevenLabs' live model list (GET /v1/models, a free read) is kept in the library (runs/.elevenlabs-models.json) by `T tts models`; a copy younger than this many minutes is used as it is, `--refresh` asks again. The user picks the narration model from that list at the start (`T tts model`); a model is usable only when its facts are recorded below (the entry's keys follow eleven_v4's: voice_settings, ranges, defaults, speed, style, ssml_breaks, speaker_boost, audio_tags, stitching, stitch_max_ids, seed, language_code, max_chars, credits_per_character, pace_levers, source), read from ElevenLabs' docs and the live row (static section 6)",
+        "models": {
+          "eleven_v4": {
+            "voice_settings": [
+              "stability",
+              "similarity_boost"
+            ],
+            "ranges": {
+              "stability": [
+                0.0,
+                1.0
+              ],
+              "similarity_boost": [
+                0.0,
+                1.0
+              ]
+            },
+            "defaults": {
+              "stability": 0.5,
+              "similarity_boost": 0.75
+            },
+            "speed": false,
+            "style": false,
+            "ssml_breaks": false,
+            "speaker_boost": false,
+            "audio_tags": true,
+            "stitching": "ids",
+            "stitch_max_ids": 3,
+            "seed": true,
+            "language_code": true,
+            "max_chars": 10000,
+            "credits_per_character": 1.0,
+            "pace_levers": "the voice (its own pace: the audio it was made from, or its design description), the words and their punctuation (ellipses slow a line down; full stops and dashes give rests), and audio tags in brackets (delivery and pace, e.g. [Building tension, measured pace], [Quick, light, playful pace], [slowly]; pauses [short pause], [pause], [long pause]); tag adherence is not perfect and no tag has a documented length, so each lever is measured on the voice first (T tts probe); passages of different paces may be asked for different parts",
+            "source": "elevenlabs.io/docs: overview/models, overview/capabilities/text-to-speech/eleven-v4, .../best-practices, api-reference/text-to-speech/convert and convert-with-timestamps, guides request-stitching; read 2026-11-09"
+          },
+          "eleven_v4_turbo": {
+            "name": "Eleven v4 Turbo",
+            "voice_settings": [
+              "stability",
+              "similarity_boost"
+            ],
+            "ranges": {
+              "stability": [
+                0.0,
+                1.0
+              ],
+              "similarity_boost": [
+                0.0,
+                1.0
+              ]
+            },
+            "defaults": {
+              "stability": 0.5,
+              "similarity_boost": 0.75
+            },
+            "speed": false,
+            "style": false,
+            "ssml_breaks": false,
+            "speaker_boost": false,
+            "audio_tags": true,
+            "stitching": "none",
+            "stitch_max_ids": 3,
+            "seed": true,
+            "language_code": true,
+            "max_chars": 10000,
+            "credits_per_character": 0.5,
+            "pace_levers": "audio tags in brackets, as Eleven v4 (with Stability and Similarity the only levers ElevenLabs documents for Turbo by name); the voice's own pace and the words and punctuation as for v4 (the docs' advice is written for v4 and not extended to Turbo by name); each lever is measured on the voice first (T tts probe)",
+            "unverified": [
+              "request stitching: the stitching guide shows Eleven v4 and names only Eleven v3 as unsupported; Turbo is not named, so each passage is sent alone until a probe shows better",
+              "speed and SSML breaks: not found for Turbo (the docs give it v4's two settings: 'Both use Stability and Similarity'); none is sent",
+              "the docs' request limit (the live row's 10000 is used)",
+              "whether the REST text-to-speech endpoint serves it: the models page ties it to the Text to Dialogue websocket while the live row says it makes speech from text; the first probe tells"
+            ],
+            "source": "elevenlabs.io/docs: overview/models, overview/capabilities/text-to-speech/eleven-v4, api-reference/text-to-speech/convert, eleven-api/choosing-the-right-model; the live GET /v1/models row (94 languages, 10000 characters, character_cost_multiplier 0.5); read 2026-11-11"
+          },
+          "eleven_multilingual_v2": {
+            "name": "Eleven Multilingual v2",
+            "voice_settings": [
+              "stability",
+              "similarity_boost",
+              "style",
+              "use_speaker_boost",
+              "speed"
+            ],
+            "ranges": {
+              "stability": [
+                0.0,
+                1.0
+              ],
+              "similarity_boost": [
+                0.0,
+                1.0
+              ],
+              "speed": [
+                0.7,
+                1.2
+              ]
+            },
+            "defaults": {
+              "stability": 0.5,
+              "similarity_boost": 0.75,
+              "style": 0.0,
+              "use_speaker_boost": true,
+              "speed": 1.0
+            },
+            "speed": true,
+            "style": true,
+            "ssml_breaks": true,
+            "speaker_boost": true,
+            "audio_tags": false,
+            "stitching": "none",
+            "stitch_max_ids": 3,
+            "seed": true,
+            "language_code": false,
+            "max_chars": 10000,
+            "credits_per_character": 1.0,
+            "pace_levers": "the speed setting (0.7 to 1.2, default 1.0), the style setting, the voice's own pace, and the words and punctuation (dashes and ellipses are less consistent than SSML breaks, which the toolkit does not send: the text is spoken text only); no audio tags, so the narration has no delivery and no tags_after; each lever is measured on the voice first (T tts probe)",
+            "unverified": [
+              "audio tags: the docs name them for Eleven v3 and v4 only, so none is sent",
+              "request stitching: not stated for this model, so each passage is sent alone",
+              "the style setting's range (the docs give none; the default 0 is used)"
+            ],
+            "source": "elevenlabs.io/docs: overview/models, api-reference/text-to-speech/convert (language_code: not supported for multilingual_v2 models), best-practices/prompting/controls, help-center pages on the pace and on pauses; the live GET /v1/models row (29 languages, 10000 characters, can_use_style and can_use_speaker_boost true, character_cost_multiplier 1.0); read 2026-11-11"
+          },
+          "eleven_flash_v2_5": {
+            "name": "Eleven Flash v2.5",
+            "voice_settings": [
+              "stability",
+              "similarity_boost",
+              "speed"
+            ],
+            "ranges": {
+              "stability": [
+                0.0,
+                1.0
+              ],
+              "similarity_boost": [
+                0.0,
+                1.0
+              ],
+              "speed": [
+                0.7,
+                1.2
+              ]
+            },
+            "defaults": {
+              "stability": 0.5,
+              "similarity_boost": 0.75,
+              "speed": 1.0
+            },
+            "speed": true,
+            "style": false,
+            "ssml_breaks": true,
+            "speaker_boost": false,
+            "audio_tags": false,
+            "stitching": "none",
+            "stitch_max_ids": 3,
+            "seed": true,
+            "language_code": false,
+            "max_chars": 40000,
+            "credits_per_character": 0.5,
+            "pace_levers": "the speed setting (0.7 to 1.2, default 1.0), the voice's own pace, and the words and punctuation (dashes and ellipses are less consistent than SSML breaks, which the toolkit does not send: the text is spoken text only); no style setting and no audio tags, so the narration has no delivery and no tags_after; each lever is measured on the voice first (T tts probe)",
+            "unverified": [
+              "audio tags: the docs name them for Eleven v3 and v4 only, so none is sent",
+              "request stitching: not stated for this model, so each passage is sent alone",
+              "language_code: the docs do not say whether Flash v2.5 honours it (a code a model does not support is ignored), so none is sent",
+              "text normalisation is weaker than Multilingual v2's (numbers, dates and currencies can be read awkwardly, ElevenLabs' docs): the script writes numbers as the words they are spoken as"
+            ],
+            "source": "elevenlabs.io/docs: overview/models, api-reference/text-to-speech/convert, best-practices/prompting/controls, help-center pages on the pace and on pauses; the live GET /v1/models row (32 languages, 40000 characters, character_cost_multiplier 0.5); read 2026-11-11"
+          }
+        }
+      }
+    },
+    "music": {
+      "config": "acestep-v15-turbo",
+      "device": "cuda",
+      "inference_steps": 8,
+      "gain": 0.22,
+      "gain_note": "the starting level only: each video's level is the agent's, kept as the image plan's music_gain after `T music measure` (static §6); 0.22 put the 2026-11-06 bed 12.4 LU under the narration with every word heard the same",
+      "fade_in_s": 1.0,
+      "fade_out_s": 3.0,
+      "max_s": 600,
+      "max_section_s": 480,
+      "crossfade_s": 4.0,
+      "sections_note": "ACE-Step 1.5 makes at most 600 s per piece on this PC (its own limit for an 8-12 GB GPU without its language model, acestep/gpu_config.py tier4, constants DURATION_MAX). A longer bed is made in sections (the user, 2026-11-07: \"we could do 2x8minutes for a 16minutes video i guess, or 5x5 for a 25 minutes\"): the agent's own sections in music.json (one caption per part of the story), or the fewest equal ones of at most max_section_s, joined end to end with a crossfade of crossfade_s; the fade-in on the first, the fade-out on the last"
+    },
+    "narration": {
+      "lead_s": 0.3,
+      "tail_s": 0.8,
+      "pause_s": 0.35,
+      "loudness_lufs": -14.0,
+      "true_peak_db": -1.0,
+      "level_min_step_db": 0.5,
+      "tempo_max": 1.05,
+      "tempo_note": "the pace's last resort (the user, 2026-11-09): a speed-up of at most 5 %, pitch and formants kept, made only on the user's yes after they have seen the delivered project, never the agent's call (`T tts tempo --user-ok`); the pace is reached in the generation first",
+      "narration_note": "the narration is ElevenLabs' delivered audio, placed as delivered: no voice chain, no gain, no trim, no added silence (the user, 2026-11-09); pause_s is only the hint of where a passage may end when a plan has no pause marks; loudness_lufs is the local render's mix target, never applied to the narration"
+    },
+    "captions": {
+      "words": 3,
+      "y_rel": 0.72,
+      "min_cue_s": 0.2,
+      "min_cue_note": "a cue that would be on screen for less than this (a quick 'he' or 'of') takes the next word with it, up to twice the words at once; 0 turns it off; the plan's captions block can set its own",
+      "chars_unspaced": 10,
+      "chars_unspaced_note": "a language written without spaces between words (Japanese, Chinese, Thai, Lao, Khmer, Burmese ...) has no words to count: a caption cue holds this many letters, joined with no space (a cue of 3 English words is about 15 to 20 letters, and a Chinese or Japanese character is about twice as wide as a Latin one); the plan's captions block can set its own as `chars`"
+    },
+    "render": {
+      "size": "720x1280",
+      "fps": 30,
+      "motion_amount": 0.12,
+      "motion_amount_note": "only the image size margin of `T static formats` when no reference was measured; every move, its amount and every transition are the plan's (the agent's, from the references' edit profile and data/capcut-catalogue.md), never a stock value (the user, 2026-11-06)"
+    },
+    "effects": {
+      "scan_fps": 15,
+      "scan_width": 192,
+      "sheet_frames": 8,
+      "sheet_rows": 10,
+      "jobs": 4,
+      "note": "The optional effects folder (the user, 2026-11-06: sound effects, green-screen transitions, overlays): `T effects scan` measures every file once (cached in runs/_effects-cache by path, size and time) at scan_fps on a scan_width copy, and draws contact sheets of sheet_frames frames per file, sheet_rows files per sheet. Facts only: what each effect is used for, where and how loud is the plan's (reference/static section 5)."
+    },
+    "drawings": {
+      "ssaa": 4,
+      "codec_order": [
+        "qtrle",
+        "png-mov",
+        "prores4444"
+      ],
+      "preview_points": [
+        0.3,
+        0.65,
+        1.0
+      ],
+      "grid_step": 0.1,
+      "grid_long_side_px": 1280,
+      "boil_seed": 1105,
+      "notes": "Drawings over a still (the user, 2026-11-11: \"the agents editing the video should also to be able to draw, and animate too, like combining flux klein image + drawing or animation along with other edit capabilities ... (those width, height... lines are drawn and animated frame by frame)\"). `T draw render` draws the plan's images[K].drawings with Pillow at ssaa times the canvas, reduces them and pipes the frames to ffmpeg as a transparent clip the canvas's size, in the first codec of codec_order the CapCut effects check lists as playing; three previews at preview_points (shares of the animated span) and a sheet; boil is seeded from boil_seed, so the same spec renders the same frames. `T draw grid` draws gridlines every grid_step of the canvas on the still at grid_long_side_px. No look value lives here: every colour, width, dash, easing, timing and place is the agent's, in the plan."
+    },
+    "fonts": {
+      "open_licences": [
+        "OFL-1.1",
+        "Apache-2.0"
+      ],
+      "max_mb": 5,
+      "subset_order": [
+        "latin",
+        "latin-ext",
+        "cyrillic",
+        "cyrillic-ext",
+        "greek",
+        "greek-ext",
+        "vietnamese",
+        "devanagari"
+      ],
+      "note": "Extra fonts (the user, 2026-11-11: \"add a permission for the agents to download extra fonts on capcut if the available ones do not seem a good match for the video\"): `T fetch-font` takes a font from Fontsource (its API's licence and subsets) or a URL with its licence named, only under open_licences (fonts/README.md: every font here is under the SIL Open Font License 1.1 or the Apache License 2.0), at most max_mb, into the library's fonts folder with its README row; with a text the subsets are tried in subset_order. Which font suits a video is the agent's reading."
+    }
+  }
+}

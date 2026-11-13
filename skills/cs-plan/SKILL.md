@@ -1,6 +1,6 @@
 ---
 name: cs-plan
-description: /create-static Analyze Mode / Static phase: characters, the subject pool, five voice samples, the one stop, scripts and image plans (A6s). Internal to that command.
+description: /create-static phase A6s: characters, the subject pool, five voice samples, the one stop, scripts and image plans (A6s). Internal to that command.
 user-invocable: false
 ---
 

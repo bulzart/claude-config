@@ -112,22 +112,35 @@ def expand_home(text: str) -> str:
     return text
 
 
-def runs_root() -> Path:
+def runs_root(home: Path = None) -> Path:
+    home = home or AWL_HOME
     try:
-        rr = json.loads(read_shared(AWL_HOME / "config.json")).get("runs_root")
+        rr = json.loads(read_shared(home / "config.json")).get("runs_root")
         if rr:
             return Path(os.path.expanduser(rr))
     except (OSError, ValueError):
         pass
-    return AWL_HOME / "runs"
+    return home / "runs"
+
+
+# the libraries whose runs this guard protects: the one named by AWL_HOME (tests point it at a temp copy: then only that one), else both
+# libraries of this PC that make runs with a references folder (/analyze-with-loupe and /create-static)
+LIBS = [AWL_HOME] if os.environ.get("AWL_HOME") else [AWL_HOME, HOME / ".claude" / "create-static"]
 
 
 def protected() -> list:
-    """[(folder or file, run name, the path as the run stores it)] of the open runs, each in its long and its 8.3 form."""
-    lib = norm(str(AWL_HOME))
+    """[(folder or file, run name, the path as the run stores it)] of the open runs of every library, each in its long and its 8.3 form."""
+    res = []
+    for home in LIBS:
+        res += _protected_of(home)
+    return res
+
+
+def _protected_of(home: Path) -> list:
+    lib = norm(str(home))
     res, now = [], time.time()
     try:
-        entries = list(os.scandir(runs_root()))
+        entries = list(os.scandir(runs_root(home)))
     except OSError:
         return res
     for e in entries:
@@ -486,7 +499,7 @@ def main():
         return
     (folder, run), what = found
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": (
-        f"Refused by /analyze-with-loupe item 34: {what} would move, rename, delete or write inside {folder}, an input folder of the open run "
+        f"Refused by item 34 of /analyze-with-loupe and /create-static: {what} would move, rename, delete or write inside {folder}, an input folder of the open run "
         f"{run}. The user's folders are read-only: copy what you need into the run folder (cp, Copy-Item, shutil.copy2) and leave the "
         "original where it is; a step that cleans up its own files does so in a command that names only the run folder. If the user "
         "explicitly asked for this change, tell them it is refused while that run is open: they can make it themselves.")}}))
