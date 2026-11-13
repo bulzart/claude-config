@@ -114,6 +114,8 @@ def main():
     rc = cfg.get("report") or {}
     check(rc.get("model") == "claude-haiku-5-5" and rc.get("effort") in ("high", "xhigh", "max") and rc.get("enabled") is True, "the chunk reporter is Haiku 5.5 at high effort or above (never low or medium) in config.json")
     check("scan_model" not in cfg["agents"] and cfg["agents"].get("scan_chunks_game") and cfg["agents"].get("scan_chunks_streamer"), "no agent has a model of its own any more (the analysis batch sizes remain)")
+    check((cfg.get("watch") or {}).get("workers") == 2 and "watch.workers" in read(CC / "README.md") and "Two processors" in read(CC / "docs" / "processing.md"),
+          "config.json has watch.workers 2 and the README and docs/processing.md describe the two processors")
     nc = cfg.get("notify") or {}
     check({"enabled", "persistent", "sound", "idle_minutes", "catchup_hours"} <= set(nc) and nc.get("enabled") is True, "config.json has the notify block (the ready alert is on)")
     check((CC / "scripts" / "notify.ps1").is_file() and (CC / "scripts" / "cc_notify.py").is_file(), "the ready alert's scripts exist (notify.ps1, cc_notify.py)")

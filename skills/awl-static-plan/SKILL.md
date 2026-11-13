@@ -147,9 +147,11 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    the bed's caption, sections and timing, editing those plan files yourself; run `T tts probe --run RUN --video NN` with the plan's
    levers (passage 1, billed, used by `say` as passage 1) and one more probe for each lever set you want to compare, as few as the
    account's characters allow (the forecast's `credits`); write each decision, its numbers and the result you expect into
-   `RUN/40-briefs/video-NN-brief.md`. Ask what could be wrong with it, and, if a second opinion is worth having, have one or more fresh
-   reviewers read the plan cold (static §13: they get the plan and the standards, never your reasoning). A decision that would break a
-   lock or a rule of this phase is undone.
+   `RUN/40-briefs/video-NN-brief.md`. Ask what could be wrong with it. Then **one fresh reviewer reads the plan cold, a standing step** (static
+   §13: a new agent with none of your context, given the narration's text, the pictures' plan, the title, thumbnail and the video's other
+   published words, and the standard, never your reasoning; it reports where it would stop watching and what is unclear, flat, repetitive,
+   unearned or untrue); you decide and fix before anything is generated, and more reviewers only if you want them. A decision that would
+   break a lock or a rule of this phase is undone.
 10. Show one line per video (number, subject, title, length, images, bed or none, the forecast pace) and go on without waiting.
 
 **More videos** (static §10; `/analyze-with-loupe more <run> [N]`, or the user asking for more after a wrap-up; always in the session's

@@ -33,5 +33,5 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 3.1 |
 | 11b | Nothing indecent, gory or distressing | `115_11b_nothing-indecent-gory-or-distres.md` | 6.1 |
 | 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 8.6 |
-| 13 | Evaluating the work (A6s, S2, S3, S4) | `130_13_evaluating-the-work.md` | 15.9 |
+| 13 | Evaluating the work (A6s, S2, S3, S4) | `130_13_evaluating-the-work.md` | 16.5 |
 <!-- sections:end -->

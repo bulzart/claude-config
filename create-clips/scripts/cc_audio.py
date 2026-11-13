@@ -143,6 +143,7 @@ class Transcriber:
         self.used = {}
         self.load_seconds = None
         self._lock = threading.Lock()
+        self._gate = None                   # at most `parallel` transcriptions at once: a further processor waits its turn (the cores are shared)
 
     # the device and compute type to try, in order
     def _attempts(self) -> list:
@@ -182,7 +183,7 @@ class Transcriber:
         names = [asked] + [m for m in ("small", "base", "tiny") if m != asked]
         last_err = None
         threads = int(self.cfg.get("cpu_threads") or 0)
-        workers = max(1, int(self.cfg.get("num_workers") or _WORKERS))
+        workers = max(1, int(self.cfg.get("parallel") or _WORKERS))       # transcriptions that may run at the same time (default: as many as the watcher has processors)
         for dev, ct in attempts:
             for name in names:
                 try:
@@ -190,6 +191,7 @@ class Transcriber:
                     if dev == "cpu" and threads:
                         kw["cpu_threads"] = threads
                     self.model = WhisperModel(name, **kw)
+                    self._gate = threading.BoundedSemaphore(workers)
                     self.used = {"model": name, "device": dev, "compute_type": ct}
                     if workers > 1:
                         self.used["num_workers"] = workers
@@ -206,25 +208,28 @@ class Transcriber:
 
     def transcribe(self, wav_path, rec_start_s: float, duration_s: float | None) -> dict:
         self.load()
-        model = self.model                  # a local name: an idle unload by the watcher cannot pull it away mid-call
-        if model is None:
+        model, gate = self.model, self._gate     # local names: an idle unload by the watcher cannot pull them away mid-call
+        if model is None or gate is None:
             self.load()
-            model = self.model
+            model, gate = self.model, self._gate
         lang = str(self.cfg.get("language") or "auto")
         prompt = str(self.cfg.get("initial_prompt") or "").strip() or None
-        t0 = time.time()
-        segs, info = model.transcribe(
-            str(wav_path), language=None if lang.lower() == "auto" else lang, word_timestamps=True,
-            vad_filter=bool(self.cfg.get("vad_filter", True)), beam_size=int(self.cfg.get("beam_size", 5)),
-            condition_on_previous_text=bool(self.cfg.get("condition_on_previous_text", False)), initial_prompt=prompt)
-        out_segs = []
-        for s in segs:
-            out_segs.append({
-                "start": round(float(s.start), 2), "end": round(float(s.end), 2), "text": str(s.text).strip(),
-                "avg_logprob": round(float(s.avg_logprob), 3), "no_speech_prob": round(float(s.no_speech_prob), 3),
-                "compression_ratio": round(float(s.compression_ratio), 2),
-                "words": [{"w": str(w.word).strip(), "s": round(float(w.start), 2), "e": round(float(w.end), 2),
-                           "p": round(float(w.probability), 2)} for w in (s.words or []) if str(w.word).strip()]})
+        t_wait = time.time()
+        with gate:                          # the generator is consumed inside the gate: the decoding happens here, not in model.transcribe()
+            t0 = time.time()
+            waited = t0 - t_wait
+            segs, info = model.transcribe(
+                str(wav_path), language=None if lang.lower() == "auto" else lang, word_timestamps=True,
+                vad_filter=bool(self.cfg.get("vad_filter", True)), beam_size=int(self.cfg.get("beam_size", 5)),
+                condition_on_previous_text=bool(self.cfg.get("condition_on_previous_text", False)), initial_prompt=prompt)
+            out_segs = []
+            for s in segs:
+                out_segs.append({
+                    "start": round(float(s.start), 2), "end": round(float(s.end), 2), "text": str(s.text).strip(),
+                    "avg_logprob": round(float(s.avg_logprob), 3), "no_speech_prob": round(float(s.no_speech_prob), 3),
+                    "compression_ratio": round(float(s.compression_ratio), 2),
+                    "words": [{"w": str(w.word).strip(), "s": round(float(w.start), 2), "e": round(float(w.end), 2),
+                               "p": round(float(w.probability), 2)} for w in (s.words or []) if str(w.word).strip()]})
         n_words = sum(len(s["words"]) for s in out_segs)
         speech = sum(max(0.0, s["end"] - s["start"]) for s in out_segs)
         res = {"engine": "faster-whisper", **self.used, "language": info.language,
@@ -233,6 +238,8 @@ class Transcriber:
                "duration_s": round(float(duration_s), 3) if duration_s else None, "segments": out_segs, "n_words": n_words,
                "speech_seconds": round(speech, 2), "wpm_speech_only": round(n_words / (speech / 60), 1) if speech > 1 else None,
                "transcribe_seconds": round(time.time() - t0, 1), "model_load_seconds": self.load_seconds}
+        if waited > 0.5:
+            res["waited_for_turn_s"] = round(waited, 1)
         return res
 
 

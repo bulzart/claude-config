@@ -25,7 +25,7 @@ executes.
   fact, inflating a figure, inventing a person, a quote or an event, or telling a stand-in as if real (a picture of "the car beside you" is
   framed as the viewer's scenario). Drama comes from true material, within §11, §11b and the references' register.
 - **Be skeptical of your own design** (§13): where would a stranger leave, what is dull, unclear, unearned or untrue, what is only there
-  because it was easy? Fix it where it costs least, in the plan. A fresh reviewer who knows nothing of the work may read the design cold.
+  because it was easy? Fix it where it costs least, in the plan. A fresh reviewer who knows nothing of the work reads the finished plan cold before anything is generated (§13).
 - **Keep a short note of what was decided and why** (`40-briefs/video-NN-blueprint.md`, any form that serves) so later steps build from it.
 
 Some things worth asking, when they fit: what the promise is and whether title, thumbnail and first line keep one promise; what the viewer

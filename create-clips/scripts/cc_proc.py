@@ -908,7 +908,7 @@ def _register_durations(ready: list) -> None:
                 continue
             try:
                 p = ffprobe_facts(c["path"])
-            except BaseException:  # noqa: BLE001   an unreadable file fails its own probe stage later, with a reason
+            except (Exception, SystemExit):  # noqa: BLE001   an unreadable file fails its own probe stage later, with a reason
                 continue
             if p.get("duration_s") and p.get("has_video"):
                 row = r or new_row(cid, c["index"])
@@ -916,13 +916,16 @@ def _register_durations(ready: list) -> None:
                 put_row(run, row)
 
 
-def _find_stale(root: Path, inflight: set):
-    """(run, row) of a chunk whose rec start moved (a lower-numbered chunk arrived after it) and that no processor is working on, else None."""
+def _find_stale(root: Path, inflight: set, blocked: dict | None = None):
+    """(run, row) of a chunk whose rec start moved (a lower-numbered chunk arrived after it) and that no processor is working on, else None.
+    `blocked` holds the chunks whose re-make just failed to clear the flag: they are left alone for a minute."""
+    now = time.time()
     for rd in sorted(root.glob("*")):
         if not (rd / "state.json").is_file():
             continue
         for r in load_chunks(rd):
-            if r.get("stale_rec") and (rd / r["file"]).is_file() and (rd.name, r["id"]) not in inflight:
+            key = (rd.name, r["id"])
+            if r.get("stale_rec") and (rd / r["file"]).is_file() and key not in inflight and now >= (blocked or {}).get(key, 0):
                 return rd, r
     return None
 
@@ -946,6 +949,7 @@ def cmd_watch(a):
     workers = _worker_count(a)
     slots = [_Slot(r) for r in _roles(workers)]
     inflight: set = set()
+    stale_blocked: dict = {}
     try:
         from cc_audio import configure_workers
         configure_workers(workers)                  # one Whisper model, as many transcriptions at once as there are processors
@@ -997,6 +1001,8 @@ def cmd_watch(a):
         last_work = time.time()
         if job["kind"] == "refresh":
             say(f"[watch] {run.name} {job['cid']} ({job['role']}): its rec start moved, sheets and text views re-made: {res.get('status')} in {secs:.1f} s")
+            if not res.get("ok") or res.get("stale_rec"):
+                stale_blocked[job["key"]] = time.time() + 60          # did not clear the flag: not again at once
             return
         if res.get("refused"):
             blocked_until[c["path"]] = time.time() + 30
@@ -1054,7 +1060,7 @@ def cmd_watch(a):
                 if not ready and not waiting:                                # a free processor re-makes a chunk whose rec start moved (a lower chunk came after it)
                     for s in slots:
                         if s.job is None:
-                            st = _find_stale(root, inflight)
+                            st = _find_stale(root, inflight, stale_blocked)
                             if not st:
                                 break
                             rd, r = st

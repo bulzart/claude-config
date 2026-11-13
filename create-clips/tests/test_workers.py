@@ -92,6 +92,37 @@ def main():
         check(len(calls) == 1 and calls[0] == 2 and t.model is not None and t.used.get("num_workers") == 2, f"four threads, one model load, asked to run two transcriptions at once {calls}")
         check(cc_audio.get_transcriber({}) is t and cc_audio.get_transcriber({"language": "de"}) is not t, "the same run settings share one transcriber, other settings get their own")
         check(cc_audio.unload_transcriber() is True and t.model is None and cc_audio.unload_transcriber() is False, "an idle unload frees the model once")
+        # how many transcriptions may run at once (the cores are shared): a stand-in model that takes 0.6 s and counts how many calls overlap
+        class Info:
+            language, language_probability = "en", 0.99
+
+        class Stub:
+            def __init__(self):
+                self.now = self.peak = 0
+                self.lock = threading.Lock()
+
+            def transcribe(self, *a_, **k):
+                with self.lock:
+                    self.now += 1
+                    self.peak = max(self.peak, self.now)
+                time.sleep(0.6)
+                with self.lock:
+                    self.now -= 1
+                return iter([]), Info()
+
+        def run_two(parallel: int):
+            tr = cc_audio.Transcriber({"model": "tiny"})
+            tr.model, tr._gate = Stub(), threading.BoundedSemaphore(parallel)
+            out = []
+            th = [threading.Thread(target=lambda: out.append(tr.transcribe("x.wav", 0.0, 1.0))) for _ in range(2)]
+            t0 = time.time()
+            [x.start() for x in th]
+            [x.join() for x in th]
+            return tr.model.peak, time.time() - t0, out
+        peak, wall, out = run_two(1)
+        check(peak == 1 and wall >= 1.15 and any(o.get("waited_for_turn_s") for o in out), f"whisper.parallel 1: the second processor waits for its turn (peak {peak} at once, {wall:.1f} s, waited {[o.get('waited_for_turn_s') for o in out]})")
+        peak, wall, out = run_two(2)
+        check(peak == 2 and wall < 1.0 and not any(o.get("waited_for_turn_s") for o in out), f"whisper.parallel 2: both transcriptions run at once (peak {peak}, {wall:.1f} s)")
     finally:
         faster_whisper.WhisperModel = orig
         cc_audio.configure_workers(1)

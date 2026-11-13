@@ -19,15 +19,20 @@ is never asked for a call (the user, 2026-10-28 and 2026-11-08), and nothing her
 narrator), the user's start choices (formats, images' source, QC fixes, CapCut plan, the narration model), the video's language and approach
 as the user picked them, §11 and §11b, or the memory guard.
 
-**Fresh reviewers, with none of your context.** When a second opinion is worth having, spawn one or more new agents (`subagent_type:
+**Fresh reviewers, with none of your context.** **One fresh read of the plan is a standing step** (the user, 2026-11-13: "make one fresh
+read of the plan before the first generation a standing step, still with no judge"): before the first generation of each video (A6s step
+9), spawn a new agent that reads the finished plan cold, as a stranger on the feed would (the narration's text, the pictures' plan, the
+title, thumbnail and whatever else is published with the video), and reports where it would stop watching and what is unclear, flat,
+repetitive, unearned or untrue; you decide and fix, while a change still costs a line. It is a read, not a judge: no checklist, no verdict,
+no schedule of checkpoints. Beyond that one, when a second opinion is worth having, spawn one or more new agents (`subagent_type:
 general-purpose`, `model: "opus"`) that know nothing of the working agent's context: give each the thing to look at and the standard to
 look at it by (the references' numbers where they apply, the hard rules), and never your reasoning, expectations or conclusions (a
 reviewer told what to find finds it). Several reviewers may look at the same thing in different ways: where they agree it is evidence,
 where they differ it is a question to settle with the data. A reviewer reports; it never changes a plan or a file and never generates, and
-you decide and fix (a re-draw follows the run's QC fixes). You choose when and how many, never on a schedule, and not at all when there is
-nothing worth asking; typical moments are a drafted plan before anything is generated (a change costs a line there), a stretch of made
-stills looked at cold against their lines, the finished edit. Heavy work (a model, a test suite) never runs beside FLUX 3 Klein, a reviewer
-included. In a session without agents the working agent does the cold read itself, from the artifact alone.
+you decide and fix (a re-draw follows the run's QC fixes). Beyond the standing read you choose when and how many, never on a schedule, and
+not at all when there is nothing worth asking; typical moments are a stretch of made stills looked at cold against their lines and the
+finished edit. Heavy work (a model, a test suite) never runs beside FLUX 3 Klein, a reviewer included. In a session without agents the
+working agent does the cold read itself, from the artifact alone.
 
 **The facts you read.** `20-analysis/static-spec.md` and the cards (the craft); `T static profile --run RUN --refs <the family>` and
 `--refs <the niche's references in it>` (their numbers: the pace by the fair measure, the pauses, the seconds a still); the video's plan

@@ -16,8 +16,18 @@ $CC = "C:\Users\Bulzart\.claude\create-clips\scripts\cc.py"
 ```
 `watch` polls `Downloads\twitch-chunks\<channel>\<session>\` (config `inbox_dir`). A chunk counts as landed when its `chunk-NNNN.mp4` has no
 `.crdownload` sibling, its size has been stable for 1.5 s and its `chunk-NNNN.json` sidecar is there (it waits up to 20 s for it, then goes on without).
-It creates the run `Documents\stream-clips\runs\<session>` from the folder name, ingests chunks in number order and prints one line per chunk to stderr.
-A backlog at start is processed first. One watcher at a time (`runs\.watch.lock`, a dead pid's lock is taken over).
+It creates the run `Documents\stream-clips\runs\<session>` from the folder name and prints one line per chunk to stderr, with the processor that did it.
+One watcher at a time (`runs\.watch.lock`, a dead pid's lock is taken over).
+
+### Two processors (config `watch.workers`, default 2; `watch --workers N`, env `CC_WORKERS`)
+One processor was slower than the stream (a 3-minute chunk took 4 to 7 minutes on a busy PC), so the recording was never caught up with. The watcher now runs two processors at the same time, each on its own chunk:
+- **live** takes the NEWEST chunk that is ready (the one just recorded), so the end of a recording is never left behind;
+- **backlog** takes the OLDEST (the ones left behind), so nothing waits for ever. Both work inwards until they meet. With one chunk ready the first free processor takes it; `--workers 1` is the old one-at-a-time, in number order.
+- **Rec times stay right in any order.** A chunk's rec start is the sum of the durations before it, and its sheets and text views carry that time. So before a processor starts, the watcher probes the real duration of every ready chunk (one ffprobe of the file in the inbox) and enters it in the chunk table;
+  the live processor can then start on the newest chunk with the older ones still waiting, and nothing has to be made twice. A chunk that arrives late (a lower number after higher ones) is still caught by the stale mechanism: a free processor re-makes the sheets and text views of the chunks whose rec start moved.
+- **One Whisper model serves both** (loaded once, thread-safe; faster-whisper's `num_workers` = `whisper.parallel`, default the number of processors), and the two transcriptions really run side by side. `whisper.cpu_threads` is per transcription (default 4 each). A gate keeps the number of simultaneous transcriptions at `whisper.parallel`: set it to 1 and the second processor waits its turn for Whisper while it can still do the other steps.
+- `status` shows `pending` for a chunk that is queued (its duration is already in the table) and `processing` for one a processor is working on; the `processed` list of `watch --once` names the processor and the start and end of every chunk.
+- Tested by `tests\test_workers.py` (the assignment rule, one model load, six real chunks processed by both processors with rec starts and sheets right, `--workers 1` in order, a late lower chunk).
 
 ## Starting it by itself (opt-in, one-time, removable): `scripts\install-background.ps1`
 
@@ -103,12 +113,20 @@ All of them cross chunk boundaries. `sheet` also deletes its frames right after 
 
 `frames` (interval 0.75, 5 x 6, 240 x 135, jpeg 86), `audio` (window 0.5, `keep_wav`, loud jump 10 dB), `whisper` (model medium, device cpu, compute int8,
 language en, beam 5, VAD on, `initial_prompt`), `min_free_gb` (3). Optional keys read with defaults: `audio.loud_jump_floor_db` (-45), `frames.chat_bar_ref` (20),
-`whisper.cuda_compute_type` (float16), `whisper.cpu_threads`. `report` (enabled, model `claude-haiku-5-5`, effort high, parallel 2, timeout_s 420, max_turns 30, max_attempts 2, claude_bin, setting_sources project).
-`notify` (enabled, persistent, sound, idle_minutes 15, catchup_hours 24).
-Env: `CC_RUNS_ROOT`, `CC_INBOX`, `CC_WHISPER_MODEL`, `CC_WHISPER_DEVICE`, `CC_MIN_FREE_GB`, `CC_REPORT` (0 = no reports), `CC_CLAUDE_BIN`, `CC_REPORT_PARALLEL`, `CC_REPORT_TIMEOUT`, `CC_NOTIFY` (0 = no automatic alerts), `CC_NOTIFY_IDLE_MIN`.
+`whisper.cuda_compute_type` (float16), `whisper.cpu_threads` (per transcription, default 4), `whisper.parallel` (transcriptions at the same time, default = the processors). `report` (enabled, model `claude-haiku-5-5`, effort high, parallel 2, timeout_s 420, max_turns 30, max_attempts 2, claude_bin, setting_sources project).
+`notify` (enabled, persistent, sound, idle_minutes 15, catchup_hours 24). `watch` (workers 2: the processors working on chunks at the same time).
+Env: `CC_RUNS_ROOT`, `CC_INBOX`, `CC_WHISPER_MODEL`, `CC_WHISPER_DEVICE`, `CC_MIN_FREE_GB`, `CC_REPORT` (0 = no reports), `CC_CLAUDE_BIN`, `CC_REPORT_PARALLEL`, `CC_REPORT_TIMEOUT`, `CC_NOTIFY` (0 = no automatic alerts), `CC_NOTIFY_IDLE_MIN`, `CC_WORKERS`, `CC_CONFIG` (another config file; tests).
 Per run: `new-run --language auto --prompt "names, terms"` (kept in `state.json -> settings.whisper_override`).
 
-## Speed (this PC, a 180 s 1280x720 60 fps chunk)
+## Speed with one and with two processors (measured 2026-11-13, BLAST Premier run, 1080p60 source chunks, a busy PC)
+
+- **One processor** (the live test): a 180 s chunk took 4 to 7 minutes (probe 1-91 s, audio 1.5-30 s, sheets 25-104 s, transcript 120-383 s), so a recording was still being worked on about 10 minutes after it stopped.
+- **Whisper medium on this 6-core CPU is the limit for the transcript step, not the number of processors.** Two 60 s excerpts: 52 s one after the other (4 threads each), 48 s at the same time (4 threads each, each one about 1.7 x slower), 62-73 s with 3 or 6 threads (the PC was busier then, so these runs are only roughly comparable). The words were identical every time.
+  So `whisper.parallel` (how many transcriptions may run at once, default = the number of processors) and `whisper.cpu_threads` (default 4) stay at their defaults; a processor that has to wait for its turn says so in its transcript (`waited_for_turn_s`).
+- **What the second processor does win:** the other steps of one chunk (probe, audio, sheets, digest: 30 to 200 s on a busy PC) run beside the other processor's transcription, and the newest chunk never waits behind the backlog. How much that is end to end depends on the PC's load; the per-chunk seconds in `chunks.json` and the log lines `(live)` / `(backlog)` show it on every recording.
+- **The one big transcription speedup is the GPU** (`whisper.device: "cuda"`, below), left off because the GPU belongs to FLUX Klein and ACE-Step.
+
+## Speed of one processor on an idle PC (a 180 s 1280x720 60 fps chunk)
 
 Sheets about 4-5 s; audio 0.3 s; **Whisper medium on the CPU (int8) about 125-130 s** (0.7 x real time, so one live stream is kept up with; two streams at once are not);
 whole chunk about 134 s. Opt-in GPU: `whisper.device: "cuda"` (it borrows the CUDA 12 DLLs of ACE-Step's torch folder, `whisper.cuda_dll_dir`): about 4 s for a
@@ -122,7 +140,8 @@ whole chunk about 134 s. Opt-in GPU: `whisper.device: "cuda"` (it borrows the CU
   (finished stages are skipped; `--force` redoes all). A corrupt file fails at `probe` and is moved into its chunk folder, never retried by the watcher.
 - **Whisper cannot load**: `doctor` says whether the model is cached (`Systran/faster-whisper-medium`); it falls back to small/base/tiny and records `model_fallback`.
   Keep `av<19` (PyAV 19 breaks faster-whisper 1.2.1).
-- **Chunk numbers arrive out of order**: rec starts are recomputed; chunks made with an old rec start are flagged `stale_rec` and re-made (sheets and text views, no Whisper) automatically.
+- **Chunk numbers arrive out of order**: rec starts are recomputed; chunks made with an old rec start are flagged `stale_rec` and re-made (sheets and text views, no Whisper) automatically by a free processor.
+- **Chunks are not finished in number order**: with two processors that is normal (the live one starts on the newest chunk, the backlog one on the oldest); `status` and the rec times are right at every moment. `watch --workers 1` goes back to one at a time.
 - **Another watcher is running**: one at a time; stop it, or a dead one's lock is replaced at the next start.
 - **Stop the transcript for now**: `--skip-whisper` (status `pending`); a later `ingest` without it makes the transcript.
 - **Chunks on another drive than the runs**: moved by copy through a `.part` file (needs the room).

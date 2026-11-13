@@ -322,8 +322,8 @@ to be published well (a description with chapters and sources, a pinned comment 
 is already crafted", and "just give general suggestions ... and then the pipeline evaluates on its own and find out whats best while it
 executes"): before any line is written the agent works out what will hold and attach a viewer in this subject and niche (§4b: a direction,
 never a checklist), and the script, stills, bed and edit are made from it. **No judge agents in Static** (the user, 2026-11-13): the
-pipeline judges its own work as it goes, skeptically, and spawns fresh reviewers with none of its context only when a second opinion is
-worth having (§13). The length is asked
+pipeline judges its own work as it goes, skeptically; one fresh read of the plan by a reviewer with none of its context is a standing step
+before the first generation, and more fresh reviewers are used only when a second opinion is worth having (§13). The length is asked
 at A5, after the niche is locked and before any planning (the user, 2026-11-12): standard (the niche's references' length, each video's own the
 agent's from their lengths and what drives them) or the user's own (a total, or minutes more or less than standard; `static.length_plan`,
 `target_length_s` in the narration JSON); a bed
