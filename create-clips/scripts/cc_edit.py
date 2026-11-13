@@ -452,20 +452,17 @@ def cmd_censor(a):
 
 # --------------------------------------------------------------------------- the EDL
 
-# The default look (the user, 2026-11-13): the Loupe toolkit's word-box captions: white words with a black outline, the word being spoken on a rounded colour box
-# that moves from word to word (`style: "word-box"`, the box's numbers in `box`, its colour `highlight_color`), with a free font family (`font_family`, or
-# `font_file`) and a free highlight colour: the agent picks both to match the video's appearance. `style: "plain"` is the old one-text-per-caption look (keyword
-# colouring with `highlight_words`); it is also what a language the word box cannot take (written without spaces, or right to left) falls back to.
-# `size: "auto"` puts the em at `size_em_pct` percent of the picture's smaller side (cc_wordbox.auto_size): small/normal for phones and tablets, in any font.
+# The default look (the user, 2026-11-13): COPIED FROM LOUPE VIDEO 04 (run 20261106-063422-static-klein): Luckiest Guy (the one font, always: the box numbers were tuned for it),
+# upper case, white words with a thick black outline (0.18) and a shadow, the word being spoken on a rounded colour box that moves from word to word (`style: "word-box"`,
+# the box's numbers in `box`, its colour `highlight_color`, which stays free: the agent picks it to match the video). `style: "plain"` is the old one-text-per-caption look
+# (keyword colouring with `highlight_words`) in the same font and outline; it is also what a language the word box cannot take (written without spaces, or right to left)
+# falls back to. `size: "auto"` puts the em at `size_em_pct` percent of the picture's smaller side (cc_wordbox.auto_size): small/normal for phones and tablets.
+_HOUSE = {"style": "word-box", "font_file": wb.HOUSE_FONT_FILE, "size": "auto", "size_em_pct": wb.DEFAULT_EM_PCT, "color": "#FFFFFF", "stroke_color": "#000000",
+          "stroke_width": wb.HOUSE_STROKE_WIDTH, "shadow": True, "case": "upper", "highlight_words": [], "highlight_color": wb.DEFAULT_COLOR, "box": dict(wb.DEFAULT_BOX),
+          "word_box_max_words": 3000, "mask_terms": [], "replace": []}
 DEFAULT_CAPTIONS = {
-    "short": {"style": "word-box", "font_file": "Montserrat-Bold.otf", "size": "auto", "size_em_pct": wb.DEFAULT_EM_PCT, "color": "#FFFFFF", "stroke_color": "#000000",
-              "stroke_width": 0.1, "y_rel": 0.66, "max_words": 3, "max_chars": 18, "case": "upper", "highlight_words": [], "highlight_color": wb.DEFAULT_COLOR,
-              "highlight_size": 1.15, "box": dict(wb.DEFAULT_BOX), "word_box_max_words": 3000, "intro": "fade-in", "intro_s": 0.1, "mask_terms": [], "replace": [],
-              "min_cue_s": 0.25, "gap_break_s": 0.5},
-    "long": {"style": "word-box", "font_file": "Montserrat-Bold.otf", "size": "auto", "size_em_pct": wb.DEFAULT_EM_PCT, "color": "#FFFFFF", "stroke_color": "#000000",
-             "stroke_width": 0.08, "y_rel": 0.88, "max_words": 5, "max_chars": 32, "case": "as-is", "highlight_words": [], "highlight_color": wb.DEFAULT_COLOR,
-             "highlight_size": 1.1, "box": dict(wb.DEFAULT_BOX), "word_box_max_words": 3000, "intro": None, "intro_s": 0.0, "mask_terms": [], "replace": [],
-             "min_cue_s": 0.4, "gap_break_s": 0.8},
+    "short": {**_HOUSE, "y_rel": 0.66, "max_words": 3, "max_chars": 18, "highlight_size": 1.15, "intro": "fade-in", "intro_s": 0.1, "min_cue_s": 0.25, "gap_break_s": 0.5},
+    "long": {**_HOUSE, "y_rel": 0.88, "max_words": 5, "max_chars": 32, "highlight_size": 1.1, "intro": None, "intro_s": 0.0, "min_cue_s": 0.4, "gap_break_s": 0.8},
 }
 PLAIN_CAPTIONS = {"short": {"highlight_color": "#FFD700"},
                   "long": {"max_words": 7, "max_chars": 42, "highlight_color": "#FFD700"}}
@@ -478,8 +475,9 @@ def whisper_language(run) -> str | None:
 
 
 def merge_captions(run, kind: str, edl_caps: dict | None) -> dict:
-    """The captions block of a video: the default look for its kind, the EDL's own keys over it, the user's picks at the start (state.json captions_font and
-    captions_color) filling what the EDL leaves open, `style` settled (a language the word box cannot take falls back to plain) and `enabled` = the run's setting."""
+    """The captions block of a video: the default look for its kind (the Loupe video 04 look, the font always Luckiest Guy), the EDL's own keys over it, the user's colour pick at the
+    start (state.json captions_color) filling what the EDL leaves open, `style` settled (a language the word box cannot take falls back to plain) and `enabled` = the run's setting.
+    An EDL that names another font (`font_family`, `font_file`) is kept, and `captions` reports it as a fact (`house_font` false): the one reason is a character the house font cannot draw."""
     k = "short" if kind == "short" else "long"
     edl_caps = dict(edl_caps or {})
     style = str(edl_caps.get("style") or "word-box").strip().lower()
@@ -494,8 +492,6 @@ def merge_captions(run, kind: str, edl_caps: dict | None) -> dict:
     caps = {**base, **edl_caps, "style": style}
     caps["box"] = {**wb.DEFAULT_BOX, **(edl_caps.get("box") or {})}
     st = load_state(run) or {}
-    if st.get("captions_font") and not (edl_caps.get("font_family") or edl_caps.get("font_file")):
-        caps["font_family"] = str(st["captions_font"])
     if st.get("captions_color") and "highlight_color" not in edl_caps:
         caps["highlight_color"] = str(st["captions_color"])
     if reason:
@@ -984,26 +980,32 @@ def cmd_captions(a):
     else:
         res = build_cues(run, resolved)
     d = rp.resolve().parent
-    write_json(d / "captions.json", {"video": resolved["video"], "style": caps.get("style"), "font_file": font_file, "size": size_info, **res})
+    frep = wb.font_report(font_file, " ".join(c["text"] for c in res["cues"]))      # the characters of the captions the font has no glyph for (a fact, known before the build)
+    house = Path(font_file).name == wb.HOUSE_FONT_FILE
+    write_json(d / "captions.json", {"video": resolved["video"], "style": caps.get("style"), "font_file": font_file, "house_font": house, "size": size_info, **frep, **res})
     srt = []
     for c in res["cues"]:
         srt.append(f"{c['i']}\n{_srt_time(c['start'])} --> {_srt_time(c['end'])}\n{c['text']}\n")
     write_text(d / "captions.srt", "\n".join(srt))
     out({"ok": True, "video": resolved["video"], "style": caps.get("style"), "style_reason": caps.get("style_reason"), "cues": len(res["cues"]), "words": res["n_words"],
          "duration_s": resolved["totals"]["duration_s"], "silent_stretches_over_4s": _silent(res["cues"], resolved["totals"]["duration_s"]),
-         "font_file": font_file, "size": size_info, "highlight_color": caps.get("highlight_color") if caps.get("style") == "word-box" else None,
+         "font_file": font_file, "house_font": house, **frep, "size": size_info, "highlight_color": caps.get("highlight_color") if caps.get("style") == "word-box" else None,
          **({"word_box": res["word_box"], "split_for_width": res["split_for_width"]} if caps.get("style") == "word-box" else {}),
          "files": [str(d / "captions.json"), str(d / "captions.srt")],
          "note": "captions are ON for this run (the default): every second of speech is captioned; a stretch without speech has none unless the agent adds a text line. "
-                 "The look is `style` (word-box: the spoken word on a rounded colour box, one CapCut text per word; plain: one text per caption); the font, the highlight "
-                 "colour and the size are the EDL's captions block (size auto = the em at size_em_pct of the picture's smaller side)"})
+                 "The look is the Loupe video 04 look: `style` word-box (the spoken word on a rounded colour box, one CapCut text per word) in the house font, Luckiest Guy, ALWAYS "
+                 "(the box numbers are tuned for it; `house_font` says whether this video uses it); the highlight colour is the EDL's own pick; the size is auto = the em at "
+                 "size_em_pct of the picture's smaller side. `font_missing_glyphs` lists the characters of the captions the font cannot draw: a font other than the house font "
+                 "is for that reason only"})
 
 
 def cmd_fonts(a):
     rows = font_rows(a.family)
-    out({"ok": True, "count": len(rows), "family_filter": a.family, "fonts": rows,
-         "note": "facts only, never a judgement of which fits: put a family in the EDL's captions.font_family (captions.font_style picks Bold, Black ... when a family has several) "
-                 "or a file in captions.font_file (a name in the Loupe fonts folder or an absolute path); the library's own copy is the one a project keeps (kept_by)"})
+    out({"ok": True, "count": len(rows), "family_filter": a.family, "fonts": rows, "house_font": {"family": wb.HOUSE_FONT_FAMILY, "file": wb.HOUSE_FONT_FILE},
+         "note": "facts only. The captions use the house font, Luckiest Guy, always (the Loupe video 04 look; the box numbers are tuned for it). This list is for the one exception: "
+                 "`captions` says `font_missing_glyphs` for a character the house font cannot draw (Slavic and Turkish letters, Cyrillic, Greek); then name another family in "
+                 "the EDL's captions.font_family (captions.font_style picks Bold, Black ... when a family has several) or a file in captions.font_file; the library's own copy "
+                 "is the one a project keeps (kept_by). Its line height differs from Luckiest Guy's, so look at the box in the first frame"})
 
 
 def _silent(cues: list, total: float) -> list:
@@ -1543,6 +1545,8 @@ def finish_run(a) -> dict:
         else:
             args = [cli, "import-srt", str(d), str(srt), "--track-name", "subtitle", "--font-size", str(size), "--color", caps["color"],
                     "--border-width", str(caps["stroke_width"]), "--border-color", caps["stroke_color"], "--align", "1", "--y", f"{1 - 2 * float(caps['y_rel']):.3f}"]
+            if caps.get("shadow"):
+                args.append("--shadow")
             hw = [w for w in caps.get("highlight_words") or [] if str(w).strip()]
             if hw:
                 hf = vdir / "highlight-words.txt"
@@ -1644,11 +1648,15 @@ def cmd_capcut_build(a):
         problems.append(f"capcut lint: {chk['lint']['errors']} errors: {chk['lint']['error_messages']}")
     elif chk["lint"]["errors"] is None:
         problems.append(f"capcut lint gave no summary (exit {chk['lint']['exit']})")
+    cj = (read_json(vdir / "captions.json") or {}) if captions_on(run) else {}
+    cfont = {"file": cj.get("font_file"), "house_font": cj.get("house_font"), "missing_glyphs": cj.get("font_missing_glyphs")} if cj else None
+    if cfont and cfont["missing_glyphs"]:
+        problems.append(f"the caption font cannot draw these characters of the captions: {''.join(cfont['missing_glyphs'])} (CapCut would show boxes or another font's letters)")
     slim = [{k: v for k, v in s.items() if k in ("step", "exit", "composed", "texts", "tracks", "boxed_texts", "keyed", "blurred", "done", "failed", "freed_mb", "animated", "in_draft")} for s in fres.get("steps") or []]
     out({"ok": not problems, "video": a.video, "draft": cres["draft"], "name": cres.get("name"), "seconds": round(time.time() - t0, 1),
          "seconds_by_part": {"compose": round(t1 - t0, 1), "finish": round(t2 - t1, 1), "read_back": round(t3 - t2, 1)},
          "compose": {k: cres.get(k) for k in ("ok", "pieces", "sfx_lanes", "composed_in_the_same_call", "extras_error_then_composed_bare", "video_segments_retargeted", "seconds")},
-         "finish": {"ok": fres.get("ok"), "steps": slim}, "read_back": chk, "problems": problems,
+         "finish": {"ok": fres.get("ok"), "steps": slim}, "read_back": chk, "caption_font": cfont, "problems": problems,
          "note": "unverified by any tool here: how CapCut draws the project (the caption look, the zoom, a fill or fit-blur layout); the proxy frames and the first open in CapCut are the look-at-it checks"}, 0 if not problems else 1)
 
 

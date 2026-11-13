@@ -157,13 +157,20 @@ def main():
           "the router and the README name the CapCut composition, `capcut-build`, and forbid building clip by clip")
     check("--bare" in cb and "composed.json" in cb and "store lock" in cb and "font-cache.json" in cb, "capcut-build.md describes --bare, composed.json, the store lock and the font cache")
     ec, gec = read(CC / "reference" / "edit-craft.md"), read(CC / "reference" / "game-edit-craft.md")
-    check("word-box" in ec and "size_em_pct" in ec and "4.6" in ec and "phone" in ec.lower() and "font_family" in ec and "highlight_color" in ec and "captions.why" in ec,
-          "edit-craft.md describes the word-box look, the free font and colour, and the small-to-normal automatic size for phones")
+    check("word-box" in ec and "size_em_pct" in ec and "4.6" in ec and "phone" in ec.lower() and "highlight_color" in ec and "captions.why" in ec,
+          "edit-craft.md describes the word-box look, the free box colour, and the small-to-normal automatic size for phones")
     check('size: "auto"' in gec and "highlight" not in gec.lower().replace("highlight_color", "") or 'size: "auto"' in gec, "game-edit-craft.md follows the automatic size (no stale fixed size)")
-    check("captions_font" in sk("cc-start") and "captions_color" in sk("cc-start") and "captions_font" in rt and "captions_font" in ec,
-          "cc-start, the router and edit-craft.md carry the user's own caption font and colour (captions_font, captions_color)")
-    check(all("font" in sk(n).lower() and "appearance" in sk(n).lower() for n in ("cc-build-short", "cc-build-long")) and "font" in sk("cc-build-game").lower() and "broadcast" in sk("cc-build-game").lower(),
-          "the build skills tell the agent to pick the caption font and colour to match the video's appearance")
+    # THE FONT IS FIXED (the user, 2026-11-13, after comparing our frame with Loupe video 04's): Luckiest Guy always; only the box colour is free
+    readme = read(CC / "README.md")
+    check(all("Luckiest Guy" in t for t in (ec, gec, rt, readme, sk("cc-start"), sk("cc-build-short"), sk("cc-build-long"), sk("cc-build-game"), sk("cc-produce"))),
+          "the router, the README, edit-craft.md, game-edit-craft.md, cc-start, the three build skills and the produce contract all say the caption font is Luckiest Guy")
+    check(all("ALWAYS" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game", "cc-produce")) and "font_missing_glyphs" in ec and "house_font" in ec,
+          "the build skills say ALWAYS, and edit-craft.md names the one exception (a character the font cannot draw: font_missing_glyphs, house_font)")
+    check("captions_font" not in sk("cc-start") and "captions_font" not in rt and "captions_font" not in readme and "captions_font" not in ec, "the per-run font option captions_font is gone from cc-start, the router, the README and edit-craft.md")
+    check("captions_color" in sk("cc-start") and "captions_color" in rt and "captions_color" in ec, "cc-start, the router and edit-craft.md carry the user's own box colour (captions_color)")
+    check(all("pick only the box colour" in sk(n).lower() for n in ("cc-build-short", "cc-build-long", "cc-build-game")), "the build skills tell the agent to pick only the box colour to match the video's appearance")
+    check((Path("C:/Users/Bulzart/.claude/analyze-with-loupe/fonts") / "LuckiestGuy-Regular.ttf").is_file(), "the house font file exists in the Loupe fonts folder")
+    check("Montserrat" not in ec and "Barlow\", \"font_style" not in ec, "edit-craft.md no longer shows another font as the example or the fallback")
     gi = (CC.parent / ".gitignore")
     check(not gi.is_file() or "create-clips/data/font-cache.json" in read(gi), "the font-lookup cache is git-ignored (derived data)")
 

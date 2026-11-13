@@ -17,9 +17,17 @@ from pathlib import Path
 
 CAPCUT_FONT_PER_SIZE = 0.00575
 WORD_BOX_PREFIX = "wordcap"
-# the preset the Loupe videos 03/04 settled on with the user (2026-11-09/10): a rounded box (radius 0.3), a smaller box (pad 0.08) that sits a little low (v_offset 0.15),
-# words 0.7 em apart so neighbouring boxes never touch; the colour is the video's own (the agent's pick: DEFAULT_COLOR is only the fallback)
-DEFAULT_BOX = {"alpha": 1.0, "round_radius": 0.3, "style": 0, "gap_em": 0.7, "pad": 0.08, "v_offset": 0.15}
+# THE LOUPE LOOK, copied from video 04 of the run 20261106-063422-static-klein (the user, 2026-11-13: "always use the same font family as they used in that video"; his
+# screenshots of our frame and of that video's showed our box far too big and off its word). The numbers below were settled with the user on the Loupe videos 03/04
+# (2026-11-09/10) FOR THIS FONT: CapCut draws a box around the whole line of a text (ascent + descent), so how big the box looks and where it sits depends on the font's
+# metrics. Luckiest Guy has a line of 1.0 em with its baseline at 0.70 of it and capitals as tall as its lowercase; a font like Barlow Black (line 1.2 em, baseline at
+# 0.83, x-height 0.52 em) puts the same numbers' box far too high around the same word. So the font is fixed: never a font picked per video.
+HOUSE_FONT_FILE = "LuckiestGuy-Regular.ttf"            # a name in the Loupe fonts folder (AWL fonts/)
+HOUSE_FONT_FAMILY = "Luckiest Guy"
+HOUSE_STROKE_WIDTH = 0.18                               # a thick black outline, and a shadow (has_shadow), as in the Loupe videos' caption look
+# the box: a rounded box (radius 0.3), padding 0.08 (CapCut's own 0.14 reached 0.35 em past the word), sitting 0.15 lower so it centres on the word, words 0.55 em apart
+# so neighbouring boxes never touch; the colour is the video's own (the agent's pick: DEFAULT_COLOR is only the fallback, the orange of Loupe video 04)
+DEFAULT_BOX = {"alpha": 1.0, "round_radius": 0.3, "style": 0, "gap_em": 0.55, "pad": 0.08, "v_offset": 0.15}
 DEFAULT_COLOR = "#FF7A1A"
 # the box is one text per word placed left to right along a centred line: a language written without spaces or right to left cannot take it
 NO_WORD_BOX = {"zh": "written without spaces between words", "ja": "written without spaces between words", "th": "written without spaces between words",
@@ -133,8 +141,9 @@ def capcut_em_px(font_file: str, size: float, canvas_w: int) -> float:
 
 # The caption size (the user, 2026-11-13: "neither too small nor too large ... most viewers may be watching from the phone or tablets ... go to the most optimal in the
 # small/normal side"): the em of the caption is a fixed share of the picture's SMALLER side, so it looks the same on a 16:9 video (its height) and on a vertical
-# one (its width), in any font. 4.6 % is what the Loupe videos settled on with the user (CapCut size 5.5 on a 16:9 canvas, 10 on a 9:16 one) and sits close to
-# broadcast subtitle practice (about 5 % of the height); the guide for the agent is 4.0 to 5.0 %, the small/normal side, never above.
+# one (its width), in any font. 4.6 % keeps to the small/normal side the user asked for and sits close to broadcast subtitle practice; the guide for the agent is 4.0 to
+# 5.0 %, never above. For the house font (line 1.0 em) 4.6 % is CapCut size 4.5 on a 16:9 canvas and 8.0 on a 9:16 one. The Loupe videos themselves use size 5.5 / 10 in
+# that font, which is an em of about 5.6 % of the smaller side, some 20 % larger: the user has not asked for that size here, so it is a number to change, not the default.
 DEFAULT_EM_PCT = 4.6
 EM_PCT_GUIDE = (4.0, 5.0)
 
@@ -155,6 +164,80 @@ def size_facts(font_file: str, size: float, canvas_w: int, canvas_h: int) -> dic
     pct = round(100.0 * em / min(int(canvas_w), int(canvas_h)), 2)
     return {"size": size, "em_px": round(em, 1), "em_pct_of_smaller_side": pct, "guide_pct": list(EM_PCT_GUIDE),
             "vs_guide": "inside" if EM_PCT_GUIDE[0] <= pct <= EM_PCT_GUIDE[1] else ("larger" if pct > EM_PCT_GUIDE[1] else "smaller")}
+
+
+_GLYPHS = {}
+
+
+def font_glyphs(font_file) -> set:
+    """The code points a TrueType or OpenType font file has a glyph for (its cmap's Unicode subtables, formats 4 and 12), read with no library: the same reading the
+    Loupe toolkit's capcut-font does, so a missing character is known when the captions are planned, not when the project is open. Raises ValueError for a file
+    that is not a plain TrueType/OpenType font."""
+    import struct
+    p = Path(font_file)
+    st = p.stat()
+    key = (str(p.resolve()), st.st_mtime_ns, st.st_size)
+    if key in _GLYPHS:
+        return _GLYPHS[key]
+    d = p.read_bytes()
+    base = struct.unpack(">I", d[12:16])[0] if d[:4] == b"ttcf" else 0
+    if d[base:base + 4] not in (b"\x00\x01\x00\x00", b"OTTO", b"true", b"typ1"):
+        raise ValueError("not a TrueType or OpenType font file")
+    cmap = None
+    for k in range(struct.unpack(">H", d[base + 4:base + 6])[0]):
+        tag, _cs, off, _ln = struct.unpack(">4sIII", d[base + 12 + 16 * k:base + 28 + 16 * k])
+        if tag == b"cmap":
+            cmap = off
+            break
+    if cmap is None:
+        raise ValueError("the font file has no cmap table")
+    got = set()
+    for k in range(struct.unpack(">H", d[cmap + 2:cmap + 4])[0]):
+        plat, enc, off = struct.unpack(">HHI", d[cmap + 4 + 8 * k:cmap + 12 + 8 * k])
+        if not (plat == 0 or (plat == 3 and enc in (1, 10))):
+            continue
+        sub = cmap + off
+        fmt = struct.unpack(">H", d[sub:sub + 2])[0]
+        if fmt == 4:
+            seg = struct.unpack(">H", d[sub + 6:sub + 8])[0] // 2
+            o = sub + 14
+            ends = struct.unpack(f">{seg}H", d[o:o + 2 * seg])
+            starts = struct.unpack(f">{seg}H", d[o + 2 * seg + 2:o + 4 * seg + 2])
+            deltas = struct.unpack(f">{seg}h", d[o + 4 * seg + 2:o + 6 * seg + 2])
+            ro_at = o + 6 * seg + 2
+            offs = struct.unpack(f">{seg}H", d[ro_at:ro_at + 2 * seg])
+            for i in range(seg):
+                if starts[i] == 0xFFFF:
+                    continue
+                for c in range(starts[i], min(ends[i], 0xFFFE) + 1):
+                    if offs[i] == 0:
+                        g = (c + deltas[i]) & 0xFFFF
+                    else:
+                        at = ro_at + 2 * i + offs[i] + 2 * (c - starts[i])
+                        g = struct.unpack(">H", d[at:at + 2])[0] if at + 2 <= len(d) else 0
+                        g = (g + deltas[i]) & 0xFFFF if g else 0
+                    if g:
+                        got.add(c)
+        elif fmt == 12:
+            for j in range(struct.unpack(">I", d[sub + 12:sub + 16])[0]):
+                s0, e0, g0 = struct.unpack(">III", d[sub + 16 + 12 * j:sub + 28 + 12 * j])
+                if e0 - s0 <= 0x110000:
+                    got.update(c for c in range(s0, e0 + 1) if g0 + (c - s0))
+    _GLYPHS[key] = got
+    return got
+
+
+def font_report(font_file, text: str) -> dict:
+    """Whether the font has a glyph for every character of the captions: {"font_missing_glyphs": [...], "font_covers": bool}. A fact: a font that lacks a character draws a box
+    or another font's letter. The house font (Luckiest Guy) draws English, Albanian (ë, ç), French, Spanish and German; it has no Slavic or Turkish letters (š ž č ć đ ğ ş)."""
+    import struct
+    import unicodedata
+    try:
+        have = font_glyphs(font_file)
+    except (OSError, ValueError, struct.error) as e:
+        return {"font_missing_glyphs": None, "font_covers": None, "font_glyphs_error": f"{type(e).__name__}: {e}"[:200]}
+    miss = sorted({c for c in str(text or "") if not c.isspace() and unicodedata.category(c) not in ("Cc", "Cf", "Cs") and ord(c) not in have})
+    return {"font_missing_glyphs": miss, "font_covers": not miss}
 
 
 class Probe:
@@ -327,6 +410,8 @@ def compose_parts(plan: dict, caps: dict, total_s: float) -> dict:
     outline = {}
     if caps.get("stroke_color") and float(caps.get("stroke_width") or 0) > 0:
         outline = {"borderWidth": float(caps["stroke_width"]), "borderColor": str(caps["stroke_color"])}
+    if caps.get("shadow"):                                  # the Loupe look's shadow: capcut-cli's `--shadow` (has_shadow on, CapCut's own shadow numbers)
+        outline["shadow"] = True
     end_us = int(round(float(total_s) * 1e6))
     tracks, ops, kept, n, clipped, dropped = [], [], [], 0, 0, 0
     for tr in plan["tracks"]:
@@ -415,6 +500,8 @@ def apply_word_box(d: Path, vdir: Path, caps: dict, cues: list, canvas: dict, fo
                 "--align", "1", "--x", "0", "--y", str(y)]
         if caps.get("stroke_color") and float(caps.get("stroke_width") or 0) > 0:
             args += ["--border-width", str(caps["stroke_width"]), "--border-color", str(caps["stroke_color"])]
+        if caps.get("shadow"):
+            args.append("--shadow")
         if boxed:
             args += ["--bg-color", box["color"], "--bg-alpha", str(box["alpha"]), "--bg-style", str(box["style"]), "--bg-round-radius", str(box["round_radius"])]
         r = sh(args, 600)

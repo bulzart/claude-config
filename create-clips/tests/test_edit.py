@@ -192,9 +192,11 @@ def main():
             check(boxed and all(m.get("background_color", "").upper() == "#FF7A1A" and float(m.get("background_alpha") or 0) > 0 and abs(float(m.get("background_round_radius") or 0) - 0.3) < 1e-6
                                 and float(m.get("background_width")) == 0.08 and float(m.get("background_vertical_offset")) == 0.15 and int(m.get("check_flag") or 0) & 16 for m in boxed),
                   f"the spoken word's text is on the preset box: orange #FF7A1A, rounded 0.3, padding 0.08, a little low, the box flag set ({len(boxed)} boxed texts)")
-            check(plain and all(not float(m.get("background_alpha") or 0) and int(m.get("check_flag") or 0) & 8 and not int(m.get("check_flag") or 0) & 16 for m in plain)
-                  and all(str(m.get("font_path", "")).endswith("Montserrat-Bold.otf") for m in boxed + plain),
-                  f"the other words are plain with the outline ({len(plain)} texts) and every text has the font")
+            check(plain and all(not float(m.get("background_alpha") or 0) and int(m.get("check_flag") or 0) & 8 and int(m.get("check_flag") or 0) & 32 and not int(m.get("check_flag") or 0) & 16 for m in plain)
+                  and all(str(m.get("font_path", "")).endswith("LuckiestGuy-Regular.ttf") for m in boxed + plain),
+                  f"the other words are plain with the thick outline and the shadow ({len(plain)} texts) and every text is in Luckiest Guy, the house font")
+            check(all(abs(float(m["border_width"]) - 0.18) < 1e-6 and m.get("has_shadow") is True and json.loads(m["content"])["text"] == json.loads(m["content"])["text"].upper() for m in boxed + plain),
+                  "every caption text has Loupe video 04's look: the 0.18 outline, the shadow, upper case")
             ys = {round(float(s["clip"]["transform"]["y"]), 4) for t in c["tracks"] if t["type"] == "text" for s in t["segments"]}
             xs = [float(s["clip"]["transform"]["x"]) for t in c["tracks"] if t["type"] == "text" for s in t["segments"]]
             check(len(ys) == 1 and ys == {round(1 - 2 * 0.66, 4)} and min(xs) < 0 < max(xs) and all(-1 < x < 1 for x in xs), f"every caption text is on one baseline (y {ys}) and the words sit left and right of the centre")
@@ -298,8 +300,8 @@ def main():
             o2 = small_edl("S02", {"font_family": "Luckiest Guy", "highlight_color": "#22AAFF", "box": {"round_radius": 0.45}})
             r = cc("edl-check", "--run", run, "--edl", o2 / "edl.json", env=env)
             r = cc("captions", "--run", run, "--resolved", o2 / "resolved.json", env=env)
-            check(r.get("ok") and str(r.get("font_file", "")).endswith("LuckiestGuy-Regular.ttf") and r["size"]["vs_guide"] == "inside" and r.get("highlight_color") == "#22AAFF",
-                  "captions: a font FAMILY is looked up on the PC and its size is automatic (the em inside the guide) " + json.dumps({k: r.get(k) for k in ("font_file", "size")})[:300])
+            check(r.get("ok") and str(r.get("font_file", "")).endswith("LuckiestGuy-Regular.ttf") and r["size"]["vs_guide"] == "inside" and r.get("highlight_color") == "#22AAFF" and r.get("house_font") is True,
+                  "captions: the house font can also be named by its family (looked up on the PC), its size is automatic (the em inside the guide) and the highlight colour is the EDL's " + json.dumps({k: r.get(k) for k in ("font_file", "size")})[:300])
             r = cc("capcut-compose", "--run", run, "--video", "S02", "--name", "cctest5", "--store", store, env=env)
             r = cc("capcut-finish", "--run", run, "--draft", store / "cctest5", "--video", "S02", env=env)
             c5 = json.loads((store / "cctest5" / "draft_content.json").read_text(encoding="utf-8"))
@@ -307,7 +309,7 @@ def main():
             boxed5 = [tm5[s["material_id"]] for t in c5["tracks"] if t["type"] == "text" and t["name"].endswith(("-box", "-box-in")) for s in t["segments"]]
             check(r.get("ok") and boxed5 and all(m["background_color"].upper() == "#22AAFF" and abs(float(m["background_round_radius"]) - 0.45) < 1e-6
                                                   and str(m["font_path"]).endswith("LuckiestGuy-Regular.ttf") for m in boxed5),
-                  "a free font family and highlight colour reach the draft: Luckiest Guy on a blue #22AAFF box with radius 0.45 " + str(r)[:200])
+                  "a free highlight colour and box radius reach the draft: Luckiest Guy on a blue #22AAFF box with radius 0.45 " + str(r)[:200])
             o3 = small_edl("S03", {"style": "plain"})
             cc("edl-check", "--run", run, "--edl", o3 / "edl.json", env=env)
             r = cc("captions", "--run", run, "--resolved", o3 / "resolved.json", env=env)
@@ -316,6 +318,23 @@ def main():
             r = cc("capcut-finish", "--run", run, "--draft", store / "cctest6", "--video", "S03", env=env)
             c6 = json.loads((store / "cctest6" / "draft_content.json").read_text(encoding="utf-8"))
             check(r.get("ok") and [t["name"] for t in c6["tracks"] if t["type"] == "text"] == ["subtitle"] and len(c6["materials"]["texts"]) == r_cues(o3), "style plain: one text per caption cue on the subtitle track")
+            t6 = {m["id"]: m for m in c6["materials"]["texts"]}
+            check(all(str(m.get("font_path", "")).endswith("LuckiestGuy-Regular.ttf") and abs(float(m["border_width"]) - 0.18) < 1e-6 and m.get("has_shadow") is True for m in t6.values()),
+                  "the plain look is in the house font too, with the same 0.18 outline and shadow")
+            # THE FONT IS FIXED (the user, 2026-11-13): a video that names another font is reported as a fact, and a character the house font cannot draw is known before the build
+            o5 = small_edl("S05", {"font_family": "Barlow", "font_style": "Black"})
+            cc("edl-check", "--run", run, "--edl", o5 / "edl.json", env=env)
+            r = cc("captions", "--run", run, "--resolved", o5 / "resolved.json", env=env)
+            check(r.get("ok") and r.get("house_font") is False and str(r.get("font_file", "")).endswith("Barlow-Black.ttf"), "a video that names another font is reported: house_font false " + json.dumps({k: r.get(k) for k in ("font_file", "house_font")}))
+            r = cc("captions", "--run", run, "--resolved", out / "resolved.json", env=env)
+            check(r.get("house_font") is True and str(r.get("font_file", "")).endswith("LuckiestGuy-Regular.ttf") and r.get("font_covers") is True, "the default is the house font, Luckiest Guy, and it draws every character of the captions")
+            o6 = small_edl("S06", {"replace": [["Hello", "Šnax"]]})
+            cc("edl-check", "--run", run, "--edl", o6 / "edl.json", env=env)
+            r = cc("captions", "--run", run, "--resolved", o6 / "resolved.json", env=env)
+            check(r.get("house_font") is True and "Š" in (r.get("font_missing_glyphs") or []) and r.get("font_covers") is False, "a character the house font cannot draw (Š) is listed by `captions` before the build " + json.dumps({k: r.get(k) for k in ("font_missing_glyphs", "font_covers")}, ensure_ascii=False))
+            r = cc("capcut-build", "--run", run, "--video", "S06", "--name", "cctest_glyph", "--store", store, env=env)
+            check(any("cannot draw" in p for p in r.get("problems", [])) and "Š" in ((r.get("caption_font") or {}).get("missing_glyphs") or []),
+                  "capcut-build lists the missing character as a problem: " + str(r.get("problems"))[:200])
             # an hour-long video has hundreds of pieces: 150 here; the facts of a chunk are read once, not once per piece (it took 24 s for 300 pieces before)
             big = {"schema": "cc-edl/1", "video": "L02", "kind": "long", "layout": {"mode": "native"},
                    "segments": [{"id": f"b{i}", "rec_from": round((i * 0.15) % 20 + 0.5, 2), "rec_to": round((i * 0.15) % 20 + 1.0, 2)} for i in range(150)]}

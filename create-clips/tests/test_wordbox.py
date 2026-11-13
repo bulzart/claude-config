@@ -92,7 +92,8 @@ def main():
 
         # the line, the texts and the tracks
         box = wb.box_params({"highlight_color": "#22AAFF", "box": {"round_radius": 0.4}})
-        check(box["color"] == "#22AAFF" and box["round_radius"] == 0.4 and box["pad"] == 0.08 and box["gap_em"] == 0.7, "box_params: the colour and the radius are the EDL's, the rest is the preset")
+        check(box["color"] == "#22AAFF" and box["round_radius"] == 0.4 and box["pad"] == 0.08 and box["gap_em"] == 0.55 and box["v_offset"] == 0.15,
+              "box_params: the colour and the radius are the EDL's, the rest is Loupe video 04's preset (pad 0.08, v_offset 0.15, words 0.55 em apart)")
         probe = wb.Probe(str(FONT), s169, 1920, box["gap_em"])
         c1 = {"start": 1.0, "end": 2.0, "words": [W("this", 1.0, 1.2), W("point", 1.3, 1.5), W("immovable.", 1.6, 2.0)]}
         c2 = {"start": 2.0, "end": 3.0, "words": [W("big", 2.0, 2.2), W("play", 2.4, 2.8)]}
@@ -122,6 +123,33 @@ def main():
               and all(parts[i]["end"] <= parts[i + 1]["start"] + 1e-6 for i in range(len(parts) - 1)), f"a too-wide caption is split ({len(parts)} parts), no word lost or reordered")
         one = wb.fit_cues([c1], probe, 5000, 0.25)
         check(len(one) == 1, "a caption that fits is left alone")
+
+    # THE LOUPE VIDEO 04 LOOK is the default and the font is fixed (the user, 2026-11-13, after the screenshots of our box and of that video's: "always use the same font family")
+    for k in ("short", "long"):
+        d = cc_edit.DEFAULT_CAPTIONS[k]
+        check(d["font_file"] == "LuckiestGuy-Regular.ttf" and d["font_file"] == wb.HOUSE_FONT_FILE and not d.get("font_family") and d["stroke_width"] == 0.18 and d["stroke_color"] == "#000000"
+              and d["shadow"] is True and d["case"] == "upper" and d["color"] == "#FFFFFF" and d["box"]["gap_em"] == 0.55 and d["box"]["pad"] == 0.08 and d["box"]["v_offset"] == 0.15
+              and d["box"]["round_radius"] == 0.3 and d["highlight_color"] == "#FF7A1A" and d["style"] == "word-box",
+              f"the {k} default is Loupe video 04's look: Luckiest Guy, upper case, white with a 0.18 black outline and a shadow, the box 0.3 / 0.08 / 0.15 / 0.55 em")
+    if FONT2.is_file():
+        m1 = wb.font_report(str(FONT2), "TEAM FALCONS WIN, ZERI CKA? Zëri çka? 3K 1v3 m0NESY")
+        m2 = wb.font_report(str(FONT2), "Šnax Żyw Ğ")
+        check(m1["font_covers"] and m1["font_missing_glyphs"] == [], "Luckiest Guy draws English, digits, punctuation and Albanian (ë ç): " + json.dumps(m1, ensure_ascii=False))
+        check(not m2["font_covers"] and {"Š", "Ż", "Ğ"} <= set(m2["font_missing_glyphs"]), "it does not draw Š Ż Ğ: reported before the build as a fact: " + json.dumps(m2, ensure_ascii=False))
+        # the box's relation to the font: the line is 1.0 em with the baseline low in it (what the tuned v_offset assumes), unlike a 1.2 em line (Barlow, Montserrat)
+        from PIL import ImageFont
+        asc, desc = ImageFont.truetype(str(FONT2), 1000).getmetrics()
+        check(abs((asc + desc) / 1000 - 1.0) < 0.01, f"Luckiest Guy's line is 1.0 em (ascent {asc}, descent {desc}), the line the box numbers were tuned for")
+        # the compose parts carry the outline AND the shadow, and the box with its padding and offset on the boxed texts only
+        caps0 = {**cc_edit.DEFAULT_CAPTIONS["long"], "size": 4.5, "y_rel": 0.76}
+        pl = wb.plan_word_box(caps0, [c1_ := {"start": 0.0, "end": 1.0, "words": [W("TEAM", 0.0, 0.4), W("WINS", 0.5, 0.9)]}], {"width": 1920, "height": 1080, "fps": 30}, str(FONT2))
+        cp = wb.compose_parts(pl, caps0, 5.0)
+        ops_box = [o for o in cp["operations"] if "bgColor" in o["style"]]
+        ops_plain = [o for o in cp["operations"] if "bgColor" not in o["style"]]
+        check(cp["texts"] == len(cp["operations"]) and ops_box and ops_plain and all(o["style"].get("shadow") is True and o["style"]["borderWidth"] == 0.18 and o["style"]["borderColor"] == "#000000" for o in cp["operations"]),
+              "every composed text gets the 0.18 black outline and the shadow; " + str(len(ops_box)) + " boxed, " + str(len(ops_plain)) + " plain")
+        check(all(o["style"]["bgRoundRadius"] == 0.3 and o["style"]["bgWidth"] == 0.08 and o["style"]["bgHeight"] == 0.08 and o["style"]["bgVOffset"] == 0.15 and o["style"]["bgHOffset"] == 0.0 for o in ops_box),
+              "the boxed texts carry radius 0.3, padding 0.08 and the 0.15 vertical offset")
 
     # an earlier build's caption tracks are removed with their materials
     content = {"tracks": [{"type": "text", "name": "subtitle", "segments": [{"material_id": "a", "extra_material_refs": ["x"]}]},
