@@ -9,7 +9,9 @@ Commands (see README.md for the contract; times are rec times):
   grid-frame     one full-resolution frame with a 10% grid (and an optional region box) to read coordinates from
   censor         blurred/pixelated copy of a span (only that span, optionally only a region): the file replaces the span in the edit
   edl-check      resolve an EDL (cuts, layouts, zooms, sfx, transitions, censor) into pieces, the MCP plan and the finish plan; facts at every cut
-  captions       caption cues from the transcript words of the resolved pieces -> captions.json + captions.srt (nothing when the run's captions setting is off)
+  captions       caption cues from the transcript words of the resolved pieces -> captions.json + captions.srt (nothing when the run's captions setting is off); the look is the
+                 word-box one by default (the spoken word on a rounded colour box, cc_wordbox.py) or plain
+  fonts          the font files the captions can use (family, style, file, where kept)
   capcut-name    a free CapCut project name
   capcut-finish  after the last MCP save: zoom keyframes, transitions, background blur, captions (not when the run's captions setting is off), font, intro, repair
 """
@@ -31,6 +33,7 @@ from pathlib import Path
 from cc_common import (CC_HOME, cfg_get, chunk_dir, fail, ffprobe_facts, find_tool, fmt_hms, load_chunks, load_state,  # noqa: F401
                        now_iso, out, parse_time, read_json, resolve_run, run_cmd, run_paths, say, split_across_chunks,
                        update_state, write_json, write_text)
+import cc_wordbox as wb  # noqa: E402  (the word-box caption look: planning and the draft writer)
 
 EDL_SCHEMA = "cc-edl/1"
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -447,14 +450,102 @@ def cmd_censor(a):
 
 # --------------------------------------------------------------------------- the EDL
 
+# The default look (the user, 2026-11-13): the Loupe toolkit's word-box captions: white words with a black outline, the word being spoken on a rounded colour box
+# that moves from word to word (`style: "word-box"`, the box's numbers in `box`, its colour `highlight_color`), with a free font family (`font_family`, or
+# `font_file`) and a free highlight colour: the agent picks both to match the video's appearance. `style: "plain"` is the old one-text-per-caption look (keyword
+# colouring with `highlight_words`); it is also what a language the word box cannot take (written without spaces, or right to left) falls back to.
+# `size: "auto"` puts the em at `size_em_pct` percent of the picture's smaller side (cc_wordbox.auto_size): small/normal for phones and tablets, in any font.
 DEFAULT_CAPTIONS = {
-    "short": {"font_file": "Montserrat-Bold.otf", "size": 15, "color": "#FFFFFF", "stroke_color": "#000000", "stroke_width": 0.1, "y_rel": 0.66,
-              "max_words": 3, "max_chars": 18, "case": "upper", "highlight_words": [], "highlight_color": "#FFD700", "highlight_size": 1.15,
-              "intro": "fade-in", "intro_s": 0.1, "mask_terms": [], "replace": [], "min_cue_s": 0.25, "gap_break_s": 0.5},
-    "long": {"font_file": "Montserrat-Bold.otf", "size": 6, "color": "#FFFFFF", "stroke_color": "#000000", "stroke_width": 0.08, "y_rel": 0.88,
-             "max_words": 7, "max_chars": 42, "case": "as-is", "highlight_words": [], "highlight_color": "#FFD700", "highlight_size": 1.1,
-             "intro": None, "intro_s": 0.0, "mask_terms": [], "replace": [], "min_cue_s": 0.4, "gap_break_s": 0.8},
+    "short": {"style": "word-box", "font_file": "Montserrat-Bold.otf", "size": "auto", "size_em_pct": wb.DEFAULT_EM_PCT, "color": "#FFFFFF", "stroke_color": "#000000",
+              "stroke_width": 0.1, "y_rel": 0.66, "max_words": 3, "max_chars": 18, "case": "upper", "highlight_words": [], "highlight_color": wb.DEFAULT_COLOR,
+              "highlight_size": 1.15, "box": dict(wb.DEFAULT_BOX), "intro": "fade-in", "intro_s": 0.1, "mask_terms": [], "replace": [], "min_cue_s": 0.25, "gap_break_s": 0.5},
+    "long": {"style": "word-box", "font_file": "Montserrat-Bold.otf", "size": "auto", "size_em_pct": wb.DEFAULT_EM_PCT, "color": "#FFFFFF", "stroke_color": "#000000",
+             "stroke_width": 0.08, "y_rel": 0.88, "max_words": 5, "max_chars": 32, "case": "as-is", "highlight_words": [], "highlight_color": wb.DEFAULT_COLOR,
+             "highlight_size": 1.1, "box": dict(wb.DEFAULT_BOX), "intro": None, "intro_s": 0.0, "mask_terms": [], "replace": [], "min_cue_s": 0.4, "gap_break_s": 0.8},
 }
+PLAIN_CAPTIONS = {"short": {"highlight_color": "#FFD700"},
+                  "long": {"max_words": 7, "max_chars": 42, "highlight_color": "#FFD700"}}
+
+
+def whisper_language(run) -> str | None:
+    st = load_state(run) or {}
+    lang = ((st.get("settings") or {}).get("whisper") or {}).get("language")
+    return lang or (cfg_get("whisper", {}) or {}).get("language")
+
+
+def merge_captions(run, kind: str, edl_caps: dict | None) -> dict:
+    """The captions block of a video: the default look for its kind, the EDL's own keys over it, the user's picks at the start (state.json captions_font and
+    captions_color) filling what the EDL leaves open, `style` settled (a language the word box cannot take falls back to plain) and `enabled` = the run's setting."""
+    k = "short" if kind == "short" else "long"
+    edl_caps = dict(edl_caps or {})
+    style = str(edl_caps.get("style") or "word-box").strip().lower()
+    if style not in ("word-box", "plain"):
+        style = "word-box"
+    reason = None
+    if style == "word-box":
+        ok, why = wb.language_support(whisper_language(run))
+        if not ok:
+            style, reason = "plain", f"the captions' language is {why}: the word box needs spaces between words and left to right, so the plain caption look is used"
+    base = {**DEFAULT_CAPTIONS[k], **(PLAIN_CAPTIONS[k] if style == "plain" else {})}
+    caps = {**base, **edl_caps, "style": style}
+    caps["box"] = {**wb.DEFAULT_BOX, **(edl_caps.get("box") or {})}
+    st = load_state(run) or {}
+    if st.get("captions_font") and not (edl_caps.get("font_family") or edl_caps.get("font_file")):
+        caps["font_family"] = str(st["captions_font"])
+    if st.get("captions_color") and "highlight_color" not in edl_caps:
+        caps["highlight_color"] = str(st["captions_color"])
+    if reason:
+        caps["style_reason"] = reason
+    caps["enabled"] = captions_on(run)
+    return caps
+
+
+def awl_cmd() -> list:
+    return [sys.executable, str(awl_home() / "scripts" / "awl.py")]
+
+
+def font_rows(family: str | None = None) -> list:
+    """The font files on this PC the edit can use (the Loupe toolkit's list: its fonts folder first, then CapCut's own, then Windows'), optionally only the
+    families containing `family`: facts, never a judgement of which fits."""
+    r = sh([*awl_cmd(), "capcut-font", "--list", *(["--family", family] if family else [])], 120)
+    res = r.get("result")
+    return (res or {}).get("fonts", []) if isinstance(res, dict) else []
+
+
+_STYLE_PREFERENCE = ("bold", "extrabold", "extra bold", "black", "semibold", "medium", "regular")
+
+
+def caption_font(caps: dict) -> str:
+    """The caption font's file: `font_family` (looked up on this PC, the style in `font_style` or else Bold first) or `font_file` (a name in the Loupe fonts folder or
+    an absolute path)."""
+    fam = str(caps.get("font_family") or "").strip()
+    if fam:
+        rows = font_rows(fam)
+        exact = [r for r in rows if str(r["family"]).lower() == fam.lower()] or rows
+        if not exact:
+            fail(f"no font family matching {fam!r} on this PC: `T fonts --family <part of the name>` lists them", 2, families=sorted({r["family"] for r in font_rows()})[:60])
+        want = str(caps.get("font_style") or "").strip().lower()
+
+        def rank(r):
+            sty = str(r.get("style") or "").lower()
+            if want and sty == want:
+                return -1
+            return next((i for i, p in enumerate(_STYLE_PREFERENCE) if sty == p), len(_STYLE_PREFERENCE))
+        return str(sorted(exact, key=rank)[0]["file"])
+    p = Path(str(caps["font_file"]))
+    if not p.is_absolute():
+        p = awl_home() / "fonts" / p
+    if not p.is_file():
+        fail(f"captions.font_file not found: {p} (a name from the Loupe fonts folder, an absolute path, or captions.font_family: `T fonts` lists the fonts)", 2)
+    return str(p).replace("\\", "/")
+
+
+def caption_size(caps: dict, canvas: dict, font_file: str) -> tuple:
+    """(the CapCut size to use, facts about it): `size: "auto"` puts the font's em at `size_em_pct` percent of the picture's smaller side, a number is taken as given."""
+    W, H = int(canvas["width"]), int(canvas["height"])
+    raw = caps.get("size", "auto")
+    size = wb.auto_size(font_file, W, H, float(caps.get("size_em_pct") or wb.DEFAULT_EM_PCT)) if str(raw).strip().lower() == "auto" else float(raw)
+    return size, wb.size_facts(font_file, size, W, H)
 
 
 def load_catalogue() -> dict:
@@ -687,8 +778,7 @@ def plan_edl(run: Path, edl: dict, make_files: bool) -> tuple:
     totals = {"duration_s": round(at, 3), "pieces": len(pieces), "segments": len(seg_info), "sfx": len(sfx_ops),
               "chunks_used": sorted({p["chunk"] for p in pieces if p["kind"] == "plain"}),
               "censored_spans": sum(1 for p in pieces if p["kind"] == "censor")}
-    caps = {**DEFAULT_CAPTIONS["short" if kind == "short" else "long"], **(edl.get("captions") or {})}
-    caps["enabled"] = captions_on(run)               # the run's captions setting (on by default); finish.json and resolved.json carry it
+    caps = merge_captions(run, kind, edl.get("captions"))         # the look, the user's picks at the start and the run's captions setting (finish.json and resolved.json carry them)
     resolved = {"schema": "cc-resolved/1", "video": vid, "kind": kind, "canvas": {"width": canvas[0], "height": canvas[1], "fps": fps},
                 "segments": seg_info, "pieces": pieces, "joins": joins, "totals": totals, "warnings": warnings, "captions": caps}
     ops = [{"op": "add_video", "track": "main", "file": p["file"], "srcStartSec": round(p["src_from"], 3), "durSec": round(p["dur_src"], 3),
@@ -759,9 +849,8 @@ def _srt_time(t: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
-def build_cues(run: Path, resolved: dict) -> dict:
-    caps = resolved["captions"]
-    terms = {str(t).lower() for t in caps.get("mask_terms") or []}
+def _resolved_words(run: Path, resolved: dict) -> list:
+    """The spoken words of the resolved pieces on the OUTPUT timeline: [{"w", "s", "e"}] sorted by start."""
     cache = {}
     words = []
     for p in resolved["pieces"]:
@@ -776,6 +865,36 @@ def build_cues(run: Path, resolved: dict) -> dict:
                 a, b = max(s, off0), min(e, off0 + span)
                 words.append({"w": w, "s": round(p["at"] + (a - off0) / p["speed"], 3), "e": round(p["at"] + (b - off0) / p["speed"], 3)})
     words.sort(key=lambda x: x["s"])
+    return words
+
+
+def build_cues_word_box(run: Path, resolved: dict, caps: dict, font_file: str) -> dict:
+    """The captions for the word-box look: the words masked and spelled (the lexicon works on word sequences here, so a phrase Whisper split across a caption's
+    edge still matches and keeps its time), grouped into captions by the same rules as the plain look, a caption whose line would be wider than the frame
+    split in two, then the plan of CapCut texts (one per word and state) as facts."""
+    words = _resolved_words(run, resolved)
+    tokens = wb.tokens_from_words(words, caps, _mask_word)
+    groups = wb.group_words(tokens, caps)
+    cues = [{"start": s, "end": e, "words": ws} for ws, (s, e) in zip(groups, wb.cue_times(groups, caps["min_cue_s"]))]
+    canvas = resolved["canvas"]
+    W, fps = int(canvas["width"]), int(canvas.get("fps") or 30)
+    box = wb.box_params(caps)
+    probe = wb.Probe(font_file, float(caps["size"]), W, float(box["gap_em"]))
+    limit = wb.FIT_FRACTION * W - 2 * wb.EDGE_EM * probe.em - 0.04 * W
+    split = wb.fit_cues(cues, probe, limit, float(caps["min_cue_s"]))
+    out_cues = [{"i": i + 1, "start": round(c["start"], 3), "end": round(c["end"], 3), "text": " ".join(w["w"] for w in c["words"]), "words": c["words"]}
+                for i, c in enumerate(split)]
+    rows = wb.plan_rows(out_cues, fps)
+    groups_t, geo = wb.plan_texts(rows, probe, W)
+    return {"cues": out_cues, "n_words": len(words), "split_for_width": len(split) - len(cues),
+            "params": {k: caps[k] for k in ("max_words", "max_chars", "case", "gap_break_s", "min_cue_s")},
+            "word_box": {"font_file": font_file, "size": float(caps["size"]), "box": box, **wb.plan_summary(groups_t), "geometry": geo}}
+
+
+def build_cues(run: Path, resolved: dict) -> dict:
+    caps = resolved["captions"]
+    terms = {str(t).lower() for t in caps.get("mask_terms") or []}
+    words = _resolved_words(run, resolved)
     mx_words, mx_chars, gap = int(caps["max_words"]), int(caps["max_chars"]), float(caps["gap_break_s"])
     cues, cur = [], []
 
@@ -821,17 +940,34 @@ def cmd_captions(a):
     if not captions_on(run):
         out({"ok": True, "video": resolved["video"], "skipped": True, "cues": 0, "silent_stretches_over_4s": [], "files": [],
              "note": "captions are OFF for this run (state.json captions=off, picked at the start): nothing was written and capcut-finish adds no caption track"})
-    res = build_cues(run, resolved)
+    caps = resolved["captions"]
+    font_file = caption_font(caps)
+    size, size_info = caption_size(caps, resolved["canvas"], font_file)
+    if caps.get("style") == "word-box":
+        res = build_cues_word_box(run, resolved, {**caps, "size": size}, font_file)
+    else:
+        res = build_cues(run, resolved)
     d = rp.resolve().parent
-    write_json(d / "captions.json", {"video": resolved["video"], **res})
+    write_json(d / "captions.json", {"video": resolved["video"], "style": caps.get("style"), "font_file": font_file, "size": size_info, **res})
     srt = []
     for c in res["cues"]:
         srt.append(f"{c['i']}\n{_srt_time(c['start'])} --> {_srt_time(c['end'])}\n{c['text']}\n")
     write_text(d / "captions.srt", "\n".join(srt))
-    out({"ok": True, "video": resolved["video"], "cues": len(res["cues"]), "words": res["n_words"], "duration_s": resolved["totals"]["duration_s"],
-         "silent_stretches_over_4s": _silent(res["cues"], resolved["totals"]["duration_s"]),
+    out({"ok": True, "video": resolved["video"], "style": caps.get("style"), "style_reason": caps.get("style_reason"), "cues": len(res["cues"]), "words": res["n_words"],
+         "duration_s": resolved["totals"]["duration_s"], "silent_stretches_over_4s": _silent(res["cues"], resolved["totals"]["duration_s"]),
+         "font_file": font_file, "size": size_info, "highlight_color": caps.get("highlight_color") if caps.get("style") == "word-box" else None,
+         **({"word_box": res["word_box"], "split_for_width": res["split_for_width"]} if caps.get("style") == "word-box" else {}),
          "files": [str(d / "captions.json"), str(d / "captions.srt")],
-         "note": "captions are ON for this run (the default): every second of speech is captioned; a stretch without speech has none unless the agent adds a text line"})
+         "note": "captions are ON for this run (the default): every second of speech is captioned; a stretch without speech has none unless the agent adds a text line. "
+                 "The look is `style` (word-box: the spoken word on a rounded colour box, one CapCut text per word; plain: one text per caption); the font, the highlight "
+                 "colour and the size are the EDL's captions block (size auto = the em at size_em_pct of the picture's smaller side)"})
+
+
+def cmd_fonts(a):
+    rows = font_rows(a.family)
+    out({"ok": True, "count": len(rows), "family_filter": a.family, "fonts": rows,
+         "note": "facts only, never a judgement of which fits: put a family in the EDL's captions.font_family (captions.font_style picks Bold, Black ... when a family has several) "
+                 "or a file in captions.font_file (a name in the Loupe fonts folder or an absolute path); the library's own copy is the one a project keeps (kept_by)"})
 
 
 def _silent(cues: list, total: float) -> list:
@@ -1144,21 +1280,29 @@ def cmd_capcut_finish(a):
     else:
         if not srt.is_file():
             fail(f"captions are on for this run and {srt} does not exist: run `captions` first")
-        args = [cli, "import-srt", str(d), str(srt), "--track-name", "subtitle", "--font-size", str(caps["size"]), "--color", caps["color"],
-                "--border-width", str(caps["stroke_width"]), "--border-color", caps["stroke_color"], "--align", "1", "--y", f"{1 - 2 * float(caps['y_rel']):.3f}"]
-        hw = [w for w in caps.get("highlight_words") or [] if str(w).strip()]
-        if hw:
-            hf = vdir / "highlight-words.txt"
-            write_text(hf, "\n".join(hw) + "\n")
-            args += ["--highlight-words", f"@{hf}", "--keyword-color", caps["highlight_color"], "--keyword-size", str(caps["highlight_size"])]
-        steps.append({"step": "captions-import", **sh(args, 900)})
-        font = Path(str(caps["font_file"]))
-        if not font.is_absolute():
-            font = awl_home() / "fonts" / font
-        steps.append({"step": "captions-font", **sh([*awl, "capcut-font", "--draft", str(d), "--font-file", str(font), "--track", "subtitle"], 300)})
-        if caps.get("intro"):
-            steps.append({"step": "captions-intro", **sh([*awl, "capcut-text-anim", "--draft", str(d), "--track", "subtitle", "--intro", caps["intro"],
-                                                             "--intro-duration", str(caps.get("intro_s") or 0.1), "--run", str(run)], 300)})
+        font_path = caption_font(caps)
+        size, size_info = caption_size(caps, finish["canvas"], font_path)
+        if caps.get("style") == "word-box":               # the spoken word on a rounded colour box: one CapCut text per word and state (cc_wordbox.py)
+            cj = read_json(vdir / "captions.json") or {}
+            if not cj.get("cues"):
+                fail(f"captions are on (word-box look) and {vdir / 'captions.json'} has no cues: run `captions` again")
+            r = wb.apply_word_box(d, vdir, {**caps, "size": size}, cj["cues"], finish["canvas"], font_path, cli, awl, run, sh, draft_files)
+            steps.extend(r["steps"])
+            if not r["ok"] and r.get("error"):
+                steps.append({"step": "captions-word-box", "exit": 1, "error": r["error"], "geometry": r.get("geometry")})
+        else:
+            args = [cli, "import-srt", str(d), str(srt), "--track-name", "subtitle", "--font-size", str(size), "--color", caps["color"],
+                    "--border-width", str(caps["stroke_width"]), "--border-color", caps["stroke_color"], "--align", "1", "--y", f"{1 - 2 * float(caps['y_rel']):.3f}"]
+            hw = [w for w in caps.get("highlight_words") or [] if str(w).strip()]
+            if hw:
+                hf = vdir / "highlight-words.txt"
+                write_text(hf, "\n".join(hw) + "\n")
+                args += ["--highlight-words", f"@{hf}", "--keyword-color", caps["highlight_color"], "--keyword-size", str(caps["highlight_size"])]
+            steps.append({"step": "captions-import", **sh(args, 900)})
+            steps.append({"step": "captions-font", **sh([*awl, "capcut-font", "--draft", str(d), "--font-file", font_path, "--track", "subtitle"], 300)})
+            if caps.get("intro"):
+                steps.append({"step": "captions-intro", **sh([*awl, "capcut-text-anim", "--draft", str(d), "--track", "subtitle", "--intro", caps["intro"],
+                                                                 "--intro-duration", str(caps.get("intro_s") or 0.1), "--run", str(run)], 300)})
     steps.append({"step": "repair", **sh([*awl, "capcut-repair", "--draft", str(d), "--keep-text"], 1800)})
     bad = [s for s in steps if s.get("exit") not in (None, 0) and s["step"] != "repair"] + ([s for s in steps if s["step"] == "repair" and s.get("exit") not in (0,)])
     out({"ok": not bad and not failed and not any(s.get("pieces_without_a_clip") for s in steps), "draft": str(d), "video": a.video, "steps": steps})
@@ -1230,10 +1374,14 @@ def register(sub) -> None:
     p.add_argument("--make-censor", action="store_true", help="make the blurred files the EDL's censor entries need")
     p.set_defaults(func=cmd_edl_check)
 
-    p = sub.add_parser("captions", help="caption cues from the transcript words of the resolved pieces")
+    p = sub.add_parser("captions", help="caption cues from the transcript words of the resolved pieces (the word-box look's texts as facts; nothing when the run's captions setting is off)")
     p.add_argument("--run", required=True)
     p.add_argument("--resolved", required=True, help="the resolved.json next to the EDL")
     p.set_defaults(func=cmd_captions)
+
+    p = sub.add_parser("fonts", help="the font files the captions can use (family, style, file, where it is kept): the Loupe fonts folder first, then CapCut's own, then Windows'; --family filters")
+    p.add_argument("--family", help="only the families containing this text (e.g. luckiest, bangers, montserrat)")
+    p.set_defaults(func=cmd_fonts)
 
     p = sub.add_parser("capcut-name", help="a free CapCut project name")
     p.add_argument("--channel", required=True)

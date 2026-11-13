@@ -154,7 +154,16 @@ def main():
                   f"the project's cover is a frame of the first clip on the canvas's shape ({pr['width']}x{pr['height']}), not the template's 'Template text' tile")
             c = json.loads((store / "cctest" / "draft_content.json").read_text(encoding="utf-8"))
             texts = c["materials"].get("texts", [])
-            check(len(texts) == len(json.loads((out / "captions.json").read_text(encoding="utf-8"))["cues"]), "one text per caption cue in the draft")
+            cj = json.loads((out / "captions.json").read_text(encoding="utf-8"))
+            check(cj.get("style") == "word-box" and len(texts) == cj["word_box"]["texts"] > len(cj["cues"]),
+                  f"word-box captions (the default look): one CapCut text per word and state in the draft ({len(texts)} = the planned {cj['word_box']['texts']}, more than the {len(cj['cues'])} cues)")
+            tnames = [t["name"] for t in c["tracks"] if t["type"] == "text"]
+            check(tnames and all(n.startswith("wordcap-") for n in tnames) and "subtitle" not in tnames, "the caption tracks are the wordcap-* ones and there is no plain subtitle track: " + str(tnames))
+            tm = {m["id"]: m for m in texts}
+            boxed = [tm[s["material_id"]] for t in c["tracks"] if t["type"] == "text" and t["name"].endswith(("-box", "-box-in")) for s in t["segments"]]
+            plain = [tm[s["material_id"]] for t in c["tracks"] if t["type"] == "text" and t["name"].endswith(("-word", "-word-in")) for s in t["segments"]]
+            print("DEBUG boxed material keys:", {k: v for k, v in boxed[0].items() if k.startswith(("background", "border", "check_flag", "font_path", "text_color", "has_"))} if boxed else None)
+            print("DEBUG plain material keys:", {k: v for k, v in plain[0].items() if k.startswith(("background", "check_flag"))} if plain else None)
             seg0 = [t for t in c["tracks"] if t["type"] == "video"][0]["segments"][0]
             check(any(k["property_type"] == "KFTypeScaleX" for k in seg0.get("common_keyframes", [])), "the zoom keyframes are on the first clip")
             lint = subprocess.run([capcut, "lint", str(store / "cctest")], capture_output=True, text=True)
