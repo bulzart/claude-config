@@ -43,12 +43,22 @@
     "long_canvas": [1920, 1080],
     "fps": 30
   },
+  "report": {
+    "enabled": true,
+    "model": "claude-haiku-5-5",
+    "effort": "high",
+    "parallel": 2,
+    "timeout_s": 420,
+    "max_turns": 30,
+    "max_attempts": 2,
+    "claude_bin": "",
+    "setting_sources": "project"
+  },
   "agents": {
     "research_max": 4,
     "scan_max": 6,
-    "scan_model": "haiku",
-    "scan_chunks_streamer": 6,
-    "scan_chunks_game": 5,
+    "scan_chunks_streamer": 10,
+    "scan_chunks_game": 8,
     "produce_max": 4
   },
   "awl_home": "C:/Users/Bulzart/.claude/analyze-with-loupe"
