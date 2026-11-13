@@ -38,7 +38,7 @@ Procedure (an agent does it for its own video):
 6. Every span blurred is listed in the video's report (rec range, what, region, style).
 
 ## 3. Other things an agent keeps in mind
-- **Slurs, hate and threats**: a moment whose point is hate is not picked. A slur that is incidental is masked in the caption (`captions.mask_terms`) and, when the cut can avoid it, cut out; the report lists it. Ordinary swearing is the streamer's voice: it stays; mask only the hardest words in captions when the platform would limit the video (the report says which).
+- **Slurs, hate and threats**: a moment whose point is hate is not picked. A slur that is incidental is masked in the caption (`captions.mask_terms`) and, when the cut can avoid it, cut out; the report lists it. **With captions OFF** (the user's choice at the start) nothing masks it and no audio is edited: the plan marks every span where one is heard and cuts around it (or leaves the span out), and the report lists every one that is still audible. Ordinary swearing is the streamer's voice: it stays; mask only the hardest words in captions when the platform would limit the video (the report says which).
 - **Meaning**: a cut never makes a person say or mean something they did not (no cutting "I would never" down to "I would"). When a clip needs context to be fair, the context is in it.
 - **Minors, health, tragedies**: no jokes on a real tragedy, a real death or a real victim; not picked.
 - **Commercial music**: a song that plays on stream can get a clip muted or claimed on YouTube, TikTok and Instagram; cut around it or leave the moment out; the report notes it.

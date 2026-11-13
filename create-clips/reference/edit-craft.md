@@ -1,6 +1,6 @@
 # Edit craft: cuts, layouts, zoom, transitions, sound effects, captions
 
-The edit has four tools and nothing else: **cuts**, **captions** (always), **VFX** (zoom, a short transition, a blur where `safety.md` says so) and **sound effects** that match the situation. No drawings, no stickers, no emoji, no music bed.
+The edit has four tools and nothing else: **cuts**, **captions** (when the run's captions setting is on, which is the default), **VFX** (zoom, a short transition, a blur where `safety.md` says so) and **sound effects** that match the situation. No drawings, no stickers, no emoji, no music bed.
 You write the edit as an EDL (`60-outputs/<id>/edl.json`); `cc.py edl-check` resolves it into the CapCut plan and tells you facts about every cut.
 
 ## The EDL (schema `cc-edl/1`; times are rec time)
@@ -57,7 +57,9 @@ They are seasoning that matches the situation, never decoration. The names are t
 | A tragic or heavy moment | none | never a meme sound on real pain, loss or a serious subject |
 - Never over a word that carries the joke; leave the speech clean. About one per 8 to 10 s of a short at most, far fewer in long videos. Never a sound with a religious feel (bells, choir, chant, amen). Volume relative to the speech: the voice must stay on top.
 
-## Captions (always, on every second of speech)
+## Captions (when the run's captions setting is on, which is the default: on every second of speech)
+The user picks captions or no captions at the start of the command; it is `state.json -> captions` (`on` or `off`; a run without the key is `on`; `T state --run RUN get captions`). **With captions OFF** the EDL has no `captions` block, `cc.py captions` answers "skipped" and writes nothing,
+`capcut-finish` adds no caption track, font or entrance (`finish.json` carries `captions.enabled: false`), the lexicon and every cue check are not needed, and a slur that is spoken stays audible (nothing masks it, no audio is edited): the plan cuts around it. Everything below is for captions ON.
 The captions come from the Whisper words of the pieces (`cc.py captions`), 1 to 4 words per cue in a short, a line of up to 7 words in a long video.
 - Shorts: Montserrat Bold, size 15 (about 93 px on 1080 wide; CapCut size = px / (0.00575 x canvas width)), white with a black outline, around 66% down (`y_rel` 0.66), upper case, the key word in gold (`highlight_words`), a 0.1 s fade-in.
 - Long: Montserrat Bold, size 6, bottom (`y_rel` 0.88), normal case, no intro.
@@ -66,4 +68,4 @@ The captions come from the Whisper words of the pieces (`cc.py captions`), 1 to 
 - No emoji in any text. The captions never cover the face or the key action (move `y_rel` for the whole video if they do).
 
 ## Check before you build
-`edl-check` returns: no warnings, no missing blurred files, no refused transitions, every cut clean, the duration inside the brief (a short at most 180 s), the captions' silent stretches understood, the SFX not on speech, nothing religious or superstitious in the transcript words of the spans (`safety.md`).
+`edl-check` returns: no warnings, no missing blurred files, no refused transitions, every cut clean, the duration inside the brief (a short at most 180 s), the captions' silent stretches understood (captions on), the SFX not on speech, nothing religious or superstitious in the transcript words of the spans (`safety.md`).

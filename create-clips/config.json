@@ -65,7 +65,9 @@
     "catchup_hours": 24
   },
   "agents": {
-    "research_max": 4,
+    "research_max": 1,
+    "research_calls": 15,
+    "scan_min_blocks": 2,
     "scan_max": 6,
     "scan_chunks_streamer": 10,
     "scan_chunks_game": 8,

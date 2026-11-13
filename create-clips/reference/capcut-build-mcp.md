@@ -10,7 +10,7 @@ so it is used only when `capcut-compose` has failed with a plain error that the 
 - The chunk files are used **in place**: `capcut_add_video` (MCP) references the file; capcut-cli's `add-video` COPIES the media into the draft (C: has little free space): never use it.
 - Never `capcut_transcribe`, `capcut_add_captions`, `capcut_clear_captions`, `capcut_add_keyframe` for a zoom, or `capcut_save` with force.
 
-## Steps (after the EDL, `edl-check` and `captions` of `capcut-build.md` step 1)
+## Steps (after the EDL, `edl-check` and, when captions are on, `captions` of `capcut-build.md` step 1)
 1. **Name**: `T capcut-name --channel <channel> --video <id>` gives a free project name (`12_Nov_2026_kaicenat_S03`) and its path.
 2. **Tools**: `ToolSearch "select:mcp__capcut__capcut_clone_draft,mcp__capcut__capcut_read_timeline,mcp__capcut__capcut_add_video,mcp__capcut__capcut_add_audio,mcp__capcut__capcut_add_track,mcp__capcut__capcut_trim_segment,mcp__capcut__capcut_delete_segment,mcp__capcut__capcut_validate,mcp__capcut__capcut_save,mcp__capcut__capcut_discard"`.
 3. **Project**: `capcut_clone_draft {base:"_analyze-stack-template", newName:"<name>", empty:true}`, then at once `TA capcut-prep --draft "<store>/<name>" --canvas <W>x<H>` (shorts 1080x1920, long 1920x1080).

@@ -1,7 +1,7 @@
 # Game edit craft: the condensed match
 
 The base is `edit-craft.md` (the EDL, cuts, captions): read it first. This file says what differs for a broadcast of a match. Game mode makes **long-form condensed matches only** (the user, 2026-11-13): no shorts, no vertical versions, **no sound effects at all**.
-The tools are cuts, captions (always), a short transition where a map changes, and a blur where `safety.md` says. No zoom, no music, no stickers, no emoji, no text but captions, no filters, no drawings, no speed changes.
+The tools are cuts, captions (when the run's captions setting is on, the default), a short transition where a map changes, and a blur where `safety.md` says. No zoom, no music, no stickers, no emoji, no text but captions, no filters, no drawings, no speed changes.
 
 ## 1. The spans come from the plan
 The brief lists units, each with a keep level and `keep_spans`. You decide the exact cut points inside each span (a breath between the casters' words: `T words`), and you may tighten a span;
@@ -24,17 +24,18 @@ You cannot add a score card: the only text is captions. The scoreboard is alread
 
 ## 5. The casters are the narration
 - Never lower or mute them. There are no sound effects, so nothing competes with a call.
-- The captions follow the casters, who speak fast and shout. `T captions` makes the cues from the Whisper words; the **names** are the risk: apply the brief's lexicon (`replace`) and re-read every cue that holds a player or team name before you build.
+- With captions ON the captions follow the casters, who speak fast and shout. `T captions` makes the cues from the Whisper words; the **names** are the risk: apply the brief's lexicon (`replace`) and re-read every cue that holds a player or team name before you build.
 - Crowd and game sound stay. Music that is audible between rounds belongs to a cut stretch; commercial music over live play is a claim risk (`safety.md`): cut around it where the play allows.
 
 ## 6. The condensed match
 - One segment per straight run: adjacent kept units are one segment (the chunk joins inside it are seamless). A `flash` unit is its own short segment (3 to 8 s: the result and the scoreboard change).
   A skipped unit leaves nothing; the next kept unit makes the score clear (it is on the HUD); when two or more rounds were skipped in a row, a `flash` of the scoreboard between the clusters keeps the score line honest.
 - A `flash` transition (0.15 to 0.25 s) at each map change; plain cuts everywhere else. Never start or end in the middle of a round or a fight: a map's first segment starts at the map start or the first kept unit's live start, its last one ends on the map result.
-- Captions: `size` 6, at the bottom, normal case, the lexicon in `replace`; every second of speech is captioned.
+- Captions (when on; with captions OFF none): `size` 6, normal case, the lexicon in `replace`; every second of speech is captioned. Put them above the HUD's bottom row, not over it: a CS2 broadcast's player cards start at about 81% of the frame (measure on a full frame with `T grid-frame`);
+  the first game run used `y_rel` 0.76 (the default 0.88 sits on the cards) and `max_words` 8, `max_chars` 40 so that the lexicon phrases ("Dust2", "3K sequence") are not split across cues.
 - Chapters in `posting.md`: each half, overtime and every unit that is a headline (an ace, a clutch, a comeback), with output timestamps (`resolved.json -> pieces[].at`).
 - The length is the sum of the kept spans. Do not pad; do not trim a unit below what makes it understood.
 
 ## 7. Safety in a match
 Same rules as everywhere (`safety.md`): religion and superstition are avoided (a player's prayer or gesture, a blessing from a caster: not a pick; an incidental one is cut around or listed); distress and gore are blurred where seen
-(game violence in its normal look is not gore; a real injury or a real breakdown on camera is); personal data on screen is blurred (a phone number, an email, a real address in a lower third); slurs from casters, players or chat are masked in the captions.
+(game violence in its normal look is not gore; a real injury or a real breakdown on camera is); personal data on screen is blurred (a phone number, an email, a real address in a lower third); slurs from casters, players or chat are masked in the captions (with captions OFF they stay audible and nothing masks them: the plan cuts around them).

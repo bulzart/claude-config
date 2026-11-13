@@ -3,15 +3,15 @@
 Commands (see README.md for the contract; times are rec times):
   config         show the effective folders and free space, or set config.json keys (e.g. after a new drive is installed)
   state          read/write run state (dotted keys)
-  blocks         split the recorded chunks into blocks of N chunks (for scan agents), with the numbers that size them
+  blocks         split the recorded chunks into blocks of N chunks (for scan agents; --min-blocks M gives a short recording at least M blocks), with the numbers that size them
   sfx-scan       catalogue the sound-effects folder (name, duration, levels) -> RUN/30-assets/sfx.json + sfx.md
   layout-calc    CapCut scale/posX/posY for a 16:9 source on a canvas (fill around a focus, or fit)
   grid-frame     one full-resolution frame with a 10% grid (and an optional region box) to read coordinates from
   censor         blurred/pixelated copy of a span (only that span, optionally only a region): the file replaces the span in the edit
   edl-check      resolve an EDL (cuts, layouts, zooms, sfx, transitions, censor) into pieces, the MCP plan and the finish plan; facts at every cut
-  captions       caption cues from the transcript words of the resolved pieces -> captions.json + captions.srt
+  captions       caption cues from the transcript words of the resolved pieces -> captions.json + captions.srt (nothing when the run's captions setting is off)
   capcut-name    a free CapCut project name
-  capcut-finish  after the last MCP save: zoom keyframes, transitions, background blur, captions, font, intro, repair
+  capcut-finish  after the last MCP save: zoom keyframes, transitions, background blur, captions (not when the run's captions setting is off), font, intro, repair
 """
 from __future__ import annotations
 
@@ -57,6 +57,16 @@ def capcut_running() -> bool:
         return "capcut.exe" in (cp.stdout or "").lower()
     except Exception:  # noqa: BLE001
         return False
+
+
+def captions_on(run) -> bool:
+    """The run's captions setting (state.json -> captions): 'on' (the default, also when the key is missing) or 'off' (the user picked no captions at the start)."""
+    v = (load_state(run) or {}).get("captions")
+    if v is None or v == "":
+        return True
+    if isinstance(v, bool):                           # `state set captions=false` is read as JSON false
+        return v
+    return str(v).strip().lower() not in ("off", "no", "false", "0", "none")
 
 
 def slug(text: str) -> str:
@@ -171,6 +181,9 @@ def cmd_blocks(a):
     rows = [r for r in load_chunks(run) if r.get("duration_s")]
     rows.sort(key=lambda r: r["rec_start_s"])
     n = max(1, int(a.chunks))
+    mb = max(1, int(getattr(a, "min_blocks", 1) or 1))
+    if mb > 1 and rows:                      # a short recording still gets at least `mb` blocks, so that scan agents can work side by side
+        n = max(1, min(n, math.ceil(len(rows) / mb)))
     blocks = []
     for i in range(0, len(rows), n):
         part = rows[i:i + n]
@@ -182,7 +195,7 @@ def cmd_blocks(a):
                        "from_hms": fmt_hms(part[0]["rec_start_s"], False),
                        "to_hms": fmt_hms(part[-1]["rec_start_s"] + part[-1]["duration_s"], False), "words": words,
                        "done": sum(1 for r in part if r.get("status") == "done")})
-    out({"ok": True, "run": str(run), "chunks": len(rows), "block_size": n, "blocks": blocks,
+    out({"ok": True, "run": str(run), "chunks": len(rows), "block_size": n, "min_blocks": mb, "blocks": blocks,
          "total_s": round(sum(r["duration_s"] for r in rows), 1)})
 
 
@@ -675,6 +688,7 @@ def plan_edl(run: Path, edl: dict, make_files: bool) -> tuple:
               "chunks_used": sorted({p["chunk"] for p in pieces if p["kind"] == "plain"}),
               "censored_spans": sum(1 for p in pieces if p["kind"] == "censor")}
     caps = {**DEFAULT_CAPTIONS["short" if kind == "short" else "long"], **(edl.get("captions") or {})}
+    caps["enabled"] = captions_on(run)               # the run's captions setting (on by default); finish.json and resolved.json carry it
     resolved = {"schema": "cc-resolved/1", "video": vid, "kind": kind, "canvas": {"width": canvas[0], "height": canvas[1], "fps": fps},
                 "segments": seg_info, "pieces": pieces, "joins": joins, "totals": totals, "warnings": warnings, "captions": caps}
     ops = [{"op": "add_video", "track": "main", "file": p["file"], "srcStartSec": round(p["src_from"], 3), "durSec": round(p["dur_src"], 3),
@@ -804,6 +818,9 @@ def cmd_captions(a):
     resolved = read_json(rp)
     if not resolved:
         fail(f"cannot read {rp} (run edl-check first)")
+    if not captions_on(run):
+        out({"ok": True, "video": resolved["video"], "skipped": True, "cues": 0, "silent_stretches_over_4s": [], "files": [],
+             "note": "captions are OFF for this run (state.json captions=off, picked at the start): nothing was written and capcut-finish adds no caption track"})
     res = build_cues(run, resolved)
     d = rp.resolve().parent
     write_json(d / "captions.json", {"video": resolved["video"], **res})
@@ -814,7 +831,7 @@ def cmd_captions(a):
     out({"ok": True, "video": resolved["video"], "cues": len(res["cues"]), "words": res["n_words"], "duration_s": resolved["totals"]["duration_s"],
          "silent_stretches_over_4s": _silent(res["cues"], resolved["totals"]["duration_s"]),
          "files": [str(d / "captions.json"), str(d / "captions.srt")],
-         "note": "captions are always added (non-negotiable); a stretch without speech has none unless the agent adds a text line"})
+         "note": "captions are ON for this run (the default): every second of speech is captioned; a stretch without speech has none unless the agent adds a text line"})
 
 
 def _silent(cues: list, total: float) -> list:
@@ -1122,24 +1139,26 @@ def cmd_capcut_finish(a):
         steps.append({"step": "bg-blur", "level": finish["bg_blur"], "exits": res, "note": "unverified on this PC's CapCut: look at the first project"})
     caps = finish["captions"]
     srt = vdir / "captions.srt"
-    if not srt.is_file():
-        fail(f"captions are non-negotiable and {srt} does not exist: run `captions` first")
-    cw, ch = finish["canvas"]["width"], finish["canvas"]["height"]
-    args = [cli, "import-srt", str(d), str(srt), "--track-name", "subtitle", "--font-size", str(caps["size"]), "--color", caps["color"],
-            "--border-width", str(caps["stroke_width"]), "--border-color", caps["stroke_color"], "--align", "1", "--y", f"{1 - 2 * float(caps['y_rel']):.3f}"]
-    hw = [w for w in caps.get("highlight_words") or [] if str(w).strip()]
-    if hw:
-        hf = vdir / "highlight-words.txt"
-        write_text(hf, "\n".join(hw) + "\n")
-        args += ["--highlight-words", f"@{hf}", "--keyword-color", caps["highlight_color"], "--keyword-size", str(caps["highlight_size"])]
-    steps.append({"step": "captions-import", **sh(args, 900)})
-    font = Path(str(caps["font_file"]))
-    if not font.is_absolute():
-        font = awl_home() / "fonts" / font
-    steps.append({"step": "captions-font", **sh([*awl, "capcut-font", "--draft", str(d), "--font-file", str(font), "--track", "subtitle"], 300)})
-    if caps.get("intro"):
-        steps.append({"step": "captions-intro", **sh([*awl, "capcut-text-anim", "--draft", str(d), "--track", "subtitle", "--intro", caps["intro"],
-                                                         "--intro-duration", str(caps.get("intro_s") or 0.1), "--run", str(run)], 300)})
+    if not captions_on(run):                          # the user picked no captions at the start: no caption track, no font, no entrance
+        steps.append({"step": "captions", "skipped": "captions are off for this run (state.json captions=off)"})
+    else:
+        if not srt.is_file():
+            fail(f"captions are on for this run and {srt} does not exist: run `captions` first")
+        args = [cli, "import-srt", str(d), str(srt), "--track-name", "subtitle", "--font-size", str(caps["size"]), "--color", caps["color"],
+                "--border-width", str(caps["stroke_width"]), "--border-color", caps["stroke_color"], "--align", "1", "--y", f"{1 - 2 * float(caps['y_rel']):.3f}"]
+        hw = [w for w in caps.get("highlight_words") or [] if str(w).strip()]
+        if hw:
+            hf = vdir / "highlight-words.txt"
+            write_text(hf, "\n".join(hw) + "\n")
+            args += ["--highlight-words", f"@{hf}", "--keyword-color", caps["highlight_color"], "--keyword-size", str(caps["highlight_size"])]
+        steps.append({"step": "captions-import", **sh(args, 900)})
+        font = Path(str(caps["font_file"]))
+        if not font.is_absolute():
+            font = awl_home() / "fonts" / font
+        steps.append({"step": "captions-font", **sh([*awl, "capcut-font", "--draft", str(d), "--font-file", str(font), "--track", "subtitle"], 300)})
+        if caps.get("intro"):
+            steps.append({"step": "captions-intro", **sh([*awl, "capcut-text-anim", "--draft", str(d), "--track", "subtitle", "--intro", caps["intro"],
+                                                             "--intro-duration", str(caps.get("intro_s") or 0.1), "--run", str(run)], 300)})
     steps.append({"step": "repair", **sh([*awl, "capcut-repair", "--draft", str(d), "--keep-text"], 1800)})
     bad = [s for s in steps if s.get("exit") not in (None, 0) and s["step"] != "repair"] + ([s for s in steps if s["step"] == "repair" and s.get("exit") not in (0,)])
     out({"ok": not bad and not failed and not any(s.get("pieces_without_a_clip") for s in steps), "draft": str(d), "video": a.video, "steps": steps})
@@ -1161,9 +1180,10 @@ def register(sub) -> None:
     p.add_argument("pairs", nargs="*")
     p.set_defaults(func=cmd_config)
 
-    p = sub.add_parser("blocks", help="split the chunks into blocks of N for scan agents")
+    p = sub.add_parser("blocks", help="split the chunks into blocks of N for scan agents (at least M blocks with --min-blocks, so a short recording still gets side-by-side agents)")
     p.add_argument("--run", required=True)
     p.add_argument("--chunks", type=int, default=10)
+    p.add_argument("--min-blocks", dest="min_blocks", type=int, default=1, help="at least this many blocks: the block size becomes min(--chunks, ceil(chunks / M))")
     p.set_defaults(func=cmd_blocks)
 
     p = sub.add_parser("words", help="the spoken words of a rec span with their start times (exact cut points)")

@@ -1,6 +1,6 @@
 ---
 name: cc-build-game
-description: /create-clips game mode, production agent (one condensed match, one CapCut project): cut the planned rounds of a match, caption the casters, keep the whole frame and the HUD, leave sponsor stretches out, build the project with one compose command. Internal to that command.
+description: /create-clips game mode, production agent (one condensed match, one CapCut project): cut the planned rounds of a match, caption the casters (unless the run's captions setting is off), keep the whole frame and the HUD, leave sponsor stretches out, build the project with one compose command. Internal to that command.
 user-invocable: false
 ---
 
@@ -11,19 +11,21 @@ user-invocable: false
 
 ## Read now
 - `RUN/40-briefs/<id>-brief.md` and `RUN/20-analysis/brief.md` (the match, the teams and their spelling, what travels, the lexicon, the touchy list), and the game's profile the brief names.
-- `CC/reference/game-edit-craft.md` (the condensed match), `CC/reference/edit-craft.md` (the EDL, cuts, captions), `CC/reference/safety.md`, `CC/reference/capcut-build.md` (the build recipe), `CC/reference/clip-economy.md` (the long-form section). Read each once, whole.
+- `CC/reference/game-edit-craft.md` (the condensed match), `CC/reference/edit-craft.md` (the EDL, cuts, captions), `CC/reference/safety.md`, `CC/reference/capcut-build.md` (the build recipe), `CC/reference/clip-economy.md` (the long-form section). Read each once, whole, in ONE message.
+- The run's captions setting: `T state --run RUN get captions` (`on` by default, `off` when the user picked no captions; your contract says which). Everything below about captions applies only when it is on.
+- Speed: independent tool calls go in ONE message (all the contact sheets and frames you need from ONE PowerShell call, the images read together); every check stays (a frame at every cut, `edl-check`, the read-back).
 
 ## Steps
 1. **Study the units**: for each unit in the brief (its keep level and `keep_spans`): the words (`T words --run RUN --from T --to T` for exact starts; `T window` for the transcript, the per-second numbers and the chat), the HUD facts (`RUN/20-analysis/hud/states.txt`),
    the frames (the dense sheets in `RUN/10-media/Cnnnn/sheets/`, `T frame --run RUN --at T`, `T grid-frame` to measure a region), and the chunk reports (`RUN/10-media/Cnnnn/report.md`: observations of what each stretch shows, nothing decided).
    Work out the order, the straight runs (adjacent kept units are one segment), the flashes, the map changes, the replays to cut, and the chapters.
-2. **Touchy check** (safety.md) over every span, by the words and the frames: religion and superstition (cut around, or `failed` with the reason when a unit is about it), real gore or distress and personal data on screen (a `censor` entry, only that span, only that region), slurs (`mask_terms`), commercial music over live play.
+2. **Touchy check** (safety.md) over every span, by the words and the frames: religion and superstition (cut around, or `failed` with the reason when a unit is about it), real gore or distress and personal data on screen (a `censor` entry, only that span, only that region), slurs (`mask_terms` with captions on; with captions OFF a spoken slur is audible and nothing masks it: cut around it or leave the span out, as the brief marks it), commercial music over live play.
    **Sponsorship and the like** (sponsor stings, "presented by" cards, betting or promo segments, sponsor reads, giveaways, ad breaks) is cut out totally: not noted, not blurred, not kept (game-edit-craft.md §4).
 3. **Write the EDL** `OUT/edl.json` (edit-craft.md and game-edit-craft.md): `kind: long`, canvas 1920x1080, `layout: {"mode": "native"}`, one segment per straight run of kept units, a short segment per `flash` unit, a `flash` transition (0.15 to 0.25 s) at each map change and plain cuts elsewhere,
-   no zoom, **no sound effects** (no `sfx` entries at all), the captions block (`size` 6, bottom, the lexicon in `replace`, `mask_terms` for slurs).
+   no zoom, **no sound effects** (no `sfx` entries at all), and with captions ON the captions block (`size` 6, bottom, the lexicon in `replace`, `mask_terms` for slurs); with captions OFF no `captions` block at all.
 4. **Check**: `T edl-check --run RUN --edl OUT/edl.json --make-censor`: fix the EDL until there are no warnings, no cut inside a word, no refused transition, every blurred file made; look at `T censor ... --preview-only` for each blurred span.
-   Then `T captions --run RUN --resolved OUT/resolved.json` (always; read `silent_stretches_over_4s`) and re-read every cue that holds a player or team name against the lexicon.
-5. **Build** with `CC/reference/capcut-build.md`: `T capcut-compose` (the whole project in one command; CapCut closed: if it is open, stop here with `ready-to-build`), `T capcut-finish`, the checks (`capcut segments`, `capcut texts`, `capcut lint`; no proxy of the whole video: the read-back is the check), `OUT/report.md` and `OUT/posting.md`
+   Then, with captions ON, `T captions --run RUN --resolved OUT/resolved.json` (read `silent_stretches_over_4s`) and re-read every cue that holds a player or team name against the lexicon. With captions OFF skip this step (`T captions` would only answer "skipped"; there are no cues to read).
+5. **Build** with `CC/reference/capcut-build.md`: `T capcut-compose` (the whole project in one command; CapCut closed: if it is open, stop here with `ready-to-build`), `T capcut-finish` (it adds no caption track when captions are OFF), the checks (`capcut segments`, `capcut texts` (0 when captions are off), `capcut lint`; no proxy of the whole video: the read-back is the check), `OUT/report.md` and `OUT/posting.md`
    (title `<team> vs <team> | Map 2 Mirage | <event>`, description, hashtags, chapters with output timestamps from `resolved.json`).
    The report lists the units used with their keep levels, the replays cut or kept, the blurred spans, the exclamations or touchy items left in, the sponsor stretches cut, the project's size and the chunks it uses, and what is unverified.
 6. `T state --run RUN set videos.<id>.status=built videos.<id>.project="<name>" videos.<id>.duration_s=<n>` (or `failed` with `videos.<id>.error="..."`). CapCut open: finish the plan, set `videos.<id>.status=ready-to-build`, stop.
@@ -33,7 +35,7 @@ user-invocable: false
 - Never a sound effect, of any kind, anywhere.
 - Never keep a sponsor, betting, promo or ad stretch; never note or blur one.
 - Never widen a unit's span past its bounds without writing why; never turn a `flash` into a full unit; never cut inside a caster's shout or a word; never start or end in the middle of a round.
-- Never blur more than the span and the region where the content is seen. Never include religion or superstition. Never build without captions.
+- Never blur more than the span and the region where the content is seen. Never include religion or superstition. Never build without captions when the run's captions setting is on, and never add any when it is off.
 - Never copy a chunk into the draft, never `capcut lint --fix`, never save with force.
 
 ## Hand-off

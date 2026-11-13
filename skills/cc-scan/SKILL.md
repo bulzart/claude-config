@@ -12,17 +12,21 @@ user-invocable: false
 - `CC/reference/moment-mining.md` (the reading order, the block file, the quality bar). Read it whole once; each mining agent reads it too.
 
 ## Steps
-1. **Blocks**: `T blocks --run RUN --chunks N` with N from `config.json -> agents.scan_chunks_streamer` (10: about 30 minutes per agent; the agents start from the chunk reports, so a block can be large). Record the list in `state.json` (`T state --run RUN set scan.blocks=<n>`).
-2. **Spawn the mining agents** (general-purpose, **no `model` argument**: they use the model the user picked; one per block, at most `config.json -> agents.scan_max` = 6 at once, the next block as one finishes; never two agents on one block). One message per wave. Each agent's contract (it never sees this skill):
+1. **Blocks**: `T blocks --run RUN --chunks N --min-blocks M` with N from `config.json -> agents.scan_chunks_streamer` (10: about 30 minutes per agent; the agents start from the chunk reports, so a block can be large) and M from `config.json -> agents.scan_min_blocks` (2: a short stream still gets at least two blocks, so two agents read it side by side; the block size becomes min(N, ceil(chunks / M))). Record the list in `state.json` (`T state --run RUN set scan.blocks=<n>`).
+   The sound-effect catalogue (`T sfx-scan`) was started in `cc-start`; the mining agents do not need it.
+2. **Spawn the mining agents** (general-purpose, **no `model` argument**: they use the model the user picked; one per block, at most `config.json -> agents.scan_max` = 6 at once, the next block as one finishes; never two agents on one block). ALL the blocks of a wave in ONE message. Each agent's contract (it never sees this skill):
    - the run path; its block (the chunk ids, the rec range); its output `RUN/20-analysis/blocks/block-NN.json`;
    - read, in this order: `CC/reference/moment-mining.md`, `RUN/20-analysis/brief.md`, `RUN/20-analysis/clip-criteria.md`, then the data as moment-mining.md says: the chunks' reports first (`RUN/10-media/Cnnnn/report.md`: what a reporter saw and heard, observations only), the stream.md rows, the transcripts of every chunk in the block,
      and the overview sheets, dense sheets and `T window` / `T frame` / `T sheet` / `T words` only where a candidate or a mismatch needs them (a chunk without a report is read from its raw data);
    - a report decides nothing: what is a moment, what is on brand and what is touchy is the agent's call, by the brief and the criteria, not by numbers alone; names in a report are as printed or transcribed, never verified;
+   - the picture wins: where the brief, the criteria or a report says something the frames or the words show otherwise, the moment says what is seen and the agent says so in `notes`;
+   - speed: it batches independent tool calls (several frames, sheets or Read calls in ONE message, all the contact sheets it needs from ONE PowerShell call) and aims for about 8 minutes and about 40 tool calls;
    - it records what must be blurred (`sensitive`) and what must be avoided (`avoid`: religion, superstition, hate, tragedy, commercial music; `CC/reference/safety.md` §1 and §3, which it reads);
    - it reads media only (never moves, renames or writes into `10-media`), writes only its block file, never asks, never spawns agents;
    - it returns three lines: the file, how many moments, anything the planner must know.
 3. **Check each block file** when its agent returns: valid JSON (`& $PY -c "import json,sys; json.load(open(sys.argv[1], encoding='utf-8'))" <file>`), the fields of moment-mining.md present, rec times inside the block, a richness score per chunk, every moment with bounds, a hook and a reason.
    A bad or empty file: one retry with the problem named; a second failure is recorded in `state.json` (`scan.failed`) and the block is covered by the planner reading its reports and transcripts itself.
+   **Reconcile**: where the moments contradict the brief, `clip-criteria.md` or `recon.md` (a wrong name, a wrong topic, a guest who is someone else), correct those files now, with a line saying so at the top: the planner and the builders read them.
 4. `T state --run RUN set stage=scanned next_skill=cc-plan`.
 
 ## Never

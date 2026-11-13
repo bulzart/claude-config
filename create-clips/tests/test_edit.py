@@ -89,9 +89,43 @@ def main():
         r = cc("captions", "--run", run, "--resolved", out / "resolved.json", env=env)
         srt = (out / "captions.srt").read_text(encoding="utf-8")
         check(r.get("ok") and "S***" in srt and "KAI CENAT" in srt, "captions: masking and the lexicon replace applied")
+        res_on = json.loads((out / "resolved.json").read_text(encoding="utf-8"))
+        check(res_on["captions"].get("enabled") is True and fin["captions"].get("enabled") is True,
+              "captions are ON when the run has no `captions` key: resolved.json and finish.json say enabled")
+
+        # block sizing: a short recording still gets side-by-side agents
+        r = cc("blocks", "--run", run, "--chunks", 10, env=env)
+        check(r.get("ok") and len(r["blocks"]) == 1 and r["blocks"][0]["chunks"] == ["C0001", "C0002"], "blocks: two chunks are one block by default")
+        r = cc("blocks", "--run", run, "--chunks", 10, "--min-blocks", 2, env=env)
+        check(r.get("ok") and len(r["blocks"]) == 2 and r["block_size"] == 1 and r["min_blocks"] == 2, "blocks --min-blocks 2: two chunks make two blocks")
+        r = cc("blocks", "--run", run, "--chunks", 1, "--min-blocks", 2, env=env)
+        check(r.get("ok") and r["block_size"] == 1, "blocks --min-blocks never makes a block bigger than --chunks")
+
+        # the user picked NO captions at the start (state.json captions=off): nothing is written, the finish plan says so
+        (out / "captions.srt").unlink()
+        (out / "captions.json").unlink()
+        r = cc("state", "--run", run, "set", "captions=off", env=env)
+        check(r.get("ok"), "state: captions=off recorded")
+        r = cc("captions", "--run", run, "--resolved", out / "resolved.json", env=env)
+        check(r.get("ok") and r.get("skipped") is True and not (out / "captions.srt").exists() and not (out / "captions.json").exists(),
+              "captions OFF: `captions` answers skipped and writes no cue file")
+        r = cc("edl-check", "--run", run, "--edl", out / "edl.json", env=env)
+        fin_off = json.loads((out / "finish.json").read_text(encoding="utf-8"))
+        check(r.get("ok") and fin_off["captions"].get("enabled") is False, "captions OFF: finish.json carries captions.enabled false")
+        for word in ("false", "0", "no"):
+            r = cc("state", "--run", run, "set", f"captions={word}", env=env)
+            r2 = cc("captions", "--run", run, "--resolved", out / "resolved.json", env=env)
+            check(r2.get("skipped") is True, f"captions={word} is read as off")
+        cc("state", "--run", run, "set", "captions=on", env=env)
+        r = cc("edl-check", "--run", run, "--edl", out / "edl.json", env=env)
+        r = cc("captions", "--run", run, "--resolved", out / "resolved.json", env=env)
+        check(r.get("ok") and not r.get("skipped") and (out / "captions.srt").is_file(), "captions back ON: the cues are written again")
 
         capcut = shutil.which("capcut")
-        if capcut:
+        busy = "capcut.exe" in subprocess.run(["tasklist", "/FI", "IMAGENAME eq CapCut.exe", "/NH"], capture_output=True, text=True).stdout.lower()
+        if capcut and busy:
+            print("SKIP capcut-compose/finish: CapCut is running on this PC (compose and finish refuse while it runs, and the app is the user's): close it and run this test again; those checks are NOT verified by this run")
+        elif capcut:
             store = tmp / "drafts"
             store.mkdir()
             r = cc("capcut-compose", "--run", run, "--video", "S01", "--name", "cctest", "--store", store, env=env)
@@ -138,6 +172,20 @@ def main():
             check(r.get("ok") and n >= 150, f"edl-check of a {n}-piece EDL ok")
             r = cc("capcut-compose", "--run", run, "--video", "L02", "--name", "cctest2", "--store", store, env=env)
             check(r.get("ok") and r.get("video_segments_retargeted") == n and r.get("seconds", 99) < 10, f"capcut-compose of {n} pieces: all retargeted, {r.get('seconds')} s (under 10) " + json.dumps(r)[:200])
+            # captions OFF at the build: no caption track, no font, no entrance, and no srt is needed; captions ON without an srt is refused
+            cc("state", "--run", run, "set", "captions=off", env=env)
+            cc("edl-check", "--run", run, "--edl", out2 / "edl.json", env=env)
+            r = cc("capcut-compose", "--run", run, "--video", "L02", "--name", "cctest3", "--store", store, env=env)
+            check(r.get("ok"), "capcut-compose for the captions-off build ok " + json.dumps(r)[:160])
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest3", "--video", "L02", env=env)
+            steps = [s.get("step") for s in r.get("steps", [])]
+            c3 = json.loads((store / "cctest3" / "draft_content.json").read_text(encoding="utf-8"))
+            check(r.get("ok") and "captions" in steps and not any(str(s).startswith("captions-") for s in steps) and not c3["materials"].get("texts"),
+                  "capcut-finish with captions OFF: no srt needed, no caption import, font or entrance, no text in the draft " + str(steps))
+            cc("state", "--run", run, "set", "captions=on", env=env)
+            r = cc("capcut-compose", "--run", run, "--video", "L02", "--name", "cctest4", "--store", store, env=env)
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest4", "--video", "L02", env=env)
+            check(r.get("ok") is False and "captions are on" in str(r.get("error", "")), "capcut-finish with captions ON and no captions.srt is refused: " + str(r.get("error"))[:120])
             # NOT tested here: opening the composed project in CapCut 9.7 itself (no tool here can); the first real build is that check
         else:
             print("skip capcut-compose/finish (capcut-cli not on PATH)")

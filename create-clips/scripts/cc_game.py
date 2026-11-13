@@ -385,7 +385,7 @@ def cmd_units_table(a):
     if per_video:
         L += ["", "## Units per video", ""] + [f"- **{v}**: {', '.join(ids)}" for v, ids in sorted(per_video.items())]
     if j.get("non_play"):
-        L += ["", "## Not play (cut from every video)", "", "| Rec time | Kind | Note |", "|---|---|---|"]
+        L += ["", "## Not play (not rounds; sponsor stretches are cut totally, a few of the others may be used as story beats: see each video's brief)", "", "| Rec time | Kind | Note |", "|---|---|---|"]
         for n in sorted(j["non_play"], key=lambda n: float(n.get("rec_from") or 0)):
             L.append(f"| {fmt_hms(float(n.get('rec_from') or 0), False)} to {fmt_hms(float(n.get('rec_to') or 0), False)} | {_cell(n.get('kind'), 20)} | {_cell(n.get('note'))} |")
     write_text(dest, "\n".join(L) + "\n")

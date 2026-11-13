@@ -8,9 +8,10 @@ So: research like a fan who lives on the internet, not like an analyst writing a
 joking about, hyping, arguing over and clipping right now, and why does it land with them?" Numbers are only there to give a sense of scale
 ("the trailer broke records in a day", "a few hundred thousand watching") and the facts (dates, names, titles) only where a wrong one would make a clip embarrassing.
 
-## What each research agent brings back (short, conversational, concrete)
+## What the research agent brings back: four short sections of ONE note (`20-analysis/research.md`; the contract is `research-agent.md`)
 
-Write each note the way you would explain it to a friend who is about to edit clips of this stream: plain sentences, real examples, no tables of statistics.
+The four parts below (R1 to R4) are the four SECTIONS of one note, about 1.5 KB each, written by the ONE research agent: take the points that can guide a clip decision, not the whole list.
+Write the note the way you would explain it to a friend who is about to edit clips of this stream: plain sentences, real examples, no tables of statistics.
 Every claim carries a tag: **[W]** seen on the web (say where: a Reddit thread, a post on X, a TikTok trend, a YouTube video and its comments, a news line),
 **[S]** said in this stream (transcript, rec time), **[M]** from the model's memory (flag it: it may be old), **[I]** inference. Never invent a number, a quote or a clip
 title: write "not found" instead.
@@ -52,8 +53,8 @@ how the captions and sound look, what the top clip channels post, titles that pu
   "<topic> what everyone is saying", "<guest> <streamer> stream". Read the result titles and snippets as the social signal itself (a thread title, a post, a clip name, a comment
   quoted in an article is data).
 - `WebFetch` a page worth reading (a news article, a Know Your Meme entry, a fan wiki, a thread that is not blocked). When a site blocks it, the search snippets are enough.
-- Look at several sources before believing one. Check dates: a thing from two years ago is background, not "what is circulating".
-- Stop when a note is rich enough to guide a clip decision. Depth on the 10 things that matter beats a long list.
+- One source per claim is enough for a clip: tag it and check its date (a thing from two years ago is background, not "what is circulating"); what two quick searches do not find is "not found". Never probe mirror sites or chase one claim across many pages.
+- Stop when the note is rich enough to guide a clip decision, inside the budget (`config.json -> agents.research_calls` tool calls, about 3 to 4 minutes). Depth on the 10 things that matter beats a long list.
 
 ## The context brief (written once the notes are in; every later agent reads it first)
 `RUN/20-analysis/brief.md`, at most about 4 KB, plain language:
@@ -63,6 +64,6 @@ how the captions and sound look, what the top clip channels post, titles that pu
 4. **The topic's social pulse:** what everyone is saying and joking about, the key points, the scale in words, the lingo, what viewers wait for.
 5. **People:** each guest or named person in a line, with the spelling to use.
 6. **Touchy:** what must not be joked about or shown (religion and superstition always: avoided), what gets blurred (gore, distress, nudity, personal data), spoiler or controversy notes.
-7. **Lexicon fixes:** `Whisper wrote -> right spelling` pairs for names, handles, game terms (they go into the captions' `replace`).
+7. **Lexicon fixes:** `Whisper wrote -> right spelling` pairs for names, handles, game terms (they go into the captions' `replace`; with captions off the pairs are not needed).
 8. **How to judge a moment here:** the five questions that decide a pick for this streamer and this topic.
-The longer notes stay beside it in `20-analysis/` (`streamer.md`, `topic.md`, `people.md`, `clip-trends.md`) for an agent that needs the detail.
+The longer note stays beside it in `20-analysis/research.md` for an agent that needs the detail.

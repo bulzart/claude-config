@@ -80,7 +80,7 @@ def main():
     check(not miss_ref, "every CC/reference/... path the docs name exists " + str(sorted(set(miss_ref))[:6]))
     miss_bare = []
     for d in docs:
-        for m in re.findall(r"`((?:game-clipping|game-mining|game-edit-craft|game-research-playbook|capcut-build-mcp|capcut-build|edit-craft|clip-economy|moment-mining|portfolio|research-playbook|safety)\.md)`", read(d)):
+        for m in re.findall(r"`((?:game-clipping|game-mining|game-edit-craft|game-research-playbook|capcut-build-mcp|capcut-build|edit-craft|clip-economy|moment-mining|portfolio|research-playbook|research-agent|safety)\.md)`", read(d)):
             if not (CC / "reference" / m).is_file():
                 miss_bare.append((d.name, m))
     check(not miss_bare, "every reference named by its file name exists " + str(sorted(set(miss_bare))[:6]))
@@ -125,6 +125,26 @@ def main():
     gm = [read(p).lower() for p in (SKILLS / "cc-build-game" / "SKILL.md", SKILLS / "cc-plan-game" / "SKILL.md", CC / "reference" / "game-edit-craft.md")]
     check(all("never a short" in t or "no shorts" in t for t in gm) and all("sound effect" in t for t in gm), "game mode's plan, build skill and edit craft all say: no shorts and no sound effects")
     check("askuserquestion" in read(ROUTER).lower() and "askuserquestion" in read(SKILLS / "cc-start" / "SKILL.md").lower(), "the router allows AskUserQuestion and cc-start asks the mode")
+
+    # the user's choices of 2026-11-13: ONE research agent, side-by-side blocks, captions or no captions picked at the start
+    ag = cfg.get("agents") or {}
+    check(ag.get("research_max") == 1 and (ag.get("research_calls") or 0) >= 5 and (ag.get("scan_min_blocks") or 0) >= 2,
+          "config.json: one research agent with a call budget, and at least two scan blocks")
+    ra = CC / "reference" / "research-agent.md"
+    check(ra.is_file() and "ONE" in read(ra) and "SendMessage" in read(ra) and "research.md" in read(ra), "reference/research-agent.md exists: the contract of the one research agent")
+    rt, sk = read(ROUTER), lambda n: read(SKILLS / n / "SKILL.md")  # noqa: E731
+    check("ONE research agent" in rt and "research agents at most 4" not in rt and "Never more than ONE research agent" in rt, "the router says ONE research agent and no longer allows four")
+    check("research.md" in sk("cc-start") and "research_calls" in sk("cc-start") and "research.md" in sk("cc-profile") and "research.md" in sk("cc-profile-game"),
+          "cc-start starts the research agent and both profile skills collect its note")
+    check(all("research wave" not in sk(n).lower().replace("never a research wave", "").replace("never start a second research agent or a research wave", "") for n in ("cc-profile", "cc-profile-game", "cc-start")),
+          "no profile skill spawns a research wave any more")
+    check("hud-scan" in sk("cc-profile-game") and "region-series" in sk("cc-profile-game") and "min-blocks" in sk("cc-scan-game") and "min-blocks" in sk("cc-scan"),
+          "the screen scan starts in the profile phase and both scans size their blocks with --min-blocks")
+    check("captions=on|off" in rt and "captions=on|off" in read(CC / "README.md") and "Captions" in sk("cc-start") and "AskUserQuestion" in sk("cc-start"),
+          "the router, the README and cc-start offer the captions choice (argument or question)")
+    check(all("captions" in sk(n).lower() and ("off" in sk(n).lower()) for n in ("cc-build-short", "cc-build-long", "cc-build-game", "cc-produce", "cc-wrapup", "cc-plan", "cc-plan-game")),
+          "every plan, produce, build and wrap-up skill follows the run's captions setting")
+    check("captions OFF" in read(CC / "reference" / "edit-craft.md") and "captions OFF" in read(CC / "reference" / "safety.md"), "edit-craft.md and safety.md say what captions OFF means (and that a spoken slur is cut around)")
 
     # the empty compose template
     tm = CC / "data" / "compose-template"
