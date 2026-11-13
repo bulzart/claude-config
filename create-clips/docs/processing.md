@@ -43,12 +43,26 @@ The host's log is `logs\native-host.log`, the background watcher's `logs\watch.l
 | `timeline.md` | one row per second: speech, loudest 0.5 s, motion, chat msgs/s |
 | `digest.json` | the chunk's row of `00-inventory\stream.md` as data |
 | `probe.json`, `chunk.json`, `chat.json` | ffprobe facts, the extension's sidecar and chat file |
+| `report.json` / `report.md` | the chunk reporter's observations of the chunk (below); `report.md` is the readable one the agents read |
 
 Run level: `00-inventory\chunks.json` (the chunk table with the stages of every chunk), `stream.md` (one row per chunk, plain percentiles, the ten
 largest seconds by chat rate / loudness / motion), `stream-meta.json` (title and game per chunk, the changes), `state.json`, `logs\ingest-C0012.log`.
 
 **Frames are never kept.** They are written one sheet at a time (30), the sheet is drawn, and those frames are deleted the moment the sheet is saved
 (`frames.json -> frames_deleted: true, leftover_frames: 0`). The 16 kHz wav is deleted after the transcript (`audio.keep_wav` keeps it).
+
+## The chunk reporter (a headless Haiku session per chunk, while the stream is downloaded)
+
+When a chunk has its sheets, audio numbers and text views, the watcher queues a **report**: a separate `claude -p` session (config `report`: Haiku 5.5, effort high, the Read tool only, no MCP servers, the user's settings and hooks left out, nothing saved as a conversation, at most `parallel` = 2 at once)
+opens the chunk's overview and dense sheets, `timeline.md`, `transcript.txt`, `digest.json`, `audio-profile.json`, `chunk.json` and `chat.json`, and writes what they show. The brief it works from is `reference\reporter.md`:
+**observations only, never a decision**: no verdict, no label such as "ace" or "highlight", no name corrected or guessed, nothing ranked, kept or skipped. The command's agents read `report.md` instead of opening every sheet, so by the time `/create-clips` runs the reading is already done.
+- **Files:** `report.json` (whitelisted fields only: `look` per sheet, `sound`, `speech`, `chat`, `seen_and_heard`, `unclear`; a field the brief does not ask for is dropped and counted in `dropped`) and `report.md` (the same, readable). `made_by` records the model, effort, seconds, cost, turns, attempts and which files the session **really opened** (read from its Read calls in the stream, not from what it claims).
+  A file it did not open after the one retry is listed in `made_by.not_opened`, in `warnings` and in `report.md`. The chunk's row in `chunks.json` has a `report` field (`status` done|failed|running, model, at, seconds, cost_usd, attempts, error).
+- **Never in the way:** a report runs beside the chunk processing and never changes a chunk's own status; a failed report leaves the chunk `done`. A report is current while its source signature (rec span, sheets, text views) matches: a chunk re-made because its rec start moved, or whose transcript arrived later, has a STALE report and gets a new one.
+- **Commands:** `status` shows `report:ok|--|STALE|FAIL|run` per chunk and the `reports` counts; `report --run RUN` makes every missing, stale or failed report now, `--parallel N` sessions at once (about a minute each; cost about half a cent to a few cents per chunk), `--chunk C0007`, `--force`, `--all`, `--dry-run`.
+  The watcher retries a failed report once more (`max_attempts` 2) and then leaves it to `report`. `watch --no-report` (or `report.enabled: false`, or env `CC_REPORT=0`) starts no reporter.
+- **The claude CLI:** the real `claude.exe` must come first on PATH (the npm `claude.cmd` shim cuts a command at 8191 characters; with a shim the brief travels on stdin instead). `doctor` shows which one it found; config `report.claude_bin` or env `CC_CLAUDE_BIN` names it. A rate limit stops a chunk's attempts at once and is reported as `rate limited`.
+- **Restart the watcher after an update:** a running watcher keeps the code it started with (stop it and start `watch`, or restart the `CreateClipsWatcher` task, to pick up the reporter).
 
 ## Reading a sheet
 
@@ -72,7 +86,8 @@ All of them cross chunk boundaries. `sheet` also deletes its frames right after 
 
 `frames` (interval 0.75, 5 x 6, 240 x 135, jpeg 86), `audio` (window 0.5, `keep_wav`, loud jump 10 dB), `whisper` (model medium, device cpu, compute int8,
 language en, beam 5, VAD on, `initial_prompt`), `min_free_gb` (3). Optional keys read with defaults: `audio.loud_jump_floor_db` (-45), `frames.chat_bar_ref` (20),
-`whisper.cuda_compute_type` (float16), `whisper.cpu_threads`. Env: `CC_RUNS_ROOT`, `CC_INBOX`, `CC_WHISPER_MODEL`, `CC_WHISPER_DEVICE`, `CC_MIN_FREE_GB`.
+`whisper.cuda_compute_type` (float16), `whisper.cpu_threads`. `report` (enabled, model `claude-haiku-5-5`, effort high, parallel 2, timeout_s 420, max_turns 30, max_attempts 2, claude_bin, setting_sources project).
+Env: `CC_RUNS_ROOT`, `CC_INBOX`, `CC_WHISPER_MODEL`, `CC_WHISPER_DEVICE`, `CC_MIN_FREE_GB`, `CC_REPORT` (0 = no reports), `CC_CLAUDE_BIN`, `CC_REPORT_PARALLEL`, `CC_REPORT_TIMEOUT`.
 Per run: `new-run --language auto --prompt "names, terms"` (kept in `state.json -> settings.whisper_override`).
 
 ## Speed (this PC, a 180 s 1280x720 60 fps chunk)
@@ -93,3 +108,4 @@ whole chunk about 134 s. Opt-in GPU: `whisper.device: "cuda"` (it borrows the CU
 - **Another watcher is running**: one at a time; stop it, or a dead one's lock is replaced at the next start.
 - **Stop the transcript for now**: `--skip-whisper` (status `pending`); a later `ingest` without it makes the transcript.
 - **Chunks on another drive than the runs**: moved by copy through a `.part` file (needs the room).
+- **No reports appear**: `doctor` shows the claude CLI line (found or not); `status` shows the `report:` column and `logs\report-Cnnnn.log` the last attempts (turns, cost, files opened, errors). `report --run RUN` makes the missing ones now.

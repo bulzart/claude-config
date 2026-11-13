@@ -15,8 +15,8 @@ user-invocable: false
 
 ## Steps
 1. **Merge** (portfolio.md §1): write `stream-summary.md`, `moments.json`, `richness.json`, `lexicon.json` (merged with the profile's), `sensitive.json`, `avoid.json`. Where a block is missing or thin, read its transcripts yourself (`T window`).
-1b. **The second look** (you, the model the user picked, not the scan model): the scan agents were the fast pass and their `standalone` and `shareability` scores are their own reading. Before a moment becomes a short or a span of a long video,
-   read its words yourself (`T window --run RUN --from T --to T`) and look at a dense sheet or a frame of its payoff (`RUN/10-media/Cnnnn/sheets/`, `T frame`): fix the bounds, the hook and the scores where the card is wrong and drop what does not hold.
+1b. **A check of what will be used** (you, the model the user picked): the block files are the mining agents' reading, each with its own `standalone` and `shareability` scores. Before a moment becomes a short or a span of a long video,
+   read its words yourself (`T window --run RUN --from T --to T`) and look at a dense sheet or a frame of its payoff (`RUN/10-media/Cnnnn/sheets/`, `T frame`) or at the chunk's report (`RUN/10-media/Cnnnn/report.md`): fix the bounds, the hook and the scores where the card is wrong and drop what does not hold.
    The best three shorts, the first and last span of every long video, and every moment with `confidence` low or medium always get it.
 2. **Decide the long-form videos** (portfolio.md §2): runs and pickups from the richness line, how many videos the night earns, each one's shape and length (about an hour as a guide, never cut a story in half, past an hour when needed, fewer and shorter when the night was warm). Honour `only=shorts` (none) from the user's start notes.
 3. **Decide the shorts** (portfolio.md §3): which moments, how many (as many as are good, up to 3 minutes each, the length follows the moment), what the hook is, what is cut together and what is cut twice. Honour `only=long` (none).

@@ -13,7 +13,8 @@ user-invocable: false
 - After the recon says which game it is, the game's profile if the library has one: `CC/reference/games/<slug>.md` (`cs2`, `dota2`, `valorant`, `lol`); any other game: `CC/reference/games/generic.md` (how to write its profile).
 
 ## Steps
-1. **Recon** (this session, small): from `RUN/00-inventory/stream.md`, `stream-meta.json` (the title and category over the broadcast), the transcripts of the first chunk, the last chunk and three chunks in between (`RUN/10-media/Cnnnn/transcript.txt`) and the overview sheets of those chunks, find out
+1. **Recon** (this session, small): from `RUN/00-inventory/stream.md`, `stream-meta.json` (the title and category over the broadcast), the chunk reports of the first chunk, the last chunk and three chunks in between (`RUN/10-media/Cnnnn/report.md`: what a reporter saw and heard, text on screen quoted as printed, nothing decided),
+   their transcripts (`RUN/10-media/Cnnnn/transcript.txt`) and, where a report is thin, the overview sheets of those chunks, find out
    the game and its edition, the tournament and the stage, the teams and players (the names on the scoreboard, the names the casters say), the map or the draft, the format (BO1, BO3, BO5), the score now, the casters, and how the broadcast is built (a desk, replays, ads, a pre-show).
    Write `RUN/20-analysis/recon.md` (15 to 25 lines, each with its rec time or its source) and fold in the user's `notes` from `state.json`.
    Record `T state --run RUN set game="Counter-Strike 2" game_slug=cs2 event="<tournament and stage>"`.

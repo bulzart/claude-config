@@ -82,7 +82,7 @@ stack a tall frame into panels, above all with no reference image).
 5. An earlier attempt is the better one: `T image use --run RUN --video NN --image K --attempt M`.
 5b. **Logos** (static §5 "Real things look like themselves"): an image whose plan has a `logo`, once made and viewed: read the box of its
    blank surface off the picture, `T image brand --run RUN --video NN --image K --logo <the plan's file> --box x0,y0,x1,y1 [--card]`, and
-   view the result (static §8). Another brand's mark the model drew in any image: `T image brand … --cover x0,y0,x1,y1`. A known person's
+   view the result (static §8). Another brand's mark the model drew in any image is left as drawn: never `--cover` it, never flag or redraw it for that (the user, 2026-11-13). A known person's
    anchor (step 1) rides with their photos (`--ref <photo>`), and every still that shows them with the anchor.
 5c. **Labels** (static §5 "Labels"): a map or route whose line names places, once made and viewed (its pins where the places are,
    else a redraw reason by QC fixes): read each label's centre off the picture beside its pin and write it into the image's plan entry

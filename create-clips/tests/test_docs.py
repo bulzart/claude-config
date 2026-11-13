@@ -91,7 +91,7 @@ def main():
     parser = ccmod.build_parser()
     sub = next(a for a in parser._actions if getattr(a, "choices", None))
     cmds = set(sub.choices)
-    check({"hud-read", "hud-scan", "region-series", "hud-states", "hud-slice", "units-merge", "units-verdict", "units-check", "units-table", "capcut-compose", "capcut-finish", "edl-check", "captions"} <= cmds,
+    check({"report", "hud-read", "hud-scan", "region-series", "hud-states", "hud-slice", "units-merge", "units-verdict", "units-check", "units-table", "capcut-compose", "capcut-finish", "edl-check", "captions"} <= cmds,
           "the game and compose commands are registered in cc.py (" + str(len(cmds)) + " commands)")
     bad_cmd = []
     for d in docs:
@@ -111,7 +111,13 @@ def main():
             if cur is None:
                 bad_key.append((d.name, k))
     check(not bad_key, "every config.json key the docs name exists " + str(sorted(set(bad_key))[:6]))
-    check(cfg["agents"].get("scan_model") == "haiku" and cfg["agents"].get("scan_chunks_game") and cfg["agents"].get("scan_chunks_streamer"), "the scan agents' model and batch sizes are in config.json")
+    rc = cfg.get("report") or {}
+    check(rc.get("model") == "claude-haiku-5-5" and rc.get("effort") in ("high", "xhigh", "max") and rc.get("enabled") is True, "the chunk reporter is Haiku 5.5 at high effort or above (never low or medium) in config.json")
+    check("scan_model" not in cfg["agents"] and cfg["agents"].get("scan_chunks_game") and cfg["agents"].get("scan_chunks_streamer"), "no agent has a model of its own any more (the analysis batch sizes remain)")
+    check((CC / "reference" / "reporter.md").is_file() and "decide nothing" in read(CC / "reference" / "reporter.md").lower().replace("**", ""), "the reporter's brief exists and says it decides nothing")
+    gm = [read(p).lower() for p in (SKILLS / "cc-build-game" / "SKILL.md", SKILLS / "cc-plan-game" / "SKILL.md", CC / "reference" / "game-edit-craft.md")]
+    check(all("never a short" in t or "no shorts" in t for t in gm) and all("sound effect" in t for t in gm), "game mode's plan, build skill and edit craft all say: no shorts and no sound effects")
+    check("askuserquestion" in read(ROUTER).lower() and "askuserquestion" in read(SKILLS / "cc-start" / "SKILL.md").lower(), "the router allows AskUserQuestion and cc-start asks the mode")
 
     # the empty compose template
     tm = CC / "data" / "compose-template"

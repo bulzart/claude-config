@@ -39,7 +39,7 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
   that reads as a letter or symbol (§5); a known person's anchor read against their photos (face shape, hair, glasses, build): it reads
   as them, in the run's style.
 - **Real things** (§5): every logo the plan places is the official file on its surface, legible at the export size and outside the
-  caption band, the patch under it not showing; no other brand's mark is left in the picture (`T image brand --cover`); a known person
+  caption band, the patch under it not showing; another brand's mark the model drew stays as drawn (never covered, never a flag: the user, 2026-11-13); a known person
   keeps their anchor's likeness in every still.
 - **Drawings** (§5 "Drawings"; the agent's own look at the previews of `T draw render`, at the grid's coordinates, before the edit): the
   drawing sits on what it explains (each leader ends on the thing it names, each highlight covers that region and little else); it starts

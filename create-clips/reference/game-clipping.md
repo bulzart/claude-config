@@ -10,9 +10,10 @@ The game's own profile (`reference/games/<game>.md`) says what a unit is in that
 
 ## 2. The match map (written before any unit is judged): `RUN/20-analysis/match-map.md`
 Every stretch of the broadcast classified by **what it is**, with rec times: pre-show and desk, the match start, each map or game, each half, play (the rounds), breaks between rounds (buy phase), timeouts, tactical pauses, technical pauses,
-the side switch, overtime, the post-match, ads or station breaks, replays. Replays are listed with the rec span they cover and, when you can tell, the moment they repeat (the **live** version is the canonical one).
+the side switch, overtime, the post-match, ads or station breaks, **sponsorship and the like** (sponsor stings and bumpers, "presented by" cards, betting-odds or promo segments, sponsor reads, giveaways), replays. Replays are listed with the rec span they cover and, when you can tell, the moment they repeat (the **live** version is the canonical one).
+**Sponsorship and the like is skipped totally** (the user, 2026-11-13): it is `non_play` and is cut from every video; it is not noted, not blurred and not kept as context. A small sponsor logo sitting on live play is not a stretch: it stays, because cutting it would cut the play.
 Sources: the score and clock series from `hud-scan` (§3 below), the sheets (the scoreboard overlay is on screen almost all the time), the casters' words, the loudness and chat numbers.
-The scan phase writes a skeleton from text only (the score resets, the long stretches with no score change); the scan agents refine it in their `non_play`; the planner writes the final one.
+The scan phase writes a skeleton from text only (the score resets, the long stretches with no score change, what the chunk reports say about them); the mining agents refine it in their `non_play`; the planner writes the final one.
 
 ## 3. Read the screen with the HUD tools
 The scoreboard, the round timer or game clock, the kill feed and the replay badge are on screen in known places. Find them once and let the tools read them over the whole match:
@@ -24,8 +25,8 @@ They return facts (values and the times they changed). **You** read them: a scor
 The regions found go in `RUN/20-analysis/hud/regions.json` (the profile phase writes it) so everyone uses the same ones.
 
 ## 4. Two writers: the scan gives facts and a first read, the planner gives the verdict
-The scan agents (a fast model) read every unit of their block and write a **card** (`RUN/20-analysis/blocks/block-NN.json -> units[]`). The planner (the model the user picked) checks the units it will use and writes the **verdict** into `RUN/20-analysis/rounds.json`.
-Nobody else decides what is kept; a scan agent's `keep_hint` is advice.
+The mining agents read every unit of their block (starting from the chunk reports) and write a **card** (`RUN/20-analysis/blocks/block-NN.json -> units[]`): the facts and a first read. The planner checks the units it will use and writes the **verdict** into `RUN/20-analysis/rounds.json`.
+Nobody else decides what is kept; a mining agent's `keep_hint` is advice. (The reports themselves decide nothing: they only say what a chunk shows.)
 ```json
 {"id": "R14", "kind": "round", "rec_from": 4012.5, "rec_to": 4090.0, "live_from": 4031.0, "score_before": "7-6", "score_after": "8-6", "winner": "team name", "side": "CT", "how_it_ended": "bomb defused",
  "economy": "full buy vs force", "events": [{"rec": 4058.2, "what": "opening kill by X (AWP, B long)"}, {"rec": 4066.0, "what": "1v3 clutch begins"}, {"rec": 4087.4, "what": "defuse with 0.9 s left"}],
@@ -62,16 +63,17 @@ Never skip: the round or fight the story turns on, the last round of a map, an o
 - **End** at the result (bomb exploded or defused, the last kill, time) plus 1 to 3 s for the reaction or the scoreboard update; a big play earns 2 to 3 s of the player cam or the crowd.
 - **Replays:** the live action is canonical. Keep a replay only when it adds what the live view hid (the first-person view of a clutch, a different angle of a spectacular kill) and say why; a replay of what was just shown is cut (`replays` spans on the card).
 - **Caster audio:** the casters are the narration and the hype: cut in a pause between sentences, let the scream land, keep the line that names the play. Captions follow them.
-- **Context a viewer needs:** a short must make the score and the stakes clear in its first seconds: the scoreboard in view is enough, and the casters' words say the rest. A vertical crop that cuts the scoreboard or the kill feed out of a unit whose point is the stakes is the wrong layout: use the fit layout (`game-edit-craft.md`).
+- **Context a viewer needs:** the scoreboard is always in the picture (the video is 16:9 and nothing is cropped), and the casters' words say the rest. A condensed match keeps the score line honest: when units were skipped in a row, the next kept unit still shows the score (a `flash` of the scoreboard between clusters if it does not).
 
-## 8. From units to videos
-- **Shorts (up to 3 minutes):** the best plays one by one (an ace, a clutch, a spectacular kill, a throw, a caster explosion) at 15 to 60 s; a **round story** when a whole round is the clip (the 1v3 on match point: setup, play, result, reaction); a **best plays of the map** compilation of 3 to 6 plays at 60 to 150 s when each play is short;
-  a **funny and fails** cut when the scene has it. As many as are good; the same play is never two shorts unless the hooks differ.
-- **Long-form (the condensed match):** a map or a whole match as the viewer who missed it would want it: the rounds that matter at full or trim, the ones that explain at flash, the rest gone, in order, with the score always clear. About an hour is a guide, a CS2 map is usually 10 to 20 minutes condensed and a Dota 2 game 15 to 30;
-  never end in the middle of a round or a fight. One video per map or per game is the natural unit; a theme video ("every clutch of the day") is fine when the day earned it. Chapters at each map, half, overtime and big round.
-- **Titles:** the play and the people first (`<player> <what happened> vs <team> | <event>`), the stakes where they help, no spoiler of the result in the first caption of a short.
+## 8. From units to videos: long-form only (the user, 2026-11-13: no shorts at all in game mode)
+Game mode makes **condensed matches** and nothing else: a map or a whole match as the viewer who missed it would want it. The rounds that matter at full or trim, the ones that explain at flash, the rest gone, in order, with the score always clear.
+- **One video per map or per game** is the unit (`L01`, `L02` ...): a BO3 that went three maps gives three videos; a one-sided map or a quick best-of-one gives a brief video; a map or game that was dull gets a brief video, or none. A whole series is one video only when its maps together add up to a brief one.
+- **Length** follows what the kept units add up to: a CS2 map is usually 10 to 20 minutes condensed, a Dota 2 game 15 to 30. About an hour is only a ceiling; never pad; never end in the middle of a round or a fight.
+- **Chapters** at each half, overtime and every unit that is a headline (an ace, a clutch, a comeback), with output timestamps in `posting.md`.
+- **Titles:** the teams, the map or game and the event (`<team> vs <team> | Map 2 Mirage | <event>`), the stage where it helps; no spoiler of the result in the title when the stage is an elimination or a final.
+- Never: a short, a vertical (9:16) version, a highlight reel under 3 minutes, a sound effect, a text overlay.
 
-## 9. What to write
+## 9. What to write (the chunk reports the mining agents start from were made while the match was downloaded: observations only, `reporter.md`)
 The profile phase: `hud/regions.json`, `recon.md`, `brief.md`, `clip-criteria.md`, `lexicon.json` (and `game-profile.md` for a game the library lacks). The scan phase: `hud/*.json` and `hud/states.txt`, the `match-map.md` skeleton, one block file per block with its unit cards.
 The plan phase: `rounds.json` (every unit with its keep level, merged and checked), the final `match-map.md`, `portfolio.md` (the videos), and one brief per video (`40-briefs/<id>-brief.md`) with the units it uses, each unit's keep level and `keep_spans`,
 the replays to cut, the context to show, the touchy spans. The wrap-up writes `deliverables/rounds.md` (`cc.py units-table`). The production agent decides the exact cuts inside the spans.

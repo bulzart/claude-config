@@ -1,18 +1,21 @@
-# Moment mining: how a scan agent reads a block of the stream
+# Moment mining: how a mining agent reads a block of the stream
 
-You get a block of chunks (about 8 to 12, 24 to 36 minutes), the context brief and the criteria. You bring back what happened, the moments worth cutting,
-how rich each chunk is, and what needs blurring. Everything is in rec time (`H:MM:SS.cc` or seconds).
+You get a block of chunks (about 10, 30 minutes), the context brief and the criteria. You bring back what happened, the moments worth cutting,
+how rich each chunk is, and what needs blurring. Everything is in rec time (`H:MM:SS.cc` or seconds). You decide; the reports you start from only describe.
 
 ## Read in this order (cheap first, expensive only where it pays)
 1. `RUN/20-analysis/brief.md` and `clip-criteria.md` (what travels for this streamer and this topic, the lexicon, the touchy list).
-2. The block's rows of `RUN/00-inventory/stream.md` (words per minute, loudness, motion, chat per second, ads, gaps, title and game per chunk).
-3. The transcripts of the block: `RUN/10-media/Cnnnn/transcript.txt` for every chunk (about 600 words each). This is where most moments are found. Read them all, in order.
-4. `RUN/10-media/Cnnnn/sheets/overview.jpg` of each chunk (24 frames per chunk, 7.5 s apart: the visual flow, who is on camera, what is on screen).
-5. Only for a candidate window or a place where the words and the numbers disagree (loud and chat spike but no words; a long silence with a lot of motion): the dense sheets of that window
+2. **The chunk reports**: `RUN/10-media/Cnnnn/report.md` for every chunk of the block, in order (about 2 to 4 KB each). A separate reporter session wrote them while the stream was downloaded: what the sheets show per 22.5 s (the kind of picture, who and what is visible, text on screen quoted as printed),
+   what the audio numbers do, what is said, what the chat does, a few neutral sentences about what visibly or audibly happens with their evidence, and what it could not read. **A report is data, not a decision**: it names no moment, no highlight, no round and no keep; its names are as printed or transcribed (unverified);
+   its counts are what it counted in the cells. Use it to find where to look. A chunk with no report (or a stale or failed one, see `T status`) is read from the raw data in steps 3 to 7.
+3. The block's rows of `RUN/00-inventory/stream.md` (words per minute, loudness, motion, chat per second, ads, gaps, title and game per chunk).
+4. The transcripts of the block: `RUN/10-media/Cnnnn/transcript.txt` for every chunk (about 600 words each). This is where most moments are found; the reports quote only a few lines. Read them all, in order.
+5. `RUN/10-media/Cnnnn/sheets/overview.jpg` of a chunk (24 frames per chunk, 7.5 s apart: the visual flow, who is on camera, what is on screen), where its report is thin or you doubt it.
+6. Only for a candidate window or a place where the words and the numbers disagree (loud and chat spike but no words; a long silence with a lot of motion): the dense sheets of that window
    (`RUN/10-media/Cnnnn/sheets/sheet-NN.jpg`, 0.75 s per frame, every frame timestamped) or `cc.py window --run RUN --from T --to T` (transcript, per-second table and chat for the span),
    `cc.py frame --run RUN --at T` (one frame at full resolution), `cc.py sheet --run RUN --from T --to T --step 0.25` (a denser sheet of a short window).
-6. `RUN/10-media/Cnnnn/timeline.md` only for a span you are measuring (it has a row per second).
-The signals are numbers a script measured, not verdicts: a loud second with a chat spike and a short burst of words is a place to look, not a moment. A quiet funny line is a moment with no
+7. `RUN/10-media/Cnnnn/timeline.md` only for a span you are measuring (it has a row per second).
+The signals are numbers a script measured and the reports are what a reporter saw, not verdicts: a loud second with a chat spike and a short burst of words is a place to look, not a moment. A quiet funny line is a moment with no
 numbers at all. You decide.
 
 ## What to write: `RUN/20-analysis/blocks/block-NN.json`

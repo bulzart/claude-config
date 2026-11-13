@@ -1,5 +1,5 @@
 ---
-description: Take a processed livestream run folder (3-minute chunks, frame sheets, transcripts) and turn it into short-form (Shorts, TikTok, Reels) and long-form videos as CapCut projects with cuts, captions, VFX and sound effects. Two modes, chosen from the stream - streamer clipping (a person's stream - research of the streamer, their audience and the topic, then the moments) and game clipping (a match broadcast such as BLAST Premier CS2 or a Dota 2 game - research of the game, the event and the teams, then rounds and fights, how much of each to keep).
+description: Take a processed livestream run folder (3-minute chunks, frame sheets, transcripts, chunk reports) and turn it into CapCut projects with cuts, captions and VFX. Two modes, picked by the user at the start - streamer clipping (a person's stream - research of the streamer, their audience and the topic, then the moments; short-form and long-form videos, with matching sound effects) and game clipping (a match broadcast such as BLAST Premier CS2 or a Dota 2 game - research of the game, the event and the teams, then rounds and fights, how much of each to keep; long condensed-match videos only, no shorts, no sound effects, sponsor stretches cut).
 argument-hint: "<run folder or session name> [mode=streamer|game] [game=\"Counter-Strike 2\"] [only=shorts|long] [notes=\"guest, topic, what you want\"] [streamer=\"Name\"] | resume [run]"
 disable-model-invocation: true
 disallowed-tools:
@@ -7,6 +7,7 @@ disallowed-tools:
 allowed-tools:
   - Skill
   - Agent
+  - AskUserQuestion
   - Read
   - Write
   - Edit
@@ -51,7 +52,7 @@ allowed-tools:
 Arguments: `$ARGUMENTS`
 
 You are running the **/create-clips** command: the clip-farming editor for livestreams and matches. It has **two modes**, each with its own logic: **streamer clipping** (a person is the show: jokes, hype, arguments, clips, memes, lingo) and **game clipping** (a match is the show: the clips are built on rounds and fights).
-`cc-start` decides the mode from the stream (the user's `mode=` wins) and stores it as `mode` in `state.json`; every later phase follows it. This file is only the **router**; the work is split into **phase skills** (`cc-*`) and **reference files** (`CC/reference/`), so every phase loads only what it needs and a long run does not rot.
+**The user picks the mode, from the very start:** `cc-start` asks (unless the arguments carry `mode=`), stores the answer as `mode` in `state.json`, and every later phase follows it; nothing guesses it. This file is only the **router**; the work is split into **phase skills** (`cc-*`) and **reference files** (`CC/reference/`), so every phase loads only what it needs and a long run does not rot.
 
 `CC` = `C:/Users/Bulzart/.claude/create-clips` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$CC/scripts/cc.py"` (one JSON object on its last line; run through PowerShell: Git Bash forks fail on this PC) · `RUN` = the run folder the user names.
 The run folder is what `cc.py watch` made from the Twitch Chunk Recorder's chunks: `CC/README.md` is the contract (layout, rec time, files).
@@ -63,40 +64,42 @@ The run folder is what `cc.py watch` made from the Twitch Chunk Recorder's chunk
    After a compaction re-invoke the skill in `next_skill`: its text may have been summarised away.
 4. **Agents never receive this file.** An agent gets a contract that names the skill to invoke (Skill tool; if it is unavailable, Read `C:/Users/Bulzart/.claude/skills/<name>/SKILL.md`) and the reference files that skill lists.
 
-## Phases (the mode is decided in phase 1; `T state --run RUN get mode` says which column a run follows)
+## Phases (the user picks the mode in phase 1; `T state --run RUN get mode` says which column a run follows)
+Before the command runs, while the chunks are downloaded, the processor makes each chunk's sheets, audio numbers and transcript, and a separate headless **Haiku reporter session** (`claude -p`, Haiku 5.5, high effort) writes a **report** of what the chunk shows: observations only, never a verdict (`CC/reference/reporter.md`).
+The command's agents read those reports; nothing is spawned to read the raw chunks.
 | Phase | Streamer mode | Game mode | Does (streamer / game) | Next |
 |---|---|---|---|---|
-| 1 intake | `cc-start` | `cc-start` | the run, the chunk table, folders, the size of the work, **the mode** | `cc-profile` / `cc-profile-game` |
+| 1 intake | `cc-start` | `cc-start` | **asks the mode**, the run, the chunk table, any missing reports, folders, the size of the work | `cc-profile` / `cc-profile-game` |
 | 2 profile | `cc-profile` | `cc-profile-game` | recon, then a research wave and the context brief. Streamer: the streamer and their audience, the topic or game or event and what the internet says about it, the people, what works as a clip. Game: the game, the event and its storylines, the teams and players, esports clip trends; and where the score and the clock sit on screen | `cc-scan` / `cc-scan-game` |
-| 3 scan | `cc-scan` | `cc-scan-game` | fast scan agents (Haiku) read the stream in blocks. Streamer: summary, moments, richness per chunk. Game: the score read off the screen over the whole match, then a card per round or fight, what is not play, extras. Both: what to blur or avoid | `cc-plan` / `cc-plan-game` |
-| 4 plan | `cc-plan` | `cc-plan-game` | merge and a second look at what will be used. Streamer: the long-form and short-form videos. Game: a keep verdict for every round or fight (full, trim, flash, skip), shorts of the best plays, condensed-match videos. One brief per video | `cc-produce` |
-| 5 produce | `cc-produce` | `cc-produce` | one production agent per video, up to 4 at once, shorts and long-form together | `cc-wrapup` |
+| 3 scan | `cc-scan` | `cc-scan-game` | mining agents (the user's model) read the chunk reports in blocks and decide. Streamer: summary, moments, richness per chunk. Game: the score read off the screen over the whole match, then a card per round or fight, what is not play (sponsor stretches included), extras. Both: what to blur or avoid | `cc-plan` / `cc-plan-game` |
+| 4 plan | `cc-plan` | `cc-plan-game` | merge and a check of what will be used. Streamer: the long-form and short-form videos. Game: a keep verdict for every round or fight (full, trim, flash, skip) and the long condensed-match videos (no shorts). One brief per video | `cc-produce` |
+| 5 produce | `cc-produce` | `cc-produce` | one production agent per video, up to 4 at once (streamer: shorts and long-form together) | `cc-wrapup` |
 | per video | `cc-build-short` / `cc-build-long` | `cc-build-game` | study, EDL, captions, `capcut-compose`, `capcut-finish`, report | (returns) |
 | 6 wrap-up | `cc-wrapup` | `cc-wrapup` | verify, deliverables README (game mode also `rounds.md`), what to do next | none |
 
 ## Core rules (the full text sits in the skill or reference that owns each)
 1. **Normal command, never a workflow.** Everything runs in this conversation with ordinary tools and the Agent tool; the `Workflow` tool is disabled.
-2. **Agents**: research agents at most 4 (web only), scan agents at most 6 at once, production agents at most 4 at once, one per video, never overlapping, never asking, never spawning agents. → `cc-profile`, `cc-scan`, `cc-produce` (and their game-mode twins)
-   **Models** (the user, 2026-11-12): only the scan agents get a `model`, `haiku` (`config.json -> agents.scan_model`): the scan is the fast pass, each agent with its own batch of chunks. The main session, the research agents, the planner and the production agents use the model the user picked with `/model`: no `model` argument, and never a question about it.
-   The planner re-checks what it will use (the second look), so the fast pass never decides alone.
-3. **Scripts gather, agents decide.** `cc.py` measures, extracts, converts, reads numbers off the screen and writes what an agent decided; no verdict, rank or gate comes from a script. Every judgement is an agent's, with its reason written where the step records it.
+2. **Agents**: research agents at most 4 (web only), mining agents at most 6 at once, production agents at most 4 at once, one per video, never overlapping, never asking, never spawning agents. → `cc-profile`, `cc-scan`, `cc-produce` (and their game-mode twins)
+   **Models** (the user, 2026-11-12/13): every agent and the main session use the model the user picked with `/model`: never a `model` argument, never a question about it. The only Haiku is the **chunk reporter**, a separate headless `claude -p` session per chunk made by the processor while the stream is downloaded (config `report`):
+   it reads the chunk's sheets, audio numbers, transcript and chat and writes what they show. It is a reporter and never a decider: no verdict, no label such as "ace", no name corrected, nothing ranked or kept. Every decision is a working agent's.
+3. **Scripts gather, agents decide.** `cc.py` measures, extracts, converts, reads numbers off the screen and writes what an agent decided; no verdict, rank or gate comes from a script. Every judgement is a working agent's, with its reason written where the step records it. A report is data about a chunk, not a decision about it.
 4. **Think like a clip farmer who lives on the internet.** Before deciding anything, the agents are in touch with the streamer and their audience, the topic of the stream (a game, a release, an event, a trend: what everyone is saying, joking about, hyping and clipping about it), the people on it, and what works as a clip right now. The research is social, not scientific
    (the user, 2026-11-12). Every claim is tagged [W] web, [S] this stream, [M] model memory, [I] inference; nothing is invented. → `cc-profile`, `CC/reference/research-playbook.md`. In game mode the same spirit covers the game, the event, the teams and players and the esports clip trends. → `cc-profile-game`, `CC/reference/game-research-playbook.md`
 5. **Two kinds of video at once.** Short-form (Shorts, TikTok, Reels): up to 3 minutes each, the length follows the content, as many as are good. Long-form: about an hour as a guide, never cutting a story in half (so it may run past an hour), the number decided by how rich the night was for this creator (8 hour-long videos on a night that is hot all through, fewer and shorter on a warm one, none on a dull one), made of straight runs of chunks and pickups, the agent's call. → `cc-plan`, `CC/reference/portfolio.md`
-   **Game mode**: the units are rounds (CS2, Valorant) or fights and objectives (Dota 2, League); every unit gets a keep level (full, trim, flash, skip) with its reason: a round with no impact is dropped, a quiet one that a viewer would lose a detail of is kept short, a big one is kept whole. Shorts are the best plays and round stories; long-form is the condensed match (one video per map or game). → `cc-plan-game`, `CC/reference/game-clipping.md`
-6. **The edit is only**: cuts, captions, VFX (a zoom, a short transition, a blur where rule 7 says) and sound effects that match the situation. No music, no stickers, no emoji, no text overlay but captions, no filters, no drawings. **Captions are non-negotiable**: every second of speech, in every video. → `CC/reference/edit-craft.md`; a match: `CC/reference/game-edit-craft.md`
+   **Game mode makes long-form only, never a short** (the user, 2026-11-13): the units are rounds (CS2, Valorant) or fights and objectives (Dota 2, League); every unit gets a keep level (full, trim, flash, skip) with its reason: a round with no impact is dropped, a quiet one that a viewer would lose a detail of is kept short, a big one is kept whole. The videos are condensed matches, one per map or game. Sponsorship and the like (sponsor stings, betting segments, ad breaks, promos) is skipped totally. → `cc-plan-game`, `CC/reference/game-clipping.md`
+6. **The edit is only**: cuts, captions, VFX (a zoom, a short transition, a blur where rule 7 says) and, in streamer mode, sound effects that match the situation. No music, no stickers, no emoji, no text overlay but captions, no filters, no drawings. **Game mode has no sound effects at all.** **Captions are non-negotiable**: every second of speech, in every video. → `CC/reference/edit-craft.md`; a match: `CC/reference/game-edit-craft.md`
 7. **Safety** (the user, 2026-11-12): religion and superstition are **avoided** (a moment about them is not picked; an incidental one is cut around). Distressing, gory, nudity and personal data are **kept, never avoided, and blurred only in the section (and the part of the frame) where they are seen**; the rest of the clip is never blurred. → `CC/reference/safety.md`
 8. **The run's media is read-only**: chunks, sheets and transcripts are never moved, renamed, deleted or rewritten by this command. A chunk is used in place in CapCut (never copied into a draft: C: has little free space).
 9. **CapCut** (9.7, Free, no Pro): closed for every save; only the measured transitions; **one compose command per video**: `cc.py capcut-compose` builds the whole project (main track, sound-effect lanes, the chunks used in place) in a second or two, `cc.py capcut-finish` does the zoom keys, transitions, captions and the repair;
    never `capcut lint --fix`, never `--force-write`, never save with force. The per-tool MCP route is a fallback only. → `CC/reference/capcut-build.md`
-10. **No questions mid-run.** The agents decide; blockers (CapCut running, a missing run, a failed chunk) are reported, not asked. The user reads `RUN/deliverables/README.md` at the end.
+10. **One question at the start, none mid-run.** `cc-start` asks which mode this is (unless `mode=` was given); after that the agents decide, and blockers (CapCut running, a missing run, a failed chunk) are reported, not asked. The user reads `RUN/deliverables/README.md` at the end.
 11. **Honest reporting.** Never claim a check, a project or a render that did not happen; report failures with the real error. Every file named to the user is a full path from the drive letter.
 12. **Chunks arrive in rec time**: all times in plans, EDLs and reports are rec time (seconds since the start of C0001, content only); map to chunks with `T locate`, never `index * 180`.
-13. **One mode per run**, decided in `cc-start` and never asked; a phase of one mode reads only its own mode's skills and references (the shared ones: safety, edit-craft, clip-economy, capcut-build). A streamer co-streaming a match is streamer mode with the game as the topic.
+13. **One mode per run, picked by the user at the start** (`cc-start` asks; `mode=` in the arguments skips the question; a resumed run keeps its mode). A phase of one mode reads only its own mode's skills and references (the shared ones: safety, edit-craft, clip-economy, capcut-build). A streamer co-streaming a match is a streamer run with the game as the topic: the user decides which mode to pick.
 
 ## Never (global)
 - Never use or create a Workflow. Never more than 4 production agents at once. Never two agents on one video.
-- Never give a `model` to any agent but the scan agents. Never let a scan agent decide a keep level or a video.
+- Never give a `model` to any agent (the user's `/model` rules). Never guess or change the mode. Never let a report (or the reporter) decide a keep level, a moment, a name or a video.
 - Never delete or overwrite a chunk, a sheet, a transcript or a CapCut project. Never push or commit anything.
 - Never include religion or superstition; never skip a gory or distressing moment because it is one; never blur more than where it is seen; never build a video without captions.
 - Never invent a fact about the streamer, the topic or a person.

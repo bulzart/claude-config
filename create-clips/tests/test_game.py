@@ -189,8 +189,8 @@ def main():
         check(r.get("ok") and r["units"] == 5 and r["skipped"] == 1 and r["videos"] == ["S01", "S02"], "units-table: 5 units, 1 skipped, 2 videos " + json.dumps(r)[:200])
         check("## Skipped units" in md and "because R4" in md and "- **S01**: R1, R2, R3" in md and "- **S02**: R5" in md and "Team / A" in md,
               "the table lists the skipped unit with its reason, the units per video, and escapes a pipe")
-        r = cc("config", "get", "agents.scan_model", env=env)
-        check(r.get("ok") and r.get("value") == "haiku", "config get agents.scan_model is haiku (the scan agents' model)")
+        r = cc("config", "get", "report.model", env=env)
+        check(r.get("ok") and r.get("value") == "claude-haiku-5-5", "config get report.model is Haiku 5.5 (the chunk reporter's model)")
         integration(env, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

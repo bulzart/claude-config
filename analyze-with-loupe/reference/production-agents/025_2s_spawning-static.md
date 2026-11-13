@@ -110,7 +110,7 @@ Hard rules:
   commands when memory runs low); three or more characters ride with their own anchors where `T image fit` shows the memory for them,
   else with one cast sheet (`T image cast`).
 - Real things look like themselves (<AWL>/reference/static/050_5_images-a6s-plan-s3.md): a logo the plan places is the official file,
-  put on its surface with `T image brand` (never drawn by the model); another brand's mark the model drew is painted over (`--cover`);
+  put on its surface with `T image brand` (never drawn by the model); another brand's mark the model drew is left as drawn, never covered (the user, 2026-11-13);
   a known person keeps their anchor's likeness.
 - Every format is the same video (static §2b): the script, the narration, the bed, the cuts on their lines, the moves, the joins, the
   effects, the captions' words and look, the title and the thumbnail are the primary's, made once. An extra format's stills are the

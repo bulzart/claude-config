@@ -12,8 +12,8 @@ user-invocable: false
 - `CC/reference/research-playbook.md` (the research wave, how to search, the brief's shape). Read it whole once.
 
 ## Steps
-1. **Recon** (this session, small): from `RUN/00-inventory/stream.md`, `stream-meta.json` (titles and categories over the night) and the transcripts of the first chunk, the last chunk and three chunks in between
-   (`RUN/10-media/Cnnnn/transcript.txt`; or `T window --run RUN --from T --to T`), find out: who the streamer is (the channel name, how they are addressed), what the stream is about (the game, the event, the release, the trend), who is on with them (names heard), the mood.
+1. **Recon** (this session, small): from `RUN/00-inventory/stream.md`, `stream-meta.json` (titles and categories over the night), the chunk reports of the first chunk, the last chunk and three chunks in between (`RUN/10-media/Cnnnn/report.md`: what a reporter saw and heard, observations only)
+   and their transcripts (`RUN/10-media/Cnnnn/transcript.txt`; or `T window --run RUN --from T --to T`), find out: who the streamer is (the channel name, how they are addressed), what the stream is about (the game, the event, the release, the trend), who is on with them (names heard), the mood.
    Write `RUN/20-analysis/recon.md` (10 to 20 lines, each with its rec time or its source). Fold in the user's `notes` from `state.json`.
 2. **Research wave**: spawn the research agents **in one message** (up to `config.json -> agents.research_max`, 4: streamer and audience, the topic, the people, what is working as a clip). Each is a general-purpose agent, web only
    (WebSearch, WebFetch, Read, Write), briefed with: the channel, the stream's date, `recon.md`, the playbook's section for its job, its output file (`20-analysis/streamer.md`, `topic.md`, `people.md`, `clip-trends.md`), and these rules:

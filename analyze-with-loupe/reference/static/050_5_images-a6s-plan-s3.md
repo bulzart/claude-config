@@ -169,8 +169,10 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
     `T image brand --run RUN --video NN --image K --logo <file> --box x0,y0,x1,y1 [--card]` places the file on that surface (the box read
     off the picture, outside the caption band; `--card` paints a flat card first when something there must be hidden) as the next attempt,
     the generated one kept; an extra format's still gets its own (`--format <tag>`, the box read off that still). The present logo tells the viewer who even in an earlier year; a dated logo, when the official archive holds
-    it, tells when: the agent's call, written in the plan. Another brand's mark the model drew on its own (a fruit on a laptop, a label)
-    is painted over with `--cover x0,y0,x1,y1`.
+    it, tells when: the agent's call, written in the plan. Another brand's mark the model drew on its own (a fruit on a laptop, a label,
+    a car maker's badge on a grille) is **left as it is**, never painted over (the user, 2026-11-13: "no need to do T image brand
+    --cover for logos ever"): `--cover` is not used for a logo or a brand mark, and a mark like that is not a flag or a re-draw
+    either. (A mark that reads as a religious symbol, a cross for instance, stays §11's.)
   - **A known person** (whose appearance is public: a founder, a leader, an artist) is drawn to look like them, in the run's style lock:
     two or three public photos (the user's assets first; else ones whose licence allows reuse, from Wikimedia Commons or an official press
     page: `T fetch-image --kind photo`) ride with their anchor (`T image generate --anchor C1 --ref <photo> …`; the sheet prompt names
