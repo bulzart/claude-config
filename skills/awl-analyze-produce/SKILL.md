@@ -43,7 +43,7 @@ The model was picked at the start (§2.4) and does not change.
    Overlay text never depends on the model: it goes in CapCut. Never switch models.
 
 ### A9. Prepare every video (this session)
-At the start of A9: `T state --run RUN set stage=producing next_skill=awl-analyze-produce` (a resume re-enters here; the ledger and `state.json → videos[]` show which videos are done).
+At the start of A9: `T state --run RUN set stage=producing next_skill=awl-analyze-produce` (a resume re-enters here; the ledger and `state.json → videos[]` show which videos are done), and add each video's items (X1 to X10, by video, files by full path) to `RUN/todo.md` (item 38), then keep it as A9b says.
 A run with no `state.json → model_limits` (one made before 2026-11-05, resumed) records it first, as A8 step 2 says, before any video is planned.
 
 **How A9 invokes the per-video skills.** Step 1 (X1–X4 for every video, in allocation order): invoke Skill `awl-plan-video` (X1), `awl-write-request` (X2: the checked draft) and `awl-precheck` for **X4 and X4b only** (X4b: the judge writes the final prompt from the whole checked brief); their text stays loaded for the next video. Step 2 (shared inputs, X3 for the shared uploads, every image the judge added at X4b (its placeholder `value`) and X5's folder): invoke Skill `awl-inputs`, then return here. Step 3 (X5–X6 per video): invoke `awl-precheck` again for X5 and X6 of every video and print the total once. Steps 4 and 5 follow here.
