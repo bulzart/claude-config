@@ -19,7 +19,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - production-agents §3: `CS/reference/production-agents/030_3_the-agent-s-contract.md` (7.6 KB)
 - production-agents §4: `CS/reference/production-agents/040_4_60-outputs-video-nn-result-json.md` (2.2 KB)
 - production-agents §5: `CS/reference/production-agents/050_5_this-session-as-agents-report.md` (2.1 KB)
-- static §13: `CS/reference/static/130_13_evaluating-the-work.md` (16.5 KB) (the fresh read before the first generation, and "Between image stretches"; skip when already read)
+- static §13: `CS/reference/static/130_13_evaluating-the-work.md` (17.5 KB) (the fresh read before the first generation, and "Between image stretches"; skip when already read)
 
 ### A9s. Prepare every video (this session; item 36)
 At the start: `T state --run RUN set stage=producing next_skill=cs-produce` (a resume re-enters here; `state.json → videos[]` shows which videos are done), and add the production items to `RUN/todo.md` (item 38): per video S2, S3 (its stretches by image number, naming the

@@ -15,7 +15,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §6: `CS/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (30.5 KB)
 - static §8: `CS/reference/static/080_8_static-qc-s2-s4.md` (9.7 KB)
-- static §13: `CS/reference/static/130_13_evaluating-the-work.md` (15.8 KB)
+- static §13: `CS/reference/static/130_13_evaluating-the-work.md` (17.5 KB)
 
 The main session runs S2 for every video, one at a time, before any production agent starts (`cs-produce` A9s). The narration
 is ElevenLabs' in the run's voice (`state.json → static.voice`) and the run's narration model (`state.json → static.tts_model`: Eleven v4

@@ -18,7 +18,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - *(nothing else from the library: `T model-menu` and `T model-entry --id` print what is needed)*
 - effort §1: `AWL/reference/effort/010_1_the-question-awl-start-step-5d.md` (3.0 KB) (every run, step 5d)
 - *Static (as soon as the sub-mode is Static):*
-  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (4.7 KB)
+  - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (5.8 KB)
 - *Static, when `T static check` reports a part the run needs as not ready:*
   - static §9: `AWL/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (11.9 KB)
 - *Static, when the narration model the user picks is not set up (`set_up: false`):*

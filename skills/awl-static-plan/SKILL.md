@@ -14,22 +14,22 @@ user-invocable: false
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (5.8 KB) (who works the run, and when; skip when already read)
-- static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (4.2 KB)
+- static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (4.7 KB)
 - static §4b: `AWL/reference/static/045_4b_engagement-thought-first.md` (5.1 KB) (what the references taught, then what will hold a viewer, thought through before any line)
-- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (10.5 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (26.6 KB)
+- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (11.1 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (27.6 KB)
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (30.5 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (11.0 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (6.1 KB)
 - static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (8.6 KB)
-- static §13: `AWL/reference/static/130_13_evaluating-the-work.md` (15.8 KB) (how you judge your own work, and fresh reviewers)
+- static §13: `AWL/reference/static/130_13_evaluating-the-work.md` (17.6 KB) (how you judge your own work, and fresh reviewers)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
   - brand-guardrails §4: `AWL/reference/brand-guardrails/040_4_the-audit-in-the-pipeline.md` (3.8 KB)
 
-Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset registry (A2b), `state.json → requested_videos` and `static.length_plan` (A5). A run with no `static.length_plan` (made before 2026-11-12, or A5 not answered) asks the length first (`awl-analyze-study` A5 "Then the length"), before the pool is drawn.
+Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset registry (A2b), `state.json → requested_videos` and `static.length_plan` (A5). A run whose spec has no page "What the references teach" (made before 2026-11-14) gets it first, written from the spec's readings and the niche's cards (static §2), before anything is planned. A run with no `static.length_plan` (made before 2026-11-12, or A5 not answered) asks the length first (`awl-analyze-study` A5 "Then the length"), before the pool is drawn.
 
 ### A6s. Static: the plan (main session; the run's one stop)
 1. **Characters.** Every character of the asset registry gets an id (C1, C2 …), who they are (a known real person, an ordinary role, a
@@ -81,7 +81,7 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    development, and not just check and edit and do double effort after the whole video story is already crafted and finished", and "just
    give general suggestions ... and then the pipeline evaluates on its own and find out whats best while it executes").
    **6a. Learn from the references, then think it through** (static §4b), before any line, prompt or caption exists: first write down
-   what the references taught for this subject's niche (the spec's template and readings, and the niche's cards: their patterns,
+   what the references taught for this subject's niche (the spec's page "What the references teach" and its readings, and the niche's cards: their patterns,
    approach and how their stories are built, with their sources) as the first part of the blueprint; then, with that and what your
    research found as the context, work out what will make a stranger click, stay, feel something, finish and pass this video on, for this
    subject in this niche (alone, or with fresh agents given all the same context and left free to think: how many and with what focus

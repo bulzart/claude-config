@@ -207,6 +207,13 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   Every Klein prompt says the picture is one continuous scene from a single camera viewpoint filling the whole frame, above all one with
   no reference image: the upsampler may otherwise lay a tall frame out as stacked panels (2026-11-06: an image with no reference came back
   as two pictures with a hard seam; with that sentence the seven after it were single scenes).
+  Every Klein prompt also says the time of day and where the camera is: what a prompt leaves open the upsampler fills from its own habit
+  (2026-11-13, video 05: prompts with no time of day came back as bright day inside a night chapter, and "seen from the passenger seat" with
+  a frontal reference face came back with the camera outside the car in about half the stills). Where the camera must stay inside a place,
+  the prompt says where it sits and what is around the subject ("the camera on the passenger seat beside him, looking across the cabin, so
+  his driver's window is behind his head and the windscreen is in front of him"), and the same prompt does not also make a window or a
+  doorway the subject, ask for the whole body with both hands busy, or ask for a close readable face: the model then moves the camera
+  outside. A stretch's stills show which words held, and the prompts still to come are changed from it (§13).
 - **Prompts mode** (`static_images=prompts`): `T image prompts --run RUN` writes `deliverables/prompts/video-NN-image-prompts.md` (the
   characters' sheets first, then one prompt per image with its file name `vNN-iKK`, the character to attach, and the format's aspect and size); the user makes
   them, puts them in one folder and sends its path; `T image intake --run RUN --folder <path>` copies them in (never moves or changes

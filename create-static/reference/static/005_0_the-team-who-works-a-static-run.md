@@ -45,7 +45,8 @@ from what was decided. The work judges itself as it goes (§13); it is never a r
 **The discipline** is what gets it there, and it is never traded for the ambition:
 - the craft, the tone and the register come from the references' measured data and their words (§1, §2), never from habit, taste or a
   stock value: a calm documentary stays calm, a wry one wry; the ambition sharpens what they do, it never turns it into clickbait;
-- facts are sourced, never invented, and the subject is new, never a reference's (§3, §4);
+- what is told as real is sourced, never invented, and the subject is new, never a reference's (§3, §4); each niche has its own logic
+  and the agent decides what fits it (§4b);
 - the edit uses only what this PC's CapCut was shown to play, within the run's CapCut plan (§7, §9);
 - one channel: every video of the run in its niche, its visual style and its narrator, as the user picked them (§10); each video in an
   approach and a language of its own, recorded with its subject (§10, §6);

@@ -85,7 +85,11 @@ silence is placed (§6 "Passages").
   even as a first-aid fact (the tip told by its other places: "her head, her neck and under her arms").
 - **Fact sheet** (factual niches): `40-briefs/video-NN-facts.md`, every claim of the script with its source URLs, and what else the
   research found that gives the story life (§3), each with its source and, for a quote, its exact words.
+- **Sources told as they are** (the user, 2026-11-13: "if its fact story do not lie"): a claim told as real has two fetched sources in the
+  fact sheet or names its one in the line ("the AP told of …"); a source seen only in a search summary is not a fetched one; where outlets
+  differ on a detail, the line says what one source says and names it; the design note and the script count sources from the fact sheet's
+  fetched ones, never from memory. A claim stronger than its sources is softened or cut before anything is recorded, while that costs a line.
 - **Told to hold, not only to inform** (§4b): the lines carry what the design made first decided; nothing is there only because it is true
-  and dull, and nothing is invented to make it livelier (the truth rule).
+  and dull, and what is told as real is never invented to make it livelier (the truth rule).
 - The copy test (`creative-direction.md` §5.0) and the sharpness gate pass before the script is final.
 

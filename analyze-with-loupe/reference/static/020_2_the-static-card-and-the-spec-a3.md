@@ -14,6 +14,13 @@ reference speaks to it; "V02's template" or "V01's moves" is never the reason fo
 (written after A5; §1 "The run's niche within the set"): the spec names the references of the run's niche and, for every field below,
 gives their pattern beside the set's and the family's: the niche's numbers are what a video aims at, the others the context they are
 read in; a spec written before 2026-11-09 gets this block before the run's next videos are planned.
+- **What the references teach** (the user, 2026-11-14: "analysing the references and their pattern -> taking what we've learned from the
+  references in terms of patterns and approach and of how the video story should be crafted"): written first, in plain words, a page at most
+  for the set and for the niche's references: how these videos are crafted, how they hook, build, hold and land a story, the devices that
+  recur and what each does for the viewer, what they do about truth and about attachment, what they never do. The fields below are the
+  numbers and counts behind it, and they are common ground, not a form: what a niche's craft has that they do not name goes on this page,
+  and a field the niche's references do not use stays thin, never filled from another niche. The planners start from this page, then think
+  freely with it (§4b, A6s 6a). A spec written before 2026-11-14 gets this page before the run's next videos are planned.
 - **Narration template**: the beats in order with their share of the length (hook 0–5 %, setup, escalation 1…n, the reveal, the payoff,
   the closing line), as the set builds them; the line length; the pace and the pauses (below).
 - **The pace** (the user, 2026-11-08: "the narration speed and style should mirror the reference's data patterns ... we have to be very

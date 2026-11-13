@@ -15,7 +15,7 @@ Phase 1 of `/create-static`. The router (the command) sent you here and passes t
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §0: `CS/reference/static/005_0_the-team-who-works-a-static-run.md` (4.7 KB)
+- static §0: `CS/reference/static/005_0_the-team-who-works-a-static-run.md` (5.8 KB)
 - *when `T static check` reports a part the run needs as not ready:*
   - static §9: `CS/reference/static/090_9_the-static-pc-setup-once-per-pc.md` (12 KB)
 - *when the narration model the user picks is not set up (`set_up: false`):*

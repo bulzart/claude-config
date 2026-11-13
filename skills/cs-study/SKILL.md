@@ -31,7 +31,7 @@ Only these section files for this phase, nothing else unless a step below says s
 - static §0: `CS/reference/static/005_0_the-team-who-works-a-static-run.md` (5.8 KB) (who works the run: read at the start, again only
   after a compaction)
 - static §1: `CS/reference/static/010_1_what-static-mines-from-the-refer.md` (12.7 KB)
-- static §2: `CS/reference/static/020_2_the-static-card-and-the-spec-a3.md` (13.5 KB)
+- static §2: `CS/reference/static/020_2_the-static-card-and-the-spec-a3.md` (14.4 KB)
 - static §10: `CS/reference/static/100_10_one-channel-per-run.md` (11.5 KB) (the niche, the visual style and the narrator, A5)
 
 ### A3. Video analysis (as continuous sequences)
@@ -83,7 +83,7 @@ Write, following the protocol §5–§6:
   **audience model** and the **trend read** (`creative-direction.md` §2–§4; protocol §6);
 - first `T static profile --run RUN` (every analysed reference's measured numbers and the set's median and range,
   `20-analysis/set-profile.md`; `--refs` for a family), then `20-analysis/static-spec.md` (static §2) from the **whole set** (the user,
-  2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy"): the narration template, the pace
+  2026-11-08: "the reference datas should be studied as a whole not just pick one of them to copy"): first a page in plain words on what the references teach (static §2: how they hook, build, hold and land a story, their recurring devices and what each does for the viewer), then the narration template, the pace
   (the set's bands while speaking and overall, the pauses), seconds per still, retention, emotion over time, language, engagement,
   attachment, the social side, content style, the approaches seen (static §2: counted across the set and the niche's references), the
   niche candidates (fields, never a title or story form), the visual styles (each reference's, grouped, with a storyboard sheet

@@ -324,7 +324,7 @@ to be published well (a description with chapters and sources, a pinned comment 
 2026-11-13: "in early stages of planning and video development, and not just check and edit and do double effort after the whole video story
 is already crafted", and "just give general suggestions ... and then the pipeline evaluates on its own and find out whats best while it
 executes"): before any line is written the agent works out what will hold and attach a viewer in this subject and niche (§4b: a direction,
-never a checklist), and the script, stills, bed and edit are made from it. **No judge agents in Static** (the user, 2026-11-13): the
+never a checklist) starting from what the references taught (a page of the spec) and thinking freely with it, alone or with fresh agents given all of it, each niche by its own logic, and the script, stills, bed and edit are made from it. **No judge agents in Static** (the user, 2026-11-13): the
 pipeline judges its own work as it goes, skeptically; one fresh read of the plan by a reviewer with none of its context is a standing step
 before the first generation, and more fresh reviewers are used only when a second opinion is worth having (§13). The length is asked
 at A5, after the niche is locked and before any planning (the user, 2026-11-12): standard (the niche's references' length, each video's own the

@@ -18,6 +18,10 @@ and the style are carried, the subject is new; the copy test applies: one yes ma
   whatever this niche and subject offer that a viewer would care about, wonder at or remember, each with its source and, for a quote, its
   exact words, gathered now so the design is built from it and not patched afterwards. What that is differs from subject to subject: the
   agent finds out as it researches.
+- **Each niche has its own logic** (§4b; the user, 2026-11-14): the references' content style (§1) says whether their stories are real or
+  invented. Where it is invented, each subject is a story made up for the video, told in the references' craft, never passed off as real
+  and never a reference's story (the copy test); what "true" asks of it is that it holds together, and the pool is scored the same way.
+  The agent reads from the references which kind its niche is and what that kind needs; nothing here fixes it.
 - **Characters decide the kind of subject** when the assets hold them (read who they are from their photos and descriptions):
   - a known real person: real, sourced facts (their rise, a turning point, a lesser-known story), told the references' way;
   - an ordinary role (a farmer, a nurse, a soldier): a story, an anecdote or a drama of their world that fits the references' telling;

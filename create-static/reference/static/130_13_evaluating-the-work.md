@@ -34,6 +34,15 @@ not at all when there is nothing worth asking; typical moments are a stretch of 
 finished edit. Heavy work (a model, a test suite) never runs beside FLUX 3 Klein, a reviewer included. In a session without agents the
 working agent does the cold read itself, from the artifact alone.
 
+**Informed helpers, with all of your context** (the user, 2026-11-14: agents that "use their free will, suggestions, curiosity build up,
+engagement engine, strategy and other aspects"): the other kind of fresh agent, for the design (A6s 6a) and any time the planner wants more
+minds on the work. It is given everything the planner has (the spec's page "What the references teach" and the niche's cards, the design
+note, the script, the pictures' plan, the facts), the user's aim in the user's words, the hard rules and what a change costs at this stage;
+it reads the references first, then thinks freely and brings back suggestions, each with its reason (the pattern, or the viewer) and its cost
+(free; a line recorded again; a still drawn again). It scores and passes nothing and changes no file but its own report; the planner decides,
+applies what is free and brings the costly to the user. Whether to use any, how many and with what focus is the planner's call for the
+subject (§4b); a cold reader, who is given nothing, is a different check.
+
 **The facts you read.** `20-analysis/static-spec.md` and the cards (the craft); `T static profile --run RUN --refs <the family>` and
 `--refs <the niche's references in it>` (their numbers: the pace by the fair measure, the pauses, the seconds a still); the video's plan
 files (`40-briefs/video-NN-*`); `T static forecast` (below); the run's history (`60-outputs/video-*/images*.json` notes, the briefs); and

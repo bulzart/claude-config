@@ -3,7 +3,7 @@
 Static is the fourth Analyze sub-mode (the user, 2026-11-05). Its references are viral narration and storytelling videos whose picture is a
 slideshow: a new still every few seconds under one voice. Static learns **how** they are made (the hook, the way of telling, the
 punchlines, the pacing, the cuts, what keeps a viewer watching) and makes new videos with that craft on a **different subject**: real and
-sourced when the niche is factual, fitting the characters in the assets folder when there are any. The pictures are stills: made by the
+sourced when the niche is factual, made up and kept consistent (never passed off as real) when its stories are invented, fitting the characters in the assets folder when there are any. The pictures are stills: made by the
 OpenAI Images API with the user's key, by FLUX 3 Image Klein on this PC, or by the user from the prompts the pipeline writes (the user
 picks at the start). The voice is the run's own ElevenLabs voice in the model the user picks (Eleven v4 unless they pick another), speaking
 each video in the language the user picks for it, used exactly as delivered; the niche is a family of content and each video an approach of
@@ -19,12 +19,12 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 |---|---|---|---|
 | 0 | The team (who works a Static run) | `005_0_the-team-who-works-a-static-run.md` | 5.8 |
 | 1 | What Static mines from the references (A3) | `010_1_what-static-mines-from-the-refer.md` | 12.7 |
-| 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 13.5 |
+| 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 14.4 |
 | 2b | More than one format (A5, S3, S4, X10) | `025_2b_more-than-one-format.md` | 4.4 |
-| 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 4.2 |
-| 4 | The script (A6s) | `040_4_the-script-a6s.md` | 10.5 |
-| 4b | Engagement: thought through first (A6s) | `045_4b_engagement-thought-first.md` | 3.7 |
-| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 26.6 |
+| 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 4.7 |
+| 4 | The script (A6s) | `040_4_the-script-a6s.md` | 11.1 |
+| 4b | Engagement: thought through first (A6s) | `045_4b_engagement-thought-first.md` | 5.1 |
+| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 27.5 |
 | 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 30.7 |
 | 7 | The edit (S4) | `070_7_the-edit-s4.md` | 15.0 |
 | 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 10.4 |
@@ -33,5 +33,5 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 3.1 |
 | 11b | Nothing indecent, gory or distressing | `115_11b_nothing-indecent-gory-or-distres.md` | 6.1 |
 | 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 8.6 |
-| 13 | Evaluating the work (A6s, S2, S3, S4) | `130_13_evaluating-the-work.md` | 16.5 |
+| 13 | Evaluating the work (A6s, S2, S3, S4) | `130_13_evaluating-the-work.md` | 17.5 |
 <!-- sections:end -->

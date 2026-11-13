@@ -13,7 +13,7 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §5: `CS/reference/static/050_5_images-a6s-plan-s3.md` (25.3 KB)
+- static §5: `CS/reference/static/050_5_images-a6s-plan-s3.md` (27.5 KB)
 - static §8: `CS/reference/static/080_8_static-qc-s2-s4.md` (9.7 KB)
 - static §11: `CS/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §11b: `CS/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (6.1 KB)
