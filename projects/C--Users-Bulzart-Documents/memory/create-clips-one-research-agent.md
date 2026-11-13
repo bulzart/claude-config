@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: efec77d7-2d15-4e76-856d-85333ee657d3
-  modified: 2026-11-13T15:32:46.970Z
+  modified: 2026-11-13T16:20:30.388Z
 ---
 
 User 2026-11-13 (twice, same words): "when we complete the clips, make sure to re-edit the /create-clips pipeline so that it only spawns only one research agent for all the work, no need to collect 100 sources ... one agent suffices to collect everything briefly, not a deep research", "same for streamer mode, and also anything that can be processed and produced in bulk ... in order to save as much time as possible ... we need to deliver as fast as possible, yet without ruining or letting anything aside, we want to achieve the same results as we do right now but faster."
@@ -20,5 +20,7 @@ Also: "add the option to pick captions and no captions mode for both streamer an
 - Lessons written into the skills: live vs replay only from the replay-badge series (the first brief called two live rounds replays); `hud/states.txt` misses banner-hidden round ends (raw `<name>.txt` is truth); "reconcile" step after the scan; captions `y_rel` 0.76 above a CS2 HUD; a subagent's write of `report.md` can be refused by the harness (the main session saves the returned text).
 
 **Verified 16:32:** `tests/run-all.py --fast` all green (280 s) and, once the user closed CapCut, `tests/test_edit.py` including compose/finish with captions off (no caption track) and captions on without an srt refused. Not verified: a real run with the new start (one dialog, the background research agent) has not happened yet.
+
+Later the same day (same session): the caption look (Loupe word-box, free font/colour, small/normal size) is [[create-clips-caption-look]]; the single CapCut composition and `capcut-build` are [[create-clips-capcut-composition]].
 
 Related: [[create-clips-pipeline]], [[scripts-gather-agents-decide]], [[awl-never-ask-decide-autonomously]]

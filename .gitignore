@@ -55,4 +55,5 @@ __pycache__/
 /analyze-stack/samples/
 /create-clips/runs/
 /create-clips/data/sfx-cache.json
+/create-clips/data/font-cache.json
 /loupe/data/

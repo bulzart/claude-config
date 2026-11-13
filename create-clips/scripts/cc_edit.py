@@ -13,7 +13,9 @@ Commands (see README.md for the contract; times are rec times):
                  word-box one by default (the spoken word on a rounded colour box, cc_wordbox.py) or plain
   fonts          the font files the captions can use (family, style, file, where kept)
   capcut-name    a free CapCut project name
-  capcut-finish  after the last MCP save: zoom keyframes, transitions, background blur, captions (not when the run's captions setting is off), font, intro, repair
+  capcut-compose the whole CapCut project in ONE `capcut compile`: the clips on their real chunk files, the sound-effect lanes, the transitions and the word-box caption texts
+  capcut-finish  after compose (or the last MCP save): zoom keyframes, background blur, the caption font and entrance, repair, clean-up (what compose did not put in)
+  capcut-build   compose + finish + the read-back in one command, one JSON answer: the way every video is built (the user, 2026-11-13: the composition for everything)
 """
 from __future__ import annotations
 
@@ -30,7 +32,7 @@ import time
 import uuid
 from pathlib import Path
 
-from cc_common import (CC_HOME, cfg_get, chunk_dir, fail, ffprobe_facts, find_tool, fmt_hms, load_chunks, load_state,  # noqa: F401
+from cc_common import (CC_HOME, FileLock, cfg_get, chunk_dir, fail, ffprobe_facts, find_tool, fmt_hms, load_chunks, load_state,  # noqa: F401
                        now_iso, out, parse_time, read_json, resolve_run, run_cmd, run_paths, say, split_across_chunks,
                        update_state, write_json, write_text)
 import cc_wordbox as wb  # noqa: E402  (the word-box caption look: planning and the draft writer)
@@ -515,13 +517,37 @@ def font_rows(family: str | None = None) -> list:
 
 
 _STYLE_PREFERENCE = ("bold", "extrabold", "extra bold", "black", "semibold", "medium", "regular")
+FONT_CACHE = CC_HOME / "data" / "font-cache.json"      # derived data (git-ignored like sfx-cache.json): a family lookup costs a Python start and a scan of the PC's fonts, about 3 s
+
+
+def _font_cache_get(key: str):
+    e = (read_json(FONT_CACHE, {}) or {}).get(key)
+    try:
+        if e and Path(str(e["file"])).is_file() and Path(str(e["file"])).stat().st_size == int(e["size"]):
+            return str(e["file"])
+    except (KeyError, OSError, ValueError, TypeError):
+        pass
+    return None
+
+
+def _font_cache_put(key: str, file: str) -> None:
+    try:
+        j = read_json(FONT_CACHE, {}) or {}
+        j[key] = {"file": file, "size": Path(file).stat().st_size, "when": now_iso()}
+        write_json(FONT_CACHE, j)
+    except OSError:
+        pass                                          # a cache that cannot be written only costs the next lookup its 3 s
 
 
 def caption_font(caps: dict) -> str:
-    """The caption font's file: `font_family` (looked up on this PC, the style in `font_style` or else Bold first) or `font_file` (a name in the Loupe fonts folder or
-    an absolute path)."""
+    """The caption font's file: `font_family` (looked up on this PC, the style in `font_style` or else Bold first; the answer is kept in data/font-cache.json while the file
+    is still there, so compose, finish and the next video do not scan the fonts again) or `font_file` (a name in the Loupe fonts folder or an absolute path)."""
     fam = str(caps.get("font_family") or "").strip()
     if fam:
+        key = f"{fam.lower()}|{str(caps.get('font_style') or '').strip().lower()}"
+        hit = _font_cache_get(key)
+        if hit:
+            return hit
         rows = font_rows(fam)
         exact = [r for r in rows if str(r["family"]).lower() == fam.lower()] or rows
         if not exact:
@@ -533,7 +559,9 @@ def caption_font(caps: dict) -> str:
             if want and sty == want:
                 return -1
             return next((i for i, p in enumerate(_STYLE_PREFERENCE) if sty == p), len(_STYLE_PREFERENCE))
-        return str(sorted(exact, key=rank)[0]["file"])
+        chosen = str(sorted(exact, key=rank)[0]["file"])
+        _font_cache_put(key, chosen)
+        return chosen
     p = Path(str(caps["font_file"]))
     if not p.is_absolute():
         p = awl_home() / "fonts" / p
@@ -1100,9 +1128,95 @@ def make_cover(d: Path, piece: dict, canvas: dict) -> bool:
     return cp.returncode == 0 and (d / "draft_cover.jpg").is_file()
 
 
-def cmd_capcut_compose(a):
-    """The whole CapCut project in one command (no per-tool calls): resolved.json -> a `capcut compile` spec (main video track, one audio track
-    per sound-effect lane) -> the draft in the CapCut drafts store -> the placeholder media replaced by the real chunk files. Then `capcut-finish`."""
+def capcut_store_lock_path() -> Path:
+    """The machine-wide lock of CapCut's shared project index (root_meta_info.json): the Loupe toolkit's repair takes this very file (same O_EXCL protocol) around its `register`
+    step, so a build of this command and a repair of another run never write the index together."""
+    acfg = read_json(awl_home() / "config.json", {}) or {}
+    return Path(acfg.get("runs_root") or (awl_home() / "runs")) / ".capcut-store.lock"
+
+
+def locked_compile(args: list):
+    """`capcut compile` creates the draft AND adds it to the store's shared root_meta_info.json (a read, a change and a write): production agents build their videos side by side,
+    so the call holds the store lock; it lasts a few seconds. The lock is only the compile call: the rest of the build touches this draft's own folder."""
+    try:
+        with FileLock(capcut_store_lock_path(), timeout=900, stale_s=300):
+            return run_cmd(args, timeout=600)
+    except TimeoutError as e:
+        fail(f"{e}: another build is writing CapCut's project index; run this again", 4)
+
+
+def probe_pool(files: list) -> dict:
+    """ffprobe facts of every distinct file, several at a time (a long video draws on dozens of chunks and each probe is a process of its own)."""
+    from concurrent.futures import ThreadPoolExecutor
+    files = sorted(set(files))
+    if not files:
+        return {}
+    with ThreadPoolExecutor(max_workers=min(8, len(files))) as ex:
+        return dict(zip(files, ex.map(ffprobe_facts, files)))
+
+
+def word_box_parts(vdir: Path, caps: dict, canvas: dict, total_s: float):
+    """The word-box captions of a video as the plan and the compile parts, from its captions.json and the resolved look; None when the file holds no word-box cues.
+    Compose and finish both call it, so what finish expects is what compose wrote (the fingerprint of the parts tells)."""
+    cj = read_json(vdir / "captions.json") or {}
+    if cj.get("style") != "word-box" or not cj.get("cues"):
+        return None
+    font_path = caption_font(caps)
+    size, _info = caption_size(caps, canvas, font_path)
+    c2 = {**caps, "size": size}
+    plan = wb.plan_word_box(c2, cj["cues"], canvas, font_path)
+    return {"font_path": font_path, "size": size, "caps": c2, "plan": plan, "parts": None if plan["error"] else wb.compose_parts(plan, c2, total_s)}
+
+
+def parts_fingerprint(parts: dict) -> str:
+    return hashlib.sha1(json.dumps([parts["tracks"], parts["operations"]], sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def compose_extras(run: Path, vdir: Path, finish: dict, pieces: list, canvas: dict) -> dict:
+    """What goes into the same `capcut compile` call as the clips and the sound-effect lanes, so the whole project is ONE composition (the user, 2026-11-13: use the
+    composition for everything, for faster delivery): the transitions (an operation on the clip before each join: the very function capcut-cli's `transition` command
+    calls) and, when the captions are on and in the word-box look, the caption texts with their styles (wb.compose_parts: the functions import-srt calls, without a process
+    and a draft write per track). Compile has no operation for the caption font, the entrance, the zoom keys, the background blur or the repair: capcut-finish writes those."""
+    res = {"tracks": [], "operations": [], "transitions": None, "captions": None}
+    half = 0.5 / max(1, int(canvas.get("fps") or 30))
+    trs = finish.get("transitions") or []
+    if trs:
+        done, failed, used = [], [], set()
+        for t in trs:
+            if t.get("refused"):
+                failed.append({"slug": t["slug"], "error": t["refused"]})
+                continue
+            p = next((q for q in pieces if abs(float(q["at"]) - float(t["on_clip_at_s"])) <= half), None)
+            if p is None:
+                failed.append({"slug": t["slug"], "error": f"no clip starts at {t['on_clip_at_s']} s"})
+                continue
+            if p["piece"] in used:
+                failed.append({"slug": t["slug"], "error": f"clip {p['piece']} already has a transition"})
+                continue
+            used.add(p["piece"])
+            res["operations"].append({"op": "transition", "target": f"p{p['piece']}", "slug": t["slug"], "duration": round(float(t["dur_s"]), 3)})
+            done.append({"slug": t["slug"], "at_s": t["on_clip_at_s"]})
+        res["transitions"] = {"done": done, "failed": failed}
+    caps = finish.get("captions") or {}
+    if captions_on(run) and caps.get("style") == "word-box" and pieces:
+        total_s = max(float(p["at"]) + float(p["dur_out"]) for p in pieces)
+        w = word_box_parts(vdir, caps, canvas, total_s)
+        if w and w["parts"]:
+            parts = w["parts"]
+            res["tracks"] += parts["tracks"]
+            res["operations"] += parts["operations"]
+            res["captions"] = {"composed": True, "style": "word-box", "tracks": len(parts["tracks"]), "texts": parts["texts"], "clipped_at_end": parts["clipped_at_end"],
+                               "dropped": parts["dropped"], "fingerprint": parts_fingerprint(parts), "plan_tracks": parts["plan_tracks"],
+                               "track_list": [{"track": t["track"], "boxed": t["boxed"], "entrance": t["entrance"], "texts": len(t["entries"])} for t in parts["plan_tracks"]]}
+        elif w:
+            res["captions"] = {"composed": False, "error": w["plan"]["error"]}
+    return res
+
+
+def compose_run(a) -> dict:
+    """The whole CapCut project in one command (no per-tool calls): resolved.json -> a `capcut compile` spec (the main video track, one audio track per sound-effect lane,
+    the transitions and, in the word-box look, the caption texts with their styles) -> the draft in the CapCut drafts store -> the placeholder media replaced by the real
+    chunk files. `--bare` leaves the transitions and the captions to `capcut-finish`. Then `capcut-finish` (or `capcut-build`, which does both and the read-back)."""
     run = resolve_run(a.run)
     vdir = run_paths(run)["outputs"] / a.video
     resolved, plan = read_json(vdir / "resolved.json"), read_json(vdir / "mcp-plan.json")
@@ -1129,13 +1243,14 @@ def cmd_capcut_compose(a):
     ratio = {(1080, 1920): "9:16", (1920, 1080): "16:9"}.get((canvas["width"], canvas["height"]), "original")
     pieces = resolved["pieces"]
     ph = make_placeholder(run, max(p["dur_src"] for p in pieces) if pieces else 1.0)
-    probes = {}                                     # one ffprobe per distinct file (a long video has hundreds of pieces over a few dozen chunks)
-    for p in pieces:
-        if p["file"] not in probes:
-            probes[p["file"]] = ffprobe_facts(p["file"])
+    probes = probe_pool([p["file"] for p in pieces])    # one ffprobe per distinct file, side by side (a long video has hundreds of pieces over a few dozen chunks)
     missing = [f for f, pr in probes.items() if not pr.get("duration_s")]
     if missing:
         fail(f"media not readable: {missing[:3]}")
+    finish = read_json(vdir / "finish.json") or {}
+    extra = {"tracks": [], "operations": [], "transitions": None, "captions": None}
+    if not getattr(a, "bare", False) and finish:
+        extra = compose_extras(run, vdir, finish, pieces, canvas)
     items = []
     for p in pieces:
         it = {"ref": f"p{p['piece']}", "path": str(ph).replace("\\", "/"), "start": p["at"], "duration": p["dur_out"], "sourceStart": round(p["src_from"], 6),
@@ -1154,9 +1269,11 @@ def cmd_capcut_compose(a):
                                                       "start": o["atSec"], "duration": o["durSec"], "volume": o["volume"]})
     for lane in sorted(lanes):
         tracks.append({"type": "audio", "name": lane, "items": lanes[lane]})
-    spec = {"name": name, "width": canvas["width"], "height": canvas["height"], "fps": canvas["fps"], "ratio": ratio, "tracks": tracks}
+    spec = {"name": name, "width": canvas["width"], "height": canvas["height"], "fps": canvas["fps"], "ratio": ratio, "tracks": tracks + extra["tracks"]}
+    if extra["operations"]:
+        spec["operations"] = extra["operations"]
     spec_path = vdir / "compose-spec.json"
-    write_json(spec_path, spec)
+    write_json(spec_path, spec, indent=None)
     # The default template is data/compose-template: an EMPTY draft that carries this PC's CapCut 9.7 version markers (a copy of the _analyze-stack-template
     # with its four segments removed and its media files dropped; 60 KB). capcut-cli's own `auto` falls back to its bundled CapCut 6.5.0 (mac) skeleton when
     # the store has no app-authored project, which is the case here, and a template folder that still holds clips would keep them and push the main track aside.
@@ -1165,11 +1282,26 @@ def cmd_capcut_compose(a):
     args = [cli, "compile", str(spec_path), "--out", str(store / name)]
     if tmpl:
         args += ["--template", str(tmpl)]
-    cp = run_cmd(args, timeout=600)
+    t_started_compile = time.time()
+    cp = locked_compile(args)
     d = store / name
+    extras_error = None
+    if (cp.returncode != 0 or not (d / "draft_content.json").is_file()) and (extra["tracks"] or extra["operations"]):
+        # the transitions or the captions were refused by compile (an unknown transition name, a text it cannot take): the half-made folder is this very command's own (the name
+        # was free a moment ago), removed by its exact path, and the clips and sound effects are composed alone; capcut-finish then writes the rest the older way
+        extras_error = ((cp.stderr or "") + (cp.stdout or ""))[-400:]
+        if d.is_dir():
+            shutil.rmtree(d, ignore_errors=True)
+        extra = {"tracks": [], "operations": [], "transitions": None, "captions": None}
+        spec.pop("operations", None)
+        spec["tracks"] = tracks
+        write_json(spec_path, spec, indent=None)
+        cp = locked_compile(args)
     if cp.returncode != 0 or not (d / "draft_content.json").is_file():
         fail("capcut compile failed: " + ((cp.stderr or "") + (cp.stdout or ""))[-500:], 1)
+    t_compiled = time.time()
     res = retarget_media(d, pieces, probes)
+    t_retargeted = time.time()
     # the placeholder copy is not referenced any more
     try:
         (d / "assets" / "video" / ph.name).unlink(missing_ok=True)
@@ -1180,10 +1312,27 @@ def cmd_capcut_compose(a):
     left = [str(x) for x in (d / "assets").rglob("*") if x.is_file() and x.suffix.lower() in (".mp4", ".mov") and x.stat().st_size > 5_000_000] if (d / "assets").is_dir() else []
     pool_removed = clean_media_pool(d)
     cover = bool(pieces) and make_cover(d, pieces[0], canvas)
-    out({"ok": res["video_segments_retargeted"] == len(pieces) and not left, "draft": str(d), "name": name, "pieces": len(pieces), "sfx_lanes": len(lanes),
-         "template": str(tmpl) if tmpl else "auto (capcut-cli's own choice)", **res, "big_media_copied_into_the_draft": left, "media_pool_entries_dropped": pool_removed, "cover_from_first_clip": cover,
-         "seconds": round(time.time() - t_start, 1),
-         "next": f"T capcut-finish --run RUN --draft \"{d}\" --video {a.video}"})
+    cap = extra["captions"]
+    cap_check = None
+    if cap and cap.get("composed"):                  # the texts compile wrote against the plan, and the one box field compile cannot set
+        cap_check = wb.check_composed(d, cap["plan_tracks"], True, draft_files)
+    composed = {"draft": str(d), "name": name, "when": now_iso(), "bare": bool(getattr(a, "bare", False)), "transitions": extra["transitions"],
+                "captions": ({k: v for k, v in cap.items() if k != "plan_tracks"} | {"check": cap_check}) if cap else None, "extras_error": extras_error}
+    write_json(vdir / "composed.json", composed)     # what is already in this draft: capcut-finish writes only the rest
+    in_comp = {"transitions": len((extra["transitions"] or {}).get("done") or []), "transitions_refused": len((extra["transitions"] or {}).get("failed") or []),
+               "caption_texts": (cap or {}).get("texts") if cap and cap.get("composed") else 0, "caption_tracks": (cap or {}).get("tracks") if cap and cap.get("composed") else 0,
+               "caption_check_ok": None if cap_check is None else cap_check["ok"]}
+    return {"ok": res["video_segments_retargeted"] == len(pieces) and not left and (cap_check is None or cap_check["ok"]), "draft": str(d), "name": name, "pieces": len(pieces),
+            "sfx_lanes": len(lanes), "composed_in_the_same_call": in_comp, **({"extras_error_then_composed_bare": extras_error} if extras_error else {}),
+            "template": str(tmpl) if tmpl else "auto (capcut-cli's own choice)", **res, "big_media_copied_into_the_draft": left, "media_pool_entries_dropped": pool_removed,
+            "cover_from_first_clip": cover, "seconds": round(time.time() - t_start, 1),
+            "seconds_by_stage": {"before_compile": round(t_started_compile - t_start, 1), "compile": round(t_compiled - t_started_compile, 1), "retarget_media": round(t_retargeted - t_compiled, 1),
+                                 "tidy_and_checks": round(time.time() - t_retargeted, 1)},
+            "next": f"T capcut-finish --run RUN --draft \"{d}\" --video {a.video}"}
+
+
+def cmd_capcut_compose(a):
+    out(compose_run(a))
 
 
 def kf_multi(prop: str, keys: list) -> dict:
@@ -1228,6 +1377,40 @@ def write_zoom_keys(d: Path, zooms: list, fps: int) -> dict:
         files.append({"file": p.name, "clips_keyed": keyed, "clips_on_main_track": len(segs)})
     first = files[0]["clips_keyed"] if files else 0
     return {"files": files, "pieces_without_a_clip": sorted(unmatched), "keyed": first}
+
+
+BLUR_LEVELS = (0.0625, 0.375, 0.75, 1.0)      # CapCut's four-step background blur (capcut-cli's own table)
+
+
+def write_bg_blur(d: Path, level: int, ats: list, fps: int) -> dict:
+    """The background blur of the fit-blur clips, written into the draft the way capcut-cli's `bg-blur` does it (setBgBlur: a `canvas_blur` material in the draft's `canvases`, its id
+    in the clip's extra_material_refs, an earlier canvas of that clip replaced), for every clip at once instead of one process per clip. `ats` are the clips' starts in output seconds."""
+    lvl = min(max(int(level), 1), 4)
+    half = 500000 / max(1, int(fps))
+    ids, files, unmatched = {}, [], set()
+    for p in draft_files(d):
+        content = json.loads(p.read_text(encoding="utf-8"))
+        main = next((t for t in content.get("tracks", []) if t.get("type") == "video"), None)
+        segs = (main or {}).get("segments") or []
+        canvases = content.setdefault("materials", {}).setdefault("canvases", [])
+        done = 0
+        for at in ats:
+            seg = next((s for s in segs if abs(int((s.get("target_timerange") or {}).get("start") or 0) - at * 1e6) <= half), None)
+            if seg is None:
+                unmatched.add(at)
+                continue
+            old = {c.get("id") for c in canvases}
+            seg["extra_material_refs"] = [r for r in (seg.get("extra_material_refs") or []) if r not in old]
+            cid = ids.setdefault(round(at, 6), str(uuid.uuid4()))          # the same id in every copy of the timeline
+            canvases.append({"album_image": "", "blur": BLUR_LEVELS[lvl - 1], "color": "", "id": cid, "image": "", "image_id": "", "image_name": "",
+                             "source_platform": 0, "team_id": "", "type": "canvas_blur"})
+            seg["extra_material_refs"].append(cid)
+            done += 1
+        if done:
+            shutil.copyfile(p, p.with_name(p.name + ".blur.bak"))
+            write_text(p, json.dumps(content, ensure_ascii=False))
+        files.append({"file": p.name, "clips_blurred": done})
+    return {"files": files, "level": lvl, "blur": BLUR_LEVELS[lvl - 1], "clips_without_a_match": sorted(unmatched), "blurred": files[0]["clips_blurred"] if files else 0}
 
 
 def main_clips(d: Path) -> list:
@@ -1275,7 +1458,15 @@ def prune_draft_backups(d: Path) -> int:
     return freed + prune_draft_history(d)
 
 
-def cmd_capcut_finish(a):
+def count_text_segments(d: Path, names: list) -> int:
+    c = read_json(d / "draft_content.json") or {}
+    return sum(len(t.get("segments") or []) for t in c.get("tracks", []) if t.get("type") == "text" and str(t.get("name") or "") in names)
+
+
+def finish_run(a) -> dict:
+    """The rest of the build, after capcut-compose: the zoom keys and the background blur (written straight into the draft: compile has no operation for them), the
+    caption font and entrance and the repair (awl's helpers). What compose already put in the draft (composed.json: the transitions and the word-box texts, checked against
+    the plan by a fingerprint) is not written again; a draft built another way (the MCP route, `--bare`, a changed EDL) still gets everything the older way."""
     run = resolve_run(a.run)
     d = Path(a.draft)
     if not (d / "draft_content.json").is_file():
@@ -1287,6 +1478,9 @@ def cmd_capcut_finish(a):
     if not finish:
         fail(f"no finish.json in {vdir} (run edl-check)")
     cli, awl = capcut_cli(), [sys.executable, str(awl_home() / "scripts" / "awl.py")]
+    composed = read_json(vdir / "composed.json") or {}
+    if str(composed.get("draft") or "") != str(d):
+        composed = {}                                 # compose wrote it for another draft (or not at all): nothing is assumed to be in this one
     steps = []
     fps = int(finish["canvas"].get("fps") or 30)
     if finish.get("zoom"):
@@ -1294,27 +1488,30 @@ def cmd_capcut_finish(a):
     clips = main_clips(d)
     half = 500000 / fps
     done, failed = [], []
-    for t in finish.get("transitions") or []:
-        if t.get("refused"):
-            failed.append({"slug": t["slug"], "error": t["refused"]})
-            continue
-        seg = next((s for s in clips if abs(int(s["target_timerange"]["start"]) - t["on_clip_at_s"] * 1e6) <= half), None)
-        if not seg:
-            failed.append({"slug": t["slug"], "error": f"no clip starts at {t['on_clip_at_s']} s"})
-            continue
-        r = sh([cli, "transition", str(d), str(seg["id"]), t["slug"], "--duration", f"{t['dur_s']:.3f}s"], 120)
-        (done if r["exit"] == 0 else failed).append({"slug": t["slug"], "at_s": t["on_clip_at_s"], **({} if r["exit"] == 0 else {"error": r["stderr"] or r["result"]})})
-    if finish.get("transitions"):
-        steps.append({"step": "transitions", "done": done, "failed": failed})
-    if finish.get("bg_blur"):
-        res = []
-        for mp in finish["main_pieces"]:
-            if mp["layout"] != "fit-blur":
+    ct = composed.get("transitions")
+    if ct is not None:                                # the transitions are operations of the composition
+        done, failed = list(ct.get("done") or []), list(ct.get("failed") or [])
+        have = len((read_json(d / "draft_content.json") or {}).get("materials", {}).get("transitions") or [])
+        if have < len(done):
+            failed.append({"error": f"the draft holds {have} transitions and the composition made {len(done)}: compose it again"})
+        steps.append({"step": "transitions", "composed": True, "done": done, "failed": failed, "in_draft": have})
+    else:
+        for t in finish.get("transitions") or []:
+            if t.get("refused"):
+                failed.append({"slug": t["slug"], "error": t["refused"]})
                 continue
-            seg = next((s for s in clips if abs(int(s["target_timerange"]["start"]) - mp["at_s"] * 1e6) <= half), None)
-            if seg:
-                res.append(sh([cli, "bg-blur", str(d), str(seg["id"]), str(int(finish["bg_blur"]))], 60)["exit"])
-        steps.append({"step": "bg-blur", "level": finish["bg_blur"], "exits": res, "note": "unverified on this PC's CapCut: look at the first project"})
+            seg = next((s for s in clips if abs(int(s["target_timerange"]["start"]) - t["on_clip_at_s"] * 1e6) <= half), None)
+            if not seg:
+                failed.append({"slug": t["slug"], "error": f"no clip starts at {t['on_clip_at_s']} s"})
+                continue
+            r = sh([cli, "transition", str(d), str(seg["id"]), t["slug"], "--duration", f"{t['dur_s']:.3f}s"], 120)
+            (done if r["exit"] == 0 else failed).append({"slug": t["slug"], "at_s": t["on_clip_at_s"], **({} if r["exit"] == 0 else {"error": r["stderr"] or r["result"]})})
+        if finish.get("transitions"):
+            steps.append({"step": "transitions", "done": done, "failed": failed})
+    if finish.get("bg_blur"):
+        ats = [mp["at_s"] for mp in finish["main_pieces"] if mp["layout"] == "fit-blur"]
+        r = write_bg_blur(d, int(finish["bg_blur"]), ats, fps)
+        steps.append({"step": "bg-blur", **r, "exit": 0 if not r["clips_without_a_match"] else 1, "note": "unverified on this PC's CapCut: look at the first project"})
     caps = finish["captions"]
     srt = vdir / "captions.srt"
     if not captions_on(run):                          # the user picked no captions at the start: no caption track, no font, no entrance
@@ -1328,10 +1525,21 @@ def cmd_capcut_finish(a):
             cj = read_json(vdir / "captions.json") or {}
             if not cj.get("cues") or cj.get("style") != "word-box":
                 fail(f"captions are on (word-box look) and {vdir / 'captions.json'} has no word-box cues: run `captions` again")
-            r = wb.apply_word_box(d, vdir, {**caps, "size": size}, cj["cues"], finish["canvas"], font_path, cli, awl, run, sh, draft_files, after_write=lambda: prune_draft_history(d))
-            steps.extend(r["steps"])
-            if not r["ok"] and r.get("error"):
-                steps.append({"step": "captions-word-box", "exit": 1, "error": r["error"], "geometry": r.get("geometry")})
+            cc_ = composed.get("captions") or {}
+            total_s = max([float(m["at_s"]) + float(m["dur_s"]) for m in finish.get("main_pieces") or []] or [0.0])
+            w = word_box_parts(vdir, caps, finish["canvas"], total_s) if cc_.get("composed") else None
+            names = [t["track"] for t in (cc_.get("track_list") or [])]
+            if (w and w["parts"] and cc_.get("fingerprint") == parts_fingerprint(w["parts"]) and (cc_.get("check") or {}).get("ok")
+                    and count_text_segments(d, names) == w["parts"]["texts"]):
+                # the texts are in the draft already, written by the composition and checked against this very plan: only the font and the entrance are left
+                steps.append({"step": "captions-word-box", "composed": True, "captions": w["plan"]["captions"], "tracks": cc_["tracks"], "texts": cc_["texts"],
+                              "boxed_texts": (cc_.get("check") or {}).get("boxed_texts"), "geometry": w["plan"]["geometry"], "box": w["plan"]["box"], "exit": 0})
+                steps.extend(wb.font_and_entrance(d, w["caps"], [t for t in w["parts"]["plan_tracks"] if t["entrance"]], font_path, awl, run, sh))
+            else:                                         # a draft built another way, or a plan that changed since compose: the older route drops any earlier caption tracks and imports again
+                r = wb.apply_word_box(d, vdir, {**caps, "size": size}, cj["cues"], finish["canvas"], font_path, cli, awl, run, sh, draft_files, after_write=lambda: prune_draft_history(d))
+                steps.extend(r["steps"])
+                if not r["ok"] and r.get("error"):
+                    steps.append({"step": "captions-word-box", "exit": 1, "error": r["error"], "geometry": r.get("geometry")})
         else:
             args = [cli, "import-srt", str(d), str(srt), "--track-name", "subtitle", "--font-size", str(size), "--color", caps["color"],
                     "--border-width", str(caps["stroke_width"]), "--border-color", caps["stroke_color"], "--align", "1", "--y", f"{1 - 2 * float(caps['y_rel']):.3f}"]
@@ -1352,7 +1560,96 @@ def cmd_capcut_finish(a):
         steps.append({"step": "cleanup", "freed_mb": round(prune_draft_backups(d) / 1048576, 1), "note": "capcut-cli's undo snapshots and the *.bak copies of this draft's documents; the plan files in the video's output folder rebuild it"})
     else:
         prune_draft_history(d)                       # the snapshots are never needed; the .bak copies stay for the failure
-    out({"ok": ok, "draft": str(d), "video": a.video, "steps": steps})
+    return {"ok": ok, "draft": str(d), "video": a.video, "steps": steps}
+
+
+def cmd_capcut_finish(a):
+    out(finish_run(a))
+
+
+def build_checks(d: Path, resolved: dict, composed: dict, cli: str) -> dict:
+    """The read-back of a finished build in one pass (what the production agents ran as `capcut segments`, `capcut texts` and `capcut lint`, one command each): the clips of the
+    main track against the plan, whether the joins are contiguous, the audio clips, the texts against the number the captions' plan made, the transitions and zoom keys the draft
+    holds, every media file on disk, and capcut lint's counts. Facts only: `capcut-build` turns the ones that disagree with the plan into `problems`."""
+    c = read_json(d / "draft_content.json") or {}
+    tracks = c.get("tracks") or []
+    main = next((t for t in tracks if t.get("type") == "video"), None)
+    segs = sorted((main or {}).get("segments") or [], key=lambda s: int((s.get("target_timerange") or {}).get("start") or 0))
+    ends = [int(s["target_timerange"]["start"]) + int(s["target_timerange"]["duration"]) for s in segs]
+    off = sum(1 for s, e in zip(segs[1:], ends) if abs(int(s["target_timerange"]["start"]) - e) > 1)
+    mats = c.get("materials") or {}
+    missing = sorted({str(m.get("path")) for k in ("videos", "audios") for m in mats.get(k) or [] if m.get("path") and not Path(str(m["path"])).exists()})
+    text_tracks = [t for t in tracks if t.get("type") == "text"]
+    cap = composed.get("captions") or {}
+    lint = sh([cli, "lint", str(d)], 600)
+    lr = lint["result"] if isinstance(lint.get("result"), dict) else {}
+    issues = lr.get("issues") or []
+    codes = {}
+    for i in issues:
+        codes[f"{i.get('severity')}:{i.get('code')}"] = codes.get(f"{i.get('severity')}:{i.get('code')}", 0) + 1
+    size = sum(f.stat().st_size for f in d.rglob("*") if f.is_file())
+    return {"main_clips": len(segs), "planned_pieces": len(resolved["pieces"]), "main_end_s": round(max(ends, default=0) / 1e6, 3), "planned_s": float(resolved["totals"]["duration_s"]),
+            "joins_not_contiguous": off, "audio_clips": sum(len(t.get("segments") or []) for t in tracks if t.get("type") == "audio"), "planned_sfx": int(resolved["totals"].get("sfx") or 0),
+            "text_tracks": len(text_tracks), "texts": sum(len(t.get("segments") or []) for t in text_tracks), "composed_caption_texts": cap.get("texts") if cap.get("composed") else None,
+            "transitions_in_draft": len(mats.get("transitions") or []), "zoomed_clips": sum(1 for s in segs if s.get("common_keyframes")), "media_missing": missing[:5],
+            "draft_mb": round(size / 1048576, 1),
+            "lint": {"errors": (lr.get("summary") or {}).get("errors"), "warnings": (lr.get("summary") or {}).get("warnings"), "by_code": codes,
+                     "error_messages": [str(i.get("message"))[:160] for i in issues if i.get("severity") == "error"][:5], "exit": lint["exit"]}}
+
+
+def cmd_capcut_build(a):
+    """ONE command for the whole CapCut project (the user, 2026-11-13: the composition for everything, for faster delivery): capcut-compose (the clips, the sound-effect lanes, the
+    transitions and the word-box captions in one `capcut compile`), capcut-finish (the zoom keys, the background blur, the caption font and entrance, the repair, the clean-up) and the
+    read-back (clips, length, joins, texts, transitions, media on disk, capcut lint). One JSON answer; `problems` lists what disagrees with the plan."""
+    run = resolve_run(a.run)
+    vdir = run_paths(run)["outputs"] / a.video
+    t0 = time.time()
+    if captions_on(run):
+        cap_files = [vdir / "captions.srt", vdir / "captions.json"]
+        if not all(f.is_file() for f in cap_files):
+            fail(f"captions are on for this run and {vdir / 'captions.srt'} or captions.json does not exist: run `captions` first (nothing was changed)")
+        if (vdir / "resolved.json").is_file() and cap_files[1].stat().st_mtime < (vdir / "resolved.json").stat().st_mtime - 1:
+            fail(f"{cap_files[1]} is older than the last edl-check ({vdir / 'resolved.json'}): the cues may not match the cuts; run `captions` again (nothing was changed)")
+    cres = compose_run(argparse.Namespace(run=a.run, video=a.video, name=a.name, store=a.store, template=a.template, channel=a.channel, bare=a.bare))
+    t1 = time.time()
+    if not cres.get("draft"):
+        out({"ok": False, "video": a.video, "compose": cres, "problems": ["compose failed"]}, 1)
+    fres = finish_run(argparse.Namespace(run=a.run, draft=cres["draft"], video=a.video))
+    t2 = time.time()
+    d = Path(cres["draft"])
+    resolved = read_json(vdir / "resolved.json") or {}
+    chk = build_checks(d, resolved, read_json(vdir / "composed.json") or {}, capcut_cli())
+    t3 = time.time()
+    problems = []
+    if not cres.get("ok"):
+        problems.append("compose reported a problem (see compose)")
+    for s in fres.get("steps") or []:
+        if s.get("exit") not in (None, 0):
+            problems.append(f"finish step {s.get('step')} failed: {str(s.get('error') or s.get('stderr') or s.get('result'))[:200]}")
+        if s.get("failed"):
+            problems.append(f"finish step {s.get('step')}: {len(s['failed'])} failed, first: {str(s['failed'][0])[:200]}")
+        if s.get("pieces_without_a_clip"):
+            problems.append(f"zoom keys: pieces without a clip: {s['pieces_without_a_clip']}")
+    if chk["main_clips"] != chk["planned_pieces"]:
+        problems.append(f"the main track has {chk['main_clips']} clips and the plan {chk['planned_pieces']} pieces")
+    if abs(chk["main_end_s"] - chk["planned_s"]) > 0.1:
+        problems.append(f"the main track ends at {chk['main_end_s']} s and the plan says {chk['planned_s']} s")
+    if chk["joins_not_contiguous"]:
+        problems.append(f"{chk['joins_not_contiguous']} clips do not start where the one before ends")
+    if chk["composed_caption_texts"] is not None and chk["texts"] != chk["composed_caption_texts"]:
+        problems.append(f"the draft holds {chk['texts']} texts and the composition made {chk['composed_caption_texts']}")
+    if chk["media_missing"]:
+        problems.append(f"media files missing on disk: {chk['media_missing']}")
+    if chk["lint"]["errors"]:
+        problems.append(f"capcut lint: {chk['lint']['errors']} errors: {chk['lint']['error_messages']}")
+    elif chk["lint"]["errors"] is None:
+        problems.append(f"capcut lint gave no summary (exit {chk['lint']['exit']})")
+    slim = [{k: v for k, v in s.items() if k in ("step", "exit", "composed", "texts", "tracks", "boxed_texts", "keyed", "blurred", "done", "failed", "freed_mb", "animated", "in_draft")} for s in fres.get("steps") or []]
+    out({"ok": not problems, "video": a.video, "draft": cres["draft"], "name": cres.get("name"), "seconds": round(time.time() - t0, 1),
+         "seconds_by_part": {"compose": round(t1 - t0, 1), "finish": round(t2 - t1, 1), "read_back": round(t3 - t2, 1)},
+         "compose": {k: cres.get(k) for k in ("ok", "pieces", "sfx_lanes", "composed_in_the_same_call", "extras_error_then_composed_bare", "video_segments_retargeted", "seconds")},
+         "finish": {"ok": fres.get("ok"), "steps": slim}, "read_back": chk, "problems": problems,
+         "note": "unverified by any tool here: how CapCut draws the project (the caption look, the zoom, a fill or fit-blur layout); the proxy frames and the first open in CapCut are the look-at-it checks"}, 0 if not problems else 1)
 
 
 # --------------------------------------------------------------------------- register
@@ -1435,17 +1732,28 @@ def register(sub) -> None:
     p.add_argument("--video", required=True)
     p.set_defaults(func=cmd_capcut_name)
 
-    p = sub.add_parser("capcut-compose", help="the whole CapCut project in one command from resolved.json (capcut compile + the real chunk paths)")
+    p = sub.add_parser("capcut-compose", help="the whole CapCut project in one `capcut compile` from resolved.json: the clips on the real chunk paths, the sound-effect lanes, the transitions and (word-box look) the caption texts")
     p.add_argument("--run", required=True)
     p.add_argument("--video", required=True)
     p.add_argument("--name", help="the project name (default: a free DD_Mon_YYYY_<channel>_<video>)")
     p.add_argument("--channel")
     p.add_argument("--store", help="the CapCut drafts folder (default: the real store)")
     p.add_argument("--template", help="a template folder, or auto/bundled (capcut-cli's own choices); default: data/compose-template, an empty draft with this PC's CapCut 9.7 version markers. A folder that holds clips keeps them")
+    p.add_argument("--bare", action="store_true", help="only the clips and the sound-effect lanes (the older split: capcut-finish then writes the transitions and the captions)")
     p.set_defaults(func=cmd_capcut_compose)
 
-    p = sub.add_parser("capcut-finish", help="after capcut-compose (or the last MCP save): zoom keys, transitions, bg blur, captions, font, intro, repair")
+    p = sub.add_parser("capcut-finish", help="after capcut-compose (or the last MCP save): zoom keys, bg blur, the caption font and entrance, repair, clean-up; transitions and captions only when compose did not put them in")
     p.add_argument("--run", required=True)
     p.add_argument("--draft", required=True)
     p.add_argument("--video", required=True)
     p.set_defaults(func=cmd_capcut_finish)
+
+    p = sub.add_parser("capcut-build", help="ONE command for the whole project: capcut-compose + capcut-finish + the read-back (clips, length, joins, texts, media, capcut lint); `problems` lists what disagrees with the plan")
+    p.add_argument("--run", required=True)
+    p.add_argument("--video", required=True)
+    p.add_argument("--name", help="the project name (default: a free DD_Mon_YYYY_<channel>_<video>)")
+    p.add_argument("--channel")
+    p.add_argument("--store", help="the CapCut drafts folder (default: the real store)")
+    p.add_argument("--template", help="see capcut-compose")
+    p.add_argument("--bare", action="store_true", help="see capcut-compose")
+    p.set_defaults(func=cmd_capcut_build)

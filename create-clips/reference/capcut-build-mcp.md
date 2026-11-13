@@ -1,7 +1,7 @@
 # Building the CapCut project through the MCP tools (FALLBACK ONLY)
 
-The normal build is ONE command (`cc.py capcut-compose`, then `cc.py capcut-finish`): see `capcut-build.md`. This older recipe makes the same project with one MCP tool call per clip. It is slower (a short is dozens of calls, an hour-long video hundreds),
-so it is used only when `capcut-compose` has failed with a plain error that the report names and a re-run does not fix it. Nothing else changes: the EDL, `edl-check`, the captions, `capcut-finish`, the checks and the report are the same.
+The normal build is ONE command through the CapCut composition (`cc.py capcut-build`): see `capcut-build.md`. This older recipe makes the same project with one MCP tool call per clip. It is slower (a short is dozens of calls, an hour-long video hundreds),
+so it is used only when `capcut-build` has failed with a plain error that the report names and a re-run does not fix it. Nothing else changes: the EDL, `edl-check`, the captions, `capcut-finish` (which writes the transitions and the caption texts itself on a draft the composition did not make), the checks and the report are the same.
 
 `CC` = `C:/Users/Bulzart/.claude/create-clips` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$CC/scripts/cc.py"` (run through PowerShell; each prints one JSON object on its last line) ·
 `TA` = `"$PY" "C:/Users/Bulzart/.claude/analyze-with-loupe/scripts/awl.py"` (the proven CapCut helpers: `capcut-prep`, `capcut-font`, `capcut-text-anim`, `capcut-repair`) · `RUN` = the run folder · `OUT` = `RUN/60-outputs/<id>`.
@@ -18,7 +18,7 @@ so it is used only when `capcut-compose` has failed with a plain error that the 
 5. **Execute `OUT/mcp-plan.json -> ops` in order**: `add_video` on `main`: `capcut_add_video {draft, file, srcStartSec, durSec, scale, posX, posY, speed, volume, trackIndex:<main>}` and **no `atSec`** (it appends right after the last clip: no gap, no overlap);
    `add_audio`: `capcut_add_audio {draft, file, atSec, durSec, volume, trackIndex:<its lane>}`. A long video has many pieces: do them in order and read the timeline back after the first five and at the end.
 6. `capcut_validate`, `capcut_save` (never force). This is the **last MCP save**: `capcut-finish` writes the project's files itself, and a later MCP save would write its own copy back over them.
-7. Then `T capcut-finish`, the checks and the report as in `capcut-build.md` steps 4 to 6.
+7. Then `T capcut-finish` (on this draft nothing was composed, so it writes the transitions and the captions itself), the checks (`capcut segments`, `capcut texts`, `capcut lint`, the media pool) and the report as in `capcut-build.md` steps 3 and 4.
 
 ## When something goes wrong
 - `capcut_save` refused (CapCut open, or the draft changed on disk): close CapCut / `capcut_discard` and rebuild the edits; CapCut running is a blocker notice.

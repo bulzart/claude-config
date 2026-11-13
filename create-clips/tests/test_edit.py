@@ -204,6 +204,89 @@ def main():
             check('"errors":0' in lint.stdout.replace(" ", ""), "capcut lint: 0 errors")
             if sfx_file.is_file():
                 check(any(t["type"] == "audio" and t.get("segments") for t in c["tracks"]), "the sound effect is on an audio track")
+            # THE SAME PROJECT BY TWO ROUTES (the user, 2026-11-13: the composition for everything): the older split (compose --bare, then finish with one `capcut transition` call and
+            # one `import-srt` call per track) against the single composition above. The captions' texts, their styles and places, and the transition on the join must be the same.
+            r = cc("capcut-compose", "--run", run, "--video", "S01", "--name", "cctest_bare", "--store", store, "--bare", env=env)
+            ic = r.get("composed_in_the_same_call") or {}
+            check(r.get("ok") and ic.get("caption_texts") == 0 and ic.get("transitions") == 0, "capcut-compose --bare: only the clips and the sound effects go into the composition " + str(ic))
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest_bare", "--video", "S01", env=env)
+            check(r.get("ok") and not any(s.get("composed") for s in r.get("steps", [])), "capcut-finish on a bare draft does the transitions and the captions the older way " + str([s.get("step") for s in r.get("steps", [])]))
+
+            def text_rows(path):
+                cc_ = json.loads((path / "draft_content.json").read_text(encoding="utf-8"))
+                tmat = {m["id"]: m for m in cc_["materials"].get("texts", [])}
+                fields = ("font_size", "text_color", "alignment", "has_border", "border_width", "border_color", "border_alpha", "background_color", "background_alpha", "background_style",
+                          "background_round_radius", "background_width", "background_height", "background_horizontal_offset", "background_vertical_offset", "background_fill",
+                          "check_flag", "font_path", "font_name", "line_max_width", "sub_type")
+                rows = []
+                for t in cc_["tracks"]:
+                    if t["type"] != "text":
+                        continue
+                    for s in sorted(t["segments"], key=lambda s: int(s["target_timerange"]["start"])):
+                        m = tmat[s["material_id"]]
+                        rows.append({"track": t["name"], "start": int(s["target_timerange"]["start"]), "dur": int(s["target_timerange"]["duration"]),
+                                     "x": round(float(s["clip"]["transform"]["x"]), 4), "y": round(float(s["clip"]["transform"]["y"]), 4), "text": json.loads(m["content"])["text"],
+                                     "fields": {k: m.get(k) for k in fields}})
+                joins = {}
+                trm = {m["id"]: m for m in cc_["materials"].get("transitions", [])}
+                for t in cc_["tracks"]:
+                    if t["type"] == "video":
+                        for s in t["segments"]:
+                            for ref in s.get("extra_material_refs") or []:
+                                if ref in trm:
+                                    joins[int(s["target_timerange"]["start"])] = (trm[ref]["name"], trm[ref]["duration"], trm[ref]["effect_id"])
+                return rows, joins
+            rows_new, joins_new = text_rows(store / "cctest")
+            rows_old, joins_old = text_rows(store / "cctest_bare")
+            same_len = len(rows_new) == len(rows_old) > 0
+            diffs = []
+            for a_, b_ in zip(rows_new, rows_old):
+                if a_["track"] != b_["track"] or a_["text"] != b_["text"] or a_["x"] != b_["x"] or a_["y"] != b_["y"] or a_["fields"] != b_["fields"]:
+                    diffs.append((a_, b_))
+                elif abs(a_["start"] - b_["start"]) > 1500 or abs(a_["dur"] - b_["dur"]) > 3000:     # the older route wrote whole milliseconds (an .srt), the composition microseconds
+                    diffs.append((a_["start"], b_["start"], a_["dur"], b_["dur"]))
+            check(same_len and not diffs, f"the single composition and the older two-step route make the same {len(rows_new)} caption texts (track, word, place, style, time within a millisecond) " + str(diffs[:1])[:500])
+            check(joins_new and joins_new == joins_old, f"the transition on the join is the same by both routes {joins_new}")
+            # ONE command for everything: compose + finish + the read-back, one answer
+            r = cc("capcut-build", "--run", run, "--video", "S01", "--name", "cctest_build", "--store", store, env=env)
+            rb = r.get("read_back") or {}
+            check(r.get("ok") and not r.get("problems") and rb.get("main_clips") == 5 and rb.get("texts") == rb.get("composed_caption_texts") == cj["word_box"]["texts"]
+                  and (rb.get("lint") or {}).get("errors") == 0 and rb.get("joins_not_contiguous") == 0 and not rb.get("media_missing"),
+                  "capcut-build: one command makes the whole project and reads it back (clips, length, joins, texts, media on disk, lint): " + json.dumps({k: r.get(k) for k in ("ok", "problems", "seconds_by_part")}) + json.dumps(rb)[:300])
+            check(any(s.get("step") == "captions-word-box" and s.get("composed") for s in (r.get("finish") or {}).get("steps", [])) and any(s.get("step") == "transitions" and s.get("composed") for s in (r.get("finish") or {}).get("steps", [])),
+                  "capcut-build: finish did not write the transitions and the caption texts again (the composition had them)")
+            # a transition compile refuses (an unknown name that the plan let through): the clips are composed alone, the half-made folder of this very call is removed,
+            # and finish writes the rest the older way, with the failure reported
+            fj = out / "finish.json"
+            keep_finish = fj.read_text(encoding="utf-8")
+            f_ = json.loads(keep_finish)
+            f_["transitions"] = [{**t, "slug": "no-such-transition", "refused": None} for t in f_["transitions"]]
+            fj.write_text(json.dumps(f_), encoding="utf-8")
+            r = cc("capcut-compose", "--run", run, "--video", "S01", "--name", "cctest_fb", "--store", store, env=env)
+            check(r.get("ok") and r.get("extras_error_then_composed_bare") and (r.get("composed_in_the_same_call") or {}).get("caption_texts") == 0 and (store / "cctest_fb" / "draft_content.json").is_file(),
+                  "a transition compile refuses: the clips are composed alone and the answer says why " + str(r.get("extras_error_then_composed_bare"))[:160])
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest_fb", "--video", "S01", env=env)
+            cfb = json.loads((store / "cctest_fb" / "draft_content.json").read_text(encoding="utf-8"))
+            check(r.get("ok") is False and any(s.get("step") == "transitions" and s.get("failed") for s in r.get("steps", [])) and [t["name"] for t in cfb["tracks"] if t["type"] == "text"],
+                  "finish after that: the failed transition is reported, the captions are still written the older way")
+            fj.write_text(keep_finish, encoding="utf-8")
+            # captions.json older than the last edl-check no longer matches the cuts: the build refuses before it changes anything
+            cc("edl-check", "--run", run, "--edl", out / "edl.json", env=env)
+            r = cc("capcut-build", "--run", run, "--video", "S01", "--name", "cctest_stale", "--store", store, env=env)
+            check(r.get("ok") is False and "older than the last edl-check" in str(r.get("error", "")) and not (store / "cctest_stale").exists(),
+                  "capcut-build refuses captions that are older than the last edl-check, before it changes anything: " + str(r.get("error"))[:150])
+            cc("captions", "--run", run, "--resolved", out / "resolved.json", env=env)
+            # four builds at once (production agents build side by side): each compile writes CapCut's shared project index under the store lock, and no project is lost from it
+            import concurrent.futures as cf
+            store2 = tmp / "drafts_par"
+            store2.mkdir()
+            with cf.ThreadPoolExecutor(max_workers=4) as ex:
+                futs = [ex.submit(cc, "capcut-compose", "--run", run, "--video", "S01", "--name", f"par{i}", "--store", store2, env=env) for i in range(4)]
+                res_par = [f.result() for f in futs]
+            idx = json.loads((store2 / "root_meta_info.json").read_text(encoding="utf-8"))
+            listed = sorted(Path(str(e.get("draft_fold_path", ""))).name for k, v in idx.items() if isinstance(v, list) for e in v if isinstance(e, dict))
+            check(all(x.get("ok") for x in res_par) and listed == [f"par{i}" for i in range(4)],
+                  f"four capcut-compose calls at once: all ok and all four projects are in the shared index {listed}")
             # the look is free: any font family and any highlight colour (the agent picks them to match the video), and the old plain look is still there
             def small_edl(video, caps):
                 e = {"schema": "cc-edl/1", "video": video, "kind": "short", "layout": {"mode": "fill", "focus": [0.5, 0.5]},

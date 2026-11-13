@@ -297,32 +297,118 @@ def drop_text_tracks(content: dict, keep_prefix_of=(WORD_BOX_PREFIX, "subtitle")
     return len(gone)
 
 
-def apply_word_box(d: Path, vdir: Path, caps: dict, cues: list, canvas: dict, font_file: str, cli: str, awl: list, run, sh, draft_files, after_write=None) -> dict:
-    """Write the word-box captions into the draft: one track per (word index, boxed, entrance) with capcut-cli's import-srt (the box flags on the boxed
-    ones), each text moved to its place on the line and the box's padding written into the draft's own JSON (capcut-cli leaves them unset), then the font on
-    every text and the entrance on the tracks that start a caption. Returns {"ok", "steps", ...}; the caller runs capcut-repair afterwards."""
-    W, H, fps = int(canvas["width"]), int(canvas["height"]), int(canvas.get("fps") or 30)
+def plan_word_box(caps: dict, cues: list, canvas: dict, font_file: str) -> dict:
+    """The word-box captions as a plan (no draft, no file): the box's numbers, the baseline `y` (CapCut's -1..1 units), the tracks (the boxed ones first, so the plain
+    words draw above a box's edge) each with its texts, and the line's geometry. `error` is set when a caption line would be wider than the frame."""
+    W, fps = int(canvas["width"]), int(canvas.get("fps") or 30)
     box = box_params(caps)
     probe = Probe(font_file, float(caps["size"]), W, float(box["gap_em"]))
     rows = plan_rows(cues, fps)
     groups, geo = plan_texts(rows, probe, W)
-    steps = []
+    plan = {"box": box, "y": round(1 - 2 * float(caps["y_rel"]), 4), "geometry": geo, "captions": len(rows), "tracks": [], "error": None}
     if geo["widest_line_px"] > FIT_FRACTION * W:
-        return {"ok": False, "error": f"a caption line is {geo['widest_line_px']:.0f} px wide, over {FIT_FRACTION:.0%} of the {W} px frame: run `captions` again (it splits long lines) or lower captions.size",
-                "geometry": geo, "steps": steps}
+        plan["error"] = (f"a caption line is {geo['widest_line_px']:.0f} px wide, over {FIT_FRACTION:.0%} of the {W} px frame: run `captions` again "
+                         f"(it splits long lines) or lower captions.size")
+        return plan
+    for key in sorted(groups, key=lambda k: (not k[1], k[0], not k[2])):
+        i, boxed, first = key
+        plan["tracks"].append({"track": track_name(i, boxed, first), "boxed": boxed, "entrance": first, "entries": sorted(groups[key], key=lambda e: e["start"])})
+    return plan
+
+
+def compose_parts(plan: dict, caps: dict, total_s: float) -> dict:
+    """The planned captions as the captions' part of a `capcut compile` spec, so the whole project is one composition: one text track per planned track, every text
+    already on its place on the line (`x` per word, the shared baseline `y`, the size and the colour), and one `text-style` operation per text: the outline, and on the
+    boxed ones the box with the padding and offsets that capcut-cli's import-srt leaves unset. These are the same capcut-cli functions import-srt calls (addText and
+    setTextStyle), so the texts are the ones the older route made, without a process and a draft write per track. A text is cut at the video's end (the project must
+    not grow past its last clip); one that would then be shorter than a millisecond is dropped. Times are whole microseconds, so a text ends exactly where the next
+    one of its track starts."""
+    box, y = plan["box"], plan["y"]
+    outline = {}
+    if caps.get("stroke_color") and float(caps.get("stroke_width") or 0) > 0:
+        outline = {"borderWidth": float(caps["stroke_width"]), "borderColor": str(caps["stroke_color"])}
+    end_us = int(round(float(total_s) * 1e6))
+    tracks, ops, kept, n, clipped, dropped = [], [], [], 0, 0, 0
+    for tr in plan["tracks"]:
+        items, entries = [], []
+        for e in tr["entries"]:
+            s_us, e_full = int(round(e["start"] * 1e6)), int(round(e["end"] * 1e6))
+            e_us = min(e_full, end_us)
+            if e_us - s_us < 1000:
+                dropped += 1
+                continue
+            clipped += 1 if e_us < e_full else 0
+            n += 1
+            ref = f"cap{n}"
+            items.append({"ref": ref, "text": e["text"], "start": s_us / 1e6, "duration": (e_us - s_us) / 1e6, "fontSize": float(caps["size"]),
+                          "color": str(caps["color"]), "x": e["x"], "y": y})
+            entries.append({**e, "start": s_us / 1e6, "end": e_us / 1e6})
+            style = dict(outline)
+            if tr["boxed"]:
+                style.update({"bgColor": box["color"], "bgAlpha": float(box["alpha"]), "bgStyle": int(box["style"]), "bgRoundRadius": float(box["round_radius"]),
+                              "bgWidth": float(box["pad"]), "bgHeight": float(box["pad"]), "bgHOffset": 0.0, "bgVOffset": float(box["v_offset"])})
+            if style:
+                ops.append({"op": "text-style", "target": ref, "style": style})
+        if items:
+            tracks.append({"type": "text", "name": tr["track"], "items": items})
+            kept.append({**tr, "entries": entries})
+    return {"tracks": tracks, "operations": ops, "plan_tracks": kept, "texts": n, "clipped_at_end": clipped, "dropped": dropped}
+
+
+def check_composed(d: Path, plan_tracks: list, boxed_fill: bool, draft_files) -> dict:
+    """After `capcut compile` wrote the captions into the draft: every planned track is there with its texts in the planned order and at the planned time (2 ms), and the
+    boxed texts get the one box field the compile route cannot set (`background_fill`, empty: CapCut's own value for a plain colour box). Written into every copy of
+    the timeline. Returns facts: {"ok", "tracks", "texts", "boxed_texts", "unmatched": [...]}."""
+    texts, boxed_texts, unmatched = 0, 0, []
+    for p in draft_files(d):
+        c = json.loads(p.read_text(encoding="utf-8"))
+        byname = {str(t.get("name") or ""): t for t in c.get("tracks", []) if t.get("type") == "text"}
+        mats = {m.get("id"): m for m in c.get("materials", {}).get("texts", [])}
+        n_here, b_here, changed = 0, 0, False
+        for tr in plan_tracks:
+            t = byname.get(tr["track"])
+            segs = sorted((t or {}).get("segments") or [], key=lambda s: int(s["target_timerange"]["start"]))
+            if len(segs) != len(tr["entries"]):
+                unmatched.append({"file": p.name, "track": tr["track"], "texts": len(segs), "planned": len(tr["entries"])})
+                continue
+            for s, e in zip(segs, tr["entries"]):
+                if abs(int(s["target_timerange"]["start"]) / 1e6 - e["start"]) > 0.002:
+                    unmatched.append({"file": p.name, "track": tr["track"], "at": e["start"], "segment_start": int(s["target_timerange"]["start"]) / 1e6})
+                    break
+                n_here += 1
+                if tr["boxed"]:
+                    b_here += 1
+                    m = mats.get(s.get("material_id"))
+                    if m is not None and boxed_fill and m.get("background_fill") != "":
+                        m["background_fill"] = ""
+                        changed = True
+        if changed:
+            p.write_text(json.dumps(c, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        if p.name == "draft_content.json":
+            texts, boxed_texts = n_here, b_here
+    return {"ok": not unmatched, "tracks": len(plan_tracks), "texts": texts, "boxed_texts": boxed_texts, "unmatched": unmatched[:5]}
+
+
+def apply_word_box(d: Path, vdir: Path, caps: dict, cues: list, canvas: dict, font_file: str, cli: str, awl: list, run, sh, draft_files, after_write=None) -> dict:
+    """Write the word-box captions into an existing draft (the route for a draft that capcut-compose did not put them in): one track per (word index, boxed, entrance)
+    with capcut-cli's import-srt (the box flags on the boxed ones), each text moved to its place on the line and the box's padding written into the draft's own JSON
+    (capcut-cli leaves them unset), then the font on every text and the entrance on the tracks that start a caption. Returns {"ok", "steps", ...}; the caller runs
+    capcut-repair afterwards. A draft made by `capcut-compose` already holds these texts (compose_parts) and only needs `font_and_entrance`."""
+    plan = plan_word_box(caps, cues, canvas, font_file)
+    box, geo, rows_n, y = plan["box"], plan["geometry"], plan["captions"], plan["y"]
+    steps = []
+    if plan["error"]:
+        return {"ok": False, "error": plan["error"], "geometry": geo, "steps": steps}
     dropped = 0
     for p in draft_files(d):
         c = json.loads(p.read_text(encoding="utf-8"))
         dropped = max(dropped, drop_text_tracks(c))
         p.write_text(json.dumps(c, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    y = round(1 - 2 * float(caps["y_rel"]), 4)
     work = vdir / "word-box"
     work.mkdir(parents=True, exist_ok=True)
     tracks, failed = [], []
-    for key in sorted(groups, key=lambda k: (not k[1], k[0], not k[2])):          # boxed tracks first, so the plain words draw above a box's edge
-        i, boxed, first = key
-        name = track_name(i, boxed, first)
-        ents = sorted(groups[key], key=lambda e: e["start"])
+    for tr0 in plan["tracks"]:
+        name, boxed, first, ents = tr0["track"], tr0["boxed"], tr0["entrance"], tr0["entries"]
         sp = work / f"{name}.srt"
         sp.write_text("\n".join(f"{n + 1}\n{srt_time(e['start'])} --> {srt_time(e['end'])}\n{e['text']}\n" for n, e in enumerate(ents)), encoding="utf-8")
         args = [cli, "import-srt", str(d), str(sp), "--track-name", name, "--font-size", str(caps["size"]), "--color", str(caps["color"]),
@@ -365,13 +451,19 @@ def apply_word_box(d: Path, vdir: Path, caps: dict, cues: list, canvas: dict, fo
                 n_here += 1
         p.write_text(json.dumps(c2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         placed = max(placed, n_here)
-    steps.append({"step": "captions-word-box", "captions": len(rows), "tracks": len(tracks), "texts": sum(t["texts"] for t in tracks),
+    steps.append({"step": "captions-word-box", "captions": rows_n, "tracks": len(tracks), "texts": sum(t["texts"] for t in tracks),
                   "boxed_texts": sum(t["texts"] for t in tracks if t["boxed"]), "placed": placed, "failed": failed[:5], "unmatched": unmatched[:5],
                   "dropped_old_caption_tracks": dropped, "geometry": geo, "box": box, "exit": 0 if not failed and not unmatched else 1})
-    steps.append({"step": "captions-font", **sh([*awl, "capcut-font", "--draft", str(d), "--font-file", str(font_file)], 600)})      # every text: the outline and the box flags too
-    if caps.get("intro"):
-        for tr in tracks:
-            if tr["entrance"]:
-                steps.append({"step": "captions-intro:" + tr["track"], **sh([*awl, "capcut-text-anim", "--draft", str(d), "--track", tr["track"], "--intro", caps["intro"],
-                                                                                "--intro-duration", str(caps.get("intro_s") or 0.1), "--run", str(run)], 300)})
+    steps.extend(font_and_entrance(d, caps, [t for t in tracks if t["entrance"]], font_file, awl, run, sh))
     return {"ok": not failed and not unmatched, "steps": steps, "geometry": geo, "texts": sum(t["texts"] for t in tracks)}
+
+
+def font_and_entrance(d: Path, caps: dict, entrance_tracks: list, font_file: str, awl: list, run, sh) -> list:
+    """What no capcut-cli composition can write: the caption font on every text (awl's `capcut-font` also sets the outline and the box flags CapCut 9.7 needs) and, when the
+    EDL asks for an entrance, the animation on the tracks that start a caption (one call per track). Runs on a draft whatever route wrote its texts."""
+    steps = [{"step": "captions-font", **sh([*awl, "capcut-font", "--draft", str(d), "--font-file", str(font_file)], 600)}]
+    if caps.get("intro"):
+        for tr in entrance_tracks:
+            steps.append({"step": "captions-intro:" + tr["track"], **sh([*awl, "capcut-text-anim", "--draft", str(d), "--track", tr["track"], "--intro", caps["intro"],
+                                                                           "--intro-duration", str(caps.get("intro_s") or 0.1), "--run", str(run)], 300)})
+    return steps

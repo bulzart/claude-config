@@ -146,6 +146,27 @@ def main():
           "every plan, produce, build and wrap-up skill follows the run's captions setting")
     check("captions OFF" in read(CC / "reference" / "edit-craft.md") and "captions OFF" in read(CC / "reference" / "safety.md"), "edit-craft.md and safety.md say what captions OFF means (and that a spoken slur is cut around)")
 
+    # the user's choices of 2026-11-13, later: the CapCut composition for everything (ONE build command), and the caption look
+    check({"capcut-build", "fonts"} <= cmds, "cc.py registers capcut-build (the one build command) and fonts")
+    cb = read(CC / "reference" / "capcut-build.md")
+    check(all("T capcut-build" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game", "cc-produce")) and "T capcut-build" in cb and "problems" in cb and "ONE" in cb,
+          "every build skill, the produce contract and capcut-build.md send the agent to ONE `T capcut-build` command with a `problems` list")
+    check(not any(re.search(r"`T capcut-compose`[^.\n]*`T capcut-finish`", sk(n)) for n in ("cc-build-short", "cc-build-long", "cc-build-game")),
+          "no build skill tells the agent to run compose and finish as two commands any more")
+    check("capcut-build" in rt and "composition" in rt and "never a project built clip by clip" in rt and "capcut-build" in read(CC / "README.md"),
+          "the router and the README name the CapCut composition, `capcut-build`, and forbid building clip by clip")
+    check("--bare" in cb and "composed.json" in cb and "store lock" in cb and "font-cache.json" in cb, "capcut-build.md describes --bare, composed.json, the store lock and the font cache")
+    ec, gec = read(CC / "reference" / "edit-craft.md"), read(CC / "reference" / "game-edit-craft.md")
+    check("word-box" in ec and "size_em_pct" in ec and "4.6" in ec and "phone" in ec.lower() and "font_family" in ec and "highlight_color" in ec and "captions.why" in ec,
+          "edit-craft.md describes the word-box look, the free font and colour, and the small-to-normal automatic size for phones")
+    check('size: "auto"' in gec and "highlight" not in gec.lower().replace("highlight_color", "") or 'size: "auto"' in gec, "game-edit-craft.md follows the automatic size (no stale fixed size)")
+    check("captions_font" in sk("cc-start") and "captions_color" in sk("cc-start") and "captions_font" in rt and "captions_font" in ec,
+          "cc-start, the router and edit-craft.md carry the user's own caption font and colour (captions_font, captions_color)")
+    check(all("font" in sk(n).lower() and "appearance" in sk(n).lower() for n in ("cc-build-short", "cc-build-long")) and "font" in sk("cc-build-game").lower() and "broadcast" in sk("cc-build-game").lower(),
+          "the build skills tell the agent to pick the caption font and colour to match the video's appearance")
+    gi = (CC.parent / ".gitignore")
+    check(not gi.is_file() or "create-clips/data/font-cache.json" in read(gi), "the font-lookup cache is git-ignored (derived data)")
+
     # the empty compose template
     tm = CC / "data" / "compose-template"
     check((tm / "draft_content.json").is_file() and (tm / "draft_meta_info.json").is_file(), "data/compose-template holds the empty CapCut 9.7 draft that capcut-compose starts from")

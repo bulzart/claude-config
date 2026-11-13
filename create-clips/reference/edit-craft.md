@@ -17,11 +17,12 @@ You write the edit as an EDL (`60-outputs/<id>/edl.json`); `cc.py edl-check` res
    "censor": [{"rec_from": 3901.0, "rec_to": 3908.5, "region": [0.55, 0.1, 0.4, 0.45], "style": "blur", "why": "gore in the video he is watching"}]}
  ],
  "sfx": [{"name": "vine-boom", "at": {"seg": "s2", "t": 51.3}, "volume": 0.7, "why": "lands on the reveal"}],
- "captions": {"size": 15, "y_rel": 0.66, "max_words": 3, "case": "upper", "highlight_words": ["wild"], "replace": [["Kai Sinat", "Kai Cenat"]], "mask_terms": []}}
+ "captions": {"font_family": "Luckiest Guy", "highlight_color": "#22AAFF", "y_rel": 0.66, "why": "the stream's blue overlay colour on a dark game scene", "replace": [["Kai Sinat", "Kai Cenat"]], "mask_terms": []}}
 ```
+The captions block is short because the look has defaults (the word-box look, `size` auto, 3 words and upper case in a short): only what this video needs is written (the section "Captions" below).
 - A segment is a span of the stream; the output is the segments in order. The same span may appear twice (a cold open, a callback). `zoom.at` and `sfx.at.t` are seconds from the segment's start in the output.
-- `edl-check` writes `resolved.json` (the pieces, per chunk), `mcp-plan.json` (the exact CapCut tool calls), `finish.json` (zoom keys, transitions, captions options) and returns facts: every cut with whether it lands inside a word and the gap to the nearest word,
-  warnings (a hole in the recording, a missing blurred file, a refused transition), the duration.
+- `edl-check` writes `resolved.json` (the pieces, per chunk), `mcp-plan.json` (the sound-effect lanes and the clips' places), `finish.json` (zoom keys, transitions, captions options) and returns facts: every cut with whether it lands inside a word and the gap to the nearest word,
+  warnings (a hole in the recording, a missing blurred file, a refused transition), the duration. `T capcut-build` turns these files into the CapCut project in one composition (capcut-build.md): nothing is added to the project by hand or clip by clip.
 
 ## Cuts
 - Find exact points with `cc.py words --run RUN --from T --to T` (every word with its start time). Cut in the breath between words: start about 0.1 to 0.2 s before the first word, end about 0.2 to 0.3 s after the last (let a laugh land).
