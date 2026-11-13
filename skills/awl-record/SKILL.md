@@ -49,13 +49,16 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     (`60-outputs/video-NN/images/`, api, klein or user), the narration (`30-assets/narration/video-NN.wav`), the bed or none, the drawings (their ids and images, `30-assets/drawings/video-NN/`; none when none) and, with images by
     the user, the prompts file; the YouTube title and thumbnail (static §12): write `RUN/deliverables/video-NN-title.txt` (the plan's `title`
     on its first line, and for a video in another language a second line "English: <the plan's `title_gloss`>") and name it and
-    `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row; the
+    `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row (the other title options follow the
+    title after a blank line); and the publishing kit planned at A6s (static §12; the plan's `publish` block): `RUN/deliverables/video-NN-description.txt`
+    (the description, its chapters each given its time from the timeline: the start of its image, the first at 0:00, at least three,
+    each at least 10 s long) and `RUN/deliverables/video-NN-pinned-comment.txt`, both named in the row; the
     run's locks it kept (niche, style reference, narrator; static §10) and this video's own approach and language (story form, angle,
     point of view, time frame, title form, pillar; the language's name, code and unit; the narration model: `state.json →
     static.video_info`, `static.tts_model`); `result.json` adds `static`: {format, images (count, source api|klein|user, re-draws), cost_usd_estimate (the sum of
     the image calls), drawings (how many, and per drawing its id, image, start, length and why: static §5 "Drawings"), narration_s, voice (its ElevenLabs id and name), model (the narration's ElevenLabs model id), language {code, name,
     official, unit}, approach {story_form, angle, point_of_view, time_frame, scale, title_form, pillar}, the narration's characters,
-    passages made again, partial or whole, bed, title, title_gloss, thumbnail, captions (word box placed, or the plain look and why), font
+    passages made again, partial or whole, bed, title, title_gloss, thumbnail, description and pinned comment (their files), captions (word box placed, or the plain look and why), font
     (any replacement for missing glyphs), pronunciation ("not checked (listen)" when the language is outside the model's list or is the
     first in the run, static §8)}. No Higgsfield job, credit or flag fields.
     More than one format (static §2b): one README row per format (its CapCut project's name and full path, its export size, its stills'

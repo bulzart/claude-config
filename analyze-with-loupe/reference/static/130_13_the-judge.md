@@ -78,8 +78,23 @@ processed file read 207.4; since 2026-11-09 nothing is done to the delivered aud
 
 **The checkpoints** (each writes its decisions into `40-briefs/video-NN-judge.md`: the decision, the numbers it rests on, the
 predicted result; and afterwards the measured result against it):
+0. **J0, before the script** (A6s step 6a, right after the blueprint is written, §4b; `awl-static-plan`; the user, 2026-11-13: the
+   engagement is designed in the early stages, never repaired after the story is finished): the blueprint against the spec's
+   "Retention, emotion, language, engagement, attachment, the social side" numbers, scaled to the video's minutes: the hook's moment,
+   stake and promise; the re-hook interval and the longest stretch without a turn (the spec's median about 60 s, longest 100 s); the
+   open-loop ledger (a loop alive at every moment after the hook, the first paid in the first third, the biggest in the last fifth);
+   the thread's appearances (three or more, spaced) and the crowd's behaviour; the mood turns (about 7-8) and the main peak's place
+   (80-96 %); every fact slot's job (a scene, a number at human scale, a turn or a tool) and the stretches of agencies, dates or tips
+   that run long; the wit, the questions and the asks at the references' rates, the debate question and the ending; the pictures' and
+   the sound's jobs; the publishing kit's one promise; the truth rule (every real person's moment has its source, a stand-in is framed as
+   one, nothing is made larger than its source) and §11 and §11b. It edits the blueprint (never writes a script line), names the story
+   material still missing for step 6b's research, writes its decisions into `video-NN-judge.md`, and sets the counts J1 will confirm.
+   Nothing is generated.
 1. **J1, before any generation** (A6s step 9, after the scripts, image plans and bed are written; `awl-static-plan`): reads the
-   forecast of every part and decides:
+   forecast of every part and **confirms the plan files carry the blueprint** (the script's beats, thread, loops, turns, questions and
+   asks where the blueprint put them, each image's `job` and `shot`, the bed's sections on the emotion map, the planned moves, joins and
+   sounds on its beats: a script written to its blueprint has no miss; a miss is a small fix to that plan file now, never a second
+   pass over the story), then decides:
    - the video's **approach and language** as recorded (`T static subjects --run RUN`, `state.json → static.video_info`): the family
      the video takes (the approach's story form, the story family of the spec it follows), the variety against the last video's
      approach (§10), and the language the narration, the title and the captions are written in, with its model (§6);
@@ -127,7 +142,8 @@ predicted result; and afterwards the measured result against it):
    narration sits outside the references' loudness). Spans are moved by `from_line` (free). The point learned by the narration is the
    next video's forecast.
 3. **J3, between image stretches** (S3; the main session spawns the judge when an image agent reports, before the next is spawned):
-   the stretch's report and flags and the stills it names, viewed; what went wrong is traced to its prompt words (the caption the
+   the stretch's report and flags and the stills it names, viewed (each against its `job` and `shot`, §5: a human beat with no face, a
+   reveal with a competing subject, the same road again and again); what went wrong is traced to its prompt words (the caption the
    upsampler wrote is in each attempt) and the next stretches' prompts are changed so it does not happen again (prevention costs no
    generation); a re-draw of a made still follows the run's QC fixes.
 4. **J4, right before the bed** (S2's bed step, when the images are done or in a gap between image stretches): the memory forecast
@@ -136,8 +152,8 @@ predicted result; and afterwards the measured result against it):
    user's is closed), the bed is tried once in ACE-Step's int8 (`--quantization int8_weight_only`, §6: only after that stop), once
    more before the edit when that is stopped too, and still stopped the video goes on without a bed, named (never a
    blocker); after it: `T music measure` against the bed's plan.
-5. **J5, before the edit** (S4; the edit agent's first step reads `video-NN-judge.md`): the labels, drawings, moves and joins the plan
-   carries against the spec's numbers (the push-ins as many as the family's moving shots allow, the dips at the chapters; the drawings
+5. **J5, before the edit** (S4; the edit agent's first step reads `video-NN-judge.md`): the labels, drawings, moves, joins and story
+   sounds the plan carries, on the blueprint's beats (§4b, §7), against the spec's numbers (the push-ins as many as the family's moving shots allow, the dips at the chapters; the drawings
    as many and as long as the references' annotation pattern shows, §2, or, where they draw nothing, only where the narration
    elaborates something a drawn layer shows better, each with its reason), read with `T draw list` and the `drawings_*` facts of `T
    slideshow plan` (a clip not rendered, a drawing on a moving image, past its image or in the caption band), decided before the
@@ -147,9 +163,10 @@ predicted result; and afterwards the measured result against it):
 **Judge prompt** (the main session fills the `<…>`):
 
 ```
-You are the judge of a /analyze-with-loupe Static run (narrated still-picture videos), checkpoint <J1|J2|J3|J4|J5> for video <NN>.
+You are the judge of a /analyze-with-loupe Static run (narrated still-picture videos), checkpoint <J0|J1|J2|J3|J4|J5> for video <NN>.
 Read first: C:/Users/Bulzart/.claude/analyze-with-loupe/reference/static/130_13_the-judge.md (your brief: follow it exactly), then
-<RUN>/20-analysis/static-spec.md and only the sections of static §4, §5 or §6 your checkpoint touches.
+<RUN>/20-analysis/static-spec.md and only the sections of static §4, §4b, §5 or §6 your checkpoint touches (J0 and J1: the video's
+blueprint <RUN>/40-briefs/video-<NN>-blueprint.md).
 Run: <RUN>. Toolkit T: "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe" "C:/Users/Bulzart/.claude/analyze-with-loupe/scripts/awl.py"
 (through PowerShell). The video's family: <family name> (<refs>); the run's niche and its references in the family: <niche> (<refs>,
 or none: then the family's numbers lead); the video's approach: <story form, angle, point of view, time frame, scale, title form,
@@ -157,7 +174,8 @@ pillar> and the last video's: <the same, or none>; the video's language: <name a
 whether the narration model lists it> and the run's narration model: <model id>; the run's QC fixes: <ask|auto|off>.
 <what happened since the last checkpoint: the agent's report, the measured numbers, or "nothing generated yet">
 Do: `T static profile --run <RUN> --refs <refs>` and `T static forecast --run <RUN> --video <NN> [--part … --from … --to …]`; read them
-with the plan files; decide every change yourself (never ask anyone), edit only the plan files your checkpoint owns (J1: the narration
+with the plan files; decide every change yourself (never ask anyone), edit only the plan files your checkpoint owns (J0: the video's
+blueprint, and nothing else: no line, no prompt; J1: the narration
 JSON's pace, delivery, settings and pause tags, the image plan's prompts and characters, music.json's track; J2: the narration
 JSON's levers for passages made again; J3: the
 image prompts of the stretches not made yet; J4: music.json's track; J5: the image plan's motion, labels and joins), run the forecast

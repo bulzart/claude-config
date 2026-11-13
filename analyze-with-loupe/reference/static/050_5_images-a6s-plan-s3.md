@@ -12,7 +12,9 @@ and short pauses, never across a long pause (0.8 s), a short last group joining 
 "characters": [{"id":
 "C1", "name": "…", "photo": "<path or null>", "sheet_prompt": "<when no photo>"}], "images": [{"image": 1, "from_line": 1, "prompt": "…",
 "characters": ["C1"], "motion": "<zoom-in | zoom-out | pan-left | pan-right | pan-up | pan-down | none>", "amount": <the change>,
-"transition": "<cut | a transition slug the catalogue shows drawn>", "trans_s": <seconds>, "line": "<the words over it>"}, …],
+"transition": "<cut | a transition slug the catalogue shows drawn>", "trans_s": <seconds>, "line": "<the words over it>", "job":
+"<what this picture does at its beat, from the blueprint, §4b: establish | escalate | human | reveal | relief | instruct>", "shot":
+"<wide | medium | close | detail | diagram>"}, …],
 "effects": [<with an effects folder, below>], "title": "<the video's YouTube title, §12>", "thumbnail": {"prompt": "…", "size":
 "<W>x<H>", "text": "<its exact words, or null>", "characters": ["C1"], "why": "…"}}` (the title and the thumbnail: §12). Every value
 in `<…>` is decided from the spec (no stock value exists: `T slideshow plan` lists what is undecided). The size and quality are the run's
@@ -55,6 +57,16 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   frames at 30 fps), its own number after the others (the timeline follows the starts), `"motion": "none"` unless the reference's insert
   moves; `T slideshow plan` lists it under `shorter_than_0_5s` as a fact. Its picture is a glimpse in the run's subject (the reference's
   device, never its picture: §3).
+- **The pictures' jobs** (the user, 2026-11-13: engagement is built in from the start, §4b): when the plan is written, each image gets its
+  `job` and `shot` from the blueprint's beat, so the prompt is written *for* that job and never patched afterwards. A **human** beat
+  shows the face and the feeling in a medium or close shot (a person doing something, never only a car or a road); an **escalate** beat
+  shows the thing getting worse (the gauge, the drift, the dark); a **reveal** shows its one new thing and nothing competing with it; a
+  **relief** lets the light warm; an **instruct** shows the action's one detail large (the pipe, the hand, the phone); an **establish**
+  picture orients (wide) and is used sparingly. The light follows the emotion map inside the style lock (cold and muted at dread, the
+  style's one warm accent where a human moment or hope arrives), a cutaway to the crews or the system sits in its own light so the
+  viewer feels the change of world, and no scene or shot repeats more than three stills in a row without a reason in the plan (an empty
+  road again and again is the dullest picture the model makes). The first still of a beat is its strongest. QC (§8) reads each still
+  against its `job`.
 - **The prompt**: what the image shows at that moment of the story (the subject, the action, the place, the time of day), the framing, the
   style lock of the spec word for word (the style reference's look, the same in every video of the run: §10), then the composition for
   the run's aspect (`static.format.aspect`; vertical: the main subject in

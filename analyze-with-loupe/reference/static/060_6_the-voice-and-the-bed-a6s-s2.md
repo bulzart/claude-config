@@ -233,8 +233,10 @@ stopped at 8.69 GB; at full precision the bed needs about 13.6 GB free, int8 a l
 **A long bed** (the user, 2026-11-07: "if acestep 1.5 max is 10 minutes, then we could do 2x8minutes for a 16minutes video i guess, or
 5x5 for a 25 minutes"): ACE-Step makes at most 600 s per piece on this PC (`config.json → static.music.max_s`), so a longer track is made
 in sections and joined end to end with crossfades (`crossfade_s`, default 4 s) into the one file the edit uses: either the agent's own
-`"sections": [{"caption": "<this part's mood, the same instruments and tempo>", "duration": <s>}, …]` (one per part of the story: the
-rise, the turn, the fall; the section lengths add up to the track's duration plus one crossfade per join), or, without them, the fewest
+`"sections": [{"caption": "<this part's mood, the same instruments and tempo>", "duration": <s>}, …]` (one per part of the story, taken
+from the blueprint's emotion map when the plan is written (§4b, the user, 2026-11-13: built in from the start): the calm, the unease,
+the dread, the low and the lift, the peak, the close, each at its place in the narration, so the bed thins before a reveal and lifts
+where hope or warmth arrives; the section lengths add up to the track's duration plus one crossfade per join), or, without them, the fewest
 equal sections of at most `max_section_s` (480 s) under the track's caption. The fade-in is on the first section, the fade-out on the
 last; the pieces stay in `30-assets/music/parts/`. `T music measure`'s level per second shows each join: no drop or jump around it.
 

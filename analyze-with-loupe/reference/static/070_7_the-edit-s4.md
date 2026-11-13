@@ -14,7 +14,11 @@
   the timeline goes straight into the CapCut project; no check copies and no capcut-cli proxy preview are made, and the edit's checks
   read the project back (§8). (`T slideshow render` still exists for a local copy the user asks for: at the format's check size, each
   still drawn with an exact sub-pixel resample per frame, the captions burned in, the frames counted.)
-- **Motion**: the plan's moves and joins (§5), as the references make them; effects only as the references use them (§2).
+- **Motion**: the plan's moves and joins (§5), as the references make them; effects only as the references use them (§2). They sit on
+  the blueprint's beats (§4b: the push-ins at dread, scale and a reveal's first still, the dips at the chapters, a story sound where
+  the story names one, from the user's sounds folder and never a meme or a death sound, the silence or dip before a reveal) and were
+  decided when the plan was written (§5, §6): the edit builds what the plan decided, and J5 confirms it; nothing is invented here to
+  liven a stretch the plan left plain.
 - **The CapCut project is the final** (the user, 2026-11-05: "export it as the final"): it mirrors the timeline at the format's export
   size, the images at their full size (`reference/capcut-assembly.md` §1–§2, §4): `T capcut-name`, `capcut_clone_draft`,
   `T capcut-prep --draft "<draft>" --canvas <state.json → static.format.export>`; each image with `capcut_add_image` at its start for its duration on the main

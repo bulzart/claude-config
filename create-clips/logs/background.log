@@ -3,3 +3,28 @@
 [watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); Ctrl+C stops
 [watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); Ctrl+C stops
 [watch] chunk reports: claude-haiku-5-5 (effort high), 2 at a time
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\blastpremier\20261113-133945-blastpremier\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.9 s (180.197 s 1920x1080 59.94 fps)
+[C0001] stage audio: ok in 1.5 s (361 windows)
+[C0001] stage sheets: ok in 24.9 s (241 frames, 9 sheets, leftovers 0)
+[C0001] stage transcript: ok in 382.7 s (446 words, medium on cpu, 140.5 s)
+[C0001] stage digest: ok in 0.4 s (181 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.9, 'audio': 1.5, 'sheets': 24.9, 'transcript': 382.7, 'digest': 0.4}
+[watch] blastpremier/20261113-133945-blastpremier C0001: done in 419.4 s {'move': 0.0, 'probe': 0.9, 'audio': 1.5, 'sheets': 24.9, 'transcript': 382.7, 'digest': 0.4} free 5.17 GB
+[C0002] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\blastpremier\20261113-133945-blastpremier\chunk-0002.mp4
+[C0002] stage move: ok in 0.2 s
+[C0002] stage probe: ok in 16.6 s (66.086 s 1920x1080 59.941 fps)
+[C0002] stage audio: ok in 29.9 s (133 windows)
+[C0002] stage sheets: ok in 11.4 s (88 frames, 3 sheets, leftovers 0)
+[C0002] stage transcript: ok in 21.5 s (66 words, medium on cpu, 21.5 s)
+[C0002] stage digest: ok in 0.1 s (67 seconds)
+[C0002] ingest end: done {'move': 0.2, 'probe': 16.6, 'audio': 29.9, 'sheets': 11.4, 'transcript': 21.5, 'digest': 0.1}
+[watch] blastpremier/20261113-133945-blastpremier C0002: done in 80.7 s {'move': 0.2, 'probe': 16.6, 'audio': 29.9, 'sheets': 11.4, 'transcript': 21.5, 'digest': 0.1} free 5.16 GB
+[C0003] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\blastpremier\20261113-133945-blastpremier\chunk-0003.mp4
+[C0003] stage move: ok in 0.0 s
+[C0003] stage probe: ok in 90.8 s (180.182 s 1920x1080 59.94 fps)
+[C0003] stage audio: ok in 19.0 s (361 windows)
+[report] 20261113-133945-blastpremier C0001: done in 201.7 s, $0.032
+[C0003] stage sheets: ok in 104.2 s (241 frames, 9 sheets, leftovers 0)
+[report] 20261113-133945-blastpremier C0002: done in 232.7 s, $0.024

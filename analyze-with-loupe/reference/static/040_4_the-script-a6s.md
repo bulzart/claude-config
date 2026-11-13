@@ -1,5 +1,9 @@
 ## 4 The script (A6s)
 
+**The script is written to the video's engagement blueprint** (§4b: made before the first line, checked by J0): its beats, thread, open
+loops, re-hooks, human layer, asks and ending are the plan the lines serve, and `script.md` names the blueprint's beat over each section.
+This section says how the lines themselves are written; it never replaces that design, and a finished script is not patched to add it.
+
 `40-briefs/video-NN-script.md` (readable: the beats, the devices used, the sources) and `40-briefs/video-NN-narration.json`, the lines the
 voice speaks: `{"video": "NN", "language": "<the video's language: its ISO code from the model's live list (`T tts models`), or its name; english
 when the video is English>", "pace": {"unit": "words" | "characters", "refs": ["<the references the point rests on: the niche's within the
@@ -44,8 +48,8 @@ silence is placed (§6 "Passages").
   said at the stop with the length it does hold, never padded with repeats or invented claims. It is written into
   `video-NN-narration.json` as `"target_length_s"` with `"length_why"` (the user's pick, or the references' numbers it rests on), and
   the script is sized to it.
-- **The template of the spec**: the hook in the first line (spoken within the first second), every beat in its share, the payoff, the
-  closing line or loop; the length: the target, as the words at the plan's overall point (`pace.target.wpm_overall`: words =
+- **The template of the spec**: the hook in the first line (spoken within the first second), every beat in its share (the blueprint's
+  map, §4b), the payoff, the closing line or loop; the length: the target, as the words at the plan's overall point (`pace.target.wpm_overall`: words =
   seconds × words a minute / 60; 530 s at 165 words a minute is about 1,460 words), the voice, its tags and the words chosen and
   measured so the narration speaks at that point (§6: nothing is sped or slowed afterwards). A spelled-out year or number counts as the words it is spoken as ("eighteen twelve" is two). (Before the
   pace was set, 2026-11-06 to 11-08, scripts were sized at the voice's own speed, which ran about 12 % under its sample's: video 02 of
@@ -66,7 +70,7 @@ silence is placed (§6 "Passages").
   voice holds tags for (§6: `T tts voice --emotion NAME="[tags]"`) takes those tags. A **strong** line (`"strong": true, "delivery":
   "[<the feeling as audio tags, e.g. quiet disbelief, slower>]"`: Eleven v4's audio tags, §6) is for the peaks only (the user,
   2026-11-05: "not make big strong emotion changes unexpectedly, but yeah make room for it"): where the references' narrator peaks (the
-  hook's turn, the reveal, the payoff), at most one line in five and never two in a row unless the references do; its delivery in the
+  hook's turn, the reveal, the payoff: the peaks of the blueprint's emotion map, §4b), at most one line in five and never two in a row unless the references do; its delivery in the
   references' register (no shouting a reference never does); the line before leads into it (its wording, a pause tag) and the line
   after comes back down, so the feeling never jumps unannounced. Its tag holds until the next one, so its passage ends after it (§6
   "Passages"). The narration's own `delivery` (the tags that lead every passage) and a section's own deliveries (a slow, quiet stretch
@@ -79,6 +83,10 @@ silence is placed (§6 "Passages").
 - **Nothing indecent, gory or distressing** (§11b): a hard fact is told plainly and briefly, never by its graphic side (how many people
   died may be said; how a body was found, an injury or someone's suffering is not); no swearing; no intimate part of the body named,
   even as a first-aid fact (the tip told by its other places: "her head, her neck and under her arms").
-- **Fact sheet** (factual niches): `40-briefs/video-NN-facts.md`, every claim of the script with its source URLs.
+- **Fact sheet** (factual niches): `40-briefs/video-NN-facts.md`, every claim of the script with its source URLs, the story material
+  of §3 (the people's accounts, with their sources and exact quotes) beside the claims, and each real person's moment told as theirs.
+- **Told to hold, not only to inform** (§4b): the lines carry the blueprint's thread, loops, turns, questions and asks where it put them;
+  a fact does a job (a scene, a number at human scale, a turn or a tool); the narrator's dry wit stays inside the references' register;
+  nothing is invented to make it livelier (the truth rule).
 - The copy test (`creative-direction.md` §5.0) and the sharpness gate pass before the script is final.
 

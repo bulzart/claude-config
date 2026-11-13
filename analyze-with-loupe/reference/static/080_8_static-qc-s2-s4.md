@@ -29,7 +29,8 @@ judged against what was chosen and forecast for it, and a miss beyond its tolera
 - **Every image, viewed** (Read the file): it shows what its line says; the character matches their photo or anchor (face, hair, build,
   clothing, age); hands, faces, bodies and counts are right (`anomaly-catalog.md` §2.13 for illustrated, painted and cartoon pictures, §2.17 for identity); its size and aspect the format's (`off_aspect` for the user's
   images); no stray text, letters, logos or watermarks; the style lock holds across the set; the caption band is free of faces and key detail;
-  one picture, not panels with a seam; the sizes of people, animals and things against each other as in life (§5); no subtitle-like
+  one picture, not panels with a seam; it does its planned `job` (§5, §4b: a human beat shows the face and the feeling, a reveal its one
+  new thing); the sizes of people, animals and things against each other as in life (§5); no subtitle-like
   line (`T image text --run RUN --video NN` lists every line of letters it reads, with its box and whether it sits in the bottom third:
   a long line across the bottom or over the picture that no sign, page or screen carries is a made-up subtitle, a redraw reason, its
   prompt checked for caption words first, §5; letters cut off by the bottom edge, only their tops showing, are one too and the check

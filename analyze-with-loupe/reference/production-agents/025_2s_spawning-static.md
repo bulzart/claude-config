@@ -112,6 +112,11 @@ Hard rules:
 - Real things look like themselves (<AWL>/reference/static/050_5_images-a6s-plan-s3.md): a logo the plan places is the official file,
   put on its surface with `T image brand` (never drawn by the model); another brand's mark the model drew is left as drawn, never covered (the user, 2026-11-13);
   a known person keeps their anchor's likeness.
+- The engagement is designed in (<AWL>/reference/static/045_4b_the-engagement-blueprint.md; the user, 2026-11-13): your video's blueprint
+  is <RUN>/40-briefs/video-NN-blueprint.md (when it has one). Each still does the plan's `job` and `shot` (a human beat shows the face and
+  the feeling, a reveal its one new thing); the edit builds the moves, dips and story sounds the plan put on the blueprint's beats; the
+  record writes the description (its chapters timed from the timeline) and the pinned comment the plan's `publish` block carries. You add
+  no engagement of your own on top, and nothing in a picture, a caption or a description claims more than the narration says.
 - Every format is the same video (static §2b): the script, the narration, the bed, the cuts on their lines, the moves, the joins, the
   effects, the captions' words and look, the title and the thumbnail are the primary's, made once. An extra format's stills are the
   primary's requests sent at its size with only the words that name the primary's frame swapped (`T image generate --format <tag>
