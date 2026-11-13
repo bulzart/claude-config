@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import sys
+import threading
 import time
 import traceback
 from pathlib import Path
@@ -24,6 +25,7 @@ from cc_common import (CHUNK_RE, SCHEMA, FileLock, cfg_get, chunk_dir, chunk_id,
 STAGES = ("move", "probe", "audio", "sheets", "transcript", "digest")
 RUN_DIRS = ("00-inventory", "10-media", "20-analysis", "30-assets", "40-briefs", "60-outputs", "deliverables", "logs")
 CHUNK_FILE_RE = re.compile(r"^chunk-(\d{4,})\.mp4$", re.I)
+_STREAM_LOCK = threading.Lock()        # two processors finishing together must not write stream.md / stream-meta.json over each other
 
 
 # --------------------------------------------------------------------------- the chunk table
@@ -394,9 +396,10 @@ def _finish(run: Path, row: dict, secs: dict, skipped: list, errors: list, state
     row = put_row(run, row)
     update_state(run, **{f"chunks.{row['id']}": {"status": row["status"], "processed_at": row["processed_at"], "error": row["error"]}})
     try:
-        rows = load_chunks(run)
-        build_stream_meta(run, rows, load_state(run))
-        build_stream_md(run, rows, load_state(run))
+        with _STREAM_LOCK:
+            rows = load_chunks(run)
+            build_stream_meta(run, rows, load_state(run))
+            build_stream_md(run, rows, load_state(run))
     except Exception as e:  # noqa: BLE001
         log(f"stream.md / stream-meta.json not updated: {type(e).__name__}: {e}", show=True)
     log(f"ingest end: {row['status']} {secs}", show=True)
@@ -834,6 +837,105 @@ def _check_ready(c: dict, seen: dict, now: float, stable_s: float, sidecar_wait:
     return "ready"
 
 
+class _Slot:
+    """One processor of the watcher: a role and the thread that works on one job (a chunk) right now. The roles: `live` takes the NEWEST chunk that is ready
+    (the one being recorded now, so the recording is never left behind), `backlog` the OLDEST (the ones left behind). With one processor it is `backlog`: in order."""
+
+    def __init__(self, role: str):
+        self.role = role
+        self.job = None
+        self.result = None
+        self.done = threading.Event()
+        self.thread = None
+
+    def start(self, job: dict, fn) -> None:
+        self.job, self.result = job, None
+        self.done.clear()
+
+        def work():
+            t0 = time.time()
+            try:
+                res = fn(job)
+            except BaseException as e:  # noqa: BLE001   a chunk's own failure comes back from ingest_chunk; this is for the unexpected, a thread must never die silently
+                res = {"ok": False, "chunk": job["cid"], "error": f"{type(e).__name__}: {e}", "status": None}
+            self.result = {"res": res, "seconds": time.time() - t0, "t0": t0}
+            self.done.set()
+        self.thread = threading.Thread(target=work, daemon=True, name=f"cc-{self.role}")
+        self.thread.start()
+
+
+def _worker_count(a) -> int:
+    n = getattr(a, "workers", None) or os.environ.get("CC_WORKERS") or cfg_get("watch.workers", 2) or 1
+    try:
+        return max(1, min(4, int(n)))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _roles(n: int) -> list:
+    return ["live"] + ["backlog"] * (n - 1) if n > 1 else ["backlog"]
+
+
+def _job_key(c: dict) -> tuple:
+    return (c["session"], chunk_id(c["index"]))
+
+
+def _assign(ready: list, roles: list) -> list:
+    """The chunk each free processor takes, in the order of `roles` (`ready` is sorted oldest to newest and loses the chunks taken): `live` takes the NEWEST ready chunk,
+    `backlog` the OLDEST. With two chunks ready the live one gets the newer, the backlog one the older; with one chunk the first free processor in the list gets it."""
+    taken = []
+    for role in roles:
+        if not ready:
+            break
+        taken.append(ready.pop(-1 if role == "live" else 0))
+    return taken
+
+
+def _register_durations(ready: list) -> None:
+    """Put every ready chunk's real duration into its run's chunk table before a processor starts on one of them. A chunk's rec start is the sum of the durations
+    before it: with the live processor taking the NEWEST chunk while older ones still wait, its sheets and text views would carry a wrong rec time (and be made again
+    later) unless the older chunks' durations are already known. One ffprobe of the file in the inbox; the chunk is not moved and keeps status pending."""
+    by_run: dict = {}
+    for c in ready:
+        by_run.setdefault((c["session"], c["channel"], str(c["session_dir"])), []).append(c)
+    for (session, channel, sdir), cs in by_run.items():
+        run, _ = ensure_run(session, channel, Path(sdir))
+        rows = {r["id"]: r for r in load_chunks(run)}
+        for c in sorted(cs, key=lambda x: x["index"]):
+            cid = chunk_id(c["index"])
+            r = rows.get(cid)
+            if r and (r.get("duration_s") or r.get("status") in ("processing", "done", "failed")):
+                continue
+            try:
+                p = ffprobe_facts(c["path"])
+            except BaseException:  # noqa: BLE001   an unreadable file fails its own probe stage later, with a reason
+                continue
+            if p.get("duration_s") and p.get("has_video"):
+                row = r or new_row(cid, c["index"])
+                row["duration_s"] = p["duration_s"]
+                put_row(run, row)
+
+
+def _find_stale(root: Path, inflight: set):
+    """(run, row) of a chunk whose rec start moved (a lower-numbered chunk arrived after it) and that no processor is working on, else None."""
+    for rd in sorted(root.glob("*")):
+        if not (rd / "state.json").is_file():
+            continue
+        for r in load_chunks(rd):
+            if r.get("stale_rec") and (rd / r["file"]).is_file() and (rd.name, r["id"]) not in inflight:
+                return rd, r
+    return None
+
+
+def _run_job(job: dict, skip_whisper: bool) -> dict:
+    run = job["run"]
+    if job["kind"] == "chunk":
+        c = job["c"]
+        return ingest_chunk(run, c["path"], index=c["index"], sidecar=c["sidecar"] if c["sidecar"].is_file() else None,
+                            chat=c["chat"] if c["chat"].is_file() else None, skip_whisper=skip_whisper)
+    return ingest_chunk(run, Path(run) / job["file"], index=job["index"])
+
+
 def cmd_watch(a):
     inbox = Path(a.inbox) if a.inbox else inbox_dir()
     seen, blocked_until, tries, dead = {}, {}, {}, set()
@@ -841,8 +943,17 @@ def cmd_watch(a):
     last_pause_msg = 0.0
     root = runs_root()
     root.mkdir(parents=True, exist_ok=True)
+    workers = _worker_count(a)
+    slots = [_Slot(r) for r in _roles(workers)]
+    inflight: set = set()
+    try:
+        from cc_audio import configure_workers
+        configure_workers(workers)                  # one Whisper model, as many transcriptions at once as there are processors
+    except Exception as e:  # noqa: BLE001
+        say(f"[watch] could not set the number of Whisper workers: {e}")
     say(f"[watch] inbox {inbox} -> runs {root} (whisper: {(cfg_get('whisper', {}) or {}).get('model')} on "
-        f"{os.environ.get('CC_WHISPER_DEVICE') or (cfg_get('whisper', {}) or {}).get('device')}); Ctrl+C stops")
+        f"{os.environ.get('CC_WHISPER_DEVICE') or (cfg_get('whisper', {}) or {}).get('device')}); "
+        + (f"{workers} processors: one takes the newest chunk (live), the others the oldest (backlog)" if workers > 1 else "1 processor, chunks in order") + "; Ctrl+C stops")
     interrupted = False
     last_work, last_sync, last_catch = time.time(), 0.0, 0.0
     idle_unload = float((cfg_get("whisper", {}) or {}).get("idle_unload_s", 600) or 0)
@@ -867,71 +978,100 @@ def cmd_watch(a):
             say("[watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)")
     except Exception as e:  # noqa: BLE001
         say(f"[watch] ready alerts are off: {type(e).__name__}: {e}")
+
+    def launch(s, job: dict) -> None:
+        nonlocal last_work
+        inflight.add(job["key"])
+        last_work = time.time()
+        s.start(job, lambda j: _run_job(j, a.skip_whisper))
+
+    def book(s) -> None:
+        """A processor has finished its job: enter what happened (retries, the report, the alert); the processor is free again."""
+        nonlocal last_work, last_pause_msg
+        job, got = s.job, s.result
+        s.job = s.result = s.thread = None
+        s.done.clear()
+        inflight.discard(job["key"])
+        res, secs = got["res"], got["seconds"]
+        run, c = job["run"], job.get("c")
+        last_work = time.time()
+        if job["kind"] == "refresh":
+            say(f"[watch] {run.name} {job['cid']} ({job['role']}): its rec start moved, sheets and text views re-made: {res.get('status')} in {secs:.1f} s")
+            return
+        if res.get("refused"):
+            blocked_until[c["path"]] = time.time() + 30
+            if time.time() - last_pause_msg > 60:
+                say(f"[watch] paused: {res['refused']} (waiting; free some space)")
+                last_pause_msg = time.time()
+            return
+        if not res.get("ok") and c["path"].exists():
+            tries[c["path"]] = tries.get(c["path"], 0) + 1
+            blocked_until[c["path"]] = time.time() + 60
+            if tries[c["path"]] >= 5:
+                dead.add(c["path"])
+                say(f"[watch] giving up on {c['path']} after {tries[c['path']]} tries: {res.get('error')}")
+        cid = res.get("chunk") or job["cid"]
+        processed.append({"session": c["session"], "chunk": cid, "status": res.get("status"), "seconds": round(secs, 1), "error": res.get("error"),
+                          "processor": job["role"], "started": round(got["t0"], 2), "ended": round(got["t0"] + secs, 2)})
+        say(f"[watch] {c['channel']}/{c['session']} {cid} ({job['role']}): {res.get('status')} in {secs:.1f} s {res.get('seconds')} free {free_gb(run)} GB")
+        if alerts:
+            alerts.add(run)
+        if res.get("ok") and reporter and all((res.get("stages") or {}).get(s_) is True for s_ in ("sheets", "audio", "digest")):
+            reporter.enqueue(run, res["chunk"])
+            touched_runs.add(run)
+
     with WatchLock(root / ".watch.lock") as lock:
         try:
             while True:
                 lock.touch()
                 now = time.time()
+                progressed = False
+                for s in slots:                                            # a finished job is entered, its processor is free again
+                    if s.job is not None and s.done.is_set():
+                        book(s)
+                        progressed = True
                 if now - last_sync > 10:                                   # the recorder's session.json (start, end, reason) follows into the run
                     last_sync = now
                     for _ in range(sync_sessions(inbox, root)):
                         say("[watch] a recording's session.json changed: the run's recording info is updated")
-                if idle_unload and now - last_work > idle_unload:        # a background watcher does not keep the 1.5 GB model while nothing arrives
+                busy = any(s.job is not None for s in slots)
+                if idle_unload and not busy and now - last_work > idle_unload:        # a background watcher does not keep the 1.5 GB model while nothing arrives
                     from cc_audio import unload_transcriber
                     if unload_transcriber():
                         say(f"[watch] idle for {int(idle_unload)} s: Whisper model unloaded (the next chunk loads it again)")
                 cands = scan_inbox(inbox)
                 states = {c["path"]: _check_ready(c, seen, now, a.stable, a.sidecar_wait) for c in cands}
-                ready = [c for c in cands if states[c["path"]] == "ready" and c["path"] not in dead and now >= blocked_until.get(c["path"], 0)]
-                if ready:
-                    c = ready[0]
-                    t0 = time.time()
-                    run, created = ensure_run(c["session"], c["channel"], c["session_dir"])
-                    res = ingest_chunk(run, c["path"], index=c["index"], sidecar=c["sidecar"] if c["sidecar"].is_file() else None,
-                                       chat=c["chat"] if c["chat"].is_file() else None, skip_whisper=a.skip_whisper)
-                    if res.get("refused"):
-                        blocked_until[c["path"]] = time.time() + 30
-                        if time.time() - last_pause_msg > 60:
-                            say(f"[watch] paused: {res['refused']} (waiting; free some space)")
-                            last_pause_msg = time.time()
-                    else:
-                        if not res.get("ok") and c["path"].exists():
-                            tries[c["path"]] = tries.get(c["path"], 0) + 1
-                            blocked_until[c["path"]] = time.time() + 60
-                            if tries[c["path"]] >= 5:
-                                dead.add(c["path"])
-                                say(f"[watch] giving up on {c['path']} after {tries[c['path']]} tries: {res.get('error')}")
-                        processed.append({"session": c["session"], "chunk": res.get("chunk"), "status": res.get("status"),
-                                          "seconds": round(time.time() - t0, 1), "error": res.get("error")})
-                        say(f"[watch] {c['channel']}/{c['session']} {res.get('chunk')}: {res.get('status')} in {time.time() - t0:.1f} s "
-                            f"{res.get('seconds')} free {free_gb(run)} GB")
-                        if alerts:
-                            alerts.add(run)
-                        if res.get("ok"):
-                            refresh_stale(run, limit=1)
-                            if reporter and all((res.get("stages") or {}).get(s) is True for s in ("sheets", "audio", "digest")):
-                                reporter.enqueue(run, res["chunk"])
-                                touched_runs.add(run)
-                    last_work = time.time()
+                ready = [c for c in cands if states[c["path"]] == "ready" and c["path"] not in dead and now >= blocked_until.get(c["path"], 0)
+                         and _job_key(c) not in inflight]
+                waiting = any(s_ in ("unstable", "waiting-sidecar") for s_ in states.values())
+                if ready and any(s.job is None for s in slots):
+                    _register_durations(ready)                               # durations first: a chunk's rec start is the sum of the ones before it
+                free = [s for s in slots if s.job is None]
+                for s, c in zip(free, _assign(ready, [s.role for s in free])):    # live: the newest ready chunk; backlog: the oldest
+                    run, _ = ensure_run(c["session"], c["channel"], c["session_dir"])
+                    launch(s, {"kind": "chunk", "key": _job_key(c), "run": run, "cid": chunk_id(c["index"]), "c": c, "role": s.role})
+                    progressed = True
+                if not ready and not waiting:                                # a free processor re-makes a chunk whose rec start moved (a lower chunk came after it)
+                    for s in slots:
+                        if s.job is None:
+                            st = _find_stale(root, inflight)
+                            if not st:
+                                break
+                            rd, r = st
+                            launch(s, {"kind": "refresh", "key": (rd.name, r["id"]), "run": rd, "cid": r["id"], "file": r["file"], "index": r["index"], "role": s.role})
+                            progressed = True
+                if progressed:
                     continue
                 if reporter and touched_runs and time.time() - last_catch > 30:        # a chunk whose report failed, went stale or was never queued is queued again
                     last_catch = time.time()
                     reporter.catch_up(touched_runs)
                 if alerts:                      # every ~10 s: is a run fully processed (recording ended, chunks done, reports settled)? then one notification
                     notified += alerts.tick(inbox, root, reporter=reporter, reports_on=reporter is not None, skip_transcript=a.skip_whisper, dead=dead)
-                waiting = any(s in ("unstable", "waiting-sidecar") for s in states.values())
-                if not waiting:                 # idle: re-make one chunk whose rec start moved, if any
-                    did = False
-                    for rd in sorted(root.glob("*")):
-                        if (rd / "state.json").is_file() and refresh_stale(rd, limit=1):
-                            did = True
-                            break
-                    if did:
-                        continue
-                if a.once and not waiting:
+                busy = any(s.job is not None for s in slots)
+                if a.once and not waiting and not busy and not ready:
                     skipped_incomplete = [str(c["path"]) for c in cands if states[c["path"]] in ("blocked", "gone") or c["path"] in dead]
                     break
-                time.sleep(min(a.interval, max(0.3, a.stable / 2)) if (a.once and waiting) else a.interval)
+                time.sleep(min(a.interval, 1.0) if busy else (min(a.interval, max(0.3, a.stable / 2)) if (a.once and waiting) else a.interval))   # busy: look soon after a processor finishes
         except KeyboardInterrupt:
             interrupted = True
             say("[watch] stopped (Ctrl+C); an interrupted chunk resumes at the next start")
@@ -958,8 +1098,14 @@ def cmd_watch(a):
             notified += alerts.tick(inbox, root, reporter=reporter, reports_on=reporter is not None, skip_transcript=a.skip_whisper, dead=dead, force=True)
         except Exception as e:  # noqa: BLE001
             say(f"[watch] ready alert check failed: {type(e).__name__}: {e}")
-    out({"ok": True, "processed": processed, "skipped_incomplete": skipped_incomplete, "interrupted": interrupted, "reports": reports,
-         "notified": [Path(r["run"]).name for r in notified]})
+    result = {"ok": True, "processed": processed, "skipped_incomplete": skipped_incomplete, "interrupted": interrupted, "reports": reports,
+              "notified": [Path(r["run"]).name for r in notified], "processors": [s.role for s in slots]}
+    if interrupted:                                  # the processors are daemon threads in the middle of a chunk: leave at once, the chunk resumes at the next start
+        sys.stdout.write(json.dumps(result, ensure_ascii=False) + "\n")
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(0)
+    out(result)
 
 
 # --------------------------------------------------------------------------- register
@@ -994,6 +1140,7 @@ def register(sub) -> None:
     p.add_argument("--skip-whisper", action="store_true")
     p.add_argument("--no-report", action="store_true", help="do not start the headless chunk reporter (config report.enabled false does the same)")
     p.add_argument("--no-notify", action="store_true", help="no ready alert (config notify.enabled false or CC_NOTIFY=0 does the same)")
+    p.add_argument("--workers", type=int, help="processors working on chunks at the same time (config watch.workers, default 2): one takes the newest ready chunk, the others the oldest; 1 = one at a time, in order")
     p.set_defaults(func=cmd_watch)
 
     p = sub.add_parser("status", help="stages per chunk of a run, free space; without --run: the list of runs")

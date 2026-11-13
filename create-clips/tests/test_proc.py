@@ -349,7 +349,7 @@ def main():
             (sd / "Unconfirmed 99.crdownload").write_bytes(b"partial")
             shutil.copyfile(data / "short10.mp4", sd / "chunk-0004.mp4")
             (sd / "chunk-0004.mp4.crdownload").write_bytes(b"still downloading")
-            rc, so, se, j = run_cc(["watch", "--once", "--interval", "0.5", "--stable", "0.6", "--sidecar-wait", "1"], tiny)
+            rc, so, se, j = run_cc(["watch", "--once", "--workers", "1", "--interval", "0.5", "--stable", "0.6", "--sidecar-wait", "1"], tiny)     # one processor: in number order
             run_w = runs / ses
             rows = json.loads((run_w / "00-inventory" / "chunks.json").read_text(encoding="utf-8")) if (run_w / "00-inventory" / "chunks.json").exists() else []
             mine = [p for p in (j or {}).get("processed", []) if p["session"] == ses]     # the inbox also holds the refused chunk of another session

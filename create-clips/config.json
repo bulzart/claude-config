@@ -54,6 +54,9 @@
     "claude_bin": "",
     "setting_sources": "project"
   },
+  "watch": {
+    "workers": 2
+  },
   "notify": {
     "enabled": true,
     "persistent": true,
