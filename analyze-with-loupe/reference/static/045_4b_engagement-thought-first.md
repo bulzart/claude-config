@@ -18,12 +18,24 @@ executes.
 - **Think it through early, before it is written**, at the subject, in the research and in the plan the script is made from, so the script,
   the pictures, the sound, the edit and the words around the video (title, thumbnail, description, whatever the video needs to be
   published well) are made from one idea and not repaired afterwards. A late pass over a finished story is double work.
-- **Use the references as evidence, not as a recipe**: what already holds attention in this niche (the spec's retention, emotion,
-  engagement, attachment and social-side readings, §1, §2) is read for this niche; the numbers are ranges to work inside, and the agent
-  may leave one with its reason written.
-- **Keep the facts true and make them alive**: through what is chosen, in what order, what is shown and what is asked, never by changing a
-  fact, inflating a figure, inventing a person, a quote or an event, or telling a stand-in as if real (a picture of "the car beside you" is
-  framed as the viewer's scenario). Drama comes from true material, within §11, §11b and the references' register.
+- **Learn from the references first, then think with what you learned** (the user, 2026-11-14: analyse the references and their
+  patterns, take what they taught about patterns, approach and how the story is crafted, then, with all that context, think it through
+  freely, then plan and execute): what already holds attention in this niche (the spec's template, retention, emotion, engagement,
+  attachment and social-side readings, §1, §2, and the niche's own cards: their patterns, their approach, how their stories are built)
+  is read for this niche and written down first, with its sources; the thinking below starts from it, never from the prompts alone, and
+  the references are never only a late check. They are evidence, not a recipe: the numbers are ranges to work inside, and the agent may
+  leave a pattern with its reason written.
+- **Keep what is told as real true, and make it alive**: where the niche tells real facts or events, through what is chosen, in what
+  order, what is shown and what is asked, never by changing a fact, inflating a figure, inventing a person, a quote or an event, or
+  telling a stand-in as if real (a picture of "the car beside you" is framed as the viewer's scenario). Where the niche's story is
+  invented (the references' content style says which, §1), it holds together and is never passed off as real. Drama comes from the
+  material, within §11, §11b and the references' register.
+- **Each niche has its own logic** (the user, 2026-11-14: "every niche has to have their own logic ... the system should be smart and
+  decide on its own"): what "true" means here, what holds a viewer, what attaches them and which checks fit the work are read from this
+  niche's references and decided by the agent for the subject, never carried over from another niche and never fixed by a list; this
+  section is general on purpose. Who does the thinking is the agent's decision as well: itself alone, or fresh agents given all this
+  context and left free to think with it (how many, with what focus, as the subject calls for); a reader who is given nothing is a
+  different check (§13).
 - **Be skeptical of your own design** (§13): where would a stranger leave, what is dull, unclear, unearned or untrue, what is only there
   because it was easy? Fix it where it costs least, in the plan. A fresh reviewer who knows nothing of the work reads the finished plan cold before anything is generated (§13).
 - **Keep a short note of what was decided and why** (`40-briefs/video-NN-blueprint.md`, any form that serves) so later steps build from it.

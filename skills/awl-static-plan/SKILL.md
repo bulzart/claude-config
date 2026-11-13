@@ -15,7 +15,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (5.8 KB) (who works the run, and when; skip when already read)
 - static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (4.2 KB)
-- static §4b: `AWL/reference/static/045_4b_engagement-thought-first.md` (3.7 KB) (what will hold a viewer, thought through before any line)
+- static §4b: `AWL/reference/static/045_4b_engagement-thought-first.md` (5.1 KB) (what the references taught, then what will hold a viewer, thought through before any line)
 - static §4: `AWL/reference/static/040_4_the-script-a6s.md` (10.5 KB)
 - static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (26.6 KB)
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (30.5 KB)
@@ -80,10 +80,14 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
 6. **The design, then the scripts**, per video (the user, 2026-11-13: "this has to be in early stages of planning and video
    development, and not just check and edit and do double effort after the whole video story is already crafted and finished", and "just
    give general suggestions ... and then the pipeline evaluates on its own and find out whats best while it executes").
-   **6a. Think it through first** (static §4b), before any line, prompt or caption exists: what will make a stranger click, stay, feel
-   something, finish and pass this video on, for this subject in this niche, working it out from what the references show works and from
-   what your research found; keep a short note of what you decided and why (`RUN/40-briefs/video-NN-blueprint.md`, any form), be skeptical
-   of it, and, if a second opinion is worth having, have a fresh reviewer read it cold (static §13: no context of yours, no conclusions).
+   **6a. Learn from the references, then think it through** (static §4b), before any line, prompt or caption exists: first write down
+   what the references taught for this subject's niche (the spec's template and readings, and the niche's cards: their patterns,
+   approach and how their stories are built, with their sources) as the first part of the blueprint; then, with that and what your
+   research found as the context, work out what will make a stranger click, stay, feel something, finish and pass this video on, for this
+   subject in this niche (alone, or with fresh agents given all the same context and left free to think: how many and with what focus
+   is your decision; each niche has its own logic, static §4b); keep a short note of what you decided and why
+   (`RUN/40-briefs/video-NN-blueprint.md`, any form), be skeptical of it, and, if a second opinion is worth having, have a fresh reviewer
+   read it cold (static §13: no context of yours, no conclusions).
    **6b. Research again** wherever the design found a gap, sourced as static §3 says and written into the fact sheet.
    **6c. Scripts** (static §4, written to the design), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
    niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11), and no graphic detail,
@@ -186,8 +190,9 @@ languages, and their scripts, image plans, titles and thumbnails keep the run's 
 
 ## Never (this phase)
 
-- Never take a reference's subject, names, facts or lines; never invent a fact, a quote, a date or a number; never put a claim in a script
-  that its fact sheet does not source.
+- Never take a reference's subject, names, facts or lines; never invent a fact, a quote, a date or a number told as real; never put a
+  claim told as real in a script that its fact sheet does not source (a niche whose story is invented makes it up by design and holds it
+  to its own consistency, static §4b).
 - Never write a script before the engagement is thought through, and never add it afterwards as a pass over a finished story (static §4b).
 - Never pick the subjects or the voice for the user unless they said "you pick".
 - Never ask for anything but the subjects and the voice at the stop (the paths and choices were asked at the start).
