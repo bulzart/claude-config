@@ -53,4 +53,6 @@ Keep the file compact (the planner reads every block's file): at most about 20 K
   Use the full scale. The planner reads these to decide how many long videos exist.
 - **Say how sure you are**: a moment you only read in the transcript (no frames seen) is "medium" at best; one whose words you could not understand (music, crosstalk) is "low".
 - **Touchy things are recorded where they are found** (`sensitive`, `avoid`), with the rec span at full-resolution precision, so the builder does not have to find them again.
+- **Speed (the user wants it fast, without losing a check):** batch independent tool calls (several frames, contact sheets or Read calls in ONE message, every sheet you need from ONE PowerShell call, the images read together), aim for about 8 minutes and about 40 tool calls.
+- **The picture and the words win** over the brief, the criteria or a report: where they disagree, the moment says what is seen and heard, and `notes` says so.
 - **Do not decide the videos.** That is the planner's job; you hand over the best map of the block you can.

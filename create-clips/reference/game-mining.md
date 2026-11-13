@@ -54,6 +54,8 @@ An empty `sensitive` and `avoid` is a statement that the block was checked: say 
 - **Extras are rare and real:** a caster who loses it, a crowd roar, a reaction on camera, a funny moment off the play. Not every sentence is one.
 - **Names as the brief spells them.** Where Whisper wrote a player or team wrong, add the pair to `lexicon_fixes`.
 - **Say how sure you are:** a card read from the transcript only (no frames seen) is `medium` at best; one whose words you could not understand (crosstalk, music) is `low`, and the card says what would settle it.
+- **Speed (the user wants it fast, without losing a check):** batch independent tool calls (several frames, contact sheets or Read calls in ONE message, every sheet you need from ONE PowerShell call, the images read together), aim for about 8 minutes and about 40 tool calls; one image per turn is the slowest way to read a block.
+  Start from the units that matter (the story, the big plays), count the kills of those on frames, and give the dull ones a short reason from the clock, the score and the words.
 - **Do not decide the videos or the keep levels.** Hand over the best map of the block you can.
 
 Keep the file compact (the planner reads every block's file): at most about 24 KB, plain short sentences, evidence as pointers (a rec time, a sheet), no pasted transcript.

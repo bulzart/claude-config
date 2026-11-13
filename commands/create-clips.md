@@ -14,6 +14,7 @@ allowed-tools:
   - Glob
   - Grep
   - ToolSearch
+  - SendMessage
   - WebSearch
   - WebFetch
   - "Bash(C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe *)"
