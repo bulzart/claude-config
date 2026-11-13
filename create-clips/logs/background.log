@@ -72,3 +72,39 @@
 [C0001] stage digest: ok in 0.0 s (181 seconds)
 [C0001] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.4, 'sheets': 6.1, 'transcript': 84.0, 'digest': 0.0}
 [watch] jynxzi/20261113-200011-jynxzi C0001 (live): done in 90.7 s {'move': 0.0, 'probe': 0.1, 'audio': 0.4, 'sheets': 6.1, 'transcript': 84.0, 'digest': 0.0} free 24.1 GB
+[C0002] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\jynxzi\20261113-200011-jynxzi\chunk-0002.mp4
+[C0002] stage move: ok in 0.0 s
+[C0002] stage probe: ok in 0.1 s (180.014 s 1280x720 60.0 fps)
+[C0002] stage audio: ok in 0.2 s (361 windows)
+[C0002] stage sheets: ok in 4.6 s (240 frames, 8 sheets, leftovers 0)
+[C0003] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\jynxzi\20261113-200011-jynxzi\chunk-0003.mp4
+[C0003] stage move: ok in 0.0 s
+[C0003] stage probe: ok in 0.1 s (30.008 s 1280x720 59.998 fps)
+[C0003] stage audio: ok in 0.2 s (60 windows)
+[C0003] stage sheets: ok in 1.2 s (40 frames, 2 sheets, leftovers 0)
+[watch] a recording's session.json changed: the run's recording info is updated
+[report] 20261113-200011-jynxzi C0001: done in 128.8 s, $0.025
+[C0003] stage transcript: ok in 22.8 s (81 words, medium on cpu, 22.8 s)
+[C0003] stage digest: ok in 0.0 s (31 seconds)
+[C0003] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.2, 'sheets': 1.2, 'transcript': 22.8, 'digest': 0.0}
+[watch] jynxzi/20261113-200011-jynxzi C0003 (backlog): done in 24.3 s {'move': 0.0, 'probe': 0.1, 'audio': 0.2, 'sheets': 1.2, 'transcript': 22.8, 'digest': 0.0} free 24.01 GB
+[C0002] stage transcript: ok in 83.1 s (366 words, medium on cpu, 83.1 s)
+[C0002] stage digest: ok in 0.0 s (181 seconds)
+[C0002] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.2, 'sheets': 4.6, 'transcript': 83.1, 'digest': 0.0}
+[watch] jynxzi/20261113-200011-jynxzi C0002 (live): done in 88.0 s {'move': 0.0, 'probe': 0.1, 'audio': 0.2, 'sheets': 4.6, 'transcript': 83.1, 'digest': 0.0} free 24.01 GB
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\jynxzi\20261113-200817-jynxzi\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.1 s (26.013 s 1280x720 59.998 fps)
+[C0001] stage audio: ok in 0.2 s (52 windows)
+[C0001] stage sheets: ok in 0.8 s (35 frames, 2 sheets, leftovers 0)
+[report] 20261113-200011-jynxzi C0003: done in 108.0 s, $0.016
+[C0001] stage transcript: ok in 21.6 s (79 words, medium on cpu, 21.6 s)
+[C0001] stage digest: ok in 0.0 s (27 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.2, 'sheets': 0.8, 'transcript': 21.6, 'digest': 0.0}
+[watch] jynxzi/20261113-200817-jynxzi C0001 (live): done in 22.8 s {'move': 0.0, 'probe': 0.1, 'audio': 0.2, 'sheets': 0.8, 'transcript': 21.6, 'digest': 0.0} free 24.1 GB
+[report] 20261113-200817-jynxzi C0001: failed (the chunk has no sheets to report on)
+[watch] a recording's session.json changed: the run's recording info is updated
+[report] 20261113-200817-jynxzi C0001: failed (the chunk has no sheets to report on)
+[notify] 20261113-200817-jynxzi: Create-clips is ready (with problems): 20261113-200817-jynxzi -> toast
+[report] 20261113-200011-jynxzi C0002: done in 138.3 s, $0.026
+[watch] idle for 600 s: Whisper model unloaded (the next chunk loads it again)
