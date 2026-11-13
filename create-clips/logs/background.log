@@ -62,3 +62,13 @@
 [watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); 2 processors: one takes the newest chunk (live), the others the oldest (backlog); Ctrl+C stops
 [watch] chunk reports: claude-haiku-5-5 (effort high), 2 at a time
 [watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\jynxzi\20261113-200011-jynxzi\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.1 s (180.002 s 1280x720 60.0 fps)
+[C0001] stage audio: ok in 0.4 s (360 windows)
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0001] stage sheets: ok in 6.1 s (240 frames, 8 sheets, leftovers 0)
+[C0001] stage transcript: ok in 84.0 s (230 words, medium on cpu, 52.4 s)
+[C0001] stage digest: ok in 0.0 s (181 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.4, 'sheets': 6.1, 'transcript': 84.0, 'digest': 0.0}
+[watch] jynxzi/20261113-200011-jynxzi C0001 (live): done in 90.7 s {'move': 0.0, 'probe': 0.1, 'audio': 0.4, 'sheets': 6.1, 'transcript': 84.0, 'digest': 0.0} free 24.1 GB
