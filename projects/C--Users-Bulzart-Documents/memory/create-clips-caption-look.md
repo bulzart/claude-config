@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: efec77d7-2d15-4e76-856d-85333ee657d3
-  modified: 2026-11-13T16:53:22.482Z
+  modified: 2026-11-13T18:12:44.925Z
 ---
 
 User 2026-11-13, first: "use the same background color preset and spoken word highlight style the analyze with loupe uses [frames] but with the possibility to use whichever font family or highlight color it matches the appearance", and "font size neither too small nor too large ... most viewers on phone or tablets ... preferably dont use large fonts, go to the small/normal side".
@@ -20,6 +20,6 @@ Then, after opening the demo project in CapCut and screenshotting our frame next
 - CONFIRMED by the user later on 2026-11-13: of the new demo `13_Nov_2026_blastpremier_L01_loupe_look` (Luckiest Guy, size 4.5 on 1080p, box 0.3 / 0.08 / 0.15 / 0.55): "it looks all good". So the look, the box fit and the size 4.5 as seen are approved; do not change them unasked. He then asked what size we use and why (answered: 4.6% em, my judgement from his small/normal-for-phones wish).
 - Plain fallback (languages without spaces, over `word_box_max_words` 3000 words = about 23 minutes of this broadcast's talk) uses the same font, outline, shadow and case.
 - Game mode names come out in capitals (TESES, M0NESY, KARRIGAN); Luckiest Guy draws lowercase as near-capitals anyway.
-- Not verified by any tool: CapCut's drawing. A project whose first frame has a boxed word (the demo `13_Nov_2026_blastpremier_L01_loupe_look`) lets me read CapCut's own `draft_cover.jpg` after the user opens it once. The first demo `..._L01_wordbox` (Barlow) is the "before" and still in the store.
+- Not verified by any tool: CapCut's drawing. A project whose first frame has a boxed word (the demo `13_Nov_2026_blastpremier_L01_loupe_look`) lets me read CapCut's own `draft_cover.jpg` after the user opens it once. Both demo projects (and the whole BLAST run) were deleted on 2026-11-13 at the user's request to free space, so nothing is left to open; the approved look is in the code defaults.
 
 Related: [[create-clips-one-research-agent]], [[create-clips-capcut-composition]], [[awl-static-word-box-captions]], [[always-full-paths]]
