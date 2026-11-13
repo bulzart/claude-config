@@ -2,8 +2,8 @@
 
 The user, 2026-11-13: "every judge in this static mode should be removed, the pipeline should be intelligent to evaluate and be skeptical in
 itself and judge while it works, but spawn different judges who have no context on the main agent". This replaces the judge agent and its
-checkpoints (J1 to J5, 2026-11-08: "make a smart judge system ... nothing should turn out as unexpected"); what that system learned is
-kept below as the pipeline's own habits and facts.
+checkpoints (2026-11-08: "make a smart judge system ... nothing should turn out as unexpected"); what that system learned is kept below as
+the pipeline's own habits and facts. (A run planned before 2026-11-13 may hold `video-NN-judge.md` files: they are history.)
 
 **Judge your own work while you do it, and be skeptical of it.** Whoever makes a plan, a line, a still, a bed or an edit judges it as it
 is made and assumes it may be wrong: the first plan, the first take, the first still. Every value an output will carry is chosen on

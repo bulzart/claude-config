@@ -316,13 +316,14 @@ subject (`T static subjects --story-form …`, §3, §10). The ElevenLabs **mode
 ElevenLabs MCP's `list_models`, else `T tts models`; `T tts model` stores it; a model with no recorded facts is set up from ElevenLabs' docs
 first, §6) and each video has a **language** of its own (asked at A5 and with More videos and at a clone; `T static language`): the content is
 written natively in it with an English gloss per line, whatever language the references are in (§4, §6, §7); nothing religious or superstitious ever (§11); every video also gets a YouTube title and a
-thumbnail (§12: `T image generate --thumbnail`, `deliverables/video-NN-title.txt` and `video-NN-thumbnail.png`), plus a description with its
-chapters and a pinned comment (`video-NN-description.txt`, `video-NN-pinned-comment.txt`). **Engagement is designed first** (the user, 2026-11-13: "in early
-stages of planning and video development, and not just check and edit and do double effort after the whole video story is already crafted"):
-the pool collects story material (people, stakes, turns), each video gets a blueprint before any line is written (§4b: the hook, a thread
-of a real person beside "you", open loops, re-hooks, the human layer, a debate question, the asks, the ending, each picture's job, the
-sound's job, the publishing kit), the judge's J0 checks it against the references' numbers, and the script, stills, bed and edit are made
-from it. The length is asked
+thumbnail (§12: `T image generate --thumbnail`, `deliverables/video-NN-title.txt` and `video-NN-thumbnail.png`), and whatever else the video needs
+to be published well (a description with chapters and sources, a pinned comment …). **Engagement is thought through first** (the user,
+2026-11-13: "in early stages of planning and video development, and not just check and edit and do double effort after the whole video story
+is already crafted", and "just give general suggestions ... and then the pipeline evaluates on its own and find out whats best while it
+executes"): before any line is written the agent works out what will hold and attach a viewer in this subject and niche (§4b: a direction,
+never a checklist), and the script, stills, bed and edit are made from it. **No judge agents in Static** (the user, 2026-11-13): the
+pipeline judges its own work as it goes, skeptically, and spawns fresh reviewers with none of its context only when a second opinion is
+worth having (§13). The length is asked
 at A5, after the niche is locked and before any planning (the user, 2026-11-12): standard (the niche's references' length, each video's own the
 agent's from their lengths and what drives them) or the user's own (a total, or minutes more or less than standard; `static.length_plan`,
 `target_length_s` in the narration JSON); a bed

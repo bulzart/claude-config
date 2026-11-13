@@ -48,10 +48,10 @@ How it applies (as §11 does):
 - **The thumbnail** (§12): the same; its face's feeling reads at a glance (surprise, worry, curiosity), never terror or pain.
 - **The bed** (§6): no screams, sobs or sounds of pain in its caption or its sound.
 - **The forecast** (§13): `T static forecast` lists each prompt's and the bed's words that tend to bring these in
-  (`nudity_gore_or_distress_words`: a shower, a bath, blood, a wound, a scream ...) as facts; J1 reads every marked prompt and rewrites
+  (`nudity_gore_or_distress_words`: a shower, a bath, blood, a wound, a scream ...) as facts; you read every marked prompt before any generation (§13) and rewrite
   the moment that would show any of them (a reading such as "blood pressure pills" stays as it is). A marked prompt whose lying-down
   moment is the survival fact keeps the pose, written with the alive cues above. Its narration part lists the script's lines that
-  name an intimate part of the body (`intimate_body_words`); J1 tells each by its other places.
+  name an intimate part of the body (`intimate_body_words`); you tell each by its other places.
 - **QC** (§8): every still and the thumbnail viewed for these (skin where clothes belong, a bathroom or a bed scene, blood or a wound,
   a face in agony, a person lying limp, a survival pose that does not read clearly alive) and every line read (graphic detail,
   swearing, an intimate part of the body named); a hit is a regenerate reason by the run's QC fixes; with QC fixes off it is named in the brief

@@ -55,19 +55,14 @@ spelled out exactly in `text` and in the prompt; nothing religious or superstiti
 (§11b: a face's feeling that reads at a glance, never terror or pain), no sticker, emoji, arrow badge or logo
 (item 6), no reference's own picture or subject.
 
-**The click and the publishing kit** (the user, 2026-11-13: engagement is designed first, §4b): the title, the thumbnail and the first line of
-the narration make **one promise**, taken from the blueprint, and the video keeps it. The plan carries two or three title options in the
-recorded title form (the first is `title`; each at most 100 characters, the front-loaded part about 60 so the feed shows it whole), and the
-thumbnail's concept is the **twist** in two or three words that tease the title and never repeat it (the references' pattern above), one
-subject, one feeling that reads at feed size; the first title and concept are made, the others stay in the plan for the user's own
-test. A6s also writes, from the blueprint, `"publish": {"description": "<the promise in its first two lines, then what the viewer will
-get, then the sources (a factual niche: the fact sheet's strongest, by name and URL), at most three hashtags>", "chapters": [{"label":
-"<the chapter's own title, a line that makes you want it, in the video's language>", "image": <K: its first image>}, …],
-"pinned_comment": "<the blueprint's debate question, one or two lines in the narrator's voice>"}`. X10 gives each chapter its time from
-the timeline (its first image's start; the first at 0:00, at least three, each at least 10 s long: YouTube's rules) and writes
-`deliverables/video-NN-description.txt` and `deliverables/video-NN-pinned-comment.txt`. Nothing in them is promised that the video does
-not keep (never more than the narration says), nothing religious or superstitious (§11), nothing indecent, gory or distressing (§11b),
-and no emoji or sticker (item 6).
+**The click and the words around the video** (the user, 2026-11-13: engagement is thought through first, §4b): the title, the thumbnail and
+the first line of the narration make one promise, and the video keeps it. Beyond the title and the thumbnail the agent decides what else
+this video needs to be published well, as its niche and subject call for (for example title options, a description with chapters and the
+sources, a pinned comment), and writes it into the plan's optional `"publish"` block in whatever form serves (`description`, `chapters`:
+`[{"label", "image": <K: its first image>}]`, `pinned_comment`, anything else). X10 writes each as a file in `deliverables/`, giving each
+chapter its time from the timeline (its first image's start; YouTube's rules: the first at 0:00, at least three, each at least 10 s long).
+Nothing in them is promised that the video does not keep (never more than the narration says), nothing religious or superstitious (§11),
+nothing indecent, gory or distressing (§11b), and no emoji or sticker (item 6).
 
 **Making it (S3, the production agent)**: with the stills, by the run's images source: API or FLUX 3 Klein, `T image generate --run RUN
 --video NN --thumbnail --size <W>x<H> --prompt-file <file> [--ref <anchor or photo> …]` (the attempt is `thumb-aK`; the one in use is
@@ -81,7 +76,7 @@ reliably: few words, large); the run's style; nothing of §11 or §11b; nothing 
 (it promises what the video keeps).
 
 **The record (X10)**: `deliverables/video-NN-title.txt` (the title on its first line, and its English reading on a second line
-beginning "English: " when the video is in another language; the other title options after a blank line), the thumbnail in
-`deliverables/`, `deliverables/video-NN-description.txt` (with its chapters' times) and `deliverables/video-NN-pinned-comment.txt`, and all
-of them in the video's README row and its result.json. A video in more than one format (§2b) has one title and one thumbnail, made with the primary and
+beginning "English: " when the video is in another language), the thumbnail in `deliverables/`, and whatever else the plan's `publish`
+block carries as files beside them (`video-NN-description.txt` with its chapters' times, `video-NN-pinned-comment.txt`, title options …),
+and all of them in the video's README row and its result.json. A video in more than one format (§2b) has one title and one thumbnail, made with the primary and
 named in every format's row.

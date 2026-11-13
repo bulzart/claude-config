@@ -107,7 +107,7 @@ first video in it (static §8: nothing here hears the voice); the captions' look
 §7), any font replaced for missing glyphs, and that how CapCut shapes a right-to-left or joined script was not seen. Each video's drawings
 (how many, which images, what each elaborates) and that how CapCut plays their clips was read back from the project but not seen
 rendered (nothing here renders a project).
-It also gives each narration's pace against its point (static §6, §13 J2: the measured words a minute while speaking and overall, the
+It also gives each narration's pace against its point (static §6, §13 "After the narration": the measured words a minute while speaking and overall, the
 point, the niche's and the family's numbers beside it) and, when the request levers left it off the point, the speed-up that would close
 it (at most `config static.narration.tempo_max`, 1.05). The user looks at the project in CapCut first; the speed-up is asked with
 AskUserQuestion (header "Speed-up") and made only on their yes (the user, 2026-11-09: "only speedup on their permission never else"):

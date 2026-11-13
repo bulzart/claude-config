@@ -15,7 +15,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (30.5 KB)
 - static §8: `AWL/reference/static/080_8_static-qc-s2-s4.md` (9.7 KB)
-- static §13: `AWL/reference/static/130_13_the-judge.md` (18.1 KB)
+- static §13: `AWL/reference/static/130_13_evaluating-the-work.md` (15.8 KB)
 
 The main session runs S2 for every video, one at a time, before any production agent starts (`awl-analyze-produce` A9s). The narration
 is ElevenLabs' in the run's voice (`state.json → static.voice`) and the run's narration model (`state.json → static.tts_model`: Eleven v4
@@ -37,10 +37,10 @@ outside the references', and a capped speed-up made only on the user's yes after
    or a model or language with no measured point yet): the first passage is made as a probe (`T tts probe --run RUN --video NN`, billed
    for that passage only, which `say` then keeps as passage 1), read by `T narration-words` against its script, and the rest is made
    only when the heard words match; a text the model cannot speak is a blocker reported with the numbers (the user picks another
-   language or model), never asked mid-run. **The pace** (static §6 "The pace", §13): the narration JSON's `pace` carries the judge's point (J1; in the
+   language or model), never asked mid-run. **The pace** (static §6 "The pace", §13): the narration JSON's `pace` carries the point you chose (static §13, before any generation; in the
    language's own unit, `T static units`) and
    its levers (the voice, `delivery`, `voice_settings`, the words) were measured on the probe; the answer's `pace.on_target` and
-   `pace.within` are the facts for J2 (below): a narration off its point is never shipped unexplained. The answer's `level` is the
+   `pace.within` are the facts for your check in step 4b: a narration off its point is never shipped unexplained. The answer's `level` is the
    loudness rule's (static §6: as delivered inside the references' range, else one gain toward their median within -1 dBTP). A partial
    narration (`partial`: the characters ran out) is named in the brief and the wrap-up; the timeline leaves out the images after it.
    Run it in the foreground; it may run past ten minutes and continue in the background on its own, which is fine once started.
@@ -63,10 +63,10 @@ outside the references', and a capped speed-up made only on the user's yes after
 4. **The images meet the narration:** each image spans from its `from_line`'s start to the next image's (the first from 0, the last to the
    end with the tail). Keep every span within the spec's range of seconds per still and none under about 2 s: move `from_line`, merge or
    split images in `video-NN-images.json` (their prompts with them).
-4b. **The judge, J2** (static §13): spawn the judge with the narration's measured pace, pauses, length and spans; it reads them against
-   J1's forecast and point and decides: spans by `from_line` (free); a miss of the point changed through the request first (another
-   delivery tag, pause tag, setting or wording, the passages made again, billed, by the run's QC fixes); what the request levers
-   cannot reach is kept as delivered with its reason, and J2 writes the speed-up that would close it (at most config
+4b. **Check the narration yourself, skeptically** (static §13 "After the narration"): read the narration's measured pace, pauses, length
+   and spans against your forecast and the point and settle: spans by `from_line` (free); a miss of the point changed through the request
+   first (another delivery tag, pause tag, setting or wording, the passages made again, billed, by the run's QC fixes); what the
+   request levers cannot reach is kept as delivered with its reason, and you write the speed-up that would close it (at most config
    `static.narration.tempo_max` 1.05) for the wrap-up to offer: never made here (the user, 2026-11-09: "only speedup on their
    permission never else"). On the user's later yes, after they have looked at the delivered project: `T tts tempo --run RUN --video NN
    --tempo X --why "<the levers tried and their measures>" --user-ok "<the user's words>"` (pitch and formants kept; the level rule read
@@ -76,7 +76,7 @@ outside the references', and a capped speed-up made only on the user's yes after
 5. **The bed** (every video, static §6; `RUN/40-briefs/music.json` from A6s), after every narration is made, when every image is made
    or in a gap between image stretches (two local models never share the GPU and the commit memory; 2026-11-08 the guard stopped
    ACE-Step at 2.0 GB free commit; since 2026-11-09 it loads the low-commit way, the answer's `loading`, and needs about 13.6 GB free
-   commit, static §9 "What a job needs"): first **J4** (static §13): `T static forecast --run RUN --video NN --part music` right before, its
+   commit, static §9 "What a job needs"): first your check before the bed (static §13): `T static forecast --run RUN --video NN --part music` right before, its
    memory headroom a fact and never a gate (static §13 "Memory is a fact"): the bed is tried at full precision; after a real guard
    stop (the answer's `worker.guard_stopped` and `worker.guard_line`) the user is told its line and the bed is tried once in
    ACE-Step's int8 (below), once more before the edit when that is stopped too, and still stopped the video goes on without a bed,
@@ -111,7 +111,7 @@ An ElevenLabs error is reported with its real text (the key never shown). Narrat
   Its pace, pauses and length come from the request (the voice, the settings, the words, the audio tags; static §6); a length that is
   off is a script rewritten and its passages made again. The only two changes allowed (the user, 2026-11-09) are the level rule's one
   gain (outside the references' loudness only) and a capped speed-up (`T tts tempo`, pitch kept) made only on the user's own yes
-  after they have looked at the delivered project, never on the agent's or the judge's call (the user, 2026-11-09: "only speedup on
+  after they have looked at the delivered project, never on the agent's or a reviewer's call (the user, 2026-11-09: "only speedup on
   their permission never else").
 - Never analyse the references' music beyond the numbers A3 already has (the user, 2026-11-06: "no need to analyze their instrumentals
   too"); never keep a bed's level at which a narration word is heard differently (a level costs nothing to change, whatever the QC fixes).

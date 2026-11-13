@@ -13,17 +13,17 @@ user-invocable: false
 
 Only these section files for this phase, nothing else unless a step below says so. A section already read in this session is not read again.
 
-- static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (6.0 KB) (who works the run, and when; skip when already read)
-- static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (4.5 KB)
-- static §4b: `AWL/reference/static/045_4b_the-engagement-blueprint.md` (9.7 KB) (the blueprint, made before any line is written)
-- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (10.7 KB)
-- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (27.2 KB)
+- static §0: `AWL/reference/static/005_0_the-team-who-works-a-static-run.md` (5.8 KB) (who works the run, and when; skip when already read)
+- static §3: `AWL/reference/static/030_3_a-new-subject-a6s.md` (4.2 KB)
+- static §4b: `AWL/reference/static/045_4b_engagement-thought-first.md` (3.7 KB) (what will hold a viewer, thought through before any line)
+- static §4: `AWL/reference/static/040_4_the-script-a6s.md` (10.5 KB)
+- static §5: `AWL/reference/static/050_5_images-a6s-plan-s3.md` (26.6 KB)
 - static §6: `AWL/reference/static/060_6_the-voice-and-the-bed-a6s-s2.md` (30.5 KB)
 - static §10: `AWL/reference/static/100_10_one-channel-per-run.md` (11.0 KB)
 - static §11: `AWL/reference/static/110_11_no-religion-and-no-superstition.md` (3.1 KB)
 - static §11b: `AWL/reference/static/115_11b_nothing-indecent-gory-or-distres.md` (6.1 KB)
-- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (9.2 KB)
-- static §13: `AWL/reference/static/130_13_the-judge.md` (20.6 KB)
+- static §12: `AWL/reference/static/120_12_the-youtube-title-and-thumbnail.md` (8.6 KB)
+- static §13: `AWL/reference/static/130_13_evaluating-the-work.md` (15.8 KB) (how you judge your own work, and fresh reviewers)
 - creative-direction §5.0: `AWL/reference/creative-direction/060_5.0_transfer-not-repetition-the-craf.md` (5.1 KB)
 - creative-direction §6: `AWL/reference/creative-direction/090_6_the-sharpness-gate-before-a-conc.md` (1.0 KB)
 - *the client's documents hold rules (`RUN/30-assets/guardrails.md` exists):*
@@ -47,11 +47,10 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    of view, time frame, scale, title form and pillar, drawn from the spec's "approaches seen", from the whole set's other story
    families, or the agent's own inside the niche (its reason written); the pool is varied on purpose, none repeats the last video's
    approach without a written reason (`T static subjects --run RUN` lists the approaches made), and a pool is never "N days of X"
-   alone. **The research collects story material beside the claims** (static §3, §4b; the user, 2026-11-13: "not just facts"): the
-   real people and what they did, chose and said (with their sources and exact quotes), the turning points, contrasts, the crowd's
-   behaviour, numbers a viewer can picture, the specific details of a scene; each candidate is scored on it, and one with no people,
-   creatures, things or places to follow scores low and is picked only when its other scores carry it. Write `RUN/20-analysis/static-subjects.md` (each candidate: title, approach, hook line, its thread
-   (who or what would run beside "you", or none yet), why it fits, the scores, the sources).
+   alone. **The research looks for what gives a subject life beside the claims** (static §3, §4b; the user, 2026-11-13: "not just
+   facts"): whatever this niche and subject offer that a viewer would care about, wonder at or remember, each with its source; each
+   candidate is scored on how well it can hold and attach a viewer, and the agent works out what that means for it. Write
+   `RUN/20-analysis/static-subjects.md` (each candidate: title, approach, hook line, why it fits, the scores, the sources).
 3. **Five voice samples** (static §6; the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them
    so the user can hear them and pick the one they like to be the voice of the videos"), only when the run has no narrator yet (the
    locks' `voice` empty) or a clone picks a new one (`state.json → static.new_voice` true): five candidates from the spec's voice
@@ -65,7 +64,7 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    and stop.
 4. **The one stop**, in plain chat (never AskUserQuestion: the pool is longer than four options), the last thing in the turn: the
    subjects numbered (title, in English for the user to read: the video's own title is written in its language at step 7 — approach
-   in one line, with the last video's beside it — hook line — its thread, who the viewer would come to care about — why it fits — for facts the number of sources), the five voices when step 3 made them (number,
+   in one line, with the last video's beside it — hook line — why it fits — for facts the number of sources), the five voices when step 3 made them (number,
    the voice in a few words, its pace while articulating in words a minute (its preview's or sample's, as `T tts voices` or `T tts
    design` print it) next to the set's, said plainly: nothing is sped afterwards, and the run's model may have no speed setting (Eleven v4
    has none), so a voice near the set's pace is the one that reaches it, and the full path of its file, so the user can play it), and "Reply with N
@@ -78,19 +77,15 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    that video; `T static subjects --set NN …` edits a made-up approach before its narration exists), then, when step 3 made samples, `T tts voice --run RUN --voice-id ID` (an account voice) or `--sample K` (a design) (a
    clone's new narrator: `--replace`, then `T state --run RUN set static.new_voice=false`), plus `--emotion NAME="[tags]"` (at most two:
    the audio tags sent where a line of that emotion begins) when the spec's delivery swings (static §6).
-6. **The blueprint, then the scripts**, per video (the user, 2026-11-13: "this has to be in early stages of planning and video
-   development, and not just check and edit and do double effort after the whole video story is already crafted and finished": the
-   engagement is designed first and built in, static §4b).
-   **6a. The blueprint** `RUN/40-briefs/video-NN-blueprint.md`, before any line, prompt or caption exists: the promise, the hook, the cast
-   (you, the thread, the crowd, the force), the stakes and the running number, the emotion map, the open-loop ledger, the re-hook
-   rhythm, every fact's job, the human layer and its debate question, the wit and questions, the asks, the ending, the pictures' and the
-   sound's jobs and the publishing kit, from the spec's engagement numbers (`RUN/20-analysis/static-spec.md`, scaled to the video's
-   minutes), the pool's story material and the video's recorded approach; then the viewer's-seat test on it. Then **J0** (static §13:
-   spawn the judge, checkpoint J0, `model: "opus"`, the same prompt as step 9's): it edits the blueprint and names the story material
-   still missing; read its record in `video-NN-judge.md` before going on.
-   **6b. Research top-up**, only for the slots the blueprint left empty (a person's account and exact words, a human-scale number, a
-   behaviour of the crowd), sourced as static §3 says and written into the fact sheet.
-   **6c. Scripts** (static §4, written to the blueprint beat by beat, `script.md` naming each section's beat), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
+6. **The design, then the scripts**, per video (the user, 2026-11-13: "this has to be in early stages of planning and video
+   development, and not just check and edit and do double effort after the whole video story is already crafted and finished", and "just
+   give general suggestions ... and then the pipeline evaluates on its own and find out whats best while it executes").
+   **6a. Think it through first** (static §4b), before any line, prompt or caption exists: what will make a stranger click, stay, feel
+   something, finish and pass this video on, for this subject in this niche, working it out from what the references show works and from
+   what your research found; keep a short note of what you decided and why (`RUN/40-briefs/video-NN-blueprint.md`, any form), be skeptical
+   of it, and, if a second opinion is worth having, have a fresh reviewer read it cold (static §13: no context of yours, no conclusions).
+   **6b. Research again** wherever the design found a gap, sourced as static §3 says and written into the fact sheet.
+   **6c. Scripts** (static §4, written to the design), per video: `RUN/40-briefs/video-NN-script.md`, `RUN/40-briefs/video-NN-narration.json`, and for a factual
    niche `RUN/40-briefs/video-NN-facts.md`; nothing religious or superstitious in any line (static §11), and no graphic detail,
    suffering or swearing, and no intimate part of the body named, even as a first-aid fact (static §11b: a hard fact told plainly and
    briefly; the tip told by its other places). The length follows the user's pick, asked at A5 before this phase
@@ -104,32 +99,31 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    narration JSON also carries the spec's `pace`
    (`wpm_articulation` and `wpm_overall` as the family's bands from `T static profile`, the point from the niche's references within
    it, with `why`; static §1, §4) and the long pauses the niche's references hold as a line's `tags_after` where they pause longer
-   (before a reveal); its `delivery`, `voice_settings` and the pace point are J1's (step 9). The beats, the hooks, the emotions, the
+   (before a reveal); its `delivery`, `voice_settings` and the pace point are settled by your check at step 9. The beats, the hooks, the emotions, the
    language and the calls to action follow the spec's patterns: mostly the niche's references', the whole set's kept where they hold
    across niches or where the niche's references are silent (static §1 "The run's niche within the set", §2), never one reference's. The copy test and the
    sharpness gate (creative-direction §5.0, §6) pass before a script is final.
 7. **Image plans** (static §5), per video: `RUN/40-briefs/video-NN-images.json`: the characters (photo, or the sheet prompt of one with
-   none), one image per stretch of lines (`from_line`), each with its `job` and `shot` from the blueprint's beats and its prompt written for that job
-   (static §5 "The pictures' jobs": a human beat shows the face and the feeling, a reveal its one new thing, the light on the emotion map,
-   no scene or shot over three stills running without a reason), every prompt with the spec's style lock word for word (the style reference's
+   none), one image per stretch of lines (`from_line`), each written for a purpose in the story (static §5 "A purpose for each picture": the plan may
+   note it as `job` and `shot`, free text; vary what the eye sees), every prompt with the spec's style lock word for word (the style reference's
    look, the same in every video of the run: static §10) and §5's composition, each company or brand the story is about with its
    official logo where the story brings it in and once more later (static §5 "Real things look like themselves": `T fetch-image --kind
    logo`, the image's `logo` field, its surface plain and blank in the prompt), a secular scene with nothing of static §11 in it, every
    person dressed for the scene with the clothes named from top to bottom and no undressed, injured or agonised moment, nobody as if
    dead, and a survival pose low on the ground kept and drawn with the person clearly alive: head up or turned so the open eyes show,
    mid-move (static §11b), the
-   video's `title` (in the video's language, in the recorded title form, with `title_gloss`, two or three options, the first in use) and `thumbnail` (static §12: the
-   references' title and thumbnail patterns, the thumbnails' size, the run's style lock; its words in the video's language; the twist, one
-   promise with the title and the first line) and the `publish` block (the description, its chapters by image, the pinned comment: static
-   §12, from the blueprint), the labels
+   video's `title` (in the video's language, in the recorded title form, with `title_gloss`) and `thumbnail` (static §12: the
+   references' title and thumbnail patterns, the thumbnails' size, the run's style lock; its words in the video's language; one promise
+   with the title and the first line) and, when the video needs it, the `publish` block (what else it needs to be published well: static
+   §12), the labels
    in the video's language (static §5 "Labels": CapCut text whose font covers every character: `T static language --language L --font
    <file> --text <file>`), the places where a drawn annotation will elaborate the narration (static §5 "Drawings": the drawings
    themselves, with their positions, are written at S3 by the video's own agent once the stills exist, so an image it will draw on is
-   kept still here, `"motion": "none"`, with the reason in the judge's record), each
+   kept still here, `"motion": "none"`, with the reason in the video's brief), each
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times
    this still's seconds, the references' order of moves; a join and the caption entrance from `AWL/data/capcut-catalogue.md`, only what it
    shows drawn, and only options marked free while the run's CapCut plan is free, `state.json → capcut_plan`), the `captions` block: the spec's text look (static §2: font file (an extra open-licence font may be downloaded when no listed font is a good match: `T fetch-font`, static §7 "Extra fonts"), size, colours, outline, box, case, highlight, the
-   entrance as `animation` and `animation_s`) with this video's highlighted words (a `word_box`'s colour is the video's own, a first pick from its style lock's palette, never the last video's by default: static §7; J5 settles it from the finished stills); with an effects folder, the `effects` the spec's effects
+   entrance as `animation` and `animation_s`) with this video's highlighted words (a `word_box`'s colour is the video's own, a first pick from its style lock's palette, never the last video's by default: static §7; settled from the finished stills before the edit, static §13); with an effects folder, the `effects` the spec's effects
    pattern calls for (static §2, §5 "Effects": each overlay or sound from `00-inventory/effects.md`, its moment and anchor second, how it
    is blended, its fit and volume, and why; only the ways the catalogue's Effects part shows playing). Nothing is left to a stock value:
    `T slideshow plan` lists what is undecided. The count follows the spec's seconds per still at the script's length; the narration's
@@ -138,28 +132,25 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    its frame (shape, the subject's place, the caption band) the same way, so an extra format swaps those words only (static §5); the
    extra formats' own values (`by_format`) are read off their stills later, at S3 and S4.
 8. **The bed** (every video, also when the references are voice only; static §6): `RUN/40-briefs/music.json`, one track per video,
-   its `caption`, `bpm` and `why` reasoned from the spec's bed brief and this video's script and blueprint (its beats and their emotions:
-   the sections follow the emotion map, static §6), never from
+   its `caption`, `bpm` and `why` reasoned from the spec's bed brief and this video's script and the story's feeling as you thought it through
+   (the sections follow it, static §6), never from
    analysing the references' music (the user, 2026-11-06: "make sure we try to generate instrumentals that fit the video content type and
    narration based on the data collected from the references, no need to analyze their instrumentals too"); the image plan gets
    `"music": true`. The duration is set in S2 once the narration exists, and the level after the bed's check. A video longer than
    ACE-Step's 600 s may carry `sections` (one caption per part of the story, the same instruments and tempo; static §6); without them the
    toolkit makes equal sections.
-9. **The judge, J1** (static §13; the user, 2026-11-08: "it evaluates the situation and decides way before generation happens";
-   "nothing should turn out as unexpected"), per video, before any speech, image or bed is made (J0 already read the blueprint at 6a;
-   J1 **confirms the plan files carry it**, a miss being a small fix to one file now, never a second pass over the story): spawn the judge (§13's prompt,
-   checkpoint J1, `model: "opus"`; the video's family, its references and the niche's references in it, from the spec; the video's
-   approach and the last video's, its language with its unit and whether the model lists it, and the run's narration model, all from
-   `state.json → static.video_info` and `static.tts_model`) and wait for it. For a video in another language it runs `T static units
-   --run RUN --video NN` first (the references' English points converted by the script's ratio, static §4). It reads `T static forecast`
-   and the family's numbers, decides the pace point, the narration's levers (its delivery and pace tags, the settings, the wording), the
-   pause tags, the strong lines, every prompt the forecast marks and the bed's caption, sections and timing, edits those plan files itself
-   and writes `RUN/40-briefs/video-NN-judge.md` with each decision, its numbers and the result it forecasts. The probes are this
-   session's (the judge never generates, static §13): `T tts probe --run RUN --video NN` with the plan's levers before the judge starts
-   (passage 1, billed, used by `say` as passage 1), and one more probe for each lever set the judge names to compare, the judge then
-   continued with the measures; as few as the account's characters allow (the forecast's `credits`). Read its record: a decision that breaks a lock or a rule of this phase is undone and the judge
-   is continued with why.
-10. Show one line per video (number, subject, title, length, images, bed or none, the judge's forecast pace) and go on without waiting.
+9. **Check your own plan, skeptically, before anything is generated** (static §13 "Before any generation"; the user, 2026-11-08: "nothing
+   should turn out as unexpected", and 2026-11-13: no judge checkpoints, you judge while you work), per video, before any speech, image or
+   bed is made: for a video in another language run `T static units --run RUN --video NN` first (the references' English points
+   converted by the script's ratio, static §4); read `T static forecast` and the family's numbers; settle the pace point, the narration's
+   levers (its delivery and pace tags, the settings, the wording), the pause tags, the strong lines, every prompt the forecast marks and
+   the bed's caption, sections and timing, editing those plan files yourself; run `T tts probe --run RUN --video NN` with the plan's
+   levers (passage 1, billed, used by `say` as passage 1) and one more probe for each lever set you want to compare, as few as the
+   account's characters allow (the forecast's `credits`); write each decision, its numbers and the result you expect into
+   `RUN/40-briefs/video-NN-brief.md`. Ask what could be wrong with it, and, if a second opinion is worth having, have one or more fresh
+   reviewers read the plan cold (static §13: they get the plan and the standards, never your reasoning). A decision that would break a
+   lock or a rule of this phase is undone.
+10. Show one line per video (number, subject, title, length, images, bed or none, the forecast pace) and go on without waiting.
 
 **More videos** (static §10; `/analyze-with-loupe more <run> [N]`, or the user asking for more after a wrap-up; always in the session's
 run, never a new one): no start question is asked; references new to the run's folder are taken in first (static §10 "New
@@ -181,8 +172,9 @@ languages, and their scripts, image plans, titles and thumbnails keep the run's 
 - One channel per run (static §10): the niche (a field, never a title or story form), the visual style and the narrator are the user's
   picks, locked; another niche is a clone. Each video has an approach and a language of its own, recorded with its subject (static
   §10, §6; the user, 2026-11-11); the agents keep room for their own creativity inside the niche.
-- Engagement is designed first (static §4b; the user, 2026-11-13): the blueprint exists, and J0 has read it, before the first line,
-  prompt or caption; a fact does a job; a stand-in is framed as one and nothing is made larger than its source (the truth rule).
+- Engagement is thought through first (static §4b; the user, 2026-11-13), before the first line, prompt or caption; you judge your own
+  work as you go and are skeptical of it, and fresh reviewers with none of your context are only for when you want a second opinion
+  (static §13); nothing is made larger than its source, and a stand-in is framed as one (the truth rule).
 - Nothing religious or superstitious in a subject, a line, a prompt, a title or a thumbnail (static §11).
 - Nothing indecent, gory or distressing in a subject, a line, a prompt, a title or a thumbnail (static §11b; the user, 2026-11-09).
 - No Higgsfield and no Loupe in Static: no model menu, `T prompt-template`, `T qc-brief` or `T qc-consult`.
@@ -191,7 +183,7 @@ languages, and their scripts, image plans, titles and thumbnails keep the run's 
 
 - Never take a reference's subject, names, facts or lines; never invent a fact, a quote, a date or a number; never put a claim in a script
   that its fact sheet does not source.
-- Never write a script before its blueprint, and never add the engagement afterwards as a pass over a finished story (static §4b).
+- Never write a script before the engagement is thought through, and never add it afterwards as a pass over a finished story (static §4b).
 - Never pick the subjects or the voice for the user unless they said "you pick".
 - Never ask for anything but the subjects and the voice at the stop (the paths and choices were asked at the start).
 - Never put text, a sticker or an emoji into an image prompt unless the story needs that text (item 6; a thumbnail's words only as the

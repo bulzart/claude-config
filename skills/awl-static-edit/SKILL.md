@@ -24,9 +24,11 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Step S4
 
-0. **The judge's record first** (static §13, J5): read `RUN/40-briefs/video-NN-judge.md`: the moves, joins, labels and the bed's level
-   decided and forecast for this video are what the project carries; a value the timeline gives that differs from the record is traced
-   to its cause and named in the brief before the project is built (nothing lands by accident).
+0. **The decisions first, and your own check** (static §13 "Before the edit"): read `RUN/40-briefs/video-NN-brief.md` and the plan files:
+   the moves, joins, labels and the bed's level decided for this video are what the project carries; a value the timeline gives that
+   differs from them is traced to its cause and named in the brief before the project is built (nothing lands by accident). Settle the
+   caption word box's colour from the finished stills and check the plan's moves, joins, drawings and sounds against the spec's numbers,
+   skeptically, as §13 says.
 1. **The timeline:** with drawings in the plan (static §5 "Drawings"), first `T draw render --run RUN --video NN` (every clip made and
    current, its previews viewed: `T draw list --run RUN --video NN` shows which are not), then `T slideshow plan --run RUN --video NN` →
    `RUN/40-briefs/video-NN-timeline.json` and the captions on the video's

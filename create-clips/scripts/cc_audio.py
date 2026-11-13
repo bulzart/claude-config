@@ -114,8 +114,19 @@ def audio_profile(rms_db: list, peak_db: list, window_s: float, rec_start_s: flo
 
 # --------------------------------------------------------------------------- Whisper
 
+_WORKERS = 1                    # how many chunks the watcher transcribes at the same time (cc_proc.cmd_watch sets it): faster-whisper's num_workers
+_LOCK = threading.Lock()
+
+
+def configure_workers(n: int) -> None:
+    """The watcher runs `n` processors, each on its own chunk: the model must allow `n` transcriptions at once (num_workers), or a second one would wait for the first."""
+    global _WORKERS
+    _WORKERS = max(1, int(n))
+
+
 class Transcriber:
-    """faster-whisper behind one object. Loads on first use, keeps the model, records what it really used."""
+    """faster-whisper behind one object. Loads on first use (once, whichever thread asks first), keeps the model, records what it really used.
+    One model serves several threads: faster-whisper's num_workers (= the watcher's processors) lets their transcribe() calls run in parallel."""
 
     def __init__(self, wcfg: dict | None = None):
         base = dict(load_config().get("whisper") or {})
@@ -130,6 +141,7 @@ class Transcriber:
         self.model = None
         self.used = {}
         self.load_seconds = None
+        self._lock = threading.Lock()
 
     # the device and compute type to try, in order
     def _attempts(self) -> list:
@@ -154,6 +166,12 @@ class Transcriber:
     def load(self) -> None:
         if self.model is not None:
             return
+        with self._lock:                    # two processors asking at once: one loads, the other waits and uses the same model
+            if self.model is not None:
+                return
+            self._load()
+
+    def _load(self) -> None:
         t0 = time.time()
         attempts = self._attempts()
         if any(d == "cuda" for d, _ in attempts):
@@ -163,14 +181,17 @@ class Transcriber:
         names = [asked] + [m for m in ("small", "base", "tiny") if m != asked]
         last_err = None
         threads = int(self.cfg.get("cpu_threads") or 0)
+        workers = max(1, int(self.cfg.get("num_workers") or _WORKERS))
         for dev, ct in attempts:
             for name in names:
                 try:
-                    kw = {"device": dev, "compute_type": ct, "local_files_only": bool(self.cfg.get("local_files_only", True))}
+                    kw = {"device": dev, "compute_type": ct, "local_files_only": bool(self.cfg.get("local_files_only", True)), "num_workers": workers}
                     if dev == "cpu" and threads:
                         kw["cpu_threads"] = threads
                     self.model = WhisperModel(name, **kw)
                     self.used = {"model": name, "device": dev, "compute_type": ct}
+                    if workers > 1:
+                        self.used["num_workers"] = workers
                     if name != asked:
                         self.used["model_fallback"] = {"asked": asked, "used": name}
                     if (dev, ct) != attempts[0]:
@@ -184,10 +205,14 @@ class Transcriber:
 
     def transcribe(self, wav_path, rec_start_s: float, duration_s: float | None) -> dict:
         self.load()
+        model = self.model                  # a local name: an idle unload by the watcher cannot pull it away mid-call
+        if model is None:
+            self.load()
+            model = self.model
         lang = str(self.cfg.get("language") or "auto")
         prompt = str(self.cfg.get("initial_prompt") or "").strip() or None
         t0 = time.time()
-        segs, info = self.model.transcribe(
+        segs, info = model.transcribe(
             str(wav_path), language=None if lang.lower() == "auto" else lang, word_timestamps=True,
             vad_filter=bool(self.cfg.get("vad_filter", True)), beam_size=int(self.cfg.get("beam_size", 5)),
             condition_on_previous_text=bool(self.cfg.get("condition_on_previous_text", False)), initial_prompt=prompt)
@@ -210,28 +235,33 @@ class Transcriber:
         return res
 
 
-_TRANSCRIBER: Transcriber | None = None
+_TRANSCRIBERS: dict = {}
 
 
 def get_transcriber(wcfg: dict | None = None) -> Transcriber:
-    """One Transcriber per process (and per distinct run override), so a long watch loads the model once."""
-    global _TRANSCRIBER
+    """One Transcriber per process and per distinct run override (usually just one), so a long watch loads the model once and every processor shares it."""
     key = repr(sorted((wcfg or {}).items()))
-    if _TRANSCRIBER is None or getattr(_TRANSCRIBER, "_key", None) != key:
-        _TRANSCRIBER = Transcriber(wcfg)
-        _TRANSCRIBER._key = key
-    return _TRANSCRIBER
+    with _LOCK:
+        t = _TRANSCRIBERS.get(key)
+        if t is None:
+            t = _TRANSCRIBERS[key] = Transcriber(wcfg)
+            t._key = key
+        return t
 
 
 def unload_transcriber() -> bool:
-    """Free the Whisper model's memory (a watcher that has been idle for a while drops it; the next chunk loads it again). True when a model was loaded."""
-    t = _TRANSCRIBER
-    if t is not None and t.model is not None:
-        t.model = None
+    """Free the Whisper model's memory (a watcher that has been idle for a while drops it; the next chunk loads it again). True when a model was loaded.
+    The watcher calls it only while no processor is working."""
+    freed = False
+    with _LOCK:
+        for t in _TRANSCRIBERS.values():
+            if t.model is not None:
+                t.model = None
+                freed = True
+    if freed:
         import gc
         gc.collect()
-        return True
-    return False
+    return freed
 
 
 def empty_transcript(rec_start_s: float, duration_s: float | None, note: str) -> dict:

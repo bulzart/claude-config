@@ -44,9 +44,10 @@ under "Read now" the exact section files it needs: read those and nothing else. 
   3. awl-record        (X10: deliverables with the YouTube title and thumbnail, README row, result.json)
   With QC fixes `off` every image is made once and nothing is redone: the edit is still built and its facts recorded; result.json
   `qc` = "off: not checked (the user reviews at the end)".
-  The judge's record comes first (static §13): <RUN>/40-briefs/video-NN-judge.md holds what was decided and forecast for your video
-  (the prompts as J1 and J3 left them, the pace, the joins, the labels, the bed); read its part for your step before your first call,
-  send the plan as it is now, and name in your report every outcome that differs from what the record expects, with its cause.
+  The plan's decisions come first (static §13): <RUN>/40-briefs/video-NN-brief.md and the plan files hold what was decided and forecast
+  for your video (the prompts as the main session left them, the pace, the joins, the labels, the bed); read what concerns your step
+  before your first call, send the plan as it is now, name in your report every outcome that differs from what was expected, with its
+  cause, and judge your own work as you make it, skeptically.
   A long video is split (awl-analyze-produce A9b): when your spawn message says `images K1-K2: S3 only`, make and check only those images
   (and the thumbnail when it says so), write <RUN>/60-outputs/video-NN/images-K1-K2.json (each image's attempts, re-draws, cost, flags)
   and end with one JSON line {"video", "images": "K1-K2", "status", "cost_usd_estimate", "flagged"}; when it says `S4 and X10`, every image
@@ -112,11 +113,11 @@ Hard rules:
 - Real things look like themselves (<AWL>/reference/static/050_5_images-a6s-plan-s3.md): a logo the plan places is the official file,
   put on its surface with `T image brand` (never drawn by the model); another brand's mark the model drew is left as drawn, never covered (the user, 2026-11-13);
   a known person keeps their anchor's likeness.
-- The engagement is designed in (<AWL>/reference/static/045_4b_the-engagement-blueprint.md; the user, 2026-11-13): your video's blueprint
-  is <RUN>/40-briefs/video-NN-blueprint.md (when it has one). Each still does the plan's `job` and `shot` (a human beat shows the face and
-  the feeling, a reveal its one new thing); the edit builds the moves, dips and story sounds the plan put on the blueprint's beats; the
-  record writes the description (its chapters timed from the timeline) and the pinned comment the plan's `publish` block carries. You add
-  no engagement of your own on top, and nothing in a picture, a caption or a description claims more than the narration says.
+- The engagement was thought through first (<AWL>/reference/static/045_4b_engagement-thought-first.md; the user, 2026-11-13): your
+  video's note of it is <RUN>/40-briefs/video-NN-blueprint.md (when it has one). Each still is made for what the plan wanted of it (its
+  `job` and `shot`, when noted); the edit builds the moves, dips and story sounds the plan decided; the record writes whatever the plan's
+  `publish` block carries (description with its chapters timed from the timeline, a pinned comment …). You add no engagement of your own
+  on top, and nothing in a picture, a caption or a description claims more than the narration says.
 - Every format is the same video (static §2b): the script, the narration, the bed, the cuts on their lines, the moves, the joins, the
   effects, the captions' words and look, the title and the thumbnail are the primary's, made once. An extra format's stills are the
   primary's requests sent at its size with only the words that name the primary's frame swapped (`T image generate --format <tag>

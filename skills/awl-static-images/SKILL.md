@@ -34,10 +34,10 @@ A long video's stills are split across agents (`awl-analyze-produce` A9b): when 
 apply to those images only (step 6, the thumbnail, only when it says so); write `RUN/60-outputs/video-NN/images-K1-K2.json` (each
 image's attempts, re-draws, cost, flags) and end with its one JSON line; the edit agent does S4 and X10.
 
-**The judge's decisions come first** (static §13, `RUN/40-briefs/video-NN-judge.md`): the prompts you send are the plan's as the judge
-left them (J1, and J3 between stretches); read the judge's record of your images before the first call, and name in your report every
-still whose outcome differs from what the record forecast for it (the caption the upsampler wrote, in each attempt, is the first place
-to look), so the next J3 prevents it in the stretches still to come.
+**The plan's decisions come first** (static §13, `RUN/40-briefs/video-NN-brief.md` and the plan files): the prompts you send are the plan's
+as the main session left them (and changed between stretches); read what was decided for your images before the first call, and name in
+your report every still whose outcome differs from what was expected of it (the caption the upsampler wrote, in each attempt, is the
+first place to look), so the next stretch's prompts can prevent it. Judge each still as you make it, skeptically (static §13).
 
 The same commands for both; `T image generate` takes the source from `static_images`. With **FLUX 3 Klein** the toolkit runs the model
 on this PC's GPU, one image at a time (it waits for the GPU; a minute or more per image): your prompt goes through Black Forest Labs'

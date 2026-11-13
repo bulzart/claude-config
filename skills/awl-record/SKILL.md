@@ -49,10 +49,9 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
     (`60-outputs/video-NN/images/`, api, klein or user), the narration (`30-assets/narration/video-NN.wav`), the bed or none, the drawings (their ids and images, `30-assets/drawings/video-NN/`; none when none) and, with images by
     the user, the prompts file; the YouTube title and thumbnail (static §12): write `RUN/deliverables/video-NN-title.txt` (the plan's `title`
     on its first line, and for a video in another language a second line "English: <the plan's `title_gloss`>") and name it and
-    `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row (the other title options follow the
-    title after a blank line); and the publishing kit planned at A6s (static §12; the plan's `publish` block): `RUN/deliverables/video-NN-description.txt`
-    (the description, its chapters each given its time from the timeline: the start of its image, the first at 0:00, at least three,
-    each at least 10 s long) and `RUN/deliverables/video-NN-pinned-comment.txt`, both named in the row; the
+    `RUN/deliverables/video-NN-thumbnail.png` (the toolkit keeps the one in use there) in the row; and whatever else the plan's `publish`
+    block carries (static §12: for example a description and a pinned comment, written as files in `RUN/deliverables/`, a chapter's time
+    taken from the timeline: the start of its first image, the first at 0:00, at least three, each at least 10 s long), named in the row; the
     run's locks it kept (niche, style reference, narrator; static §10) and this video's own approach and language (story form, angle,
     point of view, time frame, title form, pillar; the language's name, code and unit; the narration model: `state.json →
     static.video_info`, `static.tts_model`); `result.json` adds `static`: {format, images (count, source api|klein|user, re-draws), cost_usd_estimate (the sum of
