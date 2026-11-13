@@ -128,7 +128,7 @@ project stays as it is), reported as a new build.
 - Never create or read an error ledger (item 22): a video the user reports as wrong is diagnosed with their
   words verbatim, in its brief, and fixed only after the diagnosis.
 - Never close a run with a RESIDUAL FAILURE or a regenerated video that has no attempt block in its
-  brief (A10, §6). Never copy an agent contract from an earlier run: it is generated at A9 by `T contract`
+  brief (A10, §6). Never copy an agent contract from an earlier run: it is generated at A9s by `T contract`
   from `production-agents` §2s.
 
 ## Hand-off

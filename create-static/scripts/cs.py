@@ -2612,7 +2612,7 @@ def cmd_contract(a):
     state.json does not hold stays as it is and is listed (the agents must not be spawned with it). Run-specific notes go under their own
     heading at the end, never into the rules. The previous file, when different, is kept beside it with a stamp."""
     rd, st = _state_of(a.run)
-    tpl_name = "025_2s_spawning-static.md" if str(st.get("analyze_submode") or "") == "static" else "020_2_spawning.md"    # Static: its own block (item 36)
+    tpl_name = "025_2s_spawning-static.md"                      # the production agent's prompt (item 36)
     tpl_p = CS_HOME / "reference" / "production-agents" / tpl_name
     if not tpl_p.is_file():            # a temp home (tests) holds no references: the library beside this script does
         tpl_p = Path(__file__).resolve().parent.parent / "reference" / "production-agents" / tpl_name

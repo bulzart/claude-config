@@ -15,7 +15,7 @@ Hard rules:
 - Never reuse another edit's files unless the user says "same files as video K".
 - Never invent a client identity silently. If a concept needs something that was not supplied:
   1. **adapt the concept** to what was supplied (e.g. hands-only POV when no character was given);
-  2. otherwise ask once: drop the element, or the user adds files (`awl-asset-plan`). Nothing is generated
+  2. otherwise drop the element from the plan and say so in the brief (the user may add files, `cs-start`). Nothing is generated
      to fill the gap: client assets come only from the paths the user gives (contract item 11).
 
 What a well-prepared asset set looks like (share this only if the user asks):
