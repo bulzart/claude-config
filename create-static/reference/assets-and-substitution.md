@@ -12,5 +12,5 @@ Stored as section files in `assets-and-substitution/` (next to this file); **rea
 |---|---|---|---|
 | 1 | Where client assets come from: only the user | `010_1_where-client-assets-come-from-on.md` | 3.9 |
 | 2 | Understanding the supplied assets (autonomous) | `020_2_understanding-the-supplied-asset.md` | 2.9 |
-| 3 | Asset registry — `30-assets/registry.md` and `state.json → assets` | `030_3_asset-registry-30-assets-registr.md` | 1.5 |
+| 3 | Asset registry — `30-assets/registry.md` and `state.json → assets` | `030_3_asset-registry-30-assets-registr.md` | 1.1 |
 <!-- sections:end -->

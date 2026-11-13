@@ -78,7 +78,7 @@ def _last_json(text: str):
 def store_lock_path() -> Path:
     """The lock of CapCut's shared project index (root_meta_info.json), one file for every toolkit that writes it: config capcut.store_lock (the file the Loupe toolkit's repair
     and the clip toolkit's build also take), else <runs>/.capcut-store.lock."""
-    p = HOST.cfg_get("capcut.store_lock")
+    p = os.environ.get("CS_STORE_LOCK") or HOST.cfg_get("capcut.store_lock")      # CS_STORE_LOCK: tests keep their lock out of the real one
     return Path(p) if p else Path(HOST.cfg_get("runs_root") or (HOST.CS_HOME / "runs")) / ".capcut-store.lock"
 
 

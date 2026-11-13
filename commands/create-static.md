@@ -56,7 +56,7 @@ This file is only the **router**, and it is small on purpose. The pipeline is sp
 2. **Load only what the current phase names.** Each skill has a "Read now" list of exact section files (some conditional); read those and nothing else unless a step
    says so. Never Read a whole reference; never run `docs_tool.py join` in a run. A section already read in this session is not read again.
 3. **Citations.** `file.md §id` is a section of `CS/reference/<file>/`. `file.md` itself is only an index (a table `§ | section | file | KB`). Resolve a citation that no "Read now" list covers with that
-   table or Glob `CS/reference/<file>/*_<id>_*.md`; an id that is not a row lives in its nearest parent row. Labels such as A5, S4, X10, "item 36" resolve with the **labels** table below.
+   table or Glob `CS/reference/<file>/*_<id>_*.md`; an id that is not a row lives in its nearest parent row. Labels such as A5, S4, X10, "item 36" resolve with the **labels** table below. A section that points at `generation-system.md`, `text-and-format.md` or `voiceover.md` points at documents of modes this command does not have: follow the section's Static rule and ignore the pointer.
 4. **A phase boundary is a safe cut.** Everything a later phase needs is in `RUN/state.json` and the run files, not in this conversation. When many phases lie behind you and the context is
    long, tell the user in one line that they may run `/compact` (or open a new session and send `/create-static resume <RUN>`); nothing is lost. After a compaction, or on resume,
    **re-invoke the skill named in `state.json → next_skill`**: its text may have been summarised away. Inside the per-video work a run resumes at the video level

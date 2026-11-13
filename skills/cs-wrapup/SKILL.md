@@ -55,7 +55,7 @@ Before the table, check the run's deliverables and text. Every video in `state.j
 the plan and brief files carry every attempt; and no CapCut text layer of any project contains an emoji (the user's rule, strict).
 What is missing is fixed before the table is shown.
 
-Offer, in one line, the next useful step (more videos, a different direction, redraw or make again what a video got wrong).
+Offer, in one line, the next useful step (more videos, a different direction, redraw the stills of a flagged video).
 Static (static §10, §12): the table also names each video's YouTube title and its thumbnail (full paths:
 `deliverables/video-NN-title.txt`, `deliverables/video-NN-thumbnail.png`), each with its approach (story form, point of view, time frame,
 title form) and its language, and the offer names the two ways on: more videos of this channel's niche (`/create-static more <RUN>`:
@@ -110,7 +110,7 @@ project stays as it is), reported as a new build.
     those lessons. **When a delivered video is wrong**, in the run or in a later session:
     take the user's words verbatim, diagnose them in pipeline terms (the stage that made the miss and the
     stage that should have caught it), say which section already holds the rule and why it did not
-    prevent this video, and offer the fix (a re-edit or a redraw or a new narration passage of that video: `cs-feedback`); when the
+    prevent this video, and offer the fix (a new edit, a redrawn still or a narration passage made again: `cs-feedback`); when the
     miss is a kind the references do not hold, say so in one line and offer to write the rule, generalised
     (what to achieve, what to avoid, the miss and its cause, the corrected wording), into the section that
     owns it; write it only on the user's yes. A user's word outranks the agents' QC on the same point: the user saw what QC passed. **The

@@ -82,5 +82,5 @@ to its cause before it is accepted. The agent is skeptical of its own result (§
 - **An extra format** (§2b): its stills and its project get every check above, on their own files; each still also against the
   primary's (the same scene, people and things, only its layout changed for the frame), and its labels, logos, aimed zooms and caption
   band read off its own picture, never carried over.
-- **The craft**: the hook lands in the first second, the payoff lands, and the copy test still says no (`creative-direction.md` §8).
+- **The craft**: the hook lands in the first second, the payoff lands, and the copy test still says no (`creative-direction.md` §5.0).
 

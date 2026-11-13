@@ -6,8 +6,8 @@ user-invocable: false
 
 # cs-images — Static step S3: the stills
 
-> `CS` = `C:/Users/Bulzart/.claude/create-static` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$CS/scripts/cs.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `CS/runs/<stamp>-<slug>/`.
-> A citation `file.md §id` is a section of `CS/reference/<file>/` (models: `CS/models/<guide>/`, Higgsfield: `CS/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
+> `CS` = `C:/Users/Bulzart/.claude/create-static` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$CS/scripts/cs.py"` (every call prints one JSON object on its last line; run through PowerShell: Git Bash forks fail on this PC) · `RUN` = the run folder `CS/runs/<stamp>-<slug>/`.
+> A citation `file.md §id` is a section of `CS/reference/<file>/`; `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
 ## Read now
 
@@ -86,7 +86,7 @@ stack a tall frame into panels, above all with no reference image).
    anchor (step 1) rides with their photos (`--ref <photo>`), and every still that shows them with the anchor.
 5c. **Labels** (static §5 "Labels"): a map or route whose line names places, once made and viewed (its pins where the places are,
    else a redraw reason by QC fixes): read each label's centre off the picture beside its pin and write it into the image's plan entry
-   (`"labels": [{"text", "x_rel", "y_rel"}]`, the motion `none`) and the plan's `labels_style`; the edit places them (`T capcut-labels`).
+   (`"labels": [{"text", "x_rel", "y_rel"}]`, the motion `none`) and the plan's `labels_style`; the edit places them (`T capcut-build`).
    The labels' text is spelled as the narration says it, in the video's language; the label font holds a glyph for every character
    (`T static language --run RUN --language <code> --font <font_file> --text <a file of the labels' texts>`: `font_missing_glyphs` empty,
    else another font of `T capcut-font --list`, the reason in the plan, static §5).

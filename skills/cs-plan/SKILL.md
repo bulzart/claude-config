@@ -6,8 +6,8 @@ user-invocable: false
 
 # cs-plan — Static: subjects, voice, scripts, image plans (A6s)
 
-> `CS` = `C:/Users/Bulzart/.claude/create-static` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$CS/scripts/cs.py"` (every call prints one JSON object on its last line; run through Bash) · `RUN` = the run folder `CS/runs/<stamp>-<slug>/`.
-> A citation `file.md §id` is a section of `CS/reference/<file>/` (models: `CS/models/<guide>/`, Higgsfield: `CS/higgsfield/higgsfield-mcp/`); `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
+> `CS` = `C:/Users/Bulzart/.claude/create-static` · `PY` = `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` · `T` = `"$PY" "$CS/scripts/cs.py"` (every call prints one JSON object on its last line; run through PowerShell: Git Bash forks fail on this PC) · `RUN` = the run folder `CS/runs/<stamp>-<slug>/`.
+> A citation `file.md §id` is a section of `CS/reference/<file>/`; `file.md` itself is only the index. An id that is not a row of the index lives in its nearest parent row.
 
 ## Read now
 
@@ -182,7 +182,6 @@ languages, and their scripts, image plans, titles and thumbnails keep the run's 
   `[-]` and the reason when dropped), set the `Next:` line before a long step, and mirror the items in the session's task list when it has task tools. A fresh reviewer is never given the to-do.
 - Nothing religious or superstitious in a subject, a line, a prompt, a title or a thumbnail (static §11).
 - Nothing indecent, gory or distressing in a subject, a line, a prompt, a title or a thumbnail (static §11b; the user, 2026-11-09).
-- No Higgsfield and no Loupe in Static: no model menu, `T prompt-template`, `T qc-brief` or `T qc-consult`.
 
 ## Never (this phase)
 

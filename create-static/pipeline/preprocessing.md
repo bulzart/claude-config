@@ -1,65 +1,45 @@
 # Chosen processing pipeline (recorded decision)
 
-**Decision (2026-09-30):** all media inspection and processing for /analyze-with-loupe runs **locally
-and deterministically** through `scripts/awl.py`.
+**Decision (2026-09-30):** all media inspection and processing for /create-static runs **locally and deterministically** through `scripts/cs.py`.
 
-**The rule (the user, 2026-10-12), for every mode and every command:** the scripts gather, extract, record,
-tabulate and calculate; they never evaluate or decide. They measure (durations, cuts, loudness, spectra), extract
-(frames, transcripts, OCR text with its numbers), fetch and probe, record the agents' facts and decisions with who
-and why, and calculate pure formulas. They hand out no verdict, status, flag or label derived from content, apply
-no threshold that refuses, caps or changes an answer, rank or pick nothing, compare no texts for sameness and
-count no words to decide anything; a command refuses only a bad argument, a missing file or tool, a damaged
-ledger, an unsafe web address or a failed ffmpeg run, and it keeps the user's own locks (CapCut closed while a
-project is written, the locked house text preset) and the user's audio choice (`prep-all` stops without it). The AI
-agent that runs the pipeline reads the numbers and tables, decides from the mode's specification (Recreate, Create
-and Edit alike) and records the decision with the reason. The numbers that used to be enforced (the 0.10 s sync
-tolerance, the 15 / 25 % size bands, the 12 % crop loss, ...) are rules of thumb in the reference documents,
+**The rule (the user, 2026-10-12), for every command:** the scripts gather, extract, record, tabulate and calculate; they never evaluate or decide. They measure (durations, cuts, loudness, spectra), extract
+(frames, transcripts, OCR text with its numbers), fetch and probe, record the agents' facts and decisions with who and why, and calculate pure formulas. They hand out no verdict, status, flag or label derived
+from content, apply no threshold that refuses, caps or changes an answer, rank or pick nothing, compare no texts for sameness and count no words to decide anything; a command refuses only a bad argument, a
+missing file or tool, a damaged ledger, an unsafe web address or a failed ffmpeg run, and it keeps the user's own locks (CapCut closed while a project is written). The AI agent that runs the pipeline reads the
+numbers and tables, decides from the Static specification (`reference/static/`) and records the decision with the reason. The numbers that used to be enforced are rules of thumb in the reference documents,
 applied with judgement.
 
 | stage | tool | why this tool |
 |---|---|---|
-| Metadata | **ffprobe** (FFmpeg 9.0.2 full build, winget Gyan.FFmpeg) | Exact streams, rotation, SAR, fps, audio stream index. Rotation- and SAR-aware display size, following Higgsfield's own media-pipeline normalisation |
+| Metadata | **ffprobe** (FFmpeg full build, winget Gyan.FFmpeg) | Exact streams, rotation, SAR, fps, audio stream index. Rotation- and SAR-aware display size |
 | Structure (cuts, shots, pacing, motion activity) | **FFmpeg** `select` scene score on 192 px frames | Deterministic; one decode pass; no ML dependency |
-| Frame sampling | **FFmpeg** `fps=5` (one pass) plus targeted `-ss` seeks | Exact timestamps; ~5 frames per second baseline with adaptive density |
+| Frame sampling | **FFmpeg** `fps=2` flat for a Static run's references (config `static.analysis.fps`, no effort level) plus targeted `-ss` seeks | Exact timestamps |
 | Static thinning | **Pillow + NumPy** (48×48 grey mean absolute difference vs. the last kept frame) | Cheap, deterministic, and never drops below 1 fps |
 | Storyboards | **Pillow** | Labelled chronological contact sheets of **30 frames**, sized to Claude's vision limits (≤ 1.15 MP, ≤ 1568 px long side) so they are read at full size and no cell is shrunk |
 | Audio | **FFmpeg** (16 kHz mono WAV, `ebur128`, `silencedetect`, `astats` RMS per 0.5 s) | Deterministic loudness, silences and energy curve |
-| Speech | **faster-whisper** `small`, int8 CPU, local cache, word timestamps + VAD. Fallback: **FFmpeg's built-in whisper.cpp filter** (`ggml-base.en.bin`) | Word-level timing is a meaningful advantage over FFmpeg-only ASR (the fallback has segment timing only). Runs offline (`local_files_only`) |
-| On-screen text sample | **RapidOCR** (onnxruntime CPU) on ~12 frames per video | Extracts the on-screen text with the numbers that describe it (first and last time, frames it was seen in, share of the frames scanned, row of the frame, confidence, spelling facts such as an @ or a URL pattern); no label is put on any text: the agent decides what is a caption, a fixed overlay, a handle, a watermark or noise (feeds the text policy) |
-| Output format | **FFmpeg** (lanczos scale-to-cover + crop, or blurred pad on request) | Exact 720×1280 without stretching |
-| Overlay text | **CapCut text layers** through the capcut MCP (`reference/capcut-assembly.md`), over the clean generated video | Editable in the video's CapCut project; the generation itself never carries overlay text |
-| Deterministic text (fallback) | **FFmpeg + libass** (`subtitles` filter, fonts copied beside the `.ass`) | Only when the CapCut MCP is unavailable |
-| Multi-clip joins, hand-off frames | **FFmpeg** (`concat` with `cut` / `continuous` seams; `last-frame` as a lossless PNG) | Continuous seams drop the next clip's repeated first frame; the clips' own fps is kept |
-| Edit clean-up | **FFmpeg** `delogo` / `crop` | Small static overlays only; large text goes to the edit model |
-| Audio split (intake; Edit Mode and Analyze **Recreate**: audio + silent copy; **Create**: audio only, `--audio-only`) | **FFmpeg** stream copy: audio → `<given path>/files_audio/`, video-only copy → `<given path>/videos_without_audio/` | Only silent videos are uploaded to Higgsfield (fewer flags). The untouched original audio is kept for the final |
-| Audio restoration | **FFmpeg** (Higgsfield media-pipeline rules: offset-aware `adelay`/`atrim` + `apad`/`atrim`, `-t` exact; AAC 256 kb/s) | The generated picture gets the original audio from `files_audio`. Verified: 0 ms lag; waveform correlation 0.99+ against the original |
-| Transfers | **requests** (Python) PUT/GET | Higgsfield presigned upload and public result download, with retries |
+| Speech | **faster-whisper** (the config's `whisper_model`), int8 CPU, local cache, word timestamps + VAD. Fallback: **FFmpeg's built-in whisper.cpp filter** | Word-level timing; runs offline (`local_files_only`) |
+| On-screen text sample | **RapidOCR** (onnxruntime CPU) on ~12 frames per video | Extracts the on-screen text with the numbers that describe it (first and last time, frames it was seen in, share of the frames scanned, row of the frame, confidence, spelling facts); no label is put on any text: the agent decides what is a caption, a fixed overlay, a handle, a watermark or noise |
+| Captions and moves of the references | `T edit-profile` | The references' edit layer as numbers at their full frame rate (static §1) |
+| The CapCut project | **capcut-cli** `compile` + the toolkit's one write pass (`T capcut-build`) | One composition per video (item 39, `reference/capcut-build.md`) |
 
-Not used: Higgsfield `sandbox_exec` (remote), Higgsfield `video_analysis_*` (remote, paid; optional only
-on request), and cloud ASR.
-
-## Video sampling policy
+## Video sampling policy (a Static run's references)
 
 | rule | value |
 |---|---|
-| Baseline | **~5 frames per second** across the whole video (`--fps 5`). Frame *n* shows the source frame nearest to *n*/5 s |
-| Densify automatically | The last frame before and the first frame after every cut; **10 fps** within ±0.5 s of each motion peak (non-cut visual change; up to 8 peaks, ≥ 1 s apart); **10 fps** over the first second (hook onset) |
-| Densify on demand | `awl.py frames <video> --range a-b --fps 15 --sheet` around fast actions, object interactions, hand contact, gestures, product appearances, swaps, text appearances and transitions |
+| Baseline | **2 frames per second** across the whole video, flat (the user, 2026-11-07: "just do 2fps when on static mode"). Frame *n* shows the source frame nearest to *n*/2 s |
+| Densify on demand | `cs.py frames <video> --range a-b --fps 15 --sheet` around a caption entrance, a cut, a move or a drawn annotation the analysis needs to see closely |
 | Thin | Static stretches: ≥ 3 consecutive near-duplicate baseline frames (mean absolute difference < 2.5/255 on 48×48 grey vs. the last kept frame) are dropped, with ≥ 1 frame per second kept. Reported as static runs, shown as grey cells on the storyboard |
-| Cap | 1,800 baseline frames per video (6 min at 5 fps). Beyond that the baseline rate is lowered and the note says so; densify the segments of interest |
 | Never | Five repeated analyses of the same frames. The rule is a sampling rate, not repeated passes |
 
-Audio, speech, on-screen text, cuts and motion are aligned on the same clock in
-`timeline.md` (one row per second), so the storyboard and the timeline are read together as one
-continuous sequence.
+Audio, speech, on-screen text, cuts and motion are aligned on the same clock in `timeline.md` (one row per second), so the storyboard and the timeline are read together as one continuous sequence.
 
 ## Outputs per video (`<run>/10-media/<V>/`)
 
 | file | content |
 |---|---|
-| `video.md` | Human summary: specs, sampling counts, pacing, speech, audio, loop similarity, motion peaks, static runs, sheet list, shot table, transcript, OCR spans |
+| `video.md` | Human summary: specs, sampling counts, pacing, speech, audio, motion peaks, static runs, sheet list, shot table, transcript, OCR spans |
 | `timeline.md` | Per-second table: shot, events (CUT, motion peak, static, silence), words spoken, max loudness, OCR text |
-| `sheets/storyboard-NN.jpg` | Chronological storyboard, **30 frames per sheet** (6 s at 5 fps; about one second of a 30 fps QC checkpoint). A span that overflows is split into balanced pages of whole rows (31 frames → 18 + 13), never 30 + 1. Portrait: 6 columns × 5 rows, 138 × 245 px cells, 1.2 s per row at 5 fps (828 × 1351 px). Landscape: 5 × 6, 240 × 135 cells (1200 × 952). Square: 5 × 6, 184 px cells (920 × 1246). Every sheet stays under 1.15 MP, the point past which Claude's vision downscales an image, so the cells are read at their real size |
+| `sheets/storyboard-NN.jpg` | Chronological storyboard, **30 frames per sheet**. A span that overflows is split into balanced pages of whole rows (31 frames → 18 + 13), never 30 + 1. Every sheet stays under 1.15 MP, the point past which Claude's vision downscales an image, so the cells are read at their real size |
 | `frames/base/`, `frames/extra/` | Baseline and densified JPEGs (≤ 720 px long side) |
 | `video.json`, `frames.json`, `cuts.json`, `activity.json`, `audio.json`, `transcript.json`, `ocr.json`, `probe.json` | Machine data |
 | `audio/audio-16k.wav` | ASR input |
@@ -67,70 +47,46 @@ continuous sequence.
 ## Commands
 
 Python: `C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe` (`config.json → python`).
-Script: `C:/Users/Bulzart/.claude/analyze-with-loupe/scripts/awl.py`. Every command prints one JSON
-object as its last stdout line.
+Script: `C:/Users/Bulzart/.claude/create-static/scripts/cs.py`. Every command prints one JSON object on its last line; `cs.py <command> -h` lists a command's options. The commands a Static run uses:
 
-```text
-awl.py new-run --mode analyze --source "<refs folder>" --assets "<asset path>" … [--examples "<folder>"]   → run_dir
-awl.py new-run --mode edit --source "<video path>" …                   (edit: per-edit assets come later)
-awl.py state --run "<run>" get [key] | set k=v … | append k=v …
-awl.py inventory "<refs folder>" --run "<run>" --as references         → 00-inventory/ (reference material only)
-awl.py inventory "<video paths>" --run "<run>" --as sources            → 00-inventory/ (edit: videos only, other files ignored)
-awl.py inventory "<asset paths>" --run "<run>" --as assets [--scope video-01]  → 30-assets/<scope>/asset-inventory.{json,md} (paths, kinds, sizes, sub-folder, duplicate_of: facts only; no role is guessed from a file name, the agent confirms each by looking)
-awl.py inventory "<examples folder>" --run "<run>" --as examples     → 00-inventory/examples-inventory.{json,md} (study only; may be empty)
-awl.py prep-assets --run "<run>" [--scope video-01]                    → previews, docs, font names, assets-sheet-NN.jpg
-awl.py prep-all --run "<run>" [--jobs 2] [--only V01,V03] [--redo]     → 10-media/<V>/…, images/, docs/, index.md
-awl.py prep-all --run "<run>" --set examples [--jobs 2]               → 10-media/E01…, examples-index.md
-awl.py prep-video "<video>" --out "<dir>" --id V01                     (one video)
-awl.py frames "<video>" --out "<dir>" --range 3.0-4.2 --fps 15 --sheet [--label x] | --at 1.2,3.4
-awl.py prep-image "<image>" --out "<preview.jpg>"
-awl.py doc-text "<file>" --out "<txt>"                                 (docx/pptx/xlsx/txt/md/csv/json/srt/vtt/html)
-awl.py hf-put --file "<local>" --url "<upload_url>" --content-type "<exact type>"
-awl.py hf-get --url "<result_url>" --out "<file.mp4>"
-awl.py split-audio "<given video path>" --run "<run>" [--audio-only]   → <path>/files_audio/ (+ <path>/videos_without_audio/ unless --audio-only)
-awl.py audio-profile --audio "<files_audio file>" --out "<json>" [--transcript …] [--cuts …]   → the sound design as numbers: speech share (null when the run did not ingest audio), harmonic ratio outside speech, tempo, beat strength, spectral flatness, steady-tone share, energy per second and its change, hits (with on_cut); no label
-awl.py fetch-audio --url "<direct audio url>" --page "<page>" --license "<license>" --out "<file>"   → download + <file>.source.json
-awl.py restore-audio --generated "<edit>" --audio "<path>/files_audio/<name>.m4a" --audio-offset <s> [--start <s>] --out "<file>"   → the generated picture + the ORIGINAL audio; reports the facts of the result and how much shorter the generated clip was
-awl.py sync-check --source "<prepared source / own-silent.mp4>" --output "<final>" [--start <s>] --out "<dir>" [--tol 0.10] [--min-corr 0.5] [--min-motion 0.25]   → <dir>/sync-check.json + sync-sheet.jpg: global and per-window offsets, drift, duration difference, side-by-side sheet; numbers only, no verdict and no fix
-awl.py finalize --run "<run>" --video V01 --file "<approved.mp4>" --original "<original video>"   → <path>/final/<name>.mp4 (reports facts, refuses nothing)
-awl.py conform --video "<in>" --out "<out>" [--focus-x 0.5 --focus-y 0.5] [--mode fill|pad] [--dry-run]   → exact 720×1280; reports lost_fraction (the share of the picture a crop removes) and never refuses a crop; --dry-run writes nothing
-awl.py trim --video "<in>" --out "<out>" --start 0.4 [--end 7.6]
-awl.py concat --clips a.mp4 b.mp4 --out joined.mp4 [--seams cut|continuous,…]   → + joined.mp4.join.json (each piece's clip, attempt and seconds; restore-audio, conform, clean, captions and trim carry it)
-awl.py last-frame --video "<clip>" --out "<handoff.png>" [--back 0.3]    → exact last frame, lossless
-awl.py capcut-name --video 3                                              → 01_Oct_2026_v03 (free name)
-awl.py capcut-prep --draft "<store>/<name>"                               → right after capcut_clone_draft
-awl.py capcut-repair --draft "<store>/<name>" --preview "<preview.mp4>"  → after every capcut_save (house text style + register + sync + lint, locked)
-awl.py capcut-text-style --draft "<store>/<name>" [--check | --learn [--text N] [--replace]]   → font System, size 10 (11 when the video has only a little text: ≤ 5 words on screen at once, every line ≤ 82% of the width at 11; config capcut.text_style.short_text), the user's locked preset (config capcut.text_style.learned)
-awl.py strip-inserts --video "<reference>" --inserts 13.0-15.0 --out "<dir>"  → own.mp4, own-silent.mp4, map.json (split points)
-awl.py captions --video "<in>" --out "<out>" --spec captions.json | --from-speech [--script "…"]   (fallback only)
-awl.py clean --video "<in>" --out "<out>" --delogo "x,y,w,h@t0-t1" [--crop "x,y,w,h"]
-awl.py qc --video "<final>" --out "<dir>" --mode analyze|edit [--allowed-text "a|b"] [--expect-duration s] [--expect-aspect 9:16] [--expect-size WxH] [--dense "label:a-b" …] [--dense-fps 30]   → storyboard + measurements beside the expected values (size, duration, aspect, audio, black and frozen spans, the on-screen text its OCR saw beside the planned text), dense checkpoint sheets; no pass or fail
-awl.py scale --product-cm H [--distance d --distance-basis "<how d was derived>" --lens f] [--frame img.png --product-px y0-y1 --ref-cm h --ref-px y0-y1 [--depth-ratio r]] [--out scale.json]   # size reckoning, arithmetic only: expected size per shot; observed size as a multiple of the expected one, per estimate; no verdict
-awl.py model-menu --mode analyze|edit --live-ids "<ids from models_explore>"   (the numbered table of every model, pinned first; it picks nothing)
-awl.py ledger begin --run "<run>" --video NN --attempt K --request "<request.json>"   (records a pending entry and reports conflicts; it refuses nothing, the agent decides)
-awl.py ledger set --run "<run>" --fingerprint F --job J --status submitted|unknown|completed|failed|accepted|rejected
-awl.py open --file "<final.mp4>"                                       (Edit Mode review in the default player)
+```
+cs.py new-run --source "<refs folder>" [--assets "<path>" …] [--examples "<folder>"]   → run_dir
+cs.py state --run "<run>" get [key] | set k=v … | append k=v …
+cs.py inventory "<refs folder>" --run "<run>" --as references     → 00-inventory/ (reference material only)
+cs.py inventory "<asset paths>" --run "<run>" --as assets          → 30-assets/asset-inventory.{json,md} (paths, kinds, sizes, duplicate_of: facts only; no role is guessed from a file name)
+cs.py inventory "<examples folder>" --run "<run>" --as examples    → 00-inventory/examples-inventory.{json,md} (study only; may be empty)
+cs.py prep-assets --run "<run>"                                    → previews, docs, font names, assets-sheet-NN.jpg
+cs.py prep-all --run "<run>" [--jobs 2] [--only V01,V03] [--redo]  → 10-media/<V>/…, images/, docs/, index.md
+cs.py prep-video "<video>" --out "<dir>" --id V01                  (one video)
+cs.py frames "<video>" --out "<dir>" --range 3.0-4.2 --fps 15 --sheet [--label x] | --at 1.2,3.4
+cs.py doc-text "<file>" --out "<txt>"                              (docx/pptx/xlsx/txt/md/csv/json/srt/vtt/html)
+cs.py split-audio "<given video path>" --run "<run>" --audio-only  → <path>/files_audio/
+cs.py audio-profile --audio "<file>" --out "<json>"               → the sound design as numbers: speech share, harmonic ratio outside speech, tempo, beat strength, spectral flatness, energy per second; no label
+cs.py edit-profile --run "<run>" --ref V01                        → the reference's edit layer as numbers (zoom, pan, pace, caption entrances; gather only)
+cs.py effects scan --run "<run>" --folder "<effects folder>"       → 00-inventory/effects.json and .md
+cs.py reuse-analysis … | clone-run --from <run>                   (an analysis another run made; static §10)
+cs.py static check | formats | format | lock | subjects | language | units | context | profile | forecast
+cs.py image … | fetch-image … | fetch-font … | tts … | narration-words … | music … | draw … | slideshow plan …   (static §5, §6, §7)
+cs.py capcut-font --list                                           (the fonts the captions can use)
+cs.py capcut-build --run "<run>" --video NN [--format <tag>]       → the video's CapCut project (item 39)
+cs.py ledger begin|set|show … | contract --run "<run>" | status | doctor | lint-run
 ```
 
-PDFs: `prep-all`, `prep-assets` and `doc-text` extract the text layer with pypdf (layout mode) into `docs/<D>.txt`, and report `pages`,
-`chars` and `image_only`. A PDF with no text layer gets its embedded page images written to `docs/<D>-pages/` (at most 40), to be viewed one
-by one; the Read tool renders at most 10 pages of a PDF on this machine (no poppler).
+PDFs: `prep-all`, `prep-assets` and `doc-text` extract the text layer with pypdf (layout mode) into `docs/<D>.txt`, and report `pages`, `chars` and `image_only`. A PDF with no text layer gets its embedded page images
+written to `docs/<D>-pages/` (at most 40), to be viewed one by one; the Read tool renders at most 10 pages of a PDF on this machine (no poppler).
 
 ## Measured performance (this machine, 2026-09-30, `prep-all --jobs 2`)
 
 | input | wall time | storyboard cells |
 |---|---|---|
-| 15 s AI clip, 480×854, no speech | ~54 s | 94 |
-| 27 s POV clip, 720×1280, 11 shots, no speech | ~60–90 s | 202 |
+| 15 s clip, 480×854, no speech | ~54 s | 94 |
+| 27 s clip, 720×1280, 11 shots, no speech | ~60–90 s | 202 |
 | 40 s talking head, 720×1280, 183 words | ~75–110 s | ~260 |
 
-The long poles are OCR (~2–5 s per frame) and ASR (~real-time with `small`). For large folders use
-`--jobs 2`, `--whisper-model base`, or `--no-ocr` for videos without overlays.
+These were measured at 5 fps; a Static run's 2 fps takes less. The long poles are OCR (~2–5 s per frame) and ASR (~real-time with `small`). For large folders use `--jobs 2`, `--whisper-model base`, or `--no-ocr`
+for videos without overlays.
 
 ## Known limits
-- The cut detector is a heuristic: very fast motion can create false cuts and soft dissolves can be
-  missed. Confirm cuts on the storyboard (red bars).
+- The cut detector is a heuristic: very fast motion can create false cuts and soft dissolves can be missed. Confirm cuts on the storyboard (red bars).
 - OCR misses stylised or animated text and stickers; always read overlays by eye as well.
-- ASR can mis-hear names and brand words; verify them against the lips and the context. Captions use
-  `--script` to force the intended wording.
-- `delogo` smears textured backgrounds; use it only for small overlays on simple backgrounds.
+- ASR can mis-hear names and brand words; verify them against the lips and the context.
