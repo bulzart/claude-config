@@ -28,3 +28,34 @@
 [report] 20261113-133945-blastpremier C0001: done in 201.7 s, $0.032
 [C0003] stage sheets: ok in 104.2 s (241 frames, 9 sheets, leftovers 0)
 [report] 20261113-133945-blastpremier C0002: done in 232.7 s, $0.024
+[C0003] stage transcript: ok in 147.2 s (393 words, medium on cpu, 147.1 s)
+[C0003] stage digest: ok in 0.2 s (181 seconds)
+[C0003] ingest end: done {'move': 0.0, 'probe': 90.8, 'audio': 19.0, 'sheets': 104.2, 'transcript': 147.2, 'digest': 0.2}
+[watch] blastpremier/20261113-133945-blastpremier C0003: done in 363.5 s {'move': 0.0, 'probe': 90.8, 'audio': 19.0, 'sheets': 104.2, 'transcript': 147.2, 'digest': 0.2} free 4.96 GB
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0004] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\blastpremier\20261113-133945-blastpremier\chunk-0004.mp4
+[C0004] stage move: ok in 0.8 s
+[C0004] stage probe: ok in 29.4 s (180.183 s 1920x1080 59.94 fps)
+[C0004] stage audio: ok in 6.5 s (361 windows)
+[C0004] stage sheets: ok in 91.7 s (241 frames, 9 sheets, leftovers 0)
+[C0004] stage transcript: ok in 119.9 s (437 words, medium on cpu, 119.9 s)
+[C0004] stage digest: ok in 0.1 s (181 seconds)
+[C0004] ingest end: done {'move': 0.8, 'probe': 29.4, 'audio': 6.5, 'sheets': 91.7, 'transcript': 119.9, 'digest': 0.1}
+[watch] blastpremier/20261113-133945-blastpremier C0004: done in 249.9 s {'move': 0.8, 'probe': 29.4, 'audio': 6.5, 'sheets': 91.7, 'transcript': 119.9, 'digest': 0.1} free 4.95 GB
+[C0005] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\blastpremier\20261113-133945-blastpremier\chunk-0005.mp4
+[C0005] stage move: ok in 0.1 s
+[C0005] stage probe: ok in 18.7 s (20.035 s 1920x1080 59.943 fps)
+[C0005] stage audio: ok in 11.7 s (41 windows)
+[C0005] stage sheets: ok in 20.6 s (27 frames, 1 sheets, leftovers 0)
+[C0005] stage transcript: ok in 22.7 s (25 words, medium on cpu, 22.7 s)
+[C0005] stage digest: ok in 0.1 s (21 seconds)
+[C0005] ingest end: done {'move': 0.1, 'probe': 18.7, 'audio': 11.7, 'sheets': 20.6, 'transcript': 22.7, 'digest': 0.1}
+[watch] blastpremier/20261113-133945-blastpremier C0005: done in 75.5 s {'move': 0.1, 'probe': 18.7, 'audio': 11.7, 'sheets': 20.6, 'transcript': 22.7, 'digest': 0.1} free 4.95 GB
+[report] 20261113-133945-blastpremier C0003: done in 346.1 s, $0.040
+[report] 20261113-133945-blastpremier C0005: done in 63.8 s, $0.009
+[report] 20261113-133945-blastpremier C0004: done in 341.9 s, $0.051
+[watch] idle for 600 s: Whisper model unloaded (the next chunk loads it again)
+[watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); Ctrl+C stops
+[watch] chunk reports: claude-haiku-5-5 (effort high), 2 at a time
+[watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)
+[notify] 20261113-133945-blastpremier: Create-clips is ready: blastpremier -> toast

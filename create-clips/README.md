@@ -20,6 +20,8 @@ This file is the **contract** between the three parts. Everything that crosses a
    Do not use the `!` prefix of the Claude prompt for it: that runs through Git Bash, which cannot start on this PC. The extension then starts `cc.py watch` in the background when you press Record. Or start it by hand in a PowerShell window: `& "C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe" "C:\Users\Bulzart\.claude\create-clips\scripts\cc.py" watch`.
 3. **Record**: open a streamer's Twitch page and press the **Record** button the extension puts at the bottom right of the page (or type the login in the extension's popup, or put channels on the auto-record list).
    Chunks land in `Downloads\twitch-chunks\...` every 3 minutes and the processor turns each one into sheets and a transcript inside `C:\Users\Bulzart\Documents\stream-clips\runs\<session>`.
+   When the recording has ended and every chunk and its report is done, Windows shows **one notification** (it stays until you dismiss it) with the exact `/create-clips <run folder>` command (`docs/processing.md`, "The ready alert").
+   Chrome's "Ask where to save each file before downloading" (Settings > Downloads) must be OFF in the recording profile, or every chunk file waits for a Save As click.
 4. **Clip**: in Claude Code, `/create-clips <that run folder>` (optionally `notes="guest was X, topic Y"`, `mode=streamer|game`, `game="Counter-Strike 2"`, `only=shorts|long` (streamer mode)). It asks you first which mode this is, unless you gave `mode=`.
    Read `RUN\deliverables\README.md` at the end (game mode also writes `RUN\deliverables\rounds.md`: every round or fight with what was done with it); open the CapCut projects, check the first frame, export.
    Models: the chunk reports are written by the Haiku reporter (`config.json -> report`); research, analysis, planning, editing and the main session use whatever you picked with `/model`. Nothing asks you which.
@@ -79,8 +81,9 @@ about that long after the moment, because of the stream's delay), so index i is 
 `[10j, 10j+10)` and `samples[].t` is the chunk offset the message is aligned to. The chat file is therefore saved about `lag_hint_s` after the chunk ends (still before its mp4).
 
 `session.json`: `{"schema":"tcr-session/1","channel","session","started_at","ended_at","reason","quality_pref","chunk_seconds","chat":true,"stream":{...},"chunks":N}`.
-`reason` is set when the recording ends: `stream-ended` (the extension stops by itself when the stream ends), `stop` (the user), `low-disk`, `limit` (the optional GB cap), `error`. `cc.py watch` copies a changed
-session.json into the run (`00-inventory/session.json`) and records `recording` and `stream_ended` in `state.json`, which `/create-clips` reads to know whether the recording is complete.
+`reason` is set when the recording ends: `stream-ended` (the extension stops by itself when the stream ends), `user` (you pressed Stop), `size-limit` (the optional GB cap), `low-disk`, `stalled` (no new video for 10 minutes),
+`browser-restarted`, `stopped`, `save-failed...`, `offline...`. `cc.py watch` copies a changed session.json into the run (`00-inventory/session.json`) and records `recording` and `stream_ended` in `state.json` (compared with the file's content, so a recording that ended before its
+first chunk was processed gets its end recorded too), which `/create-clips` and the ready alert read to know whether the recording is complete.
 
 ## 2. The run folder (made by `cc.py`, numbered like an analyze-with-loupe run)
 
@@ -126,7 +129,8 @@ ads_skipped_s, ended_by, quality:{...}, stream:{...}, status:"pending|processing
 sheets:N, frames:N, words:N, speech_seconds, language, model, device, seconds:{audio,sheets,transcript}, error, processed_at}`.
 
 `state.json`: `{schema:"cc/1", channel, session, run, created, inbox, settings:{frame_interval_s,frames_per_sheet,...}, chunks:{"C0001":{status,...}},
-stage (the /create-clips stage), next_skill, videos:{}}`.
+stage (the /create-clips stage), next_skill, videos:{}, recording:{started_at,ended_at,reason,chunks,chunk_seconds,quality_pref}, stream_ended,
+ready_notified:{at,fingerprint,chunks,done,failed,how,ok,error}}` (`recording` and `stream_ended` come from the recorder's session.json; `ready_notified` is what the ready alert announced: once per state of the run).
 
 ### Per-chunk file formats
 
@@ -152,6 +156,8 @@ Editing and run state (`scripts/cc_edit.py`): `config` (show, `get <dotted key>`
 `captions` (cues from the transcript words of the resolved pieces: masking, spelling replacements), `capcut-name`, `capcut-compose` (the whole CapCut project in one command from the resolved EDL, on `data/compose-template`, the chunks used in place),
 `capcut-finish` (zoom keyframes, transitions, captions, font, entrance, repair).
 The chunk reporter (`scripts/cc_report.py`, `docs/processing.md`): `report` (make, redo or list the chunks' reports; the watcher queues one after every ingested chunk). `status` shows the `report:` column and the `reports` counts.
+The ready alert (`scripts/cc_notify.py`, `scripts/notify.ps1`, `docs/processing.md`): `notify` (check whether a run is fully processed and send the Windows notification once per state of the run; `--test`, `--dry-run`, `--force`); the watcher sends it by itself.
+`status` shows the line `ready for /create-clips: yes` or `not ready yet: <why>` and `ready` in its JSON.
 On-screen reading for game matches (`scripts/cc_hud.py`, `docs/hud.md`): `hud-read` (OCR of one region at one time), `hud-scan` (OCR of a region over a range: the score, the clock), `region-series` (numbers of regions over time: a kill-feed burst, a replay badge).
 Game tabulation (`scripts/cc_game.py`): `hud-states` (the changes of the score as one time-ordered table), `hud-slice` (one reader's readings inside a rec range), `units-merge` (the block files as one `rounds.json`),
 `units-verdict` (the planner's keep decisions written next to the cards), `units-check` (facts about round and fight cards: missing fields, overlaps, score changes no unit holds, uncovered stretches),
@@ -159,7 +165,7 @@ Game tabulation (`scripts/cc_game.py`): `hud-states` (the changes of the score a
 `--run` takes a run folder path or a bare session name under `runs_root`.
 
 The command, its phase skills (`~/.claude/skills/cc-*`: profile, scan, plan and build skills for each mode, plus the shared start, produce and wrap-up) and the references (`reference/*.md`, `reference/games/*.md`) are described in `~/.claude/commands/create-clips.md`;
-`tests/run-all.py` runs every test (`test_edit.py` the edit toolkit, `test_game.py` the game tabulation, `test_hud.py` the screen reading, `test_proc.py` the processor, `test_report.py` the chunk reporter (with a stand-in claude, no model call), `test_native_host.py` the Chrome helper, `test_docs.py` that every file and skill the docs name exists).
+`tests/run-all.py` runs every test (`test_edit.py` the edit toolkit, `test_game.py` the game tabulation, `test_hud.py` the screen reading, `test_proc.py` the processor, `test_report.py` the chunk reporter (with a stand-in claude, no model call), `test_notify.py` the ready alert (stand-ins, nothing is shown), `test_nowindow.py` that no script opens a console window, `test_native_host.py` the Chrome helper, `test_docs.py` that every file and skill the docs name exists).
 
 ## 4. Rules that hold everywhere
 
@@ -167,6 +173,7 @@ The command, its phase skills (`~/.claude/skills/cc-*`: profile, scan, plan and 
 - Models: the only Haiku is the chunk reporter (`config.json -> report`: Haiku 5.5, effort high, a headless `claude -p` session per chunk, Read tool only); research, analysis, planning, production and the main session use the model the user picked with `/model` (no `model` argument to any agent, never a question about it).
   **The reporter reports, it never decides**: no verdict, no label ("ace", "highlight"), no name corrected, nothing ranked, kept or skipped; every decision is a working agent's. The analysis batch sizes are `scan_chunks_streamer` 10 and `scan_chunks_game` 8 (the agents start from the reports).
 - The mode is the user's pick, asked once at the start and kept for the run. Game mode makes long-form condensed matches only: no shorts, no sound effects, sponsor stretches cut.
+- No console windows: every program a script starts (ffmpeg, ffprobe, PowerShell, taskkill, claude) is started with `creationflags=NO_WINDOW` (`cc_common.run_cmd` does it). The watcher runs under `pythonw.exe` without a console, and a console program started without the flag gets a NEW one that Windows Terminal shows as a window per call (one popup per ffmpeg call, seen 2026-11-13). `tests/test_nowindow.py` fails when a script forgets it.
 - Never move, rename, delete or overwrite a chunk's `chunk.mp4` after `ingest`; the editing side only reads it. Frames are the only media a script deletes (after their sheet is built), plus the 16 kHz wav after transcription.
 - Whisper stays on the CPU by default (the GPU is reserved for FLUX Klein and ACE-Step with their memory guard); the GPU is an opt-in (`whisper.device`), measured at ~10x faster.
 - Free space is checked per drive: `doctor` and `watch` report it and refuse to start a chunk below `min_free_gb` (3 GB) on the runs drive (C: has about 8 GB until the new SSD is in).

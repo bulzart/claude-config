@@ -507,7 +507,14 @@ def cmd_status(a):
         counts[r.get("status")] = counts.get(r.get("status"), 0) + 1
     inbox = (st.get("inbox") and Path(st["inbox"])) or None
     waiting = sorted(p.name for p in inbox.glob("chunk-*.mp4")) if inbox and inbox.is_dir() else []
-    out({"ok": True, "run": str(run), "channel": st.get("channel"), "session": st.get("session"), "chunks": len(rows), "by_status": counts,
+    try:                                # can /create-clips start on this run? (facts: the recording ended, chunks and reports settled; cc_notify.py)
+        from cc_notify import run_facts
+        rf = run_facts(run)
+        ready = {"ready": rf["ready"], "why_not": rf["why_not"], "announced": bool(st.get("ready_notified"))}
+        print("ready for /create-clips: yes" if rf["ready"] else ("finished, but no chunk could be used" if rf["alert"] else "not ready yet: " + "; ".join(rf["why_not"])))
+    except Exception as e:  # noqa: BLE001
+        ready = {"ready": None, "error": f"{type(e).__name__}: {e}"}
+    out({"ok": True, "run": str(run), "channel": st.get("channel"), "session": st.get("session"), "chunks": len(rows), "by_status": counts, "ready": ready,
          "rec_total_s": round(sum(float(r.get("duration_s") or 0) for r in rows), 1), "newest": newest["id"] if newest else None,
          "newest_status": newest.get("status") if newest else None, "stale_rec": [r["id"] for r in rows if r.get("stale_rec")],
          "failed": [{"chunk": r["id"], "error": r.get("error")} for r in rows if r.get("status") == "failed"],
@@ -663,6 +670,14 @@ def cmd_doctor(a):
             + f"; reports {'on' if rc['enabled'] else 'OFF'}: {rc['model']}, effort {rc['effort']}, {rc['parallel']} at a time", hard=False)
     except Exception as e:  # noqa: BLE001
         chk("claude CLI (chunk reports)", False, f"{type(e).__name__}: {e}"[:120], hard=False)
+    try:
+        from cc_notify import notify_cfg, probe
+        nc, pr = notify_cfg(), probe()
+        chk("Windows notification (ready alert)", bool(pr.get("ok")),
+            (f"toast ready ({pr.get('setting')})" if pr.get("ok") else f"toast not available ({pr.get('error') or pr.get('setting')}): a message box is the fallback")
+            + f"; automatic alerts {'on' if nc['enabled'] else 'OFF'}, {'stay until dismissed' if nc['persistent'] else 'go away by themselves'}", hard=False)
+    except Exception as e:  # noqa: BLE001
+        chk("Windows notification (ready alert)", False, f"{type(e).__name__}: {e}"[:120], hard=False)
     root, inbox = runs_root(), inbox_dir()
     min_free = cfg_get("min_free_gb", 3)
     for name, p in (("runs drive free space", root), ("inbox drive free space", inbox)):
@@ -765,7 +780,9 @@ def glob_escape(s: str) -> str:
 def sync_sessions(inbox: Path, root: Path) -> int:
     """The extension writes session.json when a recording starts and overwrites it when it ends (the stream ended, the user stopped it, a
     limit was reached). Copy a newer one into its run (00-inventory/session.json) and record the end in state.json (recording.ended_at,
-    reason, chunks, stream_ended) so /create-clips knows whether the recording is complete. Returns the number of runs updated."""
+    reason, chunks, stream_ended) so /create-clips knows whether the recording is complete. Returns the number of runs updated.
+    The state is compared with the file's CONTENT, not with the copy's age: the ingest's move stage copies session.json too (a recording that ended before
+    its first chunk was processed), and a copy that is already as new as the source must not leave state.json without the recording's end."""
     n = 0
     if not inbox.is_dir():
         return 0
@@ -778,14 +795,19 @@ def sync_sessions(inbox: Path, root: Path) -> int:
                 continue
             dst = run / "00-inventory" / "session.json"
             try:
-                if dst.is_file() and dst.stat().st_mtime_ns >= sj.stat().st_mtime_ns:
-                    continue
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(sj, dst)
                 data = read_json(sj, {}) or {}
                 rec = {"started_at": data.get("started_at"), "ended_at": data.get("ended_at"), "reason": data.get("reason"),
                        "chunks": data.get("chunks"), "chunk_seconds": data.get("chunk_seconds"), "quality_pref": data.get("quality_pref")}
-                update_state(run, recording=rec, stream_ended=bool(data.get("ended_at")))
+                st = read_json(run / "state.json", {}) or {}
+                need_copy = not dst.is_file() or dst.stat().st_mtime_ns < sj.stat().st_mtime_ns
+                need_state = st.get("recording") != rec or st.get("stream_ended") != bool(data.get("ended_at"))
+                if not (need_copy or need_state):
+                    continue
+                if need_copy:
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(sj, dst)
+                if need_state:
+                    update_state(run, recording=rec, stream_ended=bool(data.get("ended_at")))
                 n += 1
             except OSError:
                 continue
@@ -824,7 +846,7 @@ def cmd_watch(a):
     interrupted = False
     last_work, last_sync, last_catch = time.time(), 0.0, 0.0
     idle_unload = float((cfg_get("whisper", {}) or {}).get("idle_unload_s", 600) or 0)
-    reporter, rcfg, touched_runs = None, None, set()
+    reporter, rcfg, touched_runs, notified = None, None, set(), []
     try:                                  # the chunk reporter: a headless Haiku session per finished chunk (observations only), started beside the processing
         from cc_report import Reporter, find_claude, report_cfg
         rcfg = report_cfg()
@@ -836,6 +858,15 @@ def cmd_watch(a):
                 say("[watch] chunk reports are off: the claude CLI was not found (put claude.exe on PATH, or set config report.claude_bin)")
     except Exception as e:  # noqa: BLE001
         say(f"[watch] chunk reports are off: {type(e).__name__}: {e}")
+    alerts = None
+    try:                                  # the ready alert: a Windows notification when a run is fully processed and /create-clips can start on it (cc_notify.py)
+        from cc_notify import Alerts, notify_cfg
+        ncfg = notify_cfg()
+        if ncfg["enabled"] and not a.no_notify:
+            alerts = Alerts(ncfg, background=not a.once)
+            say("[watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)")
+    except Exception as e:  # noqa: BLE001
+        say(f"[watch] ready alerts are off: {type(e).__name__}: {e}")
     with WatchLock(root / ".watch.lock") as lock:
         try:
             while True:
@@ -874,6 +905,8 @@ def cmd_watch(a):
                                           "seconds": round(time.time() - t0, 1), "error": res.get("error")})
                         say(f"[watch] {c['channel']}/{c['session']} {res.get('chunk')}: {res.get('status')} in {time.time() - t0:.1f} s "
                             f"{res.get('seconds')} free {free_gb(run)} GB")
+                        if alerts:
+                            alerts.add(run)
                         if res.get("ok"):
                             refresh_stale(run, limit=1)
                             if reporter and all((res.get("stages") or {}).get(s) is True for s in ("sheets", "audio", "digest")):
@@ -884,6 +917,8 @@ def cmd_watch(a):
                 if reporter and touched_runs and time.time() - last_catch > 30:        # a chunk whose report failed, went stale or was never queued is queued again
                     last_catch = time.time()
                     reporter.catch_up(touched_runs)
+                if alerts:                      # every ~10 s: is a run fully processed (recording ended, chunks done, reports settled)? then one notification
+                    notified += alerts.tick(inbox, root, reporter=reporter, reports_on=reporter is not None, skip_transcript=a.skip_whisper, dead=dead)
                 waiting = any(s in ("unstable", "waiting-sidecar") for s in states.values())
                 if not waiting:                 # idle: re-make one chunk whose rec start moved, if any
                     did = False
@@ -918,7 +953,13 @@ def cmd_watch(a):
             from cc_report import kill_all
             kill_all()
         reports = reporter.summary()
-    out({"ok": True, "processed": processed, "skipped_incomplete": skipped_incomplete, "interrupted": interrupted, "reports": reports})
+    if alerts and a.once and not interrupted:       # a one-pass run looks once more after its reports are in (the long-running watcher checks all the time)
+        try:
+            notified += alerts.tick(inbox, root, reporter=reporter, reports_on=reporter is not None, skip_transcript=a.skip_whisper, dead=dead, force=True)
+        except Exception as e:  # noqa: BLE001
+            say(f"[watch] ready alert check failed: {type(e).__name__}: {e}")
+    out({"ok": True, "processed": processed, "skipped_incomplete": skipped_incomplete, "interrupted": interrupted, "reports": reports,
+         "notified": [Path(r["run"]).name for r in notified]})
 
 
 # --------------------------------------------------------------------------- register
@@ -952,6 +993,7 @@ def register(sub) -> None:
     p.add_argument("--sidecar-wait", type=float, default=20.0, help="seconds to wait for chunk-NNNN.json before going on without it")
     p.add_argument("--skip-whisper", action="store_true")
     p.add_argument("--no-report", action="store_true", help="do not start the headless chunk reporter (config report.enabled false does the same)")
+    p.add_argument("--no-notify", action="store_true", help="no ready alert (config notify.enabled false or CC_NOTIFY=0 does the same)")
     p.set_defaults(func=cmd_watch)
 
     p = sub.add_parser("status", help="stages per chunk of a run, free space; without --run: the list of runs")

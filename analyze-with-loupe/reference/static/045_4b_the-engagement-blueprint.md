@@ -29,7 +29,8 @@ scaled to the video's minutes; a number the spec does not give is the agent's, w
 - **The promise.** One sentence: what the viewer gets and the question they must have answered. The title, the thumbnail and the first
   line make that one promise (§12) and the end keeps it; nothing is promised that the video does not deliver.
 - **The hook** (the references' first seconds, §2): a precise moment, the stake or twist that makes it matter now, the promise.
-- **The cast.** *You*: the viewer's stand-in, one anchor. A **thread**: a real person or small group, sourced, whose own small arc runs
+- **The cast.** *You*: the viewer's stand-in, one anchor. A **thread**: a real person or small group, sourced (where the subject has no person: a creature, a thing or a place with its own small
+  arc, such as a ship, a house or a river), whose own small arc runs
   beside "you" and shows up at least three times, spaced (planted early, complicated in the middle, paid near the peak): the references'
   recurring character (12 of 16) and side characters with small arcs (the F3 videos). The **crowd**: what the others do and why (real,
   sourced behaviour: who helps, who gives up, who copies whom). The **force** against them (the clock, the cold, the unknown). A private
@@ -88,5 +89,11 @@ documentary stays calm: the ambition sharpens it, it never turns it into clickba
 factual-history or explainer video (§2, F1, F2) maps its own family's beats (the turning points; the steps and the held-back surprise)
 in the same places.
 
+**Any niche.** The blueprint is made for every niche the user locks; nothing in it names one. Where the niche is factual its slots are
+filled from research (§3: people's sourced accounts, turning points, specifics). Where it is invented (fiction, a children's tale) there is
+nothing to research: the cast, the thread and the human layer are the writer's own characters and moments, built the same way, with §11,
+§11b and the references' register unchanged. A subject with no person at all (a mechanism, a place, an object) takes its thread from the
+thing itself, a stand-in framed as one, or a question kept open and a running number.
+
 **Never:** a blueprint written after the script; a script with a beat the blueprint does not hold; a late "engagement pass" that
-rewrites a finished story; a fact kept for being true that does no job; an invented person to attach the viewer to.
+rewrites a finished story; a fact kept for being true that does no job; an invented person told as if real.

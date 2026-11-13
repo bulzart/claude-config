@@ -54,6 +54,13 @@
     "claude_bin": "",
     "setting_sources": "project"
   },
+  "notify": {
+    "enabled": true,
+    "persistent": true,
+    "sound": true,
+    "idle_minutes": 15,
+    "catchup_hours": 24
+  },
   "agents": {
     "research_max": 4,
     "scan_max": 6,

@@ -21,9 +21,9 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 1 | What Static mines from the references (A3) | `010_1_what-static-mines-from-the-refer.md` | 12.7 |
 | 2 | The Static card and the spec (A3–A4) | `020_2_the-static-card-and-the-spec-a3.md` | 13.5 |
 | 2b | More than one format (A5, S3, S4, X10) | `025_2b_more-than-one-format.md` | 4.5 |
-| 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 4.5 |
+| 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 4.9 |
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 10.7 |
-| 4b | The engagement blueprint (A6s: designed before any line is written) | `045_4b_the-engagement-blueprint.md` | 9.7 |
+| 4b | The engagement blueprint (A6s: designed before any line is written) | `045_4b_the-engagement-blueprint.md` | 10.4 |
 | 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 27.2 |
 | 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 30.7 |
 | 7 | The edit (S4) | `070_7_the-edit-s4.md` | 14.4 |

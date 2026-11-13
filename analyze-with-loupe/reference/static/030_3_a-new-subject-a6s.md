@@ -18,7 +18,9 @@ and the style are carried, the subject is new; the copy test applies: one yes ma
   is built from it and not patched afterwards: the real people involved and what they did, chose and said (each account with its source
   and, when it is a quote, its exact words), the turning points and their hours, a contrast or an irony, the behaviour of the crowd
   (who helped, who gave up, who copied whom), numbers a viewer can picture, and the specific details that make a scene (the half bag of
-  nuts, the board game). A subject whose sources hold no people, no stake and no turn is not in the pool.
+  nuts, the board game). A subject whose sources hold nothing to attach to (no person, creature, thing or place with a stake and a turn) scores low on story
+  material and is picked only when its other scores carry it; its plan then leans on a stand-in thread, open questions and the running number
+  (§4b). In a niche of invented stories there is nothing to research: the writer builds the same slots from their own characters and moments.
 - **Characters decide the kind of subject** when the assets hold them (read who they are from their photos and descriptions):
   - a known real person: real, sourced facts (their rise, a turning point, a lesser-known story), told the references' way;
   - an ordinary role (a farmer, a nurse, a soldier): a story, an anecdote or a drama of their world that fits the references' telling;
@@ -37,7 +39,7 @@ and the style are carried, the subject is new; the copy test applies: one yes ma
   curiosity gap, fit to the spec (above all to the niche's references, §1 "The run's niche within the set"), freshness (not already everywhere in the niche), image-ability (stills can carry it), **story
   material** (people to attach to, a stake, a turn, vivid specifics, a question worth arguing: §4b) and for facts
   source strength; ties go to stop power. Each candidate: a title (a working title in English, for the user to read: the video's own
-  title is written in its language at the plan, §12), its approach (above), its hook line, **its thread** (the real person or group
-  who would run beside "you", or "none yet"), why it fits (one line), and for facts its
+  title is written in its language at the plan, §12), its approach (above), its hook line, **its thread** (the real person or group, or
+  the creature, thing or place, that would run beside "you", or "none yet"), why it fits (one line), and for facts its
   sources' count.
 

@@ -22,7 +22,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from cc_common import (chunk_dir, fail, ffprobe_facts, find_tool, fmt_hms, load_chunks, out, parse_time, read_json, rec_to_chunk,
+from cc_common import (NO_WINDOW, chunk_dir, fail, ffprobe_facts, find_tool, fmt_hms, load_chunks, out, parse_time, read_json, rec_to_chunk,
                        resolve_run, run_paths, say, split_across_chunks)
 
 KINDS = ("digits", "text", "auto")
@@ -130,7 +130,7 @@ class PieceStream:
         cmd = [find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-ss", f"{offset:.3f}", "-t", f"{dur:.3f}", "-i", str(chunk_file), "-an", "-sn", "-dn"]
         cmd += (["-filter_complex", vf, "-map", "[out]"] if complex_graph else ["-vf", vf])
         cmd += ["-f", "rawvideo", "-pix_fmt", pix_fmt, "pipe:1"]
-        self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=self.err, stdin=subprocess.DEVNULL, bufsize=1 << 20)
+        self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=self.err, stdin=subprocess.DEVNULL, bufsize=1 << 20, creationflags=NO_WINDOW)
 
     def frames(self):
         np = _np()

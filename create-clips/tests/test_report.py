@@ -74,7 +74,7 @@ def main():
         shim = tmp / "fake-claude.cmd"
         shim.write_text(f'@echo off\r\n"{PY}" "{FAKE}" %*\r\n', encoding="utf-8")
         args_file, count_file = tmp / "args.json", tmp / "count.txt"
-        base = {"CC_RUNS_ROOT": str(tmp / "runs"), "CC_CLAUDE_BIN": str(shim), "FAKE_CLAUDE_ARGS_FILE": str(args_file), "FAKE_CLAUDE_COUNT_FILE": str(count_file)}
+        base = {"CC_RUNS_ROOT": str(tmp / "runs"), "CC_CLAUDE_BIN": str(shim), "FAKE_CLAUDE_ARGS_FILE": str(args_file), "FAKE_CLAUDE_COUNT_FILE": str(count_file), "CC_NOTIFY": "0"}
         run = tmp / "runs" / "20261113-000000-rtest"
         (run / "00-inventory").mkdir(parents=True)
         (run / "state.json").write_text('{"schema":"cc/1","channel":"rtest","session":"20261113-000000-rtest"}', encoding="utf-8")

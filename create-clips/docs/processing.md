@@ -64,6 +64,23 @@ opens the chunk's overview and dense sheets, `timeline.md`, `transcript.txt`, `d
 - **The claude CLI:** the real `claude.exe` must come first on PATH (the npm `claude.cmd` shim cuts a command at 8191 characters; with a shim the brief travels on stdin instead). `doctor` shows which one it found; config `report.claude_bin` or env `CC_CLAUDE_BIN` names it. A rate limit stops a chunk's attempts at once and is reported as `rate limited`.
 - **Restart the watcher after an update:** a running watcher keeps the code it started with (stop it and start `watch`, or restart the `CreateClipsWatcher` task, to pick up the reporter).
 
+## The ready alert (a Windows notification when a run can go to /create-clips)
+
+When a recording has ended and every chunk of it is processed and reported, the watcher shows **one Windows notification**: "Create-clips is ready: <channel>", how many chunks were processed (and which failed), how much stream that is,
+whether the reports are in, and the exact command, `Run: /create-clips <the full run folder path>`. It is a reminder toast: it stays on screen until you dismiss it (Dismiss button) and plays the reminder sound.
+- **Ready means (facts only, nothing judges the footage):** the recorder wrote its end into `session.json` (you stopped it, the stream ended, the size limit or the disk guard hit ...) or nothing has arrived for `notify.idle_minutes` (15: a recorder that died cannot write its end);
+  no chunk file of the session waits in the inbox and the recorder's own chunk count (`session.json -> chunks`) is accounted for; no chunk is pending or being processed; every chunk report is made or has failed for good (when the reporter is on).
+  A chunk that failed does not hold the alert back: the alert names it and its title says "with problems"; when nothing could be processed it says "nothing usable" and does not offer the command. An end the user did not ask for (low disk, size limit, stalled, Chrome restarted) is named in the text.
+- **Once per state:** `state.json -> ready_notified` holds a fingerprint of the chunks and reports that were announced. A watcher restart repeats nothing; a later chunk of the same run is a new state and gets a new alert.
+  At start, and once a minute, the watcher also takes up a run whose recording ended within `notify.catchup_hours` (24) and that nobody was told about (the watcher was off, or was restarted in between).
+- **How it is shown:** `scripts\notify.ps1` (Windows PowerShell 5.1, started hidden) sends a toast under the registered app id of Windows PowerShell, so nothing is registered or changed on this PC; the banner reads "Windows PowerShell".
+  If notifications are switched off for that app or for Windows, a topmost message box with the same text appears instead (`doctor` says which applies). The toast is sent from a background thread: a slow notification never holds up a chunk.
+  Focus assist / Do Not Disturb keep a toast in the notification centre without the banner and the sound.
+- **Commands:** `notify --run RUN` (check; send when ready and not yet announced; `--dry-run` says what it would send and records nothing; `--force` sends anyway: a run that is not ready gets a clearly marked "NOT ready" note that is not recorded as an announcement), `notify --test` (a test notification),
+  `status --run RUN` (the line `ready for /create-clips: yes` or `not ready yet: <why>`, and `ready` in the JSON), `doctor` (the "Windows notification" line).
+- **Settings:** `config.json -> notify` (`enabled`, `persistent` = stays until dismissed, `sound`, `idle_minutes`, `catchup_hours`); `watch --no-notify` or env `CC_NOTIFY=0` turns the automatic alerts off (the `notify` command still sends when asked).
+  Tests set `CC_NOTIFY_BIN` / `CC_NOTIFY_BOX_CMD` to the stand-ins in `tests\fake_notify.py`, so no test shows anything. Like the reporter, the alert needs a restarted watcher after an update.
+
 ## Reading a sheet
 
 Header: `channel | C0012 | rec 0:33:00.00-0:33:22.50 | sheet 1/8 | 0.75 s per frame`. Left to right, top to bottom. Under every frame its OWN time:
@@ -87,7 +104,8 @@ All of them cross chunk boundaries. `sheet` also deletes its frames right after 
 `frames` (interval 0.75, 5 x 6, 240 x 135, jpeg 86), `audio` (window 0.5, `keep_wav`, loud jump 10 dB), `whisper` (model medium, device cpu, compute int8,
 language en, beam 5, VAD on, `initial_prompt`), `min_free_gb` (3). Optional keys read with defaults: `audio.loud_jump_floor_db` (-45), `frames.chat_bar_ref` (20),
 `whisper.cuda_compute_type` (float16), `whisper.cpu_threads`. `report` (enabled, model `claude-haiku-5-5`, effort high, parallel 2, timeout_s 420, max_turns 30, max_attempts 2, claude_bin, setting_sources project).
-Env: `CC_RUNS_ROOT`, `CC_INBOX`, `CC_WHISPER_MODEL`, `CC_WHISPER_DEVICE`, `CC_MIN_FREE_GB`, `CC_REPORT` (0 = no reports), `CC_CLAUDE_BIN`, `CC_REPORT_PARALLEL`, `CC_REPORT_TIMEOUT`.
+`notify` (enabled, persistent, sound, idle_minutes 15, catchup_hours 24).
+Env: `CC_RUNS_ROOT`, `CC_INBOX`, `CC_WHISPER_MODEL`, `CC_WHISPER_DEVICE`, `CC_MIN_FREE_GB`, `CC_REPORT` (0 = no reports), `CC_CLAUDE_BIN`, `CC_REPORT_PARALLEL`, `CC_REPORT_TIMEOUT`, `CC_NOTIFY` (0 = no automatic alerts), `CC_NOTIFY_IDLE_MIN`.
 Per run: `new-run --language auto --prompt "names, terms"` (kept in `state.json -> settings.whisper_override`).
 
 ## Speed (this PC, a 180 s 1280x720 60 fps chunk)
@@ -108,4 +126,9 @@ whole chunk about 134 s. Opt-in GPU: `whisper.device: "cuda"` (it borrows the CU
 - **Another watcher is running**: one at a time; stop it, or a dead one's lock is replaced at the next start.
 - **Stop the transcript for now**: `--skip-whisper` (status `pending`); a later `ingest` without it makes the transcript.
 - **Chunks on another drive than the runs**: moved by copy through a `.part` file (needs the room).
+- **Terminal windows pop up while chunks are processed**: a program started without `creationflags=NO_WINDOW` from the `pythonw.exe` watcher gets its own console, which Windows Terminal shows as a window per call (seen 2026-11-13: one per ffmpeg call).
+  Every script starts its programs through `cc_common.run_cmd` (or with the flag); `tests\test_nowindow.py` fails when one does not. A running watcher keeps the code it started with: restart it after an update.
+- **No notification appears when a run is done**: `doctor` shows the "Windows notification" line (Settings > System > Notifications: "Windows PowerShell" must not be off); `notify --test` sends one; `status --run RUN` says whether the run is ready and why not;
+  `state.json -> ready_notified` says whether and how it was announced (`toast`, `messagebox`, `failed`); `logs\background.log` has the `[notify]` lines. A run is announced once per state: `notify --run RUN --force` shows it again.
+- **Chunk files do not appear in the inbox although the recording runs**: Chrome's "Ask where to save each file before downloading" (Settings > Downloads) is on in that profile: every file waits for a Save As click. Turn it off.
 - **No reports appear**: `doctor` shows the claude CLI line (found or not); `status` shows the `report:` column and `logs\report-Cnnnn.log` the last attempts (turns, cost, files opened, errors). `report --run RUN` makes the missing ones now.

@@ -50,8 +50,8 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    alone. **The research collects story material beside the claims** (static §3, §4b; the user, 2026-11-13: "not just facts"): the
    real people and what they did, chose and said (with their sources and exact quotes), the turning points, contrasts, the crowd's
    behaviour, numbers a viewer can picture, the specific details of a scene; each candidate is scored on it, and one with no people,
-   no stake and no turn is out. Write `RUN/20-analysis/static-subjects.md` (each candidate: title, approach, hook line, its thread
-   (who would run beside "you", or none yet), why it fits, the scores, the sources).
+   creatures, things or places to follow scores low and is picked only when its other scores carry it. Write `RUN/20-analysis/static-subjects.md` (each candidate: title, approach, hook line, its thread
+   (who or what would run beside "you", or none yet), why it fits, the scores, the sources).
 3. **Five voice samples** (static §6; the user, 2026-11-06: "the agent should suggest 5 versions and also the file path for each of them
    so the user can hear them and pick the one they like to be the voice of the videos"), only when the run has no narrator yet (the
    locks' `voice` empty) or a clone picks a new one (`state.json → static.new_voice` true): five candidates from the spec's voice

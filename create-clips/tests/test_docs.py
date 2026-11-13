@@ -91,7 +91,7 @@ def main():
     parser = ccmod.build_parser()
     sub = next(a for a in parser._actions if getattr(a, "choices", None))
     cmds = set(sub.choices)
-    check({"report", "hud-read", "hud-scan", "region-series", "hud-states", "hud-slice", "units-merge", "units-verdict", "units-check", "units-table", "capcut-compose", "capcut-finish", "edl-check", "captions"} <= cmds,
+    check({"report", "notify", "hud-read", "hud-scan", "region-series", "hud-states", "hud-slice", "units-merge", "units-verdict", "units-check", "units-table", "capcut-compose", "capcut-finish", "edl-check", "captions"} <= cmds,
           "the game and compose commands are registered in cc.py (" + str(len(cmds)) + " commands)")
     bad_cmd = []
     for d in docs:
@@ -114,6 +114,11 @@ def main():
     rc = cfg.get("report") or {}
     check(rc.get("model") == "claude-haiku-5-5" and rc.get("effort") in ("high", "xhigh", "max") and rc.get("enabled") is True, "the chunk reporter is Haiku 5.5 at high effort or above (never low or medium) in config.json")
     check("scan_model" not in cfg["agents"] and cfg["agents"].get("scan_chunks_game") and cfg["agents"].get("scan_chunks_streamer"), "no agent has a model of its own any more (the analysis batch sizes remain)")
+    nc = cfg.get("notify") or {}
+    check({"enabled", "persistent", "sound", "idle_minutes", "catchup_hours"} <= set(nc) and nc.get("enabled") is True, "config.json has the notify block (the ready alert is on)")
+    check((CC / "scripts" / "notify.ps1").is_file() and (CC / "scripts" / "cc_notify.py").is_file(), "the ready alert's scripts exist (notify.ps1, cc_notify.py)")
+    rd, pd = read(CC / "README.md"), read(CC / "docs" / "processing.md")
+    check("`notify`" in rd and "The ready alert" in pd and "creationflags=NO_WINDOW" in rd, "the README and docs/processing.md describe the ready alert and the no-console-window rule")
     check((CC / "reference" / "reporter.md").is_file() and "decide nothing" in read(CC / "reference" / "reporter.md").lower().replace("**", ""), "the reporter's brief exists and says it decides nothing")
     gm = [read(p).lower() for p in (SKILLS / "cc-build-game" / "SKILL.md", SKILLS / "cc-plan-game" / "SKILL.md", CC / "reference" / "game-edit-craft.md")]
     check(all("never a short" in t or "no shorts" in t for t in gm) and all("sound effect" in t for t in gm), "game mode's plan, build skill and edit craft all say: no shorts and no sound effects")

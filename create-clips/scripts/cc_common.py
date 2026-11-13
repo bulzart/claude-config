@@ -161,10 +161,16 @@ def find_tool(name: str) -> str:
     return name
 
 
+# A console program (ffmpeg, ffprobe, powershell ...) started by a process that has no console of its own, such as the pythonw.exe watcher of the logon task,
+# is given a NEW console, and with Windows Terminal as the default terminal that is a visible window per call. Every child this toolkit starts carries this
+# flag: the console stays hidden and nothing opens. (0 where the flag does not exist; tests/test_nowindow.py checks that no call site forgets it.)
+NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
 def run_cmd(args: list, timeout: float = 600, cwd: str | None = None) -> subprocess.CompletedProcess:
-    """Run a command without a shell; text output, never raises on a non-zero exit."""
+    """Run a command without a shell; text output, never raises on a non-zero exit. The child's console window stays hidden (NO_WINDOW)."""
     return subprocess.run([str(a) for a in args], capture_output=True, text=True, encoding="utf-8", errors="replace",
-                          timeout=timeout, cwd=cwd)
+                          timeout=timeout, cwd=cwd, creationflags=NO_WINDOW)
 
 
 def ffprobe_facts(path) -> dict:
