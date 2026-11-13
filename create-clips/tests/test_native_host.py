@@ -62,7 +62,7 @@ def main():
             {"id": "C0001", "index": 1, "status": "done", "processed_at": "2026-11-12T11:20:00", "seconds": {"audio": 1, "sheets": 4, "transcript": 100}},
             {"id": "C0002", "index": 2, "status": "processing"}]), encoding="utf-8")
         (inbox / "testch" / session / "chunk-0003.mp4").write_bytes(b"x")
-        env = {**os.environ, "CC_RUNS_ROOT": str(runs), "CC_INBOX": str(inbox)}
+        env = {**os.environ, "CC_RUNS_ROOT": str(runs), "CC_INBOX": str(inbox), "CC_REPORT": "0"}      # no real report sessions from the watcher this test starts
         h = Host(env)
         r = h.ask({"id": "1", "type": "hello"})
         check(r.get("ok") and r["id"] == "1" and r["host"] == "create-clips", "hello answered with the host name and the id echoed")

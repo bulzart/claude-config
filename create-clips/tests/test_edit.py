@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -104,6 +105,19 @@ def main():
                   "the composed draft carries the CapCut 9.7 / windows version markers (the empty template), not capcut-cli's bundled 6.5.0 / mac skeleton")
             r = cc("capcut-finish", "--run", run, "--draft", store / "cctest", "--video", "S01", env=env)
             check(r.get("ok"), "capcut-finish ok on the composed draft")
+            meta_p = store / "cctest" / "draft_meta_info.json"
+            meta = json.loads(meta_p.read_text(encoding="utf-8"))
+            pool = [e for g in meta.get("draft_materials", []) for e in g.get("value", [])]
+
+            def pool_exists(e):
+                fp = str(e.get("file_Path") or "")
+                return (Path(fp) if re.match(r"^[A-Za-z]:[\\/]", fp) else (store / "cctest" / fp)).is_file()
+            check(bool(pool) and all(pool_exists(e) for e in pool) and "placeholder" not in meta_p.read_text(encoding="utf-8"),
+                  "every file in the draft's media pool exists and the placeholder is not listed (CapCut shows 'Media lost / Link media' for a missing one): " + str([e.get("extra_info") for e in pool]))
+            cover = store / "cctest" / "draft_cover.jpg"
+            pr = json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=width,height", "-of", "json", str(cover)], capture_output=True, text=True).stdout)["streams"][0]
+            check(cover.stat().st_size != 42155 and abs(pr["width"] / pr["height"] - 1080 / 1920) < 0.02,
+                  f"the project's cover is a frame of the first clip on the canvas's shape ({pr['width']}x{pr['height']}), not the template's 'Template text' tile")
             c = json.loads((store / "cctest" / "draft_content.json").read_text(encoding="utf-8"))
             texts = c["materials"].get("texts", [])
             check(len(texts) == len(json.loads((out / "captions.json").read_text(encoding="utf-8"))["cues"]), "one text per caption cue in the draft")

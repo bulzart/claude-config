@@ -903,6 +903,42 @@ def retarget_media(d: Path, pieces: list, probes: dict) -> dict:
     return {"video_segments_retargeted": done}
 
 
+def clean_media_pool(d: Path) -> list:
+    """`capcut compile` lists the placeholder in the draft's media pool (draft_meta_info.json -> draft_materials), and a template may list media of its own. The files
+    are not there (the placeholder copy is deleted after the clips are pointed at the real chunks), and CapCut shows 'Media lost / Link media' for every pool entry
+    whose file is missing when the project opens. Drop each entry whose file does not exist; the real media are added to the pool by capcut-finish (repair)."""
+    p = d / "draft_meta_info.json"
+    j = read_json(p)
+    if not isinstance(j, dict):
+        return []
+    removed = []
+    for g in j.get("draft_materials") or []:
+        keep = []
+        for e in g.get("value") or []:
+            fp = str(e.get("file_Path") or "")
+            path = Path(fp) if re.match(r"^[A-Za-z]:[\\/]", fp) else (d / fp)
+            if path.is_file():
+                keep.append(e)
+            else:
+                removed.append(str(e.get("extra_info") or fp))
+        g["value"] = keep
+    if removed:
+        write_text(p, json.dumps(j, ensure_ascii=False))
+    return removed
+
+
+def make_cover(d: Path, piece: dict, canvas: dict) -> bool:
+    """The project's thumbnail on CapCut's home screen: a frame of the first clip on the canvas's shape. Without it the template's own cover (a blue 'Template text'
+    tile) would stand for every project until it is opened and saved in CapCut."""
+    w, h = int(canvas["width"]), int(canvas["height"])
+    sc = 540.0 / max(w, h)
+    cw, ch = max(2, int(w * sc) // 2 * 2), max(2, int(h * sc) // 2 * 2)
+    t = float(piece["src_from"]) + min(1.0, float(piece["dur_src"]) / 2)
+    cp = run_cmd([find_tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-ss", f"{t:.3f}", "-i", piece["file"], "-frames:v", "1",
+                  "-vf", f"scale={cw}:{ch}:force_original_aspect_ratio=decrease,pad={cw}:{ch}:(ow-iw)/2:(oh-ih)/2:black", "-q:v", "3", str(d / "draft_cover.jpg")], timeout=120)
+    return cp.returncode == 0 and (d / "draft_cover.jpg").is_file()
+
+
 def cmd_capcut_compose(a):
     """The whole CapCut project in one command (no per-tool calls): resolved.json -> a `capcut compile` spec (main video track, one audio track
     per sound-effect lane) -> the draft in the CapCut drafts store -> the placeholder media replaced by the real chunk files. Then `capcut-finish`."""
@@ -981,8 +1017,11 @@ def cmd_capcut_compose(a):
     except OSError:
         pass
     left = [str(x) for x in (d / "assets").rglob("*") if x.is_file() and x.suffix.lower() in (".mp4", ".mov") and x.stat().st_size > 5_000_000] if (d / "assets").is_dir() else []
+    pool_removed = clean_media_pool(d)
+    cover = bool(pieces) and make_cover(d, pieces[0], canvas)
     out({"ok": res["video_segments_retargeted"] == len(pieces) and not left, "draft": str(d), "name": name, "pieces": len(pieces), "sfx_lanes": len(lanes),
-         "template": str(tmpl) if tmpl else "auto (capcut-cli's own choice)", **res, "big_media_copied_into_the_draft": left, "seconds": round(time.time() - t_start, 1),
+         "template": str(tmpl) if tmpl else "auto (capcut-cli's own choice)", **res, "big_media_copied_into_the_draft": left, "media_pool_entries_dropped": pool_removed, "cover_from_first_clip": cover,
+         "seconds": round(time.time() - t_start, 1),
          "next": f"T capcut-finish --run RUN --draft \"{d}\" --video {a.video}"})
 
 

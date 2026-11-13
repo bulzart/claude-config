@@ -152,7 +152,7 @@ def main():
     runs, inbox, data = tmp / "runs", tmp / "inbox", tmp / "data"
     for d in (runs, inbox, data):
         d.mkdir(parents=True)
-    env = {"CC_RUNS_ROOT": str(runs), "CC_INBOX": str(inbox)}
+    env = {"CC_RUNS_ROOT": str(runs), "CC_INBOX": str(inbox), "CC_REPORT": "0"}          # CC_REPORT=0: the watcher must not start real Haiku report sessions here
     tiny = {**env, "CC_WHISPER_MODEL": "tiny"}
     print(f"test folder {tmp}; reference video: {ref}")
     t_all = time.time()

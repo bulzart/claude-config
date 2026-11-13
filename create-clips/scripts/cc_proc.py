@@ -468,6 +468,15 @@ def _stage_letters(row: dict) -> str:
     return " ".join(f"{s}:{('FAIL' if isinstance(row['stages'].get(s), str) else sym.get(row['stages'].get(s), '--'))}" for s in STAGES)
 
 
+def _report_letter(run: Path, row: dict) -> str:
+    try:
+        from cc_report import report_state
+        st = report_state(run, row)
+    except Exception:  # noqa: BLE001
+        return "report:?"
+    return "report:" + {"done": "ok", "missing": "--", "stale": "STALE", "failed": "FAIL", "running": "run", "n/a": "n/a"}.get(st, st)
+
+
 def cmd_status(a):
     if not a.run:
         root = runs_root()
@@ -484,9 +493,13 @@ def cmd_status(a):
     run = resolve_run(a.run)
     st = load_state(run)
     rows = load_chunks(run)
+    rep_counts = {}
     for r in rows:
+        letter = _report_letter(run, r)
+        if r.get("status") == "done":
+            rep_counts[letter.split(":", 1)[1]] = rep_counts.get(letter.split(":", 1)[1], 0) + 1
         print(f"{r['id']} {r.get('status'):10s} {('%.1f s' % r['duration_s']) if r.get('duration_s') else '-':>9} rec {fmt_hms(r.get('rec_start_s'))} "
-              f"sheets {r.get('sheets')} words {r.get('words')} [{_stage_letters(r)}]" + (f" ERROR {r['error']}" if r.get("error") else "") +
+              f"sheets {r.get('sheets')} words {r.get('words')} [{_stage_letters(r)}] {letter}" + (f" ERROR {r['error']}" if r.get("error") else "") +
               (" STALE-REC" if r.get("stale_rec") else ""))
     newest = max(rows, key=lambda r: r["index"]) if rows else None
     counts = {}
@@ -498,6 +511,8 @@ def cmd_status(a):
          "rec_total_s": round(sum(float(r.get("duration_s") or 0) for r in rows), 1), "newest": newest["id"] if newest else None,
          "newest_status": newest.get("status") if newest else None, "stale_rec": [r["id"] for r in rows if r.get("stale_rec")],
          "failed": [{"chunk": r["id"], "error": r.get("error")} for r in rows if r.get("status") == "failed"],
+         "reports": {"ok": rep_counts.get("ok", 0), "missing": rep_counts.get("--", 0), "stale": rep_counts.get("STALE", 0), "failed": rep_counts.get("FAIL", 0),
+                     "running": rep_counts.get("run", 0)},
          "inbox_waiting": waiting, "free_gb": free_gb(run), "min_free_gb": cfg_get("min_free_gb", 3),
          "claude_stage": st.get("stage"), "next_skill": st.get("next_skill")})
 
@@ -639,6 +654,15 @@ def cmd_doctor(a):
         chk("cuda", True, f"{n} device(s); cuda dll dir {'has cublas64_12.dll' if dll.is_file() else 'missing'}; device in use: {w.get('device', 'cpu')} (opt-in)", hard=False)
     except Exception as e:  # noqa: BLE001
         chk("cuda", False, str(e)[:100], hard=False)
+    try:
+        from cc_report import find_claude, report_cfg
+        rc = report_cfg()
+        path, is_exe = find_claude(rc)
+        chk("claude CLI (chunk reports)", bool(path),
+            (path or "not found: put claude.exe on PATH or set config report.claude_bin") + ("" if (is_exe or not path) else " (a .cmd shim: the reporter's brief then travels on stdin)")
+            + f"; reports {'on' if rc['enabled'] else 'OFF'}: {rc['model']}, effort {rc['effort']}, {rc['parallel']} at a time", hard=False)
+    except Exception as e:  # noqa: BLE001
+        chk("claude CLI (chunk reports)", False, f"{type(e).__name__}: {e}"[:120], hard=False)
     root, inbox = runs_root(), inbox_dir()
     min_free = cfg_get("min_free_gb", 3)
     for name, p in (("runs drive free space", root), ("inbox drive free space", inbox)):
@@ -798,8 +822,20 @@ def cmd_watch(a):
     say(f"[watch] inbox {inbox} -> runs {root} (whisper: {(cfg_get('whisper', {}) or {}).get('model')} on "
         f"{os.environ.get('CC_WHISPER_DEVICE') or (cfg_get('whisper', {}) or {}).get('device')}); Ctrl+C stops")
     interrupted = False
-    last_work, last_sync = time.time(), 0.0
+    last_work, last_sync, last_catch = time.time(), 0.0, 0.0
     idle_unload = float((cfg_get("whisper", {}) or {}).get("idle_unload_s", 600) or 0)
+    reporter, rcfg, touched_runs = None, None, set()
+    try:                                  # the chunk reporter: a headless Haiku session per finished chunk (observations only), started beside the processing
+        from cc_report import Reporter, find_claude, report_cfg
+        rcfg = report_cfg()
+        if rcfg["enabled"] and not a.no_report:
+            if find_claude(rcfg)[0]:
+                reporter = Reporter(rcfg)
+                say(f"[watch] chunk reports: {rcfg['model']} (effort {rcfg['effort']}), {rcfg['parallel']} at a time")
+            else:
+                say("[watch] chunk reports are off: the claude CLI was not found (put claude.exe on PATH, or set config report.claude_bin)")
+    except Exception as e:  # noqa: BLE001
+        say(f"[watch] chunk reports are off: {type(e).__name__}: {e}")
     with WatchLock(root / ".watch.lock") as lock:
         try:
             while True:
@@ -840,8 +876,14 @@ def cmd_watch(a):
                             f"{res.get('seconds')} free {free_gb(run)} GB")
                         if res.get("ok"):
                             refresh_stale(run, limit=1)
+                            if reporter and all((res.get("stages") or {}).get(s) is True for s in ("sheets", "audio", "digest")):
+                                reporter.enqueue(run, res["chunk"])
+                                touched_runs.add(run)
                     last_work = time.time()
                     continue
+                if reporter and touched_runs and time.time() - last_catch > 30:        # a chunk whose report failed, went stale or was never queued is queued again
+                    last_catch = time.time()
+                    reporter.catch_up(touched_runs)
                 waiting = any(s in ("unstable", "waiting-sidecar") for s in states.values())
                 if not waiting:                 # idle: re-make one chunk whose rec start moved, if any
                     did = False
@@ -862,7 +904,21 @@ def cmd_watch(a):
             sync_sessions(inbox, root)                  # a run made during this pass gets its recording info too
         except Exception as e:  # noqa: BLE001
             say(f"[watch] could not sync session.json: {e}")
-    out({"ok": True, "processed": processed, "skipped_incomplete": skipped_incomplete, "interrupted": interrupted})
+    reports = None
+    if reporter:
+        try:
+            if a.once and not interrupted:              # a one-pass run waits for the reports it queued; the long-running watcher never does
+                reporter.catch_up(touched_runs)
+                if reporter.pending():
+                    say(f"[watch] waiting for {reporter.pending()} chunk report(s) to finish")
+                reporter.join()
+        except KeyboardInterrupt:
+            interrupted = True
+        if interrupted:
+            from cc_report import kill_all
+            kill_all()
+        reports = reporter.summary()
+    out({"ok": True, "processed": processed, "skipped_incomplete": skipped_incomplete, "interrupted": interrupted, "reports": reports})
 
 
 # --------------------------------------------------------------------------- register
@@ -895,6 +951,7 @@ def register(sub) -> None:
     p.add_argument("--stable", type=float, default=1.5, help="a file is landed when its size is unchanged for this many seconds")
     p.add_argument("--sidecar-wait", type=float, default=20.0, help="seconds to wait for chunk-NNNN.json before going on without it")
     p.add_argument("--skip-whisper", action="store_true")
+    p.add_argument("--no-report", action="store_true", help="do not start the headless chunk reporter (config report.enabled false does the same)")
     p.set_defaults(func=cmd_watch)
 
     p = sub.add_parser("status", help="stages per chunk of a run, free space; without --run: the list of runs")

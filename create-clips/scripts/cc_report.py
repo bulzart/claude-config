@@ -121,7 +121,7 @@ def build_prompt(run: Path, row: dict, inp: dict, session: str, channel: str, fe
     paths = must_open(inp)
     lines = [f"Report on chunk {cid} of the recording {session} (channel {channel}).",
              f"This chunk covers rec time {r0:.1f} to {r1:.1f} s ({fmt_hms(r0, False)} to {fmt_hms(r1, False)}). Every time in your report is rec time in seconds, as printed in the sheets' cells and in the files.",
-             "Open every one of these files with the Read tool, using exactly these paths:"]
+             "Open every one of these files with the Read tool, all in one step (every Read call at the same time), using exactly these paths:"]
     lines += ["  " + str(p) for p in paths]
     if "transcript" not in inp["files"]:
         lines.append("(This chunk has no transcript: say so under unclear and report only what the pictures and the numbers show.)")
@@ -282,6 +282,8 @@ def clean_report(obj: dict) -> tuple:
     for e in entries("seen_and_heard", ("rec", "what", "evidence")):
         rep["seen_and_heard"].append({"rec": _t(e.get("rec")), "what": _s(e.get("what"), 800), "evidence": [_s(x, 120) for x in _list(e.get("evidence"))]})
     rep["unclear"] = [_s(x, 500) for x in _list(obj.get("unclear")) if _s(x)]
+    for name, key in (("look", "rec_from"), ("sound", "rec_from"), ("speech", "rec_from"), ("chat", "rec_from"), ("seen_and_heard", "rec")):
+        rep[name].sort(key=lambda e: (e.get(key) is None, e.get(key) or 0.0))        # time order, whatever order the session wrote them in
     return rep, {"fields": dropped_fields, "entry_fields": dropped_entries}
 
 
@@ -318,18 +320,21 @@ def render_md(rep: dict) -> str:
         for x in e.get("text") or []:
             bits.append(f"text \"{x['text']}\"" + (f" ({x['where']}" + (f", cells {x['cells']}" if x.get("cells") else "") + ")" if x.get("where") else ""))
         L.append(" | ".join(bits))
+    none = ["- (nothing reported)"]
     L += ["", "## Sound (what the numbers show)"]
-    L += [f"- {tr(e['rec_from'], e['rec_to'])}: {e['what']}" for e in rep.get("sound", [])]
+    L += [f"- {tr(e['rec_from'], e['rec_to'])}: {e['what']}" for e in rep.get("sound", [])] or none
     L += ["", "## Speech (from the transcript)"]
     for e in rep.get("speech", []):
         L.append(f"- {tr(e['rec_from'], e['rec_to'])}: {e['about']}")
         L += [f"  - {fmt_hms(x['rec'], False) if x.get('rec') is not None else '?'} \"{x['text']}\"" for x in e.get("lines") or []]
+    if not rep.get("speech"):
+        L += none
     L += ["", "## Chat"]
-    L += [f"- {tr(e['rec_from'], e['rec_to'])}: {e['what']}" for e in rep.get("chat", [])]
+    L += [f"- {tr(e['rec_from'], e['rec_to'])}: {e['what']}" for e in rep.get("chat", [])] or none
     L += ["", "## Seen and heard (neutral sentences with evidence)"]
-    L += [f"- {e['rec']:.1f} s: {e['what']}" + (f" [{'; '.join(e['evidence'])}]" if e.get("evidence") else "") for e in rep.get("seen_and_heard", []) if e.get("rec") is not None]
+    L += [f"- {e['rec']:.1f} s: {e['what']}" + (f" [{'; '.join(e['evidence'])}]" if e.get("evidence") else "") for e in rep.get("seen_and_heard", []) if e.get("rec") is not None] or none
     L += ["", "## Unclear (could not be read or told)"]
-    L += [f"- {x}" for x in rep.get("unclear", [])]
+    L += [f"- {x}" for x in rep.get("unclear", [])] or none
     if rep.get("warnings"):
         L += ["", "## Format warnings"] + [f"- {w}" for w in rep["warnings"]]
     return "\n".join(L) + "\n"
@@ -358,9 +363,16 @@ def current_report(run: Path, row: dict) -> dict | None:
     return None
 
 
+def eligible(row: dict) -> bool:
+    """A chunk can be reported on once it has its pictures (sheets), its audio numbers and its text views (digest). The transcript is not required: a chunk
+    made with --skip-whisper (or whose speech-to-text failed) is reported without speech, and its report goes stale, and is made again, when the transcript arrives."""
+    st = (row or {}).get("stages") or {}
+    return all(st.get(s) is True for s in ("sheets", "audio", "digest"))
+
+
 def report_state(run: Path, row: dict) -> str:
     """done | stale | running | failed | missing (facts about the files; the watcher and `status` use it)."""
-    if row.get("status") != "done":
+    if not eligible(row):
         return "n/a"
     if current_report(run, row):
         return "done"
@@ -394,8 +406,8 @@ def make_report(run: Path, cid: str, force: bool = False, cfg: dict | None = Non
     row = next((r for r in load_chunks(run) if r["id"] == cid), None)
     if not row:
         return {"ok": False, "chunk": cid, "error": "no such chunk"}
-    if row.get("status") != "done":
-        return {"ok": False, "chunk": cid, "error": f"the chunk is not processed yet (status {row.get('status')})"}
+    if not eligible(row):
+        return {"ok": False, "chunk": cid, "error": "the chunk has no sheets, audio numbers and text views yet (its processing is not finished)"}
     if not force and current_report(run, row):
         return {"ok": True, "chunk": cid, "status": "current", "note": "the report is current"}
     claude, is_exe = find_claude(cfg)
@@ -568,7 +580,7 @@ def cmd_report(a):
     if a.parallel:
         cfg["parallel"] = max(1, int(a.parallel))
     rows = load_chunks(run)
-    done_rows = [r for r in rows if r.get("status") == "done"]
+    done_rows = [r for r in rows if eligible(r)]
     wanted = {c.strip().upper() for part in (a.chunk or []) for c in str(part).split(",") if c.strip()}
     unknown = sorted(wanted - {r["id"] for r in rows})
     force = bool(a.force or a.all)
@@ -592,7 +604,9 @@ def cmd_report(a):
         rep.enqueue(run, r["id"], force=force)
     rep.join()
     s = rep.summary()
-    out({"ok": not s["failed"], "run": str(run), "requested": [r["id"] for r in todo], "reported": s["done"], "failed": s["failed"], "already_current": [r["id"] for r in targets if r not in todo],
+    todo_ids = {r["id"] for r in todo}
+    current = [r["id"] for r in done_rows if r["id"] not in todo_ids and report_state(run, r) == "done"]
+    out({"ok": not s["failed"], "run": str(run), "requested": [r["id"] for r in todo], "reported": s["done"], "failed": s["failed"], "already_current": current,
          "unknown": unknown, "cost_usd": s["cost_usd"], "seconds": round(time.time() - t0, 1), "model": cfg["model"], "parallel": cfg["parallel"]}, 0 if not s["failed"] else 1)
 
 
