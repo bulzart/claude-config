@@ -118,4 +118,4 @@ An ElevenLabs error is reported with its real text (the key never shown). Narrat
 
 ## Hand-off
 
-Return to A9s in `awl-analyze-produce`.
+Tick S2 (the narration, its checks, the image spans, the bed) in `RUN/todo.md` with its result (item 38), then return to A9s in `awl-analyze-produce`.

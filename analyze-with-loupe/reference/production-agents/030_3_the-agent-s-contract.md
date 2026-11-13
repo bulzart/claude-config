@@ -49,7 +49,8 @@
 10. **No questions.** On any blocker, write `result.json` with `"status":"blocked"` and `"blocker"`
    set to one of `permission` | `capcut_running` | `credits` | `failed_twice` | `qc_fix_permission` | `voiceover` | `other`, plus one
    line of detail (`qc_fix_permission` also carries `fix_proposal`, §4). Then stop.
-11. **Final message:** the content of `result.json`, as one JSON line.
+11. **Final message:** the content of `result.json`, as one JSON line, after the video's `RUN/60-outputs/video-NN/todo.md` (command item 38) is current and closed: each item `[x]`, or `[-]` with its reason,
+   or named in the report as open. The agent writes that file when it starts and keeps it as it works (a file has one writer, so parallel agents never share one).
 12. **Record.** Every regenerate reason and every flagged delivery (RESIDUAL FAILURE) is written at once in
    the video's brief as an attempt block (the failed request, the verdict with its numbers and frame paths,
    what the retry changes) and in `result.json`; nothing else is written to the library but the flag record

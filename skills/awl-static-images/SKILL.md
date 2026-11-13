@@ -170,3 +170,6 @@ video's spawn message `format <tag>, images K1-K2` means that format's stills K1
 
 A production agent: invoke Skill `awl-static-edit` once every format's stills are made (a split video's image agent: end with its
 JSON line). The main session (anchors, prompts, intake): return to A9s in `awl-analyze-produce`.
+
+A production agent keeps its `RUN/60-outputs/video-NN/todo.md` (item 38): its stretch's stills by number (`[ ]` until drawn and viewed, `[x]` after, a redraw added as its own item with the reason),
+the edit and the record after them; its final JSON line says what is done and what is not.

@@ -177,6 +177,9 @@ languages, and their scripts, image plans, titles and thumbnails keep the run's 
 - Engagement is thought through first (static §4b; the user, 2026-11-13), before the first line, prompt or caption; you judge your own
   work as you go and are skeptical of it, and fresh reviewers with none of your context are only for when you want a second opinion
   (static §13); nothing is made larger than its source, and a stand-in is framed as one (the truth rule).
+- The plan's steps are items in `RUN/todo.md` (item 38; the user, 2026-11-13: tasks and to-dos to keep what is done and what is next): when A6s starts, add its steps and, per video, the design,
+  the research it needs, the script, the image plan, the bed, the check before any generation and the standing fresh read; mark each as you work (`[~]` while at it, `[x]` and its result when done,
+  `[-]` and the reason when dropped), set the `Next:` line before a long step, and mirror the items in the session's task list when it has task tools. A fresh reviewer is never given the to-do.
 - Nothing religious or superstitious in a subject, a line, a prompt, a title or a thumbnail (static §11).
 - Nothing indecent, gory or distressing in a subject, a line, a prompt, a title or a thumbnail (static §11b; the user, 2026-11-09).
 - No Higgsfield and no Loupe in Static: no model menu, `T prompt-template`, `T qc-brief` or `T qc-consult`.
@@ -198,6 +201,6 @@ languages, and their scripts, image plans, titles and thumbnails keep the run's 
 
 ## Hand-off
 
-`T state --run RUN set stage=planned next_skill=awl-analyze-produce`, then invoke Skill `awl-analyze-produce`.
+`T state --run RUN set stage=planned next_skill=awl-analyze-produce`, tick the plan in `RUN/todo.md` and set its `Next:` line (item 38), then invoke Skill `awl-analyze-produce`.
 
-After a compaction, or on `resume`, re-invoke the skill named in `RUN/state.json → next_skill`: its text may have been summarised away.
+After a compaction, or on `resume`, read `RUN/todo.md` first (item 38), then re-invoke the skill named in `RUN/state.json → next_skill`: its text may have been summarised away.

@@ -76,6 +76,6 @@ A production agent does not touch `state.json → videos[]` or `next_step`: it w
 
 ## Hand-off
 
-- Production agent: write `result.json`, `readme-row.md`, the deliverables, then send the one-line JSON as the final message and stop.
+- Production agent: write `result.json`, `readme-row.md`, the deliverables, close the video's `todo.md` (item 38: every item `[x]` or `[-]` with its reason, `Next:` saying what the main session does), then send the one-line JSON as the final message and stop.
 - Edit Mode: more videos: `T state --run RUN set video=<NN+1> next_skill=awl-edit` and continue with E7 in `awl-edit`. No more videos, or the user stops: `T state --run RUN set stage=edited next_skill=awl-wrapup`, then invoke Skill `awl-wrapup`.
 - Analyze Mode main session: continue A9b in `awl-analyze-produce`.

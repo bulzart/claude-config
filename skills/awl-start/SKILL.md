@@ -228,6 +228,10 @@ Only these section files for this phase, nothing else unless a step below says s
    included; the router's "One run per session"):
    - `T new-run --mode <analyze|edit> --source "<refs folder | video paths…>" [--assets "<path>" "<path>" …] [--examples "<folder>"]` (Free, requirement only: no `--source`);
    - keep `RUN` from the JSON;
+   - write `RUN/todo.md` (contract item 38, the user, 2026-11-13: tasks and to-dos so that what is done and what comes next is never only in a conversation): a first line `# Run to-do: <run id> (kept by the main session; one writer)`, a
+     `Next:` line, an `Updated:` line, the marks (`[ ]` not started, `[~]` in progress, `[x]` done, `[-]` dropped with its reason), then every phase still ahead as checklist items (a Static run: the start answers, the references'
+     analysis, A6s's steps with each video's standing fresh read, S2, S3's stretches, the bed, S4 and X10, the wrap-up); make the session's tasks from them when it has task tools (TaskCreate, TaskUpdate); each later
+     phase adds its own items when it starts and the hand-off ticks the finished one;
    - store the locked model (step 4.5);
    - store the audio choice (step 5b): `T state --run RUN set audio_ingest=whisper` or `audio_ingest=frames-only`;
    - store the effort level (step 5d): `T effort --run RUN --level <level>` plus the user's own numbers as its options (`effort.md` §1;
@@ -344,4 +348,4 @@ Item 17's "§3 R-steps" are step A6r (`awl-recreate-plan`).
 - Analyze Mode: `T state --run RUN set stage=started next_skill=awl-analyze-prepare`, then invoke Skill `awl-analyze-prepare`.
 - Edit Mode: `T state --run RUN set stage=started next_skill=awl-edit`, then invoke Skill `awl-edit`.
 
-After a compaction, or on `resume`, re-invoke the skill named in `RUN/state.json → next_skill`: its text may have been summarised away.
+After a compaction, or on `resume`, read `RUN/todo.md` first (item 38), then re-invoke the skill named in `RUN/state.json → next_skill`: its text may have been summarised away.

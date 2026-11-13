@@ -41,8 +41,20 @@ def main():
     else:
         todo = (f"This run has no `next_skill` (it predates the skills layout): take the phase from `stage` / `next_step` "
                 f"(`{st.get('next_step', '?')}`) with the map in the command's resume section.")
+    todo_note = ""
+    todo_file = p.parent / "todo.md"        # the run's to-do (command item 38): what is done and what is next
+    if todo_file.is_file():
+        nxt_line = ""
+        try:
+            for ln in todo_file.read_text(encoding="utf-8").splitlines()[:15]:
+                if ln.startswith("Next:"):
+                    nxt_line = " " + ln.strip()[:320]
+                    break
+        except OSError:
+            pass
+        todo_note = f" Read the run's to-do `{todo_file}` first (what is done and what is next).{nxt_line}"
     note = (f"{command} run `{p.parent.name}` is in progress ({st.get('mode', '?')} mode, {where}; last change "
-            f"{datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M')}). {todo} Read `{p}` and the ledger for the exact point reached; "
+            f"{datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M')}).{todo_note} {todo} Read `{p}` and the ledger for the exact point reached; "
             f"if this session is not working on that run, ignore this note.")
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": note}}))
 

@@ -128,4 +128,4 @@ Then invoke Skill `awl-record`.
 
 ## Hand-off
 
-Invoke Skill `awl-record` (X10).
+Tick the edit's items in the video's `todo.md` (item 38), then invoke Skill `awl-record` (X10).

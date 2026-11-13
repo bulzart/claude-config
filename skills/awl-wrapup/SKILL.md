@@ -159,6 +159,8 @@ upscale. It runs only on the user's yes, never on its own, and never before the 
     agents** write a regenerate reason or a flagged delivery in the video's brief (an attempt block with the
     failed request, the verdict and what changed) and in `result.json` (`reference/production-agents.md` §3
     item 12); nothing else is written to the library but the Higgsfield flag record of item 23.
+38. **The to-do is checked at the close** (the user, 2026-11-13): before the report, read `RUN/todo.md` and every video's `todo.md` (item 38): each item is `[x]`, or `[-]` with its reason, or named in the
+    report as open, so nothing that was planned is silently missing; then set the run's `Next:` line to what the user decides (the feedback question, an open choice) or to "done".
 
 ## Never (this phase)
 

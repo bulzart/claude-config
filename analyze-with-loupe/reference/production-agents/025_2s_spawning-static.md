@@ -126,5 +126,8 @@ Hard rules:
   a zoom aimed at a spot, the captions' size and band (the plan's `by_format.<tag>`).
 - The YouTube thumbnail: `T image generate --run <RUN> --video NN --thumbnail --size <the plan's thumbnail.size> --prompt-file …`
   (static §12); the title: `<RUN>/deliverables/video-NN-title.txt` at X10.
+- Your to-do (command item 38; the user, 2026-11-13: tasks and to-do lists to keep what is done and what is next): when you start, write your steps for this video into `<RUN>/60-outputs/video-NN/todo.md`
+  (`[ ]` not started, `[~]` in progress, `[x]` done with its result in a few words, `[-]` dropped with its reason; a `Next:` line on top), keep it current as you work and before any long wait (a
+  stretch of stills, a build), add new work (a redraw, a fix) as it appears, and close it before your final message; mirror it in your task tools if your session has them. The file is yours alone.
 - Your final message is the one JSON line awl-record (X10) ends with.
 ```

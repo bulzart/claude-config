@@ -23,6 +23,9 @@ The context of a run is its scarcest resource, so nothing is loaded before its s
 - **Section files.** Every long document (the references, the Higgsfield guide, every model guide) is an index file plus a folder of section files; the section numbers (`§4b.1c`,
   `§2.14`, `guide §3.14`) are unchanged. A skill reads the sections it names, never a whole document.
 - **Production agents** get a contract that invokes the per-video skills (`awl-inputs`, `awl-submit`, `awl-postprocess`, `awl-qc`, `awl-record`); they never read the command file.
+- **Task lists and a to-do file** (item 38, the user, 2026-11-13): every run keeps `RUN/todo.md` (the main session) and every production agent `RUN/60-outputs/video-NN/todo.md` (one file, one writer), a markdown
+  checklist (`[ ]` `[~]` `[x]` `[-]`, a `Next:` line on top, full paths, results in a few words) read first on a resume or after a compaction, beside the session's task list when it has task tools. A record, never a
+  gate: no script reads it and a fresh reviewer is never given it.
 
 ```
 analyze-with-loupe/

@@ -15,14 +15,14 @@ Only these section files for this phase, nothing else unless a step below says s
 
 - production-agents §1: `AWL/reference/production-agents/010_1_prepared-by-this-session-before.md` (1.7 KB)
 - production-agents §2: `AWL/reference/production-agents/020_2_spawning.md` (17.5 KB)
-- production-agents §3: `AWL/reference/production-agents/030_3_the-agent-s-contract.md` (8.6 KB)
+- production-agents §3: `AWL/reference/production-agents/030_3_the-agent-s-contract.md` (8.9 KB)
 - production-agents §5: `AWL/reference/production-agents/050_5_this-session-as-agents-report.md` (2.3 KB)
 - higgsfield-mcp §1: `AWL/higgsfield/higgsfield-mcp/010_1_connection-and-conventions.md` (1.5 KB)
 - `models_explore {action:"get", model_id}` once (A8.2)
 - *an own voiceover (`state.json → voiceover.enabled` true; item 31; the takes in X1, a `voiceover` blocker):*
   - voiceover §4: `AWL/reference/voiceover/040_4_generating-and-recording-a-take.md` (3.7 KB)
 - *Static (item 36): production-agents §1, §3 and §5 above, and §2s in place of §2, the Higgsfield section and `models_explore`:*
-  - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (13.1 KB)
+  - production-agents §2s: `AWL/reference/production-agents/025_2s_spawning-static.md` (14.5 KB)
 
 ### A8. Load the locked model's documentation
 **Static: no A8** (no video model; item 36): go to A9s.
@@ -74,7 +74,9 @@ Plan everything before production, in allocation order, **without asking for con
    (`state.json → memes`; item 32).
 
 ### A9s. Static: prepare every video (this session; item 36, in place of A9)
-At the start: `T state --run RUN set stage=producing next_skill=awl-analyze-produce`. In order, without asking:
+At the start: `T state --run RUN set stage=producing next_skill=awl-analyze-produce`, and add the production items to `RUN/todo.md` (item 38): per video S2, S3 (its stretches by image number, naming the
+stills to draw and to redraw), the bed, S4 and X10, each with its files by full path; mirror them in the session's tasks when it has task tools, and update both before every long wait (a recording, a
+stretch, an agent) and as each agent reports. In order, without asking:
 1. **S2 for every video**, one at a time: invoke Skill `awl-static-sound` (the narration, its words and checks, the image spans; the
    beds after the last narration).
 2. **Images by the API or by FLUX 3 Klein** (`static_images=api|klein`): the characters' anchors once (Skill `awl-static-images`, its
@@ -122,7 +124,10 @@ videos only (their numbers from `T static subjects`); the videos already in `sta
     finishes.
   - Each agent runs X3 (its own inputs) → X7 → X8 → X9 → X10 for its video, ending with its CapCut
     project, and returns one JSON line. It runs X5 again for any request it changes.
+  - Each spawn message names the agent's own to-do, `RUN/60-outputs/video-NN/todo.md` (item 38): the agent writes its steps into it when it starts, keeps it current (`[ ]`, `[~]`, `[x]`, `[-]` with
+    the reason), and its report says what is done, what is not and what comes next; one file, one writer, so parallel agents never share one.
 - **As each agent reports:**
+  - tick the video's items in `RUN/todo.md` from its report and its own `todo.md`, set `Next:`, and add what the report leaves open (a redraw, a blocker, a flag);
   - read its `60-outputs/video-NN/result.json`;
   - record it (`T state --run RUN append videos='<json>'`);
   - check the brief: a `qc` that says RESIDUAL FAILURE or regenerated has an attempt block in the
