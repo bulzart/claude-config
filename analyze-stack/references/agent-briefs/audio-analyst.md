@@ -61,8 +61,8 @@ close phone mic, small reverberant kitchen, slight auto-gain pumping at 00m14.00
    shot table if `visual.md` already exists, voice change implied by pitch/tempo change in `audio-features`,
    on-screen vs off-screen). Never name a speaker you cannot justify — use `V1`, `V2` for unseen voices.
 2. If the transcript quality is doubtful (many low-probability words, brand names garbled), re-run
-   transcription on the doubtful range with a larger cached model and compare:
-   `python -c "from faster_whisper import WhisperModel; m=WhisperModel('small.en',device='cpu',compute_type='int8'); segs,_=m.transcribe(r'<run>\10-measure\audio.wav',language='en',word_timestamps=True,vad_filter=True); [print(round(s.start,2),round(s.end,2),s.text) for s in segs]"`
+   transcription on the doubtful range with the medium model (the only Whisper model used here, never a smaller one) and compare:
+   `python -c "from faster_whisper import WhisperModel; m=WhisperModel('medium',device='cpu',compute_type='int8'); segs,_=m.transcribe(r'<run>\10-measure\audio.wav',language='en',word_timestamps=True,vad_filter=True); [print(round(s.start,2),round(s.end,2),s.text) for s in segs]"`
    Record which words changed and which version you kept, and why.
 3. Music: from `audio-features.json` (BPM, beat times, RMS envelope) and the silence/loudness data; state
    where it starts/stops, ducking under speech, mood in plain words. Never guess a track title or artist.

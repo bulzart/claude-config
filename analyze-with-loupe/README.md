@@ -450,7 +450,7 @@ agent's always-loaded text grew by about 4 % (4.7 KB of 112 KB), the main sessio
 
 ## Tooling requirements (this machine)
 - FFmpeg / ffprobe 9.x (winget Gyan.FFmpeg).
-- Python 3.12 with Pillow, NumPy and requests; faster-whisper (models cached: small, base, tiny) and
+- Python 3.12 with Pillow, NumPy and requests; faster-whisper (the `medium` model cached; always medium, never a smaller one) and
   rapidocr-onnxruntime are optional but used.
 - The Higgsfield MCP server `higgsfield` (OAuth via `/mcp`); the lipsync method uses its `sync_so` model (Sync Lipsync 3), which the model menu never lists.
 - For an own voiceover (item 31): the ElevenLabs MCP server `elevenlabs` (the local `elevenlabs-mcp` through `uvx`, user scope, `ELEVENLABS_API_KEY` in its

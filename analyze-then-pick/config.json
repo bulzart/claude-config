@@ -3,7 +3,7 @@
   "atp_home": "C:/Users/Bulzart/.claude/analyze-then-pick",
   "python": "C:/Users/Bulzart/AppData/Local/Programs/Python/Python312/python.exe",
   "runs_root": "C:/Users/Bulzart/.claude/analyze-then-pick/runs",
-  "whisper_model": "small",
+  "whisper_model": "medium",
   "tools": {},
   "output": {
     "aspect_ratio": "9:16",

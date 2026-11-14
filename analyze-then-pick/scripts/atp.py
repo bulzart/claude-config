@@ -751,7 +751,7 @@ def audio_ingest_of(run_dir: Path) -> str:
     return v
 
 
-def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str = "auto") -> dict:
+def transcribe(wav: str, workdir: Path, model_name: str = "medium", language: str = "auto") -> dict:
     res = {"engine": None, "has_speech": False, "segments": []}
     if os.environ.get("ATP_TRANSCRIBE_STUB"):           # tests: no model is downloaded or run; the shape of a real answer
         res.update({"engine": "stub", "model": "stub", "language": "en", "language_probability": 1.0,
@@ -762,7 +762,7 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
     try:
         from faster_whisper import WhisperModel  # type: ignore
         model = None
-        for name in [model_name] + [m for m in ("small", "base", "tiny") if m != model_name]:
+        for name in [model_name]:  # always the model asked for, never a smaller one (the user, 2026-11-14: Whisper medium, strictly)
             try:
                 model = WhisperModel(name, device="cpu", compute_type="int8", local_files_only=True)
                 res["model"] = name
@@ -770,7 +770,7 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
             except Exception:
                 continue
         if model is None:
-            raise RuntimeError("no cached faster-whisper model")
+            raise RuntimeError(f"the faster-whisper model {model_name!r} could not be loaded from the cache (there is no fallback to a smaller model)")
         segs, info = model.transcribe(wav, language=None if language == "auto" else language,
                                       word_timestamps=True, vad_filter=True, beam_size=5)
         for s in segs:
@@ -783,7 +783,7 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
     except Exception as e:  # fallback: ffmpeg's built-in whisper.cpp filter
         res["faster_whisper_error"] = str(e)[:300]
         model_file = None
-        for cand in ("ggml-base.en.bin", "ggml-small.bin", "ggml-base.bin", "ggml-tiny.en.bin"):
+        for cand in ("ggml-medium.bin",):  # always the model asked for, never a smaller one (the user, 2026-11-14: Whisper medium, strictly)
             p = Path.home() / ".cache" / "whisper-cpp" / cand
             if p.exists():
                 model_file = p
@@ -949,7 +949,7 @@ def second_timeline(dur: float, shots: list, cuts: list, peaks: list, statics: l
 # --------------------------------------------------------------------------- prep-video
 
 def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, dense_fps: float = 10.0,
-               static_threshold: float = 2.5, whisper_model: str = "small", language: str = "auto",
+               static_threshold: float = 2.5, whisper_model: str = "medium", language: str = "auto",
                audio_ingest: str = None, do_ocr: bool = True, ocr_budget: int = 12,
                max_frames: int = 1800, hook_s: float = 3.0) -> dict:
     t0 = time.time()
@@ -4893,7 +4893,7 @@ def main():
         p.add_argument("--static-threshold", type=float, default=cfg_get("analysis.static_threshold", 2.5),
                        help="mean abs grey difference (0-255) below which a frame counts as a static duplicate; 0 disables thinning")
         p.add_argument("--max-frames", type=int, default=cfg_get("analysis.max_baseline_frames", 1800))
-        p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"))
+        p.add_argument("--whisper-model", default=cfg_get("whisper_model", "medium"))
         p.add_argument("--language", default="auto")
         p.add_argument("--no-ocr", action="store_true")
         p.add_argument("--ocr-frames", type=int, default=cfg_get("analysis.ocr_frames", 12))
@@ -4997,7 +4997,7 @@ def main():
     p.add_argument("--audio-ingest", choices=list(AUDIO_INGEST), help="without --run: the choice --from-speech must honour")
     p.add_argument("--script", help="intended spoken wording (forces correct text onto ASR timing)")
     p.add_argument("--script-file"); p.add_argument("--words-per-caption", type=int, default=3)
-    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small")); p.add_argument("--language", default="auto")
+    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "medium")); p.add_argument("--language", default="auto")
     p.add_argument("--crf", type=int, default=18); p.set_defaults(fn=cmd_captions)
 
     p = sp.add_parser("trim"); p.add_argument("--video", required=True); p.add_argument("--out", required=True)

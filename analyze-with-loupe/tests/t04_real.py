@@ -1,5 +1,5 @@
 """Real data, read-only on the sources: the user's reference folder, a real guardrails PDF, the real Loupe library (qc-brief, no model call) and
-one real clip through faster-whisper (the cached small model). Everything the toolkit writes goes to a temp library copy (AWL_HOME); nothing
+one real clip through faster-whisper (the cached medium model, always). Everything the toolkit writes goes to a temp library copy (AWL_HOME); nothing
 under the real runs/ or Loupe's data is written. Opt-in: `python tests/run_all.py --real`, or run this file. With AWL_TEST_LIVE_KEEPER=1 it
 also makes ONE real qc-consult and ONE real plan-hints (a few cents): the keeper is asked about a can that shrinks after a cut."""
 import json
@@ -33,7 +33,7 @@ if V10.is_file():
     s = js["seams"][0]
     check(s["luma_max"] > 230 and s["luma_min"] < 110 and s["diff_max"] > 15, f"V10 at 7.52 s: the profile shows the flash (luma {s['luma_min']}-{s['luma_max']}, max frame difference {s['diff_max']})")
 
-# --- one real clip through faster-whisper (the cached small model), both modes
+# --- one real clip through faster-whisper (the cached medium model, always), both modes
 clips = sorted(p for p in REFS.glob("*.mp4") if p.stat().st_size > 0)
 clip = V10 if V10.is_file() else (clips[0] if clips else None)
 if clip:

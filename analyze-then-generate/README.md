@@ -135,7 +135,7 @@ Build prompt for the app: `Documents/prompts/loupe.txt`; build prompt for this l
 
 ## Tooling requirements (this machine)
 - FFmpeg / ffprobe 9.x (winget Gyan.FFmpeg).
-- Python 3.12 with Pillow, NumPy and requests; faster-whisper (models cached: small, base, tiny) and
+- Python 3.12 with Pillow, NumPy and requests; faster-whisper (the `medium` model cached; always medium, never a smaller one) and
   rapidocr-onnxruntime are optional but used.
 - The Higgsfield MCP server `higgsfield` (OAuth via `/mcp`).
 - CapCut desktop (9.x), the `capcut` MCP server (installed with analyze-stack:

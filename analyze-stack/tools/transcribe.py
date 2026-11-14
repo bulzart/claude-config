@@ -1,13 +1,13 @@
 """transcribe.py - Stage 1: speech transcription with word timestamps -> 10-measure\\transcript.json / .srt / .txt
 
-Usage: python transcribe.py --run-dir <run> [--model small] [--language auto] [--engine faster-whisper|ffmpeg]
+Usage: python transcribe.py --run-dir <run> [--model medium] [--language auto] [--engine faster-whisper|ffmpeg]
                             [--beam-size 5] [--no-vad] [--quiet]
 
 Engines:
-  faster-whisper (default): CPU int8, VAD filter, word timestamps + probabilities. Models `small`, `small.en`, `base`
-                            are cached in the default HF cache (C:\\Users\\Bulzart\\.cache\\huggingface\\hub).
-  ffmpeg:                   ffmpeg's built-in whisper.cpp filter with the ggml models in C:\\Users\\Bulzart\\.cache\\whisper-cpp\\
-                            (tiny.en, base.en). Segment timestamps only (no words). Python-free fallback.
+  faster-whisper (default): CPU int8, VAD filter, word timestamps + probabilities. The model is `medium`, always (the user, 2026-11-14: strictly
+                            Whisper medium for anything; never a smaller one), cached in the default HF cache (C:\\Users\\Bulzart\\.cache\\huggingface\\hub).
+  ffmpeg:                   ffmpeg's built-in whisper.cpp filter with the ggml model in C:\\Users\\Bulzart\\.cache\\whisper-cpp\\
+                            (ggml-medium.bin only: no smaller substitute). Segment timestamps only (no words). Python-free fallback.
 
 transcript.json: {engine, model, language, language_probability, has_speech, segments:[{id,start,end,text,words:[{word,start,end,probability}],
                   avg_logprob, no_speech_prob}], n_segments, n_words, speech_s, wpm_speech_only, wpm_whole_video, ...}
@@ -27,8 +27,7 @@ sys.dont_write_bytecode = True  # keep tools\ free of __pycache__ (only the run 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402
 
-GGML = {"tiny": "ggml-tiny.en.bin", "tiny.en": "ggml-tiny.en.bin", "base": "ggml-base.en.bin", "base.en": "ggml-base.en.bin",
-        "small": "ggml-small.en.bin", "small.en": "ggml-small.en.bin"}
+GGML = {"medium": "ggml-medium.bin"}      # medium only: no smaller model is ever substituted
 
 
 def write_srt(path: Path, segments: list[dict]) -> None:
@@ -86,14 +85,10 @@ def parse_srt(text: str) -> list[dict]:
 
 
 def run_ffmpeg_whisper(audio: Path, model: str, language: str | None, mdir: Path, log) -> dict:
-    name = GGML.get(model, GGML["base"])
+    name = GGML["medium"]
     mpath = common.WHISPER_CPP_DIR / name
     if not mpath.exists():
-        alt = common.WHISPER_CPP_DIR / "ggml-base.en.bin"
-        log.warn(f"{name} not in {common.WHISPER_CPP_DIR}; using {alt.name}")
-        mpath = alt
-    if not mpath.exists():
-        raise RuntimeError(f"no ggml model in {common.WHISPER_CPP_DIR} (download ggml-base.en.bin from huggingface ggerganov/whisper.cpp)")
+        raise RuntimeError(f"{name} is not in {common.WHISPER_CPP_DIR}: the ffmpeg engine reads the medium model only, with no smaller substitute (download it from huggingface ggerganov/whisper.cpp)")
     esc = str(mpath).replace("\\", "/").replace(":", "\\:")
     dest = "transcript-ffmpeg.srt"
     (mdir / dest).unlink(missing_ok=True)
@@ -113,7 +108,7 @@ def run_ffmpeg_whisper(audio: Path, model: str, language: str | None, mdir: Path
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="speech transcription with word timestamps")
     common.add_std_args(ap)
-    ap.add_argument("--model", default="small", help="faster-whisper model (small | small.en | base | tiny); ffmpeg engine: tiny | base")
+    ap.add_argument("--model", default="medium", help="the Whisper model: medium, always (the user, 2026-11-14); a smaller one is never the default and never a fallback")
     ap.add_argument("--language", default="auto", help="ISO code (en) or auto")
     ap.add_argument("--engine", default="faster-whisper", choices=["faster-whisper", "ffmpeg"])
     ap.add_argument("--beam-size", type=int, default=5)

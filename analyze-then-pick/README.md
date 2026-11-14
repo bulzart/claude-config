@@ -86,8 +86,8 @@ Higgsfield generation tools: saves a flag-like answer to Loupe as a capture the 
 passes). Build prompt for the app: `Documents/prompts/loupe.txt`.
 
 ## Audio ingest (contract item 24)
-At the start the user chooses, once per run, whether the videos' audio is processed as text: **Whisper speech-to-text** (faster-whisper `small`, int8 on the CPU, about real time per
-video plus about 8 s of model load; the transcript is written once per video as `10-media/<V>/transcript.json` and `.txt` and feeds the cards, the sync anchors of spoken lines, the
+At the start the user chooses, once per run, whether the videos' audio is processed as text: **Whisper speech-to-text** (faster-whisper `medium` always, never a smaller model, int8 on the CPU, about half the video's length per video on this PC
+plus the model load; the transcript is written once per video as `10-media/<V>/transcript.json` and `.txt` and feeds the cards, the sync anchors of spoken lines, the
 caption timing and the sound profile's speech share) or **frames only** (no speech-to-text, no transcript file; every speech field of every card, plan and brief says `audio not
 ingested`, never `no speech`: what was said is unknown, not absent). The answer is `state.json → audio_ingest` (`whisper` | `frames-only`) and the only source of the choice: no
 script or skill picks a default, `T prep-all` stops without it, `T prep-video` takes `--audio-ingest`, `T captions --from-speech` refuses in a frames-only run. Whatever needs the
@@ -130,7 +130,7 @@ audio file itself (the original audio restored under the picture, loudness and s
 
 ## Tooling requirements (this machine)
 - FFmpeg / ffprobe 9.x (winget Gyan.FFmpeg).
-- Python 3.12 with Pillow, NumPy and requests; faster-whisper (models cached: small, base, tiny) and
+- Python 3.12 with Pillow, NumPy and requests; faster-whisper (the `medium` model cached; always medium, never a smaller one) and
   rapidocr-onnxruntime are optional but used.
 - The Higgsfield MCP server `higgsfield` (OAuth via `/mcp`).
 - CapCut desktop (9.x), the `capcut` MCP server (installed with analyze-stack:

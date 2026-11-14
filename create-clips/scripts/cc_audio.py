@@ -180,7 +180,7 @@ class Transcriber:
             self._prepare_cuda()
         from faster_whisper import WhisperModel  # type: ignore
         asked = str(self.cfg.get("model") or "medium")
-        names = [asked] + [m for m in ("small", "base", "tiny") if m != asked]
+        names = [asked]                     # ALWAYS the model asked for (medium), never a smaller one: no silent downgrade (the user, 2026-11-14)
         last_err = None
         threads = int(self.cfg.get("cpu_threads") or 0)
         workers = max(1, int(self.cfg.get("parallel") or _WORKERS))       # transcriptions that may run at the same time (default: as many as the watcher has processors)
@@ -204,7 +204,7 @@ class Transcriber:
                 except Exception as e:  # noqa: BLE001
                     last_err = e
                     continue
-        raise RuntimeError(f"no faster-whisper model could be loaded ({str(last_err)[:300]})")
+        raise RuntimeError(f"the faster-whisper model {asked!r} could not be loaded ({str(last_err)[:300]}); there is no fallback to a smaller model: fix the cache or the memory and run the chunk again")
 
     def transcribe(self, wav_path, rec_start_s: float, duration_s: float | None, language: str | None = None) -> dict:
         self.load()

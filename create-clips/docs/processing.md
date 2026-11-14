@@ -138,7 +138,7 @@ whole chunk about 134 s. Opt-in GPU: `whisper.device: "cuda"` (it borrows the CU
 - **`refused: free space`**: below `min_free_gb` on the runs drive; free space (chunks are big), the watcher retries every 30 s.
 - **A chunk shows `failed`**: `status --run RUN` shows which stage; the reason is in `logs\ingest-Cnnnn.log`. Fix it, then `ingest --run RUN --chunk RUN\10-media\Cnnnn\chunk.mp4`
   (finished stages are skipped; `--force` redoes all). A corrupt file fails at `probe` and is moved into its chunk folder, never retried by the watcher.
-- **Whisper cannot load**: `doctor` says whether the model is cached (`Systran/faster-whisper-medium`); it falls back to small/base/tiny and records `model_fallback`.
+- **Whisper cannot load**: `doctor` says whether the model is cached (`Systran/faster-whisper-medium`). The model is `medium`, always: there is NO fallback to a smaller one (the user, 2026-11-14), so the chunk's `transcript` stage fails with the reason, `status` shows it, and the chunk is run again after the cache or the memory is fixed.
   Keep `av<19` (PyAV 19 breaks faster-whisper 1.2.1).
 - **Chunk numbers arrive out of order**: rec starts are recomputed; chunks made with an old rec start are flagged `stale_rec` and re-made (sheets and text views, no Whisper) automatically by a free processor.
 - **Chunks are not finished in number order**: with two processors that is normal (the live one starts on the newest chunk, the backlog one on the oldest); `status` and the rec times are right at every moment. `watch --workers 1` goes back to one at a time.

@@ -898,7 +898,7 @@ def _effort_clamp(key: str, value):
     return v, None
 
 
-def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str = "auto") -> dict:
+def transcribe(wav: str, workdir: Path, model_name: str = "medium", language: str = "auto") -> dict:
     res = {"engine": None, "has_speech": False, "segments": []}
     if os.environ.get("AWL_TRANSCRIBE_STUB"):           # tests: no model is downloaded or run; the shape of a real answer
         res.update({"engine": "stub", "model": "stub", "language": "en", "language_probability": 1.0,
@@ -909,7 +909,7 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
     try:
         from faster_whisper import WhisperModel  # type: ignore
         model = None
-        for name in [model_name] + [m for m in ("small", "base", "tiny") if m != model_name]:
+        for name in [model_name]:  # always the model asked for, never a smaller one (the user, 2026-11-14: Whisper medium, strictly)
             try:
                 model = WhisperModel(name, device="cpu", compute_type="int8", local_files_only=True)
                 res["model"] = name
@@ -919,7 +919,7 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
             except Exception:
                 continue
         if model is None:
-            raise RuntimeError("no cached faster-whisper model")
+            raise RuntimeError(f"the faster-whisper model {model_name!r} could not be loaded from the cache (there is no fallback to a smaller model)")
         segs, info = model.transcribe(wav, language=None if language == "auto" else language,
                                       word_timestamps=True, vad_filter=True, beam_size=5)
         for s in segs:
@@ -932,7 +932,7 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
     except Exception as e:  # fallback: ffmpeg's built-in whisper.cpp filter
         res["faster_whisper_error"] = str(e)[:300]
         model_file = None
-        for cand in ("ggml-base.en.bin", "ggml-small.bin", "ggml-base.bin", "ggml-tiny.en.bin"):
+        for cand in ("ggml-medium.bin",):  # always the model asked for, never a smaller one (the user, 2026-11-14: Whisper medium, strictly)
             p = Path.home() / ".cache" / "whisper-cpp" / cand
             if p.exists():
                 model_file = p
@@ -1094,7 +1094,7 @@ def second_timeline(dur: float, shots: list, cuts: list, peaks: list, statics: l
 # --------------------------------------------------------------------------- prep-video
 
 def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, dense_fps: float = 10.0,
-               static_threshold: float = 2.5, whisper_model: str = "small", language: str = "auto",
+               static_threshold: float = 2.5, whisper_model: str = "medium", language: str = "auto",
                audio_ingest: str = None, do_ocr: bool = True, ocr_budget: int = 12,
                max_frames: int = 1800, hook_s: float = 3.0, peaks_max: int = 8, extras: bool = True) -> dict:
     t0 = time.time()
@@ -11061,7 +11061,7 @@ def _measure_pace(wav: Path, lines: list, spans: dict, lang: str, workdir: Path,
         wav16 = work / "pace-16k.wav"
         run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(wav), "-ac", "1", "-ar", "16000", str(wav16)],
             check=True, timeout=600)
-        tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), _whisper_lang(lang, info))
+        tr = transcribe(str(wav16), work, cfg_get("whisper_model", "medium"), _whisper_lang(lang, info))
         segs = tr.get("segments") or []
     res = _pace_of(segs, unit)
     res["_words"] = [w for s in segs for w in s.get("words") or [] if w.get("s") is not None and w.get("e") is not None]
@@ -11621,7 +11621,7 @@ def _el_measure_file(f: Path, lang: str, work: Path) -> dict:
     run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(f), "-ac", "1", "-ar", "16000", str(wav16)], check=True,
         timeout=600)
     info = _lang_info(lang, soft=True) if str(lang or "").strip() else {}
-    tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), _whisper_lang(lang, info or None))
+    tr = transcribe(str(wav16), work, cfg_get("whisper_model", "medium"), _whisper_lang(lang, info or None))
     segs = tr.get("segments") or []
     m = dict(_pace_of(segs, info.get("unit") or "words"))
     m["heard"] = " ".join(str(s.get("text") or "").strip() for s in segs)[:400]
@@ -12125,7 +12125,7 @@ def _el_heard_line_times(wav: Path, lines_text: dict, line_order: list, lang: st
     wav16 = work / (wav.stem + "-16k.wav")
     run([find_tool("ffmpeg"), "-nostdin", "-y", "-loglevel", "error", "-i", str(wav), "-ac", "1", "-ar", "16000", str(wav16)], check=True,
         timeout=600)
-    tr = transcribe(str(wav16), work, cfg_get("whisper_model", "small"), _whisper_lang(lang, info))
+    tr = transcribe(str(wav16), work, cfg_get("whisper_model", "medium"), _whisper_lang(lang, info))
     heard = [w for s in tr.get("segments") or [] for w in s.get("words") or []]
     timed = align_script(heard, " ".join(lines_text[n] for n in line_order), info) if heard else []
     res, i = {}, 0
@@ -13030,7 +13030,7 @@ def _music_measure(a):
          f"[1:a]aresample=48000,{stereo(bed)}volume={gain},atrim=0:{total:.3f},apad=whole_dur={total:.3f}[b];"
          f"[0:a][b]amix=inputs=2:normalize=0:duration=first[o]", "-map", "[o]", str(mixed)], check=True, timeout=600)
     lang = _whisper_lang(side.get("language"))   # the video's language as speech-to-text knows it ('auto' when the narration names none)
-    wm = cfg_get("whisper_model", "small")       # the model narration-words reads with, so its words can stand in below
+    wm = cfg_get("whisper_model", "medium")       # the model narration-words reads with, so its words can stand in below
     tr_bed = transcribe(str(bed), work, wm, lang)
     w_alone, w_n, w_from = _heard_words(tr_bed), None, "transcribed now"
     wj = rd / "30-assets" / "narration" / f"video-{nn}.words.json"
@@ -17458,7 +17458,7 @@ def main():
         p.add_argument("--static-threshold", type=float, default=cfg_get("analysis.static_threshold", 2.5),
                        help="mean abs grey difference (0-255) below which a frame counts as a static duplicate; 0 disables thinning")
         p.add_argument("--max-frames", type=int, default=cfg_get("analysis.max_baseline_frames", 1800))
-        p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"))
+        p.add_argument("--whisper-model", default=cfg_get("whisper_model", "medium"))
         p.add_argument("--language", default="auto")
         p.add_argument("--no-ocr", action="store_true")
         p.add_argument("--ocr-frames", type=int, default=cfg_get("analysis.ocr_frames", 12))
@@ -17861,7 +17861,7 @@ def main():
     p.add_argument("--words", type=int, help="words per caption (default config static.captions.words); for a language written without "
                                              "spaces the letters per caption (default config static.captions.chars_unspaced)")
     p.add_argument("--min-match", type=float, default=0.85, help="list the lines whose heard share of their script words is below this")
-    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"))
+    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "medium"))
     p.set_defaults(fn=cmd_narration_words)
 
     p = sp.add_parser("music", help="Static's bed under every video (contract item 36): check (the setup) | make (ACE-Step 1.5 in its own "

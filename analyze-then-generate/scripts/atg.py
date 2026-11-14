@@ -780,12 +780,12 @@ def audio_analysis(video: str, info: dict, workdir: Path) -> dict:
     return res
 
 
-def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str = "auto", vad: bool = True) -> dict:
+def transcribe(wav: str, workdir: Path, model_name: str = "medium", language: str = "auto", vad: bool = True) -> dict:
     res = {"engine": None, "has_speech": False, "segments": []}
     try:
         from faster_whisper import WhisperModel  # type: ignore
         model = None
-        for name in [model_name] + [m for m in ("small", "base", "tiny") if m != model_name]:
+        for name in [model_name]:  # always the model asked for, never a smaller one (the user, 2026-11-14: Whisper medium, strictly)
             try:
                 model = WhisperModel(name, device="cpu", compute_type="int8", local_files_only=True)
                 res["model"] = name
@@ -793,7 +793,7 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
             except Exception:
                 continue
         if model is None:
-            raise RuntimeError("no cached faster-whisper model")
+            raise RuntimeError(f"the faster-whisper model {model_name!r} could not be loaded from the cache (there is no fallback to a smaller model)")
         segs, info = model.transcribe(wav, language=None if language == "auto" else language,
                                       word_timestamps=True, vad_filter=vad, beam_size=5)
         for s in segs:
@@ -806,7 +806,7 @@ def transcribe(wav: str, workdir: Path, model_name: str = "small", language: str
     except Exception as e:  # fallback: ffmpeg's built-in whisper.cpp filter
         res["faster_whisper_error"] = str(e)[:300]
         model_file = None
-        for cand in ("ggml-base.en.bin", "ggml-small.bin", "ggml-base.bin", "ggml-tiny.en.bin"):
+        for cand in ("ggml-medium.bin",):  # always the model asked for, never a smaller one (the user, 2026-11-14: Whisper medium, strictly)
             p = Path.home() / ".cache" / "whisper-cpp" / cand
             if p.exists():
                 model_file = p
@@ -964,7 +964,7 @@ def second_timeline(dur: float, shots: list, cuts: list, peaks: list, statics: l
 # --------------------------------------------------------------------------- prep-video
 
 def prep_video(video: str, odir: Path, vid: str = "V", base_fps: float = 5.0, dense_fps: float = 10.0,
-               static_threshold: float = 2.5, whisper_model: str = "small", language: str = "auto",
+               static_threshold: float = 2.5, whisper_model: str = "medium", language: str = "auto",
                do_transcript: bool = True, do_ocr: bool = True, ocr_budget: int = 12,
                max_frames: int = 1800, hook_s: float = 3.0, vad: bool = True) -> dict:
     t0 = time.time()
@@ -6971,7 +6971,7 @@ def main():
         p.add_argument("--static-threshold", type=float, default=cfg_get("analysis.static_threshold", 2.5),
                        help="mean abs grey difference (0-255) below which a frame counts as a static duplicate; 0 disables thinning")
         p.add_argument("--max-frames", type=int, default=cfg_get("analysis.max_baseline_frames", 1800))
-        p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"))
+        p.add_argument("--whisper-model", default=cfg_get("whisper_model", "medium"))
         p.add_argument("--language", default="auto")
         p.add_argument("--no-transcript", action="store_true")
         p.add_argument("--no-vad", action="store_true", help="transcribe without the voice-activity filter: sung words over music are not dropped, "
@@ -7024,7 +7024,7 @@ def main():
     p.add_argument("--profile", action="store_true", help="also measure the sound design (audio-profile.json) of the videos that lack it")
     p.add_argument("--second-pass", action="store_true", dest="second_pass", help="for a video in which no speech was found, transcribe its audio again WITHOUT the voice filter "
                    "(sung words are not dropped; words may be invented over pure music or a tone) and show the result in the digest; nothing prepared is changed")
-    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small"), help="the model of the second pass (default: the configured one)")
+    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "medium"), help="the model of the second pass (default: the configured one)")
     p.add_argument("--check", action="store_true", help="exit 1 when a transcript is missing, failed or skipped, or when a card lacks its 'Audio context:' and 'Said:' lines; "
                                                          "writes nothing unless --out is given (other agents may be reading the digest)")
     p.add_argument("--cards", action="store_true", help="with --check: every video must also HAVE a card")
@@ -7089,7 +7089,7 @@ def main():
     p.add_argument("--from-speech", action="store_true", help="time captions to the clip's own speech")
     p.add_argument("--script", help="intended spoken wording (forces correct text onto ASR timing)")
     p.add_argument("--script-file"); p.add_argument("--words-per-caption", type=int, default=3)
-    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "small")); p.add_argument("--language", default="auto")
+    p.add_argument("--whisper-model", default=cfg_get("whisper_model", "medium")); p.add_argument("--language", default="auto")
     p.add_argument("--crf", type=int, default=18); p.set_defaults(fn=cmd_captions)
 
     p = sp.add_parser("trim"); p.add_argument("--video", required=True); p.add_argument("--out", required=True)
