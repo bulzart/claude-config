@@ -234,6 +234,16 @@ def main():
     check(all("25 minutes" not in read(p) for p in (SKILLS / "cc-plan-game" / "SKILL.md", SKILLS / "cc-build-game" / "SKILL.md", CC / "reference" / "game-clipping.md")),
           "game mode's plan, build skill and clipping guide carry no 25-minute rule")
 
+    # the user's choice of 2026-11-14 (STREAMER MODE): how much of a stream becomes videos is the agents' judgement and never a target (three hours, 32 minutes or none); nothing included to reach a length
+    check(all(w in pf for w in ("never a target", "three hours", "32 minutes", "no minimum", "not a length to reach")),
+          "portfolio.md: how much of the stream becomes videos is the agents' judgement and never a target (three hours, 32 minutes or none; no minimum, the range is not a length to reach)")
+    check(all(w in sk("cc-plan") for w in ("never a target", "32 minutes", "reach a number of minutes")) and all(w in rt for w in ("three hours", "32 minutes", "reach a number of minutes")) and all(w in readme for w in ("never a target", "32 minutes")),
+          "cc-plan, the router and the README carry the same: no stretch is included only to fill a video or reach a number of minutes")
+    check(all(w in sk("cc-build-long") for w in ("never a number to reach", "only to lengthen it", "only to reach a length")) and all(w in cl for w in ("32-minute video", "three hours of videos", "not a target")),
+          "cc-build-long and the craft sheet: the length is never a number to reach, nothing is kept only to lengthen a video, and a video can be much shorter than the plan hoped")
+    check("none from a dull one" in sk("cc-start") and "hours of videos" in sk("cc-start"),
+          "the Videos question tells the user the agents decide how much of the stream is worth it (hours from a great night, half an hour from a quiet one, none from a dull one)")
+
     # the user's choice of 2026-11-14 (GAME MODE): a recording with 2, 3 or more different matches gives separate videos, each in its own CapCut project, matches never mixed
     gcl, gmn = read(CC / "reference" / "game-clipping.md"), read(CC / "reference" / "game-mining.md")
     check("Different matches are never mixed" in gcl and "its own CapCut project" in gcl and "teams changing on the scoreboard" in gcl and "never two matches in one video or one project" in gcl.lower(),
