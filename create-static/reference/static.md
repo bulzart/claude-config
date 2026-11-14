@@ -25,7 +25,7 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 11.1 |
 | 4b | Engagement: thought through first (A6s) | `045_4b_engagement-thought-first.md` | 5.1 |
 | 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 28.0 |
-| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 30.7 |
+| 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 30.8 |
 | 7 | The edit (S4) | `070_7_the-edit-s4.md` | 15.0 |
 | 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 10.6 |
 | 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 12.2 |

@@ -396,3 +396,58 @@ operable )
 [watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); 2 processors: one takes the newest chunk (live), the others the oldest (backlog); Ctrl+C stops
 [watch] chunk reports: claude-haiku-5-5 (effort high), 2 at a time
 [watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\hasanabi\20261114-203009-hasanabi\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.2 s (180.011 s 1280x720 60.0 fps)
+[C0001] stage audio: ok in 0.7 s (361 windows)
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0001] stage sheets: ok in 11.9 s (240 frames, 8 sheets, leftovers 0)
+[C0002] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\hasanabi\20261114-203009-hasanabi\chunk-0002.mp4
+[C0002] stage move: ok in 0.0 s
+[C0002] stage probe: ok in 0.2 s (78.006 s 1280x720 59.999 fps)
+[C0002] stage audio: ok in 0.4 s (156 windows)
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0002] stage sheets: ok in 4.2 s (104 frames, 4 sheets, leftovers 0)
+[C0002] stage transcript: ok in 452.4 s (146 words, medium on cpu, 452.3 s, language en (detected, now the run's language))
+[C0002] stage digest: ok in 0.1 s (79 seconds)
+[C0002] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 4.2, 'transcript': 452.4, 'digest': 0.1}
+[watch] hasanabi/20261114-203009-hasanabi C0002 (backlog): done in 457.5 s {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 4.2, 'transcript': 452.4, 'digest': 0.1} free 17.13 GB
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\hasanabi\20261114-203428-hasanabi\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.4 s (180.016 s 1920x1080 60.0 fps)
+[C0001] stage audio: ok in 1.4 s (361 windows)
+[C0001] stage sheets: ok in 87.8 s (240 frames, 8 sheets, leftovers 0)
+[report] 20261114-203009-hasanabi C0002: done in 210.7 s, $0.018
+[C0001] stage transcript: ok in 749.5 s (398 words, medium on cpu, 743.6 s, language en (detected))
+[C0001] stage digest: ok in 0.0 s (181 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.7, 'sheets': 11.9, 'transcript': 749.5, 'digest': 0.0}
+[watch] hasanabi/20261114-203009-hasanabi C0001 (live): done in 762.6 s {'move': 0.0, 'probe': 0.2, 'audio': 0.7, 'sheets': 11.9, 'transcript': 749.5, 'digest': 0.0} free 17.19 GB
+[C0003] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\hasanabi\20261114-203428-hasanabi\chunk-0003.mp4
+[C0003] stage move: ok in 0.0 s
+[C0003] stage probe: ok in 0.5 s (6.0 s 1920x1080 60.01 fps)
+[C0003] stage audio: ok in 0.4 s (12 windows)
+[C0003] stage sheets: ok in 1.9 s (8 frames, 1 sheets, leftovers 0)
+[C0003] stage transcript: ok in 87.7 s (4 words, medium on cpu, 87.7 s, language en (detected))
+[C0003] stage digest: ok in 0.1 s (6 seconds)
+[C0003] ingest end: done {'move': 0.0, 'probe': 0.5, 'audio': 0.4, 'sheets': 1.9, 'transcript': 87.7, 'digest': 0.1}
+[watch] hasanabi/20261114-203428-hasanabi C0003 (live): done in 90.9 s {'move': 0.0, 'probe': 0.5, 'audio': 0.4, 'sheets': 1.9, 'transcript': 87.7, 'digest': 0.1} free 17.21 GB
+[C0002] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\hasanabi\20261114-203428-hasanabi\chunk-0002.mp4
+[C0002] stage move: ok in 0.0 s
+[C0002] stage probe: ok in 1.1 s (180.005 s 1920x1080 60.0 fps)
+[C0002] stage audio: ok in 3.8 s (360 windows)
+[report] 20261114-203009-hasanabi C0001: done in 265.0 s, $0.028
+[notify] 20261114-203009-hasanabi: Create-clips is ready: hasanabi -> toast
+[C0002] stage sheets: ok in 215.1 s (240 frames, 8 sheets, leftovers 0)
+[report] 20261114-203428-hasanabi C0003: done in 245.8 s, $0.006
+[C0001] stage transcript: ok in 634.6 s (425 words, medium on cpu, 634.6 s, language en (detected, now the run's language))
+[C0001] stage digest: ok in 0.1 s (181 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.4, 'audio': 1.4, 'sheets': 87.8, 'transcript': 634.6, 'digest': 0.1}
+[watch] hasanabi/20261114-203428-hasanabi C0001 (backlog): done in 724.8 s {'move': 0.0, 'probe': 0.4, 'audio': 1.4, 'sheets': 87.8, 'transcript': 634.6, 'digest': 0.1} free 16.72 GB
+[C0002] stage transcript: ok in 333.8 s (403 words, medium on cpu, 333.8 s, language en (detected))
+[C0002] stage digest: ok in 0.1 s (181 seconds)
+[C0002] ingest end: done {'move': 0.0, 'probe': 1.1, 'audio': 3.8, 'sheets': 215.1, 'transcript': 333.8, 'digest': 0.1}
+[watch] hasanabi/20261114-203428-hasanabi C0002 (live): done in 554.2 s {'move': 0.0, 'probe': 1.1, 'audio': 3.8, 'sheets': 215.1, 'transcript': 333.8, 'digest': 0.1} free 16.73 GB
+[report] 20261114-203428-hasanabi C0001: done in 217.1 s, $0.025
+[report] 20261114-203428-hasanabi C0002: done in 191.1 s, $0.027
+[notify] 20261114-203428-hasanabi: Create-clips is ready: hasanabi -> toast

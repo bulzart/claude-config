@@ -293,6 +293,25 @@ def main():
     check("25 minutes" not in gcl and "25 minutes" not in gmn and "acts.json" not in sk("cc-plan-game"),
           "game mode got the separate-project rule only: no 25-minute range and no streamer-mode acts file")
 
+    # the user's choice of 2026-11-14 (WHISPER): medium for anything, strictly; no smaller model as a default, a fallback or a speed-up; the router, the README and the processing doc say so
+    proc = read(CC / "docs" / "processing.md")
+    check(cfg["whisper"]["model"] == "medium" and "Whisper is `medium`, always" in rt and "Whisper is `medium`, always" in readme and "there is NO fallback to a smaller one" in proc and "tests only" in proc
+          and "never fall back to one and never translate a transcript" in rt,
+          "Whisper is medium, always: the config, the router (rule 15 and the Never list), the README and the processing doc say so, and CC_WHISPER_MODEL is documented as tests only")
+    check("transcribe, never translate" in rt and "rule 15" in rt.split("**The edit is only**")[1].split("Safety")[0] and "mask_terms" in rt.split("15. **Whisper")[1],
+          "the router carries the spoken-language rule (transcribe, never translate; the masks of another language go to captions.mask_terms) and rule 6 points to it")
+
+    # the user's choice of 2026-11-13 (TO-DO LISTS, every pipeline): RUN/todo.md kept by the main session, one to-do per production agent, read first on a resume; a record, never a gate
+    core = rt.split("## Core rules")[1].split("## Never (global)")[0]
+    nums = [int(n) for n in re.findall(r"^(\d+)\. \*\*", core, re.M)]
+    check(nums == list(range(1, len(nums) + 1)) and len(nums) >= 16, f"the router's core rules are numbered 1 to {len(nums)} with no gap or repeat")
+    todo_skills = ("cc-start", "cc-profile", "cc-profile-game", "cc-scan", "cc-scan-game", "cc-plan", "cc-plan-game", "cc-produce", "cc-build-short", "cc-build-long", "cc-build-game", "cc-wrapup")
+    check("Task lists and a to-do file" in rt and "RUN/todo.md" in rt and "never a gate" in rt and "the files are right" in rt and all("todo.md" in sk(s) and "rule 16" in sk(s) for s in todo_skills),
+          "the router has the to-do rule (16) and every cc-* skill names its part of it (write, tick, the agent's own to-do, the check at the close)")
+    check("read `RUN/todo.md` first" in rt and "Write `RUN/todo.md`" in cs and "The to-do is checked at the close" in sk("cc-wrapup") and "its own to-do" in sk("cc-produce")
+          and all("Your own to-do" in sk(s) for s in ("cc-build-short", "cc-build-long", "cc-build-game")) and "todo.md" in readme,
+          "the to-do is written at the start, read first on a resume, kept by each production agent, checked at the close and described in the README")
+
     # the router names both modes' skills
     r = read(ROUTER)
     for s in ("cc-start", "cc-profile", "cc-profile-game", "cc-scan", "cc-scan-game", "cc-plan", "cc-plan-game", "cc-produce", "cc-build-short", "cc-build-long", "cc-build-game", "cc-wrapup"):

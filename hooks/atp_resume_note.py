@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """SessionStart hook (matcher compact|resume): after a compaction or a resume, tell the agent which pipeline run is in
-progress (of /analyze-then-pick, /analyze-then-generate or /analyze-with-loupe, whichever changed last) and which skill to re-invoke.  The skills' text may have been summarised away; the run's state.json still names the next one.
+progress (of /analyze-then-pick, /analyze-then-generate, /analyze-with-loupe, /create-static or /create-clips, whichever changed last) and which skill to re-invoke.  The skills' text may have been summarised away; the run's state.json still names the next one.
 It reads one small file and prints one short note; with no run in progress it prints nothing."""
 import json
 import os
@@ -10,16 +10,32 @@ from datetime import datetime
 from pathlib import Path
 
 CLAUDE = Path(__file__).resolve().parent.parent
-FINISHED = {"done", "redo_delivered", "delivered", "complete", "completed", "closed"}
+FINISHED = {"done", "redo_delivered", "delivered", "complete", "completed", "closed", "wrapped"}
 # (library folder, environment override, slash command)
-LIBS = [("analyze-then-pick", "ATP_HOME", "/analyze-then-pick"), ("analyze-then-generate", "ATG_HOME", "/analyze-then-generate"), ("analyze-with-loupe", "AWL_HOME", "/analyze-with-loupe")]
+LIBS = [("analyze-then-pick", "ATP_HOME", "/analyze-then-pick"), ("analyze-then-generate", "ATG_HOME", "/analyze-then-generate"), ("analyze-with-loupe", "AWL_HOME", "/analyze-with-loupe"),
+        ("create-static", "CS_HOME", "/create-static")]
+
+
+def run_folders():
+    """(the folder that holds the runs, the slash command, whether a run counts only once the command has started it)."""
+    for folder, env, command in LIBS:
+        yield Path(os.environ.get(env) or CLAUDE / folder) / "runs", command, False
+    # /create-clips: its runs are made by the stream processor in the runs_root of its config (CC_RUNS_ROOT in the tests). A run the processor made and the command has not
+    # started has no next_skill: it is a recording, not a run in progress.
+    root = os.environ.get("CC_RUNS_ROOT")
+    if not root:
+        try:
+            root = json.loads((CLAUDE / "create-clips" / "config.json").read_text(encoding="utf-8")).get("runs_root")
+        except (OSError, ValueError):
+            root = None
+    if root:
+        yield Path(root).expanduser(), "/create-clips", True
 
 
 def main():
     best = None
-    for folder, env, command in LIBS:
-        home = Path(os.environ.get(env) or CLAUDE / folder)
-        for p in (home / "runs").glob("*/state.json"):
+    for runs, command, needs_next in run_folders():
+        for p in runs.glob("*/state.json"):
             if p.parent.name.startswith("client-fixes"):
                 continue
             try:
@@ -28,6 +44,8 @@ def main():
             except (OSError, ValueError):
                 continue
             if st.get("stage") in FINISHED or time.time() - t > 36 * 3600:
+                continue
+            if needs_next and not st.get("next_skill"):
                 continue
             if best is None or t > best[0]:
                 best = (t, p, st, command)
@@ -54,7 +72,7 @@ def main():
             pass
         todo_note = f" Read the run's to-do `{todo_file}` first (what is done and what is next).{nxt_line}"
     note = (f"{command} run `{p.parent.name}` is in progress ({st.get('mode', '?')} mode, {where}; last change "
-            f"{datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M')}).{todo_note} {todo} Read `{p}` and the ledger for the exact point reached; "
+            f"{datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M')}).{todo_note} {todo} Read `{p}`{'' if command == '/create-clips' else ' and the ledger'} for the exact point reached; "
             f"if this session is not working on that run, ignore this note.")
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": note}}))
 

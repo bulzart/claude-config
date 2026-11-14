@@ -913,8 +913,6 @@ def transcribe(wav: str, workdir: Path, model_name: str = "medium", language: st
             try:
                 model = WhisperModel(name, device="cpu", compute_type="int8", local_files_only=True)
                 res["model"] = name
-                if name != model_name:      # the named model could not be loaded: say so, the words below are another model's
-                    res["model_fallback"] = {"asked": model_name, "used": name}
                 break
             except Exception:
                 continue

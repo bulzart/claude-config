@@ -42,7 +42,7 @@ user-invocable: false
    - `RUN/20-analysis/lexicon.json`: `{"replace": [["Whisper wrote", "right spelling"], ...]}` for every player, team and caster name and the game's terms, checked against what Whisper really wrote in the transcripts. Only when captions are on (`T state --run RUN get captions` is not `off`); with captions off nothing is typed on the picture, so the pairs have no use (names in the brief and in `posting.md` keep the right spelling);
    - `RUN/20-analysis/game-profile.md` **only** when the library has no page for this game: written from `games/generic.md`'s questions and the research. The library's pages are never edited from a run.
    Where the note found nothing, the brief says it plainly and leans on the broadcast; a wrong name or score in the brief is worse than a gap.
-6. `T state --run RUN set stage=profiled next_skill=cc-scan-game`.
+6. `T state --run RUN set stage=profiled next_skill=cc-scan-game`, then tick the profile items in `RUN/todo.md` and set its `Next:` line (rule 16).
 
 ## Never
 - Never write a research claim without its tag. Never copy a long text from a page: say it in a line and say where.

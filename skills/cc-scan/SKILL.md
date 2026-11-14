@@ -12,7 +12,7 @@ user-invocable: false
 - `CC/reference/moment-mining.md` (the reading order, the block file, the quality bar). Read it whole once; each mining agent reads it too.
 
 ## Steps
-1. **Blocks**: `T blocks --run RUN --chunks N --min-blocks M` with N from `config.json -> agents.scan_chunks_streamer` (10: about 30 minutes per agent; the agents start from the chunk reports, so a block can be large) and M from `config.json -> agents.scan_min_blocks` (2: a short stream still gets at least two blocks, so two agents read it side by side; the block size becomes min(N, ceil(chunks / M))). Record the list in `state.json` (`T state --run RUN set scan.blocks=<n>`).
+1. **Blocks**: `T blocks --run RUN --chunks N --min-blocks M` with N from `config.json -> agents.scan_chunks_streamer` (10: about 30 minutes per agent; the agents start from the chunk reports, so a block can be large) and M from `config.json -> agents.scan_min_blocks` (2: a short stream still gets at least two blocks, so two agents read it side by side; the block size becomes min(N, ceil(chunks / M))). Record the list in `state.json` (`T state --run RUN set scan.blocks=<n>`) and add one item per block to `RUN/todo.md` (rule 16), ticked as each block's file passes the check in step 3.
    The sound-effect catalogue (`T sfx-scan`) was started in `cc-start`; the mining agents do not need it.
 2. **Spawn the mining agents** (general-purpose, **no `model` argument**: they use the model the user picked; one per block, at most `config.json -> agents.scan_max` = 6 at once, the next block as one finishes; never two agents on one block). ALL the blocks of a wave in ONE message. Each agent's contract (it never sees this skill):
    - the run path; its block (the chunk ids, the rec range); its output `RUN/20-analysis/blocks/block-NN.json`;
@@ -32,7 +32,7 @@ user-invocable: false
    `acts` are in time order, inside the block and cover it (a gap between two acts is named); a file without them is sent back once with that named (if it is still missing, the planner reads that block's summary lines and transcripts for the borders instead).
    A bad or empty file: one retry with the problem named; a second failure is recorded in `state.json` (`scan.failed`) and the block is covered by the planner reading its reports and transcripts itself.
    **Reconcile**: where the moments contradict the brief, `clip-criteria.md` or `recon.md` (a wrong name, a wrong topic, a guest who is someone else), correct those files now, with a line saying so at the top: the planner and the builders read them.
-4. `T state --run RUN set stage=scanned next_skill=cc-plan`.
+4. `T state --run RUN set stage=scanned next_skill=cc-plan`, then tick the scan in `RUN/todo.md` and set its `Next:` line (rule 16).
 
 ## Never
 - Never give an agent more than one block or the whole stream. Never let a mining agent decide the videos.

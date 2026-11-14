@@ -17,7 +17,7 @@ applied with judgement.
 | Static thinning | **Pillow + NumPy** (48×48 grey mean absolute difference vs. the last kept frame) | Cheap, deterministic, and never drops below 1 fps |
 | Storyboards | **Pillow** | Labelled chronological contact sheets of **30 frames**, sized to Claude's vision limits (≤ 1.15 MP, ≤ 1568 px long side) so they are read at full size and no cell is shrunk |
 | Audio | **FFmpeg** (16 kHz mono WAV, `ebur128`, `silencedetect`, `astats` RMS per 0.5 s) | Deterministic loudness, silences and energy curve |
-| Speech | **faster-whisper** (the config's `whisper_model`), int8 CPU, local cache, word timestamps + VAD. Fallback: **FFmpeg's built-in whisper.cpp filter** | Word-level timing; runs offline (`local_files_only`) |
+| Speech | **faster-whisper** `medium` (the config's `whisper_model`; always, never a smaller one: the user, 2026-11-14), int8 CPU, local cache, word timestamps + VAD. Fallback: **FFmpeg's built-in whisper.cpp filter** (`ggml-medium.bin`, the same size) | Word-level timing; runs offline (`local_files_only`) |
 | On-screen text sample | **RapidOCR** (onnxruntime CPU) on ~12 frames per video | Extracts the on-screen text with the numbers that describe it (first and last time, frames it was seen in, share of the frames scanned, row of the frame, confidence, spelling facts); no label is put on any text: the agent decides what is a caption, a fixed overlay, a handle, a watermark or noise |
 | Captions and moves of the references | `T edit-profile` | The references' edit layer as numbers at their full frame rate (static §1) |
 | The CapCut project | **capcut-cli** `compile` + the toolkit's one write pass (`T capcut-build`) | One composition per video (item 39, `reference/capcut-build.md`) |

@@ -28,6 +28,7 @@ user-invocable: false
    Each brief states the run's captions setting (`T state --run RUN get captions`). With captions OFF a slur that is spoken stays audible (nothing masks it and no audio is edited): the brief marks every span where one is heard, and the plan cuts around it or drops the span (`CC/reference/safety.md`).
 5. Record the videos with dotted keys (no JSON quoting): `T state --run RUN set videos.S01.kind=short "videos.S01.title=working title" videos.S01.status=planned` for each, and `stage=planned next_skill=cc-produce`.
    (`T state` values are read as JSON when they parse, as a file when written `key=@file.json`, else as text.)
+   Then add one build item per planned video to `RUN/todo.md` (rule 16: its id, its brief and its output folder by full path), tick the plan and set `Next:` to the production.
 6. Give the user nothing to answer: the plan is theirs to read later in `portfolio.md`. One line in the chat says how many shorts and long videos are planned (with the shorts level the user picked; when the shorts are fewer than the level's range, the line says so and why in a few words).
 
 ## Never

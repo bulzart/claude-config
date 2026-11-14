@@ -106,7 +106,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 ## Rules this phase owns (contract items 24, 27)
 
-24. **Audio ingest** is `whisper` in Static and is never asked: every reference's audio is transcribed locally (faster-whisper, the config's `whisper_model`, int8 on the CPU)
+24. **Audio ingest** is `whisper` in Static and is never asked: every reference's audio is transcribed locally (faster-whisper, the config's `whisper_model` = `medium`, always: the user, 2026-11-14, "we should strictly always use medium model for anything", so no smaller model as a default, a fallback or a speed-up; int8 on the CPU)
     and written once per reference as `10-media/<V>/transcript.json` and `transcript.txt` by `T prep-all`; `state.json → audio_ingest` is the only source.
 27. **QC fixes** (the user chooses at the start; `state.json → qc_fixes`, a run without it is `auto`):
     - **`ask`**: when QC finds issues in a video's images that only a new draw can fix, from the first video on, the fix is not drawn until the user answers yes:

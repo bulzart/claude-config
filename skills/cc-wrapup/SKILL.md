@@ -9,7 +9,7 @@ user-invocable: false
 > `CC`, `PY`, `T`, `RUN` as in cc-start.
 
 ## Read now
-- `T state --run RUN get` (the videos and their status) and every `RUN/60-outputs/<id>/report.md`.
+- `T state --run RUN get` (the videos and their status) and every `RUN/60-outputs/<id>/report.md`; for the close also `RUN/todo.md` and every `RUN/60-outputs/<id>/todo.md` (router rule 16).
 
 ## Steps
 1. **Verify**, do not trust: for each `built` video the CapCut project folder named in its report exists, `capcut lint "<draft>"` shows 0 errors, `capcut segments "<draft>" --track video` shows the clip count and the total length the report states (within 0.1 s),
@@ -20,8 +20,9 @@ user-invocable: false
 2. **Write `RUN/deliverables/README.md`**: the stream (channel, date, length, topic, guests; game mode: the game, the event, the teams, the score of each map; the captions setting, on or off, as the user picked it), then one row per video: id, kind, title, length, CapCut project name, source chunks, status (game mode: also its match and game, the rows grouped by match in the order played, and where the recording holds a match only in part, where it begins or ends); then the lists the user may want to read: every blurred span (video, rec range, what, region), every exclamation or touchy item left in, every context span kept in a long video (video, rec range, what it gives and what needs it), how each streamer-mode long video opens and ends (its rec range, and every border its builder reported as not clean, with where that story starts and ends), every word masked in the captions (the `masked` tally in each video's `captions.json`, as typed, with counts; with captions off: every slur still audible), each video's caption look (the box colour, the size and the agent's reason, whether the house font Luckiest Guy was used (`house_font`) and why not if it was not, or "plain look: <why>", or "captions off"), commercial music noted, videos made from a 720p source (soft in a 9:16 crop), what failed and why (a video its builder judged not worth making is listed as dropped, with its reason), what is `ready-to-build` and needs CapCut closed.
    Add each video's `posting.md` text (title, description, hashtags, chapters) under its row.
 3. **Space**: the run's size (`T status --run RUN` and the drive's free space), and the sentence: the chunks stay until the user has exported what they want from CapCut (never deleted by this command).
-4. **Tell the user** (a few lines, plain): how many shorts and long videos (streamer mode: with the shorts level the user picked, and why there are fewer shorts than its range when there are), where the README is, that CapCut must be opened once and each project's first frame checked (a `fill` layout and a `fit-blur` background are not verified by any tool here), the export size and fps per kind, what is waiting (`/create-clips <run> resume`), what failed.
-5. `T state --run RUN set stage=wrapped`.
+4. **The to-do is checked at the close** (router rule 16, the user, 2026-11-13): before the report, read `RUN/todo.md` and every video's `todo.md`: each item is `[x]`, or `[-]` with its reason, or named in the report as open, so nothing that was planned is silently missing; then set the run's `Next:` line to what the user does next (`/create-clips <run> resume` when a project waits on CapCut) or to "done".
+5. **Tell the user** (a few lines, plain): how many shorts and long videos (streamer mode: with the shorts level the user picked, and why there are fewer shorts than its range when there are), where the README is, that CapCut must be opened once and each project's first frame checked (a `fill` layout and a `fit-blur` background are not verified by any tool here), the export size and fps per kind, what is waiting (`/create-clips <run> resume`), what failed.
+6. `T state --run RUN set stage=wrapped`.
 
 ## Never
 - Never claim a project is good because the agent said so; the checks above are the claim.

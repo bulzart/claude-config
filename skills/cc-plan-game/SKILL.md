@@ -36,6 +36,7 @@ user-invocable: false
    Write `RUN/20-analysis/portfolio.md` (the table: id, kind `long`, match, game, working title, length, units, why it exists; the counts; the building order: best first).
    Every span in a brief is re-checked against `avoid.json` (religion and superstition never in; an incidental one is edited around or the unit is dropped) and `sensitive.json` (kept, blurred where seen).
 6. Record the videos with dotted keys: `T state --run RUN set videos.L01.kind=long "videos.L01.title=working title" videos.L01.status=planned "videos.L01.match=<team> vs <team> | <stage>" "videos.L01.game=<map or game>"` for each, then `stage=planned next_skill=cc-produce`.
+   Then add one build item per planned video to `RUN/todo.md` (rule 16: its id, its match and game, its brief and its output folder by full path), tick the plan and set `Next:` to the production.
 7. One line in the chat: how many videos are planned (and for how many matches), and that `RUN/deliverables/rounds.md` will carry the table of every round with its keep level (the user can overrule a skip there). The plan itself is theirs to read later in `portfolio.md`.
 
 ## Never

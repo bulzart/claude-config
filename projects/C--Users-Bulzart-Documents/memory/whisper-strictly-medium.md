@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: efec77d7-2d15-4e76-856d-85333ee657d3
-  modified: 2026-11-14T19:13:45.220Z
+  modified: 2026-11-14T20:06:09.505Z
 ---
 
 User 2026-11-14: "btw we use whisper medium for all our audio processing right, not whisper small? because we should strictly always use medium model for anything". Earlier, 2026-11-11, for AWL/Static: "always medium for narration checks, extracting and analysing no matter the language".
@@ -18,5 +18,7 @@ User 2026-11-14: "btw we use whisper medium for all our audio processing right, 
 - New script, tool or doc that transcribes: default `medium`, no smaller fallback, no "use base/small if it is slow" advice. If medium will not load, stop and report the real error (cache, memory), never another size or engine (same spirit as [[awl-memory-is-a-fact]]).
 - Costs the user accepted by saying "strictly": about 0.7 s of work per second of audio (3x small), a hard failure when the medium model is not cached.
 - Left on purpose (tell the user, ask): the CLI flags `--whisper-model` / `--model` still accept another name if someone types it; `CC_WHISPER_MODEL` (create-clips) exists for the tests, whose fast suite runs a tiny stand-in so it finishes in minutes; historical research notes (`analyze-stack/research`, learning logs) still describe the old small/base/tiny.
+
+**In the commands (2026-11-14, "update createstatic and createclips commands to be in sync"):** /create-static item 24 (+ a Never line, `cs-start`, `cs-prepare`, `pipeline/preprocessing.md`, static §6 and §9, `config.json` whisper_model_note; the dead `model_fallback` code is gone from cs.py and awl.py) and /create-clips router rule 15 (+ the Never line, README, `docs/processing.md`, `tests/test_docs.py`). Both routers also carry the to-do rule now, see [[task-lists-and-todo-files]]. The user said no Loupe checks are needed (Static mode does not use Loupe): the AWL suite's t01/t02/t03/t05 failures seen the same day (a missing judge doc, a TTS stand-in timeout, Loupe start, hook capture) were not investigated.
 
 Related: [[pc-pipeline-tooling]], [[create-clips-spoken-language]], [[atp-audio-ingest-question]].

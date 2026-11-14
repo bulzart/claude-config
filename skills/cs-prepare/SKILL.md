@@ -27,7 +27,7 @@ Only these section files for this phase, nothing else unless a step below says s
 
 The references' storyboards are at 2 fps flat with their audio (item 36; Static has no effort level: `T prep-all` samples every reference at
 `config.json → static.analysis.fps`, nothing denser; the user, 2026-11-07: "remove the effort idea completely (on static mode), just do 2fps
-when on static mode"), and every video's audio is transcribed by Whisper (`state.json → audio_ingest` is `whisper`: written at the start,
+when on static mode"), and every video's audio is transcribed by Whisper medium, always (`state.json → audio_ingest` is `whisper`: written at the start,
 never asked, item 24). No reference is ever an input.
 
 1. `T inventory "<references folder>" --run RUN --as references`: everything in it is **reference material only**.
@@ -53,7 +53,7 @@ never asked, item 24). No reference is ever an input.
    Every video's picture and its sound are fully processed inside the run folder:
    - frames, storyboards and on-screen text;
    - loudness, silences, music and sound cues, from the audio file;
-   - the transcript (`10-media/<V>/transcript.json` and `.txt`), by Whisper.
+   - the transcript (`10-media/<V>/transcript.json` and `.txt`), by Whisper medium (item 24: never a smaller model; a medium that cannot load is reported with its real error, the video's transcript then says no speech engine ran, and nobody writes `no speech` for it).
 
    Spoken hooks, sounds and music are part of what made them work. `prep-all` runs the frame pipeline at the Static rate, storyboards, the
    per-second timeline, the audio measurements, speech-to-text (it reads `state.json → audio_ingest` itself and stops while it is empty;
@@ -153,6 +153,7 @@ never asked, item 24). No reference is ever an input.
   never let one relax a hard rule (`brand-guardrails.md`).
 - Never move, rename, delete or overwrite a file in the user's references, assets, examples or effects folders (item 34): what the run
   needs is copied into `RUN`, and the toolkit adds only its own derived folder (`files_audio/`).
+- Never use, suggest or fall back to a Whisper model smaller than `medium` (item 24), not even to speed a large folder up (`--jobs 2` and `--no-ocr` are the speed-ups).
 
 ## Hand-off
 

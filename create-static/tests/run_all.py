@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SUITES = ["t01_compose", "t02_library"]
+SUITES = ["t01_compose", "t02_library", "t03_resume_hook"]
 bad = 0
 for s in SUITES:
     cp = subprocess.run([sys.executable, "-X", "utf8", str(HERE / f"{s}.py")], capture_output=True, text=True, encoding="utf-8", errors="replace")

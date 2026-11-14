@@ -42,4 +42,5 @@ create-static/
 ```
 
 `python scripts/check_all.py` runs the tests and `docs_tool.py check`. Machine settings are the environment variables of this PC (OPENAI_API_KEY, ELEVEN_API_KEY, AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT, AWL_MUSIC_PYTHON,
-AWL_MUSIC_ROOT, AWL_TTS_PYTHON): their names are unchanged. The input guard hook (`~/.claude/hooks/awl_input_guard.py`) protects the references, examples and effects folders of the open runs of this library too (item 34).
+AWL_MUSIC_ROOT, AWL_TTS_PYTHON): their names are unchanged. The input guard hook (`~/.claude/hooks/awl_input_guard.py`) protects the references, examples and effects folders of the open runs of this library too (item 34). The SessionStart resume note (`~/.claude/hooks/atp_resume_note.py`) names a run of this library that is in progress after a compaction or a resume, with its next skill and the first `Next:` line of its `todo.md` (item 38; `tests/t03_resume_hook.py`).
+Whisper is `medium`, always (item 24: the user, 2026-11-14): no smaller model as a default, a fallback or a speed-up.

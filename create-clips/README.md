@@ -96,6 +96,7 @@ first chunk was processed gets its end recorded too), which `/create-clips` and 
 ```
 RUN\
   state.json                    run facts + per-chunk status (cc.py writes; commands read)
+  todo.md                       the command's run to-do (cc-start writes it, every phase ticks it; a record, never a gate: router rule 16)
   00-inventory\
     chunks.json                 the chunk table (below)
     stream.md                   one row per chunk: the numbers an agent scans first (gather-only)
@@ -116,7 +117,7 @@ RUN\
                                 game mode adds: hud\ (regions.json, the score and clock readings, states.txt), match-map.md, game-profile.md (a game the library lacks), rounds.json (every round or fight with its keep verdict)
   30-assets\                    /create-clips and cc.py: extra frames, dense sheets, censor clips, caption files, sfx.json
   40-briefs\                    /create-clips: one brief per planned video
-  60-outputs\<video>\           /create-clips: EDL, captions, build plan, CapCut project name, report
+  60-outputs\<video>\           /create-clips: EDL, captions, build plan, CapCut project name, report, todo.md (the production agent's own to-do)
   deliverables\                 README with the CapCut projects made
   logs\                         cc.py logs (watch.log, ingest-<chunk>.log)
 ```
@@ -212,4 +213,6 @@ The command, its phase skills (`~/.claude/skills/cc-*`: profile, scan, plan and 
 - **Shorts are always 9:16** (the user, 2026-11-14): a short's canvas is 1080x1920 whatever the source. `edl-check` warns when a short's EDL names another canvas (the check is then not ok) and `capcut-build` lists it as a problem (`tests/test_edit.py`); a whole 16:9 frame goes in the middle of the 9:16 canvas on a blurred copy (`fit-blur`). Long videos stay 16:9.
 - **Spoken language** (the user, 2026-11-14: "not always all of the streams we will process will be in english, some will be in german or spanish too"): `whisper.language` is `auto` (it was forced to `en`, so every chunk was decoded as English). Whisper, the multilingual `medium` model, names the language per chunk; an unsure guess falls back to English; the first sure detection on a stream chunk is locked as the run's language (`state.json -> settings.whisper.language_locked`; an ad chunk never sets or uses it; a language the user set for the run is never replaced).
   The task stays transcribe, never translate. The agents read the stream in its language and write their notes in English, add that language's profanity to `captions.mask_terms`, and write the posting text in the stream's language (`reference/language.md`, `tests/test_language.py`).
+- **Whisper is `medium`, always** (the user, 2026-11-14: "we should strictly always use medium model for anything"): no smaller model as a default, a fallback or a speed-up; a medium that cannot load fails the chunk's transcript stage with the reason and nothing else reads in its place (`docs/processing.md` troubleshooting, `tests/test_language.py`). `CC_WHISPER_MODEL` exists for the tests only (their fast suite runs a tiny stand-in).
+- **A run to-do** (the user, 2026-11-13: tasks and to-do lists so that what is done and what comes next is never only in a conversation): `RUN\todo.md` kept by the main session and `RUN\60-outputs\<video>\todo.md` kept by each production agent, read first on a resume or after a compaction; a record and never a gate (no script reads it; the run's own files win when they disagree). The SessionStart resume note (`~/.claude/hooks/atp_resume_note.py`) names a run the command has started (it has a `next_skill`; a recording that is not started or a `wrapped` run is not "in progress") after a compaction or a resume, with its next skill and the first `Next:` line of its `todo.md` (`tests/test_resume_hook.py`).
 - No emoji in any file this toolkit or a command writes. Religion and superstition are avoided in what a video says or shows; gore, distress and nudity are kept but blurred, only where seen; nothing else is ever blurred (the user, 2026-11-14: no blur for personal data, DMs, usernames, IDs or face cams).

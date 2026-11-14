@@ -13,6 +13,7 @@ user-invocable: false
 - `RUN/40-briefs/<id>-brief.md` and `RUN/20-analysis/brief.md` (the match, the teams and their spelling, what travels, the lexicon, the touchy list), and the game's profile the brief names.
 - `CC/reference/game-edit-craft.md` (the condensed match), `CC/reference/edit-craft.md` (the EDL, cuts, captions), `CC/reference/safety.md`, `CC/reference/capcut-build.md` (the build recipe), `CC/reference/clip-economy.md` (the long-form section). Read each once, whole, in ONE message.
 - The run's captions setting: `T state --run RUN get captions` (`on` by default, `off` when the user picked no captions; your contract says which). Everything below about captions applies only when it is on.
+- Your own to-do `RUN/60-outputs/<id>/todo.md` (router rule 16; your contract names it): write your steps into it now, keep it current (`[ ]` not started, `[~]` in progress, `[x]` done, `[-]` dropped with its reason; one file, one writer) and say in your report what is done, what is not and what comes next.
 - Speed: independent tool calls go in ONE message (all the contact sheets and frames you need from ONE PowerShell call, the images read together); every check stays (a frame at every cut, `edl-check`, the read-back).
 
 ## Steps

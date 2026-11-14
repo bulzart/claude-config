@@ -24,7 +24,7 @@ user-invocable: false
    - `RUN/20-analysis/clip-criteria.md`: for THIS streamer and THIS topic, what makes a moment worth cutting (the kinds that travel, with what to look and listen for in the transcript, the frames and the chat), what is on brand, what to skip, and the five questions that decide a pick;
    - `RUN/20-analysis/lexicon.json`: `{"replace": [["Whisper wrote", "right spelling"], ...]}` from the people and the topic, checked against what Whisper really wrote in the transcripts. Only when captions are on (`T state --run RUN get captions` is not `off`): with captions off nothing is typed on the picture, so the spelling fixes have no use (names in the brief and in `posting.md` still use the right spelling).
    Where the note found nothing, the brief says it plainly and leans on the transcript; a wrong claim in the brief is worse than a gap.
-4. `T state --run RUN set stage=profiled next_skill=cc-scan`.
+4. `T state --run RUN set stage=profiled next_skill=cc-scan`, then tick the profile items in `RUN/todo.md` and set its `Next:` line (rule 16).
 
 ## Never
 - Never write a research claim without its tag. Never copy a long text from a page: say it in a line and say where.

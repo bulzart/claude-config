@@ -63,7 +63,7 @@ start and the videos go without a bed.
   `text_encoders/qwen3.5_9b_flux3_prompt_upsampler_w4a8.safetensors` and `vae/flux2-vae.safetensors` (about 18 GB). Then
   `AWL_IMAGE_PYTHON` = its `python_embeded\python.exe` (or a guarded `.cmd`) and `AWL_IMAGE_ROOT` = the portable folder. int8 is the
   build for GPUs without FP8 (the RTX 30 series); the licence allows commercial outputs only for a business under US$5M a year.
-- faster-whisper's cached models and ffmpeg (with xfade, loudnorm, sidechaincompress, subtitles) as for every run; OpenCV in the
+- faster-whisper's cached `medium` model (the only Whisper model used, item 24) and ffmpeg (with xfade, loudnorm, sidechaincompress, subtitles) as for every run; OpenCV in the
   toolkit's Python (`T edit-profile`); capcut-cli on the PATH.
 - **The CapCut check** (maintenance of the catalogue `CS/data/capcut-catalogue.md`, already measured on this PC with CapCut 9.7.0.4153 and kept with this library: a run never does it; it is done once per PC and again after every CapCut update, with the CapCut MCP and the toolkit's own `capcut-check`, the only place those are used; the user, 2026-11-06: "make sure ... what is left to the
   incoming agent is already verified that will work"): a file can look right and play nothing (CapCut 9.7 ignores UNIFORM_SCALE

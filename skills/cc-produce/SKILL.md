@@ -10,6 +10,7 @@ user-invocable: false
 
 ## Read now
 - `RUN/20-analysis/portfolio.md` (the videos and the building order). Nothing else: the agents read their own briefs.
+- `RUN/todo.md` (router rule 16): what is done and what is open; the plan already added one build item per video.
 - `T state --run RUN get only`: the user's pick at the start (`long` = long videos only, `both`, `shorts`; none = both). A planned video of a kind the user did not pick (a short in a `long` run) is not built: say so in one line and leave it `planned`.
 
 ## Steps
@@ -18,6 +19,7 @@ user-invocable: false
    Never two agents on one video. Spawn each wave in one message so they run together.
 3. **The contract** each agent gets (write it in full; the agent never sees this skill or the command file):
    - the run path, the video id and kind, its brief `RUN/40-briefs/<id>-brief.md`, its output folder `RUN/60-outputs/<id>/`;
+   - its own to-do `RUN/60-outputs/<id>/todo.md` (router rule 16): it writes its steps into it when it starts, keeps it current (`[ ]` not started, `[~]` in progress, `[x]` done, `[-]` dropped with its reason) and its report says what is done, what is not and what comes next; one file, one writer, so parallel agents never share one;
    - invoke the build skill of the run's mode (`T state --run RUN get mode`): streamer mode `cc-build-short` (kind short) or `cc-build-long` (kind long); game mode `cc-build-game` (long only: game mode has no shorts) and follow it (if the Skill tool or the name is not available, Read `C:/Users/Bulzart/.claude/skills/<name>/SKILL.md`);
    - read `RUN/20-analysis/brief.md` first; the rest only as its skill says;
    - the rules in one place: only cuts, captions, VFX (zoom, a short transition, a blur where safety says) and, in streamer mode, matching sound effects (game mode: no sound effects at all, and sponsor stretches cut out); religion and superstition avoided, gore, distress and nudity kept and blurred only where seen (nothing else is ever blurred: personal data, DMs, usernames, IDs and face cams stay as they are) (`CC/reference/safety.md`, which it reads);
@@ -28,7 +30,8 @@ user-invocable: false
    - speed: it reads its reference files in ONE message, batches independent tool calls (all the contact sheets and frames it needs from ONE PowerShell call, the images read together) and keeps every check (a frame at every cut, `edl-check`, the read-back): batching saves time, skipping a check saves nothing that stays saved;
    - it returns at most 8 lines: the id, the status (`built`, `ready-to-build` or `failed`), the CapCut project name and path, the length, the blurred spans, the exclamations or touchy items left, for a streamer-mode long video any border that was not clean, blockers. It writes `report.md` and `posting.md` in its output folder; the harness may refuse a subagent's write of `report.md`: then it returns the full report text after a line `===== REPORT.MD =====` and this session saves it.
 4. **Collect**: when an agent returns, check `RUN/60-outputs/<id>/report.md` exists (save the returned report text as that file when the agent could not) and `T state --run RUN get videos.<id>` says what it returned. A `failed` video gets one retry with the failure named, except one whose error starts with `not worth a video:` (its builder judged what is left not worth making, `cc-build-long`): that one is not retried and goes into the wrap-up as dropped, with its reason; a second failure stays `failed` and goes into the wrap-up.
-5. When every video is `built`, `ready-to-build` or `failed`: `T state --run RUN set stage=produced next_skill=cc-wrapup`.
+   Tick the video's item in `RUN/todo.md` from its report and its own `todo.md`, set `Next:`, and add what the report leaves open (a retry, a blocker, a project waiting on CapCut); where the to-do and the run's own files disagree, the files are right: look at them before an item is done again, then correct the to-do (rule 16).
+5. When every video is `built`, `ready-to-build` or `failed`: `T state --run RUN set stage=produced next_skill=cc-wrapup`, and set the to-do's `Next:` line to the wrap-up.
 
 ## Never
 - Never more than four agents at once, never two on one project, never a production agent that edits another video's folder.
