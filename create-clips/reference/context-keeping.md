@@ -14,11 +14,17 @@ The line that says who just joined or what the stream switched to; the rules or 
 
 ## Guards (what keeps it honest)
 - Only what is already on tape: no text card, no narration, no line nobody said (`edit-craft.md`). If the context could only be given that way, leave it out and judge the moment without it.
-- Never across a hole in the recording (a chunk with `gap_before_s`), never over an ad batch or an avoid span, and never in a way that changes what something means (`safety.md`).
-- Context goes with what needs it: if what leaned on it is dropped, the bit is dropped too.
+- Never across a hole in the recording (a chunk with `gap_before_s`), never over an ad batch or an avoid span, and never in a way that changes what something means (`safety.md`). A bit from an earlier part of the stream is a span of its own; it never straddles a hole.
+- Context goes with what needs it and comes before it in the video: if what leaned on it is dropped, the bit is dropped too.
 
-## Who does what (the flow stays read, plan, deliver)
-- **The mining agents** work exactly as before: they read their block and hand over what they found. Nothing here is asked of them.
-- **The planner (`cc-plan`):** a moment's `needs_context`, the block notes and the words around the spans it keeps are its leads. It checks the words and a frame before keeping a bit, marks each one in the long video's brief as a **context span** with what it gives and what needs it, and leaves out what the data does not support.
+## Who does what (the flow stays read, plan, deliver; nobody new is involved)
+- **The mining agents** already read every line of their block. When a moment they pick needs something a viewer would not know, its `needs_context` says what, and where the stream tells it when they saw it in their block (a rec span). When it lies outside their block, or they cannot see where, they say only what is needed: the planner sees every block and finds it. Anything not tied to a moment (the premise of the stream, a thread that runs through it) goes in `notes`. They do not go looking for it, and a moment's bounds are not stretched for context (that is what `setup_from` is for).
+- **The planner (`cc-plan`)** is the one place that sees every block, so it connects what a single miner cannot (next section). It checks the words and a frame before keeping a bit, marks each one in the long video's brief as a **context span** with what it gives and what needs it, and leaves out what the data does not support.
 - **The builder (`cc-build-long`):** keeps a context span to what the context needs, may apply the same judgement when it decides what to drop inside a run, and lists every context span in its report with what it gives.
 - **Shorts:** a short carries its own setup (`setup_from`, `needs_context`); nothing else changes for them.
+
+## Finding the context (the planner, across blocks too)
+1. **Leads:** the `needs_context` of the moments it keeps (what, and where if the miner saw it), the blocks' `people` (`first_rec`, `notes`: where someone first shows up) and `summary` lines (they carry rec times: who is on, what they do, the topic, the turns), the block notes, a moment at the very start of a block (its beginning may lie in the block before), and the words just before a kept span that opens in the middle of something. A moment that needs nothing needs no search.
+2. **Already told?** If the video already tells it earlier, there is nothing to add.
+3. **Where does the stream say it?** If the miner gave no place, or the place lies in another block, use a plain text search over the transcripts of the whole recording (`RUN/10-media/Cnnnn/transcript.txt`; every line carries its rec time) for the name or the word, and read around the hits (`T window`). Search for the word as the transcript may have written it too (`lexicon.json` and the `people` notes list the spellings Whisper used). Leave out hits inside ad batches and avoid spans. A passing mention is not the telling; the place where the stream really says it is the one to use, which is often but not always the first hit.
+4. **Decide from what you read:** would a viewer be lost without it? If so, keep the bit that carries it as a context span, placed before what leans on it. If the stream never says it, or a viewer would not be lost, judge the moment without it.

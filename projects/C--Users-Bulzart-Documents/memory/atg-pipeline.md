@@ -47,3 +47,5 @@ is hard to meet at standard depth. Regression suites: `analyze-then-generate/tes
 
 **Why:** the user is building an owned-inventory store ([[user-kosovo-ecommerce-founder]]) and wants the next products found from what made videos
 spread, without the references' dominant niche deciding the answer.
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): /analyze-then-generate: Edit + Analyze (Recreate, Create, Viral-Browser: research, 3 winning products, blueprints + reference packs; generates nothing); scripts gather, agents decide; build prompt Documents/prompts/analyze-then-generate.txt

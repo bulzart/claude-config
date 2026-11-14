@@ -20,3 +20,5 @@ The user, 2026-10-12, mid-run of the Viral-Browser test: "make sure that the pyt
 - Kept on purpose (they read no meaning): file locks, exact-fingerprint bookkeeping, the safe-address guard of page reads and link probes, form checks, the CapCut "close CapCut" and locked-preset checks.
 - Done for /analyze-then-generate (atg.py, 2026-10-12): qc, sync-check, scale, conform, finalize, restore-audio, ledger begin (records and reports `conflicts`), model-menu, inventory, OCR, audio-profile, audio-context, viral-stats, niches, candidates (rate / table / summary; no rank, pool, shortlist), evidence, econ, spec (judge / table / gaps), photo. NOT yet converted: /analyze-then-pick (atp.py and its docs) and analyze-stack still carry the old verdict logic; offer to convert them when relevant.
 - Related: [[no-hardcoded-names-in-scripts]], [[atg-pipeline]].
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): in EVERY mode scripts only gather/extract/record/tabulate/calculate; never evaluate, label, rank, gate or decide (user 2026-10-12); the agent carries every judgement and records why

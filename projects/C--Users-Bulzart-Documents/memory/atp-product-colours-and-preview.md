@@ -20,3 +20,5 @@ On 2026-10-14 (run 20261013-230824-13, video 02) the user opened `deliverables/v
 - Lessons this run produced for the references (put them into the references when asked): Seedance `video_edit` replaces the whole person with the reference's complete look, so use the full-look photo and Higgsfield's person-replacement wording (a head crop swapped only the hair); a face of about 100 px does not follow the identity image at all.
 
 Related: [[neurogum-package-forms]], [[atp-deliverables-one-folder]].
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-14: a faded Neurogum pack is wrong (never "muted" in a product clause); previews are 720x1280 burns, captions T size 50 / pitch 0.033; Seedance person swap needs the full-look photo

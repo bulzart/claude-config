@@ -20,3 +20,5 @@ Still standing from 2026-10-22: the blurred source-crop size-and-place guide ima
 - The `placeholder` command and generation-system §4b.6/§4b.7 were removed on 2026-10-28, and t01 guards against their return. Never reintroduce them.
 
 Related: [[analyze-with-loupe-command]], [[no-genjutsu-use-wan-prime]], [[references-built-per-generation]], [[always-full-paths]].
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-28: no placement marker/preview; the silent original is the only video reference, prompts/images/instructions carry spot and size; source-crop guide image still banned

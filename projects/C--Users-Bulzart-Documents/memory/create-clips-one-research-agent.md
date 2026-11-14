@@ -24,3 +24,5 @@ Also: "add the option to pick captions and no captions mode for both streamer an
 Later the same day (same session): the caption look (Loupe word-box, free font/colour, small/normal size) is [[create-clips-caption-look]]; the single CapCut composition and `capcut-build` are [[create-clips-capcut-composition]].
 
 Related: [[create-clips-pipeline]], [[scripts-gather-agents-decide]], [[awl-never-ask-decide-autonomously]]
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: both modes spawn ONE brief research agent (the 4-agent wave cost 14 min / 930k tokens), everything bulk/parallel, same results faster; plus a captions/no-captions option picked at the start; DONE and tested 2026-11-13 (CapCut closed)

@@ -46,3 +46,4 @@ regenerate, no post-fix. Wired into the affordance sheet, assets registry step 3
 §4b.2/§5 "size" gate/§8/§9/§10 "Size:" line, command A2b/X1/X2/X4/X9/Never, Seedance and Wan
 §3.14 + checklists, production-agents, preprocessing usage, README, build prompt.
 
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): reference/anomaly-catalog.md: counts, openings, permanence, solidity, blend/paste test, size reckoning; wired into ledger, prompts, QC; a new anomaly is added as a case on the user's say

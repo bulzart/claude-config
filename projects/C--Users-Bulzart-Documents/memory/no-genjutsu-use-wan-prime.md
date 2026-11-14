@@ -15,3 +15,5 @@ On 2026-10-21, during the Celsius Recreate run `20261021-224049-21` of /analyze-
 **How to apply:** in that run, every request, contract and agent uses `wan3_0_prime`; no Genjutsu call, pass or wording anywhere. For later runs, the model is still the user's pick from the menu; do not recommend Genjutsu for Recreate face or product swaps without saying what this pilot showed. Related: [[analyze-with-loupe-command]].
 
 **Not a standing default (2026-10-26):** in the Neurogum Recreate run `20261026-222435-26` the user picked Wan 3.0 Prime from the menu, then mid-analysis asked "change the generation model use Seedance 2.5 edit instead of Wan 3.0 prime" (`seedance_2_5`, mode video_edit). So "from now on Wan 3.0 Prime" was scoped, not permanent: never describe Wan 3.0 Prime in the menu as the user's default; offer the pinned models neutrally.
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-21 mid Celsius run: work on wan 3.0 prime, no Genjutsu (pilot left the face unswapped); NOT a standing default (2026-10-26 a run went to Seedance 2.5 edit)

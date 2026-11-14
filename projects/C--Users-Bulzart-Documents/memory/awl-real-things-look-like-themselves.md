@@ -21,3 +21,5 @@ licence recorded), the plan's `logo` field with a blank surface in the prompt, `
 image is made (a model redraws logos wrong); a known person's anchor rides with public photos. Mind the story's date: a dated scene
 should not show a logo from years later (open question to the user 2026-11-07: period-accurate name vs present logo). Related:
 [[analyze-with-loupe-command]].
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-07: a company the story is about shows its official logo (T fetch-image + T image brand, never drawn); known people look like them; mind the story's date

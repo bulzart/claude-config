@@ -23,3 +23,5 @@ Then, after opening the demo project in CapCut and screenshotting our frame next
 - Not verified by any tool: CapCut's drawing. A project whose first frame has a boxed word (the demo `13_Nov_2026_blastpremier_L01_loupe_look`) lets me read CapCut's own `draft_cover.jpg` after the user opens it once. Both demo projects (and the whole BLAST run) were deleted on 2026-11-13 at the user's request to free space, so nothing is left to open; the approved look is in the code defaults.
 
 Related: [[create-clips-one-research-agent]], [[create-clips-capcut-composition]], [[awl-static-word-box-captions]], [[always-full-paths]]
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: COPY of Loupe video 04's look: Luckiest Guy ALWAYS (the box numbers are tuned for it; another font made the box big and off), upper case, outline 0.18 + shadow, word on a rounded box; only the box colour is free; size small/normal for phones (auto 4.6%); CapCut's drawing not verified by any tool

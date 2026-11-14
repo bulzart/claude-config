@@ -38,3 +38,5 @@ owning sections as general rules (what to achieve, what to avoid) with short sam
   Loupe flag record. (analyze-then-generate's own ledger was retired on 2026-10-18 in its rebuild, [[atg-pipeline]].)
 
 Related: [[atp-anomaly-catalog]], [[update-from-errors-command]], [[atp-build-prompt-sync]].
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): 2026-10-13: no error ledger (context rot); lessons live generalised in the references; a bad-video report is diagnosed in the brief, rule written into the owning section on the user's yes

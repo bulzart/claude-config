@@ -27,3 +27,5 @@ What was built (Recreate and Create only; Edit Mode has no automatic regeneratio
 **How to apply:** I decided the choice is made at the start (all questions upfront, autonomy afterwards) and added a third answer "fix it, and stop asking" so the
 user can switch to auto at the first finding; if the user wants the question only at the first finding, or an Edit Mode variant, change `atg-start`/`atg-qc`.
 Related: [[atg-pipeline]], [[atg-skills-architecture]].
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-18, contract item 27: at the start the user picks ask (stop with a fix proposal, nothing spent until yes) or auto (QC agents fix alone); state.json qc_fixes; Recreate/Create only

@@ -22,3 +22,5 @@ What was built (extension `C:\Users\Bulzart\Documents\twitch-chunk-recorder`, cr
 **How to apply:** after an extension change reload it in `chrome://extensions`; restart `CreateClipsWatcher` after toolkit changes. If an ad chunk looks like real stream content, the agent's verdict says `stream` and it is mined like any chunk; never make a script drop or skip ad chunks.
 
 Related: [[create-clips-pipeline]], [[scripts-gather-agents-decide]]
+
+Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: the recorder skips nothing (Twitch's ad segments = their own chunks, kind "ad"), scripts only pass the marker on, mining agents give a verdict per ad batch and the planner puts the ads in avoid.json; plus the streamer-mode Videos question (long only | long + shorts, `state.only`); ishowspeed lost 36% of the stream to 181 s ad gaps
