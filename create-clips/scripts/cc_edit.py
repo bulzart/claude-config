@@ -856,21 +856,70 @@ def cmd_edl_check(a):
 
 # --------------------------------------------------------------------------- captions
 
-MASK = re.compile(r"[A-Za-z0-9]")
+MASKS_FILE = CC_HOME / "data" / "caption-masks.json"
+_VOWELS = "aeiouyAEIOUY"
+_EDGES = re.compile(r"^([^\w']*)(.*?)([^\w']*)$", re.UNICODE | re.DOTALL)
+_mask_cache: dict = {}
+
+
+def _star(s: str) -> str:
+    """The asterisk style of the captions (the user, 2026-11-14: "f*ck, f*ggot or similarly"): ONE asterisk takes the place of the first vowel after the word's first letter
+    (fuck -> f*ck, shit -> sh*t, faggot -> f*ggot, pedo -> p*do, gay -> g*y); a word with no such vowel loses its second letter (ass -> a*s)."""
+    for i in range(1, len(s)):
+        if s[i] in _VOWELS:
+            return s[:i] + "*" + s[i + 1:]
+    return s[:1] + "*" + s[2:] if len(s) > 1 else s
+
+
+def mask_lists() -> tuple:
+    """(the `anywhere` patterns, the `whole_word` set) of data/caption-masks.json, read again when the file changes. A word of `anywhere` is masked wherever it sits in a spoken word
+    (fucking, motherfucker, bullshit come with `fuck` and `shit`); an entry written `bad[ass]` masks only the part in brackets and only inside that longer word; a `whole_word` entry is masked
+    only when the whole spoken word is exactly that one (a short or ambiguous word). The file is the user's list: the code holds no word. A missing or broken file is an error, never a silent
+    skip (captions would then go out unmasked)."""
+    try:
+        mtime = MASKS_FILE.stat().st_mtime
+    except OSError as e:
+        raise ValueError(f"the caption mask list is missing: {MASKS_FILE} ({e})")
+    if _mask_cache.get("mtime") != mtime:
+        data = read_json(MASKS_FILE)
+        if not isinstance(data, dict) or not isinstance(data.get("anywhere"), list) or not isinstance(data.get("whole_word"), list):
+            raise ValueError(f"the caption mask list {MASKS_FILE} must be a JSON object with the lists `anywhere` and `whole_word`")
+        pats = []
+        for entry in data["anywhere"]:
+            e = str(entry).strip()
+            m = re.fullmatch(r"([A-Za-z']*)\[([A-Za-z']+)\]([A-Za-z']*)", e)
+            pre, core, post = m.groups() if m else ("", e, "")
+            if not core:
+                continue
+            pats.append(re.compile((f"(?<={re.escape(pre)})" if pre else "") + "(" + re.escape(core) + ")" + (f"(?={re.escape(post)})" if post else ""), re.I))
+        _mask_cache.update(mtime=mtime, anywhere=pats, whole={str(w).strip().lower() for w in data["whole_word"] if str(w).strip()})
+    return _mask_cache["anywhere"], _mask_cache["whole"]
 
 
 def _mask_word(w: str, terms: set) -> str:
-    core = re.sub(r"[^A-Za-z0-9']", "", w).lower()
-    if core in terms and len(core) > 1:
-        out_, first = [], True
-        for ch in w:
-            if MASK.match(ch):
-                out_.append(ch if first else "*")
-                first = False
-            else:
-                out_.append(ch)
-        return "".join(out_)
-    return w
+    """A spoken word as it is typed in a caption: a word of the default list (data/caption-masks.json) or of this video's `mask_terms` (exact lower-case forms) gets the asterisk
+    style (`_star`), the punctuation around it stays. Only the typed caption changes: the audio is never touched."""
+    anywhere, whole = mask_lists()
+    lead, body, trail = _EDGES.match(w).groups()
+    core = re.sub(r"[^A-Za-z0-9']", "", body).lower()
+    if len(core) > 1 and (core in terms or core in whole):
+        return lead + _star(body) + trail
+    shown = body
+    for p in anywhere:
+        shown = p.sub(lambda m: _star(m.group(1)), shown)
+    return lead + shown + trail if shown != body else w
+
+
+def _masked_tally(words: list, caps: dict) -> dict:
+    """What the masking did to the spoken words, as a fact for the agent's check and the wrap-up: {the word as it is typed (lower case): how many times}, most often first."""
+    terms = {str(t).lower() for t in caps.get("mask_terms") or []}
+    tally: dict = {}
+    for x in words:
+        shown = _mask_word(x["w"], terms)
+        if shown != x["w"]:
+            key = _EDGES.match(shown).group(2).lower()
+            tally[key] = tally.get(key, 0) + 1
+    return dict(sorted(tally.items(), key=lambda kv: (-kv[1], kv[0])))
 
 
 def _srt_time(t: float) -> str:
@@ -919,7 +968,7 @@ def build_cues_word_box(run: Path, resolved: dict, caps: dict, font_file: str) -
                 for i, c in enumerate(split)]
     rows = wb.plan_rows(out_cues, fps)
     groups_t, geo = wb.plan_texts(rows, probe, W)
-    return {"cues": out_cues, "n_words": len(words), "split_for_width": len(split) - len(cues),
+    return {"cues": out_cues, "n_words": len(words), "split_for_width": len(split) - len(cues), "masked": _masked_tally(words, caps),
             "params": {k: caps[k] for k in ("max_words", "max_chars", "case", "gap_break_s", "min_cue_s")},
             "word_box": {"font_file": font_file, "size": float(caps["size"]), "box": box, **wb.plan_summary(groups_t), "geometry": geo}}
 
@@ -961,7 +1010,8 @@ def build_cues(run: Path, resolved: dict) -> dict:
         elif caps.get("case") == "lower":
             text = text.lower()
         out_cues.append({"i": i + 1, "start": round(start, 3), "end": round(end, 3), "text": text, "words": ws})
-    return {"cues": out_cues, "n_words": len(words), "params": {k: caps[k] for k in ("max_words", "max_chars", "case", "gap_break_s", "min_cue_s")}}
+    return {"cues": out_cues, "n_words": len(words), "masked": _masked_tally(words, caps),
+            "params": {k: caps[k] for k in ("max_words", "max_chars", "case", "gap_break_s", "min_cue_s")}}
 
 
 def cmd_captions(a):
@@ -974,6 +1024,10 @@ def cmd_captions(a):
         out({"ok": True, "video": resolved["video"], "skipped": True, "cues": 0, "silent_stretches_over_4s": [], "files": [],
              "note": "captions are OFF for this run (state.json captions=off, picked at the start): nothing was written and capcut-finish adds no caption track"})
     caps = resolved["captions"]
+    try:
+        mask_lists()                       # the default list of masked words must load: captions never go out unmasked by accident
+    except ValueError as e:
+        fail(str(e))
     font_file = caption_font(caps)
     size, size_info = caption_size(caps, resolved["canvas"], font_file)
     if caps.get("style") == "word-box":
@@ -989,11 +1043,14 @@ def cmd_captions(a):
         srt.append(f"{c['i']}\n{_srt_time(c['start'])} --> {_srt_time(c['end'])}\n{c['text']}\n")
     write_text(d / "captions.srt", "\n".join(srt))
     out({"ok": True, "video": resolved["video"], "style": caps.get("style"), "style_reason": caps.get("style_reason"), "cues": len(res["cues"]), "words": res["n_words"],
+         "masked_words": sum(res["masked"].values()), "masked": res["masked"],
          "duration_s": resolved["totals"]["duration_s"], "silent_stretches_over_4s": _silent(res["cues"], resolved["totals"]["duration_s"]),
          "font_file": font_file, "house_font": house, **frep, "size": size_info, "highlight_color": caps.get("highlight_color") if caps.get("style") == "word-box" else None,
          **({"word_box": res["word_box"], "split_for_width": res["split_for_width"]} if caps.get("style") == "word-box" else {}),
          "files": [str(d / "captions.json"), str(d / "captions.srt")],
          "note": "captions are ON for this run (the default): every second of speech is captioned; a stretch without speech has none unless the agent adds a text line. "
+                 "Profanity and slurs are typed with one asterisk in place of a vowel (f*ck, sh*t, f*ggot, p*do, g*y), always: the default list is data/caption-masks.json, the EDL's "
+                 "captions.mask_terms adds words; `masked` says what was masked (as typed): read the cues once for any other word of that kind the list does not know, add it to mask_terms and run this again. The audio is never changed. "
                  "The look is the Loupe video 04 look: `style` word-box (the spoken word on a rounded colour box, one CapCut text per word) in the house font, Luckiest Guy, ALWAYS "
                  "(the box numbers are tuned for it; `house_font` says whether this video uses it); the highlight colour is the EDL's own pick; the size is auto = the em at "
                  "size_em_pct of the picture's smaller side. `font_missing_glyphs` lists the characters of the captions the font cannot draw: a font other than the house font "

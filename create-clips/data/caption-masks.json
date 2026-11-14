@@ -1,0 +1,20 @@
+{
+  "what": "Words that are ALWAYS typed with an asterisk in a caption, in every video of both modes (the user, 2026-11-14: \"words such as fuck, faggot, pedo, shit, gay and more always write in captions like f*ck, f*ggot or similarly\"). Only the typed caption changes: the spoken word stays in the audio, nothing edits audio. This file is the user's own list: add or remove a word here and every later build follows. A word heard in one video that is not here goes in that video's EDL, captions.mask_terms (exact lower-case forms), and `cc.py captions` is run again.",
+  "how": "ONE asterisk takes the place of the first vowel after the word's first letter (fuck -> f*ck, shit -> sh*t, faggot -> f*ggot, pedo -> p*do, gay -> g*y, bitch -> b*tch); a word with no such vowel loses its second letter (ass -> a*s). Punctuation and case stay (the captions are upper case later: F*CK).",
+  "anywhere": [
+    "fuck", "shit", "bitch", "faggot", "nigga", "nigger", "pussy", "whore", "slut", "pedophil", "paedophil",
+    "[ass]hole", "[dick]head", "[cock]sucker",
+    "bad[ass]", "dumb[ass]", "jack[ass]", "smart[ass]", "kick[ass]", "hard[ass]"
+  ],
+  "anywhere_note": "A word listed here is masked wherever it sits inside a spoken word, so its forms and compounds come with it: fuck -> fucking, fucked, motherfucker, fuckin'; shit -> shitty, bullshit; pedophil -> pedophile, pedophiles. An entry written bad[ass] masks only the part in brackets and only inside that longer word (badass -> bada*s), so class, pass and assume stay as they are. Only list a stem here that no everyday word contains (therapist contains rapist, so rapist is below).",
+  "whole_word": [
+    "ass", "asses", "dick", "dicks", "cock", "cocks", "cunt", "cunts", "cunty",
+    "piss", "pissed", "pisses", "pissing",
+    "gay", "gays", "pedo", "pedos", "paedo", "paedos", "fag", "fags",
+    "rape", "rapes", "raped", "raping", "rapist", "rapists",
+    "retard", "retards", "retarded", "bastard", "bastards",
+    "tranny", "trannies", "dyke", "dykes", "kike", "kikes", "spic", "spics", "chink", "chinks",
+    "gook", "gooks", "paki", "pakis", "wetback", "wetbacks", "coon", "coons", "beaner", "beaners"
+  ],
+  "whole_word_note": "A word listed here is masked only when the whole spoken word is exactly this one (any case, punctuation around it ignored): a short or ambiguous word whose letters sit inside everyday words (ass in class, dick in Dickens, pedo in torpedo, cunt in Scunthorpe, coon in raccoon)."
+}

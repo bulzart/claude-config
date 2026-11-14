@@ -51,8 +51,10 @@ def main():
     toks2 = wb.tokens_from_words(words2, {"mask_terms": [], "replace": [["three case sequence", "3K sequence"]], "case": "as-is"}, cc_edit._mask_word)
     check([t["w"] for t in toks2] == ["light", "3K", "sequence"] and toks2[1]["s"] == 1.0 and abs(toks2[2]["e"] - 2.1) < 1e-6,
           "lexicon: a three-word phrase becomes two tokens that share its span: " + json.dumps([(t["w"], t["s"], t["e"]) for t in toks2]))
-    toks3 = wb.tokens_from_words([W("what", 0, 0.2), W("the", 0.2, 0.3), W("shit", 0.3, 0.6)], {"mask_terms": ["shit"], "replace": [], "case": "upper"}, cc_edit._mask_word)
-    check([t["w"] for t in toks3] == ["WHAT", "THE", "S***"], "masking then the case rule: " + str([t["w"] for t in toks3]))
+    toks3 = wb.tokens_from_words([W("what", 0, 0.2), W("the", 0.2, 0.3), W("shit", 0.3, 0.6)], {"mask_terms": [], "replace": [], "case": "upper"}, cc_edit._mask_word)
+    check([t["w"] for t in toks3] == ["WHAT", "THE", "SH*T"], "masking (the default list, one asterisk) then the case rule: " + str([t["w"] for t in toks3]))
+    toks3b = wb.tokens_from_words([W("oh", 0, 0.2), W("heck,", 0.2, 0.6)], {"mask_terms": ["heck"], "replace": [], "case": "upper"}, cc_edit._mask_word)
+    check([t["w"] for t in toks3b] == ["OH", "H*CK,"], "a word the video's mask_terms adds is masked the same way and keeps its comma: " + str([t["w"] for t in toks3b]))
     toks4 = wb.tokens_from_words([W("Jaroskate", 0, 1), W("connects", 1, 2), W("the", 2, 2.2), W("headshot.", 2.2, 3)],
                                  {"mask_terms": [], "replace": [["Jaroskate connects the headshot", "Connects the headshot"]]}, cc_edit._mask_word)
     check([t["w"] for t in toks4] == ["Connects", "the", "headshot."], "a phrase that gets shorter keeps its words in order: " + str([t["w"] for t in toks4]))

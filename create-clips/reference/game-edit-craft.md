@@ -39,4 +39,4 @@ You cannot add a score card: the only text is captions. The scoreboard is alread
 
 ## 7. Safety in a match
 Same rules as everywhere (`safety.md`): religion and superstition are avoided (a player's prayer or gesture, a blessing from a caster: not a pick; an incidental one is cut around or listed); distress and gore are blurred where seen
-(game violence in its normal look is not gore; a real injury or a real breakdown on camera is); personal data on screen (a phone number, an email, a real address, DMs, names) is NOT blurred (the user, 2026-11-14); slurs from casters, players or chat are masked in the captions (with captions OFF they stay audible and nothing masks them: the plan cuts around them).
+(game violence in its normal look is not gore; a real injury or a real breakdown on camera is); personal data on screen (a phone number, an email, a real address, DMs, names) is NOT blurred (the user, 2026-11-14); profanity and slurs from casters, players or chat are always masked in the captions with one asterisk (f*ck, sh*t; safety.md §3; with captions OFF they stay audible and nothing masks them: the plan cuts around them).

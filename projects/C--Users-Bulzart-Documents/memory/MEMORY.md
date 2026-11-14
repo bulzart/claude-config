@@ -2,7 +2,7 @@
 - [Local AI installs + memory guard](local-ai-installs.md) — ACE-Step 1.5 + FLUX 3 Klein int8 (ComfyUI) in Documents\AI; always under tools\memguard.py (ACE web UI froze Windows twice); page file fixed 12-16 GB; Smart App Control OFF
 - [This PC's pipeline tooling](pc-pipeline-tooling.md) — Python312 + whisper medium (av<19), real claude.exe first on PATH, ffmpeg full build, capcut-cli 0.25 + CapCut 9.7 (no Pro), never `capcut lint --fix`; PowerShell, not Git Bash
 - [CapCut text preset locked](capcut-text-preset-locked.md) — /analyze-then-pick always uses the user's chosen preset (from 03_Oct_2026_v09); text always horizontally centred; never replace unasked
-- [~/.claude git versioning](claude-folder-git-versioning.md) — local repo + auto-commit hooks; allow-list .gitignore; add new user folders to it; never leave backup copies in tracked folders
+- [~/.claude git versioning](claude-folder-git-versioning.md) — local repo + auto-commit hooks; allow-list .gitignore; add new user folders to it; never leave backup copies in tracked folders; origin bulzart/claude-config private again (checked 2026-11-14), push branch pc on the user's say
 - [Neurogum package forms](neurogum-package-forms.md) — closed cartons/pouch only, never a big box or an opened carton; vary forms; Peppermint + Spearmint only; size authority = per-folder product_properties.txt
 - [Celsius: no Orange flavour, black can top](celsius-no-orange-flavor.md) — rotate Cherry Cola, Peach Vibe, Watermelon; Orange already overused; can lid/rim is BLACK never silver (user 2026-10-30)
 - [ATP anomaly catalog](atp-anomaly-catalog.md) — reference/anomaly-catalog.md: counts, openings, permanence, solidity, blend test, size reckoning; wired into ledger, prompts, QC; new anomalies added on the user's say
@@ -75,6 +75,7 @@
 - [create-clips: ads recorded, agents judge](create-clips-ads-recorded-agents-judge.md) — user 2026-11-14: nothing skipped, ads are chunks of kind "ad"; miners judge each batch, the planner puts ads in avoid.json
 - [Task lists and to-do files](task-lists-and-todo-files.md) — user 2026-11-13: router item 38; every run keeps RUN/todo.md and every agent its video todo.md, read first on resume; a record, never a gate
 - [create-clips: blur only gore/distress](create-clips-blur-only-gore-distress.md) — user 2026-11-14: blur ONLY gore, real distress, nudity; never DMs, usernames, IDs, lobby tags, face cams, names or other personal data
+- [create-clips: caption masks](create-clips-caption-masks.md) — user 2026-11-14: profanity and slurs ALWAYS typed with one asterisk (f*ck, f*ggot); list = create-clips/data/caption-masks.json + mask_terms; audio never edited
 - [create-clips: context in cut parts (light)](create-clips-context-keeping-light.md) — user 2026-11-14: long videos MAY keep a bit of a dull part something kept leans on; no limits, judged from data
 - [Fix limits, don't just report them](feedback-fix-limits-dont-just-report.md) — user 2026-11-14: when I find a gap in my own work, evaluate it on real data and fix it (lightest way that works); ask only when the choice is the user's
 - [/create-static command](create-static-command.md) — 2026-11-13: Static mode of /analyze-with-loupe as its own command, CapCut project by ONE `T capcut-build`; library ~/.claude/create-static, cs-* skills; not yet run end to end

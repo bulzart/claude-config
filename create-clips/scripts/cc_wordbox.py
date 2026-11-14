@@ -68,7 +68,7 @@ def _edges(w: str) -> tuple:
 
 
 def tokens_from_words(words: list, caps: dict, mask_word) -> list:
-    """The spoken words as they are captioned: the hardest words masked (`mask_terms`), the lexicon (`replace`: Whisper wrote -> right spelling) applied to
+    """The spoken words as they are captioned: profanity and slurs masked (`mask_word`: the default list of data/caption-masks.json plus the video's `mask_terms`), the lexicon (`replace`: Whisper wrote -> right spelling) applied to
     WORD SEQUENCES, so a phrase that Whisper split across a caption's edge still matches and a replaced phrase keeps its place in time (its tokens share the
     span of the words they replace), the case rule last. Returns [{"w", "s", "e"}] in time order."""
     terms = {str(t).lower() for t in caps.get("mask_terms") or []}

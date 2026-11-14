@@ -207,6 +207,16 @@ def main():
     check(re.search(r"\b\d+(?:\.\d+)?\s*(?:s|sec|secs|seconds)\b|few seconds|a handful|at most|at least", ref, re.I) is None and not any(w in ref for w in ("NAVI", "CS2", "Typical Gamer", "Pirate", "Speed")),
           "context-keeping.md sets no number of seconds or count (the agents judge from the data) and carries no example borrowed from a game match or from a run")
 
+    # the user's choice of 2026-11-14: profanity and slurs are ALWAYS typed with one asterisk in captions (f*ck), from the user's own list file plus the EDL's mask_terms
+    ml = CC / "data" / "caption-masks.json"
+    check(ml.is_file(), "data/caption-masks.json (the user's list of always-masked caption words) exists")
+    safety = read(CC / "reference" / "safety.md")
+    check("f*ck" in safety and "caption-masks.json" in safety and "mask_terms" in safety and "always masked" in safety and "f*ck" in ec and "caption-masks.json" in ec and "f*ck" in gec,
+          "safety.md, edit-craft.md and game-edit-craft.md say profanity and slurs are always typed with one asterisk (f*ck), from data/caption-masks.json plus mask_terms")
+    check("f*ck" in rt and "caption-masks.json" in rt and "f*ck" in readme and "caption-masks.json" in readme and "test_masks.py" in readme, "the router and the README carry the caption mask rule")
+    check(all("mask_terms" in sk(n) and "f*ck" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game")) and "masked" in sk("cc-wrapup"),
+          "the three build skills and the wrap-up follow the mask rule (the default list by itself, mask_terms for a word it lacks, the `masked` tally in the README)")
+
     # the router names both modes' skills
     r = read(ROUTER)
     for s in ("cc-start", "cc-profile", "cc-profile-game", "cc-scan", "cc-scan-game", "cc-plan", "cc-plan-game", "cc-produce", "cc-build-short", "cc-build-long", "cc-build-game", "cc-wrapup"):

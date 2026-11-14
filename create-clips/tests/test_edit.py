@@ -73,7 +73,7 @@ def main():
                             {"id": "s2", "rec_from": 10.0, "rec_to": 15.0, "transition_in": {"slug": "flash", "dur": 0.2},
                              "censor": [{"rec_from": 11.0, "rec_to": 12.5, "region": [0.1, 0.1, 0.4, 0.4], "style": "blur", "why": "test"}],
                              "layout": {"mode": "fill", "focus": [0.3, 0.5]}}],
-               "captions": {"mask_terms": ["shit"], "highlight_words": ["wild"], "replace": [["Kai Sinat", "Kai Cenat"]]}}
+               "captions": {"mask_terms": ["damn"], "highlight_words": ["wild"], "replace": [["Kai Sinat", "Kai Cenat"]]}}
         out = run / "60-outputs" / "S01"
         out.mkdir(parents=True)
         sfx_file = Path("C:/Users/Bulzart/Documents/sound_effects/vine boom.mp3")
@@ -93,7 +93,10 @@ def main():
         check(len(fin["zoom"]) == 1 and fin["transitions"][0]["refused"] is None, "finish plan: one zoom, the flash transition accepted")
         r = cc("captions", "--run", run, "--resolved", out / "resolved.json", env=env)
         srt = (out / "captions.srt").read_text(encoding="utf-8")
-        check(r.get("ok") and "S***" in srt and "KAI CENAT" in srt, "captions: masking and the lexicon replace applied")
+        check(r.get("ok") and "SH*T" in srt and "D*MN" in srt and "KAI CENAT" in srt and "SHIT" not in srt and "DAMN" not in srt,
+              "captions: the default list masks shit (SH*T), the EDL's mask_terms masks damn (D*MN), the lexicon replace applied: " + srt.replace("\n", " | ")[:200])
+        check(r.get("masked_words") == 2 and r.get("masked", {}).get("sh*t") == 1 and r.get("masked", {}).get("d*mn") == 1,
+              "captions: the answer tallies what was masked (as typed): " + json.dumps(r.get("masked")))
         res_on = json.loads((out / "resolved.json").read_text(encoding="utf-8"))
         check(res_on["captions"].get("enabled") is True and fin["captions"].get("enabled") is True,
               "captions are ON when the run has no `captions` key: resolved.json and finish.json say enabled")

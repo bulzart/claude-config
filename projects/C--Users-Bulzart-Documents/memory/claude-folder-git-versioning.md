@@ -5,11 +5,12 @@ metadata:
   node_type: memory
   type: project
   originSessionId: eeae7805-53c0-4ecd-8da6-f148caa3f308
-  modified: 2026-11-13T17:02:00.367Z
+  modified: 2026-11-14T03:48:54.476Z
 ---
 
 Since 2026-10-05, `C:\Users\Bulzart\.claude` is a local git repo (branch main; since 2026-10-15 it has a GitHub remote, `origin` = bulzart/claude-config, pushed manually with `git -C ~/.claude push`: the auto-commit hook only commits) so the user can revert commands, skills, pipelines, hooks, memory and settings to any earlier point.
 **CORRECTION 2026-11-13: that remote is PUBLIC, not private** (GitHub API, no login: visibility public, 156 memory notes under projects/*/memory, settings.json, CLAUDE.md and 3,700 other files readable by anyone; checked with a whole-tree scan: no API keys or tokens in it). The working branch is `pc` (tracks origin/pc; main is old). On 2026-11-13 the user said "git push now"; I found it public, did NOT push (12 commits ahead, a plain fast-forward, dry-run worked) and asked whether to push as is or make the repo private first. Before any push of this repo: say it is public and ask.
+**UPDATE 2026-11-14: it is PRIVATE again** (GitHub API without a login answers 404; an anonymous `git ls-remote` asks for a user name; the stored login still reads it: origin/pc = feefbec = my local origin/pc). The user presumably made it private after my 11-13 question, and then said "push to git for the claude config repo on pc branch" (an explicit request, 14 commits ahead): a plain `git push origin pc` from `C:\Users\Bulzart\.claude`. Re-check the visibility before each push (API 404 and the anonymous ls-remote failing = private); if it is public again, say so and ask first.
 
 - Hooks in `~/.claude/settings.json` (Stop, SessionStart) run `hooks/autocommit.py`, which commits tracked changes as `auto(<event>): …`.
 - `.gitignore` is an allow-list (`/*` then `!/commands/`, `!/skills/`, `!/analyze-then-pick/`, `!/analyze-stack/`, `!/hooks/`, memory dirs, settings.json…). Claude Code's own files (credentials, sessions, transcripts, plugins, skills/synced, caches) are never tracked; run folders, samples, node_modules, `_backups` are excluded.
