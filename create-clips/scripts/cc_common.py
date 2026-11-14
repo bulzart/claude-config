@@ -358,6 +358,33 @@ def rec_to_chunk(rows: list, t: float):
     return None, None
 
 
+def ad_batches(rows: list) -> list:
+    """The chunks the recorder marked as ads (`kind == "ad"`: Twitch's own marker for the segments, passed on in the sidecar), consecutive chunk numbers merged
+    into batches (one ad break = one batch). Facts only, for the agents: `[{batch, chunks, rec_from, rec_to, seconds, t0_utc, t1_utc, titles}]` in order. Whether
+    a batch really is an ad, and so is left out of every video, is the agents' call (the user, 2026-11-14), never this function's."""
+    batches, cur = [], None
+    for r in sorted((x for x in rows if x.get("kind") == "ad"), key=lambda x: x["index"]):
+        dur = float(r.get("duration_s") or 0)
+        start = r.get("rec_start_s")
+        if cur is not None and r["index"] == cur["_last"] + 1:
+            cur["chunks"].append(r["id"])
+            cur["seconds"] += dur
+            cur["t1_utc"] = r.get("t1_utc") or cur["t1_utc"]
+        else:
+            cur = {"batch": len(batches) + 1, "chunks": [r["id"]], "rec_from": start, "seconds": dur, "t0_utc": r.get("t0_utc"), "t1_utc": r.get("t1_utc"),
+                   "titles": [], "_last": r["index"]}
+            batches.append(cur)
+        cur["_last"] = r["index"]
+        cur["rec_to"] = round(float(start) + dur, 3) if start is not None else None
+        for t in ((r.get("ad") or {}).get("titles") or []):
+            if t not in cur["titles"] and len(cur["titles"]) < 5:
+                cur["titles"].append(t)
+    for b in batches:
+        b.pop("_last", None)
+        b["seconds"] = round(b["seconds"], 3)
+    return batches
+
+
 def split_across_chunks(rows: list, t0: float, t1: float) -> list:
     """The pieces of rec span [t0, t1) per chunk: [{chunk, offset_from, offset_to, rec_from, rec_to}] in order (a span over a chunk
     boundary gives two pieces; a hole between chunks, a gap in the recording, is skipped and reported by the caller)."""

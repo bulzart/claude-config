@@ -142,7 +142,9 @@ def guess_index(src: Path | None, sidecar: Path | None) -> int | None:
 
 
 def _apply_sidecar(row: dict, side: dict | None) -> None:
-    for k in ("t0_utc", "t1_utc", "gap_before_s", "ads_skipped_s", "ended_by", "quality", "stream"):
+    # `kind` ("ad") and `ad` are Twitch's own marker for the chunk's segments, passed on by the recorder (the user, 2026-11-14: nothing is skipped, ad or not ad).
+    # A fact in the table, never a verdict: the agents look at the chunk and decide which batches really are ads (a chunk without `kind` is the stream).
+    for k in ("t0_utc", "t1_utc", "gap_before_s", "ads_skipped_s", "ended_by", "quality", "stream", "kind", "ad"):
         if side and k in side:
             row[k] = side[k]
 
@@ -503,7 +505,7 @@ def cmd_status(a):
             rep_counts[letter.split(":", 1)[1]] = rep_counts.get(letter.split(":", 1)[1], 0) + 1
         print(f"{r['id']} {r.get('status'):10s} {('%.1f s' % r['duration_s']) if r.get('duration_s') else '-':>9} rec {fmt_hms(r.get('rec_start_s'))} "
               f"sheets {r.get('sheets')} words {r.get('words')} [{_stage_letters(r)}] {letter}" + (f" ERROR {r['error']}" if r.get("error") else "") +
-              (" STALE-REC" if r.get("stale_rec") else ""))
+              (" STALE-REC" if r.get("stale_rec") else "") + (" AD-MARKED" if r.get("kind") == "ad" else ""))
     newest = max(rows, key=lambda r: r["index"]) if rows else None
     counts = {}
     for r in rows:
@@ -518,6 +520,7 @@ def cmd_status(a):
     except Exception as e:  # noqa: BLE001
         ready = {"ready": None, "error": f"{type(e).__name__}: {e}"}
     out({"ok": True, "run": str(run), "channel": st.get("channel"), "session": st.get("session"), "chunks": len(rows), "by_status": counts, "ready": ready,
+         "ad_marked": [r["id"] for r in rows if r.get("kind") == "ad"],
          "rec_total_s": round(sum(float(r.get("duration_s") or 0) for r in rows), 1), "newest": newest["id"] if newest else None,
          "newest_status": newest.get("status") if newest else None, "stale_rec": [r["id"] for r in rows if r.get("stale_rec")],
          "failed": [{"chunk": r["id"], "error": r.get("error")} for r in rows if r.get("status") == "failed"],
@@ -533,7 +536,8 @@ def cmd_chunks(a):
     for r in rows:
         q = r.get("quality") or {}
         print(f"{r['id']} {r.get('status'):10s} rec {fmt_hms(r.get('rec_start_s'))} len {r.get('duration_s')} t0 {r.get('t0_utc')} "
-              f"gap {r.get('gap_before_s')} ads {r.get('ads_skipped_s')} {q.get('name') or ''} {(r.get('stream') or {}).get('game') or ''}")
+              f"gap {r.get('gap_before_s')} ads {r.get('ads_skipped_s')} {q.get('name') or ''} {(r.get('stream') or {}).get('game') or ''}"
+              + (" AD-MARKED" if r.get("kind") == "ad" else ""))
     out({"ok": True, "run": str(run), "chunks": rows})
 
 

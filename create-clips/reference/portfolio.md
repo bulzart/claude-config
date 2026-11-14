@@ -10,6 +10,9 @@ Two kinds are made at the same time: shorts and long-form. The agents decide how
 - `RUN/20-analysis/richness.json`: one score per chunk (the scan's), smoothed by you where a block agent was harsher or kinder than its neighbours, with the reason.
 - `RUN/20-analysis/lexicon.json`: the merged Whisper-spelling fixes, `[["Whisper wrote","right"], ...]`, which every EDL's `captions.replace` takes.
 - `RUN/20-analysis/sensitive.json` and `avoid.json`: every span to blur and every span to stay away from, merged, as the builders will need them.
+- **The ad batches** (the user, 2026-11-14: the recorder skips nothing, and the agents leave the ad batches out when they analyse): the mining agents' `ad_batches` (each with a verdict `ad|stream|mixed`) merged by rec time into `RUN/20-analysis/ad-batches.json`
+  (`T blocks` also lists the recorder's marker as `ad_batches`; compare: a marked batch no agent judged is yours to judge now, from its report and a sheet). Every span with verdict `ad` goes into `avoid.json` as `{"rec_from", "rec_to", "kind": "ad", "what": "..."}`, so
+  every brief carries it as a span to stay away from. A `stream` verdict is not left out; a `mixed` one is left out only for the seconds that are the ad.
 
 ## 2. Long-form: how rich was the night?
 Read the richness line across the whole stream (a score per chunk), not just the peaks.
@@ -19,7 +22,7 @@ Read the richness line across the whole stream (a score per chunk), not just the
   if it is warm, make fewer and shorter videos that are all good; if only a few pockets are good, one video or none. A video is made when its content earns the length. Padding is a failure.
 - Decide **each video's shape**: chronological is the default (the night as it went); a theme video ("every guest moment") or a best-of order is fine when it is the better watch. A cold open of the best 20 to 40 s may start it.
   Length is about an hour as a guide; a segment is never cut in half to hit it, so a video may run past an hour to end a scene, or stop short when the next stretch is weak.
-  Where the recording has a gap (a chunk with `gap_before_s` or `ads_skipped_s` in the table), the join is part of the plan.
+  Where the recording has a gap (a chunk with `gap_before_s` or `ads_skipped_s` in the table), the join is part of the plan. An ad batch (verdict `ad`) is never part of a run, a span or a pickup: the stream on either side of it is a cut, not a continuation.
 - List for each: `L01`, working title, the ordered source spans (`rec_from`, `rec_to`, a line on why each is in), the target length, the chapter list, the sensitive and avoid spans inside, the guests it features.
 
 ## 3. Shorts: which moments, how many

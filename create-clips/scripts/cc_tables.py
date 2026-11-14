@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-from cc_common import (chunk_dir, fmt_hms, load_chunks, read_json, write_json, write_text)
+from cc_common import (ad_batches, chunk_dir, fmt_hms, load_chunks, read_json, write_json, write_text)
 
 
 # --------------------------------------------------------------------------- loading
@@ -201,9 +201,11 @@ def build_stream_md(run: Path, rows: list, state: dict) -> str:
             cand["motion"].append((rec0 + s, float(np.mean(v)), cid, s))
     total = sum(float(r.get("duration_s") or 0) for r in rows)
     done = sum(1 for r in rows if r.get("status") == "done")
+    ad_ids = {r["id"] for r in rows if r.get("kind") == "ad"}
     head = [f"# Stream {state.get('session')} ({state.get('channel')})", "",
             f"{len(rows)} chunks ({done} done), {fmt_hms(total)} recorded. All times are rec time h:mm:ss.cc (seconds since the start of C0001, "
-            "recorded content only); `clock` is the local wall clock of the chunk's first segment. wpm = words per minute over the whole chunk; "
+            "every recorded chunk counts, an ad-marked one too); `(ad-marked)` after a chunk id = the recorder passed on Twitch's own marker for its segments "
+            "(a fact, not a verdict: see the section below the table); `clock` is the local wall clock of the chunk's first segment. wpm = words per minute over the whole chunk; "
             "speech % = Whisper speech seconds over the chunk's length; rms = loudness in dBFS over 0.5 s windows; loud jumps = windows 10 dB "
             "above the previous 5 s median (audio-profile.json); motion = mean frame difference 0-255; chat = messages per second (chunks "
             "without chat show -). Numbers only: no row here says a moment is good.", "",
@@ -215,20 +217,32 @@ def build_stream_md(run: Path, rows: list, state: dict) -> str:
     body = []
     for r in rows:
         cid = r["id"]
+        label = f"{cid} (ad-marked)" if cid in ad_ids else cid
         d = digests.get(cid)
         rng = f"{fmt_hms(r.get('rec_start_s'), cs=False)}-{fmt_hms((r.get('rec_start_s') or 0) + (r.get('duration_s') or 0), cs=False)}"
         clock = local_clock(r.get("t0_utc"))
         if not d:
-            body.append(f"| {cid} | {rng} | {clock} | status: {r.get('status')} {r.get('error') or ''} | | | | | | | | | | |".replace("\n", " "))
+            body.append(f"| {label} | {rng} | {clock} | status: {r.get('status')} {r.get('error') or ''} | | | | | | | | | | |".replace("\n", " "))
             continue
         tg = " / ".join(x for x in (str(d.get("title") or "")[:40], str(d.get("game") or "")) if x) or "-"
         sp = "-" if d.get("speech_share") is None else f"{100 * d['speech_share']:.0f}"
         chat = "-" if d.get("chat_total") is None else f"{d['chat_total']}/{d['chat_max_per_s']}"
         first = " ".join(str(d.get("first_words") or "").split()[:10]).replace("|", "/")
-        body.append(f"| {cid} | {rng} | {clock} | {tg.replace('|', '/')} | {d.get('words')} | {f1(d.get('wpm'), 0)} | {sp} | "
+        body.append(f"| {label} | {rng} | {clock} | {tg.replace('|', '/')} | {d.get('words')} | {f1(d.get('wpm'), 0)} | {sp} | "
                     f"{f1(d.get('rms_mean_db'))}/{f1(d.get('rms_max_db'))} | {d.get('loud_jumps')} | {f1(d.get('motion_mean'))} | {chat} | "
                     f"{f1(d.get('ads_skipped_s'), 0)} | {f1(d.get('gap_before_s'), 0)} | {first} |")
-    out = head + body + ["", "## Plain percentiles across chunks", "", "| column | n | p10 | p50 | p90 | max |", "|---|---|---|---|---|---|"]
+    out = head + body
+    batches = ad_batches(rows)
+    if batches:
+        out += ["", "## Chunks the recorder marked as ads", "",
+                "Twitch's own marker for the segments of these chunks (a stitched-ad range or a title that is not `live`), passed on by the recorder: a fact, not a "
+                "verdict. Nothing was skipped; the agents look at each batch (its reports, sheets and words) and decide whether it really is an ad; the batches that are "
+                "are left out of every video. Consecutive chunk numbers are one batch (one ad break).", "",
+                "| batch | chunks | rec range | seconds | titles |", "|---|---|---|---|---|"]
+        for b in batches:
+            rr = f"{fmt_hms(b['rec_from'], cs=False)}-{fmt_hms(b['rec_to'], cs=False)}" if b.get("rec_from") is not None and b.get("rec_to") is not None else "-"
+            out.append(f"| {b['batch']} | {', '.join(b['chunks'])} | {rr} | {b['seconds']:.1f} | {'; '.join(b['titles']).replace('|', '/') or '-'} |")
+    out += ["", "## Plain percentiles across chunks (every chunk, ad-marked ones included)", "", "| column | n | p10 | p50 | p90 | max |", "|---|---|---|---|---|---|"]
     for key, label in (("words", "words"), ("wpm", "wpm"), ("speech_share", "speech share"), ("rms_mean_db", "rms mean dB"),
                        ("rms_max_db", "rms max dB"), ("loud_jumps", "loud jumps"), ("motion_mean", "motion mean"),
                        ("chat_total", "chat total"), ("chat_max_per_s", "chat max per s")):
@@ -241,7 +255,7 @@ def build_stream_md(run: Path, rows: list, state: dict) -> str:
         if not top:
             out.append("(no data)")
         for i, (rec, v, cid, off) in enumerate(top, 1):
-            out.append(f"{i}. {fmt_hms(rec)} ({cid} +{off}) {v:.1f} {unit[kind]}")
+            out.append(f"{i}. {fmt_hms(rec)} ({cid} +{off}{', ad-marked chunk' if cid in ad_ids else ''}) {v:.1f} {unit[kind]}")
     text = "\n".join(out) + "\n"
     write_text(run / "00-inventory" / "stream.md", text)
     return text

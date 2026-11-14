@@ -32,7 +32,7 @@ import time
 import uuid
 from pathlib import Path
 
-from cc_common import (CC_HOME, FileLock, cfg_get, chunk_dir, fail, ffprobe_facts, find_tool, fmt_hms, load_chunks, load_state,  # noqa: F401
+from cc_common import (CC_HOME, FileLock, ad_batches, cfg_get, chunk_dir, fail, ffprobe_facts, find_tool, fmt_hms, load_chunks, load_state,  # noqa: F401
                        now_iso, out, parse_time, read_json, resolve_run, run_cmd, run_paths, say, split_across_chunks,
                        update_state, write_json, write_text)
 import cc_wordbox as wb  # noqa: E402  (the word-box caption look: planning and the draft writer)
@@ -196,11 +196,12 @@ def cmd_blocks(a):
         for r in part:
             words += int(r.get("words") or 0)
         blocks.append({"block": len(blocks) + 1, "chunks": [r["id"] for r in part],
+                       "ad_chunks": [r["id"] for r in part if r.get("kind") == "ad"],         # the recorder's marker (a fact); the agents decide what it means
                        "rec_from": part[0]["rec_start_s"], "rec_to": round(part[-1]["rec_start_s"] + part[-1]["duration_s"], 2),
                        "from_hms": fmt_hms(part[0]["rec_start_s"], False),
                        "to_hms": fmt_hms(part[-1]["rec_start_s"] + part[-1]["duration_s"], False), "words": words,
                        "done": sum(1 for r in part if r.get("status") == "done")})
-    out({"ok": True, "run": str(run), "chunks": len(rows), "block_size": n, "min_blocks": mb, "blocks": blocks,
+    out({"ok": True, "run": str(run), "chunks": len(rows), "block_size": n, "min_blocks": mb, "blocks": blocks, "ad_batches": ad_batches(rows),
          "total_s": round(sum(r["duration_s"] for r in rows), 1)})
 
 

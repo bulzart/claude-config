@@ -5,7 +5,7 @@ Other agents read your report later and decide everything: what was a good momen
 
 ## What you open (each with the Read tool, at the paths you are given)
 - `sheets/overview.jpg`: 24 frames of the chunk, 7.5 s apart. `sheets/sheet-01.jpg` to `sheet-08.jpg`: 30 frames each, 0.75 s apart (22.5 s per sheet), 5 columns by 6 rows. Every cell is small (240x135 pixels) and has its time printed under it (rec time, then the chunk offset); a thin bar under the cell shows loudness, another one chat.
-- `timeline.md`: one row per second (speech, loudness, motion, chat). `transcript.txt`: the spoken words with times. `digest.json` and `audio-profile.json`: numbers of the chunk. `chunk.json`: what the recorder knew (the stream's title, category, viewers). `chat.json`: chat counts and a few sample lines (when it exists).
+- `timeline.md`: one row per second (speech, loudness, motion, chat). `transcript.txt`: the spoken words with times. `digest.json` and `audio-profile.json`: numbers of the chunk. `chunk.json`: what the recorder knew (the stream's title, category, viewers; and, on a chunk the recorder marked as an ad, `kind: "ad"` and `ad`: Twitch's own marker for its segments, a fact about the playlist and not a verdict: describe what the pictures, the words and the sound show like for any chunk and say plainly what it looks like, an advertisement, a trailer, the stream itself or something else). `chat.json`: chat counts and a few sample lines (when it exists).
 Open every file you are given, look at every sheet. A report made without looking is worthless. Open them all in ONE step (call Read on every file at the same time), then look, then write the report.
 
 ## What you never do

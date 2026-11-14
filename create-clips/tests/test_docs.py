@@ -146,6 +146,21 @@ def main():
           "every plan, produce, build and wrap-up skill follows the run's captions setting")
     check("captions OFF" in read(CC / "reference" / "edit-craft.md") and "captions OFF" in read(CC / "reference" / "safety.md"), "edit-craft.md and safety.md say what captions OFF means (and that a spoken slur is cut around)")
 
+    # the user's choices of 2026-11-14: a videos question in streamer mode (long only, or long + shorts, no default), and nothing skipped, ad or not ad
+    cs = sk("cc-start")
+    check("`Videos`" in cs and "Long videos only" in cs and "Long videos + shorts" in cs and "no default" in cs and "only=both" in cs and "only=long" in cs,
+          "cc-start asks the Videos question in the same dialog: long videos only, or long videos + shorts, the user picks (no default)")
+    check("only=long|both|shorts" in rt and "only=long|both" in read(CC / "README.md") and "videos choice" in rt, "the router and the README offer the videos choice (argument or question)")
+    check("only=long" in sk("cc-plan") and "only=shorts" in sk("cc-plan") and "get only" in sk("cc-plan") and "get only" in sk("cc-produce"),
+          "cc-plan and cc-produce read the run's `only` (long = no short is planned or built)")
+    check("game mode" in cs.lower() and "only=long" in cs and "never in game mode" in cs, "game mode records only=long and is not asked the Videos question")
+    mm, pf = read(CC / "reference" / "moment-mining.md"), read(CC / "reference" / "portfolio.md")
+    check("ad_batches" in mm and "verdict" in mm and "Ad-marked chunks" in mm and "ad_batches" in sk("cc-scan") and "ad-batches.json" in pf and '"kind": "ad"' in pf and "ad-batches.json" in sk("cc-plan"),
+          "the mining agents judge the ad-marked batches (ad_batches with a verdict) and the planner puts the ones that are ads into avoid.json")
+    check("do not skip anything" in rt.lower() and "ad-marked" in rt and "avoid.json" in rt and '"kind": "ad"' in read(CC / "README.md"),
+          "the router and the README say: nothing is skipped, ad or not ad; the agents leave the ad batches out")
+    check("ad-marked" in read(CC / "reference" / "game-mining.md") and "non_play" in read(CC / "reference" / "game-mining.md"), "game mining judges the ad-marked chunks too (non_play kind ad)")
+
     # the user's choices of 2026-11-13, later: the CapCut composition for everything (ONE build command), and the caption look
     check({"capcut-build", "fonts"} <= cmds, "cc.py registers capcut-build (the one build command) and fonts")
     cb = read(CC / "reference" / "capcut-build.md")

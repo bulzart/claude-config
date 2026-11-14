@@ -4,8 +4,8 @@ Twitch livestream -> **Twitch Chunk Recorder** (Chrome extension, `C:\Users\Bulz
 **`cc.py watch`** (this toolkit) turns each chunk into frame sheets, a Whisper transcript and per-second numbers inside a run folder ->
 **`/create-clips <run folder>`** (Claude Code command) researches the stream, mines its moments and builds CapCut projects (shorts and long-form).
 
-The command has **two modes and a captions choice, and you pick them at the very start** (`/create-clips` asks both in one dialog; `mode=streamer|game` and `captions=on|off` in the command skip the questions), each mode with its own logic:
-- **streamer clipping**: a person is the show (jokes, reactions, arguments, chat, lingo): ONE brief research agent on the streamer, their audience and the topic, moments, shorts and hour-long videos, with matching sound effects.
+The command has **two modes, a captions choice and (streamer mode) a videos choice, and you pick them at the very start** (`/create-clips` asks them in one dialog; `mode=streamer|game`, `captions=on|off` and `only=long|both` in the command skip the questions), each mode with its own logic:
+- **streamer clipping**: a person is the show (jokes, reactions, arguments, chat, lingo): ONE brief research agent on the streamer, their audience and the topic, moments, hour-long videos and, when you pick them, shorts too (the question: long videos only, or long videos + shorts), with matching sound effects.
 - **game clipping**: a broadcast of a match (BLAST Premier CS2, a Dota 2 game, Valorant, League ...): ONE brief research agent on the game, the event and the teams, then **rounds and fights** as the units
   (how much of each to take, which to drop, which small ones to keep because a viewer would lose the detail). **Long condensed-match videos only: no shorts, no sound effects**; sponsorship and the like (sponsor stings, betting segments, ad breaks) is cut out totally.
 
@@ -22,7 +22,7 @@ This file is the **contract** between the three parts. Everything that crosses a
    Chunks land in `Downloads\twitch-chunks\...` every 3 minutes and the processor turns each one into sheets and a transcript inside `C:\Users\Bulzart\Documents\stream-clips\runs\<session>`.
    When the recording has ended and every chunk and its report is done, Windows shows **one notification** (it stays until you dismiss it) with the exact `/create-clips <run folder>` command (`docs/processing.md`, "The ready alert").
    Chrome's "Ask where to save each file before downloading" (Settings > Downloads) must be OFF in the recording profile, or every chunk file waits for a Save As click.
-4. **Clip**: in Claude Code, `/create-clips <that run folder>` (optionally `notes="guest was X, topic Y"`, `mode=streamer|game`, `captions=on|off`, `game="Counter-Strike 2"`, `only=shorts|long` (streamer mode)). It asks you first which mode this is and whether the videos get captions, unless you gave `mode=` and `captions=` (captions are on by default).
+4. **Clip**: in Claude Code, `/create-clips <that run folder>` (optionally `notes="guest was X, topic Y"`, `mode=streamer|game`, `captions=on|off`, `game="Counter-Strike 2"`, `only=long|both|shorts` (streamer mode)). It asks you first which mode this is, whether the videos get captions and, in streamer mode, whether to make long videos only or long videos plus shorts, unless you gave `mode=`, `captions=` and `only=` (captions are on by default; the videos you always pick).
    Read `RUN\deliverables\README.md` at the end (game mode also writes `RUN\deliverables\rounds.md`: every round or fight with what was done with it); open the CapCut projects, check the first frame, export.
    Models: the chunk reports are written by the Haiku reporter (`config.json -> report`); research, analysis, planning, editing and the main session use whatever you picked with `/model`. Nothing asks you which.
 Space: source quality (1080p60, about 8 Mbps) is about 3.6 GB per hour of stream, 720p60 about 1.5 GB. C: has only about 8 GB free until the new 1 TB M.2 SSD the user is buying (2026-11-12) is installed; then set Chrome's
@@ -67,7 +67,13 @@ A file still downloading is `*.crdownload`: never read it. Chunk numbers start a
 ```
 `t0_utc`/`t1_utc` = the playlist's PROGRAM-DATE-TIME of the chunk's first segment and its end (null when the playlist gave none). `ended_by` is
 `duration` | `init-change` | `gap` | `stop` | `stream-ended`. `gap_before_s` = seconds of the stream that are missing between the previous chunk's end and
-this chunk's start (by program date time; ad seconds and reconnects). `stream` is a GQL snapshot taken at the chunk's start, `null` fields when unknown.
+this chunk's start (by program date time; the stream an ad session never received, lost segments and reconnects). `stream` is a GQL snapshot taken at the chunk's start, `null` fields when unknown.
+
+**Ad chunks** (the user, 2026-11-14: "just do not skip anything, whether ad or not ad, and the agents then exclude batches of ads when they analyse"): the recorder saves the segments Twitch marks as ads (a stitched-ad range or a title that is not `live`) as
+chunks of their own, numbered in sequence between the stream's chunks, and their sidecar carries two more fields after `ended_by`: `"kind": "ad"` and `"ad": {"segments_by_range": n, "segments_by_title": n, "titles": [...]}`. A stream chunk has neither field. An ad chunk has no chat file and is never dropped, however short.
+`ads_skipped_s` is then only the ad seconds that could not be recorded (a segment that would not download): normally 0. The marker is **Twitch's word, a fact the processor copies into the chunk table (`kind`, `ad`) and shows (`(ad-marked)` in `stream.md`, `AD-MARKED` in `T status` and `T chunks`, `ad_chunks` per block and `ad_batches` in `T blocks`), never a verdict:**
+an ad chunk is processed like any chunk (sheets, audio numbers, transcript, digest, report; the report says what it shows), rec time runs through it, and the agents decide, when they analyse, which batches (consecutive marked chunks = one ad break) really are ads and leave those out of every video
+(mining agents: `ad_batches` with a verdict `ad|stream|mixed` in their block file; the planner: `ad-batches.json` and `avoid.json` kind `ad`). → `reference/moment-mining.md`, `reference/portfolio.md`.
 
 `chat-NNNN.json` (`schema: "tcr-chat/1"`), no user names, ever:
 ```json
@@ -117,7 +123,7 @@ RUN\
 
 ### Times (read this once)
 
-- **rec time** = seconds since the start of C0001, counting recorded content only (a gap between chunks does NOT add time). Every time an agent
+- **rec time** = seconds since the start of C0001, counting every recorded chunk, an ad-marked one too (a gap between chunks does NOT add time). Every time an agent
   reads or writes (sheets, transcripts, EDL, moments) is rec time. Display `H:MM:SS.cc` (`0:33:45.75`) or plain seconds (`2025.75`).
 - **chunk offset** = seconds since the start of that chunk's mp4 (`+45.75`).
 - `rec = chunk.rec_start_s + offset`. `rec_start_s` of a chunk = sum of the real durations (ffprobe) of the chunks before it.
@@ -125,7 +131,7 @@ RUN\
 - `t0_utc` (wall clock) is context only (when it happened, gaps between chunks).
 
 `00-inventory/chunks.json`: list of `{id:"C0001", index:1, file:"10-media/C0001/chunk.mp4", rec_start_s, duration_s, t0_utc, t1_utc, gap_before_s,
-ads_skipped_s, ended_by, quality:{...}, stream:{...}, status:"pending|processing|done|failed", stages:{move,probe,audio,sheets,transcript,digest: true|false|"failed: why"},
+ads_skipped_s, ended_by, kind:"ad" (only on a chunk the recorder marked as an ad), ad:{...} (the same), quality:{...}, stream:{...}, status:"pending|processing|done|failed", stages:{move,probe,audio,sheets,transcript,digest: true|false|"failed: why"},
 sheets:N, frames:N, words:N, speech_seconds, language, model, device, seconds:{audio,sheets,transcript}, error, processed_at}`.
 
 `state.json`: `{schema:"cc/1", channel, session, run, created, inbox, settings:{frame_interval_s,frames_per_sheet,...}, chunks:{"C0001":{status,...}},
@@ -173,7 +179,7 @@ The command, its phase skills (`~/.claude/skills/cc-*`: profile, scan, plan and 
 - Scripts gather, agents decide: no verdict, label, rank or gate comes from a script (numbers, facts, peaks lists are fine). In game mode the screen readers and `units-check` report values, changes and gaps; whether a round was a clutch or should be kept is an agent's call.
 - Models: the only Haiku is the chunk reporter (`config.json -> report`: Haiku 5.5, effort high, a headless `claude -p` session per chunk, Read tool only); research, analysis, planning, production and the main session use the model the user picked with `/model` (no `model` argument to any agent, never a question about it).
   **The reporter reports, it never decides**: no verdict, no label ("ace", "highlight"), no name corrected, nothing ranked, kept or skipped; every decision is a working agent's. The analysis batch sizes are `scan_chunks_streamer` 10 and `scan_chunks_game` 8 (the agents start from the reports), and a recording always gets at least `scan_min_blocks` 2 blocks so that two agents read it side by side.
-- The mode and the captions setting are the user's picks, asked once at the start (one dialog) and kept for the run. Game mode makes long-form condensed matches only: no shorts, no sound effects, sponsor stretches cut.
+- The mode, the captions setting and (streamer mode) the videos choice (`only=long`: long videos only, `only=both`: long plus shorts) are the user's picks, asked once at the start (one dialog) and kept for the run. Game mode makes long-form condensed matches only: no shorts, no sound effects, sponsor stretches cut.
 - **Captions** (the user, 2026-11-13): `state.json -> captions` is `on` (the default, also for a run made before the option existed) or `off`. With captions on every second of speech is captioned in every video; with captions off `cc.py captions` writes nothing, `capcut-finish` adds no caption track, font or entrance (`finish.json` carries `captions.enabled: false`), the lexicon work is skipped,
   and a spoken slur, which nothing masks (no audio is edited), is cut around by the plan. Skills, references and the wrap-up follow the setting.
 - **The caption look** (the user, 2026-11-13, after comparing a frame of ours with one of Loupe video 04 in run `20261106-063422-static-klein`: "the highlight is way too off and big in comparison with the fonts, and always use the same font family as they used in that video"): COPIED from that video, not approximated.

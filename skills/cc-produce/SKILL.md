@@ -10,6 +10,7 @@ user-invocable: false
 
 ## Read now
 - `RUN/20-analysis/portfolio.md` (the videos and the building order). Nothing else: the agents read their own briefs.
+- `T state --run RUN get only`: the user's pick at the start (`long` = long videos only, `both`, `shorts`; none = both). A planned video of a kind the user did not pick (a short in a `long` run) is not built: say so in one line and leave it `planned`.
 
 ## Steps
 1. **CapCut**: `Get-Process CapCut -ErrorAction SilentlyContinue`. Running is a blocker notice, not a question: the agents still write their edit plans, but cannot save a project. Tell the user once, in a line, to close CapCut; the videos stay `ready-to-build` and a later `/create-clips <run> resume` builds them.

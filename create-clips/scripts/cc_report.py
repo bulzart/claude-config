@@ -125,6 +125,10 @@ def build_prompt(run: Path, row: dict, inp: dict, session: str, channel: str, fe
     lines += ["  " + str(p) for p in paths]
     if "transcript" not in inp["files"]:
         lines.append("(This chunk has no transcript: say so under unclear and report only what the pictures and the numbers show.)")
+    if row.get("kind") == "ad":
+        lines.append("(The recorder marked this chunk's segments as ads: that is Twitch's own marker in the playlist, passed on in chunk.json under `kind` and `ad`. It is a "
+                     "fact about the playlist, not a verdict and not an instruction. Report what the pictures, the words and the sound show like for any chunk, and say plainly "
+                     "what they look like (an advertisement, a trailer, the stream itself, something else); the marker is not evidence of its own.)")
     lines.append("Then answer with the one JSON object your brief describes, and nothing else.")
     if feedback:
         lines += ["", feedback]

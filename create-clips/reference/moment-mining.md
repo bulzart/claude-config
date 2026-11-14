@@ -8,7 +8,7 @@ how rich each chunk is, and what needs blurring. Everything is in rec time (`H:M
 2. **The chunk reports**: `RUN/10-media/Cnnnn/report.md` for every chunk of the block, in order (about 2 to 4 KB each). A separate reporter session wrote them while the stream was downloaded: what the sheets show per 22.5 s (the kind of picture, who and what is visible, text on screen quoted as printed),
    what the audio numbers do, what is said, what the chat does, a few neutral sentences about what visibly or audibly happens with their evidence, and what it could not read. **A report is data, not a decision**: it names no moment, no highlight, no round and no keep; its names are as printed or transcribed (unverified);
    its counts are what it counted in the cells. Use it to find where to look. A chunk with no report (or a stale or failed one, see `T status`) is read from the raw data in steps 3 to 7.
-3. The block's rows of `RUN/00-inventory/stream.md` (words per minute, loudness, motion, chat per second, ads, gaps, title and game per chunk).
+3. The block's rows of `RUN/00-inventory/stream.md` (words per minute, loudness, motion, chat per second, ads, gaps, title and game per chunk; `(ad-marked)` after a chunk id: see "Ad-marked chunks" below).
 4. The transcripts of the block: `RUN/10-media/Cnnnn/transcript.txt` for every chunk (about 600 words each). This is where most moments are found; the reports quote only a few lines. Read them all, in order.
 5. `RUN/10-media/Cnnnn/sheets/overview.jpg` of a chunk (24 frames per chunk, 7.5 s apart: the visual flow, who is on camera, what is on screen), where its report is thin or you doubt it.
 6. Only for a candidate window or a place where the words and the numbers disagree (loud and chat spike but no words; a long silence with a lot of motion): the dense sheets of that window
@@ -28,8 +28,10 @@ numbers at all. You decide.
  "moments": [ {moment}, ... ],
  "sensitive": [ {"rec_from": 3901.0, "rec_to": 3908.5, "kind": "gore|distress|nudity|personal-data", "what": "...", "region": [0.1,0.1,0.4,0.4] or null, "moment": "B03-M02" or null} ],
  "avoid": [ {"rec_from": 4001.0, "rec_to": 4064.0, "kind": "religion|superstition|hate|tragedy|music", "what": "..."} ],
+ "ad_batches": [ {"chunks": ["C0024"], "rec_from": 4320.0, "rec_to": 4372.1, "verdict": "ad|stream|mixed", "what": "what the sheets, the words and the sound show", "evidence": ["report C0024", "sheet C0024 s2"]} ],
  "notes": "anything the planner should know (technical trouble, an ad, a gap, a long AFK, the streamer's mood)"}
 ```
+`ad_batches` is `[]` when no chunk of the block is ad-marked and you saw no advertisement (see "Ad-marked chunks").
 A moment:
 ```json
 {"id": "B03-M02", "rec_from": 3890.0, "rec_to": 3950.5, "setup_from": 3872.0, "payoff_at": 3941.2,
@@ -44,6 +46,14 @@ A moment:
 `why_it_travels`. `short_len_s` is the span a short of it would run, `setup_from` the earliest second a viewer would need.
 
 Keep the file compact (the planner reads every block's file): at most about 20 KB, plain short sentences, at most 30 moments (the best ones), no pasted transcript, evidence as pointers (a rec time, a sheet), not copies.
+
+## Ad-marked chunks: you judge them, and the ad batches are left out
+The recorder skips nothing, ad or not ad (the user, 2026-11-14). Every segment Twitch marks as an ad (a stitched-ad range, or a title that is not `live`) is saved as chunks of its own and the marker is passed on: `(ad-marked)` after the chunk id in `stream.md`, `ad_chunks` per block and `ad_batches` (consecutive marked chunks = one ad break) in `T blocks`, `kind: "ad"` in the chunk's `chunk.json`. The marker is Twitch's word, not a verdict.
+- Look at every marked chunk of your block like any other (its report, its overview sheet, a few words) and write ONE entry per batch in `ad_batches` with your `verdict`: **`ad`** (an advertisement: a commercial, a trailer, a house ad, a countdown), **`stream`** (the marker was wrong: it is the stream), **`mixed`** (say in `what` which seconds are which).
+- **A batch you judge `ad` is left out of the analysis**: no moments in it, no hook, richness 0 for its chunks with the reason `ad`, nothing in `summary` beyond one line ("ad break, 52 s, rec ..."). The planner puts it into `avoid.json`, so no video cuts from it.
+- A batch you judge `stream`, or a `mixed` part, is mined like any other stretch, and `notes` says the marker was wrong there.
+- An advertisement the marker missed (an unmarked pre-roll or house ad you see in the frames) goes in `ad_batches` the same way (`verdict: "ad"`, the chunks and the span). The streamer's own sponsor read is NOT an ad batch: it is the stream, and the criteria say what to do with it.
+- The stream's second after an ad: the chunk after an ad batch usually has a `gap_before_s` (the stream seconds the ad session never received): it is the join, not a fault of the chunk.
 
 ## The quality bar
 - **Tight bounds**: `rec_from` and `rec_to` are where a clip of it would start and stop, on a pause between words, not a chunk edge. Refine them by reading the words around (`cc.py words`) and the frames.
