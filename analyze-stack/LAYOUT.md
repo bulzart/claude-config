@@ -67,8 +67,9 @@ libass `fontsdir`): `tools\edit\fonts\` = Montserrat-ExtraBold / Black / Bold, A
 BebasNeue-Regular; system fallbacks Arial Black, Impact, Bahnschrift.
 Also installed 2026-09-16: trendspy (Google Trends client), ByteDance's official Seedance 2.5
 prompt-optimisation skill at `C:\Users\Bulzart\.claude\skills\sd25-pe\SKILL.md` (rule source
-for prompt writers), whisper.cpp ggml models `tiny.en` + `base.en` in
-`C:\Users\Bulzart\.cache\whisper-cpp\` (ffmpeg built-in whisper filter fallback).
+for prompt writers), whisper.cpp ggml models in `C:\Users\Bulzart\.cache\whisper-cpp\`
+(ffmpeg built-in whisper filter fallback; since 2026-11-14 only `ggml-medium.bin` is read, the old
+`tiny.en` / `base.en` files are unused: the Whisper model is medium, always).
 Higgsfield MCP: reachable two ways — the claude.ai connector "Higssfield" (tools
 `mcp__claude_ai_Higssfield__*`, connected) and a persistent user-scope Claude Code server named
 `higgsfield` (`https://mcp.higgsfield.ai/mcp`, HTTP; tools `mcp__higgsfield__*` once the owner

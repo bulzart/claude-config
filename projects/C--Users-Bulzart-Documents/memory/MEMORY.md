@@ -86,3 +86,4 @@
 - [Fix limits, don't just report them](feedback-fix-limits-dont-just-report.md) — user 2026-11-14: when I find a gap in my own work, evaluate it on real data and fix it (lightest way that works); ask only when the choice is the user's
 - [/create-static command](create-static-command.md) — 2026-11-13: Static mode of /analyze-with-loupe as its own command, CapCut project by ONE `T capcut-build`; library ~/.claude/create-static, cs-* skills; not yet run end to end
 - [AWL Static: no kids or children](awl-static-no-kids-or-children.md) — user 2026-11-14: every person an adult, never a child or a child-looking figure (round chubby face); state adult features in the sheet and view the anchor
+- [Whisper strictly medium](whisper-strictly-medium.md) — user 2026-11-14: medium for ALL audio processing in every pipeline; no smaller default, fallback or speed-up advice; a medium that cannot load is an error (ATP/ATG were on small until today)
