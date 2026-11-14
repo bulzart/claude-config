@@ -1348,26 +1348,32 @@ MOVE_PROPS = ("UNIFORM_SCALE", "KFTypeScaleX", "KFTypeScaleY", "KFTypePositionX"
 
 
 def write_zoom_keys(d: Path, zooms: list, fps: int) -> dict:
+    """The zoom keyframes, written into every copy of the timeline (draft_content.json, the draft_info.json mirror, template-2.tmp). Each zoom's keyframe objects are made ONCE and the
+    same ones (ids included) go into every copy: with fresh random ids per copy the copies differed, and on a long video the repair's `capcut sync-timelines` then refused (the root
+    document looked older than the 'drifted' mirrors; tests/test_zoomkeys.py)."""
     half = 500000 / fps
     files, unmatched = [], set()
+    made = {}
     for p in draft_files(d):
         content = json.loads(p.read_text(encoding="utf-8"))
         main = next((t for t in content.get("tracks", []) if t.get("type") == "video"), None)
         segs = (main or {}).get("segments") or []
         keyed = 0
-        for z in zooms:
+        for zi, z in enumerate(zooms):
             want = z["at_s"] * 1e6
             seg = next((s for s in segs if abs(int((s.get("target_timerange") or {}).get("start") or 0) - want) <= half), None)
             if seg is None:
                 unmatched.add(z["piece"])
                 continue
             keys = z["keys"]
-            kfs = [k for k in seg.get("common_keyframes") or [] if k.get("property_type") not in MOVE_PROPS]
-            kfs.append(kf_multi("KFTypeScaleX", [(k["t_us"], k["scale"]) for k in keys]))
-            if any(abs(k["x"]) > 1e-6 for k in keys):
-                kfs.append(kf_multi("KFTypePositionX", [(k["t_us"], k["x"]) for k in keys]))
-            if any(abs(k["y"]) > 1e-6 for k in keys):
-                kfs.append(kf_multi("KFTypePositionY", [(k["t_us"], k["y"]) for k in keys]))
+            if zi not in made:
+                new = [kf_multi("KFTypeScaleX", [(k["t_us"], k["scale"]) for k in keys])]
+                if any(abs(k["x"]) > 1e-6 for k in keys):
+                    new.append(kf_multi("KFTypePositionX", [(k["t_us"], k["x"]) for k in keys]))
+                if any(abs(k["y"]) > 1e-6 for k in keys):
+                    new.append(kf_multi("KFTypePositionY", [(k["t_us"], k["y"]) for k in keys]))
+                made[zi] = new
+            kfs = [k for k in seg.get("common_keyframes") or [] if k.get("property_type") not in MOVE_PROPS] + made[zi]
             seg["common_keyframes"] = kfs
             seg["uniform_scale"] = {"on": True, "value": 1.0}
             clip = seg.setdefault("clip", {})
