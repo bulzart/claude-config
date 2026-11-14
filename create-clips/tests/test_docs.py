@@ -245,6 +245,13 @@ def main():
           "the planned length is an 'expected length' (an estimate from the spans), never called a target in the planner's guide or the long-video builder")
     check("not worth a video" in sk("cc-build-long") and "not worth a video:" in sk("cc-produce") and "not retried" in sk("cc-produce") and "dropped" in sk("cc-wrapup"),
           "a long video its builder judges not worth making is set failed with 'not worth a video: <why>', is not retried by cc-produce, and the wrap-up lists it as dropped with its reason")
+    # the user's choice of 2026-11-14 (STREAMER SHORTS): zoom, sound effects and the words per caption are the agents' call; encouraged where there is room and it fits, never forced
+    check("6 to 8 s" not in ec and "8 to 10 s" not in ec and "one per big beat at most" not in cl and "seasoning" not in cl.lower() and "seasoning" not in ec.lower(),
+          "no zoom or sound-effect count or spacing is set in the craft sheet or the edit craft any more (the old 6 to 8 s, 8 to 10 s and one-per-beat limits are gone)")
+    check("the agent's call" in cl and "the agent's call" in ec and "would feel off" in cl and "would feel off" in ec and "Never force a zoom or a sound effect" in sk("cc-build-short"),
+          "shorts: zoom and sound effects are the agent's call, used where there is room and they fit, left out where there is none or one would feel off")
+    check("about 3 words" in cl and "about 3 words" in ec and "the agent sets another count" in ec and "about 3 by default" in sk("cc-build-short"),
+          "shorts: about 3 words a caption is a default; the agent sets another count in the EDL when the speech or the picture calls for it")
     check("none from a dull one" in sk("cc-start") and "hours of videos" in sk("cc-start"),
           "the Videos question tells the user the agents decide how much of the stream is worth it (hours from a great night, half an hour from a quiet one, none from a dull one)")
 
