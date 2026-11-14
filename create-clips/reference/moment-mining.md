@@ -25,6 +25,7 @@ numbers at all. You decide.
  "people": [{"name": "...", "role": "guest|co-streamer|mentioned", "first_rec": 3790.5, "notes": "spelling, how Whisper wrote it"}],
  "lexicon_fixes": [["Whisper wrote", "right spelling"]],
  "richness": [{"chunk": "C0021", "score": 7, "why": "one line: how good this chunk's content is for this streamer's audience, as a stretch to watch"}],
+ "acts": [ {"rec_from": 3780.0, "rec_to": 4150.5, "kind": "game|guest|story|challenge|topic|chat|break|dull|other", "what": "one line: what this stretch is, as a watch", "starts": "how it opens: what a viewer sees and hears", "ends": "how it ends: the result, the guest leaving, the topic closing, or 'continues in the next block'", "open_start": false, "open_end": false} ],
  "moments": [ {moment}, ... ],
  "sensitive": [ {"rec_from": 3901.0, "rec_to": 3908.5, "kind": "gore|distress|nudity", "what": "...", "region": [0.1,0.1,0.4,0.4] or null, "moment": "B03-M02" or null} ],
  "avoid": [ {"rec_from": 4001.0, "rec_to": 4064.0, "kind": "religion|superstition|hate|tragedy|music", "what": "..."} ],
@@ -32,6 +33,10 @@ numbers at all. You decide.
  "notes": "anything the planner should know (technical trouble, an ad, a gap, a long AFK, the streamer's mood)"}
 ```
 `ad_batches` is `[]` when no chunk of the block is ad-marked and you saw no advertisement (see "Ad-marked chunks").
+`acts` (the user, 2026-11-14: a long video is one whole watch, so the planner sets the borders between long videos between the stream's acts and never inside a story): the stretches of your block that are each one watchable thing from its start to its end
+(a game or a match from the lobby to the result, a guest segment, a story from its setup to its end, a challenge or a bet to its verdict, a topic the stream stayed on, a break, a dull stretch), in time order and covering the whole block, usually 2 to 8 of them. A dull stretch or a break is an act of its own (kind `dull` or `break`), so the planner can see where a border may fall.
+`starts` and `ends` say what a viewer would see and hear at the two edges (the result lands, the guest leaves, the streamer changes the game), so the planner can tell a clean border from a story cut in half. An act that begins before your block or goes on after it is marked `open_start` or `open_end`, with the edge you can see: the planner joins it to the neighbouring block's act.
+You do not decide the videos: you say where the stream's own acts begin and end, from the words and the frames.
 A moment:
 ```json
 {"id": "B03-M02", "rec_from": 3890.0, "rec_to": 3950.5, "setup_from": 3872.0, "payoff_at": 3941.2,
@@ -65,4 +70,5 @@ The recorder skips nothing, ad or not ad (the user, 2026-11-14). Every segment T
 - **Touchy things are recorded where they are found** (`sensitive`, `avoid`), with the rec span at full-resolution precision, so the builder does not have to find them again.
 - **Speed (the user wants it fast, without losing a check):** batch independent tool calls (several frames, contact sheets or Read calls in ONE message, every sheet you need from ONE PowerShell call, the images read together), aim for about 8 minutes and about 40 tool calls.
 - **The picture and the words win** over the brief, the criteria or a report: where they disagree, the moment says what is seen and heard, and `notes` says so.
-- **Do not decide the videos.** That is the planner's job; you hand over the best map of the block you can.
+- **Acts end where the stream ends them**: an act's bounds are where its story, game or conversation really starts and finishes (read the words around each edge), never a chunk edge; one still going at the end of your block is `open_end`, never closed by you.
+- **Do not decide the videos.** That is the planner's job; you hand over the best map of the block you can (the moments and the acts).

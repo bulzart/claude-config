@@ -217,6 +217,23 @@ def main():
     check(all("mask_terms" in sk(n) and "f*ck" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game")) and "masked" in sk("cc-wrapup"),
           "the three build skills and the wrap-up follow the mask rule (the default list by itself, mask_terms for a word it lacks, the `masked` tally in the README)")
 
+    # the user's choice of 2026-11-14 (STREAMER MODE ONLY): a long video is one whole watch of about 25 minutes to an hour, set by the content; borders between acts, never a story left half
+    cl = read(CC / "reference" / "clip-economy.md")
+    check(all("25 minutes to an hour" in t for t in (pf, cl, sk("cc-start"), sk("cc-build-long"), rt, readme)) and "36, 43 and 27" in pf and "whole watch" in pf and "whole watch" in rt,
+          "portfolio.md, clip-economy.md, cc-start, cc-build-long, the router and the README say a long video is one whole watch of about 25 minutes to an hour (the 36, 43 and 27 minute example is in the planner's guide)")
+    check(not any("about an hour" in t.lower() for t in (pf, cl, sk("cc-start"), sk("cc-build-long"), sk("cc-plan"), rt, readme, mm)),
+          "no streamer-mode file still sets the long video at 'about an hour'")
+    check("acts" in mm and "open_end" in mm and "open_start" in mm and "acts" in sk("cc-scan") and "acts.json" in pf and "acts.json" in sk("cc-plan"),
+          "the mining agents record the stream's acts (open_start and open_end at a block's edge) and the planner merges them into acts.json")
+    check("Check every border" in pf and "between acts" in pf and "ONE long video only" in pf and "between acts" in sk("cc-plan") and "reading the words" in sk("cc-plan"),
+          "the planner sets the borders between acts, checks every border by reading the words, and keeps a stretch in one long video only")
+    check("how it opens" in pf and "not clean" in sk("cc-build-long") and "not clean" in sk("cc-produce") and "not clean" in sk("cc-wrapup"),
+          "the long-video builder checks how its video opens and ends, and a border that was not clean goes through the produce contract into the wrap-up README")
+    check("game-clipping.md" in cl and "condensed match" in cl.lower() and "about an hour is only a ceiling" in read(CC / "reference" / "game-clipping.md").lower(),
+          "the 25-minutes-to-an-hour rule is streamer mode only: the shared craft sheet points game mode to game-clipping.md, whose own length rule is unchanged")
+    check(all("25 minutes" not in read(p) for p in (SKILLS / "cc-plan-game" / "SKILL.md", SKILLS / "cc-build-game" / "SKILL.md", CC / "reference" / "game-clipping.md")),
+          "game mode's plan, build skill and clipping guide carry no 25-minute rule")
+
     # the router names both modes' skills
     r = read(ROUTER)
     for s in ("cc-start", "cc-profile", "cc-profile-game", "cc-scan", "cc-scan-game", "cc-plan", "cc-plan-game", "cc-produce", "cc-build-short", "cc-build-long", "cc-build-game", "cc-wrapup"):

@@ -8,23 +8,39 @@ Two kinds are made at the same time: shorts and long-form. The agents decide how
   the turns, the technical trouble). A reader should get the night in two minutes.
 - `RUN/20-analysis/moments.json`: all moments, ids kept, duplicates and overlaps merged (when two block agents saw one moment from two sides, keep the widest honest bounds and the better title).
 - `RUN/20-analysis/richness.json`: one score per chunk (the scan's), smoothed by you where a block agent was harsher or kinder than its neighbours, with the reason.
+- `RUN/20-analysis/acts.json`: the mining agents' `acts` of every block, in rec time (each act: `rec_from`, `rec_to`, `kind`, `what`, `starts`, `ends`): an act that is open at the end of one block (`open_end`) and open at the start of the next (`open_start`) is joined into ONE act with one `what`.
+  Every ad batch and every hole in the recording (`gap_before_s`) is marked in it as a border. Section 2 sets the borders between the long videos from these acts.
 - `RUN/20-analysis/lexicon.json`: the merged Whisper-spelling fixes, `[["Whisper wrote","right"], ...]`, which every EDL's `captions.replace` takes.
 - `RUN/20-analysis/sensitive.json` and `avoid.json`: every span to blur (gore, distress, nudity only) and every span to stay away from, merged, as the builders will need them.
 - **The ad batches** (the user, 2026-11-14: the recorder skips nothing, and the agents leave the ad batches out when they analyse): the mining agents' `ad_batches` (each with a verdict `ad|stream|mixed`) merged by rec time into `RUN/20-analysis/ad-batches.json`
   (`T blocks` also lists the recorder's marker as `ad_batches`; compare: a marked batch no agent judged is yours to judge now, from its report and a sheet). Every span with verdict `ad` goes into `avoid.json` as `{"rec_from", "rec_to", "kind": "ad", "what": "..."}`, so
   every brief carries it as a span to stay away from. A `stream` verdict is not left out; a `mixed` one is left out only for the seconds that are the ad.
 
-## 2. Long-form: how rich was the night?
-Read the richness line across the whole stream (a score per chunk), not just the peaks.
+## 2. Long-form: the night as whole watches (streamer mode)
+A long video is **one whole watch** (the user, 2026-11-14): whatever a viewer starts in it, a story, a bit, a game, a challenge, a conversation, ends inside the same video, so nobody has to open the next one to see how it finished.
+Its length is a ballpark of **about 25 minutes to an hour, set by the content and its context** (what is being said, who is on, what the stream is doing, where it changes), never by the clock and never "an hour, then whatever is left".
+From a 7-hour stream the content may give three videos of 36, 43 and 27 minutes. It must not give one of an hour and a second of 46 minutes that opens with the end of a story the first one left half told (the viewer would have to watch the first 7 minutes of the second to finish what they were watching) when the stream could have been split into watches that are easier to finish.
+A video a little under 25 minutes or over an hour is right when its content is whole at that length (a great 20-minute stretch that is all there is; a 70-minute challenge that cannot be cut without losing it). Length means the finished video, the dull parts already out: the plan estimates it from the spans.
+
+Read the richness line across the whole stream (a score per chunk), not just the peaks, and the acts.
+- **The acts** (`acts.json`): the stretches of the stream that are each one watchable thing from its start to its end (a game or a match from the lobby to the result, a guest segment, a story from its setup to its end, a challenge or a bet to its verdict, a topic the stream stayed on, a break or a dull stretch).
+  A block file with no `acts` (a run made before the field existed, or a thin file) is read from its summary lines and its transcripts.
 - Find **runs**: stretches of chunks that are good to watch as a whole (the stream on fire, a long guest segment, a challenge from start to end). Runs can be short or 20 chunks long.
-- Find **pickups**: good moments between the runs (2 minutes from one chunk, 30 s from another) that belong in the best hour but do not make a run.
-- Decide **how many videos**: if the content is consistently hot for this creator's audience (they would watch it all), there can be many (8 videos of about an hour is possible for a streamer like that on a big night);
-  if it is warm, make fewer and shorter videos that are all good; if only a few pockets are good, one video or none. A video is made when its content earns the length. Padding is a failure.
-- Decide **each video's shape**: chronological is the default (the night as it went); a theme video ("every guest moment") or a best-of order is fine when it is the better watch. A cold open of the best 20 to 40 s may start it.
-  Length is about an hour as a guide; a segment is never cut in half to hit it, so a video may run past an hour to end a scene, or stop short when the next stretch is weak.
+- Find **pickups**: good moments between the runs (2 minutes from one chunk, 30 s from another) that belong in a video but do not make a run.
+- **Set the borders between the videos from the acts, then see what lengths come out.** A border falls between acts (a pause, a scene change, a guest leaving, a game or a topic ending, a break, a hole in the recording, an ad batch, a dull stretch that is left out), never inside a story, a bit, a game, a challenge or a conversation.
+  Acts that belong together (one guest, one game session, one topic, one mood) go into one video, so that what is kept comes to about 25 to 60 minutes. Where the sums fall badly (an hour and a remainder of 46 minutes that begins in the middle of something), move the borders or group the acts again until every video is a good whole.
+  What is left over and too thin for a video of its own goes with the act it belongs to, becomes material for shorts, or is left out; it is never a tail that ends in the middle of a story.
+- **An act that alone runs past an hour** (a marathon game session, an all-night challenge) stays one video when it holds as a whole. If it has to be divided, only where one part is finished (a game won, a level done, a topic closed, a break the stream takes itself):
+  each part ends on a resolved point and the next opens with its own setup (a bit of what it needs may be kept as a context span, `context-keeping.md`). Never at a place where the answer, the reveal, the result or the payoff lies on the other side.
+- **Check every border by reading the words** (`T window` about two minutes on each side of it, and a frame): nothing is in progress across it: no story whose end is on the other side, no question not yet answered, no bet or game not yet decided, no "wait for it".
+  Where something is, it goes whole into one video: the border moves to its start or to its end, whichever makes the better watches. The first and the last scene of every long video are read the same way: it does not open in the middle of something, and it does not end before its last story lands.
+  A stretch of the stream is in ONE long video only: a short may reuse a moment, and a bit kept as a context span may come from a stretch another video holds (`context-keeping.md`); otherwise two long videos never overlap.
+- Decide **how many videos**: as many whole watches as the content earns. If it is consistently hot for this creator's audience (they would watch it all) there can be many; if it is warm, fewer and shorter ones that are all good; if only a few pockets are good, one video or none. The number is not the stream's length divided by an hour. Padding is a failure.
+- Decide **each video's shape**: chronological is the default (the night as it went); a theme video ("every guest moment") or a best-of order is fine when it is the better watch, its stories whole. A cold open of the best 20 to 40 s may start it.
   Where the recording has a gap (a chunk with `gap_before_s` or `ads_skipped_s` in the table), the join is part of the plan. An ad batch (verdict `ad`) is never part of a run, a span or a pickup: the stream on either side of it is a cut, not a continuation.
 - **Dull parts and the context a bit of one may carry** (`CC/reference/context-keeping.md`): the parts with nothing to show are left out, as before. Where something that is kept leans on a bit of one, the planner may keep that bit as a **context span**; a moment's `needs_context`, the people and summary lines of the block files and the agents' `notes` are leads; where the stream says it, even in another block, is found with a plain text search of the transcripts (the file says how); it is checked in the words and a frame, and the data decides.
-- List for each: `L01`, working title, the ordered source spans (`rec_from`, `rec_to`, a line on why each is in), the target length, the chapter list, the sensitive and avoid spans inside, the guests it features.
+- List for each: `L01`, working title, the ordered source spans (`rec_from`, `rec_to`, a line on why each is in), the target length and why (the acts in it), how it opens (the scene, and what a viewer needs to follow it) and how it ends (where its last story lands),
+  the video before it and the one after it (id, and the rec time where each ends and starts), the chapter list, the sensitive and avoid spans inside, the guests it features.
 
 ## 3. Shorts: which moments, how many
 - Start from the moments with the highest shareability and standalone scores that fit this streamer's criteria, then read them again as a clip editor: does the first 2 seconds hook? is the payoff clean?
@@ -38,8 +54,8 @@ Read the richness line across the whole stream (a score per chunk), not just the
 
 ## 4. Write the briefs (one file per video) and the plan
 `RUN/40-briefs/<id>-brief.md` (about a page): the goal in a sentence; who it is for; the sources (spans with rec times and a line each; a context span is marked as one, with what it gives and what needs it); constraints (length, the sensitive spans with what to blur, the avoid spans, the lexicon,
-the people and their spelling); what the editor should try (a hook, an order, a cold open, a callback); the title and hashtags for `posting.md`.
-`RUN/20-analysis/portfolio.md`: the table of videos (id, kind, working title, length target, spans, why it exists), the count of each kind, and the plan for the order of building (best first). Record the ids in
+the people and their spelling); what the editor should try (a hook, an order, a cold open, a callback); for a long video also how it opens and how it ends and the videos before and after it (where each stops and starts), so its builder can check its own borders; the title and hashtags for `posting.md`.
+`RUN/20-analysis/portfolio.md`: the table of videos (id, kind, working title, length target, spans, why it exists; for a long video also the acts in it and its two borders), the count of each kind, and the plan for the order of building (best first). Record the ids in
 `state.json -> videos` (`cc.py state --run RUN set videos.S01={...}`).
 The planner does not cut. A production agent gets a brief and decides the exact cuts, zooms, sounds and captions itself.
 

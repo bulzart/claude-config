@@ -30,13 +30,15 @@ Nothing is a moment because a script says so; it is a moment because you read th
 - **Zoom is emphasis**: a quick punch-in (110 to 125%, 0.15 to 0.25 s in) on the line or the face that carries the joke. Not every cut.
 - **Hook, context, payoff** is the shape; the posting title and the first caption word should not spoil the payoff.
 
-## A long-form video (YouTube, about an hour) is a good evening
-- The viewer wants a streamer's best hour without watching the whole stream. Chronological order is fine and honest; a cold open of the best 20 to 40 s sets the tone.
+## A long-form video (YouTube, streamer mode) is one whole watch of about 25 minutes to an hour
+- The viewer wants the streamer's best parts without watching the whole stream, in watches they can finish: a video holds the acts that belong together, each from its start to its end (the planner's rule: `portfolio.md` section 2). Chronological order is fine and honest; a cold open of the best 20 to 40 s sets the tone.
+  (Game mode's long videos are condensed matches, one per map or game, and their length follows the kept rounds or fights: `game-clipping.md`.)
 - Cut what the live audience needed and the replay viewer does not: long silences, technical trouble, repeated reading of the same chat, a long AFK. Keep the rhythm of the stream.
-- **Never cut a story, a bit or a game moment in half**: an hour is a guide, not a wall. Finish the scene even if the video runs past the hour.
+- **Never cut a story, a bit or a game moment in half, inside a video or between two**: what a viewer starts in a video ends in it, and the next video never opens with the end of something this one began.
+  The length (about 25 minutes to an hour) is a ballpark that follows the content, not a wall: finish the scene even if the video runs a little over an hour, stop earlier when what follows is weak, never pad.
 - Straight stretches are normal (20 chunks in a row when the stream is on fire); a mix of short pickups and long runs is normal too. The segment list is the agent's call.
 - Chapters: write timestamps for the places a viewer would jump to. Transitions are plain cuts or very short ones; the content does the work.
-- A long video earns its length from richness: if the stream was only warm, a 30 to 40 minute video that is all good beats a padded hour. If it was hot all night, several videos.
+- A long video earns its length from richness: if the stream was only warm, a 30 to 40 minute video that is all good beats a padded hour. If it was hot all night, several whole watches, split where the stream's own acts end (36, 43 and 27 minutes from a 7-hour stream, not an hour and a leftover that starts in the middle of a story).
 
 ## Posting notes (each video gets them in `posting.md`)
 - Title: curiosity or shock without spoiling the payoff; the streamer's name and the topic where it helps search; no clickbait that the clip does not deliver.
