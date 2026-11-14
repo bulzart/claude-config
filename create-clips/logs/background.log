@@ -390,3 +390,6 @@ operable )
 [report] 20261114-010840-ishowspeed C0012: done in 165.1 s, $0.028
 [notify] 20261114-010840-ishowspeed: Create-clips is ready (with problems): ishowspeed -> toast
 [watch] idle for 600 s: Whisper model unloaded (the next chunk loads it again)
+[watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); 2 processors: one takes the newest chunk (live), the others the oldest (backlog); Ctrl+C stops
+[watch] chunk reports: claude-haiku-5-5 (effort high), 2 at a time
+[watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)

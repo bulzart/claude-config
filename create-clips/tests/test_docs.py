@@ -80,7 +80,7 @@ def main():
     check(not miss_ref, "every CC/reference/... path the docs name exists " + str(sorted(set(miss_ref))[:6]))
     miss_bare = []
     for d in docs:
-        for m in re.findall(r"`((?:game-clipping|game-mining|game-edit-craft|game-research-playbook|capcut-build-mcp|capcut-build|edit-craft|clip-economy|moment-mining|portfolio|research-playbook|research-agent|safety)\.md)`", read(d)):
+        for m in re.findall(r"`((?:game-clipping|game-mining|game-edit-craft|game-research-playbook|capcut-build-mcp|capcut-build|edit-craft|clip-economy|moment-mining|portfolio|research-playbook|research-agent|safety|context-keeping)\.md)`", read(d)):
             if not (CC / "reference" / m).is_file():
                 miss_bare.append((d.name, m))
     check(not miss_bare, "every reference named by its file name exists " + str(sorted(set(miss_bare))[:6]))
@@ -197,6 +197,15 @@ def main():
         check(not any(t.get("segments") for t in c.get("tracks", [])), "the compose template has no clips of its own")
     except ValueError:
         check(False, "the compose template's draft_content.json is valid JSON")
+
+    # the user's choice of 2026-11-14: context in the cut parts of a streamer long video: guidance only, no limits, judged from the data
+    ref = read(CC / "reference" / "context-keeping.md")
+    check(all("context-keeping.md" in t for t in (sk("cc-scan"), sk("cc-plan"), sk("cc-build-long"), mm, pf, rt, read(CC / "README.md"))),
+          "cc-scan, cc-plan, cc-build-long, moment-mining.md, portfolio.md, the router and the README point to context-keeping.md")
+    check(all(w in ref for w in ("on tape", "no text card", "gap_before_s", "needs_context", "context span")),
+          "context-keeping.md says: only what is on tape (no text card), never across a hole in the recording, needs_context as the hint, and the context span in the brief")
+    check(re.search(r"\b\d+(?:\.\d+)?\s*(?:s|sec|secs|seconds)\b|few seconds|a handful|at most|at least", ref, re.I) is None and not any(w in ref for w in ("NAVI", "CS2", "Typical Gamer", "Pirate", "Speed")),
+          "context-keeping.md sets no number of seconds or count (the agents judge from the data) and carries no example borrowed from a game match or from a run")
 
     # the router names both modes' skills
     r = read(ROUTER)

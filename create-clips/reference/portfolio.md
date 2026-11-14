@@ -23,6 +23,7 @@ Read the richness line across the whole stream (a score per chunk), not just the
 - Decide **each video's shape**: chronological is the default (the night as it went); a theme video ("every guest moment") or a best-of order is fine when it is the better watch. A cold open of the best 20 to 40 s may start it.
   Length is about an hour as a guide; a segment is never cut in half to hit it, so a video may run past an hour to end a scene, or stop short when the next stretch is weak.
   Where the recording has a gap (a chunk with `gap_before_s` or `ads_skipped_s` in the table), the join is part of the plan. An ad batch (verdict `ad`) is never part of a run, a span or a pickup: the stream on either side of it is a cut, not a continuation.
+- **Dull parts and the context a bit of one may carry** (`CC/reference/context-keeping.md`): the parts with nothing to show are left out, as before. Where something that is kept leans on a bit of one, the planner may keep that bit as a **context span**; a moment's `needs_context` and the agents' `notes` are leads, checked in the words and a frame, and the data decides.
 - List for each: `L01`, working title, the ordered source spans (`rec_from`, `rec_to`, a line on why each is in), the target length, the chapter list, the sensitive and avoid spans inside, the guests it features.
 
 ## 3. Shorts: which moments, how many
@@ -36,7 +37,7 @@ Read the richness line across the whole stream (a score per chunk), not just the
   what to stay away from, the SFX or zoom ideas if any (optional), the posting title and hashtags idea.
 
 ## 4. Write the briefs (one file per video) and the plan
-`RUN/40-briefs/<id>-brief.md` (about a page): the goal in a sentence; who it is for; the sources (spans with rec times and a line each); constraints (length, the sensitive spans with what to blur, the avoid spans, the lexicon,
+`RUN/40-briefs/<id>-brief.md` (about a page): the goal in a sentence; who it is for; the sources (spans with rec times and a line each; a context span is marked as one, with what it gives and what needs it); constraints (length, the sensitive spans with what to blur, the avoid spans, the lexicon,
 the people and their spelling); what the editor should try (a hook, an order, a cold open, a callback); the title and hashtags for `posting.md`.
 `RUN/20-analysis/portfolio.md`: the table of videos (id, kind, working title, length target, spans, why it exists), the count of each kind, and the plan for the order of building (best first). Record the ids in
 `state.json -> videos` (`cc.py state --run RUN set videos.S01={...}`).

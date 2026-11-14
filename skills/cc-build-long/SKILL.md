@@ -10,12 +10,12 @@ user-invocable: false
 
 ## Read now
 - `RUN/40-briefs/<id>-brief.md` and `RUN/20-analysis/brief.md`.
-- `CC/reference/clip-economy.md` (the long-form section), `CC/reference/edit-craft.md`, `CC/reference/safety.md`, `CC/reference/capcut-build.md`. Read each once, whole, in ONE message.
+- `CC/reference/clip-economy.md` (the long-form section), `CC/reference/edit-craft.md`, `CC/reference/safety.md`, `CC/reference/capcut-build.md`, `CC/reference/context-keeping.md` (short). Read each once, whole, in ONE message.
 - The run's captions setting: `T state --run RUN get captions` (`on` by default, `off` when the user picked no captions; your contract says which). Everything below about captions applies only when it is on.
 - Speed: independent tool calls go in ONE message (all the contact sheets and frames you need from ONE PowerShell call, the images read together); every check stays.
 
 ## Steps
-1. **Read the spans**: the brief lists the spans (runs of chunks and pickups) in order with a line each. For each, read the transcript (`RUN/10-media/Cnnnn/transcript.txt`, or `T window`) and the overview sheets of its chunks; look at dense sheets and full frames only where a decision needs them (a story's start and end, a touchy span, a layout question).
+1. **Read the spans**: the brief lists the spans (runs of chunks and pickups) in order with a line each. A span the brief marks as a context span is there for the context it gives: keep what that context needs (`context-keeping.md`). Where you drop dull parts inside a run, the same judgement applies: a bit of one may stay when what follows is unclear without it. For each, read the transcript (`RUN/10-media/Cnnnn/transcript.txt`, or `T window`) and the overview sheets of its chunks; look at dense sheets and full frames only where a decision needs them (a story's start and end, a touchy span, a layout question).
    You decide the final cut list: where a run starts and ends (on a scene boundary, a pause between words), what inside it to drop (long silences, technical trouble, a long AFK, a chat read nobody needs), whether a cold open of the best 20 to 40 s starts the video.
    About an hour is a guide: finish a scene even if the video runs past an hour; stop earlier when what follows is weak. A scene, a story or a bit is never cut in half.
 2. **Touchy check** (safety.md) over every span, by the transcripts and the sheets: religion and superstition are cut out or the stretch is left out (an incidental exclamation is kept and listed); gore, distress and nudity get a `censor` entry (only that span, only that region; personal data, DMs, usernames, IDs and face cams are never blurred); slurs masked in captions (with captions OFF a spoken slur is audible and nothing masks it: cut around it or leave the span out, as the brief marks it); commercial music noted.
@@ -28,7 +28,7 @@ user-invocable: false
    with captions ON `T captions --run RUN --resolved OUT/resolved.json` (read `silent_stretches_over_4s`; with captions OFF skip it). View each blurred file's preview and the frames around it.
 5. **Build** with `CC/reference/capcut-build.md` (canvas 1920x1080): ONE command, `T capcut-build --run RUN --video <id>` composes all the pieces, the sound effects, the transitions and the captions in a single CapCut composition, finishes and reads the project back (CapCut closed: if it is open, stop with `ready-to-build`); keep the sound effects few. Never build clip by clip.
    No proxy preview of the whole hour: the build's `read_back` (the clip count against the plan, the total length, the joins, the texts, the media on disk, `capcut lint`) and an empty `problems` list are the check, and three frames from the start, middle and end of a proxy only if a render is cheap.
-   `OUT/report.md` and `OUT/posting.md` (title, description, hashtags, chapters with rec-to-output timestamps: the output time of a segment is its `at` in `resolved.json`).
+   `OUT/report.md` and `OUT/posting.md` (title, description, hashtags, chapters with rec-to-output timestamps: the output time of a segment is its `at` in `resolved.json`). The report lists each context span kept and what it gives.
 6. `T state --run RUN set videos.<id>.status=built videos.<id>.project="<name>" videos.<id>.duration_s=<n>` (or `failed` with the reason). C: free space is small: say in the report the project's size and the chunks it uses.
 
 ## Never

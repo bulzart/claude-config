@@ -4,7 +4,7 @@ You get a block of chunks (about 10, 30 minutes), the context brief and the crit
 how rich each chunk is, and what needs blurring (gore, distress, nudity only: personal data, DMs, usernames and face cams are never recorded). Everything is in rec time (`H:MM:SS.cc` or seconds). You decide; the reports you start from only describe.
 
 ## Read in this order (cheap first, expensive only where it pays)
-1. `RUN/20-analysis/brief.md` and `clip-criteria.md` (what travels for this streamer and this topic, the lexicon, the touchy list).
+1. `RUN/20-analysis/brief.md` and `clip-criteria.md` (what travels for this streamer and this topic, the lexicon, the touchy list). `CC/reference/context-keeping.md` is short: read it too.
 2. **The chunk reports**: `RUN/10-media/Cnnnn/report.md` for every chunk of the block, in order (about 2 to 4 KB each). A separate reporter session wrote them while the stream was downloaded: what the sheets show per 22.5 s (the kind of picture, who and what is visible, text on screen quoted as printed),
    what the audio numbers do, what is said, what the chat does, a few neutral sentences about what visibly or audibly happens with their evidence, and what it could not read. **A report is data, not a decision**: it names no moment, no highlight, no round and no keep; its names are as printed or transcribed (unverified);
    its counts are what it counted in the cells. Use it to find where to look. A chunk with no report (or a stale or failed one, see `T status`) is read from the raw data in steps 3 to 7.
@@ -43,7 +43,7 @@ A moment:
  "confidence": "high|medium|low", "sensitive_refs": [], "avoid_refs": []}
 ```
 `standalone` = how well it works for someone who never saw the stream (1 to 10); `shareability` = how likely this audience sends it on (1 to 10). They are your judgement, with the reason in
-`why_it_travels`. `short_len_s` is the span a short of it would run, `setup_from` the earliest second a viewer would need.
+`why_it_travels`. `short_len_s` is the span a short of it would run, `setup_from` the earliest second a viewer would need. `needs_context` may also say where the stream itself gives that context when it lies outside the moment (a rec span); `CC/reference/context-keeping.md` says how that is judged, and anything not tied to a moment goes in `notes`.
 
 Keep the file compact (the planner reads every block's file): at most about 20 KB, plain short sentences, at most 30 moments (the best ones), no pasted transcript, evidence as pointers (a rec time, a sheet), not copies.
 
