@@ -42,7 +42,7 @@ Read the richness line across the whole stream (a score per chunk), not just the
 - Decide **each video's shape**: chronological is the default (the night as it went); a theme video ("every guest moment") or a best-of order is fine when it is the better watch, its stories whole. A cold open of the best 20 to 40 s may start it.
   Where the recording has a gap (a chunk with `gap_before_s` or `ads_skipped_s` in the table), the join is part of the plan. An ad batch (verdict `ad`) is never part of a run, a span or a pickup: the stream on either side of it is a cut, not a continuation.
 - **Dull parts and the context a bit of one may carry** (`CC/reference/context-keeping.md`): the parts with nothing to show are left out, as before. Where something that is kept leans on a bit of one, the planner may keep that bit as a **context span**; a moment's `needs_context`, the people and summary lines of the block files and the agents' `notes` are leads; where the stream says it, even in another block, is found with a plain text search of the transcripts (the file says how); it is checked in the words and a frame, and the data decides.
-- List for each: `L01`, working title, the ordered source spans (`rec_from`, `rec_to`, a line on why each is in), the target length and why (the acts in it), how it opens (the scene, and what a viewer needs to follow it) and how it ends (where its last story lands),
+- List for each: `L01`, working title, the ordered source spans (`rec_from`, `rec_to`, a line on why each is in), the expected length (an estimate from the spans, never a goal) and why (the acts in it), how it opens (the scene, and what a viewer needs to follow it) and how it ends (where its last story lands),
   the video before it and the one after it (id, and the rec time where each ends and starts), the chapter list, the sensitive and avoid spans inside, the guests it features.
 
 ## 3. Shorts: which moments, how many
@@ -52,13 +52,13 @@ Read the richness line across the whole stream (a score per chunk), not just the
 - Spread: variety across the night and across the kinds of moment that travel for this streamer; the best 3 get the most care.
 - Count: as many as are good. A hot night can give dozens; a quiet one a handful. There is no minimum.
 - A moment can be in a short and in a long video; that is normal.
-- List for each: `S01`, working title, the source spans, the target length (up to 3 min; the length follows the content), the hook idea (what the first 2 s are), the payoff, what to blur (spans from `sensitive.json`),
+- List for each: `S01`, working title, the source spans, the expected length (up to 3 min; the length follows the content), the hook idea (what the first 2 s are), the payoff, what to blur (spans from `sensitive.json`),
   what to stay away from, the SFX or zoom ideas if any (optional), the posting title and hashtags idea.
 
 ## 4. Write the briefs (one file per video) and the plan
 `RUN/40-briefs/<id>-brief.md` (about a page): the goal in a sentence; who it is for; the sources (spans with rec times and a line each; a context span is marked as one, with what it gives and what needs it); constraints (length, the sensitive spans with what to blur, the avoid spans, the lexicon,
 the people and their spelling); what the editor should try (a hook, an order, a cold open, a callback); for a streamer-mode long video also how it opens and how it ends and the videos before and after it (where each stops and starts), so its builder can check its own borders (a game-mode brief says which match and game it is: `cc-plan-game`); the title and hashtags for `posting.md`.
-`RUN/20-analysis/portfolio.md`: the table of videos (id, kind, working title, length target, spans, why it exists; for a streamer-mode long video also the acts in it and its two borders; game mode: also its match and game), the count of each kind, and the plan for the order of building (best first). Record the ids in
+`RUN/20-analysis/portfolio.md`: the table of videos (id, kind, working title, expected length, spans, why it exists; for a streamer-mode long video also the acts in it and its two borders; game mode: also its match and game), the count of each kind, and the plan for the order of building (best first). Record the ids in
 `state.json -> videos` (`cc.py state --run RUN set videos.S01={...}`).
 The planner does not cut. A production agent gets a brief and decides the exact cuts, zooms, sounds and captions itself.
 

@@ -241,6 +241,10 @@ def main():
           "cc-plan, the router and the README carry the same: no stretch is included only to fill a video or reach a number of minutes")
     check(all(w in sk("cc-build-long") for w in ("never a number to reach", "only to lengthen it", "only to reach a length")) and all(w in cl for w in ("32-minute video", "three hours of videos", "not a target")),
           "cc-build-long and the craft sheet: the length is never a number to reach, nothing is kept only to lengthen a video, and a video can be much shorter than the plan hoped")
+    check("target length" not in pf and "length target" not in pf and "brief's target" not in sk("cc-build-long") and "expected length" in pf and "expected length" in sk("cc-build-long"),
+          "the planned length is an 'expected length' (an estimate from the spans), never called a target in the planner's guide or the long-video builder")
+    check("not worth a video" in sk("cc-build-long") and "not worth a video:" in sk("cc-produce") and "not retried" in sk("cc-produce") and "dropped" in sk("cc-wrapup"),
+          "a long video its builder judges not worth making is set failed with 'not worth a video: <why>', is not retried by cc-produce, and the wrap-up lists it as dropped with its reason")
     check("none from a dull one" in sk("cc-start") and "hours of videos" in sk("cc-start"),
           "the Videos question tells the user the agents decide how much of the stream is worth it (hours from a great night, half an hour from a quiet one, none from a dull one)")
 
