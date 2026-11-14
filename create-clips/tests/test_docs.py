@@ -200,8 +200,8 @@ def main():
 
     # the user's choice of 2026-11-14: context in the cut parts of a streamer long video: guidance only, no limits, judged from the data
     ref = read(CC / "reference" / "context-keeping.md")
-    check(all("context-keeping.md" in t for t in (sk("cc-scan"), sk("cc-plan"), sk("cc-build-long"), mm, pf, rt, read(CC / "README.md"))),
-          "cc-scan, cc-plan, cc-build-long, moment-mining.md, portfolio.md, the router and the README point to context-keeping.md")
+    check(all("context-keeping.md" in t for t in (sk("cc-plan"), sk("cc-build-long"), pf, rt, read(CC / "README.md"))),
+          "cc-plan, cc-build-long, portfolio.md, the router and the README point to context-keeping.md (the mining agents are not asked anything new)")
     check(all(w in ref for w in ("on tape", "no text card", "gap_before_s", "needs_context", "context span")),
           "context-keeping.md says: only what is on tape (no text card), never across a hole in the recording, needs_context as the hint, and the context span in the brief")
     check(re.search(r"\b\d+(?:\.\d+)?\s*(?:s|sec|secs|seconds)\b|few seconds|a handful|at most|at least", ref, re.I) is None and not any(w in ref for w in ("NAVI", "CS2", "Typical Gamer", "Pirate", "Speed")),

@@ -17,8 +17,8 @@ The line that says who just joined or what the stream switched to; the rules or 
 - Never across a hole in the recording (a chunk with `gap_before_s`), never over an ad batch or an avoid span, and never in a way that changes what something means (`safety.md`).
 - Context goes with what needs it: if what leaned on it is dropped, the bit is dropped too.
 
-## Who does what
-- **Mining agents:** when a moment they pick needs something the stream says elsewhere, its `needs_context` says what and where (a rec span), so the planner can look; anything not tied to a moment (the premise of the stream, a thread that runs through it) goes in `notes`. They do not go looking for it, and a moment's bounds are not stretched for context (that is what `setup_from` is for).
-- **The planner (`cc-plan`):** these hints are leads. It checks the words and a frame before keeping a bit, marks each one in the long video's brief as a **context span** with what it gives and what needs it, and leaves out what the data does not support.
+## Who does what (the flow stays read, plan, deliver)
+- **The mining agents** work exactly as before: they read their block and hand over what they found. Nothing here is asked of them.
+- **The planner (`cc-plan`):** a moment's `needs_context`, the block notes and the words around the spans it keeps are its leads. It checks the words and a frame before keeping a bit, marks each one in the long video's brief as a **context span** with what it gives and what needs it, and leaves out what the data does not support.
 - **The builder (`cc-build-long`):** keeps a context span to what the context needs, may apply the same judgement when it decides what to drop inside a run, and lists every context span in its report with what it gives.
 - **Shorts:** a short carries its own setup (`setup_from`, `needs_context`); nothing else changes for them.
