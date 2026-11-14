@@ -9,6 +9,7 @@ the user set (the run's override) is never touched; the captions and stream.md r
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import threading
@@ -78,6 +79,43 @@ def main():
     m = FakeModel(("de", 0.97))
     r = transcriber(m, language="fr").transcribe("x.wav", 0.0, 10.0)
     check(r["language"] == "fr" and r["language_source"] == "forced" and m.calls == ["fr"], "a language in the config is forced too")
+
+    # 1b. the model is ALWAYS the one asked for (medium): a model that cannot load is an error, never a silent switch to a smaller one (the user, 2026-11-14)
+    import cc_audio
+    tried = []
+
+    class Refusing:
+        def __init__(self, name, **kw):
+            tried.append(name)
+            raise OSError("the model is not in the cache")
+
+    fake_fw = types.ModuleType("faster_whisper")
+    fake_fw.WhisperModel = Refusing
+    saved_fw = sys.modules.get("faster_whisper")
+    saved_env = os.environ.pop("CC_WHISPER_MODEL", None)      # the tests' own shortcut to another model must not decide this check
+    sys.modules["faster_whisper"] = fake_fw
+    try:
+        tr = cc_audio.Transcriber({"model": "medium", "device": "cpu"})
+        raised = None
+        try:
+            tr.load()
+        except RuntimeError as e:
+            raised = str(e)
+        check(raised is not None and "no fallback to a smaller model" in raised and set(tried) == {"medium"}, f"a medium that cannot load is an error and no other model is tried: tried {tried}")
+        tried.clear()
+        tr = cc_audio.Transcriber({})
+        try:
+            tr.load()
+        except RuntimeError:
+            pass
+        check(set(tried) == {"medium"}, f"with no model in the settings the model is medium, nothing smaller is tried: tried {tried}")
+    finally:
+        if saved_fw is None:
+            sys.modules.pop("faster_whisper", None)
+        else:
+            sys.modules["faster_whisper"] = saved_fw
+        if saved_env is not None:
+            os.environ["CC_WHISPER_MODEL"] = saved_env
 
     with tempfile.TemporaryDirectory(prefix="cc-lang-test-") as tmp:
         tmp = Path(tmp)

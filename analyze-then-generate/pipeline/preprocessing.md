@@ -23,7 +23,7 @@ bands, the 12 % crop loss, ...) are rules of thumb in the reference documents, a
 | Static thinning | **Pillow + NumPy** (48×48 grey mean absolute difference vs. the last kept frame) | Cheap, deterministic, and never drops below 1 fps |
 | Storyboards | **Pillow** | Labelled chronological contact sheets of **30 frames**, sized to Claude's vision limits (≤ 1.15 MP, ≤ 1568 px long side) so they are read at full size and no cell is shrunk |
 | Audio | **FFmpeg** (16 kHz mono WAV, `ebur128`, `silencedetect`, `astats` RMS per 0.5 s) | Deterministic loudness, silences and energy curve |
-| Speech | **faster-whisper** `small`, int8 CPU, local cache, word timestamps + VAD. Fallback: **FFmpeg's built-in whisper.cpp filter** (`ggml-base.en.bin`) | Word-level timing is a meaningful advantage over FFmpeg-only ASR (the fallback has segment timing only). Runs offline (`local_files_only`). A transcript only records what the transcriber returned: `has_speech` means at least one word came back, and it cannot tell speech from lyrics (the card agent states the voice type) |
+| Speech | **faster-whisper** `medium` (always, never a smaller one: the user, 2026-11-14), int8 CPU, local cache, word timestamps + VAD. Fallback: **FFmpeg's built-in whisper.cpp filter** (`ggml-medium.bin`, the same size) | Word-level timing is a meaningful advantage over FFmpeg-only ASR (the fallback has segment timing only). Runs offline (`local_files_only`). A transcript only records what the transcriber returned: `has_speech` means at least one word came back, and it cannot tell speech from lyrics (the card agent states the voice type) |
 | On-screen text sample | **RapidOCR** (onnxruntime CPU) on ~12 frames per video | Extracts the on-screen text with the numbers that describe it (first and last time, frames it was seen in, share of the frames scanned, row of the frame, confidence, spelling facts such as an @ or a URL pattern); no label is put on any text: the agent decides what is a caption, a fixed overlay, a handle, a watermark or noise (feeds the text policy) |
 | Output format | **FFmpeg** (lanczos scale-to-cover + crop, or blurred pad on request) | Exact 720×1280 without stretching |
 | Overlay text | **CapCut text layers** through the capcut MCP (`reference/capcut-assembly.md`), over the clean generated video | Editable in the video's CapCut project; the generation itself never carries overlay text |
@@ -133,8 +133,8 @@ PDFs are read directly with Claude's Read tool (`pages` for long files).
 | 27 s POV clip, 720×1280, 11 shots, no speech | ~60–90 s | 202 |
 | 40 s talking head, 720×1280, 183 words | ~75–110 s | ~260 |
 
-The long poles are OCR (~2–5 s per frame) and ASR (~real-time with `small`). For large folders use
-`--jobs 2`, `--whisper-model base`, or `--no-ocr` for videos without overlays.
+The long poles are OCR (~2–5 s per frame) and ASR (about 0.7 s of work per second of audio with `medium`, the only model used). For large folders use
+`--jobs 2` or `--no-ocr` for videos without overlays.
 
 ## Known limits
 - The cut detector is a heuristic: very fast motion can create false cuts and soft dissolves can be

@@ -83,7 +83,7 @@ written to `docs/<D>-pages/` (at most 40), to be viewed one by one; the Read too
 | 27 s clip, 720×1280, 11 shots, no speech | ~60–90 s | 202 |
 | 40 s talking head, 720×1280, 183 words | ~75–110 s | ~260 |
 
-These were measured at 5 fps; a Static run's 2 fps takes less. The long poles are OCR (~2–5 s per frame) and ASR (~real-time with `small`). For large folders use `--jobs 2`, `--whisper-model base`, or `--no-ocr`
+These were measured at 5 fps; a Static run's 2 fps takes less. The long poles are OCR (~2–5 s per frame) and ASR (about 0.7 s of work per second of audio with `medium`, the only model used). For large folders use `--jobs 2` or `--no-ocr`
 for videos without overlays.
 
 ## Known limits

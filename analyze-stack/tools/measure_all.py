@@ -4,7 +4,7 @@ Usage:
   python measure_all.py <video-or-url> --run-root C:\\...\\runs [--slug s] [options]
   python measure_all.py <existing-run-dir> [options]
   python measure_all.py --run-dir <existing-run-dir> [options]
-Options: [--skip-transcribe] [--whisper-model small] [--language auto] [--fps N] [--skip step,step] [--redo] [--quiet]
+Options: [--skip-transcribe] [--whisper-model medium] [--language auto] [--fps N] [--skip step,step] [--redo] [--quiet]
 
 Each script runs as its own process; a failing script is logged and the driver continues (exit code 0 when every
 script succeeded, 1 when at least one failed, 2 when intake failed). Steps whose output already exists are skipped
@@ -268,7 +268,7 @@ def main(argv=None) -> int:
     ap.add_argument("--run-root", default=str(common.DEFAULT_RUN_ROOT))
     ap.add_argument("--slug", default=None)
     ap.add_argument("--skip-transcribe", action="store_true")
-    ap.add_argument("--whisper-model", default="small")
+    ap.add_argument("--whisper-model", default="medium", help="the Whisper model: medium, always (the user, 2026-11-14); never a smaller one")
     ap.add_argument("--language", default="auto")
     ap.add_argument("--engine", default="faster-whisper", choices=["faster-whisper", "ffmpeg"], help="transcription engine")
     ap.add_argument("--fps", type=float, default=None, help="force the keyframe sampling rate")

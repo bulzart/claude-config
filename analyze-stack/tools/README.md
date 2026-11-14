@@ -155,20 +155,21 @@ Time: 3–12 s (librosa's first call after a cold numba cache is the slow case; 
 ### 2.6 `transcribe.py` — speech with word timestamps
 Usage:
 ```
-C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\transcribe.py --run-dir "<run>" [--model small] [--language auto] [--engine faster-whisper|ffmpeg] [--beam-size 5] [--no-vad] [--audio <wav>] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\transcribe.py --run-dir "<run>" [--model medium] [--language auto] [--engine faster-whisper|ffmpeg] [--beam-size 5] [--no-vad] [--audio <wav>] [--quiet]
 ```
-Engines: `faster-whisper` (default; CPU int8, VAD filter, word timestamps + probabilities; models
-`small`, `small.en`, `base` are cached in `C:\Users\Bulzart\.cache\huggingface\hub`) or `ffmpeg`
-(built-in whisper.cpp filter with `C:\Users\Bulzart\.cache\whisper-cpp\ggml-tiny.en.bin` /
-`ggml-base.en.bin`; segment timestamps only — the Python-free fallback).
+Engines: `faster-whisper` (default; CPU int8, VAD filter, word timestamps + probabilities; the model is
+`medium`, always: the user, 2026-11-14, "strictly always use medium model for anything"; cached in
+`C:\Users\Bulzart\.cache\huggingface\hub`) or `ffmpeg` (built-in whisper.cpp filter with
+`C:\Users\Bulzart\.cache\whisper-cpp\ggml-medium.bin` only, no smaller substitute; segment timestamps
+only — the Python-free fallback).
 Outputs: `transcript.json` (`engine, model, language, language_probability, has_speech,
 language_uncertain, segments[{id, start, end, text, words[{word, start, end, probability}], avg_logprob,
 no_speech_prob}], n_segments, n_words, speech_s, wpm_speech_only, wpm_whole_video`), `transcript.srt`
 (SIDECAR only — never rendered), `transcript.txt` (one segment per line; `No speech detected.` when
 empty). `has_speech=false` when there are no words or the language probability is < 0.5 with fewer
 than 5 words. ASR failure → `transcript.error.txt`, exit 1.
-Time: 6.5–12 s for 27 s with no speech (2 s model load); speech runs at roughly 0.3–0.5x real time
-with `small` on this CPU.
+Time: 6.5–12 s for 27 s with no speech (2 s model load, measured with the old `small` model, which is no
+longer used); speech runs at roughly 0.7x real time with `medium` on this CPU.
 
 ### 2.7 `ocr.py` — on-screen text
 Usage:
@@ -209,7 +210,7 @@ video once; `--no-motion` drops it to ~3 s).
 ### 2.9 `measure_all.py` — Stage-1 driver
 Usage:
 ```
-C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py --run-dir "<run>" [--whisper-model small] [--language auto] [--engine faster-whisper|ffmpeg] [--fps N] [--skip probe,cuts,keyframes,audio,transcribe,ocr,visual_stats] [--skip-transcribe] [--redo] [--quiet]
+C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py --run-dir "<run>" [--whisper-model medium] [--language auto] [--engine faster-whisper|ffmpeg] [--fps N] [--skip probe,cuts,keyframes,audio,transcribe,ocr,visual_stats] [--skip-transcribe] [--redo] [--quiet]
 C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py "<video-or-url>" [--run-root <runs>] [--slug <slug>] [--cookies-from-browser chrome] [same options]
 C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe C:\Users\Bulzart\.claude\analyze-stack\tools\measure_all.py "<existing run dir>" [same options]
 ```

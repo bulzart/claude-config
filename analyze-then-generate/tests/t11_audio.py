@@ -41,7 +41,7 @@ def ac_video(vid, name, dur, segs=None, engine="faster-whisper", language="en", 
                                               "hook": {"speech_starts_s": speech_starts}}), encoding="utf-8")
     tr = {"engine": engine, "has_speech": words_n > 0, "segments": segs or [], "skipped": skipped}
     if engine:
-        tr.update({"model": "small", "language": language, "language_probability": prob, "n_words": words_n, "speech_seconds": speech_s, "wpm_speech_only": round(words_n / (speech_s / 60), 1) if speech_s > 1 else None})
+        tr.update({"model": "medium", "language": language, "language_probability": prob, "n_words": words_n, "speech_seconds": speech_s, "wpm_speech_only": round(words_n / (speech_s / 60), 1) if speech_s > 1 else None})
     if error:
         tr["faster_whisper_error"] = error
     (d / "transcript.json").write_text(json.dumps(tr), encoding="utf-8")
@@ -98,7 +98,7 @@ md_ac = digest.read_text(encoding="utf-8")
 check("[00:00.00-00:05.00] You're telling me this works in ten seconds? Stop scrolling." in md_ac and "no label such as music bed" in md_ac and "| V04 |" in md_ac and "languages heard: en x2, es x1" in md_ac
       and "flatness 0.01" in md_ac and "peak 440 Hz" in md_ac and "music bed likely" not in md_ac, "the digest carries every transcript line with its times and the sound NUMBERS, and no label")
 for vid_ in ("V05", "V06", "V08"):
-    (ACR / "10-media" / vid_ / "transcript.json").write_text(json.dumps({"engine": "faster-whisper", "has_speech": False, "segments": [], "skipped": False, "model": "small", "language": "en",
+    (ACR / "10-media" / vid_ / "transcript.json").write_text(json.dumps({"engine": "faster-whisper", "has_speech": False, "segments": [], "skipped": False, "model": "medium", "language": "en",
                                                                          "language_probability": 0.4, "n_words": 0, "speech_seconds": 0}), encoding="utf-8")
 js, rc, _ = acx("--check")
 check(rc == 0 and js["ok"] and js["without_a_transcript"] == [], "once every video has a transcript the check passes")

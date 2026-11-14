@@ -195,8 +195,6 @@ class Transcriber:
                     self.used = {"model": name, "device": dev, "compute_type": ct}
                     if workers > 1:
                         self.used["num_workers"] = workers
-                    if name != asked:
-                        self.used["model_fallback"] = {"asked": asked, "used": name}
                     if (dev, ct) != attempts[0]:
                         self.used["device_fallback"] = {"asked": attempts[0][0], "used": dev, "why": str(last_err)[:200] if last_err else None}
                     self.load_seconds = round(time.time() - t0, 1)
