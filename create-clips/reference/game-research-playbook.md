@@ -11,7 +11,7 @@ Tags on every claim: **[W]** seen on the web (say where: a Reddit match thread, 
 ## Step 1: recon of the broadcast (this session, from the run's data)
 From `stream-meta.json` (title and game per chunk), the transcripts of the first chunk and a few windows, and the sheets:
 which game (and which edition: CS2 vs CS:GO, Dota 2 patch), which tournament and stage (group, playoffs, grand final), which teams and players (tags on the scoreboard, names the casters say),
-which map or draft is on, the format (BO1, BO3, BO5), the score now, the casters, and how this broadcast is built (a desk between matches, replays, ads, a pre-show). Write `20-analysis/recon.md` (15 to 25 lines, with rec times).
+which map or draft is on, the format (BO1, BO3, BO5), the score now, the casters, and how this broadcast is built (a desk between matches, replays, ads, a pre-show), and whether it plays more than one match (the title changing, the casters naming new teams): each match with its teams and stage. Write `20-analysis/recon.md` (15 to 25 lines, with rec times).
 
 ## Step 2: the research note (ONE agent, started in `cc-start`, web only, one note `research.md` of four short sections; the contract and the budget are in `research-agent.md`)
 - **R1 The game's social pulse** (section 1): the state of the game today (a new patch, a meta shift, big news, how big it is in scale words), who plays and watches it, the community's mood;
@@ -26,7 +26,7 @@ Liquipedia and news pages often fetch; HLTV and Reddit often block `WebFetch`: t
 One source per claim is enough for a clip; stop inside the budget (`config.json -> agents.research_calls` tool calls, about 3 to 4 minutes): the first game run's four agents spent 435 tool calls and 14 minutes and chased claims no clip decision needed.
 
 ## Step 3: the context brief (`RUN/20-analysis/brief.md`, at most about 4 KB; every later agent reads it first)
-1. **The match:** game, event, stage, format, teams, map or draft, score at each point you know, casters, the broadcast's structure.
+1. **The match** (each match of the recording with its rec range, when there are several): game, event, stage, format, teams, map or draft, score at each point you know, casters, the broadcast's structure.
 2. **The game's pulse:** what everyone is saying and joking about, the lingo, what clips travel.
 3. **The event and the storylines:** stakes, rivalries, what the audience hopes to see in this match.
 4. **Teams and players:** each with the spelling to use and a line on how fans see them.

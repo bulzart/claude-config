@@ -14,6 +14,10 @@ the side switch, overtime, the post-match, ads or station breaks, **sponsorship 
 **Sponsorship and the like is skipped totally** (the user, 2026-11-13): it is `non_play` and is cut from every video; it is not noted, not blurred and not kept as context. A small sponsor logo sitting on live play is not a stretch: it stays, because cutting it would cut the play.
 Sources: the score and clock series from `hud-scan` (§3 below), the sheets (the scoreboard overlay is on screen almost all the time), the casters' words, the loudness and chat numbers.
 The scan phase writes a skeleton from text only (the score resets, the long stretches with no score change, what the chunk reports say about them); the mining agents refine it in their `non_play`; the planner writes the final one.
+**More than one match in the recording** (the user, 2026-11-14: "if the stream has 2, 3 different matches or more being played throughout the whole stream, do the video for each of the game in a separate capcut project"): a broadcast can play two, three or more different matches one after the other
+(a **match** here is one contest between two teams, a BO1, BO3 or BO5; its maps or games are the **games** inside it). The match map then has one more level: each match (its two teams, the stage and the format, its rec range) with its games inside it.
+What makes a stretch a new match is **the teams changing on the scoreboard**: a score reset alone is only the next map or game of the same match. The desk, the analysts, the pre-show of the next two teams, the breaks and the ads between two matches are `non_play`.
+Before a stretch is called a new match, the team names are read in a frame just before and just after the change, and in the casters' words around it (`T window`).
 
 ## 3. Read the screen with the HUD tools
 The scoreboard, the round timer or game clock, the kill feed and the replay badge are on screen in known places. Find them once and let the tools read them over the whole match:
@@ -67,7 +71,10 @@ Never skip: the round or fight the story turns on, the last round of a map, an o
 
 ## 8. From units to videos: long-form only (the user, 2026-11-13: no shorts at all in game mode)
 Game mode makes **condensed matches** and nothing else: a map or a whole match as the viewer who missed it would want it. The rounds that matter at full or trim, the ones that explain at flash, the rest gone, in order, with the score always clear.
-- **One video per map or per game** is the unit (`L01`, `L02` ...): a BO3 that went three maps gives three videos; a one-sided map or a quick best-of-one gives a brief video; a map or game that was dull gets a brief video, or none. A whole series is one video only when its maps together add up to a brief one.
+- **One video per map or per game** is the unit (`L01`, `L02` ...): a BO3 that went three maps gives three videos; a one-sided map or a quick best-of-one gives a brief video; a map or game that was dull gets a brief video, or none. A whole series is one video only when it is one match and its maps together add up to a brief one.
+- **Different matches are never mixed** (the user, 2026-11-14): when the recording holds 2, 3 or more different matches, the games of each match are videos of their own, each in its own CapCut project (one production agent per video), numbered in the order they were played.
+  Never two matches in one video or one project, however short each is, and never one game split between two videos: a border falls between games, at a map's result and the scoreboard update, never in the middle of a round or a fight.
+  A match the recording holds only in part (it starts or stops in the middle of one) is a video of what is there when that is worth watching, otherwise none; its brief and the README say where it begins or ends. Each video's title, brief and spellings are its own match's teams.
 - **Length** follows what the kept units add up to: a CS2 map is usually 10 to 20 minutes condensed, a Dota 2 game 15 to 30. About an hour is only a ceiling; never pad; never end in the middle of a round or a fight.
 - **Chapters** at each half, overtime and every unit that is a headline (an ace, a clutch, a comeback), with output timestamps in `posting.md`.
 - **Titles:** the teams, the map or game and the event (`<team> vs <team> | Map 2 Mirage | <event>`), the stage where it helps; no spoiler of the result in the title when the stage is an elimination or a final.

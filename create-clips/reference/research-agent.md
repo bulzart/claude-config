@@ -32,8 +32,8 @@ Reply with three lines: the full path of the file you wrote, how sure you are, w
 
 **Game mode, the four sections:**
 1. *The game's pulse*: the state of the game today (a patch, a meta shift, big news), who plays and watches it, the community's mood; the lingo, running jokes and memes; what clips of this game travel on TikTok, Shorts and Reels.
-2. *The event and its storylines*: what the tournament is, the stage and the stakes, the format; the stories around this match (rivalries, upsets, roster changes, form, a controversy), the previous meeting of these teams; what fans were saying before and during the match.
-3. *Teams and players*: who they are to the audience, style, the star players and how fans talk about them; HOW EVERY NAME IS SPELLED (in-game names with their capitals, team tags) and how Whisper may mishear them (`Whisper wrote -> right spelling` pairs); the casters' names.
+2. *The event and its storylines*: what the tournament is, the stage and the stakes, the format; the stories around this match (rivalries, upsets, roster changes, form, a controversy), the previous meeting of these teams; what fans were saying before and during the match; when the event played more than one match on the stream's date, one line per match (teams, stage, format: the schedule page has them), and the main session finds which of them are in the recording.
+3. *Teams and players* (of every match you listed): who they are to the audience, style, the star players and how fans talk about them; HOW EVERY NAME IS SPELLED (in-game names with their capitals, team tags) and how Whisper may mishear them (`Whisper wrote -> right spelling` pairs); the casters' names.
 4. *What works as an esports clip right now*: formats, lengths, hooks and titles of the top clip accounts for this game, three to five real examples; one search for the organiser's creator rules (sponsor logos, cut-downs without added value), written as a claim risk for the user, not as advice.
 
 ## After it returns (the main session; `cc-profile` and `cc-profile-game` say when)

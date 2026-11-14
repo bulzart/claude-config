@@ -234,6 +234,21 @@ def main():
     check(all("25 minutes" not in read(p) for p in (SKILLS / "cc-plan-game" / "SKILL.md", SKILLS / "cc-build-game" / "SKILL.md", CC / "reference" / "game-clipping.md")),
           "game mode's plan, build skill and clipping guide carry no 25-minute rule")
 
+    # the user's choice of 2026-11-14 (GAME MODE): a recording with 2, 3 or more different matches gives separate videos, each in its own CapCut project, matches never mixed
+    gcl, gmn = read(CC / "reference" / "game-clipping.md"), read(CC / "reference" / "game-mining.md")
+    check("Different matches are never mixed" in gcl and "its own CapCut project" in gcl and "teams changing on the scoreboard" in gcl and "never two matches in one video or one project" in gcl.lower(),
+          "game-clipping.md: different matches are never mixed, each game is its own CapCut project, and a new match is told by the teams changing on the scoreboard (a score reset alone is the next game)")
+    check("match-change" in gmn and "match-change" in sk("cc-scan-game") and "a score reset alone" in gmn and "a score reset alone" in sk("cc-scan-game"),
+          "the game miners record a change of match as non_play match-change, and tell it from a new map (a score reset alone)")
+    check("more than one match" in sk("cc-profile-game") and "just after each reset" in sk("cc-profile-game") and "second or third match" in sk("cc-profile-game"),
+          "the game profile phase finds every match of the recording (a frame just after each score reset; the teams of a second or third match go to the research agent)")
+    check("own CapCut project" in sk("cc-plan-game") and "never two matches in one video or one project" in sk("cc-plan-game").lower() and "videos.L01.match" in sk("cc-plan-game") and "videos.L01.game" in sk("cc-plan-game"),
+          "cc-plan-game plans the games of each match as videos of their own (each its own CapCut project) and records each video's match and game")
+    check("grouped by match" in sk("cc-wrapup") and "different matches" in rt and "own CapCut project" in rt and "different matches" in readme and "match-change" in readme,
+          "the wrap-up README groups game videos by match, and the router and the README carry the rule")
+    check("25 minutes" not in gcl and "25 minutes" not in gmn and "acts.json" not in sk("cc-plan-game"),
+          "game mode got the separate-project rule only: no 25-minute range and no streamer-mode acts file")
+
     # the router names both modes' skills
     r = read(ROUTER)
     for s in ("cc-start", "cc-profile", "cc-profile-game", "cc-scan", "cc-scan-game", "cc-plan", "cc-plan-game", "cc-produce", "cc-build-short", "cc-build-long", "cc-build-game", "cc-wrapup"):

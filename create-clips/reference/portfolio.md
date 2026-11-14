@@ -54,8 +54,8 @@ Read the richness line across the whole stream (a score per chunk), not just the
 
 ## 4. Write the briefs (one file per video) and the plan
 `RUN/40-briefs/<id>-brief.md` (about a page): the goal in a sentence; who it is for; the sources (spans with rec times and a line each; a context span is marked as one, with what it gives and what needs it); constraints (length, the sensitive spans with what to blur, the avoid spans, the lexicon,
-the people and their spelling); what the editor should try (a hook, an order, a cold open, a callback); for a long video also how it opens and how it ends and the videos before and after it (where each stops and starts), so its builder can check its own borders; the title and hashtags for `posting.md`.
-`RUN/20-analysis/portfolio.md`: the table of videos (id, kind, working title, length target, spans, why it exists; for a long video also the acts in it and its two borders), the count of each kind, and the plan for the order of building (best first). Record the ids in
+the people and their spelling); what the editor should try (a hook, an order, a cold open, a callback); for a streamer-mode long video also how it opens and how it ends and the videos before and after it (where each stops and starts), so its builder can check its own borders (a game-mode brief says which match and game it is: `cc-plan-game`); the title and hashtags for `posting.md`.
+`RUN/20-analysis/portfolio.md`: the table of videos (id, kind, working title, length target, spans, why it exists; for a streamer-mode long video also the acts in it and its two borders; game mode: also its match and game), the count of each kind, and the plan for the order of building (best first). Record the ids in
 `state.json -> videos` (`cc.py state --run RUN set videos.S01={...}`).
 The planner does not cut. A production agent gets a brief and decides the exact cuts, zooms, sounds and captions itself.
 
