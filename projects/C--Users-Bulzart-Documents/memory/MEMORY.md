@@ -84,3 +84,4 @@
 - [create-clips: shorts always 9:16](create-clips-shorts-always-9-16.md) — user 2026-11-14: a short is ALWAYS 9:16 (1080x1920); edl-check warns and capcut-build lists a problem otherwise (small code guard in cc_edit.py); long videos stay 16:9
 - [Fix limits, don't just report them](feedback-fix-limits-dont-just-report.md) — user 2026-11-14: when I find a gap in my own work, evaluate it on real data and fix it (lightest way that works); ask only when the choice is the user's
 - [/create-static command](create-static-command.md) — 2026-11-13: Static mode of /analyze-with-loupe as its own command, CapCut project by ONE `T capcut-build`; library ~/.claude/create-static, cs-* skills; not yet run end to end
+- [AWL Static: no kids or children](awl-static-no-kids-or-children.md) — user 2026-11-14: every person an adult, never a child or a child-looking figure (round chubby face); state adult features in the sheet and view the anchor
