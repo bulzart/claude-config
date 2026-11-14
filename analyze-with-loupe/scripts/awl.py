@@ -12424,13 +12424,14 @@ def _tts_say(a):
             continue
         rooms = [x for x in ((left - spent) if left is not None else None, (budget - spent) if budget is not None else None) if x is not None]
         room = min(rooms) if rooms else None
-        if room is not None and len(body["text"]) > room:
-            stopped = {"passage": k, "needs": len(body["text"]), "characters_left": room, "lines": ps["lines"],
+        cpc = float((P.get("caps") or {}).get("credits_per_character") or 1.0)   # the model's credits a character (Eleven v4 Turbo: 0.5)
+        if room is not None and len(body["text"]) * cpc > room:
+            stopped = {"passage": k, "needs": len(body["text"]), "credits_needed": round(len(body["text"]) * cpc, 1), "characters_left": room, "lines": ps["lines"],
                        "why": "the account's characters" if left is not None and room == left - spent else "--budget"}
             if a.fill and room > 0:   # the whole lines of this passage that still fit, as a shorter last passage
                 fit_g = []
                 for ln in [x for x in P["lines"] if x["n"] in ps["lines"]]:
-                    if len(_el_passage_text(fit_g + [ln], P["voice"], P["spec"])[0]) > room:
+                    if len(_el_passage_text(fit_g + [ln], P["voice"], P["spec"])[0]) * cpc > room:
                         break
                     fit_g.append(ln)
                 if fit_g:
@@ -14060,13 +14061,15 @@ def _forecast_narration(rd: Path, st: dict, nn: str) -> dict:
     cr = _el_credits(_el_key())
     if cr:
         acc, upto_line = 0, None
+        cpc = float((P.get("caps") or {}).get("credits_per_character") or 1.0)   # the model's credits a character (Eleven v4 Turbo: 0.5)
         for x in ps:
-            if acc + len(x["text"]) > cr["left"]:
+            if acc + len(x["text"]) * cpc > cr["left"]:
                 break
-            acc += len(x["text"])
+            acc += len(x["text"]) * cpc
             upto_line = x["lines"][-1]
-        res["credits"] = {"characters_to_send": sum(sends), "characters_left": cr["left"], "tier": cr.get("tier"),
-                          "covers_all": sum(sends) <= cr["left"], "whole_passages_reach_line": upto_line, "lines_planned": len(lines)}
+        res["credits"] = {"characters_to_send": sum(sends), "credits_per_character": cpc, "credits_needed": round(sum(sends) * cpc, 1),
+                          "characters_left": cr["left"], "tier": cr.get("tier"),
+                          "covers_all": sum(sends) * cpc <= cr["left"], "whole_passages_reach_line": upto_line, "lines_planned": len(lines)}
     lever = _el_lever(P)
     res["lever"] = lever
     point, how = _el_point(voice.get("fit") or {}, lever)
