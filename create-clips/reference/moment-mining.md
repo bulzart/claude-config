@@ -1,7 +1,7 @@
 # Moment mining: how a mining agent reads a block of the stream
 
 You get a block of chunks (about 10, 30 minutes), the context brief and the criteria. You bring back what happened, the moments worth cutting,
-how rich each chunk is, and what needs blurring. Everything is in rec time (`H:MM:SS.cc` or seconds). You decide; the reports you start from only describe.
+how rich each chunk is, and what needs blurring (gore, distress, nudity only: personal data, DMs, usernames and face cams are never recorded). Everything is in rec time (`H:MM:SS.cc` or seconds). You decide; the reports you start from only describe.
 
 ## Read in this order (cheap first, expensive only where it pays)
 1. `RUN/20-analysis/brief.md` and `clip-criteria.md` (what travels for this streamer and this topic, the lexicon, the touchy list).
@@ -26,7 +26,7 @@ numbers at all. You decide.
  "lexicon_fixes": [["Whisper wrote", "right spelling"]],
  "richness": [{"chunk": "C0021", "score": 7, "why": "one line: how good this chunk's content is for this streamer's audience, as a stretch to watch"}],
  "moments": [ {moment}, ... ],
- "sensitive": [ {"rec_from": 3901.0, "rec_to": 3908.5, "kind": "gore|distress|nudity|personal-data", "what": "...", "region": [0.1,0.1,0.4,0.4] or null, "moment": "B03-M02" or null} ],
+ "sensitive": [ {"rec_from": 3901.0, "rec_to": 3908.5, "kind": "gore|distress|nudity", "what": "...", "region": [0.1,0.1,0.4,0.4] or null, "moment": "B03-M02" or null} ],
  "avoid": [ {"rec_from": 4001.0, "rec_to": 4064.0, "kind": "religion|superstition|hate|tragedy|music", "what": "..."} ],
  "ad_batches": [ {"chunks": ["C0024"], "rec_from": 4320.0, "rec_to": 4372.1, "verdict": "ad|stream|mixed", "what": "what the sheets, the words and the sound show", "evidence": ["report C0024", "sheet C0024 s2"]} ],
  "notes": "anything the planner should know (technical trouble, an ad, a gap, a long AFK, the streamer's mood)"}

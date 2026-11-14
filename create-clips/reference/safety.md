@@ -18,7 +18,7 @@ How it applies:
 - Captions, titles, hashtags, sound effects and music follow the same rule (no church bells, choir, chants, "amen" sound; no horoscope hashtag).
 - Check the transcript words of every picked span for these before building, and the frames of the span for a place of worship or a symbol that stands out.
 
-## 2. Distressing, gory, indecent: kept, never avoided, but blurred, only where it is seen
+## 2. Distressing, gory, indecent: kept, never avoided, but blurred, only where it is seen (the ONLY things ever blurred)
 The moment stays in the clip. The section of the video where the content appears is blurred, and only that section: the time span it is visible, and the part of the frame it occupies when it
 does not fill the frame. The rest of the clip is never blurred.
 What gets blurred:
@@ -26,7 +26,7 @@ What gets blurred:
   streamer is watching, a news clip, a game with realistic gore).
 - **Real distress**: a real person in agony, terror or a breakdown seen in a video, a real accident's aftermath. Ordinary strong feeling (laughing, crying, rage, screaming at a game) is normal and is not blurred.
 - **Nudity and sexual content**, implied or explicit, in a video, an ad, a photo or a screen.
-- **Personal data**: a phone number, an address, an email, a payment card, a licence plate, a password or stream key, a private message with a private person's name, a live location, a child's face when it is not the streamer's own channel content. Blur the region while it is on screen.
+- **Not blurred, ever** (the user, 2026-11-14: "the only reason we blur is when there's gore, distressful content and similar, as for other types no need to blur at all"): personal data and identifying details are left exactly as they are on screen: viewer DMs and chat, usernames, in-game IDs and lobby tags, party and Social panels, face cams and faces (a child's too), names, donor alerts, a phone number, an address, an email. No `sensitive` entry, no `censor` entry, no line in a brief and no line in a report for them. Only gore and injury, real distress, and nudity or sexual content (the "similar") are blurred.
 Procedure (an agent does it for its own video):
 1. Find the span: in the scan it is a `sensitive` entry on the moment (rec from, rec to, what, where in the frame). In the build, look again at full resolution: `cc.py grid-frame --run RUN --at <rec> [--region x,y,w,h]` (a frame with a 10% grid; measure the region on it) at the first moment it shows, at the last, and in between.
 2. Decide the region: a part of the frame (a video playing in a window, a screen share, a corner) gets `region` = x,y,w,h as fractions of the frame; when it fills the frame, no region (the whole frame for that span).

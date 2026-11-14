@@ -9,7 +9,7 @@ Two kinds are made at the same time: shorts and long-form. The agents decide how
 - `RUN/20-analysis/moments.json`: all moments, ids kept, duplicates and overlaps merged (when two block agents saw one moment from two sides, keep the widest honest bounds and the better title).
 - `RUN/20-analysis/richness.json`: one score per chunk (the scan's), smoothed by you where a block agent was harsher or kinder than its neighbours, with the reason.
 - `RUN/20-analysis/lexicon.json`: the merged Whisper-spelling fixes, `[["Whisper wrote","right"], ...]`, which every EDL's `captions.replace` takes.
-- `RUN/20-analysis/sensitive.json` and `avoid.json`: every span to blur and every span to stay away from, merged, as the builders will need them.
+- `RUN/20-analysis/sensitive.json` and `avoid.json`: every span to blur (gore, distress, nudity only) and every span to stay away from, merged, as the builders will need them.
 - **The ad batches** (the user, 2026-11-14: the recorder skips nothing, and the agents leave the ad batches out when they analyse): the mining agents' `ad_batches` (each with a verdict `ad|stream|mixed`) merged by rec time into `RUN/20-analysis/ad-batches.json`
   (`T blocks` also lists the recorder's marker as `ad_batches`; compare: a marked batch no agent judged is yours to judge now, from its report and a sheet). Every span with verdict `ad` goes into `avoid.json` as `{"rec_from", "rec_to", "kind": "ad", "what": "..."}`, so
   every brief carries it as a span to stay away from. A `stream` verdict is not left out; a `mixed` one is left out only for the seconds that are the ad.

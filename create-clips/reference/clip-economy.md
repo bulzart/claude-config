@@ -49,5 +49,5 @@ Nothing is a moment because a script says so; it is a moment because you read th
 - A moment that needs knowledge the viewer does not have and cannot get in 5 s.
 - Spoiling your own punchline in the first caption or the title.
 - Music the streamer is playing that is commercial (it can get a clip muted or claimed): cut around it or keep it out of the clip.
-- Another person's private information on screen (blur it, `safety.md`).
+- (Another person's private information on screen is NOT blurred and not avoided: only gore, distress and nudity are ever blurred, `safety.md`.)
 - Taking one line out of context so that it means the opposite of what was said (a cut must keep the meaning).

@@ -37,7 +37,7 @@ The numbers are facts a script read off the screen, the reports are what a repor
               "why_it_travels": "...", "standalone": 7, "shareability": 8, "evidence": ["transcript 4300-4312"], "confidence": "medium"} ],
  "people": [{"name": "...", "role": "player|caster|analyst|coach|guest", "team": "...", "notes": "spelling, how Whisper wrote it"}],
  "lexicon_fixes": [["Whisper wrote", "right spelling"]],
- "sensitive": [ {"rec_from": 3901.0, "rec_to": 3908.5, "kind": "gore|distress|nudity|personal-data", "what": "...", "region": [0.1,0.1,0.4,0.4], "unit": "R14"} ],
+ "sensitive": [ {"rec_from": 3901.0, "rec_to": 3908.5, "kind": "gore|distress|nudity", "what": "...", "region": [0.1,0.1,0.4,0.4], "unit": "R14"} ],
  "avoid": [ {"rec_from": 4001.0, "rec_to": 4064.0, "kind": "religion|superstition|hate|tragedy|music", "what": "..."} ],
  "notes": "anything the planner should know (a pause that cost a team, an ad, a gap, a HUD read that failed, a unit you could not card)"}
 ```

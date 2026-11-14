@@ -36,7 +36,7 @@ user-invocable: false
    - **the units that end inside its block are its units**; it may read the chunk before the block to see where the first one started; a unit still running at the block's end is the next agent's;
    - a card for every unit (the dull ones with a short reason), evidence as pointers, "not seen" where it did not see, never a count it did not make; `keep_hint` is advice, the planner decides what is kept and which videos exist;
    - sponsorship and the like (sponsor stings and bumpers, "presented by" cards, betting segments, promos, ad breaks, giveaways) goes into `non_play` with kind `sponsor`;
-   - it records what must be blurred (`sensitive`) and what must be avoided (`avoid`: religion, superstition, hate, tragedy, commercial music; `CC/reference/safety.md`, which it reads);
+   - it records what must be blurred (`sensitive`: gore, distress, nudity only; never personal data) and what must be avoided (`avoid`: religion, superstition, hate, tragedy, commercial music; `CC/reference/safety.md`, which it reads);
    - it reads media only (never moves, renames or writes into `10-media`), writes only its block file, never asks, never spawns agents, no emoji, every file it names is a full path;
    - it returns three lines: the file, how many units and extras, anything the planner must know.
 5. **Check each block file** when its agent returns: `T units-check --run RUN --file RUN/20-analysis/blocks/block-NN.json` (valid JSON; every card has its fields; no overlap; the score changes of the range and the units that end at them; the gaps with no unit and no `non_play`).

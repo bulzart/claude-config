@@ -63,7 +63,7 @@ how the captions and sound look, what the top clip channels post, titles that pu
 3. **What travels for them:** the 6 to 10 kinds of moment fans share (each with a real example in a few words).
 4. **The topic's social pulse:** what everyone is saying and joking about, the key points, the scale in words, the lingo, what viewers wait for.
 5. **People:** each guest or named person in a line, with the spelling to use.
-6. **Touchy:** what must not be joked about or shown (religion and superstition always: avoided), what gets blurred (gore, distress, nudity, personal data), spoiler or controversy notes.
+6. **Touchy:** what must not be joked about or shown (religion and superstition always: avoided), what gets blurred (gore, distress, nudity only: never personal data), spoiler or controversy notes.
 7. **Lexicon fixes:** `Whisper wrote -> right spelling` pairs for names, handles, game terms (they go into the captions' `replace`; with captions off the pairs are not needed).
 8. **How to judge a moment here:** the five questions that decide a pick for this streamer and this topic.
 The longer note stays beside it in `20-analysis/research.md` for an agent that needs the detail.

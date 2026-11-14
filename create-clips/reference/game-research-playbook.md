@@ -32,7 +32,7 @@ One source per claim is enough for a clip; stop inside the budget (`config.json 
 4. **Teams and players:** each with the spelling to use and a line on how fans see them.
 5. **What travels from this scene:** the 6 to 10 kinds of moment that get shared, each with a real example in a few words.
 6. **Touchy:** religion and superstition (avoided; "god" as praise ("he is a god", "godlike") is a figure of speech: not highlighted, kept), real gore or distress (blurred where seen; game violence in the game's normal look is not gore),
-   personal data on screen (blurred), slurs from players or chat (masked in captions; with captions off the plan cuts around them), commercial music in the broadcast (a claim risk), a living person in a controversy (no jokes).
+   personal data on screen is left as it is (never blurred), slurs from players or chat (masked in captions; with captions off the plan cuts around them), commercial music in the broadcast (a claim risk), a living person in a controversy (no jokes).
 7. **Lexicon fixes:** `Whisper wrote -> right spelling` pairs, checked against what Whisper really wrote in the transcripts (they go into the captions' `replace`; with captions off they are not needed).
 8. **How to judge a round or a play here:** the five questions that decide a keep for this game and this stage.
 The longer note stays beside it (`research.md`).

@@ -121,6 +121,28 @@ def main():
         pieces = cc_common.split_across_chunks(rows, 350.0, 470.0)
         check([p["chunk"] for p in pieces] == ["C0002", "C0003", "C0004", "C0005"], f"a span over ad-marked chunks still resolves to all its pieces (the agents decide what to cut): {[p['chunk'] for p in pieces]}")
 
+        # 8. the real ingest path (no Whisper): a tiny ad-marked chunk from an inbox session reaches the chunk table and stream.md with its marker
+        inbox = tmp / "inbox"
+        sess = inbox / "testch" / "20261114-010000-testch"
+        sess.mkdir(parents=True)
+        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30", "-f", "lavfi", "-i", "sine=frequency=880:sample_rate=48000",
+                        "-t", "6", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-g", "60", "-c:a", "aac", str(sess / "chunk-0001.mp4")], check=True)
+        side = {"schema": "tcr/1", "channel": "testch", "session": sess.name, "chunk": 1, "file": "chunk-0001.mp4", "t0_utc": "2026-11-14T01:00:00.000Z", "t1_utc": "2026-11-14T01:00:06.000Z",
+                "duration_s": 6.0, "segments": 3, "bytes": 1, "quality": {"name": "720p60"}, "gap_before_s": 0, "ads_skipped_s": 0, "ended_by": "gap", "kind": "ad",
+                "ad": {"segments_by_range": 3, "segments_by_title": 0, "titles": ["Amazon|2474283100495.0"]}, "stream": {"id": "1", "title": "t", "game": "g", "viewers": 1, "uptime_s": 5, "started_at": None},
+                "tool": {"name": "Twitch Chunk Recorder", "version": "1.1.0"}}
+        (sess / "chunk-0001.json").write_text(json.dumps(side), encoding="utf-8")
+        env2 = {**env, "CC_INBOX": str(inbox)}
+        r, _ = cc("ingest", "--chunk", sess / "chunk-0001.mp4", "--skip-whisper", "--no-refresh", env=env2)
+        run2 = tmp / "runs" / sess.name
+        got = json.loads((run2 / "00-inventory" / "chunks.json").read_text(encoding="utf-8")) if (run2 / "00-inventory" / "chunks.json").is_file() else []
+        check(bool(got) and got[0].get("kind") == "ad" and got[0]["ad"]["titles"] == ["Amazon|2474283100495.0"] and got[0]["stages"]["move"] is True and got[0]["stages"]["sheets"] is True,
+              f"a real ingest: the ad-marked chunk is processed like any chunk (sheets made) and its row carries kind and ad: {json.dumps(r)[:200]}")
+        check((run2 / "10-media" / "C0001" / "chunk.json").is_file() and json.loads((run2 / "10-media" / "C0001" / "chunk.json").read_text(encoding="utf-8")).get("kind") == "ad",
+              "the chunk's own chunk.json (what the reporter reads) keeps the marker")
+        md3 = (run2 / "00-inventory" / "stream.md").read_text(encoding="utf-8") if (run2 / "00-inventory" / "stream.md").is_file() else ""
+        check("C0001 (ad-marked)" in md3 and "## Chunks the recorder marked as ads" in md3, "stream.md of that run shows the marker and the batch")
+
     print("ALL PASSED" if not failed else f"FAILED: {failed}")
     sys.exit(1 if failed else 0)
 
