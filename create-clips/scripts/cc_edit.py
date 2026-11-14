@@ -646,6 +646,15 @@ def env_at(env: list, t: float):
     return env[-1][1], env[-1][2]
 
 
+def _is_9_16(canvas) -> bool:
+    """True for a 9:16 canvas (1080x1920, or any size of that shape). A short is ALWAYS 9:16 (the user, 2026-11-14): `edl-check` warns and `capcut-build` lists a problem when it is not."""
+    try:
+        w, h = int(canvas[0]), int(canvas[1])
+    except (TypeError, ValueError, IndexError):
+        return False
+    return w > 0 and h > 0 and abs(w / h - 9 / 16) < 0.01
+
+
 def plan_edl(run: Path, edl: dict, make_files: bool) -> tuple:
     rows = [r for r in load_chunks(run) if r.get("duration_s")]
     if not rows:
@@ -659,6 +668,8 @@ def plan_edl(run: Path, edl: dict, make_files: bool) -> tuple:
     fps = int((edl.get("canvas") or {}).get("fps") or cfg_get("capcut.fps", 30))
     base_layout = edl.get("layout") or {"mode": "fill" if kind == "short" else "native"}
     words_cache, warnings, pieces = {}, [], []
+    if kind == "short" and not _is_9_16(canvas):
+        warnings.append({"canvas": f"{canvas[0]}x{canvas[1]}", "warning": "a short is always 9:16 (1080x1920): this EDL's canvas is not; remove `canvas` from the EDL (the default is 1080x1920)"})
     at = 0.0
     seg_info = []
     for si, seg in enumerate(edl.get("segments") or [], 1):
@@ -1689,6 +1700,9 @@ def cmd_capcut_build(a):
     chk = build_checks(d, resolved, read_json(vdir / "composed.json") or {}, capcut_cli())
     t3 = time.time()
     problems = []
+    rc = resolved.get("canvas") or {}
+    if resolved.get("kind") == "short" and not _is_9_16((rc.get("width"), rc.get("height"))):
+        problems.append(f"a short is always 9:16 (1080x1920): this project's canvas is {rc.get('width')}x{rc.get('height')}")
     if not cres.get("ok"):
         problems.append("compose reported a problem (see compose)")
     for s in fres.get("steps") or []:

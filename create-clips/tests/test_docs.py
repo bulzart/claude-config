@@ -245,6 +245,20 @@ def main():
           "the planned length is an 'expected length' (an estimate from the spans), never called a target in the planner's guide or the long-video builder")
     check("not worth a video" in sk("cc-build-long") and "not worth a video:" in sk("cc-produce") and "not retried" in sk("cc-produce") and "dropped" in sk("cc-wrapup"),
           "a long video its builder judges not worth making is set failed with 'not worth a video: <why>', is not retried by cc-produce, and the wrap-up lists it as dropped with its reason")
+    # the user's choice of 2026-11-14 (STREAMER SHORTS): a short is ALWAYS 9:16 (1080x1920); the check warns, the build lists a problem
+    check("always 9:16" in sk("cc-build-short") and "Never a short in any shape but 9:16" in sk("cc-build-short") and "A short is always 9:16" in ec and "Always 9:16" in cl and "always 9:16" in rt and "Shorts are always 9:16" in readme,
+          "shorts are always 9:16: the short builder, the edit craft, the craft sheet, the router and the README say so")
+    check("not 9:16" in read(CC / "reference" / "capcut-build.md") and "edl-check` warns" in ec and "capcut-build` lists it as a problem" in ec,
+          "the docs say edl-check warns and capcut-build lists a problem when a short is not 9:16")
+
+    # the user's choice of 2026-11-14 (STREAMER SHORTS LEVEL): when shorts are made the user picks Concentrated (the one, two or three best) or Normal (about 5 to 10), asked as a follow-up; a range, never a quota
+    check(all(w in cs for w in ("`Shorts`", "Concentrated", "Normal", "shorts_level", "shorts=concentrated|normal", "no default", "Never ask anything but", "shorts level")) and "follow-up" in cs.lower(),
+          "cc-start asks the shorts level (Concentrated or Normal, no default) as a follow-up when shorts are made, takes `shorts=` as an argument, and stores it as shorts_level")
+    check(all(w in pf for w in ("shorts_level", "`concentrated`", "`normal`", "never a quota", "Never more than three", "Never more than ten")) and all(w in sk("cc-plan") for w in ("shorts_level", "concentrated", "never a quota")),
+          "portfolio.md and cc-plan read the shorts level: concentrated = the one, two or three best (never more than three), normal = about 5 to 10 (never more than ten); a range, never a quota")
+    check(all(w in rt for w in ("shorts=concentrated|normal", "shorts level", "shorts_level")) and all(w in readme for w in ("shorts=concentrated|normal", "shorts_level")),
+          "the router and the README offer the shorts level (argument or follow-up question) and name the saved setting")
+
     # the user's choice of 2026-11-14 (STREAMER SHORTS): zoom, sound effects and the words per caption are the agents' call; encouraged where there is room and it fits, never forced
     check("6 to 8 s" not in ec and "8 to 10 s" not in ec and "one per big beat at most" not in cl and "seasoning" not in cl.lower() and "seasoning" not in ec.lower(),
           "no zoom or sound-effect count or spacing is set in the craft sheet or the edit craft any more (the old 6 to 8 s, 8 to 10 s and one-per-beat limits are gone)")

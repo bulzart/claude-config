@@ -33,6 +33,8 @@ The captions block is short because the look has defaults (Loupe video 04's look
 - `speed` stays 1.0 unless the brief asks (no speed ramps in v1).
 
 ## Layout (shorts are 9:16, long videos are 16:9)
+**A short is always 9:16 (1080x1920), whatever the source** (the user, 2026-11-14): its EDL needs no `canvas` (the default is 1080x1920) and never another; `edl-check` warns when a short's canvas is not 9:16 (the check is then not ok) and `capcut-build` lists it as a problem.
+When the whole 16:9 frame is the point, `fit-blur` puts it in the middle of the 9:16 canvas on a blurred copy of itself: the canvas stays 9:16 either way. `native` is for long videos.
 The source is 16:9 (1280x720 or 1920x1080). A short needs a decision about the frame:
 - **fill** (the default): the crop around `focus` (fractions of the source: x, y of the middle of what you want) fills the 9:16 canvas. Use `cc.py layout-calc` or let `edl-check` compute it; it tells which part of the source is visible (`visible_x`).
   Look at the real frame first: `cc.py grid-frame --run RUN --at T`. For a facecam streamer the focus is the face; for a game with a facecam in a corner, cut between the gameplay focus and the facecam focus on the beats; for just-chatting the face.

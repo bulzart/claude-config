@@ -46,11 +46,16 @@ Read the richness line across the whole stream (a score per chunk), not just the
   the video before it and the one after it (id, and the rec time where each ends and starts), the chapter list, the sensitive and avoid spans inside, the guests it features.
 
 ## 3. Shorts: which moments, how many
+**The user's level for shorts** (`T state --run RUN get shorts_level`, asked at the start whenever shorts are made; the user, 2026-11-14):
+- **`concentrated`**: only the one, two or three best shorts: the most highlighted pieces of the content, the ones with the most potential. Read all the candidates, then keep only those; each gets the most care. Never more than three.
+- **`normal`**: about 5 to 10 shorts, the best moments spread across the night. Never more than ten.
+The level is the range the user chose, never a quota: when the stream has fewer moments worth a short than the level would make (a quiet night under `normal`; only one real highlight under `concentrated`), the planner makes fewer, and none when none is worth it.
+Nothing is made to reach a number: the best are chosen first, and a moment that is not good enough is not added to fill the range. A run made before the question existed has no level: the planner judges the count as before.
 - Start from the moments with the highest shareability and standalone scores that fit this streamer's criteria, then read them again as a clip editor: does the first 2 seconds hook? is the payoff clean?
 - One moment can make one short; two or three small beats about one thing can make one short together (a "3 times chat was right" cut); a strong moment can also be cut twice with different hooks when both are good.
 - Do not make five shorts that are the same joke. Do not make a short of a moment that needs 40 s of setup to deserve 15 s of payoff.
-- Spread: variety across the night and across the kinds of moment that travel for this streamer; the best 3 get the most care.
-- Count: as many as are good. A hot night can give dozens; a quiet one a handful. There is no minimum.
+- Spread: under `normal`, variety across the night and across the kinds of moment that travel for this streamer; under `concentrated` the best come first and variety matters less; the best 3 get the most care.
+- Count: set by the level (`concentrated`: up to 3; `normal`: about 5 to 10) and never more than are good: a hot night fills its range with the best moments, a quiet one gives fewer than the range, and there is no minimum. A run with no level (made before the question existed): as many as are good.
 - A moment can be in a short and in a long video; that is normal.
 - List for each: `S01`, working title, the source spans, the expected length (up to 3 min; the length follows the content), the hook idea (what the first 2 s are), the payoff, what to blur (spans from `sensitive.json`),
   what to stay away from, the SFX or zoom ideas if any (optional), the posting title and hashtags idea.

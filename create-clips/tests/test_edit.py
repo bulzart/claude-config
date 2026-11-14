@@ -121,6 +121,33 @@ def main():
         cc("edl-check", "--run", run, "--edl", o4 / "edl.json", env=env)
         check(json.loads((o4 / "resolved.json").read_text(encoding="utf-8"))["captions"]["style"] == "word-box", "English: the word-box look is the default")
 
+        # a short is ALWAYS 9:16 (the user, 2026-11-14): another canvas in a short's EDL is a warning (edl-check is then not ok); the default and an explicit 1080x1920 pass; a long video keeps 16:9
+        e9 = {"schema": "cc-edl/1", "video": "S09", "kind": "short", "canvas": {"width": 1920, "height": 1080, "fps": 30}, "layout": {"mode": "fill", "focus": [0.5, 0.5]},
+              "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}]}
+        o9 = run / "60-outputs" / "S09"
+        o9.mkdir(parents=True)
+        (o9 / "edl.json").write_text(json.dumps(e9), encoding="utf-8")
+        r = cc("edl-check", "--run", run, "--edl", o9 / "edl.json", env=env)
+        check(r.get("ok") is False and any("9:16" in str(w.get("warning")) for w in r.get("warnings") or []),
+              "a short with a 1920x1080 canvas: edl-check warns that a short is always 9:16 and is not ok: " + json.dumps(r.get("warnings"))[:160])
+        e9["canvas"] = {"width": 1080, "height": 1920, "fps": 30}
+        (o9 / "edl.json").write_text(json.dumps(e9), encoding="utf-8")
+        r = cc("edl-check", "--run", run, "--edl", o9 / "edl.json", env=env)
+        check(not any("9:16" in str(w.get("warning")) for w in r.get("warnings") or []), "a short with an explicit 1080x1920 canvas: no 9:16 warning")
+        e9.pop("canvas")
+        (o9 / "edl.json").write_text(json.dumps(e9), encoding="utf-8")
+        r = cc("edl-check", "--run", run, "--edl", o9 / "edl.json", env=env)
+        res9 = json.loads((o9 / "resolved.json").read_text(encoding="utf-8"))
+        check(not any("9:16" in str(w.get("warning")) for w in r.get("warnings") or []) and (res9["canvas"]["width"], res9["canvas"]["height"]) == (1080, 1920),
+              "a short with no canvas in its EDL gets 1080x1920 by default and no warning")
+        l9 = {"schema": "cc-edl/1", "video": "L09", "kind": "long", "canvas": {"width": 1920, "height": 1080, "fps": 30}, "layout": {"mode": "native"},
+              "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}]}
+        ol9 = run / "60-outputs" / "L09"
+        ol9.mkdir(parents=True)
+        (ol9 / "edl.json").write_text(json.dumps(l9), encoding="utf-8")
+        r = cc("edl-check", "--run", run, "--edl", ol9 / "edl.json", env=env)
+        check(not any("9:16" in str(w.get("warning")) for w in r.get("warnings") or []), "a long video's 16:9 canvas is not touched by the 9:16 rule")
+
         # block sizing: a short recording still gets side-by-side agents
         r = cc("blocks", "--run", run, "--chunks", 10, env=env)
         check(r.get("ok") and len(r["blocks"]) == 1 and r["blocks"][0]["chunks"] == ["C0001", "C0002"], "blocks: two chunks are one block by default")
@@ -338,6 +365,16 @@ def main():
             r = cc("capcut-build", "--run", run, "--video", "S06", "--name", "cctest_glyph", "--store", store, env=env)
             check(any("cannot draw" in p for p in r.get("problems", [])) and "Š" in ((r.get("caption_font") or {}).get("missing_glyphs") or []),
                   "capcut-build lists the missing character as a problem: " + str(r.get("problems"))[:200])
+            # a short that is not 9:16 is listed by capcut-build as a problem too (the user, 2026-11-14: shorts are ALWAYS 9:16), even when the edl-check warning was not heeded
+            e7 = {"schema": "cc-edl/1", "video": "S08", "kind": "short", "canvas": {"width": 1920, "height": 1080, "fps": 30}, "layout": {"mode": "fill", "focus": [0.5, 0.5]},
+                  "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}]}
+            o7 = run / "60-outputs" / "S08"
+            o7.mkdir(parents=True, exist_ok=True)
+            (o7 / "edl.json").write_text(json.dumps(e7), encoding="utf-8")
+            cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
+            cc("captions", "--run", run, "--resolved", o7 / "resolved.json", env=env)
+            r = cc("capcut-build", "--run", run, "--video", "S08", "--name", "cctest_169", "--store", store, env=env)
+            check(r.get("ok") is False and any("9:16" in p for p in r.get("problems", [])), "capcut-build lists a short that is not 9:16 as a problem: " + str(r.get("problems"))[:200])
             # an hour-long video has hundreds of pieces: 150 here; the facts of a chunk are read once, not once per piece (it took 24 s for 300 pieces before)
             big = {"schema": "cc-edl/1", "video": "L02", "kind": "long", "layout": {"mode": "native"},
                    "segments": [{"id": f"b{i}", "rec_from": round((i * 0.15) % 20 + 0.5, 2), "rec_to": round((i * 0.15) % 20 + 1.0, 2)} for i in range(150)]}
