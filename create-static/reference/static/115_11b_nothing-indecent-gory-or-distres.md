@@ -22,6 +22,10 @@ No subject, line, caption, picture, thumbnail or sound of a Static video shows, 
   fact is a pose low on the ground (flat in a ditch with the hands over the neck for a tornado, the recovery position, crawling under
   smoke), the person is clearly alive in it: head up, or turned so the open eyes show, mid-move (bracing, covering the head,
   crawling, looking at the danger), never limp or still with the eyes closed;
+- **children, and anyone who looks like one** (the user, 2026-11-14, on video 01 of the run of 2026-11-14, whose 'you' was drawn as a round-faced
+  boy: "the guy looks too young and like a kid", then "make sure avoiding using kids or children in the video content next time"): no child,
+  baby, teenager or student-age figure, and no adult drawn so young that the face reads as a child's (a round chubby face, big cheeks,
+  tiny features, no jaw or chin); every person is a clearly adult figure, in the references' style.
 - **what a family audience is not shown or told**: vomit, excrement, urine, a toilet in use; drugs and drunkenness; graphic medical
   detail (a needle in skin, an operation, a wound being treated); swearing, slurs and crude jokes; a person humiliated.
 
@@ -45,6 +49,10 @@ How it applies (as §11 does):
   alive in it (above): "she lies flat in the ditch, her head raised, her eyes open, her hands clasped over the back of her neck".
   Feelings stay in the references' register and short of extremes (worry, alarm, relief, a frown; never agony or terror).
   The prompt names what is there, never what must stay out (a prompt that says "no blood" tends to draw some).
+  Every person and character is written as an adult in the prompt and the sheet: an age in years (late twenties to forties for 'you'),
+  and the adult features in words (an oval head with a jaw and chin, light stubble or lines beside the eyes, level eyes, full brows,
+  adult proportions with the head about a seventh of the height): the style lock's round white heads and dot eyes otherwise draw a
+  child's face. A script has no child, grandchild or student as a person in a scene; a niche's story about children is told by its adults.
 - **The thumbnail** (§12): the same; its face's feeling reads at a glance (surprise, worry, curiosity), never terror or pain.
 - **The bed** (§6): no screams, sobs or sounds of pain in its caption or its sound.
 - **The forecast** (§13): `T static forecast` lists each prompt's and the bed's words that tend to bring these in

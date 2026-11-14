@@ -161,6 +161,8 @@ video's spawn message `format <tag>, images K1-K2` means that format's stills K1
   says).
 - Never anything religious or superstitious in a still or a thumbnail (static §11): a prompt describes a secular scene and never names
   what must stay out.
+- Never a child, or an adult drawn with a child's face, in a still, an anchor or a thumbnail (static §11b; the user, 2026-11-14: "the guy looks
+  too young and like a kid"): an anchor's sheet states an age and its adult features, and is viewed for a grown person before any still uses it.
 - Never a person undressed or in an undressing moment, an injury, blood or a face in agony in a still or a thumbnail (static §11b):
   every person's clothes are named from top to bottom in the prompt, and a still that shows skin where clothes belong is a failure
   (step 3); nor a person lying limp or still with closed eyes, while a survival pose low on the ground is drawn with the person

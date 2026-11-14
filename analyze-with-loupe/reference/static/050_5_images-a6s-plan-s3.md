@@ -162,6 +162,10 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   itself instead of the scene), so every still made with one is viewed for that. Every image copies the anchor's
   details, so view it for an ornament that reads as a letter or symbol (braid loops, embroidery, a pattern): it comes back in every image
   (2026-11-06: lapel braid loops read as a repeated "N"). The sheet prompt names the ornament plainly ("plain straight gold braid").
+  **Every character is an adult** (§11b; the user, 2026-11-14: "the guy looks too young and like a kid"): the sheet prompt gives an age
+  in years and the adult features in words (an oval head with a jaw and chin, light stubble or lines by the eyes, level eyes, full
+  brows, adult proportions); the style's round white head and dot eyes alone draw a child's face, and a face with big cheeks, tiny
+  features and no jaw is a failed anchor, drawn again before any still uses it (every image copies it).
 - **Real things look like themselves** (the user, 2026-11-07: "if there's a company, or a brand being talked about, their logo should
   appear somewhere, or if talking about famous person whos appeareance is known it should really look like them, and so on"; "we need
   to let the viewer watching the video have more context about who we're talking about"):

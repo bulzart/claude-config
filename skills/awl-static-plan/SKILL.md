@@ -113,7 +113,8 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    look, the same in every video of the run: static §10) and §5's composition, each company or brand the story is about with its
    official logo where the story brings it in and once more later (static §5 "Real things look like themselves": `T fetch-image --kind
    logo`, the image's `logo` field, its surface plain and blank in the prompt), a secular scene with nothing of static §11 in it, every
-   person dressed for the scene with the clothes named from top to bottom and no undressed, injured or agonised moment, nobody as if
+   person an adult (static §11b, 2026-11-14: no child or child-faced figure; each character's sheet states an age and adult features)
+   dressed for the scene with the clothes named from top to bottom and no undressed, injured or agonised moment, nobody as if
    dead, and a survival pose low on the ground kept and drawn with the person clearly alive: head up or turned so the open eyes show,
    mid-move (static §11b), the
    video's `title` (in the video's language, in the recorded title form, with `title_gloss`) and `thumbnail` (static §12: the

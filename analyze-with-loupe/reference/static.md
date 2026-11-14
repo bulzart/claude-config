@@ -24,14 +24,14 @@ Stored as section files in `static/` (next to this file); **read only the sectio
 | 3 | A new subject (A6s) | `030_3_a-new-subject-a6s.md` | 4.7 |
 | 4 | The script (A6s) | `040_4_the-script-a6s.md` | 11.1 |
 | 4b | Engagement: thought through first (A6s) | `045_4b_engagement-thought-first.md` | 5.1 |
-| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 27.6 |
+| 5 | Images (A6s plan, S3) | `050_5_images-a6s-plan-s3.md` | 28.0 |
 | 6 | The voice and the bed (A6s, S2) | `060_6_the-voice-and-the-bed-a6s-s2.md` | 30.8 |
 | 7 | The edit (S4) | `070_7_the-edit-s4.md` | 14.4 |
-| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 9.9 |
+| 8 | Static QC (S2–S4) | `080_8_static-qc-s2-s4.md` | 10.2 |
 | 9 | The Static PC (setup, once per PC) | `090_9_the-static-pc-setup-once-per-pc.md` | 11.9 |
 | 10 | One channel per run | `100_10_one-channel-per-run.md` | 11.5 |
 | 11 | No religion and no superstition | `110_11_no-religion-and-no-superstition.md` | 3.1 |
-| 11b | Nothing indecent, gory or distressing | `115_11b_nothing-indecent-gory-or-distres.md` | 6.1 |
+| 11b | Nothing indecent, gory or distressing | `115_11b_nothing-indecent-gory-or-distres.md` | 7.2 |
 | 12 | The YouTube title and thumbnail (A1, A6s, S3, X10) | `120_12_the-youtube-title-and-thumbnail.md` | 8.6 |
 | 13 | Evaluating the work (A6s, S2, S3, S4) | `130_13_evaluating-the-work.md` | 17.6 |
 <!-- sections:end -->
