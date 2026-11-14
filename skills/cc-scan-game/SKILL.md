@@ -38,6 +38,7 @@ user-invocable: false
    - **matches** (game-mining.md): a recording can hold two, three or more different matches; where the teams on the scoreboard change inside its block (a score reset alone is only the next map or game) it records the stretch between them as `non_play` kind `match-change` and cards each match's units with that match's names;
    - sponsorship and the like (sponsor stings and bumpers, "presented by" cards, betting segments, promos, ad breaks, giveaways) goes into `non_play` with kind `sponsor`;
    - it records what must be blurred (`sensitive`: gore, distress, nudity only; never personal data) and what must be avoided (`avoid`: religion, superstition, hate, tragedy, commercial music; `CC/reference/safety.md`, which it reads);
+   - **the spoken language** (the `Spoken language` line of `stream.md`; `CC/reference/language.md`): when the casters are not in English the agent reads the transcripts as spoken, quotes lines as spoken and writes its block file in English;
    - it reads media only (never moves, renames or writes into `10-media`), writes only its block file, never asks, never spawns agents, no emoji, every file it names is a full path;
    - it returns three lines: the file, how many units and extras, anything the planner must know.
 5. **Check each block file** when its agent returns: `T units-check --run RUN --file RUN/20-analysis/blocks/block-NN.json` (valid JSON; every card has its fields; no overlap; the score changes of the range and the units that end at them; the gaps with no unit and no `non_play`).

@@ -112,11 +112,11 @@ All of them cross chunk boundaries. `sheet` also deletes its frames right after 
 ## Settings (`config.json`; env overrides for tests)
 
 `frames` (interval 0.75, 5 x 6, 240 x 135, jpeg 86), `audio` (window 0.5, `keep_wav`, loud jump 10 dB), `whisper` (model medium, device cpu, compute int8,
-language en, beam 5, VAD on, `initial_prompt`), `min_free_gb` (3). Optional keys read with defaults: `audio.loud_jump_floor_db` (-45), `frames.chat_bar_ref` (20),
+language auto: Whisper names the stream's language, `fallback_language` en when it is not sure, `detect_min_probability` 0.85, `detect_min_words` 40 (`reference/language.md`), beam 5, VAD on, `initial_prompt`), `min_free_gb` (3). Optional keys read with defaults: `audio.loud_jump_floor_db` (-45), `frames.chat_bar_ref` (20),
 `whisper.cuda_compute_type` (float16), `whisper.cpu_threads` (per transcription, default 4), `whisper.parallel` (transcriptions at the same time, default = the processors). `report` (enabled, model `claude-haiku-5-5`, effort high, parallel 2, timeout_s 420, max_turns 30, max_attempts 2, claude_bin, setting_sources project).
 `notify` (enabled, persistent, sound, idle_minutes 15, catchup_hours 24). `watch` (workers 2: the processors working on chunks at the same time).
 Env: `CC_RUNS_ROOT`, `CC_INBOX`, `CC_WHISPER_MODEL`, `CC_WHISPER_DEVICE`, `CC_MIN_FREE_GB`, `CC_REPORT` (0 = no reports), `CC_CLAUDE_BIN`, `CC_REPORT_PARALLEL`, `CC_REPORT_TIMEOUT`, `CC_NOTIFY` (0 = no automatic alerts), `CC_NOTIFY_IDLE_MIN`, `CC_WORKERS`, `CC_CONFIG` (another config file; tests).
-Per run: `new-run --language auto --prompt "names, terms"` (kept in `state.json -> settings.whisper_override`).
+Per run: `new-run --language de --prompt "names, terms"` (kept in `state.json -> settings.whisper_override`; `--language auto` is the config's default: the first sure detection of a stream chunk is locked as the run's language, `state.json -> settings.whisper.language_locked`). A language set for a run is never replaced by a detection; to change one later: `state --run RUN set settings.whisper_override.language=de`, then `ingest ... --force` the chunks made before.
 
 ## Speed with one and with two processors (measured 2026-11-13, BLAST Premier run, 1080p60 source chunks, a busy PC)
 

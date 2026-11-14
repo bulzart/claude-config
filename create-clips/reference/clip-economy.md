@@ -43,7 +43,7 @@ Nothing is a moment because a script says so; it is a moment because you read th
 - A long video earns its length from richness, and the agents decide how much of a stream is worth showing at all: three hours of videos from an eight-hour stream if it was that good, a 32-minute video if that is all it gave, none if the streamer did nothing worth including. A video that is all good beats a padded hour. If it was hot all night, several whole watches, split where the stream's own acts end (36, 43 and 27 minutes from a 7-hour stream, not an hour and a leftover that starts in the middle of a story).
 
 ## Posting notes (each video gets them in `posting.md`)
-- Title: curiosity or shock without spoiling the payoff; the streamer's name and the topic where it helps search; no clickbait that the clip does not deliver.
+- Title: curiosity or shock without spoiling the payoff; the streamer's name and the topic where it helps search; no clickbait that the clip does not deliver. Title, description and hashtags are written in the language the stream is spoken in (the viewers' language) unless the user's notes say otherwise (`language.md`).
 - Description: one line of what happens, credit to the streamer and the channel (`twitch.tv/<channel>`), 3 to 5 hashtags (the streamer, the topic, one format tag).
 - Several shorts from one moment (different hooks) are fine; the same clip twice is not.
 - Each platform wants its own upload; one 9:16 file serves Shorts, TikTok and Reels.

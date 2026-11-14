@@ -211,6 +211,15 @@ def build_stream_md(run: Path, rows: list, state: dict) -> str:
             "without chat show -). Numbers only: no row here says a moment is good.", "",
             "| chunk | rec range | clock | title / game | words | wpm | speech % | rms mean/max dB | loud jumps | motion mean | chat total/max | ads s | gap s | first words |",
             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    langs = {}
+    for r in rows:                      # the spoken language as Whisper reported it: stream chunks only (an advertisement is in its own language)
+        if r.get("language") and r.get("kind") != "ad":
+            langs[r["language"]] = langs.get(r["language"], 0) + 1
+    if langs:
+        w = (state.get("settings") or {}).get("whisper") or {}
+        head[4:4] = ["Spoken language (Whisper's detection, a fact): " + ", ".join(f"{k} in {v} chunks" for k, v in sorted(langs.items(), key=lambda kv: -kv[1]))
+                     + (f"; the run's language is {w['language_locked']} (locked from {w.get('language_locked_from')})" if w.get("language_locked") else "")
+                     + ". A chunk Whisper was not sure about was transcribed in the fallback language (`language_source` in its transcript.json). Advertisements are not counted.", ""]
 
     def f1(x, nd=1):
         return "-" if x is None else (f"{x:.{nd}f}" if isinstance(x, float) else str(x))

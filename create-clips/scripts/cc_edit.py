@@ -470,9 +470,19 @@ PLAIN_CAPTIONS = {"short": {"highlight_color": "#FFD700"},
 
 
 def whisper_language(run) -> str | None:
+    """The language of the run's speech: the run's locked or chosen language, else the one Whisper reported most often for its stream chunks (an ad chunk is in its own language), else the config's."""
     st = load_state(run) or {}
-    lang = ((st.get("settings") or {}).get("whisper") or {}).get("language")
-    return lang or (cfg_get("whisper", {}) or {}).get("language")
+    w = (st.get("settings") or {}).get("whisper") or {}
+    lang = w.get("language_locked") or w.get("language")
+    if not lang or str(lang).lower() == "auto":
+        seen = {}
+        for r in load_chunks(run):
+            if r.get("language") and r.get("kind") != "ad":
+                seen[r["language"]] = seen.get(r["language"], 0) + 1
+        if seen:
+            return max(seen, key=seen.get)
+        return (cfg_get("whisper", {}) or {}).get("language")
+    return lang
 
 
 def merge_captions(run, kind: str, edl_caps: dict | None) -> dict:

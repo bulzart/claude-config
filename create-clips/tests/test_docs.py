@@ -245,6 +245,15 @@ def main():
           "the planned length is an 'expected length' (an estimate from the spans), never called a target in the planner's guide or the long-video builder")
     check("not worth a video" in sk("cc-build-long") and "not worth a video:" in sk("cc-produce") and "not retried" in sk("cc-produce") and "dropped" in sk("cc-wrapup"),
           "a long video its builder judges not worth making is set failed with 'not worth a video: <why>', is not retried by cc-produce, and the wrap-up lists it as dropped with its reason")
+    # the user's choice of 2026-11-14 (BOTH MODES): the spoken language is found per stream (auto, fallback, a lock per run), the task stays transcribe; the agents read it in that language
+    lg = read(CC / "reference" / "language.md")
+    check(all(w in lg for w in ("auto", "fallback_language", "language_locked", "never translate", "An ad chunk", "mask_terms", "Posting text", "multilingual")),
+          "reference/language.md: auto detection with a fallback, a lock per run (not from or for an ad chunk), transcribe never translate, masks and posting text in the stream's language")
+    check(cfg.get("whisper", {}).get("language") == "auto" and cfg.get("whisper", {}).get("fallback_language") == "en" and "language auto" in read(CC / "docs" / "processing.md"),
+          "config.json: whisper.language is auto with an English fallback (it was forced to en), and docs/processing.md says so")
+    check(all("language.md" in t for t in (sk("cc-start"), sk("cc-scan"), sk("cc-scan-game"), read(CC / "reference" / "safety.md"), cl, readme)) and "Spoken language:" in read(CC / "reference" / "research-agent.md"),
+          "cc-start, both scan skills, safety.md, the craft sheet and the README point to language.md, and the research contract carries the spoken language")
+
     # the user's choice of 2026-11-14 (STREAMER SHORTS): a short is ALWAYS 9:16 (1080x1920); the check warns, the build lists a problem
     check("always 9:16" in sk("cc-build-short") and "Never a short in any shape but 9:16" in sk("cc-build-short") and "A short is always 9:16" in ec and "Always 9:16" in cl and "always 9:16" in rt and "Shorts are always 9:16" in readme,
           "shorts are always 9:16: the short builder, the edit craft, the craft sheet, the router and the README say so")

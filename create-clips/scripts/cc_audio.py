@@ -206,22 +206,32 @@ class Transcriber:
                     continue
         raise RuntimeError(f"no faster-whisper model could be loaded ({str(last_err)[:300]})")
 
-    def transcribe(self, wav_path, rec_start_s: float, duration_s: float | None) -> dict:
+    def transcribe(self, wav_path, rec_start_s: float, duration_s: float | None, language: str | None = None) -> dict:
         self.load()
         model, gate = self.model, self._gate     # local names: an idle unload by the watcher cannot pull them away mid-call
         if model is None or gate is None:
             self.load()
             model, gate = self.model, self._gate
-        lang = str(self.cfg.get("language") or "auto")
+        # `language` = the run's locked language for this chunk (cc_proc.stream_language), else the config's; "auto" = Whisper names the language of this chunk itself
+        lang = str(language or self.cfg.get("language") or "auto")
+        auto = lang.lower() == "auto"
         prompt = str(self.cfg.get("initial_prompt") or "").strip() or None
         t_wait = time.time()
         with gate:                          # the generator is consumed inside the gate: the decoding happens here, not in model.transcribe()
             t0 = time.time()
             waited = t0 - t_wait
-            segs, info = model.transcribe(
-                str(wav_path), language=None if lang.lower() == "auto" else lang, word_timestamps=True,
-                vad_filter=bool(self.cfg.get("vad_filter", True)), beam_size=int(self.cfg.get("beam_size", 5)),
-                condition_on_previous_text=bool(self.cfg.get("condition_on_previous_text", False)), initial_prompt=prompt)
+            tkw = dict(word_timestamps=True, vad_filter=bool(self.cfg.get("vad_filter", True)), beam_size=int(self.cfg.get("beam_size", 5)),
+                       condition_on_previous_text=bool(self.cfg.get("condition_on_previous_text", False)), initial_prompt=prompt)
+            segs, info = model.transcribe(str(wav_path), language=None if auto else lang, **tkw)
+            source, detected = ("detected" if auto else "forced"), None
+            if auto:
+                # Whisper has named the language before it decodes anything (`info` is ready, the segments are not). A guess it is not sure of (music, one short word, noise) is not
+                # trusted: the configured fallback language decodes the chunk instead, and the guess is kept as a fact (detected_language, detected_probability).
+                detected = (str(info.language), round(float(info.language_probability), 3))
+                fb = str(self.cfg.get("fallback_language") or "").strip()
+                if detected[1] < float(self.cfg.get("detect_min_probability", 0.85)) and fb and fb.lower() != "auto":
+                    segs, info = model.transcribe(str(wav_path), language=fb, **tkw)
+                    source = "fallback"
             out_segs = []
             for s in segs:
                 out_segs.append({
@@ -233,11 +243,13 @@ class Transcriber:
         n_words = sum(len(s["words"]) for s in out_segs)
         speech = sum(max(0.0, s["end"] - s["start"]) for s in out_segs)
         res = {"engine": "faster-whisper", **self.used, "language": info.language,
-               "language_probability": round(float(info.language_probability), 3), "vad_filter": bool(self.cfg.get("vad_filter", True)),
+               "language_probability": round(float(info.language_probability), 3), "language_source": source, "vad_filter": bool(self.cfg.get("vad_filter", True)),
                "initial_prompt": prompt, "rec_start_s": round(rec_start_s, 3),
                "duration_s": round(float(duration_s), 3) if duration_s else None, "segments": out_segs, "n_words": n_words,
                "speech_seconds": round(speech, 2), "wpm_speech_only": round(n_words / (speech / 60), 1) if speech > 1 else None,
                "transcribe_seconds": round(time.time() - t0, 1), "model_load_seconds": self.load_seconds}
+        if detected:
+            res["detected_language"], res["detected_probability"] = detected
         if waited > 0.5:
             res["waited_for_turn_s"] = round(waited, 1)
         return res

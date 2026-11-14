@@ -105,6 +105,43 @@ def _session_from_chunk_path(p: Path) -> tuple:
     return None, None, None
 
 
+# --------------------------------------------------------------------------- the spoken language
+
+def _auto_language(wcfg_override: dict | None) -> bool:
+    """True when the run's language is left to Whisper's detection: no language in the run's own override and `whisper.language` of the config is 'auto'."""
+    lang = (wcfg_override or {}).get("language")
+    if lang is None:
+        lang = cfg_get("whisper.language", "auto")
+    return str(lang or "auto").strip().lower() == "auto"
+
+
+def stream_language(run: Path, row: dict, wcfg_override: dict | None) -> str | None:
+    """The language to tell Whisper for this chunk, or None (= the transcriber's own setting: a forced language, or detection in this chunk). Only a run left to detection has a
+    locked language, and an ad chunk never uses it (an advertisement is in its own language, often not the stream's)."""
+    if not _auto_language(wcfg_override) or row.get("kind") == "ad":
+        return None
+    return (((load_state(run).get("settings") or {}).get("whisper") or {}).get("language_locked")) or None
+
+
+def lock_language(run: Path, cid: str, row: dict, wcfg_override: dict | None, tr: dict) -> bool:
+    """The first SURE detection on real speech of a stream chunk becomes the run's language, so the chunks after it are not guessed one by one (a stream is in one language in nearly
+    every case). Never from an ad chunk, a fallback or a chunk with little speech; never over the user's own pick (the run's override or a language in the config). True when it locked now.
+    `state.json -> settings.whisper.language_locked` is the language and `language_locked_from` says where it came from."""
+    if not _auto_language(wcfg_override) or row.get("kind") == "ad" or tr.get("language_source") != "detected":
+        return False
+    if int(tr.get("n_words") or 0) < int(cfg_get("whisper.detect_min_words", 40)) or float(tr.get("language_probability") or 0) < float(cfg_get("whisper.detect_min_probability", 0.85)):
+        return False
+    with FileLock(Path(run) / ".state.lock", timeout=60):        # the check and the write under one lock: two processors may detect at the same moment
+        st = read_json(Path(run) / "state.json", {}) or {}
+        w = st.setdefault("settings", {}).setdefault("whisper", {})
+        if w.get("language_locked"):
+            return False
+        w["language_locked"] = w["language"] = tr["language"]
+        w["language_locked_from"] = f"{cid}: {tr['language']}, probability {tr.get('language_probability')}, {tr.get('n_words')} words"
+        write_json(Path(run) / "state.json", st)
+    return True
+
+
 # --------------------------------------------------------------------------- logging
 
 class Log:
@@ -356,11 +393,14 @@ def ingest_chunk(run: Path, src: Path | None, index: int | None = None, sidecar:
             r = extract_wav(dest, wav)
             if not r["ok"]:
                 raise RuntimeError(f"audio extraction failed: {r['error']}")
-        tr = get_transcriber(wcfg_override).transcribe(wav, rec0, duration)
+        tr = get_transcriber(wcfg_override).transcribe(wav, rec0, duration, language=stream_language(run, row, wcfg_override))
         write_json(cdir / "transcript.json", tr, indent=None)
         row["words"], row["speech_seconds"], row["language"] = tr["n_words"], tr["speech_seconds"], tr["language"]
+        row["language_source"] = tr.get("language_source")
         row["model"], row["device"] = tr.get("model"), tr.get("device")
-        return f"{tr['n_words']} words, {tr.get('model')} on {tr.get('device')}, {tr['transcribe_seconds']} s"
+        locked = lock_language(run, cid, row, wcfg_override, tr)
+        return (f"{tr['n_words']} words, {tr.get('model')} on {tr.get('device')}, {tr['transcribe_seconds']} s, language {tr['language']} ({tr.get('language_source')}"
+                + (", now the run's language" if locked else "") + ")")
     if skip_whisper and todo("transcript"):
         log("transcript skipped (--skip-whisper)", show=True)
     else:
@@ -512,6 +552,10 @@ def cmd_status(a):
         counts[r.get("status")] = counts.get(r.get("status"), 0) + 1
     inbox = (st.get("inbox") and Path(st["inbox"])) or None
     waiting = sorted(p.name for p in inbox.glob("chunk-*.mp4")) if inbox and inbox.is_dir() else []
+    langs = {}
+    for r in rows:                      # the spoken language as Whisper reported it, stream chunks only (an advertisement is in its own language)
+        if r.get("language") and r.get("kind") != "ad":
+            langs[r["language"]] = langs.get(r["language"], 0) + 1
     try:                                # can /create-clips start on this run? (facts: the recording ended, chunks and reports settled; cc_notify.py)
         from cc_notify import run_facts
         rf = run_facts(run)
@@ -521,6 +565,7 @@ def cmd_status(a):
         ready = {"ready": None, "error": f"{type(e).__name__}: {e}"}
     out({"ok": True, "run": str(run), "channel": st.get("channel"), "session": st.get("session"), "chunks": len(rows), "by_status": counts, "ready": ready,
          "ad_marked": [r["id"] for r in rows if r.get("kind") == "ad"],
+         "language": {"locked": ((st.get("settings") or {}).get("whisper") or {}).get("language_locked"), "by_chunk": langs},
          "rec_total_s": round(sum(float(r.get("duration_s") or 0) for r in rows), 1), "newest": newest["id"] if newest else None,
          "newest_status": newest.get("status") if newest else None, "stale_rec": [r["id"] for r in rows if r.get("stale_rec")],
          "failed": [{"chunk": r["id"], "error": r.get("error")} for r in rows if r.get("status") == "failed"],
