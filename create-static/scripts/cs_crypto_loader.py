@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 ENV_VAR = "CS_SOURCE_KEY"
-SCRIPTS_DIR = Path(__file__).resolve().parent
+SCRIPTS_DIR = Path(os.environ.get("CS_SCRIPTS_DIR") or Path(__file__).resolve().parent)  # CS_SCRIPTS_DIR: tests point this at an isolated temp copy, never the real source
 ALWAYS_PLAIN = {"cs", "cs_crypto_loader", "cs_source"}  # the bootstrap, this loader, and the lock/unlock tool itself: never encrypted
 
 

@@ -133,6 +133,24 @@ language auto: Whisper names the stream's language, `fallback_language` en when 
 Env: `CC_RUNS_ROOT`, `CC_INBOX`, `CC_WHISPER_MODEL` (tests only: the fast tests run a tiny stand-in so a suite takes minutes, never a real run; the model of a real run is always `medium`), `CC_WHISPER_DEVICE`, `CC_MIN_FREE_GB`, `CC_REPORT` (0 = no reports), `CC_CLAUDE_BIN`, `CC_REPORT_PARALLEL`, `CC_REPORT_TIMEOUT`, `CC_NOTIFY` (0 = no automatic alerts), `CC_NOTIFY_IDLE_MIN`, `CC_WORKERS`, `CC_CONFIG` (another config file; tests).
 Per run: `new-run --language de --prompt "names, terms"` (kept in `state.json -> settings.whisper_override`; `--language auto` is the config's default: the first sure detection of a stream chunk is locked as the run's language, `state.json -> settings.whisper.language_locked`). A language set for a run is never replaced by a detection; to change one later: `state --run RUN set settings.whisper_override.language=de`, then `ingest ... --force` the chunks made before.
 
+## Source encryption (`cc.py source`; the user, 2026-11-15)
+
+Every `cc_*.py` module except `cc.py`, `cc_crypto_loader.py` and `cc_source.py` can be stored on disk encrypted at rest (`cc_edit.py.enc` instead of `cc_edit.py`): the moment
+anything imports it, `cc_crypto_loader.py` (installed as a Python import hook the instant `cc.py` starts) decrypts it in memory with the key in the `CC_SOURCE_KEY` environment
+variable and runs it - no decrypted copy ever touches disk. Without the right key, nothing that needs an encrypted module can run at all, and the error says so plainly rather
+than a cryptic traceback. A module whose plain `.py` is sitting there (the normal state while editing it) is loaded exactly as Python always loads a file: no key is needed at
+all while something is unlocked, and `~/.claude/.gitignore` lists every protected module's plain filename by name, so an unlocked copy can never be committed by accident,
+however a session or an auto-commit hook ends.
+
+```
+& $PY $CC source generate-key          # prints a brand-new key ONCE; save it (a password manager, or a Windows user environment variable) - nothing here writes it anywhere
+& $PY $CC source lock                  # encrypts every currently-plain protected module with CC_SOURCE_KEY, deletes the plain copy: this is the state to commit
+& $PY $CC source unlock [--force]      # decrypts every protected module's .py.enc with CC_SOURCE_KEY into a plain, editable .py (--force overwrites an already-unlocked copy)
+& $PY $CC source status                # which modules are plain, locked, both (edited since the last lock: re-lock it), or missing
+```
+Persist the key for every future PowerShell session without typing it again: `setx CC_SOURCE_KEY "<key>"` (a one-time, per-user command; new shells pick it up, the current one needs `$env:CC_SOURCE_KEY = "<key>"` too, once). This is a real protection, not security by obscurity: the plain source stays readable while anyone is actively maintaining it (that is the whole point), but the moment it is locked, having the repository alone - the `.py.enc` files, this very doc, the whole command history of how to build it - is not enough to produce a working copy; only the key is. A repository leak with everything still unlocked (plain `.py` present) protects nothing: lock before anything leaves this machine.
+Working on the code in a session: unlock first (`source unlock`, needs the key once), edit normally (no key needed again while it stays unlocked), run `source lock` again before the work is considered finished so the committed `.py.enc` reflects the latest edit - the plain copy itself is never at risk of being committed regardless, by the gitignore rule above, but a stale `.enc` would be a real, silent bug.
+
 ## Speed with one and with two processors (measured 2026-11-13, BLAST Premier run, 1080p60 source chunks, a busy PC)
 
 - **One processor** (the live test): a 180 s chunk took 4 to 7 minutes (probe 1-91 s, audio 1.5-30 s, sheets 25-104 s, transcript 120-383 s), so a recording was still being worked on about 10 minutes after it stopped.

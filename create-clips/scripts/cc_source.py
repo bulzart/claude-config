@@ -1,5 +1,6 @@
 """cc_source.py - lock, unlock, and check the encrypted-at-rest state of the other cc_*.py modules (see cc_crypto_loader.py for how the
-encrypted ones actually get read at runtime). Always plain, never encrypted itself, like cc.py and cc_crypto_loader.py.
+encrypted ones actually get read at runtime). Always plain, never encrypted itself, like cc.py and cc_crypto_loader.py. Self-contained (it does
+not import cc_common, which may itself be encrypted and unavailable - that is exactly the case this tool exists to handle).
 
   cc.py source generate-key    print a brand-new key ONCE (save it; nothing here writes it to any file)
   cc.py source lock            encrypt every currently-plain protected module with CC_SOURCE_KEY, then delete the plain copy
@@ -12,11 +13,21 @@ variable for the run; it is never written to a file, logged, or sent anywhere.
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 
-from cc_common import fail, out
 from cc_crypto_loader import ENV_VAR, SCRIPTS_DIR, protected_names
+
+
+def out(obj: dict, code: int = 0) -> None:
+    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
+    sys.exit(code)
+
+
+def fail(msg: str, code: int = 2, **extra) -> None:
+    out({"ok": False, "error": msg, **extra}, code)
 
 
 def _key() -> str:

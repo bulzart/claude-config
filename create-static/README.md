@@ -36,7 +36,8 @@ create-static/
 ├── fonts/                          the fonts the captions and labels use (kept here so a project keeps finding them)
 ├── pipeline/preprocessing.md       the media tools and the commands a Static run uses
 ├── reference/                      section files (above)
-├── scripts/                        cs.py (the toolkit), cs_compose.py (the composition), docs_tool.py, check_all.py, image_worker.py, music_worker.py
+├── scripts/                        cs.py (the entry point) + cs_core.py (the toolkit, can be encrypted at rest), cs_compose.py (the composition, can be encrypted at rest),
+│                                   cs_crypto_loader.py + cs_source.py (never encrypted: decrypt-on-import, lock/unlock/status), docs_tool.py, check_all.py, image_worker.py, music_worker.py
 ├── tests/                          t01_compose.py (the build on a synthetic video), t02_library.py (the command, skills, references and toolkit agree), run_all.py
 └── runs/                           one folder per run (git-ignored)
 ```
@@ -44,3 +45,17 @@ create-static/
 `python scripts/check_all.py` runs the tests and `docs_tool.py check`. Machine settings are the environment variables of this PC (OPENAI_API_KEY, ELEVEN_API_KEY, AWL_IMAGE_PYTHON, AWL_IMAGE_ROOT, AWL_MUSIC_PYTHON,
 AWL_MUSIC_ROOT, AWL_TTS_PYTHON): their names are unchanged. The input guard hook (`~/.claude/hooks/awl_input_guard.py`) protects the references, examples and effects folders of the open runs of this library too (item 34). The SessionStart resume note (`~/.claude/hooks/atp_resume_note.py`) names a run of this library that is in progress after a compaction or a resume, with its next skill and the first `Next:` line of its `todo.md` (item 38; `tests/t03_resume_hook.py`).
 Whisper is `medium`, always (item 24: the user, 2026-11-14): no smaller model as a default, a fallback or a speed-up.
+
+**Source encryption** (the user, 2026-11-15: "use encryption at run ... requires a key for files to be read ... not a .exe file"): `cs_core.py` (everything the toolkit does) and
+`cs_compose.py` (the CapCut composition) can be stored on disk encrypted at rest (`cs_core.py.enc` instead of `cs_core.py`); the moment anything imports one, `cs_crypto_loader.py`
+(a Python import hook installed the instant `cs.py` starts) decrypts it in memory with the key in the `CS_SOURCE_KEY` environment variable and runs it - no decrypted copy ever
+touches disk, and without the right key nothing that needs it can run at all. A module whose plain `.py` is sitting there (the normal state while editing it) needs no key at all
+and is loaded exactly as Python always loads a file; `~/.claude/.gitignore` lists both protected filenames by name, so an unlocked copy can never be committed by accident.
+```
+& $PY scripts\cs.py source generate-key     # prints a brand-new key ONCE; save it (a password manager, or setx CS_SOURCE_KEY "<key>") - nothing here writes it anywhere
+& $PY scripts\cs.py source lock             # encrypts cs_core.py/cs_compose.py with CS_SOURCE_KEY, deletes the plain copies: this is the state to commit
+& $PY scripts\cs.py source unlock [--force] # decrypts them with CS_SOURCE_KEY back into plain, editable .py files
+& $PY scripts\cs.py source status           # plain, locked, both (edited since the last lock: re-lock it), or missing
+```
+Real protection, not security by obscurity: the plain source stays readable while someone is actively maintaining it, but once it is locked, the repository alone - the `.py.enc`
+files and this very explanation included - cannot produce a working copy; only the key can. Lock before anything leaves this machine; a leak while still unlocked protects nothing.
