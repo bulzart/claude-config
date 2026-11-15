@@ -15,6 +15,7 @@ While a stream is downloaded, a separate headless **Haiku reporter** (`claude -p
 This file is the **contract** between the three parts. Everything that crosses a part (file names, JSON fields, times) is defined here.
 
 ## Quick start
+0. **On another PC** (a copy of this toolkit from the repo): copy the folders, install the software, run `python scripts\setup_pc.py` once (it rewrites the original PC's paths in the commands, skills and configs and prints a checklist of everything still missing), then set the two keys; `docs/processing.md`, "On another PC". Everything below then applies unchanged.
 1. **Once**: `chrome://extensions` -> Developer mode -> Load unpacked -> `C:\Users\Bulzart\Documents\twitch-chunk-recorder`. Check `T doctor` (ffmpeg, Whisper medium cached, free space).
 2. **Let the processor start by itself** (one time, opt-in, removable): double-click `C:\Users\Bulzart\.claude\create-clips\scripts\install-background.cmd` in Explorer (it registers the Chrome helper and a logon task; `uninstall-background.cmd` undoes it).
    Do not use the `!` prefix of the Claude prompt for it: that runs through Git Bash, which cannot start on this PC. The extension then starts `cc.py watch` in the background when you press Record. Or start it by hand in a PowerShell window: `& "C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe" "C:\Users\Bulzart\.claude\create-clips\scripts\cc.py" watch`.

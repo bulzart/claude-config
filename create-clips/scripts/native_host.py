@@ -25,7 +25,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from cc_common import CC_HOME, free_gb, inbox_dir, read_json, runs_root  # noqa: E402
+import cc_crypto_loader  # noqa: E402,F401  (the decrypt-on-import hook: Chrome starts this file on its own, not through cc.py, and cc_common is encrypted at rest)
+
+try:
+    from cc_common import CC_HOME, free_gb, inbox_dir, read_json, runs_root  # noqa: E402
+    NOT_READY = ""
+except ImportError as e:        # CC_SOURCE_KEY is missing or wrong in CHROME's environment (or `cryptography` is not installed): stay alive and say why, so the extension shows it
+    NOT_READY = (f"{e}" if isinstance(e, cc_crypto_loader.SourceLocked) else f"{type(e).__name__}: {e}")[:400]
+    CC_HOME = Path(__file__).resolve().parent.parent
 
 VERSION = "1"
 LOG = CC_HOME / "logs" / "native-host.log"
@@ -126,6 +133,8 @@ def session_status(session: str) -> dict:
 def handle(msg: dict) -> dict:
     mid, typ = msg.get("id"), msg.get("type")
     base = {"id": mid, "ok": True, "type": typ}
+    if NOT_READY:
+        return {"id": mid, "ok": False, "error": f"the processor cannot start: {NOT_READY} (start Chrome again after setting CC_SOURCE_KEY: the host runs with Chrome's environment)"}
     if typ in ("hello", "ensure"):
         w = ensure_watcher()
         return {**base, "host": "create-clips", "version": VERSION, **w, "runs_root": str(runs_root()), "inbox": str(inbox_dir()),

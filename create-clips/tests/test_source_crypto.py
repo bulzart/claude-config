@@ -63,7 +63,7 @@ def register(sub):
 
 
 def run(code: str, env_extra: dict, expect_ok: bool | None = None) -> subprocess.CompletedProcess:
-    env = {**os.environ, **env_extra}
+    env = {**{k: v for k, v in os.environ.items() if k != "CC_SOURCE_KEY"}, **env_extra}    # the real key, once it is set on this PC, must never leak into a "no key" case
     cp = subprocess.run([PY, "-I", "-c", code], capture_output=True, text=True, env=env, timeout=30)
     if expect_ok is not None:
         check((cp.returncode == 0) == expect_ok, f"exit code {cp.returncode} (expected {'0' if expect_ok else 'nonzero'}): {(cp.stderr or '')[-200:]}")
@@ -187,7 +187,9 @@ def main():
         check("Traceback" not in cp.stdout and "Traceback" not in cp.stderr, "no key, cc_proc locked: --help never shows a raw traceback")
 
         cp = run_cc(scripts, ["probe"], key=None, expect_ok=False)
-        check("Traceback" not in cp.stdout and "Traceback" not in cp.stderr, "no key, cc_proc locked: `cc.py probe` fails cleanly (argparse 'invalid choice'), not a crash dump")
+        check("Traceback" not in cp.stdout and "Traceback" not in cp.stderr, "no key, cc_proc locked: `cc.py probe` fails cleanly, not a crash dump")
+        check(last_json(cp).get("ok") is False and "CC_SOURCE_KEY" in last_json(cp).get("error", "") and last_json(cp).get("locked") == ["cc_proc"],
+              f"no key, cc_proc locked: `cc.py probe` names the key and the locked module in one JSON error, not a bare 'invalid choice': {cp.stdout.strip()[:200]!r}")
 
         cp = run_cc(scripts, ["probe"], key=key, expect_ok=True)
         check(last_json(cp).get("here") == "scripts", f"THE BUG THIS CATCHES: correct key must make __file__ work inside a decrypted module, not raise NameError: {cp.stdout.strip()!r}")

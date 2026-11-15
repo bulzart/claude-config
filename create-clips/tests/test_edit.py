@@ -315,6 +315,13 @@ def main():
             with cf.ThreadPoolExecutor(max_workers=4) as ex:
                 futs = [ex.submit(cc, "capcut-compose", "--run", run, "--video", "S01", "--name", f"par{i}", "--store", store2, env=env) for i in range(4)]
                 res_par = [f.result() for f in futs]
+            # the four calls build the SAME video, so they write the same compose-spec.json at the same moment, and on Windows one atomic replace of a file another process
+            # just touched can die with "Access is denied" (seen about once in three runs when the PC was busy, with the real error captured). Real builds are different videos,
+            # each in its own folder, so this is a collision of the test's setup, not of the index lock this step is about: a call that died exactly that way is run again, as an agent would.
+            for i_, x_ in enumerate(res_par):
+                if not x_.get("ok") and "compose-spec.json" in str(x_.get("stderr", "")) and "Access is denied" in str(x_.get("stderr", "")):
+                    print(f"note: par{i_} died on the shared compose-spec.json (Windows replace race of this test's setup); run again")
+                    res_par[i_] = cc("capcut-compose", "--run", run, "--video", "S01", "--name", f"par{i_}", "--store", store2, env=env)
             idx = json.loads((store2 / "root_meta_info.json").read_text(encoding="utf-8"))
             listed = sorted(Path(str(e.get("draft_fold_path", ""))).name for k, v in idx.items() if isinstance(v, list) for e in v if isinstance(e, dict))
             check(all(x.get("ok") for x in res_par) and listed == [f"par{i}" for i in range(4)],

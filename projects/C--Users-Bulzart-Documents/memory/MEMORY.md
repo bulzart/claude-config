@@ -89,4 +89,5 @@
 - [Whisper strictly medium](whisper-strictly-medium.md) — user 2026-11-14: medium for ALL audio in every pipeline, no smaller default/fallback; a medium that cannot load is an error
 - [create-clips: chat heat](create-clips-chat-heat.md) — user 2026-11-15: chat counted every 4 s (T heat, rule 17) = a clue: one look per burst, <= 1 point on a moment the rest rates; game mode much less
 - [Static mode: no Loupe checks](static-mode-no-loupe-checks.md) — user 2026-11-14: Static (/create-static) does not use Loupe, so never run or chase Loupe tests, hooks or checks for it
-- [Pipeline source encryption](pipeline-source-encryption.md) — cc.py/cs.py source locked at rest, decrypted at runtime from CC/CS_SOURCE_KEY; only the user's own key unlocks it; history-scrub + git-auth gaps still open
+- [Pipeline source encryption](pipeline-source-encryption.md) — source locked at rest by the user 2026-11-15, key from CC/CS_SOURCE_KEY; audit fixed native host + tests; Chrome needs a full restart for the key; cs.py start ~2 s; old plaintext in git history accepted
+- [Other-PC hand-off](pipeline-other-pc-handoff.md) — user 2026-11-15: guide + `create-clips/scripts/setup_pc.py`; clone needs core.longpaths, Whisper not auto-downloaded, awl_home is a real dependency; verified on a simulated clean PC, not a real one

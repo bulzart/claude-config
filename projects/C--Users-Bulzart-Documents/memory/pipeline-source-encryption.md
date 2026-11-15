@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 7871cc76-de90-4292-a548-53ad612f5f68
-  modified: 2026-11-15T12:22:55.963Z
+  modified: 2026-11-15T13:59:15.084Z
 ---
 
 User 2026-11-15, after rejecting two earlier approaches in the same session (file-order obfuscation: "weak security... would break my own ability to read/edit"; then a PyInstaller `.exe` build, [[protected-build-tool]]-superseded: "it should not be a .exe file ... use encryption at run and remove any .exe, i just need to have encryption in the runtime while the command executes it requires a key for files to be read"). Final, explicit requirement: "i encrypt once all the priority files in both pipelines with my keys ... its only my keys who decrypt them ... they should never change once i lock them."
@@ -20,6 +20,14 @@ Doc for the user: `create-clips/docs/processing.md` "Source encryption" section;
 
 **Known, accepted gap (found 2026-11-15 while preparing to push, user decided the same day):** the plaintext of these exact files already sits in many historical commits on `origin/pc` (confirmed via `git ls-tree -r origin/pc` and `git log --follow`) from before this feature existed. Locking the current tree and pushing does not scrub old commits — a full clone still exposes the old plaintext through history regardless of what HEAD looks like. Asked the user (AskUserQuestion: rewrite history with git filter-repo + force-push, vs. leave history as-is and lock going forward only) — **the user chose to leave history as-is.** Do not re-propose a history rewrite unless the user raises it again themselves.
 
-Separately, `git fetch`/`push` to `origin` (`bulzart/claude-config`) was failing 2026-11-15 ("could not read Password ... terminal prompts disabled"; `gh auth status` showed not logged in at all) — the user needs to re-auth in an interactive terminal (e.g. `gh auth login`) before any push can succeed; check whether this is still true before assuming it is.
+Separately, `git fetch`/`push` to `origin` (`bulzart/claude-config`) was failing 2026-11-15 ("could not read Password ... terminal prompts disabled"; `gh auth status` showed not logged in at all) — the user needs to re-auth in an interactive terminal (e.g. `gh auth login`) before any push can succeed; check whether this is still true before assuming it is. (Later that day `git ls-remote origin` worked again and origin/pc was at 6d836b5.)
+
+**Audit 2026-11-15 afternoon, after the user locked the REAL source himself (~13:33, his keys set with setx; `.enc` files byte-identical to the last committed plaintext for all 13 cc modules and cs_compose; cs_core has no plaintext history because it was split out of cs.py).** What the lock broke and what was fixed (plain files only; no locked module was touched or unlocked):
+- `native_host.py` (Chrome starts it; plain, never through cc.py) imported the locked `cc_common` without the decrypt hook: the Record button's processor link crashed at import (`No module named 'cc_common'`), invisible to the extension's own tests (they use a mock port). Now it installs the hook first and, with no usable key, answers the extension "the processor cannot start ... start Chrome again after setting CC_SOURCE_KEY". **Chrome passes ITS environment to the host**: the user's Chrome (started 13:27) predates the keys, so it needs one full restart (all windows and the tray process) before the host works; not yet confirmed live.
+- Tests that read or import source: `test_nowindow` scanned only the 4 plain scripts (now decrypts the rest in memory, fails if it cannot), `test_docs` looked for `cc_notify.py` on disk, `test_proc` imported `cc_sheets` without the hook, and `test_source_crypto` / create-static `t04` built their "no key" case from `os.environ` (the real key leaked in: they must drop it). All green again.
+- A command whose module is locked with no key now answers one JSON error naming the key (cc.py and cs.py), not a bare argparse "invalid choice".
+- The running watcher (started 11-14 20:13, old plaintext code in memory) was restarted through the `CreateClipsWatcher` task: it comes up on the encrypted code (Task Scheduler passes the user-level variables).
+- Cost: decrypt is ~7 ms; compiling `cs_core` (1.1 MB) is ~1.9 s at EVERY `cs.py` start (no .pyc for an encrypted module), create-clips ~0.2 s in all. A cache of the compiled code, encrypted with the same key, would remove it; not built (the user's call).
+Other PCs: [[pipeline-other-pc-handoff]].
 
 Related: [[claude-folder-git-versioning]], [[create-clips-pipeline]], [[create-static-command]], [[whisper-strictly-medium]].

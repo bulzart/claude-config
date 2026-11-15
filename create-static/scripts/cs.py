@@ -21,9 +21,21 @@ def _locked_only() -> None:
     # cs_core can't decrypt (CS_SOURCE_KEY missing or wrong): `source` lives inside cs_core.main() normally, so without this fallback,
     # `cs.py source status`/`unlock` - the one thing you'd want to run in exactly this situation - would be unreachable too.
     import argparse
+    import json
     import cs_source
-    ap = argparse.ArgumentParser(prog="cs.py", description="cs_core.py is encrypted at rest and CS_SOURCE_KEY is missing or wrong: only "
-                                  "`source` is available until it's unlocked (`cs.py source status` for details).")
+
+    class _Parser(argparse.ArgumentParser):
+        def error(self, message):       # a command that lives only inside the locked cs_core: name the reason, in the one-JSON-object form every command answers in
+            if "invalid choice" in message:
+                sys.stdout.write(json.dumps({"ok": False, "error": f"{message.split(' (choose')[0]}: that command lives in cs_core.py, which is encrypted at rest, and "
+                                             f"CS_SOURCE_KEY is missing or does not decrypt it. Set CS_SOURCE_KEY to the project's key in the environment this was started "
+                                             f"from (a new terminal after `setx`); `cs.py source status` shows the state."}) + "\n")
+                sys.stdout.flush()
+                sys.exit(2)
+            super().error(message)
+
+    ap = _Parser(prog="cs.py", description="cs_core.py is encrypted at rest and CS_SOURCE_KEY is missing or wrong: only "
+                 "`source` is available until it's unlocked (`cs.py source status` for details).")
     sub = ap.add_subparsers(dest="cmd", metavar="<command>")
     cs_source.register(sub)
     a = ap.parse_args()

@@ -2,13 +2,18 @@
   install-background.ps1: make the processing script start by itself (opt-in, per user, no admin rights, fully removable).
 
   -Mode native   register the Chrome native-messaging host `com.createclips.processor` (HKCU registry key + a manifest file). The Twitch Chunk Recorder
-                 then starts `cc.py watch` in the background when you press Record, and shows how many chunks are processed. Needs the extension loaded once
-                 (its id is read from native-host\extension-id.txt in the extension folder, or pass -ExtensionId).
+                 then starts `cc.py watch` in the background when you press Record, and shows how many chunks are processed. The extension's id is the
+                 same on every PC (its manifest.json carries a fixed key): it is read from native-host\extension-id.txt in -ExtensionDir when you pass
+                 that folder, from -ExtensionId when you pass it, and is otherwise the id built into this script.
   -Mode task     a Scheduled Task that runs `cc.py watch` hidden at every logon (the watcher is then always on, even when Chrome is closed).
   -Mode both     native + task.
   -Mode remove   delete the registry key, the host manifest and the scheduled task.
   -Mode status   say what is installed and whether the watcher is running (changes nothing).
   -DryRun        print what would be written, write nothing.
+  -Python        the python.exe to start the host and the watcher with (default: the Python 3.12 found on this PC).
+
+  Works from wherever the create-clips folder is (it uses its own location). Both the host and the watcher need CC_SOURCE_KEY in their environment
+  (the toolkit's code is encrypted at rest): set it with setx and start Chrome / log on again afterwards.
 
   Examples (PowerShell):   .\install-background.ps1 -Mode status
                            .\install-background.ps1 -Mode native
@@ -17,26 +22,48 @@
 param(
   [ValidateSet('native','task','both','remove','status')][string]$Mode = 'status',
   [string]$ExtensionId = '',
-  [string]$ExtensionDir = 'C:\Users\Bulzart\Documents\twitch-chunk-recorder',
-  [string]$Python = 'C:\Users\Bulzart\AppData\Local\Programs\Python\Python312\python.exe',
+  [string]$ExtensionDir = '',
+  [string]$Python = '',
   [switch]$DryRun
 )
 $ErrorActionPreference = 'Stop'
-$cc      = 'C:\Users\Bulzart\.claude\create-clips'
+$cc      = Split-Path $PSScriptRoot -Parent            # the create-clips folder this script sits in (scripts\..)
 $hostDir = Join-Path $cc 'native-host'
 $name    = 'com.createclips.processor'
 $manifest = Join-Path $hostDir "$name.json"
 $launcher = Join-Path $hostDir 'native_host.bat'
 $regKey  = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$name"
 $taskName = 'CreateClipsWatcher'
+$PinnedId = 'clnbfkmjckffkfgnhnfacicbalpieddp'          # the id of the Twitch Chunk Recorder (fixed by the "key" in its manifest.json)
 
 function Say($m) { Write-Host $m }
 
+function Find-Python {
+  foreach ($cmd in @(@('py','-3.12'), @('python'))) {
+    try {
+      $exe = (Get-Command $cmd[0] -ErrorAction Stop).Source
+      $pyArgs = @($cmd | Select-Object -Skip 1) + @('-c','import sys; print(sys.executable)')
+      $p = (& $exe @pyArgs 2>$null | Select-Object -First 1)
+      if ($p -and (Test-Path $p.Trim())) { return $p.Trim() }
+    } catch { }
+  }
+  throw 'python.exe not found: install Python 3.12 or pass -Python <full path to python.exe>'
+}
+if ($Mode -in @('native','task','both') -and -not $Python) { $Python = Find-Python }
+
 function Get-ExtensionId {
   if ($ExtensionId) { return $ExtensionId.Trim() }
-  $f = Join-Path $ExtensionDir 'native-host\extension-id.txt'
-  if (Test-Path $f) { return (Get-Content $f -Raw).Trim() }
-  throw "extension id unknown: pass -ExtensionId or make sure $f exists"
+  if ($ExtensionDir) {
+    $f = Join-Path $ExtensionDir 'native-host\extension-id.txt'
+    if (Test-Path $f) { return (Get-Content $f -Raw).Trim() }
+  }
+  return $PinnedId
+}
+
+function Get-RunsRoot {
+  if ($env:CC_RUNS_ROOT) { return $env:CC_RUNS_ROOT }
+  try { $r = (Get-Content (Join-Path $cc 'config.json') -Raw | ConvertFrom-Json).runs_root; if ($r) { return $r } } catch { }
+  return (Join-Path $cc 'runs')
 }
 
 function Install-Native {
@@ -57,6 +84,7 @@ function Install-Native {
   New-Item -Path $regKey -Force | Out-Null
   Set-ItemProperty -Path $regKey -Name '(default)' -Value $manifest
   Say 'native host registered. Reload the extension (chrome://extensions) and press Record: the processor starts by itself.'
+  Say 'Chrome gives the host its own environment: if you set CC_SOURCE_KEY after Chrome started, close every Chrome window (and its background process) and open it again.'
 }
 
 function Install-Task {
@@ -87,12 +115,11 @@ function Show-Status {
   Say ("host manifest   : " + $(if (Test-Path $manifest) { $manifest } else { 'absent' }))
   $t = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
   Say ("scheduled task  : " + $(if ($t) { "$($t.State)" } else { 'not installed' }))
-  $lock = 'C:\Users\Bulzart\Documents\stream-clips\runs\.watch.lock'
+  $lock = Join-Path (Get-RunsRoot) '.watch.lock'
   $pid_ = 0
   if (Test-Path $lock) { [void][int]::TryParse((Get-Content $lock -Raw).Trim(), [ref]$pid_) }
   Say ("watcher         : " + $(if ($pid_ -gt 0 -and (Get-Process -Id $pid_ -ErrorAction SilentlyContinue)) { "running (pid $pid_)" } else { 'not running' }))
-  $idf = Join-Path $ExtensionDir 'native-host\extension-id.txt'
-  Say ("extension id    : " + $(if (Test-Path $idf) { (Get-Content $idf -Raw).Trim() } else { 'unknown (extension not built yet)' }))
+  Say ("extension id    : " + (Get-ExtensionId))
 }
 
 switch ($Mode) {

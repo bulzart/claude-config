@@ -12,6 +12,7 @@ Every child process must therefore be started with creationflags=NO_WINDOW. This
 from __future__ import annotations
 
 import ast
+import os
 import subprocess
 import sys
 import tempfile
@@ -48,6 +49,23 @@ def scan(src: str, name: str) -> tuple:
     return calls, bad
 
 
+def read_scripts(unreadable: list):
+    """(name, text) of every script of the toolkit: the plain .py files, and the locked ones (`<name>.py.enc`) decrypted in memory with CC_SOURCE_KEY (nothing
+    is written to disk). A locked script that cannot be decrypted goes into `unreadable` and fails the test: the scan must never pass by looking at nothing."""
+    names = {p.name for p in SCRIPTS.glob("*.py")}
+    for p in sorted(SCRIPTS.glob("*.py")):
+        yield p.name, p.read_text(encoding="utf-8-sig")
+    for p in sorted(SCRIPTS.glob("*.py.enc")):
+        if p.name[:-4] in names:
+            continue                                  # the plain copy is there (unlocked for editing): it was read above
+        key = os.environ.get("CC_SOURCE_KEY")
+        try:
+            from cryptography.fernet import Fernet
+            yield p.name[:-4], Fernet(key.encode("utf-8")).decrypt(p.read_bytes()).decode("utf-8-sig")
+        except Exception as e:  # noqa: BLE001  (no key, a wrong key, no cryptography package: all the same here)
+            unreadable.append(f"{p.name} ({type(e).__name__})")
+
+
 def main():
     # the scan itself: it must flag the old way and accept the new one
     c1, b1 = scan("import subprocess\nsubprocess.run(['ffprobe'], capture_output=True)\n", "old.py")
@@ -55,12 +73,13 @@ def main():
     c3, b3 = scan("import os\nos.system('dir')\n", "sys.py")
     check(c1 == 1 and len(b1) == 1 and c2 == 2 and not b2 and len(b3) == 1, "the scan flags a call without creationflags and an os.system, and accepts calls that pass it")
 
-    scanned, calls, bad = 0, 0, []
-    for path in sorted(SCRIPTS.glob("*.py")):
+    scanned, calls, bad, unreadable = 0, 0, [], []
+    for name, text in read_scripts(unreadable):
         scanned += 1
-        c, b = scan(path.read_text(encoding="utf-8-sig"), path.name)
+        c, b = scan(text, name)
         calls += c
         bad += b
+    check(not unreadable, "every locked script was decrypted in memory to be scanned (CC_SOURCE_KEY must be set for this test) " + ("; ".join(unreadable) if unreadable else "-"))
     check(scanned >= 8 and calls >= 4, f"read {scanned} scripts, {calls} subprocess calls found (the scan sees them)")
     check(not bad, "every subprocess call hides its console window, and no os.system/os.popen/os.startfile " + ("; ".join(bad) if bad else "-"))
 

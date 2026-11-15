@@ -37,12 +37,25 @@ def fail(msg: str, code: int = 2, **extra) -> None:
     sys.exit(code)
 
 
+class _Parser(argparse.ArgumentParser):
+    """When a command is unknown because its module is locked (CC_SOURCE_KEY missing or wrong), say that, in the one-JSON-object form every command answers in,
+    instead of a bare "invalid choice" that never mentions the key (the user, 2026-11-15: no key or a wrong key must fail with a plain message)."""
+    locked: list = []
+
+    def error(self, message):
+        if self.locked and "invalid choice" in message:
+            fail(f"{message.split(' (choose')[0]}: that command lives in a module that is encrypted at rest, and CC_SOURCE_KEY is missing or does not decrypt it "
+                 f"(locked: {', '.join(self.locked)}). Set CC_SOURCE_KEY to the project's key in the environment this was started from (a new terminal after "
+                 f"`setx`); `cc.py source status` shows the state.", 2, locked=list(self.locked))
+        super().error(message)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="cc.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = _Parser(prog="cc.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", metavar="<command>")
     import cc_source                # always present (never encrypted): lock/unlock/status for the other modules
     cc_source.register(sub)
-    locked = []
+    locked = ap.locked = []
     for name in MODULES:
         try:
             mod = importlib.import_module(name)

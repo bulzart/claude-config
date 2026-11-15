@@ -118,7 +118,8 @@ def main():
           "config.json has watch.workers 2 and the README and docs/processing.md describe the two processors")
     nc = cfg.get("notify") or {}
     check({"enabled", "persistent", "sound", "idle_minutes", "catchup_hours"} <= set(nc) and nc.get("enabled") is True, "config.json has the notify block (the ready alert is on)")
-    check((CC / "scripts" / "notify.ps1").is_file() and (CC / "scripts" / "cc_notify.py").is_file(), "the ready alert's scripts exist (notify.ps1, cc_notify.py)")
+    check((CC / "scripts" / "notify.ps1").is_file() and any((CC / "scripts" / n).is_file() for n in ("cc_notify.py", "cc_notify.py.enc")),
+          "the ready alert's scripts exist (notify.ps1, cc_notify.py: plain, or locked as cc_notify.py.enc)")
     rd, pd = read(CC / "README.md"), read(CC / "docs" / "processing.md")
     check("`notify`" in rd and "The ready alert" in pd and "creationflags=NO_WINDOW" in rd, "the README and docs/processing.md describe the ready alert and the no-console-window rule")
     check((CC / "reference" / "reporter.md").is_file() and "decide nothing" in read(CC / "reference" / "reporter.md").lower().replace("**", ""), "the reporter's brief exists and says it decides nothing")

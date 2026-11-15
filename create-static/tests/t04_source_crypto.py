@@ -72,7 +72,7 @@ def _probe():
 
 
 def run(code: str, env_extra: dict, expect_ok: bool | None = None) -> subprocess.CompletedProcess:
-    env = {**os.environ, **env_extra}
+    env = {**{k: v for k, v in os.environ.items() if k != "CS_SOURCE_KEY"}, **env_extra}    # the real key, once it is set on this PC, must never leak into a "no key" case
     cp = subprocess.run([PY, "-I", "-c", code], capture_output=True, text=True, env=env, timeout=30)
     if expect_ok is not None:
         check((cp.returncode == 0) == expect_ok, f"exit code {cp.returncode} (expected {'0' if expect_ok else 'nonzero'}): {(cp.stderr or '')[-200:]}")
@@ -188,6 +188,8 @@ def main():
 
         cp = run_cs(scripts, ["probe"], key=None, expect_ok=False)
         check("Traceback" not in cp.stdout and "Traceback" not in cp.stderr, "no key, cs_core locked: `cs.py probe` fails cleanly (the locked-only fallback parser), not a crash dump")
+        last = [ln for ln in cp.stdout.splitlines() if ln.strip()]
+        check(bool(last) and '"ok": false' in last[-1] and "CS_SOURCE_KEY" in last[-1], f"no key, cs_core locked: `cs.py probe` names the key in one JSON error, not a bare 'invalid choice': {cp.stdout.strip()[:160]!r}")
 
         cp = run_cs(scripts, ["probe"], key=key, expect_ok=True)
         check(last_json(cp).get("here") == "scripts", f"THE BUG THIS CATCHES: correct key must make __file__ work inside a decrypted module, not raise NameError: {cp.stdout.strip()!r}")
