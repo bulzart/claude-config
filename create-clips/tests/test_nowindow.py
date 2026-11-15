@@ -76,6 +76,7 @@ def main():
             probe.write_text(
                 "import sys\n"
                 f"sys.path.insert(0, {str(SCRIPTS)!r})\n"
+                "import cc_crypto_loader\n"
                 "import cc_common\n"
                 f"cp = cc_common.run_cmd([{sys.executable!r}, '-c', 'import ctypes; print(ctypes.windll.kernel32.GetConsoleWindow())'])\n"
                 f"open({str(res)!r}, 'w').write(cp.stdout.strip() + '|' + str(cc_common.NO_WINDOW))\n", encoding="utf-8")

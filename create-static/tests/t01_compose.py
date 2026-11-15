@@ -210,7 +210,8 @@ def main():
 
         # ---- CapCut running: the build changes nothing (exit 3)
         code, res7, cp = sh([PY, "-X", "utf8", "-c",
-                             "import sys; sys.path.insert(0, r'%s'); sys.argv=['cs.py','capcut-build','--run',r'%s','--video','01','--store',r'%s']; import cs; cs._capcut_running=lambda: True; cs.main()"
+                             "import sys; sys.path.insert(0, r'%s'); sys.argv=['cs.py','capcut-build','--run',r'%s','--video','01','--store',r'%s']; "
+                             "import cs_crypto_loader; import cs_core as cs; cs._capcut_running=lambda: True; cs.main()"
                              % (LIB / "scripts", run, store)], env)
         check(code == 3 and res7 and "CapCut is running" in json.dumps(res7), "with CapCut running the build stops with exit 3")
         check(sorted(p.name for p in store.iterdir()) == before, "and builds nothing")

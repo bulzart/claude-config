@@ -25,6 +25,7 @@ SCRIPTS = HERE.parent / "scripts"
 CC = SCRIPTS / "cc.py"
 PY = sys.executable
 sys.path.insert(0, str(SCRIPTS))
+import cc_crypto_loader  # noqa: E402,F401
 
 
 def check(cond, msg):

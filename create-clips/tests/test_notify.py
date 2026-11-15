@@ -27,6 +27,7 @@ PY = sys.executable
 FAKE_NOTIFY = HERE / "fake_notify.py"
 FAKE_CLAUDE = HERE / "fake_claude.py"
 sys.path.insert(0, str(SCRIPTS))
+import cc_crypto_loader  # noqa: E402,F401
 
 
 def check(cond, msg):

@@ -39,6 +39,24 @@
 !/projects/*/memory/
 
 # ---- never, even inside the folders above ------------------------------------------------
+# Encrypted-at-rest source (the user, 2026-11-15): `cc.py source unlock` regenerates these plain .py files locally, for editing; only their
+# .py.enc stays tracked. Ignored by exact name (not a *.py wildcard) so a brand-new cc_*.py module is tracked plain until it is deliberately
+# locked - add its name here, in create-clips/scripts/cc_crypto_loader.py's ALWAYS_PLAIN stays untouched, when it joins the protected set.
+/create-clips/scripts/cc_audio.py
+/create-clips/scripts/cc_common.py
+/create-clips/scripts/cc_edit.py
+/create-clips/scripts/cc_frames.py
+/create-clips/scripts/cc_game.py
+/create-clips/scripts/cc_heat.py
+/create-clips/scripts/cc_hud.py
+/create-clips/scripts/cc_notify.py
+/create-clips/scripts/cc_proc.py
+/create-clips/scripts/cc_report.py
+/create-clips/scripts/cc_sheets.py
+/create-clips/scripts/cc_tables.py
+/create-clips/scripts/cc_wordbox.py
+/create-static/scripts/cs_core.py
+/create-static/scripts/cs_compose.py
 /.credentials.json
 /skills/synced/
 /skills/.trash/

@@ -14,6 +14,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "scripts"))
+import cc_crypto_loader  # noqa: E402,F401
 import cc_edit  # noqa: E402
 import cc_wordbox as wb  # noqa: E402
 

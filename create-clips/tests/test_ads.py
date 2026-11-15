@@ -18,6 +18,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SCRIPTS = HERE.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
+import cc_crypto_loader  # noqa: E402,F401
 CC = SCRIPTS / "cc.py"
 PY = sys.executable
 

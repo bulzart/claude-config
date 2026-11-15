@@ -10,6 +10,9 @@ Commands live in seven modules, each exposing register(sub):
   cc_heat.py  the chat counted in 4-second bins against the stream's own normal: heat (heat.json/heat.md with the bursts, one span's numbers, a block file's unmentioned bursts; numbers only)
 (native_host.py is the Chrome native-messaging host that starts and reports on `watch`; install-background.ps1 registers it, opt-in.)
 Scripts gather, agents decide: nothing here judges, ranks or decides.
+
+Every module above except this file can be stored encrypted at rest (cc_crypto_loader.py decrypts one at the moment something imports it, given
+CC_SOURCE_KEY; cc_source.py is `source generate-key|lock|unlock|status`; the user, 2026-11-15). Neither of those two is ever encrypted itself.
 """
 from __future__ import annotations
 
@@ -20,6 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import cc_crypto_loader  # noqa: E402,F401  (registers the decrypt-on-import hook before anything below can need it: the user, 2026-11-15)
+
 from cc_common import fail  # noqa: E402
 
 MODULES = ("cc_proc", "cc_report", "cc_notify", "cc_edit", "cc_hud", "cc_game", "cc_heat")
@@ -28,6 +33,8 @@ MODULES = ("cc_proc", "cc_report", "cc_notify", "cc_edit", "cc_hud", "cc_game", 
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="cc.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", metavar="<command>")
+    import cc_source                # always present (never encrypted): lock/unlock/status for the other modules
+    cc_source.register(sub)
     for name in MODULES:
         try:
             mod = importlib.import_module(name)
