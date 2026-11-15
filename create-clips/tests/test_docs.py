@@ -312,6 +312,25 @@ def main():
           and all("Your own to-do" in sk(s) for s in ("cc-build-short", "cc-build-long", "cc-build-game")) and "todo.md" in readme,
           "the to-do is written at the start, read first on a resume, kept by each production agent, checked at the close and described in the README")
 
+    # the user's choice of 2026-11-15 (CHAT HEAT): the chat counted in 4 s bins against the stream's own normal; a clue that corroborates, never picks and never drops; game mode much less but considered
+    ch = read(CC / "reference" / "chat-heat.md")
+    mm, gm, gc = read(CC / "reference" / "moment-mining.md"), read(CC / "reference" / "game-mining.md"), read(CC / "reference" / "game-clipping.md")
+    rs = read(CC / "reference" / "research-agent.md") + read(CC / "reference" / "research-playbook.md")
+    check(all(w in ch for w in ("4-second bins", "this stream's own normal", "It corroborates, it never creates", "It never subtracts", "The second look", "heat_review", "one point on `shareability`",
+                                "taken into account way less", "A half point at most", "--rows")),
+          "chat-heat.md has the method: 4 s bins against the stream's own normal, corroborates and never creates, never subtracts, the second look, the one-point nudge, game mode much less")
+    check(all(w in rt for w in ("Chat heat is a clue, never a verdict", "Game mode: much less", "never picks a moment alone and never drops one", "`T heat --run RUN`", "Never pick a moment only because the chat peaked", "one look at every chat burst"))
+          and cfg["chat"]["bin_s"] == 4 and cfg["chat"]["burst_min_z"] == 4 and cfg["chat"]["burst_min_n"] == 5,
+          "the router has the chat-heat rule (streamer mode, game mode much less, the Never line) and config.json -> chat has the 4 s bin and the burst settings")
+    check("`T heat --run RUN`" in cs and "has_chat" in cs and "--coverage" in sk("cc-scan") and "sent back once" in sk("cc-scan") and "one look" in sk("cc-scan") and "--rows" in sk("cc-scan")
+          and "no file is sent back" in sk("cc-scan-game") and "light clue" in sk("cc-scan-game") and "chat_peak" in sk("cc-plan-game") and "heat" in sk("cc-plan") and "chat heat" in sk("cc-build-short"),
+          "cc-start makes the heat, cc-scan gives every burst one look and sends back what nobody looked at once, cc-scan-game keeps it light, the planners and the builders read it as a clue")
+    check('"heat_review"' in mm and '"heat": null' in mm and "Every burst of your block gets one look" in mm and "never picks and never drops a moment" in mm and "--rows" in mm
+          and '"heat_review"' in gm and "Chat is a light clue here" in gm and "chat_peak" in gm and "chat_peak" in gc and "half-point clue" in gc,
+          "the mining guides: a heat field in a moment, a heat_review list in the block file, one look per burst; in game mode a light clue on the unit card (chat_peak)")
+    check("Chat heat" in pf and "heat.md" in pf and "`T heat`" in cl and "chat's vocabulary" in rs and "heat.md" in readme and "tests/test_heat.py" in readme and "## The chat heat" in proc,
+          "the planner's guide, the craft sheet, the research brief, the README and the processing doc carry the chat heat")
+
     # the router names both modes' skills
     r = read(ROUTER)
     for s in ("cc-start", "cc-profile", "cc-profile-game", "cc-scan", "cc-scan-game", "cc-plan", "cc-plan-game", "cc-produce", "cc-build-short", "cc-build-long", "cc-build-game", "cc-wrapup"):

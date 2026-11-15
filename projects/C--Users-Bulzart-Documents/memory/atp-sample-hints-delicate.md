@@ -17,3 +17,5 @@ On 2026-10-14 the user asked that the agent crafting a video's FIRST prompt can 
 **Why / how to apply:** over-correction from old misses is itself a failure mode. Keep any change to this feature sparse, positive and text-only; never let agents read the library or sample images at planning time; update `Documents/prompts/loupe.txt` and the ATP build prompt with any change.
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): `atp.py plan-hints` at X2: the keeper gives 0-3 sparse text-only hints; the writer applies at most 2, never as prompt text, and records them (user 2026-10-14: avoid over-correction)
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): `atp.py plan-hints` at X2: the keeper gives sparse text-only hints; the writer applies at most 2, never as prompt text (user 2026-10-14: avoid over-correction)

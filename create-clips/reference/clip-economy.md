@@ -15,7 +15,7 @@ Everything below is a starting point; the streamer's own context brief (`20-anal
 9. **Storytime**: a story with a turn (needs its setup; the setup is part of the clip).
 10. **Moment-in-time**: the release, the leak, the trailer reaction, the record, the news everyone is talking about this week (these expire: speed matters).
 11. **Chat as a character**: chat spamming one word, chat being right, a streamer reading chat out.
-Chat reaction is a signal: a spike in messages per second right after something happened means the audience felt it (see `chat_per_s` in the sheets and `stream.md`).
+Chat reaction is a signal, a small one: a burst of messages right after something happened means the audience felt it (`T heat` lists the bursts in `RUN/20-analysis/heat.md`; `chat-heat.md` says how to weigh them: they corroborate a moment the rest already likes, never pick one and never drop one).
 Nothing is a moment because a script says so; it is a moment because you read the words, saw the frames and felt the turn.
 
 ## A short (Shorts, TikTok, Reels) is a promise kept fast

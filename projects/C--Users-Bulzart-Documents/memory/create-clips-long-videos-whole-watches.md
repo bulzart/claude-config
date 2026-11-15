@@ -21,3 +21,5 @@ User 2026-11-14 (a pasted brief, then "i am talking only about streamer mode"): 
 - Where it lives: `reference/portfolio.md` section 2, `moment-mining.md`, `clip-economy.md`, cc-plan, cc-scan, cc-build-long, cc-start (Videos question text), cc-produce, cc-wrapup, README, router rule 5; checks in `tests/test_docs.py`.
 
 Related: [[create-clips-pipeline]], [[scripts-gather-agents-decide]], [[create-clips-ads-recorded-agents-judge]].
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14, STREAMER MODE ONLY: ~25 min to 1 h per video set by content (36+43+27 from 7 h, not 60+46); borders between acts (miners' `acts`), every border checked in the words, no story left half; how much becomes content (3 h, 32 min or none) is the agents' call, never a target

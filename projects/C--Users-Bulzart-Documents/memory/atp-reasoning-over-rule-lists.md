@@ -15,3 +15,5 @@ On 2026-10-15 the user said the prompt-crafting and QC examples ("product should
 **How to apply:** when adding a rule or a lesson anywhere in the pipeline, give it a trigger and the product detail that makes it true, phrase it as a derivation, keep examples to one short mechanism (placeholders or a neutral noun), and let QC judge by intent, product details and physics. Related: [[atp-sample-hints-delicate]], [[atp-skills-architecture]], [[loupe-web-app]].
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): prompt crafting + QC reason from the product's details and the scene; rules are conditions with triggers, few examples, §6 order of authority; keeper matches by product details (user 2026-10-15)
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-15: prompt crafting + QC reason from the product's details and the scene; rules are conditions with triggers, few examples; the keeper matches by product details

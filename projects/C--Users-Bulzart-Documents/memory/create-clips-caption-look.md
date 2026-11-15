@@ -25,3 +25,5 @@ Then, after opening the demo project in CapCut and screenshotting our frame next
 Related: [[create-clips-one-research-agent]], [[create-clips-capcut-composition]], [[awl-static-word-box-captions]], [[always-full-paths]]
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: COPY of Loupe video 04's look: Luckiest Guy ALWAYS (the box numbers are tuned for it; another font made the box big and off), upper case, outline 0.18 + shadow, word on a rounded box; only the box colour is free; size small/normal for phones (auto 4.6%); CapCut's drawing not verified by any tool
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: COPY of Loupe video 04's look: Luckiest Guy ALWAYS, upper case, word on a rounded box; only the box colour is free; size small/normal for phones (auto 4.6%)

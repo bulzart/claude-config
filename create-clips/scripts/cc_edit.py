@@ -201,6 +201,12 @@ def cmd_blocks(a):
                        "from_hms": fmt_hms(part[0]["rec_start_s"], False),
                        "to_hms": fmt_hms(part[-1]["rec_start_s"] + part[-1]["duration_s"], False), "words": words,
                        "done": sum(1 for r in part if r.get("status") == "done")})
+    try:                                      # the chat bursts of each block (ids from 20-analysis/heat.json, a fact: `T heat` makes the file); [] when there is none
+        from cc_heat import burst_ids_in
+        for b in blocks:
+            b["bursts"] = burst_ids_in(run, float(b["rec_from"]), float(b["rec_to"]))
+    except ImportError:
+        pass
     out({"ok": True, "run": str(run), "chunks": len(rows), "block_size": n, "min_blocks": mb, "blocks": blocks, "ad_batches": ad_batches(rows),
          "total_s": round(sum(r["duration_s"] for r in rows), 1)})
 

@@ -19,3 +19,5 @@ metadata:
 **How to apply:** change the owning skill/section and run `check_all.py` + `docs_tool.py index`; keep the two toolkits' behaviour separate (no cross-pipeline mentions); a new Static fix in /analyze-with-loupe is not carried over automatically.
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): 2026-11-13: Static mode of /analyze-with-loupe as its own command, CapCut project by ONE composition `T capcut-build` (23 s vs 3 min, identical output); library ~/.claude/create-static, cs-* skills, check_all.py; not yet opened in CapCut or run end to end
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): 2026-11-13: Static mode of /analyze-with-loupe as its own command, CapCut project by ONE `T capcut-build`; library ~/.claude/create-static, cs-* skills; not yet run end to end

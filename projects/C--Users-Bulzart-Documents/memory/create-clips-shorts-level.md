@@ -20,3 +20,5 @@ User 2026-11-14: "also add another feature to the pipeline, if the user picks lo
 - Where: skills cc-start, cc-plan, cc-wrapup, portfolio.md section 3, router (argument-hint, rules 5 and 10), README; checks in `tests/test_docs.py`.
 
 Related: [[create-clips-pipeline]], [[create-clips-shorts-edit-freedom]], [[create-clips-ads-recorded-agents-judge]] (the Videos question).
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14, streamer mode: when shorts are made a follow-up asks Concentrated (the 1-3 best) or Normal (about 5-10), stored as state.shorts_level; a range, never a quota

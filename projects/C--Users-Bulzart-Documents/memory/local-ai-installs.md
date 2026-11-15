@@ -36,3 +36,5 @@ Related: [[avast-https-scanning-breaks-tls]], [[analyze-with-loupe-command]]
 **2026-11-09 12:11, after the restart with the fixed page file:** commit limit 27.9 GB, 19.95 GB free at rest. FLUX 3 Klein at its usual reserve 5 made 12 stills (one or two references) at about 11.9 GB peak, 95-140 s each; ACE-Step made a 763 s bed (3 sections) at full precision in 82 s (low-commit loading, 10 s load), no guard stop.
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): ACE-Step 1.5 + FLUX 3 Klein int8 (ComfyUI) in Documents\AI; always under tools\memguard.py (ACE web UI froze Windows twice); WDDM charges GPU memory as commit; page file fixed 12-16 GB; Smart App Control OFF
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): ACE-Step 1.5 + FLUX 3 Klein int8 (ComfyUI) in Documents\AI; always under tools\memguard.py (ACE web UI froze Windows twice); page file fixed 12-16 GB; Smart App Control OFF

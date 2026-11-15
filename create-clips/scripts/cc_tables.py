@@ -259,7 +259,8 @@ def build_stream_md(run: Path, rows: list, state: dict) -> str:
         out.append(f"| {label} | {p['n']} | {p['p10']:.2f} | {p['p50']:.2f} | {p['p90']:.2f} | {p['max']:.2f} |" if p else f"| {label} | 0 | | | | |")
     unit = {"chat": "msgs/s", "loud": "dB (max 0.5 s RMS)", "motion": "mean frame diff"}
     for kind, title in (("chat", "chat rate"), ("loud", "loudness"), ("motion", "motion")):
-        out += ["", f"## Ten largest seconds by {title}", "(seconds within 5 s of an already listed one are skipped, so one long event is one entry)", ""]
+        out += ["", f"## Ten largest seconds by {title}", "(seconds within 5 s of an already listed one are skipped, so one long event is one entry)"
+                + (" (raw counts of one second: a fast chat tops this list in any stream; the stream's own normal and its bursts are in `20-analysis/heat.md`, made by `T heat`)" if kind == "chat" else ""), ""]
         top = _top_seconds(cand[kind])
         if not top:
             out.append("(no data)")

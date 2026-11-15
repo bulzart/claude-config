@@ -34,3 +34,5 @@ procedure (~28 KB) no longer sits in front of Edit and Recreate runs.
 file; never recreate a monolithic command; never Read a whole reference/guide or `models/index.json` in a run; keep new text free of mentions of the other
 pipeline ([[no-cross-pipeline-mentions]]); update the build prompt after any pipeline change ([[atp-build-prompt-sync]]); backups live outside tracked
 folders ([[claude-folder-git-versioning]]). Related: [[atg-pipeline]], [[loupe-web-app]].
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): 2026-10-18: ~20 KB router + 25 atg-* skills (6 atg-vb-*) + sectioned references; hooks and Loupe cover both pipelines; edit the owning skill/section, run docs_tool index + check

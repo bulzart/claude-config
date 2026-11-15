@@ -17,3 +17,5 @@ Captions: the house look (Luckiest Guy, the word box, size auto) is unchanged; o
 Not asked, left as is: long videos keep "a few zooms, a handful of sounds". Where: `reference/clip-economy.md` (the short section), `reference/edit-craft.md` (zoom, sound effects, lines), skill cc-build-short; checks in `tests/test_docs.py`.
 
 Related: [[create-clips-caption-look]], [[scripts-gather-agents-decide]], [[create-clips-pipeline]].
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14, streamer shorts: zoom, sound effects and words per caption are the agents' call (no count or spacing); used where there is room and it fits, never forced

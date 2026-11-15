@@ -39,6 +39,7 @@ Nobody else decides what is kept; a mining agent's `keep_hint` is advice. (The r
  "highlight_types": ["clutch", "last-second-defuse"], "story": "saves the map", "keep_hint": "full", "keep_hint_why": "the clutch needs its setup (1v3 at 40 s left) and the defuse",
  "detail_value": "none", "confidence": "high", "evidence": ["hud score change 4090.0", "transcript 4086-4090", "sheet C0023 s5"]}
 ```
+`chat_peak` is `null`, or the chat burst that falls in the unit as `T heat` lists it (`{"burst": "H014", "peak_rec": 4091.0, "z": 5.2, "pct": 99, "says": "F x40"}`): a light clue about how the room reacted, never a reason by itself (`chat-heat.md`, game mode).
 The planner's verdict for the same unit (`rounds.json -> units[]`: the card plus these fields):
 ```json
 {"keep": "full", "keep_spans": [[4058.0, 4092.0]], "keep_why": "the clutch needs its setup (1v3 at 40 s left) and the defuse", "verified": "frames C0023 s4-s5, hud score 4090.0", "used_in": ["S03", "L01"]}
@@ -53,6 +54,7 @@ A unit matters for four kinds of reason; one is enough, two or more make it a ke
 - **Information value (the detail a viewer would lose):** a round that looks quiet but changes what follows: the economy reset after a save, a new strategy shown for the first time, a timeout and the round after it, a player swap or a technical pause that cost a team,
   a first kill of the match, the first time a map pick is played, a half-time score line.
 A unit with none of these is **noise**: a clean execute with one or two kills that does not move the stakes, a routine eco, a dull farming stretch. Noise is dropped.
+The chat's reaction (`chat_peak`) is at most a half-point clue on `impact` to settle a tie, never a fifth reason: the match content decides (`chat-heat.md`, game mode).
 
 ## 6. Keep levels (the planner gives every unit one, with the reason; the scan's `keep_hint` uses the same four words)
 - **full:** the whole play from where it becomes interesting to the result (a clutch, an ace, a decisive fight).

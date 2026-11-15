@@ -14,3 +14,5 @@ Fix that worked (all six regenerated, previews rebuilt): the guide is a photorea
 
 **Why:** the user judges the can's realism first; a pasted guide is the root cause, not the prompt wording.
 **How to apply:** for the remaining 14 videos (05, 06, 09-20) ask before regenerating (my read: 06, 15, 20 look most pasted); never write the lesson into the references or Loupe without the user's yes ([[fix-regeneration-original-plus-recrafted-prompt]]); a deliverable preview of video 03 must include the ghost composite (`60-outputs/video-03/preview-work/ghost-filter.txt`), the other previews are plain clean + text ([[atp-product-colours-and-preview]]).
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): 2026-10-20: cans of videos 01-04, 07, 08 regenerated with photoreal guide plates; 05, 06, 09-20 still on old guides (ask first); lesson not yet in the references

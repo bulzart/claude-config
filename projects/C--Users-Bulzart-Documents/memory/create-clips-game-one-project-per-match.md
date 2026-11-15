@@ -20,3 +20,5 @@ User 2026-11-14, right after the streamer-mode long-video rule ([[create-clips-l
 - Where: `reference/game-clipping.md` sections 2 and 8, `game-mining.md`, `game-research-playbook.md`, `research-agent.md`, skills cc-profile-game, cc-scan-game, cc-plan-game, cc-wrapup, cc-start (mode text), router rule 5, README; checks in `tests/test_docs.py`.
 
 Related: [[create-clips-pipeline]], [[scripts-gather-agents-decide]], [[create-clips-ads-recorded-agents-judge]].
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14, GAME MODE: a recording with 2, 3+ different matches gives every game of every match its own video and CapCut project, matches never mixed; new match = teams change on the scoreboard; lengths unchanged

@@ -39,10 +39,12 @@ user-invocable: false
    - sponsorship and the like (sponsor stings and bumpers, "presented by" cards, betting segments, promos, ad breaks, giveaways) goes into `non_play` with kind `sponsor`;
    - it records what must be blurred (`sensitive`: gore, distress, nudity only; never personal data) and what must be avoided (`avoid`: religion, superstition, hate, tragedy, commercial music; `CC/reference/safety.md`, which it reads);
    - **the spoken language** (the `Spoken language` line of `stream.md`; `CC/reference/language.md`): when the casters are not in English the agent reads the transcripts as spoken, quotes lines as spoken and writes its block file in English;
+   - **the chat heat, a light clue in a match** (the user, 2026-11-15: the game is extracted from the match content, and chat still has to be considered; `CC/reference/chat-heat.md`, its game-mode section; the burst ids of its block are in `T blocks`, their rows come from `T heat --run RUN --from <its rec_from> --to <its rec_to> --rows`): one look per unit to fill the card's `chat_peak` from the burst in it (or `null`); at most half a point on `impact`, only to settle a tie, never a `keep_hint` by itself; a burst outside every unit, extra and non-play span gets one `heat_review` line; a run with no chat (`has_chat: false`): skip it;
    - it reads media only (never moves, renames or writes into `10-media`), writes only its block file, never asks, never spawns agents, no emoji, every file it names is a full path;
    - it returns three lines: the file, how many units and extras, anything the planner must know.
 5. **Check each block file** when its agent returns: `T units-check --run RUN --file RUN/20-analysis/blocks/block-NN.json` (valid JSON; every card has its fields; no overlap; the score changes of the range and the units that end at them; the gaps with no unit and no `non_play`).
    Facts only: you decide what they mean. A bad or thin file (no evidence, an impact with no reason, missing units): one retry with the unit ids and the problem named; a second failure goes into `state.json` (`scan.failed`) and the planner covers that block itself.
+   `T heat --run RUN --coverage <block file>` lists the chat bursts that lie outside every unit, extra and non-play span (`unmentioned`): facts for the planner; in game mode no file is sent back for them.
    **Reconcile**: where the cards contradict the brief, `clip-criteria.md`, `recon.md` or the match-map skeleton (a live round called a replay, a wrong score, a wrong name), correct those files now, with a line saying so at the top: the planner and the builders read them.
 6. `T state --run RUN set stage=scanned next_skill=cc-plan-game`, then tick the scan in `RUN/todo.md` and set its `Next:` line (rule 16).
 
@@ -50,6 +52,7 @@ user-invocable: false
 - Never give an agent more than one block or the whole match. Never let a mining agent decide the videos or the final keep levels.
 - Never accept a block with no `sensitive` and `avoid` statement: an empty list is a statement that the block was checked, and the agent says so in `notes`.
 - Never trust a HUD series you did not look at: the changes list is read against the frames at three places before it is used.
+- Never let chat decide a unit's keep level or its impact alone: the match content decides, chat is a light clue (`chat-heat.md`, game mode).
 
 ## Hand-off
 Invoke Skill `cc-plan-game`.

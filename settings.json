@@ -172,5 +172,6 @@
       "**Org-specific CLIs**: None configured"
     ]
   },
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "switchModelsOnFlag": false
 }

@@ -19,3 +19,5 @@ The user, 2026-11-09, on video 03's still 67 (a man under a cool shower, bare be
 **Update 2026-11-09 (evening), the user's yes to both:** a survival pose low on the ground (flat in a ditch, the recovery position) is kept and drawn with the person clearly alive (head up or turned, eyes open, moving); and no narration line names an intimate part of the body, even as first aid (video 03's line 180 "at her groin" was re-made; the forecast lists `intimate_body_words`).
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-09: no nudity (implied included), gore, injury, extreme distress, as strict as religion (static §11b); clothes named top to bottom; nobody as if dead
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-09: no nudity (implied included), gore, injury, extreme distress, as strict as religion (static section 11b); nobody as if dead

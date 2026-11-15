@@ -19,7 +19,7 @@ title: write "not found" instead.
 ### R1 The streamer and the people who watch them
 - Who they are in two lines; what they stream (the categories they live in), how a normal stream goes, their recurring bits, catchphrases, running jokes, the
   names the community uses for things (emotes, nicknames, "the lore").
-- Who watches: how the audience talks, what they spam in chat when something happens, what they love to see (the type of moment) and what bores them.
+- Who watches: how the audience talks, what they spam in chat when something happens (the emotes and phrases and what each means here: laughter, hype, dismay, praise, a complaint, an answer to the streamer), what they love to see (the type of moment) and what bores them.
 - What they promote or push on stream (sponsors, their own brand, merch, charity, a series, collabs): this is context, and it tells which moments are "on brand".
 - What fans actually share: 5 to 8 real examples of moments of THIS streamer that travelled (title or description, roughly when, why it spread: the reaction, the line, the
   chaos, the guest). Which kinds of moments they are famous for.

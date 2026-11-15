@@ -109,6 +109,21 @@ Rec time is the time every agent uses; `cc.py locate` converts to chunk + offset
 ```
 All of them cross chunk boundaries. `sheet` also deletes its frames right after drawing.
 
+## The chat heat (`T heat`; the user, 2026-11-15; how the agents weigh it: `reference/chat-heat.md`)
+
+```
+& $PY $CC heat --run RUN                                  # RUN\20-analysis\heat.md and heat.json: 4 s bins of rec time, each against the stream's own normal, the per-chunk table, the bursts
+& $PY $CC heat --run RUN --from 2025 --to 2045            # one span: messages, the bins, the peak (z, ratio, pct), the bursts inside, what chat said (tokens, commands, words per message, sample lines)
+& $PY $CC heat --run RUN --from 5400 --to 7200 --rows     # a block's own rows (its chunks and its bursts, as in heat.md) without reading the whole heat.md
+& $PY $CC heat --run RUN --coverage RUN\20-analysis\blocks\block-03.json   # the bursts of a block file that no moment, unit, extra, non-play span or heat_review line mentions
+& $PY $CC heat --run RUN --min-z 3 --min-n 4              # list weaker bursts (the settings are the caller's)
+```
+It reads only the chunks' `chat.json` (the recorder's per-second counts, already shifted by `lag_hint_s`, the top tokens per 10 s counted over all messages, up to 120 sampled messages, no user names) and the chunk table; it writes nothing else and decides nothing. Ad-marked chunks have no chat file and are no data.
+A bin is `n` messages in 4 s of rec time (a chunk's 1 s counts are spread over the bins they overlap, so a fractional chunk start loses and doubles nothing); `base` is the median of the covered bins within 37 bins (about 150 s) around it; `z` = (n - base) / sqrt(base + 1); `ratio` = (n + 1) / (base + 1); `pct` = the bin's z among all the run's bins.
+A burst is bins with z of 4 or more and n of 5 or more, merged when 2 bins apart or less, widened while z stays at 1.5 or more (at most 6 bins each side). No data (never counted as a quiet chat): before the first message of the run, a stretch of at least 30 s of exact zeros while the stream's median is at least 3 per bin (a capture dropout, listed under `capture.gaps`), and chunks with no chat.
+`config.json -> chat`: `bin_s` 4, `baseline_half_bins` 37, `burst_min_z` 4, `burst_min_n` 5, `burst_merge_bins` 2, `onset_z` 1.5, `max_extend_bins` 6, `hot_z` 2 (the hot share of a chunk), `dropout_min_s` 30, `dropout_min_median` 3, `after_ad_s` 90, `samples_per_burst` 6, `tokens_per_burst` 8, `coverage_pad_s` 8, and the recorder's `lag_hint_s` 8.
+`T blocks` lists each block's burst ids (`bursts`, from heat.json); `stream.md` points to heat.md under its raw "largest seconds by chat rate" list. Measured on four real recordings (28, 15 and two of about 5 minutes): chats ran from 1.8 to 9.7 messages/s; bursts at z 4 came at about 10 to 40 an hour; they last 4 to 14 s (up to about 50 s); a run builds in under a second.
+
 ## Settings (`config.json`; env overrides for tests)
 
 `frames` (interval 0.75, 5 x 6, 240 x 135, jpeg 86), `audio` (window 0.5, `keep_wav`, loud jump 10 dB), `whisper` (model medium, device cpu, compute int8,

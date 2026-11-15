@@ -37,7 +37,21 @@
     "cuda_dll_dir": "C:/Users/Bulzart/Documents/AI/ACE-Step-1.5/.venv/Lib/site-packages/torch/lib"
   },
   "chat": {
-    "lag_hint_s": 8
+    "lag_hint_s": 8,
+    "bin_s": 4,
+    "baseline_half_bins": 37,
+    "burst_min_z": 4,
+    "burst_min_n": 5,
+    "burst_merge_bins": 2,
+    "onset_z": 1.5,
+    "max_extend_bins": 6,
+    "hot_z": 2,
+    "dropout_min_s": 30,
+    "dropout_min_median": 3,
+    "after_ad_s": 90,
+    "samples_per_burst": 6,
+    "tokens_per_burst": 8,
+    "coverage_pad_s": 8
   },
   "capcut": {
     "drafts_dir": "",

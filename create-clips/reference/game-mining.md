@@ -25,6 +25,7 @@ Whatever the broadcast shows that is not a unit goes in `non_play`.
    `cc.py window`, `cc.py frame`, `cc.py sheet --step 0.25` only where the sheets leave a doubt.
 7. `cc.py region-series` over a unit for the kill feed or the replay badge when you need to count kills or to tell live from replay (a burst of changes in the feed within a few seconds is kills: you look at the frames and count the names).
    `cc.py hud-read` for one value at one time (the clock at a play).
+Chat (a light clue here): the chat bursts of your block are listed by `T heat --run RUN --from <your rec_from> --to <your rec_to> --rows` (`T blocks` lists their ids); `CC/reference/chat-heat.md`, its game-mode section, says how little they weigh in a match: one look per unit for the card's `chat_peak`, a half point at most on `impact`.
 The numbers are facts a script read off the screen, the reports are what a reporter saw; the transcript and the frames are the evidence you check them against. When the HUD series, a report and the picture disagree, the picture wins, and the card says so.
 
 ## What to write: `RUN/20-analysis/blocks/block-NN.json`
@@ -39,6 +40,7 @@ The numbers are facts a script read off the screen, the reports are what a repor
  "lexicon_fixes": [["Whisper wrote", "right spelling"]],
  "sensitive": [ {"rec_from": 3901.0, "rec_to": 3908.5, "kind": "gore|distress|nudity", "what": "...", "region": [0.1,0.1,0.4,0.4], "unit": "R14"} ],
  "avoid": [ {"rec_from": 4001.0, "rec_to": 4064.0, "kind": "religion|superstition|hate|tragedy|music", "what": "..."} ],
+ "heat_review": [ {"burst": "H013", "peak_rec": 4010.0, "kind": "crowd|commands|desk|other", "why": "only for a chat burst outside every unit, extra and non-play span: one line"} ],
  "notes": "anything the planner should know (a pause that cost a team, an ad, a gap, a HUD read that failed, a unit you could not card)"}
 ```
 The unit card is the one in `game-clipping.md` §4 (every field; `null` where unknown). `impact` (1 to 10) and `keep_hint` (`full`, `trim`, `flash`, `skip`) are your first read with the reason in `impact_why` and `keep_hint_why`; `game-clipping.md` §5 to §7 say what they mean.
@@ -55,6 +57,8 @@ An empty `sensitive` and `avoid` is a statement that the block was checked: say 
 - **Sponsorship and the like is `non_play`, kind `sponsor`:** sponsor stings and bumpers, "presented by" cards, betting-odds or promo segments, sponsor reads by the casters or the desk, giveaways and "use code" promotions, ad breaks. Give its exact span so it can be cut cleanly. A small sponsor logo that sits on live play is not a stretch: it is not recorded.
 - **Ad-marked chunks (Twitch's own ads, recorded like everything else):** the recorder skips nothing, ad or not ad (the user, 2026-11-14), and passes Twitch's marker on (`(ad-marked)` after the chunk id in `stream.md`, `ad_chunks` per block in `T blocks`, `kind: "ad"` in the chunk's `chunk.json`). It is Twitch's word, not a verdict: look at each marked chunk of your block (report, overview sheet, a few words). What really is an advertisement goes in `non_play` as kind `ad` with its exact span (rec times, the chunks in the note) and is left out of your analysis: no unit, no extra, no round count in it. If the broadcast itself is on screen the marker was wrong: analyse it like any other stretch and say so in the unit's note. An advertisement the marker missed is `non_play` kind `ad` the same way.
 - **Extras are rare and real:** a caster who loses it, a crowd roar, a reaction on camera, a funny moment off the play. Not every sentence is one.
+- **Chat is a light clue here** (the user, 2026-11-15: the match is extracted from its own content, and chat still has to be considered): fill each card's `chat_peak` from the chat burst that falls in the unit (or ends within 8 s after it), or `null`; at most half a point on `impact`, only to settle a tie between units of the same impact, never a `keep_hint` by itself and never a unit of its own.
+  A burst outside every unit, extra and non-play span (a caster meltdown the units do not hold, a crowd roar) gets one `heat_review` line; no file is sent back for it. `CC/reference/chat-heat.md`, game mode.
 - **Names as the brief spells them.** Where Whisper wrote a player or team wrong, add the pair to `lexicon_fixes`.
 - **Say how sure you are:** a card read from the transcript only (no frames seen) is `medium` at best; one whose words you could not understand (crosstalk, music) is `low`, and the card says what would settle it.
 - **Speed (the user wants it fast, without losing a check):** batch independent tool calls (several frames, contact sheets or Read calls in ONE message, every sheet you need from ONE PowerShell call, the images read together), aim for about 8 minutes and about 40 tool calls; one image per turn is the slowest way to read a block.

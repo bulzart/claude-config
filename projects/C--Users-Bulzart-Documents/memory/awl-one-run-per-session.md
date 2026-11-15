@@ -19,3 +19,5 @@ folders scatters that data and re-analyses references.
 inventory again in that run (ids stay put since 2026-11-07; new files get the next ids), analyse only the new references into its
 folders (A1, A3, the spec revised at A4), then make the videos. A clone (`/analyze-with-loupe clone <run>`) or a fresh
 `/analyze-with-loupe` start are the only new run folders. Related: [[analyze-with-loupe-command]].
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-07: more videos and new references continue the session's run (ids kept, analyse only the new ones); only a clone or a new /analyze-with-loupe start makes a run folder

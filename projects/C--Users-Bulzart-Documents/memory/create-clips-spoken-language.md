@@ -19,3 +19,5 @@ User 2026-11-14: "is the whisper processor supposed to know which language is th
 **Verified on real audio (2026-11-14, medium on CPU, the user's own downloads copied to a temp inbox, originals untouched):** a German train-conversation lesson: detected de, probability 0.994, 149 words; a Spanish humour short: es 0.996, 71 words; both locked the run's language; forcing English on the same audio gave a half-translation that mixes the languages (the old behaviour); Whisper's translate task gives consistent English but is not used for captions. The model is medium and ONLY medium: [[whisper-strictly-medium]].
 
 Related: [[create-clips-pipeline]], [[create-clips-caption-masks]], [[scripts-gather-agents-decide]], [[pc-pipeline-tooling]].
+
+Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: streams may be German/Spanish; whisper.language was forced en, now auto (unsure -> en fallback, first sure detection on a stream chunk locked per run, ads never lock); transcribe never translate; agents add that language's profanity to mask_terms
