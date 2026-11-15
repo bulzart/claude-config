@@ -1,6 +1,6 @@
 """Test of encryption-at-rest for cs_core.py/cs_compose.py (cs_crypto_loader.py, cs_source.py): the mechanism, never the real source.
 
-    python tests/test_source_crypto.py
+    python tests/t04_source_crypto.py
 
 Everything happens in an isolated temp copy (CS_SCRIPTS_DIR points cs_crypto_loader.py and cs_source.py at it): two small dummy modules stand
 in for cs_core.py/cs_compose.py, so this never touches, locks or unlocks a single file of the real create-static/scripts/. Checks: unlocked
@@ -26,7 +26,7 @@ failed = 0
 
 def check(cond, msg):
     global failed
-    print(("ok   " if cond else "FAIL ") + msg)
+    print(("PASS  " if cond else "FAIL  ") + msg)
     if not cond:
         failed += 1
 
