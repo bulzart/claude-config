@@ -6,7 +6,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "sonnet",
+  "model": "claude-sonnet-5",
   "hooks": {
     "Stop": [
       {
@@ -142,6 +142,7 @@
   "theme": "dark",
   "editorMode": "vim",
   "autoCompactEnabled": true,
+  "switchModelsOnFlag": false,
   "terminalProgressBarEnabled": true,
   "skipAutoPermissionPrompt": true,
   "autoMode": {
@@ -172,6 +173,5 @@
       "**Org-specific CLIs**: None configured"
     ]
   },
-  "voiceEnabled": true,
-  "switchModelsOnFlag": false
+  "voiceEnabled": true
 }
