@@ -59,3 +59,8 @@ and is loaded exactly as Python always loads a file; `~/.claude/.gitignore` list
 ```
 Real protection, not security by obscurity: the plain source stays readable while someone is actively maintaining it, but once it is locked, the repository alone - the `.py.enc`
 files and this very explanation included - cannot produce a working copy; only the key can. Lock before anything leaves this machine; a leak while still unlocked protects nothing.
+`source generate-key|lock|unlock|status` always work with no key at all when nothing is locked, and `source status`/`unlock` always work even when both modules ARE locked and the
+key is missing or wrong (that is the one case they exist for) - neither ever needs `cs_core.py` to import successfully first. Any other command needs the real key once `cs_core.py`
+is locked: `tests/run_all.py`, `t01_compose.py` and `t02_library.py` exercise the real toolkit directly, so once it is actually locked, running them needs `CS_SOURCE_KEY` set to the
+real key first - that is expected, not a failure of the suite. `tests/t04_source_crypto.py` is the one test that never needs the real key: it proves the mechanism itself (and
+drives the real `cs.py` entry point) against disposable dummy modules in an isolated copy, never the real source.
