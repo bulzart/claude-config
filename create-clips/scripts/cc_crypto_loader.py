@@ -30,6 +30,11 @@ SCRIPTS_DIR = Path(os.environ.get("CC_SCRIPTS_DIR") or Path(__file__).resolve().
 ALWAYS_PLAIN = {"cc", "cc_crypto_loader", "cc_source"}  # the bootstrap, this loader, and the lock/unlock tool itself: never encrypted
 
 
+class SourceLocked(ImportError):
+    """A protected module is encrypted at rest and CC_SOURCE_KEY is missing or wrong: raised instead of a bare ImportError so cc.py can tell
+    this one specific, expected case apart from an unrelated import failure (a real missing dependency inside an already-decrypted module)."""
+
+
 def protected_names() -> list[str]:
     """Every cc_* module name that has a plain .py, an encrypted .py.enc, or both, except the names that are never encrypted."""
     names = set()
@@ -50,7 +55,7 @@ class _EncryptedLoader(importlib.abc.Loader):
     def exec_module(self, module) -> None:
         key = os.environ.get(ENV_VAR)
         if not key:
-            raise ImportError(
+            raise SourceLocked(
                 f"{self.fullname} is encrypted at rest ({self.enc_path.name}) and {ENV_VAR} is not set: there is no key to decrypt it with. "
                 f"Set {ENV_VAR} to the project's key (see docs/processing.md \"Source encryption\"), or run `cc.py source unlock` first if you "
                 f"meant to edit it, which needs the same key once.")
@@ -58,8 +63,11 @@ class _EncryptedLoader(importlib.abc.Loader):
         try:
             source = Fernet(key.encode("utf-8")).decrypt(self.enc_path.read_bytes())
         except (InvalidToken, ValueError) as e:
-            raise ImportError(f"{ENV_VAR} does not decrypt {self.fullname} ({self.enc_path.name}): the key is wrong, or the file is corrupt "
-                               f"({type(e).__name__}).") from None
+            raise SourceLocked(f"{ENV_VAR} does not decrypt {self.fullname} ({self.enc_path.name}): the key is wrong, or the file is corrupt "
+                                f"({type(e).__name__}).") from None
+        # a normal file import sets __file__ (and Python fills in __name__/__loader__/__spec__ for us); create_module returning None skips that,
+        # so without this, any module-level `Path(__file__)` (a very common "where am I" idiom) crashes with NameError even with the right key.
+        module.__file__ = str(self.enc_path.with_suffix(""))  # looks exactly like the plain .py path, not the .enc one it actually came from
         code = compile(source, str(self.enc_path), "exec")
         exec(code, module.__dict__)  # noqa: S102 - this IS the module's own code, decrypted; equivalent to what a normal import does with a .py file
 

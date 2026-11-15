@@ -16,7 +16,27 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import cs_crypto_loader  # noqa: E402,F401  (registers the decrypt-on-import hook before anything below can need it)
 
-import cs_core  # noqa: E402
+
+def _locked_only() -> None:
+    # cs_core can't decrypt (CS_SOURCE_KEY missing or wrong): `source` lives inside cs_core.main() normally, so without this fallback,
+    # `cs.py source status`/`unlock` - the one thing you'd want to run in exactly this situation - would be unreachable too.
+    import argparse
+    import cs_source
+    ap = argparse.ArgumentParser(prog="cs.py", description="cs_core.py is encrypted at rest and CS_SOURCE_KEY is missing or wrong: only "
+                                  "`source` is available until it's unlocked (`cs.py source status` for details).")
+    sub = ap.add_subparsers(dest="cmd", metavar="<command>")
+    cs_source.register(sub)
+    a = ap.parse_args()
+    if not getattr(a, "fn", None):
+        ap.print_help()
+        sys.exit(2)
+    a.fn(a)
+
 
 if __name__ == "__main__":
-    cs_core.main()
+    try:
+        import cs_core  # noqa: E402
+    except cs_crypto_loader.SourceLocked:
+        _locked_only()
+    else:
+        cs_core.main()

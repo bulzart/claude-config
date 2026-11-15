@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import sys
 from pathlib import Path
 
@@ -25,9 +26,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import cc_crypto_loader  # noqa: E402,F401  (registers the decrypt-on-import hook before anything below can need it: the user, 2026-11-15)
 
-from cc_common import fail  # noqa: E402
-
 MODULES = ("cc_proc", "cc_report", "cc_notify", "cc_edit", "cc_hud", "cc_game", "cc_heat")
+
+
+def fail(msg: str, code: int = 2, **extra) -> None:
+    # a local copy, not `from cc_common import fail`: cc_common is itself encryptable, and this file must still be able to report an error
+    # (including "a module is locked") when cc_common, or anything else, can't decrypt.
+    sys.stdout.write(json.dumps({"ok": False, "error": msg, **extra}, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
+    sys.exit(code)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -35,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = ap.add_subparsers(dest="cmd", metavar="<command>")
     import cc_source                # always present (never encrypted): lock/unlock/status for the other modules
     cc_source.register(sub)
+    locked = []
     for name in MODULES:
         try:
             mod = importlib.import_module(name)
@@ -42,7 +50,12 @@ def build_parser() -> argparse.ArgumentParser:
             if e.name == name:      # the module itself is not written (yet): the others still work
                 continue
             raise
+        except cc_crypto_loader.SourceLocked:
+            locked.append(name)     # encrypted and CC_SOURCE_KEY missing/wrong: that module's commands are unavailable, others still work
+            continue
         mod.register(sub)
+    if locked:
+        ap.epilog = (f"{ap.epilog}\n\n" if ap.epilog else "") + f"Locked, no usable key: {', '.join(locked)} (and anything that imports them). `cc.py source status` for details."
     return ap
 
 
