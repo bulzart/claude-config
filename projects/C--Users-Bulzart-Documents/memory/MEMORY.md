@@ -89,4 +89,4 @@
 - [Whisper strictly medium](whisper-strictly-medium.md) — user 2026-11-14: medium for ALL audio in every pipeline, no smaller default/fallback; a medium that cannot load is an error
 - [create-clips: chat heat](create-clips-chat-heat.md) — user 2026-11-15: chat counted every 4 s (T heat, rule 17) = a clue: one look per burst, <= 1 point on a moment the rest rates; game mode much less
 - [Static mode: no Loupe checks](static-mode-no-loupe-checks.md) — user 2026-11-14: Static (/create-static) does not use Loupe, so never run or chase Loupe tests, hooks or checks for it
-- [Protected build tool](protected-build-tool.md) — user 2026-11-15: `scripts/build-protected.js` (Node, not .ps1) makes a compiled copy of create-clips/create-static for a future hand-off, PyInstaller under the hood, output outside the repo, bundles any .ps1 helpers
+- [Pipeline source encryption](pipeline-source-encryption.md) — cc.py/cs.py source locked at rest, decrypted at runtime from CC/CS_SOURCE_KEY; only the user's own key unlocks it; history-scrub + git-auth gaps still open
