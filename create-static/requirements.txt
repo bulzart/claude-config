@@ -1,0 +1,10 @@
+# create-static Python dependencies (Python 3.12). Install with:
+#   python -m pip install -r requirements.txt
+faster-whisper
+numpy
+Pillow
+opencv-python
+librosa
+requests
+pypdf
+cryptography
