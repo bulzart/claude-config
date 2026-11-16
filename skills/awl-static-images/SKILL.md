@@ -94,7 +94,7 @@ stack a tall frame into panels, above all with no reference image).
    animate over a still; 2026-11-16: use more of them, of any kind that relates to the moment, not only numbers): read the video's lines once, beat by beat,
    and ask what the viewer needs to see that the still cannot show (static §5 lists the families: a quantity or comparison, steps or a
    process, a cause and its effect, a contrast, a place or "look here", a time, a list built item by item, a thing to notice); give each
-   such beat a drawing, built element by element on the spoken words, with every figure exactly as the narration and the facts file
+   such beat a drawing (a CapCut overlay made by `T draw`, never asked of the image model), built element by element on the spoken words, with every figure exactly as the narration and the facts file
    give it. The first video's grid of dots and two bars are samples, not the set. Where the narration elaborates
    something a drawn layer shows better than the still does (a measurement, a mechanism, a comparison, a count, a route: the references'
    annotation pattern, static §2, or your own reason where they draw nothing), once the still is made and viewed:

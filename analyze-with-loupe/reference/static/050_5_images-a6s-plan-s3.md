@@ -134,6 +134,13 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   not the kind: **an animated drawing that relates to what is said at that moment and shows, points at, builds up or stresses it
   better than the still alone does.** A drawn layer is one of a video's main tools, not an exception: the plan (A6s), the stills
   (S3) and the edit (S4) all look for it.
+  - *Where it lives:* in CapCut, never in the image generation (the user, 2026-11-16: "the drawing and animations should be in
+    capcut though, not directly in the image generation"). The stills are the plain scene only: the image model is never asked for a
+    grid, chart, arrow, number or word (the no-subtitle rule below). A drawing is written once its still exists (S3, to read the
+    positions off it), made by the toolkit as a transparent clip and placed in the CapCut project (S4) on a track of its own
+    (`draw1`, `draw2` …) above the still; the moves are CapCut's keyframes, the joins its transitions, the labels and captions its
+    text. In CapCut a drawing's clip can be moved, trimmed or deleted; what is inside it (the dots, the bars) is not a CapCut shape,
+    because CapCut has no freehand drawing tool to build it with.
   - *Where:* not only numbers. Read the script beat by beat and ask what the viewer needs to see now that the still cannot show.
     The families, as examples and never a checklist: a quantity or a comparison (the samples above); steps in order, or a process
     drawn as it runs; a cause and what follows from it; a relationship or a contrast (this against that, right against wrong); a
@@ -155,7 +162,7 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
     relates to the moment), used where they fit what is said, inside the measured numbers of §13 item 5.
   - *Room for it:* a still that will carry a drawing of some size (a grid, a chart, a diagram, a list, a route) is planned for it:
     its prompt describes a calm area (a plain wall, an empty table top, an open floor) as part of the scene, never as "a space for
-    text" (the no-subtitle rule below), so the drawing sits there and hides nothing it explains (the first video's dot grids sat on
+    text" (the no-subtitle rule below) and never with the drawing itself in it, so the drawing sits there and hides nothing it explains (the first video's dot grids sat on
     a cream wall its stills left clear).
   - *How many:* the agent's call, never a quota and never a gate: start from the beats of the script that a drawn layer shows
     better, and look again at any stretch of about a minute with nothing drawn and nothing else moving. The first balance video had
