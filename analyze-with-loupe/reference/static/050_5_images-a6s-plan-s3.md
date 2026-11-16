@@ -133,7 +133,7 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   with "+84%" above it (read from the drawing specs and seen in the user's recording of the upload). They are samples of a kind,
   not the kind: **an animated drawing that relates to what is said at that moment and shows, points at, builds up or stresses it
   better than the still alone does.** A drawn layer is one of a video's main tools, not an exception: the plan (A6s), the stills
-  (S3) and the edit (S4) all look for it.
+  (S3) and the edit (S4) all look for it, and all keep it to what feels right (below).
   - *Where it lives:* in CapCut, never in the image generation (the user, 2026-11-16: "the drawing and animations should be in
     capcut though, not directly in the image generation"). The stills are the plain scene only: the image model is never asked for a
     grid, chart, arrow, number or word (the no-subtitle rule below). A drawing is written once its still exists (S3, to read the
@@ -164,10 +164,18 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
     its prompt describes a calm area (a plain wall, an empty table top, an open floor) as part of the scene, never as "a space for
     text" (the no-subtitle rule below) and never with the drawing itself in it, so the drawing sits there and hides nothing it explains (the first video's dot grids sat on
     a cream wall its stills left clear).
-  - *How many:* the agent's call, never a quota and never a gate: start from the beats of the script that a drawn layer shows
-    better, and look again at any stretch of about a minute with nothing drawn and nothing else moving. The first balance video had
-    21 drawings and 11 moves in 11 minutes, but its drawings came in seven stretches: none in the first 102 s (the hook) or the
-    last 90 s, and gaps of 38 to 117 s between them; the user asked for them "throughout the video".
+  - *What feels right* (the user, 2026-11-16: "yes but also not overdo animations though, just what feels right"): encouraged is not
+    piled on. The narration leads and the drawing serves it: a drawing is made where the viewer gains from it, and the test is
+    whether it would be missed if it were gone. A still with nothing on it is a normal, good moment, and a quiet stretch is not a gap
+    to fill. Signs of too much: a drawing that competes with the narration or the captions; two animating at once; a drawing on
+    every still for minutes with no room to breathe; a build that takes longer than the words it explains; the same kind of
+    animation again and again with nothing new to show; anything there to look busy. Fewer, simpler and well timed beats more. The
+    references' pace of drawing (§2) and the agent's own taste are the guide.
+  - *How many:* the agent's call, never a quota, never a gate and not a target upward either: start from the beats of the script
+    that a drawn layer shows better. The first balance video had 21 drawings and 11 moves in 11 minutes, in seven stretches (none
+    in the first 102 s or the last 90 s, gaps of 38 to 117 s between them); the user liked them, asked for them "throughout the
+    video" and then "not overdo": spread where moments call for them, and a long stretch with nothing drawn is asked about once
+    (does anything there gain from a drawing?) and left alone when nothing does.
   - *Never lie:* what a drawing states is what the narration and the facts file say: a number is the same figure in the same unit
     (the source in the drawing's `why`), a process the order the source gives; a drawing never makes a result look larger or a
     cause stronger than the source says.

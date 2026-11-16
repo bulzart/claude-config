@@ -123,8 +123,8 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    §12), the labels
    in the video's language (static §5 "Labels": CapCut text whose font covers every character: `T static language --language L --font
    <file> --text <file>`), the places where a drawn annotation will elaborate the narration (encouraged, static §5 "Drawings and explanation animations are
-   encouraged": one for every beat of the script that a drawn layer shows or points at better than the still, of any family and not only
-   numbers (a quantity, steps, a cause, a contrast, a place, a time, a list, a thing to notice), and that still's
+   encouraged": one where a beat of the script gains from a drawn layer that shows or points at what is said, of any family and not only
+   numbers (a quantity, steps, a cause, a contrast, a place, a time, a list, a thing to notice), what feels right and never overdone, and that still's
    prompt describes a calm area of the scene, a plain wall, an empty table top or an open floor, for the drawing (scenery only: the
    drawing itself is a CapCut overlay made later and is never in the prompt); static §5 "Drawings": the drawings
    themselves, with their positions, are written at S3 by the video's own agent once the stills exist, so an image it will draw on is

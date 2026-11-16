@@ -148,9 +148,9 @@ read 207.4; since 2026-11-09 nothing is done to the delivered audio, so the two 
    bed's plan.
 5. *Before the edit* (S4; the edit agent's first step): the labels, drawings, moves and joins the plan carries against the spec's numbers
    (the push-ins as many as the family's moving shots allow, the dips at the chapters; the drawings as many and as long as the references'
-   annotation pattern shows, §2, and never fewer than the moments of the narration that a drawn layer shows better call for (of any kind, not only numbers), or, where the
-   references draw nothing, wherever the narration elaborates something a drawn layer shows better (encouraged, §5 "Drawings and
-   explanation animations are encouraged": a stretch of about a minute with nothing drawn is looked at again), each with its reason), read with `T draw list` and the `drawings_*` facts of `T slideshow plan` (a clip not rendered, a drawing on a
+   annotation pattern shows, §2, and where a moment of the narration gains from a drawn layer (of any kind, not only numbers) one is made, or, where the
+   references draw nothing, wherever the narration elaborates something a drawn layer shows better (encouraged but not overdone, §5 "Drawings and
+   explanation animations are encouraged": what feels right, no count is a target; a long stretch with nothing drawn is asked about once and left alone when nothing there gains), each with its reason), read with `T draw list` and the `drawings_*` facts of `T slideshow plan` (a clip not rendered, a drawing on a
    moving image, past its image or in the caption band), decided before the project is built. Also the caption word box's colour
    (`captions.word_box.color`, §7: the video's own, from its finished stills' palette and standing out from them, never the last video's by
    default; write the colours you read and why in `word_box.why`).
