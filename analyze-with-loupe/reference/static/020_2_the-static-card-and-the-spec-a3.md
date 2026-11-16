@@ -84,8 +84,8 @@ read in; a spec written before 2026-11-09 gets this block before the run's next 
   highlights, words), their looks as numbers read off the frames (the line width and the dash against the frame's short side, the
   colours, the lettering), how they appear and how fast (the draw-on seconds, the wipe or pop), whether they wobble, their hold, and
   their lead on the spoken word in seconds. The niche's references first, the whole set's beside them (§1 "The run's niche within the
-  set"). Where the references draw nothing, the pattern is empty and the video's drawings are the agent's own: allowed wherever the
-  narration elaborates something a drawn layer shows better than the still does, inside the run's style lock (§10), each with its
+  set"). Where the references draw nothing, the pattern is empty and the video's drawings are the agent's own: encouraged wherever the
+  narration elaborates something a drawn layer shows better than the still does (§5 "Drawings and explanation animations are encouraged"), inside the run's style lock (§10), each with its
   written reason (§5 "Drawings"); never a sticker, icon or badge.
 - **Voice profile**: the numbers of §1 and the delivery in words; the five sample voices are written from it (§6).
 - **Bed brief** (§6; a bed goes under every video, also when the references are voice only): the content type and its register, the

@@ -122,7 +122,10 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    with the title and the first line) and, when the video needs it, the `publish` block (what else it needs to be published well: static
    §12), the labels
    in the video's language (static §5 "Labels": CapCut text whose font covers every character: `T static language --language L --font
-   <file> --text <file>`), the places where a drawn annotation will elaborate the narration (static §5 "Drawings": the drawings
+   <file> --text <file>`), the places where a drawn annotation will elaborate the narration (encouraged, static §5 "Drawings and explanation animations are
+   encouraged": one for every beat of the script that a drawn layer shows or points at better than the still, of any family and not only
+   numbers (a quantity, steps, a cause, a contrast, a place, a time, a list, a thing to notice), and that still's
+   prompt describes a calm area of the scene, a plain wall, an empty table top or an open floor, for the drawing; static §5 "Drawings": the drawings
    themselves, with their positions, are written at S3 by the video's own agent once the stills exist, so an image it will draw on is
    kept still here, `"motion": "none"`, with the reason in the video's brief), each
    image's move and amount and each join decided from the spec's measured pattern (static §5 "Moves and joins": the reference's pace times

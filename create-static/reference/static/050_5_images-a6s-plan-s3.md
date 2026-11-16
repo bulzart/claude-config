@@ -123,6 +123,50 @@ text look (§2) with this video's highlighted words: the CapCut project takes it
   subtitle-like text, no sticker, emoji, icon, badge or decorative arrow (item 6): a drawing explains the picture, it does not decorate
   it. A drawing is local work (no model, no credits): the agent makes and corrects it whatever the run's QC fixes say, and notes it in
   the brief.
+- **Drawings and explanation animations are encouraged** (the user, 2026-11-16, after the first balance-test video: "encourage and
+  instruct our agents to use more of the drawings/movements/explanation animations ... any other animations ... and addon
+  animations throughout the video are welcomed"; and, when the examples read as a rule about numbers: "it hasn't to only be a
+  statistics or numbers animation it can be anything it relates to the context of the moment, i just gave you samples, we need to
+  generalise them"). The samples were two drawings of that video: at 3:24 of the sped-up cut ("5 in the hundred ... and 17.5") a
+  ten-by-ten grid of 100 dots on a plain wall with 5 turning the accent colour ("about 5 in 100"), then the same grid with 17 and
+  a half marked ("about 17.5 in 100"); and "pass, 84% fail", two bars wiping up from a baseline, the failed one 1.84 times as tall
+  with "+84%" above it (read from the drawing specs and seen in the user's recording of the upload). They are samples of a kind,
+  not the kind: **an animated drawing that relates to what is said at that moment and shows, points at, builds up or stresses it
+  better than the still alone does.** A drawn layer is one of a video's main tools, not an exception: the plan (A6s), the stills
+  (S3) and the edit (S4) all look for it.
+  - *Where:* not only numbers. Read the script beat by beat and ask what the viewer needs to see now that the still cannot show.
+    The families, as examples and never a checklist: a quantity or a comparison (the samples above); steps in order, or a process
+    drawn as it runs; a cause and what follows from it; a relationship or a contrast (this against that, right against wrong); a
+    place, a route, a direction or "look here" (a spot on the picture, a part of a body or of an object, a path); a time (a
+    length, a before and after, a timeline); a definition or a list built item by item; a key word or a name written beside the
+    thing it names (never a line of the narration: that is the captions' job); a thing to notice, circled, underlined or lit. The
+    first video's gaze line, filling ten-second ring, plumb line and marked pose were of the place and time families, its norm
+    times and curve of the quantity family. Whatever the video's subject, the same question finds its own drawings (a how-to
+    drawn step by step, a history a route and a timeline, a science a labelled diagram and a flow of cause and effect, a story the
+    chain of what led to what). A moment that nothing drawn would show better is left to the still: a drawing that only decorates
+    is not one (the rules below).
+  - *What it is made of:* `ellipse`, `rect`, `polygon`, `line` (straight or smooth, solid or dashed, with end marks) and `text`
+    elements, each with its own `in` (draw, wipe, fade, grow, pop, type), `start_s` and, where wanted, `out` and `boil`, so a
+    drawing builds up element by element on the spoken words and a second drawing can build on the first on the same still.
+    Anything these make fits; a grid of 100 circles is written by a few lines of the agent's own script that build the elements and
+    put them in the plan. What they cannot make (a figure that moves, a picture that changes into another) is not forced: another
+    still, a move or a join carries that moment, and the brief says so.
+  - *Other animated work:* the labels, the moves, the joins and the effects of the spec belong to the same idea (an animation that
+    relates to the moment), used where they fit what is said, inside the measured numbers of §13 item 5.
+  - *Room for it:* a still that will carry a drawing of some size (a grid, a chart, a diagram, a list, a route) is planned for it:
+    its prompt describes a calm area (a plain wall, an empty table top, an open floor) as part of the scene, never as "a space for
+    text" (the no-subtitle rule below), so the drawing sits there and hides nothing it explains (the first video's dot grids sat on
+    a cream wall its stills left clear).
+  - *How many:* the agent's call, never a quota and never a gate: start from the beats of the script that a drawn layer shows
+    better, and look again at any stretch of about a minute with nothing drawn and nothing else moving. The first balance video had
+    21 drawings and 11 moves in 11 minutes, but its drawings came in seven stretches: none in the first 102 s (the hook) or the
+    last 90 s, and gaps of 38 to 117 s between them; the user asked for them "throughout the video".
+  - *Never lie:* what a drawing states is what the narration and the facts file say: a number is the same figure in the same unit
+    (the source in the drawing's `why`), a process the order the source gives; a drawing never makes a result look larger or a
+    cause stronger than the source says.
+  - Every rule above and below stands (the still holds, the captions' band stays free, no sticker, icon, badge or decorative arrow,
+    nothing religious, indecent or distressing, every person an adult): more drawings means more of what explains, never more
+    decoration. Local work, no credits.
 - **No subtitle-like text, ever** (the user, 2026-11-07: "try to push no captions or subtitles style text in any image generation at
   all, it can have text over objects, books, logos, brands, inside screens, or whatever, just not subtitles style text whatsoever"):
   a prompt never holds the words caption, subtitle, lower third, title bar or text overlay, not even to keep a band clear: the model

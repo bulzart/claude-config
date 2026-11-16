@@ -90,7 +90,12 @@ stack a tall frame into panels, above all with no reference image).
    The labels' text is spelled as the narration says it, in the video's language; the label font holds a glyph for every character
    (`T static language --run RUN --language <code> --font <font_file> --text <a file of the labels' texts>`: `font_missing_glyphs` empty,
    else another font of `T capcut-font --list`, the reason in the plan, static §5).
-5d. **Drawings** (static §5 "Drawings"; the user, 2026-11-11: you can draw and animate over a still): where the narration elaborates
+5d. **Drawings** (static §5 "Drawings" and "Drawings and explanation animations are encouraged"; the user, 2026-11-11: you can draw and
+   animate over a still; 2026-11-16: use more of them, of any kind that relates to the moment, not only numbers): read the video's lines once, beat by beat,
+   and ask what the viewer needs to see that the still cannot show (static §5 lists the families: a quantity or comparison, steps or a
+   process, a cause and its effect, a contrast, a place or "look here", a time, a list built item by item, a thing to notice); give each
+   such beat a drawing, built element by element on the spoken words, with every figure exactly as the narration and the facts file
+   give it. The first video's grid of dots and two bars are samples, not the set. Where the narration elaborates
    something a drawn layer shows better than the still does (a measurement, a mechanism, a comparison, a count, a route: the references'
    annotation pattern, static §2, or your own reason where they draw nothing), once the still is made and viewed:
    `T draw grid --run RUN --video NN --image K` (view the gridded copy and read each point as shares of the frame; `--crop x0,y0,x1,y1
