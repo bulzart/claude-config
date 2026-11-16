@@ -1,6 +1,6 @@
 - [Avast HTTPS scanning breaks TLS](avast-https-scanning-breaks-tls.md) — uv needs UV_SYSTEM_CERTS=1, Python truststore; keep hf_xet on; winget --source winget; breaks chunked replies (Higgsfield MCP) and local 127.0.0.1 HTTP
 - [Local AI installs + memory guard](local-ai-installs.md) — ACE-Step 1.5 + FLUX 3 Klein int8 in Documents\AI, always under tools\memguard.py (froze Windows twice); page file 12-16 GB; Smart App Control OFF
-- [This PC's pipeline tooling](pc-pipeline-tooling.md) — Python312 + whisper medium (av<19), real claude.exe first on PATH, ffmpeg full, capcut-cli 0.25 + CapCut 9.7 (no Pro); PowerShell, not Git Bash
+- [This PC's pipeline tooling](pc-pipeline-tooling.md) — Python312 + whisper medium (av<19), real claude.exe first on PATH, ffmpeg full, capcut-cli 0.25 + CapCut 9.7 (no Pro); Git Bash fork fixed 2026-11-16 (Mandatory ASLR exceptions for Git's tools, admin once)
 - [CapCut text preset locked](capcut-text-preset-locked.md) — /analyze-then-pick always uses the user's chosen preset (from 03_Oct_2026_v09); text always horizontally centred; never replace unasked
 - [~/.claude git versioning](claude-folder-git-versioning.md) — local repo + auto-commit hooks, allow-list .gitignore (add new folders); origin bulzart/claude-config private, push branch pc only on the user's say
 - [Neurogum package forms](neurogum-package-forms.md) — closed cartons/pouch only, never a big box or an opened carton; vary forms; Peppermint + Spearmint only; size authority = per-folder product_properties.txt

@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 6df6fb40-e7ad-4b91-b765-6c6c020da849
-  modified: 2026-11-14T19:13:50.373Z
+  modified: 2026-11-16T13:26:26.429Z
 ---
 
 Set up 2026-11-05 (user: "install that tooling here too and anything else needed for the pipeline to work correctly as intended"). `awl.py doctor` all green; `awl.py static check` ready except the OpenAI key (the user sets it).
@@ -18,7 +18,7 @@ Set up 2026-11-05 (user: "install that tooling here too and anything else needed
 - capcut-cli stays 0.25.0 (global npm). Checked 2026-11-06: 0.32.0 still writes neither the `local_material_id` links nor the caption strokes, so the toolkit writes both itself (`T capcut-repair` link step, `T capcut-font`); 0.31 added `loudness --target -14` (not needed: the narration carries the target). This PC's CapCut is 9.7 (`%LOCALAPPDATA%\CapCut\Apps\9.7.1.4203`): it opens local clips by `local_material_id`. Never `capcut lint --fix` on a pipeline project (it also shortens texts over 7 s, trims captions, copies all media into the draft).
 - Remote HTTP MCP servers (higgsfield and the plugin ones) fail because of Avast: see [[avast-https-scanning-breaks-tls]].
 - No CapCut Pro here (2026-11-06): a project with a Pro option will not export (CapCut writes the blocking options to `User Data\Cache\FeedbackOtherInfo.json`); each Static run asks Free or Pro (`capcut_plan`). The measured catalogue is `analyze-with-loupe\data\capcut-catalogue.md` (moves, 76 intros with 17 Pro, 96 transitions, effects): capcut-cli's chroma key and screen blend do NOT play in CapCut 9.7 (alpha files instead), an overlay's volume 0 does not mute it (silent copy + audio track). CapCut must be closed for any toolkit or MCP write (and FLUX 3 Klein needs Chrome closed: with it open, commit memory fell under the memory guard's floor).
-- Shell gotchas (2026-11-06): Git Bash can fail to start for hours (`fork: ... 0xC0000142`); PowerShell works, run the toolkit there. A PowerShell safety hook reads a Python variable named `rd` inside inline code as `Remove-Item` and blocks the call: use another name.
+- Shell gotchas (2026-11-06): Git Bash can fail to start for hours (`fork: ... 0xC0000142`); PowerShell works, run the toolkit there. **FIXED 2026-11-16** (the earlier "memory pressure" guess was wrong: it failed with 4.7 GB RAM free): this Windows 11 build 26300 has system-wide Mandatory ASLR on (`Get-ProcessMitigation -System` shows ForceRelocateImages ON), which breaks msys fork (child needs msys-2.0.dll at the parent's address). Fix, run once in an ADMIN PowerShell (Set-ProcessMitigation takes one -Name at a time): `Set-ProcessMitigation -Name bash.exe -Disable ForceRelocateImages`, same for `sh.exe`, then `Get-ChildItem 'C:\Program Files\Git\usr\bin' -Filter *.exe | % { Set-ProcessMitigation -Name $_.Name -Disable ForceRelocateImages }` (without the loop, fork works but every msys tool exec'd from bash returns 127 silently). Undo with `-Remove`. Avast's aswhook.dll was a red herring (shields off changed nothing). If Git is reinstalled or updated with new tool names and bash breaks again, re-run the loop. Not admin in Claude Code: the user runs these. A PowerShell safety hook reads a Python variable named `rd` inside inline code as `Remove-Item` and blocks the call: use another name.
 
 **Why:** these were the gaps between this PC and the main PC; each one made a pipeline step fail or silently fall back.
 
