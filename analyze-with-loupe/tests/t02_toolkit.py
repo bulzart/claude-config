@@ -2,6 +2,7 @@
 choice, each answer one JSON object on its last line. A temp library copy (AWL_HOME) holds the runs; nothing real is touched."""
 import json
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -1046,5 +1047,117 @@ check("Analyze Mode, static" in _ct and "Images: api" in _ct and "QC fixes: auto
 js, _ = ts("lint-run", "--run", str(SR))
 check(js.get("contract", {}).get("loupe_line") is True and js.get("contract", {}).get("unresolved_placeholders") == [], "lint-run reads a Static contract's Loupe line")
 _srv.shutdown()
+
+# --- the update check (contract item 38): a temp origin and two clones (the library, Loupe) per case; nothing real is touched
+import subprocess as _sp
+import tempfile as _tf
+
+
+def _g(cwd, *args, check=True):
+    return _sp.run(["git", "-c", "user.name=t", "-c", "user.email=t@t.t", *map(str, args)], cwd=str(cwd), check=check, capture_output=True, text=True)
+
+
+def _commit(clone, files: dict, msg="c"):
+    for rel, body in files.items():
+        fp = Path(clone) / rel
+        fp.parent.mkdir(parents=True, exist_ok=True)
+        fp.write_text(body, encoding="utf-8")
+    _g(clone, "add", "-A")
+    _g(clone, "commit", "-q", "-m", msg)
+
+
+def _make_repo(base: Path, name: str, files: dict):
+    """(bare origin, upstream worker clone, the clone under test) with one commit on main."""
+    origin = base / f"{name}-origin.git"
+    _g(base, "init", "-q", "--bare", "-b", "main", origin)
+    up = base / f"{name}-up"
+    _g(base, "clone", "-q", origin, up)
+    _g(up, "checkout", "-q", "-B", "main")
+    _commit(up, files, "first")
+    _g(up, "push", "-q", "-u", "origin", "main")
+    mine = base / name
+    _g(base, "clone", "-q", origin, mine)
+    return origin, up, mine
+
+
+def _update(env, *extra):
+    js, code, _ = t("update", *extra, env=env)
+    return js, {r["repo"]: r for r in js["repos"]}
+
+
+_ub = Path(_tf.mkdtemp(prefix="awl-upd-"))
+_lo, _lu, _lib = _make_repo(_ub, "lib", {"analyze-with-loupe/README.md": "a\n", "commands/analyze-with-loupe.md": "r1\n", "plugins/p.json": "{}\n"})
+_po, _pu, _lp = _make_repo(_ub, "loupe", {"loupe.py": "1\n", "web/app.js": "1\n", "data/seed/seed.json": "1\n"})
+UENV = {"AWL_HOME": str(_lib / "analyze-with-loupe"), "LOUPE_HOME": str(_lp)}
+js, r = _update(UENV)
+check(js["ok"] and js["pulled"] == [] and r["library"]["state"] == "current" and r["loupe"]["state"] == "current" and r["library"]["branch"] == "main",
+      "update: both repositories at main's head are `current` and nothing is pulled")
+_commit(_lib, {"analyze-with-loupe/mine.txt": "x\n"}, "local, not pushed")
+js, r = _update(UENV)
+check(r["library"]["state"] == "current" and r["library"]["ahead"] == 1 and r["library"]["behind"] == 0 and js["pulled"] == [],
+      "update: local commits that are not pushed yet are not an update (`current`, ahead 1)")
+_g(_lib, "reset", "-q", "--hard", "origin/main")
+# upstream moves: a router, a skill, the config and a toolkit file; Loupe's code, a page and its seed
+_commit(_lu, {"commands/analyze-with-loupe.md": "r2\n", "skills/awl-start/SKILL.md": "s\n", "analyze-with-loupe/config.json": "{}\n",
+              "analyze-with-loupe/scripts/awl.py": "# t\n", "settings.json": "{}\n"}, "up lib")
+_g(_lu, "push", "-q")
+_commit(_pu, {"loupe_app/core.py": "2\n", "web/app.js": "2\n", "data/seed/seed.json": "2\n"}, "up loupe")
+_g(_pu, "push", "-q")
+_head_before = _g(_lib, "rev-parse", "--short", "HEAD").stdout.strip()
+js, r = _update(UENV, "--no-pull")
+check(r["library"]["state"] == "behind" and r["library"]["behind"] == 1 and _g(_lib, "rev-parse", "--short", "HEAD").stdout.strip() == _head_before
+      and set(r["library"]["areas"]) == {"router", "skills", "config", "toolkit", "hooks"} and r["library"]["areas"]["router"]["first"] == ["commands/analyze-with-loupe.md"]
+      and set(r["loupe"]["areas"]) == {"code", "web", "data"} and js["pulled"] == [],
+      "update --no-pull: it only looks (state `behind`, the checkout unchanged) and groups the changed files by area")
+js, r = _update(UENV)
+check(js["pulled"] == ["library", "loupe"] and r["library"]["state"] == "pulled" and r["library"]["head_after"] == r["library"]["remote_head"]
+      and (_lib / "skills" / "awl-start" / "SKILL.md").is_file() and (_lp / "loupe_app" / "core.py").read_text(encoding="utf-8") == "2\n",
+      "update: a clean checkout behind main is fast-forwarded in both repositories")
+js, r = _update(UENV)
+check(js["pulled"] == [] and r["library"]["state"] == "current" and r["loupe"]["state"] == "current", "update: the next call finds nothing new")
+# a local edit to a file the pull would change is never overwritten
+_commit(_lu, {"analyze-with-loupe/README.md": "up\n", "analyze-with-loupe/library/x.md": "x\n"}, "up readme")
+_g(_lu, "push", "-q")
+(_lib / "analyze-with-loupe" / "README.md").write_text("my edit\n", encoding="utf-8")
+js, r = _update(UENV)
+check(r["library"]["state"] == "dirty-overlap" and r["library"]["overlap"] == ["analyze-with-loupe/README.md"] and js["pulled"] == []
+      and (_lib / "analyze-with-loupe" / "README.md").read_text(encoding="utf-8") == "my edit\n",
+      "update: a local edit to a file the pull would change is `dirty-overlap`: reported, nothing pulled, the edit kept")
+# a local edit to another tracked file does not block it and survives
+_g(_lib, "checkout", "-q", "--", "analyze-with-loupe/README.md")
+(_lib / "plugins" / "p.json").write_text('{"churn": 1}\n', encoding="utf-8")
+js, r = _update(UENV)
+check(r["library"]["state"] == "pulled" and (_lib / "plugins" / "p.json").read_text(encoding="utf-8") == '{"churn": 1}\n'
+      and (_lib / "analyze-with-loupe" / "README.md").read_text(encoding="utf-8") == "up\n",
+      "update: a local edit to a file the pull does not touch (a plugin file the harness rewrites) does not block the pull and is kept")
+_g(_lib, "checkout", "-q", "--", "plugins/p.json")
+# local commits and new remote ones: diverged, never merged
+_commit(_lib, {"analyze-with-loupe/local.txt": "l\n"}, "local work")
+_commit(_lu, {"analyze-with-loupe/remote.txt": "r\n"}, "remote work")
+_g(_lu, "push", "-q")
+_h = _g(_lib, "rev-parse", "HEAD").stdout.strip()
+js, r = _update(UENV)
+check(r["library"]["state"] == "diverged" and r["library"]["ahead"] == 1 and r["library"]["behind"] == 1 and _g(_lib, "rev-parse", "HEAD").stdout.strip() == _h,
+      "update: local commits and new remote ones are `diverged`: reported, no merge, HEAD unchanged")
+# another branch than main is never merged into
+_g(_lib, "reset", "-q", "--hard", "origin/main")
+_g(_lib, "checkout", "-q", "-b", "pc")
+_commit(_lu, {"analyze-with-loupe/more.txt": "m\n"}, "remote more")
+_g(_lu, "push", "-q")
+js, r = _update(UENV)
+check(r["library"]["state"] == "other-branch" and r["library"]["branch"] == "pc" and js["pulled"] == [] and not (_lib / "analyze-with-loupe" / "more.txt").exists(),
+      "update: a checkout on another branch than main is `other-branch`: reported, main is not merged into it")
+_g(_lib, "checkout", "-q", "main")
+# offline or a missing remote is a state, never a stop; a folder that is no repository is one too
+_g(_lp, "remote", "set-url", "origin", str(_ub / "nowhere.git"))
+js, code, _ = t("update", env={**UENV, "AWL_UPDATE_FETCH_TIMEOUT": "20"})
+_r = {x["repo"]: x for x in js["repos"]}
+check(code == 0 and js["ok"] and _r["loupe"]["state"] == "fetch-failed" and _r["loupe"]["error"] and _r["library"]["state"] == "pulled",
+      "update: an unreachable remote is `fetch-failed` with its error, exit 0, and the other repository is still handled")
+_empty = _ub / "empty"
+_empty.mkdir()
+js, r = _update({**UENV, "LOUPE_HOME": str(_empty)})
+check(r["loupe"]["state"] == "not-a-repo" and js["ok"], "update: a folder that is no git repository is `not-a-repo`, not an error")
+shutil.rmtree(_ub, ignore_errors=True)
 
 finish()

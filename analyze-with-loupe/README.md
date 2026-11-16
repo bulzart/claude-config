@@ -337,6 +337,24 @@ or by a prompt line, in a start frame, a guide or reference image, a source, a t
 - **QC:** a blur, mosaic or censor bar found in a take, a start frame, a guide or a CapCut project is a defect (regenerate or re-edit, item 27), never covered; the camera's own
   focus, depth of field and motion blur in a shot are the scene's and are not a finding. A blur or bar baked into a reference is read as a source overlay and not re-made.
 
+## Update check first, every run (contract item 38)
+The user, 2026-11-16: "everytime it runs it first checks if there's any updates on the main branch if yes it pulls and sets up whats needed, if not it just continues".
+The first thing the command does, before the resume and feedback checks, is `awl.py update`: it fetches `main` of the library's repository (`~/.claude`, GitHub
+`bulzart/claude-config`) and of Loupe's (`~/.claude/loupe`, `bulzart/loupe`) and, when `main` is ahead and the checkout can take it as a plain fast-forward
+(`git merge --ff-only`), pulls it. One JSON line comes back: per repository the state, the branch, ahead and behind, and the changed files grouped by area (library: `router`,
+`skills`, `config`, `toolkit`, `tests`, `library`, `hooks`; Loupe: `code`, `web`, `data`; the grouping is by folder and judges nothing).
+- **Nothing new:** `current` (local commits not pushed yet are not an update): nothing is said and the run goes on.
+- **Pulled:** the router's table sets up what the areas need: a changed router is read again, a changed toolkit or config runs `awl.py doctor` and installs only what it lists as
+  missing (a pulled `config.json` carries the paths of the PC it came from, so they are checked against this PC), changed hooks apply from the next session, changed Loupe
+  code runs `awl.py loupe restart` (stops the server that answers as Loupe on its port, then `ensure`: the new code starts and the keeper re-reads the library), Loupe's pages
+  are served live. A pulled Loupe seed does not change an existing Loupe database (the seed only starts an empty data folder): the sample pictures and flag evidence arrive, the
+  database rows do not. One line to the user says what came.
+- **Anything else** is one line and the run goes on with what is on disk, never a stop and never a question: `fetch-failed` (offline, no stored login: the fetch never waits for a
+  password, `GIT_TERMINAL_PROMPT=0`, `GCM_INTERACTIVE=Never`, 40 s), `diverged` (local commits and new remote ones), `dirty-overlap` (a local edit to a file the pull would change; the
+  Stop hook's own plugin-file edits count only if the pull changes the same file), `other-branch` (a checkout not on `main` is never merged into), `pull-failed`, `no-origin`,
+  `not-a-repo`. The toolkit never merges, resets, stashes, checks out or forces.
+- Only the main session checks, once per invocation (a resume too); an agent never does. `--no-pull` only looks.
+
 ## Recreate: the whole source in one generation when it fits (2026-11-05)
 The user: a 14 or 15 s video on a model whose maximum is 15 s is one generation, never two; split only when necessary (a change of place or ambience, other
 specific cases), and a longer video takes 2, 3 or more generations by its data; "do not do it hardcoded, because models change often". `generation-system.md`

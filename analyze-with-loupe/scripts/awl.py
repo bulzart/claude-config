@@ -24,7 +24,9 @@ Subcommands (python awl.py <cmd> -h):
   ledger        anti-duplicate guard for paid generations (begin before, set after every call)
   caught-flag    flag record in Loupe (the web app): prompts and videos Higgsfield flagged or refused, with gathered evidence
                  (add | set | list | reconcile | open)
-  loupe          ensure | status | open: the Loupe web app (flags, generation misses, QC samples)
+  loupe          ensure | restart | status | open: the Loupe web app (flags, generation misses, QC samples); restart = stop, then ensure
+  update         contract item 38, the first call of every run: fetch `main` of the library's repository and of Loupe's, fast-forward when it is ahead;
+                 one JSON line with each repo's state, ahead/behind and changed areas (never asks, merges, resets or stashes; --no-pull only looks)
   qc-consult     QC phase only: ask the QC keeper which samples (generation misses) apply to the video under QC
   qc-brief       QC phase only: the matching samples as a plain brief (no model call)
   prompt-template first request of a video (X4b, after X1-X4): the whole checked brief to the judge; it answers the final prompt
@@ -1982,6 +1984,127 @@ def _git_dirty(paths: list) -> dict:
         return {"head": head.stdout.strip(), "dirty_paths": len(rows), "first": [r[:80] for r in rows[:5]]}
     except Exception as e:  # noqa: BLE001
         return {"error": str(e)[:120]}
+
+
+# --------------------------------------------------------------------------- update check (contract item 38)
+
+UPDATE_BRANCH = "main"
+UPDATE_FETCH_TIMEOUT = int(os.environ.get("AWL_UPDATE_FETCH_TIMEOUT") or 40)     # seconds the fetch of one repository may take before the run goes on without it
+UPDATE_GIT_ENV = {"GIT_TERMINAL_PROMPT": "0", "GCM_INTERACTIVE": "Never"}        # a check at the start of a run never waits for a password or a login window
+
+
+def _git(repo, *args, timeout: int = 60, raw: bool = False):
+    """(exit code, stdout, stderr); stdout is stripped unless `raw` (a `-z` status line starts with a space that is part of it)."""
+    env = dict(os.environ)
+    env.update(UPDATE_GIT_ENV)
+    cp = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout, env=env)
+    return cp.returncode, (cp.stdout if raw else cp.stdout.strip()), cp.stderr.strip()
+
+
+def _update_area(kind: str, p: str) -> str:
+    """Which part of a repository a path belongs to, by its folder (a fact the router's table reads; no path is ranked or judged)."""
+    if kind == "library":
+        if p == "commands/analyze-with-loupe.md":
+            return "router"
+        if p.startswith("skills/awl-"):
+            return "skills"
+        if p == "analyze-with-loupe/config.json":
+            return "config"
+        if p.startswith("analyze-with-loupe/scripts/"):
+            return "toolkit"
+        if p.startswith("analyze-with-loupe/tests/"):
+            return "tests"
+        if p.startswith("analyze-with-loupe/"):
+            return "library"
+        if p == "settings.json" or p.startswith("hooks/"):
+            return "hooks"
+        return "other"
+    if p in ("loupe.py", "loupe_client.py", "mcp_server.py") or p.startswith("loupe_app/"):
+        return "code"
+    if p.startswith("web/"):
+        return "web"
+    if p.startswith("data/"):
+        return "data"
+    return "other"
+
+
+def _update_repo(kind: str, repo: Path, pull: bool) -> dict:
+    """Fetch `main` of one repository and, when it is ahead and the checkout can take it as a plain fast-forward, move to it. Nothing is merged,
+    stashed, reset or forced: any other situation is reported as a state and left as it is."""
+    r = {"repo": kind, "path": str(repo).replace("\\", "/"), "state": ""}
+    try:
+        if not (repo / ".git").exists():
+            r["state"] = "not-a-repo"
+            return r
+        _, r["branch"], _ = _git(repo, "rev-parse", "--abbrev-ref", "HEAD")
+        rc, remote, _ = _git(repo, "remote", "get-url", "origin")
+        if rc != 0:
+            r["state"] = "no-origin"
+            return r
+        r["remote"] = remote
+        rc, _, err = _git(repo, "fetch", "--quiet", "origin", UPDATE_BRANCH, timeout=UPDATE_FETCH_TIMEOUT)
+        if rc != 0:
+            r.update(state="fetch-failed", error=err[:240])
+            return r
+        rc, cnt, err = _git(repo, "rev-list", "--left-right", "--count", f"HEAD...origin/{UPDATE_BRANCH}")
+        if rc != 0:
+            r.update(state="fetch-failed", error=("no origin/%s after the fetch: " % UPDATE_BRANCH) + err[:200])
+            return r
+        r["ahead"], r["behind"] = (int(x) for x in cnt.split())
+        _, r["head"], _ = _git(repo, "rev-parse", "--short", "HEAD")
+        _, r["remote_head"], _ = _git(repo, "rev-parse", "--short", f"origin/{UPDATE_BRANCH}")
+        if not r["behind"]:
+            r["state"] = "current"          # `ahead` commits are only local work not pushed yet: not an update
+            return r
+        _, names, _ = _git(repo, "diff", "--name-only", "-z", f"HEAD...origin/{UPDATE_BRANCH}")
+        files = [x for x in names.split("\0") if x]
+        areas = {}
+        for f in files:
+            d = areas.setdefault(_update_area(kind, f), {"files": 0, "first": []})
+            d["files"] += 1
+            if len(d["first"]) < 4:
+                d["first"].append(f)
+        r["changed_files"], r["areas"] = len(files), areas
+        if r["branch"] != UPDATE_BRANCH:
+            r["state"] = "other-branch"     # not on main: main is never merged into another branch here
+            return r
+        if r["ahead"]:
+            r["state"] = "diverged"         # local commits and new remote ones: a merge is a decision for the user
+            return r
+        _, st, _ = _git(repo, "status", "--porcelain", "-z", "-uno", raw=True)
+        dirty = {e[3:] for e in st.split("\0") if len(e) > 3}
+        overlap = sorted(dirty & set(files))
+        if overlap:
+            r.update(state="dirty-overlap", overlap=overlap[:8])     # local edits to a file the pull would change
+            return r
+        if not pull:
+            r["state"] = "behind"
+            return r
+        rc, _, err = _git(repo, "merge", "--ff-only", f"origin/{UPDATE_BRANCH}", timeout=120)
+        if rc != 0:
+            r.update(state="pull-failed", error=err[:240])
+            return r
+        _, r["head_after"], _ = _git(repo, "rev-parse", "--short", "HEAD")
+        r["state"], r["commits"] = "pulled", r["behind"]
+        return r
+    except subprocess.TimeoutExpired as e:
+        r.update(state="fetch-failed" if "fetch" in str(e.cmd) else "pull-failed", error=f"timed out after {e.timeout} s")
+        return r
+    except (OSError, ValueError) as e:
+        r.update(state="fetch-failed", error=str(e)[:240])
+        return r
+
+
+def cmd_update(a):
+    """Contract item 38: at the start of every run, look at `main` of this library's repository and of Loupe's and, when it is ahead, pull it. Facts on
+    one JSON line (per repository: branch, ahead/behind, the changed areas, what happened); it never asks, never merges, resets or stashes, and a
+    network or git failure is a state, not a stop. What to set up after a pull is the router's table, read against `areas`."""
+    repos = [("library", AWL_HOME.parent), ("loupe", LOUPE_HOME)]
+    res = [_update_repo(k, p, not a.no_pull) for k, p in repos]
+    pulled = [r["repo"] for r in res if r["state"] == "pulled"]
+    out({"ok": True, "branch": UPDATE_BRANCH, "repos": res, "pulled": pulled,
+         "note": ("pulled: " + ", ".join(pulled) + "; set up from each repo's areas with the router's update table" if pulled else
+                  "nothing was pulled; a state other than current is for one line to the user (the router's update check)")})
 
 
 def cmd_doctor(a):
@@ -4339,10 +4462,55 @@ def cmd_caught_flag(a):
                  "if the flag stays, `--status persistent`; `caught-flag open --id %s` shows it in Loupe" % (cid, cid)})
 
 
+def _listener_pids(port: int) -> list:
+    """The process ids listening on a TCP port of this machine (Windows `netstat -ano`; elsewhere `lsof`)."""
+    pids = set()
+    try:
+        if os.name == "nt":
+            cp = subprocess.run(["netstat", "-ano", "-p", "tcp"], capture_output=True, text=True, timeout=20)
+            for ln in cp.stdout.splitlines():
+                p = ln.split()
+                if len(p) >= 5 and p[0] == "TCP" and p[3] == "LISTENING" and p[1].endswith(f":{port}") and p[4].isdigit():
+                    pids.add(int(p[4]))
+        else:
+            cp = subprocess.run(["lsof", "-t", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN"], capture_output=True, text=True, timeout=20)
+            pids.update(int(x) for x in cp.stdout.split() if x.isdigit())
+    except (OSError, subprocess.SubprocessError):
+        pass
+    pids.discard(os.getpid())
+    return sorted(pids)
+
+
+def _loupe_stop(lc) -> dict:
+    """Stop Loupe's server so the next `ensure` starts the code now on disk. Only a port that answers as Loupe (its health says app=loupe) is touched."""
+    if not lc.health():
+        return {"was_running": False, "stopped": []}
+    port = int(lc.base_url().rsplit(":", 1)[1])
+    stopped = []
+    for pid in _listener_pids(port):
+        try:
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, timeout=20)
+            else:
+                os.kill(pid, 15)
+            stopped.append(pid)
+        except (OSError, subprocess.SubprocessError):
+            pass
+    t0 = time.time()
+    while time.time() - t0 < 12 and lc.health():
+        time.sleep(0.4)
+    return {"was_running": True, "port": port, "stopped": stopped, "still_answering": bool(lc.health())}
+
+
 def cmd_loupe(a):
-    """The Loupe web app: ensure (start it if needed) | status | open."""
+    """The Loupe web app: ensure (start it if needed) | restart (stop it, then ensure: after its code was updated) | status | open."""
     lc = _lc()
-    if a.action == "ensure":
+    restarted = None
+    if a.action == "restart":
+        restarted = _loupe_stop(lc)
+        if restarted.get("still_answering"):
+            fail("Loupe still answers on its port after the stop; it was not restarted", 1, restart=restarted)
+    if a.action in ("ensure", "restart"):
         ok = lc.ensure()
         size = None
         if ok:
@@ -4370,7 +4538,7 @@ def cmd_loupe(a):
                     keeper = {"state": "failed", "error": str(d)[:200]}
             except Exception as e:  # noqa: BLE001
                 keeper = {"state": "failed", "error": str(e)[:200]}
-        out({"ok": ok, "url": lc.base_url(), "library_size": size, "keeper": keeper,
+        out({"ok": ok, "url": lc.base_url(), "library_size": size, "keeper": keeper, **({"restart": restarted} if restarted else {}),
              "note": "" if ok else "Loupe could not be started: python ~/.claude/loupe/loupe.py serve"}, 0 if ok else 1)
     if a.action == "status":
         h = lc.health()
@@ -8506,8 +8674,8 @@ def main():
     p.add_argument("--full", action="store_true", help="list: keep the long prompt texts")
     p.set_defaults(fn=cmd_caught_flag)
 
-    p = sp.add_parser("loupe", help="the Loupe web app: ensure | status | open")
-    p.add_argument("action", choices=["ensure", "status", "open"]); p.add_argument("--path", help="open: a page, e.g. /#/misses")
+    p = sp.add_parser("loupe", help="the Loupe web app: ensure | restart (stop, then ensure: after its code was updated) | status | open")
+    p.add_argument("action", choices=["ensure", "restart", "status", "open"]); p.add_argument("--path", help="open: a page, e.g. /#/misses")
     p.set_defaults(fn=cmd_loupe)
 
     for _nm, _h in (("qc-consult", "QC phase only: ask the QC keeper which generation-miss samples apply to the video under QC"),
@@ -8574,6 +8742,10 @@ def main():
     p = sp.add_parser("doctor", help="what this machine and library have (read-only, one JSON line): python, ffmpeg, modules, config paths, MCP registration, hooks, Loupe, docs check, git, disk; --run adds the run's stage keys")
     p.add_argument("--run"); p.add_argument("--no-loupe", action="store_true"); p.add_argument("--no-docs", action="store_true", help="skip docs_tool check")
     p.set_defaults(fn=cmd_doctor)
+
+    p = sp.add_parser("update", help="contract item 38, first thing of every run: fetch `main` of this library's repository and of Loupe's and, when it is ahead and a plain fast-forward is possible, pull it (one JSON line: per repo the state, ahead/behind and the changed areas; it never asks, merges, resets or stashes, and a failure is a state)")
+    p.add_argument("--no-pull", action="store_true", help="only look: fetch and report, change nothing")
+    p.set_defaults(fn=cmd_update)
 
     p = sp.add_parser("lint-run", help="cross-checks of a run's files as facts (gather-only): cited paths that do not exist, video numbers vs asset_plan, media ids vs uploads, prompt lengths, preset bookkeeping, the contract")
     p.add_argument("--run", required=True); p.set_defaults(fn=cmd_lint_run)

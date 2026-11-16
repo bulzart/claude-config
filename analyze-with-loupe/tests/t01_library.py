@@ -422,4 +422,21 @@ _kl = rd(LIB / "models" / "kling-4-0" / "200_3.11_visible-text.md")
 check(not _hits and "never writes a blur into a prompt" in _kl and "No real brands, organization names, logos, or watermarks may appear" in _kl,
       "no guide or reference asks for a blurred fill, a defocus, a local blur or a delogo (Kling's own blur line is quoted once, with the note that the library never uses it): " + "; ".join(_hits[:4]))
 
+# the update check (item 38): first on every invocation, before the resume and feedback checks, with the table that sets up what a pull brought
+_upd = router.split("## Update check")[1].split("## How the pipeline loads")[0] if "## Update check" in router else ""
+check("T update" in _upd and "T loupe restart" in _upd and "T doctor" in _upd and "before the resume and feedback checks" in router.split("## How the pipeline loads")[0],
+      "the router has the update check, ahead of the resume and feedback checks, and names T update, T doctor and T loupe restart")
+check(all(f"`{s_}`" in _upd for s_ in ("current", "pulled", "fetch-failed", "diverged", "dirty-overlap", "other-branch", "pull-failed")) and "Never merge, reset, stash, checkout or force" in _upd,
+      "the update check handles every state the toolkit reports and never merges, resets, stashes, checks out or forces")
+check(all(f"`{a_}`" in _upd for a_ in ("router", "skills", "toolkit", "config", "hooks", "code", "web", "data")) and "update, resume and feedback checks" in router,
+      "the update table names every area the toolkit groups changed files into, and the first load step runs after it")
+check("38. **Update check first" in router and "Only the main session checks" in router and "2026-11-16" in router, "the router has contract item 38 and says only the main session checks")
+_awl_src = rd(LIB / "scripts" / "awl.py")
+check("contract item 38" in rd(LIB / "README.md") and "awl.py update" in rd(LIB / "README.md") and "contract item 38" in " ".join(_awl_src.splitlines()[:100]),
+      "the README and the toolkit's own command list describe the update check")
+_upd_src = _awl_src.split('UPDATE_BRANCH = "main"')[1].split("def cmd_doctor")[0] if 'UPDATE_BRANCH = "main"' in _awl_src else ""
+check('choices=["ensure", "restart", "status", "open"]' in _awl_src and "UPDATE_GIT_ENV" in _upd_src and '"--ff-only"' in _upd_src
+      and not any(w_ in _upd_src for w_ in ('"reset"', '"stash"', '"checkout"', '"--hard"', '"--force"', '"-f"')),
+      "the toolkit has `loupe restart`, fetches without a login prompt and its update code only ever fast-forwards (no reset, stash, checkout or force)")
+
 finish()
