@@ -458,3 +458,6 @@ operable )
 [watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); 2 processors: one takes the newest chunk (live), the others the oldest (backlog); Ctrl+C stops
 [watch] chunk reports: claude-haiku-5-5 (effort high), 2 at a time
 [watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)
+[watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); 2 processors: one takes the newest chunk (live), the others the oldest (backlog); Ctrl+C stops
+[watch] chunk reports: claude-haiku-5-5 (effort high), 2 at a time
+[watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)
