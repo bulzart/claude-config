@@ -8691,7 +8691,7 @@ def main():
         p.add_argument("--attempt", help="qc-consult: the take under QC (a1, a2, c2-a1 ...): picks the request whose prompt is sent to the judge (the newest otherwise)")
         p.set_defaults(fn=cmd_qc_consult, cmd=_nm)
 
-    p = sp.add_parser("prompt-template", help="first request of a video (X4b, after X1-X4): the whole checked brief (your words, the checked draft request, its must-carry lines, the model's structure) to the judge (Loupe's keeper, Opus); it reads the saved prompts of the samples it chooses and answers the final prompt")
+    p = sp.add_parser("prompt-template", help="first request of a video (X4b, after X1-X4): the whole checked brief (your words, the checked draft request, its must-carry lines, the model's structure) to the judge (Loupe's keeper); it reads the saved prompts of the samples it chooses and answers the final prompt")
     p.add_argument("--run", help="run id or folder (reads the model and mode from its state.json)"); p.add_argument("--video", help="video number")
     p.add_argument("--model"); p.add_argument("--mode"); p.add_argument("--product", help="the product and its form, free text")
     p.add_argument("--product-details", help="its shape, size, opening and natural posture, from its registry row")
