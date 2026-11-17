@@ -5339,7 +5339,7 @@ def _judgement_md(run: str, video: str, clip: str, d: dict, model_id: str, note:
 
 
 def cmd_prompt_template(a):
-    """X4b, after X1-X4 of the first request of a video (the user, 2026-10-28). The whole checked brief goes to the judge (Loupe's keeper, one separate Opus
+    """X4b, after X1-X4 of the first request of a video (the user, 2026-10-28). The whole checked brief goes to the judge (Loupe's keeper, one separate Sonnet 5.5
     session that holds the samples of earlier generations): the agent's brief (what it is working on, what the video is about, what it wants to achieve),
     the checked draft request (its prompt, parameters and inputs), the lines the prompt must carry word for word, the locked model's request structure and
     the video model's entry of the model index. The judge chooses which samples' saved prompts to read, Loupe sends each one's saved prompts whole, and the answer is the final

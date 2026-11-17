@@ -1,6 +1,6 @@
 ## 2. Spawning
 For each video in allocation order, use the Agent tool with `subagent_type: "general-purpose"`, `model: "opus"`
-(the production agents run QC and judge: Opus 5.5, the user, 2026-10-28), `run_in_background: true` and description "Produce video NN". Keep at most 5 running; launch the
+(the production agents run QC: Opus 5.5, the user, 2026-10-28; the judge is Loupe's keeper, a separate Sonnet 5.5 session, the user, 2026-11-17), `run_in_background: true` and description "Produce video NN". Keep at most 5 running; launch the
 next one when an agent reports. **This prompt is the canonical agent contract.** At A9 the main session
 generates it with `T contract --run RUN [--notes "…"]` (the toolkit fills the placeholders from state.json, keeps the
 previous file beside it when it differs, and lists any placeholder it could not fill: no agent is spawned while one

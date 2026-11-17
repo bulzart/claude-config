@@ -110,7 +110,7 @@ It holds two things:
   in `state.json → higgsfield.declined_preset_id`, so every request carries it and `lint-run` knows it.
   Loupe also ships the same library as MCP tools (`mcp_server.py`: `qc_search`, `qc_get_sample`, `qc_brief`, `qc_consult`); that server is not registered in `~/.claude.json`, so the pipeline's agents reach the library only through `awl.py prompt-template`, `qc-consult`, `qc-brief`, `sample-prompts` and, for older runs, `plan-hints`.
 
-The judge writes the prompt template (the user, 2026-10-28). Loupe's keeper is the judge and runs on Opus 5.5; a Haiku data collector only
+The judge writes the prompt template (the user, 2026-10-28). Loupe's keeper is the judge and runs on Sonnet 5.5 (Opus 5.5 until 2026-11-17); a Haiku data collector only
 describes each sample's picture once and gives no verdict. X1–X4 come first: the plan, the pattern card, the pipeline's own request
 (the checked draft, with its must-carry lines in `40-briefs/video-NN-musts.md`) and the pre-generation check. Then, at X4b, the whole checked brief
 goes to the judge (`awl.py prompt-template --structure-file RUN/50-requests/video-NN-pattern.md`: the judge brief `40-briefs/video-NN-judge-brief.md`,
