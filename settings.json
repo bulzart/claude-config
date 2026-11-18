@@ -116,7 +116,7 @@
       "effortLevel": "xhigh"
     },
     "claude-sonnet-5-5": {
-      "effortLevel": "high",
+      "effortLevel": "medium",
       "autoCompactWindow": 850000
     },
     "claude-haiku-5-5": {
