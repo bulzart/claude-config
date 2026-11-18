@@ -90,6 +90,10 @@ silence is placed (§6 "Passages").
   differ on a detail, the line says what one source says and names it; the design note and the script count sources from the fact sheet's
   fetched ones, never from memory. A claim stronger than its sources is softened or cut before anything is recorded, while that costs a line.
 - **Told to hold, not only to inform** (§4b): the lines carry what the design made first decided; nothing is there only because it is true
-  and dull, and what is told as real is never invented to make it livelier (the truth rule).
+  and dull, and what is told as real is never invented to make it livelier (the truth rule). The lines are written to be heard (§4b
+  "A voice, not a lecture"): spoken words and short sentences in the references' register, the one person the story follows kept in view,
+  a dense stretch thinned of names or carried by a picture, and whatever comes after the payoff short (§4b "The shape of the watch");
+  the length is the story's, so a script that comes out shorter than the references' shortest because the tail was cut is kept as
+  it is, with the reason and the numbers in the brief, and never padded back.
 - The copy test (`creative-direction.md` §5.0) and the sharpness gate pass before the script is final.
 

@@ -45,5 +45,45 @@ will wonder and when it is answered; who or what they will come to care about; w
 and falls; where attention might drop and what changes there; where a viewer might join in or pass it on; what the pictures and the sound
 should do at each part. These are prompts for thinking, not requirements: a video may need none of them, or things not listed.
 
+**The viewer's seat: a watch that is enjoyable and easy, not a lecture** (the user, 2026-11-19, after asking for an honest 1 to 10 of a
+finished script, which got 6.5 for being correct and clever but dense and cold: "make the middle more visual ... give the viewer one person
+to root for ... find other tips and evaluate what we could do to make it more enjoyable and easygoing for the user and make it hooked, and
+not just make a hard history narration", and "generalize it for the whole pipeline niches no matter what it is they find out whats need to
+be done"). A script can be true, well sourced and well formed and still be hard to watch: the voice of a lecture, a stretch of names and
+dates, nobody to care about, a long tail after the payoff. The design (6a) works out, for this niche and subject, how the video will
+*play for a stranger who is only half paying attention*, and plans for it before any line is written; the fresh read (§13) then tells
+the plan, honestly, how it plays. These are things to find out and decide, never a checklist and never fixed answers; a niche whose
+references are solemn, brisk, playful or strange keeps their register (§0), and a video may need none of this:
+- **The shape of the watch.** Where the peak falls as a share of the length (the references' emotion peaks, §1, §2) and what the video
+  still has to say after it. Whatever follows the payoff has to earn its time: it answers a question the video itself opened, or it is
+  short. A run of consequences, background or "what happened next" after the payoff is where a stranger leaves, so it is told in a few
+  lines, or folded in before the peak, or dropped; a video that ends close to its peak and loops back is better than a complete one
+  that trails. A shorter video that holds beats a longer one padded to a number (§4 "The length"; the reason goes in the brief).
+- **Someone to follow.** A viewer stays for someone: a person with a want, an obstacle and a cost; a group; the thing under test; or the
+  viewer themself. Where the material is events, institutions or ideas, find who it is happening to and tell it through them, with
+  what they want, what is in the way, what waiting or acting costs, and a moment of doubt or fear where the sources hold one (their own
+  words and deeds before the narrator's description of them). Feelings are never invented for them: the stakes are told and the
+  viewer feels them, and what the sources do not hold is framed as the viewer's scenario ("what would you do?"), never as fact (the
+  truth rule). One person followed is usually enough; a cast of eight is a lecture.
+- **The dense stretches.** Read the script for where new names, dates, figures or terms arrive faster than a stranger can hold them (a
+  count by reading, or the forecast's digits, are facts; the call is yours). A dense stretch is given something besides words: fewer
+  names (the ones the next beat needs; the rest become "the ambassador", "the committee"), a picture or a drawn layer that carries its
+  structure (a route, a chain of cause and effect, a comparison: §5 "Drawings"), a human beat, or a change of tempo (a one-line beat
+  after a long one). Planned with the script and the pictures, never added at the end.
+- **What the viewer is wondering, and when it is answered.** Promise something concrete early (what the video will contain or how the
+  problem is solved), pay it off in stages, and open the next gap as one closes; none stays open so long that it is forgotten, and a
+  tease the video does not keep is a lie. A small payoff (a reveal, a twist, a surprise fact, a laugh) every minute or so, where the
+  material has one; the exact rhythm is the references' and the niche's, never a law (practitioner advice for narrated YouTube video
+  agrees on open loops, stakes in the first seconds and a pace that varies; none of it is research, so it is read as a prompt).
+- **A voice, not a lecture.** Written to be heard: short sentences, plain words, now and then a question put to the viewer or a "you"
+  where the references use them, a dry aside where the material itself is ironic or odd (the cheapest and truest humour is in the
+  sources: the polite wording of a secret, a favour that carried the plot, the slogan against the deed). Nothing forced or invented, and
+  the formal "it is dated", "it should be noted", a list of dates read out, or a sentence that reads like a footnote are what to rewrite.
+- **Something to look at** (§5): pictures that change what the eye sees (a place, an object, a face, a map, a change of scale), a
+  drawn explanation where the narration builds something, and a still that does nothing for its line is the first to be rethought.
+- **An honest rating.** The standing fresh read (§13) says, as a stranger who is not trying to be kind, how enjoyable and engaging the plan
+  would be to watch (1 to 10), where it would stop watching, whom it would follow and what it would cut; a rating is a feeling to read
+  with its reasons, never a score the plan has to reach and never a gate.
+
 **Never:** a design made after the script; a late rescue pass over a finished story; a made-up person or number told as real; a thing kept
 for being true that does nothing for the story.

@@ -23,8 +23,13 @@ as the user picked them, §11 and §11b, or the memory guard.
 read of the plan before the first generation a standing step, still with no judge"): before the first generation of each video (A6s step
 9), spawn a new agent that reads the finished plan cold, as a stranger on the feed would (the narration's text, the pictures' plan, the
 title, thumbnail and whatever else is published with the video), and reports where it would stop watching and what is unclear, flat,
-repetitive, unearned or untrue; you decide and fix, while a change still costs a line. It is a read, not a judge: no checklist, no verdict,
-no schedule of checkpoints. Beyond that one, when a second opinion is worth having, spawn one or more new agents (`subagent_type:
+repetitive, unearned or untrue; you decide and fix, while a change still costs a line. It is also asked, as a stranger who is not trying to be
+kind (the user, 2026-11-19: "just be honest"), for **an honest rating of 1 to 10 of how enjoyable and engaging the plan would be to
+watch**, with its reasons: where its attention would drop, whom it would follow (and if nobody, say so), which stretch is only
+information, what comes after the payoff that it would cut, and how it sounds (a person talking, or a lecture); the questions are the
+viewer's seat of §4b, put to it as questions and never as a list to tick. It is a read, not a judge: no checklist, no verdict, no pass
+mark (the rating is a feeling with its reasons, never a score the plan has to reach; a low one is a thing to look into, in the plan, while
+it costs a line), no schedule of checkpoints. Beyond that one, when a second opinion is worth having, spawn one or more new agents (`subagent_type:
 general-purpose`, `model: "opus"`) that know nothing of the working agent's context: give each the thing to look at and the standard to
 look at it by (the references' numbers where they apply, the hard rules), and never your reasoning, expectations or conclusions (a
 reviewer told what to find finds it). Several reviewers may look at the same thing in different ways: where they agree it is evidence,

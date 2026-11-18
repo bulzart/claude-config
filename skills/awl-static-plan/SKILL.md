@@ -85,7 +85,10 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    approach and how their stories are built, with their sources) as the first part of the blueprint; then, with that and what your
    research found as the context, work out what will make a stranger click, stay, feel something, finish and pass this video on, for this
    subject in this niche (alone, or with fresh agents given all the same context and left free to think: how many and with what focus
-   is your decision; each niche has its own logic, static §4b); keep a short note of what you decided and why
+   is your decision; each niche has its own logic, static §4b), including how the video will *play* for someone half paying
+   attention (static §4b "The viewer's seat": where the peak falls and how little follows it, who the story follows, which stretches
+   are dense and what carries them besides words, what stays open and when it is answered, a voice that sounds like a person, what
+   there is to look at); keep a short note of what you decided and why
    (`RUN/40-briefs/video-NN-blueprint.md`, any form), be skeptical of it, and, if a second opinion is worth having, have a fresh reviewer
    read it cold (static §13: no context of yours, no conclusions).
    **6b. Research again** wherever the design found a gap, sourced as static §3 says and written into the fact sheet.
@@ -159,7 +162,10 @@ Inputs: `RUN/20-analysis/static-spec.md` and the cards (A3–A4), the asset regi
    `RUN/40-briefs/video-NN-brief.md`. Ask what could be wrong with it. Then **one fresh reviewer reads the plan cold, a standing step** (static
    §13: a new agent with none of your context, given the narration's text, the pictures' plan, the title, thumbnail and the video's other
    published words, and the standard, never your reasoning; it reports where it would stop watching and what is unclear, flat, repetitive,
-   unearned or untrue); you decide and fix before anything is generated, and more reviewers only if you want them. A decision that would
+   unearned or untrue, and gives an honest 1 to 10 of how enjoyable and engaging the plan would be to watch, whom it would follow and what
+   it would cut: ask it to be honest, not kind, and write its rating and your answer to it into the brief); you decide and fix before
+   anything is generated (a script changed after a narration exists costs that narration's passages again, so the read comes before it),
+   and more reviewers only if you want them. A decision that would
    break a lock or a rule of this phase is undone.
 10. Show one line per video (number, subject, title, length, images, bed or none, the forecast pace) and go on without waiting.
 
