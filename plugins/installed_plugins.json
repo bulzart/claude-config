@@ -4,11 +4,11 @@
     "figma@claude-plugins-official": [
       {
         "scope": "user",
-        "installPath": "C:\\Users\\Bulzart\\.claude\\plugins\\cache\\claude-plugins-official\\figma\\2.2.157",
-        "version": "2.2.157",
+        "installPath": "C:\\Users\\Bulzart\\.claude\\plugins\\cache\\claude-plugins-official\\figma\\2.2.211",
+        "version": "2.2.211",
         "installedAt": "2026-08-23T18:17:26.341Z",
-        "lastUpdated": "2026-11-02T13:12:12.525Z",
-        "gitCommitSha": "f2789420e7e8b4e2465dfeb1e12e1fc6a31397e5"
+        "lastUpdated": "2026-11-18T19:18:27.430Z",
+        "gitCommitSha": "43a06ff1738935ad5c3d9b0437b5373aaf45cdc3"
       }
     ],
     "context7@anthropic-plugin-directory": [
