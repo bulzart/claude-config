@@ -533,3 +533,8 @@ operable )
 [C0002] stage probe: ok in 0.2 s (180.006 s 1920x1080 60.0 fps)
 [C0002] stage audio: ok in 0.3 s (360 windows)
 [C0002] stage sheets: ok in 26.4 s (240 frames, 8 sheets, leftovers 0)
+[C0004] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\kaicenat\20261118-161031-kaicenat\chunk-0004.mp4
+[C0004] stage move: ok in 0.0 s
+[C0004] stage probe: ok in 0.4 s (180.016 s 1920x1080 60.0 fps)
+[C0004] stage audio: ok in 1.1 s (361 windows)
+[report] 20261118-161025-xqc C0001: done in 144.6 s, $0.025
