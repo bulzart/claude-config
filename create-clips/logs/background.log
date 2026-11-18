@@ -485,3 +485,51 @@ operable )
 [watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); 2 processors: one takes the newest chunk (live), the others the oldest (backlog); Ctrl+C stops
 [watch] chunk reports: claude-haiku-5-5 (effort high), 2 at a time
 [watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)
+[watch] inbox C:\Users\Bulzart\Downloads\twitch-chunks -> runs C:\Users\Bulzart\Documents\stream-clips\runs (whisper: medium on cpu); 2 processors: one takes the newest chunk (live), the others the oldest (backlog); Ctrl+C stops
+[watch] chunk reports: claude-haiku-5-5 (effort high), 2 at a time
+[watch] ready alerts: a Windows notification when a run is fully processed (config notify; CC_NOTIFY=0 turns it off)
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\kaicenat\20261118-161031-kaicenat\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.2 s (44.021 s 1920x1080 59.999 fps)
+[C0001] stage audio: ok in 0.4 s (89 windows)
+[C0002] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\kaicenat\20261118-161031-kaicenat\chunk-0002.mp4
+[C0002] stage move: ok in 0.0 s
+[C0002] stage probe: ok in 0.2 s (15.2 s 1920x1080 29.999 fps)
+[C0002] stage audio: ok in 0.6 s (31 windows)
+[C0001] stage sheets: ok in 7.9 s (59 frames, 2 sheets, leftovers 0)
+[C0002] stage sheets: ok in 1.5 s (21 frames, 1 sheets, leftovers 0)
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0002] stage transcript: ok in 81.4 s (1 words, medium on cpu, 18.6 s, language en (fallback))
+[C0002] stage digest: ok in 0.0 s (16 seconds)
+[C0002] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.6, 'sheets': 1.5, 'transcript': 81.4, 'digest': 0.0}
+[watch] kaicenat/20261118-161031-kaicenat C0002 (backlog): done in 83.9 s {'move': 0.0, 'probe': 0.2, 'audio': 0.6, 'sheets': 1.5, 'transcript': 81.4, 'digest': 0.0} free 753.41 GB
+[C0001] stage transcript: ok in 98.2 s (75 words, medium on cpu, 34.6 s, language en (detected, now the run's language))
+[C0001] stage digest: ok in 0.0 s (45 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 7.9, 'transcript': 98.2, 'digest': 0.0}
+[watch] kaicenat/20261118-161031-kaicenat C0001 (live): done in 106.8 s {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 7.9, 'transcript': 98.2, 'digest': 0.0} free 753.39 GB
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\xqc\20261118-161025-xqc\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.2 s (179.984 s 1920x1080 60.0 fps)
+[C0001] stage audio: ok in 0.4 s (360 windows)
+[watch] a recording's session.json changed: the run's recording info is updated
+[report] 20261118-161031-kaicenat C0002: done in 57.0 s, $0.009
+[C0001] stage sheets: ok in 19.3 s (240 frames, 8 sheets, leftovers 0)
+[report] 20261118-161031-kaicenat C0001: done in 65.0 s, $0.012
+[C0003] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\kaicenat\20261118-161031-kaicenat\chunk-0003.mp4
+[C0003] stage move: ok in 0.0 s
+[C0003] stage probe: ok in 0.2 s (180.004 s 1920x1080 60.0 fps)
+[C0003] stage audio: ok in 0.4 s (360 windows)
+[C0003] stage sheets: ok in 17.4 s (240 frames, 8 sheets, leftovers 0)
+[C0001] stage transcript: ok in 79.0 s (201 words, medium on cpu, 79.0 s, language en (detected, now the run's language))
+[C0001] stage digest: ok in 0.0 s (180 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 19.3, 'transcript': 79.0, 'digest': 0.0}
+[watch] xqc/20261118-161025-xqc C0001 (live): done in 99.0 s {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 19.3, 'transcript': 79.0, 'digest': 0.0} free 752.9 GB
+[C0003] stage transcript: ok in 78.2 s (253 words, medium on cpu, 78.2 s, language en (forced))
+[C0003] stage digest: ok in 0.0 s (181 seconds)
+[C0003] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 17.4, 'transcript': 78.2, 'digest': 0.0}
+[watch] kaicenat/20261118-161031-kaicenat C0003 (backlog): done in 96.3 s {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 17.4, 'transcript': 78.2, 'digest': 0.0} free 753.08 GB
+[C0002] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\xqc\20261118-161025-xqc\chunk-0002.mp4
+[C0002] stage move: ok in 0.0 s
+[C0002] stage probe: ok in 0.2 s (180.006 s 1920x1080 60.0 fps)
+[C0002] stage audio: ok in 0.3 s (360 windows)
+[C0002] stage sheets: ok in 26.4 s (240 frames, 8 sheets, leftovers 0)
