@@ -23,31 +23,29 @@ Write `40-plans/video-NN/blueprint.json` and a compelling 1–2-page `outline.md
 
 Treat the title/thumbnail as the **opening contract**. The first 30–60 seconds should demonstrate that the video can deliver, not waste time introducing the channel. The intro can begin with an outcome, an intimate detail, a specific problem, a source discovery or a visually legible contradiction. Avoid a single mandatory “what if I told you ...” gimmick.
 
-## Deriving the niche's storytelling grammar
+## Three example niches — different dramaturgy, never a fixed formula
 
-Before choosing a premise, extract the narrative engine from the references themselves. Different niches create engagement through fundamentally different mechanisms. Never force one niche's formula onto another's material — and never default to a documentary-style structure simply because it is familiar.
+### How-to and scenario/problem-solving
 
-For any niche, study the references and answer these seven questions, writing the results into `20-analysis/niche-synthesis.md` before any creative work begins:
+Give useful progress early. Hook with a clearly recognizable failure or desired result; demonstrate the mechanism, show a common wrong approach and its consequence, walk through a realistic repair or technique, then test edge cases. Use real-world constraints and on-screen comparative diagrams; don't withhold all steps as a retention trick. An 8–15-minute lesson needs multiple practical examples, failure modes and a meaningful outcome, not repetitive motivational narration. Where an instruction has a safety or expertise boundary, state it promptly.
 
-1. **Source of curiosity** — what creates the carrying question? A decision under pressure, a skill gap, a revealed contradiction, a possibility space, an unsolved mystery?
-2. **Viewer's most valuable gain** — what do they arrive not knowing, and what matters most about what they leave with? Understanding, capability, wonder, a changed perspective, closure?
-3. **Forward motion** — what pulls each section into the next? Revelation, demonstration, escalation, complication, evidence, argument, discovery, or the earned payoff of an earlier planted detail?
-4. **Participation moments** — when does the viewer get to infer, predict, feel, or think independently rather than just receive? Where can the story slow down and let them arrive at something themselves?
-5. **Visual language** — what visuals are native to this niche and do useful explanatory or emotional work? Maps, diagrams, artifacts, faces, scale comparisons, process shots, before/after contrasts?
-6. **Natural emotional arc** — what is the full emotional experience from opening to close? Suspense→resolution, confusion→clarity, problem→skill, speculation→insight, awe→understanding?
-7. **Niche-specific failure modes** — what kills engagement specifically in this type of content, based on the weakest moments in the references studied?
+Possible route: concrete frustrated moment → diagnosis → smallest successful fix → why it works → tricky case → what to do next. Other routes, such as a live experiment or suspenseful troubleshooting, are equally valid when better for the topic.
 
-The answers become a creative grammar earned from the actual material, not borrowed from a generic template. If the references show no clean grammar — because they mix incompatible niches, durations, or audiences — split them and treat each cohort independently before writing a niche brief.
+### History, including military history
 
-### Three illustrated applications
+The most engaging question may be: what did the people involved actually know, what decision was available, what did that decision cost, and what changed because of it? Let maps, terrain, distance, material conditions, chronology, logistics, political context and imperfect information create tension. Use identifiable human stakes but don't invent diary lines, dialogue, motives, casualty counts or impossible eyewitness perspectives. Separate documented actions, disputed interpretations and creative reconstructed illustration. Protect against anachronistic clothing, wrong insignia, misdated equipment and impossible travel.
 
-The following are worked examples of this process, not prescriptions. If the reference folder contains none of these niches, derive the grammar the same way from what is actually there.
+The format can be an object-led investigation, battle/decision reconstruction, a misunderstood logistical problem, the path of one ordinary witness, an unexpected turning point, or a comparison of rival interpretations. History should feel alive without becoming fiction sold as fact. Avoid glamorizing harm; choose appropriate sensitivity for a general audience.
 
-**How-to and problem-solving:** Curiosity comes from a recognizable gap between current state and desired result. Forward motion comes from demonstration, failure modes, and repair. The viewer is mentally applying each step to their own situation. Failure mode: withholding useful steps as a retention trick, or defining terms without solving a real problem.
+### What-if and counterfactual explainers
 
-**History, including military history:** Curiosity comes from imperfect information and consequential decisions. Forward motion comes from revealed constraints, costs of choices, and changing stakes. The viewer reconstructs what was knowable at a given moment. Failure mode: listing events without human stakes, inventing motives or dialogue, anachronistic details that break credibility.
+State the **single changed assumption** clearly. Set real-world baseline and known constraints. Trace first-order effects, then second-order consequences, feedback loops and at least one plausible competing branch. Give the viewer a framework to think with, not confident pronouncements about imaginary timelines. Show a branching timeline and visually mark the point where historical fact ends and the hypothetical begins. Use humor, thought experiments and everyday analogies if they illuminate. Land on the real lesson learned by exploring the counterfactual.
 
-**What-if and counterfactual:** Curiosity comes from a changed assumption and its logical consequences. Forward motion comes from tracing first-order then second-order effects, with uncertainty clearly marked. The viewer tests the logic against their own assumptions. Failure mode: confident pronouncements about imaginary timelines, or second-order effects that ignore known constraints.
+An alternative may be to begin with a startling predicted consequence and work backwards through assumptions, or to stage an argument between competing models with explicit uncertainties. The key is testable logic, not loud speculations.
+
+### Other niches
+
+Infer their storytelling grammar from *relevant* references rather than forcing the above three outlines on them. A personal story, science explainer, reflective essay or invented fable may succeed through voice, structure and insight more than dense graphics. Choose what fits audience, promise, level of evidence and duration.
 
 ## Research that supports creativity without turning into a hard documentary
 
