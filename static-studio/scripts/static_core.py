@@ -596,13 +596,29 @@ def plan_facts(rd, video):
     forecast = round(words * 60 / pace + pause_s, 2) if pace else 0
     if not pace:
         issues.append('script_missing_narration_pace')
+    # planned_pauses_s (pause_after_s) is an authoring intent, never actually sent to ElevenLabs
+    # (chunks_for_lines does not transmit it); forecast_s above is therefore only a rough
+    # word-count-vs-pace sanity check. The REAL total duration also includes ElevenLabs' own
+    # natural inter-sentence breathing, which planned pauses do not predict. Once a voice has a
+    # real measured overhead (60-voice/voice-lock.json -> measured_overhead_s/_lines, recorded
+    # from an actual generation's real duration minus its pure-speaking time), report a second,
+    # more accurate forecast using that -- this is the number to trust once it exists.
+    voice_lock = read_json(rd / '60-voice' / 'voice-lock.json')
+    real_forecast = None
+    if voice_lock.get('measured_overhead_s') and voice_lock.get('measured_overhead_lines') and lines:
+        overhead_per_line = voice_lock['measured_overhead_s'] / voice_lock['measured_overhead_lines']
+        real_pace = voice_lock.get('measured_wpm') or pace
+        real_forecast = round(words * 60 / real_pace + overhead_per_line * len(lines), 2) if real_pace else None
+        if real_forecast is not None and abs(real_forecast - lock['target_length_s']) > max(10, .08 * lock['target_length_s']):
+            issues.append('real_overhead_forecast_misses_locked_length_by_over_8pct')
     if abs(forecast - lock['target_length_s']) > max(10, .08 * lock['target_length_s']):
         issues.append('script_forecast_misses_locked_length_by_over_8pct')
     if not (vd / 'editorial-review.md').exists():
         issues.append('editorial_review_missing')
     return {'ready': not issues, 'issues': issues, 'script_lines': len(lines), 'words': words,
             'planned_pauses_s': round(pause_s, 2), 'narration_pace_wpm': pace,
-            'forecast_s': forecast, 'locked_target_s': lock['target_length_s'],
+            'forecast_s': forecast, 'real_overhead_forecast_s': real_forecast,
+            'locked_target_s': lock['target_length_s'],
             'target_words_without_pauses': round(lock['target_length_s'] * pace/60) if pace else None}
 
 
@@ -932,10 +948,14 @@ def cmd_tts(args):
         voice_settings = json.loads(args.settings) if args.settings else {}
     except ValueError as exc:
         error('--settings must be valid JSON (e.g. \'{"stability": 0.7, "similarity_boost": 0.8}\').', str(exc))
+    # Per-model allowed settings, from each model's own capability flags (GET /v1/models):
+    # eleven_v4: can_use_style=false, can_use_speaker_boost=false -- only stability/similarity_boost.
+    model_allowed_settings = {'eleven_v4': ('stability', 'similarity_boost')}
+    allowed = model_allowed_settings.get(args.model_id, ('stability', 'similarity_boost', 'style',
+                                                          'use_speaker_boost', 'speed'))
     for key, val in voice_settings.items():
-        if key not in ('stability', 'similarity_boost', 'style', 'use_speaker_boost', 'speed'):
-            error(f'Unknown voice setting {key!r}.', {'allowed': ['stability', 'similarity_boost', 'style',
-                  'use_speaker_boost', 'speed']})
+        if key not in allowed:
+            error(f'Model {args.model_id!r} does not take voice setting {key!r}.', {'allowed': list(allowed)})
     delivery_overhead = len(args.delivery) + 1 if args.delivery else 0
     if not args.execute:
         emit({'ok': True, 'mode': 'dry_run_no_charges', 'video': args.video,
@@ -957,8 +977,16 @@ def cmd_tts(args):
                         if not ((i + 1) in existing.get('finished_parts', [])
                         and (narrdir / f'part-{i+1:03d}.mp3').is_file()
                         and (narrdir / f'part-{i+1:03d}.mp3').stat().st_size > 1024)]
-    budget = preflight_elevenlabs_balance(key, sum(len(c['text']) for c in remaining_chunks) + delivery_overhead * len(remaining_chunks),
+    if not (0.1 <= args.assume_cost_ratio <= 1.0):
+        error('--assume-cost-ratio must be from 0.1 to 1.0 (1.0 = trust the model\'s documented '
+              'character_cost_multiplier; below 1.0 is an explicit, auditable override for a '
+              'ratio you personally verified against real billing deltas this session).')
+    raw_remaining_chars = sum(len(c['text']) for c in remaining_chunks) + delivery_overhead * len(remaining_chunks)
+    budget = preflight_elevenlabs_balance(key, round(raw_remaining_chars * args.assume_cost_ratio),
                                          args.credit_safety_factor) if remaining_chunks else {'remaining_script_characters': 0}
+    if remaining_chunks:
+        budget['raw_characters_before_ratio'] = raw_remaining_chars
+        budget['assumed_cost_ratio'] = args.assume_cost_ratio
     manifest = {**spec, 'status': 'partial', 'created_at': existing.get('created_at', now()),
                 'credit_preflight': budget, 'delivery': args.delivery or None, 'voice_settings': voice_settings or None,
                 'finished_parts': existing.get('finished_parts', [])}
@@ -1225,6 +1253,12 @@ def main():
                    '(stability 0.5), which the docs say widens randomness/variability between generations.')
     p.add_argument('--credit-safety-factor', type=float, default=1.15,
                    help='Character-allowance reserve, not a promise of credit price (default 1.15)')
+    p.add_argument('--assume-cost-ratio', type=float, default=1.0,
+                   help='0.1-1.0, default 1.0 (trust the model\'s documented character_cost_multiplier). '
+                   'Below 1.0 is an explicit override of the preflight\'s required balance for a ratio '
+                   'of real-billed-to-raw-characters you personally verified this session (e.g. from a '
+                   'probe\'s own before/after subscription delta) -- never guessed, always auditable in '
+                   'the manifest\'s credit_preflight.assumed_cost_ratio.')
     p.set_defaults(func=cmd_tts)
     p = sub.add_parser('audio-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_audio_check)
