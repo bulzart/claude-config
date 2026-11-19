@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""capcut_tools.py - write and repair the CapCut project of a Static Studio video on this PC (CapCut 9.7, capcut-cli 0.25).
+"""capcut_tools.py - write and repair the CapCut project of a Static Studio video on this PC.
 
 One command per call; every call prints one JSON object on its last line (exit 0 ok, 1 a step failed, 2 refused, 3 CapCut is running).
 Commands: capcut-name | capcut-prep | capcut-repair | capcut-motion | capcut-transitions | capcut-font | capcut-text-anim.

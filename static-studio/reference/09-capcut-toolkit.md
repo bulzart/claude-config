@@ -6,7 +6,7 @@ Call it as `python "$HOME/.claude/static-studio/scripts/capcut_tools.py" <comman
 
 ## What this PC's CapCut needs (why these commands exist)
 
-- **CapCut must be closed** for any write. If it is open when the project is due, finish everything else, tell the user once to close it, and do not close it yourself. The commands refuse and change nothing.
+- **CapCut must be closed** for any write. Check before cloning with `tasklist /FI "IMAGENAME eq CapCut.exe" /NH` (what the commands do themselves); `capcut_read_timeline` also answers `capcutRunning`, and `capcut_list_drafts` a `locked` flag per draft. If it is open when the project is due, finish everything else, tell the user once to close it, and do not close it yourself. The commands refuse and change nothing.
 - **Media links.** CapCut 9.7 opens a local clip through the `local_material_id` of its entry in the project's media list; without it every clip shows as missing. `capcut-repair` writes the entries and the links.
 - **Moves.** CapCut 9.7 ignores the MCP's scale keyframes (a project keyed that way played every still static). `capcut-motion` writes the scale and position keyframes it does play, so use it for moves instead of `capcut_add_keyframe`.
 - **Transitions and text entrances** come only from the measured catalogue `STUDIO/data/capcut-catalogue.md`, which lists what this PC's CapCut really draws. This PC has no CapCut Pro and a project that holds a Pro option will not export, so a Pro option is refused too (`STUDIO/config.json` → `capcut.pro` is false). Use `capcut-transitions` for joins instead of `capcut_add_transition`.
@@ -15,14 +15,16 @@ Call it as `python "$HOME/.claude/static-studio/scripts/capcut_tools.py" <comman
 
 ## The order
 
+Steps 5 and 6 are only for what the edit has (moves, joins, fonts, text entrances): a project without them goes from step 4 to step 7.
+
 1. `capcut-name --video NN` answers with a free project `name` (`DD_Mon_YYYY_vNN`, `-2`, `-3` when the folder exists) and its full `path`. That path is the `--draft` of every command below.
 2. MCP `capcut_clone_draft {base: "_analyze-stack-template", newName: "<name>", empty: true}`: the empty template. Never edit or delete the template.
 3. `capcut-prep --draft "<path>" --canvas 1920x1080` **immediately**, before any other call on the draft. It sets the template's identity files aside so the project can be registered, and sets the canvas (even edges).
-4. MCP: `capcut_read_timeline` (the track indexes), `capcut_add_image` (`atSec`, `durSec`), `capcut_add_audio` (the narration at 0; a music bed needs `capcut_add_track` type audio first and its `trackIndex`, else it lands on the narration's track and `capcut_validate` refuses the overlap), `capcut_add_text` as needed, `capcut_validate`, `capcut_save`. **This is the last MCP save**: the commands below write the project's files, and a later MCP save writes its own copy over them (then run them again).
+4. MCP (the tool names are the ones this PC's CapCut MCP lists now; look them up first, as manual 05 says): `capcut_read_timeline` (the track indexes), `capcut_add_image` (`atSec` and `durSec` are the shot plan's audio-linked start and length, manual 04's `shot-plan.json`), `capcut_add_audio` (the narration at 0; a music bed needs `capcut_add_track` type audio first and its `trackIndex`, else it lands on the narration's track and `capcut_validate` refuses the overlap), `capcut_add_text` as needed, `capcut_validate`, `capcut_save`. **This is the last MCP save**: the commands below write the project's files, and a later MCP save writes its own copy over them (then run them again).
 5. Moves and joins: write the images file (below), then `capcut-motion --draft "<path>" --timeline FILE` and `capcut-transitions --draft "<path>" --timeline FILE`.
-6. Texts: `capcut-font --list [--family NAME]`, then `capcut-font --draft "<path>" --font-file FILE [--track NAME]`. It sets the font on every text (or one track's) and writes the outline and box where CapCut 9.x draws them; read `font_missing_glyphs` (characters the font lacks; when it is not empty pick another font). Then `capcut-text-anim --draft "<path>" [--track NAME] --intro SLUG [--intro-duration S] [--outro SLUG]`: CapCut's own entrance on every text of the track, slugs from `capcut enums --text-intros`, capped at each text's length.
+6. Texts: `capcut-font --list [--family NAME]`, then `capcut-font --draft "<path>" --font-file FILE [--track NAME]`. It sets the font on every text (or one track's) and writes the outline and box where CapCut 9.x draws them; read `font_missing_glyphs` (characters the font lacks; when it is not empty pick another font). Then `capcut-text-anim --draft "<path>" [--track NAME] --intro SLUG [--intro-duration S] [--outro SLUG]`: CapCut's own entrance on every text of the track, capped at each text's length. `capcut enums --text-intros` lists the slugs and `STUDIO/data/capcut-catalogue.md` says which this PC's CapCut draws and which are Pro; a refused slug is reported with its reason.
 7. `capcut-repair --draft "<path>"`: register (identity, media list, store index), the media links, `sync-timelines --nested` and `lint`, under the machine-wide store lock (it waits up to 15 minutes for another toolkit that holds it). Every text stays as it is. `ok: false` with an `action` means CapCut is running or lint found errors: fix through the MCP, `capcut_save`, then repeat steps 5–7. `--preview OUT.mp4` also renders capcut-cli's low-resolution proxy of the order, timing and text: a proxy, **never an export**.
-8. Read the project back (`capcut_read_timeline` and the lint result) and write `70-edit/video-NN/timeline.json` from it, as manual 05 says.
+8. Read the project back (`capcut_read_timeline` and the lint result), write `70-edit/video-NN/timeline.json` from it and run `static_core.py timeline-check`, as manual 05 says.
 
 ## The images file (for `capcut-motion` and `capcut-transitions`)
 
@@ -32,15 +34,16 @@ Write it from the shot plan, for example as `RUN/70-edit/video-NN/capcut-images.
 {"fps": 30, "images": [
   {"image": 1, "start": 0.0,  "motion": "zoom-in",   "amount": 0.06},
   {"image": 2, "start": 6.0,  "motion": "pan-right", "amount": 0.05, "transition": "mix", "trans_s": 0.5},
-  {"image": 3, "start": 12.0, "scale": [1.0, 1.08], "x": [0.0, 0.03], "y": [0.0, 0.0]}
+  {"image": 3, "start": 12.0, "motion": "custom", "scale": [1.0, 1.08], "x": [0.0, 0.03], "y": [0.0, 0.0]}
 ]}
 ```
 
-- `image` is the clip's number in order. `start` is its start on the main track in seconds: a clip is found by its start (within half a frame), so these must be the starts the clips really have. `images_without_a_clip` in the answer must be empty.
-- `motion` is `none`, `zoom-in`, `zoom-out`, `pan-left`, `pan-right`, `pan-up` or `pan-down`. `amount` is the zoom's change (0.06 = 6 %), or for a pan the scale it travels at. There is no default amount: without one nothing moves. `scale`, `x` and `y` as `[at the start, at the end]` pairs replace the named motion: scale 1 = the picture covers the canvas, `x` and `y` = the picture's centre in half-canvas units (x to the right, y up). Keep a pan or a zoom inside the margin its scale gives, or the picture's edge shows.
+- Every row needs `image`, `start` and `motion` (`none` for a clip that stays still); `amount`, `transition` and `trans_s` are optional. A clip with no row is left as it is.
+- `image` is the clip's number in order. `start` is its start on the main track in seconds, the same `atSec` it was added at: a clip is found by its start (within half a frame), so these must be the starts the clips really have. `images_without_a_clip` in the answer must be empty.
+- `motion` is `none`, `zoom-in`, `zoom-out`, `pan-left`, `pan-right`, `pan-up` or `pan-down`. `amount` is the zoom's change (0.06 = 6 %), or for a pan the scale it travels at. There is no default amount: without one nothing moves. `scale`, `x` and `y` together (all three) as `[at the start, at the end]` pairs replace the named motion (give `motion` any label then, such as `custom`): scale 1 = the picture covers the canvas, `x` and `y` = the picture's centre in half-canvas units (x to the right, y up). Keep a pan or a zoom inside the margin its scale gives, or the picture's edge shows.
 - `transition` is a slug from `capcut enums --transitions` and plays into this image, on the clip before it, for `trans_s` seconds (default 0.5). `cut` or none = no transition. A refused slug is listed in `failed` with its reason.
 - Both commands can run again: `capcut-motion` replaces its own keyframes, `capcut-transitions` keeps a clip that already has one.
 
 ## Not covered
 
-Overlay clips, effects and caption building are not part of this toolkit: use the MCP and capcut-cli as manual 05 says, then run `capcut-repair`. No tool exports a CapCut project; the export is the user's.
+Adding overlay clips, effects and caption tracks is not part of this toolkit: use the MCP and capcut-cli as manual 05 says (`capcut_add_text` for a text). `capcut-font`, `capcut-text-anim` and `capcut-repair` then work on whatever texts and clips they find. No tool exports a CapCut project; the export is the user's.
