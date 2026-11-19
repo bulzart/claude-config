@@ -466,24 +466,69 @@ def cmd_length(args):
     if target < st['min_longform_s']:
         error('Target is shorter than long-form minimum configured for this run',
               {'target_s': target, 'minimum_s': st['min_longform_s']})
+    computed_wpm, per_ref_wpm = compute_ref_wpm(rd, refs, family)
+    if args.pace_wpm is not None:
+        pace_wpm = args.pace_wpm
+        pace_wpm_source = 'explicit'
+    elif computed_wpm is not None:
+        pace_wpm = computed_wpm
+        pace_wpm_source = 'computed_from_refs'
+    else:
+        error('Cannot determine pace_wpm: no transcripts found in 10-media/ for the selected refs. '
+              'Run prepare first, or pass --pace-wpm explicitly.')
     lock = {'schema': SCHEMA, 'video': f'{int(args.video):02d}', 'mode': args.mode,
             'target_length_s': target, 'tolerance_audio_pct': 0.04, 'tolerance_export_pct': 0.025,
             'niche': effective_niche, 'story_form': effective_form, 'reference_ids': refs,
             'reference_durations_s': {i: family[i]['duration_s'] for i in refs},
-            'language': args.language, 'pace_wpm': args.pace_wpm,
+            'language': args.language, 'pace_wpm': pace_wpm, 'pace_wpm_source': pace_wpm_source,
+            'per_ref_wpm': per_ref_wpm,
             'locked_at': now(), 'rule': 'Immutable unless user explicitly approves a revised length.'}
     write_json(lockfile, lock)
     st['selected_niche'] = effective_niche
     st['video_count'] = max(st.get('video_count', 0), int(args.video))
     st['stage'] = 'planning'
     write_json(rd / 'state.json', st)
+    wpm_note = (f'pace_wpm={pace_wpm} (computed from refs: {per_ref_wpm})'
+                if pace_wpm_source == 'computed_from_refs'
+                else f'pace_wpm={pace_wpm} (explicit override)')
     emit({'ok': True, 'lock_file': str(lockfile), 'locked_target_s': target, 'minutes': round(target/60, 2),
           'niche': effective_niche, 'story_form': effective_form, 'references': refs,
-          'guidance': 'Script, beat map, narration, timeline and export must respect this exact locked target.'})
+          'pace_wpm': pace_wpm, 'pace_wpm_source': pace_wpm_source, 'per_ref_wpm': per_ref_wpm,
+          'target_words': round(target * pace_wpm / 60),
+          'guidance': (f'Script, beat map, narration, timeline and export must respect this exact locked target. '
+                       f'{wpm_note}. Write the script to ~{round(target * pace_wpm / 60)} words.')})
 
 
 def count_words(text):
     return len(re.findall(r"\b[\w]+(?:[-'][\w]+)*\b", text, flags=re.UNICODE))
+
+
+def strip_transcript_timestamps(raw):
+    """Remove [start-end] timestamp prefixes (e.g. [0.0-2.4]) from transcript lines."""
+    lines = []
+    for line in raw.splitlines():
+        cleaned = re.sub(r'^\s*\[[\d.]+\s*[-–]\s*[\d.]+\]\s*', '', line)
+        if cleaned.strip():
+            lines.append(cleaned)
+    return ' '.join(lines)
+
+
+def compute_ref_wpm(rd, refs, family):
+    """Average WPM from the reference transcripts for the selected refs.
+    Returns (rounded_wpm, per_ref_dict) or (None, {}) if no transcripts found.
+    Strips timestamp prefixes (e.g. [0.0-2.4]) before counting to avoid inflation."""
+    per_ref = {}
+    for vid in refs:
+        tfile = rd / '10-media' / vid / 'transcript.txt'
+        dur_s = family[vid].get('duration_s', 0)
+        if tfile.exists() and dur_s > 0:
+            raw = tfile.read_text(encoding='utf-8', errors='replace')
+            text = strip_transcript_timestamps(raw)
+            wc = count_words(text)
+            per_ref[vid] = round(wc / (dur_s / 60))
+    if not per_ref:
+        return None, {}
+    return round(statistics.mean(per_ref.values())), per_ref
 
 
 def plan_facts(rd, video):
@@ -884,7 +929,7 @@ def main():
     p.add_argument('--story-form', default=''); p.add_argument('--cohort-id', default='')
     p.add_argument('--refs', default='')
     p.add_argument('--minutes', type=float); p.add_argument('--language', default='en');
-    p.add_argument('--pace-wpm', type=float, default=145); p.set_defaults(func=cmd_length)
+    p.add_argument('--pace-wpm', type=float, default=None); p.set_defaults(func=cmd_length)
     p = sub.add_parser('plan-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_plan_check)
     p = sub.add_parser('tts'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)

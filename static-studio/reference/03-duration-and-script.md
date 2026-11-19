@@ -12,18 +12,20 @@ Example:
 python "$HOME/.claude/static-studio/scripts/static_core.py" cohorts --run "RUN"
 python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
   --mode standard --niche "military history" --story-form "historical narrative" \
-  --refs V004,V005,V006 --language en --pace-wpm 143
+  --refs V004,V005,V006 --language en
 ```
+
+Do **not** pass `--pace-wpm` manually. The `length` command computes it automatically from the word counts and durations of the selected reference transcripts in `10-media/`. The computed value and a per-reference breakdown are stored in `length-lock.json` and printed in the output. The lock also reports the script's target word count (`target_words`). Only override with `--pace-wpm` if you are explicitly calibrating to a specific narrator sample and have a measured reason to diverge from the references.
 
 The locked Standard is the comparable cohort **median** rounded to five seconds. Own length uses `--mode own --minutes 18`. Neither can be changed automatically by audio/edit outputs. If the subject genuinely cannot fill the requested runtime with meaning, research a richer adjacent angle or ask the user **before paid generation** whether to explicitly revise length; document revision, do not silently overwrite the original lock. The CLI deliberately rejects overwriting a lock; new video ID/new plan or an explicit, auditable manual revision is required.
 
 ## Length arithmetic in service of quality, not padding
 
-An English conversational narration can often be estimated with an explicitly chosen words-per-minute pace, but **measure the selected reference voices and the narrator's sample**. Other languages need their own pacing method; a whitespace word count is not a reliable timing model for every script. Include planned meaningful silence and reaction space as seconds, not a blanket slowdown of the entire voice. A simple budget is:
+An English narration pace varies significantly by niche. The `length` command measures it from the selected reference transcripts and stores the result as `pace_wpm` in `length-lock.json` — use that number, not a generic estimate. Never assume 143–145 WPM as a planning default: real YouTube narrators typically speak at 170–210 WPM depending on style (compressed-history ~185, pov-military-narrative ~198, psychology-explainer ~200). Using a low estimate produces a script hundreds of words short of target.
 
-`expected_s = (number_of_narrated_words × 60 / expected_WPM) + planned_pause_s`
+`expected_s = (number_of_narrated_words × 60 / pace_wpm) + planned_pause_s`
 
-If an intended 12:00 narration runs at about 145 WPM and has 16 seconds of meaningful pause, it needs roughly `(720 - 16) × 145 / 60 ≈ 1701 words`. A 430-word script will not magically become 12 minutes by giving every image a slow zoom. For per-language estimates with characters or syllables, manually calibrate the voice sample and record an alternate estimate; do not mislabel English WPM as native pacing. Generated audio is ultimately authoritative, with hard checks after creation.
+The `length` command output includes `target_words = target_s × pace_wpm / 60`. Write the script to that word count. A 430-word script will not magically become 12 minutes by giving every image a slow zoom. For per-language estimates with characters or syllables, manually calibrate the voice sample and record an alternate estimate; do not mislabel English WPM as native pacing. Generated audio is ultimately authoritative, with hard checks after creation.
 
 Use **content-rich length**: chapters earn runtime through explanation, examples, cause-and-effect, character decisions, counterarguments, concrete research and room to think. If an agent is short by 900 words, don't append 900 words of reiteration; identify missing substance and revise the chapter questions.
 
