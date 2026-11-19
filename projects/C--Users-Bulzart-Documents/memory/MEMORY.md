@@ -96,3 +96,4 @@
 - [Static: a watch, not a lecture](awl-static-viewers-seat-not-a-lecture.md) — user 2026-11-19: honest 1-10 by a cold reader, short tail after the payoff, one person to follow, dense stretches carried by pictures; read ALL of static before editing; in static §4b/§13
 - [/create-video command](create-video-command.md) — 2026-11-19: zip's static-only command, logic untouched; PC fixes + awl's CapCut CODE (capcut_tools.py, e2e 24/24); paid TTS, CapCut GUI not verified
 - [CapCut auto-update BLOCKED](capcut-autoupdate-blocked.md) — user 2026-11-19: CapCut self-updated to 9.8.0.4213 (11-16); blocked via static-studio/maintenance/capcut_autoupdate.py; `unblock` only on the user's say
+- [WPM: measure from transcripts, never estimate](wpm-calibrate-from-transcripts.md) — before pace_wpm in script.json, compute word_count/duration for each niche cluster's refs; default estimates are dangerously low (143 vs actual 198 for pov-military-narrative)
