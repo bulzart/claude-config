@@ -15,7 +15,7 @@ For every beat, make a **visual argument sheet** `shot-plan.json`, each segment 
 - **Breathe / reflect:** an evocative image held long enough for thought, rather than continuous informational strain.
 - **Callback:** return to an earlier object/detail and visibly resolve or deepen it.
 
-No requirement that every category appear every minute. A slow map animation is valuable when tracking route/constraints; decorative sparkle is not. Select the rhythm from references of the same niche+runtime family, then adapt. A 14-minute thoughtful history film needn't cut at the rate of a TikTok Short.
+No requirement that every category appear every minute. A slow map animation is valuable when tracking route/constraints; decorative sparkle is not. Select the rhythm from comparable references in the same cluster, then adapt. A 14-minute thoughtful history film needn't cut at the rate of a TikTok Short.
 
 ## Static plus subtle motion (image-led, no forced video generation)
 

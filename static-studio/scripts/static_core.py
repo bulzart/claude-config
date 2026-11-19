@@ -372,19 +372,28 @@ def cmd_cohorts(args):
         duration = vids[vid].get('duration_s')
         if not duration:
             continue
+        cid = str(card.get('cohort_id') or '').strip().lower()
+        if cid:
+            groups.setdefault(('__cohort__:' + cid, ''), []).append((vid, duration))
         for niche in card.get('niches') or []:
             family = (str(niche).strip().lower(), str(card.get('story_form') or '').strip().lower())
             groups.setdefault(family, []).append((vid, duration))
     summaries = []
-    for (niche, form), members in sorted(groups.items()):
+    for (key, form), members in sorted(groups.items()):
         vals = sorted(t for _, t in members)
         med = statistics.median(vals)
-        summaries.append({'niche': niche, 'story_form': form, 'references': [ident for ident, _ in members],
-                          'n': len(vals), 'min_s': round(vals[0], 1), 'median_s': round(med, 1),
-                          'mean_s': round(statistics.mean(vals), 1), 'max_s': round(vals[-1], 1),
-                          'spread_ratio': round(vals[-1] / vals[0], 2),
-                          'longform_refs': [id for id, t in members if t >= st['min_longform_s']],
-                          'warning': ('MIXED_RUNTIME_FAMILIES_SELECT_COMPARABLE_IDS' if vals[-1]/vals[0] > 1.8 else None)})
+        entry = {'references': [ident for ident, _ in members],
+                 'n': len(vals), 'min_s': round(vals[0], 1), 'median_s': round(med, 1),
+                 'mean_s': round(statistics.mean(vals), 1), 'max_s': round(vals[-1], 1),
+                 'spread_ratio': round(vals[-1] / vals[0], 2),
+                 'longform_refs': [id for id, t in members if t >= st['min_longform_s']],
+                 'warning': ('MIXED_RUNTIME_FAMILIES_SELECT_COMPARABLE_IDS' if vals[-1]/vals[0] > 1.8 else None)}
+        if key.startswith('__cohort__:'):
+            entry['cohort_id'] = key[len('__cohort__:'):]
+        else:
+            entry['niche'] = key
+            entry['story_form'] = form
+        summaries.append(entry)
     write_json(rd / '20-analysis/cohorts/index.json', {'groups': summaries, 'unresolved': issues, 'at': now()})
     emit({'ok': not issues, 'groups': summaries, 'missing_cards_or_fields': issues,
           'warning': 'Patterns and duration must be selected from comparable references, not averaged across unrelated niches.'}, 2 if issues else 0)
@@ -411,22 +420,35 @@ def cmd_length(args):
     vids, cards, issues = card_set(rd)
     if issues:
         error('Analyze all reference videos before choosing length', issues)
-    niche = args.niche.strip().lower()
-    form = args.story_form.strip().lower()
-    family = {i: vids[i] for i, c in cards.items()
-              if niche in [str(x).lower() for x in c.get('niches') or []]
-              and str(c.get('story_form', '')).lower() == form}
-    if not family:
-        error('No references in selected niche and story form', {'niche': niche, 'form': form})
-    if st.get('selected_niche') and st['selected_niche'] != niche:
+    cohort_id = (getattr(args, 'cohort_id', None) or '').strip().lower()
+    niche_arg = (args.niche or '').strip().lower()
+    form_arg = (args.story_form or '').strip().lower()
+    if not cohort_id and not (niche_arg and form_arg):
+        error('Provide either --cohort-id or both --niche and --story-form')
+    if cohort_id:
+        family = {i: vids[i] for i, c in cards.items()
+                  if str(c.get('cohort_id', '')).strip().lower() == cohort_id}
+        if not family:
+            error('No references with that cohort_id in their cards', {'cohort_id': cohort_id})
+        effective_niche = '__cohort__:' + cohort_id
+        effective_form = ''
+    else:
+        family = {i: vids[i] for i, c in cards.items()
+                  if niche_arg in [str(x).lower() for x in c.get('niches') or []]
+                  and str(c.get('story_form', '')).lower() == form_arg}
+        if not family:
+            error('No references in selected niche and story form', {'niche': niche_arg, 'form': form_arg})
+        effective_niche = niche_arg
+        effective_form = form_arg
+    if st.get('selected_niche') and st['selected_niche'] != effective_niche:
         error('This run is one niche/channel only. Use clone for a different niche.',
-              {'locked_niche': st['selected_niche'], 'requested': niche})
+              {'locked_niche': st['selected_niche'], 'requested': effective_niche})
     refs = normalize_refs(args.refs)
     if args.mode == 'standard':
         if len(refs) < 2:
             error('Standard requires >=2 explicitly selected comparable reference IDs (no mixed-folder averages).')
         if any(x not in family for x in refs):
-            error('A selected reference is not in the same niche/story form', refs)
+            error('A selected reference is not in the selected group', refs)
         durations = [family[i]['duration_s'] for i in refs]
         if min(durations) < st['min_longform_s']:
             error('Standard cohort contains short-form; select long-form references only.', durations)
@@ -440,23 +462,23 @@ def cmd_length(args):
         if not refs:
             refs = list(family)
         if any(x not in family for x in refs):
-            error('An own-length reference must still match selected niche/story form.', refs)
+            error('An own-length reference must still match the selected group.', refs)
     if target < st['min_longform_s']:
         error('Target is shorter than long-form minimum configured for this run',
               {'target_s': target, 'minimum_s': st['min_longform_s']})
     lock = {'schema': SCHEMA, 'video': f'{int(args.video):02d}', 'mode': args.mode,
             'target_length_s': target, 'tolerance_audio_pct': 0.04, 'tolerance_export_pct': 0.025,
-            'niche': niche, 'story_form': form, 'reference_ids': refs,
+            'niche': effective_niche, 'story_form': effective_form, 'reference_ids': refs,
             'reference_durations_s': {i: family[i]['duration_s'] for i in refs},
             'language': args.language, 'pace_wpm': args.pace_wpm,
             'locked_at': now(), 'rule': 'Immutable unless user explicitly approves a revised length.'}
     write_json(lockfile, lock)
-    st['selected_niche'] = niche
+    st['selected_niche'] = effective_niche
     st['video_count'] = max(st.get('video_count', 0), int(args.video))
     st['stage'] = 'planning'
     write_json(rd / 'state.json', st)
     emit({'ok': True, 'lock_file': str(lockfile), 'locked_target_s': target, 'minutes': round(target/60, 2),
-          'niche': niche, 'story_form': form, 'references': refs,
+          'niche': effective_niche, 'story_form': effective_form, 'references': refs,
           'guidance': 'Script, beat map, narration, timeline and export must respect this exact locked target.'})
 
 
@@ -478,8 +500,8 @@ def plan_facts(rd, video):
     if not isinstance(lines, list) or not all(isinstance(x, dict) and str(x.get('text', '')).strip() for x in lines):
         issues.append('missing_or_invalid_script_lines')
         lines = []
-    required_blue = ('audience_promise', 'central_question', 'why_this_length', 'original_angle',
-                     'human_lens', 'ending_payoff', 'visual_grammar', 'factuality')
+    required_blue = ('audience_promise', 'narrative_approach', 'why_this_length', 'original_angle',
+                     'ending_payoff', 'visual_grammar', 'factuality')
     for f in required_blue:
         if not str(blue.get(f, '')).strip():
             issues.append('blueprint_missing_' + f)

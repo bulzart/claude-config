@@ -4,12 +4,14 @@
 
 The target is a **long-form YouTube film that is enjoyable, creative, coherent, informative and worth finishing**. There is no honest process that guarantees an objective 10/10 rating, viral performance or high retention for every video. Quality comes from repeated diagnosis and revisions against specific audience experiences, while protecting agency and originality. Use this checklist as an adversarial lens, not a rigid scoring algorithm. A genuine intentional quiet moment is not a defect just because it has no new cut.
 
+**Evaluate against the intended experience.** A tutorial should not be measured by how much dramatic tension it generates. A reflective essay should not be faulted for lacking a formal carrying question. A playful explainer should not be penalised for lacking gravitas. The question is always: does the chosen creative approach actually succeed at what it set out to do?
+
 | Dimension | The passing experience | Red flags demanding rework |
 |---|---|---|
 | Topic and premise | A real, distinctive reason to care about this story at this length | Generic subject, no organizing question, same reference script with different nouns |
 | Originality | A fresh perspective/device/evidence contribution | Template sameness, lifted hook/ending/lines, gimmick rather than insight |
 | Narrative architecture | Clear promise, growing understanding, consequential middle, earned payoff | Flat list of facts, weak middle, disconnected anecdotes, abrupt conclusion |
-| Humanism | Specific human stakes, narrator personality, credible emotional movement | Robot-voice trivia, forced drama, manipulative tragedy, canned inspiration |
+| Voice and human reality | Narrator has personality suited to the subject; human or emotional elements appear where natural for the format | Robotic trivia delivery, forced drama, manipulative tragedy, canned inspiration; also a subject calling for warmth executed with clinical detachment |
 | Engagement with dignity | Questions worth considering, moments to infer and reflect, genuine surprise | Clickbait, “and then” chains, cliffhangers on a clock, overexplaining every image |
 | Factual and logical integrity | Verified claims, labeled hypotheticals, timeline and object continuity | False quotes, confusing probability and fact, anachronistic visuals, logical teleporting |
 | Cinematic language | Pictures contribute understanding, consistent visual world, intentional motion/space/sound | Wallpaper montage, repeated generic frames, pointless zooms, unreadable text |

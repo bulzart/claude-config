@@ -2,7 +2,7 @@
 
 ## Intent
 
-A reference folder may mix how-to, historical/military, counterfactual, true-story, exploration and other formats. Treat **every video as its own narrative system**, then study only genuinely comparable cohorts. The objective is transferable knowledge about *audience experience*, not a copyable outline. A user-found viral video is a strong creative reference, not proof that a specific zoom or hook caused its views.
+A reference folder may contain formats you recognise and ones you don't. Treat **every video as its own narrative system**—analyse it fully before imposing any category on it. Categories emerge from the evidence; they are not assigned from a predefined list. Study genuinely comparable cohorts once categories have been discovered. The objective is transferable knowledge about *audience experience*, not a copyable outline. A user-found viral video is a strong creative reference, not proof that a specific zoom or hook caused its views.
 
 ## Intake, audio and visual coverage
 
@@ -34,6 +34,7 @@ A detailed card in `20-analysis/cards/V###.json` should include these additional
   "reference_id": "V001",
   "niches": ["military history", "decision-making"],
   "story_form": "historical narrative",
+  "cohort_id": "optional-stable-slug",
   "language": "en",
   "visual_medium": "illustrated stills with maps",
   "platform": "YouTube",
@@ -65,9 +66,11 @@ The command also expects a *human-readable* `20-analysis/V###-notes.md` summariz
 
 Each reference can have multiple niche tags but must have a primary `story_form`. Distinguish topical niche (“military history”) from story form (“decision-under-pressure reconstruction”) from art style (“charcoal maps”). Runtime is measured by ffprobe, not estimated from cards. Use `cohorts`: it reports median/mean/min/max and warns on high spread. **A combined average over five 40-second explainers and five 15-minute history videos is invalid as the Standard length of either.** Even 8-minute and 35-minute history videos may form separate runtime families. Provide comparable IDs in the length lock.
 
+When niche or story_form labels vary across cards for what are clearly comparable videos (e.g. one agent wrote `"military history narrative"`, another `"military history"`), assign an explicit `cohort_id` (a stable lowercase slug you choose, e.g. `long-military-history`) to the relevant cards. Any cards sharing a `cohort_id` form their own group in the `cohorts` output and can be used directly in `length --cohort-id` without matching niche/story_form strings.
+
 After all cards, create `20-analysis/niche-synthesis.md`: one chapter per niche with (a) primary references and durations, (b) observed audience experiences, (c) confidence and disagreement across references, (d) specific *story engine* candidates, (e) medium/style choices and limits, (f) pacing ranges for that audience, (g) ways to adapt structural techniques borrowed from another niche, with an explanation of the trade-off. An animated graphic from a short how-to may help a 20-minute strategic history explanation; its aggressive pacing probably should not be copied.
 
-**Outcome:** The user sees distinct niche choices rather than a generic count of references. Once the niche is chosen, the writer gains *permission to be original*; source titles, names, jokes, voice clones or watermark/overlay text do not get repeated in the new video's final creative work.
+**Outcome:** The user sees distinct creative directions rather than a generic count of references. After picking a direction, derive a **creative profile** (`20-analysis/creative-profiles/[cluster-slug].md`) from the synthesis—what appears to work for that audience, what weaknesses exist, and what creative territory remains unexplored. See §02 for the profile structure. The writer gains *permission to be original*; source titles, names, jokes, voice clones or watermark/overlay text do not get repeated in the new video's final creative work.
 
 
 Sampled frame filenames have a `frame-index.json` with **nominal** time slots (0.2 s apart at 5 fps). Those are approximate, not original source PTS. For exact transitions or frame-accurate claims, open the original and inspect a native-frame window; never assert precise source timings from a nominal index.

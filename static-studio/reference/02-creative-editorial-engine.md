@@ -23,29 +23,42 @@ Write `40-plans/video-NN/blueprint.json` and a compelling 1–2-page `outline.md
 
 Treat the title/thumbnail as the **opening contract**. The first 30–60 seconds should demonstrate that the video can deliver, not waste time introducing the channel. The intro can begin with an outcome, an intimate detail, a specific problem, a source discovery or a visually legible contradiction. Avoid a single mandatory “what if I told you ...” gimmick.
 
-## Three example niches — different dramaturgy, never a fixed formula
+## Adaptive methodology: creative profiles and episode strategy
 
-### How-to and scenario/problem-solving
+There is no fixed formula for how-to, historical, counterfactual, or any other niche. The right creative approach depends on the specific subject, the evidence from the references, and what this particular video is trying to achieve. Discover it; don't assume it.
 
-Give useful progress early. Hook with a clearly recognizable failure or desired result; demonstrate the mechanism, show a common wrong approach and its consequence, walk through a realistic repair or technique, then test edge cases. Use real-world constraints and on-screen comparative diagrams; don't withhold all steps as a retention trick. An 8–15-minute lesson needs multiple practical examples, failure modes and a meaningful outcome, not repetitive motivational narration. Where an instruction has a safety or expertise boundary, state it promptly.
+### Generate a creative profile per cluster
 
-Possible route: concrete frustrated moment → diagnosis → smallest successful fix → why it works → tricky case → what to do next. Other routes, such as a live experiment or suspenseful troubleshooting, are equally valid when better for the topic.
+After grouping references into creative clusters (see §01), generate a **creative profile** for each meaningful cluster. Store it as `20-analysis/creative-profiles/[cluster-slug].md`. This is a diagnostic summary—not a template—covering what appears to work for that audience and format, what weaknesses the references show, and what creative territory remains unexplored.
 
-### History, including military history
+Each profile should capture, with reference IDs and timestamps:
 
-The most engaging question may be: what did the people involved actually know, what decision was available, what did that decision cost, and what changed because of it? Let maps, terrain, distance, material conditions, chronology, logistics, political context and imperfect information create tension. Use identifiable human stakes but don't invent diary lines, dialogue, motives, casualty counts or impossible eyewitness perspectives. Separate documented actions, disputed interpretations and creative reconstructed illustration. Protect against anachronistic clothing, wrong insignia, misdated equipment and impossible travel.
+- **Audience expectations and viewing purpose:** what viewers likely arrive wanting, and whether references meet or deliberately subvert that.
+- **Storytelling mechanisms** that appear to sustain interest—curiosity development, revelation timing, emotional movement, information density. Label each `[I]` (plausible inference) unless confirmed by actual analytics `[M]`.
+- **Emotional and intellectual register:** how humor, tension, awe, curiosity, reflection, and warmth appear—and whether they feel earned or manufactured.
+- **Narrator personality:** what voice characteristics appear to suit this audience and why.
+- **Visual and cinematic language:** what the references accomplish visually, and where they fall short.
+- **Pacing and breathing room:** where references slow down and speed up, and whether the rhythm appears intentional.
+- **Originality gap:** what these references don't do that could be genuinely compelling to the same audience.
+- **What to avoid copying:** distinctive aesthetic choices, structural devices, or voice identities that belong to those creators.
 
-The format can be an object-led investigation, battle/decision reconstruction, a misunderstood logistical problem, the path of one ordinary witness, an unexpected turning point, or a comparison of rival interpretations. History should feel alive without becoming fiction sold as fact. Avoid glamorizing harm; choose appropriate sensitivity for a general audience.
+A technique found effective in one cluster may inspire a genuinely different application elsewhere. Cross-cluster experimentation is encouraged when it serves the specific subject and audience—but transferred techniques must be adapted to the destination context, not transplanted wholesale.
 
-### What-if and counterfactual explainers
+### Episode-specific creative strategy
 
-State the **single changed assumption** clearly. Set real-world baseline and known constraints. Trace first-order effects, then second-order consequences, feedback loops and at least one plausible competing branch. Give the viewer a framework to think with, not confident pronouncements about imaginary timelines. Show a branching timeline and visually mark the point where historical fact ends and the hypothetical begins. Use humor, thought experiments and everyday analogies if they illuminate. Land on the real lesson learned by exploring the counterfactual.
+Receiving a creative profile does not mean applying it. For every video, the agent must independently determine the best creative approach for this specific subject and intended experience.
 
-An alternative may be to begin with a startling predicted consequence and work backwards through assumptions, or to stage an argument between competing models with explicit uncertainties. The key is testable logic, not loud speculations.
+Before writing complete narration, write a brief episode-specific creative strategy in `40-plans/video-NN/editorial-review.md` covering:
 
-### Other niches
+- Why this particular idea is worth a viewer's time at this length.
+- What experience the viewer should have—what they discover, feel, understand, or question.
+- How the story progresses without padding or artificial urgency.
+- Which tools from the story engine above fit this subject, and which would feel forced.
+- How factual information becomes an enjoyable experience rather than an information delivery.
+- What visual storytelling contributes beyond illustrating spoken words.
+- What makes the execution distinct from the references.
 
-Infer their storytelling grammar from *relevant* references rather than forcing the above three outlines on them. A personal story, science explainer, reflective essay or invented fable may succeed through voice, structure and insight more than dense graphics. Choose what fits audience, promise, level of evidence and duration.
+Do not mechanically insert humor, tension, cliffhangers, emotional beats, or rhetorical questions to satisfy a format expectation. A quiet, reflective video can be exceptional. So can a playful, energetic one. The right choice depends on the subject and the intended experience.
 
 ## Research that supports creativity without turning into a hard documentary
 

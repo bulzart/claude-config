@@ -15,8 +15,13 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" 
 # Agent writes evidence-grounded 20-analysis/cards/V###.json and niche synthesis.
 python "$HOME/.claude/static-studio/scripts/static_core.py" cohorts --run "RUN"
 # User selected a niche/length; examples only after cards exist.
+# Option A: group by niche + story-form (exact string match)
 python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
   --mode standard --niche "military history" --story-form "historical narrative" \
+  --refs V001,V002,V003 --language en --pace-wpm 143
+# Option B: group by cohort_id when labels vary across cards
+python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
+  --mode standard --cohort-id "long-military-history" \
   --refs V001,V002,V003 --language en --pace-wpm 143
 # Agent writes blueprint/script/beat-map/editorial-review, then validates.
 python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RUN" --video 1
@@ -36,7 +41,7 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" status --run "RUN"
 
 ## Reference cards (agent generated)
 
-Create `20-analysis/cards/V001.json` for every unique video in `00-inventory/references.json`. Required minimum for CLI grouping: `reference_id`, `niches` (list of category names), `story_form` (one primary form), and `viewer_experience` (list of timed meaningful moments). The detailed suggested schema is in manual 01; include actual timestamps, source vs interpretation, script delivery, shot/form analysis and tradeoffs.
+Create `20-analysis/cards/V001.json` for every unique video in `00-inventory/references.json`. Required minimum for CLI grouping: `reference_id`, `niches` (list of category names), `story_form` (one primary form), and `viewer_experience` (list of timed meaningful moments). Optionally add `cohort_id` (a stable lowercase slug, e.g. `"long-military-history"`) when niche/story_form labels may vary across cards for comparable videos—any cards sharing a `cohort_id` form their own cohort group and can be used directly with `length --cohort-id`. The detailed suggested schema is in manual 01; include actual timestamps, source vs interpretation, script delivery, shot/form analysis and tradeoffs.
 
 **Important:** `cohorts` only groups by reported niche/form and measured ffprobe duration. Agents, not a keyword regex, decide what a video is actually about. A video can be in two niches, but a 50-second Short and a 15-minute episode must not share one Standard duration lock. If group spread is large, explicitly choose a narrow set of comparable IDs for `length`.
 
@@ -47,17 +52,20 @@ Minimal `40-plans/video-01/blueprint.json`:
 ```json
 {
   "audience_promise": "An answer specific enough to be worth a 12-minute watch",
-  "central_question": "What did the participants know at the decisive moment?",
+  "narrative_approach": "Decision-reconstruction narrative following a commander through incomplete information",
   "why_this_length": "The answer requires three meaningful discoveries and context",
   "original_angle": "Follow the overlooked supply decision, not just the battle",
-  "human_lens": "What a planner can and cannot know from one report",
   "ending_payoff": "Return to the opening dilemma with new evidence",
   "visual_grammar": "Earth-tone maps, aerial diagrams, restrained artifact illustration",
   "factuality": "factual",
   "research_sources": ["S1", "S2", "S3"],
+  "central_question": "What did the participants know at the decisive moment?",
+  "human_lens": "What a planner can and cannot know from one report",
   "chapter_outline": [{"id": "B01", "purpose": "orient"}, {"id": "B02", "purpose": "complicate"}]
 }
 ```
+
+`narrative_approach` is universally required. `central_question` and `human_lens` are conditional: include them when the format is investigative or decision-driven; omit them for tutorials, essays, or other formats where they would be forced.
 
 `40-plans/video-01/script.json`:
 
