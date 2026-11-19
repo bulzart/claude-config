@@ -26,6 +26,8 @@ The picture is generated as *clean stills*. Add editable captions, arrows, highl
 
 Use the real connected CapCut MCP and CLI after discovering their actual available tool names and schema. Typical actions in the user's existing setup may include listing drafts, adding image/audio/text, creating tracks, setting segment properties, adding keyframes and transitions, reading timeline, validating and saving. Do **not** fabricate tool calls or assume there is a CapCut render/export API. When no CapCut export tool is accessible, produce a **valid editable CapCut project** and explicitly explain the manual export needed. If local CapCut CLI fails, use an available supported route or stop with a clear blocker; never call a JSON manifest an exported edit.
 
+On this PC the project is written with `STUDIO/scripts/capcut_tools.py` next to the MCP and capcut-cli; its commands, their order and the files they read are in `STUDIO/reference/09-capcut-toolkit.md`.
+
 Write `70-edit/video-NN/timeline.json` **derived from the actual CapCut timeline**, not a fictional plan, with `canvas` (e.g. `1920x1080`), `visual_segments` in chronological order, each `{ "start_s": ..., "end_s": ..., "asset_path": "...", "beat_id": "B01", "purpose": "..." }`, and an optional `audio_tracks` array, transitions, labels, note on project path and export status. No section should vanish because only enough pictures/audio were rendered for the opening. The actual last narrated beat and the final held frame must reach the locked story destination. Run:
 
 ```bash

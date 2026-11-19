@@ -18,7 +18,7 @@ Input: `$ARGUMENTS`. This is a **normal Claude Code command**, not a Claude work
 | Niche → original premise and YouTube narrative | `STUDIO/reference/02-creative-editorial-engine.md` |
 | Comparable length, plan and immutable runtime | `STUDIO/reference/03-duration-and-script.md` |
 | Picture/art direction and still generation | `STUDIO/reference/04-visual-direction.md` |
-| ElevenLabs, music, CapCut and exports | `STUDIO/reference/05-voice-and-edit.md` |
+| ElevenLabs, music, CapCut and exports | `STUDIO/reference/05-voice-and-edit.md`; to write the CapCut project: `STUDIO/reference/09-capcut-toolkit.md` |
 | Whole-video skeptical review and release criteria | `STUDIO/reference/06-quality-controls.md` |
 | File schemas and working examples | `STUDIO/reference/07-schemas-and-examples.md` |
 

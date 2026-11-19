@@ -1,0 +1,11 @@
+{
+  "capcut": {
+    "drafts_dir": "C:/Users/Bulzart/AppData/Local/CapCut/User Data/Projects/com.lveditor.draft",
+    "template_draft": "_analyze-stack-template",
+    "template_note": "The empty template every project is cloned from (the CapCut MCP's CAPCUT_TEMPLATE_DRAFT). Never delete or edit it.",
+    "pro": false,
+    "pro_note": "This PC has no CapCut Pro: a project that holds a Pro option will not export. false = capcut-transitions and capcut-text-anim use only what data/capcut-catalogue.md marks as drawn by this PC's CapCut and not Pro.",
+    "store_lock": "C:/Users/Bulzart/.claude/analyze-with-loupe/runs/.capcut-store.lock",
+    "store_lock_note": "One lock file for every toolkit on this PC that writes CapCut's shared project index (root_meta_info.json): capcut-repair takes it. Do not point it anywhere else."
+  }
+}
