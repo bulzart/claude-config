@@ -928,11 +928,20 @@ def cmd_tts(args):
                        for i, c in enumerate(chunks)]}
     if not (1.0 <= args.credit_safety_factor <= 3.0):
         error('--credit-safety-factor must be from 1.0 to 3.0')
+    try:
+        voice_settings = json.loads(args.settings) if args.settings else {}
+    except ValueError as exc:
+        error('--settings must be valid JSON (e.g. \'{"stability": 0.7, "similarity_boost": 0.8}\').', str(exc))
+    for key, val in voice_settings.items():
+        if key not in ('stability', 'similarity_boost', 'style', 'use_speaker_boost', 'speed'):
+            error(f'Unknown voice setting {key!r}.', {'allowed': ['stability', 'similarity_boost', 'style',
+                  'use_speaker_boost', 'speed']})
     delivery_overhead = len(args.delivery) + 1 if args.delivery else 0
     if not args.execute:
         emit({'ok': True, 'mode': 'dry_run_no_charges', 'video': args.video,
               'parts': len(chunks), 'characters_total': sum(len(x['text']) for x in chunks) + delivery_overhead * len(chunks),
               'model_limit_per_request': model_limit(args.model_id), 'delivery': args.delivery or None,
+              'voice_settings': voice_settings or None,
               'target_length_s': lock['target_length_s'], 'candidate_manifest': spec,
               'next': 'Review credits, voice and preview. Re-run with --execute only after approving cost.'})
         return
@@ -951,7 +960,7 @@ def cmd_tts(args):
     budget = preflight_elevenlabs_balance(key, sum(len(c['text']) for c in remaining_chunks) + delivery_overhead * len(remaining_chunks),
                                          args.credit_safety_factor) if remaining_chunks else {'remaining_script_characters': 0}
     manifest = {**spec, 'status': 'partial', 'created_at': existing.get('created_at', now()),
-                'credit_preflight': budget, 'delivery': args.delivery or None,
+                'credit_preflight': budget, 'delivery': args.delivery or None, 'voice_settings': voice_settings or None,
                 'finished_parts': existing.get('finished_parts', [])}
     write_json(manifest_path, manifest)
     for i, c in enumerate(chunks):
@@ -960,6 +969,8 @@ def cmd_tts(args):
             continue
         sent_text = (args.delivery + ' ' + c['text']) if args.delivery else c['text']
         body = {'text': sent_text, 'model_id': args.model_id}
+        if voice_settings:
+            body['voice_settings'] = voice_settings
         if lock['language'] and args.model_id != 'eleven_multilingual_v2':
             body['language_code'] = lock['language'][:2]
         if i:
@@ -1209,6 +1220,9 @@ def main():
     p.add_argument('--max-chars', type=int); p.add_argument('--execute', action='store_true')
     p.add_argument('--delivery', default='', help='An audio/pace tag (e.g. "[quick, measured pace]") prepended '
                    'to every chunk sent, proven first with voice-probe. Not hashed into the script integrity check.')
+    p.add_argument('--settings', default='', help='JSON voice_settings (stability, similarity_boost, style, '
+                   'use_speaker_boost, speed) sent with every chunk. Default empty uses ElevenLabs bare defaults '
+                   '(stability 0.5), which the docs say widens randomness/variability between generations.')
     p.add_argument('--credit-safety-factor', type=float, default=1.15,
                    help='Character-allowance reserve, not a promise of credit price (default 1.15)')
     p.set_defaults(func=cmd_tts)
