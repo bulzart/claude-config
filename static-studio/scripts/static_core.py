@@ -880,8 +880,9 @@ def main():
     p.set_defaults(func=cmd_prepare)
     p = sub.add_parser('cohorts'); p.add_argument('--run', required=True); p.set_defaults(func=cmd_cohorts)
     p = sub.add_parser('length'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
-    p.add_argument('--mode', choices=['standard','own'], required=True); p.add_argument('--niche', required=True)
-    p.add_argument('--story-form', required=True); p.add_argument('--refs', default='')
+    p.add_argument('--mode', choices=['standard','own'], required=True); p.add_argument('--niche', default='')
+    p.add_argument('--story-form', default=''); p.add_argument('--cohort-id', default='')
+    p.add_argument('--refs', default='')
     p.add_argument('--minutes', type=float); p.add_argument('--language', default='en');
     p.add_argument('--pace-wpm', type=float, default=145); p.set_defaults(func=cmd_length)
     p = sub.add_parser('plan-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
