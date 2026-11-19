@@ -6,7 +6,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "sonnet[1m]",
+  "model": "claude-sonnet-5",
   "hooks": {
     "Stop": [
       {

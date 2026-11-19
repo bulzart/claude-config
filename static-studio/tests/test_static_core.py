@@ -91,18 +91,20 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(len(groups),2)
         self.assertEqual(next(x for x in groups if x['niche']=='military history')['median_s'],600)
         r=cli('length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
-              '--story-form','historical narrative','--refs','V001,V002')
+              '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145)
         self.assertEqual(r['locked_target_s'],600)
+        self.assertEqual(r['pace_wpm_source'],'explicit')
         cli('length','--run',self.run,'--video',1,'--mode','own','--niche','military history',
-            '--story-form','historical narrative','--minutes',12,expected=2)
+            '--story-form','historical narrative','--minutes',12,'--pace-wpm',145,expected=2)
         cli('length','--run',self.run,'--video',2,'--mode','own','--niche','how-to',
-            '--story-form','tutorial','--minutes',12,expected=2)
+            '--story-form','tutorial','--minutes',12,'--pace-wpm',145,expected=2)
 
     def write_plan(self):
         cli('length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
             '--story-form','historical narrative','--refs','V001,V002','--pace-wpm',145)
         vd=self.run/'40-plans/video-01'
         save(vd/'blueprint.json',{'audience_promise':'Understood decision','central_question':'What happened?',
+                                'narrative_approach':'Third-person procedural account of a single decision',
                                 'why_this_length':'Five discoveries','original_angle':'Logistical stakes',
                                 'human_lens':'People at crossroads','ending_payoff':'An earned conclusion',
                                 'visual_grammar':'Maps and restrained artifacts','factuality':'factual',

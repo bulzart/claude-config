@@ -515,17 +515,23 @@ def strip_transcript_timestamps(raw):
 
 def compute_ref_wpm(rd, refs, family):
     """Average WPM from the reference transcripts for the selected refs.
-    Returns (rounded_wpm, per_ref_dict) or (None, {}) if no transcripts found.
-    Strips timestamp prefixes (e.g. [0.0-2.4]) before counting to avoid inflation."""
+    Uses the sum of spoken-chunk durations (pure narration time) so the result
+    matches the narrator's actual speaking rate — the pace ElevenLabs will generate at.
+    Strips [start-end] timestamp prefixes before counting words.
+    Returns (rounded_wpm, per_ref_dict) or (None, {}) if no transcripts found."""
     per_ref = {}
     for vid in refs:
         tfile = rd / '10-media' / vid / 'transcript.txt'
-        dur_s = family[vid].get('duration_s', 0)
-        if tfile.exists() and dur_s > 0:
-            raw = tfile.read_text(encoding='utf-8', errors='replace')
-            text = strip_transcript_timestamps(raw)
-            wc = count_words(text)
-            per_ref[vid] = round(wc / (dur_s / 60))
+        if not tfile.exists():
+            continue
+        raw = tfile.read_text(encoding='utf-8', errors='replace')
+        narr_s = sum(float(m.group(2)) - float(m.group(1))
+                     for m in re.finditer(r'\[([\d.]+)-([\d.]+)\]', raw))
+        if narr_s <= 0:
+            continue
+        text = strip_transcript_timestamps(raw)
+        wc = count_words(text)
+        per_ref[vid] = round(wc / (narr_s / 60))
     if not per_ref:
         return None, {}
     return round(statistics.mean(per_ref.values())), per_ref
