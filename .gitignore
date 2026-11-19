@@ -25,6 +25,7 @@
 !/analyze-stack/
 !/create-clips/
 !/create-static/
+!/static-studio/
 # plugin settings only (which plugins and marketplaces are installed); their downloaded code, caches and marketplace clones stay out
 !/plugins/
 /plugins/*
@@ -77,4 +78,5 @@ __pycache__/
 /create-clips/data/font-cache.json
 /create-static/runs/
 /create-static/_backups/
+/static-studio/runs/
 /loupe/data/
