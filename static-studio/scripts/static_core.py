@@ -8,6 +8,7 @@ are always read-only. The Claude Code command directs the creative/CapCut work.
 from __future__ import annotations
 
 import argparse
+import base64
 import datetime as dt
 import hashlib
 import json
@@ -513,25 +514,32 @@ def strip_transcript_timestamps(raw):
     return ' '.join(lines)
 
 
+def wpm_from_transcript_raw(raw):
+    """Pure-narration WPM from a [start-end] text transcript: spoken words (timestamps
+    stripped from the count) over the sum of spoken-chunk durations (silence excluded).
+    This is the narrator's actual speaking rate, not a video-duration-diluted figure.
+    Returns None if the transcript has no parseable [start-end] chunks."""
+    narr_s = sum(float(m.group(2)) - float(m.group(1))
+                 for m in re.finditer(r'\[([\d.]+)-([\d.]+)\]', raw))
+    if narr_s <= 0:
+        return None
+    wc = count_words(strip_transcript_timestamps(raw))
+    return round(wc / (narr_s / 60))
+
+
 def compute_ref_wpm(rd, refs, family):
     """Average WPM from the reference transcripts for the selected refs.
     Uses the sum of spoken-chunk durations (pure narration time) so the result
     matches the narrator's actual speaking rate — the pace ElevenLabs will generate at.
-    Strips [start-end] timestamp prefixes before counting words.
     Returns (rounded_wpm, per_ref_dict) or (None, {}) if no transcripts found."""
     per_ref = {}
     for vid in refs:
         tfile = rd / '10-media' / vid / 'transcript.txt'
         if not tfile.exists():
             continue
-        raw = tfile.read_text(encoding='utf-8', errors='replace')
-        narr_s = sum(float(m.group(2)) - float(m.group(1))
-                     for m in re.finditer(r'\[([\d.]+)-([\d.]+)\]', raw))
-        if narr_s <= 0:
-            continue
-        text = strip_transcript_timestamps(raw)
-        wc = count_words(text)
-        per_ref[vid] = round(wc / (narr_s / 60))
+        wpm = wpm_from_transcript_raw(tfile.read_text(encoding='utf-8', errors='replace'))
+        if wpm is not None:
+            per_ref[vid] = wpm
     if not per_ref:
         return None, {}
     return round(statistics.mean(per_ref.values())), per_ref
@@ -656,6 +664,154 @@ def preflight_elevenlabs_balance(key, remaining_characters, safety_factor=1.15):
     return {'subscription_status': data.get('status'), 'available_character_allowance': remaining,
             'remaining_script_characters': remaining_characters, 'reserve_adjusted_minimum': needed,
             'warning': 'This check is based on character allowance, not model-specific credit cost; no guarantee against quota or billing limits.'}
+
+
+def elevenlabs_request(method, path, key, body=None, params=None, timeout=60):
+    url = 'https://api.elevenlabs.io' + path
+    if params:
+        url += '?' + urllib.parse.urlencode(params)
+    headers = {'xi-api-key': key}
+    data = None
+    if body is not None:
+        data = json.dumps(body).encode('utf-8')
+        headers['Content-Type'] = 'application/json'
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read())
+
+
+def cmd_voice_candidates(args):
+    """Suggest up to --count candidate voices (free, from the account's existing voices,
+    and/or billed Voice Design previews), save each candidate's preview audio, transcribe
+    it (Whisper), and measure its pace with the same pure-narration-time method used for
+    reference transcripts, so candidates are comparable to the locked script's pace_wpm.
+    Writes a report for the user to listen to and pick from; picks nothing itself."""
+    rd, st = run_folder(args)
+    key = elevenlabs_key()
+    if not key:
+        error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
+    vd = video_dir(rd, args.video)
+    outdir = rd / '60-voice' / f'video-{int(args.video):02d}' / 'candidates'
+    outdir.mkdir(parents=True, exist_ok=True)
+    design_n = max(0, args.design)
+    free_n = max(0, args.count - design_n)
+    candidates = []
+
+    if free_n:
+        try:
+            data = elevenlabs_request('GET', '/v1/voices', key)
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+            error('Cannot list ElevenLabs account voices.', f'{type(exc).__name__}: {str(exc)[:200]}')
+        pool = data.get('voices') or []
+        needle = (args.search or '').strip().lower()
+        if needle:
+            def matches(v):
+                hay = ' '.join([str(v.get('name') or '')] +
+                               [str(x) for x in (v.get('labels') or {}).values()]).lower()
+                return needle in hay
+            pool = [v for v in pool if matches(v)]
+        for v in pool[:free_n]:
+            candidates.append({'source': 'account_voice', 'voice_id': v['voice_id'], 'name': v.get('name'),
+                                'labels': v.get('labels') or {}, 'preview_url': v.get('preview_url')})
+        if len(candidates) < free_n:
+            error('Not enough existing account voices matched the search; broaden --search, lower --count, '
+                  'or raise --design to fill the rest with newly designed voices.',
+                  {'matched': len(candidates), 'requested': free_n})
+
+    if design_n:
+        if not args.design_description:
+            error('--design-description is required when --design > 0 '
+                  '(e.g. "calm, grave, measured male documentary narrator, American accent").')
+        text = args.design_text
+        if not text:
+            script = read_json(vd / 'script.json')
+            lines = script.get('lines') or []
+            text = ' '.join(l['text'] for l in lines[:8])[:1000]
+        if not (100 <= len(text) <= 1000):
+            error('Voice Design sample text must be 100-1000 characters.', {'characters': len(text)})
+        made = 0
+        while made < design_n:
+            try:
+                resp = elevenlabs_request('POST', '/v1/text-to-voice/design', key,
+                                          body={'voice_description': args.design_description, 'text': text})
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+                error('Voice Design call failed (this call may bill regardless of the error). '
+                      'Verify your ElevenLabs account before retrying.', f'{type(exc).__name__}: {str(exc)[:200]}')
+            previews = resp.get('previews') or []
+            if not previews:
+                error('Voice Design returned no previews.', resp)
+            for prev in previews:
+                if made >= design_n:
+                    break
+                candidates.append({'source': 'voice_design', 'voice_id': prev['generated_voice_id'],
+                                    'name': f"design-{prev['generated_voice_id'][:8]}", 'labels': {},
+                                    'audio_base_64': prev['audio_base_64']})
+                made += 1
+
+    results = []
+    for i, c in enumerate(candidates, 1):
+        stem = f'candidate-{i:02d}-{c["voice_id"][:10]}'
+        fname = outdir / f'{stem}.mp3'
+        if c['source'] == 'account_voice':
+            if not c.get('preview_url'):
+                results.append({**{k: c[k] for k in ('source', 'voice_id', 'name', 'labels')},
+                                'file': None, 'measured_wpm': None, 'error': 'voice has no preview_url'})
+                continue
+            try:
+                with urllib.request.urlopen(c['preview_url'], timeout=30) as resp:
+                    fname.write_bytes(resp.read())
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+                results.append({**{k: c[k] for k in ('source', 'voice_id', 'name', 'labels')},
+                                'file': None, 'measured_wpm': None,
+                                'error': f'preview download failed: {type(exc).__name__}: {str(exc)[:160]}'})
+                continue
+        else:
+            fname.write_bytes(base64.b64decode(c['audio_base_64']))
+        tpath = outdir / f'{stem}.json'
+        wpm, heard = None, None
+        try:
+            transcribe(fname, tpath, args.whisper_model, args.device, args.compute_type)
+            raw = tpath.with_suffix('.txt').read_text(encoding='utf-8', errors='replace')
+            wpm = wpm_from_transcript_raw(raw)
+            heard = strip_transcript_timestamps(raw).strip() or None
+        except (RuntimeError, ValueError, OSError) as exc:
+            heard = f'transcription failed: {type(exc).__name__}: {str(exc)[:160]}'
+        results.append({'source': c['source'], 'voice_id': c['voice_id'], 'name': c.get('name'),
+                        'labels': c.get('labels'), 'file': str(fname), 'measured_wpm': wpm, 'heard_text': heard})
+    report = {'video': int(args.video), 'search': args.search, 'design_description': args.design_description,
+              'candidates': results}
+    report_path = outdir.parent / 'candidates.json'
+    write_json(report_path, report)
+    emit({'ok': True, 'candidates_file': str(report_path), 'count': len(results), 'candidates': results,
+          'guidance': 'Listen to each file. Compare measured_wpm across candidates (and, once known, against '
+                      'the locked pace_wpm). Then lock the pick: voice-pick --run RUN --video NN --voice-id ID.'})
+
+
+def cmd_voice_pick(args):
+    """Lock the run's narrator voice. One voice for the whole run (every video, every
+    language) unless --replace is explicitly passed to deliberately change it."""
+    rd, st = run_folder(args)
+    lockfile = rd / '60-voice' / 'voice-lock.json'
+    if lockfile.exists() and not args.replace:
+        error('Voice already locked for this run. Pass --replace to deliberately change it.',
+              {'file': str(lockfile)})
+    try:
+        settings = json.loads(args.settings) if args.settings else {}
+    except ValueError as exc:
+        error('--settings must be valid JSON.', str(exc))
+    measured_wpm = None
+    cfile = rd / '60-voice' / f'video-{int(args.video):02d}' / 'candidates.json'
+    for c in (read_json(cfile).get('candidates') or []):
+        if c.get('voice_id') == args.voice_id:
+            measured_wpm = c.get('measured_wpm')
+            break
+    lockfile.parent.mkdir(parents=True, exist_ok=True)
+    lock = {'voice_id': args.voice_id, 'name': args.name, 'settings': settings, 'measured_wpm': measured_wpm,
+            'locked_at': now(), 'rule': 'One voice per run across every video and language; '
+                                        '--replace required to deliberately change it.'}
+    write_json(lockfile, lock)
+    emit({'ok': True, 'lock_file': str(lockfile), 'voice_id': args.voice_id, 'measured_wpm': measured_wpm,
+          'guidance': f'Pass --voice-id {args.voice_id} to every "tts" call for this run.'})
 
 
 def cmd_tts(args):
@@ -938,6 +1094,16 @@ def main():
     p.add_argument('--pace-wpm', type=float, default=None); p.set_defaults(func=cmd_length)
     p = sub.add_parser('plan-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_plan_check)
+    p = sub.add_parser('voice-candidates'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--count', type=int, default=5); p.add_argument('--search', default='')
+    p.add_argument('--design', type=int, default=0); p.add_argument('--design-description', default='')
+    p.add_argument('--design-text', default='')
+    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
+    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_voice_candidates)
+    p = sub.add_parser('voice-pick'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--voice-id', required=True); p.add_argument('--name', default='')
+    p.add_argument('--settings', default=''); p.add_argument('--replace', action='store_true')
+    p.set_defaults(func=cmd_voice_pick)
     p = sub.add_parser('tts'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--voice-id', required=True); p.add_argument('--model-id', default='eleven_v4')
     p.add_argument('--max-chars', type=int); p.add_argument('--execute', action='store_true')
