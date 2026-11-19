@@ -31,6 +31,7 @@ A cold reader may be used once before paid generation: give the full script and 
 - No later frame can depict an object/character in a different place/state without a shown or implied logically valid transition. No unmotivated jumps in distance, time, weather, lighting or scale. When two scenes must be separated, include a readable cut/ellipsis or bridge.
 - A how-to cannot reference tools/steps not yet introduced; it must solve a useful real problem, not merely define terms.
 - A military narrative's map orientation, movement, ranks, equipment and chronology are grounded; uncertain details are labeled as reconstructions.
+- No script contains a holiday or religious feast scene (Thanksgiving, Christmas dinners, etc.) as a narrative or illustrative detail. Reject it on sight during red-team review and replace it with a different detail, even if accurate and sourced.
 - A counterfactual's first changed assumption must remain in force; second-order branches may be uncertain but internally consistent.
 - Narration and visuals are complementary. A still image isn't compelled to include a logo/label, and a visual-only inference need not be narrated twice.
 - A chapter is not complete because the words stop. The promised consequence/answer and a sensible closing beat must be present.

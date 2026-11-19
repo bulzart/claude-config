@@ -66,6 +66,8 @@ For factual work, obtain primary and credible secondary sources independent of r
 
 **Voice and humanism:** Narration is written for *listening*, not silently reading. Use varied sentence length and light, well-placed conversational language. A single vivid detail can do the work of several abstract paragraphs. Use “we” sparingly and “you” only when it genuinely engages the viewer. Personal warmth may be inquisitive, dry, playful or reflective; never one relentless hyped-up sales pitch. Let characters have constraints and decisions, not just pronouncements. Pause to let a consequence land. Nothing about “being engaging” requires fabricated conflict, machine-gun cliffhangers or editing every 1.5 seconds.
 
+**No holiday or religious feast scenes.** Never pick Thanksgiving, Christmas dinners, or any other holiday/religious feast as the vivid detail that carries a beat — not as period texture, irony, dramatic contrast, or scene-setting — no matter how well-documented or historically accurate it is. If research surfaces one, leave it out and find a different detail to do that narrative work.
+
 ## Originality and copyright integrity
 
 Mined references may contribute functional techniques (e.g., start with the outcome, explain with a scale comparison, slow down on a decision), but never copy their unique shot sequences, artistic identities, voice recordings, specific scripts, distinct jokes or watermarked materials. No attempt to disguise replicated footage. For a borrowed functional device write `source timestamp → audience function → genuinely different new application → adaptation trade-off`. Generate original assets or use sources with clear licenses.
