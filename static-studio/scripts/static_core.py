@@ -822,7 +822,8 @@ def plan_facts(rd, video):
     forecast = round(early_narr + holds, 2) if pace else 0
     real_narr = real = None
     if measured.get('wpm') and lines:
-        real_narr = round(words * 60 / measured['wpm'] + measured['per_line_overhead_s'] * len(lines) + tag_s, 2)
+        pace_real = float(measured.get('forecast_wpm') or measured['wpm'])
+        real_narr = round(words * 60 / pace_real + measured['per_line_overhead_s'] * len(lines) + tag_s, 2)
         real = round(real_narr + holds, 2)
         # Once this voice is measured, the forecast has to land where export-check will look.
         if abs(real - target) > max(4, target * lock.get('tolerance_export_pct', .025)):
@@ -830,9 +831,21 @@ def plan_facts(rd, video):
     elif pace and abs(forecast - target) > max(10, .08 * target):
         issues.append('script_forecast_misses_locked_length_by_over_8pct')
     warnings = []
-    if measured.get('wpm') and script.get('pace_wpm') and abs(float(script['pace_wpm']) - float(measured['wpm'])) > 3:
-        warnings.append(f"script pace_wpm {script['pace_wpm']} differs from the voice's measured {measured['wpm']}; "
-                        "the real forecast uses the measured pace: set the script's pace_wpm to it so one number is in use")
+    # Research <-> script: a line that states a number (a date, a count, a distance) and is tied to no claim.
+    # Not blocking (a count of sides or the narrator's premise needs none); each consequential one gets a claim
+    # before its part is recorded, because a wrong number found later costs a re-record.
+    claims = read_json(rd / '30-research' / f'video-{int(video):02d}' / 'claims.json')
+    covered = {r for c in (claims.get('claims') or []) for r in (c.get('line_refs') or [])}
+    number_rx = re.compile(r"\d|\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|"
+                           r"fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|"
+                           r"eighty|ninety|hundred|thousand|million)\b", re.I)
+    numbers_without_claim = [str(x.get('id')) for x in lines
+                             if number_rx.search(strip_tags(x.get('text') or '')) and str(x.get('id')) not in covered]
+    voice_pace = measured.get('forecast_wpm') or measured.get('wpm')
+    if voice_pace and script.get('pace_wpm') and abs(float(script['pace_wpm']) - float(voice_pace)) > 3:
+        warnings.append(f"script pace_wpm {script['pace_wpm']} differs from the voice's measured {voice_pace} "
+                        "(script words per speech minute); the real forecast uses the measured one: set the script's "
+                        "pace_wpm to it so one number is in use")
     if not review.exists():
         issues.append('editorial_review_missing')
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'script_lines': len(lines),
@@ -841,7 +854,7 @@ def plan_facts(rd, video):
                              'voice_measured_wpm': measured.get('wpm'),
                              'voice_per_line_gap_s': round(measured['per_line_overhead_s'], 3) if measured else None},
             'audio_tags': tags, 'tag_time_s': tag_s, 'pause_plan': pause_plan, 'edit_holds_s': holds,
-            'content_flags': flags,
+            'content_flags': flags, 'numbers_without_claim': numbers_without_claim,
             'forecast_s': forecast, 'real_narration_forecast_s': real_narr, 'real_forecast_s': real,
             'locked_target_s': target,
             'export_window_s': [round(target - max(4, target * lock.get('tolerance_export_pct', .025)), 2),
@@ -1677,6 +1690,12 @@ def cmd_narration_measure(args):
     tag_excess = sum(max(0.0, m['excess_s']) for m in measured_tags)
     nlines = len(rows)
     wpm = round(tot_words / (tot_speech / 60)) if tot_speech else None
+    # Whisper's long pass drops a phrase now and then (measured here: ~1% of words, heard in the audio when a
+    # short window is re-transcribed), so its word count runs a little low. wpm stays the references' yardstick
+    # (they are measured the same way); the length forecast uses the script's own words over the same speech
+    # time, which reproduces the measured take exactly.
+    script_words = sum(count_words(lines[li - 1].get('text') or '') for li in rows)
+    forecast_wpm = round(script_words / (tot_speech / 60), 1) if tot_speech else None
     per_line = round((tot_dur - tot_speech - tag_excess) / nlines, 3) if nlines else None
     complete = sorted(rows) == list(range(1, len(lines) + 1))
     ratio_all = (sum(p['alignment_match_ratio'] * (p['lines'][1] - p['lines'][0] + 1) for p in per_part) / nlines) if nlines else 0
@@ -1686,6 +1705,7 @@ def cmd_narration_measure(args):
     out = {'video': n, 'complete': complete, 'script_sha256': script_hash(lines) if complete else None,
            'narration_file': str(folder / 'narration.wav') if complete else None, 'parts': per_part,
            'duration_s': round(tot_dur, 2), 'words': int(tot_words), 'speech_s': round(tot_speech, 2), 'wpm': wpm,
+           'script_words': script_words, 'forecast_wpm': forecast_wpm,
            'natural_line_gap_median_s': round(natural_gap, 3), 'per_line_overhead_s': per_line,
            'alignment_match_ratio': round(ratio_all, 3), 'tags_measured': measured_tags,
            'pause_profile': profile, 'lines': [rows[li] for li in order], 'measured_at': now(),
@@ -1707,7 +1727,8 @@ def cmd_narration_measure(args):
         tag_costs = dict(prev.get('tag_costs_s') or {}) if same else {}
         tag_costs.update(costs)
         vl['measured'] = {'voice_id': manifest['voice_id'], 'model_id': manifest['model_id'], 'settings': settings,
-                          'wpm': wpm, 'words': int(tot_words), 'speech_s': round(tot_speech, 2),
+                          'wpm': wpm, 'words': int(tot_words), 'script_words': script_words,
+                          'forecast_wpm': forecast_wpm, 'speech_s': round(tot_speech, 2),
                           'duration_s': round(tot_dur, 2), 'lines': nlines, 'per_line_overhead_s': per_line,
                           'tag_costs_s': tag_costs, 'parts': [p['id'] for p in per_part], 'measured_at': now(),
                           'method': out['method']}
@@ -1722,7 +1743,8 @@ def cmd_narration_measure(args):
         if m['tag'] in ('[pause]', '[long pause]', '[short pause]', '[slightly pause]') and m['excess_s'] < 0.2:
             warnings.append(f"{m['line']} {m['tag']} made no measurable pause: listen (was it read aloud?)")
     emit({'ok': True, 'line_times': str(folder / 'line-times.json'), 'complete': complete, 'wpm': wpm,
-          'words': int(tot_words), 'duration_s': round(tot_dur, 2), 'per_line_overhead_s': per_line,
+          'forecast_wpm': forecast_wpm, 'words': int(tot_words), 'script_words': script_words,
+          'duration_s': round(tot_dur, 2), 'per_line_overhead_s': per_line,
           'natural_line_gap_median_s': round(natural_gap, 3), 'tags_measured': measured_tags,
           'pause_profile': profile,
           'references': {v: {'wpm': (lock.get('per_ref_wpm') or {}).get(v), **p}
