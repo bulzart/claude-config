@@ -944,6 +944,8 @@ def cmd_tts(args):
                        for i, c in enumerate(chunks)]}
     if not (1.0 <= args.credit_safety_factor <= 3.0):
         error('--credit-safety-factor must be from 1.0 to 3.0')
+    if args.max_parts is not None and args.max_parts < 1:
+        error('--max-parts must be at least 1.')
     try:
         voice_settings = json.loads(args.settings) if args.settings else {}
     except ValueError as exc:
@@ -981,9 +983,10 @@ def cmd_tts(args):
         error('--assume-cost-ratio must be from 0.1 to 1.0 (1.0 = trust the model\'s documented '
               'character_cost_multiplier; below 1.0 is an explicit, auditable override for a '
               'ratio you personally verified against real billing deltas this session).')
-    raw_remaining_chars = sum(len(c['text']) for c in remaining_chunks) + delivery_overhead * len(remaining_chunks)
+    chunks_this_call = remaining_chunks[:args.max_parts] if args.max_parts else remaining_chunks
+    raw_remaining_chars = sum(len(c['text']) for c in chunks_this_call) + delivery_overhead * len(chunks_this_call)
     budget = preflight_elevenlabs_balance(key, round(raw_remaining_chars * args.assume_cost_ratio),
-                                         args.credit_safety_factor) if remaining_chunks else {'remaining_script_characters': 0}
+                                         args.credit_safety_factor) if chunks_this_call else {'remaining_script_characters': 0}
     if remaining_chunks:
         budget['raw_characters_before_ratio'] = raw_remaining_chars
         budget['assumed_cost_ratio'] = args.assume_cost_ratio
@@ -991,10 +994,13 @@ def cmd_tts(args):
                 'credit_preflight': budget, 'delivery': args.delivery or None, 'voice_settings': voice_settings or None,
                 'finished_parts': existing.get('finished_parts', [])}
     write_json(manifest_path, manifest)
+    new_parts_done = 0
     for i, c in enumerate(chunks):
         fname = narrdir / f'part-{i+1:03d}.mp3'
         if (i+1) in manifest['finished_parts'] and fname.exists() and fname.stat().st_size > 1024:
             continue
+        if args.max_parts and new_parts_done >= args.max_parts:
+            break
         sent_text = (args.delivery + ' ' + c['text']) if args.delivery else c['text']
         body = {'text': sent_text, 'model_id': args.model_id}
         if voice_settings:
@@ -1020,10 +1026,20 @@ def cmd_tts(args):
             temp.replace(fname)
             manifest['finished_parts'].append(i+1)
             write_json(manifest_path, manifest)
+            new_parts_done += 1
         except (urllib.error.HTTPError, urllib.error.URLError, OSError, RuntimeError) as exc:
             manifest['error'] = f'part {i+1}: {type(exc).__name__}: {str(exc)[:250]}'
             write_json(manifest_path, manifest)
             error('Partial ElevenLabs recording: BLOCKED (never shorten video to match credits).', manifest['error'])
+    if len(manifest['finished_parts']) < len(chunks):
+        emit({'ok': True, 'mode': 'partial_by_design_max_parts', 'new_parts_this_call': new_parts_done,
+              'finished_parts': manifest['finished_parts'], 'total_parts': len(chunks),
+              'parts_dir': str(narrdir),
+              'next': 'Listen to and/or measure the new part(s) (Whisper + wpm_from_transcript_raw) before '
+                      'continuing. Re-run the same tts command (same voice/settings/no --max-parts, or a '
+                      'higher one) to generate the rest and finalize narration.wav -- already-finished parts '
+                      'are kept, never re-billed.'})
+        return
     concat = narrdir / 'parts.txt'
     concat.write_text(''.join("file '" + str((narrdir / x['file']).resolve()).replace('\\', '/').replace("'", "'\\''") + "'\n"
                               for x in manifest['chunks']), encoding='utf-8')
@@ -1229,7 +1245,12 @@ def main():
     p.set_defaults(func=cmd_plan_check)
     p = sub.add_parser('voice-candidates'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--count', type=int, default=5); p.add_argument('--search', default='')
-    p.add_argument('--design', type=int, default=0); p.add_argument('--design-description', default='')
+    p.add_argument('--design', type=int, default=0)
+    p.add_argument('--design-description', default='', help='A voice reads about as fast as the audio it was '
+                   'made from: state the TARGET PACE IN WORDS here (e.g. "...speaks at a brisk, measured pace, '
+                   'clearly and without rushing..."), tied to this run\'s locked pace_wpm. Do not rely on a '
+                   'runtime --delivery tag at tts time to fix pace afterward -- verified unreliable for long '
+                   'chunks this session.')
     p.add_argument('--design-text', default='')
     p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
     p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_voice_candidates)
@@ -1259,6 +1280,12 @@ def main():
                    'of real-billed-to-raw-characters you personally verified this session (e.g. from a '
                    'probe\'s own before/after subscription delta) -- never guessed, always auditable in '
                    'the manifest\'s credit_preflight.assumed_cost_ratio.')
+    p.add_argument('--max-parts', type=int, default=None,
+                   help='Generate at most N new parts this call, then stop (status stays partial, no '
+                   'narration.wav yet, nothing re-billed next time). Use --max-parts 1 to generate only '
+                   'the first real chunk, measure/listen to it, and confirm the voice/settings/pace before '
+                   'paying for the rest -- the AWL Static pattern: the first chunk IS the calibration '
+                   'check, paid once, kept if good, never a separate throwaway sample.')
     p.set_defaults(func=cmd_tts)
     p = sub.add_parser('audio-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_audio_check)

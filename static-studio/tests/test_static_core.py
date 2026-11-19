@@ -128,6 +128,11 @@ class StaticStudioTests(unittest.TestCase):
         dry=cli('tts','--run',self.run,'--video',1,'--voice-id','TESTID','--model-id','eleven_v4')
         self.assertEqual(dry['mode'],'dry_run_no_charges')
         self.assertGreater(dry['characters_total'],1000)
+        # --max-parts: validated even in dry-run (no network/billing involved either way).
+        cli('tts','--run',self.run,'--video',1,'--voice-id','TESTID','--model-id','eleven_v4',
+            '--max-parts','0',expected=2)
+        self.assertEqual(cli('tts','--run',self.run,'--video',1,'--voice-id','TESTID',
+                             '--model-id','eleven_v4','--max-parts','1')['mode'],'dry_run_no_charges')
         self.assertEqual(cli('audio-check','--run',self.run,'--video',1,expected=2)['ready'],False)
         # An incomplete voice recording never makes the audio gate pass.
         d=self.run/'50-audio/video-01';d.mkdir(parents=True,exist_ok=True)
