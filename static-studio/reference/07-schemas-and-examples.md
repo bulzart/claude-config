@@ -16,20 +16,32 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" 
 python "$HOME/.claude/static-studio/scripts/static_core.py" cohorts --run "RUN"
 # User selected a niche/length; examples only after cards exist.
 # Option A: group by niche + story-form (exact string match)
+# Never pass --pace-wpm here: length computes it automatically from the references' own
+# Whisper transcripts (pure narration time, timestamps stripped). A manual number is a guess.
 python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
   --mode standard --niche "military history" --story-form "historical narrative" \
-  --refs V001,V002,V003 --language en --pace-wpm 143
+  --refs V001,V002,V003 --language en
 # Option B: group by cohort_id when labels vary across cards
 python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
   --mode standard --cohort-id "long-military-history" \
-  --refs V001,V002,V003 --language en --pace-wpm 143
+  --refs V001,V002,V003 --language en
 # Agent writes blueprint/script/beat-map/editorial-review, then validates.
 python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RUN" --video 1
+# Voice: five candidates, pace stated IN the design description (a voice reads about as fast
+# as the audio it was made from -- do not plan to fix pace later with a --delivery tag).
+python "$HOME/.claude/static-studio/scripts/static_core.py" voice-candidates --run "RUN" --video 1 \
+  --count 5 --design 2 --design-description "A grave, warm documentary narrator in his 50s, speaks at a brisk, measured pace of about 190 words a minute, clearly and without rushing" \
+  --design-text "A sample of the actual script, 100-1000 characters, read exactly as it will be sent."
+python "$HOME/.claude/static-studio/scripts/static_core.py" voice-pick --run "RUN" --video 1 \
+  --voice-id "ID_FROM_CANDIDATES_JSON" --name "Narrator name"
 # Dry run NEVER charges money. The ID below is a placeholder, not a valid voice.
 python "$HOME/.claude/static-studio/scripts/static_core.py" tts --run "RUN" --video 1 \
-  --voice-id "REPLACE_WITH_REAL_VOICE_ID" --model-id eleven_v4
-# Only after the user has approved the selected voice, model and credit cost:
-# ... repeat the same command with --execute
+  --voice-id "REPLACE_WITH_REAL_VOICE_ID" --model-id eleven_v4 \
+  --settings '{"stability":0.65,"similarity_boost":0.8}'
+# Only after the user has approved the selected voice, model and credit cost. --max-parts 1
+# makes the FIRST chunk the real calibration check (paid once, kept if good -- never a
+# separate short throwaway sample): transcribe/measure it before continuing to the rest.
+# ... repeat with --max-parts 1 --execute, measure, then repeat again without --max-parts
 python "$HOME/.claude/static-studio/scripts/static_core.py" audio-check --run "RUN" --video 1
 # Agent makes/records CapCut project and writes project-derived timeline.json.
 python "$HOME/.claude/static-studio/scripts/static_core.py" timeline-check --run "RUN" --video 1
@@ -72,13 +84,15 @@ Minimal `40-plans/video-01/blueprint.json`:
 ```json
 {
   "language": "en",
-  "pace_wpm": 143,
+  "pace_wpm": 190,
   "lines": [
     {"id": "L001", "text": "Start with a meaningful, specific opening line.", "pause_after_s": 0.5},
     {"id": "L002", "text": "Continue naturally, with context and a real reason to care.", "pause_after_s": 0.2}
   ]
 }
 ```
+
+`pace_wpm` above (190) is an example number, not a universal default — write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then `voice-lock.json`'s `measured_wpm` (the voice's own real pace) once one is, since the two can genuinely differ (real pov-military-narrative references measured ~198-200 WPM; a real selected voice in that same niche measured ~186-187 WPM — not interchangeable).
 
 `40-plans/video-01/beat-map.json`:
 
@@ -103,7 +117,30 @@ Minimal `40-plans/video-01/blueprint.json`:
 
 ## Audio manifest (automatically produced with paid TTS)
 
-Under `50-audio/video-01/`, the TTS tool creates `manifest.json` (voice/model/language/chunks and SHA256 text hashes, line ranges, `finished_parts`, `status`). Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. A model/voice/script change during a partial recording requires deliberate reconciliation; the tool will refuse silent reuse. `audio-check` disallows a partial or missing line/audio, and rejects a delivered duration far from lock.
+Under `50-audio/video-01/`, the TTS tool creates `manifest.json` (voice/model/language/chunks and SHA256 text hashes, line ranges, `finished_parts`, `status`). Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. A model/voice/script change during a partial recording requires deliberate reconciliation; the tool will refuse silent reuse. `audio-check` disallows a partial or missing line/audio, and rejects a delivered duration far from lock. `tts --max-parts 1 --execute` stops after the first chunk instead (`mode: partial_by_design_max_parts`) so it can be measured before paying for the rest.
+
+## Voice lock (`voice_id`/`settings`/`measured_wpm`/`locked_at`/`rule` written by `voice-pick`; `measured_overhead_*` hand-recorded by the agent; all of it read by `tts` and `plan-check`)
+
+`60-voice/voice-lock.json`:
+
+```json
+{
+  "voice_id": "REAL_ACCOUNT_VOICE_ID",
+  "generated_voice_id": "REAL_ACCOUNT_VOICE_ID",
+  "name": "Narrator name",
+  "settings": {"stability": 0.65, "similarity_boost": 0.8},
+  "measured_wpm": 187,
+  "measured_overhead_s": 113.4,
+  "measured_overhead_lines": 329,
+  "measured_overhead_source": "How/when this was measured -- which real generation(s), at what line count.",
+  "locked_at": "2026-11-19T13:22:38+00:00",
+  "rule": "One voice per run across every video and language; --replace required to deliberately change it."
+}
+```
+
+`measured_wpm` is this voice's own real measured pace (not the reference narrators') — it supersedes `length-lock.json`'s `pace_wpm` for sizing the script once it exists (`03-duration-and-script.md`). `measured_overhead_s`/`measured_overhead_lines` are the real ElevenLabs natural-pause overhead observed on an actual generation (for this many script lines) — `plan-check` uses them for `real_overhead_forecast_s`, a more accurate prediction than its plain `forecast_s` (which only counts the script's own *planned* pauses, never actually sent to ElevenLabs).
+
+**No command writes `measured_overhead_s`/`measured_overhead_lines` yet** — after a `--max-parts 1` calibration chunk or a completed generation, the agent transcribes it, computes `overhead_s = real_duration_s - words*60/measured_wpm`, and adds the three fields into this file itself (merge, don't just overwrite — `voice-pick --replace` rewrites the whole file from scratch and does not preserve them, so re-add them after any `--replace`, and only reuse old overhead data if the voice itself didn't change; a different voice needs its own fresh measurement).
 
 **Production agents must not manually toggle `status=complete`.** The manifest represents real provider responses. The tool saves chunks and updates the manifest after each successful response so a credit cutoff cannot masquerade as a short completed voiceover.
 
