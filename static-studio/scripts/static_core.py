@@ -789,7 +789,10 @@ def cmd_voice_candidates(args):
 
 def cmd_voice_pick(args):
     """Lock the run's narrator voice. One voice for the whole run (every video, every
-    language) unless --replace is explicitly passed to deliberately change it."""
+    language) unless --replace is explicitly passed to deliberately change it.
+    A Voice Design candidate's generated_voice_id is not a usable voice until it is saved
+    to the account library (POST /v1/text-to-voice) -- done here automatically, billed
+    only in that it finalizes a design already generated, not a new design call."""
     rd, st = run_folder(args)
     lockfile = rd / '60-voice' / 'voice-lock.json'
     if lockfile.exists() and not args.replace:
@@ -799,19 +802,108 @@ def cmd_voice_pick(args):
         settings = json.loads(args.settings) if args.settings else {}
     except ValueError as exc:
         error('--settings must be valid JSON.', str(exc))
-    measured_wpm = None
+    measured_wpm, source, design_description = None, None, None
     cfile = rd / '60-voice' / f'video-{int(args.video):02d}' / 'candidates.json'
-    for c in (read_json(cfile).get('candidates') or []):
+    cdata = read_json(cfile)
+    for c in (cdata.get('candidates') or []):
         if c.get('voice_id') == args.voice_id:
-            measured_wpm = c.get('measured_wpm')
+            measured_wpm, source = c.get('measured_wpm'), c.get('source')
+            design_description = cdata.get('design_description')
             break
+    final_voice_id = args.voice_id
+    saved_from = None
+    if source == 'voice_design':
+        if not args.name:
+            error('--name is required to save a Voice Design candidate as a permanent voice '
+                  '(ElevenLabs requires voice_name).')
+        key = elevenlabs_key()
+        if not key:
+            error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
+        try:
+            resp = elevenlabs_request('POST', '/v1/text-to-voice', key,
+                                      body={'voice_name': args.name,
+                                            'voice_description': design_description or args.name,
+                                            'generated_voice_id': args.voice_id})
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+            error('Could not save the designed voice to your ElevenLabs library.',
+                  f'{type(exc).__name__}: {str(exc)[:200]}')
+        if not resp.get('voice_id'):
+            error('Save call returned no voice_id.', resp)
+        saved_from = args.voice_id
+        final_voice_id = resp['voice_id']
     lockfile.parent.mkdir(parents=True, exist_ok=True)
-    lock = {'voice_id': args.voice_id, 'name': args.name, 'settings': settings, 'measured_wpm': measured_wpm,
-            'locked_at': now(), 'rule': 'One voice per run across every video and language; '
-                                        '--replace required to deliberately change it.'}
+    lock = {'voice_id': final_voice_id, 'generated_voice_id': saved_from, 'name': args.name,
+            'settings': settings, 'measured_wpm': measured_wpm, 'locked_at': now(),
+            'rule': 'One voice per run across every video and language; '
+                    '--replace required to deliberately change it.'}
     write_json(lockfile, lock)
-    emit({'ok': True, 'lock_file': str(lockfile), 'voice_id': args.voice_id, 'measured_wpm': measured_wpm,
-          'guidance': f'Pass --voice-id {args.voice_id} to every "tts" call for this run.'})
+    emit({'ok': True, 'lock_file': str(lockfile), 'voice_id': final_voice_id,
+          'saved_from_generated_voice_id': saved_from, 'measured_wpm': measured_wpm,
+          'guidance': f'Pass --voice-id {final_voice_id} to every "tts"/"voice-probe" call for this run.'})
+
+
+def cmd_voice_probe(args):
+    """Measure a chosen voice's ACHIEVED pace on a short real sample of this run's own
+    script (optionally with a delivery/pace audio tag), via one short billed TTS call,
+    before committing to the full paid narration. Separate from tts's chunk/resume state;
+    does not touch script.json, length-lock.json or 50-audio/."""
+    rd, st = run_folder(args)
+    key = elevenlabs_key()
+    if not key:
+        error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
+    vd = video_dir(rd, args.video)
+    lock = read_json(vd / 'length-lock.json', required=True)
+    text = args.text
+    if not text:
+        script = read_json(vd / 'script.json', required=True)
+        buf, total = [], 0
+        for l in script.get('lines') or []:
+            buf.append(l['text'])
+            total += len(l['text']) + 1
+            if total >= 450:
+                break
+        text = ' '.join(buf)
+    sent_text = (args.delivery + ' ' if args.delivery else '') + text
+    limit = model_limit(args.model_id)
+    if len(sent_text) > limit:
+        error('Probe text exceeds the model request limit.', {'characters': len(sent_text), 'limit': limit})
+    budget = preflight_elevenlabs_balance(key, len(sent_text), args.credit_safety_factor)
+    body = {'text': sent_text, 'model_id': args.model_id}
+    if lock.get('language') and args.model_id != 'eleven_multilingual_v2':
+        body['language_code'] = lock['language'][:2]
+    url = ('https://api.elevenlabs.io/v1/text-to-speech/' + urllib.parse.quote(args.voice_id, safe='')
+           + '?output_format=mp3_44100_128')
+    req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), method='POST',
+                                 headers={'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg'})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            raw = resp.read()
+    except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+        error('Probe TTS call failed (may have been billed regardless of the error). '
+              'Verify your ElevenLabs account before retrying.', f'{type(exc).__name__}: {str(exc)[:200]}')
+    if len(raw) < 1024:
+        error('Audio response too short.', {'bytes': len(raw)})
+    outdir = rd / '60-voice' / f'video-{int(args.video):02d}' / 'probes'
+    outdir.mkdir(parents=True, exist_ok=True)
+    n = len(list(outdir.glob('probe-*.mp3'))) + 1
+    stem = f'probe-{n:02d}-{args.voice_id[:10]}'
+    fname = outdir / f'{stem}.mp3'
+    fname.write_bytes(raw)
+    tpath = outdir / f'{stem}.json'
+    transcribe(fname, tpath, args.whisper_model, args.device, args.compute_type)
+    rawtxt = tpath.with_suffix('.txt').read_text(encoding='utf-8', errors='replace')
+    wpm = wpm_from_transcript_raw(rawtxt)
+    target = float(lock.get('pace_wpm') or 0)
+    within = bool(wpm and target and abs(wpm - target) <= max(5, 0.06 * target))
+    emit({'ok': True, 'file': str(fname), 'voice_id': args.voice_id, 'model_id': args.model_id,
+          'delivery': args.delivery or None, 'sent_characters': len(sent_text), 'credit_preflight': budget,
+          'achieved_wpm': wpm, 'target_pace_wpm': target or None, 'within_tolerance': within,
+          'heard_text': strip_transcript_timestamps(rawtxt).strip(),
+          'guidance': ('Close enough to the locked pace_wpm: proceed with tts using this voice/delivery.'
+                       if within else
+                       'Not close enough yet. Try a stronger/different delivery tag (pace wording like '
+                       '"[quick, measured pace]" or "[brisk narration]") and probe again, or accept this '
+                       'pace and revise the script word budget before tts.')})
 
 
 def cmd_tts(args):
@@ -836,10 +928,11 @@ def cmd_tts(args):
                        for i, c in enumerate(chunks)]}
     if not (1.0 <= args.credit_safety_factor <= 3.0):
         error('--credit-safety-factor must be from 1.0 to 3.0')
+    delivery_overhead = len(args.delivery) + 1 if args.delivery else 0
     if not args.execute:
         emit({'ok': True, 'mode': 'dry_run_no_charges', 'video': args.video,
-              'parts': len(chunks), 'characters_total': sum(len(x['text']) for x in chunks),
-              'model_limit_per_request': model_limit(args.model_id),
+              'parts': len(chunks), 'characters_total': sum(len(x['text']) for x in chunks) + delivery_overhead * len(chunks),
+              'model_limit_per_request': model_limit(args.model_id), 'delivery': args.delivery or None,
               'target_length_s': lock['target_length_s'], 'candidate_manifest': spec,
               'next': 'Review credits, voice and preview. Re-run with --execute only after approving cost.'})
         return
@@ -855,17 +948,18 @@ def cmd_tts(args):
                         if not ((i + 1) in existing.get('finished_parts', [])
                         and (narrdir / f'part-{i+1:03d}.mp3').is_file()
                         and (narrdir / f'part-{i+1:03d}.mp3').stat().st_size > 1024)]
-    budget = preflight_elevenlabs_balance(key, sum(len(c['text']) for c in remaining_chunks),
+    budget = preflight_elevenlabs_balance(key, sum(len(c['text']) for c in remaining_chunks) + delivery_overhead * len(remaining_chunks),
                                          args.credit_safety_factor) if remaining_chunks else {'remaining_script_characters': 0}
     manifest = {**spec, 'status': 'partial', 'created_at': existing.get('created_at', now()),
-                'credit_preflight': budget,
+                'credit_preflight': budget, 'delivery': args.delivery or None,
                 'finished_parts': existing.get('finished_parts', [])}
     write_json(manifest_path, manifest)
     for i, c in enumerate(chunks):
         fname = narrdir / f'part-{i+1:03d}.mp3'
         if (i+1) in manifest['finished_parts'] and fname.exists() and fname.stat().st_size > 1024:
             continue
-        body = {'text': c['text'], 'model_id': args.model_id}
+        sent_text = (args.delivery + ' ' + c['text']) if args.delivery else c['text']
+        body = {'text': sent_text, 'model_id': args.model_id}
         if lock['language'] and args.model_id != 'eleven_multilingual_v2':
             body['language_code'] = lock['language'][:2]
         if i:
@@ -1104,9 +1198,17 @@ def main():
     p.add_argument('--voice-id', required=True); p.add_argument('--name', default='')
     p.add_argument('--settings', default=''); p.add_argument('--replace', action='store_true')
     p.set_defaults(func=cmd_voice_pick)
+    p = sub.add_parser('voice-probe'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--voice-id', required=True); p.add_argument('--model-id', default='eleven_v4')
+    p.add_argument('--delivery', default=''); p.add_argument('--text', default='')
+    p.add_argument('--credit-safety-factor', type=float, default=1.15)
+    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
+    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_voice_probe)
     p = sub.add_parser('tts'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--voice-id', required=True); p.add_argument('--model-id', default='eleven_v4')
     p.add_argument('--max-chars', type=int); p.add_argument('--execute', action='store_true')
+    p.add_argument('--delivery', default='', help='An audio/pace tag (e.g. "[quick, measured pace]") prepended '
+                   'to every chunk sent, proven first with voice-probe. Not hashed into the script integrity check.')
     p.add_argument('--credit-safety-factor', type=float, default=1.15,
                    help='Character-allowance reserve, not a promise of credit price (default 1.15)')
     p.set_defaults(func=cmd_tts)
