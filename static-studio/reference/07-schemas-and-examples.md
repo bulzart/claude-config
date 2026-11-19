@@ -27,23 +27,31 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" -
   --refs V001,V002,V003 --language en
 # Agent writes blueprint/script/beat-map/editorial-review, then validates.
 python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RUN" --video 1
-# Voice: five candidates, pace stated IN the design description (a voice reads about as fast
-# as the audio it was made from -- do not plan to fix pace later with a --delivery tag).
+# How the comparable narrators speak and pause (same yardstick later used on the voice):
+python "$HOME/.claude/static-studio/scripts/static_core.py" pace-profile --run "RUN" --video 1
+# Voice: five candidates described by the narrator this story needs (character, register, age,
+# accent). A preview's pace does not predict the real pace; choose by ear.
 python "$HOME/.claude/static-studio/scripts/static_core.py" voice-candidates --run "RUN" --video 1 \
-  --count 5 --design 2 --design-description "A grave, warm documentary narrator in his 50s, speaks at a brisk, measured pace of about 190 words a minute, clearly and without rushing" \
+  --count 5 --design 2 --design-description "A grave, warm documentary narrator in his 50s, American, close to the listener, restrained rather than theatrical" \
   --design-text "A sample of the actual script, 100-1000 characters, read exactly as it will be sent."
 python "$HOME/.claude/static-studio/scripts/static_core.py" voice-pick --run "RUN" --video 1 \
-  --voice-id "ID_FROM_CANDIDATES_JSON" --name "Narrator name"
+  --voice-id "ID_FROM_CANDIDATES_JSON" --name "Narrator name" --settings '{"stability":0.65,"similarity_boost":0.8}'
 # Dry run NEVER charges money. The ID below is a placeholder, not a valid voice.
 python "$HOME/.claude/static-studio/scripts/static_core.py" tts --run "RUN" --video 1 \
   --voice-id "REPLACE_WITH_REAL_VOICE_ID" --model-id eleven_v4 \
   --settings '{"stability":0.65,"similarity_boost":0.8}'
-# Only after the user has approved the selected voice, model and credit cost. --max-parts 1
-# makes the FIRST chunk the real calibration check (paid once, kept if good -- never a
-# separate short throwaway sample): transcribe/measure it before continuing to the rest.
-# ... repeat with --max-parts 1 --execute, measure, then repeat again without --max-parts
+# Only after the user has approved the voice, model and credit cost: the FIRST real part is the
+# calibration (paid once, kept). The tool refuses more parts before this voice is measured.
+#   tts ... --max-parts 1 --execute
+python "$HOME/.claude/static-studio/scripts/static_core.py" narration-measure --run "RUN" --video 1
+python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RUN" --video 1   # real_forecast_s
+#   tts ... --execute                      (the rest; finished parts are kept)
+#   tts ... --rerecord-changed --execute   (after editing lines: only the parts that hold them)
 python "$HOME/.claude/static-studio/scripts/static_core.py" audio-check --run "RUN" --video 1
-# Agent makes/records CapCut project and writes project-derived timeline.json.
+python "$HOME/.claude/static-studio/scripts/static_core.py" narration-measure --run "RUN" --video 1   # line times
+python "$HOME/.claude/static-studio/scripts/static_core.py" retime-shots --run "RUN" --video 1 --render-narration
+# Agent makes/records CapCut project (narration-edit.wav, stills at the retimed shot times) and
+# writes project-derived timeline.json.
 python "$HOME/.claude/static-studio/scripts/static_core.py" timeline-check --run "RUN" --video 1
 # Only after an actual MP4 is accessible:
 python "$HOME/.claude/static-studio/scripts/static_core.py" export-check \
@@ -86,13 +94,15 @@ Minimal `40-plans/video-01/blueprint.json`:
   "language": "en",
   "pace_wpm": 190,
   "lines": [
-    {"id": "L001", "text": "Start with a meaningful, specific opening line.", "pause_after_s": 0.5},
-    {"id": "L002", "text": "Continue naturally, with context and a real reason to care.", "pause_after_s": 0.2}
+    {"id": "L001", "text": "Start with a meaningful, specific opening line."},
+    {"id": "L002", "text": "A turn the story wants to land.", "pause_after_s": 2, "pause_via": "tag"},
+    {"id": "L003", "text": "[pause] The next line opens after it, as the review decided."},
+    {"id": "L004", "text": "The closing line.", "pause_after_s": 4, "pause_via": "edit"}
   ]
 }
 ```
 
-`pace_wpm` above (190) is an example number, not a universal default — write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then `voice-lock.json`'s `measured_wpm` (the voice's own real pace) once one is, since the two can genuinely differ (real pov-military-narrative references measured ~198-200 WPM; a real selected voice in that same niche measured ~186-187 WPM — not interchangeable).
+`pace_wpm` above (190) is an example number, not a universal default. Write this run's own measured value: `length-lock.json`'s reference-measured figure before a voice is picked, then the voice's real one (`voice-lock.json` → `measured.wpm`) once its first part is measured. The two genuinely differ: this niche's references measured 195–206 WPM, the voice 186–187. `text` is sent exactly as written, inline tags included, and tags are not counted as words. `pause_after_s` up to 1 s needs nothing, since the voice's own gap gives it. A longer one names `pause_via`: `"tag"` means a pause tag at this line's end or the next line's start; `"edit"` means a hold inserted by `retime-shots`. Each tag and realised pause gets a line under "Delivery and tags" in `editorial-review.md`, and each `content_flags` hit gets one under "Content flags".
 
 `40-plans/video-01/beat-map.json`:
 
@@ -117,9 +127,9 @@ Minimal `40-plans/video-01/blueprint.json`:
 
 ## Audio manifest (automatically produced with paid TTS)
 
-Under `50-audio/video-01/`, the TTS tool creates `manifest.json` (voice/model/language/chunks and SHA256 text hashes, line ranges, `finished_parts`, `status`). Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. A model/voice/script change during a partial recording requires deliberate reconciliation; the tool will refuse silent reuse. `audio-check` disallows a partial or missing line/audio, and rejects a delivered duration far from lock. `tts --max-parts 1 --execute` stops after the first chunk instead (`mode: partial_by_design_max_parts`) so it can be measured before paying for the rest.
+Under `50-audio/video-01/`, the TTS tool creates `manifest.json` (voice/model/language/chunks and SHA256 text hashes, line ranges, `finished_parts`, `status`). Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. Parts keep their line boundaries once recorded. An edited line marks only its part as changed: the dry run lists `changed_recorded_parts`, and `--rerecord-changed` re-records just those, with old takes in `superseded/` and the change in `history`. Adding or removing lines, or changing the voice, model or language, needs `--rechunk`/`--archive-existing` (the folder moves to `video-NN-archive-<time>`). `audio-check` disallows a partial or missing line/audio, rejects a duration outside the audio tolerance, and rejects a narration that, with its planned edit holds, cannot fit the export window. `tts --max-parts 1 --execute` stops after the first part (`mode: partial_by_design_max_parts`) so it can be measured before paying for the rest.
 
-## Voice lock (`voice_id`/`settings`/`measured_wpm`/`locked_at`/`rule` written by `voice-pick`; `measured_overhead_*` hand-recorded by the agent; all of it read by `tts` and `plan-check`)
+## Voice lock (`voice-pick` writes the voice; `narration-measure` writes `measured`; `tts` and `plan-check` read both)
 
 `60-voice/voice-lock.json`:
 
@@ -129,18 +139,32 @@ Under `50-audio/video-01/`, the TTS tool creates `manifest.json` (voice/model/la
   "generated_voice_id": "REAL_ACCOUNT_VOICE_ID",
   "name": "Narrator name",
   "settings": {"stability": 0.65, "similarity_boost": 0.8},
-  "measured_wpm": 187,
-  "measured_overhead_s": 113.4,
-  "measured_overhead_lines": 329,
-  "measured_overhead_source": "How/when this was measured -- which real generation(s), at what line count.",
+  "preview_wpm": 195,
+  "measured": {"voice_id": "REAL_ACCOUNT_VOICE_ID", "model_id": "eleven_v4",
+               "settings": {"stability": 0.65, "similarity_boost": 0.8},
+               "wpm": 187, "words": 1356, "speech_s": 435.1, "duration_s": 486.2, "lines": 122,
+               "per_line_overhead_s": 0.41, "tag_costs_s": {"[pause]": 1.9},
+               "parts": [1], "measured_at": "2026-11-19T15:30:00+00:00"},
   "locked_at": "2026-11-19T13:22:38+00:00",
   "rule": "One voice per run across every video and language; --replace required to deliberately change it."
 }
 ```
 
-`measured_wpm` is this voice's own real measured pace (not the reference narrators') — it supersedes `length-lock.json`'s `pace_wpm` for sizing the script once it exists (`03-duration-and-script.md`). `measured_overhead_s`/`measured_overhead_lines` are the real ElevenLabs natural-pause overhead observed on an actual generation (for this many script lines) — `plan-check` uses them for `real_overhead_forecast_s`, a more accurate prediction than its plain `forecast_s` (which only counts the script's own *planned* pauses, never actually sent to ElevenLabs).
+`preview_wpm` is information only, since a short preview reads fast and scatters. `measured` comes from a real part of 300+ words recorded with exactly this voice, model and settings. It supersedes the references' pace for the forecast (`plan-check` → `real_forecast_s`) and is what unlocks recording more than one part. `per_line_overhead_s` is the voice's natural silence per script line with the measured tag time taken out. `tag_costs_s` holds the median extra seconds each tag really added on this voice. `voice-pick --replace` keeps `measured` only when the voice and settings are unchanged.
 
-**No command writes `measured_overhead_s`/`measured_overhead_lines` yet** — after a `--max-parts 1` calibration chunk or a completed generation, the agent transcribes it, computes `overhead_s = real_duration_s - words*60/measured_wpm`, and adds the three fields into this file itself (merge, don't just overwrite — `voice-pick --replace` rewrites the whole file from scratch and does not preserve them, so re-add them after any `--replace`, and only reuse old overhead data if the voice itself didn't change; a different voice needs its own fresh measurement).
+## Line times and edit plan (written by `narration-measure` and `retime-shots`)
+
+`50-audio/video-01/line-times.json` (from `narration-measure`) contains:
+- `complete`, `script_sha256` (stale once the script changes), `parts[]` (offset, duration, words, speech, WPM, alignment);
+- `wpm`, `per_line_overhead_s`, `natural_line_gap_median_s`, `tags_measured[]` (line, tag, gap, excess), `pause_profile` (the same keys `pace-profile` gives for the references);
+- `lines[]`: `{id, index, start_s, end_s, matched_words, words}`.
+
+`70-edit/video-01/edit-plan.json` (from `retime-shots`) contains:
+- `narration_duration_s` and `holds[]` (`after_line`, `at_audio_s`, `hold_s`);
+- `edit_duration_s`, `edit_narration` (`narration-edit.wav` and its probed duration), `export_window_s`, `within_export_window`;
+- `shots[]` (`id`, `beat_id`, `start_s`, `end_s`, `duration_s`) and `notes` (shots the real timing made very short or long).
+
+`retime-shots` also rewrites `60-visuals/video-01/shot-plan.json`'s `start_s`/`end_s`, keeping the planned values once as `planned_start_s`/`planned_end_s`.
 
 **Production agents must not manually toggle `status=complete`.** The manifest represents real provider responses. The tool saves chunks and updates the manifest after each successful response so a credit cutoff cannot masquerade as a short completed voiceover.
 

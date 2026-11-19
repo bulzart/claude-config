@@ -3053,3 +3053,197 @@ operable )
 [report] 20261118-161025-xqc C0048: done in 135.3 s, $0.018
 [report] 20261118-161025-xqc C0047: done in 182.1 s, $0.031
 [notify] 20261118-161025-xqc: Create-clips is ready: xqc -> toast
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ohnepixel\20261119-143919-ohnepixel\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.1 s (38.0 s 1920x1080 60.0 fps)
+[C0001] stage audio: ok in 0.2 s (76 windows)
+[C0001] stage sheets: ok in 2.7 s (51 frames, 2 sheets, leftovers 0)
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0001] stage transcript: ok in 179.3 s (90 words, medium on cpu, 105.5 s, language en (detected, now the run's language))
+[C0001] stage digest: ok in 0.0 s (38 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.2, 'sheets': 2.7, 'transcript': 179.3, 'digest': 0.0}
+[watch] ohnepixel/20261119-143919-ohnepixel C0001 (live): done in 182.3 s {'move': 0.0, 'probe': 0.1, 'audio': 0.2, 'sheets': 2.7, 'transcript': 179.3, 'digest': 0.0} free 686.31 GB
+[report] 20261119-143919-ohnepixel C0001: done in 92.2 s, $0.013
+[notify] 20261119-143919-ohnepixel: Create-clips is ready: ohnepixel -> toast
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\zarbex\20261119-145018-zarbex\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.2 s (29.789 s 1920x1080 59.94 fps)
+[C0001] stage audio: ok in 0.5 s (60 windows)
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ohnepixel\20261119-145014-ohnepixel\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.6 s (38.016 s 1920x1080 60.0 fps)
+[C0001] stage audio: ok in 0.5 s (77 windows)
+[watch] a recording's session.json changed: the run's recording info is updated
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0001] stage sheets: ok in 6.6 s (40 frames, 2 sheets, leftovers 0)
+[C0001] stage sheets: ok in 7.0 s (51 frames, 2 sheets, leftovers 0)
+[C0001] stage transcript: ok in 56.3 s (42 words, medium on cpu, 56.3 s, language de (detected, now the run's language))
+[C0001] stage digest: ok in 0.0 s (30 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.5, 'sheets': 6.6, 'transcript': 56.3, 'digest': 0.0}
+[watch] zarbex/20261119-145018-zarbex C0001 (live): done in 63.7 s {'move': 0.0, 'probe': 0.2, 'audio': 0.5, 'sheets': 6.6, 'transcript': 56.3, 'digest': 0.0} free 686.31 GB
+[C0001] stage transcript: ok in 63.8 s (66 words, medium on cpu, 63.8 s, language en (detected, now the run's language))
+[C0001] stage digest: ok in 0.0 s (39 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.6, 'audio': 0.5, 'sheets': 7.0, 'transcript': 63.8, 'digest': 0.0}
+[watch] ohnepixel/20261119-145014-ohnepixel C0001 (backlog): done in 72.1 s {'move': 0.0, 'probe': 0.6, 'audio': 0.5, 'sheets': 7.0, 'transcript': 63.8, 'digest': 0.0} free 686.27 GB
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ohnepixel\20261119-145133-ohnepixel\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.2 s (34.005 s 1920x1080 60.0 fps)
+[C0001] stage audio: ok in 0.3 s (69 windows)
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0001] stage sheets: ok in 4.9 s (46 frames, 2 sheets, leftovers 0)
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\trymacs\20261119-145126-trymacs\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.2 s (30.2 s 1920x1080 30.0 fps)
+[C0001] stage audio: ok in 0.4 s (61 windows)
+[C0001] stage sheets: ok in 2.9 s (41 frames, 2 sheets, leftovers 0)
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0001] stage transcript: ok in 35.1 s (29 words, medium on cpu, 35.1 s, language en (detected))
+[C0001] stage digest: ok in 0.0 s (35 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.3, 'sheets': 4.9, 'transcript': 35.1, 'digest': 0.0}
+[C0001] stage transcript: ok in 22.6 s (3 words, medium on cpu, 22.6 s, language en (fallback))
+[C0001] stage digest: ok in 0.0 s (31 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 2.9, 'transcript': 22.6, 'digest': 0.0}
+[watch] ohnepixel/20261119-145133-ohnepixel C0001 (live): done in 40.6 s {'move': 0.0, 'probe': 0.2, 'audio': 0.3, 'sheets': 4.9, 'transcript': 35.1, 'digest': 0.0} free 686.2 GB
+[watch] trymacs/20261119-145126-trymacs C0001 (backlog): done in 26.2 s {'move': 0.0, 'probe': 0.2, 'audio': 0.4, 'sheets': 2.9, 'transcript': 22.6, 'digest': 0.0} free 686.2 GB
+[report] 20261119-145018-zarbex C0001: done in 76.4 s, $0.011
+[notify] 20261119-145018-zarbex: Create-clips is ready: zarbex -> toast
+[report] 20261119-145014-ohnepixel C0001: done in 79.3 s, $0.012
+[notify] 20261119-145014-ohnepixel: Create-clips is ready: ohnepixel -> toast
+[report] 20261119-145126-trymacs C0001: done in 36.1 s, $0.006
+[report] 20261119-145133-ohnepixel C0001: done in 68.5 s, $0.011
+[notify] 20261119-145133-ohnepixel: Create-clips is ready: ohnepixel -> toast
+[watch] idle for 600 s: Whisper model unloaded (the next chunk loads it again)
+[C0001] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0001.mp4
+[C0001] stage move: ok in 0.0 s
+[C0001] stage probe: ok in 0.1 s (32.005 s 1920x1080 59.998 fps)
+[C0001] stage audio: ok in 0.3 s (64 windows)
+[C0001] stage sheets: ok in 1.9 s (43 frames, 2 sheets, leftovers 0)
+[watch] a recording's session.json changed: the run's recording info is updated
+[C0002] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0002.mp4
+[C0002] stage move: ok in 0.0 s
+[C0002] stage probe: ok in 0.1 s (30.2 s 1920x1080 30.0 fps)
+[C0002] stage audio: ok in 0.6 s (61 windows)
+[C0002] stage sheets: ok in 1.1 s (41 frames, 2 sheets, leftovers 0)
+[C0002] stage transcript: ok in 73.5 s (3 words, medium on cpu, 18.4 s, language en (fallback))
+[C0002] stage digest: ok in 0.0 s (31 seconds)
+[C0002] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.6, 'sheets': 1.1, 'transcript': 73.5, 'digest': 0.0}
+[watch] ishowspeed/20261119-185106-ishowspeed C0002 (backlog): done in 75.3 s {'move': 0.0, 'probe': 0.1, 'audio': 0.6, 'sheets': 1.1, 'transcript': 73.5, 'digest': 0.0} free 731.64 GB
+[C0003] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0003.mp4
+[C0003] stage move: ok in 0.0 s
+[C0003] stage probe: ok in 0.1 s (2.005 s 1920x1080 30.0 fps)
+[C0001] stage transcript: ok in 94.3 s (31 words, medium on cpu, 21.0 s, language en (detected))
+[C0001] stage digest: ok in 0.0 s (33 seconds)
+[C0001] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 1.9, 'transcript': 94.3, 'digest': 0.0}
+[C0003] stage audio: ok in 0.3 s (5 windows)
+[C0003] stage sheets: ok in 0.2 s (3 frames, 1 sheets, leftovers 0)
+[watch] ishowspeed/20261119-185106-ishowspeed C0001 (live): done in 96.8 s {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 1.9, 'transcript': 94.3, 'digest': 0.0} free 731.64 GB
+[C0012] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0012.mp4
+[C0012] stage move: ok in 0.0 s
+[C0012] stage probe: ok in 0.1 s (0.2 s 1920x1080 29.963 fps)
+[C0012] stage audio: ok in 0.1 s (1 windows)
+[C0012] stage sheets: ok in 0.2 s (1 frames, 1 sheets, leftovers 0)
+[C0012] stage transcript: ok in 8.8 s (0 words, medium on cpu, 8.8 s, language en (fallback))
+[C0012] stage digest: ok in 0.0 s (1 seconds)
+[C0012] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.2, 'transcript': 8.8, 'digest': 0.0}
+[watch] ishowspeed/20261119-185106-ishowspeed C0012 (live): done in 9.4 s {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.2, 'transcript': 8.8, 'digest': 0.0} free 731.64 GB
+[C0011] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0011.mp4
+[C0011] stage move: ok in 0.0 s
+[C0011] stage probe: ok in 0.3 s (2.0 s 1920x1080 30.0 fps)
+[C0011] stage audio: ok in 0.3 s (4 windows)
+[C0011] stage sheets: ok in 0.3 s (3 frames, 1 sheets, leftovers 0)
+[C0003] stage transcript: ok in 16.8 s (3 words, medium on cpu, 16.8 s, language en (fallback))
+[C0003] stage digest: ok in 0.0 s (3 seconds)
+[C0003] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 0.2, 'transcript': 16.8, 'digest': 0.0}
+[watch] ishowspeed/20261119-185106-ishowspeed C0003 (backlog): done in 17.5 s {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 0.2, 'transcript': 16.8, 'digest': 0.0} free 731.64 GB
+[C0004] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0004.mp4
+[C0004] stage move: ok in 0.0 s
+[C0004] stage probe: ok in 0.3 s (2.0 s 1920x1080 30.0 fps)
+[C0011] stage transcript: ok in 6.7 s (0 words, medium on cpu, 6.7 s, language en (fallback))
+[C0011] stage digest: ok in 0.0 s (2 seconds)
+[C0011] ingest end: done {'move': 0.0, 'probe': 0.3, 'audio': 0.3, 'sheets': 0.3, 'transcript': 6.7, 'digest': 0.0}
+[C0004] stage audio: ok in 0.3 s (4 windows)
+[C0004] stage sheets: ok in 0.3 s (3 frames, 1 sheets, leftovers 0)
+[watch] ishowspeed/20261119-185106-ishowspeed C0011 (live): done in 7.8 s {'move': 0.0, 'probe': 0.3, 'audio': 0.3, 'sheets': 0.3, 'transcript': 6.7, 'digest': 0.0} free 731.64 GB
+[C0010] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0010.mp4
+[C0010] stage move: ok in 0.0 s
+[C0010] stage probe: ok in 0.1 s (2.0 s 1920x1080 30.0 fps)
+[C0010] stage audio: ok in 0.1 s (4 windows)
+[C0010] stage sheets: ok in 0.4 s (3 frames, 1 sheets, leftovers 0)
+[C0004] stage transcript: ok in 7.0 s (0 words, medium on cpu, 7.0 s, language en (fallback))
+[C0004] stage digest: ok in 0.0 s (2 seconds)
+[C0004] ingest end: done {'move': 0.0, 'probe': 0.3, 'audio': 0.3, 'sheets': 0.3, 'transcript': 7.0, 'digest': 0.0}
+[watch] ishowspeed/20261119-185106-ishowspeed C0004 (backlog): done in 7.9 s {'move': 0.0, 'probe': 0.3, 'audio': 0.3, 'sheets': 0.3, 'transcript': 7.0, 'digest': 0.0} free 731.64 GB
+[C0005] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0005.mp4
+[C0005] stage move: ok in 0.0 s
+[C0010] stage transcript: ok in 6.7 s (0 words, medium on cpu, 6.7 s, language en (fallback))
+[C0010] stage digest: ok in 0.0 s (2 seconds)
+[C0010] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.4, 'transcript': 6.7, 'digest': 0.0}
+[C0005] stage probe: ok in 0.2 s (2.0 s 1920x1080 30.0 fps)
+[C0005] stage audio: ok in 0.2 s (4 windows)
+[C0005] stage sheets: ok in 0.2 s (3 frames, 1 sheets, leftovers 0)
+[watch] ishowspeed/20261119-185106-ishowspeed C0010 (live): done in 7.4 s {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.4, 'transcript': 6.7, 'digest': 0.0} free 731.64 GB
+[C0009] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0009.mp4
+[C0009] stage move: ok in 0.0 s
+[C0009] stage probe: ok in 0.1 s (2.0 s 1920x1080 30.0 fps)
+[C0009] stage audio: ok in 0.1 s (4 windows)
+[C0009] stage sheets: ok in 0.3 s (3 frames, 1 sheets, leftovers 0)
+[C0005] stage transcript: ok in 6.5 s (0 words, medium on cpu, 6.5 s, language en (fallback))
+[C0005] stage digest: ok in 0.0 s (2 seconds)
+[C0005] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.2, 'sheets': 0.2, 'transcript': 6.5, 'digest': 0.0}
+[watch] ishowspeed/20261119-185106-ishowspeed C0005 (backlog): done in 7.2 s {'move': 0.0, 'probe': 0.2, 'audio': 0.2, 'sheets': 0.2, 'transcript': 6.5, 'digest': 0.0} free 731.64 GB
+[C0006] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0006.mp4
+[C0006] stage move: ok in 0.0 s
+[C0006] stage probe: ok in 0.2 s (2.0 s 1920x1080 30.0 fps)
+[C0006] stage audio: ok in 0.1 s (4 windows)
+[C0006] stage sheets: ok in 0.3 s (3 frames, 1 sheets, leftovers 0)
+[C0009] stage transcript: ok in 6.4 s (0 words, medium on cpu, 6.4 s, language en (fallback))
+[C0009] stage digest: ok in 0.0 s (2 seconds)
+[C0009] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.3, 'transcript': 6.4, 'digest': 0.0}
+[watch] ishowspeed/20261119-185106-ishowspeed C0009 (live): done in 7.1 s {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.3, 'transcript': 6.4, 'digest': 0.0} free 731.64 GB
+[C0008] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0008.mp4
+[C0008] stage move: ok in 0.0 s
+[C0008] stage probe: ok in 0.1 s (2.005 s 1920x1080 30.0 fps)
+[C0008] stage audio: ok in 0.1 s (5 windows)
+[C0008] stage sheets: ok in 0.3 s (3 frames, 1 sheets, leftovers 0)
+[C0006] stage transcript: ok in 6.7 s (0 words, medium on cpu, 6.7 s, language en (fallback))
+[C0006] stage digest: ok in 0.0 s (2 seconds)
+[C0006] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.1, 'sheets': 0.3, 'transcript': 6.7, 'digest': 0.0}
+[report] 20261119-185106-ishowspeed C0002: done in 42.9 s, $0.007
+[watch] ishowspeed/20261119-185106-ishowspeed C0006 (backlog): done in 7.4 s {'move': 0.0, 'probe': 0.2, 'audio': 0.1, 'sheets': 0.3, 'transcript': 6.7, 'digest': 0.0} free 731.64 GB
+[C0007] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0007.mp4
+[C0007] stage move: ok in 0.0 s
+[C0007] stage probe: ok in 0.1 s (0.2 s 1920x1080 29.963 fps)
+[C0007] stage audio: ok in 0.1 s (1 windows)
+[C0007] stage sheets: ok in 0.1 s (1 frames, 1 sheets, leftovers 0)
+[C0007] stage transcript: ok in 6.9 s (0 words, medium on cpu, 6.9 s, language en (fallback))
+[C0007] stage digest: ok in 0.0 s (1 seconds)
+[C0007] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.1, 'transcript': 6.9, 'digest': 0.0}
+[C0008] stage transcript: ok in 14.6 s (3 words, medium on cpu, 14.6 s, language en (fallback))
+[C0008] stage digest: ok in 0.0 s (3 seconds)
+[C0008] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.3, 'transcript': 14.6, 'digest': 0.0}
+[watch] ishowspeed/20261119-185106-ishowspeed C0008 (live): done in 15.2 s {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.3, 'transcript': 14.6, 'digest': 0.0} free 731.64 GB
+[watch] ishowspeed/20261119-185106-ishowspeed C0007 (backlog): done in 7.3 s {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.1, 'transcript': 6.9, 'digest': 0.0} free 731.64 GB
+[report] 20261119-185106-ishowspeed C0012: done in 25.4 s, $0.004
+[report] 20261119-185106-ishowspeed C0001: done in 79.3 s, $0.011
+[watch] a recording's session.json changed: the run's recording info is updated
+[report] 20261119-185106-ishowspeed C0003: done in 27.4 s, $0.005
+[C0013] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\ishowspeed\20261119-185106-ishowspeed\chunk-0013.mp4
+[C0013] stage move: ok in 0.0 s
+[C0013] stage probe: ok in 0.1 s (108.0 s 1920x1080 59.999 fps)
+[C0013] stage audio: ok in 0.5 s (216 windows)
+[report] 20261119-185106-ishowspeed C0011: done in 20.4 s, $0.004
+[C0013] stage sheets: ok in 8.4 s (144 frames, 5 sheets, leftovers 0)
+[report] 20261119-185106-ishowspeed C0004: done in 29.6 s, $0.005
+[report] 20261119-185106-ishowspeed C0010: done in 35.8 s, $0.006
+[C0013] stage transcript: ok in 43.4 s (169 words, medium on cpu, 43.4 s, language en (detected, now the run's language))
+[C0013] stage digest: ok in 0.0 s (108 seconds)
+[C0013] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.5, 'sheets': 8.4, 'transcript': 43.4, 'digest': 0.0}
+[watch] ishowspeed/20261119-185106-ishowspeed C0013 (live): done in 52.5 s {'move': 0.0, 'probe': 0.1, 'audio': 0.5, 'sheets': 8.4, 'transcript': 43.4, 'digest': 0.0} free 731.53 GB
+[report] 20261119-185106-ishowspeed C0005: done in 29.8 s, $0.005
+[report] 20261119-185106-ishowspeed C0009: done in 24.2 s, $0.004
+[report] 20261119-185106-ishowspeed C0006: done in 28.2 s, $0.005
+[report] 20261119-185106-ishowspeed C0008: done in 27.4 s, $0.005
+[report] 20261119-185106-ishowspeed C0007: done in 17.4 s, $0.004
+[report] 20261119-185106-ishowspeed C0013: done in 129.7 s, $0.021
+[notify] 20261119-185106-ishowspeed: Create-clips is ready: ishowspeed -> toast
+[watch] idle for 600 s: Whisper model unloaded (the next chunk loads it again)

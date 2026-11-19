@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import base64
 import datetime as dt
+import difflib
 import hashlib
 import json
 import math
@@ -483,6 +484,9 @@ def cmd_length(args):
             'reference_durations_s': {i: family[i]['duration_s'] for i in refs},
             'language': args.language, 'pace_wpm': pace_wpm, 'pace_wpm_source': pace_wpm_source,
             'per_ref_wpm': per_ref_wpm,
+            # How the comparable narrators pause (same yardstick narration-measure uses on the generated voice):
+            # the evidence the script stage reads before deciding any pause, hold or tag.
+            'reference_pause_profiles': ref_pause_profiles(rd, refs),
             'locked_at': now(), 'rule': 'Immutable unless user explicitly approves a revised length.'}
     write_json(lockfile, lock)
     st['selected_niche'] = effective_niche
@@ -500,8 +504,167 @@ def cmd_length(args):
                        f'{wpm_note}. Write the script to ~{round(target * pace_wpm / 60)} words.')})
 
 
+TAG_RE = re.compile(r'\[([^\[\]]{1,160})\]')
+TAGS_FILE = ROOT / 'data' / 'elevenlabs-audio-tags.json'
+TTS_MODELS = ('eleven_v4', 'eleven_v4_turbo')   # the user's standing rule: these two models only
+# A planned pause up to this long is the voice's own gap between lines (already inside the measured per-line
+# overhead): nothing to realise. Longer ones are realised by a pause tag or by a hold in the edit (pause_via).
+NATURAL_PAUSE_MAX_S = 1.0
+# Natural gap per script line before this run's voice is measured (eleven_v4 here, 2026-11-19: 0.36-0.42 s).
+DEFAULT_LINE_OVERHEAD_S = 0.4
+
+
+def strip_tags(text):
+    """The spoken words of a line: inline [audio tags] are sent to ElevenLabs but never spoken."""
+    return re.sub(r'[ \t]{2,}', ' ', TAG_RE.sub(' ', str(text))).strip()
+
+
 def count_words(text):
-    return len(re.findall(r"\b[\w]+(?:[-'][\w]+)*\b", text, flags=re.UNICODE))
+    return len(re.findall(r"\b[\w]+(?:[-'][\w]+)*\b", strip_tags(text), flags=re.UNICODE))
+
+
+_TAG_CATALOGUE = None
+
+
+def tag_catalogue():
+    global _TAG_CATALOGUE
+    if _TAG_CATALOGUE is None:
+        data = read_json(TAGS_FILE)
+        _TAG_CATALOGUE = {' '.join(str(t['tag']).lower().split()): t for t in data.get('tags') or []}
+    return _TAG_CATALOGUE
+
+
+def classify_tag(inner):
+    """The catalogue entry of one tag (its text inside the brackets). The vocabulary is open: a tag the
+    catalogue doesn't list is 'custom', allowed, and judged by ear on the calibration chunk."""
+    key = '[' + ' '.join(str(inner).lower().split()) + ']'
+    entry = tag_catalogue().get(key)
+    if entry:
+        return entry
+    if 'accent' in key:
+        return {'tag': key, 'category': 'accent_character', 'pipeline_status': 'not_for_narration'}
+    return {'tag': key, 'category': 'pause' if 'pause' in key else 'custom', 'pipeline_status': 'custom'}
+
+
+def tag_cost_s(tag, measured_costs=None):
+    """Seconds a tag adds: this voice's measured value (narration-measure) first, else the catalogue's
+    approximate one, else 2 s for any pause wording and 0 for a delivery tag."""
+    if measured_costs and tag in measured_costs:
+        return float(measured_costs[tag])
+    entry = tag_catalogue().get(tag) or {}
+    if entry.get('approx_cost_s') is not None:
+        return float(entry['approx_cost_s'])
+    return 2.0 if 'pause' in tag else 0.0
+
+
+def script_tags(lines):
+    """Every inline tag in the script, with its catalogue status. Refuses only what a pipeline rule excludes
+    (not_for_narration) and broken brackets; which tags fit the story is the agents' decision (05)."""
+    found, issues = [], []
+    for i, row in enumerate(lines):
+        text = str(row.get('text') or '')
+        lid = str(row.get('id') or f'L{i+1:03d}')
+        if text.count('[') != text.count(']') or re.search(r'\[[^\]]*\[', text) or re.search(r'\][^\[]*\]', text):
+            issues.append(f'audio_tag_malformed_brackets:{lid}')
+        for m in TAG_RE.finditer(text):
+            entry = classify_tag(m.group(1))
+            found.append({'line': lid, 'index': i + 1, 'tag': entry['tag'], 'category': entry.get('category'),
+                          'status': entry.get('pipeline_status'), 'at_line_start': not text[:m.start()].strip(),
+                          'at_line_end': not text[m.end():].strip(), 'words_before': count_words(text[:m.start()])})
+            if entry.get('pipeline_status') == 'not_for_narration':
+                issues.append(f'audio_tag_not_for_narration:{lid}:{entry["tag"]}')
+        if text.strip() and not strip_tags(text):
+            issues.append(f'line_has_only_tags:{lid}')
+    return found, issues
+
+
+def is_pause_tag(inner):
+    return classify_tag(inner).get('category') == 'pause'
+
+
+def script_pause_plan(lines):
+    """Each planned pause longer than a natural line gap and how it is realised: 'tag' (a pause tag at this
+    line's end or the next line's start: costs the tag's measured time inside the narration) or 'edit' (a hold:
+    the narration is split there and the picture held; adds pause_after_s to the edit, not to the narration)."""
+    plan, issues = [], []
+    for i, row in enumerate(lines):
+        lid = str(row.get('id') or f'L{i+1:03d}')
+        try:
+            p = float(row.get('pause_after_s') or 0)
+        except (TypeError, ValueError):
+            issues.append(f'pause_after_s_invalid:{lid}')
+            continue
+        via = str(row.get('pause_via') or '').strip().lower()
+        if via and via not in ('natural', 'tag', 'edit'):
+            issues.append(f'pause_via_invalid:{lid}')
+            continue
+        if p <= NATURAL_PAUSE_MAX_S and via in ('', 'natural'):
+            continue
+        if via in ('', 'natural'):
+            issues.append(f'pause_{lid}_over_{NATURAL_PAUSE_MAX_S:g}s_needs_pause_via_tag_or_edit')
+            continue
+        if via == 'tag':
+            here = str(row.get('text') or '').rstrip()
+            after = str(lines[i + 1].get('text') or '').lstrip() if i + 1 < len(lines) else ''
+            ends = [m.group(1) for m in (re.search(r'\[([^\[\]]+)\]\s*$', here), re.match(r'\s*\[([^\[\]]+)\]', after)) if m]
+            if not any(is_pause_tag(x) for x in ends):
+                issues.append(f'pause_{lid}_via_tag_but_no_pause_tag_at_this_line_end_or_next_line_start')
+        plan.append({'line': lid, 'index': i + 1, 'pause_after_s': p, 'via': via})
+    return plan, issues
+
+
+def edit_holds_s(lines):
+    plan, _ = script_pause_plan(lines)
+    return round(sum(p['pause_after_s'] for p in plan if p['via'] == 'edit'), 2)
+
+
+# Words that may break 02's content rules. A hit is not a verdict (a word can be plain, unavoidable fact): it
+# must be answered, line by line, under a "Content flags" heading in editorial-review.md (rewritten, or why kept).
+CONTENT_FLAGS = [
+    ('holiday_religion_superstition', re.compile(
+        r"\b(christmas|xmas|thanksgiving|easter|hanukkah|ramadan|diwali|halloween|new year's|holiday|holidays|feast|"
+        r"church|chapel|chaplain|pray|prayed|praying|prayer|prayers|god|gods|heaven|miracle|miraculous|blessed|"
+        r"blessing|omen|omens|luck|lucky|luckily|curse|cursed|ghost|ghosts|haunted|astrology|superstition)\b", re.I)),
+    ('injury_gore_distress', re.compile(
+        r"\b(blood|bloody|bled|bleed|bleeding|wound|wounds|gore|gory|corpse|corpses|severed|amputated|amputation|"
+        r"limb|limbs|agony|scream|screamed|screaming|sobbing|terror|terrified|panic|panicked|despair|suicide|"
+        r"vomit|vomited|needle|syringe|inject|injected)\b", re.I)),
+    ('swearing', re.compile(r"\b(hell|damn|damned|goddamn|bastard|crap|shit|fuck)\b", re.I)),
+]
+
+
+def content_flags(lines, review_text):
+    m = re.search(r'^#+[^\n]*content flags?[^\n]*\n(.*?)(?=^#|\Z)', review_text or '', flags=re.I | re.M | re.S)
+    section = m.group(1) if m else ''
+    flags, issues = [], []
+    for i, row in enumerate(lines):
+        lid = str(row.get('id') or f'L{i+1:03d}')
+        spoken = strip_tags(row.get('text') or '')
+        for kind, rx in CONTENT_FLAGS:
+            hits = sorted({h.lower() for h in rx.findall(spoken)})
+            if hits:
+                reviewed = bool(re.search(r'\b' + re.escape(lid) + r'\b', section))
+                flags.append({'line': lid, 'kind': kind, 'terms': hits, 'reviewed': reviewed})
+                if not reviewed:
+                    issues.append(f'content_flag_unreviewed:{lid}:{kind}')
+    return flags, issues
+
+
+def script_hash(lines):
+    return hashlib.sha256('\n'.join(str(r.get('text') or '').strip() for r in lines).encode('utf-8')).hexdigest()
+
+
+def voice_measurement(rd):
+    """The locked voice's real measured pace and natural per-line gap (narration-measure writes it), or the
+    older hand-recorded fields. Empty until a real chunk of at least 300 words has been measured."""
+    vl = read_json(rd / '60-voice' / 'voice-lock.json')
+    m = vl.get('measured') or {}
+    if m.get('wpm') and m.get('per_line_overhead_s') is not None and (m.get('words') or 0) >= 300:
+        return m
+    if vl.get('measured_wpm') and vl.get('measured_overhead_s') and vl.get('measured_overhead_lines'):
+        return {'wpm': vl['measured_wpm'], 'per_line_overhead_s': vl['measured_overhead_s'] / vl['measured_overhead_lines'],
+                'voice_id': vl.get('voice_id'), 'settings': vl.get('settings') or {}, 'source': 'hand-recorded (older run)'}
+    return {}
 
 
 def strip_transcript_timestamps(raw):
@@ -514,17 +677,63 @@ def strip_transcript_timestamps(raw):
     return ' '.join(lines)
 
 
+def transcript_speech(raw):
+    """(spoken words, speech seconds) of a [start-end] text transcript: the sum of the spoken segments'
+    durations, so silence between segments is excluded. One yardstick for references and generated narration."""
+    narr_s = sum(float(m.group(2)) - float(m.group(1))
+                 for m in re.finditer(r'\[([\d.]+)-([\d.]+)\]', raw))
+    return count_words(strip_transcript_timestamps(raw)), narr_s
+
+
 def wpm_from_transcript_raw(raw):
     """Pure-narration WPM from a [start-end] text transcript: spoken words (timestamps
     stripped from the count) over the sum of spoken-chunk durations (silence excluded).
     This is the narrator's actual speaking rate, not a video-duration-diluted figure.
     Returns None if the transcript has no parseable [start-end] chunks."""
-    narr_s = sum(float(m.group(2)) - float(m.group(1))
-                 for m in re.finditer(r'\[([\d.]+)-([\d.]+)\]', raw))
+    wc, narr_s = transcript_speech(raw)
     if narr_s <= 0:
         return None
-    wc = count_words(strip_transcript_timestamps(raw))
     return round(wc / (narr_s / 60))
+
+
+def transcript_words(tjson):
+    """Word timestamps of a transcript.json written by transcribe(), in time order."""
+    out = []
+    for seg in tjson.get('segments') or []:
+        for w in seg.get('words') or []:
+            if w.get('start_s') is not None and w.get('end_s') is not None and str(w.get('text') or '').strip():
+                out.append({'start_s': float(w['start_s']), 'end_s': float(w['end_s']), 'text': str(w['text'])})
+    return out
+
+
+def pause_profile(words):
+    """How a narrator pauses, from Whisper word timestamps: the silence between consecutive words. Computed the
+    same way for the references and for this run's narration, so the two can be compared directly."""
+    if len(words) < 2:
+        return {}
+    gaps = [max(0.0, b['start_s'] - a['end_s']) for a, b in zip(words, words[1:])]
+    span = words[-1]['end_s'] - words[0]['start_s']
+    mins = span / 60 if span > 0 else 0
+    real = sorted(g for g in gaps if g >= 0.3)
+
+    def per_min(th):
+        return round(sum(1 for g in gaps if g >= th) / mins, 2) if mins else None
+
+    def pct(q):
+        return round(real[min(len(real) - 1, int(q * len(real)))], 2) if real else None
+    return {'speech_span_s': round(span, 1), 'pauses_0_3s_plus_per_min': per_min(0.3),
+            'pauses_0_8s_plus_per_min': per_min(0.8), 'pauses_1_5s_plus_per_min': per_min(1.5),
+            'pauses_3s_plus_per_min': per_min(3.0), 'pause_median_s': pct(.5), 'pause_p90_s': pct(.9),
+            'longest_pause_s': round(max(gaps), 2), 'silence_share': round(sum(gaps) / span, 3) if span > 0 else None}
+
+
+def ref_pause_profiles(rd, refs):
+    out = {}
+    for vid in refs:
+        t = read_json(rd / '10-media' / vid / 'transcript.json')
+        if t:
+            out[vid] = pause_profile(transcript_words(t))
+    return out
 
 
 def compute_ref_wpm(rd, refs, family):
@@ -590,36 +799,54 @@ def plan_facts(rd, video):
             issues.append(f'beat_{n}_bad_structure')
     if timing and (abs(cursor_s - lock['target_length_s']) > 1 or cursor_line != len(lines)):
         issues.append('beats_do_not_cover_all_time_and_lines')
+    # Spoken words only: inline [audio tags] are sent to ElevenLabs but never spoken (count_words strips them).
     words = sum(count_words(x.get('text', '')) for x in lines)
-    pause_s = sum(float(x.get('pause_after_s', 0)) for x in lines) if lines else 0
+    tags, tag_issues = script_tags(lines)
+    pause_plan, pause_issues = script_pause_plan(lines)
+    issues += tag_issues + pause_issues
+    holds = round(sum(p['pause_after_s'] for p in pause_plan if p['via'] == 'edit'), 2)
+    review = vd / 'editorial-review.md'
+    review_text = review.read_text(encoding='utf-8', errors='replace') if review.exists() else ''
+    flags, flag_issues = content_flags(lines, review_text)
+    issues += flag_issues
+    measured = voice_measurement(rd)
+    tag_s = round(sum(tag_cost_s(t['tag'], measured.get('tag_costs_s')) for t in tags), 2)
     pace = float(script.get('pace_wpm') or lock.get('pace_wpm') or 0)
-    forecast = round(words * 60 / pace + pause_s, 2) if pace else 0
     if not pace:
         issues.append('script_missing_narration_pace')
-    # planned_pauses_s (pause_after_s) is an authoring intent, never actually sent to ElevenLabs
-    # (chunks_for_lines does not transmit it); forecast_s above is therefore only a rough
-    # word-count-vs-pace sanity check. The REAL total duration also includes ElevenLabs' own
-    # natural inter-sentence breathing, which planned pauses do not predict. Once a voice has a
-    # real measured overhead (60-voice/voice-lock.json -> measured_overhead_s/_lines, recorded
-    # from an actual generation's real duration minus its pure-speaking time), report a second,
-    # more accurate forecast using that -- this is the number to trust once it exists.
-    voice_lock = read_json(rd / '60-voice' / 'voice-lock.json')
-    real_forecast = None
-    if voice_lock.get('measured_overhead_s') and voice_lock.get('measured_overhead_lines') and lines:
-        overhead_per_line = voice_lock['measured_overhead_s'] / voice_lock['measured_overhead_lines']
-        real_pace = voice_lock.get('measured_wpm') or pace
-        real_forecast = round(words * 60 / real_pace + overhead_per_line * len(lines), 2) if real_pace else None
-        if real_forecast is not None and abs(real_forecast - lock['target_length_s']) > max(10, .08 * lock['target_length_s']):
-            issues.append('real_overhead_forecast_misses_locked_length_by_over_8pct')
-    if abs(forecast - lock['target_length_s']) > max(10, .08 * lock['target_length_s']):
+    target = lock['target_length_s']
+    # Narration = spoken words at a pace + the voice's natural gap after every line + what the tags add.
+    # A pause the story wants longer than that gap exists only if it is realised (pause_via): a tag (inside
+    # the narration) or an edit hold (added on top of it). Planned pauses are never sent to ElevenLabs.
+    early_narr = (words * 60 / pace + DEFAULT_LINE_OVERHEAD_S * len(lines) + tag_s) if pace else 0
+    forecast = round(early_narr + holds, 2) if pace else 0
+    real_narr = real = None
+    if measured.get('wpm') and lines:
+        real_narr = round(words * 60 / measured['wpm'] + measured['per_line_overhead_s'] * len(lines) + tag_s, 2)
+        real = round(real_narr + holds, 2)
+        # Once this voice is measured, the forecast has to land where export-check will look.
+        if abs(real - target) > max(4, target * lock.get('tolerance_export_pct', .025)):
+            issues.append('real_forecast_outside_export_tolerance')
+    elif pace and abs(forecast - target) > max(10, .08 * target):
         issues.append('script_forecast_misses_locked_length_by_over_8pct')
-    if not (vd / 'editorial-review.md').exists():
+    warnings = []
+    if measured.get('wpm') and script.get('pace_wpm') and abs(float(script['pace_wpm']) - float(measured['wpm'])) > 3:
+        warnings.append(f"script pace_wpm {script['pace_wpm']} differs from the voice's measured {measured['wpm']}; "
+                        "the real forecast uses the measured pace: set the script's pace_wpm to it so one number is in use")
+    if not review.exists():
         issues.append('editorial_review_missing')
-    return {'ready': not issues, 'issues': issues, 'script_lines': len(lines), 'words': words,
-            'planned_pauses_s': round(pause_s, 2), 'narration_pace_wpm': pace,
-            'forecast_s': forecast, 'real_overhead_forecast_s': real_forecast,
-            'locked_target_s': lock['target_length_s'],
-            'target_words_without_pauses': round(lock['target_length_s'] * pace/60) if pace else None}
+    return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'script_lines': len(lines),
+            'words': words, 'narration_pace_wpm': pace,
+            'pace_sources': {'references_wpm': lock.get('pace_wpm'), 'script_wpm': script.get('pace_wpm'),
+                             'voice_measured_wpm': measured.get('wpm'),
+                             'voice_per_line_gap_s': round(measured['per_line_overhead_s'], 3) if measured else None},
+            'audio_tags': tags, 'tag_time_s': tag_s, 'pause_plan': pause_plan, 'edit_holds_s': holds,
+            'content_flags': flags,
+            'forecast_s': forecast, 'real_narration_forecast_s': real_narr, 'real_forecast_s': real,
+            'locked_target_s': target,
+            'export_window_s': [round(target - max(4, target * lock.get('tolerance_export_pct', .025)), 2),
+                                round(target + max(4, target * lock.get('tolerance_export_pct', .025)), 2)],
+            'target_words_without_pauses': round(target * pace / 60) if pace else None}
 
 
 def cmd_plan_check(args):
@@ -647,10 +874,40 @@ def chunks_for_lines(lines, maximum):
     return chunks
 
 
+def chunks_from_manifest(old_chunks, lines):
+    """Keep the recorded parts' line boundaries, so editing one line changes only the part that holds it
+    (fresh greedy chunking would shift every later boundary and force a full re-record). None when the
+    boundaries no longer cover the script exactly (lines were added or removed)."""
+    out, cursor = [], 0
+    for c in old_chunks:
+        try:
+            lo, hi = int(c['line_start']), int(c['line_end'])
+        except (KeyError, TypeError, ValueError):
+            return None
+        if lo != cursor + 1 or hi < lo or hi > len(lines):
+            return None
+        out.append({'line_start': lo, 'line_end': hi,
+                    'text': '\n'.join(str(r['text']).strip() for r in lines[lo - 1:hi])})
+        cursor = hi
+    return out if cursor == len(lines) else None
+
+
 def model_limit(model):
-    known = {'eleven_v4': 10000, 'eleven_v3': 3000, 'eleven_multilingual_v2': 10000,
-             'eleven_flash_v2_5': 40000, 'eleven_turbo_v2_5': 40000}
+    # GET /v1/models, 2026-11-19: eleven_v4 and eleven_v4_turbo take 10,000 characters per request.
+    known = {'eleven_v4': 10000, 'eleven_v4_turbo': 10000}
     return known.get(model, 3000)
+
+
+def voice_calibrated(rd, voice_id, model_id, settings):
+    """True when this exact voice/model/settings has a real measured pace from a chunk of 300+ words."""
+    vl = read_json(rd / '60-voice' / 'voice-lock.json')
+    m = vl.get('measured') or {}
+    if m:
+        return (m.get('voice_id') == voice_id and m.get('model_id') == model_id
+                and (m.get('settings') or {}) == (settings or {}) and (m.get('words') or 0) >= 300)
+    # older hand-recorded measurement (from a real chunk of the same voice and settings)
+    return bool(vl.get('measured_wpm') and vl.get('measured_overhead_s') and vl.get('voice_id') == voice_id
+                and (vl.get('settings') or {}) == (settings or {}))
 
 
 def preflight_elevenlabs_balance(key, remaining_characters, safety_factor=1.15):
@@ -699,9 +956,12 @@ def elevenlabs_request(method, path, key, body=None, params=None, timeout=60):
 def cmd_voice_candidates(args):
     """Suggest up to --count candidate voices (free, from the account's existing voices,
     and/or billed Voice Design previews), save each candidate's preview audio, transcribe
-    it (Whisper), and measure its pace with the same pure-narration-time method used for
-    reference transcripts, so candidates are comparable to the locked script's pace_wpm.
-    Writes a report for the user to listen to and pick from; picks nothing itself."""
+    it (Whisper) and record its preview_wpm with the references' yardstick. A preview is
+    short: its pace does not predict the voice's real pace on a full chunk (measured here:
+    preview 195 -> real 180; a 209 human sample -> 178), so candidates are chosen by
+    character and register by ear; the real pace comes from the calibration chunk.
+    Writes a report for the user to listen to and pick from; picks nothing itself.
+    An earlier round's report is kept as candidates-<time>.json, never overwritten."""
     rd, st = run_folder(args)
     key = elevenlabs_key()
     if not key:
@@ -771,14 +1031,14 @@ def cmd_voice_candidates(args):
         if c['source'] == 'account_voice':
             if not c.get('preview_url'):
                 results.append({**{k: c[k] for k in ('source', 'voice_id', 'name', 'labels')},
-                                'file': None, 'measured_wpm': None, 'error': 'voice has no preview_url'})
+                                'file': None, 'preview_wpm': None, 'error': 'voice has no preview_url'})
                 continue
             try:
                 with urllib.request.urlopen(c['preview_url'], timeout=30) as resp:
                     fname.write_bytes(resp.read())
             except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
                 results.append({**{k: c[k] for k in ('source', 'voice_id', 'name', 'labels')},
-                                'file': None, 'measured_wpm': None,
+                                'file': None, 'preview_wpm': None,
                                 'error': f'preview download failed: {type(exc).__name__}: {str(exc)[:160]}'})
                 continue
         else:
@@ -793,14 +1053,19 @@ def cmd_voice_candidates(args):
         except (RuntimeError, ValueError, OSError) as exc:
             heard = f'transcription failed: {type(exc).__name__}: {str(exc)[:160]}'
         results.append({'source': c['source'], 'voice_id': c['voice_id'], 'name': c.get('name'),
-                        'labels': c.get('labels'), 'file': str(fname), 'measured_wpm': wpm, 'heard_text': heard})
+                        'labels': c.get('labels'), 'file': str(fname), 'preview_wpm': wpm, 'heard_text': heard})
     report = {'video': int(args.video), 'search': args.search, 'design_description': args.design_description,
-              'candidates': results}
+              'made_at': now(), 'candidates': results}
     report_path = outdir.parent / 'candidates.json'
+    if report_path.exists():   # keep every earlier round
+        shutil.move(str(report_path), str(report_path.with_name(
+            'candidates-' + dt.datetime.now().strftime('%Y%m%d-%H%M%S') + '.json')))
     write_json(report_path, report)
     emit({'ok': True, 'candidates_file': str(report_path), 'count': len(results), 'candidates': results,
-          'guidance': 'Listen to each file. Compare measured_wpm across candidates (and, once known, against '
-                      'the locked pace_wpm). Then lock the pick: voice-pick --run RUN --video NN --voice-id ID.'})
+          'guidance': 'Listen to each file and choose by character and register for this story (the creative '
+                      'strategy in editorial-review.md, the references\' narrators). preview_wpm is a short-sample '
+                      'figure: it does not predict real pace. Lock the pick with voice-pick; the real pace is '
+                      'measured on the first real chunk (tts --max-parts 1, then narration-measure).'})
 
 
 def cmd_voice_pick(args):
@@ -818,23 +1083,30 @@ def cmd_voice_pick(args):
         settings = json.loads(args.settings) if args.settings else {}
     except ValueError as exc:
         error('--settings must be valid JSON.', str(exc))
-    measured_wpm, source, design_description = None, None, None
-    cfile = rd / '60-voice' / f'video-{int(args.video):02d}' / 'candidates.json'
-    cdata = read_json(cfile)
-    for c in (cdata.get('candidates') or []):
-        if c.get('voice_id') == args.voice_id:
-            measured_wpm, source = c.get('measured_wpm'), c.get('source')
-            design_description = cdata.get('design_description')
+    preview_wpm, source, design_description = None, None, None
+    vdir = rd / '60-voice' / f'video-{int(args.video):02d}'
+    for cfile in [vdir / 'candidates.json'] + sorted(vdir.glob('candidates-*.json'), reverse=True):
+        cdata = read_json(cfile)
+        hit = next((c for c in (cdata.get('candidates') or []) if c.get('voice_id') == args.voice_id), None)
+        if hit:
+            preview_wpm = hit.get('preview_wpm', hit.get('measured_wpm'))
+            source, design_description = hit.get('source'), cdata.get('design_description')
             break
     final_voice_id = args.voice_id
     saved_from = None
+    key = elevenlabs_key() if source == 'voice_design' else None
+    if source == 'voice_design':
+        if not key:
+            error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
+        try:   # already saved earlier (the save returns 400 the second time): use the library voice as it is
+            elevenlabs_request('GET', '/v1/voices/' + urllib.parse.quote(args.voice_id, safe=''), key)
+            source = 'account_voice'
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, ValueError):
+            pass
     if source == 'voice_design':
         if not args.name:
             error('--name is required to save a Voice Design candidate as a permanent voice '
                   '(ElevenLabs requires voice_name).')
-        key = elevenlabs_key()
-        if not key:
-            error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
         try:
             resp = elevenlabs_request('POST', '/v1/text-to-voice', key,
                                       body={'voice_name': args.name,
@@ -848,21 +1120,30 @@ def cmd_voice_pick(args):
         saved_from = args.voice_id
         final_voice_id = resp['voice_id']
     lockfile.parent.mkdir(parents=True, exist_ok=True)
-    lock = {'voice_id': final_voice_id, 'generated_voice_id': saved_from, 'name': args.name,
-            'settings': settings, 'measured_wpm': measured_wpm, 'locked_at': now(),
+    old = read_json(lockfile)
+    lock = {'voice_id': final_voice_id, 'generated_voice_id': saved_from, 'name': args.name or old.get('name'),
+            'settings': settings, 'preview_wpm': preview_wpm, 'locked_at': now(),
             'rule': 'One voice per run across every video and language; '
-                    '--replace required to deliberately change it.'}
+                    '--replace required to deliberately change it.',
+            'pace_note': 'preview_wpm is a short-sample figure and is never used to size the script; the real '
+                         'pace is measured (narration-measure) on the first real chunk.'}
+    m = old.get('measured') or {}
+    if m.get('voice_id') == final_voice_id and (m.get('settings') or {}) == settings:
+        lock['measured'] = m   # same voice and settings: the real measurement still holds
     write_json(lockfile, lock)
     emit({'ok': True, 'lock_file': str(lockfile), 'voice_id': final_voice_id,
-          'saved_from_generated_voice_id': saved_from, 'measured_wpm': measured_wpm,
-          'guidance': f'Pass --voice-id {final_voice_id} to every "tts"/"voice-probe" call for this run.'})
+          'saved_from_generated_voice_id': saved_from, 'preview_wpm': preview_wpm,
+          'measured_kept': bool(lock.get('measured')),
+          'guidance': f'Pass --voice-id {final_voice_id} to every "tts"/"voice-probe" call for this run. '
+                      'Next: tts --max-parts 1 --execute (the calibration chunk), then narration-measure.'})
 
 
 def cmd_voice_probe(args):
-    """Measure a chosen voice's ACHIEVED pace on a short real sample of this run's own
-    script (optionally with a delivery/pace audio tag), via one short billed TTS call,
-    before committing to the full paid narration. Separate from tts's chunk/resume state;
-    does not touch script.json, length-lock.json or 50-audio/."""
+    """Hear a voice (and any inline tag written into --text) on a short real passage of this run's script,
+    via one short billed call, before the paid narration: how the voice and the tags SOUND. Its WPM is
+    reported but a sample under ~300 words does not predict real pace (measured here: short samples read up
+    to 199 WPM, the same voice 175-188 on real chunks); the real pace comes from the calibration chunk.
+    Separate from tts's chunk/resume state; does not touch script.json, length-lock.json or 50-audio/."""
     rd, st = run_folder(args)
     key = elevenlabs_key()
     if not key:
@@ -883,8 +1164,11 @@ def cmd_voice_probe(args):
     limit = model_limit(args.model_id)
     if len(sent_text) > limit:
         error('Probe text exceeds the model request limit.', {'characters': len(sent_text), 'limit': limit})
+    voice_settings = parse_voice_settings(args.settings, args.model_id)
     budget = preflight_elevenlabs_balance(key, len(sent_text), args.credit_safety_factor)
     body = {'text': sent_text, 'model_id': args.model_id}
+    if voice_settings:
+        body['voice_settings'] = voice_settings
     if lock.get('language') and args.model_id != 'eleven_multilingual_v2':
         body['language_code'] = lock['language'][:2]
     url = ('https://api.elevenlabs.io/v1/text-to-speech/' + urllib.parse.quote(args.voice_id, safe='')
@@ -909,17 +1193,33 @@ def cmd_voice_probe(args):
     transcribe(fname, tpath, args.whisper_model, args.device, args.compute_type)
     rawtxt = tpath.with_suffix('.txt').read_text(encoding='utf-8', errors='replace')
     wpm = wpm_from_transcript_raw(rawtxt)
-    target = float(lock.get('pace_wpm') or 0)
-    within = bool(wpm and target and abs(wpm - target) <= max(5, 0.06 * target))
+    heard = strip_transcript_timestamps(rawtxt).strip()
+    sent_tags = [classify_tag(m.group(1))['tag'] for m in TAG_RE.finditer(sent_text)]
+    spoken_back = [t for t in sent_tags if t.strip('[]') and t.strip('[]').split()[0] in heard.lower()]
     emit({'ok': True, 'file': str(fname), 'voice_id': args.voice_id, 'model_id': args.model_id,
-          'delivery': args.delivery or None, 'sent_characters': len(sent_text), 'credit_preflight': budget,
-          'achieved_wpm': wpm, 'target_pace_wpm': target or None, 'within_tolerance': within,
-          'heard_text': strip_transcript_timestamps(rawtxt).strip(),
-          'guidance': ('Close enough to the locked pace_wpm: proceed with tts using this voice/delivery.'
-                       if within else
-                       'Not close enough yet. Try a stronger/different delivery tag (pace wording like '
-                       '"[quick, measured pace]" or "[brisk narration]") and probe again, or accept this '
-                       'pace and revise the script word budget before tts.')})
+          'voice_settings': voice_settings or None, 'delivery': args.delivery or None,
+          'sent_characters': len(sent_text), 'credit_preflight': budget, 'sample_words': count_words(text),
+          'short_sample_wpm': wpm, 'references_pace_wpm': lock.get('pace_wpm'), 'tags_sent': sent_tags,
+          'tags_maybe_read_aloud': spoken_back, 'heard_text': heard,
+          'guidance': 'Listen: does the voice suit the story, and did each tag land as delivery (not read aloud, '
+                      'not a sound effect)? short_sample_wpm does not predict the real pace; do not size the '
+                      'script on it. Real pace: tts --max-parts 1 --execute, then narration-measure.'})
+
+
+def parse_voice_settings(raw, model_id):
+    try:
+        voice_settings = json.loads(raw) if raw else {}
+    except ValueError as exc:
+        error('--settings must be valid JSON (e.g. \'{"stability": 0.7, "similarity_boost": 0.8}\').', str(exc))
+    if not isinstance(voice_settings, dict):
+        error('--settings must be a JSON object.')
+    # From each model's own capability flags (GET /v1/models, 2026-11-19): eleven_v4 and eleven_v4_turbo have
+    # can_use_style=false and can_use_speaker_boost=false. Speed is not used: the user's standing decision.
+    allowed = ('stability', 'similarity_boost')
+    for k in voice_settings:
+        if k not in allowed:
+            error(f'Model {model_id!r} is used here with these voice settings only.', {'allowed': list(allowed), 'got': k})
+    return voice_settings
 
 
 def cmd_tts(args):
@@ -930,38 +1230,53 @@ def cmd_tts(args):
     vd = video_dir(rd, args.video)
     script = read_json(vd / 'script.json', required=True)
     lock = read_json(vd / 'length-lock.json', required=True)
-    limit = min(args.max_chars or model_limit(args.model_id), model_limit(args.model_id))
-    limit = min(limit, 3000) if args.model_id == 'eleven_v3' else min(limit, 8000)
-    chunks = chunks_for_lines(script['lines'], limit)
+    if not (1.0 <= args.credit_safety_factor <= 3.0):
+        error('--credit-safety-factor must be from 1.0 to 3.0')
+    if args.max_parts is not None and args.max_parts < 1:
+        error('--max-parts must be at least 1.')
+    voice_settings = parse_voice_settings(args.settings, args.model_id)
+    limit = min(args.max_chars or model_limit(args.model_id), model_limit(args.model_id), 8000)
     narrdir = rd / '50-audio' / f'video-{int(args.video):02d}'
-    narrdir.mkdir(parents=True, exist_ok=True)
     manifest_path = narrdir / 'manifest.json'
     existing = read_json(manifest_path)
+    stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
+    other_take = bool(existing) and any(existing.get(x) != y for x, y in
+                                        (('model_id', args.model_id), ('voice_id', args.voice_id),
+                                         ('language', lock['language'])))
+    start_over = other_take or args.rechunk
+    if start_over and not args.archive_existing and existing:
+        error('The recorded audio uses another voice/model/language, or --rechunk asks for new part boundaries. '
+              'Pass --archive-existing to move the whole folder aside (nothing is deleted; every part is re-billed).',
+              {'folder': str(narrdir), 'recorded_with': {k: existing.get(k) for k in ('voice_id', 'model_id', 'language')}})
+    chunks = None
+    if existing.get('chunks') and not start_over:
+        chunks = chunks_from_manifest(existing['chunks'], script['lines'])
+        if chunks is None:
+            error('Lines were added or removed since the parts were recorded, so their boundaries no longer fit. '
+                  'Restore the line count, or re-record everything: --rechunk --archive-existing (every part re-billed).')
+    if chunks is None:
+        chunks = chunks_for_lines(script['lines'], limit)
+    for i, c in enumerate(chunks, 1):
+        if len(c['text']) > model_limit(args.model_id):
+            error(f'Part {i} is now longer than the model accepts in one request.', {'characters': len(c['text'])})
     spec = {'model_id': args.model_id, 'voice_id': args.voice_id, 'language': lock['language'],
             'chunks': [{'id': i+1, 'line_start': c['line_start'], 'line_end': c['line_end'],
                         'text_sha256': hashlib.sha256(c['text'].encode()).hexdigest(),
                         'file': f'part-{i+1:03d}.mp3', 'characters': len(c['text'])}
                        for i, c in enumerate(chunks)]}
-    if not (1.0 <= args.credit_safety_factor <= 3.0):
-        error('--credit-safety-factor must be from 1.0 to 3.0')
-    if args.max_parts is not None and args.max_parts < 1:
-        error('--max-parts must be at least 1.')
-    try:
-        voice_settings = json.loads(args.settings) if args.settings else {}
-    except ValueError as exc:
-        error('--settings must be valid JSON (e.g. \'{"stability": 0.7, "similarity_boost": 0.8}\').', str(exc))
-    # Per-model allowed settings, from each model's own capability flags (GET /v1/models):
-    # eleven_v4: can_use_style=false, can_use_speaker_boost=false -- only stability/similarity_boost.
-    model_allowed_settings = {'eleven_v4': ('stability', 'similarity_boost')}
-    allowed = model_allowed_settings.get(args.model_id, ('stability', 'similarity_boost', 'style',
-                                                          'use_speaker_boost', 'speed'))
-    for key, val in voice_settings.items():
-        if key not in allowed:
-            error(f'Model {args.model_id!r} does not take voice setting {key!r}.', {'allowed': list(allowed)})
+    old_chunks = {} if start_over else {c.get('id'): c for c in existing.get('chunks') or []}
+    finished_before = [] if start_over else list(existing.get('finished_parts') or [])
+    changed = [s['id'] for s in spec['chunks'] if s['id'] in finished_before
+               and old_chunks.get(s['id'], {}).get('text_sha256') != s['text_sha256']]
     delivery_overhead = len(args.delivery) + 1 if args.delivery else 0
     if not args.execute:
+        todo = [c for c, s in zip(chunks, spec['chunks']) if s['id'] not in finished_before or s['id'] in changed]
         emit({'ok': True, 'mode': 'dry_run_no_charges', 'video': args.video,
               'parts': len(chunks), 'characters_total': sum(len(x['text']) for x in chunks) + delivery_overhead * len(chunks),
+              'parts_to_record': [s['id'] for s in spec['chunks'] if s['id'] not in finished_before or s['id'] in changed],
+              'changed_recorded_parts': changed, 'starts_over': start_over,
+              'characters_to_record': sum(len(x['text']) for x in todo) + delivery_overhead * len(todo),
+              'calibrated': voice_calibrated(rd, args.voice_id, args.model_id, voice_settings),
               'model_limit_per_request': model_limit(args.model_id), 'delivery': args.delivery or None,
               'voice_settings': voice_settings or None,
               'target_length_s': lock['target_length_s'], 'candidate_manifest': spec,
@@ -970,29 +1285,51 @@ def cmd_tts(args):
     key = elevenlabs_key()
     if not key:
         error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
-    if existing and any(existing.get(x) != spec[x] for x in ('model_id', 'voice_id', 'language')):
-        error('Existing partial audio uses another voice/model/language; choose a new video or manually archive the old manifest.')
-    if existing.get('chunks') and [{k: x[k] for k in ('id', 'line_start', 'line_end', 'text_sha256', 'file', 'characters')}
-                                  for x in existing['chunks']] != spec['chunks']:
-        error('Script changed since audio generation began. Reconcile/re-record affected chunks explicitly.')
-    remaining_chunks = [c for i, c in enumerate(chunks)
-                        if not ((i + 1) in existing.get('finished_parts', [])
-                        and (narrdir / f'part-{i+1:03d}.mp3').is_file()
-                        and (narrdir / f'part-{i+1:03d}.mp3').stat().st_size > 1024)]
+    if changed and not args.rerecord_changed:
+        error('Script lines changed inside parts that are already recorded. Re-record only those parts with '
+              '--rerecord-changed (their old takes move to superseded/, never deleted).',
+              {'changed_parts': changed,
+               'characters': sum(s['characters'] for s in spec['chunks'] if s['id'] in changed)})
+    kept = [] if start_over else [x for x in finished_before if x not in changed
+                                  and (narrdir / f'part-{x:03d}.mp3').is_file()
+                                  and (narrdir / f'part-{x:03d}.mp3').stat().st_size > 1024]
+    remaining_chunks = [c for i, c in enumerate(chunks) if (i + 1) not in kept]
+    batch = remaining_chunks[:args.max_parts] if args.max_parts else remaining_chunks
+    if len(batch) > 1 and not args.skip_calibration and not voice_calibrated(rd, args.voice_id, args.model_id, voice_settings):
+        error('Calibrate first: this voice/model/settings has no real measured pace yet. Record one part '
+              '(--max-parts 1 --execute), run narration-measure, check plan-check\'s real_forecast_s, then record '
+              'the rest. --skip-calibration overrides this.')
     if not (0.1 <= args.assume_cost_ratio <= 1.0):
         error('--assume-cost-ratio must be from 0.1 to 1.0 (1.0 = trust the model\'s documented '
               'character_cost_multiplier; below 1.0 is an explicit, auditable override for a '
               'ratio you personally verified against real billing deltas this session).')
-    chunks_this_call = remaining_chunks[:args.max_parts] if args.max_parts else remaining_chunks
-    raw_remaining_chars = sum(len(c['text']) for c in chunks_this_call) + delivery_overhead * len(chunks_this_call)
+    raw_remaining_chars = sum(len(c['text']) for c in batch) + delivery_overhead * len(batch)
+    # The balance is checked before anything on disk moves: a failed preflight leaves the folder as it was.
     budget = preflight_elevenlabs_balance(key, round(raw_remaining_chars * args.assume_cost_ratio),
-                                         args.credit_safety_factor) if chunks_this_call else {'remaining_script_characters': 0}
+                                         args.credit_safety_factor) if batch else {'remaining_script_characters': 0}
     if remaining_chunks:
         budget['raw_characters_before_ratio'] = raw_remaining_chars
         budget['assumed_cost_ratio'] = args.assume_cost_ratio
+    history = list(existing.get('history') or [])
+    if start_over and existing:
+        archive = narrdir.with_name(f'{narrdir.name}-archive-{stamp}')
+        shutil.move(str(narrdir), str(archive))
+        history = [{'at': now(), 'archived_previous_take_to': str(archive)}]
+        existing = {}
+    narrdir.mkdir(parents=True, exist_ok=True)
+    if changed:
+        sup = narrdir / 'superseded'
+        sup.mkdir(exist_ok=True)
+        for pid in changed:
+            part = narrdir / f'part-{pid:03d}.mp3'
+            if part.exists():
+                shutil.move(str(part), str(sup / f'part-{pid:03d}-{stamp}.mp3'))
+        if (narrdir / 'narration.wav').exists():
+            shutil.move(str(narrdir / 'narration.wav'), str(sup / f'narration-{stamp}.wav'))
+        history.append({'at': now(), 'rerecorded_parts': changed, 'old_takes': str(sup)})
     manifest = {**spec, 'status': 'partial', 'created_at': existing.get('created_at', now()),
                 'credit_preflight': budget, 'delivery': args.delivery or None, 'voice_settings': voice_settings or None,
-                'finished_parts': existing.get('finished_parts', [])}
+                'finished_parts': kept, 'history': history}
     write_json(manifest_path, manifest)
     new_parts_done = 0
     for i, c in enumerate(chunks):
@@ -1035,10 +1372,10 @@ def cmd_tts(args):
         emit({'ok': True, 'mode': 'partial_by_design_max_parts', 'new_parts_this_call': new_parts_done,
               'finished_parts': manifest['finished_parts'], 'total_parts': len(chunks),
               'parts_dir': str(narrdir),
-              'next': 'Listen to and/or measure the new part(s) (Whisper + wpm_from_transcript_raw) before '
-                      'continuing. Re-run the same tts command (same voice/settings/no --max-parts, or a '
-                      'higher one) to generate the rest and finalize narration.wav -- already-finished parts '
-                      'are kept, never re-billed.'})
+              'next': 'Listen to the new part(s), then narration-measure (real pace, natural gap per line, what '
+                      'each tag cost) and plan-check (real_forecast_s against the export window). Adjust the '
+                      'lines of the parts not yet recorded if needed, then re-run the same tts command (no '
+                      '--max-parts) for the rest -- finished parts are kept, never re-billed.'})
         return
     concat = narrdir / 'parts.txt'
     concat.write_text(''.join("file '" + str((narrdir / x['file']).resolve()).replace('\\', '/').replace("'", "'\\''") + "'\n"
@@ -1106,8 +1443,21 @@ def audio_facts(rd, video):
         issues.append('narration_duration_outside_locked_tolerance')
     if duration and part_durations and abs(sum(part_durations) - duration) > max(3, 0.01*duration):
         issues.append('joined_narration_differs_from_sum_of_parts')
+    # The picture can't be shorter than the narration, and export-check holds the export to its own (tighter)
+    # window: narration plus the planned edit holds must already fit it, or the export can never pass.
+    holds = edit_holds_s(script_lines)
+    window = None
+    if target and duration:
+        tol_e = max(4, target * lock.get('tolerance_export_pct', .025))
+        window = [round(target - tol_e, 2), round(target + tol_e, 2)]
+        if duration + holds > target + tol_e:
+            issues.append('narration_plus_edit_holds_longer_than_export_window')
+        elif duration + holds < target - tol_e:
+            issues.append('narration_plus_edit_holds_shorter_than_export_window')
     return {'ready': not issues, 'issues': issues, 'duration_s': duration,
-            'target_length_s': target, 'script_lines': len(script.get('lines') or []),
+            'target_length_s': target, 'edit_holds_s': holds,
+            'expected_edit_s': round(duration + holds, 2) if duration else None, 'export_window_s': window,
+            'script_lines': len(script.get('lines') or []),
             'recorded_lines': cursor, 'manifest_status': manifest.get('status')}
 
 
@@ -1141,8 +1491,11 @@ def cmd_timeline_check(args):
             cursor = b
         except (KeyError, TypeError, ValueError):
             issues.append(f'bad_visual_segment_{i}')
-    if lock and abs(cursor - lock['target_length_s']) > max(4, lock['target_length_s'] * .025):
+    if lock and abs(cursor - lock['target_length_s']) > max(4, lock['target_length_s'] * lock.get('tolerance_export_pct', .025)):
         issues.append('timeline_misses_locked_target')
+    plan = read_json(rd / '70-edit' / f'video-{int(args.video):02d}' / 'edit-plan.json')
+    if plan.get('edit_duration_s') and seq and abs(cursor - plan['edit_duration_s']) > 0.5:
+        issues.append('timeline_end_differs_from_edit_plan')   # the project drifted from the retimed shots
     if track.get('canvas') not in ('1920x1080', '2560x1440', '3840x2160'):
         issues.append('canvas_not_youtube_16_9')
     emit({'ready': not issues, 'issues': issues, 'last_visual_end_s': cursor,
@@ -1188,6 +1541,312 @@ def cmd_export_check(args):
                                      'watch last minute', 'listen to all TTS joins',
                                      'check factual assertions/visual chronology', 'review title-thumbnail promise']},
          0 if not issues else 2)
+
+
+def tokens_of(text):
+    """Comparable word tokens: lower case, hyphens and apostrophes dropped ('Yudam-ni' matches 'Yudamni')."""
+    out = []
+    for w in re.findall(r"\b[\w]+(?:[-'][\w]+)*\b", strip_tags(text), flags=re.UNICODE):
+        t = re.sub(r"[-']", '', w.lower())
+        if t:
+            out.append(t)
+    return out
+
+
+def align_lines(line_texts, words):
+    """Match script lines to Whisper words (difflib on word tokens). Returns, per line, a list of per-token
+    (start, end) times (None where Whisper heard something else), and the share of script tokens matched."""
+    s_tok, owner, pos = [], [], []
+    tok_time = []
+    for li, text in enumerate(line_texts):
+        toks = tokens_of(text)
+        tok_time.append([None] * len(toks))
+        for k, t in enumerate(toks):
+            s_tok.append(t)
+            owner.append(li)
+            pos.append(k)
+    h_tok, h_time = [], []
+    for w in words:
+        for t in tokens_of(w['text']):
+            h_tok.append(t)
+            h_time.append((w['start_s'], w['end_s']))
+    matched = 0
+    for a, b, size in difflib.SequenceMatcher(a=s_tok, b=h_tok, autojunk=False).get_matching_blocks():
+        for k in range(size):
+            tok_time[owner[a + k]][pos[a + k]] = h_time[b + k]
+            matched += 1
+    return tok_time, (matched / len(s_tok)) if s_tok else 0.0
+
+
+def cmd_narration_measure(args):
+    """Measure the real narration with the references' own yardstick (the same transcribe() and
+    wpm_from_transcript_raw): real pace, the natural gap after each line, what every inline tag actually cost,
+    how the narration pauses next to the references, and when each script line is spoken. Writes
+    50-audio/video-NN/line-times.json and, from 300+ words of the locked voice, voice-lock.json -> measured
+    (what plan-check's real_forecast_s and the tts calibration gate read)."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    script = read_json(vd / 'script.json', required=True)
+    lock = read_json(vd / 'length-lock.json', required=True)
+    lines = script.get('lines') or []
+    folder = rd / '50-audio' / f'video-{n:02d}'
+    manifest = read_json(folder / 'manifest.json', required=True)
+    chunks = manifest.get('chunks') or []
+    finished = set(manifest.get('finished_parts') or [])
+    use = [c for c in chunks if c['id'] in finished and (folder / c['file']).is_file()]
+    if args.parts:
+        want = {int(x) for x in args.parts.split(',') if x.strip()}
+        use = [c for c in use if c['id'] in want]
+    if not use:
+        error('No finished narration parts to measure.')
+    durations = {c['id']: probe(folder / c['file'])['duration_s'] for c in chunks if (folder / c['file']).is_file()}
+    wdir = folder / 'whisper'
+    wdir.mkdir(exist_ok=True)
+    tags, _ = script_tags(lines)
+    rows, all_words, per_part = {}, [], []
+    tot_words = tot_speech = tot_dur = 0.0
+    for c in use:
+        lo, hi = int(c['line_start']), int(c['line_end'])
+        text = '\n'.join(str(r.get('text') or '').strip() for r in lines[lo - 1:hi])
+        if hashlib.sha256(text.encode('utf-8')).hexdigest() != c.get('text_sha256'):
+            error(f'Part {c["id"]} (lines {lo}-{hi}) was recorded from other text than the script has now. '
+                  'Measure only the parts that match (--parts), or re-record this one.')
+        part = folder / c['file']
+        tpath = wdir / (Path(c['file']).stem + '.json')
+        cached = read_json(tpath)
+        if not (cached and tpath.stat().st_mtime >= part.stat().st_mtime and cached.get('model') == args.whisper_model):
+            transcribe(part, tpath, args.whisper_model, args.device, args.compute_type)
+        tj = read_json(tpath)
+        wc, speech = transcript_speech(tpath.with_suffix('.txt').read_text(encoding='utf-8', errors='replace'))
+        offset = sum(durations.get(x['id'], 0) for x in chunks if x['id'] < c['id'])
+        words = transcript_words(tj)
+        tok_time, ratio = align_lines([str(r.get('text') or '') for r in lines[lo - 1:hi]], words)
+        for j, tt in enumerate(tok_time):
+            got = [x for x in tt if x]
+            rows[lo + j] = {'id': lines[lo + j - 1].get('id'), 'index': lo + j,
+                            'start_s': round(offset + got[0][0], 3) if got else None,
+                            'end_s': round(offset + max(x[1] for x in got), 3) if got else None,
+                            'matched_words': len(got), 'words': len(tt),
+                            '_tok': [None if x is None else (offset + x[0], offset + x[1]) for x in tt]}
+        all_words += [{'start_s': w['start_s'] + offset, 'end_s': w['end_s'] + offset, 'text': w['text']} for w in words]
+        per_part.append({'id': c['id'], 'lines': [lo, hi], 'offset_s': round(offset, 3),
+                         'duration_s': durations[c['id']], 'words': wc, 'speech_s': round(speech, 2),
+                         'wpm': round(wc / (speech / 60)) if speech else None, 'alignment_match_ratio': round(ratio, 3)})
+        tot_words += wc
+        tot_speech += speech
+        tot_dur += durations[c['id']]
+    order = sorted(rows)
+    for k, li in enumerate(order):     # a line Whisper missed entirely sits between its neighbours
+        r = rows[li]
+        if r['start_s'] is None:
+            prev_end = next((rows[x]['end_s'] for x in reversed(order[:k]) if rows[x]['end_s'] is not None), None)
+            next_start = next((rows[x]['start_s'] for x in order[k + 1:] if rows[x]['start_s'] is not None), None)
+            r['start_s'] = prev_end if prev_end is not None else next_start
+            r['end_s'] = next_start if next_start is not None else prev_end
+            r['interpolated'] = True
+    pause_tag_at = set()
+    for t in tags:
+        if t['category'] == 'pause':
+            pause_tag_at.add(t['index'] if t['at_line_end'] else t['index'] - 1 if t['at_line_start'] else -1)
+    gaps = [rows[li + 1]['start_s'] - rows[li]['end_s'] for li in order
+            if li + 1 in rows and li not in pause_tag_at and rows[li]['end_s'] is not None
+            and rows[li + 1]['start_s'] is not None]
+    natural_gap = statistics.median(gaps) if gaps else 0.0
+    measured_tags = []
+    for t in tags:
+        li = t['index']
+        if li not in rows:
+            continue
+        tok, k = rows[li]['_tok'], t['words_before']
+        before = next((x[1] for x in reversed(tok[:k]) if x), None)
+        if before is None and li - 1 in rows:
+            before = rows[li - 1]['end_s']
+        after = next((x[0] for x in tok[k:] if x), None)
+        if after is None and li + 1 in rows:
+            after = rows[li + 1]['start_s']
+        if before is None or after is None:
+            continue
+        base = natural_gap if (t['at_line_start'] or t['at_line_end']) else 0.15
+        measured_tags.append({'line': t['line'], 'tag': t['tag'], 'gap_s': round(after - before, 2),
+                              'excess_s': round(after - before - base, 2)})
+    costs = {}
+    for m in measured_tags:
+        costs.setdefault(m['tag'], []).append(m['excess_s'])
+    costs = {k: round(statistics.median(v), 2) for k, v in costs.items()}
+    tag_excess = sum(max(0.0, m['excess_s']) for m in measured_tags)
+    nlines = len(rows)
+    wpm = round(tot_words / (tot_speech / 60)) if tot_speech else None
+    per_line = round((tot_dur - tot_speech - tag_excess) / nlines, 3) if nlines else None
+    complete = sorted(rows) == list(range(1, len(lines) + 1))
+    ratio_all = (sum(p['alignment_match_ratio'] * (p['lines'][1] - p['lines'][0] + 1) for p in per_part) / nlines) if nlines else 0
+    profile = pause_profile(all_words)
+    for r in rows.values():
+        r.pop('_tok', None)
+    out = {'video': n, 'complete': complete, 'script_sha256': script_hash(lines) if complete else None,
+           'narration_file': str(folder / 'narration.wav') if complete else None, 'parts': per_part,
+           'duration_s': round(tot_dur, 2), 'words': int(tot_words), 'speech_s': round(tot_speech, 2), 'wpm': wpm,
+           'natural_line_gap_median_s': round(natural_gap, 3), 'per_line_overhead_s': per_line,
+           'alignment_match_ratio': round(ratio_all, 3), 'tags_measured': measured_tags,
+           'pause_profile': profile, 'lines': [rows[li] for li in order], 'measured_at': now(),
+           'method': 'transcribe() + wpm_from_transcript_raw on each part, exactly as on the references'}
+    write_json(folder / 'line-times.json', out)
+    vl_path = rd / '60-voice' / 'voice-lock.json'
+    vl = read_json(vl_path)
+    settings = manifest.get('voice_settings') or {}
+    wrote = False
+    note = None
+    if tot_words < 300:
+        note = 'Under 300 words measured: too short to calibrate (short samples read fast and scatter).'
+    elif vl.get('voice_id') != manifest.get('voice_id') or (vl.get('settings') or {}) != settings:
+        note = 'The narration was recorded with another voice or settings than voice-lock.json: not written there.'
+    else:
+        prev = vl.get('measured') or {}
+        same = (prev.get('voice_id') == manifest['voice_id'] and prev.get('model_id') == manifest['model_id']
+                and (prev.get('settings') or {}) == settings)
+        tag_costs = dict(prev.get('tag_costs_s') or {}) if same else {}
+        tag_costs.update(costs)
+        vl['measured'] = {'voice_id': manifest['voice_id'], 'model_id': manifest['model_id'], 'settings': settings,
+                          'wpm': wpm, 'words': int(tot_words), 'speech_s': round(tot_speech, 2),
+                          'duration_s': round(tot_dur, 2), 'lines': nlines, 'per_line_overhead_s': per_line,
+                          'tag_costs_s': tag_costs, 'parts': [p['id'] for p in per_part], 'measured_at': now(),
+                          'method': out['method']}
+        for k in ('measured_wpm', 'measured_overhead_s', 'measured_overhead_lines', 'measured_wpm_source'):
+            vl.pop(k, None)
+        write_json(vl_path, vl)
+        wrote = True
+    warnings = []
+    if ratio_all < 0.9:
+        warnings.append('Under 90% of the script words were matched: listen for missing or extra words, or a script edit.')
+    for m in measured_tags:
+        if m['tag'] in ('[pause]', '[long pause]', '[short pause]', '[slightly pause]') and m['excess_s'] < 0.2:
+            warnings.append(f"{m['line']} {m['tag']} made no measurable pause: listen (was it read aloud?)")
+    emit({'ok': True, 'line_times': str(folder / 'line-times.json'), 'complete': complete, 'wpm': wpm,
+          'words': int(tot_words), 'duration_s': round(tot_dur, 2), 'per_line_overhead_s': per_line,
+          'natural_line_gap_median_s': round(natural_gap, 3), 'tags_measured': measured_tags,
+          'pause_profile': profile,
+          'references': {v: {'wpm': (lock.get('per_ref_wpm') or {}).get(v), **p}
+                         for v, p in ref_pause_profiles(rd, lock.get('reference_ids') or []).items()},
+          'alignment_match_ratio': round(ratio_all, 3), 'voice_lock_updated': wrote, 'note': note,
+          'warnings': warnings,
+          'next': 'plan-check (real_forecast_s against the export window); when complete: retime-shots.'})
+
+
+def cmd_pace_profile(args):
+    """Pace and pauses of the references (and, when measured, this video's narration) with one yardstick."""
+    rd, st = run_folder(args)
+    refs = normalize_refs(args.refs)
+    lock = read_json(video_dir(rd, args.video) / 'length-lock.json') if args.video else {}
+    if not refs:
+        refs = lock.get('reference_ids') or []
+    if not refs:
+        error('Give --refs V001,V002, or --video NN to use that video\'s locked references.')
+    out = {}
+    for vid in refs:
+        tfile = rd / '10-media' / vid / 'transcript.txt'
+        wpm = wpm_from_transcript_raw(tfile.read_text(encoding='utf-8', errors='replace')) if tfile.exists() else None
+        out[vid] = {'wpm': wpm, **(ref_pause_profiles(rd, [vid]).get(vid) or {})}
+    narr = None
+    if args.video:
+        lt = read_json(rd / '50-audio' / f'video-{int(args.video):02d}' / 'line-times.json')
+        if lt:
+            narr = {'wpm': lt.get('wpm'), 'complete': lt.get('complete'), **(lt.get('pause_profile') or {})}
+    emit({'ok': True, 'references': out, 'narration': narr,
+          'note': 'WPM = words over pure speech time; pauses = silence between consecutive words (Whisper word '
+                  'timestamps). Same functions for references and narration.'})
+
+
+def cmd_retime_shots(args):
+    """Time every shot to the real narration: each cut falls in the silence between the last line of one shot
+    and the first line of the next; an edit hold (pause_via "edit") is inserted at its line and belongs to the
+    shot before it. Rewrites shot-plan.json's start_s/end_s (the planned values kept once as planned_*), writes
+    70-edit/video-NN/edit-plan.json, and with --render-narration the narration with its holds
+    (50-audio/video-NN/narration-edit.wav) -- the audio file the CapCut project uses."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    lock = read_json(vd / 'length-lock.json', required=True)
+    script = read_json(vd / 'script.json', required=True)
+    lines = script.get('lines') or []
+    folder = rd / '50-audio' / f'video-{n:02d}'
+    lt = read_json(folder / 'line-times.json', required=True)
+    if not lt.get('complete') or lt.get('script_sha256') != script_hash(lines):
+        error('line-times.json does not describe the whole current script: run narration-measure on the finished narration.')
+    gate = audio_facts(rd, n)
+    blocking = [x for x in gate['issues'] if not x.startswith('narration_plus_edit_holds')
+                and x != 'narration_duration_outside_locked_tolerance']
+    if blocking:
+        error('The narration is not complete and matching the script yet.', blocking)
+    plan_path = rd / '60-visuals' / f'video-{n:02d}' / 'shot-plan.json'
+    plan = read_json(plan_path, required=True)
+    shots = plan.get('shots') or []
+    index = {str(r.get('id')): i + 1 for i, r in enumerate(lines)}
+    times = {r['index']: r for r in lt['lines']}
+    dur = gate['duration_s']
+    holds = []
+    for p in script_pause_plan(lines)[0]:
+        if p['via'] == 'edit':
+            i = p['index']
+            at = (times[i]['end_s'] + times[i + 1]['start_s']) / 2 if i < len(lines) else dur
+            holds.append({'after_line': p['line'], 'at_audio_s': round(at, 3), 'hold_s': p['pause_after_s']})
+    holds.sort(key=lambda h: h['at_audio_s'])
+    total = round(dur + sum(h['hold_s'] for h in holds), 3)
+    ranges, cursor = [], 0
+    for s in shots:
+        a, b = index.get(str(s.get('line_start'))), index.get(str(s.get('line_end')))
+        if a is None or b is None or a != cursor + 1 or b < a:
+            error(f'Shot {s.get("id")} does not start on the line after the previous shot ends.',
+                  {'line_start': s.get('line_start'), 'line_end': s.get('line_end'), 'previous_end': cursor})
+        ranges.append((a, b))
+        cursor = b
+    if cursor != len(lines):
+        error('The shots do not cover every script line.', {'last_line_covered': cursor, 'lines': len(lines)})
+    out_shots, start, notes = [], 0.0, []
+    for k, (s, (a, b)) in enumerate(zip(shots, ranges)):
+        if k + 1 < len(shots):
+            split = (times[b]['end_s'] + times[b + 1]['start_s']) / 2
+            end = split + sum(h['hold_s'] for h in holds if h['at_audio_s'] <= split + 1e-6)
+        else:
+            end = total
+        s.setdefault('planned_start_s', s.get('start_s'))
+        s.setdefault('planned_end_s', s.get('end_s'))
+        s['start_s'], s['end_s'] = round(start, 2), round(end, 2)
+        length = end - start
+        if length < 2.0 or length > 45.0:
+            notes.append(f"{s.get('id')} now lasts {length:.1f}s (planned "
+                         f"{(s['planned_end_s'] or 0) - (s['planned_start_s'] or 0):.1f}s): check it still works")
+        out_shots.append({'id': s.get('id'), 'beat_id': s.get('beat_id'), 'start_s': s['start_s'],
+                          'end_s': s['end_s'], 'duration_s': round(length, 2)})
+        start = end
+    plan['timed_to'] = {'narration': str(folder / 'narration.wav'), 'edit_duration_s': total, 'retimed_at': now()}
+    write_json(plan_path, plan)
+    tol = max(4, lock['target_length_s'] * lock.get('tolerance_export_pct', .025))
+    edit_audio = None
+    if args.render_narration:
+        src, outp = folder / 'narration.wav', folder / 'narration-edit.wav'
+        filt, labels, prev = [], [], 0.0
+        for j, h in enumerate(holds):
+            filt.append(f"[0:a]atrim=start={prev:.3f}:end={h['at_audio_s']:.3f},asetpts=PTS-STARTPTS[a{j}]")
+            filt.append(f"anullsrc=r=44100:cl=stereo,atrim=duration={h['hold_s']:.3f}[s{j}]")
+            labels += [f'[a{j}]', f'[s{j}]']
+            prev = h['at_audio_s']
+        if prev < dur - 0.01:
+            filt.append(f'[0:a]atrim=start={prev:.3f},asetpts=PTS-STARTPTS[tail]')
+            labels.append('[tail]')
+        filt.append(''.join(labels) + f'concat=n={len(labels)}:v=0:a=1[out]')
+        run_cmd(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', str(src),
+                 '-filter_complex', ';'.join(filt), '-map', '[out]', '-ar', '44100', '-ac', '2',
+                 '-c:a', 'pcm_s16le', str(outp)])
+        edit_audio = {'file': str(outp), 'duration_s': probe(outp)['duration_s']}
+    edit_plan = {'video': n, 'narration_file': str(folder / 'narration.wav'), 'narration_duration_s': dur,
+                 'holds': holds, 'edit_duration_s': total, 'edit_narration': edit_audio,
+                 'export_window_s': [round(lock['target_length_s'] - tol, 2), round(lock['target_length_s'] + tol, 2)],
+                 'within_export_window': abs(total - lock['target_length_s']) <= tol,
+                 'shots': out_shots, 'notes': notes, 'made_at': now()}
+    write_json(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json', edit_plan)
+    emit({'ok': True, 'edit_plan': str(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json'),
+          'shot_plan': str(plan_path), 'shots': len(out_shots), 'edit_duration_s': total, 'holds': holds,
+          'within_export_window': edit_plan['within_export_window'], 'edit_narration': edit_audio, 'notes': notes})
 
 
 def cmd_status(args):
@@ -1246,11 +1905,10 @@ def main():
     p = sub.add_parser('voice-candidates'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--count', type=int, default=5); p.add_argument('--search', default='')
     p.add_argument('--design', type=int, default=0)
-    p.add_argument('--design-description', default='', help='A voice reads about as fast as the audio it was '
-                   'made from: state the TARGET PACE IN WORDS here (e.g. "...speaks at a brisk, measured pace, '
-                   'clearly and without rushing..."), tied to this run\'s locked pace_wpm. Do not rely on a '
-                   'runtime --delivery tag at tts time to fix pace afterward -- verified unreliable for long '
-                   'chunks this session.')
+    p.add_argument('--design-description', default='', help='The narrator this story needs: character, register, '
+                   'age, accent, delivery (from the creative strategy and the references\' narrators). Pace words '
+                   'here do not set the real pace (measured: no steady effect, preview pace not kept on real '
+                   'chunks); the real pace is measured on the calibration chunk.')
     p.add_argument('--design-text', default='')
     p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
     p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_voice_candidates)
@@ -1259,19 +1917,29 @@ def main():
     p.add_argument('--settings', default=''); p.add_argument('--replace', action='store_true')
     p.set_defaults(func=cmd_voice_pick)
     p = sub.add_parser('voice-probe'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
-    p.add_argument('--voice-id', required=True); p.add_argument('--model-id', default='eleven_v4')
-    p.add_argument('--delivery', default=''); p.add_argument('--text', default='')
+    p.add_argument('--voice-id', required=True); p.add_argument('--model-id', default='eleven_v4', choices=TTS_MODELS)
+    p.add_argument('--settings', default='', help='JSON voice_settings (stability, similarity_boost), as tts.')
+    p.add_argument('--delivery', default=''); p.add_argument('--text', default='', help='The passage to hear, '
+                   'inline [tags] included exactly as the script will carry them.')
     p.add_argument('--credit-safety-factor', type=float, default=1.15)
     p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
     p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_voice_probe)
     p = sub.add_parser('tts'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
-    p.add_argument('--voice-id', required=True); p.add_argument('--model-id', default='eleven_v4')
+    p.add_argument('--voice-id', required=True); p.add_argument('--model-id', default='eleven_v4', choices=TTS_MODELS)
     p.add_argument('--max-chars', type=int); p.add_argument('--execute', action='store_true')
-    p.add_argument('--delivery', default='', help='An audio/pace tag (e.g. "[quick, measured pace]") prepended '
-                   'to every chunk sent, proven first with voice-probe. Not hashed into the script integrity check.')
-    p.add_argument('--settings', default='', help='JSON voice_settings (stability, similarity_boost, style, '
-                   'use_speaker_boost, speed) sent with every chunk. Default empty uses ElevenLabs bare defaults '
-                   '(stability 0.5), which the docs say widens randomness/variability between generations.')
+    p.add_argument('--delivery', default='', help='A tag prepended to every part sent. Measured: a pace tag here '
+                   'had no lasting effect over a real part. Delivery belongs inline in the script\'s lines, '
+                   'decided at the script stage (05 -> Inline audio tags). Not hashed into the integrity check.')
+    p.add_argument('--settings', default='', help='JSON voice_settings (stability, similarity_boost) sent with '
+                   'every part. Empty uses ElevenLabs\' bare default stability 0.5, which widens variability.')
+    p.add_argument('--rerecord-changed', action='store_true', help='Re-record only the recorded parts whose '
+                   'lines changed (old takes move to superseded/); the other parts are kept as they are.')
+    p.add_argument('--rechunk', action='store_true', help='Start over with fresh part boundaries (every part '
+                   're-billed); needs --archive-existing when audio exists.')
+    p.add_argument('--archive-existing', action='store_true', help='Move the existing audio folder aside (to '
+                   'video-NN-archive-<time>) before starting over with another voice/model/language or --rechunk.')
+    p.add_argument('--skip-calibration', action='store_true', help='Allow recording several parts before this '
+                   'voice/model/settings has a real measured pace (normally: --max-parts 1, then narration-measure).')
     p.add_argument('--credit-safety-factor', type=float, default=1.15,
                    help='Character-allowance reserve, not a promise of credit price (default 1.15)')
     p.add_argument('--assume-cost-ratio', type=float, default=1.0,
@@ -1289,6 +1957,18 @@ def main():
     p.set_defaults(func=cmd_tts)
     p = sub.add_parser('audio-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_audio_check)
+    p = sub.add_parser('narration-measure', help='Real pace, line gap, tag costs, pauses and line times of the narration')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--parts', default='', help='Only these finished parts, e.g. 1 (the calibration part)')
+    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
+    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_narration_measure)
+    p = sub.add_parser('pace-profile', help='Pace and pauses of the references (and the measured narration)')
+    p.add_argument('--run', required=True); p.add_argument('--refs', default=''); p.add_argument('--video', type=int)
+    p.set_defaults(func=cmd_pace_profile)
+    p = sub.add_parser('retime-shots', help='Time the shot plan to the real narration and its edit holds')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--render-narration', action='store_true', help='Also write narration-edit.wav with the holds')
+    p.set_defaults(func=cmd_retime_shots)
     p = sub.add_parser('timeline-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_timeline_check)
     p = sub.add_parser('export-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)

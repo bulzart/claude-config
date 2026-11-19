@@ -161,6 +161,85 @@ class StaticStudioTests(unittest.TestCase):
         res=cli('export-check','--run',self.run,'--video',1,'--file',short,expected=2)
         self.assertIn('export_duration_misses_user_locked_length',res['issues'])
 
+    def load_core(self):
+        spec=importlib.util.spec_from_file_location('static_studio_core', TOOL)
+        mod=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_tags_pauses_and_content_flags(self):
+        core=self.load_core()
+        # Tags are sent but never spoken: not counted as words.
+        self.assertEqual(core.count_words('[pause] And then [softly, slowly] the night comes.'),5)
+        lines=[{'id':'L001','text':'There is one road.','pause_after_s':2,'pause_via':'tag'},
+               {'id':'L002','text':'[pause] And then the night comes.'},
+               {'id':'L003','text':'They look the same.','pause_after_s':4},
+               {'id':'L004','text':'[gunshot] It is over.','pause_after_s':5,'pause_via':'edit'}]
+        tags,issues=core.script_tags(lines)
+        self.assertEqual([t['tag'] for t in tags],['[pause]','[gunshot]'])
+        self.assertIn('audio_tag_not_for_narration:L004:[gunshot]',issues)
+        plan,pissues=core.script_pause_plan(lines)
+        self.assertIn('pause_L003_over_1s_needs_pause_via_tag_or_edit',pissues)
+        self.assertEqual(core.edit_holds_s(lines),5.0)
+        bad=[{'id':'L001','text':'A line.','pause_after_s':3,'pause_via':'tag'},{'id':'L002','text':'No tag here.'}]
+        self.assertTrue(any('via_tag_but_no_pause_tag' in x for x in core.script_pause_plan(bad)[1]))
+        self.assertIn('audio_tag_malformed_brackets:L001',core.script_tags([{'id':'L001','text':'[pause A line.'}])[1])
+        # A flagged word needs an answer under a "Content flags" heading, not a mention anywhere.
+        rows=[{'id':'L011','text':"You'd be home by Christmas."},{'id':'L020','text':'The wounded cross.'}]
+        flags,fi=core.content_flags(rows,'# Review\nL011 is great.\n')
+        self.assertEqual([f['line'] for f in flags],['L011'])
+        self.assertIn('content_flag_unreviewed:L011:holiday_religion_superstition',fi)
+        self.assertFalse(core.content_flags(rows,'## Content flags\n- L011: rewritten.\n')[1])
+
+    def test_parts_keep_boundaries_and_alignment(self):
+        core=self.load_core()
+        lines=[{'text':f'Line number {i} is here.'} for i in range(1,9)]
+        old=core.chunks_for_lines(lines,60)
+        self.assertGreater(len(old),2)
+        manifest=[{'id':i+1,'line_start':c['line_start'],'line_end':c['line_end']} for i,c in enumerate(old)]
+        lines[1]['text']='Line two.'   # shorter: fresh greedy chunking could pull the next line into part 1
+        kept=core.chunks_from_manifest(manifest,lines)
+        self.assertEqual([(c['line_start'],c['line_end']) for c in kept],[(c['line_start'],c['line_end']) for c in old])
+        self.assertIsNone(core.chunks_from_manifest(manifest,lines[:-1]))   # a removed line: boundaries no longer fit
+        words=[{'start_s':i*0.5,'end_s':i*0.5+0.4,'text':w} for i,w in enumerate('you are twenty years old this is 1950'.split())]
+        tok,ratio=core.align_lines(['You are twenty years old.','[pause] This is 1950.'],words)
+        self.assertEqual(ratio,1.0)
+        self.assertEqual(tok[1][0],(2.5,2.9))
+        prof=core.pause_profile([{'start_s':0,'end_s':1},{'start_s':3,'end_s':4},{'start_s':4.1,'end_s':5}])
+        self.assertEqual(prof['longest_pause_s'],2.0)
+
+    def test_narration_must_leave_room_in_export_window(self):
+        vd=self.write_plan()
+        d=self.run/'50-audio/video-01';d.mkdir(parents=True,exist_ok=True)
+        dry=cli('tts','--run',self.run,'--video',1,'--voice-id','TESTID','--model-id','eleven_v4')
+        specs=dry['candidate_manifest']
+        # one 615 s narration: inside audio's own 4% (600 +/- 24) but, with a planned 5 s closing hold,
+        # outside the export window (600 +/- 15)
+        for chunk in specs['chunks']:
+            subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','anullsrc=r=8000:cl=mono',
+                            '-t',str(615/len(specs['chunks'])),'-c:a','libmp3lame','-b:a','32k',str(d/chunk['file'])],check=True)
+        (d/'parts.txt').write_text(''.join(f"file '{(d/c['file']).as_posix()}'\n" for c in specs['chunks']))
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(d/'parts.txt'),
+                        str(d/'narration.wav')],check=True)
+        save(d/'manifest.json',{**specs,'status':'complete','finished_parts':[c['id'] for c in specs['chunks']]})
+        script=json.loads((vd/'script.json').read_text())
+        script['lines'][-1].update({'pause_after_s':5,'pause_via':'edit'})
+        save(vd/'script.json',script)
+        res=cli('audio-check','--run',self.run,'--video',1,expected=2)
+        self.assertNotIn('narration_duration_outside_locked_tolerance',res['issues'])
+        self.assertIn('narration_plus_edit_holds_longer_than_export_window',res['issues'])
+        self.assertEqual(res['edit_holds_s'],5.0)
+        # Only the changed part would be re-recorded, never the whole narration.
+        script['lines'][0]['text']='A changed first line.'
+        save(vd/'script.json',script)
+        again=cli('tts','--run',self.run,'--video',1,'--voice-id','TESTID','--model-id','eleven_v4')
+        self.assertEqual(again['changed_recorded_parts'],[1])
+        self.assertEqual(again['parts_to_record'],[1])
+        refused=subprocess.run([sys.executable,str(TOOL),'tts','--run',str(self.run),'--video','1','--voice-id','TESTID',
+                                '--model-id','eleven_multilingual_v2'],capture_output=True,text=True)
+        self.assertEqual(refused.returncode,2)   # only eleven_v4 / eleven_v4_turbo are accepted
+        self.assertIn('eleven_v4_turbo',refused.stderr)
+
     def test_legacy_not_imported_and_clone_keeps_only_analysis(self):
         clone=cli('clone','--from-run',self.run,'--workspace',self.home/'runs')['run']
         cp=Path(clone)

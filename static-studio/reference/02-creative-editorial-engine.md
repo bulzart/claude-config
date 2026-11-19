@@ -56,6 +56,7 @@ Before writing complete narration, write a brief episode-specific creative strat
 - Which tools from the story engine above fit this subject, and which would feel forced.
 - How factual information becomes an enjoyable experience rather than an information delivery.
 - What visual storytelling contributes beyond illustrating spoken words.
+- How the narration should sound and breathe for this story: its register, where it slows or quickens, and the few moments (if any) that must land in silence. Read this against the references' measured delivery (`pace-profile`: their pace and how they pause), not copied from it. 03's pauses and 05's voice and tag choices carry out what this says; they never invent their own.
 - What makes the execution distinct from the references.
 
 Do not mechanically insert humor, tension, cliffhangers, emotional beats, or rhetorical questions to satisfy a format expectation. A quiet, reflective video can be exceptional. So can a playful, energetic one. The right choice depends on the subject and the intended experience.

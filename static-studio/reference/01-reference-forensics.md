@@ -60,7 +60,7 @@ A detailed card in `20-analysis/cards/V###.json` should include these additional
 }
 ```
 
-The command also expects a *human-readable* `20-analysis/V###-notes.md` summarizing the reference's 3–6 most useful mechanisms with timestamps and a critique of where it loses the viewer. If a creator succeeds despite apparent repetition or a sparse edit, record that: the voice, concrete tension, or source topic may be doing the work. Do not mistake high shot frequency for high value.
+For `narrator_character`, measure as well as listen: `pace-profile --run "RUN" --refs V###` gives the narrator's pace and how they pause (how often, the typical and the longest pause). It uses the same functions `narration-measure` later applies to the generated voice, so the two compare directly. Note where the narrator's longest silences fall and what the story is doing there. The command also expects a *human-readable* `20-analysis/V###-notes.md` summarizing the reference's 3–6 most useful mechanisms with timestamps and a critique of where it loses the viewer. If a creator succeeds despite apparent repetition or a sparse edit, record that: the voice, concrete tension, or source topic may be doing the work. Do not mistake high shot frequency for high value.
 
 ## Cross-video synthesis without niche pollution
 

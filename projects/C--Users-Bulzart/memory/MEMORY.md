@@ -3,4 +3,5 @@
 - [Feedback: CapCut text size](feedback-capcut-text-size.md) — overlay text size 10 standard, 11 when a video has only a little text (≤5 words at once); one size per video; AWL capcut-text-style sets it; not in AWL Static (2026-11-05: the references' own text look, free)
 - [Project: analyze-stack build](project-analyze-stack.md) — stack home C:\Users\Bulzart\.claude\analyze-stack; single /analyze-stack command; read-only Seedance notes + director bundle (2026-09-19); capcut MCP (verified 2026-09-19) + capcut-cli 0.25
 - [Project: Loupe judge context](project-loupe-judge-context.md) — image fingerprints shipped 2026-11-03; Haiku reading reference images declined, don't re-propose
+- [Feedback: ElevenLabs v4 only](feedback-elevenlabs-v4-only.md) — eleven_v4/v4_turbo strictly, no speed tests; tags chosen by the video's agents from the full catalogue
 - [Feedback: no added stickers or emojis](feedback-no-stickers.md) — never add a sticker or emoji to a generation or a CapCut edit, any pipeline; natural in-scene ones (a phone chat) and product label art are fine
