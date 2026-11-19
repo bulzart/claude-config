@@ -6,6 +6,16 @@ The narrator should sound like a person who understands and *cares* about the su
 
 A channel/run uses a consistent narrator persona and visual identity; different **videos** may have distinct emotional routes and spoken languages. One narrator may need more dynamic delivery for an inventive science topic than for reflective history. Pick voice/model only once when stable; if the voice cannot handle the language/topic, explain a necessary change.
 
+## Inline audio tags: executing the story's own pauses, never inventing new ones
+
+ElevenLabs v4/v4 Turbo read bracketed inline tags embedded directly in the sent text — not a fixed closed list, natural-language cues grouped roughly as emotion (`[whispers]`, `[sighs]`), pacing (`[slowly]`, `[rushed]`, `[snappy]`, `[speedy]`, `[drawn out]`) and pauses (`[pause]`, `[long pause]`, `[slightly pause]`). A tag carries forward until the next one — don't stack contrasting tags on the same words — and ordinary punctuation (ellipses, dashes, a capitalized word) already shapes pacing without needing a tag at all.
+
+**Where a tag goes is decided by the story, not by whoever is running `tts`.** `03-duration-and-script.md`'s `beat-map.json` → `planned_silence_s` (or a passage `editorial-review.md` already flagged as a key moment — a quote, a turning point, the closing line) is the one legitimate source for "this line earns a real pause." Read those before writing a single tag; placing one anywhere else is inventing editorial weight the planning stage never decided, in the one stage of the pipeline that is supposed to only *execute*. Embed the tag directly inside the relevant line's `text` in `script.json` (e.g. `"text": "Retreat? Hell, we're not retreating. [pause] We're just attacking in a different direction."`) — it is sent exactly as written, no tool flag needed.
+
+**`[long pause]` is reserved for moments that are genuinely pivotal** (a turning point, the final line) — not sprinkled for general gravity. `[pause]` suits a real beat inside a sentence (a quote's own turn, a declaration before its justification); `[slightly pause]` suits a smaller, still-real hitch. Most lines get no tag at all.
+
+**Tags cost real, measurable time — budget for it, don't bolt it on after the script is already sized.** Confirmed by direct measurement: one `[long pause]` plus one `[slightly pause]` added just over 12 seconds to a single ~56-line, ~3,550-character chunk. Count tags into the word/time budget the same way `planned_silence_s` already does, *before* the final calibration pass (05's `--max-parts 1` step), not as a surprise discovered only after a full generation runs long.
+
 ## Pick the voice: five candidates, pace baked in from the start
 
 Ported from `/analyze-with-loupe` Static mode, verified this session after the alternative (a generic voice plus a runtime delivery tag to force pace) failed twice on real paid generations. **A voice reads about as fast as the audio it was made from** — pace is a property of the voice itself, not something reliably imposed afterward.
