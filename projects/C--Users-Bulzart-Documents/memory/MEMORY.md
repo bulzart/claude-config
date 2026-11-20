@@ -97,3 +97,4 @@
 - [/create-video command](create-video-command.md) — 2026-11-19: zip's static-only command, logic untouched; PC fixes + awl's CapCut CODE (capcut_tools.py, e2e 24/24); paid TTS, CapCut GUI not verified
 - [CapCut auto-update BLOCKED](capcut-autoupdate-blocked.md) — user 2026-11-19: CapCut self-updated to 9.8.0.4213 (11-16); blocked via static-studio/maintenance/capcut_autoupdate.py; `unblock` only on the user's say
 - [WPM: measure from transcripts, never estimate](wpm-calibrate-from-transcripts.md) — before pace_wpm in script.json, compute word_count/duration for each niche cluster's refs; default estimates are dangerously low (143 vs actual 198 for pov-military-narrative)
+- [create-video: adaptive-niche guardrail](create-video-adaptive-niche-guardrail.md) — 9-point shift never drifts; no per-niche rules/figures in manuals; plan-check needs Creative strategy + Self-audit; one cold read before paid narration

@@ -119,7 +119,7 @@ class StaticStudioTests(unittest.TestCase):
                 'line_end':i*10 if i<5 else 52,
                 'narrative_job':'genuinely deliver new evidence','visual_intent':'a purposeful comparison'} for i in range(1,6)]
         save(vd/'beat-map.json',{'target_length_s':600,'beats':beats})
-        (vd/'editorial-review.md').write_text('Evidence, exit risks, revisions made.',encoding='utf-8')
+        (vd/'editorial-review.md').write_text('## Creative strategy\n'+' '.join(['why']*45)+'\n## Self-audit\n'+' '.join(['risk']*45)+'\n',encoding='utf-8')
         return vd
 
     def test_plan_audio_partial_and_timeline(self):
@@ -190,6 +190,11 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual([f['line'] for f in flags],['L011'])
         self.assertIn('content_flag_unreviewed:L011:holiday_religion_superstition',fi)
         self.assertFalse(core.content_flags(rows,'## Content flags\n- L011: rewritten.\n')[1])
+        # The creative sections must exist with real text; a heading alone is not a strategy.
+        filler=' '.join(['word']*45)
+        self.assertEqual(core.review_sections_missing('## Creative strategy\nTBD\n## Self-audit\n'+filler+'\n'),
+                         ['editorial_review_missing_section:creative_strategy'])
+        self.assertFalse(core.review_sections_missing('## Creative strategy\n'+filler+'\n### Breath\nmore\n## Self-audit\n'+filler))
 
     def test_parts_keep_boundaries_and_alignment(self):
         core=self.load_core()

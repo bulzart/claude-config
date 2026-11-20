@@ -650,6 +650,20 @@ def content_flags(lines, review_text):
     return flags, issues
 
 
+REVIEW_SECTIONS = (('creative_strategy', r'creative strategy'), ('self_audit', r'self[- ]audit'))
+
+
+def review_sections_missing(review_text, min_words=40):
+    """The two creative sections of editorial-review.md (02's episode strategy, 03's self-audit) exist and are
+    written. Presence and length only: whether they are any good is the agents' and the cold reader's call."""
+    missing = []
+    for key, head in REVIEW_SECTIONS:
+        m = re.search(r'^#+[^\n]*' + head + r'[^\n]*\n(.*?)(?=^#{1,2} |\Z)', review_text or '', flags=re.I | re.M | re.S)
+        if not m or len(re.findall(r'\w+', m.group(1))) < min_words:
+            missing.append(f'editorial_review_missing_section:{key}')
+    return missing
+
+
 def script_hash(lines):
     return hashlib.sha256('\n'.join(str(r.get('text') or '').strip() for r in lines).encode('utf-8')).hexdigest()
 
@@ -809,6 +823,7 @@ def plan_facts(rd, video):
     review_text = review.read_text(encoding='utf-8', errors='replace') if review.exists() else ''
     flags, flag_issues = content_flags(lines, review_text)
     issues += flag_issues
+    issues += review_sections_missing(review_text)
     measured = voice_measurement(rd)
     tag_s = round(sum(tag_cost_s(t['tag'], measured.get('tag_costs_s')) for t in tags), 2)
     pace = float(script.get('pace_wpm') or lock.get('pace_wpm') or 0)
