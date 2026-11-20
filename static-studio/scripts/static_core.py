@@ -3212,6 +3212,31 @@ def audio_facts(rd, video):
     old_parts = narration_outdated_parts(read_json(vd / 'direction-lock.json'), manifest) if manifest else []
     if old_parts:
         issues.append('narration_parts_made_for_an_earlier_direction:' + ','.join(str(x) for x in old_parts))
+    # One narrator throughout: every part recorded with the voice, model and settings of the video's voice lock.
+    warnings = []
+    vf = voice_facts(rd, video)
+    if manifest and vf['lock']:
+        recs = part_records_of(manifest)
+        setup = (vf['voice_id'], vf['model_id'], vf['settings'])
+        other = [x for x in manifest.get('finished_parts') or []
+                 if tuple((recs.get(str(x)) or {}).get(k) or ({} if k == 'settings' else None)
+                          for k in ('voice_id', 'model_id', 'settings')) != setup]
+        if other:
+            issues.append('narration_parts_recorded_with_another_voice_setup:' + ','.join(str(x) for x in other))
+    # Every line heard, no tag read aloud (narration-measure, on these exact parts).
+    lt = read_json(folder / 'line-times.json')
+    seam_s = 0.0
+    if lt:
+        now_prints = {c.get('id'): quick_fingerprint(folder / c['file']) for c in manifest.get('chunks') or []
+                      if (folder / c.get('file', '__missing__')).is_file()}
+        current = bool(lt.get('parts')) and all(p.get('fingerprint') == now_prints.get(p.get('id'))
+                                                for p in lt['parts'])
+        if current:
+            issues += [f'narration_line_not_heard:{x}' for x in lt.get('unheard_lines') or []]
+            issues += [f'narration_tag_read_aloud:{t["line"]}:{t["tag"]}' for t in lt.get('tags_read_aloud') or []]
+            seam_s = sum(float(s.get('seam_hold_s') or 0) for s in lt.get('seams') or [])
+        else:
+            warnings.append('line-times.json describes an earlier recording: run narration-measure on these parts')
     # The picture can't be shorter than the narration, and export-check holds the export to its own (tighter)
     # window: narration plus the planned edit holds must already fit it, or the export can never pass.
     holds = edit_holds_s(script_lines)
@@ -3219,13 +3244,13 @@ def audio_facts(rd, video):
     if target and duration:
         tol_e = max(4, target * lock.get('tolerance_export_pct', .025))
         window = [round(target - tol_e, 2), round(target + tol_e, 2)]
-        if duration + holds > target + tol_e:
+        if duration + holds + seam_s > target + tol_e:
             issues.append('narration_plus_edit_holds_longer_than_export_window')
-        elif duration + holds < target - tol_e:
+        elif duration + holds + seam_s < target - tol_e:
             issues.append('narration_plus_edit_holds_shorter_than_export_window')
-    return {'ready': not issues, 'issues': issues, 'duration_s': duration,
-            'target_length_s': target, 'edit_holds_s': holds,
-            'expected_edit_s': round(duration + holds, 2) if duration else None, 'export_window_s': window,
+    return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'duration_s': duration,
+            'target_length_s': target, 'edit_holds_s': holds, 'seam_holds_s': round(seam_s, 2),
+            'expected_edit_s': round(duration + holds + seam_s, 2) if duration else None, 'export_window_s': window,
             'script_lines': len(script.get('lines') or []),
             'recorded_lines': cursor, 'manifest_status': manifest.get('status')}
 
