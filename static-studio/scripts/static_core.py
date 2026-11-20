@@ -171,7 +171,7 @@ def cmd_init(args):
           'analysis_fps': args.fps, 'min_longform_s': args.min_longform,
           'notes': 'Static only. Agents invent new subjects within the chosen niche; references teach form, not copied content.'}
     write_json(rd / 'state.json', st)
-    (rd / 'todo.md').write_text('# Static Studio run\n\n- [ ] Inventory and prepare references\n- [ ] Analyze evidence and choose niche\n- [ ] Lock comparable long-form length\n- [ ] Research and plan original story\n- [ ] Record complete narration\n- [ ] Design and assemble image-led edit\n- [ ] Export and independently verify final video\n', encoding='utf-8')
+    (rd / 'todo.md').write_text('# Static Studio run\n\n- [ ] Inventory and prepare references (av-profile: watch them as films)\n- [ ] Analyze evidence and choose niche\n- [ ] Lock comparable long-form length\n- [ ] Research the story; creative direction: approaches, treatments, blind read, direction-lock (before the script)\n- [ ] Beat directions and script; cold read with every finding answered; plan-check\n- [ ] Record complete narration (calibration part first: pace and delivery per beat)\n- [ ] Design and assemble image-led edit (shot-check, retime-shots)\n- [ ] Export; final watch review answered; release-check\n', encoding='utf-8')
     emit({'ok': True, 'run': str(rd), 'next': 'scan --run "' + str(rd) + '"'})
 
 
@@ -205,7 +205,7 @@ def cmd_clone(args):
             target = rd/oldrel; target.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(old, target)
     for card in (src/'20-analysis/cards').glob('V*.json'):
         shutil.copy2(card, rd/'20-analysis/cards'/card.name)
-    (rd/'todo.md').write_text('# Cloned Static analysis\n\n- [ ] Choose niche and lock a new video length\n- [ ] Plan and produce new long-form YouTube video\n', encoding='utf-8')
+    (rd/'todo.md').write_text('# Cloned Static analysis\n\n- [ ] prepare + av-profile the references again (frames and transcripts are not cloned)\n- [ ] Choose niche and lock a new video length\n- [ ] Creative direction and lock before the script; cold read; then produce (create-video.md D-G)\n', encoding='utf-8')
     emit({'ok': True, 'run': str(rd), 'source_run': str(src), 'note': 'Only analyses are reused. Source media is read-only; production assets remain independent.'})
 
 
