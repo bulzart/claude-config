@@ -1501,7 +1501,7 @@ def cmd_voice_candidates(args):
     if design_n:
         if not args.design_description:
             error('--design-description is required when --design > 0 '
-                  '(e.g. "calm, grave, measured male documentary narrator, American accent").')
+                  '(the narrator the locked treatment describes: character, register, age, accent, delivery).')
         text = args.design_text
         if not text:
             script = read_json(vd / 'script.json')

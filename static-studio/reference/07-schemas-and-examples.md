@@ -46,7 +46,7 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" pace-profile --run "
 # accent: the locked treatment's narrator). A preview's pace does not predict the real pace; the agents
 # can't listen: compare descriptions, transcripts and measured_delivery; the user may listen and overrule.
 python "$HOME/.claude/static-studio/scripts/static_core.py" voice-candidates --run "RUN" --video 1 \
-  --count 5 --design 2 --design-description "A grave, warm documentary narrator in his 50s, American, close to the listener, restrained rather than theatrical" \
+  --count 5 --design 2 --design-description "<the locked treatment's narrator: character, register, age, accent, delivery>" \
   --design-text "A sample of the actual script, 100-1000 characters, read exactly as it will be sent."
 python "$HOME/.claude/static-studio/scripts/static_core.py" voice-pick --run "RUN" --video 1 \
   --voice-id "ID_FROM_CANDIDATES_JSON" --name "Narrator name" --settings '{"stability":0.65,"similarity_boost":0.8}'
