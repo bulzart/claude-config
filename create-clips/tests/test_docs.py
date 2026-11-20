@@ -162,6 +162,14 @@ def main():
           "the build skills, the router, the README, edit-craft.md, the produce contract and the wrap-up describe the Montserrat word-highlight look")
     check(all("lexicon" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game")) and "not_before" in sk("cc-profile") and "review" in sk("cc-profile") and "ONE pass" in read(CC / "reference" / "edit-craft.md"),
           "the lexicon rules (whole words, one pass, punctuation, context guards, review) are in cc-profile and edit-craft.md, and every build skill reads the lexicon record")
+    # who speaks (the user, 2026-11-20): the [sub] marks of the game's subtitled lines are facts every reader is told about the same way, and they never decide
+    mm, rep, ec2 = read(CC / "reference" / "moment-mining.md"), read(CC / "reference" / "reporter.md"), read(CC / "reference" / "edit-craft.md")
+    check("[sub]" in mm and "not attributed" in mm and "never dropped" in mm and "voices.json" in rep and "never from the transcript" in rep,
+          "moment-mining.md explains the [sub] marks (facts, an unmarked line is not attributed, a moment is never dropped for them) and the reporter quotes subtitles from voices.json")
+    check("T voices" in sk("cc-start") and "T voices" in sk("cc-scan") and "[sub]" in sk("cc-plan") and "[sub]" in sk("cc-build-short") and "[sub]" in sk("cc-build-long"),
+          "cc-start makes the speaker facts, cc-scan waits for them, the planner and the builders read the [sub] marks")
+    check("captions.skip" in ec2 and "never the streamer's own words" in ec2 and "subtitle_y_median" in ec2 and "voices" in read(CC / "README.md") and "T voices" in rt,
+          "edit-craft.md has captions.skip (never the streamer's words) and the caption placement clear of the game's subtitles; the README and the router name the voices facts")
     check(all("word_box_max_words" in sk(n) for n in ("cc-build-long", "cc-build-game", "cc-produce")) and "falls back to the plain look, in the same font, by itself" not in sk("cc-build-long"),
           "the long-form build skills keep every box-look video word-box (the user, 2026-11-18): word_box_max_words raised, no silent plain fallback")
     check("padding 0.05" in read(CC / "README.md") and "padding 0.05" in read(CC / "reference" / "edit-craft.md"), "the README and edit-craft.md give the box padding 0.05 (the user, 2026-11-20: a little smaller, then \"only a tiny bit\" smaller)")
