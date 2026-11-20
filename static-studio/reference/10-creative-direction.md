@@ -84,7 +84,8 @@ documentary voice is one option among many. Ask what the subject's own nature an
 Playfulness can carry a hard subject (never at the expense of the people who suffered in it); calm can carry an
 exciting one.
 
-Optional, when it helps and the user allows: free local stills (FLUX) for the sample moments, and a short paid voice
+Optional, when it helps and the user allows: free local stills (FLUX) for the sample moments (an image job with
+`"purpose": "treatment_preview"`, each item naming its treatment and moment, 04), and a short paid voice
 probe (05) for the user to hear a narrator and the agents to measure it. Neither is required; both are evidence, not decisions.
 
 ## 3. Choosing without scores
@@ -100,7 +101,23 @@ No numbers decide this. Two things do:
    from the others. Write it in `decision`.
 
 Then `direction-lock`. The script and the beat directions are written from the locked treatment. Changing course
-later is allowed and sometimes right: re-lock with `--revise "what changed and why"`.
+later is allowed and sometimes right: re-lock with `--revise "what changed and why"`. The lock compares the direction
+field by field and says what the change touched (`affects`, and `outdated_now` for what exists):
+
+- The evidence, the alternatives, the reasons and the samples touch nothing: same revision, nothing to redo.
+- In the chosen treatment, the narrator touches the beat map, the script and the recorded narration; the writing voice
+  the script; structure and pace the beat map, script, shot plan and edit; the visual language the shot plan, style
+  bible, stills and edit; the sound the beat map, music and edit; the audiovisual relationship the beat map, shot plan
+  and edit; the emotional course the beat map and script. In the strategy, the viewer's experience and facts as
+  experience touch the beat map and script, the progression also the shot plan and edit, the picture's contribution
+  the shot plan, style bible and stills, sound and breath the beat map, music and edit. Another approach touches the
+  beat map, script, shot plan and edit; another treatment touches everything.
+- Each touched piece is updated for real (its own checks then apply: a script edit beyond a trim gets a fresh read) or
+  kept on record with `direction-reapprove --artifact NAME --reason "why it still serves the treatment"`, before the
+  stage that uses it continues: `plan-check` and paid narration for the script and beat map, the image workers for the
+  shot plan and style bible, `retime-shots` and `timeline-check` for the narration, stills, music and edit.
+- Refining the chosen treatment needs no new blind read; it is shown at every plan-check. A treatment never read, or
+  rewritten so far that under 70% of its vocabulary is what its reader saw, gets its own blind read first.
 
 ## 4. Beat direction: the treatment, moment by moment
 

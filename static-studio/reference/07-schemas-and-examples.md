@@ -60,10 +60,15 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" tts --run "RUN" --vi
 python "$HOME/.claude/static-studio/scripts/static_core.py" narration-measure --run "RUN" --video 1
 python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RUN" --video 1   # real_forecast_s
 #   tts ... --execute                      (the rest; finished parts are kept)
-#   tts ... --rerecord-changed --execute   (after editing lines: only the parts that hold them)
+#   tts ... --rerecord-changed --execute   (after editing lines, or a narrator change: only those parts)
 python "$HOME/.claude/static-studio/scripts/static_core.py" audio-check --run "RUN" --video 1
 python "$HOME/.claude/static-studio/scripts/static_core.py" narration-measure --run "RUN" --video 1   # line times
 python "$HOME/.claude/static-studio/scripts/static_core.py" shot-check --run "RUN" --video 1   # before stills; retime-shots refuses a failing plan
+# The same gate the image and music workers run before they load anything (free), and the direction each item carries out:
+python "$HOME/.claude/static-studio/scripts/static_core.py" media-check --job "RUN/60-visuals/video-01/stills-job.json" --kind stills
+# After a meaningful direction change (direction-lock --revise lists outdated_now): update each piece, or keep it on record:
+python "$HOME/.claude/static-studio/scripts/static_core.py" direction-reapprove --run "RUN" --video 1 \
+  --artifact shot-plan --reason "why it still serves the locked treatment"
 python "$HOME/.claude/static-studio/scripts/static_core.py" retime-shots --run "RUN" --video 1 --render-narration
 # Agent makes/records CapCut project (narration-edit.wav, stills at the retimed shot times) and
 # writes project-derived timeline.json.
@@ -155,7 +160,7 @@ Minimal `40-plans/video-01/blueprint.json`:
 
 ## Audio manifest (automatically produced with paid TTS)
 
-Under `50-audio/video-01/`, the TTS tool creates `manifest.json` (voice/model/language/chunks and SHA256 text hashes, line ranges, `finished_parts`, `status`). Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. Parts keep their line boundaries once recorded. An edited line marks only its part as changed: the dry run lists `changed_recorded_parts`, and `--rerecord-changed` re-records just those, with old takes in `superseded/` and the change in `history`. Adding or removing lines, or changing the voice, model or language, needs `--rechunk`/`--archive-existing` (the folder moves to `video-NN-archive-<time>`). `audio-check` disallows a partial or missing line/audio, rejects a duration outside the audio tolerance, and rejects a narration that, with its planned edit holds, cannot fit the export window. `tts --max-parts 1 --execute` stops after the first part (`mode: partial_by_design_max_parts`) so it can be measured before paying for the rest.
+Under `50-audio/video-01/`, the TTS tool creates `manifest.json` (voice/model/language/chunks and SHA256 text hashes, line ranges, `finished_parts`, `part_revs`: the direction revision each part was recorded under, `status`). Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. Parts keep their line boundaries once recorded. An edited line marks only its part as changed: the dry run lists `changed_recorded_parts`, and `--rerecord-changed` re-records just those, with old takes in `superseded/` and the change in `history`. Adding or removing lines, or changing the voice, model or language, needs `--rechunk`/`--archive-existing` (the folder moves to `video-NN-archive-<time>`). `audio-check` disallows a partial or missing line/audio, rejects a duration outside the audio tolerance, and rejects a narration that, with its planned edit holds, cannot fit the export window. `tts --max-parts 1 --execute` stops after the first part (`mode: partial_by_design_max_parts`) so it can be measured before paying for the rest.
 
 ## Voice lock (`voice-pick` writes the voice; `narration-measure` writes `measured`; `tts` and `plan-check` read both)
 
@@ -190,7 +195,9 @@ Under `50-audio/video-01/`, the TTS tool creates `manifest.json` (voice/model/la
 `70-edit/video-01/edit-plan.json` (from `retime-shots`) contains:
 - `narration_duration_s` and `holds[]` (`after_line`, `at_audio_s`, `hold_s`);
 - `edit_duration_s`, `edit_narration` (`narration-edit.wav` and its probed duration), `export_window_s`, `within_export_window`;
-- `shots[]` (`id`, `beat_id`, `start_s`, `end_s`, `duration_s`) and `notes` (shots the real timing made very short or long).
+- `shots[]` (`id`, `beat_id`, `start_s`, `end_s`, `duration_s`, and `direction`: its beat's `experience`, `visual_intent`, `sound_direction`, `pace`) and `notes` (shots the real timing made very short or long);
+- `beats[]` (each beat's span in the edit, with its direction) and `direction` (the locked treatment's `visual_language`, `sound`, `audiovisual_relationship` and `structure_and_pace`, its `treatment` id and the `production_rev` it follows);
+- `shot_structure_sha256` and `script_sha256`: `timeline-check` asks for a new retime when the shots' structure or the script changed.
 
 `retime-shots` also rewrites `60-visuals/video-01/shot-plan.json`'s `start_s`/`end_s`, keeping the planned values once as `planned_start_s`/`planned_end_s`.
 
@@ -231,7 +238,11 @@ what `plan-check` and `direction-lock` look for, not what makes it good.
 
 Five approaches (at least three of perspective/scale/structure/voice/visualization among them, at least one that
 challenges the references' formula), two or three treatments. `direction-lock.json` keeps the hash, the time, the
-treatment, whether a script already existed (`late_reason`) and the history of `--revise`.
+treatment, whether a script already existed (`late_reason`) and the history of `--revise`, plus what production
+follows: `production_rev` (raised by a change that alters what production must do), `sections` (one hash per field,
+so a revision knows exactly what changed), `required` (per artifact, the revision that last touched it and, for a
+plan file, its content hash at that moment), `reapproved` (per artifact: the revision, the reason and, for a file, the
+content approved) and `reviewed_treatments` (each treatment's words as its last blind read saw them).
 
 ## Review records (`review-packet`, a fresh agent, `review-record`, the director's answers)
 
@@ -270,15 +281,27 @@ references'. All of it is measurement; none of it is a verdict.
   "fps": 30,
   "project_file": "C:/path/to/the/real/capcut/project",
   "visual_segments": [
-    {"start_s": 0, "end_s": 14.5,
+    {"start_s": 0, "end_s": 14.5, "shot_id": "S001",
      "asset_path": "C:/path/to/an/actual/still.png", "beat_id": "B01",
      "purpose": "Orient viewer to location before explaining constraints"},
-    {"start_s": 14.5, "end_s": 28.2,
+    {"start_s": 14.5, "end_s": 28.2, "shot_id": "S002",
      "asset_path": "C:/path/to/a/diagram.png", "beat_id": "B01",
      "purpose": "Make distance and travel costs immediately visible"}
+  ],
+  "audio_tracks": [
+    {"kind": "narration", "file": "C:/path/to/narration-edit.wav", "start_s": 0, "end_s": 1150.2},
+    {"kind": "music", "file": "C:/path/to/bed-01.wav", "start_s": 0, "end_s": 96.0, "beats": ["B01", "B02"]}
   ]
 }
 ```
+
+## Media records (written by the gated workers, never by hand)
+
+`60-visuals/video-01/stills-provenance.json`: `{"video": 1, "images": {"<file>": {"shot_id", "beat_id",
+"frame_prompt_sha256", "production_rev", "treatment", "engine", "made_at"}}}`. `70-edit/video-01/music-provenance.json`:
+the same with `beats` and `caption_sha256` per track. `timeline-check` and `release-check` trace the project through
+them. Pictures made any other way (supplied by the user, drawn) are accepted as a set with `direction-reapprove
+--artifact stills --reason "..."`, on record.
 
 Again these are a small excerpt, not a passing whole-film timeline. Fill every segment until the actual project ends, with meaningful beat IDs and no gaps; base timestamps on CapCut project readback. Timeline gate success still requires a human watch/listen pass and an **independent MP4 export check**.
 

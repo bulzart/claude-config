@@ -65,11 +65,6 @@ def main():
         requested.append({'id':item.get('id',f'S{i:03d}'),'file':name,
                           'hash':hashlib.sha256(item['prompt'].encode('utf-8')).hexdigest(),
                           'prompt':item['prompt']})
-    if not a.execute:
-        output({'ok':True,'mode':'dry_run_no_charges','model':model,'quality':quality,
-                'size':size,'image_count':len(imgs),'output_dir':str(dest),
-                'note':'Verify model access and pricing before rerunning with --execute; an API call is charged per generation.'})
-        return
     # Static Studio's production gate, before any paid call: the job names its run and video, every image a shot of
     # the checked shot plan with that shot's approved prompt, and the direction, beat map and shot plan are current.
     try:
@@ -77,7 +72,13 @@ def main():
         import static_core
         gate=static_core.media_gate(job,'stills')
     except Exception as exc:  # noqa: BLE001
-        output({'ok':False,'error':'Static Studio gate unavailable: '+type(exc).__name__+': '+str(exc)[:200]},True)
+        gate={'ok':False,'issues':['gate_unavailable: '+type(exc).__name__+': '+str(exc)[:200]]}
+    if not a.execute:   # free; says whether --execute would pass the gate
+        output({'ok':True,'mode':'dry_run_no_charges','model':model,'quality':quality,
+                'size':size,'image_count':len(imgs),'output_dir':str(dest),
+                'production_gate':{'ok':gate['ok'],'issues':gate['issues']},
+                'note':'Verify model access and pricing before rerunning with --execute; an API call is charged per generation.'})
+        return
     if not gate['ok']:
         output({'ok':False,'error':'Static Studio: these stills cannot be generated yet (fix the plan, not the gate).',
                 'issues':gate['issues']},True)
@@ -130,7 +131,7 @@ def main():
     combined=[x for k,x in prior.items() if k not in seen]+status
     mf.write_text(json.dumps({'model':model,'size':size,'quality':quality,'status':'complete','results':combined},indent=2),encoding='utf-8')
     provenance=None
-    if not gate.get('preview'):   # which shot each picture shows, made under which direction revision
+    if not gate.get('untracked'):   # which shot each picture shows, made under which direction revision
         ready={x['file'] for x in status if x.get('status')=='ready'}
         entries=[{'out':str(dest/row['file']),**rec,'engine':'openai:'+str(model)}
                  for row,rec in zip(requested,gate['records']) if row['file'] in ready]

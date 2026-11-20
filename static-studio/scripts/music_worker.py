@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""music_worker.py - ACE-Step 1.5 for /analyze-with-loupe Static (contract item 36): an instrumental bed under a narration, only when a
-run's plan calls for one.
+"""music_worker.py - ACE-Step 1.5 for Static Studio: an instrumental bed under a narration, only when a video's plan calls for one.
 
-Run ONLY by awl.py (`T music ...`) with ACE-Step 1.5's own Python (AWL_MUSIC_PYTHON, the .venv of a clone of
+Run by the /create-video agents (manual 04) with ACE-Step 1.5's own Python (AWL_MUSIC_PYTHON, the .venv of a clone of
 https://github.com/ace-step/ACE-Step-1.5 set up with `uv sync`; NOT `pip install ace-step`, which is v1), in that clone's folder
 (AWL_MUSIC_ROOT), one job file per call, one model load per call. It prints one JSON object on its last stdout line.
 
 Jobs:
   check    : torch, CUDA, the acestep package, and whether the checkpoints folder holds the configured music model
-  generate : tracks [{video, caption, duration, bpm, seed, fade_in, fade_out, out}] -> one instrumental wav each (48 kHz)
+  generate : run, video and tracks [{video, beats, caption, duration, bpm, seed, fade_in, fade_out, out}] -> one instrumental wav
+             each (48 kHz). Refused before any model loads unless Static Studio's production gate passes (static_core.media_gate:
+             the direction locked and current, the beat map checked, each track naming the beats it scores); each track made is
+             recorded with its beats and direction revision (70-edit/video-NN/music-provenance.json)
 
 The API used (ACE-Step 1.5 docs/en/INFERENCE.md, checked against the code): AceStepHandler().initialize_service(project_root, config_path,
 device, ...) -> (message, ok); generate_music(dit, llm=None, GenerationParams(task_type="text2music", caption, lyrics="[Instrumental]",

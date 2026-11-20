@@ -441,13 +441,26 @@ class StaticStudioTests(unittest.TestCase):
         ok=cli('plan-check','--run',self.run,'--video',1)
         self.assertTrue(ok['ready'])
         self.assertTrue(any('reapproved for direction revision 2' in w for w in ok['warnings']))
-        # Refining the chosen treatment needs no new blind read, but everything downstream must follow it.
+        # Refining the chosen treatment needs no new blind read; what that field feeds must follow it, nothing else.
         d['treatments'][0]['narrator']+=' Now noticeably warmer.'
         save(vd/'direction.json',d)
         r=cli('direction-lock','--run',self.run,'--video',1,'--revise','the narrator warmed up')
         self.assertEqual(r['production_rev'],3)
-        self.assertEqual(r['affects'],['beat-map','script','shot-plan','style-bible','stills','music','edit'])
-        self.assertIn('script_made_for_an_earlier_direction',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
+        self.assertEqual(r['affects'],['beat-map','script','narration'])
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('script_made_for_an_earlier_direction',res['issues'])
+        self.assertTrue(any('refined after its blind read' in w for w in res['warnings']))   # shown, never silent
+        # A rewrite of the chosen treatment is a new treatment: it gets its own blind read first.
+        rewrite=json.loads(json.dumps(d))
+        for k in ('narrator','writing_voice','structure_and_pace','visual_language','sound','audiovisual_relationship',
+                  'emotional_course','departures','risks','evidence_used'):
+            rewrite['treatments'][0][k]='A gravel voiced coastguard reads old telegrams aloud beside a lighthouse lamp.'
+        for m in ('opening','quiet_middle','turning_point'):
+            rewrite['treatments'][0]['samples'][m]={'narration':' '.join(f'Telegram {i} crackles over static while the lighthouse beam sweeps the harbour wall.' for i in range(6)),
+                                                    'picture':'a lighthouse lamp room at night, telegrams pinned to the wall'}
+        save(vd/'direction.json',rewrite)
+        r=cli('direction-lock','--run',self.run,'--video',1,'--revise','a whole new narrator and look',expected=2)
+        self.assertIn('rewritten since its blind read',r['error'])
         # Only a treatment that never had a blind read can't be chosen.
         t3=json.loads(json.dumps(d['treatments'][1])); t3['id']='T3'
         d['treatments'].append(t3); d['decision']['treatment']='T3'
@@ -585,6 +598,22 @@ class StaticStudioTests(unittest.TestCase):
         job={'op':'generate','run':str(self.run),'video':1,
              'images':[{'shot_id':'S1','prompt':shots[0]['frame_prompt']+', painterly, soft edges','out':str(stills/'S1.png')}]}
         jobp=self.home/'stills-job.json'; save(jobp,job)
+        ok=cli('media-check','--job',jobp,'--kind','stills')
+        self.assertTrue(ok['ok'])
+        self.assertEqual(ok['direction']['items'][0]['visual_intent'],'a purposeful comparison')   # what the picture must do
+        self.assertTrue(ok['direction']['visual_language'])                                         # in the locked look
+        # The thumbnail needs the locked direction, not a shot; an unknown purpose is refused.
+        thumb={'run':str(self.run),'video':1,'purpose':'thumbnail',
+               'images':[{'prompt':'a bold close portrait of a surveyor at dawn with a broken bridge behind','out':str(stills/'thumb.png')}]}
+        save(jobp,thumb); self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
+        thumb['purpose']='poster'; save(jobp,thumb)
+        self.assertIn('job_purpose_must_be:shots/treatment_preview/thumbnail',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
+        # A deliberate callback shows an earlier shot's still again: nothing to generate for it.
+        shots[4]['reuses']='S1'; shots[4].pop('frame_prompt')
+        save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        save(jobp,{**job,'images':[{'shot_id':'S5','prompt':shots[0]['frame_prompt'],'out':str(stills/'S5.png')}]})
+        self.assertIn('item_1_shot_S5_is_a_callback_of_S1_nothing_to_generate',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
+        save(jobp,job)
         self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
         # A prompt that drifted from the approved shot, or a shot the plan doesn't have, is refused.
         drift=json.loads(json.dumps(job)); drift['images'][0]['prompt']='a rocket launch at noon, cinematic'
@@ -612,7 +641,7 @@ class StaticStudioTests(unittest.TestCase):
         gate=core.media_gate(job,'stills')
         stills.mkdir(); (stills/'S1.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'0'*2048)
         core.record_media(gate['run'],1,'stills',[{'out':str(stills/'S1.png'),**gate['records'][0]}])
-        self.assertEqual(core.stills_facts(self.run,1)['issues'],['stills_missing_or_untraced:S2,S3,S4,S5'])
+        self.assertEqual(core.stills_facts(self.run,1)['issues'],['stills_missing_or_untraced:S2,S3,S4'])   # S5 shows S1's
         # A meaningful change of the chosen treatment: its earlier picture and the shot plan no longer stand...
         d=json.loads((vd/'direction.json').read_text())
         d['treatments'][0]['visual_language']+=' Colder, sparser frames throughout.'
@@ -624,7 +653,8 @@ class StaticStudioTests(unittest.TestCase):
         # ...until the shot plan follows the new look for real, and the job carries its new prompt.
         shots[0]['frame_prompt']='a sparse cold picture 1 of the valley, dawn light, one clear subject'
         save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
-        cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','beat-map','--reason','the beats already ask for restraint')
+        self.assertNotIn('beat_map_made_for_an_earlier_direction',      # the look changed; the beats did not need to
+                         cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
         self.assertIn('item_1_prompt_does_not_carry_shot_S1_frame_prompt',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
         job['images'][0]['prompt']=shots[0]['frame_prompt']+', painterly'; save(jobp,job)
         self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
@@ -633,6 +663,13 @@ class StaticStudioTests(unittest.TestCase):
         sf=core.stills_facts(self.run,1)
         self.assertEqual(sf['issues'],[])
         self.assertTrue(any('explicit reapproval' in w for w in sf['warnings']))
+        # A later change that doesn't touch the pictures leaves that reapproval standing.
+        d=json.loads((vd/'direction.json').read_text())
+        d['treatments'][0]['narrator']+=' A touch drier.'
+        save(vd/'direction.json',d)
+        self.assertNotIn('stills',cli('direction-lock','--run',self.run,'--video',1,'--revise','a drier narrator')['affects'])
+        self.assertEqual(core.stills_facts(self.run,1)['issues'],[])
+        self.assertEqual(cli('direction-lock','--run',self.run,'--video',1)['unchanged'],True)   # nothing new: nothing to do
 
     def test_edit_follows_the_retimed_shots_and_beats(self):
         vd,d,_=self.narrated()
@@ -644,27 +681,106 @@ class StaticStudioTests(unittest.TestCase):
         save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
         cli('retime-shots','--run',self.run,'--video',1)
         plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
-        self.assertEqual(plan['direction'],{'treatment':'T1','production_rev':1})        # made under the locked direction
-        self.assertEqual(plan['shots'][1]['direction']['pace'],'slow')                     # each shot carries its beat's direction
+        self.assertEqual((plan['direction']['treatment'],plan['direction']['production_rev']),('T1',1))   # made under the locked direction
+        self.assertTrue(plan['direction']['visual_language'] and plan['direction']['sound'])     # the editor gets the treatment's look and sound
+        self.assertEqual(plan['shots'][1]['direction']['pace'],'slow')                           # each shot carries its beat's direction
         self.assertEqual([b['id'] for b in plan['beats']],['B01','B02'])
+        # The stills are made through the gate and recorded with their shots.
+        core=self.load_core()
+        stills=self.home/'stills'; stills.mkdir()
+        job={'run':str(self.run),'video':1,'images':[{'shot_id':s['id'],'prompt':s['frame_prompt']+', ink wash',
+                                                      'out':str(stills/f"{s['id']}.png")} for s in shots]}
+        gate=core.media_gate(job,'stills'); self.assertTrue(gate['ok'],gate['issues'])
+        for it in job['images']:
+            Path(it['out']).write_bytes(b'\x89PNG\r\n\x1a\n'+b'0'*2048)
+        core.record_media(gate['run'],1,'stills',[{'out':it['out'],**rec} for it,rec in zip(job['images'],gate['records'])])
+        # timeline.json as read back from CapCut: each clip's own picture file (CapCut writes C:/ paths).
         tdir=self.run/'70-edit/video-01'
-        seg=[{'start_s':s['start_s'],'end_s':s['end_s'],'beat_id':s['beat_id'],'shot_id':s['id'],'purpose':'the shot\'s job'} for s in plan['shots']]
+        seg=[{'start_s':s['start_s'],'end_s':s['end_s'],'beat_id':s['beat_id'],'shot_id':s['id'],'purpose':'the shot\'s job',
+              'asset_path':str(stills/f"{s['id']}.png").replace('\\','/')} for s in plan['shots']]
         timeline={'canvas':'1920x1080','visual_segments':seg,
-                  'audio_segments':[{'kind':'music','file':str(self.home/'bed.wav'),'start_s':0,'end_s':5,'beats':['B01']}]}
+                  'audio_tracks':[{'kind':'narration','file':str(d/'narration.wav'),'start_s':0,'end_s':plan['edit_duration_s']},
+                                  {'kind':'music','file':str(self.home/'bed.wav'),'start_s':0,'end_s':5,'beats':['B01']}]}
         save(tdir/'timeline.json',timeline)
-        res=cli('timeline-check','--run',self.run,'--video',1,expected=2)
-        trace=[x for x in res['issues'] if x.startswith(('visual_','shot_','edit_plan','audio_'))]
-        self.assertEqual(trace,['audio_1_music_without_provenance'])   # cuts follow the retimed shots; the bed is untraced
+        def trace():
+            res=cli('timeline-check','--run',self.run,'--video',1,expected=2)
+            return res,[x for x in res['issues'] if x.startswith(('visual_','shot_','edit_plan','audio_track','stills_'))]
+        res,found=trace()
+        self.assertEqual(found,['audio_track_2_music_without_provenance'])   # every cut traced; the bed is not
+        # The bed made through the gate for the beat it scores; the gate hands the agent that beat's sound direction.
+        mjob={'op':'generate','run':str(self.run),'video':1,'tracks':[{'video':1,'beats':['B01'],'duration':5,
+              'caption':'a low warm drone that thins out','out':str(self.home/'bed.wav')}]}
+        mg=core.media_gate(mjob,'music'); self.assertTrue(mg['ok'],mg['issues'])
+        self.assertEqual(mg['direction']['items'][0]['beats']['B01']['sound_direction'],'bed')
+        core.record_media(mg['run'],1,'music',[{'out':mjob['tracks'][0]['out'],**mg['records'][0]}])
+        res,found=trace()
+        self.assertEqual(found,[])
+        # Pictures swapped in CapCut, a clip relabelled to another beat, a bed moved outside its beats.
+        a,b=timeline['visual_segments'][0]['asset_path'],timeline['visual_segments'][1]['asset_path']
+        timeline['visual_segments'][0]['asset_path'],timeline['visual_segments'][1]['asset_path']=b,a
         timeline['visual_segments'][1]['beat_id']='B01'
-        timeline['audio_segments'][0].update({'beats':['B02'],'start_s':0,'end_s':1})
+        timeline['audio_tracks'][1].update({'beats':['B02'],'start_s':0,'end_s':1})
         save(tdir/'timeline.json',timeline)
-        res=cli('timeline-check','--run',self.run,'--video',1,expected=2)
-        self.assertIn('visual_2_beat_differs_from_its_shot',res['issues'])
-        self.assertIn('audio_1_plays_outside_its_beats',res['issues'])
+        res,found=trace()
+        for issue in ('visual_1_shows_the_still_of_shot_S2','visual_2_beat_differs_from_its_shot',
+                      'audio_track_2_plays_outside_its_beats'):
+            self.assertIn(issue,res['issues'])
+        # The cut put back as it was.
+        timeline['visual_segments'][0]['asset_path'],timeline['visual_segments'][1]['asset_path']=a,b
+        timeline['visual_segments'][1]['beat_id']='B02'
+        timeline['audio_tracks'][1].update({'beats':['B01'],'start_s':0,'end_s':5})
+        save(tdir/'timeline.json',timeline)
+        self.assertEqual(trace()[1],[])
+        # The look changes: the stills and the edit plan no longer stand; the bed does (the sound didn't change).
+        dd=json.loads((vd/'direction.json').read_text())
+        dd['treatments'][0]['visual_language']+=' Colder light throughout.'
+        save(vd/'direction.json',dd)
+        cli('direction-lock','--run',self.run,'--video',1,'--revise','colder light')
+        res,found=trace()
+        self.assertIn('edit_plan_made_for_an_earlier_direction',found)
+        self.assertTrue(any(x.startswith('stills_made_for_an_earlier_direction') for x in found))
+        self.assertFalse([x for x in found if 'music' in x])
         # The shot plan changed its structure after the retime: the edit plan no longer describes it.
         shots[1]['line_start']='L007'; shots[0]['line_end']='L006'
         save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
         self.assertIn('edit_plan_outdated_rerun_retime_shots',cli('timeline-check','--run',self.run,'--video',1,expected=2)['issues'])
+
+    def test_recorded_narration_follows_the_narrator(self):
+        vd=self.write_plan()
+        core=self.load_core()
+        script=json.loads((vd/'script.json').read_text())
+        lang=json.loads((vd/'length-lock.json').read_text())['language']
+        chunks=core.chunks_for_lines(script['lines'],min(core.model_limit('eleven_v4'),8000))
+        d=self.run/'50-audio/video-01'
+        save(d/'manifest.json',{'model_id':'eleven_v4','voice_id':'TESTID','language':lang,'status':'partial',
+                                'finished_parts':[1],'part_revs':{'1':1},
+                                'chunks':[{'id':i+1,'line_start':c['line_start'],'line_end':c['line_end'],'file':f'part-{i+1:03d}.mp3',
+                                           'text_sha256':hashlib.sha256(c['text'].encode()).hexdigest(),'characters':len(c['text'])}
+                                          for i,c in enumerate(chunks)]})
+        (d/'part-001.mp3').write_bytes(b'0'*2048)          # part 1 recorded under revision 1 (dry runs only: no network)
+        tts=['tts','--run',self.run,'--video',1,'--voice-id','TESTID','--model-id','eleven_v4']
+        dry=cli(*tts)
+        self.assertEqual(dry['parts_made_for_an_earlier_direction'],[])
+        self.assertNotIn(1,dry['parts_to_record'])
+        # The narrator changes in the chosen treatment: the recorded part no longer stands on its own.
+        dd=json.loads((vd/'direction.json').read_text())
+        dd['treatments'][0]['narrator']+=' Warmer, and a little amused.'
+        save(vd/'direction.json',dd)
+        r=cli('direction-lock','--run',self.run,'--video',1,'--revise','the narrator warmed up')
+        self.assertEqual(r['affects'],['beat-map','script','narration'])
+        self.assertEqual(r['outdated_now'],['beat-map','script','narration'])
+        for a in ('beat-map','script'):
+            cli('direction-reapprove','--run',self.run,'--video',1,'--artifact',a,'--reason','the words already carry the warmer narrator')
+        dry=cli(*tts)
+        self.assertEqual(dry['parts_made_for_an_earlier_direction'],[1])     # re-recorded with --rerecord-changed...
+        self.assertIn(1,dry['parts_to_record'])
+        self.assertIn('narration_parts_made_for_an_earlier_direction:1',cli('audio-check','--run',self.run,'--video',1,expected=2)['issues'])
+        cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','narration',
+            '--reason','the recorded voice already sounds warm enough here')   # ...or kept, on record
+        dry=cli(*tts)
+        self.assertEqual(dry['parts_made_for_an_earlier_direction'],[])
+        self.assertNotIn(1,dry['parts_to_record'])
+        self.assertFalse([x for x in cli('audio-check','--run',self.run,'--video',1,expected=2)['issues'] if 'earlier_direction' in x])
 
     def test_voice_candidates_measure_each_preview_without_listening(self):
         core=self.load_core()

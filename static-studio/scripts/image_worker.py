@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""image_worker.py - FLUX 3 Image Klein (int8) for /analyze-with-loupe Static (contract item 36): a run's stills made on this PC.
+"""image_worker.py - FLUX 3 Image Klein (int8) for Static Studio: a video's stills made on this PC.
 
-Run ONLY by awl.py (`T image ...`, `T static check`) with the Python of a ComfyUI Windows portable install (AWL_IMAGE_PYTHON: a .cmd that
+Run by the /create-video agents (manual 04) with the Python of a ComfyUI Windows portable install (AWL_IMAGE_PYTHON: a .cmd that
 runs its python_embeded\\python.exe inside the memory guard) and that install's folder (AWL_IMAGE_ROOT: the folder that holds
 python_embeded and ComfyUI). One job file per call. It starts a private headless ComfyUI on a free 127.0.0.1 port (no browser, no
 custom nodes, no partner nodes and no internet for the frontend, nothing pinned in RAM, no metadata in the PNGs), sends every image of
@@ -10,7 +10,11 @@ the job as an API workflow, moves the PNGs to their paths, stops ComfyUI and pri
 Jobs:
   check    : the install (ComfyUI and its version, torch, CUDA, the GPU) and the four model files; "probe": true also starts ComfyUI
              and asks it for every node the workflow uses
-  generate : images [{prompt, out, width, height, seed, steps, upsample, refs}] -> one PNG each, with the caption the image model got
+  generate : run, video, purpose (shots | treatment_preview | thumbnail; default shots) and images [{shot_id, prompt, out, width,
+             height, seed, steps, upsample, refs}] -> one PNG each, with the caption the image model got. Refused before ComfyUI
+             starts unless Static Studio's production gate passes (static_core.media_gate: the direction locked and current, the
+             beat map and shot plan checked, each prompt carrying its shot's approved frame_prompt); each film still made is
+             recorded with its shot, beat and direction revision (60-visuals/video-NN/stills-provenance.json)
              (optional job keys: alpha, models, timeout_per_image, start_timeout, reserve_vram_gb: the GPU memory ComfyUI leaves
              unused, default 5, 0 for none; comfy_args: extra ComfyUI flags; log_out: a path ComfyUI's log is copied to)
 
@@ -518,7 +522,7 @@ def main():
         res = op(job)
     except Exception as e:  # noqa: BLE001
         out({"ok": False, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-1500:]}, 1)
-    if gate and not gate.get("preview"):   # which shot each picture shows, made under which direction revision
+    if gate and not gate.get("untracked"):   # which shot each picture shows, made under which direction revision
         made = {str(Path(r["out"]).resolve()) for r in res.get("images") or [] if r.get("ok") and r.get("out")}
         entries = [{"out": str(Path(it["out"]).resolve()), **rec, "engine": "flux3-image-klein-int8"}
                    for it, rec in zip(job.get("images") or [], gate["records"])

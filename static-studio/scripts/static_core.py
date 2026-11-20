@@ -796,17 +796,46 @@ def direction_facts(rd, video):
 
 
 # ---------------------------------------------------------------- what a direction change touches
-# The direction lock carries a production revision. A change to the chosen treatment, the strategy or the chosen
-# approach is meaningful: it raises the revision and marks the artifacts it affects. Each affected artifact must then
-# be really updated (its content changes; its own checks apply) or explicitly reapproved (`direction-reapprove`, with
-# a reason, on record) before a production stage that uses it continues. A change to the evidence, the alternatives
-# or the reasons affects nothing: no new revision, no new work, no new read.
+# The direction lock carries a production revision. A change that alters what production must do (another treatment
+# chosen, the chosen treatment's narrator, visual language, sound..., the strategy's progression, another approach)
+# raises the revision and marks the artifacts that field feeds (FIELD_EFFECTS). Each marked artifact must then be
+# really updated (its content changes and its own checks apply: a script edit beyond a trim still gets a fresh read)
+# or explicitly reapproved (`direction-reapprove`, with a reason, on record) before a stage that uses it continues.
+# Evidence, alternatives, reasons and samples feed nothing: no new revision, nothing to redo, no new read.
 TRACKED_FILES = ('beat-map', 'script', 'shot-plan', 'style-bible')
-MEDIA_ARTIFACTS = ('stills', 'music', 'edit')
+MEDIA_ARTIFACTS = ('narration', 'stills', 'music', 'edit')
 ALL_ARTIFACTS = TRACKED_FILES + MEDIA_ARTIFACTS
-SECTION_EFFECTS = {'chosen_treatment': ALL_ARTIFACTS,
-                   'strategy': ('beat-map', 'script', 'shot-plan', 'edit'),
-                   'chosen_approach': ('beat-map', 'script', 'shot-plan', 'edit')}
+FIELD_EFFECTS = {
+    'decision.treatment': ALL_ARTIFACTS,
+    'chosen_approach.id': ('beat-map', 'script', 'shot-plan', 'edit'),
+    'strategy.viewer_experience': ('beat-map', 'script'),
+    'strategy.progression': ('beat-map', 'script', 'shot-plan', 'edit'),
+    'strategy.facts_as_experience': ('beat-map', 'script'),
+    'strategy.picture_contribution': ('shot-plan', 'style-bible', 'stills'),
+    'strategy.sound_and_breath': ('beat-map', 'music', 'edit'),
+    'treatment.narrator': ('beat-map', 'script', 'narration'),
+    'treatment.writing_voice': ('script',),
+    'treatment.structure_and_pace': ('beat-map', 'script', 'shot-plan', 'edit'),
+    'treatment.visual_language': ('shot-plan', 'style-bible', 'stills', 'edit'),
+    'treatment.sound': ('beat-map', 'music', 'edit'),
+    'treatment.audiovisual_relationship': ('beat-map', 'shot-plan', 'edit'),
+    'treatment.emotional_course': ('beat-map', 'script'),
+}
+NO_EFFECT = ('evidence', 'approaches', 'other_treatments', 'decision.reasons', 'chosen_approach.why',
+             'chosen_approach.runner_up', 'chosen_approach.why_not_runner_up', 'strategy.why_this_idea',
+             'strategy.fits_and_forced', 'strategy.distinct_from_references', 'treatment.name',
+             'treatment.evidence_used', 'treatment.departures', 'treatment.risks', 'treatment.samples')
+TREATMENT_REREAD_BELOW = 0.7   # under this share of its blind read's vocabulary, the chosen treatment is a new one
+
+
+def field_effects(key):
+    """The artifacts a change to this part of direction.json must be followed by; a part this table doesn't know is
+    assumed to matter for all of them."""
+    if key in FIELD_EFFECTS:
+        return FIELD_EFFECTS[key]
+    if key in NO_EFFECT or key.startswith('other.'):
+        return ()
+    return ALL_ARTIFACTS
 
 
 def artifact_path(rd, video, name):
@@ -814,6 +843,7 @@ def artifact_path(rd, video, name):
     vis, edit = rd / '60-visuals' / f'video-{n:02d}', rd / '70-edit' / f'video-{n:02d}'
     return {'beat-map': video_dir(rd, n) / 'beat-map.json', 'script': video_dir(rd, n) / 'script.json',
             'shot-plan': vis / 'shot-plan.json', 'style-bible': vis / 'style-bible.md',
+            'narration': rd / '50-audio' / f'video-{n:02d}' / 'manifest.json',
             'stills': vis / 'stills-provenance.json', 'music': edit / 'music-provenance.json',
             'edit': edit / 'edit-plan.json'}[name]
 
@@ -831,20 +861,48 @@ def artifact_sha(rd, video, name):
 
 
 def direction_sections(d):
-    """One hash per part of direction.json, so a revision can tell which part changed."""
+    """One hash per part of direction.json (each field of the chosen approach, the strategy and the chosen
+    treatment on its own), so a revision can tell exactly what changed."""
     trs = {str(t.get('id')): t for t in d.get('treatments') or [] if isinstance(t, dict)}
     dec = d.get('decision') if isinstance(d.get('decision'), dict) else {}
     chosen = str(dec.get('treatment'))
-    return {'evidence': canonical_sha(d.get('evidence')), 'approaches': canonical_sha(d.get('approaches')),
-            'chosen_approach': canonical_sha(d.get('chosen_approach')), 'strategy': canonical_sha(d.get('strategy')),
-            'chosen_treatment': canonical_sha([chosen, trs.get(chosen)]),
-            'other_treatments': canonical_sha({k: v for k, v in trs.items() if k != chosen}),
-            'decision_reasons': canonical_sha({k: v for k, v in dec.items() if k != 'treatment'})}
+    out = {'evidence': canonical_sha(d.get('evidence')), 'approaches': canonical_sha(d.get('approaches')),
+           'other_treatments': canonical_sha({k: v for k, v in trs.items() if k != chosen}),
+           'decision.treatment': canonical_sha(chosen),
+           'decision.reasons': canonical_sha({k: v for k, v in dec.items() if k != 'treatment'})}
+    for group, part in (('chosen_approach', d.get('chosen_approach')), ('strategy', d.get('strategy')),
+                        ('treatment', trs.get(chosen))):
+        for k, v in (part if isinstance(part, dict) else {}).items():
+            if not (group == 'treatment' and k == 'id'):
+                out[f'{group}.{k}'] = canonical_sha(v)
+    for k, v in d.items():
+        if k not in ('evidence', 'approaches', 'treatments', 'decision', 'chosen_approach', 'strategy'):
+            out['other.' + k] = canonical_sha(v)
+    return out
+
+
+def treatment_text(t):
+    """A treatment's words, as a reader of it sees them: its fields and its sample moments."""
+    t = t if isinstance(t, dict) else {}
+    s = t.get('samples') if isinstance(t.get('samples'), dict) else {}
+    return ' '.join([str(t.get(k) or '') for k in TREATMENT_KEYS] +
+                    [str((s.get(m) or {}).get(x) or '') for m in SAMPLE_MOMENTS for x in ('narration', 'picture')])
+
+
+def chosen_treatment_of(d):
+    dec = d.get('decision') if isinstance(d.get('decision'), dict) else {}
+    return next((t for t in d.get('treatments') or [] if isinstance(t, dict)
+                 and str(t.get('id')) == str(dec.get('treatment'))), {})
 
 
 def media_present(rd, video, name):
     p = artifact_path(rd, video, name)
     return p.is_file() and bool(read_json(p))
+
+
+def _pkey(path):
+    """One spelling per file, whichever tool wrote the path (CapCut writes C:/..., Python C:\\...)."""
+    return os.path.normcase(str(Path(str(path)).expanduser().resolve()))
 
 
 def required_rev(lock, artifact):
@@ -853,10 +911,13 @@ def required_rev(lock, artifact):
 
 
 def reapproved_for(lock, artifact):
-    """The explicit reapproval of this artifact that still applies (given for the revision that last affected it)."""
+    """The explicit reapproval of this artifact that still applies: given for the revision that last touched it, or,
+    for an artifact no change has touched (user-supplied stills, say), until one does."""
     ra = (lock.get('reapproved') or {}).get(artifact) or {}
-    want = required_rev(lock, artifact) or lock.get('production_rev', 1)
-    return ra if ra and ra.get('rev') == want else None
+    if not ra:
+        return None
+    req = required_rev(lock, artifact)
+    return ra if req is None or ra.get('rev') == req else None
 
 
 def media_current(lock, artifact, made_rev):
@@ -888,6 +949,41 @@ def stale_files(rd, video, names=TRACKED_FILES):
             continue
         out[name] = f"{name.replace('-', '_')}_made_for_an_earlier_direction"
     return out
+
+
+def narration_outdated_parts(lock, manifest):
+    """Recorded parts made before the latest direction change that touched the narrator (a part recorded before
+    parts carried their revision counts as made before any), unless the narration was reapproved for it."""
+    req = required_rev(lock, 'narration')
+    if not req or reapproved_for(lock, 'narration'):
+        return []
+    revs = manifest.get('part_revs') or {}
+    out = []
+    for x in manifest.get('finished_parts') or []:
+        try:
+            if int(revs.get(str(x)) or 0) < req:
+                out.append(x)
+        except (TypeError, ValueError):
+            out.append(x)
+    return out
+
+
+def outdated_artifacts(rd, video):
+    """Every artifact the latest meaningful direction change left behind (made for an earlier direction, neither
+    updated since nor reapproved): the plan files and the media made from them."""
+    n = int(video)
+    lock = read_json(video_dir(rd, n) / 'direction-lock.json')
+    names = set(stale_files(rd, n))
+    if narration_outdated_parts(lock, read_json(artifact_path(rd, n, 'narration'))):
+        names.add('narration')
+    for kind, key in (('stills', 'images'), ('music', 'tracks')):
+        recs = (read_json(artifact_path(rd, n, kind)).get(key) or {}).values()
+        if any(not media_current(lock, kind, r.get('production_rev')) for r in recs):
+            names.add(kind)
+    plan = read_json(artifact_path(rd, n, 'edit'))
+    if plan and not media_current(lock, 'edit', (plan.get('direction') or {}).get('production_rev')):
+        names.add('edit')
+    return [a for a in ALL_ARTIFACTS if a in names]
 
 
 def direction_gate(rd, video):
@@ -942,14 +1038,21 @@ def _norm(text):
     return ' '.join(strip_tags(str(text or '')).lower().split())
 
 
+STILL_PURPOSES = ('shots', 'treatment_preview', 'thumbnail')
+
+
 def media_gate(job, kind):
     """What every generation worker runs before it makes anything (stills: image_worker.py, openai_images_worker.py;
-    music: music_worker.py), and `media-check` runs by hand. A job names its run and video; every still names a shot
-    of the checked shot plan and its prompt carries that shot's approved frame prompt; every music track names the
-    beats it scores. Refused while the direction, the beat map or the shot plan fails its check or was made for an
-    earlier direction. Treatment previews (job purpose "treatment_preview") are the one exception: they come before
-    the lock, name a treatment and a sample moment, and carry that sample's picture. Returns the records to keep."""
-    out = {'ok': False, 'issues': [], 'warnings': [], 'records': [], 'run': None, 'video': None, 'preview': False}
+    music: music_worker.py), and `media-check` runs by hand. A job names its run and video. Stills for the film
+    (purpose "shots", the default) each name a shot of the checked shot plan, and the prompt carries that shot's
+    approved frame_prompt word for word (style words may be added around it); a music track names the beats it
+    scores. Refused while the direction, the beat map or the shot plan fails its check or was made for an earlier
+    direction. Two other purposes for stills: "treatment_preview" (before the lock: each item names a treatment and
+    a sample moment and carries that sample's picture) and "thumbnail" (the locked, current direction only).
+    Returns the records to keep and, for the agent writing the prompts or captions, the direction each item
+    carries out: the beat's intent and the locked treatment's visual language or sound."""
+    out = {'ok': False, 'issues': [], 'warnings': [], 'records': [], 'run': None, 'video': None,
+           'untracked': False, 'direction': {}}
     iss = out['issues']
     run, video = job.get('run'), job.get('video')
     if not run or not video:
@@ -970,8 +1073,12 @@ def media_gate(job, kind):
     items = job.get('images' if kind == 'stills' else 'tracks') or []
     if not items:
         iss.append('job_has_nothing_to_make')
-    if kind == 'stills' and job.get('purpose') == 'treatment_preview':
-        out['preview'] = True
+    purpose = str(job.get('purpose') or 'shots') if kind == 'stills' else 'music'
+    if kind == 'stills' and purpose not in STILL_PURPOSES:
+        iss.append('job_purpose_must_be:' + '/'.join(STILL_PURPOSES))
+        return out
+    if purpose == 'treatment_preview':
+        out['untracked'] = True
         d = read_json(video_dir(rd, n) / 'direction.json')
         iss += [x for x in direction_facts(rd, n)['issues']
                 if x.startswith(('treatment_', 'direction_needs_2', 'direction_missing'))]
@@ -989,33 +1096,55 @@ def media_gate(job, kind):
         return out
     gate, lock, _ = direction_gate(rd, n)
     iss += gate
+    rev, treatment = lock.get('production_rev', 1), lock.get('treatment')
+    chosen = chosen_treatment_of(read_json(video_dir(rd, n) / 'direction.json'))
+    if purpose == 'thumbnail':
+        out['untracked'] = True
+        for i, it in enumerate(items, 1):
+            if n_words(it.get('prompt')) < 8:
+                iss.append(f'item_{i}_missing_prompt')
+        out['direction'] = {'treatment': treatment, 'visual_language': chosen.get('visual_language')}
+        out['ok'] = not iss
+        return out
     iss += beat_map_facts(rd, n)
     iss += list(stale_files(rd, n, ('beat-map',)).values())
-    rev, treatment = lock.get('production_rev', 1), lock.get('treatment')
+    beats = {str(b.get('id')): b for b in read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or []}
     if kind == 'stills':
         sf = shot_facts(rd, n)
         iss += sf['issues']
         out['warnings'] += sf['warnings']
         shots = {str(s.get('id')): s for s in read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []}
+        out['direction'] = {'treatment': treatment, 'visual_language': chosen.get('visual_language'), 'items': []}
         for i, it in enumerate(items, 1):
             s = shots.get(str(it.get('shot_id') or it.get('id') or ''))
             if not s:
                 iss.append(f'item_{i}_must_name_a_shot_of_the_shot_plan')
                 continue
+            if s.get('reuses'):
+                iss.append(f'item_{i}_shot_{s.get("id")}_is_a_callback_of_{s.get("reuses")}_nothing_to_generate')
+                continue
             fp = _norm(s.get('frame_prompt') or s.get('prompt'))
             if not fp or fp not in _norm(it.get('prompt')):
                 iss.append(f'item_{i}_prompt_does_not_carry_shot_{s.get("id")}_frame_prompt')
+            b = beats.get(str(s.get('beat_id'))) or {}
+            out['direction']['items'].append({'shot_id': str(s.get('id')), 'beat_id': str(s.get('beat_id')),
+                                              'new_thing': s.get('new_thing'), 'visual_intent': b.get('visual_intent'),
+                                              'experience': b.get('experience')})
             out['records'].append({'shot_id': str(s.get('id')), 'beat_id': str(s.get('beat_id')),
                                    'frame_prompt_sha256': hashlib.sha256(fp.encode('utf-8')).hexdigest(),
                                    'production_rev': rev, 'treatment': treatment})
     else:
-        beats = {str(b.get('id')) for b in read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or []}
+        out['direction'] = {'treatment': treatment, 'sound': chosen.get('sound'), 'items': []}
         for i, it in enumerate(items, 1):
             bs = [str(x) for x in it.get('beats') or []]
             if not bs or any(b not in beats for b in bs):
                 iss.append(f'track_{i}_must_name_beats_of_the_beat_map')
+            if str(it.get('video', n)) != str(n):
+                iss.append(f'track_{i}_is_for_another_video')
             if n_words(it.get('caption')) < 3:
                 iss.append(f'track_{i}_missing_caption')
+            out['direction']['items'].append({'beats': {b: {k: (beats.get(b) or {}).get(k) for k in
+                                                            ('sound_direction', 'experience', 'pace')} for b in bs}})
             out['records'].append({'beats': bs, 'caption_sha256': hashlib.sha256(_norm(it.get('caption')).encode('utf-8')).hexdigest(),
                                    'production_rev': rev, 'treatment': treatment})
     out['ok'] = not iss
@@ -1031,18 +1160,19 @@ def record_media(run, video, kind, entries):
     data = read_json(p) or {'video': n}
     data.setdefault(key, {})
     for e in entries:
-        data[key][str(Path(e['out']).expanduser().resolve())] = {**{k: v for k, v in e.items() if k != 'out'},
-                                                                 'made_at': now()}
+        data[key][_pkey(e['out'])] = {**{k: v for k, v in e.items() if k != 'out'}, 'made_at': now()}
     write_json(p, data)
     return str(p)
 
 
 def stills_facts(rd, video):
     """Every shot has a still made through the gate, from its current approved prompt, under the current direction
-    (or the director explicitly reapproved the stills for this revision, e.g. user-supplied pictures)."""
+    (or the director explicitly reapproved the stills for this revision, e.g. user-supplied or drawn pictures). A
+    shot that `reuses` an earlier shot (a deliberate callback) shows that shot's still."""
     n = int(video)
     lock = read_json(video_dir(rd, n) / 'direction-lock.json')
     shots = read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []
+    by_id = {str(s.get('id')): s for s in shots}
     prov = read_json(artifact_path(rd, n, 'stills')).get('images') or {}
     by_shot = {}
     for path, rec in prov.items():
@@ -1051,12 +1181,13 @@ def stills_facts(rd, video):
     missing, changed, older = [], [], []
     for s in shots:
         sid = str(s.get('id'))
-        recs = sorted(by_shot.get(sid) or [], key=lambda x: x[0])
+        src = by_id.get(str(s.get('reuses') or sid)) or s
+        recs = sorted(by_shot.get(str(src.get('id'))) or [], key=lambda x: x[0])
         if not recs:
             missing.append(sid)
             continue
         rec = recs[-1][1]
-        fp = hashlib.sha256(_norm(s.get('frame_prompt') or s.get('prompt')).encode('utf-8')).hexdigest()
+        fp = hashlib.sha256(_norm(src.get('frame_prompt') or src.get('prompt')).encode('utf-8')).hexdigest()
         if rec.get('frame_prompt_sha256') != fp:
             changed.append(sid)
         if not media_current(lock, 'stills', rec.get('production_rev')):
@@ -1316,7 +1447,7 @@ def shot_facts(rd, video):
     order = [str(r.get('id') or f'L{i + 1:03d}') for i, r in enumerate(lines)]
     shots = plan.get('shots') or []
     out['shots'] = len(shots)
-    used, cursor = set(), 0
+    used, cursor, earlier = set(), 0, set()
     for s in shots:
         sid = s.get('id')
         if str(s.get('beat_id')) not in beats:
@@ -1325,8 +1456,11 @@ def shot_facts(rd, video):
             used.add(str(s.get('beat_id')))
         if n_words(s.get('new_thing')) < 4:
             out['issues'].append(f'shot_{sid}_missing_new_thing')
-        if n_words(s.get('frame_prompt') or s.get('prompt')) < 8:
+        if s.get('reuses') and str(s.get('reuses')) not in earlier:
+            out['issues'].append(f'shot_{sid}_reuses_no_earlier_shot')   # a callback shows an earlier shot's still
+        elif n_words(s.get('frame_prompt') or s.get('prompt')) < 8 and not s.get('reuses'):
             out['issues'].append(f'shot_{sid}_missing_frame_prompt')
+        earlier.add(str(sid))
         a = order.index(str(s.get('line_start'))) + 1 if str(s.get('line_start')) in order else None
         b = order.index(str(s.get('line_end'))) + 1 if str(s.get('line_end')) in order else None
         if a != cursor + 1 or b is None or b < a:
@@ -1515,7 +1649,14 @@ def plan_facts(rd, video):
         ra = reapproved_for(dlock, name)
         if ra:
             warnings.append(f'{name} reapproved for direction revision {ra.get("rev")}: {ra.get("reason")}')
-    snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
+    seen = (dlock.get('reviewed_treatments') or {}).get(str(dfacts.get('chosen_treatment')))
+    if seen is not None:
+        now_text = treatment_text(chosen_treatment_of(read_json(vd / 'direction.json')))
+        if now_text != seen:
+            share = _jaccard(_content_tokens(seen), _content_tokens(now_text))
+            warnings.append(f'the chosen treatment was refined after its blind read ({share:.0%} of its vocabulary is '
+                            'still what the reader saw)')
+    snapshot ={str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
     script_review = review_state(vd, 'script', script_hash(lines), snapshot) if lines else \
         {'issues': ['script_review_missing'], 'warnings': [], 'rounds': 0}
     issues += script_review['issues']
@@ -1567,7 +1708,7 @@ def plan_facts(rd, video):
             'content_flags': flags, 'numbers_without_claim': numbers_without_claim,
             'creative': {'direction_locked': bool(dlock), 'locked_late': bool(dlock.get('late_reason')),
                          'treatment': dfacts.get('chosen_treatment'), 'production_rev': dlock.get('production_rev'),
-                         'outdated': sorted(stale_files(rd, video)), 'script_review_rounds': script_review['rounds'],
+                         'outdated': outdated_artifacts(rd, video), 'script_review_rounds': script_review['rounds'],
                          'majors_closed_by_decision': script_review.get('majors_closed_by_decision') or []},
             'writing_signals': writing_signals(lines, lock.get('language') or script.get('language') or 'en'),
             'forecast_s': forecast, 'real_narration_forecast_s': real_narr, 'real_forecast_s': real,
@@ -1976,6 +2117,7 @@ def cmd_tts(args):
     narrdir = rd / '50-audio' / f'video-{int(args.video):02d}'
     manifest_path = narrdir / 'manifest.json'
     existing = read_json(manifest_path)
+    dlock = read_json(vd / 'direction-lock.json')
     stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
     other_take = bool(existing) and any(existing.get(x) != y for x, y in
                                         (('model_id', args.model_id), ('voice_id', args.voice_id),
@@ -2005,13 +2147,18 @@ def cmd_tts(args):
     finished_before = [] if start_over else list(existing.get('finished_parts') or [])
     changed = [s['id'] for s in spec['chunks'] if s['id'] in finished_before
                and old_chunks.get(s['id'], {}).get('text_sha256') != s['text_sha256']]
+    # Parts recorded before the latest direction change that touched the narrator, unless the narration was
+    # reapproved for it (direction-reapprove --artifact narration): re-recorded like changed lines.
+    outdated = [] if start_over else [x for x in narration_outdated_parts(dlock, existing) if x in finished_before]
+    redo = sorted(set(changed) | set(outdated))
     delivery_overhead = len(args.delivery) + 1 if args.delivery else 0
     if not args.execute:
-        todo = [c for c, s in zip(chunks, spec['chunks']) if s['id'] not in finished_before or s['id'] in changed]
+        todo = [c for c, s in zip(chunks, spec['chunks']) if s['id'] not in finished_before or s['id'] in redo]
         emit({'ok': True, 'mode': 'dry_run_no_charges', 'video': args.video,
               'parts': len(chunks), 'characters_total': sum(len(x['text']) for x in chunks) + delivery_overhead * len(chunks),
-              'parts_to_record': [s['id'] for s in spec['chunks'] if s['id'] not in finished_before or s['id'] in changed],
-              'changed_recorded_parts': changed, 'starts_over': start_over,
+              'parts_to_record': [s['id'] for s in spec['chunks'] if s['id'] not in finished_before or s['id'] in redo],
+              'changed_recorded_parts': changed, 'parts_made_for_an_earlier_direction': outdated,
+              'starts_over': start_over,
               'characters_to_record': sum(len(x['text']) for x in todo) + delivery_overhead * len(todo),
               'calibrated': voice_calibrated(rd, args.voice_id, args.model_id, voice_settings),
               'model_limit_per_request': model_limit(args.model_id), 'delivery': args.delivery or None,
@@ -2022,12 +2169,14 @@ def cmd_tts(args):
     key = elevenlabs_key()
     if not key:
         error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
-    if changed and not args.rerecord_changed:
-        error('Script lines changed inside parts that are already recorded. Re-record only those parts with '
-              '--rerecord-changed (their old takes move to superseded/, never deleted).',
-              {'changed_parts': changed,
-               'characters': sum(s['characters'] for s in spec['chunks'] if s['id'] in changed)})
-    kept = [] if start_over else [x for x in finished_before if x not in changed
+    if redo and not args.rerecord_changed:
+        error('Recorded parts no longer match: script lines changed inside them, or they were recorded before the '
+              'latest direction change to the narrator. Re-record only those parts with --rerecord-changed (their '
+              'old takes move to superseded/, never deleted), or, when the recorded voice still serves the locked '
+              'treatment, keep them with direction-reapprove --artifact narration --reason "...".',
+              {'changed_parts': changed, 'parts_made_for_an_earlier_direction': outdated,
+               'characters': sum(s['characters'] for s in spec['chunks'] if s['id'] in redo)})
+    kept = [] if start_over else [x for x in finished_before if x not in redo
                                   and (narrdir / f'part-{x:03d}.mp3').is_file()
                                   and (narrdir / f'part-{x:03d}.mp3').stat().st_size > 1024]
     remaining_chunks = [c for i, c in enumerate(chunks) if (i + 1) not in kept]
@@ -2054,19 +2203,22 @@ def cmd_tts(args):
         history = [{'at': now(), 'archived_previous_take_to': str(archive)}]
         existing = {}
     narrdir.mkdir(parents=True, exist_ok=True)
-    if changed:
+    if redo:
         sup = narrdir / 'superseded'
         sup.mkdir(exist_ok=True)
-        for pid in changed:
+        for pid in redo:
             part = narrdir / f'part-{pid:03d}.mp3'
             if part.exists():
                 shutil.move(str(part), str(sup / f'part-{pid:03d}-{stamp}.mp3'))
         if (narrdir / 'narration.wav').exists():
             shutil.move(str(narrdir / 'narration.wav'), str(sup / f'narration-{stamp}.wav'))
-        history.append({'at': now(), 'rerecorded_parts': changed, 'old_takes': str(sup)})
+        history.append({'at': now(), 'rerecorded_parts': redo, 'text_changed': changed,
+                        'earlier_direction': outdated, 'old_takes': str(sup)})
+    # Which direction revision each part was recorded under (direction-lock's production_rev).
+    part_revs = {k: v for k, v in (existing.get('part_revs') or {}).items() if str(k).isdigit() and int(k) in kept}
     manifest = {**spec, 'status': 'partial', 'created_at': existing.get('created_at', now()),
                 'credit_preflight': budget, 'delivery': args.delivery or None, 'voice_settings': voice_settings or None,
-                'finished_parts': kept, 'history': history}
+                'finished_parts': kept, 'part_revs': part_revs, 'history': history}
     write_json(manifest_path, manifest)
     new_parts_done = 0
     for i, c in enumerate(chunks):
@@ -2099,6 +2251,7 @@ def cmd_tts(args):
             _ = probe(temp)  # ffprobe reads audio, even though temp suffix is generic
             temp.replace(fname)
             manifest['finished_parts'].append(i+1)
+            manifest['part_revs'][str(i+1)] = dlock.get('production_rev', 1)
             write_json(manifest_path, manifest)
             new_parts_done += 1
         except (urllib.error.HTTPError, urllib.error.URLError, OSError, RuntimeError) as exc:
@@ -2180,6 +2333,10 @@ def audio_facts(rd, video):
         issues.append('narration_duration_outside_locked_tolerance')
     if duration and part_durations and abs(sum(part_durations) - duration) > max(3, 0.01*duration):
         issues.append('joined_narration_differs_from_sum_of_parts')
+    # Recorded before the latest direction change to the narrator: re-recorded or explicitly reapproved first.
+    old_parts = narration_outdated_parts(read_json(vd / 'direction-lock.json'), manifest) if manifest else []
+    if old_parts:
+        issues.append('narration_parts_made_for_an_earlier_direction:' + ','.join(str(x) for x in old_parts))
     # The picture can't be shorter than the narration, and export-check holds the export to its own (tighter)
     # window: narration plus the planned edit holds must already fit it, or the export can never pass.
     holds = edit_holds_s(script_lines)
@@ -2215,11 +2372,13 @@ def _run_file(rd, f):
 
 
 def timeline_facts(rd, video):
-    """The CapCut project as recorded in timeline.json, against the plan it must follow: every visual segment is a
-    retimed shot of the current edit plan (shot_id), for that shot's beat, starting where retime-shots put it; every
-    shot is in the cut; every sound segment names the beats it serves and plays inside them; music comes from the
-    gated worker under the current direction; the stills are current (stills_facts); the edit plan describes the
-    current shots, script and direction. Plus the length and format checks the timeline always had."""
+    """The CapCut project as recorded in timeline.json (written from CapCut's own read-back), against the plan it
+    must follow: every visual segment is a retimed shot of the current edit plan (shot_id), for that shot's beat,
+    starting where retime-shots put it, and shows that shot's own still (asset_path traced through the stills record;
+    a callback shot may show the shot it reuses); every shot is in the cut; every audio track other than the
+    narration names the beats it serves and plays inside them; music comes from the gated worker under the current
+    direction; the stills are current (stills_facts); the edit plan describes the current shots, script and
+    direction. Plus the length and format checks the timeline always had."""
     n = int(video)
     vd = video_dir(rd, n)
     lock = read_json(vd / 'length-lock.json')
@@ -2236,11 +2395,14 @@ def timeline_facts(rd, video):
     beat_ids = {str(b.get('id')) for b in read_json(vd / 'beat-map.json').get('beats') or []}
     plan = read_json(artifact_path(rd, n, 'edit'))
     plan_shots = {str(s.get('id')): s for s in plan.get('shots') or []}
+    cur_shots = read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []
+    reuse_of = {str(s.get('id')): str(s.get('reuses')) for s in cur_shots if s.get('reuses')}
+    stills = read_json(artifact_path(rd, n, 'stills')).get('images') or {}
+    stills_reapproved = bool(reapproved_for(dlock, 'stills'))
     if not plan:
         issues.append('edit_plan_missing_run_retime_shots')
     else:
         lines = read_json(vd / 'script.json').get('lines') or []
-        cur_shots = read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []
         if plan.get('shot_structure_sha256') != shot_structure_sha(cur_shots) or \
                 plan.get('script_sha256') != script_hash(lines):
             issues.append('edit_plan_outdated_rerun_retime_shots')
@@ -2267,6 +2429,14 @@ def timeline_facts(rd, video):
                 if str(plan_shots[sid].get('beat_id')) != str(clip.get('beat_id')):
                     issues.append(f'visual_{i}_beat_differs_from_its_shot')
                 seen.setdefault(sid, []).append(a)
+            if not str(clip.get('asset_path') or '').strip():
+                issues.append(f'visual_{i}_missing_asset_path')
+            elif sid:   # the picture CapCut really shows, traced to the shot (and beat) it was made for
+                rec = stills.get(_pkey(_run_file(rd, clip['asset_path'])))
+                if rec and str(rec.get('shot_id')) not in (sid, reuse_of.get(sid)):
+                    issues.append(f'visual_{i}_shows_the_still_of_shot_{rec.get("shot_id")}')
+                elif not rec and not stills_reapproved:
+                    issues.append(f'visual_{i}_still_without_provenance')
             cursor = b
         except (KeyError, TypeError, ValueError):
             issues.append(f'bad_visual_segment_{i}')
@@ -2283,30 +2453,30 @@ def timeline_facts(rd, video):
     spans = {str(b.get('id')): (float(b.get('start_s') or 0), float(b.get('end_s') or 0)) for b in plan.get('beats') or []}
     music = read_json(artifact_path(rd, n, 'music')).get('tracks') or {}
     music_used = False
-    for j, seg in enumerate(track.get('audio_segments') or [], 1):
+    for j, seg in enumerate(track.get('audio_tracks') or [], 1):
         kind = str(seg.get('kind') or '')
         if kind == 'narration':
             continue
         bs = [str(x) for x in seg.get('beats') or []]
         if not bs or any(x not in beat_ids for x in bs):
-            issues.append(f'audio_{j}_must_name_beats_of_the_beat_map')
+            issues.append(f'audio_track_{j}_must_name_beats_of_the_beat_map')
         else:
             try:
                 a, b = float(seg['start_s']), float(seg['end_s'])
                 if spans and not any(x in spans and a < spans[x][1] and b > spans[x][0] for x in bs):
-                    issues.append(f'audio_{j}_plays_outside_its_beats')
+                    issues.append(f'audio_track_{j}_plays_outside_its_beats')
             except (KeyError, TypeError, ValueError):
-                issues.append(f'audio_{j}_needs_start_s_and_end_s')
+                issues.append(f'audio_track_{j}_needs_start_s_and_end_s')
         if kind == 'music':
             music_used = True
-            rec = music.get(str(_run_file(rd, seg.get('file'))))
+            rec = music.get(_pkey(_run_file(rd, seg.get('file')))) if seg.get('file') else None
             if not rec and not reapproved_for(dlock, 'music'):
-                issues.append(f'audio_{j}_music_without_provenance')
+                issues.append(f'audio_track_{j}_music_without_provenance')
             elif rec and not media_current(dlock, 'music', rec.get('production_rev')):
-                issues.append(f'audio_{j}_music_made_for_an_earlier_direction')
+                issues.append(f'audio_track_{j}_music_made_for_an_earlier_direction')
     if music and not music_used:
-        warnings.append('music was made for this video but timeline.json lists no music segment: if the bed is in '
-                        'the project, record it (audio_segments, kind "music", with its beats)')
+        warnings.append('music was made for this video but timeline.json lists no music track: if the bed is in '
+                        'the project, record it (audio_tracks: kind "music", its file, start_s, end_s and beats)')
     sf = stills_facts(rd, n)
     issues += sf['issues']
     warnings += sf['warnings']
@@ -2697,7 +2867,11 @@ def cmd_retime_shots(args):
                  'holds': holds, 'edit_duration_s': total, 'edit_narration': edit_audio,
                  'export_window_s': [round(lock['target_length_s'] - tol, 2), round(lock['target_length_s'] + tol, 2)],
                  'within_export_window': abs(total - lock['target_length_s']) <= tol,
-                 'direction': {'treatment': dlock.get('treatment'), 'production_rev': dlock.get('production_rev', 1)},
+                 # What the editor carries out (09): the locked treatment's picture, sound and pace, and each shot's
+                 # beat direction below; the revision stamps which direction this edit plan follows.
+                 'direction': {'treatment': dlock.get('treatment'), 'production_rev': dlock.get('production_rev', 1),
+                               **{k: chosen_treatment_of(read_json(vd / 'direction.json')).get(k) for k in
+                                  ('visual_language', 'sound', 'audiovisual_relationship', 'structure_and_pace')}},
                  'shot_structure_sha256': shot_structure_sha(shots), 'script_sha256': script_hash(lines),
                  'beats': [{'id': b, 'start_s': round(a, 2), 'end_s': round(z, 2), **beat_dir.get(b, {})}
                            for b, (a, z) in beat_spans.items()],
@@ -2846,12 +3020,13 @@ def cmd_direction_lock(args):
     first can be locked only with --late "reason" (recorded and shown at every plan-check). A later change needs
     --revise "what changed and why" (kept in the lock's history).
 
-    Every lock knows which parts changed. A change to the chosen treatment, the strategy or the chosen approach is
-    meaningful: the production revision goes up and the artifacts it affects (SECTION_EFFECTS) must be updated or
-    explicitly reapproved before the stages that use them continue. Anything that already existed before the first
-    lock was made without a direction and is affected the same way. A change to the evidence, the alternatives or the
-    reasons is harmless: same revision, nothing to redo. Refining the chosen treatment needs no new blind read; only a
-    treatment that was never in one does."""
+    Every lock knows which fields changed (direction_sections). A change that alters what production must do raises
+    the production revision, and the artifacts that field feeds (FIELD_EFFECTS) must be updated or explicitly
+    reapproved before the stages that use them continue. Anything that already existed before the first lock was made
+    without a direction and is affected the same way. Evidence, alternatives, reasons and samples are harmless: same
+    revision, nothing to redo. Refining the chosen treatment needs no new blind read (it is shown at every plan-check);
+    a treatment that was never in one, or one rewritten past TREATMENT_REREAD_BELOW of the vocabulary its reader saw,
+    gets its own blind read first."""
     rd, st = run_folder(args)
     n = int(args.video)
     vd = video_dir(rd, n)
@@ -2860,23 +3035,39 @@ def cmd_direction_lock(args):
         error('The creative direction is not complete yet.', df['issues'])
     lockp = vd / 'direction-lock.json'
     prev = read_json(lockp)
-    if not prev:
-        tr = review_state(vd, 'treatment', df['treatments_sha256'])
-        if tr['issues']:
-            error('The treatments need their blind comparison read (review-packet --kind treatment), recorded, and '
-                  'every finding answered before the direction is locked.', tr['issues'])
-    else:
-        recs = review_records(vd, 'treatment')
-        compared = set(((recs[-1][0].get('labels') or {}).values()) if recs else [])
-        if str(df['chosen_treatment']) not in compared:
-            error('The chosen treatment was never in a blind comparison read: run review-packet --kind treatment for '
-                  'the current treatments first.', {'chosen': df['chosen_treatment'], 'compared': sorted(compared)})
+    if prev and prev.get('direction_sha256') == df['direction_sha256']:
+        emit({'ok': True, 'unchanged': True, 'lock': str(lockp), 'treatment': prev.get('treatment'),
+              'production_rev': prev.get('production_rev')})
+        return
     d = read_json(vd / 'direction.json')
+    trs = {str(t.get('id')): t for t in d.get('treatments') or [] if isinstance(t, dict)}
+    chosen = str(df['chosen_treatment'])
+    tr = review_state(vd, 'treatment', df['treatments_sha256'])
+    if not tr['issues']:      # the latest blind read saw exactly these treatments
+        reviewed = {k: treatment_text(v) for k, v in trs.items()}
+    elif not prev:
+        error('The treatments need their blind comparison read (review-packet --kind treatment), recorded, and '
+              'every finding answered before the direction is locked.', tr['issues'])
+    else:
+        unsettled = [x for x in tr['issues'] if x != 'treatment_review_outdated']
+        if unsettled:
+            error('The latest blind read of the treatments is not settled yet: answer every finding first.', unsettled)
+        reviewed = dict(prev.get('reviewed_treatments') or {})
+        seen = reviewed.get(chosen)
+        if seen is None:
+            error('The chosen treatment was never in a blind comparison read: run review-packet --kind treatment for '
+                  'the current treatments first.', {'chosen': chosen, 'compared': sorted(reviewed)})
+        share = _jaccard(_content_tokens(seen), _content_tokens(treatment_text(trs.get(chosen))))
+        if share < TREATMENT_REREAD_BELOW:
+            error(f'The chosen treatment has been rewritten since its blind read: {share:.0%} of its vocabulary is '
+                  'still what the reader saw. A rewrite this large is a new treatment: give the current treatments '
+                  'their own blind read (review-packet --kind treatment), answer it, then lock again.',
+                  {'treatment': chosen, 'still_the_same': round(share, 2), 'needs_at_least': TREATMENT_REREAD_BELOW})
     sections = direction_sections(d)
     script_exists = (vd / 'script.json').is_file()
     entry = {'locked_at': now(), 'direction_sha256': df['direction_sha256'],
              'treatments_sha256': df['treatments_sha256'], 'treatment': df['chosen_treatment'],
-             'script_existed': script_exists, 'sections': sections}
+             'script_existed': script_exists, 'sections': sections, 'reviewed_treatments': reviewed}
     if not prev:
         if script_exists and not args.late:
             error('A script already exists: the creative direction is decided and locked BEFORE scriptwriting. For a '
@@ -2889,15 +3080,11 @@ def cmd_direction_lock(args):
         lock = {**entry, 'late_reason': args.late or None, 'history': [], 'production_rev': 1, 'required': required,
                 'reapproved': {}, 'changed_sections': [], 'affects': hit}
     else:
-        if prev.get('direction_sha256') == df['direction_sha256']:
-            emit({'ok': True, 'unchanged': True, 'lock': str(lockp), 'treatment': prev.get('treatment'),
-                  'production_rev': prev.get('production_rev')})
-            return
         if not args.revise:
             error('The direction changed since it was locked. Re-lock with --revise "what changed and why".')
         old = prev.get('sections') or {}
-        changed = [k for k, h in sections.items() if old.get(k) != h]
-        hit = [a for a in ALL_ARTIFACTS if any(a in SECTION_EFFECTS.get(k, ()) for k in changed)]
+        changed = sorted(k for k in set(old) | set(sections) if old.get(k) != sections.get(k))
+        hit = [a for a in ALL_ARTIFACTS if any(a in field_effects(k) for k in changed)]
         rev = prev.get('production_rev', 1)
         history = (prev.get('history') or []) + [{k: prev.get(k) for k in ('locked_at', 'direction_sha256', 'treatment',
                                                                           'production_rev')}
@@ -2910,7 +3097,7 @@ def cmd_direction_lock(args):
             lock.update({'production_rev': rev + 1, 'required': required,
                          'reapproved': {k: v for k, v in (prev.get('reapproved') or {}).items() if k not in hit}})
     write_json(lockp, lock)
-    outdated = sorted(stale_files(rd, n))
+    outdated = outdated_artifacts(rd, n)
     emit({'ok': True, 'lock': str(lockp), 'treatment': lock['treatment'], 'late': bool(lock.get('late_reason')),
           'production_rev': lock['production_rev'], 'changed_sections': lock.get('changed_sections'),
           'affects': hit, 'outdated_now': outdated,
@@ -2943,7 +3130,7 @@ def cmd_direction_reapprove(args):
         entry['sha256'] = artifact_sha(rd, n, args.artifact)
     lock.setdefault('reapproved', {})[args.artifact] = entry
     write_json(lockp, lock)
-    emit({'ok': True, 'artifact': args.artifact, 'for_revision': rev, 'still_outdated': sorted(stale_files(rd, n))})
+    emit({'ok': True, 'artifact': args.artifact, 'for_revision': rev, 'still_outdated': outdated_artifacts(rd, n)})
 
 
 def cmd_media_check(args):
