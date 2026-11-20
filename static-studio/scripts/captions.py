@@ -644,6 +644,22 @@ def build_draft(d, plan, work, replace=False):
     return record
 
 
+def newest_content(d):
+    """The project's timeline as CapCut will open it: the newest readable one of draft_content.json, template-2.tmp
+    (written when the user opens the project) and the Timelines/ copies."""
+    d = Path(d)
+    docs = [p for p in (d / 'draft_content.json', d / 'template-2.tmp') if p.is_file()] + \
+        sorted(d.glob('Timelines/*/draft_content.json'))
+    for p in sorted(docs, key=lambda x: x.stat().st_mtime, reverse=True):
+        try:
+            c = json.loads(p.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            continue
+        if isinstance(c, dict) and c.get('tracks') is not None:
+            return c
+    return None
+
+
 def _style_fill(s):
     col = (((s.get('fill') or {}).get('content') or {}).get('solid') or {}).get('color')
     return tuple(round(float(x), 3) for x in col) if col else None
@@ -660,10 +676,9 @@ def check_draft(d, plan, fps=None):
     box) while it is spoken; in the highlight, never more than one yellow word, the yellow word is the word being
     spoken, and no word is yellow through a pause. With captions off, no caption track at all."""
     d = Path(d)
-    p = d / 'draft_content.json'
-    if not p.is_file():
-        return {'ok': False, 'issues': [f'not a CapCut draft: {d}']}
-    content = json.loads(p.read_text(encoding='utf-8'))
+    content = newest_content(d)
+    if content is None:
+        return {'ok': False, 'issues': [f'not a CapCut draft (no readable timeline document): {d}']}
     tracks = caption_tracks(content)
     issues, warnings = [], []
     if plan['captions'] == 'off':
@@ -753,19 +768,24 @@ def check_draft(d, plan, fps=None):
         if any(x['text'] != x['text'].upper() for x in texts):
             issues.append('a_word_box_caption_is_not_in_capitals')
         order = sorted(boxed, key=lambda r: r['start'])
-        j, missed = 0, []
-        for w in words:
+        j, missed, passed = 0, [], []
+        for wi, w in enumerate(words):
             while j < len(order) and order[j]['start'] < w['s'] - 0.5:
                 j += 1
             if j < len(order) and _wb_norm(order[j]['text']) == _wb_norm(w['w']):
                 j += 1
+            elif wi + 1 < len(words) and words[wi + 1]['s'] - w['s'] < 1.5 * frame:
+                # the word box's own rule: a word that starts within a frame of the next hands its box straight on
+                passed.append(w['w'])
             else:
                 missed.append(w['w'])
-        if len(missed) > max(2, len(words) // 200):
+        if missed:
             issues.append(f'{len(missed)}_words_never_boxed:' + ','.join(missed[:8]))
-        elif missed:
-            warnings.append(f'{len(missed)} words shorter than a frame passed their box on: ' + ','.join(missed[:8]))
-        stats = {'texts': len(texts), 'boxed_texts': len(boxed), 'words': len(words), 'words_boxed': len(words) - len(missed)}
+        if passed:
+            warnings.append(f'{len(passed)} words start within a frame of the next and passed their box on (the word '
+                            'box\'s own rule): ' + ','.join(passed[:8]))
+        stats = {'texts': len(texts), 'boxed_texts': len(boxed), 'words': len(words),
+                 'words_boxed': len(words) - len(missed) - len(passed), 'words_passed_on': len(passed)}
     overlaps = 0
     for t in tracks:
         segs = sorted(t.get('segments') or [], key=lambda s: int(s['target_timerange']['start']))
