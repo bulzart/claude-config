@@ -108,3 +108,6 @@
 - [create-clips: second look (recall)](create-clips-second-look.md) — 2026-11-20: cc.py recall + ONE second-look agent after the scan; strong 11/11 found by the single pass, recoveries = laughs + cut-off payoffs; config recall.second_look
 - [create-clips: the face is evidence](create-clips-face-is-evidence.md) — 2026-11-20: 'no reaction' only after a face-cam strip (T sheet --crop); 3 of 3 checked hid a laugh
 - [create-clips: streamer-only lexicon fixes](create-clips-lexicon-scope.md) — 2026-11-20: scope "streamer" never changes words printed in the game's subtitle; plain pairs fix every voice
+- [create-video: Whisper on the GPU](create-video-gpu-whisper.md) — user 2026-11-21: medium, cuda float16, always; CPU only with --cpu-approved; doctor --whisper; script adds the pip CUDA DLL dirs itself
+- [create-video: 2 fps analysis](create-video-analysis-2fps.md) — user 2026-11-21: 2 fps, each frame at its own timestamp (transcript clock); runs keep their rate (old run 5 fps); inspect-window for brief stretches
+- [create-video: content review](create-video-content-review.md) — user 2026-11-21: per-reference safety vs religion/superstition vs holiday, kept apart; selective exclusion; checked downstream; every timeline picture looked at
