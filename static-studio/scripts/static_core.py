@@ -2449,11 +2449,20 @@ def ledger_rows(rd):
 
 
 def measured_cost_ratio(rd, model_id):
-    """Credits this account was really billed per character sent on this model, from the ledger (other use of the
-    account between the two balance reads can only push it up): (median, number of requests)."""
-    ratios = [r['delta'] / r['characters'] for r in ledger_rows(rd)
-              if r.get('model_id') == model_id and r.get('kind') in ('tts', 'probe', 'trial') and r.get('ok')
-              and isinstance(r.get('delta'), (int, float)) and r['delta'] >= 0 and r.get('characters')]
+    """Credits this account was really billed per character sent on this model, from the ledger: ElevenLabs'
+    character-cost header where the request has one (measured 2026-11-20: it equals the balance drop, which shows
+    up only some seconds later), else the balance drop (other use of the account between the two balance reads can
+    only push it up): (median, number of requests)."""
+    ratios = []
+    for r in ledger_rows(rd):
+        if r.get('model_id') != model_id or r.get('kind') not in ('tts', 'probe', 'trial') or not r.get('ok') \
+                or not r.get('characters') or r.get('phase') == 'pending':
+            continue
+        c = r.get('character_cost_header')
+        if c is None and isinstance(r.get('delta'), (int, float)) and r['delta'] > 0:
+            c = r['delta']
+        if isinstance(c, (int, float)) and c >= 0:
+            ratios.append(c / r['characters'])
     return (round(statistics.median(ratios), 3), len(ratios)) if ratios else (None, 0)
 
 
@@ -2543,11 +2552,12 @@ def eleven_paid_post(rd, key, path, body, kind, meta, accept='audio/mpeg', timeo
     """One billed ElevenLabs request, on record: the live balance just before and just after (free calls), the
     characters sent (the text, and the context fields apart) and what the account was billed, appended to the ledger
     whether it worked or not. A 'pending' row goes in first, so a request cut off by a crash or a power cut is still
-    on record (a trial budget counts it at its largest possible charge). The cost is read three ways: ElevenLabs'
-    `character-cost` reply header (documented under "Tracking generation costs"), the balance drop, and, when
-    `meta` names credits_per_character, `credits_billed`: the larger of the two in credits (concurrent use of the
-    account can only push the balance drop up). When the balance just before is under `require`, nothing is sent.
-    Returns (raw bytes or None, error or None, entry)."""
+    on record (a trial budget counts it at its largest possible charge). The cost: ElevenLabs' `character-cost` reply
+    header (documented under "Tracking generation costs"; measured 2026-11-20 on eleven_v4: it is the credits billed,
+    the balance falling by exactly that some seconds later), and the balance drop read just after (often 0, since the
+    balance lags). When `meta` names credits_per_character, `credits_billed` is the header, else a balance drop seen,
+    else unknown (a trial budget then counts the request at its largest possible charge). When the balance just
+    before is under `require`, nothing is sent. Returns (raw bytes or None, error or None, entry)."""
     before = subscription_balance(key)
     chars = len(str(body.get('text') or ''))
     ctx = len(str(body.get('previous_text') or '')) + len(str(body.get('next_text') or ''))
@@ -2583,11 +2593,9 @@ def eleven_paid_post(rd, key, path, body, kind, meta, accept='audio/mpeg', timeo
     delta = (before['available'] - after) if after is not None else None
     entry.update({'phase': 'done', 'ok': err is None, 'error': err, 'request_id': rid, 'trace_id': trace,
                   'history_item_id': hist, 'character_cost_header': cost, 'balance_after': after, 'delta': delta})
-    rate = meta.get('credits_per_character')
-    if rate is not None:
-        known = [x for x in ((math.ceil(cost * float(rate)) if cost is not None else None),
-                             (delta if isinstance(delta, (int, float)) and delta >= 0 else None)) if x is not None]
-        entry['credits_billed'] = max(known) if known else None
+    if meta.get('credits_per_character') is not None:
+        entry['credits_billed'] = cost if cost is not None else (
+            delta if isinstance(delta, (int, float)) and delta > 0 else None)
     ledger_add(rd, entry)
     return raw, err, entry
 
@@ -3041,15 +3049,42 @@ def trial_plan_facts(plan, vf, lines, pron):
         def val(run, k):
             return run[0] if k == 'passage' else variants[run[1]][k]
         diffs = sorted({k for a in cmp_ for b in cmp_ for k in TRIAL_VARIABLES if val(a, k) != val(b, k)})
-        if len(diffs) != 1:
+        if q.get('repeat'):
+            # The same request twice: how much one set-up varies by itself, the yardstick for every other answer.
+            if diffs:
+                issues.append(f'question_{qid}_is_a_repeat_but_changes:' + ','.join(diffs))
+        elif len(diffs) != 1:
             issues.append(f'question_{qid}_changes_{len(diffs)}_things_at_once:' + (','.join(diffs) or 'nothing'))
         questions.append({'id': qid, 'asks': q.get('asks'), 'compare': cmp_, 'varies': diffs,
-                          'listen_for': q.get('listen_for')})
+                          'listen_for': q.get('listen_for'), 'repeat': bool(q.get('repeat'))})
         asked |= set(cmp_)
+    joins = []
+    for j in plan.get('joins') or []:
+        jid = str((j or {}).get('id') or '')
+        parts, cmpv = [str(x) for x in j.get('parts') or []], [str(x) for x in j.get('compare') or []]
+        if len(parts) != 2 or len(cmpv) < 2 or any(x not in passages for x in parts) or any(x not in variants for x in cmpv):
+            issues.append(f'join_{jid}_needs_two_passages_and_the_variants_it_compares')
+            continue
+        pa, pb = passages[parts[0]], passages[parts[1]]
+        if not (pa['lines'] and pb['lines'] and pa['lines'][1] + 1 == pb['lines'][0]):
+            issues.append(f'join_{jid}_passages_must_be_consecutive_script_lines')
+        need = [(x, v) for v in cmpv for x in parts]
+        missing = [f'{x}-{v}' for x, v in need if (x, v) not in runs]
+        if missing:
+            issues.append(f'join_{jid}_needs_runs:' + ','.join(missing))
+        jd = sorted({k for x in cmpv for y in cmpv for k in TRIAL_VARIABLES if k != 'passage'
+                     and variants[x][k] != variants[y][k]})
+        if len(jd) != 1:
+            issues.append(f'join_{jid}_changes_{len(jd)}_things_at_once:' + (','.join(jd) or 'nothing'))
+        if n_words(j.get('asks')) < MIN_NOTE_WORDS:
+            issues.append(f'join_{jid}_must_say_what_it_asks')
+        joins.append({'id': jid, 'parts': parts, 'compare': cmpv, 'varies': jd, 'asks': j.get('asks'),
+                      'listen_for': j.get('listen_for')})
+        asked |= set(need)
     issues += [f'run_{a}_{b}_answers_no_question' for a, b in runs if (a, b) not in asked]
     if not runs:
         issues.append('trial_has_no_runs')
-    return issues, passages, variants, runs, questions
+    return issues, passages, variants, runs, questions, joins
 
 
 def trial_request(passages, variants, run, lines, pron):
@@ -3106,9 +3141,17 @@ def budget_spent(rd, budget_id):
                 spent += int(r.get('max_credits') or 0)
                 open_.append(r)
         elif r.get('phase') in ('done', 'recovered'):
-            c = r.get('credits_billed')
+            c = take_credits(r)
             spent += int(c) if c is not None else int(r.get('max_credits') or 0)
     return spent, open_
+
+
+def take_credits(row):
+    """What one request cost, best evidence first: ElevenLabs' character-cost header (exact), else the credits_billed
+    on record (a balance drop seen), else None. A recovered request has no header: it counts as on record."""
+    if row.get('character_cost_header') is not None and row.get('phase') != 'recovered':
+        return row['character_cost_header']
+    return row.get('credits_billed')
 
 
 def _pid_running(pid):
@@ -3263,17 +3306,28 @@ def _blind_order(trial_id, qid, runs_):
     return sorted(runs_, key=lambda r: hashlib.sha256(f'{trial_id}|{qid}|{r[0]}-{r[1]}'.encode('utf-8')).hexdigest())
 
 
-def trial_listening_set(outdir, plan, questions, report, passages, variants):
+def _join_audio(a, b, gap_s, out):
+    """Two takes as the viewer hears two recorded parts: the first, a gap of the voice's own pause, the second."""
+    run_cmd(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', str(a), '-f', 'lavfi', '-t',
+             f'{gap_s:.3f}', '-i', 'anullsrc=r=44100:cl=mono', '-i', str(b), '-filter_complex',
+             '[0:a]aformat=sample_rates=44100:channel_layouts=mono[x];[1:a]aformat=sample_rates=44100:channel_layouts=mono[g];'
+             '[2:a]aformat=sample_rates=44100:channel_layouts=mono[y];[x][g][y]concat=n=3:v=0:a=1[o]', '-map', '[o]',
+             '-c:a', 'libmp3lame', '-b:a', '128k', str(out)])
+
+
+def trial_listening_set(outdir, plan, questions, report, passages, variants, joins=()):
     """The blind listening set for the user: listening/ holds each question's takes as <Q>-A.mp3, <Q>-B.mp3 ... (copies;
     the labels say nothing about the settings) and listening-guide.md (the lines, what each moment is meant to feel
     like, what to listen for, a sheet to fill in); answer-key.md / .json, one folder up, say which take is which, with
-    every take's settings and measurements. A take used by two questions is copied under each question's own label.
-    Returns what was written."""
+    every take's settings and measurements. A take used by two questions is copied under each question's own label. A
+    join (two passages of consecutive lines, recorded as two requests the way two parts are) is heard as the viewer
+    would: the first take, the voice's own pause, the second; the answer key shows the steps in level, pace and
+    pitch across the join. Returns what was written."""
     lst = outdir / 'listening'
     lst.mkdir(parents=True, exist_ok=True)
     key, guide = [], [
         f'# Blind listening: {plan["id"]}', '',
-        'Each question below has two (or more) takes of the same lines. In each pair exactly one thing differs. The file '
+        'Each question below has two (or more) takes. In each pair at most one thing differs (some questions send the very same request twice, to hear how much one set-up varies by itself). The file '
         'names say nothing about which is which; the answer key is one folder up (answer-key.md): open it only after '
         'you have written your notes.', '',
         'How to listen: headphones or good speakers, at the volume you would watch a video. Play A then B, then B then A. '
@@ -3306,6 +3360,44 @@ def trial_listening_set(outdir, plan, questions, report, passages, variants):
         guide += [f'| {txt} |' + ' |' * len(labels) + ' | |' for _, txt in TRIAL_LISTEN_ITEMS]
         guide += ['', 'Which would you keep, and why (one line):', '', '']
         done_q.append(q['id'])
+    join_rows = []
+    for j in joins:
+        takes = {(x, v): report['runs'].get(f'{x}|{v}') or {} for v in j['compare'] for x in j['parts']}
+        if not all(tk.get('file') and tk.get('measured') for tk in takes.values()):
+            continue
+        pauses = sorted(pp['pause_s'] for tk in takes.values() for pp in tk.get('pauses') or [])
+        gap = min(0.8, max(0.3, pauses[len(pauses) // 2] if pauses else 0.45))
+        pa, pb = passages[j['parts'][0]], passages[j['parts'][1]]
+        guide += [f'## {j["id"]}: the join between two recorded parts ({pa.get("lines_label")} | {pb.get("lines_label")})',
+                  '', f'Meant to feel: {pa.get("intended_delivery")} | then: {pb.get("intended_delivery")}', '',
+                  f'Listen for: {j.get("listen_for") or "which sounds like one person telling one story across the join"}',
+                  '']
+        labels = []
+        for i, (_, v) in enumerate(_blind_order(plan['id'], j['id'], [(j['parts'][0], v) for v in j['compare']])):
+            lab = f'{j["id"]}-{chr(65 + i)}'
+            first, second = takes[(j['parts'][0], v)], takes[(j['parts'][1], v)]
+            dst = lst / f'{lab}.mp3'
+            _join_audio(first['file'], second['file'], gap, dst)
+            labels.append(lab)
+            lv = [(tk.get('loudness') or {}).get('integrated_lufs') for tk in (first, second)]
+            pc = [tk.get('active_wpm') for tk in (first, second)]
+            reg = [(tk.get('delivery') or {}).get('register_hz') for tk in (first, second)]
+            join_rows.append({'question': j['id'], 'label': lab, 'variant': v, 'gap_s': round(gap, 2),
+                              'level_step_lu': round(lv[1] - lv[0], 1) if None not in lv else None,
+                              'pace_step_wpm': (pc[1] - pc[0]) if None not in pc else None,
+                              'register_step_hz': round(reg[1] - reg[0], 1) if None not in reg else None,
+                              'first_trail_silence_s': first.get('trail_silence_s'),
+                              'second_lead_silence_s': second.get('lead_silence_s'), 'file': str(dst),
+                              'takes': [first['file'], second['file']]})
+            key.append({'question': j['id'], 'label': lab, 'file': str(dst),
+                        'run': f'{j["parts"][0]}+{j["parts"][1]}-{v}',
+                        'source': f'join of {first["file"]} and {second["file"]}'})
+        guide += ['Files: ' + ', '.join(f'{x}.mp3' for x in labels), '',
+                  '| | ' + ' | '.join(x.split('-')[-1] for x in labels) + ' | same | note |',
+                  '|---|' + '---|' * len(labels) + '---|---|']
+        guide += [f'| {txt} |' + ' |' * len(labels) + ' | |' for _, txt in TRIAL_LISTEN_ITEMS]
+        guide += ['', 'Which would you keep, and why (one line):', '', '']
+        done_q.append(j['id'])
     (lst / 'listening-guide.md').write_text('\n'.join(guide) + '\n', encoding='utf-8')
     by_source = {}
     for k in key:
@@ -3316,7 +3408,9 @@ def trial_listening_set(outdir, plan, questions, report, passages, variants):
     for q in questions:
         if q['id'] not in done_q:
             continue
-        md += [f'## {q["id"]}: {q["asks"]}', f'Only {", ".join(q["varies"])} changes between these takes.', '',
+        md += [f'## {q["id"]}: {q["asks"]}', ('Nothing changes: the same request sent twice (how much one set-up varies '
+                                                'by itself).' if q.get('repeat') else
+                                                f'Only {", ".join(q["varies"])} changes between these takes.'), '',
                '| label | take | stability | tags | pronunciation | context | active / overall wpm | duration s | '
                'longest pause s | pitch range st | loudness LUFS | credits | anomalies |',
                '|---|---|---|---|---|---|---|---|---|---|---|---|---|']
@@ -3327,16 +3421,30 @@ def trial_listening_set(outdir, plan, questions, report, passages, variants):
             md.append(f'| {k["label"]} | {k["run"]} | {v["stability"]} | {v["tags"]} | {"on" if v["pronunciation"] else "off"}'
                       f' | {v["context"]} | {x.get("active_wpm")} / {x.get("overall_wpm")} | {x.get("duration_s")} | '
                       f'{(x.get("pause_profile") or {}).get("longest_pause_s")} | {dl.get("pitch_range_st")} | '
-                      f'{(x.get("loudness") or {}).get("integrated_lufs")} | {(x.get("cost") or {}).get("credits_billed")} | '
+                      f'{(x.get("loudness") or {}).get("integrated_lufs")} | {take_credits(x.get("cost") or {})} | '
                       f'{"; ".join(x.get("anomalies") or []) or "none"} |')
         md.append('')
-    twins = [v for v in by_source.values() if len(v) > 1]
+    for j in joins:
+        rows_ = [r for r in join_rows if r['question'] == j['id']]
+        if not rows_:
+            continue
+        md += [f'## {j["id"]}: {j["asks"]}', f'Two requests joined with a {rows_[0]["gap_s"]} s pause; only '
+               f'{", ".join(j["varies"])} changes between the versions. A step is the second part minus the first.', '',
+               '| label | variant | level step LU | pace step wpm (active) | register step Hz | silence at the end of the '
+               'first s | silence before the second s |', '|---|---|---|---|---|---|---|']
+        for r in rows_:
+            setting = ', '.join(f'{k}={variants[r["variant"]][k]}' for k in j['varies'])
+            md.append(f'| {r["label"]} | {r["variant"]} ({setting}) | {r["level_step_lu"]} | {r["pace_step_wpm"]} | '
+                      f'{r["register_step_hz"]} | {r["first_trail_silence_s"]} | {r["second_lead_silence_s"]} |')
+        md.append('')
+    twins = [v for v in by_source.values() if len(v) > 1 and not str(v[0]).startswith('join')]
     if twins:
         md += ['Same recording under two labels (a baseline reused by two questions): ' +
                '; '.join(' = '.join(v) for v in twins), '']
     md += ['## What the numbers can and cannot say', ''] + [f'- {u}' for u in TRIAL_UNCERTAINTIES] + ['']
     (outdir / 'answer-key.md').write_text('\n'.join(md) + '\n', encoding='utf-8')
-    write_json(outdir / 'answer-key.json', {'trial': plan['id'], 'labels': key, 'same_recording': twins})
+    write_json(outdir / 'answer-key.json', {'trial': plan['id'], 'labels': key, 'same_recording': twins,
+                                            'joins': join_rows})
     return {'listening': str(lst), 'guide': str(lst / 'listening-guide.md'), 'answer_key': str(outdir / 'answer-key.md'),
             'questions_ready': done_q}
 
@@ -3366,7 +3474,7 @@ def cmd_narration_trial(args):
     # and so what its recorded parts are compared against, stays as it is).
     pron = pronunciation_facts(rd, n, lines, plan.get('pronunciation')) if plan.get('pronunciation') is not None \
         else pronunciation_facts(rd, n, lines)
-    issues, passages, variants, runs, questions = trial_plan_facts(plan, vf, lines, pron)
+    issues, passages, variants, runs, questions, joins = trial_plan_facts(plan, vf, lines, pron)
     issues += pron['issues']
     budget = plan.get('budget') or {}
     if not issues:
@@ -3429,7 +3537,10 @@ def cmd_narration_trial(args):
                                 'pronunciation': variants[b]['pronunciation'], 'context': variants[b]['context'],
                                 'done': done((a, b)), 'this_time': (a, b) in todo} for a, b in runs],
                'questions': [{'id': q['id'], 'asks': q['asks'], 'compares': [f'{a}-{b}' for a, b in q['compare']],
-                              'varies': q['varies']} for q in questions]}
+                              'varies': q['varies'] or (['nothing: the same request twice'] if q.get('repeat') else [])}
+                             for q in questions],
+               'joins': [{'id': j['id'], 'asks': j['asks'], 'parts': j['parts'], 'compares': j['compare'],
+                          'varies': j['varies']} for j in joins]}
     spent, open_ = budget_spent(rd, budget['id'])
     key = elevenlabs_key() if (args.execute or args.check_balance) else ''
     if (args.execute or args.check_balance) and not key:
@@ -3549,7 +3660,7 @@ def cmd_narration_trial(args):
         if all_done:
             report['finished_at'] = now()
         write_json(outdir / 'report.json', report)
-        listening = trial_listening_set(outdir, plan, questions, report, passages, variants)
+        listening = trial_listening_set(outdir, plan, questions, report, passages, variants, joins)
     finally:
         try:
             lockf.unlink()
@@ -3557,8 +3668,7 @@ def cmd_narration_trial(args):
             pass
     spent, open_ = budget_spent(rd, budget['id'])
     res = {'ok': stop is None, 'mode': 'recorded', **summary, 'report': str(outdir / 'report.json'), **listening,
-           'credits_billed_this_trial': sum(((x.get('cost') or {}).get('credits_billed') or 0)
-                                            for x in report['runs'].values()),
+           'credits_billed_this_trial': sum((take_credits(x.get('cost') or {}) or 0) for x in report['runs'].values()),
            'budget_status': {'spent': spent, 'left': budget['max_credits'] - spent, 'interrupted_requests': len(open_)},
            'all_recorded': all_done, 'stopped': stop,
            'next': 'Give the user listening/ (blind) and, after their notes, answer-key.md; record their impressions '
@@ -4105,6 +4215,24 @@ def timeline_facts(rd, video):
     if nsegs is None:
         nsegs = [s for s in track.get('audio_tracks') or [] if str(s.get('kind')) == 'narration']
     issues += narration_track_issues(rd, nsegs, expect)
+    # The captions, as the user chose them at the start: read back from the project itself.
+    try:
+        cissues, cchoice = captions_plan_facts(rd, n)
+    except (RuntimeError, ImportError) as exc:
+        cissues, cchoice = [f'captions_not_checked:{str(exc)[:120]}'], (None, None)
+    if cchoice[0] is None:
+        warnings.append('the user has not chosen the captions for this run (captions-choice): none are checked')
+    elif cissues:
+        issues += cissues
+    elif track.get('capcut_draft'):
+        try:
+            cres = _captions().check_draft(track['capcut_draft'], read_json(captions_plan_path(rd, n)))
+            issues += cres['issues']
+            warnings += cres['warnings']
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            issues.append('captions_unreadable_in_the_project:' + str(exc)[:120])
+    else:
+        warnings.append('timeline.json names no capcut_draft: the captions were not read back from the project')
     sf = stills_facts(rd, n)
     issues += sf['issues']
     warnings += sf['warnings']
@@ -4112,6 +4240,197 @@ def timeline_facts(rd, video):
         issues.append('canvas_not_youtube_16_9')
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'last_visual_end_s': cursor,
             'target_length_s': lock.get('target_length_s'), 'audio_ready': sound['ready']}
+
+
+# ---------------------------------------------------------------- captions (the user's pick at the start)
+def _captions():
+    """The caption builder (captions.py, next to this file), loaded only when a caption command needs it."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import captions
+    return captions
+
+
+def captions_plan_path(rd, video):
+    return rd / '70-edit' / f'video-{int(video):02d}' / 'captions.json'
+
+
+def cmd_captions_choice(args):
+    """The user's captions choice for this run, asked once at the start and kept in state.json: captions on with a
+    style (luckiest-guy: Luckiest Guy word box; montserrat-highlight: Montserrat Bold, the spoken word yellow), or off.
+    A typo is refused, and a choice already made changes only with --change and the user's reason."""
+    rd, st = run_folder(args)
+    cap = _captions()
+    want = (args.captions, args.style or None)
+    if want[0] == 'on' and want[1] not in cap.CAPTION_STYLES:
+        error('With captions on, --style is one of: ' + ', '.join(cap.CAPTION_STYLES))
+    if want[0] == 'off' and want[1]:
+        error('Captions off take no style.')
+    have = cap.caption_choice(st)
+    if have[0] and have != want:
+        if n_words(args.change) < 3:
+            error('This run already has its captions choice; it changes only on the user\'s say (--change "why").',
+                  {'captions': have[0], 'caption_style': have[1]})
+        st.setdefault('captions_history', []).append({'captions': have[0], 'caption_style': have[1], 'until': now(),
+                                                      'changed_because': args.change})
+    st['captions'], st['caption_style'] = want
+    st['captions_chosen_at'] = st.get('captions_chosen_at') if have == want else now()
+    write_json(rd / 'state.json', st)
+    emit({'ok': True, 'captions': want[0], 'caption_style': want[1],
+          'look': cap.LOOKS[want[1]]['label'] if want[1] else 'no captions'})
+
+
+def captions_plan_facts(rd, video, plan=None):
+    """Whether the caption plan still describes this video: the run's choice, the script, the measured narration and
+    the edit plan's holds it was made from."""
+    n = int(video)
+    cap = _captions()
+    st = read_json(rd / 'state.json')
+    choice = cap.caption_choice(st)
+    plan = plan if plan is not None else read_json(captions_plan_path(rd, n))
+    issues = []
+    if not choice[0]:
+        issues.append('captions_not_chosen: ask the user once (captions-choice)')
+        return issues, choice
+    if not plan:
+        issues.append('captions_plan_missing: run captions-plan')
+        return issues, choice
+    if (plan.get('captions'), plan.get('style')) != choice:
+        issues.append(f'captions_plan_is_for_another_choice:{plan.get("captions")}/{plan.get("style")}')
+    if choice[0] == 'on':
+        lines = read_json(video_dir(rd, n) / 'script.json').get('lines') or []
+        ep = read_json(artifact_path(rd, n, 'edit'))
+        if (plan.get('made_from') or {}).get('script_sha256') != script_hash(lines):
+            issues.append('captions_plan_made_from_an_earlier_script')
+        if (plan.get('made_from') or {}).get('narration_for_edit_sha256') != (ep.get('narration_for_edit') or {}).get('sha256'):
+            issues.append('captions_plan_made_for_an_earlier_edit_narration')
+    return issues, choice
+
+
+def cmd_captions_plan(args):
+    """The captions' words and times for this video, from the run's choice: the script's canonical words (tags removed;
+    the pronunciation list never reaches a caption), each timed by Whisper medium on the recorded narration
+    (line-times.json `word_times`, from narration-measure), moved onto the edit's timeline by every hold retime-shots
+    inserted (edit-plan.json). Writes 70-edit/video-NN/captions.json. The word box needs its colour, chosen for this
+    video's pictures, with the reason (--box-color, --box-color-why)."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    cap = _captions()
+    choice = cap.caption_choice(st)
+    if not choice[0]:
+        error('The user has not chosen the captions for this run: ask once (captions on or off and, when on, the style) '
+              'and record it with captions-choice.')
+    out = {'video': n, 'captions': choice[0], 'style': choice[1], 'made_at': now()}
+    if choice[0] == 'off':
+        write_json(captions_plan_path(rd, n), out)
+        emit({'ok': True, 'captions': 'off', 'plan': str(captions_plan_path(rd, n)),
+              'next': 'No caption is built; timeline-check confirms the project has no caption track.'})
+        return
+    vd = video_dir(rd, n)
+    lock = read_json(vd / 'length-lock.json')
+    lines = read_json(vd / 'script.json', required=True).get('lines') or []
+    language = lock.get('language') or 'en'
+    folder = rd / '50-audio' / f'video-{n:02d}'
+    lt = read_json(folder / 'line-times.json', required=True)
+    if not lt.get('complete') or lt.get('script_sha256') != script_hash(lines):
+        error('line-times.json does not describe the whole current script: run narration-measure on the finished '
+              'narration first.')
+    rows = {r['index']: r for r in lt.get('lines') or []}
+    if any('word_times' not in r for r in rows.values()):
+        error('line-times.json has no word times (it was measured before captions needed them): run narration-measure '
+              'again (free, local).')
+    ep = read_json(artifact_path(rd, n, 'edit'), required=True)
+    holds = sorted(ep.get('holds') or [], key=lambda h: float(h['at_audio_s']))
+    if choice[1] == 'luckiest-guy':
+        if not re.fullmatch(r'#[0-9A-Fa-f]{6}', args.box_color or '') or n_words(args.box_color_why) < MIN_NOTE_WORDS:
+            error('The word box needs its colour for this video: --box-color #RRGGBB (a colour of the video\'s own '
+                  'palette that stands out from the pictures behind the caption line) and --box-color-why "...".')
+        out.update({'box_color': args.box_color.upper(), 'box_color_why': args.box_color_why})
+    words, problems = [], []
+    counts = {'whisper': 0, 'shared': 0, 'between': 0}
+    for i, line in enumerate(lines, 1):
+        r = rows.get(i) or {}
+        ws, prob = cap.line_words(line.get('text') or '', r.get('word_times'), (r.get('start_s'), r.get('end_s')),
+                                  tokens_of, strip_tags, language)
+        if prob:
+            problems.append({'line': line.get('id'), 'problem': prob})
+            continue
+        for w in ws:
+            counts[w['timing']] += 1
+            words.append({'w': w['w'], 's': cap.edit_time(w['s'], holds), 'e': cap.edit_time(w['e'], holds),
+                          'line': line.get('id'), 'timing': w['timing']})
+    if problems:
+        error('Some lines cannot be captioned from the measured narration.', problems[:10])
+    for a, b in zip(words, words[1:]):
+        if b['s'] < a['s']:
+            b['s'] = a['s']
+        if b['e'] < b['s']:
+            b['e'] = b['s']
+    total = len(words) or 1
+    out.update({'language': language, 'fps': int(args.fps), 'words': words,
+                'timing_evidence': {**counts, 'words': len(words), 'whisper_share': round(counts['whisper'] / total, 3)},
+                'holds_applied': len(holds),
+                'made_from': {'line_times_measured_at': lt.get('measured_at'), 'script_sha256': script_hash(lines),
+                              'narration_for_edit_sha256': (ep.get('narration_for_edit') or {}).get('sha256'),
+                              'edit_plan_made_at': ep.get('made_at')}})
+    write_json(captions_plan_path(rd, n), out)
+    warn = []
+    if counts['between']:
+        warn.append(f'{counts["between"]} words had no time from Whisper (a line found on a second listen): each sits '
+                    'between its timed neighbours by its length')
+    emit({'ok': True, 'captions': 'on', 'style': choice[1], 'plan': str(captions_plan_path(rd, n)),
+          'words': len(words), 'timing_evidence': out['timing_evidence'], 'warnings': warn,
+          'next': 'With CapCut closed: captions-build --draft "<project folder>" (then capcut_tools.py capcut-repair '
+                  '--keep-text), then timeline-check reads them back.'})
+
+
+def cmd_captions_build(args):
+    """Write the planned captions into the CapCut project (CapCut closed): the chosen look's tracks, each text at its
+    planned time, then read back from the project and checked against the plan. Then capcut-repair --keep-text."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    cap = _captions()
+    plan = read_json(captions_plan_path(rd, n))
+    issues, choice = captions_plan_facts(rd, n, plan)
+    if issues:
+        error('The captions plan is not ready.', issues)
+    try:
+        rec = cap.build_draft(args.draft, plan, rd / '70-edit' / f'video-{n:02d}' / 'captions-build', replace=args.replace)
+    except RuntimeError as exc:
+        error(str(exc))
+    rec.update({'draft': str(Path(args.draft)), 'built_at': now()})
+    write_json(rd / '70-edit' / f'video-{n:02d}' / 'captions-built.json', rec)
+    emit({**rec, 'next': 'capcut_tools.py capcut-repair --draft "<project folder>" --keep-text; name the project in '
+                         'timeline.json (capcut_draft): timeline-check reads the captions back from it.'},
+         0 if rec.get('ok') else 2)
+
+
+def cmd_captions_check(args):
+    rd, st = run_folder(args)
+    n = int(args.video)
+    cap = _captions()
+    plan = read_json(captions_plan_path(rd, n))
+    issues, choice = captions_plan_facts(rd, n, plan)
+    res = {'ok': False, 'issues': issues}
+    if not issues:
+        res = cap.check_draft(args.draft, plan)
+    emit(res, 0 if res.get('ok') else 2)
+
+
+def cmd_captions_preview(args):
+    """A few frames of the planned captions as PNGs (PIL, not CapCut's renderer) to look at the look and the timing:
+    which word is lit or boxed at each moment, over one of the video's stills when --background is given."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    cap = _captions()
+    plan = read_json(captions_plan_path(rd, n), required=True)
+    if plan.get('captions') != 'on':
+        error('Captions are off for this run: there is nothing to preview.')
+    w, h = (int(x) for x in args.canvas.lower().split('x'))
+    files = cap.preview(plan, Path(args.out), w, h, background=args.background, start_s=args.start, frames=args.frames)
+    emit({'ok': True, 'files': files, 'note': 'PIL drawing of the layout, font, colours and timing; the outline thickness '
+                                              'is approximate. CapCut draws the real captions.'})
 
 
 def capcut_audio_segments(draft):
@@ -4690,7 +5009,9 @@ def cmd_narration_measure(args):
         except (RuntimeError, ValueError, OSError, ImportError, KeyError) as exc:
             delivery_error = f'{type(exc).__name__}: {str(exc)[:200]}'
     for r in rows.values():
-        r.pop('_tok', None)
+        # each comparable token's [start, end] on the narration (None where Whisper did not hear it): the captions'
+        # word times
+        r['word_times'] = [None if x is None else [round(x[0], 3), round(x[1], 3)] for x in (r.pop('_tok', None) or [])]
     out = {'video': n, 'complete': complete, 'script_sha256': script_hash(lines) if complete else None,
            'narration_file': str(folder / 'narration.wav') if complete else None, 'parts': per_part,
            'duration_s': round(tot_dur, 2), 'words': int(tot_words), 'speech_s': round(tot_speech, 2), 'wpm': wpm,
@@ -5805,6 +6126,28 @@ def main():
     p.add_argument('--no-seam-holds', action='store_true', help='Do not restore the voice\'s natural gap at the '
                    'joins between recorded parts')
     p.set_defaults(func=cmd_retime_shots)
+    p = sub.add_parser('captions-choice', help='The user\'s captions choice, asked once at the start: on with a style, or off')
+    p.add_argument('--run', required=True); p.add_argument('--captions', required=True, choices=('on', 'off'))
+    p.add_argument('--style', default='', choices=('', 'luckiest-guy', 'montserrat-highlight'))
+    p.add_argument('--change', default='', help='Why a choice already made changes (the user\'s say)')
+    p.set_defaults(func=cmd_captions_choice)
+    p = sub.add_parser('captions-plan', help='The captions\' words and times on the edit\'s timeline (70-edit/video-NN/captions.json)')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--box-color', default='', help='The word box\'s colour for this video (#RRGGBB)')
+    p.add_argument('--box-color-why', default='', help='Why that colour (the video\'s palette, the pictures behind the line)')
+    p.add_argument('--fps', type=int, default=30); p.set_defaults(func=cmd_captions_plan)
+    p = sub.add_parser('captions-build', help='Write the planned captions into the CapCut project (CapCut closed) and read them back')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--draft', required=True); p.add_argument('--replace', action='store_true')
+    p.set_defaults(func=cmd_captions_build)
+    p = sub.add_parser('captions-check', help='Read the captions back from the CapCut project and check them against the plan')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--draft', required=True); p.set_defaults(func=cmd_captions_check)
+    p = sub.add_parser('captions-preview', help='A few PNG frames of the planned captions (PIL, not CapCut\'s renderer)')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--out', required=True); p.add_argument('--canvas', default='1920x1080')
+    p.add_argument('--background', default=''); p.add_argument('--start', type=float, default=None)
+    p.add_argument('--frames', type=int, default=8); p.set_defaults(func=cmd_captions_preview)
     p = sub.add_parser('timeline-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.set_defaults(func=cmd_timeline_check)
     p = sub.add_parser('export-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)

@@ -1410,6 +1410,59 @@ class StaticStudioTests(unittest.TestCase):
         plan['variants'][1]['stability']=0.4; save(pf,plan)
         self.assertIn('P1-B',cli('narration-trial','--run',self.run,'--video',1,'--plan',pf,expected=2)['details'])
 
+    def test_trial_repeats_and_a_join_between_parts(self):
+        core=self.load_core()
+        self.write_plan()
+        cli('voice-pick','--run',self.run,'--video',1,'--voice-id','VOICEA','--settings','{"stability":1.0,"similarity_boost":0.7}',
+            '--reason','the measured, even narrator the treatment describes')
+        plan={'id':'trial-04','budget':{'id':'cal-test-2','max_credits':5000},
+              'passages':[{'id':'J1','moment':'end of a part','lines':'L009-L010','intended_delivery':'a beat closing quietly'},
+                          {'id':'J2','moment':'start of the next','lines':'L011-L012','intended_delivery':'a new beat, fresh energy'}],
+              'variants':[{'id':'A'},{'id':'A2'},{'id':'C','context':'neighbours'}],
+              'runs':[['J1','A'],['J2','A'],['J1','C'],['J2','C'],['J1','A2']],
+              'questions':[{'id':'Q1','asks':'how much do two identical requests differ at the end of a part',
+                            'compare':[['J1','A'],['J1','A2']],'repeat':True},
+                           {'id':'Q9','asks':'a repeat that is not one is refused before anything is priced',
+                            'compare':[['J1','A'],['J1','C']],'repeat':True}],
+              'joins':[{'id':'Q2','parts':['J1','J2'],'compare':['A','C'],
+                        'asks':'does the context make the join between two parts sound like one telling'}]}
+        pf=self.home/'trial-04.json'; save(pf,plan)
+        bad=cli('narration-trial','--run',self.run,'--video',1,'--plan',pf,expected=2)['details']
+        self.assertIn('question_Q9_is_a_repeat_but_changes:context',bad)
+        plan['questions'].pop(); save(pf,plan)
+        dry=cli('narration-trial','--run',self.run,'--video',1,'--plan',pf)
+        self.assertEqual((dry['questions'][0]['varies'],dry['joins'][0]['varies']),(['nothing: the same request twice'],['context']))
+        class Reply(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self,*a): return False
+        mp3=self.fake_mp3().read_bytes(); used={'n':0}
+        def fake(req,timeout=None):
+            if req.full_url.endswith('/v1/user/subscription'):
+                return Reply(json.dumps({'character_limit':20000,'character_count':used['n']}).encode())
+            if req.full_url.endswith('/v1/models'):
+                return Reply(json.dumps([{'model_id':'eleven_v4','model_rates':{'character_cost_multiplier':1.0}}]).encode())
+            n=len(json.loads(req.data.decode())['text']); used['n']+=n
+            r=Reply(mp3); r.headers={'character-cost':str(round(n*0.4))}; return r
+        words=[{'start_s':round(0.1+0.3*i,2),'end_s':round(0.35+0.3*i,2),'text':' w'} for i in range(6)]
+        def good_transcribe(path,outpath,*a):
+            save(Path(outpath),{'status':'transcribed','model':'medium','segments':[{'start_s':0.1,'end_s':1.9,'text':'w','words':words}]})
+            Path(outpath).with_suffix('.txt').write_text('[0.1-1.9] w w w w w w',encoding='utf-8')
+            return 1
+        with mock.patch.object(core,'transcribe',side_effect=good_transcribe):
+            code,out=self.core_call(core,'narration-trial','--run',self.run,'--video',1,'--plan',pf,'--execute',fake=fake)
+        self.assertEqual(code,0,out)
+        tdir=self.run/'60-voice/video-01/trials/trial-04'
+        self.assertEqual(sorted(p.name for p in (tdir/'listening').glob('*.mp3')),['Q1-A.mp3','Q1-B.mp3','Q2-A.mp3','Q2-B.mp3'])
+        joined=core.probe(tdir/'listening/Q2-A.mp3')['duration_s']
+        self.assertGreater(joined,2*core.probe(tdir/'J1-A.mp3')['duration_s'])            # both parts and the pause between
+        key=json.loads((tdir/'answer-key.json').read_text())
+        self.assertEqual(sorted(r['variant'] for r in key['joins']),['A','C'])
+        self.assertIn('Nothing changes: the same request sent twice',(tdir/'answer-key.md').read_text(encoding='utf-8'))
+        # The cost header is the credits (the balance falls by it, later): 40 % here, and the budget counts exactly that.
+        rep=json.loads((tdir/'report.json').read_text())
+        self.assertEqual(out['credits_billed_this_trial'],sum(round(len(x['sent']['text'])*0.4) for x in rep['runs'].values()))
+        self.assertEqual(out['budget_status']['spent'],out['credits_billed_this_trial'])
+
     def test_legacy_not_imported_and_clone_keeps_only_analysis(self):
         clone=cli('clone','--from-run',self.run,'--workspace',self.home/'runs')['run']
         cp=Path(clone)
