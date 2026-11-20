@@ -16546,3 +16546,7 @@ operable )
 [C0772] stage audio: ok in 0.1 s (4 windows)
 [report] 20261120-040246-kaicenat C0458: done in 184.0 s, $0.031
 [C0772] stage sheets: ok in 0.4 s (3 frames, 1 sheets, leftovers 0)
+[C0776] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.3, 'transcript': 6.6, 'digest': 0.0}
+[watch] kaicenat/20261120-040246-kaicenat C0776 (live): done in 13.6 s {'move': 0.0, 'probe': 0.1, 'audio': 0.1, 'sheets': 0.3, 'transcript': 6.6, 'digest': 0.0} free 656.75 GB
+[C0778] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\kaicenat\20261120-040246-kaicenat\chunk-0778.mp4
+[C0778] stage move: ok in 0.0 s
