@@ -141,8 +141,20 @@ def main():
           "no profile skill spawns a research wave any more")
     check("hud-scan" in sk("cc-profile-game") and "region-series" in sk("cc-profile-game") and "min-blocks" in sk("cc-scan-game") and "min-blocks" in sk("cc-scan"),
           "the screen scan starts in the profile phase and both scans size their blocks with --min-blocks")
-    check("captions=on|off" in rt and "captions=on|off" in read(CC / "README.md") and "Captions" in sk("cc-start") and "AskUserQuestion" in sk("cc-start"),
-          "the router, the README and cc-start offer the captions choice (argument or question)")
+    check("captions=box|no-box|off" in rt and "captions=box|no-box|off" in read(CC / "README.md") and "Captions" in sk("cc-start") and "AskUserQuestion" in sk("cc-start"),
+          "the router, the README and cc-start offer the captions choice (argument or question): box, no-box or off")
+    # the user's choice of 2026-11-20: two caption looks, picked at the start with no default (box = Luckiest Guy on a box, no-box = Montserrat Bold yellow with an outline)
+    cs0 = sk("cc-start")
+    check(all(w in cs0 for w in ("**Box captions**", "**No-box captions**", "**No captions**", "captions=no-box", "no default")) and "Captions (Recommended)" not in cs0,
+          "cc-start asks the captions question with three options and no default: Box captions, No-box captions, No captions")
+    check(all("Montserrat Bold" in t and "#FFFF00" in t and "no-box" in t for t in (rt, read(CC / "README.md"), read(CC / "reference" / "edit-craft.md"), sk("cc-build-short"), sk("cc-build-long"),
+                                                                                    sk("cc-build-game"), sk("cc-produce"))),
+          "the router, the README, edit-craft.md, the three build skills and the produce contract describe the no-box look (Montserrat Bold, yellow #FFFF00)")
+    check(all('captions.style: "no-box"' in sk(n) or "`no-box` for no-box" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game")) and all("never the other look" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game")),
+          "every build skill writes the run's look as captions.style and never builds the other look")
+    check(all("word_box_max_words" in sk(n) for n in ("cc-build-long", "cc-build-game", "cc-produce")) and "falls back to the plain look, in the same font, by itself" not in sk("cc-build-long"),
+          "the long-form build skills keep every box-look video word-box (the user, 2026-11-18): word_box_max_words raised, no silent plain fallback")
+    check("padding 0.06" in read(CC / "README.md") and "padding 0.06" in read(CC / "reference" / "edit-craft.md"), "the README and edit-craft.md give the box padding 0.06 (the user, 2026-11-20: a little smaller)")
     check(all("captions" in sk(n).lower() and ("off" in sk(n).lower()) for n in ("cc-build-short", "cc-build-long", "cc-build-game", "cc-produce", "cc-wrapup", "cc-plan", "cc-plan-game")),
           "every plan, produce, build and wrap-up skill follows the run's captions setting")
     check("captions OFF" in read(CC / "reference" / "edit-craft.md") and "captions OFF" in read(CC / "reference" / "safety.md"), "edit-craft.md and safety.md say what captions OFF means (and that a spoken slur is cut around)")
@@ -186,7 +198,8 @@ def main():
     check("captions_color" in sk("cc-start") and "captions_color" in rt and "captions_color" in ec, "cc-start, the router and edit-craft.md carry the user's own box colour (captions_color)")
     check(all("pick only the box colour" in sk(n).lower() for n in ("cc-build-short", "cc-build-long", "cc-build-game")), "the build skills tell the agent to pick only the box colour to match the video's appearance")
     check((Path("C:/Users/Bulzart/.claude/analyze-with-loupe/fonts") / "LuckiestGuy-Regular.ttf").is_file(), "the house font file exists in the Loupe fonts folder")
-    check("Montserrat" not in ec and "Barlow\", \"font_style" not in ec, "edit-craft.md no longer shows another font as the example or the fallback")
+    check("Barlow\", \"font_style" not in ec and '"font_family": "Montserrat' not in ec, "edit-craft.md shows no other font as an EDL example or a fallback (Montserrat Bold is the no-box look's own font, never an EDL key)")
+    check((Path("C:/Users/Bulzart/.claude/analyze-with-loupe/fonts") / "Montserrat-Bold.otf").is_file(), "the no-box look's font file exists in the Loupe fonts folder")
     gi = (CC.parent / ".gitignore")
     check(not gi.is_file() or "create-clips/data/font-cache.json" in read(gi), "the font-lookup cache is git-ignored (derived data)")
 
