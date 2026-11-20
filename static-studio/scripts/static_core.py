@@ -962,21 +962,322 @@ CONTENT_FLAGS = [
 ]
 
 
-def content_flags(lines, review_text):
+def content_flags(lines, review_text, themes=()):
     m = re.search(r'^#+[^\n]*content flags?[^\n]*\n(.*?)(?=^#|\Z)', review_text or '', flags=re.I | re.M | re.S)
     section = m.group(1) if m else ''
     flags, issues = [], []
     for i, row in enumerate(lines):
         lid = str(row.get('id') or f'L{i+1:03d}')
         spoken = strip_tags(row.get('text') or '')
-        for kind, rx in CONTENT_FLAGS:
-            hits = sorted({h.lower() for h in rx.findall(spoken)})
+        found = [(kind, sorted({h.lower() for h in rx.findall(spoken)})) for kind, rx in CONTENT_FLAGS]
+        # an excluded segment's theme (its review's "avoid") brought back in the words: rewritten, or why it isn't
+        found += [(f'excluded_theme:{th}', [ph]) for th, ph in theme_hits(spoken, themes)]
+        for kind, hits in found:
             if hits:
                 reviewed = bool(re.search(r'\b' + re.escape(lid) + r'\b', section))
                 flags.append({'line': lid, 'kind': kind, 'terms': hits, 'reviewed': reviewed})
                 if not reviewed:
                     issues.append(f'content_flag_unreviewed:{lid}:{kind}')
     return flags, issues
+
+
+# ---------------------------------------------------------------- content: what a reference may lend, and to what
+# Every reference gets a content review from the agent who watched it (01): its problem segments, each with its
+# timestamps, what it is, what it does in the story, the evidence, how sure, and what is done with it. Two different
+# things are recorded apart and never mixed: content safety (gore, distress, self-harm, ...: what must not be shown
+# or reproduced) and the user's creative exclusions (religious or superstitious material, holidays: not harmful,
+# just never used as a creative device here). Code checks the record's shape, that the closer looks it relies on
+# were really taken, and that nothing excluded is cited or brought back downstream; the judgement is the agent's.
+CONTENT_KINDS = ('safety', 'religion_superstition', 'holiday')
+SAFETY_CATEGORIES = ('graphic_injury', 'distressing', 'self_harm', 'dangerous_acts', 'sexual_violence_exploitation',
+                     'minors', 'hate_extremism', 'nudity_indecency', 'other')
+CREATIVE_CATEGORIES = {'religion_superstition': ('religious', 'superstition'), 'holiday': ('holiday',)}
+CONTENT_ACTIONS = {'safety': ('exclude', 'restrict_visuals', 'keep'),
+                   'religion_superstition': ('exclude', 'keep'), 'holiday': ('exclude', 'keep')}
+STORY_STATUS = ('coherent', 'bridged', 'too_dependent')
+_THEME_STOP = {'the', 'and', 'with', 'from', 'that', 'this', 'into', 'onto', 'their', 'there', 'about', 'over',
+               'under', 'his', 'her', 'its', 'for', 'was', 'were', 'are', 'any', 'all', 'one', 'who', 'what'}
+
+
+def content_review_path(rd, ref):
+    return rd / '20-analysis' / 'content' / f'{str(ref).strip().upper()}.json'
+
+
+def picture_looks_path(rd, video):
+    return rd / '60-visuals' / f'video-{int(video):02d}' / 'content-looks.json'
+
+
+def closer_looks(rd, ref, a=None, b=None):
+    """The closer looks (inspect-window) taken at a reference, overlapping [a, b] when given."""
+    out = []
+    for idx in sorted((rd / '20-analysis' / 'inspect' / str(ref).upper()).glob('*/index.json')):
+        d = read_json(idx)
+        lo, hi = d.get('from_s'), d.get('to_s')
+        if lo is None or hi is None or not d.get('frames'):
+            continue    # a look that took no frames (a window outside the video) was not a look
+        if a is None or (lo <= b and hi >= a):
+            out.append({'from_s': lo, 'to_s': hi, 'rate': d.get('rate'), 'frames': len(d.get('frames') or []),
+                        'why': d.get('why'), 'frames_removed': bool(d.get('frames_removed_at'))})
+    return out
+
+
+def content_review_issues(rd, ref, doc, row):
+    """Shape and process of one reference's content review: (issues, segments read as numbers)."""
+    iss, segs = [], []
+    if not isinstance(doc, dict):
+        return ['content_review_must_be_a_json_object'], segs
+    media = rd / '10-media' / ref
+    if not (media / 'frame-index.json').is_file():
+        iss.append('reference_not_prepared_run_prepare_first')
+    if row.get('has_audio') and read_json(media / 'transcript.json').get('status') != 'transcribed':
+        iss.append('reference_words_not_transcribed_run_prepare_with_whisper_first')
+    if n_words(doc.get('looked_at')) < 4:
+        iss.append('looked_at_must_say_what_was_watched_and_heard')
+    dur = float(row.get('duration_s') or 0)
+    raw = doc.get('segments')
+    if not isinstance(raw, list):
+        iss.append('segments_must_be_a_list_(empty_when_nothing_was_found)')
+        raw = []
+    ids = set()
+    for k, s in enumerate(raw, 1):
+        if not isinstance(s, dict):
+            iss.append(f'segment_{k}_must_be_an_object')
+            continue
+        sid = str(s.get('id') or '').strip()
+        if not re.fullmatch(r'[A-Za-z0-9_]+', sid) or sid in ids:
+            iss.append(f'segment_{k}_needs_a_unique_id_(letters_digits)')
+            sid = sid or f'#{k}'
+        ids.add(sid)
+        a, b_ = parse_clock(s.get('from')), parse_clock(s.get('to'))
+        if a is None or b_ is None or b_ <= a or a < 0 or (dur and b_ > dur + 1):
+            iss.append(f'segment_{sid}_from_to_must_be_times_inside_the_video')
+            a = b_ = None
+        kind = str(s.get('kind') or '')
+        cat = str(s.get('category') or '')
+        action = str(s.get('action') or '')
+        if kind not in CONTENT_KINDS:
+            iss.append(f'segment_{sid}_kind_must_be:' + '/'.join(CONTENT_KINDS))
+        elif kind == 'safety':
+            if cat in ('religious', 'superstition', 'holiday'):
+                iss.append(f'segment_{sid}_religious_superstitious_or_holiday_material_is_not_a_safety_category:'
+                           'record it as kind religion_superstition or holiday')
+            elif cat not in SAFETY_CATEGORIES:
+                iss.append(f'segment_{sid}_safety_category_must_be:' + '/'.join(SAFETY_CATEGORIES))
+            if str(s.get('severity') or '') not in ('low', 'medium', 'high'):
+                iss.append(f'segment_{sid}_safety_needs_a_severity:low/medium/high')
+            if cat == 'minors' and action != 'exclude':
+                iss.append(f'segment_{sid}_minors_is_always_excluded')
+            if str(s.get('severity')) == 'high' and action == 'keep':
+                iss.append(f'segment_{sid}_high_severity_cannot_be_kept_as_it_is')
+        else:
+            if cat not in CREATIVE_CATEGORIES[kind]:
+                iss.append(f'segment_{sid}_category_must_be:' + '/'.join(CREATIVE_CATEGORIES[kind]))
+            if s.get('severity') not in (None, ''):
+                iss.append(f'segment_{sid}_severity_is_for_safety_only:{kind}_is_a_creative_exclusion_not_harm')
+        if kind in CONTENT_ACTIONS and action not in CONTENT_ACTIONS[kind]:
+            iss.append(f'segment_{sid}_action_must_be:' + '/'.join(CONTENT_ACTIONS[kind]))
+        if n_words(s.get('what')) < 4:
+            iss.append(f'segment_{sid}_what_must_say_what_it_is_(neutrally,_no_graphic_detail)')
+        if n_words(s.get('role')) < 3:
+            iss.append(f'segment_{sid}_role_must_say_what_it_does_in_the_story')
+        if n_words(s.get('evidence')) < 3:
+            iss.append(f'segment_{sid}_evidence_must_say_what_shows_it')
+        if str(s.get('confidence') or '') not in ('sure', 'unsure'):
+            iss.append(f'segment_{sid}_confidence_must_be_sure_or_unsure')
+        if action in ('keep', 'restrict_visuals') and n_words(s.get('why')) < 4:
+            iss.append(f'segment_{sid}_{action}_must_say_why')
+        avoid = [str(x).strip() for x in s.get('avoid') or [] if str(x).strip()]
+        if action == 'exclude' and not avoid:
+            iss.append(f'segment_{sid}_exclude_must_name_what_to_avoid_bringing_back')
+        deps = []
+        for j, d in enumerate(s.get('depends') or [], 1):
+            da, db = parse_clock((d or {}).get('from')), parse_clock((d or {}).get('to'))
+            if da is None or db is None or db <= da or (dur and db > dur + 1):
+                iss.append(f'segment_{sid}_depends_{j}_from_to_must_be_times_inside_the_video')
+            elif n_words((d or {}).get('why')) < 3:
+                iss.append(f'segment_{sid}_depends_{j}_must_say_what_it_depends_on')
+            else:
+                deps.append((da, db))
+        looks = closer_looks(rd, ref, a, b_) if a is not None else []
+        if str(s.get('confidence')) == 'unsure' and action != 'exclude' and a is not None and not looks:
+            iss.append(f'segment_{sid}_unsure_and_used_needs_a_closer_look_first_(inspect-window)')
+        segs.append({'id': sid, 'from_s': a, 'to_s': b_, 'kind': kind, 'category': cat, 'action': action,
+                     'depends_s': deps, 'avoid': avoid, 'closer_looks': looks})
+    if any(x['action'] == 'exclude' for x in segs):
+        story = doc.get('story_without_exclusions') or {}
+        if not isinstance(story, dict) or story.get('status') not in STORY_STATUS or n_words(story.get('note')) < 6:
+            iss.append('story_without_exclusions_needs_status_(' + '/'.join(STORY_STATUS) + ')_and_a_note')
+    if n_words(doc.get('usable')) < 3:
+        iss.append('usable_must_say_what_stays_useful_(or_that_nothing_does)')
+    return iss, segs
+
+
+def content_exclusions(rd, ref):
+    """[(from_s, to_s, segment id, kind, action)] of a reference's reviewed content: an excluded segment with the
+    moments that depend on it, and a segment whose visuals are restricted."""
+    doc = read_json(content_review_path(rd, ref))
+    out = []
+    for s in doc.get('segments') or []:
+        if s.get('action') not in ('exclude', 'restrict_visuals'):
+            continue
+        a, b_ = parse_clock(s.get('from')), parse_clock(s.get('to'))
+        if a is None or b_ is None:
+            continue
+        out.append((a, b_, str(s.get('id')), str(s.get('kind')), str(s.get('action'))))
+        if s.get('action') == 'exclude':
+            for d in s.get('depends') or []:
+                da, db = parse_clock(d.get('from')), parse_clock(d.get('to'))
+                if da is not None and db is not None:
+                    out.append((da, db, str(s.get('id')), str(s.get('kind')), 'exclude'))
+    return out
+
+
+def excluded_themes(rd, video):
+    """What a video must not bring back: the excluded segments of the references its direction cites."""
+    d = read_json(video_dir(rd, video) / 'direction.json')
+    ev = d.get('evidence') if isinstance(d.get('evidence'), dict) else {}
+    out = []
+    for ref in dict.fromkeys(str(x).strip().upper() for x in ev.get('references') or []):
+        for s in read_json(content_review_path(rd, ref)).get('segments') or []:
+            if s.get('action') == 'exclude':
+                out.append({'theme': f'{ref}/{s.get("id")}', 'kind': s.get('kind'), 'what': s.get('what'),
+                            'avoid': [str(x) for x in s.get('avoid') or [] if str(x).strip()]})
+    return out
+
+
+def _theme_tokens(phrase):
+    return [w for w in re.findall(r"[a-z0-9']+", str(phrase).lower()) if len(w) > 2 and w not in _THEME_STOP]
+
+
+def theme_hits(text, themes):
+    """[(theme, phrase)]: an avoid phrase whose every content word is in the text (any order, a plural too). A net
+    for plain re-use only: a disguised version in other words is the reviewers' to catch (their packets list these)."""
+    words = set(re.findall(r"[a-z0-9']+", strip_tags(str(text or '')).lower()))
+    out = []
+    for th in themes:
+        for ph in th.get('avoid') or []:
+            toks = _theme_tokens(ph)
+            if toks and all(w in words or w + 's' in words or w + 'es' in words or
+                            (w.endswith('s') and w[:-1] in words) for w in toks):
+                out.append((th['theme'], ph))
+    return out
+
+
+def prompt_flags(text, themes=()):
+    """The content flags of a picture prompt: 02's words (swearing aside) and an excluded theme brought back."""
+    plain = strip_tags(str(text or ''))
+    kinds = [kind for kind, rx in CONTENT_FLAGS if kind != 'swearing' and rx.search(plain)]
+    kinds += [f'excluded_theme:{th}' for th, _ in theme_hits(plain, themes)]
+    return list(dict.fromkeys(kinds))
+
+
+def content_signals(rd, ref, row):
+    """Where to look closer (gathered, never judged): stretches whose words touch 02's subjects, and the picture
+    stretches the samples cannot settle (the av-profile's inspect_candidates)."""
+    tj = read_json(rd / '10-media' / ref / 'transcript.json')
+    hits = []
+    for s in tj.get('segments') or []:
+        for kind, rx in CONTENT_FLAGS:
+            if kind == 'swearing':
+                continue
+            found = sorted({h.lower() for h in rx.findall(s.get('text') or '')})
+            if found:
+                hits.append({'from': _mmss(s.get('start_s')), 'to': _mmss(s.get('end_s')), 'kind': kind,
+                             'words': found, 'said': str(s.get('text') or '')[:160]})
+    prof = read_json(ref_av_path(rd, ref))
+    fi = read_json(rd / '10-media' / ref / 'frame-index.json')
+    return {'reference': ref, 'duration_s': row.get('duration_s'),
+            'frames': {'count': len(fi.get('frames') or []), 'fps': fi.get('fps'), 'sampler': fi.get('sampler') or LEGACY_SAMPLER},
+            'transcribed': tj.get('status') == 'transcribed', 'word_hits': hits[:120],
+            'picture_candidates': prof.get('inspect_candidates') if prof else None,
+            'closer_looks_taken': closer_looks(rd, ref),
+            'note': 'Places to look, not verdicts: a word can be plain fact, and something can be shown without a word '
+                    'said. The review is your judgement of the whole video in context.'
+                    + ('' if prof else ' Run av-profile for the picture candidates.')}
+
+
+def cmd_content_review(args):
+    """The content record: a reference's review (--ref with --file; --signals shows where to look first), the look at
+    every picture a video's edit shows (--video with --pictures --file), or the run's state (--status)."""
+    rd, st = run_folder(args)
+    inv = read_json(rd / '00-inventory/references.json')
+    rows = {x['id']: x for x in inv.get('items') or [] if x.get('kind') == 'video' and not x.get('duplicate_of')}
+    if args.status:
+        refs = {}
+        for ref in rows:
+            d = read_json(content_review_path(rd, ref))
+            if not d:
+                refs[ref] = 'not reviewed'
+                continue
+            segs = d.get('segments') or []
+            refs[ref] = {'segments': len(segs),
+                         **{k: sum(1 for s in segs if s.get('kind') == k) for k in CONTENT_KINDS},
+                         'excluded': sum(1 for s in segs if s.get('action') == 'exclude'),
+                         'restricted': sum(1 for s in segs if s.get('action') == 'restrict_visuals'),
+                         'unsure': sum(1 for s in segs if s.get('confidence') == 'unsure'),
+                         'story': (d.get('story_without_exclusions') or {}).get('status')}
+        emit({'ok': True, 'reviewed': sum(1 for v in refs.values() if v != 'not reviewed'), 'references': len(rows),
+              'by_reference': refs})
+        return
+    if args.video and args.pictures:
+        if not args.file:
+            error('Give the looks file: --file looks.json ({"looks": [{"file", "result": "clean"|"issue", "note"}]})')
+        looks = read_json(Path(args.file).expanduser().resolve(), required=True).get('looks')
+        if not isinstance(looks, list) or not looks:
+            error('The looks file needs a "looks" list, one entry per picture looked at')
+        path = picture_looks_path(rd, args.video)
+        data = read_json(path) or {'video': int(args.video), 'looks': {}}
+        problems, saved = [], 0
+        for k, lk in enumerate(looks, 1):
+            f = _run_file(rd, (lk or {}).get('file'))
+            if not f.is_file():
+                problems.append(f'look_{k}_file_not_found:{f}')
+                continue
+            res = str(lk.get('result') or '')
+            if res not in ('clean', 'issue'):
+                problems.append(f'look_{k}_result_must_be_clean_or_issue')
+            if n_words(lk.get('note')) < 3:
+                problems.append(f'look_{k}_note_must_say_what_the_picture_shows')
+            if res == 'issue' and str(lk.get('category') or '') not in SAFETY_CATEGORIES + CONTENT_KINDS[1:] + ('excluded_theme',):
+                problems.append(f'look_{k}_an_issue_needs_its_category')
+            if not problems:
+                data['looks'][_pkey(f)] = {'file': str(f), 'sha256': file_sha256(f), 'result': res,
+                                           'note': lk.get('note'), 'category': lk.get('category'), 'looked_at': now()}
+                saved += 1
+        if problems:
+            error('The looks file does not follow the format; nothing was recorded.', problems)
+        write_json(path, data)
+        emit({'ok': True, 'recorded': saved, 'file': str(path),
+              'issues_open': sum(1 for x in data['looks'].values() if x.get('result') == 'issue')})
+        return
+    if not args.ref:
+        error('Name a reference (--ref V###), or --video N --pictures, or --status')
+    ref = args.ref.strip().upper()
+    row = rows.get(ref)
+    if not row:
+        error('No such reference video in this run', ref)
+    if args.signals:
+        emit({'ok': True, **content_signals(rd, ref, row)})
+        return
+    if not args.file:
+        error('Give the review: --file review.json (see 07 for its fields), or --signals for where to look first')
+    doc = read_json(Path(args.file).expanduser().resolve(), required=True)
+    issues, segs = content_review_issues(rd, ref, doc, row)
+    if issues:
+        error('The content review is not complete; nothing was saved.', issues)
+    target = content_review_path(rd, ref)
+    old = read_json(target)
+    fi = read_json(rd / '10-media' / ref / 'frame-index.json')
+    saved = {**doc, 'reference_id': ref, 'revision': int(old.get('revision') or 0) + 1, 'made_at': now(),
+             'frames_seen': {'fps': fi.get('fps'), 'sampler': fi.get('sampler') or LEGACY_SAMPLER,
+                             'count': len(fi.get('frames') or [])},
+             'closer_looks': closer_looks(rd, ref)}
+    saved['review_sha256'] = canonical_sha({k: v for k, v in saved.items() if k not in ('made_at', 'review_sha256')})
+    write_json(target, saved)
+    emit({'ok': True, 'file': str(target), 'revision': saved['revision'], 'segments': len(segs),
+          'excluded': sum(1 for s in segs if s['action'] == 'exclude'),
+          'restricted': sum(1 for s in segs if s['action'] == 'restrict_visuals'),
+          'kinds': {k: sum(1 for s in segs if s['kind'] == k) for k in CONTENT_KINDS}})
 
 
 def script_hash(lines):
@@ -1213,6 +1514,27 @@ def direction_facts(rd, video):
     for v in refs:
         if not ref_av_path(rd, v).is_file():
             iss.append(f'direction_evidence_without_av_profile:{v}')
+        cr = read_json(content_review_path(rd, v))
+        if not cr:
+            iss.append(f'direction_evidence_reference_without_content_review:{v}')
+        elif (cr.get('story_without_exclusions') or {}).get('status') == 'too_dependent':
+            warn.append(f'{v}: its story depends on material excluded from use (content review): cite how it is told '
+                        '(pace, hooks, structure, picture), never its story')
+    cut = {v: content_exclusions(rd, v) for v in refs}
+    for o in ev.get('observations') or []:
+        if not isinstance(o, dict):
+            continue
+        v = str(o.get('ref') or '').strip().upper()
+        a, b_ = parse_span(o.get('at'))
+        if a is None:
+            continue
+        for lo, hi, sid, kind, action in cut.get(v) or content_exclusions(rd, v):
+            if a <= hi and b_ >= lo:
+                if action == 'exclude':
+                    iss.append(f'direction_cites_excluded_material:{v}@{o.get("at")}:{sid}({kind})')
+                else:
+                    warn.append(f'{v}@{o.get("at")} is inside {sid}, whose visuals are restricted: borrow how it is '
+                                'told, never what it shows')
     obs = [o for o in ev.get('observations') or [] if isinstance(o, dict) and str(o.get('ref') or '').strip()
            and str(o.get('at') or '').strip() and n_words(o.get('what')) >= 4]
     if len(obs) < 3:
@@ -1585,6 +1907,9 @@ def media_gate(job, kind):
             pic = ((t.get('samples') or {}).get(m) or {}).get('picture')
             if not _norm(pic) or _norm(pic) not in _norm(it.get('prompt')):
                 iss.append(f'item_{i}_prompt_does_not_carry_its_sample_picture')
+            kinds = prompt_flags(it.get('prompt'), excluded_themes(rd, n))
+            if kinds and n_words(it.get('content_note')) < 6:
+                iss.append(f'item_{i}_prompt_content_flag_unanswered:' + '+'.join(kinds))
             out['records'].append({'purpose': 'treatment_preview', 'treatment': str(it.get('treatment')), 'moment': m})
         out['ok'] = not iss
         return out
@@ -1594,9 +1919,13 @@ def media_gate(job, kind):
     chosen = chosen_treatment_of(read_json(video_dir(rd, n) / 'direction.json'))
     if purpose == 'thumbnail':
         out['untracked'] = True
+        themes = excluded_themes(rd, n)
         for i, it in enumerate(items, 1):
             if n_words(it.get('prompt')) < 8:
                 iss.append(f'item_{i}_missing_prompt')
+            kinds = prompt_flags(it.get('prompt'), themes)
+            if kinds and n_words(it.get('content_note')) < 6:
+                iss.append(f'item_{i}_prompt_content_flag_unanswered:' + '+'.join(kinds))
         out['direction'] = {'treatment': treatment, 'visual_language': chosen.get('visual_language')}
         out['ok'] = not iss
         return out
@@ -1609,6 +1938,7 @@ def media_gate(job, kind):
         out['warnings'] += sf['warnings']
         shots = {str(s.get('id')): s for s in read_json(artifact_path(rd, n, 'shot-plan')).get('shots') or []}
         out['direction'] = {'treatment': treatment, 'visual_language': chosen.get('visual_language'), 'items': []}
+        themes_now = excluded_themes(rd, n)
         for i, it in enumerate(items, 1):
             s = shots.get(str(it.get('shot_id') or it.get('id') or ''))
             if not s:
@@ -1620,6 +1950,11 @@ def media_gate(job, kind):
             fp = _norm(s.get('frame_prompt') or s.get('prompt'))
             if not fp or fp not in _norm(it.get('prompt')):
                 iss.append(f'item_{i}_prompt_does_not_carry_shot_{s.get("id")}_frame_prompt')
+            # style words added around the approved frame prompt may not bring in what the prompt itself doesn't
+            extra = [k for k in prompt_flags(it.get('prompt'), themes_now)
+                     if k not in prompt_flags(s.get('frame_prompt') or s.get('prompt'), themes_now)]
+            if extra and n_words(it.get('content_note')) < 6:
+                iss.append(f'item_{i}_style_words_content_flag_unanswered:' + '+'.join(extra))
             b = beats.get(str(s.get('beat_id'))) or {}
             out['direction']['items'].append({'shot_id': str(s.get('id')), 'beat_id': str(s.get('beat_id')),
                                               'new_thing': s.get('new_thing'), 'visual_intent': b.get('visual_intent'),
@@ -2015,10 +2350,11 @@ def shot_facts(rd, video):
     prompts are nearly the same, and long runs of one composition family."""
     n = int(video)
     plan = read_json(rd / '60-visuals' / f'video-{n:02d}' / 'shot-plan.json')
-    out = {'ready': False, 'issues': [], 'warnings': [], 'shots': 0}
+    out = {'ready': False, 'issues': [], 'warnings': [], 'shots': 0, 'content_flags': []}
     if not plan:
         out['issues'].append('shot_plan_missing')
         return out
+    themes = excluded_themes(rd, n)
     beat_rows = read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or []
     beats = [str(b.get('id')) for b in beat_rows]
     spans = {}
@@ -2044,6 +2380,12 @@ def shot_facts(rd, video):
             out['issues'].append(f'shot_{sid}_reuses_no_earlier_shot')   # a callback shows an earlier shot's still
         elif n_words(s.get('frame_prompt') or s.get('prompt')) < 8 and not s.get('reuses'):
             out['issues'].append(f'shot_{sid}_missing_frame_prompt')
+        if not s.get('reuses'):
+            kinds = prompt_flags(s.get('frame_prompt') or s.get('prompt'), themes)
+            if kinds:
+                out['content_flags'].append({'shot': sid, 'kinds': kinds, 'answered': n_words(s.get('content_note')) >= 6})
+                if n_words(s.get('content_note')) < 6:
+                    out['issues'].append(f'shot_{sid}_prompt_content_flag_unanswered:' + '+'.join(kinds))
         earlier.add(str(sid))
         a = order.index(str(s.get('line_start'))) + 1 if str(s.get('line_start')) in order else None
         b = order.index(str(s.get('line_end'))) + 1 if str(s.get('line_end')) in order else None
@@ -2357,7 +2699,7 @@ def plan_facts(rd, video):
     holds = round(sum(p['pause_after_s'] for p in pause_plan if p['via'] == 'edit'), 2)
     review = vd / 'editorial-review.md'
     review_text = review.read_text(encoding='utf-8', errors='replace') if review.exists() else ''
-    flags, flag_issues = content_flags(lines, review_text)
+    flags, flag_issues = content_flags(lines, review_text, excluded_themes(rd, video))
     issues += flag_issues
     # Every kept tag says why this moment needs it, under "Delivery and tags" (03, 05): selective, not decorative.
     explained = delivery_review_lines(review_text)
@@ -4441,6 +4783,20 @@ def timeline_facts(rd, video):
             cursor = b
         except (KeyError, TypeError, ValueError):
             issues.append(f'bad_visual_segment_{i}')
+    looks = read_json(picture_looks_path(rd, n)).get('looks') or {}
+    unlooked, flagged = [], []
+    for f in dict.fromkeys(_run_file(rd, c.get('asset_path')) for c in seq
+                           if isinstance(c, dict) and str(c.get('asset_path') or '').strip()):
+        rec = looks.get(_pkey(f))
+        if not rec or not f.is_file() or rec.get('sha256') != file_sha256(f):
+            unlooked.append(f.name)
+        elif rec.get('result') != 'clean':
+            flagged.append(f.name)
+    if unlooked:
+        issues.append(f'pictures_not_content_checked:{len(unlooked)}:' + ','.join(unlooked[:10])
+                      + ('...' if len(unlooked) > 10 else ''))
+    if flagged:
+        issues.append(f'pictures_with_a_content_issue:{len(flagged)}:' + ','.join(flagged[:10]))
     if seq:
         for sid, s in plan_shots.items():
             if sid not in seen:
@@ -5878,8 +6234,19 @@ def cmd_media_check(args):
 
 HOUSE_RULES = ('House rules the video must keep (never suggest breaking them; flag any line or picture that comes '
                'close): no holiday, religious or superstitious scene used as a story device; nothing gory (no blood, '
-               'wounds, bodies or injuries shown or described); no extreme distress; no swearing; nothing indecent; '
-               'every person an adult.')
+               'wounds, bodies or injuries shown, or described in their physical detail; saying plainly that people '
+               'were hurt or died is fine); no extreme distress; no swearing; nothing indecent; every person an adult.')
+
+
+def house_rules(rd, video):
+    """HOUSE_RULES, plus the themes this video's reference material was cut for (its content reviews)."""
+    themes = excluded_themes(rd, video)
+    if not themes:
+        return HOUSE_RULES
+    return HOUSE_RULES + (' Parts of the reference material were left out on purpose; nothing in this video may bring '
+                          'them back, in other words or other pictures either: ' +
+                          '; '.join(f'{th["what"]} ({"a content-safety exclusion" if th["kind"] == "safety" else "a creative exclusion"})'
+                                    for th in themes) + '.')
 
 SCRIPT_BRIEF = """# Cold read: {TITLE}
 
@@ -6037,7 +6404,7 @@ def cmd_review_packet(args):
         lines = script.get('lines') or []
         snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
         holds = hold_snapshot(lines)
-        text = _fill(SCRIPT_BRIEF, TITLE=title, MINUTES=minutes, HOUSE_RULES=HOUSE_RULES, OUT=out_path)
+        text = _fill(SCRIPT_BRIEF, TITLE=title, MINUTES=minutes, HOUSE_RULES=house_rules(rd, n), OUT=out_path)
         held = sum(v[0] for v in holds.values() if v[1] == 'edit')
         refs_pp = [p for p in (lock.get('reference_pause_profiles') or {}).values() if p]
         longest = max((p.get('longest_pause_s') or 0 for p in refs_pp), default=0)
@@ -6065,7 +6432,7 @@ def cmd_review_packet(args):
         chosen = apps.get(str((d.get('chosen_approach') or {}).get('id'))) or {}
         premise = ' '.join(x for x in (str(blue.get('audience_promise') or ''), str(chosen.get('pitch') or '')) if x)
         text = _fill(TREATMENT_BRIEF, K=len(trs), PREMISE=premise or '(see the samples)', MINUTES=minutes,
-                     HOUSE_RULES=HOUSE_RULES, OUT=out_path)
+                     HOUSE_RULES=house_rules(rd, n), OUT=out_path)
         for lab, tid in labels.items():
             t = trs[tid]
             text += f'\n## Treatment {lab}\n'
@@ -6093,7 +6460,7 @@ def cmd_review_packet(args):
             b = str(s.get('beat_id'))
             lo, hi = spans.get(b, (s['start_s'], s['end_s']))
             spans[b] = (min(lo, s['start_s']), max(hi, s['end_s']))
-        text = _fill(FINAL_BRIEF, TITLE=title, HOUSE_RULES=HOUSE_RULES, OUT=out_path)
+        text = _fill(FINAL_BRIEF, TITLE=title, HOUSE_RULES=house_rules(rd, n), OUT=out_path)
         text += '\n## What each part was meant to feel like\n'
         for b in beats:
             a_s, b_s = spans.get(str(b.get('id')), (b.get('start_s'), b.get('end_s')))
@@ -6279,9 +6646,19 @@ def cmd_release_check(args):
     issues = list(dict.fromkeys(issues))
     warnings = list(dict.fromkeys(plan.get('warnings', []) + shots.get('warnings', []) + edit.get('warnings', []) +
                                   fin['warnings']))
+    looks = read_json(picture_looks_path(rd, n)).get('looks') or {}
+    shown = {_pkey(_run_file(rd, c.get('asset_path'))) for c in
+             read_json(rd / '70-edit' / f'video-{n:02d}' / 'timeline.json').get('visual_segments') or []
+             if isinstance(c, dict) and c.get('asset_path')}
+    content = {'pictures_shown': len(shown), 'pictures_looked_at_clean': sum(1 for k in shown if (looks.get(k) or {}).get('result') == 'clean'),
+               'excluded_reference_themes_in_force': len(excluded_themes(rd, n)),
+               'what_was_seen': 'every picture the timeline shows was looked at whole (content-looks); the export '
+                                'itself only through its watch sheets (a frame every 5 s) by the final reviewer, so '
+                                'drawn overlays and captions are checked by the timeline and caption checks, not '
+                                'frame by frame'}
     emit({'ready': not issues, 'release_status': 'ready' if not issues else 'blocked', 'issues': issues,
           'warnings': warnings, 'export': {k: exp[k] for k in ('file', 'metadata', 'target_s', 'difference_s')},
-          'final_review_rounds': fin['rounds'],
+          'final_review_rounds': fin['rounds'], 'content': content,
           'note': 'Ready means every recorded gate passed for this exact file. It does not say the video is good: '
                   'that is the director\'s and the reviewers\' judgement, recorded in their files.'},
          0 if not issues else 2)
@@ -6509,6 +6886,12 @@ def main():
     p = sub.add_parser('export-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--file', required=True); p.add_argument('--deep', action='store_true'); p.set_defaults(func=cmd_export_check)
     p = sub.add_parser('status'); p.add_argument('--run', required=True); p.set_defaults(func=cmd_status)
+    p = sub.add_parser('content-review', help='The content record: a reference\'s review (--ref --file; --signals '
+                       'for where to look), the look at every picture of an edit (--video --pictures --file), --status')
+    p.add_argument('--run', required=True); p.add_argument('--ref'); p.add_argument('--file')
+    p.add_argument('--signals', action='store_true'); p.add_argument('--status', action='store_true')
+    p.add_argument('--video', type=int); p.add_argument('--pictures', action='store_true')
+    p.set_defaults(func=cmd_content_review)
     p = sub.add_parser('inspect-window', help='A closer look at a brief stretch of a reference or video: a higher rate '
                        'or every frame, each at its own time, with the words and one contact sheet')
     p.add_argument('--run', required=True); p.add_argument('--ref'); p.add_argument('--file')

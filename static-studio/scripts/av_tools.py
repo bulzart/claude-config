@@ -686,8 +686,9 @@ def window_sheet(frames, out_path, title, words=()):
     return str(out_path)
 
 
-def render_sheets(feats, words, wins, out_dir, label, duration):
-    """One JPEG per minute: a frame every SHEET_STEP_S seconds with the words spoken during those seconds."""
+def render_sheets(feats, words, wins, out_dir, label, duration, tiles=None):
+    """One JPEG per minute: a frame every SHEET_STEP_S seconds with the words spoken during those seconds. tiles, when
+    a list, gets each tile's step start and the time of the frame it shows."""
     from PIL import Image, ImageDraw
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -729,6 +730,8 @@ def render_sheets(feats, words, wins, out_dir, label, duration):
             if times:
                 i = min(len(times) - 1, max(0, bisect.bisect_left(times, t + SHEET_STEP_S / 2) - 1))
                 shown = times[i]
+                if tiles is not None:
+                    tiles.append({'step_s': _r(t, 3), 'frame_s': _r(shown, 4)})
                 try:
                     im = Image.open(feats[i]['path']).convert('RGB')
                     im.thumbnail((TILE_W - 4, TILE_H - 4))
@@ -772,9 +775,10 @@ def profile(label, duration, frames=None, wav=None, words=None, sheets_dir=None,
     summ = summarize(duration, words, audio, shots, kinds, wins, segments)
     if summ.get('picture') is not None:
         summ['picture']['sampled_fps'] = fps
-    sheets = render_sheets(feats, words, wins, sheets_dir, label, duration) if (sheets_dir and feats) else []
+    tiles = []
+    sheets = render_sheets(feats, words, wins, sheets_dir, label, duration, tiles) if (sheets_dir and feats) else []
     return {'label': label, 'method': METHOD_VERSION, 'duration_s': _r(duration), 'sampled_fps': fps if feats else None,
-            'summary': summ, 'windows': wins, 'shots': shots, 'sheets': sheets,
+            'summary': summ, 'windows': wins, 'shots': shots, 'sheets': sheets, 'sheet_tiles': tiles,
             'inspect_candidates': inspect_candidates(feats, kinds, shots) if feats else [],
             'sampler': sampler if feats else None,
             'thresholds': thresholds(fps if feats else None),

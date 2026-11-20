@@ -19,6 +19,12 @@ viewer seeing *while* they hear this sentence?
 Profile the comparable references (the length lock's) and any reference whose craft you want to learn from, in any
 niche. A technique from an unrelated niche can be exactly what this story needs; its pacing usually is not.
 
+Every reference the direction cites has its content review (01), and no observation sits inside material it
+excluded (`direction_cites_excluded_material`); a restricted segment lends how it is told, never what it shows. A
+reference whose story depends on excluded material (`too_dependent`) still teaches its craft; never its story. When
+leaving material out takes away something the story needed, invent the bridge: a different, original way to do that
+narrative work, never the same device renamed and never filler.
+
 For each reference, answer with timestamps:
 
 - **The viewer's state, minute by minute.** Curious, amused, tense, moved, oriented, lost, bored? Where does the

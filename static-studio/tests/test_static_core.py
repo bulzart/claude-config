@@ -10,6 +10,7 @@ from unittest import mock
 from pathlib import Path
 import subprocess
 import sys
+import shutil
 import tempfile
 import time
 import unittest
@@ -65,12 +66,14 @@ class StaticStudioTests(unittest.TestCase):
         index=self.run/'10-media/V001/frame-index.json'
         self.assertTrue(index.is_file())
         data=json.loads(index.read_text())
-        self.assertEqual(data['mode'],'nominal_sample_time')
+        self.assertEqual(data['mode'],'source_pts')
         self.assertGreaterEqual(len(data['frames']),2)
         self.assertEqual(data['frames'][0]['approx_s'],0.0)
-        # one frame a second, on the same clock as the transcript: slots 0, 1, 2 s, each exact to half a second
-        self.assertEqual((data['fps'],data['interval_s'],data['tolerance_s']),(1.0,1.0,0.5))
-        self.assertEqual([f['approx_s'] for f in data['frames']],[0.0,1.0,2.0])
+        # two frames a second, each the first real frame of its half second, with its own time: a 5 fps clip has
+        # frames every 0.2 s, so the samples are at 0, 0.6, 1.0, 1.6, 2.0 s (never the nominal 0.5, 1.5)
+        self.assertEqual((data['fps'],data['interval_s'],data['sampler']),(2.0,0.5,'pts-v1'))
+        self.assertEqual([f['t_s'] for f in data['frames']],[0.0,0.6,1.0,1.6,2.0])
+        self.assertEqual([f['slot_s'] for f in data['frames']],[0.0,0.5,1.0,1.5,2.0])
         self.assertTrue((self.run/'10-media/V001/sampled-frames'/data['frames'][0]['file']).exists())
         job=self.home/'image-job.json'
         save(job,{'model':'gpt-image-2.5-flare','size':'1536x864','quality':'high',
@@ -110,7 +113,28 @@ class StaticStudioTests(unittest.TestCase):
         cli('prepare','--run',self.run,'--ids','V001,V002','--skip-whisper')
         out=cli('av-profile','--run',self.run,'--refs','V001,V002','--no-sheets')
         self.assertTrue((self.run/'20-analysis/av/V001.json').is_file())
+        for v in ('V001','V002'):
+            self.content_review(v,[])
         return out
+
+    def content_review(self, ref, segments, expected=0, **extra):
+        doc={'looked_at':'every sampled frame and the whole soundtrack, start to end','segments':segments,
+             'usable':'the pacing, the holds and the map transitions',**extra}
+        rp=self.home/f'review-{ref}.json'; save(rp,doc)
+        return cli('content-review','--run',self.run,'--ref',ref,'--file',rp,expected=expected)
+
+    def add_ref(self, vid, path, duration, audio, fps=30):
+        invp=self.run/'00-inventory/references.json'; inv=json.loads(invp.read_text())
+        inv['items'].append({'id':vid,'relative_path':Path(path).name,'kind':'video','source_path':str(path),
+                             'fingerprint':vid+'-test','duration_s':duration,'has_video':True,'has_audio':audio,'fps':fps})
+        save(invp,inv)
+
+    @staticmethod
+    def colour(path):
+        from PIL import Image
+        r,g,b=Image.open(path).convert('RGB').getpixel((32,18))
+        return ('red' if r>150 and g<100 and b<100 else 'blue' if b>150 and r<100 and g<100 else
+                'green' if g>90 and r<100 and b<100 else 'white' if min(r,g,b)>200 else '?')
 
     @staticmethod
     def direction_doc():
@@ -679,6 +703,11 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(core.stills_facts(self.run,1)['issues'],[])
         self.assertEqual(cli('direction-lock','--run',self.run,'--video',1)['unchanged'],True)   # nothing new: nothing to do
 
+    def look_at_pictures(self, files, result='clean', expected=0, **extra):
+        lp=self.home/'looks.json'
+        save(lp,{'looks':[{'file':str(f),'result':result,'note':'a ridge road in snow at dawn, nobody hurt',**extra} for f in files]})
+        return cli('content-review','--run',self.run,'--video',1,'--pictures','--file',lp,expected=expected)
+
     def test_edit_follows_the_retimed_shots_and_beats(self):
         vd,d,_=self.narrated()
         subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(d/'part-001.mp3'),str(d/'narration.wav')],check=True)
@@ -715,6 +744,17 @@ class StaticStudioTests(unittest.TestCase):
             return res,[x for x in res['issues'] if x.startswith(('visual_','shot_','edit_plan','audio_track','stills_'))]
         res,found=trace()
         self.assertEqual(found,['audio_track_2_music_without_provenance'])   # every cut traced; the bed is not
+        # Every picture CapCut shows is looked at whole before the edit passes; a look holds for that exact file.
+        self.assertIn('pictures_not_content_checked:2:S1.png,S2.png',res['issues'])
+        bad=self.look_at_pictures([stills/'S1.png'],result='issue',expected=2)            # an issue names its category
+        self.assertTrue(any('needs_its_category' in x for x in bad['details']))
+        self.look_at_pictures([stills/'S1.png',stills/'S2.png'])
+        self.assertFalse([x for x in trace()[0]['issues'] if x.startswith('pictures_')])
+        self.look_at_pictures([stills/'S2.png'],result='issue',category='graphic_injury')
+        self.assertIn('pictures_with_a_content_issue:1:S2.png',trace()[0]['issues'])
+        (stills/'S2.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'1'*2048)                  # remade: looked at again
+        self.assertIn('pictures_not_content_checked:1:S2.png',trace()[0]['issues'])
+        self.look_at_pictures([stills/'S2.png'])
         # The bed made through the gate for the beat it scores; the gate hands the agent that beat's sound direction.
         mjob={'op':'generate','run':str(self.run),'video':1,'tracks':[{'video':1,'beats':['B01'],'duration':5,
               'caption':'a low warm drone that thins out','out':str(self.home/'bed.wav')}]}
@@ -1466,74 +1506,266 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(out['credits_billed_this_trial'],sum(round(len(x['sent']['text'])*0.4) for x in rep['runs'].values()))
         self.assertEqual(out['budget_status']['spent'],out['credits_billed_this_trial'])
 
-    def test_references_are_analysed_at_one_frame_per_second(self):
+    def test_references_are_analysed_at_two_frames_per_second(self):
         core=self.load_core()
         st=json.loads((self.run/'state.json').read_text())
-        self.assertEqual((st['analysis_fps'],st['format']['fps']),(1.0,30))          # analysis 1 fps; the video stays 30
-        # Synchronisation: a clip red until 2.5 s, blue until 4.7 s, then green. Each 1 fps frame shows the picture of
-        # its slot to within half a second, on the same clock as the transcript's word times.
+        self.assertEqual((st['analysis_fps'],st['analysis_sampler'],st['format']['fps']),(2.0,'pts-v1',30))  # the video stays 30
+        # Red until 2.5 s, blue until 4.7 s, then green (30 fps): every sample shows exactly the picture of its own time.
         src=self.home/'sync.mp4'
         subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=red:s=64x36:r=30:d=2.5',
                         '-f','lavfi','-i','color=c=blue:s=64x36:r=30:d=2.2','-f','lavfi','-i','color=c=green:s=64x36:r=30:d=1.3',
                         '-filter_complex','[0:v][1:v][2:v]concat=n=3:v=1:a=0','-pix_fmt','yuv420p',str(src)],check=True)
-        invp=self.run/'00-inventory/references.json'; inv=json.loads(invp.read_text())
-        inv['items'].append({'id':'V004','relative_path':'sync.mp4','kind':'video','source_path':str(src),
-                             'fingerprint':'sync-test','duration_s':6.0,'has_video':True,'has_audio':False})
-        save(invp,inv)
+        self.add_ref('V004',src,6.0,False)
         self.assertTrue(cli('prepare','--run',self.run,'--ids','V004','--skip-whisper')['ok'])
-        fi=json.loads((self.run/'10-media/V004/frame-index.json').read_text())
-        from PIL import Image
-        def colour(name):
-            r,g,b=Image.open(self.run/'10-media/V004/sampled-frames'/name).convert('RGB').getpixel((32,18))
-            return 'red' if r>150 and g<100 else 'blue' if b>150 and r<100 else 'green'
-        def truth(t):
-            return 'red' if t<2.5 else 'blue' if t<4.7 else 'green'
-        seen=[(f['approx_s'],colour(f['file'])) for f in fi['frames']]
-        self.assertEqual([s for s,_ in seen],[0.0,1.0,2.0,3.0,4.0,5.0])
-        for s,c in seen:
-            self.assertIn(c,{truth(max(0,s-fi['tolerance_s'])),truth(s),truth(s+fi['tolerance_s']-1e-6)})
-        # One rate per run: another rate is refused, nothing re-sampled.
-        before=sorted((self.run/'10-media/V004/sampled-frames').glob('*.jpg'))
+        media=self.run/'10-media/V004'
+        fi=json.loads((media/'frame-index.json').read_text())
+        self.assertEqual([f['t_s'] for f in fi['frames']],[0.0,0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5])
+        truth=lambda s:'red' if s<2.5-1e-6 else 'blue' if s<4.7-1e-6 else 'green'
+        for f in fi['frames']:
+            self.assertEqual(self.colour(media/'sampled-frames'/f['file']),truth(f['t_s']),f)
+        # A variable frame rate (10, 24 then 7 fps) and a picture starting 0.37 s after the sound: each frame keeps
+        # its own source time (nothing is inferred from frame numbers), and its time on the transcript's clock is
+        # that time minus the audio's start, the clock every word time uses.
+        vfr=self.home/'vfr.mp4'; mixed=self.home/'vfr-offset.mp4'
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=red:s=64x36:r=10:d=1.3',
+                        '-f','lavfi','-i','color=c=blue:s=64x36:r=24:d=1.1','-f','lavfi','-i','color=c=green:s=64x36:r=7:d=1.6',
+                        '-filter_complex','[0:v][1:v][2:v]concat=n=3:v=1:a=0','-fps_mode','vfr','-pix_fmt','yuv420p',str(vfr)],check=True)
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','sine=frequency=440:sample_rate=16000:d=4.5',
+                        '-itsoffset','0.37','-i',str(vfr),'-map','1:v','-map','0:a','-c:v','copy','-c:a','aac',str(mixed)],check=True)
+        starts=dict(x.split(',') for x in subprocess.run(['ffprobe','-v','error','-show_entries','stream=codec_type,start_time',
+                    '-of','csv=p=0',str(mixed)],capture_output=True,text=True).stdout.split())
+        v0,a0=float(starts['video']),float(starts['audio'])
+        self.assertAlmostEqual(v0-a0,0.37,places=2)
+        self.add_ref('V005',mixed,4.5,True)
+        self.assertTrue(cli('prepare','--run',self.run,'--ids','V005','--skip-whisper')['ok'])
+        fi=json.loads((self.run/'10-media/V005/frame-index.json').read_text())
+        self.assertAlmostEqual(fi['clock_origin_s'],a0,places=3)
+        blue0,green0=v0+1.3,v0+1.3+27/24          # the 24 fps part holds 27 frames (1.125 s)
+        for f in fi['frames']:
+            self.assertAlmostEqual(f['t_s'],f['pts_s']-a0,places=3)
+            want='red' if f['pts_s']<blue0-1e-3 else 'blue' if f['pts_s']<green0-1e-3 else 'green'
+            self.assertEqual(self.colour(self.run/'10-media/V005/sampled-frames'/f['file']),want,f)
+            rate,start={'red':(10,v0),'blue':(24,blue0),'green':(7,green0)}[want]
+            self.assertAlmostEqual((f['pts_s']-start)*rate,round((f['pts_s']-start)*rate),delta=0.02)   # a real frame's time
+        self.assertAlmostEqual(fi['frames'][0]['t_s'],0.37,delta=0.01)
+        # One rate per run: another rate is refused and nothing is re-sampled.
+        before=sorted((media/'sampled-frames').glob('*.jpg'))
         self.assertIn('Clone the run',cli('prepare','--run',self.run,'--ids','V004','--fps',5,'--skip-whisper',expected=2)['error'])
-        self.assertEqual(sorted((self.run/'10-media/V004/sampled-frames').glob('*.jpg')),before)
-        # The frames and the transcript are cached apart: a new frame size re-makes the frames, never the transcript;
-        # an older manifest (one key for both) is still honoured.
-        inv=json.loads(invp.read_text())
+        self.assertEqual(sorted((media/'sampled-frames').glob('*.jpg')),before)
+        # The frames and the transcript are cached apart: new frames never re-run Whisper. Frames made the older way
+        # (one key for both, nominal slots) are not reused by a 2 fps run; the transcript still is.
+        invp=self.run/'00-inventory/references.json'; inv=json.loads(invp.read_text())
         next(x for x in inv['items'] if x['id']=='V004')['has_audio']=True
         save(invp,inv)
         calls=[]
         def fake_transcribe(path,outpath,*a):
-            calls.append(str(path))
+            calls.append(a)
             save(Path(outpath),{'status':'transcribed','model':'medium','segments':[]})
             Path(outpath).with_suffix('.txt').write_text('',encoding='utf-8')
             return 0
+        stamp=lambda:[(f.name,f.stat().st_mtime_ns) for f in sorted((media/'sampled-frames').glob('*.jpg'))]
         with mock.patch.object(core,'transcribe',side_effect=fake_transcribe):
             self.assertEqual(self.core_call(core,'prepare','--run',self.run,'--ids','V004')[0],0)
-            self.assertEqual(len(calls),1)
+            self.assertEqual(calls,[('medium','cuda','float16')])                       # Whisper medium, on the GPU
+            self.assertEqual(self.core_call(core,'prepare','--run',self.run,'--ids','V004')[0],0)
+            self.assertEqual(len(calls),1)                                             # resumed: nothing heard again
             code,out=self.core_call(core,'prepare','--run',self.run,'--ids','V004','--width',480)
             self.assertEqual((code,len(calls)),(0,1))                                 # frames re-made, Whisper not re-run
-            man=json.loads((self.run/'10-media/V004/preparation.json').read_text())
-            self.assertEqual(man['frames_signature']['width'],480)
-            old={'id':'V004','signature':{**man['frames_signature'],'whisper_model':'medium'}}
-            save(self.run/'10-media/V004/preparation.json',old)                      # the older, single-key manifest
-            stamp=[(f.name,f.stat().st_mtime_ns) for f in sorted((self.run/'10-media/V004/sampled-frames').glob('*.jpg'))]
+            man=json.loads((media/'preparation.json').read_text())
+            self.assertEqual((man['frames_signature']['width'],man['frames_signature']['sampler']),(480,'pts-v1'))
+            save(media/'preparation.json',{'id':'V004','signature':{'fingerprint':'V004-test','fps':2.0,'width':480,
+                                                                     'whisper_model':'medium'}})   # an older manifest
+            old=stamp()
+            time.sleep(0.05)
             self.assertEqual(self.core_call(core,'prepare','--run',self.run,'--ids','V004','--width',480)[0],0)
             self.assertEqual(len(calls),1)
-            self.assertEqual([(f.name,f.stat().st_mtime_ns) for f in sorted((self.run/'10-media/V004/sampled-frames').glob('*.jpg'))],stamp)
-        # av-profile records the rate its frames were sampled at, and keys its cache by it.
-        out=cli('av-profile','--run',self.run,'--refs','V004','--no-sheets')
+            self.assertNotEqual(stamp(),old)                                          # nominal frames: made again
+        # av-profile records how its frames were taken, keys its cache by it, and its watch sheets show each frame
+        # at its own time (the tile's frame is the last one before the middle of its five seconds).
+        cli('av-profile','--run',self.run,'--refs','V004')
         prof=json.loads((self.run/'20-analysis/av/V004.json').read_text())
-        self.assertEqual((prof['sampled_fps'],prof['signature']['fps'],prof['thresholds']['transition_max_frame_pairs']),(1.0,1.0,2))
-        self.assertTrue(any('1 fps' in u for u in prof['unknowns']))
-        # A run analysed at 5 fps before this change keeps its rate (its frames, profiles and export compare alike).
-        st=json.loads((self.run/'state.json').read_text()); st['analysis_fps']=5.0
-        save(self.run/'state.json',st)
-        self.assertEqual(cli('prepare','--run',self.run,'--ids','V004','--dry-run')['fps'],5.0)
-        del st['analysis_fps']; save(self.run/'state.json',st)                       # older still: no rate recorded
-        self.assertEqual(cli('prepare','--run',self.run,'--ids','V004','--dry-run')['fps'],5.0)
-        # A clone prepares its references again, at the current rate.
+        self.assertEqual((prof['sampled_fps'],prof['sampler'],prof['signature']['fps'],prof['signature']['sampler'],
+                          prof['thresholds']['transition_max_frame_pairs']),(2.0,'pts-v1',2.0,'pts-v1',3))
+        self.assertTrue(any('2 fps' in u and 'exact timestamp' in u for u in prof['unknowns']))
+        self.assertIn('inspect_candidates',prof)
+        times=[f['t_s'] for f in json.loads((media/'frame-index.json').read_text())['frames']]
+        self.assertEqual([x['step_s'] for x in prof['sheet_tiles']],[0.0,5.0])
+        for x in prof['sheet_tiles']:
+            self.assertIn(x['frame_s'],times)
+            self.assertEqual(x['frame_s'],max(s for s in times if s<x['step_s']+2.5))
+        # A run analysed before these settings keeps its 5 fps and its nominal slots (its frames, profiles and export
+        # compare alike); its older manifests are honoured, nothing re-sampled.
+        st=json.loads((self.run/'state.json').read_text())
+        del st['analysis_fps'], st['analysis_sampler']; save(self.run/'state.json',st)
+        dry=cli('prepare','--run',self.run,'--ids','V004','--dry-run')
+        self.assertEqual((dry['fps'],dry['sampler']),(5.0,'nominal'))
+        cli('prepare','--run',self.run,'--ids','V001','--skip-whisper')
+        self.assertEqual(json.loads((self.run/'10-media/V001/frame-index.json').read_text())['mode'],'nominal_sample_time')
+        frames_v1=lambda:[(f.name,f.stat().st_mtime_ns) for f in sorted((self.run/'10-media/V001/sampled-frames').glob('*.jpg'))]
+        save(self.run/'10-media/V001/preparation.json',{'id':'V001','signature':{'fingerprint':json.loads(
+            (self.run/'10-media/V001/preparation.json').read_text())['frames_signature']['fingerprint'],
+            'fps':5.0,'width':960,'whisper_model':'medium'}})
+        kept=frames_v1(); time.sleep(0.05)
+        cli('prepare','--run',self.run,'--ids','V001','--skip-whisper')
+        self.assertEqual(frames_v1(),kept)
+        st['analysis_fps'],st['analysis_sampler']=2.0,'pts-v1'; save(self.run/'state.json',st)
+        # A clone prepares its references again at the current rate, and keeps the content reviews (source times)
+        # with the records of their closer looks, never a closer look's frames.
+        self.content_review('V004',[])
+        cli('inspect-window','--run',self.run,'--ref','V004','--from','2.3','--to','2.7','--why','the cut')
         clone=Path(cli('clone','--from-run',self.run,'--workspace',self.home/'runs')['run'])
-        self.assertEqual(json.loads((clone/'state.json').read_text())['analysis_fps'],1.0)
+        cst=json.loads((clone/'state.json').read_text())
+        self.assertEqual((cst['analysis_fps'],cst['analysis_sampler']),(2.0,'pts-v1'))
+        self.assertTrue((clone/'20-analysis/content/V004.json').is_file())
+        self.assertEqual(len(list((clone/'20-analysis/inspect').rglob('index.json'))),1)
+        self.assertEqual(list((clone/'20-analysis/inspect').rglob('*.jpg')),[])
+
+    def test_a_closer_look_finds_what_the_samples_miss(self):
+        # A white flash from 3.1 to 3.3 s in a red clip: the 2 fps samples (3.0, 3.5) never see it.
+        src=self.home/'flash.mp4'
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=red:s=64x36:r=30:d=3.1',
+                        '-f','lavfi','-i','color=c=white:s=64x36:r=30:d=0.2','-f','lavfi','-i','color=c=red:s=64x36:r=30:d=2.7',
+                        '-filter_complex','[0:v][1:v][2:v]concat=n=3:v=1:a=0','-pix_fmt','yuv420p',str(src)],check=True)
+        self.add_ref('V006',src,6.0,False)
+        cli('prepare','--run',self.run,'--ids','V006','--skip-whisper')
+        media=self.run/'10-media/V006'
+        fi=json.loads((media/'frame-index.json').read_text())
+        self.assertNotIn('white',[self.colour(media/'sampled-frames'/f['file']) for f in fi['frames']])
+        # A closer look at that stretch only: 10 fps, each frame at its own time, with a contact sheet.
+        out=cli('inspect-window','--run',self.run,'--ref','V006','--from','00:02.9','--to','00:03.5','--why','a flash between samples')
+        idx=json.loads((Path(out['window'])/'index.json').read_text())
+        seen=[(f['t_s'],self.colour(Path(out['window'])/'frames'/f['file'])) for f in idx['frames']]
+        self.assertEqual([s for s,_ in seen],[2.9,3.0,3.1,3.2,3.3,3.4,3.5])
+        self.assertEqual([s for s,c in seen if c=='white'],[3.1,3.2])
+        self.assertTrue(Path(out['sheet']).is_file())
+        self.assertEqual((idx['rate'],idx['why']),(10.0,'a flash between samples'))
+        # Every frame of the stretch (--native): the flash is exactly 3.1 to 3.3 s.
+        nat=cli('inspect-window','--run',self.run,'--ref','V006','--from','3.05','--to','3.35','--native')
+        whites=[f['t_s'] for f in json.loads((Path(nat['window'])/'index.json').read_text())['frames']
+                if self.colour(Path(nat['window'])/'frames'/f['file'])=='white']
+        self.assertEqual((min(whites),len(whites)),(3.1,6))
+        # A closer look is for a brief stretch, never a whole video at a higher rate.
+        self.assertIn('brief stretch',cli('inspect-window','--run',self.run,'--ref','V006','--from','0','--to','60',
+                                          '--fps',10,expected=2)['error'])
+        # After a look at disturbing material, its frames go; the record that the look was taken stays.
+        gone=cli('inspect-window','--run',self.run,'--ref','V006','--from','00:02.9','--to','00:03.5','--remove')
+        self.assertEqual(list((Path(out['window'])/'frames').glob('*.jpg')),[])
+        self.assertIn('frames_removed_at',json.loads(Path(gone['record_kept']).read_text()))
+
+    def test_content_review_keeps_safety_and_creative_exclusions_apart(self):
+        cli('prepare','--run',self.run,'--ids','V001','--skip-whisper')
+        def seg(sid, kind, cat, action, **kw):
+            return {'id':sid,'from':'00:01','to':'00:02','kind':kind,'category':cat,'action':action,
+                    'what':'a short neutral description of the moment','role':'it sets up the next scene',
+                    'evidence':'frames and words at this time','confidence':'sure',**kw}
+        why='the fact is said plainly and nothing is shown'
+        bad=lambda *s:self.content_review('V001',list(s),expected=2)['details']
+        # Religious, superstitious or holiday material is the user's creative exclusion, never a safety matter.
+        self.assertTrue(any('not_a_safety_category' in x for x in bad(seg('S1','safety','religious','exclude',severity='low',avoid=['the ritual']))))
+        self.assertTrue(any('severity_is_for_safety_only' in x for x in bad(seg('S1','religion_superstition','superstition','exclude',severity='high',avoid=['the omen']))))
+        self.assertTrue(any('action_must_be' in x for x in bad(seg('S1','holiday','holiday','restrict_visuals',why=why))))
+        # The hard lines of safety: anything sexual with minors is always excluded; a high-severity segment is never kept.
+        self.assertTrue(any('minors_is_always_excluded' in x for x in bad(seg('S1','safety','minors','restrict_visuals',severity='high',why=why))))
+        self.assertTrue(any('high_severity_cannot_be_kept' in x for x in bad(seg('S1','safety','graphic_injury','keep',severity='high',why=why))))
+        self.assertTrue(any('exclude_must_name_what_to_avoid' in x for x in bad(seg('S1','safety','graphic_injury','exclude',severity='high'))))
+        # Not sure, and still to be used: a closer look first.
+        unsure=seg('S1','safety','graphic_injury','restrict_visuals',severity='medium',confidence='unsure',why=why)
+        self.assertTrue(any('needs_a_closer_look' in x for x in bad(unsure)))
+        cli('inspect-window','--run',self.run,'--ref','V001','--from','00:01','--to','00:01.8','--why','is the injury shown?')
+        # Legitimate storytelling stays usable: a battle told with its casualties, and a death explained, are kept as
+        # they are (looked at, not graphic); fictional violence kept off screen keeps its subject with its visuals
+        # restricted; a religious device and a holiday scene are excluded with what depends on them.
+        good=[unsure,
+              seg('S2','safety','distressing','keep',severity='low',why='casualty figures stated plainly over a map, nothing shown'),
+              seg('S3','safety','graphic_injury','restrict_visuals',severity='high',why='the fight is told, the wound never shown'),
+              seg('S4','religion_superstition','superstition','exclude',avoid=['omen','crows foretelling death'],
+                  depends=[{'from':'00:05','to':'00:06','why':'the payoff recalls the omen'}]),
+              seg('S5','holiday','holiday','exclude',avoid=['christmas truce'])]
+        out=self.content_review('V001',good,story_without_exclusions={'status':'bridged','note':'the dread comes from the weather and the silence instead'})
+        self.assertEqual((out['excluded'],out['restricted'],out['kinds']),(2,2,{'safety':3,'religion_superstition':1,'holiday':1}))
+        saved=json.loads((self.run/'20-analysis/content/V001.json').read_text())
+        self.assertEqual((saved['frames_seen']['sampler'],len(saved['closer_looks'])),('pts-v1',1))
+        # An excluded segment needs a word on whether the story still holds without it.
+        self.assertIn('story_without_exclusions_needs_status_(coherent/bridged/too_dependent)_and_a_note',bad(*good))
+        st=cli('content-review','--run',self.run,'--status')
+        self.assertEqual(st['by_reference']['V001']['religion_superstition'],1)
+        self.assertEqual(st['by_reference']['V002'],'not reviewed')
+        # Where to look first: gathered pointers, never verdicts.
+        sig=cli('content-review','--run',self.run,'--ref','V001','--signals')
+        self.assertEqual((sig['frames']['sampler'],len(sig['closer_looks_taken'])),('pts-v1',1))
+        self.assertIn('not verdicts',sig['note'])
+
+    def test_excluded_material_stays_out_of_what_is_made(self):
+        vd=self.write_plan(lock=False)
+        # V001: a superstitious device at 04:50-05:10 with its payoff at 06:10-06:30, excluded; V002: a graphic moment
+        # at 02:00-02:20 whose subject may be told but never shown.
+        cli('prepare','--run',self.run,'--ids','V001,V002','--skip-whisper')
+        def seg(sid, a, b_, kind, cat, action, **kw):
+            return {'id':sid,'from':a,'to':b_,'kind':kind,'category':cat,'action':action,'confidence':'sure',
+                    'what':'a soldier reads an omen in the crows' if kind!='safety' else 'a close view of a wound',
+                    'role':'it builds dread before the attack','evidence':'said and shown at this time',**kw}
+        self.content_review('V001',[seg('S1','04:50','05:10','religion_superstition','superstition','exclude',avoid=['omen','crows foretelling death'],
+                                        depends=[{'from':'06:10','to':'06:30','why':'the payoff recalls the omen'}])],
+                            story_without_exclusions={'status':'bridged','note':'the dread comes from the weather and the silence instead'})
+        self.content_review('V002',[seg('S1','02:00','02:20','safety','graphic_injury','restrict_visuals',severity='high',
+                                        why='the cost is told by the count and the faces')])
+        doc=self.direction_doc()
+        self.direction_doc=lambda:doc
+        # The direction cannot cite the excluded device, nor what depended on it...
+        lock=lambda expected=0:cli('direction-lock','--run',self.run,'--video',1,expected=expected)
+        save(vd/'direction.json',doc)
+        self.assertIn('direction_cites_excluded_material:V001@05:00-05:20:S1(religion_superstition)',lock(2)['details'])
+        doc['evidence']['observations'][2]['at']='06:15-06:25'; save(vd/'direction.json',doc)
+        self.assertIn('direction_cites_excluded_material:V001@06:15-06:25:S1(religion_superstition)',lock(2)['details'])
+        # ...while the rest of that reference stays usable, and the restricted moment lends how it is told only.
+        doc['evidence']['observations'][2]['at']='07:00-07:20'
+        (vd/'script.json').rename(vd/'script-later.json')          # the direction is locked before the script
+        self.lock_direction(vd)
+        (vd/'script-later.json').rename(vd/'script.json')
+        df=self.load_core().direction_facts(self.run,1)
+        self.assertEqual(df['issues'],[])
+        self.assertTrue(any('V002@02:10-02:40 is inside S1, whose visuals are restricted' in w for w in df['warnings']))
+        # The script: the excluded device brought back in the words is a content flag to answer (rewrite, or why not).
+        script=json.loads((vd/'script.json').read_text())
+        script['lines'][2]['text']='At dawn the men saw it as an omen of what was coming changed.'
+        save(vd/'script.json',script)
+        self.review_script()
+        pc=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('content_flag_unreviewed:L003:excluded_theme:V001/S1',pc['issues'])
+        script['lines'][2]['text']='At dawn the men watched the ridge in silence and waited for the order changed.'
+        save(vd/'script.json',script)
+        packet,_=self.review_script()
+        self.assertNotIn('content_flag_unreviewed:L003:excluded_theme:V001/S1',cli('plan-check','--run',self.run,'--video',1,expected=None)['issues'])
+        # The fresh reader is told what was left out (as a creative exclusion, not as harm), to catch it in disguise.
+        text=Path(packet['packet']).read_text(encoding='utf-8')
+        self.assertIn('a soldier reads an omen in the crows (a creative exclusion)',text)
+        self.assertIn('saying plainly that people were hurt or died is fine',text)
+        # Picture prompts: the excluded theme, or 02's subjects, are flags to answer before anything is generated.
+        shots=self.shots_for_plan()
+        shots[1]['frame_prompt']='black crows circling over the valley at noon as an omen, one clear subject'
+        shots[2]['frame_prompt']='a severed rope hanging from the broken bridge at dusk, one clear subject'
+        save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        sf=cli('shot-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('shot_S2_prompt_content_flag_unanswered:holiday_religion_superstition+excluded_theme:V001/S1',sf['issues'])
+        self.assertIn('shot_S3_prompt_content_flag_unanswered:injury_gore_distress',sf['issues'])
+        shots[1]['frame_prompt']='black crows circling over the empty valley at noon, one clear subject'   # rewritten
+        shots[2]['content_note']='a severed rope is a cut rope on a bridge; nobody is hurt or shown hurt'
+        save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        self.assertFalse([x for x in cli('shot-check','--run',self.run,'--video',1,expected=None)['issues'] if 'content_flag' in x])
+        # Style words cannot bring in what the approved prompt doesn't; a thumbnail is held to the same.
+        stills=self.home/'stills'
+        jobp=self.home/'job.json'
+        save(jobp,{'run':str(self.run),'video':1,'images':[{'shot_id':'S1','prompt':shots[0]['frame_prompt']+', candle-lit church glow','out':str(stills/'S1.png')}]})
+        self.assertIn('item_1_style_words_content_flag_unanswered:holiday_religion_superstition',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
+        save(jobp,{'run':str(self.run),'video':1,'purpose':'thumbnail','images':[{'prompt':'blood on the snow beside a fallen soldier at the bridge','out':str(stills/'t.png')}]})
+        self.assertIn('item_1_prompt_content_flag_unanswered:injury_gore_distress',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
+        # The safer picture that keeps the meaning: what is left behind, not the wound.
+        save(jobp,{'run':str(self.run),'video':1,'purpose':'thumbnail','images':[{'prompt':'an empty helmet in the trampled snow at the bridge, dawn light behind','out':str(stills/'t.png')}]})
+        self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
+        # A story that depends on what was excluded: its craft may still be cited, never its story.
+        self.content_review('V002',[seg('S1','02:00','02:20','safety','graphic_injury','exclude',severity='high',avoid=['the wound'])],
+                            story_without_exclusions={'status':'too_dependent','note':'the whole story turns on the injury itself'})
+        self.assertTrue(any('V002: its story depends on material excluded' in w for w in self.load_core().direction_facts(self.run,1)['warnings']))
 
     def test_legacy_not_imported_and_clone_keeps_only_analysis(self):
         clone=cli('clone','--from-run',self.run,'--workspace',self.home/'runs')['run']
@@ -1616,6 +1848,51 @@ class AvToolsTests(unittest.TestCase):
             p = self.dir / f'one-{i:04d}.png'; cv2.imwrite(str(p), img); out.append((float(i), p))
         return out
 
+    def two_fps_frames(self, zoom_per_s=0.08):
+        import numpy as np, cv2
+        h, w = 180, 320
+        def pic(bg, shape):
+            im = np.full((h, w, 3), bg, np.uint8); shape(im); return im
+        a = pic((40, 40, 200), lambda im: cv2.circle(im, (160, 90), 50, (200, 60, 30), -1))
+        b = pic((40, 170, 40), lambda im: cv2.rectangle(im, (60, 40), (260, 140), (0, 230, 230), -1))
+        c = pic((200, 200, 40), lambda im: cv2.circle(im, (80, 60), 40, (20, 20, 20), -1))
+        d = pic((120, 20, 120), lambda im: cv2.rectangle(im, (20, 100), (300, 170), (240, 240, 240), -1))
+        e = pic((20, 90, 160), lambda im: cv2.circle(im, (240, 120), 45, (0, 255, 255), -1))
+        grad = np.tile(np.linspace(30, 220, w, dtype=np.uint8), (h, 1))
+        f = cv2.merge([grad, (grad * 0.6).astype(np.uint8), (255 - grad)]); cv2.circle(f, (160, 90), 45, (250, 250, 250), -1)
+        def zoom(img, s):
+            ch, cw = int(h / s), int(w / s); y0, x0 = (h - ch) // 2, (w - cw) // 2
+            return cv2.resize(img[y0:y0 + ch, x0:x0 + cw], (w, h), interpolation=cv2.INTER_LINEAR)
+        seq = [a] * 8 + [b] * 6                       # a cut at 4 s
+        seq += [c, d] + [e] * 6                       # two pictures of half a second each: a quick series of cuts
+        seq += [cv2.addWeighted(e, .5, f, .5, 0)] + [f] * 6       # a dissolve, caught in one sample
+        seq += [zoom(f, 1 + zoom_per_s * 0.5 * k) for k in range(1, 13)]   # a push-in, six seconds
+        seq += [a] * 6                                # back to the first picture
+        out = []
+        for i, img in enumerate(seq):
+            p = self.dir / f'two-{i:04d}.png'; cv2.imwrite(str(p), img); out.append((i * 0.5, p))
+        return out
+
+    def test_two_frames_per_second_reads_the_same_edits(self):
+        feats = self.av.frame_features(self.two_fps_frames())
+        shots, kinds, _ = self.av.segment_shots(feats)
+        self.assertEqual([(s['start_s'], s['begins_with']) for s in shots],
+                         [(0.0, 'start'), (4.0, 'cut'), (7.0, 'cut'), (7.5, 'cut'), (8.0, 'cut'), (11.5, 'transition'),
+                          (20.5, 'cut')])
+        self.assertEqual(shots[-1].get('same_picture_as_shot'), 1)
+        self.assertGreater(shots[5]['motion_share'], 0.5)                  # the push-in moves inside its shot
+        self.assertEqual([self.av.transition_pairs(0.5)], [3])
+        self.assertAlmostEqual(self.av.motion_diff(0.5), 1.19, delta=0.01)
+        slow = self.av.segment_shots(self.av.frame_features(self.two_fps_frames(zoom_per_s=0.03)))[0]
+        self.assertEqual(slow[5]['motion_share'], 0.0)                     # 3 % a second reads as still, as at 5 fps
+        # what the samples cannot settle is listed for a closer look: the quick series and the dissolve
+        cands = self.av.inspect_candidates(feats, kinds, shots)
+        self.assertEqual([(c['from_s'], c['to_s']) for c in cands], [(6.5, 8.0), (10.5, 11.5)])
+        self.assertIn('cut series', cands[0]['why'])
+        self.assertEqual(cands[1]['why'], 'transition')
+        prof = self.av.profile('two', 25.0, self.two_fps_frames(), None, [], sampler=self.av.SAMPLER)
+        self.assertEqual((prof['sampled_fps'], prof['sampler'], len(prof['inspect_candidates'])), (2.0, 'pts-v1', 2))
+
     def test_one_frame_per_second_reads_the_same_edits(self):
         feats = self.av.frame_features(self.one_fps_frames())
         shots, kinds, _ = self.av.segment_shots(feats)
@@ -1686,6 +1963,112 @@ class AvToolsTests(unittest.TestCase):
         with Image.open(prof['sheets'][0]) as im:
             self.assertEqual(im.size, (4 * 320, 34 + 3 * (180 + 82)))
         self.assertIn('w0', prof['windows'][0]['said'])
+
+
+class WhisperGpuTests(unittest.TestCase):
+    """Whisper medium on the GPU through the pipeline's own code and interpreter, on real speech (Windows' built-in
+    voice, offline, no credits). A PC without a working GPU fails these tests: the pipeline needs one."""
+    SENTENCE = 'The river froze before the first patrol came back. Seven trucks waited at the bridge until morning.'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.dir = Path(cls.tmp.name)
+        cls.wav = cls.dir / 'speech.wav'
+        ps = shutil.which('powershell.exe') or shutil.which('powershell')
+        if not ps:
+            raise unittest.SkipTest('no Windows speech voice to make the test sentence')
+        cmd = ("Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+               f"$s.SetOutputToWaveFile('{cls.wav}'); $s.Speak('{cls.SENTENCE}'); $s.Dispose()")
+        subprocess.run([ps, '-NoProfile', '-Command', cmd], check=True, capture_output=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    @staticmethod
+    def words_of(text):
+        import re
+        return re.findall(r"[a-z]+", text.lower())
+
+    def test_the_production_interpreter_runs_whisper_medium_on_the_gpu(self):
+        py = shutil.which('python')
+        self.assertTrue(py and os.path.samefile(py, sys.executable), (py, sys.executable))   # the one create-video runs
+        r = subprocess.run([py, str(TOOL), 'doctor', '--whisper', '--file', str(self.wav)], capture_output=True,
+                           text=True, encoding='utf-8', errors='replace')
+        out = json.loads(r.stdout)
+        self.assertEqual(r.returncode, 0, out)
+        w, f = out['checks']['whisper'], out['checks']['whisper_file']
+        self.assertEqual((w['model'], w['device'], w['compute_type'], f['device']), ('medium', 'cuda', 'float16', 'cuda'))
+        self.assertTrue(w['gpu'])
+        self.assertEqual(self.words_of(f['first_words']), self.words_of(self.SENTENCE))
+        self.assertGreater(f['realtime_x'], 1.0)
+
+    def test_word_times_from_the_gpu_are_in_order_and_inside_the_audio(self):
+        spec = importlib.util.spec_from_file_location('static_core_gpu', TOOL)
+        core = importlib.util.module_from_spec(spec); spec.loader.exec_module(core)
+        out = self.dir / 'transcript.json'
+        core.transcribe(self.wav, out, 'medium', 'cuda', 'float16')
+        tj = json.loads(out.read_text(encoding='utf-8'))
+        self.assertEqual((tj['engine']['device'], tj['engine']['compute_type'], tj['model']), ('cuda', 'float16', 'medium'))
+        words = [w for s in tj['segments'] for w in s['words']]
+        self.assertEqual(self.words_of(' '.join(w['text'] for w in words)), self.words_of(self.SENTENCE))
+        starts = [w['start_s'] for w in words]
+        self.assertEqual(starts, sorted(starts))
+        self.assertTrue(all(0 <= w['start_s'] <= w['end_s'] <= tj['duration_s'] + 0.05 for w in words))
+        self.assertLess(starts[0], 1.0)
+        for s in tj['segments']:
+            self.assertLessEqual(s['start_s'], s['words'][0]['start_s'] + 0.05)
+            self.assertGreaterEqual(s['end_s'] + 0.05, s['words'][-1]['end_s'])
+
+    def test_no_gpu_stops_with_its_cause_and_never_uses_the_cpu(self):
+        hidden = {**os.environ, 'CUDA_VISIBLE_DEVICES': '-1'}
+        r = subprocess.run([sys.executable, str(TOOL), 'doctor', '--whisper'], capture_output=True, text=True,
+                           encoding='utf-8', errors='replace', env=hidden)
+        self.assertEqual(r.returncode, 2)
+        err = json.loads(r.stdout)['error']
+        self.assertIn('sees no CUDA device', err)
+        self.assertIn('Nothing was transcribed', err)
+        # The reference-processing stage: the same stop, and no transcript written.
+        refs = self.dir / 'refs'; refs.mkdir(exist_ok=True)
+        subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=blue:s=64x36:r=10',
+                        '-i', str(self.wav), '-t', '3', '-shortest', '-pix_fmt', 'yuv420p', '-c:a', 'aac',
+                        str(refs / 'talk.mp4')], check=True)
+        run = Path(cli('init', '--references', refs, '--workspace', self.dir / 'runs', '--slug', 'gpu')['run'])
+        cli('scan', '--run', run)
+        r = subprocess.run([sys.executable, str(TOOL), 'prepare', '--run', str(run), '--ids', 'V001'], capture_output=True,
+                           text=True, encoding='utf-8', errors='replace', env=hidden)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn('sees no CUDA device', json.loads(r.stdout)['failed'][0]['error'])
+        self.assertFalse((run / '10-media/V001/transcript.json').exists())
+        self.assertTrue((run / '10-media/V001/frame-index.json').is_file())              # the frames were still made
+        # The CPU only on the user's explicit word; another model never.
+        r = subprocess.run([sys.executable, str(TOOL), 'prepare', '--run', str(run), '--ids', 'V001', '--device', 'cpu'],
+                           capture_output=True, text=True, encoding='utf-8', errors='replace')
+        self.assertEqual(r.returncode, 2)
+        self.assertIn('explicitly says so', json.loads(r.stdout)['error'])
+        r = subprocess.run([sys.executable, str(TOOL), 'prepare', '--run', str(run), '--whisper-model', 'small'],
+                           capture_output=True, text=True, encoding='utf-8', errors='replace')
+        self.assertEqual(r.returncode, 2)
+        self.assertIn('invalid choice', r.stderr)
+        spec = importlib.util.spec_from_file_location('static_core_cpu', TOOL)
+        core = importlib.util.module_from_spec(spec); spec.loader.exec_module(core)
+        seen = []
+        def fake(path, outpath, *a):
+            seen.append(a)
+            Path(outpath).write_text(json.dumps({'status': 'transcribed', 'segments': []}), encoding='utf-8')
+            Path(outpath).with_suffix('.txt').write_text('', encoding='utf-8')
+            return 0
+        with mock.patch.object(core, 'transcribe', side_effect=fake), mock.patch.object(sys, 'argv', [
+                'static_core.py', 'prepare', '--run', str(run), '--ids', 'V001', '--device', 'cpu',
+                '--cpu-approved', 'the user said: use the CPU for this run']), \
+                mock.patch('sys.stdout', new_callable=io.StringIO):
+            try:
+                core.main()
+            except SystemExit as exc:
+                self.assertEqual(exc.code, 0)
+        self.assertEqual(seen, [('medium', 'cpu', 'int8')])
+        self.assertEqual(core._CPU_APPROVAL, 'the user said: use the CPU for this run')
 
 
 if __name__=='__main__':

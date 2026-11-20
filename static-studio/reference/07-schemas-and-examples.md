@@ -14,6 +14,10 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" 
 python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" --whisper-model medium
 # Watch the references as films: measurements + one watch sheet per minute (frames with their words).
 python "$HOME/.claude/static-studio/scripts/static_core.py" av-profile --run "RUN" --refs V001,V002,V003
+# Where to look closer, then the content review of each reference (01): what is excluded and what stays useful.
+python "$HOME/.claude/static-studio/scripts/static_core.py" content-review --run "RUN" --ref V001 --signals
+python "$HOME/.claude/static-studio/scripts/static_core.py" inspect-window --run "RUN" --ref V001 --from 12:03 --to 12:09 --why "a fast insert"
+python "$HOME/.claude/static-studio/scripts/static_core.py" content-review --run "RUN" --ref V001 --file "RUN/20-analysis/content/V001-draft.json"
 # Agent writes evidence-grounded 20-analysis/cards/V###.json and niche synthesis.
 python "$HOME/.claude/static-studio/scripts/static_core.py" cohorts --run "RUN"
 # User selected a niche/length; examples only after cards exist.
@@ -93,6 +97,42 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run 
 python "$HOME/.claude/static-studio/scripts/static_core.py" release-check --run "RUN" --video 1 --file "C:/videos/final.mp4"
 python "$HOME/.claude/static-studio/scripts/static_core.py" status --run "RUN"
 ```
+
+## Content review (agent written; `content-review` checks and saves it)
+
+`20-analysis/content/V###.json`, one per reference, timestamps in `mm:ss` (or `h:mm:ss`, or seconds):
+
+```json
+{"looked_at": "every 2 fps frame and the whole transcript; a closer look at 12:03-12:09",
+ "segments": [
+   {"id": "S1", "from": "12:03", "to": "12:41", "kind": "religion_superstition", "category": "superstition",
+    "what": "a soldier reads an omen in the crows before the attack", "role": "sets up the dread of the night attack",
+    "evidence": "said at 12:05-12:20; frames 12:10-12:30 show the birds", "confidence": "sure", "action": "exclude",
+    "depends": [{"from": "18:40", "to": "18:55", "why": "the payoff recalls the omen"}],
+    "avoid": ["omen", "crows foretelling death"]},
+   {"id": "S2", "from": "25:10", "to": "25:30", "kind": "safety", "category": "graphic_injury", "severity": "high",
+    "what": "a close view of a wounded soldier's injury", "role": "shows the cost of the crossing",
+    "evidence": "frames 25:12-25:26 and a closer look at 10 fps", "confidence": "sure", "action": "restrict_visuals",
+    "why": "the cost is told by the count and the faces, never the wound"}],
+ "story_without_exclusions": {"status": "bridged", "note": "the dread before the attack comes from the weather and the silence instead"},
+ "usable": "the cold open, the 6-second hold before each reveal, the map transitions"}
+```
+
+`kind` is `safety` (with a `category`: graphic_injury, distressing, self_harm, dangerous_acts,
+sexual_violence_exploitation, minors, hate_extremism, nudity_indecency, other; and a `severity`) or one of the user's
+creative exclusions, `religion_superstition` (religious or superstition) and `holiday` (holiday), which carry no
+severity: they are not harm. `action`: `exclude` (with `avoid`; `depends` for what goes with it), `restrict_visuals`
+(safety only; with `why`) or `keep` (with `why`). `minors` is always excluded; `high` is never kept as it is; an
+`unsure` segment that is used needs a closer look (`inspect-window`) overlapping it. The saved file adds the frames
+the review was made on and the closer looks taken (found on disk, not typed). `content-review --status` lists every
+reference's review.
+
+A closer look (`inspect-window`) writes `20-analysis/inspect/V###/<from>-<to>@<rate>/` with its frames (each at its
+own `t_s`), `sheet.jpg` and `index.json` (window, rate, why, the words said). `--remove` deletes the frames and keeps
+the index. Every picture of an edit: `content-review --video NN --pictures --file looks.json` with
+`{"looks": [{"file": "60-visuals/video-01/S01.png", "result": "clean", "note": "a ridge road in snow at dawn, two
+trucks, no people close"}]}` (an `issue` also names its `category`); saved in `60-visuals/video-NN/content-looks.json`
+with each file's hash.
 
 ## Reference cards (agent generated)
 
@@ -323,7 +363,7 @@ for the script and the final review, round 1 for the treatments).
 rate and its spread, pitch range and movement in semitones, loudness contrast, the level under the voice in its
 gaps, by third of the film; picture: shots, cuts per minute, shot lengths, moving and still share, flashes, the same
 picture again, brightness and saturation), `windows` (every 15 s: the words said and every measure), `shots`,
-`sheets` (one JPEG per minute), `sampled_fps` (the rate the frames were sampled at: the run's analysis rate; cut counts compare only between videos sampled at the same rate), `thresholds` (the picture's are seconds turned into frame pairs at that rate) and `unknowns`. `10-media/V###/frame-index.json`: `{fps, interval_s, tolerance_s, mode: "nominal_sample_time", frames: [{file, approx_s}]}`; `preparation.json` keeps the frames' and the transcript's cache keys apart (`frames_signature`: source, rate, width; `transcript_signature`: source, Whisper model), so a new rate re-makes the frames only. `50-audio/video-NN/delivery.json` holds the same
+`sheets` (one JPEG per minute; each tile names its frame's own time and the words of its five seconds), `sampled_fps` and `sampler` (how the frames were taken: cut counts compare only between videos sampled alike), `inspect_candidates` (stretches the samples cannot settle), `thresholds` (the picture's are seconds turned into frame pairs at that rate) and `unknowns`. `10-media/V###/frame-index.json` (2 fps run): `{mode: "source_pts", sampler, fps, interval_s, clock_origin_s, max_gap_s, frames: [{file, t_s, pts_s, slot_s, approx_s}]}` (`approx_s` repeats `t_s` for older readers; a run made before keeps `mode: "nominal_sample_time"`). `preparation.json` keeps the frames' and the transcript's cache keys apart (`frames_signature`: source, rate, width, sampler; `transcript_signature`: source, Whisper model), so new frames never re-run Whisper. `transcript.json` records the `engine` Whisper really ran on (device, compute type, GPU) with `elapsed_s` and `realtime_x`. `50-audio/video-NN/delivery.json` holds the same
 narration measures for the recorded voice, per beat (`spans`, with what each beat asked for) and next to the
 references'. All of it is measurement; none of it is a verdict.
 
