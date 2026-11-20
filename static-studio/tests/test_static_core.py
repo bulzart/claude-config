@@ -476,7 +476,7 @@ class StaticStudioTests(unittest.TestCase):
                {'id':'L009','text':'The column is coming down the road at last.'}]
         s=core.writing_signals(lines,'en')
         self.assertTrue(any('column is coming down' in p['phrase'] for p in s['repeated_phrases']))
-        self.assertTrue(any(x['shape']=='this is not a _ | it is a _' and x['times']==3 for x in s['repeated_sentence_shapes']))
+        self.assertTrue(any(x['shape']=='this is not _ | it is _' and x['times']==3 for x in s['repeated_sentence_shapes']))
         self.assertTrue(any(r['to']=='L004' for r in s['fragment_runs']))
         self.assertIn('L005',s['number_dense_lines'])
         self.assertEqual(s['long_sentences'][0]['line'],'L006')

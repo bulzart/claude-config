@@ -973,18 +973,24 @@ def writing_signals(lines, language='en'):
             break
     out['repeated_phrases'] = [{'phrase': ' '.join(g), 'lines': len(ls), 'examples': sorted(ls)[:6]} for g, ls in kept]
     if english:
+        def skel(tokens):
+            # Function words kept (articles aside), every run of content words one "_": the shape a listener hears.
+            out_ = []
+            for w in tokens:
+                x = w if (w in EN_FUNCTION_WORDS and w not in ('a', 'an', 'the')) else '_'
+                if not (x == '_' and out_ and out_[-1] == '_'):
+                    out_.append(x)
+            return ' '.join(out_)
         shapes = {}
         for lid, _, t in sents:
             if 2 <= len(t) <= 10:
-                sk = ' '.join(w if w in EN_FUNCTION_WORDS else '_' for w in t)
+                sk = skel(t)
                 if sk.replace('_', '').strip():
                     shapes.setdefault(sk, []).append(lid)
-        for (l1, _, t1), (l2, _, t2) in zip(sents, sents[1:]):   # two short sentences used as one figure
-            if len(t1) <= 8 and len(t2) <= 8:
-                s1 = ' '.join(w if w in EN_FUNCTION_WORDS else '_' for w in t1)
-                s2 = ' '.join(w if w in EN_FUNCTION_WORDS else '_' for w in t2)
-                if s1.replace('_', '').strip() and s2.replace('_', '').strip():
-                    shapes.setdefault(s1 + ' | ' + s2, []).append(l1)
+        for (l1, _, t1), (l2, _, t2) in zip(sents, sents[1:]):   # two sentences used as one figure: their openings
+            s1, s2 = skel(t1[:4]), skel(t2[:3])
+            if s1.replace('_', '').strip() and s2.replace('_', '').strip():
+                shapes.setdefault(s1 + ' | ' + s2, []).append(l1)
         out['repeated_sentence_shapes'] = [{'shape': k, 'times': len(v), 'examples': v[:6]} for k, v in
                                            sorted(shapes.items(), key=lambda x: -len(x[1])) if len(v) >= 3][:12]
         openings = {}

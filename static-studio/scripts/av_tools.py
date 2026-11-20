@@ -69,7 +69,8 @@ def thresholds():
 def unknowns():
     return ['on-screen text (no OCR in this setup)',
             'voice and music are not separated: pitch and loudness come from the mixed track, so a loud bed can '
-            'disturb them',
+            'disturb them; compare loudness contrast only between tracks with a similar level under the voice '
+            '(gap_level_rel_speech_db): a bed flattens it, a dry voice reads higher',
             'frame times are nominal sample slots (5 fps), not exact cut frames',
             'what a viewer feels, and whether the video kept its audience (no retention data)']
 

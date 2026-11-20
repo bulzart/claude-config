@@ -37,7 +37,7 @@ The measurements give you the parts you can't perceive directly:
 |---|---|---|
 | speaking rate per window, and how it varies | where the narrator speeds up and slows down | whether the speed feels right |
 | pitch range and word-to-word pitch movement (semitones) | how much the voice moves; a flat stretch reads low | whether the movement is warm, irritating or forced |
-| loudness contrast between words | emphasis | which words should be stressed |
+| loudness contrast between words | emphasis | which words should be stressed; a music bed flattens it, so compare a dry voice with a dry voice |
 | level in the gaps between words | a music/ambience bed under the voice (high) or silence (very low) | what the music is or does |
 | cuts per minute, shot lengths, moving share, same picture again | rhythm, stillness, motion, reuse | whether a shot earns its length |
 
