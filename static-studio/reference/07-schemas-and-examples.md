@@ -12,6 +12,8 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" init --references "C
 python "$HOME/.claude/static-studio/scripts/static_core.py" scan --run "RUN"
 python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" --dry-run
 python "$HOME/.claude/static-studio/scripts/static_core.py" prepare --run "RUN" --whisper-model medium
+# Watch the references as films: measurements + one watch sheet per minute (frames with their words).
+python "$HOME/.claude/static-studio/scripts/static_core.py" av-profile --run "RUN" --refs V001,V002,V003
 # Agent writes evidence-grounded 20-analysis/cards/V###.json and niche synthesis.
 python "$HOME/.claude/static-studio/scripts/static_core.py" cohorts --run "RUN"
 # User selected a niche/length; examples only after cards exist.
@@ -25,12 +27,24 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" -
 python "$HOME/.claude/static-studio/scripts/static_core.py" length --run "RUN" --video 1 \
   --mode standard --cohort-id "long-military-history" \
   --refs V001,V002,V003 --language en
-# Agent writes blueprint/script/beat-map/editorial-review, then validates.
+# Creative direction FIRST (10): 40-plans/video-01/direction.json (evidence, five approaches, strategy,
+# two or three treatments with sample moments), a blind read of the treatments, the decision, the lock.
+python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind treatment
+#   -> spawn ONE fresh agent: "Read only <packet> and follow it exactly." It writes the findings file.
+python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run "RUN" --video 1 --kind treatment
+#   -> answer every finding in reviews/treatment-r1-answers.json; write direction.json -> decision.
+python "$HOME/.claude/static-studio/scripts/static_core.py" direction-lock --run "RUN" --video 1
+# Agent writes blueprint, beat-map (with each beat's direction), script and editorial-review from the treatment.
+# The cold read: a fresh agent reads only the bare script.
+python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind script
+python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run "RUN" --video 1 --kind script
+#   -> answer every finding; a major one: revise, then a round-2 packet for a NEW agent.
 python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RUN" --video 1
 # How the comparable narrators speak and pause (same yardstick later used on the voice):
 python "$HOME/.claude/static-studio/scripts/static_core.py" pace-profile --run "RUN" --video 1
 # Voice: five candidates described by the narrator this story needs (character, register, age,
-# accent). A preview's pace does not predict the real pace; choose by ear.
+# accent: the locked treatment's narrator). A preview's pace does not predict the real pace; the agents
+# can't listen: compare descriptions, transcripts and measured_delivery; the user may listen and overrule.
 python "$HOME/.claude/static-studio/scripts/static_core.py" voice-candidates --run "RUN" --video 1 \
   --count 5 --design 2 --design-description "A grave, warm documentary narrator in his 50s, American, close to the listener, restrained rather than theatrical" \
   --design-text "A sample of the actual script, 100-1000 characters, read exactly as it will be sent."
@@ -49,6 +63,7 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" plan-check --run "RU
 #   tts ... --rerecord-changed --execute   (after editing lines: only the parts that hold them)
 python "$HOME/.claude/static-studio/scripts/static_core.py" audio-check --run "RUN" --video 1
 python "$HOME/.claude/static-studio/scripts/static_core.py" narration-measure --run "RUN" --video 1   # line times
+python "$HOME/.claude/static-studio/scripts/static_core.py" shot-check --run "RUN" --video 1   # before stills; retime-shots refuses a failing plan
 python "$HOME/.claude/static-studio/scripts/static_core.py" retime-shots --run "RUN" --video 1 --render-narration
 # Agent makes/records CapCut project (narration-edit.wav, stills at the retimed shot times) and
 # writes project-derived timeline.json.
@@ -56,6 +71,11 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" timeline-check --run
 # Only after an actual MP4 is accessible:
 python "$HOME/.claude/static-studio/scripts/static_core.py" export-check \
   --run "RUN" --video 1 --file "C:/videos/final.mp4" --deep
+# The final watch review of THIS file: watch sheets, a fresh reviewer, answers, then every gate at once.
+python "$HOME/.claude/static-studio/scripts/static_core.py" av-profile --run "RUN" --video 1 --file "C:/videos/final.mp4"
+python "$HOME/.claude/static-studio/scripts/static_core.py" review-packet --run "RUN" --video 1 --kind final --file "C:/videos/final.mp4"
+python "$HOME/.claude/static-studio/scripts/static_core.py" review-record --run "RUN" --video 1 --kind final
+python "$HOME/.claude/static-studio/scripts/static_core.py" release-check --run "RUN" --video 1 --file "C:/videos/final.mp4"
 python "$HOME/.claude/static-studio/scripts/static_core.py" status --run "RUN"
 ```
 
@@ -113,12 +133,20 @@ Minimal `40-plans/video-01/blueprint.json`:
     {"id": "B01", "start_s": 0, "end_s": 92,
      "line_start": 1, "line_end": 18,
      "narrative_job": "Present a real dilemma and its stakes",
-     "visual_intent": "Show relative position and scale via a map",
+     "experience": "Curious and slightly uneasy: the easy answer is about to fail",
+     "narration_direction": "Warm and quick, a friend setting up a puzzle; one dry aside",
+     "visual_intent": "Show relative position and scale via a map; hold it while the words move on",
+     "sound_direction": "Light bed, out at the last line",
+     "pace": "brisk, then one held breath",
      "viewer_question": "Why did the obvious solution fail?"},
     {"id": "B02", "start_s": 92, "end_s": 220,
      "line_start": 19, "line_end": 55,
      "narrative_job": "Reveal the first hidden constraint",
-     "visual_intent": "Reconstruct logistics and compare alternatives"}
+     "experience": "The 'oh' of seeing why it was never going to work",
+     "narration_direction": "Slower, plainer; let the picture explain",
+     "visual_intent": "Reconstruct logistics and compare alternatives with a drawn overlay",
+     "sound_direction": "No music under the explanation",
+     "pace": "unhurried"}
   ]
 }
 ```
@@ -167,6 +195,70 @@ Under `50-audio/video-01/`, the TTS tool creates `manifest.json` (voice/model/la
 `retime-shots` also rewrites `60-visuals/video-01/shot-plan.json`'s `start_s`/`end_s`, keeping the planned values once as `planned_start_s`/`planned_end_s`.
 
 **Production agents must not manually toggle `status=complete`.** The manifest represents real provider responses. The tool saves chunks and updates the manifest after each successful response so a credit cutoff cannot masquerade as a short completed voiceover.
+
+## Creative direction (agent written; `direction-lock` checks and locks it)
+
+`40-plans/video-01/direction.json` (10). Every text field is real reasoning in a few sentences; the shape below is
+what `plan-check` and `direction-lock` look for, not what makes it good.
+
+```json
+{
+  "video": 1,
+  "evidence": {
+    "references": ["V017", "V018"],
+    "observations": [{"ref": "V017", "at": "04:00-05:00", "what": "the voice confides while the picture holds one face", "label": "O"}],
+    "unknowns": ["retention: no analytics supplied"]
+  },
+  "approaches": [
+    {"id": "A1", "changes": ["structure"], "pitch": "...", "strongest_case": "...", "long_form_risk": "...",
+     "challenges_reference_formula": true}
+  ],
+  "chosen_approach": {"id": "A1", "why": "...", "runner_up": "A3", "why_not_runner_up": "..."},
+  "strategy": {"why_this_idea": "...", "viewer_experience": "...", "progression": "...", "fits_and_forced": "...",
+               "facts_as_experience": "...", "picture_contribution": "...", "sound_and_breath": "...",
+               "distinct_from_references": "..."},
+  "treatments": [
+    {"id": "T1", "name": "...", "narrator": "...", "writing_voice": "...", "structure_and_pace": "...",
+     "visual_language": "...", "sound": "...", "audiovisual_relationship": "...", "emotional_course": "...",
+     "evidence_used": "...", "departures": "...", "risks": "...",
+     "samples": {"opening": {"narration": "50+ words as spoken", "picture": "what the viewer sees"},
+                 "quiet_middle": {"narration": "...", "picture": "..."},
+                 "turning_point": {"narration": "...", "picture": "..."}}}
+  ],
+  "decision": {"treatment": "T1", "why": "...", "taken_from_others": "..."}
+}
+```
+
+Five approaches (at least three of perspective/scale/structure/voice/visualization among them, at least one that
+challenges the references' formula), two or three treatments. `direction-lock.json` keeps the hash, the time, the
+treatment, whether a script already existed (`late_reason`) and the history of `--revise`.
+
+## Review records (`review-packet`, a fresh agent, `review-record`, the director's answers)
+
+In `40-plans/video-01/reviews/`: `packet-<kind>-r<N>.md` (what the reader got), `<kind>-r<N>-findings.json` (what it
+wrote), `<kind>-r<N>.json` (sealed: the version it read, its findings and their hash), and
+`<kind>-r<N>-answers.json` (yours):
+
+```json
+{"answers": {
+  "F1": {"action": "revised", "lines": ["L003-L011"], "note": "Cut the recap to two lines; the question hangs."},
+  "F2": {"action": "disputed", "note": "The repetition is the refrain the ending pays off; kept on purpose."},
+  "F3": {"action": "kept", "note": "A minor rhythm note; this line is the breath before the turn."}
+}}
+```
+
+A major finding is `revised` or `disputed`, never just `kept`, and gets a fresh read in the next round (until round 2
+for the script and the final review, round 1 for the treatments).
+
+## Measured evidence (`av-profile`, `narration-measure`)
+
+`20-analysis/av/V###.json` per reference and `70-edit/video-NN/av/export-<id>.json` per export: `summary` (narration:
+rate and its spread, pitch range and movement in semitones, loudness contrast, the level under the voice in its
+gaps, by third of the film; picture: shots, cuts per minute, shot lengths, moving and still share, flashes, the same
+picture again, brightness and saturation), `windows` (every 15 s: the words said and every measure), `shots`,
+`sheets` (one JPEG per minute), `thresholds` and `unknowns`. `50-audio/video-NN/delivery.json` holds the same
+narration measures for the recorded voice, per beat (`spans`, with what each beat asked for) and next to the
+references'. All of it is measurement; none of it is a verdict.
 
 ## Real CapCut timeline (agent measured from project)
 

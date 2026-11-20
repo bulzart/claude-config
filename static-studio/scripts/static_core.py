@@ -136,8 +136,16 @@ def cmd_doctor(args):
         checks['pillow'] = True
     except ImportError:
         checks['pillow'] = False
+    for mod, name in (('numpy', 'numpy'), ('cv2', 'opencv'), ('librosa', 'librosa'), ('soundfile', 'soundfile')):
+        try:
+            __import__(mod)
+            checks[name] = True
+        except ImportError:
+            checks[name] = False
+    checks['av_profile_ready'] = all(checks.get(k) for k in ('numpy', 'opencv', 'librosa', 'soundfile', 'pillow'))
     emit({'ok': checks['ffmpeg'] and checks['ffprobe'], 'checks': checks,
-          'note': 'Whisper is required for reference audio analysis; image/CapCut/TTS tools are checked separately.'})
+          'note': 'Whisper is required for reference audio analysis; av-profile (watch sheets, delivery measurements) '
+                  'needs numpy, opencv, librosa, soundfile and pillow; image/CapCut/TTS tools are checked separately.'})
 
 
 def cmd_init(args):
@@ -536,7 +544,7 @@ def tag_catalogue():
 
 def classify_tag(inner):
     """The catalogue entry of one tag (its text inside the brackets). The vocabulary is open: a tag the
-    catalogue doesn't list is 'custom', allowed, and judged by ear on the calibration chunk."""
+    catalogue doesn't list is 'custom', allowed, and judged on the calibration part (its measured delivery)."""
     key = '[' + ' '.join(str(inner).lower().split()) + ']'
     entry = tag_catalogue().get(key)
     if entry:
@@ -650,22 +658,416 @@ def content_flags(lines, review_text):
     return flags, issues
 
 
-REVIEW_SECTIONS = (('creative_strategy', r'creative strategy'), ('self_audit', r'self[- ]audit'))
-
-
-def review_sections_missing(review_text, min_words=40):
-    """The two creative sections of editorial-review.md (02's episode strategy, 03's self-audit) exist and are
-    written. Presence and length only: whether they are any good is the agents' and the cold reader's call."""
-    missing = []
-    for key, head in REVIEW_SECTIONS:
-        m = re.search(r'^#+[^\n]*' + head + r'[^\n]*\n(.*?)(?=^#{1,2} |\Z)', review_text or '', flags=re.I | re.M | re.S)
-        if not m or len(re.findall(r'\w+', m.group(1))) < min_words:
-            missing.append(f'editorial_review_missing_section:{key}')
-    return missing
-
-
 def script_hash(lines):
     return hashlib.sha256('\n'.join(str(r.get('text') or '').strip() for r in lines).encode('utf-8')).hexdigest()
+
+
+# ---------------------------------------------------------------- creative direction, reviews, writing signals
+# The code enforces the PROCESS: what has to exist, in what order, for which version, and that every reviewer
+# finding is answered. It never judges the work: whether a treatment, a script or a cut is good is decided by the
+# agents and the independent reviewers (10-creative-direction.md, 06). A passed gate means the process happened.
+APPROACH_AXES = ('perspective', 'scale', 'structure', 'voice', 'visualization')
+STRATEGY_KEYS = ('why_this_idea', 'viewer_experience', 'progression', 'fits_and_forced', 'facts_as_experience',
+                 'picture_contribution', 'sound_and_breath', 'distinct_from_references')
+TREATMENT_KEYS = ('narrator', 'writing_voice', 'structure_and_pace', 'visual_language', 'sound',
+                  'audiovisual_relationship', 'emotional_course', 'evidence_used', 'departures', 'risks')
+TREATMENT_SHOWN_TO_REVIEWER = ('narrator', 'writing_voice', 'structure_and_pace', 'visual_language', 'sound',
+                               'audiovisual_relationship', 'emotional_course')
+SAMPLE_MOMENTS = ('opening', 'quiet_middle', 'turning_point')
+BEAT_DIRECTION_KEYS = ('experience', 'narration_direction', 'visual_intent', 'sound_direction', 'pace')
+# A major finding asks for a fresh read of the revised version until this round; after it the director decides
+# and records why (no endless loops). More rounds are always allowed, never required.
+REVIEW_MAX_ROUNDS = {'treatment': 1, 'script': 2, 'final': 2}
+REVIEW_ACTIONS = ('revised', 'kept', 'disputed')
+MIN_FIELD_WORDS, MIN_SAMPLE_WORDS, MIN_PICTURE_WORDS, MIN_NOTE_WORDS = 6, 50, 10, 5
+# Edits after the last read that no finding asked for: a few lines (a length trim) pass with a warning; more need
+# a fresh read, because the approval no longer describes the script.
+SMALL_EDIT_LINES, SMALL_EDIT_SHARE = 10, 0.03
+
+
+def n_words(s):
+    return len(re.findall(r'\w+', str(s or ''), flags=re.UNICODE))
+
+
+def canonical_sha(obj):
+    return hashlib.sha256(json.dumps(obj, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()
+
+
+def ref_av_path(rd, vid):
+    return rd / '20-analysis' / 'av' / f'{vid}.json'
+
+
+def _content_tokens(text):
+    return {t for t in re.findall(r"[a-z0-9']+", strip_tags(text).lower()) if len(t) > 3}
+
+
+def _jaccard(a, b):
+    return len(a & b) / len(a | b) if (a | b) else 0.0
+
+
+def direction_facts(rd, video):
+    """Structure of 40-plans/video-NN/direction.json (10-creative-direction.md): evidence read from measured
+    references, five approaches that differ in how the story is told, the episode strategy, two or three
+    audiovisual treatments with sample moments, and the decision. Presence and shape only."""
+    vd = video_dir(rd, video)
+    d = read_json(vd / 'direction.json')
+    out = {'issues': [], 'warnings': [], 'direction_sha256': None, 'treatments_sha256': None,
+           'chosen_treatment': None}
+    iss, warn = out['issues'], out['warnings']
+    if not d:
+        iss.append('direction_missing')
+        return out
+    out['direction_sha256'] = canonical_sha(d)
+    ev = d.get('evidence') if isinstance(d.get('evidence'), dict) else {}
+    refs = [str(x).strip().upper() for x in ev.get('references') or []]
+    if not refs:
+        iss.append('direction_evidence_names_no_references')
+    for v in refs:
+        if not ref_av_path(rd, v).is_file():
+            iss.append(f'direction_evidence_without_av_profile:{v}')
+    obs = [o for o in ev.get('observations') or [] if isinstance(o, dict) and str(o.get('ref') or '').strip()
+           and str(o.get('at') or '').strip() and n_words(o.get('what')) >= 4]
+    if len(obs) < 3:
+        iss.append('direction_evidence_needs_3_timed_observations')
+    if not ev.get('unknowns'):
+        iss.append('direction_evidence_lists_no_unknowns')
+    apps = [a for a in d.get('approaches') or [] if isinstance(a, dict)]
+    ids = [str(a.get('id') or '').strip() for a in apps]
+    if len(apps) < 5 or len(set(ids)) != len(ids) or '' in ids:
+        iss.append('direction_needs_5_distinct_approaches')
+    axes = set()
+    for a in apps:
+        aid = a.get('id')
+        changes = [str(x).strip().lower() for x in a.get('changes') or []]
+        if not changes or any(x not in APPROACH_AXES for x in changes):
+            iss.append(f'approach_{aid}_changes_must_name:' + '/'.join(APPROACH_AXES))
+        axes |= set(changes) & set(APPROACH_AXES)
+        for k in ('pitch', 'strongest_case', 'long_form_risk'):
+            if n_words(a.get(k)) < MIN_FIELD_WORDS:
+                iss.append(f'approach_{aid}_missing_{k}')
+    if apps and len(axes) < 3:
+        iss.append('approaches_differ_on_fewer_than_3_axes')
+    if apps and not any(a.get('challenges_reference_formula') is True for a in apps):
+        iss.append('no_approach_challenges_the_reference_formula')
+    ca = d.get('chosen_approach') if isinstance(d.get('chosen_approach'), dict) else {}
+    if ca.get('id') not in ids or ca.get('runner_up') not in ids or ca.get('runner_up') == ca.get('id'):
+        iss.append('chosen_approach_and_runner_up_must_be_two_listed_approaches')
+    for k in ('why', 'why_not_runner_up'):
+        if n_words(ca.get(k)) < MIN_FIELD_WORDS:
+            iss.append(f'chosen_approach_missing_{k}')
+    strat = d.get('strategy') if isinstance(d.get('strategy'), dict) else {}
+    for k in STRATEGY_KEYS:
+        if n_words(strat.get(k)) < MIN_FIELD_WORDS:
+            iss.append(f'strategy_missing_{k}')
+    trs = [t for t in d.get('treatments') or [] if isinstance(t, dict)]
+    tids = [str(t.get('id') or '').strip() for t in trs]
+    out['treatments_sha256'] = canonical_sha(d.get('treatments') or [])
+    if not 2 <= len(trs) <= 4 or len(set(tids)) != len(tids) or '' in tids:
+        iss.append('direction_needs_2_to_3_distinct_treatments')
+    for t in trs:
+        tid = t.get('id')
+        for k in TREATMENT_KEYS:
+            if n_words(t.get(k)) < MIN_FIELD_WORDS:
+                iss.append(f'treatment_{tid}_missing_{k}')
+        samples = t.get('samples') if isinstance(t.get('samples'), dict) else {}
+        for m in SAMPLE_MOMENTS:
+            s = samples.get(m) if isinstance(samples.get(m), dict) else {}
+            if n_words(strip_tags(s.get('narration') or '')) < MIN_SAMPLE_WORDS:
+                iss.append(f'treatment_{tid}_sample_{m}_narration_under_{MIN_SAMPLE_WORDS}_words')
+            if n_words(s.get('picture')) < MIN_PICTURE_WORDS:
+                iss.append(f'treatment_{tid}_sample_{m}_picture_missing')
+    for i in range(len(trs)):
+        for j in range(i + 1, len(trs)):
+            def toks(t):
+                s = t.get('samples') if isinstance(t.get('samples'), dict) else {}
+                return _content_tokens(' '.join(str((s.get(m) or {}).get('narration') or '') for m in SAMPLE_MOMENTS))
+            sim = _jaccard(toks(trs[i]), toks(trs[j]))
+            if sim >= 0.6:
+                warn.append(f'treatments {tids[i]} and {tids[j]} share {sim:.0%} of their sample vocabulary: '
+                            'are they really different treatments, or one treatment at two intensities?')
+    dec = d.get('decision') if isinstance(d.get('decision'), dict) else {}
+    out['chosen_treatment'] = dec.get('treatment')
+    if dec.get('treatment') not in tids:
+        iss.append('decision_must_name_a_listed_treatment')
+    for k in ('why', 'taken_from_others'):
+        if n_words(dec.get(k)) < MIN_FIELD_WORDS:
+            iss.append(f'decision_missing_{k}')
+    return out
+
+
+def review_records(vd, kind):
+    """Recorded rounds of one review kind, oldest first: (record, answers) with record['_round']."""
+    out = []
+    folder = vd / 'reviews'
+    if not folder.is_dir():
+        return out
+    for p in folder.glob(f'{kind}-r*.json'):
+        m = re.fullmatch(re.escape(kind) + r'-r(\d+)\.json', p.name)
+        if not m:
+            continue
+        rec = read_json(p)
+        if not rec:
+            continue
+        rec['_round'] = int(m.group(1))
+        ans = read_json(p.with_name(f'{kind}-r{m.group(1)}-answers.json')).get('answers') or {}
+        out.append((rec, ans if isinstance(ans, dict) else {}))
+    return sorted(out, key=lambda x: x[0]['_round'])
+
+
+def expand_lines(spec, order):
+    """'L005', 'L005-L009' or a list of them -> line ids in script order; None when a line is unknown."""
+    out = []
+    for item in (spec if isinstance(spec, list) else [spec]):
+        s = str(item).strip()
+        m = re.fullmatch(r'(L\d+)\s*[-–]\s*(L\d+)', s)
+        if m and m.group(1) in order and m.group(2) in order:
+            i, j = order.index(m.group(1)), order.index(m.group(2))
+            out += order[min(i, j):max(i, j) + 1]
+        elif s in order:
+            out.append(s)
+        else:
+            return None
+    return out
+
+
+def answer_problem(kind, finding, ans):
+    """Why an answer to a finding is not yet an answer, or None."""
+    ans = ans if isinstance(ans, dict) else {}
+    act = str(ans.get('action') or '').strip().lower()
+    if act not in REVIEW_ACTIONS:
+        return 'no action (revised, kept or disputed)'
+    if finding.get('severity') == 'major' and act == 'kept':
+        return 'a major finding is revised or disputed, never simply kept'
+    if act in ('kept', 'disputed') and n_words(ans.get('note')) < MIN_NOTE_WORDS:
+        return 'needs a note saying why'
+    if act == 'revised' and kind == 'script' and not ans.get('lines'):
+        return 'revised needs the lines that changed'
+    if act == 'revised' and kind != 'script' and n_words(ans.get('note')) < MIN_NOTE_WORDS:
+        return 'revised needs a note saying what changed'
+    return None
+
+
+def review_state(vd, kind, current_sha, snapshot=None):
+    """Where one review kind stands for the current version: every round's findings sealed and answered,
+    'revised' answers backed by real changes, a fresh read after major findings (until the round cap), and the
+    last read still describing what exists now. Issues block; warnings are shown and kept for the release sheet."""
+    recs = review_records(vd, kind)
+    st = {'kind': kind, 'rounds': len(recs), 'issues': [], 'warnings': [], 'majors_closed_by_decision': []}
+    if not recs:
+        st['issues'].append(f'{kind}_review_missing')
+        return st
+    max_r = REVIEW_MAX_ROUNDS[kind]
+    for i, (rec, ans) in enumerate(recs):
+        rnd, fs = rec['_round'], rec.get('findings') or []
+        if canonical_sha(fs) != rec.get('findings_sha256'):
+            st['issues'].append(f'{kind}_review_r{rnd}_findings_altered')
+        later = recs[i + 1][0].get('subject_snapshot') if i + 1 < len(recs) else snapshot
+        old = rec.get('subject_snapshot') or {}
+        open_ids = []
+        for f in fs:
+            fid = str(f.get('id'))
+            a = ans.get(fid) or {}
+            if answer_problem(kind, f, a):
+                open_ids.append(fid)
+                continue
+            if kind == 'script' and str(a.get('action')).strip().lower() == 'revised' and later is not None:
+                ls = expand_lines(a.get('lines'), list(old))
+                if not ls:
+                    open_ids.append(fid)
+                elif all(old.get(x) == later.get(x) for x in ls):
+                    st['issues'].append(f'{kind}_review_r{rnd}_revised_but_unchanged:{fid}')
+        if open_ids:
+            st['issues'].append(f'{kind}_review_r{rnd}_unanswered:' + ','.join(open_ids))
+    rec, ans = recs[-1]
+    rnd = rec['_round']
+    majors = [str(f.get('id')) for f in rec.get('findings') or [] if f.get('severity') == 'major']
+    if majors and rnd < max_r:
+        st['issues'].append(f'{kind}_review_round_{rnd + 1}_required')
+    elif majors:
+        st['majors_closed_by_decision'] = majors
+        st['warnings'].append(f'{kind} review: round {rnd} still found major problems ({", ".join(majors)}); '
+                              'the director closed them with the reasons in the answers')
+    if rec.get('subject_sha256') != current_sha:
+        if kind == 'script' and snapshot is not None:
+            old = rec.get('subject_snapshot') or {}
+            changed = [k for k in dict.fromkeys(list(old) + list(snapshot)) if old.get(k) != snapshot.get(k)]
+            asked = set()
+            for a in ans.values():
+                if isinstance(a, dict) and str(a.get('action')).strip().lower() == 'revised':
+                    asked |= set(expand_lines(a.get('lines'), list(old)) or [])
+            loose = [k for k in changed if k not in asked]
+            if loose:
+                total = sum(n_words(strip_tags(t)) for t in snapshot.values()) or 1
+                moved = sum(n_words(strip_tags(snapshot.get(k) or old.get(k) or '')) for k in loose)
+                if len(loose) <= SMALL_EDIT_LINES and moved <= SMALL_EDIT_SHARE * total:
+                    st['warnings'].append(f'script edited after its last read on {len(loose)} line(s) no finding '
+                                          'asked about (small enough to pass): ' + ','.join(loose))
+                else:
+                    st['issues'].append('script_changed_after_review:' + ','.join(loose[:15])
+                                        + ('...' if len(loose) > 15 else ''))
+        elif kind == 'final' and rnd >= max_r:
+            st['warnings'].append('the export changed after the last final review round')
+        else:
+            st['issues'].append(f'{kind}_review_outdated')
+    return st
+
+
+EN_FUNCTION_WORDS = set((
+    'a an the and but or so if then than that this these those it its is are was were be been being not no nor to '
+    'of in on at by for with from as into onto over under about after before through you your yours we our they '
+    'them their he him his she her i me my what which who whom whose when where why how there here do does did '
+    'have has had will would can could may might must should just only also very all every each some any more '
+    'most other such own same too now still even').split())
+NUMBER_WORDS = re.compile(r"\d[\d,.]*|\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|"
+                          r"forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b", re.I)
+
+
+def writing_signals(lines, language='en'):
+    """Counts the writer reads during revision (never a verdict, never shown to a cold reader): phrases repeated
+    across lines, sentence shapes used again and again, runs of very short fragments, sentences too long to follow
+    by ear, lines stacked with numbers, words echoing in neighbouring lines, and how sentence length varies."""
+    sents = []
+    for i, row in enumerate(lines):
+        lid = str(row.get('id') or f'L{i + 1:03d}')
+        for s in re.split(r'(?<=[.!?…])\s+', strip_tags(row.get('text') or '')):
+            toks = re.findall(r"[\w']+", s.lower())
+            if toks:
+                sents.append((lid, s.strip(), toks))
+    lengths = [len(t) for _, _, t in sents]
+    out = {'sentences': len(sents),
+           'sentence_words': {'mean': round(statistics.mean(lengths), 1) if lengths else None,
+                              'spread': round(statistics.pstdev(lengths), 1) if lengths else None,
+                              'share_under_5_words': round(sum(1 for x in lengths if x < 5) / len(lengths), 3)
+                              if lengths else None},
+           'questions': sum(1 for _, s, _ in sents if s.endswith('?'))}
+    out['long_sentences'] = [{'line': lid, 'words': len(t)} for lid, _, t in sents if len(t) > 32][:20]
+    runs, cur = [], []
+    for lid, _, t in sents:
+        if len(t) <= 4:
+            cur.append(lid)
+        else:
+            if len(cur) >= 3:
+                runs.append(cur)
+            cur = []
+    if len(cur) >= 3:
+        runs.append(cur)
+    out['fragment_runs'] = [{'from': r[0], 'to': r[-1], 'fragments': len(r)} for r in runs][:20]
+    english = str(language or '').lower().startswith('en')
+    grams = {}
+    for i, row in enumerate(lines):
+        lid = str(row.get('id') or f'L{i + 1:03d}')
+        toks = re.findall(r"[\w']+", strip_tags(row.get('text') or '').lower())
+        for n in (3, 4, 5):
+            for k in range(len(toks) - n + 1):
+                g = tuple(toks[k:k + n])
+                if english and all(w in EN_FUNCTION_WORDS for w in g):
+                    continue
+                grams.setdefault(g, set()).add(lid)
+    rep = sorted(((g, ls) for g, ls in grams.items() if len(ls) >= 3), key=lambda x: (-len(x[1]), -len(x[0])))
+    kept = []
+    for g, ls in rep:
+        if any(len(k) > len(g) and ls <= kl and ' '.join(g) in ' '.join(k) for k, kl in kept):
+            continue
+        kept.append((g, ls))
+        if len(kept) >= 15:
+            break
+    out['repeated_phrases'] = [{'phrase': ' '.join(g), 'lines': len(ls), 'examples': sorted(ls)[:6]} for g, ls in kept]
+    if english:
+        shapes = {}
+        for lid, _, t in sents:
+            if 2 <= len(t) <= 10:
+                sk = ' '.join(w if w in EN_FUNCTION_WORDS else '_' for w in t)
+                if sk.replace('_', '').strip():
+                    shapes.setdefault(sk, []).append(lid)
+        for (l1, _, t1), (l2, _, t2) in zip(sents, sents[1:]):   # two short sentences used as one figure
+            if len(t1) <= 8 and len(t2) <= 8:
+                s1 = ' '.join(w if w in EN_FUNCTION_WORDS else '_' for w in t1)
+                s2 = ' '.join(w if w in EN_FUNCTION_WORDS else '_' for w in t2)
+                if s1.replace('_', '').strip() and s2.replace('_', '').strip():
+                    shapes.setdefault(s1 + ' | ' + s2, []).append(l1)
+        out['repeated_sentence_shapes'] = [{'shape': k, 'times': len(v), 'examples': v[:6]} for k, v in
+                                           sorted(shapes.items(), key=lambda x: -len(x[1])) if len(v) >= 3][:12]
+        openings = {}
+        for lid, _, t in sents:
+            if len(t) >= 3:
+                openings.setdefault(' '.join(t[:2]), []).append(lid)
+        out['repeated_openings'] = [{'opening': k, 'times': len(v), 'examples': v[:6]} for k, v in
+                                    sorted(openings.items(), key=lambda x: -len(x[1])) if len(v) >= 5][:12]
+    out['number_dense_lines'] = [str(r.get('id') or f'L{i + 1:03d}') for i, r in enumerate(lines)
+                                 if len(NUMBER_WORDS.findall(strip_tags(r.get('text') or ''))) >= 3][:30]
+    echoes, ids = {}, [str(r.get('id') or f'L{i + 1:03d}') for i, r in enumerate(lines)]
+    toks_by = [set(t for t in re.findall(r"[\w']+", strip_tags(r.get('text') or '').lower())
+                   if len(t) >= 5 and (not english or t not in EN_FUNCTION_WORDS)) for r in lines]
+    for i in range(len(lines)):
+        window = toks_by[i:i + 4]
+        for w in toks_by[i]:
+            hits = [ids[i + k] for k, s in enumerate(window) if w in s]
+            if len(hits) >= 3 and w not in echoes:
+                echoes[w] = hits
+    out['word_echoes'] = [{'word': w, 'lines': v} for w, v in list(echoes.items())[:15]]
+    out['note'] = ('Signals for the writer, not verdicts: a repeated shape can be a deliberate refrain. Count what '
+                   'the listener will hear: a device used once is style, used eight times it is a template.')
+    return out
+
+
+def shot_facts(rd, video):
+    """The shot plan as a visual argument (04): every shot belongs to a beat and says what NEW thing its picture
+    gives the viewer; every beat has a picture; lines run contiguously. Plus repetition signals: shots whose
+    prompts are nearly the same, and long runs of one composition family."""
+    n = int(video)
+    plan = read_json(rd / '60-visuals' / f'video-{n:02d}' / 'shot-plan.json')
+    out = {'ready': False, 'issues': [], 'warnings': [], 'shots': 0}
+    if not plan:
+        out['issues'].append('shot_plan_missing')
+        return out
+    beats = [str(b.get('id')) for b in read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or []]
+    lines = read_json(video_dir(rd, n) / 'script.json').get('lines') or []
+    order = [str(r.get('id') or f'L{i + 1:03d}') for i, r in enumerate(lines)]
+    shots = plan.get('shots') or []
+    out['shots'] = len(shots)
+    used, cursor = set(), 0
+    for s in shots:
+        sid = s.get('id')
+        if str(s.get('beat_id')) not in beats:
+            out['issues'].append(f'shot_{sid}_beat_not_in_beat_map')
+        else:
+            used.add(str(s.get('beat_id')))
+        if n_words(s.get('new_thing')) < 4:
+            out['issues'].append(f'shot_{sid}_missing_new_thing')
+        if n_words(s.get('frame_prompt') or s.get('prompt')) < 8:
+            out['issues'].append(f'shot_{sid}_missing_frame_prompt')
+        a = order.index(str(s.get('line_start'))) + 1 if str(s.get('line_start')) in order else None
+        b = order.index(str(s.get('line_end'))) + 1 if str(s.get('line_end')) in order else None
+        if a != cursor + 1 or b is None or b < a:
+            out['issues'].append(f'shot_{sid}_lines_not_contiguous')
+        cursor = b or cursor
+    if order and cursor != len(order):
+        out['issues'].append('shots_do_not_cover_every_line')
+    for b in beats:
+        if b not in used:
+            out['issues'].append(f'beat_{b}_has_no_shot')
+    toks = [(s.get('id'), _content_tokens(s.get('frame_prompt') or s.get('prompt') or '')) for s in shots]
+    close = []
+    for i in range(len(toks)):
+        for j in range(i + 1, len(toks)):
+            sim = _jaccard(toks[i][1], toks[j][1])
+            if sim >= 0.7:
+                close.append(f'{toks[i][0]}~{toks[j][0]} ({sim:.0%})')
+    if close:
+        out['warnings'].append('prompts nearly the same (a callback, or the same picture twice?): ' + ', '.join(close[:12]))
+    run, prev = [], None
+    for s in shots + [{}]:
+        fam = str(s.get('composition') or '')
+        if fam and fam == prev:
+            run.append(s.get('id'))
+        else:
+            if len(run) >= 4:
+                out['warnings'].append(f'{len(run)} shots in a row of the same composition "{prev}": {run[0]}-{run[-1]}')
+            run = [s.get('id')] if fam else []
+        prev = fam
+    out['overlays'] = sum(1 for s in shots if str(s.get('diagram_or_overlay')).lower() not in ('', 'false', 'none', '0'))
+    out['ready'] = not out['issues']
+    return out
 
 
 def voice_measurement(rd):
@@ -805,7 +1207,9 @@ def plan_facts(rd, video):
                 issues.append(f'beat_{n}_time_gap_overlap_or_negative')
             if lstart != cursor_line + 1 or lend < lstart or lend > len(lines):
                 issues.append(f'beat_{n}_line_coverage_gap_or_overlap')
-            for key in ('narrative_job', 'visual_intent'):
+            # The beat's direction: what the viewer should experience, and how narration, picture, sound and pace
+            # serve it there (10-creative-direction.md). Presence only; the treatment evolves beat by beat.
+            for key in ('narrative_job',) + BEAT_DIRECTION_KEYS:
                 if not str(beat.get(key) or '').strip():
                     issues.append(f'beat_{n}_missing_{key}')
             cursor_s, cursor_line = end, lend
@@ -823,7 +1227,25 @@ def plan_facts(rd, video):
     review_text = review.read_text(encoding='utf-8', errors='replace') if review.exists() else ''
     flags, flag_issues = content_flags(lines, review_text)
     issues += flag_issues
-    issues += review_sections_missing(review_text)
+    warnings = []
+    # Creative direction first (10): the treatment is chosen and locked before the script is written, and it
+    # stays the one that was locked. Then one fresh cold read of the script, every finding answered (06).
+    dfacts = direction_facts(rd, video)
+    issues += dfacts['issues']
+    warnings += dfacts['warnings']
+    dlock = read_json(vd / 'direction-lock.json')
+    if not dlock:
+        issues.append('direction_lock_missing')
+    else:
+        if dfacts.get('direction_sha256') and dlock.get('direction_sha256') != dfacts['direction_sha256']:
+            issues.append('direction_changed_since_lock')
+        if dlock.get('late_reason'):
+            warnings.append('creative direction was locked after the script existed: ' + str(dlock['late_reason']))
+    snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
+    script_review = review_state(vd, 'script', script_hash(lines), snapshot) if lines else \
+        {'issues': ['script_review_missing'], 'warnings': [], 'rounds': 0}
+    issues += script_review['issues']
+    warnings += script_review['warnings']
     measured = voice_measurement(rd)
     tag_s = round(sum(tag_cost_s(t['tag'], measured.get('tag_costs_s')) for t in tags), 2)
     pace = float(script.get('pace_wpm') or lock.get('pace_wpm') or 0)
@@ -845,7 +1267,6 @@ def plan_facts(rd, video):
             issues.append('real_forecast_outside_export_tolerance')
     elif pace and abs(forecast - target) > max(10, .08 * target):
         issues.append('script_forecast_misses_locked_length_by_over_8pct')
-    warnings = []
     # Research <-> script: a line that states a number (a date, a count, a distance) and is tied to no claim.
     # Not blocking (a count of sides or the narrator's premise needs none); each consequential one gets a claim
     # before its part is recorded, because a wrong number found later costs a re-record.
@@ -870,6 +1291,10 @@ def plan_facts(rd, video):
                              'voice_per_line_gap_s': round(measured['per_line_overhead_s'], 3) if measured else None},
             'audio_tags': tags, 'tag_time_s': tag_s, 'pause_plan': pause_plan, 'edit_holds_s': holds,
             'content_flags': flags, 'numbers_without_claim': numbers_without_claim,
+            'creative': {'direction_locked': bool(dlock), 'locked_late': bool(dlock.get('late_reason')),
+                         'treatment': dfacts.get('chosen_treatment'), 'script_review_rounds': script_review['rounds'],
+                         'majors_closed_by_decision': script_review.get('majors_closed_by_decision') or []},
+            'writing_signals': writing_signals(lines, lock.get('language') or script.get('language') or 'en'),
             'forecast_s': forecast, 'real_narration_forecast_s': real_narr, 'real_forecast_s': real,
             'locked_target_s': target,
             'export_window_s': [round(target - max(4, target * lock.get('tolerance_export_pct', .025)), 2),
@@ -985,10 +1410,12 @@ def cmd_voice_candidates(args):
     """Suggest up to --count candidate voices (free, from the account's existing voices,
     and/or billed Voice Design previews), save each candidate's preview audio, transcribe
     it (Whisper) and record its preview_wpm with the references' yardstick. A preview is
-    short: its pace does not predict the voice's real pace on a full chunk (measured here:
-    preview 195 -> real 180; a 209 human sample -> 178), so candidates are chosen by
-    character and register by ear; the real pace comes from the calibration chunk.
-    Writes a report for the user to listen to and pick from; picks nothing itself.
+    short: its pace does not predict the voice's real pace on a full chunk (measured on one
+    run: preview 195 -> real 180; a 209 human sample -> 178). Each preview's delivery is
+    measured too (pitch range and movement, loudness contrast), because the agents cannot
+    listen: they choose for the treatment's narrator from descriptions, transcripts and these
+    measurements; the user may listen and overrule. The real pace comes from the calibration part.
+    Writes a report; picks nothing itself.
     An earlier round's report is kept as candidates-<time>.json, never overwritten."""
     rd, st = run_folder(args)
     key = elevenlabs_key()
@@ -1072,7 +1499,7 @@ def cmd_voice_candidates(args):
         else:
             fname.write_bytes(base64.b64decode(c['audio_base_64']))
         tpath = outdir / f'{stem}.json'
-        wpm, heard = None, None
+        wpm, heard, voice_delivery = None, None, None
         try:
             transcribe(fname, tpath, args.whisper_model, args.device, args.compute_type)
             raw = tpath.with_suffix('.txt').read_text(encoding='utf-8', errors='replace')
@@ -1080,8 +1507,21 @@ def cmd_voice_candidates(args):
             heard = strip_transcript_timestamps(raw).strip() or None
         except (RuntimeError, ValueError, OSError) as exc:
             heard = f'transcription failed: {type(exc).__name__}: {str(exc)[:160]}'
+        try:   # how the preview's voice moves (a short sample: indicative only), on the references' yardstick
+            av = _av()
+            import tempfile
+            tj = read_json(tpath)
+            with tempfile.TemporaryDirectory() as tmp:
+                wav = av.extract_audio(fname, Path(tmp) / 'preview.wav')
+                dv = av.delivery(stem, wav, transcript_words(tj), spans={'whole': (0.0, 1e9)}, segments=_segments_of(tj))
+            whole = (dv.get('spans') or {}).get('whole') or {}
+            voice_delivery = {k: whole.get(k) for k in ('pitch_range_st', 'pitch_movement_st', 'loudness_contrast_db')}
+            voice_delivery['register_hz'] = (dv.get('summary') or {}).get('register_hz')
+        except (RuntimeError, ValueError, OSError, ImportError, KeyError) as exc:
+            voice_delivery = {'error': f'{type(exc).__name__}: {str(exc)[:120]}'}
         results.append({'source': c['source'], 'voice_id': c['voice_id'], 'name': c.get('name'),
-                        'labels': c.get('labels'), 'file': str(fname), 'preview_wpm': wpm, 'heard_text': heard})
+                        'labels': c.get('labels'), 'file': str(fname), 'preview_wpm': wpm, 'heard_text': heard,
+                        'measured_delivery': voice_delivery})
     report = {'video': int(args.video), 'search': args.search, 'design_description': args.design_description,
               'made_at': now(), 'candidates': results}
     report_path = outdir.parent / 'candidates.json'
@@ -1090,10 +1530,12 @@ def cmd_voice_candidates(args):
             'candidates-' + dt.datetime.now().strftime('%Y%m%d-%H%M%S') + '.json')))
     write_json(report_path, report)
     emit({'ok': True, 'candidates_file': str(report_path), 'count': len(results), 'candidates': results,
-          'guidance': 'Listen to each file and choose by character and register for this story (the creative '
-                      'strategy in editorial-review.md, the references\' narrators). preview_wpm is a short-sample '
-                      'figure: it does not predict real pace. Lock the pick with voice-pick; the real pace is '
-                      'measured on the first real chunk (tts --max-parts 1, then narration-measure).'})
+          'guidance': 'The agents cannot hear these files. Choose for the chosen treatment\'s narrator (direction.json): '
+                      'compare each candidate\'s description and labels, what it said, and its measured delivery '
+                      '(pitch range and movement, loudness contrast; a short sample, indicative only) with the '
+                      'references\' (20-analysis/av). The files are listed for the user, who may listen and overrule. '
+                      'preview_wpm does not predict real pace. Lock the pick with voice-pick; the real pace and '
+                      'delivery are measured on the first real part (tts --max-parts 1, then narration-measure).'})
 
 
 def cmd_voice_pick(args):
@@ -1532,43 +1974,12 @@ def cmd_timeline_check(args):
 
 def cmd_export_check(args):
     rd, st = run_folder(args)
-    lock = read_json(video_dir(rd, args.video) / 'length-lock.json')
-    issues = []
-    if not lock:
-        error('Length lock not found for video')
-    if not audio_facts(rd, args.video)['ready']:
-        issues.append('audio_gate_failed')
-    video = Path(args.file).expanduser().resolve()
-    if not video.is_file():
-        error('Export file not found', str(video))
-    meta = probe(video)
-    target = lock['target_length_s']
-    if not meta['has_video'] or not meta['has_audio']:
-        issues.append('export_missing_picture_or_sound')
-    if not meta['width'] or not meta['height'] or abs(meta['width']/meta['height'] - 16/9) > 0.025:
-        issues.append('export_aspect_not_16_9')
-    if meta['width'] and meta['width'] < 1280:
-        issues.append('export_low_resolution')
-    if abs(meta['duration_s']-target) > max(4, target*lock.get('tolerance_export_pct', .025)):
-        issues.append('export_duration_misses_user_locked_length')
-    deep = {}
-    if args.deep:
-        for name, filters in [('black_frames', ['-vf', 'blackdetect=d=0.6:pix_th=0.10']),
-                              ('audio_silence', ['-af', 'silencedetect=noise=-48dB:d=2'])]:
-            cmd = ['ffmpeg', '-hide_banner', '-nostdin', '-i', str(video)] + filters + ['-f', 'null', '-']
-            try:
-                p = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=None)
-                lines = [x.strip() for x in p.stderr.splitlines() if
-                         ('black_start:' in x if name == 'black_frames' else 'silence_start:' in x)]
-                deep[name] = lines[:200]
-            except OSError as exc:
-                deep[name] = ['scan_unavailable:' + str(exc)]
-    emit({'ready': not issues, 'issues': issues, 'file': str(video), 'metadata': meta,
-          'target_s': target, 'difference_s': round(meta['duration_s']-target, 2), 'diagnostic_flags': deep,
-          'manual_review_required': ['watch opening/first minute', 'sample each major narrative chapter',
+    res = export_facts(rd, args.video, args.file, deep=args.deep)
+    res['manual_review_required'] = ['watch opening/first minute', 'sample each major narrative chapter',
                                      'watch last minute', 'listen to all TTS joins',
-                                     'check factual assertions/visual chronology', 'review title-thumbnail promise']},
-         0 if not issues else 2)
+                                     'check factual assertions/visual chronology', 'review title-thumbnail promise',
+                                     'final watch review: av-profile --file, review-packet --kind final, release-check']
+    emit(res, 0 if res['ready'] else 2)
 
 
 def tokens_of(text):
@@ -1632,7 +2043,7 @@ def cmd_narration_measure(args):
     wdir = folder / 'whisper'
     wdir.mkdir(exist_ok=True)
     tags, _ = script_tags(lines)
-    rows, all_words, per_part = {}, [], []
+    rows, all_words, per_part, all_segments = {}, [], [], []
     tot_words = tot_speech = tot_dur = 0.0
     for c in use:
         lo, hi = int(c['line_start']), int(c['line_end'])
@@ -1658,6 +2069,7 @@ def cmd_narration_measure(args):
                             'matched_words': len(got), 'words': len(tt),
                             '_tok': [None if x is None else (offset + x[0], offset + x[1]) for x in tt]}
         all_words += [{'start_s': w['start_s'] + offset, 'end_s': w['end_s'] + offset, 'text': w['text']} for w in words]
+        all_segments += _segments_of(tj, offset)
         per_part.append({'id': c['id'], 'lines': [lo, hi], 'offset_s': round(offset, 3),
                          'duration_s': durations[c['id']], 'words': wc, 'speech_s': round(speech, 2),
                          'wpm': round(wc / (speech / 60)) if speech else None, 'alignment_match_ratio': round(ratio, 3)})
@@ -1715,6 +2127,39 @@ def cmd_narration_measure(args):
     complete = sorted(rows) == list(range(1, len(lines) + 1))
     ratio_all = (sum(p['alignment_match_ratio'] * (p['lines'][1] - p['lines'][0] + 1) for p in per_part) / nlines) if nlines else 0
     profile = pause_profile(all_words)
+    # How the voice moves, beat by beat, next to what each beat asked for and to the references measured the same
+    # way (av_tools): the writing of the parts not yet recorded is where a flat stretch gets fixed.
+    delivery, delivery_error = None, None
+    if not args.no_delivery:
+        try:
+            av = _av()
+            import tempfile
+            top = max(c['id'] for c in use)
+            files = [folder / c['file'] for c in sorted(chunks, key=lambda x: x['id'])
+                     if c['id'] <= top and (folder / c['file']).is_file()]
+            beats = read_json(vd / 'beat-map.json').get('beats') or []
+            spans = {}
+            for b in beats:
+                try:
+                    b0, b1 = int(b['line_start']), int(b['line_end'])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if b0 in rows and b1 in rows and rows[b0]['start_s'] is not None and rows[b1]['end_s'] is not None:
+                    spans[str(b.get('id'))] = (rows[b0]['start_s'], rows[b1]['end_s'])
+            with tempfile.TemporaryDirectory() as tmp:
+                wav = av.concat_audio(files, Path(tmp) / 'narration.wav')
+                delivery = av.delivery(f'video-{n:02d} narration', wav, all_words, spans=spans, segments=all_segments)
+            for b in beats:
+                k = str(b.get('id'))
+                if k in (delivery.get('spans') or {}):
+                    delivery['spans'][k]['intended'] = {x: b.get(x) for x in ('experience', 'narration_direction', 'pace')}
+            delivery['references'] = {v: (read_json(ref_av_path(rd, v)).get('summary') or {}).get('narration')
+                                      for v in lock.get('reference_ids') or [] if ref_av_path(rd, v).is_file()}
+            delivery['parts'] = [p['id'] for p in per_part]
+            delivery['measured_at'] = now()
+            write_json(folder / 'delivery.json', delivery)
+        except (RuntimeError, ValueError, OSError, ImportError, KeyError) as exc:
+            delivery_error = f'{type(exc).__name__}: {str(exc)[:200]}'
     for r in rows.values():
         r.pop('_tok', None)
     out = {'video': n, 'complete': complete, 'script_sha256': script_hash(lines) if complete else None,
@@ -1766,6 +2211,12 @@ def cmd_narration_measure(args):
                          for v, p in ref_pause_profiles(rd, lock.get('reference_ids') or []).items()},
           'alignment_match_ratio': round(ratio_all, 3), 'voice_lock_updated': wrote, 'note': note,
           'warnings': warnings,
+          'delivery': ({'file': str(folder / 'delivery.json'), 'summary': delivery.get('summary'),
+                        'references': delivery.get('references'),
+                        'reading': 'Pitch range and movement, loudness contrast and rate across the narration, per '
+                                   'beat in the file: a beat asked to lift that measures flat is rewritten in the '
+                                   'parts not yet recorded (10-creative-direction.md), never fixed in the audio.'}
+                       if delivery else {'error': delivery_error} if delivery_error else None),
           'next': 'plan-check (real_forecast_s against the export window); when complete: retime-shots.'})
 
 
@@ -1814,6 +2265,10 @@ def cmd_retime_shots(args):
                 and x != 'narration_duration_outside_locked_tolerance']
     if blocking:
         error('The narration is not complete and matching the script yet.', blocking)
+    shots_gate = shot_facts(rd, n)
+    if shots_gate['issues']:
+        error('The shot plan is not a complete visual argument yet (shot-check): every shot needs its beat and what '
+              'NEW thing its picture gives the viewer, and every beat a picture.', shots_gate['issues'])
     plan_path = rd / '60-visuals' / f'video-{n:02d}' / 'shot-plan.json'
     plan = read_json(plan_path, required=True)
     shots = plan.get('shots') or []
@@ -1886,6 +2341,517 @@ def cmd_retime_shots(args):
           'within_export_window': edit_plan['within_export_window'], 'edit_narration': edit_audio, 'notes': notes})
 
 
+def _av():
+    """The audiovisual measurements (av_tools.py, next to this file): loaded only when a command needs them, so the
+    rest of the pipeline never waits on numpy/OpenCV/librosa."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import av_tools
+    return av_tools
+
+
+def _segments_of(tjson, offset=0.0):
+    return [(float(s['start_s']) + offset, float(s['end_s']) + offset) for s in tjson.get('segments') or []
+            if s.get('start_s') is not None and s.get('end_s') is not None]
+
+
+def export_av_path(rd, video, fingerprint):
+    return rd / '70-edit' / f'video-{int(video):02d}' / 'av' / f"export-{fingerprint.split(':')[0][:10]}.json"
+
+
+def cmd_av_profile(args):
+    """Measured evidence of how a video works over time (av_tools.py): the references (--refs), or this video's
+    export (--video NN --file). Writes the measurements and one watch sheet per minute (frames every 5 s with the
+    words spoken under them) for the agents to read like an editor scrubbing a timeline."""
+    rd, st = run_folder(args)
+    av = _av()
+    import tempfile
+    results = {}
+    if args.refs:
+        vids = cards_inventory(rd)
+        for vid in normalize_refs(args.refs):
+            row = vids.get(vid)
+            if not row:
+                error('Unknown reference ID (or a duplicate).', vid)
+            media = rd / '10-media' / vid
+            fi = read_json(media / 'frame-index.json')
+            frames = [(f['approx_s'], media / 'sampled-frames' / f['file']) for f in fi.get('frames') or []]
+            if not frames:
+                error('No sampled frames for this reference: run prepare first.', vid)
+            tj = read_json(media / 'transcript.json')
+            words = transcript_words(tj)
+            target = ref_av_path(rd, vid)
+            sig = {'fingerprint': row.get('fingerprint'), 'frames': len(frames), 'words': len(words),
+                   'method': av.METHOD_VERSION, 'sheets': not args.no_sheets}
+            old = read_json(target)
+            if old.get('signature') == sig and not args.force:
+                results[vid] = {'file': str(target), 'cached': True, 'summary': old.get('summary')}
+                continue
+            with tempfile.TemporaryDirectory() as tmp:
+                wav = None
+                if row.get('has_audio') and words:
+                    try:
+                        wav = av.extract_audio(row['source_path'], Path(tmp) / 'audio.wav')
+                    except RuntimeError as exc:
+                        results.setdefault('_notes', []).append(f'{vid}: audio not measured ({str(exc)[:120]})')
+                prof = av.profile(vid, row.get('duration_s') or frames[-1][0], frames, wav, words,
+                                  sheets_dir=None if args.no_sheets else target.with_suffix(''),
+                                  segments=_segments_of(tj))
+            tfile = media / 'transcript.txt'
+            if prof['summary'].get('narration') is not None:
+                prof['summary']['narration']['wpm_pipeline'] = (wpm_from_transcript_raw(
+                    tfile.read_text(encoding='utf-8', errors='replace')) if tfile.exists() else None)
+                prof['summary']['narration']['pause_profile'] = pause_profile(words)
+            prof.update({'signature': sig, 'source': {'id': vid, 'fingerprint': row.get('fingerprint')},
+                         'made_at': now()})
+            write_json(target, prof)
+            results[vid] = {'file': str(target), 'sheets': len(prof['sheets']), 'summary': prof['summary']}
+    elif args.video and args.file:
+        n = int(args.video)
+        f = Path(args.file).expanduser().resolve()
+        if not f.is_file():
+            error('Export file not found', str(f))
+        fp = quick_fingerprint(f)
+        target = export_av_path(rd, n, fp)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        meta = probe(f)
+        if args.transcript:
+            tj = read_json(args.transcript, required=True)
+        else:
+            tpath = target.with_name(target.stem + '-whisper.json')
+            if not (read_json(tpath).get('status') == 'transcribed'):
+                transcribe(f, tpath, args.whisper_model, args.device, args.compute_type)
+            tj = read_json(tpath)
+        words = transcript_words(tj)
+        with tempfile.TemporaryDirectory(dir=str(target.parent)) as tmp:
+            frames = av.extract_frames(f, Path(tmp) / 'frames', fps=st.get('analysis_fps', 5))
+            wav = None
+            if meta.get('has_audio'):
+                try:
+                    wav = av.extract_audio(f, Path(tmp) / 'audio.wav')
+                except RuntimeError:
+                    wav = None
+            prof = av.profile(f'video-{n:02d}', meta['duration_s'], frames, wav, words,
+                              sheets_dir=None if args.no_sheets else target.with_suffix(''),
+                              segments=_segments_of(tj))
+        for s in prof['shots']:
+            s.pop('keyframe', None)            # the export's frames were temporary; the sheets keep the pictures
+        lock = read_json(video_dir(rd, n) / 'length-lock.json')
+        prof['references'] = {v: read_json(ref_av_path(rd, v)).get('summary') for v in lock.get('reference_ids') or []
+                              if ref_av_path(rd, v).is_file()}
+        prof.update({'source': {'file': str(f), 'fingerprint': fp}, 'made_at': now()})
+        write_json(target, prof)
+        results[f'video-{n:02d}'] = {'file': str(target), 'sheets': len(prof['sheets']), 'summary': prof['summary'],
+                                     'references': prof['references']}
+    else:
+        error('Give --refs V001,V002 (references), or --video NN --file export.mp4 (this video\'s export).')
+    emit({'ok': True, 'profiles': results,
+          'reading': 'Measurements, not verdicts: what the voice, the picture and the cut do over time. Open the '
+                     'sheets in order to watch the video as a storyboard with its words; compare numbers only with '
+                     'videos measured the same way (10-creative-direction.md).'})
+
+
+def cmd_direction_lock(args):
+    """Lock the creative direction (direction.json) before the script is written: it must be complete, and its
+    treatments must have had their blind comparison read with every finding answered. A video whose script came
+    first can be locked only with --late "reason" (recorded and shown at every plan-check). A later change needs
+    --revise "what changed and why" (kept in the lock's history)."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    df = direction_facts(rd, n)
+    if df['issues']:
+        error('The creative direction is not complete yet.', df['issues'])
+    tr = review_state(vd, 'treatment', df['treatments_sha256'])
+    if tr['issues']:
+        error('The treatments need their blind comparison read (review-packet --kind treatment), recorded, and every '
+              'finding answered before the direction is locked.', tr['issues'])
+    lockp = vd / 'direction-lock.json'
+    prev = read_json(lockp)
+    script_exists = (vd / 'script.json').is_file()
+    entry = {'locked_at': now(), 'direction_sha256': df['direction_sha256'],
+             'treatments_sha256': df['treatments_sha256'], 'treatment': df['chosen_treatment'],
+             'script_existed': script_exists}
+    if not prev:
+        if script_exists and not args.late:
+            error('A script already exists: the creative direction is decided and locked BEFORE scriptwriting. For a '
+                  'video whose script really came first, --late "reason" records that exception (shown at every '
+                  'plan-check and in the release sheet).')
+        lock = {**entry, 'late_reason': args.late or None, 'history': []}
+    else:
+        if prev.get('direction_sha256') == df['direction_sha256']:
+            emit({'ok': True, 'unchanged': True, 'lock': str(lockp), 'treatment': prev.get('treatment')})
+            return
+        if not args.revise:
+            error('The direction changed since it was locked. Re-lock with --revise "what changed and why"; the script '
+                  'and beat directions may need to follow the change.')
+        lock = {**entry, 'late_reason': prev.get('late_reason'),
+                'history': (prev.get('history') or []) + [{k: prev.get(k) for k in
+                                                           ('locked_at', 'direction_sha256', 'treatment')}
+                                                          | {'revised_because': args.revise}]}
+    write_json(lockp, lock)
+    emit({'ok': True, 'lock': str(lockp), 'treatment': lock['treatment'], 'late': bool(lock.get('late_reason')),
+          'next': 'Beat directions and the script are written from this treatment (03, 10).'})
+
+
+HOUSE_RULES = ('House rules the video must keep (never suggest breaking them; flag any line or picture that comes '
+               'close): no holiday, religious or superstitious scene used as a story device; nothing gory (no blood, '
+               'wounds, bodies or injuries shown or described); no extreme distress; no swearing; nothing indecent; '
+               'every person an adult.')
+
+SCRIPT_BRIEF = """# Cold read: {TITLE}
+
+You are a first-time viewer, not an editor. Below is the complete narration of a long-form YouTube video
+(about {MINUTES} minutes, narrated over illustrated stills). You get only the title and the words, on purpose:
+no plan, no rationale. Read nothing else and do not change any file except the one you are asked to write.
+
+Read it all the way through as someone who clicked the title and is listening. Be honest, specific and fair:
+say what works as plainly as what does not. Refer to line ids.
+
+Think about:
+1. What the video promised, and whether it delivered.
+2. Your gut, 1-10: would you keep watching? (a viewer's gut, not a quality score)
+3. Where your attention dropped, and why: facts with no consequence for anyone, the same point made again, a list
+   read aloud, a sentence pattern repeating, textbook register, explaining what you had already felt, exposition
+   before you cared. Roughly how long each stretch felt.
+4. What feels formulaic: devices used so often they stop working (count them).
+5. The strongest passages, and why they work.
+6. Whether the narrator sounds like a person you would enjoy listening to: personality, warmth, wit or emotion
+   where the material invites it; or a reader of facts; or someone straining for drama.
+7. Lines hard to follow by ear: number pile-ups, very long sentences, tangled grammar, jargon.
+8. The ending: does it land; is anything after the payoff too long or too short.
+
+Then list findings (at most 12), each concrete enough to act on. Severity "major": a viewer would likely stop
+watching, lose the thread or stop trusting the video there (a long sag, a confusing stretch, a contradiction, a
+broken or unearned ending, a line breaking the house rules). "minor": polish.
+
+{HOUSE_RULES}
+Do not invent facts. If a fix needs a new fact, write "needs a sourced detail".
+
+Write your answer as JSON, and nothing else, to: {OUT}
+{{
+  "reviewer": "fresh cold reader",
+  "verdict": {{"promise": "...", "delivered": "...", "keep_watching_1_10": 7, "why": "..."}},
+  "strongest": [{{"lines": "L052-L058", "why": "..."}}],
+  "findings": [{{"id": "F1", "severity": "major", "lines": ["L112-L135"], "problem": "...",
+                 "viewer_impact": "...", "suggestion": "..."}}]
+}}
+
+## The narration
+"""
+
+TREATMENT_BRIEF = """# Treatment comparison (blind)
+
+Below are {K} different ways to make the same long-form YouTube video: how it sounds (the narrator and the
+writing) and how it looks (pictures, motion, sound), each shown through three short sample moments. The labels are
+random. You get nothing else, on purpose: read nothing else and change no file except the one you are asked to write.
+
+The video: {PREMISE}
+About {MINUTES} minutes, narrated over illustrated stills.
+
+Judge them as a viewer choosing what to watch for {MINUTES} minutes, not by the best first 30 seconds:
+1. Which would you most want to watch to the end, and why?
+2. For each: where it would wear thin over a long video; what feels fresh; what feels like a template, or like
+   any other video in this genre; whether the voice and the pictures feel like one idea.
+3. Which narrator would you enjoy for {MINUTES} minutes, and which would tire you (too flat, too theatrical,
+   too cute, too much like a lecture)?
+4. Anything in a sample that breaks the house rules.
+
+Findings (at most 8): each names the treatment label, severity "major" (this treatment would not hold a long watch,
+or has a serious flaw) or "minor", the problem, why it matters to a viewer, and a suggestion.
+
+{HOUSE_RULES}
+
+Write your answer as JSON, and nothing else, to: {OUT}
+{{
+  "reviewer": "fresh reader",
+  "would_watch": "B",
+  "why": "...",
+  "per_treatment": {{"A": "...", "B": "..."}},
+  "findings": [{{"id": "F1", "severity": "minor", "treatment": "A", "problem": "...",
+                 "viewer_impact": "...", "suggestion": "..."}}]
+}}
+"""
+
+FINAL_BRIEF = """# Final watch review: {TITLE}
+
+You review the finished video as a viewer would experience it. You cannot play it; you have its watch sheets: one
+image per minute, a frame every 5 seconds with the words spoken under it. Open every sheet in order and read them
+like a film. Below them are a few measurements per minute (facts, not verdicts). Read nothing else and change no file
+except the one you are asked to write.
+
+Judge it against what each part was meant to feel like (listed below), not against a generic checklist:
+1. Did each part deliver what it set out to do?
+2. Where does it get visually repetitive, or the pictures stop adding anything to the words (a slideshow)?
+3. Where do picture and words not connect, or contradict each other?
+4. Where does it feel like a lecture or a dry documentary instead of a story? Where does it drag or rush?
+5. Continuity breaks: a person, place, object, light or time of day that jumps without reason.
+6. The first minute and the ending.
+7. Anything on screen or in the words that breaks the house rules.
+
+Findings (at most 12), each with "at" as "mm:ss-mm:ss", severity "major" (a viewer would likely leave, get lost
+or stop trusting it there) or "minor", the problem, why it matters to a viewer, and a suggestion.
+
+{HOUSE_RULES}
+
+Write your answer as JSON, and nothing else, to: {OUT}
+{{
+  "reviewer": "fresh final reviewer",
+  "verdict": {{"delivered": "...", "keep_watching_1_10": 7, "why": "..."}},
+  "findings": [{{"id": "F1", "severity": "major", "at": "03:10-04:05", "problem": "...",
+                 "viewer_impact": "...", "suggestion": "..."}}]
+}}
+"""
+
+
+def _fill(template, **kw):
+    out = template
+    for k, v in kw.items():
+        out = out.replace('{' + k + '}', str(v))
+    return out.replace('{{', '{').replace('}}', '}')
+
+
+def _mmss(t):
+    t = max(0, int(round(float(t or 0))))
+    return f'{t // 60:02d}:{t % 60:02d}'
+
+
+def cmd_review_packet(args):
+    """The bare material for ONE fresh reviewer (an agent spawned with nothing but this file): the script for a
+    cold read, the treatments' samples for a blind comparison, or the export's watch sheets for the final review.
+    Refuses while the previous round still has unanswered findings."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    kind = args.kind
+    recs = review_records(vd, kind)
+    if recs:
+        last, ans = recs[-1]
+        open_ids = [str(f.get('id')) for f in last.get('findings') or [] if answer_problem(kind, f, ans.get(str(f.get('id'))))]
+        if open_ids:
+            error('Answer every finding of the previous round first (revised with its lines, kept or disputed with a '
+                  'reason), then ask for a fresh read.', {'round': last['_round'], 'open': open_ids})
+    rnd = recs[-1][0]['_round'] + 1 if recs else 1
+    lock = read_json(vd / 'length-lock.json', required=True)
+    minutes = round(lock['target_length_s'] / 60)
+    blue = read_json(vd / 'blueprint.json')
+    title = blue.get('title') or (blue.get('title_options') or ['(untitled)'])[0]
+    if isinstance(title, dict):
+        title = title.get('title') or json.dumps(title, ensure_ascii=False)
+    folder = vd / 'reviews'
+    folder.mkdir(parents=True, exist_ok=True)
+    out_path = folder / f'{kind}-r{rnd}-findings.json'
+    meta = {'kind': kind, 'round': rnd, 'video': n, 'created_at': now(), 'findings_file': str(out_path)}
+    if kind == 'script':
+        if not read_json(vd / 'direction-lock.json'):
+            error('Lock the creative direction first (direction-lock): the script is written from it, and read after it.')
+        script = read_json(vd / 'script.json', required=True)
+        lines = script.get('lines') or []
+        snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
+        text = _fill(SCRIPT_BRIEF, TITLE=title, MINUTES=minutes, HOUSE_RULES=HOUSE_RULES, OUT=out_path)
+        text += '\n'.join(f'{lid} {strip_tags(t)}' for lid, t in snapshot.items()) + '\n'
+        meta.update({'subject_sha256': script_hash(lines), 'subject_snapshot': snapshot})
+    elif kind == 'treatment':
+        df = direction_facts(rd, n)
+        blocking = [x for x in df['issues'] if x.startswith(('treatment_', 'direction_needs_2', 'direction_missing'))]
+        if blocking:
+            error('The treatments are not complete enough to compare.', blocking)
+        d = read_json(vd / 'direction.json')
+        trs = {str(t['id']): t for t in d.get('treatments') or []}
+        subject = df['treatments_sha256']
+        order = sorted(trs, key=lambda x: hashlib.sha256((subject + x).encode('utf-8')).hexdigest())
+        labels = {chr(65 + i): tid for i, tid in enumerate(order)}
+        apps = {str(a.get('id')): a for a in d.get('approaches') or [] if isinstance(a, dict)}
+        chosen = apps.get(str((d.get('chosen_approach') or {}).get('id'))) or {}
+        premise = ' '.join(x for x in (str(blue.get('audience_promise') or ''), str(chosen.get('pitch') or '')) if x)
+        text = _fill(TREATMENT_BRIEF, K=len(trs), PREMISE=premise or '(see the samples)', MINUTES=minutes,
+                     HOUSE_RULES=HOUSE_RULES, OUT=out_path)
+        for lab, tid in labels.items():
+            t = trs[tid]
+            text += f'\n## Treatment {lab}\n'
+            for k in TREATMENT_SHOWN_TO_REVIEWER:
+                text += f'- {k.replace("_", " ")}: {t.get(k)}\n'
+            for m in SAMPLE_MOMENTS:
+                s = (t.get('samples') or {}).get(m) or {}
+                text += (f'\n### {m.replace("_", " ")}\nWhat you see: {s.get("picture")}\n'
+                         f'What you hear: {strip_tags(s.get("narration") or "")}\n')
+        meta.update({'subject_sha256': subject, 'labels': labels})
+    else:
+        if not args.file:
+            error('The final review reads a real export: give --file export.mp4.')
+        f = Path(args.file).expanduser().resolve()
+        if not f.is_file():
+            error('Export file not found', str(f))
+        fp = quick_fingerprint(f)
+        prof = read_json(export_av_path(rd, n, fp))
+        if not prof:
+            error('Run av-profile --video NN --file on this export first: it makes the watch sheets the reviewer reads.')
+        beats = read_json(vd / 'beat-map.json').get('beats') or []
+        plan = read_json(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json')
+        spans = {}
+        for s in plan.get('shots') or []:
+            b = str(s.get('beat_id'))
+            lo, hi = spans.get(b, (s['start_s'], s['end_s']))
+            spans[b] = (min(lo, s['start_s']), max(hi, s['end_s']))
+        text = _fill(FINAL_BRIEF, TITLE=title, HOUSE_RULES=HOUSE_RULES, OUT=out_path)
+        text += '\n## What each part was meant to feel like\n'
+        for b in beats:
+            a_s, b_s = spans.get(str(b.get('id')), (b.get('start_s'), b.get('end_s')))
+            text += f'- {_mmss(a_s)}-{_mmss(b_s)}: {b.get("experience") or b.get("narrative_job")} (pace: {b.get("pace") or "-"})\n'
+        text += '\n## Watch sheets, in order\n' + '\n'.join(f'- {p}' for p in prof.get('sheets') or []) + '\n'
+        text += '\n## Measurements per minute (facts, not verdicts)\n| minute | cuts | moving | wpm | pitch range st |\n|---|---|---|---|---|\n'
+        wins = prof.get('windows') or []
+        for m0 in range(0, int(prof.get('duration_s') or 0) + 1, 60):
+            mw = [w for w in wins if m0 <= (w.get('start_s') or 0) < m0 + 60]
+            if not mw:
+                continue
+            cuts = sum(w.get('cuts') or 0 for w in mw)
+            mo = [w['motion_share'] for w in mw if w.get('motion_share') is not None]
+            wp = [w['speech_rate_wpm'] for w in mw if w.get('speech_rate_wpm')]
+            pr = [w['pitch_range_st'] for w in mw if w.get('pitch_range_st') is not None]
+            text += (f'| {_mmss(m0)} | {cuts} | {round(100 * statistics.mean(mo)) if mo else "-"}% | '
+                     f'{round(statistics.median(wp)) if wp else "-"} | {round(statistics.median(pr), 1) if pr else "-"} |\n')
+        meta.update({'subject_sha256': fp, 'file': str(f)})
+    packet = folder / f'packet-{kind}-r{rnd}.md'
+    packet.write_text(text, encoding='utf-8')
+    write_json(folder / f'packet-{kind}-r{rnd}.json', meta)
+    emit({'ok': True, 'kind': kind, 'round': rnd, 'packet': str(packet), 'findings_file': str(out_path),
+          'next': ('Spawn ONE fresh agent with no other context. Its whole prompt: "Read only ' + str(packet) +
+                   ' and follow it exactly." Do not add your rationale, the plan, or what you hope it finds. Then '
+                   'review-record --kind ' + kind + '. Never edit the reviewer\'s findings.')})
+
+
+def cmd_review_record(args):
+    """Seal a reviewer's findings for the current round (they can no longer change without plan-check noticing) and
+    start the answers file: every finding gets revised (with its lines), kept or disputed (with a reason)."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    kind = args.kind
+    recs = review_records(vd, kind)
+    rnd = recs[-1][0]['_round'] + 1 if recs else 1
+    folder = vd / 'reviews'
+    meta = read_json(folder / f'packet-{kind}-r{rnd}.json')
+    if not meta:
+        error(f'No packet for round {rnd}: run review-packet --kind {kind} first and give it to a fresh reviewer.')
+    fpath = Path(args.findings).expanduser() if args.findings else Path(meta['findings_file'])
+    raw = read_json(fpath, required=True)
+    findings = raw.get('findings')
+    if not isinstance(findings, list):
+        error('The findings file has no "findings" list.', str(fpath))
+    problems, seen = [], set()
+    order = list((meta.get('subject_snapshot') or {}).keys())
+    for f in findings:
+        fid = str(f.get('id') or '').strip() if isinstance(f, dict) else ''
+        if not fid or fid in seen:
+            problems.append(f'finding without a unique id: {f}')
+            continue
+        seen.add(fid)
+        if f.get('severity') not in ('major', 'minor'):
+            problems.append(f'{fid}: severity must be "major" or "minor"')
+        if n_words(f.get('problem')) < 4:
+            problems.append(f'{fid}: the problem is not described')
+        if kind == 'script':
+            if not f.get('lines') or expand_lines(f.get('lines'), order) is None:
+                problems.append(f'{fid}: "lines" must name lines of the reviewed script (L005 or L005-L009)')
+        elif kind == 'treatment':
+            if str(f.get('treatment') or '').strip().upper() not in (meta.get('labels') or {}):
+                problems.append(f'{fid}: "treatment" must be one of the packet\'s labels')
+            else:
+                f['treatment_id'] = meta['labels'][str(f['treatment']).strip().upper()]
+        elif not re.fullmatch(r'\d{1,3}:\d{2}(\s*-\s*\d{1,3}:\d{2})?', str(f.get('at') or '').strip()):
+            problems.append(f'{fid}: "at" must be mm:ss or mm:ss-mm:ss')
+    if problems:
+        error('The findings file does not follow the packet\'s format. Ask the reviewer to fix the format; never '
+              'rewrite its judgement.', problems)
+    rec = {'kind': kind, 'round': rnd, 'video': n, 'packet': str(folder / f'packet-{kind}-r{rnd}.md'),
+           'subject_sha256': meta['subject_sha256'], 'subject_snapshot': meta.get('subject_snapshot'),
+           'labels': meta.get('labels'), 'file': meta.get('file'), 'reviewer': raw.get('reviewer') or 'unstated',
+           'verdict': raw.get('verdict') or {k: raw.get(k) for k in ('would_watch', 'why', 'per_treatment') if k in raw},
+           'strongest': raw.get('strongest'), 'findings': findings, 'findings_sha256': canonical_sha(findings),
+           'recorded_at': now()}
+    write_json(folder / f'{kind}-r{rnd}.json', rec)
+    ans_path = folder / f'{kind}-r{rnd}-answers.json'
+    if not ans_path.exists():
+        write_json(ans_path, {'answers': {str(f['id']): {'action': '', 'lines': [], 'note': ''} for f in findings},
+                              'how': 'action: revised (script: list the lines changed) | kept (minor only) | disputed; '
+                                     'kept and disputed need a reason in note. A major finding is revised or disputed.'})
+    majors = [str(f['id']) for f in findings if f.get('severity') == 'major']
+    need_more = bool(majors) and rnd < REVIEW_MAX_ROUNDS[kind]
+    emit({'ok': True, 'record': str(folder / f'{kind}-r{rnd}.json'), 'answers_file': str(ans_path),
+          'findings': len(findings), 'major': majors,
+          'next': ('Answer every finding in the answers file and make the revisions. ' +
+                   (f'Major findings: after revising, a fresh round-{rnd + 1} read of the new version is required '
+                    '(review-packet again, a NEW agent).' if need_more else
+                    'No further read is required by the process; another one is always allowed.'))})
+
+
+def cmd_shot_check(args):
+    rd, st = run_folder(args)
+    res = shot_facts(rd, args.video)
+    emit(res, 0 if res['ready'] else 2)
+
+
+def export_facts(rd, video, file, deep=False):
+    lock = read_json(video_dir(rd, video) / 'length-lock.json')
+    if not lock:
+        error('Length lock not found for video')
+    issues = []
+    if not audio_facts(rd, video)['ready']:
+        issues.append('audio_gate_failed')
+    video_file = Path(file).expanduser().resolve()
+    if not video_file.is_file():
+        error('Export file not found', str(video_file))
+    meta = probe(video_file)
+    target = lock['target_length_s']
+    if not meta['has_video'] or not meta['has_audio']:
+        issues.append('export_missing_picture_or_sound')
+    if not meta['width'] or not meta['height'] or abs(meta['width'] / meta['height'] - 16 / 9) > 0.025:
+        issues.append('export_aspect_not_16_9')
+    if meta['width'] and meta['width'] < 1280:
+        issues.append('export_low_resolution')
+    if abs(meta['duration_s'] - target) > max(4, target * lock.get('tolerance_export_pct', .025)):
+        issues.append('export_duration_misses_user_locked_length')
+    diag = {}
+    if deep:
+        for name, filters in [('black_frames', ['-vf', 'blackdetect=d=0.6:pix_th=0.10']),
+                              ('audio_silence', ['-af', 'silencedetect=noise=-48dB:d=2'])]:
+            cmd = ['ffmpeg', '-hide_banner', '-nostdin', '-i', str(video_file)] + filters + ['-f', 'null', '-']
+            try:
+                p = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=None)
+                rows = [x.strip() for x in p.stderr.splitlines() if
+                        ('black_start:' in x if name == 'black_frames' else 'silence_start:' in x)]
+                diag[name] = rows[:200]
+            except OSError as exc:
+                diag[name] = ['scan_unavailable:' + str(exc)]
+    return {'ready': not issues, 'issues': issues, 'file': str(video_file), 'metadata': meta, 'target_s': target,
+            'difference_s': round(meta['duration_s'] - target, 2), 'diagnostic_flags': diag}
+
+
+def cmd_release_check(args):
+    """Every recorded gate for one export: plan (direction, reviews, length), narration, shot plan, the export
+    itself, and the final watch review of THIS file with every finding answered. 'ready' means the process was
+    followed through; it does not measure whether the video is good."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    plan = plan_facts(rd, n)
+    audio = audio_facts(rd, n)
+    shots = shot_facts(rd, n)
+    exp = export_facts(rd, n, args.file, deep=False)
+    fin = review_state(vd, 'final', quick_fingerprint(Path(args.file).expanduser().resolve()))
+    issues = ([f'plan:{x}' for x in plan['issues']] + [f'audio:{x}' for x in audio['issues']] +
+              [f'shots:{x}' for x in shots['issues']] + [f'export:{x}' for x in exp['issues']] + fin['issues'])
+    warnings = plan.get('warnings', []) + shots.get('warnings', []) + fin['warnings']
+    emit({'ready': not issues, 'release_status': 'ready' if not issues else 'blocked', 'issues': issues,
+          'warnings': warnings, 'export': {k: exp[k] for k in ('file', 'metadata', 'target_s', 'difference_s')},
+          'final_review_rounds': fin['rounds'],
+          'note': 'Ready means every recorded gate passed for this exact file. It does not say the video is good: '
+                  'that is the director\'s and the reviewers\' judgement, recorded in their files.'},
+         0 if not issues else 2)
+
+
 def cmd_status(args):
     rd, st = run_folder(args)
     inv = read_json(rd / '00-inventory/references.json')
@@ -1900,7 +2866,10 @@ def cmd_status(args):
         audio = audio_facts(rd, i)
         videos[str(i)] = {'target_s': read_json(vd/'length-lock.json').get('target_length_s'),
                           'plan_ready': plan['ready'], 'audio_ready': audio['ready'],
-                          'issues': list(dict.fromkeys(plan['issues'] + audio['issues']))}
+                          'creative': {**(plan.get('creative') or {}),
+                                       'reviews': {k: len(review_records(vd, k)) for k in REVIEW_MAX_ROUNDS}},
+                          'issues': list(dict.fromkeys(plan['issues'] + audio['issues'])),
+                          'warnings': plan.get('warnings', [])}
     emit({'ok': True, 'run': str(rd), 'stage': st.get('stage'), 'selected_niche': st.get('selected_niche'),
           'reference_videos': len([x for x in inv.get('items', []) if x.get('kind') == 'video']),
           'videos': videos})
@@ -1997,8 +2966,38 @@ def main():
     p = sub.add_parser('narration-measure', help='Real pace, line gap, tag costs, pauses and line times of the narration')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--parts', default='', help='Only these finished parts, e.g. 1 (the calibration part)')
+    p.add_argument('--no-delivery', action='store_true', help='Skip the delivery measurement (pitch, loudness, '
+                   'rate per beat next to the references)')
     p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
     p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_narration_measure)
+    p = sub.add_parser('av-profile', help='Measured audiovisual evidence and watch sheets: references or this export')
+    p.add_argument('--run', required=True); p.add_argument('--refs', default='')
+    p.add_argument('--video', type=int); p.add_argument('--file', default='')
+    p.add_argument('--transcript', default='', help='An existing Whisper transcript.json of the export (else Whisper '
+                   'medium transcribes it, cached)')
+    p.add_argument('--no-sheets', action='store_true'); p.add_argument('--force', action='store_true')
+    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
+    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_av_profile)
+    p = sub.add_parser('direction-lock', help='Lock the creative direction before the script is written')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--late', default='', help='Only for a video whose script existed first: why (recorded, shown)')
+    p.add_argument('--revise', default='', help='Re-lock a changed direction: what changed and why (kept in history)')
+    p.set_defaults(func=cmd_direction_lock)
+    p = sub.add_parser('review-packet', help='The bare material for ONE fresh reviewer agent')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--kind', required=True, choices=list(REVIEW_MAX_ROUNDS))
+    p.add_argument('--file', default='', help='The export (final review)'); p.set_defaults(func=cmd_review_packet)
+    p = sub.add_parser('review-record', help='Seal a reviewer\'s findings and start the answers file')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--kind', required=True, choices=list(REVIEW_MAX_ROUNDS))
+    p.add_argument('--findings', default='', help='Default: the findings file the packet named')
+    p.set_defaults(func=cmd_review_record)
+    p = sub.add_parser('shot-check', help='The shot plan as a visual argument, plus repetition signals')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.set_defaults(func=cmd_shot_check)
+    p = sub.add_parser('release-check', help='Every recorded gate for one export, final watch review included')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--file', required=True); p.set_defaults(func=cmd_release_check)
     p = sub.add_parser('pace-profile', help='Pace and pauses of the references (and the measured narration)')
     p.add_argument('--run', required=True); p.add_argument('--refs', default=''); p.add_argument('--video', type=int)
     p.set_defaults(func=cmd_pace_profile)

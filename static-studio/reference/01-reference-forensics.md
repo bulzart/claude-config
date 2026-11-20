@@ -48,6 +48,15 @@ A detailed card in `20-analysis/cards/V###.json` should include these additional
      "evidence": "[O] V001 00:14–00:32; [I] ..."}
   ],
   "narrator_character": "Conversational/inquisitive/grounded, with examples",
+  "narration_delivery": {"from_words": "[I] dry asides, direct address, short punchlines after long setups",
+                         "measured": "[O] av-profile: pitch range ~12 st per window, rate 190-245 wpm, a music bed under the voice"},
+  "audiovisual_moments": [
+    {"start_s": 240, "end_s": 300, "narration": "confides; slows down",
+     "picture": "holds one face for 14 s while the words move on", "edit_and_sound": "music drops out",
+     "viewer_effect": "[I] the quiet makes the next cut land", "evidence": "[O] sheet-005, 04:00-05:00"}
+  ],
+  "delight": [{"what": "the specific, slightly absurd true detail before each turn", "evidence": "[O] 03:12, 07:40",
+               "confidence": "[I] medium: seen twice, no retention data"}],
   "information_density": "Measured and interpreted within its format",
   "creative_strengths": ["..."],
   "weaknesses_or_tradeoffs": ["..."],
@@ -60,7 +69,9 @@ A detailed card in `20-analysis/cards/V###.json` should include these additional
 }
 ```
 
-For `narrator_character`, measure as well as listen: `pace-profile --run "RUN" --refs V###` gives the narrator's pace and how they pause (how often, the typical and the longest pause). It uses the same functions `narration-measure` later applies to the generated voice, so the two compare directly. Note where the narrator's longest silences fall and what the story is doing there. The command also expects a *human-readable* `20-analysis/V###-notes.md` summarizing the reference's 3–6 most useful mechanisms with timestamps and a critique of where it loses the viewer. If a creator succeeds despite apparent repetition or a sparse edit, record that: the voice, concrete tension, or source topic may be doing the work. Do not mistake high shot frequency for high value.
+**Watch the reference as a film: `av-profile --run "RUN" --refs V###,...`** (10 §1). It measures the narration (speaking rate per window and how it varies, pitch range and word-to-word movement, loudness contrast, the level under the voice in its gaps) and the picture (cuts, shot lengths, moving and still time, brightness and saturation, the same picture coming back), side by side in 15-second windows with the words spoken, and writes one **watch sheet** per minute to `20-analysis/av/V###/`: a frame every 5 seconds with its words underneath. Open the sheets in order: they are the closest thing to watching that an agent has, and they show what the viewer sees *while* each sentence is heard. The same functions measure this run's narration and export later, so the numbers compare directly; they are measurements, never verdicts. `pace-profile` remains the quick view of pace and pauses alone.
+
+For `narrator_character` and `narration_delivery`, combine what the words show (diction, humour, asides, direct address, sentence music) with what was measured, and label which is which. Note where the narrator's longest silences fall and what the story is doing there. For `audiovisual_moments`, record the moments where narration, picture, edit and sound work together (or against each other), with what you infer it does for the viewer. For `delight`, what makes this video *enjoyable*, with its evidence and how sure you are. The command also expects a *human-readable* `20-analysis/V###-notes.md` summarizing the reference's 3–6 most useful mechanisms with timestamps and a critique of where it loses the viewer. If a creator succeeds despite apparent repetition or a sparse edit, record that: the voice, concrete tension, or source topic may be doing the work. Do not mistake high shot frequency for high value.
 
 ## Cross-video synthesis without niche pollution
 

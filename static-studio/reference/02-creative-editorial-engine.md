@@ -4,7 +4,7 @@
 
 Do not write a ten-minute Wikipedia paraphrase, fake-suspense documentary, or robotic succession of image prompts. Aim for a piece that rewards the viewer's *time*, not only their click: a satisfying question, a surprising but earned path to understanding, emotional and human texture, a credible worldview, visual thought, and an ending that recontextualizes the beginning. Genuine interest and clarity are not enemies of entertainment. Different niches warrant different densities, levels of humor, and narrator distance. Be inviting without sounding like a school assignment, and expressive without manufacturing drama.
 
-The user chooses a **niche**, not a forced title or story form. The writer has creative discretion over a *new* angle inside it. For every video brainstorm **five substantively different** options before choosing: contrast perspective (insider vs bystander), scale (one decision vs whole system), structure (event chronology vs consequence-first), voice (practical guide vs intimate inquiry), and visualization (diagram-led vs artifact-led). At least one candidate should challenge the most obvious reference formula. Reject near-identical variants where only a person/date/location changed: five battles told the same way are one approach, not five. Record the five in `blueprint.json` → `approach_exploration`, each with what it changes (perspective, scale, structure, voice or visualization). Rank **not by mathematical virality scores** but by: genuine open question, richness of evidence, ability to sustain locked duration, human consequence, visual potential, unique viewpoint, feasibility and earned conclusion.
+The user chooses a **niche**, not a forced title or story form. The writer has creative discretion over a *new* angle inside it. For every video brainstorm **five substantively different** options before choosing: contrast perspective (insider vs bystander), scale (one decision vs whole system), structure (event chronology vs consequence-first), voice (practical guide vs intimate inquiry), and visualization (diagram-led vs artifact-led). At least one candidate should challenge the most obvious reference formula. Reject near-identical variants where only a person/date/location changed: five battles told the same way are one approach, not five. Record the five in `40-plans/video-NN/direction.json` → `approaches` (10, 07): what each `changes` (perspective, scale, structure, voice, visualization; at least three of these across the five), its `pitch`, its `strongest_case`, its `long_form_risk`, and whether it `challenges_reference_formula` (at least one does). Then `chosen_approach` with its `runner_up` and why it lost: the comparison is the reasoning, not a score. Rank **not by mathematical virality scores** but by: genuine open question, richness of evidence, ability to sustain locked duration, human consequence, visual potential, unique viewpoint, feasibility and earned conclusion.
 
 No title, hook or narrator performance can save a premise with only three minutes of substance. If research finds no depth, return to topic exploration *before recording*. Never add invented “facts,” pointless facts, filler, machine-gun rhetorical questions or theatrical fake stakes to reach the duration.
 
@@ -41,6 +41,7 @@ Each profile should capture, with reference IDs and timestamps:
 - **Pacing and breathing room:** where references slow down and speed up, and whether the rhythm appears intentional.
 - **Originality gap:** what these references don't do that could be genuinely compelling to the same audience.
 - **What to avoid copying:** distinctive aesthetic choices, structural devices, or voice identities that belong to those creators.
+- **How picture, voice and sound work together** in these videos, from their watch sheets and measurements (`av-profile`, 01): the rhythm of cuts against sentences, where the voice lifts or settles, where music sits, what each does when the story turns. Label measured `[O]` and inferred `[I]`; note what makes them enjoyable, not only what they contain.
 
 A technique found effective in one cluster may inspire a genuinely different application elsewhere. Cross-cluster experimentation is encouraged when it serves the specific subject and audience—but transferred techniques must be adapted to the destination context, not transplanted wholesale.
 
@@ -48,7 +49,7 @@ A technique found effective in one cluster may inspire a genuinely different app
 
 Receiving a creative profile does not mean applying it. For every video, the agent must independently determine the best creative approach for this specific subject and intended experience.
 
-Before writing complete narration, write a brief episode-specific creative strategy under a **"Creative strategy"** heading in `40-plans/video-NN/editorial-review.md` (`plan-check` refuses a review without it) covering:
+Before writing complete narration, write the episode-specific creative strategy in `40-plans/video-NN/direction.json` → `strategy` (07 has the keys), covering:
 
 - Why this particular idea is worth a viewer's time at this length.
 - What experience the viewer should have—what they discover, feel, understand, or question.
@@ -60,6 +61,8 @@ Before writing complete narration, write a brief episode-specific creative strat
 - What makes the execution distinct from the references.
 
 Do not mechanically insert humor, tension, cliffhangers, emotional beats, or rhetorical questions to satisfy a format expectation. A quiet, reflective video can be exceptional. So can a playful, energetic one. The right choice depends on the subject and the intended experience.
+
+The strategy then becomes two or three **audiovisual treatments**: narrator, writing voice, pacing, visual language, sound and how picture and voice relate, decided together and tried in sample moments. A blind read compares them, the director decides, and `direction-lock` fixes the choice before the script is written. How is in **10-creative-direction.md**; it is the creative director's manual, and the script stage (03) and the visual and voice stages (04, 05) work from what it locks.
 
 ## Research that supports creativity without turning into a hard documentary
 
@@ -75,4 +78,4 @@ For factual work, obtain primary and credible secondary sources independent of r
 
 Mined references may contribute functional techniques (e.g., start with the outcome, explain with a scale comparison, slow down on a decision), but never copy their unique shot sequences, artistic identities, voice recordings, specific scripts, distinct jokes or watermarked materials. No attempt to disguise replicated footage. For a borrowed functional device write `source timestamp → audience function → genuinely different new application → adaptation trade-off`. Generate original assets or use sources with clear licenses.
 
-**Internal conversation:** Creative lead may critique concepts internally while drafting. A separate cold-read reviewer is useful once before paid production, not mandatory at every small edit. Do not outsource artistic judgment to a rigid number: the producer owns the final direction.
+**Internal conversation:** Creative lead may critique concepts internally while drafting. Independent readers come in at three points only: the blind treatment comparison, the cold read of the script, and the final watch review (06, 10), never at every small edit. Do not outsource artistic judgment to a rigid number: the producer owns the final direction, and records why when it overrules a reader.

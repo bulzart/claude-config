@@ -3803,3 +3803,12 @@ operable )
 [report] 20261120-040606-xqc C0031: done in 32.6 s, $0.005
 [report] 20261120-040606-xqc C0030: done in 24.3 s, $0.004
 [report] 20261120-040606-xqc C0027: done in 24.7 s, $0.004
+[report] 20261120-040606-xqc C0024: done in 29.3 s, $0.005
+[C0035] stage transcript: ok in 87.9 s (183 words, medium on cpu, 87.8 s, language en (forced))
+[C0035] stage digest: ok in 0.2 s (181 seconds)
+[C0035] ingest end: done {'move': 0.0, 'probe': 0.3, 'audio': 1.0, 'sheets': 25.2, 'transcript': 87.9, 'digest': 0.2}
+[watch] xqc/20261120-040606-xqc C0035 (live): done in 115.7 s {'move': 0.0, 'probe': 0.3, 'audio': 1.0, 'sheets': 25.2, 'transcript': 87.9, 'digest': 0.2} free 723.64 GB
+[C0034] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\xqc\20261120-040606-xqc\chunk-0034.mp4
+[C0034] stage move: ok in 0.1 s
+[C0034] stage probe: ok in 0.7 s (180.008 s 1920x1080 60.0 fps)
+[C0034] stage audio: ok in 3.0 s (360 windows)
