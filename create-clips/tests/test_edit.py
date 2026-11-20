@@ -4,7 +4,8 @@
 
 Builds two 12 s test chunks with ffmpeg, a transcript for each, then checks: layout maths, the EDL resolve across a chunk boundary, the censor split and file,
 caption cues (masking, replacement), the cut facts, the MCP plan and finish plan, and capcut-finish against a draft in an isolated store (capcut-cli init --drafts);
-both caption looks the user can pick at the start: box (the word on a rounded colour box) and no-box (Montserrat Bold, yellow, one text per caption).
+the caption styles the user picks at the start: the Luckiest Guy box (the word on a rounded colour box) and the Montserrat highlight (white, only the spoken word
+yellow), and the no-box look older runs may hold (Montserrat Bold, yellow, one text per caption); the caption_style setting and how legacy runs read.
 """
 from __future__ import annotations
 
@@ -20,6 +21,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 CC = HERE.parent / "scripts" / "cc.py"
 PY = sys.executable
+sys.path.insert(0, str(HERE.parent / "scripts"))
+import cc_crypto_loader  # noqa: E402,F401  (the scripts may be encrypted at rest: the hook decrypts them with CC_SOURCE_KEY)
+import cc_wordbox as wb  # noqa: E402
 
 
 def cc(*args, env=None):
@@ -201,7 +205,7 @@ def main():
         cc("state", "--run", run, "set", "captions=box", env=env)
         cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
         c7b = json.loads((o7 / "resolved.json").read_text(encoding="utf-8"))["captions"]
-        check(c7b["style"] == "word-box" and c7b["look"] == "box" and c7b["font_file"] == "LuckiestGuy-Regular.ttf" and c7b["box"]["pad"] == 0.06, "captions=box: the word-box look in Luckiest Guy, the box padding 0.06")
+        check(c7b["style"] == "word-box" and c7b["look"] == "box" and c7b["font_file"] == "LuckiestGuy-Regular.ttf" and c7b["box"]["pad"] == 0.05, "captions=box: the word-box look in Luckiest Guy, the box padding 0.05")
         e7b = {**e7, "captions": {"style": "no-box"}}
         (o7 / "edl.json").write_text(json.dumps(e7b), encoding="utf-8")
         cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
@@ -211,6 +215,46 @@ def main():
         cc("state", "--run", run, "set", "captions=on", env=env)
         cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
         check(json.loads((o7 / "resolved.json").read_text(encoding="utf-8"))["captions"]["look"] == "box", "captions=on (a run made before the look could be picked): the box look")
+
+        # THE CAPTION STYLE (the user, 2026-11-20): the start asks captions on/off, then the style: caption_style=luckiest-guy (the box) or montserrat-highlight. A run without
+        # the field keeps its historical look; a stored caption_style wins over the older captions value; a typo is refused, never read as another look
+        def look_of(*pairs):
+            for p in pairs:
+                cc("state", "--run", run, "set", p, env=env)
+            cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
+            return json.loads((o7 / "resolved.json").read_text(encoding="utf-8"))["captions"]
+        cc("state", "--run", run, "set", "caption_style=", env=env)
+        check(look_of("captions=on")["look"] == "box", "legacy: captions=on and no caption_style is the Luckiest Guy box")
+        check(look_of("captions=no-box")["look"] == "no-box", "legacy: captions=no-box and no caption_style stays the no-box look (its stored pick is kept)")
+        r = cc("state", "--run", run, "set", "caption_style=montserrat-higlight", env=env)
+        check(r.get("ok") is False and "not a caption style" in str(r.get("error", "")), "a caption_style typo is refused (nothing changed), never read as another look: " + str(r.get("error"))[:100])
+        c_h = look_of("captions=on", "caption_style=montserrat-highlight")
+        st_now = json.loads((run / "state.json").read_text(encoding="utf-8"))
+        check(st_now.get("caption_style") == "montserrat-highlight" and c_h["look"] == "highlight" and c_h["style"] == "word-highlight" and c_h["font_file"] == "Montserrat-Bold.otf"
+              and c_h["color"] == "#FFFFFF" and c_h["highlight_color"] == "#FFFF00" and c_h["stroke_width"] == 0.18 and c_h["stroke_color"] == "#000000" and "box" not in c_h
+              and c_h["enabled"] is True and "not used" in c_h.get("style_reason", ""),
+              "caption_style=montserrat-highlight: Montserrat Bold, white, the spoken word yellow, the outline, no box; the EDL's word-box style is not used: " + str(c_h.get("style_reason"))[:140])
+        check(look_of("captions=no-box")["look"] == "highlight", "a stored caption_style wins over the older captions value (no-box)")
+        check(look_of("caption_style=Luckiest Guy")["look"] == "box" and json.loads((run / "state.json").read_text(encoding="utf-8"))["caption_style"] == "luckiest-guy",
+              "caption_style=Luckiest Guy is stored as luckiest-guy and gives the box look")
+        cc("state", "--run", run, "set", "captions=on", "caption_style=montserrat-highlight", env=env)
+        e7h = {**e7, "captions": {**e7["captions"], "style": "word-box", "font_family": "Luckiest Guy", "color": "#FF0000", "highlight_color": "#22AAFF"}}
+        (o7 / "edl.json").write_text(json.dumps(e7h), encoding="utf-8")
+        cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
+        c_h2 = json.loads((o7 / "resolved.json").read_text(encoding="utf-8"))["captions"]
+        check(c_h2["font_file"] == "Montserrat-Bold.otf" and not c_h2.get("font_family") and c_h2["color"] == "#FFFFFF" and c_h2["highlight_color"] == "#FFFF00"
+              and "font_family" in c_h2.get("style_reason", "") and "highlight_color" in c_h2.get("style_reason", ""),
+              "the highlight look never takes another font or colour from an EDL (said in style_reason): " + str(c_h2.get("style_reason"))[:200])
+        r = cc("captions", "--run", run, "--resolved", o7 / "resolved.json", env=env)
+        cj_h = json.loads((o7 / "captions.json").read_text(encoding="utf-8"))
+        wh = r.get("word_highlight") or {}
+        check(r.get("ok") and r.get("look") == "highlight" and r.get("style") == "word-highlight" and r.get("house_font") is True and r.get("font_names") == ["Montserrat", "Bold"]
+              and wh.get("texts", 0) >= r.get("cues", 99) and wh.get("active_color") == "#FFFF00" and wh.get("color") == "#FFFFFF" and r["size"]["vs_guide"] == "inside"
+              and "KAI CENAT" in (o7 / "captions.srt").read_text(encoding="utf-8") and (r.get("lexicon") or {}).get("applied") == 1 and cj_h["lexicon"]["applied"][0]["spoken"] == "Kai Sinat",
+              "captions (highlight): Montserrat Bold by its own name, a text per moment, the lexicon applied with its record: " + json.dumps({k: r.get(k) for k in ("cues", "word_highlight", "lexicon")})[:400])
+        (o7 / "edl.json").write_text(json.dumps(e7), encoding="utf-8")
+        cc("state", "--run", run, "set", "captions=on", "caption_style=", env=env)
+        cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
 
         capcut = shutil.which("capcut")
         busy = "capcut.exe" in subprocess.run(["tasklist", "/FI", "IMAGENAME eq CapCut.exe", "/NH"], capture_output=True, text=True).stdout.lower()
@@ -256,9 +300,9 @@ def main():
             boxed = [tm[s["material_id"]] for t in c["tracks"] if t["type"] == "text" and t["name"].endswith(("-box", "-box-in")) for s in t["segments"]]
             plain = [tm[s["material_id"]] for t in c["tracks"] if t["type"] == "text" and t["name"].endswith(("-word", "-word-in")) for s in t["segments"]]
             check(boxed and all(m.get("background_color", "").upper() == "#FF7A1A" and float(m.get("background_alpha") or 0) > 0 and abs(float(m.get("background_round_radius") or 0) - 0.3) < 1e-6
-                                and float(m.get("background_width")) == 0.06 and float(m.get("background_height")) == 0.06 and float(m.get("background_vertical_offset")) == 0.15
+                                and float(m.get("background_width")) == 0.05 and float(m.get("background_height")) == 0.05 and float(m.get("background_vertical_offset")) == 0.15
                                 and int(m.get("check_flag") or 0) & 16 for m in boxed),
-                  f"the spoken word's text is on the preset box: orange #FF7A1A, rounded 0.3, padding 0.06 (a little smaller since 2026-11-20), lifted 0.15, the box flag set ({len(boxed)} boxed texts)")
+                  f"the spoken word's text is on the preset box: orange #FF7A1A, rounded 0.3, padding 0.05 (a tiny bit smaller again, 2026-11-20), lifted 0.15, the box flag set ({len(boxed)} boxed texts)")
             check(plain and all(not float(m.get("background_alpha") or 0) and int(m.get("check_flag") or 0) & 8 and int(m.get("check_flag") or 0) & 32 and not int(m.get("check_flag") or 0) & 16 for m in plain)
                   and all(str(m.get("font_path", "")).endswith("LuckiestGuy-Regular.ttf") for m in boxed + plain),
                   f"the other words are plain with the thick outline and the shadow ({len(plain)} texts) and every text is in Luckiest Guy, the house font")
@@ -443,6 +487,78 @@ def main():
             cb2 = json.loads((store / "cctest_nobox_bare" / "draft_content.json").read_text(encoding="utf-8"))
             check(r.get("ok") and [t["name"] for t in cb2["tracks"] if t["type"] == "text"] == ["subtitle"] and sum(len(t["segments"]) for t in cb2["tracks"] if t["type"] == "text") == n7,
                   "a second finish on the same draft replaces its caption track, it never stacks a second one " + str([s.get("step") for s in r.get("steps", [])]))
+            # THE MONTSERRAT HIGHLIGHT LOOK BUILT (the user, 2026-11-20): ONE composition with the two wordhl tracks, a text per moment holding the whole line, the spoken word's
+            # range yellow by capcut-cli's text-ranges; finish adds the font and the outline into every style; the read-back checks every text; the older route matches it
+            cc("state", "--run", run, "set", "captions=on", "caption_style=montserrat-highlight", env=env)
+            cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
+            r = cc("captions", "--run", run, "--resolved", o7 / "resolved.json", env=env)
+            n_hl = (r.get("word_highlight") or {}).get("texts")
+            cj_hl = json.loads((o7 / "captions.json").read_text(encoding="utf-8"))
+            r = cc("capcut-build", "--run", run, "--video", "S07", "--name", "cctest_hl", "--store", store, env=env)
+            rb = r.get("read_back") or {}
+            hl = rb.get("caption_highlight") or {}
+            check(r.get("ok") and not r.get("problems") and rb.get("text_tracks") == 2 and rb.get("texts") == rb.get("composed_caption_texts") == n_hl and (rb.get("lint") or {}).get("errors") == 0
+                  and hl.get("texts") == n_hl and hl.get("font_montserrat_bold") == hl.get("outline_black") == hl.get("bold_flag_off") == hl.get("ranges_cover_text") == hl.get("inactive_white") == n_hl
+                  and hl.get("one_yellow_word", 0) + hl.get("all_white", 0) == n_hl and hl.get("one_yellow_word", 0) > 0
+                  and any(s.get("step") == "captions-word-highlight" and s.get("composed") for s in (r.get("finish") or {}).get("steps", [])),
+                  "capcut-build (highlight): one composition, the read-back of the finished draft: every text Montserrat Bold with the black outline, white, at most one yellow word: "
+                  + json.dumps({k: r.get(k) for k in ("ok", "problems")}) + json.dumps(hl)[:300])
+            ch = json.loads((store / "cctest_hl" / "draft_content.json").read_text(encoding="utf-8"))
+            tmh = {m["id"]: m for m in ch["materials"].get("texts", [])}
+            ents_h = sorted((e for t in wb.plan_word_highlight({**json.loads((o7 / "finish.json").read_text(encoding="utf-8"))["captions"], "size": 9.8},
+                                                                                     cj_hl["cues"], {"width": 1080, "height": 1920, "fps": 30})["tracks"] for e in t["entries"]), key=lambda e: e["start"])
+            segs_h = sorted(((t["name"], s) for t in ch["tracks"] if t["type"] == "text" for s in t["segments"]), key=lambda x: int(x[1]["target_timerange"]["start"]))
+            bad_h = []
+            for (tn, s), e in zip(segs_h, ents_h):
+                cont = json.loads(tmh[s["material_id"]]["content"])
+                yel = [st_["range"] for st_ in cont["styles"] if [round(v, 2) for v in st_["fill"]["content"]["solid"]["color"]] == [1.0, 1.0, 0.0]]
+                want = [[x["start"], x["end"]] for x in e["ranges"]]
+                if cont["text"] != e["text"] or yel != want or abs(int(s["target_timerange"]["start"]) / 1e6 - e["start"]) > 0.002 or abs(float(s["clip"]["transform"]["x"])) > 1e-6:
+                    bad_h.append((tn, cont["text"], yel, want))
+            check(len(segs_h) == len(ents_h) == n_hl and not bad_h and {tn for tn, _s in segs_h} == {"wordhl-in", "wordhl"},
+                  f"in the draft: {len(segs_h)} texts on wordhl-in / wordhl, each the whole line centred, its yellow range exactly the word planned for that moment: " + str(bad_h[:2])[:300])
+            fin_steps = [s.get("step") for s in (r.get("finish") or {}).get("steps", [])]
+            anims_in = [t for t in ch["tracks"] if t["type"] == "text" and t["name"] == "wordhl-in"][0]["segments"]
+            anims_on = [t for t in ch["tracks"] if t["type"] == "text" and t["name"] == "wordhl"][0]["segments"]
+            amap = {a["id"]: a for a in ch["materials"].get("material_animations", [])}
+
+            def has_in(seg):
+                return any(an.get("type") == "in" for ref in seg.get("extra_material_refs") or [] for an in (amap.get(ref) or {}).get("animations", []))
+            check(all(has_in(s) for s in anims_in) and not any(has_in(s) for s in anims_on),
+                  "the short's 0.1 s fade-in is on each caption's first moment only (wordhl-in), never on a word change (wordhl): " + str(fin_steps))
+            cc("capcut-compose", "--run", run, "--video", "S07", "--name", "cctest_hl_bare", "--store", store, "--bare", env=env)
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest_hl_bare", "--video", "S07", env=env)
+            chb = json.loads((store / "cctest_hl_bare" / "draft_content.json").read_text(encoding="utf-8"))
+            tmb = {m["id"]: m for m in chb["materials"].get("texts", [])}
+            rows_hc = sorted((int(s["target_timerange"]["start"]) // 1000, json.loads(tmh[s["material_id"]]["content"])["text"], str(wb._yellow_ranges(tmh[s["material_id"]])[1]))
+                             for t in ch["tracks"] if t["type"] == "text" for s in t["segments"])
+            rows_hb = sorted((int(s["target_timerange"]["start"]) // 1000, json.loads(tmb[s["material_id"]]["content"])["text"], str(wb._yellow_ranges(tmb[s["material_id"]])[1]))
+                             for t in chb["tracks"] if t["type"] == "text" for s in t["segments"])
+            hb = wb.highlight_facts(store / "cctest_hl_bare")
+            check(r.get("ok") and len(rows_hb) == len(rows_hc) == n_hl and [(a_[1], a_[2]) for a_ in rows_hb] == [(a_[1], a_[2]) for a_ in rows_hc]
+                  and all(abs(a_[0] - b_[0]) <= 2 for a_, b_ in zip(rows_hb, rows_hc)) and hb["one_yellow_word"] + hb["all_white"] == n_hl and hb["font_montserrat_bold"] == n_hl,
+                  "the highlight look by the older route (import, then the ranges written into the draft) makes the same texts and yellow words as the composition: " + json.dumps(hb)[:200])
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest_hl_bare", "--video", "S07", env=env)
+            chb2 = json.loads((store / "cctest_hl_bare" / "draft_content.json").read_text(encoding="utf-8"))
+            check(r.get("ok") and sum(len(t["segments"]) for t in chb2["tracks"] if t["type"] == "text") == n_hl, "a second finish replaces the highlight tracks, never stacks them")
+            # the same look on a LONG video (16:9, the long kind's place and grouping)
+            eL = {"schema": "cc-edl/1", "video": "L07", "kind": "long", "layout": {"mode": "native"}, "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}, {"id": "s2", "rec_from": 12.0, "rec_to": 14.5}],
+                  "captions": {"replace": [["Kai Sinat", "Kai Cenat"]], "mask_terms": ["damn"]}}
+            oL = run / "60-outputs" / "L07"
+            oL.mkdir(parents=True, exist_ok=True)
+            (oL / "edl.json").write_text(json.dumps(eL), encoding="utf-8")
+            cc("edl-check", "--run", run, "--edl", oL / "edl.json", env=env)
+            cL = json.loads((oL / "resolved.json").read_text(encoding="utf-8"))["captions"]
+            r = cc("captions", "--run", run, "--resolved", oL / "resolved.json", env=env)
+            nL = (r.get("word_highlight") or {}).get("texts")
+            r = cc("capcut-build", "--run", run, "--video", "L07", "--name", "cctest_hl_long", "--store", store, env=env)
+            hlL = (r.get("read_back") or {}).get("caption_highlight") or {}
+            cLd = json.loads((store / "cctest_hl_long" / "draft_content.json").read_text(encoding="utf-8"))
+            ysL = {round(float(s["clip"]["transform"]["y"]), 4) for t in cLd["tracks"] if t["type"] == "text" for s in t["segments"]}
+            check(cL["style"] == "word-highlight" and cL["y_rel"] == 0.88 and cL["max_words"] == 5 and r.get("ok") and not r.get("problems") and hlL.get("texts") == nL
+                  and hlL.get("one_yellow_word", 0) + hlL.get("all_white", 0) == nL and ysL == {round(1 - 2 * 0.88, 4)} and cLd["canvas_config"]["width"] == 1920,
+                  "the highlight look on a long video (1920x1080, the long kind's baseline 0.88 and 5 words per caption): built, every text read back good: " + json.dumps(hlL)[:200])
+            cc("state", "--run", run, "set", "caption_style=", env=env)
             cc("state", "--run", run, "set", "captions=on", env=env)
             # a short that is not 9:16 is listed by capcut-build as a problem too (the user, 2026-11-14: shorts are ALWAYS 9:16), even when the edl-check warning was not heeded
             e7 = {"schema": "cc-edl/1", "video": "S08", "kind": "short", "canvas": {"width": 1920, "height": 1080, "fps": 30}, "layout": {"mode": "fill", "focus": [0.5, 0.5]},

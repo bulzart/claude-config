@@ -70,7 +70,7 @@
 - [AWL sound effects folder](awl-sound-effects-folder.md) — user 2026-11-12: Documents\sound_effects (99 mp3s); neutral ones fine, no meme/death sounds in serious videos
 - [Clip-farming system /create-clips](create-clips-pipeline.md) — 2026-11-12/13: recorder -> cc.py watch (sheets, Whisper, Haiku reports) -> /create-clips -> CapCut; NO_WINDOW
 - [create-clips: ONE research agent](create-clips-one-research-agent.md) — user 2026-11-13: one brief research agent, everything bulk/parallel
-- [create-clips: caption look](create-clips-caption-look.md) — picked at the start (11-20, no default): box = Luckiest Guy on a rounded box (pad 0.06) or no-box = Montserrat Bold #FFFF00, black outline
+- [create-clips: caption look](create-clips-caption-look.md) — user 2026-11-20: Captions On/Off, then Luckiest Guy word box (pad 0.05) or Montserrat Bold word highlight; state caption_style; old runs keep their look
 - [create-clips: one CapCut composition](create-clips-capcut-composition.md) — user 2026-11-13: every build = cc.py capcut-build (one compile incl. captions); MCP fallback only
 - [create-clips: ads recorded, agents judge](create-clips-ads-recorded-agents-judge.md) — user 2026-11-14: nothing skipped, ads are kind "ad" chunks; miners judge, the planner avoids them
 - [Task lists and to-do files](task-lists-and-todo-files.md) — user 2026-11-13: every run keeps RUN/todo.md (+ each agent's), read first on resume; never a gate
@@ -100,3 +100,4 @@
 - [No cross-session messages](no-cross-session-messages.md) — user 2026-11-20: never message other Claude sessions to check their work; read state.json/outputs/CapCut, or ask the user
 - [create-video: adaptive-niche guardrail](create-video-adaptive-niche-guardrail.md) — 9-point shift never drifts; 10-creative-direction.md, av-profile watch sheets, direction.json + lock before script, three sealed fresh reads, media gate + field-level revisions; code enforces process, never quality
 - [create-video: narration direction](create-video-narration-direction.md) — user 2026-11-20: per-video voice lock, v4 has no speed, selective tags, no silence padding, beat-aligned parts, paid trials only after a yes
+- [CapCut desktop automation](capcut-desktop-automation.md) — 2026-11-20: driving CapCut via PowerShell for a visual check (on the user's yes); ExportPath registry to restore; opened projects ignore outside edits

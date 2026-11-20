@@ -141,20 +141,30 @@ def main():
           "no profile skill spawns a research wave any more")
     check("hud-scan" in sk("cc-profile-game") and "region-series" in sk("cc-profile-game") and "min-blocks" in sk("cc-scan-game") and "min-blocks" in sk("cc-scan"),
           "the screen scan starts in the profile phase and both scans size their blocks with --min-blocks")
-    check("captions=box|no-box|off" in rt and "captions=box|no-box|off" in read(CC / "README.md") and "Captions" in sk("cc-start") and "AskUserQuestion" in sk("cc-start"),
-          "the router, the README and cc-start offer the captions choice (argument or question): box, no-box or off")
+    check(all("captions=on|off" in t and "caption_style=luckiest-guy|montserrat-highlight" in t for t in (rt, read(CC / "README.md"))) and "Captions" in sk("cc-start") and "AskUserQuestion" in sk("cc-start"),
+          "the router, the README and cc-start offer the captions choice (argument or question): on or off, then the style")
     # the user's choice of 2026-11-20: two caption looks, picked at the start with no default (box = Luckiest Guy on a box, no-box = Montserrat Bold yellow with an outline)
     cs0 = sk("cc-start")
-    check(all(w in cs0 for w in ("**Box captions**", "**No-box captions**", "**No captions**", "captions=no-box", "no default")) and "Captions (Recommended)" not in cs0,
-          "cc-start asks the captions question with three options and no default: Box captions, No-box captions, No captions")
+    # the user's spec of 2026-11-20 (later): "Enable captions?" On / Off, then, with captions on, the style: Luckiest Guy - Word Box (Existing) or Montserrat Bold - Word Highlight (New)
+    check(all(w in cs0 for w in ("Enable captions?", "**On**", "**Off**", "Which caption style?", "**Luckiest Guy — Word Box (Existing)**", "**Montserrat Bold — Word Highlight (New)**",
+                                 "caption_style=luckiest-guy", "caption_style=montserrat-highlight", "Never asked when captions are off", "no default"))
+          and "Captions (Recommended)" not in cs0 and "**No-box captions**" not in cs0,
+          "cc-start asks captions On/Off and, only when on, the style (Luckiest Guy word box or Montserrat Bold word highlight), no default; the no-box look is no longer offered")
+    check("captions=no-box" in cs0 and "keeps that look" in cs0, "cc-start keeps an older run's look (captions on/box/no-box without caption_style) and adds nothing to its state")
     check(all("Montserrat Bold" in t and "#FFFF00" in t and "no-box" in t for t in (rt, read(CC / "README.md"), read(CC / "reference" / "edit-craft.md"), sk("cc-build-short"), sk("cc-build-long"),
                                                                                     sk("cc-build-game"), sk("cc-produce"))),
           "the router, the README, edit-craft.md, the three build skills and the produce contract describe the no-box look (Montserrat Bold, yellow #FFFF00)")
     check(all('captions.style: "no-box"' in sk(n) or "`no-box` for no-box" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game")) and all("never the other look" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game")),
           "every build skill writes the run's look as captions.style and never builds the other look")
+    check(all('"word-highlight"' in sk(n) and "montserrat-highlight" in sk(n) and "#FFFF00" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game"))
+          and all("word-highlight" in t or "montserrat-highlight" in t for t in (rt, read(CC / "README.md"), read(CC / "reference" / "edit-craft.md"), sk("cc-produce"), sk("cc-wrapup")))
+          and "word_highlight.texts" in sk("cc-wrapup"),
+          "the build skills, the router, the README, edit-craft.md, the produce contract and the wrap-up describe the Montserrat word-highlight look")
+    check(all("lexicon" in sk(n) for n in ("cc-build-short", "cc-build-long", "cc-build-game")) and "not_before" in sk("cc-profile") and "review" in sk("cc-profile") and "ONE pass" in read(CC / "reference" / "edit-craft.md"),
+          "the lexicon rules (whole words, one pass, punctuation, context guards, review) are in cc-profile and edit-craft.md, and every build skill reads the lexicon record")
     check(all("word_box_max_words" in sk(n) for n in ("cc-build-long", "cc-build-game", "cc-produce")) and "falls back to the plain look, in the same font, by itself" not in sk("cc-build-long"),
           "the long-form build skills keep every box-look video word-box (the user, 2026-11-18): word_box_max_words raised, no silent plain fallback")
-    check("padding 0.06" in read(CC / "README.md") and "padding 0.06" in read(CC / "reference" / "edit-craft.md"), "the README and edit-craft.md give the box padding 0.06 (the user, 2026-11-20: a little smaller)")
+    check("padding 0.05" in read(CC / "README.md") and "padding 0.05" in read(CC / "reference" / "edit-craft.md"), "the README and edit-craft.md give the box padding 0.05 (the user, 2026-11-20: a little smaller, then \"only a tiny bit\" smaller)")
     check(all("captions" in sk(n).lower() and ("off" in sk(n).lower()) for n in ("cc-build-short", "cc-build-long", "cc-build-game", "cc-produce", "cc-wrapup", "cc-plan", "cc-plan-game")),
           "every plan, produce, build and wrap-up skill follows the run's captions setting")
     check("captions OFF" in read(CC / "reference" / "edit-craft.md") and "captions OFF" in read(CC / "reference" / "safety.md"), "edit-craft.md and safety.md say what captions OFF means (and that a spoken slur is cut around)")

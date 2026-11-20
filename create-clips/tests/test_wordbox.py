@@ -96,8 +96,8 @@ def main():
 
         # the line, the texts and the tracks
         box = wb.box_params({"highlight_color": "#22AAFF", "box": {"round_radius": 0.4}})
-        check(box["color"] == "#22AAFF" and box["round_radius"] == 0.4 and box["pad"] == 0.06 and box["gap_em"] == 0.55 and box["v_offset"] == 0.15,
-              "box_params: the colour and the radius are the EDL's, the rest is the house preset (pad 0.06 since the user's 'a little bit smaller' of 2026-11-20, v_offset 0.15, words 0.55 em apart)")
+        check(box["color"] == "#22AAFF" and box["round_radius"] == 0.4 and box["pad"] == 0.05 and box["gap_em"] == 0.55 and box["v_offset"] == 0.15,
+              "box_params: the colour and the radius are the EDL's, the rest is the house preset (pad 0.05 since the user's second 'only a tiny bit' smaller of 2026-11-20, v_offset 0.15, words 0.55 em apart)")
         probe = wb.Probe(str(FONT), s169, 1920, box["gap_em"])
         c1 = {"start": 1.0, "end": 2.0, "words": [W("this", 1.0, 1.2), W("point", 1.3, 1.5), W("immovable.", 1.6, 2.0)]}
         c2 = {"start": 2.0, "end": 3.0, "words": [W("big", 2.0, 2.2), W("play", 2.4, 2.8)]}
@@ -132,9 +132,17 @@ def main():
     for k in ("short", "long"):
         d = cc_edit.DEFAULT_CAPTIONS[k]
         check(d["font_file"] == "LuckiestGuy-Regular.ttf" and d["font_file"] == wb.HOUSE_FONT_FILE and not d.get("font_family") and d["stroke_width"] == 0.18 and d["stroke_color"] == "#000000"
-              and d["shadow"] is True and d["case"] == "upper" and d["color"] == "#FFFFFF" and d["box"]["gap_em"] == 0.55 and d["box"]["pad"] == 0.06 and d["box"]["v_offset"] == 0.15
+              and d["shadow"] is True and d["case"] == "upper" and d["color"] == "#FFFFFF" and d["box"]["gap_em"] == 0.55 and d["box"]["pad"] == 0.05 and d["box"]["v_offset"] == 0.15
               and d["box"]["round_radius"] == 0.3 and d["highlight_color"] == "#FF7A1A" and d["style"] == "word-box",
-              f"the {k} default is Loupe video 04's look: Luckiest Guy, upper case, white with a 0.18 black outline and a shadow, the box 0.3 / 0.06 / 0.15 / 0.55 em")
+              f"the {k} default is Loupe video 04's look: Luckiest Guy, upper case, white with a 0.18 black outline and a shadow, the box 0.3 / 0.05 / 0.15 / 0.55 em")
+        # THE MONTSERRAT HIGHLIGHT LOOK (the user, 2026-11-20, a second style next to the box): Montserrat Bold, white, the 0.18 black outline and the shadow, the spoken word yellow,
+        # no box; size, place, words per caption and entrance as the box look's for the same kind, so grouping and position are the ones that already work
+        h = cc_edit.HIGHLIGHT_CAPTIONS[k]
+        check(h["style"] == "word-highlight" and h["font_file"] == "Montserrat-Bold.otf" == wb.HIGHLIGHT_FONT_FILE and h["color"] == "#FFFFFF" and h["highlight_color"] == "#FFFF00"
+              and h["stroke_color"] == "#000000" and h["stroke_width"] == 0.18 and h["shadow"] is True and h["case"] == "upper" and h["highlight_words"] == [] and "box" not in h
+              and not h.get("font_family") and all(h[x] == d[x] for x in ("size", "size_em_pct", "y_rel", "max_words", "max_chars", "intro", "intro_s", "min_cue_s", "gap_break_s")),
+              f"the {k} highlight default: Montserrat Bold, upper case, white with the 0.18 black outline and the shadow, the spoken word #FFFF00, no box; size, place, grouping, entrance as the box look's")
+        check(d["font_file"] == "LuckiestGuy-Regular.ttf" and d["style"] == "word-box" and "box" in d, f"the {k} box default is untouched by the highlight look (still Luckiest Guy and its box)")
         # THE NO-BOX LOOK (the user, 2026-11-20): Montserrat Bold, yellow #FFFF00, the black outline, nothing behind the text; the rest is the box look's for the same kind
         n = cc_edit.NO_BOX_CAPTIONS[k]
         check(n["style"] == "no-box" and n["font_file"] == "Montserrat-Bold.otf" == wb.NO_BOX_FONT_FILE and n["color"] == "#FFFF00" == wb.NO_BOX_COLOR and n["stroke_color"] == "#000000"
@@ -158,8 +166,9 @@ def main():
         ops_plain = [o for o in cp["operations"] if "bgColor" not in o["style"]]
         check(cp["texts"] == len(cp["operations"]) and ops_box and ops_plain and all(o["style"].get("shadow") is True and o["style"]["borderWidth"] == 0.18 and o["style"]["borderColor"] == "#000000" for o in cp["operations"]),
               "every composed text gets the 0.18 black outline and the shadow; " + str(len(ops_box)) + " boxed, " + str(len(ops_plain)) + " plain")
-        check(all(o["style"]["bgRoundRadius"] == 0.3 and o["style"]["bgWidth"] == 0.06 and o["style"]["bgHeight"] == 0.06 and o["style"]["bgVOffset"] == 0.15 and o["style"]["bgHOffset"] == 0.0 for o in ops_box),
-              "the boxed texts carry radius 0.3, padding 0.06 and the 0.15 vertical offset")
+        check(all(o["style"]["bgRoundRadius"] == 0.3 and o["style"]["bgWidth"] == 0.05 and o["style"]["bgHeight"] == 0.05 and o["style"]["bgVOffset"] == 0.15 and o["style"]["bgHOffset"] == 0.0 for o in ops_box),
+              "the boxed texts carry radius 0.3, padding 0.05 and the 0.15 vertical offset")
+        check(not any(o["op"] == "text-ranges" for o in cp["operations"]), "the box look has no per-range colour (its highlight is the box): no text-ranges operation")
     # the no-box look's texts for the composition: ONE `subtitle` track, a text per caption in the centre on the captions' baseline, yellow, the outline and the shadow, no box
     if FONT.is_file():
         capsn = {**cc_edit.NO_BOX_CAPTIONS["short"], "size": wb.auto_size(str(FONT), 1080, 1920)}
@@ -180,15 +189,148 @@ def main():
         check(0.2 < wb.space_em(str(FONT)) < 0.35 and len(parts_n) >= 2 and all(probe_n.line([w["w"] for w in p_["words"]]) <= wb.LINE_FIT * 1080 or len(p_["words"]) == 1 for p_ in parts_n),
               f"a one-text caption wider than {wb.LINE_FIT:.0%} of a 1080 px frame is split ({len(parts_n)} parts), measured with the font's own space")
 
+    # THE LEXICON'S RULES (the audit of 2026-11-20): punctuation written in a pattern must be there, a capitalised pattern word matches only that spelling, the pattern's
+    # punctuation is replaced by the replacement's and never doubled, whole words, the longest pattern first, one pass, ambiguous entries and entries marked review are not applied
+    def say(text, t0=0.0):
+        out_, t = [], t0
+        for x in text.split():
+            out_.append(W(x, round(t, 3), round(t + 0.3, 3)))
+            t += 0.35
+        return out_
+
+    def run_lex(text, pairs, case="upper"):
+        toks, log = wb.tokens_with_log(say(text), {"mask_terms": [], "replace": pairs, "case": case}, cc_edit._mask_word)
+        return " ".join(t["w"] for t in toks), log
+    lex = [["Jack,", "Chat,"], ["Chad", "chat"], ["booby", "Boobie"], ["Oh my goodness, Jack.", "Oh my goodness, chat."]]
+    got, log = run_lex("Yeah, that's the heart of Jack of Hearts.", lex)
+    check(got == "YEAH, THAT'S THE HEART OF JACK OF HEARTS.", "audit case 1: 'Jack of Hearts' stays (the pattern 'Jack,' needs its comma): " + got)
+    got, log = run_lex("Jack, why would they not count the money yet?", lex)
+    check(got == "CHAT, WHY WOULD THEY NOT COUNT THE MONEY YET?" and len(log["applied"]) == 1 and log["applied"][0]["spoken"] == "Jack," and log["applied"][0]["shown"] == "Chat,",
+          "audit case 2: 'Jack, why' becomes 'CHAT, WHY' with ONE comma, and the record says what changed: " + got + " " + json.dumps(log["applied"])[:160])
+    got, _ = run_lex("Oh my goodness, Jack. This stuff's about to", lex)
+    check(got == "OH MY GOODNESS, CHAT. THIS STUFF'S ABOUT TO", "a phrase pattern with its own punctuation: 'Jack.' becomes 'chat.', never 'CHAT,.': " + got)
+    got, log = run_lex("Look at the boobies on that statue", [["boobies", "Boobie's"]])
+    check(got == "LOOK AT THE BOOBIE'S ON THAT STATUE" and len(log["applied"]) == 1,
+          "a plain pair is applied as written (the lexicon's author decides; the record shows it in context): " + got + " | " + log["applied"][0]["context"])
+    got, log = run_lex("Look at the boobies on that statue", [{"from": "boobies", "to": "Boobie's", "review": True}])
+    check(got == "LOOK AT THE BOOBIES ON THAT STATUE" and not log["applied"] and len(log["held"]) == 1 and "[boobies]" in log["held"][0]["context"],
+          "audit case 3: an entry marked review is NOT applied; the place it would change is listed for the builder: " + got + " " + json.dumps(log["held"])[:160])
+    got, log = run_lex("Jack of Hearts, and Jack, why", [{"from": "Jack", "to": "chat", "not_before": ["of hearts"]}])
+    check(got == "JACK OF HEARTS, AND CHAT, WHY", "a context guard: 'Jack' becomes 'chat' except before 'of Hearts' (and keeps Whisper's comma): " + got)
+    got, log = run_lex("Jack, Jack, Jack, no no no", [["Jack,", "Chat,"], ["no", "nah"], ["nah", "never"]])
+    check(got == "CHAT, CHAT, CHAT, NAH NAH NAH", "repeated words are each replaced once, and a replacement is never replaced again (no 'never'): " + got)
+    got, _ = run_lex("Chad Chad, chad CHAD", [["Chad", "chat"]], case="as-is")
+    check(got == "chat chat, chat chat", "a pattern matches in any case, as the old matcher did (Chad, chad, CHAD); the comma stays: " + got)
+    got, _ = run_lex("Chad Chad, chad CHAD", [{"from": "Chad", "to": "chat", "exact_case": True}], case="as-is")
+    check(got == "chat chat, chad CHAD", "exact_case: the pattern matches only the spelling as written (Chad), not chad or CHAD: " + got)
+    got, _ = run_lex("Just hurry free state stuff. Hurry free state?", [["Hurry free state", "Furry-Free State"]], case="as-is")
+    check(got == "Just Furry-Free State stuff. Furry-Free State?", "the caseoh miss: a pattern written with a capital also fixes the lower-case words (hurry free state): " + got)
+    got, log = run_lex("Chad chad", [["Chad", "chat"], ["chad", "Chad"]], case="as-is")
+    check(got == "chat Chad" and not log["problems"], "two entries that differ only in case are not ambiguous: the one written in the word's own case wins: " + got)
+    got, _ = run_lex("booby Booby. BOOBY?", [["booby", "Boobie"]], case="as-is")
+    check(got == "Boobie Boobie. Boobie?", "a lower-case pattern word matches in any case, the punctuation Whisper wrote stays: " + got)
+    got, _ = run_lex("I can't, I can do it", [["can", "could"]])
+    check(got == "I CAN'T, I COULD DO IT", "whole words only: a contraction (can't) is not touched by a pair for 'can': " + got)
+    got, _ = run_lex("he's the dispatcher's guy", [["dispatcher's", "dispatcher's"], ["he's", "he is"]])
+    check(got == "HE IS THE DISPATCHER'S GUY", "a contraction in a pattern is matched with its apostrophe: " + got)
+    got, log = run_lex("Jack of Hearts and jack", [{"from": "Jack", "to": "chat", "exact_case": True}, ["Jack of Hearts", "Jack of Hearts"]], case="as-is")
+    check(got == "Jack of Hearts and jack", "the longest pattern wins (Jack of Hearts), and an exact_case 'Jack' does not reach the lower-case 'jack': " + got)
+    got, log = run_lex("Jack of Hearts and jack", [["Jack", "chat"], ["Jack of Hearts", "Jack of Hearts"]], case="as-is")
+    check(got == "Jack of Hearts and chat", "without exact_case the lower-case 'jack' is matched too (the longest pattern still keeps Jack of Hearts): " + got)
+    got, log = run_lex("hey Kso what's up", [["Kso", "CaseOh"], ["Kso", "K-So"]])
+    check(got == "HEY KSO WHAT'S UP" and log["problems"] and "ambiguous" in log["problems"][0]["problem"],
+          "two entries with the same pattern and different replacements are ambiguous: neither is applied, the problem is reported: " + json.dumps(log["problems"])[:160])
+    got, _ = run_lex("what the frick", [["frick", "fuck"]])
+    check(got == "WHAT THE F*CK", "a word a replacement brings in is masked like any spoken word: " + got)
+    got, log = run_lex("hello there", [["", "x"], "nonsense", ["...", "y"]])
+    check(got == "HELLO THERE" and len(log["problems"]) == 3, "entries that cannot be used are listed as problems, never applied: " + json.dumps(log["problems"])[:200])
+
+    # THE HIGHLIGHT LOOK'S MOMENTS: exactly one word yellow while it is spoken, the others white, every word white in a pause, on the frame grid
+    c_hl = {"start": 0.0, "end": 1.40, "words": [W("THAT'S", 0.00, 0.30), W("ACTUALLY", 0.32, 0.80), W("CRAZY", 0.85, 1.30)]}
+    st_ = wb.highlight_states(c_hl, 30)
+    frame = 1 / 30
+    check([s[2] for s in st_] == [0, 1, 2] and st_[0][0] == 0.0 and abs(st_[-1][1] - 1.4) < 1e-6 and all(abs(st_[i][1] - st_[i + 1][0]) < 1e-6 for i in range(len(st_) - 1))
+          and all(abs(round(b / frame) * frame - b) < 1e-5 for s in st_ for b in s[:2]),
+          "THAT'S ACTUALLY CRAZY: three moments, one word yellow in each, in order, back to back on the frame grid: " + json.dumps(st_))
+    check(abs(st_[1][0] - round(0.32 / frame) * frame) < 1e-6 and abs(st_[2][0] - round(0.85 / frame) * frame) < 1e-6,
+          "each word turns yellow on its own start (Whisper's word time, snapped to the frame)")
+    st_p = wb.highlight_states({"start": 0.0, "end": 1.4, "words": [W("WAIT", 0.0, 0.3), W("WHAT", 1.0, 1.3)]}, 30)
+    check([s[2] for s in st_p] == [0, None, 1] and abs(st_p[1][0] - 0.3) < 1e-6 and abs(st_p[1][1] - 1.0) < 1e-6,
+          "a pause longer than hold_s inside a caption: every word white from the end of WAIT to the start of WHAT: " + json.dumps(st_p))
+    st_h = wb.highlight_states({"start": 0.0, "end": 0.9, "words": [W("SO", 0.0, 0.3), W("FAST", 0.45, 0.9)]}, 30)
+    check([s[2] for s in st_h] == [0, 1] and abs(st_h[0][1] - round(0.45 / frame) * frame) < 1e-5,
+          "a short silence (0.15 s, under hold_s) keeps SO yellow until FAST starts: no white flicker: " + json.dumps(st_h))
+    st_q = wb.highlight_states({"start": 0.0, "end": 0.8, "words": [W("A", 0.0, 0.3), W("B", 0.3, 0.32), W("C", 0.32, 0.8)]}, 30)
+    check([s[2] for s in st_q] == [0, 2] and all(s[1] - s[0] >= 2 * frame - 1e-6 for s in st_q),
+          "a word spoken for one frame (B) hands its moment to the word before: no one-frame yellow flicker: " + json.dumps(st_q))
+    st_e = wb.highlight_states({"start": 0.0, "end": 2.0, "words": [W("END", 0.0, 0.4)]}, 30)
+    check([s[2] for s in st_e] == [0, None] and abs(st_e[0][1] - 0.4) < 1e-6, "a caption held on screen after its last word: the word goes white when it is no longer spoken: " + json.dumps(st_e))
+    check(wb.utf16_len("a\U0001F600b") == 4 and wb.utf16_len("ŽELJKO") == 6, "ranges are counted in UTF-16 units, as CapCut counts them (an emoji is two)")
+    capsh = {**cc_edit.HIGHLIGHT_CAPTIONS["short"], "size": 9.8}
+    cues_h = [{"i": 1, "start": 0.0, "end": 1.4, "text": "THAT'S ACTUALLY CRAZY", "words": c_hl["words"]},
+              {"i": 2, "start": 1.4, "end": 2.5, "text": "WAIT. WHAT", "words": [W("WAIT.", 1.4, 1.7), W("WHAT", 2.2, 2.5)]}]
+    ph = wb.plan_word_highlight(capsh, cues_h, {"width": 1080, "height": 1920, "fps": 30})
+    ents = sorted((e for t in ph["tracks"] for e in t["entries"]), key=lambda e: e["start"])
+    names = [t["track"] for t in ph["tracks"]]
+    check(names == ["wordhl-in", "wordhl"] and [t["entrance"] for t in ph["tracks"]] == [True, False] and ph["error"] is None,
+          "two tracks: wordhl-in (each caption's first moment, the only place an entrance goes) and wordhl (the rest): " + str(names))
+    c1_ents = [e for e in ents if e["cue"] == 1]
+    check([e["text"] for e in c1_ents] == ["THAT'S ACTUALLY CRAZY"] * 3 and [e["word"] for e in c1_ents] == ["THAT'S", "ACTUALLY", "CRAZY"]
+          and [e["ranges"][0]["start"] for e in c1_ents] == [0, 7, 16] and [e["ranges"][0]["end"] for e in c1_ents] == [6, 15, 21]
+          and all(e["ranges"][0]["font_color"] == "#FFFF00" and len(e["ranges"]) == 1 and e["x"] == 0.0 for e in c1_ents),
+          "every moment holds the WHOLE line (same text, so nothing moves) and exactly the spoken word's range in yellow: " + json.dumps([(e["word"], e["ranges"]) for e in c1_ents]))
+    c2_ents = [e for e in ents if e["cue"] == 2]
+    check([e["word"] for e in c2_ents] == ["WAIT.", None, "WHAT"] and c2_ents[1]["ranges"] == [] and c2_ents[0]["ranges"][0]["end"] - c2_ents[0]["ranges"][0]["start"] == 5,
+          "a pause in a caption is a moment with no yellow range; a word's own punctuation is lit with it (WAIT.): " + json.dumps([(e["word"], e["ranges"]) for e in c2_ents]))
+    for t in ph["tracks"]:
+        es = sorted(t["entries"], key=lambda e: e["start"])
+        check(all(es[i]["end"] <= es[i + 1]["start"] + 1e-6 for i in range(len(es) - 1)), f"track {t['track']}: no two texts overlap in time")
+    check(ph["states"]["texts"] == 6 and ph["states"]["pauses_all_white"] == 1 and ph["states"]["words_too_quick_to_light"] == 0, "the plan's facts: " + json.dumps(ph["states"]))
+    cph = wb.compose_parts(ph, capsh, 10.0)
+    rng_ops = [o for o in cph["operations"] if o["op"] == "text-ranges"]
+    sty_ops = [o for o in cph["operations"] if o["op"] == "text-style"]
+    check(cph["texts"] == 6 and len(rng_ops) == 5 and len(sty_ops) == 6 and all(i["color"] == "#FFFFFF" and i["x"] == 0.0 for t in cph["tracks"] for i in t["items"])
+          and all(o["style"]["borderWidth"] == 0.18 and o["style"]["borderColor"] == "#000000" and o["style"].get("shadow") is True and "bgColor" not in o["style"] for o in sty_ops)
+          and all(len(o["ranges"]) == 1 and o["ranges"][0]["font_color"] == "#FFFF00" for o in rng_ops),
+          "the compose parts: white texts with the 0.18 black outline and the shadow, no box, and one text-ranges operation (the yellow word) on every moment but the pause")
+    mat = {"content": json.dumps({"text": "THAT'S ACTUALLY CRAZY", "styles": [{"range": [0, 21], "size": 9.8, "bold": False, "fill": {"alpha": 1, "content": {"render_type": "solid", "solid": {"alpha": 1, "color": [1, 1, 1]}}},
+                                                                             "font": {"id": "", "path": "x/Montserrat-Bold.otf"}, "strokes": [{"width": 0.18, "content": {"solid": {"color": [0, 0, 0]}}}]}]})}
+    wb.set_text_ranges(mat, [{"start": 7, "end": 15, "font_color": "#FFFF00"}])
+    sts = json.loads(mat["content"])["styles"]
+    check([s["range"] for s in sts] == [[0, 7], [7, 15], [15, 21]] and [s["fill"]["content"]["solid"]["color"] for s in sts] == [[1, 1, 1], [1.0, 1.0, 0.0], [1, 1, 1]]
+          and all(s["font"]["path"].endswith("Montserrat-Bold.otf") and s["strokes"] for s in sts) and wb._yellow_ranges(mat)[1] == [(7, 15)],
+          "set_text_ranges (the route for a draft the composition did not caption): white, yellow, white, the font and the outline kept in every style")
+    import tempfile
+    dtmp = Path(tempfile.mkdtemp(prefix="wb-hl-"))
+    try:
+        good = dict(mat, id="m1", font_path="x/Montserrat-Bold.otf")
+        bad_ = {"id": "m2", "font_path": "x/Montserrat-Bold.otf", "content": json.dumps({"text": "AB CD", "styles": [
+            {"range": [0, 2], "bold": True, "fill": {"content": {"solid": {"color": [1, 1, 0]}}}, "font": {"path": "x/Montserrat-Bold.otf"}, "strokes": [{"width": 0.18, "content": {"solid": {"color": [0, 0, 0]}}}]},
+            {"range": [2, 5], "fill": {"content": {"solid": {"color": [1, 1, 0]}}}, "font": {"path": "x/Montserrat-Bold.otf"}, "strokes": [{"width": 0.18, "content": {"solid": {"color": [0, 0, 0]}}}]}]})}
+        (dtmp / "draft_content.json").write_text(json.dumps({"tracks": [{"type": "text", "name": "wordhl-in", "segments": [{"material_id": "m1", "target_timerange": {"start": 0, "duration": 1}},
+                                                                                                                         {"material_id": "m2", "target_timerange": {"start": 1, "duration": 1}}]}],
+                                                              "materials": {"texts": [good, bad_]}}), encoding="utf-8")
+        hf = wb.highlight_facts(dtmp)
+        check(hf["texts"] == 2 and hf["font_montserrat_bold"] == 2 and hf["outline_black"] == 2 and hf["one_yellow_word"] == 1 and hf["bold_flag_off"] == 1 and len(hf["bad"]) == 1,
+              "highlight_facts reads a finished draft back: the good text passes, the one with two yellow styles and a faux bold is listed: " + json.dumps(hf)[:300])
+    finally:
+        import shutil
+        shutil.rmtree(dtmp, ignore_errors=True)
+    if FONT.is_file():
+        from PIL import ImageFont
+        fam, sty = ImageFont.truetype(str(FONT), 20).getname()
+        check((fam, sty) == ("Montserrat", "Bold"), f"the highlight look's font file is Montserrat Bold by its own name table: {fam} {sty}")
+
     # an earlier build's caption tracks are removed with their materials
     content = {"tracks": [{"type": "text", "name": "subtitle", "segments": [{"material_id": "a", "extra_material_refs": ["x"]}]},
                           {"type": "text", "name": "wordcap-1-box-in", "segments": [{"material_id": "b", "extra_material_refs": []}]},
+                          {"type": "text", "name": "wordhl-in", "segments": [{"material_id": "d", "extra_material_refs": []}]},
                           {"type": "text", "name": "labels", "segments": [{"material_id": "c", "extra_material_refs": []}]},
                           {"type": "video", "name": "main", "segments": []}],
-               "materials": {"texts": [{"id": "a"}, {"id": "b"}, {"id": "c"}], "material_animations": [{"id": "x"}]}}
+               "materials": {"texts": [{"id": "a"}, {"id": "b"}, {"id": "c"}, {"id": "d"}], "material_animations": [{"id": "x"}]}}
     n = wb.drop_text_tracks(content)
-    check(n == 2 and [t["name"] for t in content["tracks"]] == ["labels", "main"] and [m["id"] for m in content["materials"]["texts"]] == ["c"] and not content["materials"]["material_animations"],
-          "drop_text_tracks removes the subtitle and wordcap tracks and their materials, keeps the others")
+    check(n == 3 and [t["name"] for t in content["tracks"]] == ["labels", "main"] and [m["id"] for m in content["materials"]["texts"]] == ["c"] and not content["materials"]["material_animations"],
+          "drop_text_tracks removes the subtitle, wordcap and wordhl tracks and their materials, keeps the others")
     print("FAILED: %d" % check.failed if check.failed else "ALL PASSED")
     sys.exit(1 if check.failed else 0)
 
