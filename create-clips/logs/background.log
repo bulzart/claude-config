@@ -16360,3 +16360,10 @@ operable )
 [C0747] ingest end: done {'move': 0.0, 'probe': 0.2, 'audio': 0.1, 'sheets': 0.1, 'transcript': 5.7, 'digest': 0.0}
 [watch] kaicenat/20261120-040246-kaicenat C0747 (live): done in 9.2 s {'move': 0.0, 'probe': 0.2, 'audio': 0.1, 'sheets': 0.1, 'transcript': 5.7, 'digest': 0.0} free 657.89 GB
 [report] 20261120-040606-xqc C0234: done in 201.1 s, $0.034
+[C0758] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\kaicenat\20261120-040246-kaicenat\chunk-0758.mp4
+[C0758] stage move: ok in 0.0 s
+[C0758] stage probe: ok in 0.1 s (180.004 s 1920x1080 60.0 fps)
+[C0758] stage audio: ok in 0.3 s (360 windows)
+[C0758] stage sheets: ok in 17.7 s (240 frames, 8 sheets, leftovers 0)
+[report] 20261120-040246-kaicenat C0427: done in 211.2 s, $0.035
+[report] 20261120-040159-caseoh_ C0224: current
