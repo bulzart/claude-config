@@ -102,3 +102,5 @@
 - [create-video: narration direction](create-video-narration-direction.md) — user 2026-11-20: per-video voice lock, v4 has no speed, selective tags, no silence padding, beat-aligned parts, paid trials only after a yes
 - [CapCut desktop automation](capcut-desktop-automation.md) — 2026-11-20: driving CapCut via PowerShell for a visual check (on the user's yes); ExportPath registry to restore; opened projects ignore outside edits
 - [One pipeline per session](one-pipeline-per-session.md) — user 2026-11-20: a brief naming another pipeline means this session's pipeline; others are read-only references
+- [create-video: captions](create-video-captions.md) — user 2026-11-20: Luckiest Guy box | Montserrat Bold yellow word | none, asked once; captions.py, Whisper word times; CapCut drawing not verified
+- [create-video: narration calibration](create-video-narration-calibration.md) — 2026-11-20 trial (2,051 of 5,000 credits): v4 ~0.40 credits/char, context unbilled, balance lags; waits for the user's ears
