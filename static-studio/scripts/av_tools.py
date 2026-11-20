@@ -7,14 +7,16 @@ they mean. The same functions measure the references, this run's narration and t
 compare on one yardstick (as pace already does).
 
 What is measured, and how:
-- Picture, from the sampled frames (the run's analysis rate: 1 fps for a new run, the rate a run was analysed at for
-  an older one; the export's frames are taken at the same rate): the change between consecutive frames (mean
+- Picture, from the sampled frames (the run's analysis rate: 2 fps for a new run, the rate a run was analysed at for
+  an older one; the export's frames are taken at the same rate; each frame at its own source timestamp on the
+  transcript's clock, see sample_frames): the change between consecutive frames (mean
   absolute grey difference at 64x36) and their colour histograms. A single big change is a cut; a few hard,
   recolouring changes in a row whose changes add up to much more than the run's own change are a quick series of
   cuts; any other short run of changes (up to TRANSITION_MAX_S) that ends on a different picture is a transition
   (dissolve, wipe, fast move); a long run is motion inside a shot (a camera move, animation); a change that returns
-  to the same picture is a flash (at 1 fps: anything seen in one sample only, a burst or a cutaway of up to about a
-  second).
+  to the same picture is a flash (at a low rate: anything seen in one sample only, a burst or a short cutaway).
+  Stretches the samples cannot settle (a flash, a cut series, a transition, a shot shorter than two samples) are
+  listed as inspect_candidates for a closer look at a higher rate (static_core.py inspect-window).
   Shots get their length, the share of time they move, brightness and saturation, and whether the same picture
   came back earlier (difference hash and histogram).
 - Narration, from the audio and Whisper's word times: pitch (pYIN) and loudness per word, pitch range and pitch
@@ -35,7 +37,9 @@ Needs numpy, opencv-python (cv2), librosa, soundfile and Pillow, all local; ffmp
 from __future__ import annotations
 
 import bisect
+import json
 import math
+import re
 import statistics
 import subprocess
 from pathlib import Path
@@ -177,16 +181,73 @@ def concat_audio(files, out_wav):
     return out_wav
 
 
-def extract_frames(src, out_dir, fps=1.0, width=960):
-    """Frames of a video at the analysis rate (the references' prepare settings), as (time, path) pairs."""
+SAMPLER = 'pts-v1'          # each frame picked by its real time and kept with its own timestamp (older: nominal slots)
+_SHOWINFO = re.compile(r'\bn:\s*\d+\s+pts:\s*-?\d+\s+pts_time:(-?[\d.]+)')
+
+
+def clock_origin(src):
+    """The source time a transcript of this file counts from: its audio stream's start (Whisper decodes the audio
+    from its first sample), else its video stream's. A frame's source timestamp minus this is on the transcript's
+    clock, the clock of every word time and speech segment."""
+    try:
+        p = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_type,start_time', '-of', 'json',
+                            str(src)], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=60)
+        streams = json.loads(p.stdout or '{}').get('streams') or []
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return 0.0
+
+    def start(kind):
+        for s in streams:
+            if s.get('codec_type') == kind:
+                try:
+                    return float(s.get('start_time'))
+                except (TypeError, ValueError):
+                    return None
+        return None
+    a, v = start('audio'), start('video')
+    return a if a is not None else (v if v is not None else 0.0)
+
+
+def sample_frames(src, out_dir, fps=2.0, width=960, start_s=None, end_s=None, native=False):
+    """Frames of a video by their real timestamps: the first frame of each 1/fps slot of source time (or, with
+    native, every frame), optionally only from start_s to end_s (transcript clock). Nothing is inferred from frame
+    numbers: each frame keeps its own timestamp, so a variable frame rate, a start offset or a dropped frame never
+    shifts the frames after it. Returns (frames, origin): frames [{'file', 't_s' (transcript clock), 'pts_s'
+    (source), 'slot_s'}], origin as clock_origin."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    p = subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', str(src),
-                        '-vf', f'fps={fps},scale={width}:-2', '-q:v', '5', str(out_dir / '%07d.jpg')],
-                       capture_output=True, text=True, encoding='utf-8', errors='replace')
+    for old in out_dir.glob('*.jpg'):
+        old.unlink()
+    origin = clock_origin(src)
+    conds = []
+    if start_s is not None:
+        conds.append(f'gte(t\\,{start_s + origin:.6f})')
+    if end_s is not None:
+        conds.append(f'lte(t\\,{end_s + origin:.6f})')
+    if not native:
+        conds.append(f'(isnan(prev_selected_t)+gt(floor(t*{fps:g})\\,floor(prev_selected_t*{fps:g})))')
+    cmd = ['ffmpeg', '-hide_banner', '-nostdin', '-nostats', '-y', '-loglevel', 'info', '-copyts']
+    if start_s is not None:
+        cmd += ['-ss', f'{max(0.0, start_s + origin - 2.0):.3f}']
+    cmd += ['-i', str(src), '-vf', f"select='{'*'.join(conds) or '1'}',scale={width}:-2,showinfo", '-fps_mode', 'vfr',
+            '-q:v', '5', str(out_dir / '%07d.jpg')]
+    p = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
     if p.returncode:
         raise RuntimeError('frame extraction failed: ' + (p.stderr or '')[-300:])
-    return [(round(i / fps, 3), f) for i, f in enumerate(sorted(out_dir.glob('*.jpg')))]
+    times = [float(m.group(1)) for m in _SHOWINFO.finditer(p.stderr or '')]
+    files = sorted(out_dir.glob('*.jpg'))
+    if len(times) != len(files):
+        raise RuntimeError(f'frame timestamps not read ({len(files)} frames, {len(times)} times): nothing is guessed')
+    frames = [{'file': f.name, 't_s': round(pts - origin, 4), 'pts_s': round(pts, 4),
+               'slot_s': None if native else round(math.floor(pts * fps + 1e-6) / fps - origin, 4)}
+              for f, pts in zip(files, times)]
+    return frames, origin
+
+
+def extract_frames(src, out_dir, fps=2.0, width=960):
+    """Frames of a video at the analysis rate, each at its own time on the transcript's clock: (time, path) pairs."""
+    frames, _ = sample_frames(src, out_dir, fps=fps, width=width)
+    return [(f['t_s'], Path(out_dir) / f['file']) for f in frames]
 
 
 # ---------------------------------------------------------------- picture
@@ -334,6 +395,35 @@ def segment_shots(feats):
         s.pop('_dhash', None)
         s.pop('_hist', None)
     return shots, kind, d
+
+
+def inspect_candidates(feats, kinds, shots, limit=60):
+    """Stretches the samples cannot settle, for a closer look at a higher rate (inspect-window): a flash (a picture
+    seen in one sample only), a transition or a cut series (what happened between the samples), and a shot shorter
+    than two samples. [{'from_s', 'to_s', 'why'}], merged where they touch, in time order."""
+    if len(feats) < 2:
+        return []
+    gaps = sorted(feats[j]['t'] - feats[j - 1]['t'] for j in range(1, len(feats)))
+    step = gaps[len(gaps) // 2]
+    out = []
+    for k in range(1, len(feats)):
+        if kinds[k] in ('flash', 'transition'):
+            out.append([feats[k - 1]['t'], feats[k]['t'], kinds[k]])
+        elif kinds[k] == 'cut' and k + 1 < len(feats) and kinds[k + 1] == 'cut':
+            out.append([feats[k - 1]['t'], feats[k + 1]['t'], 'cut series'])
+    for s in shots:
+        if s['length_s'] < 2 * step - 1e-6 and s['begins_with'] != 'start':
+            out.append([max(0.0, s['start_s'] - step), s['end_s'], 'short shot'])
+    out.sort()
+    merged = []
+    for a, b, why in out:
+        if merged and a <= merged[-1][1] + 1e-6:
+            merged[-1][1] = max(merged[-1][1], b)
+            if why not in merged[-1][2]:
+                merged[-1][2].append(why)
+        else:
+            merged.append([a, b, [why]])
+    return [{'from_s': _r(a, 3), 'to_s': _r(b, 3), 'why': ', '.join(w)} for a, b, w in merged[:limit]]
 
 
 # ---------------------------------------------------------------- narration
@@ -638,6 +728,7 @@ def profile(label, duration, frames=None, wav=None, words=None, sheets_dir=None,
     sheets = render_sheets(feats, words, wins, sheets_dir, label, duration) if (sheets_dir and feats) else []
     return {'label': label, 'method': METHOD_VERSION, 'duration_s': _r(duration), 'sampled_fps': fps if feats else None,
             'summary': summ, 'windows': wins, 'shots': shots, 'sheets': sheets,
+            'inspect_candidates': inspect_candidates(feats, kinds, shots) if feats else [],
             'thresholds': thresholds(fps if feats else None), 'unknowns': unknowns(fps if feats else None),
             'reading': READING}
 
