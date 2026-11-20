@@ -2,10 +2,13 @@
 """Optional image generator for Static Studio using OpenAI's Images API.
 
 CLI: openai_images_worker.py --job images.json [--execute]
-Job: {"model":"gpt-image-2.5-flare", "size":"1536x864", "quality":"high",
-      "images":[{"id":"S001", "prompt":"...", "file":"S001.png"}, ...]}
+Job: {"run":"<RUN>", "video":1, "model":"gpt-image-2.5-flare", "size":"1536x864", "quality":"high",
+      "images":[{"id":"S001", "prompt":"<the shot's frame_prompt, plus style words>", "file":"S001.png"}, ...]}
 
-Dry run is free. --execute makes paid requests with OPENAI_API_KEY from environment.
+Dry run is free. --execute makes paid requests with OPENAI_API_KEY from environment, and only after Static Studio's
+production gate (static_core.media_gate) passes: each image's id is a shot of the checked shot plan, its prompt carries
+that shot's approved frame_prompt, and the direction, beat map and shot plan are current. Each picture made is recorded
+(60-visuals/video-NN/stills-provenance.json) with its shot, beat and direction revision.
 No keys in job files or manifest. The agent must review actual images for accuracy.
 """
 from __future__ import annotations
@@ -67,6 +70,17 @@ def main():
                 'size':size,'image_count':len(imgs),'output_dir':str(dest),
                 'note':'Verify model access and pricing before rerunning with --execute; an API call is charged per generation.'})
         return
+    # Static Studio's production gate, before any paid call: the job names its run and video, every image a shot of
+    # the checked shot plan with that shot's approved prompt, and the direction, beat map and shot plan are current.
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import static_core
+        gate=static_core.media_gate(job,'stills')
+    except Exception as exc:  # noqa: BLE001
+        output({'ok':False,'error':'Static Studio gate unavailable: '+type(exc).__name__+': '+str(exc)[:200]},True)
+    if not gate['ok']:
+        output({'ok':False,'error':'Static Studio: these stills cannot be generated yet (fix the plan, not the gate).',
+                'issues':gate['issues']},True)
     key=os.environ.get('OPENAI_API_KEY')
     if not key:
         output({'ok':False,'error':'OPENAI_API_KEY missing in environment; never embed secrets in source files.'},True)
@@ -115,7 +129,14 @@ def main():
             output({'ok':False,'status':'partial','results':status,'note':'Do not pretend absent stills were generated.'},True)
     combined=[x for k,x in prior.items() if k not in seen]+status
     mf.write_text(json.dumps({'model':model,'size':size,'quality':quality,'status':'complete','results':combined},indent=2),encoding='utf-8')
-    output({'ok':True,'status':'complete','images':len(status),'output_dir':str(dest),
+    provenance=None
+    if not gate.get('preview'):   # which shot each picture shows, made under which direction revision
+        ready={x['file'] for x in status if x.get('status')=='ready'}
+        entries=[{'out':str(dest/row['file']),**rec,'engine':'openai:'+str(model)}
+                 for row,rec in zip(requested,gate['records']) if row['file'] in ready]
+        if entries:
+            provenance=static_core.record_media(gate['run'],gate['video'],'stills',entries)
+    output({'ok':True,'status':'complete','images':len(status),'output_dir':str(dest),'provenance':provenance,
             'note':'Inspect every result; API success cannot verify historical accuracy or shot continuity.'})
 
 if __name__=='__main__':

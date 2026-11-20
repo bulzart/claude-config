@@ -112,15 +112,18 @@ class StaticStudioTests(unittest.TestCase):
     def direction_doc():
         def say(*parts):   # a sentence with enough words to count as written
             return ' '.join(parts)+' because the story itself asks for it here.'
-        def sample(tag):
-            return ' '.join([f'{tag} narration sentence number {i} that a viewer hears in this moment.' for i in range(6)])
+        vocab={'T1':'wry curious amused quick bright friend jokes noticing oddly specific detail laughing',
+               'T2':'hushed intimate patient quiet witness close breath dusk candle whisper still lingering'}
+        def sample(tid, m):   # each treatment in its own words, as real treatments differ
+            w=vocab[tid].split()
+            return ' '.join(f'{m} {w[i%12]} {w[(i+3)%12]} {w[(i+5)%12]} moment {i} {w[(i+7)%12]}.' for i in range(9))
         treatments=[]
         for tid,tone in (('T1','wry curious friend'),('T2','hushed intimate witness')):
             treatments.append({'id':tid,'name':tone,
                 **{k:say(tone,k.replace('_',' '),'for this video') for k in
                    ('narrator','writing_voice','structure_and_pace','visual_language','sound',
                     'audiovisual_relationship','emotional_course','evidence_used','departures','risks')},
-                'samples':{m:{'narration':sample(f'{tid} {m}'),
+                'samples':{m:{'narration':sample(tid,m),
                               'picture':f'{tid} picture for the {m}: a wide frame with one figure and the road ahead.'}
                            for m in ('opening','quiet_middle','turning_point')}})
         return {'video':1,
@@ -334,9 +337,19 @@ class StaticStudioTests(unittest.TestCase):
         late=cli('direction-lock','--run',self.run,'--video',1,'--late','script drafted before the direction step existed')
         self.assertTrue(late['late'])
         self.review_script()
+        # What existed before the direction was made without it: each piece is revised for real or reapproved.
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertEqual(sorted(res['issues']),['beat_map_made_for_an_earlier_direction','script_made_for_an_earlier_direction'])
+        cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','script','--reason','fine',expected=2)  # a real reason
+        cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','script',
+            '--reason','the script already speaks in the chosen wry voice')
+        beats=json.loads((vd/'beat-map.json').read_text())
+        beats['beats'][0]['narration_direction']='wry and quick, a friend setting up the puzzle'
+        save(vd/'beat-map.json',beats)
         ok=cli('plan-check','--run',self.run,'--video',1)
         self.assertTrue(ok['ready'])
         self.assertTrue(any('locked after the script existed' in w for w in ok['warnings']))
+        self.assertTrue(any(w.startswith('script reapproved') for w in ok['warnings']))
         self.assertTrue(ok['creative']['locked_late'])
 
     def test_direction_needs_real_alternatives_and_measured_evidence(self):
@@ -403,21 +416,44 @@ class StaticStudioTests(unittest.TestCase):
         self.assertTrue(ok['ready'])
         self.assertTrue(any('edited after its last read' in w for w in ok['warnings']))
         d=json.loads((vd/'direction.json').read_text())
-        d['strategy']['progression']+=' And a new idea arrives late in the plan.'
+        # A harmless change (the evidence, the alternatives, the reasons): no new revision, nothing to redo.
+        d['evidence']['unknowns'].append('how the comments will react')
         save(vd/'direction.json',d)
         self.assertIn('direction_changed_since_lock',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
-        cli('direction-lock','--run',self.run,'--video',1,expected=2)          # a change needs --revise
-        cli('direction-lock','--run',self.run,'--video',1,'--revise','progression sharpened after the cold read')
-        hour_ago=json.loads((vd/'direction-lock.json').read_text())
-        old=__import__('datetime').datetime.fromisoformat(hour_ago['locked_at']).timestamp()-3600
-        os.utime(vd/'beat-map.json',(old,old))     # beat directions written for the earlier treatment
+        cli('direction-lock','--run',self.run,'--video',1,expected=2)          # any change needs --revise
+        h=cli('direction-lock','--run',self.run,'--video',1,'--revise','noted one more unknown')
+        self.assertEqual((h['production_rev'],h['affects'],h['outdated_now']),(1,[],[]))
+        self.assertTrue(cli('plan-check','--run',self.run,'--video',1)['ready'])
+        # A meaningful change (the strategy): a new revision, and what it touches must follow it.
+        d['strategy']['progression']+=' And a new idea arrives late in the plan.'
+        save(vd/'direction.json',d)
+        m=cli('direction-lock','--run',self.run,'--video',1,'--revise','progression sharpened after the cold read')
+        self.assertEqual((m['production_rev'],m['outdated_now']),(2,['beat-map','script']))
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('beat_map_made_for_an_earlier_direction',res['issues'])
+        tts=cli('tts','--run',self.run,'--video',1,'--voice-id','TESTID','--model-id','eleven_v4',expected=2)
+        self.assertIn('script_made_for_an_earlier_direction',tts['details'])   # no paid narration on an old script
+        beats=json.loads((vd/'beat-map.json').read_text())
+        beats['beats'][2]['experience']='the late idea lands as a real surprise'
+        save(vd/'beat-map.json',beats)                                         # updated for real
+        cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','script',
+            '--reason','the new idea only changes the beat order, not a single line')
         ok=cli('plan-check','--run',self.run,'--video',1)
         self.assertTrue(ok['ready'])
-        self.assertTrue(any('beat-map.json was last written before' in w for w in ok['warnings']))   # shown, not silent
-        d['treatments'][0]['narrator']+=' Now much louder.'
-        save(vd/'direction.json',d)                                            # treatments changed after their blind read
-        r=cli('direction-lock','--run',self.run,'--video',1,'--revise','narrator changed',expected=2)
-        self.assertIn('treatment_review_outdated',r['details'])
+        self.assertTrue(any('reapproved for direction revision 2' in w for w in ok['warnings']))
+        # Refining the chosen treatment needs no new blind read, but everything downstream must follow it.
+        d['treatments'][0]['narrator']+=' Now noticeably warmer.'
+        save(vd/'direction.json',d)
+        r=cli('direction-lock','--run',self.run,'--video',1,'--revise','the narrator warmed up')
+        self.assertEqual(r['production_rev'],3)
+        self.assertEqual(r['affects'],['beat-map','script','shot-plan','style-bible','stills','music','edit'])
+        self.assertIn('script_made_for_an_earlier_direction',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
+        # Only a treatment that never had a blind read can't be chosen.
+        t3=json.loads(json.dumps(d['treatments'][1])); t3['id']='T3'
+        d['treatments'].append(t3); d['decision']['treatment']='T3'
+        save(vd/'direction.json',d)
+        r=cli('direction-lock','--run',self.run,'--video',1,'--revise','switch to a brand-new treatment',expected=2)
+        self.assertIn('never in a blind comparison',r['error'])
 
     def test_duration_rules_hold_with_the_creative_process(self):
         vd=self.write_plan()
@@ -494,7 +530,8 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(s['long_sentences'][0]['line'],'L006')
         self.assertNotIn('repeated_sentence_shapes',core.writing_signals(lines,'de'))   # English heuristics stay English
 
-    def test_narration_measure_reports_delivery_per_beat(self):
+    def narrated(self):
+        """A locked direction, a 10-line script in two beats, and its recorded, measured narration (one part)."""
         vd=self.write_plan()
         lines=[{'id':f'L{i:03}','text':f'Line {i} tells the viewer something new about the road ahead tonight.'} for i in range(1,11)]
         save(vd/'script.json',{'language':'en','pace_wpm':145,'lines':lines})
@@ -518,13 +555,116 @@ class StaticStudioTests(unittest.TestCase):
                                 'finished_parts':[1],'voice_settings':{},
                                 'chunks':[{'id':1,'line_start':1,'line_end':10,'file':'part-001.mp3','characters':len(text),
                                            'text_sha256':hashlib.sha256(text.encode('utf-8')).hexdigest()}]})
-        out=cli('narration-measure','--run',self.run,'--video',1)
+        return vd,d,cli('narration-measure','--run',self.run,'--video',1)
+
+    def test_narration_measure_reports_delivery_per_beat(self):
+        vd,d,out=self.narrated()
         self.assertEqual(out['alignment_match_ratio'],1.0)
         self.assertTrue(out['delivery'] and 'file' in out['delivery'],out.get('delivery'))
         dj=json.loads((d/'delivery.json').read_text())
         self.assertEqual(set(dj['spans']),{'B01','B02'})                    # the voice, beat by beat...
         self.assertEqual(dj['spans']['B02']['intended']['pace'],'slow')     # ...next to what each beat asked for
         self.assertEqual(set(dj['references']),{'V001','V002'})             # ...and to the locked references
+
+    def shots_for_plan(self):
+        """A shot plan for write_plan's five beats: one shot each, every one with its job and its own prompt."""
+        ends={1:10,2:20,3:30,4:40,5:52}
+        shots=[{'id':f'S{i}','beat_id':f'B0{i}','line_start':f'L{(i-1)*10+1:03}','line_end':f'L{ends[i]:03}',
+                'composition':['wide','close','detail','wide','close'][i-1],
+                'new_thing':f'what the viewer learns in beat {i} that the words leave out',
+                'frame_prompt':f'a distinct picture {i} of the valley, {["dawn","noon","dusk","night","rain"][i-1]} light, one clear subject'}
+               for i in range(1,6)]
+        save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        return shots
+
+    def test_generation_follows_the_approved_plan(self):
+        vd=self.write_plan()
+        shots=self.shots_for_plan()
+        core=self.load_core()
+        stills=self.home/'stills'
+        job={'op':'generate','run':str(self.run),'video':1,
+             'images':[{'shot_id':'S1','prompt':shots[0]['frame_prompt']+', painterly, soft edges','out':str(stills/'S1.png')}]}
+        jobp=self.home/'stills-job.json'; save(jobp,job)
+        self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
+        # A prompt that drifted from the approved shot, or a shot the plan doesn't have, is refused.
+        drift=json.loads(json.dumps(job)); drift['images'][0]['prompt']='a rocket launch at noon, cinematic'
+        save(jobp,drift)
+        self.assertIn('item_1_prompt_does_not_carry_shot_S1_frame_prompt',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
+        drift['images'][0]['shot_id']='S99'; save(jobp,drift)
+        self.assertIn('item_1_must_name_a_shot_of_the_shot_plan',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
+        # The workers refuse before anything loads (no run named: no ComfyUI, no model, no network).
+        loose={'op':'generate','images':[{'prompt':'a carefully specified picture of the valley','out':str(stills/'x.png'),
+                                          'file':'x.png'}],'tracks':[{'video':1,'caption':'a low warm drone','duration':10,'out':str(stills/'x.wav')}]}
+        lp=self.home/'loose.json'; save(lp,loose)
+        for worker,extra in (('image_worker.py',[]),('music_worker.py',[]),('openai_images_worker.py',['--execute'])):
+            cmd=[sys.executable,str(ROOT/'scripts'/worker)]+(['--job',str(lp)] if worker.startswith('openai') else [str(lp)])+extra
+            p=subprocess.run(cmd,capture_output=True,text=True,env={**os.environ,'OPENAI_API_KEY':''})
+            self.assertEqual(p.returncode,2,worker+p.stdout+p.stderr)
+            self.assertIn('job_must_name_its_run_and_video',p.stdout,worker)
+        # Music names the beats it scores.
+        music={'op':'generate','run':str(self.run),'video':1,
+               'tracks':[{'video':1,'beats':['B02','B03'],'caption':'a low warm drone that thins out','duration':30,'out':str(self.home/'bed.wav')}]}
+        mp=self.home/'music-job.json'; save(mp,music)
+        self.assertTrue(cli('media-check','--job',mp,'--kind','music')['ok'])
+        music['tracks'][0]['beats']=['B99']; save(mp,music)
+        self.assertIn('track_1_must_name_beats_of_the_beat_map',cli('media-check','--job',mp,'--kind','music',expected=2)['issues'])
+        # What was made is recorded with its shot and the direction it was made under.
+        gate=core.media_gate(job,'stills')
+        stills.mkdir(); (stills/'S1.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'0'*2048)
+        core.record_media(gate['run'],1,'stills',[{'out':str(stills/'S1.png'),**gate['records'][0]}])
+        self.assertEqual(core.stills_facts(self.run,1)['issues'],['stills_missing_or_untraced:S2,S3,S4,S5'])
+        # A meaningful change of the chosen treatment: its earlier picture and the shot plan no longer stand...
+        d=json.loads((vd/'direction.json').read_text())
+        d['treatments'][0]['visual_language']+=' Colder, sparser frames throughout.'
+        save(vd/'direction.json',d)
+        cli('direction-lock','--run',self.run,'--video',1,'--revise','a colder, sparser look')
+        self.assertTrue(any(x.startswith('stills_made_for_an_earlier_direction:S1') for x in core.stills_facts(self.run,1)['issues']))
+        save(jobp,job)
+        self.assertIn('shot_plan_made_for_an_earlier_direction',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
+        # ...until the shot plan follows the new look for real, and the job carries its new prompt.
+        shots[0]['frame_prompt']='a sparse cold picture 1 of the valley, dawn light, one clear subject'
+        save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','beat-map','--reason','the beats already ask for restraint')
+        self.assertIn('item_1_prompt_does_not_carry_shot_S1_frame_prompt',cli('media-check','--job',jobp,'--kind','stills',expected=2)['issues'])
+        job['images'][0]['prompt']=shots[0]['frame_prompt']+', painterly'; save(jobp,job)
+        self.assertTrue(cli('media-check','--job',jobp,'--kind','stills')['ok'])
+        # Explicit reapproval accepts pictures as they are (user-supplied, say), on record.
+        cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','stills','--reason','the user supplies painted stills for every shot')
+        sf=core.stills_facts(self.run,1)
+        self.assertEqual(sf['issues'],[])
+        self.assertTrue(any('explicit reapproval' in w for w in sf['warnings']))
+
+    def test_edit_follows_the_retimed_shots_and_beats(self):
+        vd,d,_=self.narrated()
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(d/'part-001.mp3'),str(d/'narration.wav')],check=True)
+        shots=[{'id':'S1','beat_id':'B01','line_start':'L001','line_end':'L005','composition':'wide',
+                'new_thing':'the road the narrator is talking about, from above','frame_prompt':'a long road through snow seen from a ridge at dawn'},
+               {'id':'S2','beat_id':'B02','line_start':'L006','line_end':'L010','composition':'close',
+                'new_thing':'the hands that will have to fix the bridge','frame_prompt':'cold hands holding a coil of rope beside a broken bridge'}]
+        save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        cli('retime-shots','--run',self.run,'--video',1)
+        plan=json.loads((self.run/'70-edit/video-01/edit-plan.json').read_text())
+        self.assertEqual(plan['direction'],{'treatment':'T1','production_rev':1})        # made under the locked direction
+        self.assertEqual(plan['shots'][1]['direction']['pace'],'slow')                     # each shot carries its beat's direction
+        self.assertEqual([b['id'] for b in plan['beats']],['B01','B02'])
+        tdir=self.run/'70-edit/video-01'
+        seg=[{'start_s':s['start_s'],'end_s':s['end_s'],'beat_id':s['beat_id'],'shot_id':s['id'],'purpose':'the shot\'s job'} for s in plan['shots']]
+        timeline={'canvas':'1920x1080','visual_segments':seg,
+                  'audio_segments':[{'kind':'music','file':str(self.home/'bed.wav'),'start_s':0,'end_s':5,'beats':['B01']}]}
+        save(tdir/'timeline.json',timeline)
+        res=cli('timeline-check','--run',self.run,'--video',1,expected=2)
+        trace=[x for x in res['issues'] if x.startswith(('visual_','shot_','edit_plan','audio_'))]
+        self.assertEqual(trace,['audio_1_music_without_provenance'])   # cuts follow the retimed shots; the bed is untraced
+        timeline['visual_segments'][1]['beat_id']='B01'
+        timeline['audio_segments'][0].update({'beats':['B02'],'start_s':0,'end_s':1})
+        save(tdir/'timeline.json',timeline)
+        res=cli('timeline-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('visual_2_beat_differs_from_its_shot',res['issues'])
+        self.assertIn('audio_1_plays_outside_its_beats',res['issues'])
+        # The shot plan changed its structure after the retime: the edit plan no longer describes it.
+        shots[1]['line_start']='L007'; shots[0]['line_end']='L006'
+        save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        self.assertIn('edit_plan_outdated_rerun_retime_shots',cli('timeline-check','--run',self.run,'--video',1,expected=2)['issues'])
 
     def test_voice_candidates_measure_each_preview_without_listening(self):
         core=self.load_core()

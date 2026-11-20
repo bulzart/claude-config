@@ -482,6 +482,16 @@ def op_generate(job):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def studio():
+    """Static Studio's production gate and provenance record (static_core.py, next to this file; standard library only,
+    so it loads in ComfyUI's own Python)."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import static_core
+    return static_core
+
+
 def main():
     if len(sys.argv) != 2:
         out({"ok": False, "error": "usage: image_worker.py <job.json>"}, 2)
@@ -492,10 +502,29 @@ def main():
     op = {"check": op_check, "generate": op_generate}.get(job.get("op"))
     if op is None:
         out({"ok": False, "error": f"unknown op {job.get('op')!r} (check | generate)"}, 2)
+    gate, sc = None, None
+    if job.get("op") == "generate":
+        # Before ComfyUI starts: the job names its run and video, every image a shot of the checked shot plan carrying
+        # that shot's approved frame_prompt, and the direction, beat map and shot plan are current (static_core.media_gate).
+        try:
+            sc = studio()
+            gate = sc.media_gate(job, "stills")
+        except Exception as e:  # noqa: BLE001
+            out({"ok": False, "error": f"Static Studio gate unavailable: {type(e).__name__}: {e}"}, 2)
+        if not gate["ok"]:
+            out({"ok": False, "error": "Static Studio: these stills cannot be generated yet (fix the plan, not the gate).",
+                 "issues": gate["issues"]}, 2)
     try:
         res = op(job)
     except Exception as e:  # noqa: BLE001
         out({"ok": False, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-1500:]}, 1)
+    if gate and not gate.get("preview"):   # which shot each picture shows, made under which direction revision
+        made = {str(Path(r["out"]).resolve()) for r in res.get("images") or [] if r.get("ok") and r.get("out")}
+        entries = [{"out": str(Path(it["out"]).resolve()), **rec, "engine": "flux3-image-klein-int8"}
+                   for it, rec in zip(job.get("images") or [], gate["records"])
+                   if str(Path(str(it.get("out") or "")).resolve()) in made]
+        if entries:
+            res["provenance"] = sc.record_media(gate["run"], gate["video"], "stills", entries)
     out(res, 0 if res.get("ok") else 1)
 
 

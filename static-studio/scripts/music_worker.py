@@ -240,10 +240,32 @@ def main():
     ops = {"check": op_check, "generate": op_generate}
     if job.get("op") not in ops:
         out({"ok": False, "error": f"unknown op {job.get('op')!r}"}, 2)
+    gate, sc = None, None
+    if job.get("op") == "generate":
+        # Before any model loads: the job names its run and video, every track the beats it scores (their sound
+        # direction is what the caption carries out), and the direction and beat map are current (static_core.media_gate).
+        try:
+            here = str(Path(__file__).resolve().parent)
+            if here not in sys.path:
+                sys.path.insert(0, here)
+            import static_core as sc
+            gate = sc.media_gate(job, "music")
+        except Exception as e:  # noqa: BLE001
+            out({"ok": False, "error": f"Static Studio gate unavailable: {type(e).__name__}: {e}"}, 2)
+        if not gate["ok"]:
+            out({"ok": False, "error": "Static Studio: this music cannot be generated yet (fix the plan, not the gate).",
+                 "issues": gate["issues"]}, 2)
     try:
         res = ops[job["op"]](job)
     except Exception as e:  # noqa: BLE001
         out({"ok": False, "error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()[-1500:]}, 1)
+    if gate:   # which beats each track scores, made under which direction revision
+        made = {str(Path(m["out"]).resolve()) for m in res.get("made") or [] if m.get("out")}
+        entries = [{"out": str(Path(tr["out"]).resolve()), **rec, "engine": "ace-step-1.5"}
+                   for tr, rec in zip(job.get("tracks") or [], gate["records"])
+                   if str(Path(str(tr.get("out") or "")).resolve()) in made]
+        if entries:
+            res["provenance"] = sc.record_media(gate["run"], gate["video"], "music", entries)
     out(res, 0 if res.get("ok") else 1)
 
 
