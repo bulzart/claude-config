@@ -48,8 +48,11 @@ TILE_W, TILE_H, CAPTION_H = 320, 180, 82
 GREY_W, GREY_H = 64, 36
 CUT_DIFF = 8.0              # mean absolute grey difference (0-255) of two consecutive sampled frames: a hard change
 MOTION_DIFF = 0.6           # above the still-frame noise floor (an unchanged still measures 0-0.1 on the references),
-MOTION_STEP_S = 0.2         # per 0.2 s of time (tuned at 5 fps): a move is a speed, so at another rate the per-pair
-                            # threshold is scaled to the interval (3.0 between frames 1 s apart), never under it
+MOTION_STEP_S = 0.2         # between frames 0.2 s apart (tuned at 5 fps). Frames further apart change more for the
+MOTION_SCALE_EXP = 0.75     # same motion, so the threshold grows with the interval: x (interval / 0.2 s) ** 0.75, 2.0
+                            # at 1 fps. Calibrated 2026-11-20 on 3,770 one-second intervals of seven moving references:
+                            # 2.0 agreed with their 5 fps reading 81 % of the time and gave the same moving share (58 %
+                            # vs 56 %); 0.6 unchanged read 92 %, 3.0 (fully linear) 40 %.
 TRANSITION_MAX_S = 1.6      # a run of changes lasting up to this long that lands on another picture: a transition
                             # (8 frame pairs at 5 fps, 2 at 1 fps: the same 1.6 s at any sampling rate)
 CUT_SERIES_PATH = 1.4       # a run whose every pair is a hard, recolouring change, and whose changes add up to this many
@@ -74,8 +77,8 @@ def transition_pairs(step_s):
 
 
 def motion_diff(step_s):
-    """MOTION_DIFF for frames this far apart: the same speed of change, never below the 5 fps value."""
-    return round(MOTION_DIFF * max(1.0, (step_s or MOTION_STEP_S) / MOTION_STEP_S), 3)
+    """MOTION_DIFF for frames this far apart (MOTION_SCALE_EXP), never below the 5 fps value."""
+    return round(MOTION_DIFF * max(1.0, (step_s or MOTION_STEP_S) / MOTION_STEP_S) ** MOTION_SCALE_EXP, 3)
 
 
 def thresholds(fps=None):

@@ -323,7 +323,7 @@ for the script and the final review, round 1 for the treatments).
 rate and its spread, pitch range and movement in semitones, loudness contrast, the level under the voice in its
 gaps, by third of the film; picture: shots, cuts per minute, shot lengths, moving and still share, flashes, the same
 picture again, brightness and saturation), `windows` (every 15 s: the words said and every measure), `shots`,
-`sheets` (one JPEG per minute), `thresholds` and `unknowns`. `50-audio/video-NN/delivery.json` holds the same
+`sheets` (one JPEG per minute), `sampled_fps` (the rate the frames were sampled at: the run's analysis rate; cut counts compare only between videos sampled at the same rate), `thresholds` (the picture's are seconds turned into frame pairs at that rate) and `unknowns`. `10-media/V###/frame-index.json`: `{fps, interval_s, tolerance_s, mode: "nominal_sample_time", frames: [{file, approx_s}]}`; `preparation.json` keeps the frames' and the transcript's cache keys apart (`frames_signature`: source, rate, width; `transcript_signature`: source, Whisper model), so a new rate re-makes the frames only. `50-audio/video-NN/delivery.json` holds the same
 narration measures for the recorded voice, per beat (`spans`, with what each beat asked for) and next to the
 references'. All of it is measurement; none of it is a verdict.
 

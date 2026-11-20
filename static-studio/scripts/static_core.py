@@ -31,6 +31,15 @@ IMAGE_EXT = {'.jpg', '.jpeg', '.png', '.webp', '.heic'}
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA = 'static-youtube-longform-v1'
 DEFAULT_MIN_LONGFORM = 480
+# Reference analysis samples one frame per second (state.json analysis_fps, set when the run is made). A run keeps the
+# rate its references were analysed at, so its references and its own export are measured on one yardstick; a run
+# whose state predates the setting was analysed at 5 fps. The generated video's frame rate (format.fps) is separate.
+ANALYSIS_FPS = 1.0
+LEGACY_ANALYSIS_FPS = 5.0
+
+
+def run_analysis_fps(st):
+    return float(st.get('analysis_fps') or LEGACY_ANALYSIS_FPS)
 
 
 def emit(data, code=0):
@@ -189,7 +198,7 @@ def cmd_clone(args):
     src, previous = run_folder(argparse.Namespace(run=args.from_run))
     import tempfile
     tmp = argparse.Namespace(references=previous['source_references'], workspace=args.workspace,
-                            slug=args.slug, fps=previous.get('analysis_fps', 5),
+                            slug=args.slug, fps=ANALYSIS_FPS,
                             min_longform=previous.get('min_longform_s', DEFAULT_MIN_LONGFORM))
     # Make a new independent Static run; do not share mutable audio or output files.
     ref = Path(tmp.references)
@@ -207,7 +216,9 @@ def cmd_clone(args):
         (rd / d).mkdir(parents=True, exist_ok=True)
     st = {k:v for k,v in previous.items() if k not in ('selected_niche','video_count','stage','created_at','run_id')}
     st.update({'selected_niche': None, 'video_count': 0, 'stage': 'reference_analysis_complete',
-               'run_id': rd.name, 'created_at': now(), 'cloned_from': str(src)})
+               'run_id': rd.name, 'created_at': now(), 'cloned_from': str(src),
+               # frames are not cloned: the clone's references are prepared again, at the current analysis rate
+               'analysis_fps': ANALYSIS_FPS})
     write_json(rd/'state.json', st)
     for oldrel in ['00-inventory/references.json', '20-analysis/cohorts/index.json']:
         old = src/oldrel
@@ -296,14 +307,20 @@ def cmd_prepare(args):
               and (ids is None or v['id'] in ids)]
     if not chosen:
         error('No matching unique reference videos. Run scan first.')
-    fps = args.fps or st.get('analysis_fps', 5)
+    fps = run_analysis_fps(st)
+    if args.fps and abs(float(args.fps) - fps) > 1e-9:
+        error(f'This run analyses its references at {fps:g} fps (state.json analysis_fps): every reference of a run is '
+              'sampled at one rate, so they and the run\'s own export compare on one yardstick. Clone the run to '
+              'analyse at another rate (a clone prepares its references again at the current rate).',
+              {'run_fps': fps, 'requested_fps': args.fps})
     if not 0 < fps <= 60:
         error('FPS must be between 0 and 60')
     estimate = sum(v.get('duration_s') or 0 for v in chosen) * fps
     if args.dry_run:
         emit({'ok': True, 'videos': len(chosen), 'fps': fps, 'estimated_sample_frames': int(estimate),
               'per_video': {x['id']: x['duration_s'] for x in chosen},
-              'note': '5 fps is the baseline; use --full-fps for a specific clip when true frame-by-frame detail is necessary.'})
+              'note': f'{fps:g} fps is this run\'s analysis rate (a frame every {1 / fps:g} s); use --full-fps for a '
+                      'specific clip when true frame-by-frame detail is necessary.'})
         return
     results = []
     failures = []
@@ -317,9 +334,17 @@ def cmd_prepare(args):
         pold = read_json(manifest)
         signature = {'fingerprint': v['fingerprint'], 'fps': 'original' if args.full_fps else fps,
                      'width': args.width, 'whisper_model': args.whisper_model}
-        details = {'id': v['id'], 'source': str(src), 'signature': signature, 'updated_at': now()}
+        # The frames and the transcript are cached apart: a new sampling rate or width re-makes the frames only,
+        # never the transcript (the audio did not change). An older manifest held one signature for both.
+        frames_sig = {k: signature[k] for k in ('fingerprint', 'fps', 'width')}
+        words_sig = {k: signature[k] for k in ('fingerprint', 'whisper_model')}
+        old_sig = pold.get('signature') or {}
+        old_frames = pold.get('frames_signature') or {k: old_sig.get(k) for k in frames_sig}
+        old_words = pold.get('transcript_signature') or {k: old_sig.get(k) for k in words_sig}
+        details = {'id': v['id'], 'source': str(src), 'signature': signature, 'frames_signature': frames_sig,
+                   'transcript_signature': words_sig, 'updated_at': now()}
         try:
-            if not (pold.get('signature') == signature and list(target.glob('*.jpg'))):
+            if not (old_frames == frames_sig and list(target.glob('*.jpg'))):
                 for existing in target.glob('*.jpg'):
                     existing.unlink()
                 vf = f"scale={args.width}:-2" if args.full_fps else f"fps={fps},scale={args.width}:-2"
@@ -336,14 +361,15 @@ def cmd_prepare(args):
                 frame_names = sorted(x.name for x in target.glob('*.jpg'))
                 frame_index = {'source_id': v['id'], 'mode': 'nominal_sample_time',
                                'warning': 'Approximate sample time from output slot; not source-native PTS.',
-                               'fps': sample_rate,
+                               'fps': sample_rate, 'interval_s': round(1 / sample_rate, 4),
+                               'tolerance_s': round(0.5 / sample_rate, 4),
                                'frames': [{'file': name, 'approx_s': round(i/sample_rate, 3)}
                                           for i, name in enumerate(frame_names)]}
                 write_json(frame_index_path, frame_index)
                 details['frame_index'] = str(frame_index_path)
             if not args.skip_whisper and v.get('has_audio'):
                 tp = dest / 'transcript.json'
-                if not (pold.get('signature') == signature and read_json(tp).get('status') == 'transcribed'):
+                if not (old_words == words_sig and read_json(tp).get('status') == 'transcribed'):
                     details['transcript_segments'] = transcribe(src, tp, args.whisper_model, args.device, args.compute_type)
                 else:
                     details['transcript_segments'] = len(read_json(tp).get('segments', []))
@@ -5322,7 +5348,12 @@ def cmd_av_profile(args):
             tj = read_json(media / 'transcript.json')
             words = transcript_words(tj)
             target = ref_av_path(rd, vid)
-            sig = {'fingerprint': row.get('fingerprint'), 'frames': len(frames), 'words': len(words),
+            ffps = float(fi.get('fps') or run_analysis_fps(st))
+            if abs(ffps - run_analysis_fps(st)) > 1e-9:
+                results.setdefault('_notes', []).append(f'{vid}: its frames were sampled at {ffps:g} fps, the run '
+                                                        f'analyses at {run_analysis_fps(st):g} fps: compare its cut '
+                                                        'counts only with videos sampled at the same rate')
+            sig = {'fingerprint': row.get('fingerprint'), 'frames': len(frames), 'fps': ffps, 'words': len(words),
                    'method': av.METHOD_VERSION, 'sheets': not args.no_sheets}
             old = read_json(target)
             if old.get('signature') == sig and not args.force:
@@ -5337,7 +5368,7 @@ def cmd_av_profile(args):
                         results.setdefault('_notes', []).append(f'{vid}: audio not measured ({str(exc)[:120]})')
                 prof = av.profile(vid, row.get('duration_s') or frames[-1][0], frames, wav, words,
                                   sheets_dir=None if args.no_sheets else target.with_suffix(''),
-                                  segments=_segments_of(tj))
+                                  segments=_segments_of(tj), fps=ffps)
             tfile = media / 'transcript.txt'
             if prof['summary'].get('narration') is not None:
                 prof['summary']['narration']['wpm_pipeline'] = (wpm_from_transcript_raw(
@@ -5365,7 +5396,7 @@ def cmd_av_profile(args):
             tj = read_json(tpath)
         words = transcript_words(tj)
         with tempfile.TemporaryDirectory(dir=str(target.parent)) as tmp:
-            frames = av.extract_frames(f, Path(tmp) / 'frames', fps=st.get('analysis_fps', 5))
+            frames = av.extract_frames(f, Path(tmp) / 'frames', fps=run_analysis_fps(st))
             wav = None
             if meta.get('has_audio'):
                 try:
@@ -5374,7 +5405,7 @@ def cmd_av_profile(args):
                     wav = None
             prof = av.profile(f'video-{n:02d}', meta['duration_s'], frames, wav, words,
                               sheets_dir=None if args.no_sheets else target.with_suffix(''),
-                              segments=_segments_of(tj))
+                              segments=_segments_of(tj), fps=run_analysis_fps(st))
         for s in prof['shots']:
             s.pop('keyframe', None)            # the export's frames were temporary; the sheets keep the pictures
         lock = read_json(video_dir(rd, n) / 'length-lock.json')
@@ -5964,7 +5995,9 @@ def main():
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('doctor'); p.set_defaults(func=cmd_doctor)
     p = sub.add_parser('init'); p.add_argument('--references', required=True); p.add_argument('--workspace')
-    p.add_argument('--slug', default='story'); p.add_argument('--fps', type=float, default=5.0)
+    p.add_argument('--slug', default='story')
+    p.add_argument('--fps', type=float, default=ANALYSIS_FPS, help='Reference analysis frames per second (1 by default; '
+                   'kept by the run)')
     p.add_argument('--min-longform', type=int, default=DEFAULT_MIN_LONGFORM); p.set_defaults(func=cmd_init)
     p = sub.add_parser('clone'); p.add_argument('--from-run', required=True); p.add_argument('--workspace'); p.add_argument('--slug', default='clone'); p.set_defaults(func=cmd_clone)
     p = sub.add_parser('scan'); p.add_argument('--run', required=True); p.set_defaults(func=cmd_scan)

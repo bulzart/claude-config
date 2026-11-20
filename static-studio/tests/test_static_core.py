@@ -46,7 +46,7 @@ class StaticStudioTests(unittest.TestCase):
             p = refs/f'video_{idx+1}.mp4'
             subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi',
                             '-i',f'color=c={"red" if idx==0 else "blue" if idx==1 else "green"}:s=64x36:r=5',
-                            '-t','0.6','-pix_fmt','yuv420p',str(p)],check=True)
+                            '-t','2.6','-pix_fmt','yuv420p',str(p)],check=True)
         self.run = Path(cli('init','--references',refs,'--workspace',self.home/'runs','--slug','test')['run'])
         self.assertTrue(cli('scan','--run',self.run)['ok'])
         invp = self.run/'00-inventory/references.json'
@@ -68,6 +68,9 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(data['mode'],'nominal_sample_time')
         self.assertGreaterEqual(len(data['frames']),2)
         self.assertEqual(data['frames'][0]['approx_s'],0.0)
+        # one frame a second, on the same clock as the transcript: slots 0, 1, 2 s, each exact to half a second
+        self.assertEqual((data['fps'],data['interval_s'],data['tolerance_s']),(1.0,1.0,0.5))
+        self.assertEqual([f['approx_s'] for f in data['frames']],[0.0,1.0,2.0])
         self.assertTrue((self.run/'10-media/V001/sampled-frames'/data['frames'][0]['file']).exists())
         job=self.home/'image-job.json'
         save(job,{'model':'gpt-image-2.5-flare','size':'1536x864','quality':'high',
@@ -1463,6 +1466,75 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(out['credits_billed_this_trial'],sum(round(len(x['sent']['text'])*0.4) for x in rep['runs'].values()))
         self.assertEqual(out['budget_status']['spent'],out['credits_billed_this_trial'])
 
+    def test_references_are_analysed_at_one_frame_per_second(self):
+        core=self.load_core()
+        st=json.loads((self.run/'state.json').read_text())
+        self.assertEqual((st['analysis_fps'],st['format']['fps']),(1.0,30))          # analysis 1 fps; the video stays 30
+        # Synchronisation: a clip red until 2.5 s, blue until 4.7 s, then green. Each 1 fps frame shows the picture of
+        # its slot to within half a second, on the same clock as the transcript's word times.
+        src=self.home/'sync.mp4'
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=red:s=64x36:r=30:d=2.5',
+                        '-f','lavfi','-i','color=c=blue:s=64x36:r=30:d=2.2','-f','lavfi','-i','color=c=green:s=64x36:r=30:d=1.3',
+                        '-filter_complex','[0:v][1:v][2:v]concat=n=3:v=1:a=0','-pix_fmt','yuv420p',str(src)],check=True)
+        invp=self.run/'00-inventory/references.json'; inv=json.loads(invp.read_text())
+        inv['items'].append({'id':'V004','relative_path':'sync.mp4','kind':'video','source_path':str(src),
+                             'fingerprint':'sync-test','duration_s':6.0,'has_video':True,'has_audio':False})
+        save(invp,inv)
+        self.assertTrue(cli('prepare','--run',self.run,'--ids','V004','--skip-whisper')['ok'])
+        fi=json.loads((self.run/'10-media/V004/frame-index.json').read_text())
+        from PIL import Image
+        def colour(name):
+            r,g,b=Image.open(self.run/'10-media/V004/sampled-frames'/name).convert('RGB').getpixel((32,18))
+            return 'red' if r>150 and g<100 else 'blue' if b>150 and r<100 else 'green'
+        def truth(t):
+            return 'red' if t<2.5 else 'blue' if t<4.7 else 'green'
+        seen=[(f['approx_s'],colour(f['file'])) for f in fi['frames']]
+        self.assertEqual([s for s,_ in seen],[0.0,1.0,2.0,3.0,4.0,5.0])
+        for s,c in seen:
+            self.assertIn(c,{truth(max(0,s-fi['tolerance_s'])),truth(s),truth(s+fi['tolerance_s']-1e-6)})
+        # One rate per run: another rate is refused, nothing re-sampled.
+        before=sorted((self.run/'10-media/V004/sampled-frames').glob('*.jpg'))
+        self.assertIn('Clone the run',cli('prepare','--run',self.run,'--ids','V004','--fps',5,'--skip-whisper',expected=2)['error'])
+        self.assertEqual(sorted((self.run/'10-media/V004/sampled-frames').glob('*.jpg')),before)
+        # The frames and the transcript are cached apart: a new frame size re-makes the frames, never the transcript;
+        # an older manifest (one key for both) is still honoured.
+        inv=json.loads(invp.read_text())
+        next(x for x in inv['items'] if x['id']=='V004')['has_audio']=True
+        save(invp,inv)
+        calls=[]
+        def fake_transcribe(path,outpath,*a):
+            calls.append(str(path))
+            save(Path(outpath),{'status':'transcribed','model':'medium','segments':[]})
+            Path(outpath).with_suffix('.txt').write_text('',encoding='utf-8')
+            return 0
+        with mock.patch.object(core,'transcribe',side_effect=fake_transcribe):
+            self.assertEqual(self.core_call(core,'prepare','--run',self.run,'--ids','V004')[0],0)
+            self.assertEqual(len(calls),1)
+            code,out=self.core_call(core,'prepare','--run',self.run,'--ids','V004','--width',480)
+            self.assertEqual((code,len(calls)),(0,1))                                 # frames re-made, Whisper not re-run
+            man=json.loads((self.run/'10-media/V004/preparation.json').read_text())
+            self.assertEqual(man['frames_signature']['width'],480)
+            old={'id':'V004','signature':{**man['frames_signature'],'whisper_model':'medium'}}
+            save(self.run/'10-media/V004/preparation.json',old)                      # the older, single-key manifest
+            stamp=[(f.name,f.stat().st_mtime_ns) for f in sorted((self.run/'10-media/V004/sampled-frames').glob('*.jpg'))]
+            self.assertEqual(self.core_call(core,'prepare','--run',self.run,'--ids','V004','--width',480)[0],0)
+            self.assertEqual(len(calls),1)
+            self.assertEqual([(f.name,f.stat().st_mtime_ns) for f in sorted((self.run/'10-media/V004/sampled-frames').glob('*.jpg'))],stamp)
+        # av-profile records the rate its frames were sampled at, and keys its cache by it.
+        out=cli('av-profile','--run',self.run,'--refs','V004','--no-sheets')
+        prof=json.loads((self.run/'20-analysis/av/V004.json').read_text())
+        self.assertEqual((prof['sampled_fps'],prof['signature']['fps'],prof['thresholds']['transition_max_frame_pairs']),(1.0,1.0,2))
+        self.assertTrue(any('1 fps' in u for u in prof['unknowns']))
+        # A run analysed at 5 fps before this change keeps its rate (its frames, profiles and export compare alike).
+        st=json.loads((self.run/'state.json').read_text()); st['analysis_fps']=5.0
+        save(self.run/'state.json',st)
+        self.assertEqual(cli('prepare','--run',self.run,'--ids','V004','--dry-run')['fps'],5.0)
+        del st['analysis_fps']; save(self.run/'state.json',st)                       # older still: no rate recorded
+        self.assertEqual(cli('prepare','--run',self.run,'--ids','V004','--dry-run')['fps'],5.0)
+        # A clone prepares its references again, at the current rate.
+        clone=Path(cli('clone','--from-run',self.run,'--workspace',self.home/'runs')['run'])
+        self.assertEqual(json.loads((clone/'state.json').read_text())['analysis_fps'],1.0)
+
     def test_legacy_not_imported_and_clone_keeps_only_analysis(self):
         clone=cli('clone','--from-run',self.run,'--workspace',self.home/'runs')['run']
         cp=Path(clone)
@@ -1518,6 +1590,49 @@ class AvToolsTests(unittest.TestCase):
         self.assertIn('flash', kinds)                                     # the white flash is not a cut
         self.assertGreater(shots[2]['motion_share'], 0.3)                 # the push-in is motion inside a shot
         self.assertEqual(shots[0]['motion_share'], 0.0)
+
+    def one_fps_frames(self, zoom_per_s=0.08):
+        import numpy as np, cv2
+        h, w = 180, 320
+        def pic(bg, shape):
+            im = np.full((h, w, 3), bg, np.uint8); shape(im); return im
+        a = pic((40, 40, 200), lambda im: cv2.circle(im, (160, 90), 50, (200, 60, 30), -1))
+        b = pic((40, 170, 40), lambda im: cv2.rectangle(im, (60, 40), (260, 140), (0, 230, 230), -1))
+        c = pic((200, 200, 40), lambda im: cv2.circle(im, (80, 60), 40, (20, 20, 20), -1))
+        d = pic((120, 20, 120), lambda im: cv2.rectangle(im, (20, 100), (300, 170), (240, 240, 240), -1))
+        e = pic((20, 90, 160), lambda im: cv2.circle(im, (240, 120), 45, (0, 255, 255), -1))
+        grad = np.tile(np.linspace(30, 220, w, dtype=np.uint8), (h, 1))
+        f = cv2.merge([grad, (grad * 0.6).astype(np.uint8), (255 - grad)]); cv2.circle(f, (160, 90), 45, (250, 250, 250), -1)
+        def zoom(img, s):
+            ch, cw = int(h / s), int(w / s); y0, x0 = (h - ch) // 2, (w - cw) // 2
+            return cv2.resize(img[y0:y0 + ch, x0:x0 + cw], (w, h), interpolation=cv2.INTER_LINEAR)
+        seq = [a] * 4 + [b] * 3                      # a cut at 4 s
+        seq += [c, d] + [e] * 3                       # two pictures of one second each: a quick series of cuts
+        seq += [cv2.addWeighted(e, .5, f, .5, 0)] + [f] * 3      # a dissolve, caught in one sample
+        seq += [zoom(f, 1 + zoom_per_s * k) for k in range(1, 7)]  # a push-in, six seconds
+        seq += [a] * 3                                # back to the first picture
+        out = []
+        for i, img in enumerate(seq):
+            p = self.dir / f'one-{i:04d}.png'; cv2.imwrite(str(p), img); out.append((float(i), p))
+        return out
+
+    def test_one_frame_per_second_reads_the_same_edits(self):
+        feats = self.av.frame_features(self.one_fps_frames())
+        shots, kinds, _ = self.av.segment_shots(feats)
+        self.assertEqual([(s['start_s'], s['begins_with']) for s in shots],
+                         [(0.0, 'start'), (4.0, 'cut'), (7.0, 'cut'), (8.0, 'cut'), (9.0, 'cut'), (13.0, 'transition'),
+                          (22.0, 'cut')])
+        self.assertEqual(shots[-1].get('same_picture_as_shot'), 1)
+        self.assertGreater(shots[5]['motion_share'], 0.5)                  # the push-in moves inside its shot
+        # the same definitions at any rate: a transition lasts up to 1.6 s, a move is a speed of change
+        self.assertEqual([self.av.transition_pairs(1 / r) for r in (5, 1)], [8, 2])
+        self.assertEqual(self.av.motion_diff(0.2), 0.6)
+        self.assertAlmostEqual(self.av.motion_diff(1.0), 2.0, delta=0.01)
+        slow = self.av.segment_shots(self.av.frame_features(self.one_fps_frames(zoom_per_s=0.03)))[0]
+        self.assertEqual(slow[5]['motion_share'], 0.0)                     # 3 % a second reads as still, as at 5 fps
+        prof = self.av.profile('one', 25.0, self.one_fps_frames(), None, [])
+        self.assertEqual((prof['sampled_fps'], prof['summary']['picture']['sampled_fps']), (1.0, 1.0))
+        self.assertEqual(prof['thresholds']['transition_max_frame_pairs'], 2)
 
     def wav_and_words(self):
         import numpy as np, soundfile as sf
