@@ -48,7 +48,8 @@ The host's log is `logs\native-host.log`, the background watcher's `logs\watch.l
 | `sheets\sheet-01.jpg` ... | contact sheets: a frame every 0.75 s (4 per 3 s), 30 per sheet = 22.5 s, 5 x 6 cells of 240 x 135 |
 | `sheets\overview.jpg` | every 10th frame (7.5 s apart), 24 cells: the chunk at a glance |
 | `frames.json` | one row per frame: `i, t, rec, sheet, cell, rms_db, chat_per_s, diff_prev, t_pts, label` |
-| `transcript.json` / `.txt` | Whisper words with times (`.txt`: one readable line per segment, rec times) |
+| `transcript.json` / `.txt` | Whisper words with times (`.txt`: one readable line per segment, rec times; words that match the subtitle on screen are marked `[sub]`) |
+| `voices.json` | who speaks, as facts (after the transcript, `voices.enabled`; `cc.py voices` for older chunks): the subtitle lines read at full resolution with rec times and one label per word (`S` matches the subtitle on screen, `o` other text on screen, `.` none); never a stage, so a failure never holds a chunk up |
 | `audio.json`, `audio-profile.json` | loudness per 0.5 s, its summary and the loud-jump events |
 | `timeline.md` | one row per second: speech, loudest 0.5 s, motion, chat msgs/s |
 | `digest.json` | the chunk's row of `00-inventory\stream.md` as data |
@@ -64,7 +65,7 @@ largest seconds by chat rate / loudness / motion), `stream-meta.json` (title and
 ## The chunk reporter (a headless Haiku session per chunk, while the stream is downloaded)
 
 When a chunk has its sheets, audio numbers and text views, the watcher queues a **report**: a separate `claude -p` session (config `report`: Haiku 5.5, effort high, the Read tool only, no MCP servers, the user's settings and hooks left out, nothing saved as a conversation, at most `parallel` = 2 at once)
-opens the chunk's overview and dense sheets, `timeline.md`, `transcript.txt`, `digest.json`, `audio-profile.json`, `chunk.json` and `chat.json`, and writes what they show. The brief it works from is `reference\reporter.md`:
+opens the chunk's overview and dense sheets, `timeline.md`, `transcript.txt`, `voices.json` (when there is one: it quotes subtitles from it, never from the transcript), `digest.json`, `audio-profile.json`, `chunk.json` and `chat.json`, and writes what they show. The brief it works from is `reference\reporter.md`:
 **observations only, never a decision**: no verdict, no label such as "ace" or "highlight", no name corrected or guessed, nothing ranked, kept or skipped. The command's agents read `report.md` instead of opening every sheet, so by the time `/create-clips` runs the reading is already done.
 - **Files:** `report.json` (whitelisted fields only: `look` per sheet, `sound`, `speech`, `chat`, `seen_and_heard`, `unclear`; a field the brief does not ask for is dropped and counted in `dropped`) and `report.md` (the same, readable). `made_by` records the model, effort, seconds, cost, turns, attempts and which files the session **really opened** (read from its Read calls in the stream, not from what it claims).
   A file it did not open after the one retry is listed in `made_by.not_opened`, in `warnings` and in `report.md`. The chunk's row in `chunks.json` has a `report` field (`status` done|failed|running, model, at, seconds, cost_usd, attempts, error).

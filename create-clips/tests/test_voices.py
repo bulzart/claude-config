@@ -64,6 +64,9 @@ def make_video(path: Path, tmp: Path):
         tfe = str(tf).replace("\\", "/").replace(":", "\\:")
         vf.append(f"drawtext=fontfile='C\\:/Windows/Fonts/arial.ttf':textfile='{tfe}':fontcolor=white:fontsize=40:borderw=3:bordercolor=black:"
                   f"x=(w-tw)/2:y=h*0.86:enable='between(t,{a},{b})'")
+    # a game's button prompt at the right edge, on the same rows as the second subtitle (it must not be read together with it)
+    vf.append("drawtext=fontfile='C\\:/Windows/Fonts/arial.ttf':text='INTERRUPT':fontcolor=white:fontsize=34:borderw=3:bordercolor=black:"
+              "x=w*0.86:y=h*0.865:enable='between(t,4.5,6.5)'")
     cmd = ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=1920x1080:rate=30,colorlevels=romax=0.35:gomax=0.35:bomax=0.35", "-t", "12",
            "-vf", ",".join(vf), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-g", "60", str(path)]
     subprocess.run(cmd, check=True)
@@ -155,6 +158,11 @@ def main():
                             "conf": 0.99, "y": 0.86}],
                           [(0.5, 0.7, "He's"), (0.7, 0.9, "scamming"), (0.9, 1.1, "you!"), (1.2, 1.4, "Three"), (1.4, 1.6, "houses"), (1.6, 1.8, "after"), (1.8, 2.1, "listening")])
         check(lab6 == "oooSSSS", "the caseoh case: 'He's scamming you!' spoken over the start of the game's line stays unattributed: " + lab6)
+        lab7, _ = V.match([{"t0": 0.4, "t1": 2.0, "text": "thelab okaygotta go", "tokens": ["thelab", "okaygotta", "go"], "conf": 0.9, "y": 0.86}],
+                          [(0.5, 0.6, "the"), (0.6, 0.9, "lab."), (0.9, 1.2, "Okay,"), (1.2, 1.3, "I"), (1.3, 1.5, "gotta"), (1.5, 1.7, "go.")])
+        check(lab7 == "SSSSSS", "words OCR ran together ('thelab', 'okaygotta') are read as the transcript's two words: " + lab7)
+        check(V.split_joined(["knowwhat", "zzzz", "go"], {"know", "what", "go"}) == ["know", "what", "zzzz", "go"], "split_joined splits only a token that is two known words")
+        check(not any("INTERRUPT" in x["text"] for x in v["lines"]), "a button prompt at the edge, on the subtitle's rows, is not read into the subtitle line")
 
         # captions.skip: words in a skipped rec span get no caption; nothing changes without it
         resolved = {"pieces": [{"kind": "clip", "chunk": "C0001", "src_from": 0.0, "src_to": 12.0, "at": 0.0, "speed": 1.0, "rec_from": 100.0}],

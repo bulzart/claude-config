@@ -104,3 +104,4 @@
 - [One pipeline per session](one-pipeline-per-session.md) — user 2026-11-20: a brief naming another pipeline means this session's pipeline; others are read-only references
 - [create-video: captions](create-video-captions.md) — user 2026-11-20: Luckiest Guy box | Montserrat Bold yellow word | none, asked once; captions.py, Whisper word times; CapCut drawing not verified
 - [create-video: narration calibration](create-video-narration-calibration.md) — 2026-11-20 trial (2,051 of 5,000 credits): v4 ~0.40 credits/char, context unbilled, balance lags; waits for the user's ears
+- [create-clips: who speaks ([sub])](create-clips-speaker-facts.md) — 2026-11-20: transcript words matching on-screen subtitles (OCR) marked [sub]; voices.json, T voices; voice/music/laughter not shipped
