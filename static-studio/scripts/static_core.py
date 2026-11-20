@@ -122,6 +122,16 @@ def quick_fingerprint(path):
     return h.hexdigest()[:20] + ':' + str(size)
 
 
+def file_sha256(path):
+    """The whole file's content hash: what ties a cut to the exact approved narration (a quick fingerprint reads only
+    the ends of a file)."""
+    h = hashlib.sha256()
+    with Path(path).open('rb') as f:
+        for block in iter(lambda: f.read(1 << 20), b''):
+            h.update(block)
+    return h.hexdigest()
+
+
 def cmd_doctor(args):
     checks = {'python': sys.version.split()[0], 'ffmpeg': shutil.which('ffmpeg') is not None,
               'ffprobe': shutil.which('ffprobe') is not None,
@@ -799,19 +809,23 @@ def term_rx(term):
     return re.compile(r'(?<![\w-])' + re.escape(term) + r'(?![\w-])')
 
 
-def pronunciation_facts(rd, video, lines):
-    """The episode's pronunciation list (40-plans/video-NN/pronunciation.json): the names and terms this voice may
-    say wrong, each in a form Eleven v4 documents (IPA between slashes, or a respelling), where that pronunciation
-    comes from and how sure it is. Only what is sent changes: the script and the captions keep the canonical
-    spelling. An uncertain entry is flagged for listening, never treated as settled."""
+def pronunciation_facts(rd, video, lines, data=None):
+    """The episode's pronunciation list (40-plans/video-NN/pronunciation.json, or `data` given directly, as a trial
+    plan carries its own): the names and terms this voice may say wrong, each in a form Eleven v4 documents (IPA
+    between slashes, or a respelling), where that pronunciation comes from and how sure it is. Only what is sent
+    changes: the script and the captions keep the canonical spelling. An uncertain entry is flagged for listening,
+    never treated as settled."""
     p = pronunciation_path(rd, video)
-    out = {'file': str(p), 'issues': [], 'warnings': [], 'terms': [], 'uses': {}}
-    if not p.is_file():
-        return out
-    d = read_json(p)
-    if not d:
-        out['issues'].append('pronunciation_file_unreadable')
-        return out
+    out = {'file': str(p) if data is None else '(given)', 'issues': [], 'warnings': [], 'terms': [], 'uses': {}}
+    if data is None:
+        if not p.is_file():
+            return out
+        d = read_json(p)
+        if not d:
+            out['issues'].append('pronunciation_file_unreadable')
+            return out
+    else:
+        d = data if isinstance(data, dict) else {}
     seen = set()
     for k, t in enumerate(d.get('terms') or [], 1):
         t = t if isinstance(t, dict) else {}
@@ -2854,6 +2868,270 @@ def cmd_voice_probe(args):
                       'short_sample_wpm does not predict the real pace; do not size the script on it.'})
 
 
+# ---------------------------------------------------------------- controlled calibration trials
+TRIAL_VARIABLES = ('passage', 'voice_id', 'model_id', 'stability', 'similarity_boost', 'tags', 'pronunciation',
+                   'context')
+
+
+def trial_plan_facts(plan, vf, lines, pron):
+    """A trial plan, checked before anything is priced: passages (script lines of this video, or a short text), the
+    variants (each variable set explicitly or taken from the voice lock), the runs pairing them, and the questions.
+    Every run answers a question, and every question compares runs that differ in exactly one variable, so each
+    answer can be read: two changes at once can't be told apart."""
+    issues = []
+    pid = str(plan.get('id') or '')
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{2,40}', pid):
+        issues.append('trial_id_must_be_lowercase_letters_digits_and_dashes')
+    index = {str(r.get('id') or f'L{i + 1:03d}'): i for i, r in enumerate(lines)}
+    passages = {}
+    for p in plan.get('passages') or []:
+        k = str((p or {}).get('id') or '')
+        if not k or k in passages:
+            issues.append(f'passage_{k or "unnamed"}_needs_a_unique_id')
+            continue
+        text, rng = None, None
+        if p.get('lines'):
+            m = re.fullmatch(r'\s*(L\d+)\s*(?:-\s*(L\d+))?\s*', str(p['lines']))
+            if not m or m.group(1) not in index or (m.group(2) and m.group(2) not in index):
+                issues.append(f'passage_{k}_names_lines_the_script_does_not_have')
+            else:
+                lo, hi = index[m.group(1)], index[m.group(2) or m.group(1)]
+                if hi < lo:
+                    issues.append(f'passage_{k}_lines_run_backwards')
+                else:
+                    rng = (lo + 1, hi + 1)
+                    text = '\n'.join(str(r.get('text') or '').strip() for r in lines[lo:hi + 1])
+        elif p.get('text'):
+            text = str(p['text']).strip()
+        if not text or len(strip_tags(text)) < 20:
+            issues.append(f'passage_{k}_needs_its_lines_or_a_text')
+            text = text or ''
+        if n_words(p.get('moment')) < 1:
+            issues.append(f'passage_{k}_names_its_moment')
+        issues += script_markup([{'id': f'passage_{k}', 'text': text}])[0]
+        passages[k] = {'text': text, 'lines': rng, 'moment': p.get('moment'), 'why': p.get('why')}
+    variants = {}
+    for v in plan.get('variants') or []:
+        k = str((v or {}).get('id') or '')
+        if not k or k in variants:
+            issues.append(f'variant_{k or "unnamed"}_needs_a_unique_id')
+            continue
+        voice = str(v.get('voice_id') or 'lock')
+        voice_id = vf['voice_id'] if voice == 'lock' else voice
+        if not voice_id:
+            issues.append(f'variant_{k}_has_no_voice: there is no voice lock to stand for "lock"')
+        model = v.get('model_id') or (vf['model_id'] if vf['lock'] else 'eleven_v4')
+        if model not in TTS_MODELS:
+            issues.append(f'variant_{k}_model_must_be:' + '/'.join(TTS_MODELS))
+        settings = {x: v.get(x, (vf['settings'] or {}).get(x)) for x in VOICE_SETTING_KEYS}
+        issues += [f'variant_{k}_{x}' for x in voice_settings_issues(settings)]
+        tags = str(v.get('tags') or 'as_written')
+        if tags not in ('as_written', 'none'):
+            issues.append(f'variant_{k}_tags_must_be:as_written/none')
+        ctx = str(v.get('context') or 'none')
+        if ctx not in ('none', 'neighbours'):
+            issues.append(f'variant_{k}_context_must_be:none/neighbours')
+        variants[k] = {'voice_id': voice_id, 'model_id': model, **settings, 'tags': tags,
+                       'pronunciation': bool(v.get('pronunciation', True)), 'context': ctx}
+    runs = []
+    for r in plan.get('runs') or []:
+        pk, vk = (str(r[0]), str(r[1])) if isinstance(r, (list, tuple)) and len(r) == 2 else (None, None)
+        if pk not in passages or vk not in variants:
+            issues.append(f'run_{pk}_{vk}_names_an_unknown_passage_or_variant')
+        elif (pk, vk) in runs:
+            issues.append(f'run_{pk}_{vk}_listed_twice')
+        else:
+            runs.append((pk, vk))
+    asked, questions = set(), []
+    for q in plan.get('questions') or []:
+        qid = str((q or {}).get('id') or '')
+        cmp_ = [(str(x[0]), str(x[1])) for x in q.get('compare') or [] if isinstance(x, (list, tuple)) and len(x) == 2]
+        if n_words(q.get('asks')) < MIN_NOTE_WORDS:
+            issues.append(f'question_{qid}_must_say_what_it_asks')
+        if len(cmp_) < 2 or any(x not in runs for x in cmp_):
+            issues.append(f'question_{qid}_compares_runs_not_in_the_plan')
+            continue
+        def val(run, k):
+            return run[0] if k == 'passage' else variants[run[1]][k]
+        diffs = sorted({k for a in cmp_ for b in cmp_ for k in TRIAL_VARIABLES if val(a, k) != val(b, k)})
+        if len(diffs) != 1:
+            issues.append(f'question_{qid}_changes_{len(diffs)}_things_at_once:' + (','.join(diffs) or 'nothing'))
+        questions.append({'id': qid, 'asks': q.get('asks'), 'compare': cmp_, 'varies': diffs})
+        asked |= set(cmp_)
+    issues += [f'run_{a}_{b}_answers_no_question' for a, b in runs if (a, b) not in asked]
+    if not runs:
+        issues.append('trial_has_no_runs')
+    return issues, passages, variants, runs, questions
+
+
+def trial_request(passages, variants, run, lines, pron):
+    """What one trial run sends: the passage as the script would send it under that variant."""
+    p, v = passages[run[0]], variants[run[1]]
+    text = p['text'] if v['tags'] == 'as_written' else re.sub(r'[ \t]{2,}', ' ', TAG_RE.sub('', p['text'])).strip()
+    terms = pron['terms'] if v['pronunciation'] else []
+    sent = '\n'.join(tts_text(x, terms) for x in text.split('\n'))
+    body = {'text': sent, 'model_id': v['model_id'],
+            'voice_settings': {k: v[k] for k in VOICE_SETTING_KEYS}}
+    if v['context'] == 'neighbours' and p['lines']:
+        all_sent = [tts_text(r.get('text') or '', terms) for r in lines]
+        prev, nxt = context_text(all_sent, p['lines'][0] - 1, -1), context_text(all_sent, p['lines'][1] + 1, 1)
+        if prev:
+            body['previous_text'] = prev
+        if nxt:
+            body['next_text'] = nxt
+    return body
+
+
+def cmd_narration_trial(args):
+    """A controlled calibration trial before production: a few passages of this video (an opening, an explanation, a
+    turn), each under a few voice set-ups, to learn what this voice does with this treatment: stability, tags or no
+    tags, pronunciation, the context across a join, another narrator. The plan is checked (each question compares runs
+    that differ in exactly one thing) and priced first; nothing is recorded without --execute, and then only after the
+    live balance covers it. Each clip is transcribed (Whisper medium) and measured (pace while speaking and overall,
+    pauses, pitch movement and loudness contrast, every line heard, tags read aloud, names as heard), and listen.md
+    lists, question by question, which files to compare for the user. The measurements are evidence, never a verdict
+    on which take sounds better: no agent here can hear them."""
+    rd, st = run_folder(args)
+    n = int(args.video)
+    vd = video_dir(rd, n)
+    lock = read_json(vd / 'length-lock.json')
+    script = read_json(vd / 'script.json')
+    lines = script.get('lines') or []
+    plan = read_json(args.plan, required=True)
+    vf = voice_facts(rd, n)
+    # A trial may carry its own pronunciation list, to hear a form before the episode adopts it (the episode's list,
+    # and so what its recorded parts are compared against, stays as it is).
+    pron = pronunciation_facts(rd, n, lines, plan.get('pronunciation')) if plan.get('pronunciation') is not None \
+        else pronunciation_facts(rd, n, lines)
+    issues, passages, variants, runs, questions = trial_plan_facts(plan, vf, lines, pron)
+    issues += pron['issues']
+    if issues:
+        error('The trial plan is not ready.', issues)
+    bodies = {r: trial_request(passages, variants, r, lines, pron) for r in runs}
+    outdir = rd / '60-voice' / f'video-{n:02d}' / 'trials' / plan['id']
+    report = read_json(outdir / 'report.json')
+    done = {tuple(k.split('|')) for k, x in (report.get('runs') or {}).items() if x.get('file')}
+    todo = [r for r in runs if r not in done]
+    chars = {r: len(bodies[r]['text']) for r in runs}
+    by_model = {}
+    for r in todo:
+        by_model[variants[r[1]]['model_id']] = by_model.get(variants[r[1]]['model_id'], 0) + chars[r]
+    summary = {'trial': plan['id'], 'runs': len(runs), 'runs_to_record': len(todo),
+               'characters_to_record': sum(chars[r] for r in todo), 'characters_by_model': by_model,
+               'runs_detail': [{'run': f'{a}-{b}', 'moment': passages[a]['moment'], 'characters': chars[(a, b)],
+                                'voice_id': variants[b]['voice_id'], 'model_id': variants[b]['model_id'],
+                                'stability': variants[b]['stability'], 'similarity_boost': variants[b]['similarity_boost'],
+                                'tags': variants[b]['tags'], 'pronunciation': variants[b]['pronunciation'],
+                                'context': variants[b]['context'], 'done': (a, b) in done} for a, b in runs],
+               'questions': [{'id': q['id'], 'asks': q['asks'], 'compares': [f'{a}-{b}' for a, b in q['compare']],
+                              'varies': q['varies']} for q in questions]}
+    key = elevenlabs_key() if (args.execute or args.check_balance) else ''
+    if (args.execute or args.check_balance) and not key:
+        error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
+    if not args.execute:
+        estimate = {}
+        for model, c in by_model.items():
+            per = model_rates(rd, key, model)['credits_per_character'] if args.check_balance else cached_model_rates(rd, model)
+            measured, samples = measured_cost_ratio(rd, model)
+            estimate[model] = {'characters': c, 'credits_per_character': per,
+                               'expected_credits': math.ceil(c * per) if per is not None else None,
+                               'measured_credits_per_character': measured, 'measured_requests': samples}
+        total = sum(e['expected_credits'] or 0 for e in estimate.values()) if all(
+            e['expected_credits'] is not None for e in estimate.values()) else None
+        out = {'ok': True, 'mode': 'dry_run_no_charges', **summary, 'credit_estimate': estimate,
+               'expected_credits_total': total,
+               'reserve_with_safety_factor': math.ceil(total * args.credit_safety_factor) if total is not None else None}
+        if args.check_balance:
+            bal = subscription_balance(key)
+            out['balance'] = {'available': bal['available'], 'left_after_expected': bal['available'] - (total or 0),
+                              'next_reset_unix': bal['next_reset_unix']}
+        out['next'] = ('Show the user this plan: each question, the runs it compares, the credits. Record only after '
+                       'their approval: narration-trial ... --execute.')
+        emit(out)
+        return
+    if not todo:
+        emit({'ok': True, 'mode': 'already_recorded', **summary, 'report': str(outdir / 'report.json'),
+              'listen': str(outdir / 'listen.md')})
+        return
+    pre = {m: credit_preflight(rd, key, m, c, args.credit_safety_factor, args.assume_cost_ratio, args.keep_credits,
+                               'this trial') for m, c in by_model.items()}
+    outdir.mkdir(parents=True, exist_ok=True)
+    write_json(outdir / 'plan.json', plan)
+    report = {'trial': plan['id'], 'video': n, 'treatment': read_json(vd / 'direction-lock.json').get('treatment'),
+              'questions': summary['questions'], 'preflight': pre, 'runs': report.get('runs') or {},
+              'started_at': report.get('started_at') or now()}
+    for r in todo:
+        v = variants[r[1]]
+        per = pre[v['model_id']]['credits_per_character']
+        need = math.ceil(chars[r] * per * args.credit_safety_factor) + int(args.keep_credits or 0)
+        path = '/v1/text-to-speech/' + urllib.parse.quote(v['voice_id'], safe='') + '?output_format=mp3_44100_128'
+        body = dict(bodies[r])
+        if language_code((lock or {}).get('language')):
+            body['language_code'] = language_code(lock.get('language'))
+        raw, err, entry = eleven_paid_post(rd, key, path, body, 'trial',
+                                           {'video': n, 'trial': plan['id'], 'run': f'{r[0]}-{r[1]}',
+                                            'model_id': v['model_id'], 'voice_id': v['voice_id']}, require=need)
+        if err or not raw or len(raw) < 1024:
+            write_json(outdir / 'report.json', report)
+            error('A trial run failed; the runs already recorded are kept (re-run the same command to continue).',
+                  {'run': f'{r[0]}-{r[1]}', 'error': err or 'audio response too short', 'ledger': entry})
+        f = outdir / f'{r[0]}-{r[1]}.mp3'
+        f.write_bytes(raw)
+        tpath = f.with_suffix('.json')
+        transcribe(f, tpath, args.whisper_model, args.device, args.compute_type)
+        tj = read_json(tpath)
+        words = transcript_words(tj)
+        rawtxt = tpath.with_suffix('.txt').read_text(encoding='utf-8', errors='replace')
+        p = passages[r[0]]
+        plines = p['text'].split('\n')
+        d = align_detail(plines, words, lock.get('language') or 'en')
+        dur = probe(f)['duration_s']
+        heard = strip_transcript_timestamps(rawtxt).strip()
+        sw = sum(count_words(x) for x in plines)
+        names = []
+        for t in pron['terms']:
+            if t['rx'].search(strip_tags(p['text'])):
+                tt = tokens_of(t['term'])
+                names.append({'term': t['term'], 'sent_as': t['say'] if v['pronunciation'] else t['term'],
+                              'heard_as_written': all(x in d['heard'] for x in tt),
+                              'nearest_heard': max(d['heard'], key=lambda h: difflib.SequenceMatcher(None, tt[0], h).ratio(),
+                                                   default=None)})
+        report['runs'][f'{r[0]}|{r[1]}'] = {
+            'file': str(f), 'moment': p['moment'], 'variant': v, 'characters_sent': chars[r],
+            'credits_billed': (entry or {}).get('delta'), 'duration_s': dur,
+            'wpm_while_speaking': wpm_from_transcript_raw(rawtxt), 'wpm_overall': round(sw / (dur / 60)) if dur else None,
+            'pause_profile': pause_profile(words), 'alignment_match_ratio': round(d['ratio'], 3),
+            'lines_not_heard': [i + 1 for i, tt in enumerate(d['tok_time']) if tt and not any(tt)],
+            'tags_maybe_read_aloud': tags_heard(body['text'], heard), 'names': names, 'heard_text': heard[:600],
+            'measured_delivery': measure_file_delivery(f, tpath), 'recorded_at': now()}
+        write_json(outdir / 'report.json', report)
+    report['finished_at'] = now()
+    write_json(outdir / 'report.json', report)
+    md = [f'# Trial {plan["id"]}: what to listen to', '',
+          'The numbers are measurements, not verdicts: they cannot say which take sounds more natural, warmer or more '
+          'alive. Listen to each pair in order and note what you hear.', '']
+    for q in questions:
+        md += [f'## {q["id"]}: {q["asks"]}', f'Only {", ".join(q["varies"])} changes between these takes.', '',
+               '| take | file | wpm speaking / overall | pitch range st | loudness contrast dB | longest pause s | heard all lines | tags read aloud |',
+               '|---|---|---|---|---|---|---|---|']
+        for a, b in q['compare']:
+            x = report['runs'].get(f'{a}|{b}') or {}
+            md_ = x.get('measured_delivery') or {}
+            md.append(f'| {a}-{b} | {x.get("file")} | {x.get("wpm_while_speaking")} / {x.get("wpm_overall")} | '
+                      f'{md_.get("pitch_range_st")} | {md_.get("loudness_contrast_db")} | '
+                      f'{(x.get("pause_profile") or {}).get("longest_pause_s")} | '
+                      f'{"yes" if not x.get("lines_not_heard") else "no: " + str(x.get("lines_not_heard"))} | '
+                      f'{", ".join(x.get("tags_maybe_read_aloud") or []) or "none"} |')
+        md += ['', 'For your ears only: does the narrator sound like a person telling this story (the treatment\'s '
+                   'narrator), natural or performed, warm or flat, clear or rushed, and are the names right?', '']
+    (outdir / 'listen.md').write_text('\n'.join(md) + '\n', encoding='utf-8')
+    emit({'ok': True, 'mode': 'recorded', **summary, 'report': str(outdir / 'report.json'),
+          'listen': str(outdir / 'listen.md'),
+          'credits_billed': sum((x.get('credits_billed') or 0) for x in report['runs'].values()),
+          'next': 'Give the user listen.md and the files; record their impressions next to the measurements. Decide '
+                  'the voice lock (voice-pick) from both, never from the numbers alone.'})
+
+
 def parse_voice_settings(raw, model_id):
     try:
         voice_settings = json.loads(raw) if raw else {}
@@ -3377,6 +3655,19 @@ def timeline_facts(rd, video):
     if music and not music_used:
         warnings.append('music was made for this video but timeline.json lists no music track: if the bed is in '
                         'the project, record it (audio_tracks: kind "music", its file, start_s, end_s and beats)')
+    # The approved narration in the cut, whole: read from the CapCut project itself when timeline.json names it
+    # (capcut_draft), else from timeline.json's narration entries.
+    expect = plan.get('narration_for_edit') or {}
+    nsegs = None
+    if track.get('capcut_draft') and expect.get('file'):
+        try:
+            want = _pkey(_run_file(rd, expect['file']))
+            nsegs = [s for s in capcut_audio_segments(track['capcut_draft']) if _pkey(s['file']) == want]
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            issues.append('capcut_project_unreadable:' + str(exc)[:120])
+    if nsegs is None:
+        nsegs = [s for s in track.get('audio_tracks') or [] if str(s.get('kind')) == 'narration']
+    issues += narration_track_issues(rd, nsegs, expect)
     sf = stills_facts(rd, n)
     issues += sf['issues']
     warnings += sf['warnings']
@@ -3384,6 +3675,101 @@ def timeline_facts(rd, video):
         issues.append('canvas_not_youtube_16_9')
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'last_visual_end_s': cursor,
             'target_length_s': lock.get('target_length_s'), 'audio_ready': sound['ready']}
+
+
+def capcut_audio_segments(draft):
+    """Every audio segment of a CapCut project, read from its own timeline document (the newest readable one of
+    draft_content.json, template-2.tmp and the Timelines/ copies): the file it plays, where it sits (s), the stretch
+    of the file it uses, and its speed (a curve speed is flagged)."""
+    d = Path(str(draft)).expanduser()
+    docs = [p for p in [d / 'draft_content.json', d / 'template-2.tmp'] if p.is_file()] + \
+        sorted(d.glob('Timelines/*/draft_content.json'))
+    content, doc = None, None
+    for p in sorted(docs, key=lambda x: x.stat().st_mtime, reverse=True):
+        try:
+            c = json.loads(p.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            continue
+        if isinstance(c, dict) and c.get('tracks') is not None:
+            content, doc = c, p
+            break
+    if content is None:
+        raise OSError(f'no readable timeline document in {d}')
+    mats = {m.get('id'): m for m in (content.get('materials') or {}).get('audios') or []}
+    speeds = {m.get('id'): m for m in (content.get('materials') or {}).get('speeds') or []}
+    out = []
+    for tr in content.get('tracks') or []:
+        if tr.get('type') != 'audio':
+            continue
+        for s in tr.get('segments') or []:
+            m = mats.get(s.get('material_id'))
+            if not m:
+                continue
+            tg, src = s.get('target_timerange') or {}, s.get('source_timerange') or {}
+            sp = next((speeds[r] for r in s.get('extra_material_refs') or [] if r in speeds), {})
+            a, la = int(tg.get('start') or 0) / 1e6, int(tg.get('duration') or 0) / 1e6
+            sa, ls = int(src.get('start') or 0) / 1e6, int(src.get('duration') or 0) / 1e6
+            speed = s.get('speed') if s.get('speed') is not None else sp.get('speed', 1)
+            out.append({'file': m.get('path'), 'start_s': round(a, 3), 'end_s': round(a + la, 3),
+                        'source_start_s': round(sa, 3), 'source_end_s': round(sa + ls, 3), 'speed': float(speed or 1),
+                        'curve_speed': bool(sp.get('curve_speed')) or bool(sp.get('mode')), 'volume': s.get('volume'),
+                        'track': tr.get('name') or tr.get('id'), 'read_from': str(doc)})
+    return out
+
+
+def narration_track_issues(rd, segs, expect):
+    """The approved narration in the cut, whole: every narration segment plays the edit plan's file (unchanged since
+    retime-shots) at speed 1, each where it belongs, and together they cover the file from 0 to its end exactly once.
+    A narration sped up, slowed, trimmed, cut or replaced is refused here, even when the export still has the right
+    length."""
+    if not expect:
+        return []                    # no edit plan yet: edit_plan_missing_run_retime_shots says so
+    out = []
+    f = _run_file(rd, expect['file'])
+    if not f.is_file():
+        out.append('narration_file_missing')
+    elif file_sha256(f) != expect.get('sha256'):
+        out.append('narration_file_changed_since_retime_shots')
+    if not segs:
+        return out + ['narration_track_missing']
+    want, dur = _pkey(f), float(expect.get('duration_s') or 0)
+    rows = []
+    for j, s in enumerate(segs, 1):
+        if not s.get('file') or _pkey(_run_file(rd, s['file'])) != want:
+            out.append(f'narration_track_{j}_plays_another_file')
+            continue
+        try:
+            a, b = float(s['start_s']), float(s['end_s'])
+            sa = float(s.get('source_start_s') or 0)
+            sb = float(s['source_end_s']) if s.get('source_end_s') is not None else None
+        except (KeyError, TypeError, ValueError):
+            out.append(f'narration_track_{j}_needs_start_end_and_source_times')
+            continue
+        if sb is None:
+            out.append(f'narration_track_{j}_source_range_not_recorded')
+            sb = sa + (b - a)
+        sp = s.get('speed')
+        if sp is None:
+            out.append(f'narration_track_{j}_speed_not_recorded')
+        elif abs(float(sp) - 1.0) > 1e-3 or s.get('curve_speed'):
+            out.append(f'narration_track_{j}_speed_{float(sp):g}_not_1')
+        if abs((b - a) - (sb - sa)) > 0.05:
+            out.append(f'narration_track_{j}_length_differs_from_its_source')
+        if abs(a - sa) > 0.05:
+            out.append(f'narration_track_{j}_moved_off_its_time')
+        rows.append((sa, sb))
+    rows.sort()
+    if rows:
+        cur = 0.0
+        for sa, sb in rows:
+            if sa - cur > 0.05:
+                out.append(f'narration_cut_{round(sa - cur, 1)}s_missing_at_{_mmss(cur)}')
+            elif cur - sa > 0.05:
+                out.append(f'narration_plays_twice_near_{_mmss(sa)}')
+            cur = max(cur, sb)
+        if dur and dur - cur > 0.1:
+            out.append(f'narration_trimmed_{round(dur - cur, 1)}s_missing_at_the_end')
+    return out
 
 
 def cmd_timeline_check(args):
@@ -3958,18 +4344,25 @@ def cmd_pace_profile(args):
     if not refs:
         error('Give --refs V001,V002, or --video NN to use that video\'s locked references.')
     out = {}
+    inv = cards_inventory(rd)
     for vid in refs:
         tfile = rd / '10-media' / vid / 'transcript.txt'
         wpm = wpm_from_transcript_raw(tfile.read_text(encoding='utf-8', errors='replace')) if tfile.exists() else None
-        out[vid] = {'wpm': wpm, **(ref_pause_profiles(rd, [vid]).get(vid) or {})}
+        out[vid] = {'wpm': wpm, **ref_pace_stats(rd, vid, (inv.get(vid) or {}).get('duration_s')),
+                    **(ref_pause_profiles(rd, [vid]).get(vid) or {})}
     narr = None
     if args.video:
         lt = read_json(rd / '50-audio' / f'video-{int(args.video):02d}' / 'line-times.json')
         if lt:
-            narr = {'wpm': lt.get('wpm'), 'complete': lt.get('complete'), **(lt.get('pause_profile') or {})}
-    emit({'ok': True, 'references': out, 'narration': narr,
-          'note': 'WPM = words over pure speech time; pauses = silence between consecutive words (Whisper word '
-                  'timestamps). Same functions for references and narration.'})
+            sc = read_json(video_dir(rd, args.video) / 'script.json').get('lines') or []
+            narr = {'wpm': lt.get('wpm'), 'overall_wpm': lt.get('overall_wpm'), 'complete': lt.get('complete'),
+                    **sentence_cadence([r.get('text') or '' for r in sc]), **(lt.get('pause_profile') or {}),
+                    'beats': lt.get('beats')}
+    emit({'ok': True, 'references': out, 'narration': narr, 'definitions': PACE_DEFINITIONS,
+          'note': 'wpm / active_wpm = words over Whisper\'s speech time; overall_wpm = words over the whole span, '
+                  'pauses included; pauses = silence between consecutive words (Whisper word timestamps). The same '
+                  'functions for references and narration. A different pace is a fact to read, never a fault: a '
+                  'slower narrator is not a duller one.'})
 
 
 def cmd_retime_shots(args):
@@ -4014,7 +4407,16 @@ def cmd_retime_shots(args):
         if p['via'] == 'edit':
             i = p['index']
             at = (times[i]['end_s'] + times[i + 1]['start_s']) / 2 if i < len(lines) else dur
-            holds.append({'after_line': p['line'], 'at_audio_s': round(at, 3), 'hold_s': p['pause_after_s']})
+            holds.append({'after_line': p['line'], 'at_audio_s': round(at, 3), 'hold_s': p['pause_after_s'],
+                          'kind': 'script', 'purpose': p.get('purpose')})
+    # A join between recorded parts that came out shorter than the voice's own gap between lines (narration-measure)
+    # gets back exactly the missing fraction of a second: continuity, never padding (capped at the natural gap).
+    if not args.no_seam_holds:
+        for s in lt.get('seams') or []:
+            if float(s.get('seam_hold_s') or 0) > 0:
+                holds.append({'after_line': s.get('after_line'), 'at_audio_s': round(float(s['at_s']), 3),
+                              'hold_s': round(float(s['seam_hold_s']), 2), 'kind': 'seam',
+                              'purpose': 'restores the voice\'s natural gap at the join between two recorded parts'})
     holds.sort(key=lambda h: h['at_audio_s'])
     total = round(dur + sum(h['hold_s'] for h in holds), 3)
     ranges, cursor = [], 0
@@ -4055,7 +4457,7 @@ def cmd_retime_shots(args):
     write_json(plan_path, plan)
     tol = max(4, lock['target_length_s'] * lock.get('tolerance_export_pct', .025))
     edit_audio = None
-    if args.render_narration:
+    if holds:      # the CapCut project uses the narration with its holds: always written when there are any
         src, outp = folder / 'narration.wav', folder / 'narration-edit.wav'
         filt, labels, prev = [], [], 0.0
         for j, h in enumerate(holds):
@@ -4071,8 +4473,15 @@ def cmd_retime_shots(args):
                  '-filter_complex', ';'.join(filt), '-map', '[out]', '-ar', '44100', '-ac', '2',
                  '-c:a', 'pcm_s16le', str(outp)])
         edit_audio = {'file': str(outp), 'duration_s': probe(outp)['duration_s']}
+    # The one audio file the CapCut project must carry, at 0 s, at speed 1, untrimmed (timeline-check), and that the
+    # export must contain (export-check): its fingerprint ties the cut to this exact approved narration.
+    nf = Path(edit_audio['file']) if edit_audio else folder / 'narration.wav'
+    narration_for_edit = {'file': str(nf), 'sha256': file_sha256(nf), 'duration_s': probe(nf)['duration_s'],
+                          'parts': [p.get('id') for p in lt.get('parts') or []],
+                          'part_fingerprints': {str(p.get('id')): p.get('fingerprint') for p in lt.get('parts') or []}}
     edit_plan = {'video': n, 'narration_file': str(folder / 'narration.wav'), 'narration_duration_s': dur,
                  'holds': holds, 'edit_duration_s': total, 'edit_narration': edit_audio,
+                 'narration_for_edit': narration_for_edit,
                  'export_window_s': [round(lock['target_length_s'] - tol, 2), round(lock['target_length_s'] + tol, 2)],
                  'within_export_window': abs(total - lock['target_length_s']) <= tol,
                  # What the editor carries out (09): the locked treatment's picture, sound and pace, and each shot's
@@ -4087,7 +4496,10 @@ def cmd_retime_shots(args):
     write_json(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json', edit_plan)
     emit({'ok': True, 'edit_plan': str(rd / '70-edit' / f'video-{n:02d}' / 'edit-plan.json'),
           'shot_plan': str(plan_path), 'shots': len(out_shots), 'edit_duration_s': total, 'holds': holds,
-          'within_export_window': edit_plan['within_export_window'], 'edit_narration': edit_audio, 'notes': notes})
+          'within_export_window': edit_plan['within_export_window'], 'edit_narration': edit_audio,
+          'narration_for_edit': narration_for_edit, 'notes': notes,
+          'next': 'Put narration_for_edit.file in the CapCut project at 0 s, speed 1, untrimmed; name the project in '
+                  'timeline.json (capcut_draft) so timeline-check reads the narration from CapCut itself.'})
 
 
 def _av():
@@ -4686,6 +5098,35 @@ def export_facts(rd, video, file, deep=False):
         issues.append('export_low_resolution')
     if abs(meta['duration_s'] - target) > max(4, target * lock.get('tolerance_export_pct', .025)):
         issues.append('export_duration_misses_user_locked_length')
+    # The export carries the approved narration, whole, at its own speed: the edit plan's narration file found in the
+    # export's sound, window by window along the film (a speed change drifts, a cut or an insert jumps, a missing
+    # stretch is not found), and the level of everything else under the voice.
+    warnings, narration_match = [], None
+    plan = read_json(rd / '70-edit' / f'video-{int(video):02d}' / 'edit-plan.json')
+    nfe = plan.get('narration_for_edit') or {}
+    nf = _run_file(rd, nfe['file']) if nfe.get('file') else None
+    if nf and meta['has_audio']:
+        if not nf.is_file():
+            issues.append('export_narration_file_missing')
+        else:
+            try:
+                av = _av()
+                import tempfile
+                with tempfile.TemporaryDirectory() as tmp:
+                    m = av.narration_in_mix(av.extract_audio(video_file, Path(tmp) / 'mix.wav'),
+                                            av.extract_audio(nf, Path(tmp) / 'narration.wav'))
+                narration_match = m
+                for w in m['weak_windows']:
+                    issues.append(f'export_narration_not_found_near_{_mmss(w)}')
+                if m['lag_spread_s'] is not None and m['lag_spread_s'] > 0.25:
+                    issues.append(f'export_narration_timing_drifts_{m["lag_spread_s"]:g}s')
+                if m['median_lag_s'] is not None and abs(m['median_lag_s']) > 0.25:
+                    issues.append(f'export_narration_offset_{m["median_lag_s"]:g}s')
+                if m.get('bed_level_rel_speech_db') is not None and m['bed_level_rel_speech_db'] > -8:
+                    warnings.append(f'the sound under the voice sits {m["bed_level_rel_speech_db"]:g} dB below the speech: '
+                                    'music may mask words; listen on small speakers')
+            except (RuntimeError, ValueError, OSError, ImportError) as exc:
+                issues.append('export_narration_not_checked:' + f'{type(exc).__name__}: {str(exc)[:120]}')
     diag = {}
     if deep:
         for name, filters in [('black_frames', ['-vf', 'blackdetect=d=0.6:pix_th=0.10']),
@@ -4698,8 +5139,9 @@ def export_facts(rd, video, file, deep=False):
                 diag[name] = rows[:200]
             except OSError as exc:
                 diag[name] = ['scan_unavailable:' + str(exc)]
-    return {'ready': not issues, 'issues': issues, 'file': str(video_file), 'metadata': meta, 'target_s': target,
-            'difference_s': round(meta['duration_s'] - target, 2), 'diagnostic_flags': diag}
+    return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'file': str(video_file), 'metadata': meta,
+            'target_s': target, 'difference_s': round(meta['duration_s'] - target, 2), 'diagnostic_flags': diag,
+            'narration_in_export': {k: v for k, v in (narration_match or {}).items() if k != 'windows'} or None}
 
 
 def cmd_release_check(args):
@@ -4820,6 +5262,18 @@ def main():
     p.add_argument('--keep-credits', type=int, default=0, help='Credits that must still be left afterwards')
     p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
     p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_voice_probe)
+    p = sub.add_parser('narration-trial', help='A controlled calibration trial: a few passages under a few voice '
+                       'set-ups, each question changing one thing; priced first, recorded only with --execute')
+    p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
+    p.add_argument('--plan', required=True, help='The trial plan JSON: passages, variants, runs, questions')
+    p.add_argument('--execute', action='store_true')
+    p.add_argument('--check-balance', action='store_true', help='Dry run with the live balance and the model\'s '
+                   'credits per character (free calls)')
+    p.add_argument('--credit-safety-factor', type=float, default=1.15)
+    p.add_argument('--assume-cost-ratio', type=float, default=None)
+    p.add_argument('--keep-credits', type=int, default=0, help='Credits that must still be left afterwards')
+    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
+    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_narration_trial)
     p = sub.add_parser('tts'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--voice-id', default='', help='Optional: must be the video\'s voice lock (a check, never an override)')
     p.add_argument('--model-id', default='', choices=('',) + TTS_MODELS, help='Optional: must be the voice lock\'s')

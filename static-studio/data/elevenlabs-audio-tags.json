@@ -1,6 +1,6 @@
 {
   "title": "ElevenLabs audio tags for narration (Eleven v4 / Eleven v4 Turbo)",
-  "verified": "2026-11-19",
+  "verified": "2026-11-20",
   "sources": {
     "v4_docs": "https://elevenlabs.io/docs/best-practices/prompting/eleven-v4",
     "tags_list": "https://elevenlabs.io/blog/elevenlabs-audio-tags-list",
@@ -15,7 +15,8 @@
     "One tag per clause: contrasting tags on the same words blur the performance. Several qualities go inside one bracket, comma-separated: [tense, cautious] (tags_list).",
     "Open vocabulary: any clear natural-language instruction can be a tag ([hushed and reverent, like a nature documentary narrator]). Describe the voice quality, not something that sounds like a sound cue, or it may be rendered as a sound effect (v4_docs).",
     "Voice-dependent: tags land readily when the delivery is in the voice's training data; outside it they are 'less reliable, and the result may not be optimal' (v4_docs). A serious voice may not respond to playful tags; a voice that conflicts with a tag can read it ALOUD as text (v3_tags). A malformed or unsupported tag is read aloud (tags_list).",
-    "No SSML <break> tags on v4. Pauses come from pause tags, punctuation and text structure (v4_docs, v3_tags).",
+    "No SSML on v4 (no <break>, no <phoneme>): plan-check refuses markup in a line. Pauses come from pause tags, punctuation and text structure; a held silence is an edit hold (v4_docs, v3_tags).",
+    "Pronunciation on v4: IPA between forward slashes inside the text, as ElevenLabs' examples write it (\"/ˌbaɪoʊˈkemɪstri/\"), or a respelling; phoneme tags work on eleven_flash_v2 only. In this pipeline the form lives in 40-plans/video-NN/pronunciation.json and is applied only to what is sent (best practices).",
     "Punctuation shapes pacing without any tag: comma = short pause; ellipsis = trailing pause with weight; dash = a beat; full stop = sentence rhythm; CAPITALS = emphasis; a line break = a longer beat (v4_docs, v3_tags).",
     "Eleven v4 performs better with more context; up to 10,000 characters per request (tags_list).",
     "Iterate: if a delivery misses, swap a neighbouring emotion and regenerate; results vary, test the specific tags and phrasing (v4_docs, tags_list)."
@@ -31,8 +32,10 @@
     "2026-11-19, eleven_v4, voice UNbOi86R1a0f3ypyTCp4: [long pause] + [slightly pause] in one 56-line chunk added 12.3 s against the untagged take; five tags (2 [long pause], 2 [pause], 1 [slightly pause]) added 19.7 s to the full narration. Separate generations, so per-tag values are approximate: [long pause] roughly 6-8 s, [pause] ~2 s, [slightly pause] ~1-2 s. narration-measure measures the real gap at every tag of a real take; prefer those numbers.",
     "2026-11-19, one run's references only (re-measure each run's own with pace-profile): those narrators (V017, V018) paused little: average gap between spoken segments 0.23-0.40 s, 90th percentile 0.40-0.70 s, longest 1.3-2.0 s, at most 1.2 gaps over 0.8 s per minute. A [long pause] is three to six times longer than anything those narrators do.",
     "2026-11-19: script lines joined with newlines vs spaces gave overall 167.3 vs 168.9 WPM on the same voice (different passages): about 1%, not a meaningful pace lever.",
-    "2026-11-19: ElevenLabs' v4 prompting page lists a speed setting (0.7-1.2, default 1.0) separate from tags. Not tested here: the user's standing decision is v4/v4 Turbo with no speed setting; the tool accepts only stability and similarity_boost for these models."
+    "2026-11-20, ElevenLabs' own v4 pages: \"Both variants use two voice settings: Stability and Similarity\"; \"Style and Speed sliders are not available in Eleven v4, and SSML is not supported\"; the migration guide: \"Eleven v4 doesn't apply voice_settings.speed\". The general speed page (0.7-1.2) is not about v4. So there is no supported speed control on v4: pace comes from the voice and the writing, and is measured, never steered."
   ],
+  "contrast_axes_note": "Opposite poles of one delivery axis. Asked for together on the same words ([whispering, shouting], or [calm] [excited] stacked) they contradict each other, which ElevenLabs says blurs the performance; plan-check refuses that. A change from one pole to the other across a line or a beat is normal delivery.",
+  "contrast_axes": {"volume": {"low": ["whisper", "whispers", "whispering", "whispered", "softly", "soft", "quietly", "quiet", "hushed", "barely audible", "murmur", "murmurs", "murmuring"], "high": ["shout", "shouts", "shouting", "booming", "loud", "loudly", "yelling", "yells"]}, "energy": {"low": ["calm", "calmly", "peaceful", "tired", "bored", "sleepy", "subdued", "relaxed", "weary", "deadpan"], "high": ["excited", "excitedly", "energetic", "frantic", "thrilled", "ecstatic", "hyped", "amazed"]}, "tempo": {"slow": ["slowly", "slow", "drawn out", "unhurried", "leisurely"], "fast": ["rushed", "quickly", "quick", "snappy", "speedy", "fast", "rapid", "rapidly", "hurried"]}},
   "statuses": {
     "usable": "Fits single-narrator documentary narration when the story's own moment calls for it.",
     "use_with_care": "Register- and voice-dependent: listen to the calibration chunk; one-off moments; never at a moment of suffering; never mocking a real person or group.",

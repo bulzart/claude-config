@@ -99,3 +99,4 @@
 - [WPM: measure from transcripts, never estimate](wpm-calibrate-from-transcripts.md) — compute word_count/duration per niche cluster before pace_wpm; estimates run low (143 vs 198)
 - [No cross-session messages](no-cross-session-messages.md) — user 2026-11-20: never message other Claude sessions to check their work; read state.json/outputs/CapCut, or ask the user
 - [create-video: adaptive-niche guardrail](create-video-adaptive-niche-guardrail.md) — 9-point shift never drifts; 10-creative-direction.md, av-profile watch sheets, direction.json + lock before script, three sealed fresh reads, media gate + field-level revisions; code enforces process, never quality
+- [create-video: narration direction](create-video-narration-direction.md) — user 2026-11-20: per-video voice lock, v4 has no speed, selective tags, no silence padding, beat-aligned parts, paid trials only after a yes

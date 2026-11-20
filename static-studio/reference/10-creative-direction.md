@@ -135,6 +135,18 @@ Let the treatment evolve with the story: more distance in one beat, more intimac
 heavy one. Consistency means one world, one narrator and one visual logic, not one intensity. Never schedule
 humour, suspense or "a reset" at fixed intervals: place them where the material earns them.
 
+A beat's `narration_direction` is where the performance is decided, and it decides it for the writer, not for a tag:
+what the viewer should understand or discover here; the narrator's attitude to it (amused, wary, moved, matter-of-fact);
+the rhythm of the talk (quick and conversational, slow and plain, one long sentence then a short one); whether the
+words alone carry the feeling, which they usually should; whether one delivery tag would genuinely change something
+the writing can't; and how the voice sits with the picture and the sound (stepping back while a map explains, carrying
+a moment the picture only hints at). More expressive is not better: a calm, thoughtful beat can be the one people
+remember, and a restrained line often lands harder than a dramatic one.
+
+The narrator is chosen for the treatment, per video (05, `voice-pick`): the voice that can be this narrator for this
+whole film, never one assumed for the subject or the niche. Its stability is chosen for the narrator too (steadier, or
+freer in range), never to move the pace.
+
 ## 5. Narration people enjoy listening to
 
 These are craft principles. Each one says when it applies.
@@ -157,7 +169,11 @@ These are craft principles. Each one says when it applies.
   sentences, number-dense lines and words echoing in neighbouring lines. A refrain can be deliberate; know which yours
   are.
 - **No theatre.** No manufactured stakes, constant drama or rhetorical questions that aren't real questions. Quiet
-  is allowed. Sincerity beats intensity.
+  is allowed. Sincerity beats intensity. What a listener hears as a reading, not a storyteller: facts recited in an
+  encyclopaedia's order, every sentence performed like a trailer, forced excitement, one intensity for twenty minutes,
+  a dramatic pause after every reveal, questions in a row, the same sentence shape again, emphasis on details that
+  don't matter, an artificial cliffhanger at every turn. `writing_signals` counts some of it (questions in a row,
+  exclamations, words in capitals, how often the text directs the voice); the cold read hears the rest.
 - **End when it's over.** Answer the promise, then stop soon. A long tail of statistics after the emotional payoff
   empties the room.
 - **Delivery comes from the writing.** In TTS the voice and its settings set the character; the text sets the
@@ -189,7 +205,10 @@ These are craft principles. Each one says when it applies.
    Answer every finding: `revised` (with the lines), `kept` (minor only, with why) or `disputed` (with why). A major
    finding gets a fresh round-2 read of the revised script, by a new agent. After round 2 you decide, and the reasons
    stay on record for the release sheet.
-3. **The calibration part.** Pace for the length (05), and `delivery.json` for the performance.
+3. **The narrator, then the calibration part.** `voice-pick` for this treatment (05). When the voice, its stability, the
+   tags or a name are in doubt, a short `narration-trial` (approved and priced first) compares them one change at a
+   time and gives the user clips to hear. Then the calibration part: pace for the length (05), every line heard, and
+   `delivery.json` for the performance.
 4. **The final watch review.** `av-profile --video NN --file export.mp4` makes the export's watch sheets;
    `review-packet --kind final --file` gives a fresh reviewer the sheets and what each part was meant to feel like.
    Fix, re-export, and the new file gets its own read. `release-check` confirms every gate for that exact file.

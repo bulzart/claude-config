@@ -18,8 +18,8 @@ TOOL = ROOT/'scripts'/'static_core.py'
 
 
 def cli(*args, expected=0):
-    result = subprocess.run([sys.executable, str(TOOL), *map(str, args)],
-                            capture_output=True, text=True, check=False)
+    result = subprocess.run([sys.executable, str(TOOL), *map(str, args)],      # the tool always writes UTF-8
+                            capture_output=True, text=True, encoding='utf-8', errors='replace', check=False)
     try:
         output = json.loads(result.stdout)
     except ValueError:
@@ -300,7 +300,8 @@ class StaticStudioTests(unittest.TestCase):
                         str(d/'narration.wav')],check=True)
         save(d/'manifest.json',{**specs,'status':'complete','finished_parts':[c['id'] for c in specs['chunks']]})
         script=json.loads((vd/'script.json').read_text())
-        script['lines'][-1].update({'pause_after_s':5,'pause_via':'edit'})
+        script['lines'][-1].update({'pause_after_s':5,'pause_via':'edit',
+                                    'pause_purpose':'the last picture stays while the ending settles'})
         save(vd/'script.json',script)
         res=cli('audio-check','--run',self.run,'--video',1,expected=2)
         self.assertNotIn('narration_duration_outside_locked_tolerance',res['issues'])
@@ -446,7 +447,7 @@ class StaticStudioTests(unittest.TestCase):
         save(vd/'direction.json',d)
         r=cli('direction-lock','--run',self.run,'--video',1,'--revise','the narrator warmed up')
         self.assertEqual(r['production_rev'],3)
-        self.assertEqual(r['affects'],['beat-map','script','narration'])
+        self.assertEqual(r['affects'],['beat-map','script','voice','narration'])   # the voice choice is asked again too
         res=cli('plan-check','--run',self.run,'--video',1,expected=2)
         self.assertIn('script_made_for_an_earlier_direction',res['issues'])
         self.assertTrue(any('refined after its blind read' in w for w in res['warnings']))   # shown, never silent
@@ -767,8 +768,8 @@ class StaticStudioTests(unittest.TestCase):
         dd['treatments'][0]['narrator']+=' Warmer, and a little amused.'
         save(vd/'direction.json',dd)
         r=cli('direction-lock','--run',self.run,'--video',1,'--revise','the narrator warmed up')
-        self.assertEqual(r['affects'],['beat-map','script','narration'])
-        self.assertEqual(r['outdated_now'],['beat-map','script','narration'])
+        self.assertEqual(r['affects'],['beat-map','script','voice','narration'])
+        self.assertEqual(r['outdated_now'],['beat-map','script','narration'])   # no voice chosen yet in this fixture
         for a in ('beat-map','script'):
             cli('direction-reapprove','--run',self.run,'--video',1,'--artifact',a,'--reason','the words already carry the warmer narrator')
         dry=cli(*tts)
@@ -813,6 +814,470 @@ class StaticStudioTests(unittest.TestCase):
         self.assertNotIn('error',measured)
         self.assertIn('pitch_range_st',measured)
         self.assertIn('cannot hear',res['guidance'])
+
+    # ---------------------------------------------------------------- narration: voice lock, parts, cost, checks
+    def fake_mp3(self, seconds=2):
+        f=self.home/f'fake-{seconds}s.mp3'
+        if not f.exists():
+            subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','sine=frequency=180:sample_rate=22050',
+                            '-t',str(seconds),'-c:a','libmp3lame','-b:a','64k',str(f)],check=True)
+        return f
+
+    def core_call(self, core, *argv, fake=None):
+        """One static_core command run in this process as the CLI runs it: ElevenLabs faked, any real request refused."""
+        def no_network(*a, **k):
+            raise AssertionError('a network request was made: ' + str(getattr(a[0], 'full_url', a[0]) if a else ''))
+        code=0
+        with mock.patch.dict(os.environ,{'ELEVENLABS_API_KEY':'test-not-a-real-key','ELEVEN_API_KEY':''}), \
+                mock.patch.object(sys,'argv',['static_core.py',*map(str,argv)]), \
+                mock.patch.object(core.urllib.request,'urlopen',side_effect=fake or no_network), \
+                mock.patch('sys.stdout',new_callable=io.StringIO) as out:
+            try:
+                core.main()
+            except SystemExit as e:
+                code=e.code if isinstance(e.code,int) else 0
+            text=out.getvalue()
+        return code,(json.loads(text) if text.strip() else {})
+
+    def tagged_plan(self):
+        """write_plan's ready plan with two delivery tags, a name on the pronunciation list and each tag's reason under
+        "Delivery and tags", all written before the cold read, as a writer would."""
+        vd=self.write_plan(review_script=False)
+        script=json.loads((vd/'script.json').read_text())
+        script['lines'][0]['text']='[curious] Somewhere near Hagaru the road narrows, '+script['lines'][0]['text']
+        script['lines'][12]['text']+=' [pause]'
+        script['lines'][12].update({'pause_after_s':2,'pause_via':'tag','pause_purpose':'the cost of the choice lands first'})
+        save(vd/'script.json',script)
+        save(vd/'pronunciation.json',{'terms':[{'term':'Hagaru','say':'/həˈɡɑːruː/','how':'ipa','confidence':'likely',
+                                                'source':'the standard Korean romanisation of the town name'}]})
+        (vd/'editorial-review.md').write_text('## Self-audit\nNotes.\n\n## Delivery and tags\n- L001 [curious]: the narrator '
+                                             'leans in on the first odd detail.\n- L013 [pause]: the cost lands.\n',encoding='utf-8')
+        self.review_script()
+        return vd
+
+    def test_voice_lock_drives_every_recording(self):
+        core=self.load_core()
+        vd=self.tagged_plan()
+        self.assertTrue(cli('plan-check','--run',self.run,'--video',1)['ready'])
+        pick=['voice-pick','--run',self.run,'--video',1,'--voice-id','VOICEA']
+        reason='a warm curious friend at a table telling it plainly'
+        self.assertIn('--reason',cli(*pick,'--settings','{"stability":0.6,"similarity_boost":0.8}',expected=2)['error'])
+        cli(*pick,'--settings','{"stability":0.6}','--reason',reason,expected=2)                       # both settings chosen
+        cli(*pick,'--settings','{"stability":0.6,"similarity_boost":0.8,"speed":1.1}','--reason',reason,expected=2)  # v4: no speed
+        got=cli(*pick,'--settings','{"stability":0.6,"similarity_boost":0.8}','--reason',reason)
+        vl=json.loads((self.run/'60-voice/video-01/voice-lock.json').read_text())
+        self.assertEqual((vl['voice_id'],vl['treatment'],vl['production_rev'],vl['voice_rev']),('VOICEA','T1',1,1))
+        self.assertEqual(got['settings'],{'stability':0.6,'similarity_boost':0.8})
+        # The command line can't override the lock: another voice or other settings are refused, even in a dry run.
+        tts=['tts','--run',self.run,'--video',1]
+        self.assertIn('voice_id_differs_from_the_episode_voice_lock',cli(*tts,'--voice-id','OTHER',expected=2)['details']['conflicts'])
+        cli(*tts,'--settings','{"stability":1.0,"similarity_boost":0.8}',expected=2)
+        self.assertNotEqual(subprocess.run([sys.executable,str(TOOL),*map(str,tts),'--delivery','[excited]'],
+                                           capture_output=True,text=True).returncode,0)          # --delivery no longer exists
+        dry=cli(*tts)
+        self.assertEqual((dry['voice']['voice_id'],dry['voice']['settings'],dry['execute_blockers']),
+                         ('VOICEA',{'stability':0.6,'similarity_boost':0.8},[]))
+        self.assertEqual([p['beats'] for p in dry['parts_view']][0][0]['id'],'B01')             # parts follow the beats
+        # Recording, ElevenLabs faked: what goes out is the lock, the tags verbatim, the name in v4's IPA form.
+        sent=[]; state={'used':0,'fail':None}
+        mp3=self.fake_mp3().read_bytes()
+        class Reply(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self,*a): return False
+        def fake(req,timeout=None):
+            url=req.full_url
+            if url.endswith('/v1/user/subscription'):
+                return Reply(json.dumps({'character_limit':100000,'character_count':state['used']}).encode())
+            if url.endswith('/v1/models'):
+                return Reply(json.dumps([{'model_id':'eleven_v4','model_rates':{'character_cost_multiplier':1.0},
+                                          'maximum_text_length_per_request':10000}]).encode())
+            body=json.loads(req.data.decode())
+            sent.append(body)
+            if state['fail']==len(sent):
+                raise core.urllib.error.HTTPError(url,500,'server error',{},io.BytesIO(b'{}'))
+            state['used']+=len(body['text'])
+            return Reply(mp3)
+        code,out=self.core_call(core,*tts,'--max-parts',1,'--execute',fake=fake)
+        self.assertEqual(code,0,out)
+        b=sent[0]
+        self.assertEqual((b['model_id'],b['voice_settings']),('eleven_v4',{'stability':0.6,'similarity_boost':0.8}))
+        self.assertTrue(b['text'].startswith('[curious] Somewhere near "/həˈɡɑːruː/" the road narrows'))
+        self.assertIn('Hagaru',(vd/'script.json').read_text(encoding='utf-8'))             # the script keeps the spelling
+        self.assertNotIn('previous_text',b); self.assertNotIn('[',b['next_text'])          # context: spoken words only
+        man=json.loads((self.run/'50-audio/video-01/manifest.json').read_text())
+        rec=man['part_records']['1']
+        self.assertEqual((rec['voice_id'],rec['settings'],rec['treatment'],rec['production_rev']),
+                         ('VOICEA',{'stability':0.6,'similarity_boost':0.8},'T1',1))
+        self.assertEqual(rec['credits_billed'],len(b['text']))                              # measured, from the balance
+        ledger=[json.loads(x) for x in (self.run/'logs/elevenlabs-ledger.jsonl').read_text().splitlines()]
+        self.assertEqual((ledger[0]['kind'],ledger[0]['delta']),('tts',len(b['text'])))
+        # A failed request blocks; the same command resumes and never asks for a finished part again.
+        state['fail']=2
+        code,out=self.core_call(core,*tts,'--skip-calibration','--execute',fake=fake)
+        self.assertEqual(code,2); self.assertIn('BLOCKED',out['error'])
+        state['fail']=None
+        before=len(sent)
+        code,out=self.core_call(core,*tts,'--skip-calibration','--execute',fake=fake)
+        parts=len(json.loads((self.run/'50-audio/video-01/manifest.json').read_text())['chunks'])
+        self.assertEqual(len(sent)-before,parts-1)                                       # part 1 never again
+        self.assertEqual(sent[1]['previous_text'].split('\n')[-1],
+                         json.loads((vd/'script.json').read_text())['lines'][man['chunks'][0]['line_end']-1]['text'])
+        # Changing the narrator's settings is a revision: the parts made with the old ones are re-recorded, never mixed.
+        cli(*pick,'--settings','{"stability":0.9,"similarity_boost":0.8}','--reason',reason,expected=2)   # needs --replace
+        cli(*pick,'--settings','{"stability":0.9,"similarity_boost":0.8}','--reason','steadier for the long middle stretch','--replace')
+        dry=cli(*tts)
+        self.assertEqual(dry['parts_recorded_with_another_voice_setup'],list(range(1,parts+1)))
+        code,out=self.core_call(core,*tts,'--execute',fake=fake)
+        self.assertEqual(code,2); self.assertIn('--rerecord-changed',out['error'])
+        self.assertTrue(any(x.startswith('narration_parts_recorded_with_another_voice_setup')
+                            for x in cli('audio-check','--run',self.run,'--video',1,expected=2)['issues']))
+        # A narrator change in the direction asks again whether the chosen voice fits.
+        dd=json.loads((vd/'direction.json').read_text()); dd['treatments'][0]['narrator']+=' Quieter now.'
+        save(vd/'direction.json',dd)
+        self.assertIn('voice',cli('direction-lock','--run',self.run,'--video',1,'--revise','a quieter narrator')['outdated_now'])
+        for a in ('beat-map','script'):
+            cli('direction-reapprove','--run',self.run,'--video',1,'--artifact',a,'--reason','the words already fit the quieter narrator')
+        self.assertIn('voice_made_for_an_earlier_direction',cli(*tts)['execute_blockers'])
+        cli('direction-reapprove','--run',self.run,'--video',1,'--artifact','voice','--reason','this voice already speaks quietly enough')
+        self.assertEqual(cli(*tts)['execute_blockers'],[])
+
+    def test_parts_follow_the_story(self):
+        core=self.load_core()
+        lines=[{'id':f'L{i:03}','text':('word '*30).strip()+'.'} for i in range(1,61)]   # 151 characters a line
+        beats=[{'id':'B1','line_start':1,'line_end':8},{'id':'B2','line_start':9,'line_end':14},
+               {'id':'B3','line_start':15,'line_end':54},{'id':'B4','line_start':55,'line_end':60}]
+        lines[33]['pause_after_s']=2.0                     # inside the long beat, the story already breathes after L034
+        parts=core.chunks_for_beats(lines,beats,3500,10000)
+        ends=[p['line_end'] for p in parts]
+        self.assertEqual(parts[0]['beats'],['B1','B2'])                       # short beats together
+        self.assertIn(34,ends)                                                 # a long beat split where it breathes
+        self.assertTrue(all(e in (8,14,54,60) or 15<=e<54 for e in ends))
+        self.assertEqual(ends[-1],60)
+        self.assertTrue(all(len(p['text'])<=10000 for p in parts))
+        self.assertEqual(sum(p['line_end']-p['line_start']+1 for p in parts),60)  # every line once, none split
+        self.assertEqual([p['line_start'] for p in parts][1:],[e+1 for e in ends[:-1]])
+        joins_between_beats=[e for e in ends[:-1] if e in (8,14,54)]
+        self.assertTrue(joins_between_beats)                                   # joins where the story turns
+        fallback=core.chunks_for_beats(lines,[{'id':'B1','line_start':1,'line_end':30}],3500,10000)
+        self.assertEqual(fallback[-1]['line_end'],60)                          # a beat map that misses lines: plain packing
+
+    def test_markup_tags_and_pronunciation(self):
+        core=self.load_core()
+        rows=[{'id':'L001','text':'He waited. <break time="1.5s" />'},
+              {'id':'L002','text':'{softly} Nobody moved.'},
+              {'id':'L003','text':'(whispers) Nobody moved.'},
+              {'id':'L004','text':'They *ran* for it.'},
+              {'id':'L005','text':'[note: check this date] It was June.'},
+              {'id':'L006','text':'[whispering, shouting] Get down.'},
+              {'id':'L007','text':'[calm] [excited] Here it comes.'},
+              {'id':'L008','text':'[softly] [slowly] Here it comes.'},
+              {'id':'L009','text':'The town of /həˈɡɑːruː/ waited.'},
+              {'id':'L010','text':'A plain line (with an aside) and [curious] a tag.'}]
+        issues,warnings=core.script_markup(rows)
+        for x in ('ssml_markup_not_supported_by_eleven_v4:L001','curly_brace_markup:L002',
+                  'stage_direction_in_parentheses:L003:(whispers)','asterisk_markup:L004',
+                  'editorial_note_in_spoken_text:L005:[note: check this date]','pronunciation_markup_in_script_text:L009'):
+            self.assertIn(x,issues)
+        self.assertTrue(any(x.startswith('contradictory_delivery:L006:volume') for x in issues))
+        self.assertTrue(any(x.startswith('contradictory_delivery:L007:energy') for x in issues))
+        self.assertFalse([x for x in issues if ':L008' in x or ':L010' in x])     # compatible, and a real aside
+        self.assertTrue(any(w.startswith('L008') for w in warnings))              # stacked: one bracket is clearer
+        # Pronunciation lives in its own file and changes only what is sent.
+        self.write_plan()
+        vd=self.run/'40-plans/video-01'
+        lines=[{'id':'L001','text':'[curious] Near Hagaru, and Yudam-ni.'}]
+        save(vd/'pronunciation.json',{'terms':[
+            {'term':'Hagaru','say':'/həˈɡɑːruː/','how':'ipa','confidence':'confirmed','source':'an official romanisation table'},
+            {'term':'Yudam-ni','say':'Yoo-dahm-nee','how':'respell','confidence':'uncertain'},
+            {'term':'Koto-ri','say':'koto','how':'ipa','confidence':'likely'}]})
+        pf=core.pronunciation_facts(self.run,1,lines)
+        self.assertIn('pronunciation_Koto-ri_ipa_goes_between_slashes',pf['issues'])
+        self.assertIn('pronunciation_Koto-ri_needs_its_source',pf['issues'])
+        self.assertTrue(any('uncertain' in w and 'Yudam-ni' in w for w in pf['warnings']))
+        self.assertTrue(any('Koto-ri' in w and 'not in the script' in w for w in pf['warnings']))
+        sent=core.tts_text(lines[0]['text'],pf['terms'])
+        self.assertEqual(sent,'[curious] Near "/həˈɡɑːruː/", and Yoo-dahm-nee.')
+        # A kept tag says why under "Delivery and tags"; plan-check refuses one that doesn't.
+        script=json.loads((vd/'script.json').read_text()); script['lines'][3]['text']='[thoughtful] '+script['lines'][3]['text']
+        save(vd/'script.json',script)
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('tag_L004_not_explained_under_delivery_and_tags',res['issues'])
+        self.assertTrue(any('pronunciation_Koto-ri' in x for x in res['issues']))
+
+    def test_pace_model_counts_pauses_once(self):
+        # Two reference narrators with known speech and pauses: 4 words in 1 s of speech, then 0.6 s of silence.
+        for vid in ('V001','V002'):
+            m=self.run/'10-media'/vid; m.mkdir(parents=True,exist_ok=True)
+            segs,t=[],0.0
+            for k in range(120):
+                ws=[{'start_s':round(t+0.25*i,3),'end_s':round(t+0.25*i+0.22,3),'text':f' w{k}{i}'} for i in range(4)]
+                segs.append({'start_s':round(t,3),'end_s':round(t+1.0,3),'text':' '.join(w['text'] for w in ws),'words':ws})
+                t+=1.6
+            save(m/'transcript.json',{'status':'transcribed','segments':segs})
+            (m/'transcript.txt').write_text('\n'.join(f"[{s['start_s']:.1f}-{s['end_s']:.1f}] {s['text']}" for s in segs),encoding='utf-8')
+        lock=cli('length','--run',self.run,'--video',1,'--mode','standard','--niche','military history',
+                 '--story-form','historical narrative','--refs','V001,V002')
+        pp=lock['pace_profile']
+        self.assertEqual(pp['active_wpm'],240)                         # 4 words a second while speaking
+        self.assertAlmostEqual(pp['overall_wpm'],150,delta=1)           # 4 words every 1.6 s, pauses included
+        self.assertEqual(lock['target_words_speech_only'],round(600*240/60))
+        self.assertAlmostEqual(lock['target_words'],600*pp['overall_wpm']/60,delta=2)   # the budget counts the pauses once
+        self.assertLess(lock['target_words'],lock['target_words_speech_only'])
+
+    def test_silence_cannot_pad_a_short_script(self):
+        vd=self.write_plan()
+        script=json.loads((vd/'script.json').read_text())
+        script['pace_wpm']=200                                          # the same words now forecast far short of 600 s
+        save(vd/'script.json',script)
+        self.assertIn('script_forecast_misses_locked_length_by_over_8pct',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
+        for l in script['lines'][:-1]:
+            l.update({'pause_after_s':3.2,'pause_via':'edit'})
+        save(vd/'script.json',script)
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('pause_L001_needs_its_story_purpose',res['issues'])          # every hold says what it is for
+        for l in script['lines'][:-1]:
+            l['pause_purpose']='the viewer looks at the map for a while'
+        save(vd/'script.json',script)
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertTrue(any(x.startswith('holds_changed_after_the_script_read') for x in res['issues']))   # the reader never saw them
+        self.assertGreater(res['holds']['runtime_carried_by_holds_s'],100)
+        # Only a fresh read that is shown every hold can see past it; the packet puts each silence in front of the reader.
+        packet=cli('review-packet','--run',self.run,'--video',1,'--kind','script')
+        text=Path(packet['packet']).read_text(encoding='utf-8')
+        self.assertIn('(the picture holds 3.2 s in silence)',text)
+        self.assertIn('Held silences in this script: 51',text)
+        # A small hold tweak after a read passes with a warning.
+        vd2=vd; self.review('script',[{'id':'F1','severity':'minor','lines':['L002'],'problem':'the holds feel long here'}],
+                            {'F1':{'action':'kept','note':'the reader saw every hold and we keep them'}})
+        ok=cli('plan-check','--run',self.run,'--video',1)
+        self.assertTrue(any('carried by held silence' in w for w in ok['warnings']))
+        script['lines'][1]['pause_after_s']=5.2
+        save(vd2/'script.json',script)
+        res=cli('plan-check','--run',self.run,'--video',1)
+        self.assertTrue(any('held silences changed after the last read' in w for w in res['warnings']))
+
+    def test_every_line_heard_and_no_tag_read_aloud(self):
+        core=self.load_core()
+        vd=self.write_plan()
+        lines=[{'id':'L001','text':'Twelve divisions came south that night.'},
+               {'id':'L002','text':'[softly] Nobody in the valley knew yet.'},
+               {'id':'L003','text':'The column is coming.'},
+               {'id':'L004','text':'Two hundred and forty men held the hill.'},
+               {'id':'L005','text':'By morning the road was quiet again.'}]
+        save(vd/'script.json',{'language':'en','pace_wpm':145,'lines':lines})
+        d=self.run/'50-audio/video-01'; (d/'whisper').mkdir(parents=True)
+        heard=[['12','divisions','came','south','that','night.'],['Softly,','nobody','in','the','valley','knew','yet.'],
+               [],['240','men','held','the','hill.'],['By','morning','the','road','was','quiet','again.']]
+        t,segs=0.3,[]
+        for ws_ in heard:          # what the long Whisper pass heard: digits, a tag read aloud, one line missing
+            s0,ws=t,[]
+            for w in ws_:
+                ws.append({'start_s':round(t,3),'end_s':round(t+0.22,3),'text':' '+w}); t+=0.27
+            if ws:
+                segs.append({'start_s':round(s0,3),'end_s':round(t-0.05,3),'text':' '.join(ws_),'words':ws})
+            t+=0.4 if ws_ else 1.2
+        part=d/'part-001.mp3'
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','sine=frequency=150:sample_rate=16000',
+                        '-t',f'{t+0.3:.2f}','-c:a','libmp3lame','-b:a','32k',str(part)],check=True)
+        save(d/'whisper/part-001.json',{'status':'transcribed','model':'medium','segments':segs})
+        (d/'whisper/part-001.txt').write_text('\n'.join(f"[{s['start_s']:.1f}-{s['end_s']:.1f}] {s['text']}" for s in segs),encoding='utf-8')
+        text='\n'.join(r['text'] for r in lines)
+        save(d/'manifest.json',{'model_id':'eleven_v4','voice_id':'TESTID','language':'en','status':'complete','finished_parts':[1],
+                                'chunks':[{'id':1,'line_start':1,'line_end':5,'file':'part-001.mp3','characters':len(text),
+                                           'text_sha256':hashlib.sha256(text.encode('utf-8')).hexdigest()}]})
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(part),str(d/'narration.wav')],check=True)
+        found={'L003':False}
+        def fake_transcribe(path,outpath,*a):          # the re-hearing of one short window
+            lid=Path(outpath).stem.split('-')[-1]
+            ws=[{'start_s':0.3+0.27*i,'end_s':0.52+0.27*i,'text':' '+w} for i,w in enumerate(
+                'the column is coming'.split())] if found.get(lid) else []
+            save(Path(outpath),{'status':'transcribed','model':'medium','segments':[{'start_s':0.3,'end_s':1.4,'text':'x','words':ws}] if ws else []})
+            Path(outpath).with_suffix('.txt').write_text('',encoding='utf-8')
+            return 1
+        def measure(*extra):
+            with mock.patch.object(core,'transcribe',side_effect=fake_transcribe):
+                return self.core_call(core,'narration-measure','--run',self.run,'--video',1,'--no-delivery',*extra)
+        code,out=measure()
+        self.assertEqual(code,2)
+        self.assertEqual(out['unheard_lines'],['L003'])                                  # digits and words: the same numbers
+        self.assertEqual([t['line'] for t in out['tags_read_aloud']],['L002'])          # 'softly' said, not performed
+        self.assertTrue(any(r['line']=='L003' and not r['found'] for r in out['rechecked_lines']))
+        issues=cli('audio-check','--run',self.run,'--video',1,expected=2)['issues']
+        self.assertIn('narration_line_not_heard:L003',issues)
+        self.assertIn('narration_tag_read_aloud:L002:[softly]',issues)
+        found['L003']=True                                                                # heard on its own window
+        (d/'whisper/recheck-L003.json').unlink()          # (the fake transcript changes; real audio would not)
+        code,out=measure()
+        self.assertEqual(out['unheard_lines'],[])
+        code,out=measure('--confirm','L002','--reason','fine')
+        self.assertEqual(code,2)                                                          # a confirmation says who listened
+        code,out=measure('--confirm','L002','--reason','the user listened at 00:02 and heard the tag performed')
+        self.assertEqual((code,out['tags_read_aloud']),(0,[]))
+
+    def test_capcut_narration_track_must_be_whole(self):
+        core=self.load_core()
+        f=self.home/'narration-edit.wav'
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','sine=frequency=200:sample_rate=16000',
+                        '-t','10','-c:a','pcm_s16le',str(f)],check=True)
+        expect={'file':str(f),'sha256':core.file_sha256(f),'duration_s':10.0}
+        ok=[{'kind':'narration','file':str(f).replace('\\','/'),'start_s':0,'end_s':10,'source_start_s':0,'source_end_s':10,'speed':1}]
+        self.assertEqual(core.narration_track_issues(self.run,ok,expect),[])
+        fast=[dict(ok[0],end_s=9.709,speed=1.03)]
+        self.assertTrue(any('speed_1.03_not_1' in x for x in core.narration_track_issues(self.run,fast,expect)))
+        trimmed=[dict(ok[0],end_s=8,source_end_s=8)]
+        self.assertIn('narration_trimmed_2.0s_missing_at_the_end',core.narration_track_issues(self.run,trimmed,expect))
+        cut=[dict(ok[0],end_s=4,source_end_s=4),dict(ok[0],start_s=4,end_s=9,source_start_s=5,source_end_s=10)]
+        self.assertTrue(any(x.startswith('narration_cut_1.0s_missing') for x in core.narration_track_issues(self.run,cut,expect)))
+        self.assertIn('narration_track_missing',core.narration_track_issues(self.run,[],expect))
+        self.assertIn('narration_track_1_speed_not_recorded',core.narration_track_issues(self.run,[{k:v for k,v in ok[0].items() if k!='speed'}],expect))
+        # Read straight from a CapCut project: its own audio segment, its own speed.
+        draft=self.home/'draft'; draft.mkdir()
+        content={'tracks':[{'type':'audio','id':'t1','segments':[{'material_id':'m1','extra_material_refs':['s1'],
+                  'source_timerange':{'start':0,'duration':10000000},'target_timerange':{'start':0,'duration':10000000},'speed':1}]}],
+                 'materials':{'audios':[{'id':'m1','path':str(f).replace('\\','/')}],'speeds':[{'id':'s1','speed':1,'mode':0}]}}
+        save(draft/'draft_content.json',content)
+        segs=core.capcut_audio_segments(draft)
+        self.assertEqual(core.narration_track_issues(self.run,segs,expect),[])
+        content['tracks'][0]['segments'][0].update({'speed':1.05,'target_timerange':{'start':0,'duration':9523810}})
+        save(draft/'draft_content.json',content)
+        self.assertTrue(any('speed_1.05' in x for x in core.narration_track_issues(self.run,core.capcut_audio_segments(draft),expect)))
+        raw=f.read_bytes(); f.write_bytes(raw[:150000]+b'\0'*2000+raw[152000:])   # the approved file changed after the retime
+        self.assertIn('narration_file_changed_since_retime_shots',core.narration_track_issues(self.run,ok,expect))
+
+    def test_export_must_carry_the_approved_narration(self):
+        core=self.load_core()
+        av=core._av()
+        import numpy as np, soundfile as sf
+        rng=np.random.default_rng(7); sr=16000; y=[]
+        while len(y)<sr*48:              # speech-like: bursts of sound and short silences
+            n=int(sr*rng.uniform(0.08,0.3)); g=int(sr*rng.uniform(0.04,0.45))
+            y+=list(rng.normal(0,0.2,n)*np.hanning(n))+[0.0]*g
+        nar=np.array(y[:sr*48],dtype='float32')
+        bed=0.02*np.sin(2*np.pi*110*np.arange(len(nar))/sr).astype('float32')
+        def wav(name,sig):
+            p=self.home/name; sf.write(str(p),sig,sr); return p
+        n_p=wav('narr.wav',nar)
+        same=av.narration_in_mix(wav('mix.wav',nar+bed),n_p,windows=8,win_s=6,search_s=1.5)
+        self.assertEqual(same['weak_windows'],[]); self.assertLess(abs(same['median_lag_s']),0.05)
+        self.assertLess(same['lag_spread_s'],0.1); self.assertLess(same['bed_level_rel_speech_db'],-8)
+        fast=np.interp(np.arange(0,len(nar),1.04),np.arange(len(nar)),nar).astype('float32')   # sped up 4%
+        sped=av.narration_in_mix(wav('fast.wav',fast[:len(fast)]+bed[:len(fast)]),n_p,windows=8,win_s=6,search_s=1.5)
+        self.assertTrue(sped['weak_windows'] or sped['lag_spread_s']>0.25)
+        cut=np.concatenate([nar[:sr*20],nar[sr*24:]])                                          # four seconds missing
+        gone=av.narration_in_mix(wav('cut.wav',cut+bed[:len(cut)]),n_p,windows=8,win_s=6,search_s=1.5)
+        self.assertTrue(gone['weak_windows'] or gone['lag_spread_s']>0.25)
+        # export-check: the export's own sound against the edit plan's narration.
+        self.write_plan()
+        save(self.run/'70-edit/video-01/edit-plan.json',{'narration_for_edit':{'file':str(n_p),'sha256':core.file_sha256(n_p),
+                                                                              'duration_s':48.0}})
+        def export(name,audio):
+            p=self.home/name
+            subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=black:s=320x180:r=10',
+                            '-i',str(audio),'-shortest','-pix_fmt','yuv420p','-c:a','aac','-b:a','160k',str(p)],check=True)
+            return p
+        good=core.export_facts(self.run,1,export('good.mp4',self.home/'mix.wav'))
+        self.assertFalse([x for x in good['issues'] if x.startswith('export_narration')],good.get('narration_in_export'))
+        bad=core.export_facts(self.run,1,export('bad.mp4',self.home/'cut.wav'))
+        self.assertTrue([x for x in bad['issues'] if x.startswith('export_narration')],bad.get('narration_in_export'))
+
+    def test_cost_preflight_and_voice_design_check(self):
+        core=self.load_core()
+        self.write_plan()
+        class Reply(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self,*a): return False
+        calls=[]
+        def fake(available,per_char):
+            def f(req,timeout=None):
+                calls.append(req.full_url)
+                if req.full_url.endswith('/v1/user/subscription'):
+                    return Reply(json.dumps({'character_limit':available,'character_count':0}).encode())
+                if req.full_url.endswith('/v1/models'):
+                    return Reply(json.dumps([{'model_id':'eleven_v4','model_rates':{'character_cost_multiplier':per_char}},
+                                             {'model_id':'eleven_v4_turbo','model_rates':{'character_cost_multiplier':0.5}}]).encode())
+                raise AssertionError('a billed request was attempted: '+req.full_url)
+            return f
+        env={'ELEVENLABS_API_KEY':'test-not-a-real-key','ELEVEN_API_KEY':''}
+        with mock.patch.dict(os.environ,env), mock.patch.object(core.urllib.request,'urlopen',side_effect=fake(4000,1.0)), \
+                mock.patch('sys.stdout',new_callable=io.StringIO):
+            with self.assertRaises(SystemExit):        # 4,000 characters at 1 credit, x1.15: more than 4,000 left
+                core.credit_preflight(self.run,'k','eleven_v4',4000,1.15)
+            ok=core.credit_preflight(self.run,'k','eleven_v4_turbo',4000,1.15)          # half price: fits
+        self.assertEqual((ok['credits_per_character'],ok['expected_credits'],ok['required_available']),(0.5,2000,2300))
+        self.assertFalse([c for c in calls if 'text-to-speech' in c])
+        rates=json.loads((self.run/'logs/elevenlabs-models.json').read_text())
+        self.assertIn('eleven_v4',rates['models'])
+        # What the account was really billed, from the ledger: the measured ratio beside ElevenLabs' own figure.
+        for d_,c in ((400,1000),(410,1000)):
+            core.ledger_add(self.run,{'kind':'tts','model_id':'eleven_v4','ok':True,'delta':d_,'characters':c})
+        self.assertEqual(core.measured_cost_ratio(self.run,'eleven_v4'),(0.405,2))
+        # Voice Design is billed: without --execute it is only priced; with it, a short balance stops it before any call.
+        calls.clear()
+        args=argparse.Namespace(run=str(self.run),video=1,count=3,search='',design=3,design_description='a calm older narrator, warm and dry',
+                                design_text='x'*400,execute=False,credit_safety_factor=1.15,keep_credits=0,
+                                whisper_model='medium',device='cpu',compute_type='int8')
+        with mock.patch.dict(os.environ,env), mock.patch.object(core.urllib.request,'urlopen',side_effect=fake(4000,1.0)), \
+                mock.patch('sys.stdout',new_callable=io.StringIO) as out:
+            core.cmd_voice_candidates(args)
+        priced=json.loads(out.getvalue())
+        self.assertEqual((priced['mode'],priced['voice_design']['expected_credits'],priced['voice_design']['reserve_credits']),
+                         ('dry_run_no_charges',400,1200))
+        self.assertEqual(calls,[])
+        args.execute=True
+        with mock.patch.dict(os.environ,env), mock.patch.object(core.urllib.request,'urlopen',side_effect=fake(1000,1.0)), \
+                mock.patch('sys.stdout',new_callable=io.StringIO) as out:
+            with self.assertRaises(SystemExit):
+                core.cmd_voice_candidates(args)
+        self.assertIn('nothing was sent',json.loads(out.getvalue())['error'])
+        self.assertFalse([c for c in calls if 'text-to-voice' in c])
+
+    def test_narration_trial_plan_changes_one_thing_at_a_time(self):
+        core=self.load_core()
+        vd=self.write_plan()
+        cli('voice-pick','--run',self.run,'--video',1,'--voice-id','VOICEA','--settings','{"stability":1.0,"similarity_boost":0.7}',
+            '--reason','the measured, even narrator the treatment describes')
+        plan={'id':'trial-01','passages':[{'id':'P1','moment':'opening','lines':'L001-L003'},
+                                         {'id':'P2','moment':'turning point','lines':'L041-L042'}],
+              'variants':[{'id':'A'},{'id':'B','stability':0.5},{'id':'C','stability':0.5,'tags':'none'}],
+              'runs':[['P1','A'],['P1','B'],['P1','C'],['P2','A']],
+              'questions':[{'id':'Q1','asks':'does lower stability widen the delivery here','compare':[['P1','A'],['P1','C']]}]}
+        pf=self.home/'trial.json'; save(pf,plan)
+        bad=cli('narration-trial','--run',self.run,'--video',1,'--plan',pf,expected=2)['details']
+        self.assertIn('question_Q1_changes_2_things_at_once:stability,tags',bad)
+        self.assertIn('run_P2_A_answers_no_question',bad)
+        plan['questions']=[{'id':'Q1','asks':'does lower stability widen the delivery here','compare':[['P1','A'],['P1','B']]},
+                           {'id':'Q2','asks':'do the tags help or does the writing carry it','compare':[['P1','B'],['P1','C']]},
+                           {'id':'Q3','asks':'does the voice stay the same narrator at the turn','compare':[['P1','A'],['P2','A']]}]
+        save(pf,plan)
+        dry=cli('narration-trial','--run',self.run,'--video',1,'--plan',pf)
+        self.assertEqual((dry['mode'],dry['runs'],[q['varies'] for q in dry['questions']]),
+                         ('dry_run_no_charges',4,[['stability'],['tags'],['passage']]))
+        self.assertFalse((self.run/'60-voice/video-01/trials').exists())        # nothing recorded without --execute
+        class Reply(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self,*a): return False
+        mp3=self.fake_mp3().read_bytes(); used={'n':0}
+        def fake(req,timeout=None):
+            if req.full_url.endswith('/v1/user/subscription'):
+                return Reply(json.dumps({'character_limit':20000,'character_count':used['n']}).encode())
+            if req.full_url.endswith('/v1/models'):
+                return Reply(json.dumps([{'model_id':'eleven_v4','model_rates':{'character_cost_multiplier':1.0}}]).encode())
+            used['n']+=len(json.loads(req.data.decode())['text'])
+            return Reply(mp3)
+        def fake_transcribe(path,outpath,*a):
+            save(Path(outpath),{'status':'transcribed','model':'medium','segments':[]})
+            Path(outpath).with_suffix('.txt').write_text('',encoding='utf-8')
+            return 0
+        with mock.patch.object(core,'transcribe',side_effect=fake_transcribe):
+            code,out=self.core_call(core,'narration-trial','--run',self.run,'--video',1,'--plan',pf,'--execute',fake=fake)
+        self.assertEqual(code,0,out)
+        tdir=self.run/'60-voice/video-01/trials/trial-01'
+        self.assertEqual(sorted(p.name for p in tdir.glob('*.mp3')),['P1-A.mp3','P1-B.mp3','P1-C.mp3','P2-A.mp3'])
+        self.assertIn('Only stability changes',(tdir/'listen.md').read_text(encoding='utf-8'))
+        rep=json.loads((tdir/'report.json').read_text())
+        self.assertEqual(rep['runs']['P1|C']['variant']['tags'],'none')
+        self.assertEqual(sum(1 for x in (self.run/'logs/elevenlabs-ledger.jsonl').read_text().splitlines()
+                             if json.loads(x)['kind']=='trial'),4)
 
     def test_legacy_not_imported_and_clone_keeps_only_analysis(self):
         clone=cli('clone','--from-run',self.run,'--workspace',self.home/'runs')['run']

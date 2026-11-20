@@ -391,6 +391,7 @@ def span_stats(words, audio=None, a=None, b=None, segments=None):
         out['pitch_movement_st'] = _r(statistics.mean(moves)) if len(moves) >= 4 else None
         dbs = [r['db'] for r in rows if r.get('db') is not None]
         out['loudness_contrast_db'] = _r(statistics.pstdev(dbs)) if len(dbs) >= 4 else None
+        out['speech_level_db'] = _r(statistics.median(dbs), 1) if dbs else None
         lv = [g['rel_db'] for g in audio['gaps'] if (a is None or g['start_s'] >= a) and (b is None or g['start_s'] < b)]
         out['gap_level_rel_speech_db'] = _r(statistics.median(lv), 1) if lv else None
     return out
@@ -581,6 +582,80 @@ def profile(label, duration, frames=None, wav=None, words=None, sheets_dir=None,
     return {'label': label, 'method': METHOD_VERSION, 'duration_s': _r(duration), 'summary': summ,
             'windows': wins, 'shots': shots, 'sheets': sheets, 'thresholds': thresholds(), 'unknowns': unknowns(),
             'reading': READING}
+
+
+ENV_HOP = 320                # 20 ms at 16 kHz: the loudness envelopes a narration is found by inside a mix
+
+
+def _load_mono(path):
+    np, librosa, sf = _audio_deps()
+    y, sr = sf.read(str(path), dtype='float32', always_2d=False)
+    if getattr(y, 'ndim', 1) > 1:
+        y = y.mean(axis=1)
+    if sr != SR:
+        y = librosa.resample(y, orig_sr=sr, target_sr=SR)
+    return y
+
+
+def _envelope(y):
+    """Loudness per 20 ms (dB) of a pre-emphasised signal: speech stands out over a low music bed."""
+    np, _, _ = _audio_deps()
+    if len(y) < 2 * ENV_HOP:
+        return np.zeros(1)
+    y = np.append(y[0], y[1:] - 0.97 * y[:-1])
+    n = len(y) // ENV_HOP
+    frames = y[:n * ENV_HOP].reshape(n, ENV_HOP)
+    return 20 * np.log10(np.sqrt((frames ** 2).mean(axis=1)) + 1e-6)
+
+
+def narration_in_mix(mix_wav, narration_wav, windows=12, win_s=20.0, search_s=3.0):
+    """Where an approved narration sits inside a mix (the export): their loudness envelopes compared window by window
+    along the narration, each window searched within +-search_s. Per window: the lag and how closely the two match.
+    Over the film: the spread and the slope of the lag (a speed change drifts, a cut or an insert jumps; a stretch
+    the narration has and the mix lacks is not found), and the level of everything else under the voice: the mix
+    where the narration is silent against the mix where it speaks. Measurement only: what it means is read by the
+    checks and the agents."""
+    np, _, _ = _audio_deps()
+    nar, mix = _envelope(_load_mono(narration_wav)), _envelope(_load_mono(mix_wav))
+    fps = SR / ENV_HOP
+    W, S = int(win_s * fps), int(search_s * fps)
+    if len(nar) <= W:
+        W = max(10, len(nar) - 1)
+    speaking = nar > (np.percentile(nar, 98) - 30)
+    starts = sorted(set(int(x) for x in np.linspace(0, max(0, len(nar) - W), max(1, windows))))
+    rows = []
+    for p in starts:
+        seg = nar[p:p + W]
+        if len(seg) < 10 or speaking[p:p + W].mean() < 0.25:
+            continue
+        sz = (seg - seg.mean()) / (seg.std() + 1e-9)
+        best_c, best_l = -2.0, None
+        for lag in range(-S, S + 1):
+            q = p + lag
+            if q < 0 or q + W > len(mix):
+                continue
+            c = mix[q:q + W]
+            cz = (c - c.mean()) / (c.std() + 1e-9)
+            v = float(np.dot(sz, cz) / len(sz))
+            if v > best_c:
+                best_c, best_l = v, lag
+        rows.append({'at_s': _r(p / fps, 1), 'lag_s': _r(best_l / fps, 3) if best_l is not None else None,
+                     'match': _r(best_c, 3)})
+    good = [r for r in rows if r['lag_s'] is not None and r['match'] >= 0.5]
+    lags = [r['lag_s'] for r in good]
+    slope = None
+    if len(good) >= 3:
+        xs = np.array([r['at_s'] for r in good]) / 60.0
+        slope = _r(float(np.polyfit(xs, np.array(lags), 1)[0]), 3)
+    n = min(len(nar), len(mix))
+    quiet, loud = mix[:n][~speaking[:n]], mix[:n][speaking[:n]]
+    bed = _r(float(np.median(quiet) - np.median(loud)), 1) if len(quiet) > 50 and len(loud) > 50 else None
+    return {'windows': rows, 'weak_windows': [r['at_s'] for r in rows if r['lag_s'] is None or r['match'] < 0.5],
+            'median_lag_s': _r(statistics.median(lags), 3) if lags else None,
+            'lag_spread_s': _r(max(lags) - min(lags), 3) if lags else None, 'lag_slope_s_per_min': slope,
+            'bed_level_rel_speech_db': bed, 'narration_s': _r(len(nar) / fps, 1), 'mix_s': _r(len(mix) / fps, 1),
+            'method': 'pre-emphasised 20 ms loudness envelopes, z-normalised, best lag per window within '
+                      f'+-{search_s:g} s'}
 
 
 def delivery(label, wav, words, spans=None, segments=None):
