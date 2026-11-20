@@ -55,7 +55,10 @@ python "$HOME/.claude/static-studio/scripts/static_core.py" voice-pick --run "RU
   --reason "the treatment's narrator: warm, dry, unhurried; this voice holds that register without strain"
 # Optional, billed, approved first: a controlled trial (each question changes one thing). Priced without --execute.
 python "$HOME/.claude/static-studio/scripts/static_core.py" narration-trial --run "RUN" --video 1 \
-  --plan "RUN/60-voice/video-01/trial-01.json" --check-balance
+  --plan "RUN/60-voice/video-01/trials/trial-01/plan.json" --check-balance
+# After the user's yes: one take at a time; the same command again continues after any stop.
+python "$HOME/.claude/static-studio/scripts/static_core.py" narration-trial --run "RUN" --video 1 \
+  --plan "RUN/60-voice/video-01/trials/trial-01/plan.json" --execute [--takes P1-A,P1-B]
 # Dry run NEVER charges money. Voice, model and settings come from the video's voice lock.
 python "$HOME/.claude/static-studio/scripts/static_core.py" tts --run "RUN" --video 1
 # Only after the user has approved the voice and the credit cost: the FIRST real part is the
@@ -184,7 +187,7 @@ Minimal `40-plans/video-01/blueprint.json`:
 
 Under `50-audio/video-01/`, the TTS tool creates `manifest.json`: voice/model/language, `voice_lock` (the setup recorded with), `chunks` (line ranges, the `beats` each part carries, `text_sha256` of the canonical text and `sent_sha256` of exactly what was sent, characters), `finished_parts`, `part_revs` (the direction revision each part was recorded under), `part_records` (per finished part: voice, model, settings, voice revision, treatment, direction revision, both fingerprints, the context sent with it, the request id and the credits billed) and `status`. Completed parts reside in `part-001.mp3` etc. An all-parts-complete pass generates `narration.wav`. Parts keep their line boundaries once recorded. A part whose lines, pronunciation, voice setup or direction changed is listed by the dry run, and `--rerecord-changed` re-records just those, with old takes in `superseded/` and the change in `history`; `--rerecord-parts N --reason` redoes a part after listening. Adding or removing lines, or changing the voice, model or language, needs `--rechunk`/`--archive-existing` (the folder moves to `video-NN-archive-<time>`). `audio-check` disallows a partial or missing line/audio, mixed voice setups, a line not heard or a tag read aloud, rejects a duration outside the audio tolerance, and rejects a narration that, with its planned edit holds, cannot fit the export window. `tts --max-parts 1 --execute` stops after the first part (`mode: partial_by_design_max_parts`) so it can be measured before paying for the rest.
 
-`logs/elevenlabs-ledger.jsonl` (the run's spend record, one line per billed request: narration parts, probes, trials, Voice Design): `{"at", "kind", "video", "part", "model_id", "voice_id", "characters", "balance_before", "balance_after", "delta", "ok", "error", "request_id"}`. `delta` is what the account was really billed (other use of the account in between can only push it up); `logs/elevenlabs-models.json` caches what ElevenLabs reports for each model (credits per character, maximum characters per request) for a day.
+`logs/elevenlabs-ledger.jsonl` (the run's spend record, two lines per billed request: narration parts, probes, trials, Voice Design): first `{"phase": "pending", "attempt_id", "at", "kind", "video", "part" or "trial"/"run"/"budget", "model_id", "voice_id", "characters", "context_characters", "max_credits", "balance_before"}` before it is sent, then the same with `"phase": "done"`, `"ok", "error", "request_id", "character_cost_header", "balance_after", "delta"` and, for a trial, `"credits_billed"` (a request cut off by a crash keeps only its pending line; one recovered from the account history gets `"phase": "recovered"`). `delta` is the balance drop (other use of the account in between can only push it up), `character_cost_header` ElevenLabs' own `character-cost` reply header; `logs/elevenlabs-models.json` caches what ElevenLabs reports for each model (credits per character, maximum characters per request) for a day.
 
 ## Voice lock (`voice-pick` writes it; `narration-measure` writes `measured`; `tts`, `voice-probe` and `plan-check` read it)
 
@@ -213,21 +216,25 @@ Under `50-audio/video-01/`, the TTS tool creates `manifest.json`: voice/model/la
 
 `preview_wpm` is information only, since a short preview reads fast and scatters. `measured` comes from a real part of 300+ words recorded with exactly this voice, model and settings (another episode's measurement of the same setup counts too). It supersedes the references' pace for the forecast (`plan-check` → `real_forecast_s`) and is what unlocks recording more than one part. `per_line_overhead_s` is the voice's natural silence per script line with the measured tag time taken out. `tag_costs_s` holds the median extra seconds each tag really added on this voice. `voice-pick --replace` keeps `measured` only when the voice, model and settings are unchanged. A video recorded before episodes had their own lock keeps the run's older `60-voice/voice-lock.json`.
 
-`60-voice/video-01/trial-01.json` (a `narration-trial` plan; the agents choose the passages from the treatment's own moments):
+`60-voice/video-01/trials/trial-01/plan.json` (a `narration-trial` plan; the agents choose the passages from the treatment's own moments):
 
 ```json
 {"id": "trial-01",
- "passages": [{"id": "P1", "moment": "opening", "lines": "L001-L008"},
-              {"id": "P2", "moment": "turning point", "lines": "L210-L216"}],
+ "budget": {"id": "calibration-2026-11", "max_credits": 3000, "authorised": "the user, on the day: up to 3,000 credits for these trials"},
+ "passages": [{"id": "P1", "moment": "opening", "lines": "L001-L008",
+               "intended_delivery": "curious and close, like telling a friend something strange"},
+              {"id": "P2", "moment": "turning point", "lines": "L210-L216",
+               "intended_delivery": "quieter, the weight of the choice landing"}],
  "variants": [{"id": "A"}, {"id": "B", "stability": 0.5}, {"id": "C", "stability": 0.5, "tags": "none"}],
  "runs": [["P1", "A"], ["P1", "B"], ["P1", "C"], ["P2", "A"]],
  "questions": [
-   {"id": "Q1", "asks": "does a lower stability widen the delivery without losing the narrator", "compare": [["P1", "A"], ["P1", "B"]]},
+   {"id": "Q1", "asks": "does a lower stability widen the delivery without losing the narrator", "compare": [["P1", "A"], ["P1", "B"]],
+    "listen_for": "which take sounds more like a person telling you this"},
    {"id": "Q2", "asks": "do the tags add anything the writing does not carry", "compare": [["P1", "B"], ["P1", "C"]]},
    {"id": "Q3", "asks": "does the narrator stay the same person at the turn", "compare": [["P1", "A"], ["P2", "A"]]}]}
 ```
 
-A variant left blank takes the voice lock's voice, model and settings; `tags` is `as_written` or `none`, `pronunciation` true or false, `context` `none` or `neighbours`. The recorded clips, `report.json` and `listen.md` go to `60-voice/video-01/trials/<id>/`.
+A variant left blank takes the voice lock's voice, model and settings; `tags` is `as_written` or `none`, `pronunciation` true or false, `context` `none` or `neighbours`. Passage and variant ids have no dashes (a take is named `P1-A`). `listen_for` is the neutral prompt the blind guide shows for that question (it never says which take is which). A plan may carry its own `pronunciation` list (`{"terms": [...]}`, the form of 05) to hear a form before the episode adopts it. Everything a trial makes goes to `60-voice/video-01/trials/<id>/`: the takes (`P1-A.mp3` and their transcripts), `report.json` (each take's exact request, fingerprint, cost and measurements; `sessions` lists each call that worked on it), `listening/` (`Q1-A.mp3` ... and `listening-guide.md`, blind), `answer-key.md` / `answer-key.json` (which label is which take; a take used by two questions is listed under `same_recording`).
 
 ## Line times and edit plan (written by `narration-measure` and `retime-shots`)
 

@@ -11,6 +11,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -307,6 +308,9 @@ class StaticStudioTests(unittest.TestCase):
         self.assertNotIn('narration_duration_outside_locked_tolerance',res['issues'])
         self.assertIn('narration_plus_edit_holds_longer_than_export_window',res['issues'])
         self.assertEqual(res['edit_holds_s'],5.0)
+        # A closing hold added after the script read is read again before anything is recorded.
+        self.assertTrue(any('the ending' in x for x in cli('plan-check','--run',self.run,'--video',1,expected=2)['issues']))
+        self.review_script()
         # Only the changed part would be re-recorded, never the whole narration.
         script['lines'][0]['text']='A changed first line.'
         save(vd/'script.json',script)
@@ -910,6 +914,8 @@ class StaticStudioTests(unittest.TestCase):
                          ('VOICEA',{'stability':0.6,'similarity_boost':0.8},'T1',1))
         self.assertEqual(rec['credits_billed'],len(b['text']))                              # measured, from the balance
         ledger=[json.loads(x) for x in (self.run/'logs/elevenlabs-ledger.jsonl').read_text().splitlines()]
+        self.assertEqual(ledger[0]['phase'],'pending')                 # on record before it was sent
+        ledger=[x for x in ledger if x['phase']=='done']
         self.assertEqual((ledger[0]['kind'],ledger[0]['delta']),('tts',len(b['text'])))
         # A failed request blocks; the same command resumes and never asks for a finished part again.
         state['fail']=2
@@ -1051,10 +1057,35 @@ class StaticStudioTests(unittest.TestCase):
                             {'F1':{'action':'kept','note':'the reader saw every hold and we keep them'}})
         ok=cli('plan-check','--run',self.run,'--video',1)
         self.assertTrue(any('carried by held silence' in w for w in ok['warnings']))
-        script['lines'][1]['pause_after_s']=5.2
+        script['lines'][24]['pause_after_s']=5.2                                    # L025: the middle of the film
         save(vd2/'script.json',script)
         res=cli('plan-check','--run',self.run,'--video',1)
         self.assertTrue(any('held silences changed after the last read' in w for w in res['warnings']))
+        # The same 2 s in the opening (the hook), or a 6 s closing hold, is read again whatever its size.
+        script['lines'][24]['pause_after_s']=3.2; script['lines'][1]['pause_after_s']=5.2
+        save(vd2/'script.json',script)
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertTrue(any(x.startswith('holds_changed_in_a_key_moment') and 'L002' in x and 'the opening' in x
+                            for x in res['issues']))
+        script['lines'][1]['pause_after_s']=3.2; script['lines'][49]['pause_after_s']=6.0
+        save(vd2/'script.json',script)
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertTrue(any('L050' in x and 'the ending' in x for x in res['issues']))
+        # A beat the map marks as a key moment (a reveal) counts like the hook and the ending.
+        script['lines'][49]['pause_after_s']=3.2; script['lines'][24]['pause_after_s']=5.2
+        save(vd2/'script.json',script)
+        bm=json.loads((vd2/'beat-map.json').read_text()); bm['beats'][2]['key_moment']='the reveal'
+        save(vd2/'beat-map.json',bm)
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertTrue(any('L025' in x and 'the reveal' in x for x in res['issues']))
+        bm['beats'][2].pop('key_moment'); save(vd2/'beat-map.json',bm)
+        # Small edits add up from the last read: fifteen 0.4 s nudges (none half a second) are 6 s of silence moved.
+        script['lines'][24]['pause_after_s']=3.2
+        for l in script['lines'][20:35]:
+            l['pause_after_s']=3.6
+        save(vd2/'script.json',script)
+        res=cli('plan-check','--run',self.run,'--video',1,expected=2)
+        self.assertTrue(any(x.startswith('holds_changed_after_the_script_read:6s') for x in res['issues']))
 
     def test_every_line_heard_and_no_tag_read_aloud(self):
         core=self.load_core()
@@ -1245,6 +1276,11 @@ class StaticStudioTests(unittest.TestCase):
         bad=cli('narration-trial','--run',self.run,'--video',1,'--plan',pf,expected=2)['details']
         self.assertIn('question_Q1_changes_2_things_at_once:stability,tags',bad)
         self.assertIn('run_P2_A_answers_no_question',bad)
+        self.assertTrue(any(x.startswith('trial_needs_its_budget') for x in bad))          # the user's cap, named
+        self.assertIn('passage_P1_says_its_intended_delivery',bad)
+        plan['budget']={'id':'calibration-test','max_credits':5000}
+        for p_ in plan['passages']:
+            p_['intended_delivery']='curious and close, like telling a friend'
         plan['questions']=[{'id':'Q1','asks':'does lower stability widen the delivery here','compare':[['P1','A'],['P1','B']]},
                            {'id':'Q2','asks':'do the tags help or does the writing carry it','compare':[['P1','B'],['P1','C']]},
                            {'id':'Q3','asks':'does the voice stay the same narrator at the turn','compare':[['P1','A'],['P2','A']]}]
@@ -1273,11 +1309,106 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual(code,0,out)
         tdir=self.run/'60-voice/video-01/trials/trial-01'
         self.assertEqual(sorted(p.name for p in tdir.glob('*.mp3')),['P1-A.mp3','P1-B.mp3','P1-C.mp3','P2-A.mp3'])
-        self.assertIn('Only stability changes',(tdir/'listen.md').read_text(encoding='utf-8'))
+        self.assertIn('Only stability changes',(tdir/'answer-key.md').read_text(encoding='utf-8'))
         rep=json.loads((tdir/'report.json').read_text())
         self.assertEqual(rep['runs']['P1|C']['variant']['tags'],'none')
-        self.assertEqual(sum(1 for x in (self.run/'logs/elevenlabs-ledger.jsonl').read_text().splitlines()
-                             if json.loads(x)['kind']=='trial'),4)
+        rows=[json.loads(x) for x in (self.run/'logs/elevenlabs-ledger.jsonl').read_text().splitlines()]
+        self.assertEqual(sum(1 for x in rows if x['kind']=='trial' and x['phase']=='done'),4)
+        self.assertEqual(sum(1 for x in rows if x['kind']=='trial' and x['phase']=='pending'),4)   # on record before sending
+        # The blind set: neutral labels, a guide that names no setting, the key one folder up.
+        guide=(tdir/'listening/listening-guide.md').read_text(encoding='utf-8')
+        self.assertEqual(sorted(p.name for p in (tdir/'listening').glob('*.mp3')),
+                         ['Q1-A.mp3','Q1-B.mp3','Q2-A.mp3','Q2-B.mp3','Q3-A.mp3','Q3-B.mp3'])
+        for leak in ('stability','P1-A','P1-B','tags','0.5'):
+            self.assertNotIn(leak,guide)
+        key=json.loads((tdir/'answer-key.json').read_text())
+        self.assertEqual({k['run'] for k in key['labels'] if k['question']=='Q1'},{'P1-A','P1-B'})
+        self.assertTrue(key['same_recording'])                       # P1-A and P1-B are each used by two questions
+
+    def test_trial_budget_holds_across_crashes_and_resumes(self):
+        core=self.load_core()
+        self.write_plan()
+        cli('voice-pick','--run',self.run,'--video',1,'--voice-id','VOICEA','--settings','{"stability":1.0,"similarity_boost":0.7}',
+            '--reason','the measured, even narrator the treatment describes')
+        n=len('\n'.join(json.loads((self.run/'40-plans/video-01/script.json').read_text())['lines'][i]['text'] for i in (0,1)))
+        plan={'id':'trial-02','budget':{'id':'cal-test','max_credits':3*n+1000},
+              'passages':[{'id':'P1','moment':'opening','lines':'L001-L002','intended_delivery':'curious, close, unhurried'},
+                          {'id':'P2','moment':'explaining','lines':'L021-L022','intended_delivery':'plain and clear, never read'}],
+              'variants':[{'id':'A'},{'id':'B','stability':0.5},{'id':'C','context':'neighbours'}],
+              'runs':[['P1','A'],['P1','B'],['P2','A'],['P2','C']],
+              'questions':[{'id':'Q1','asks':'does lower stability widen the delivery here','compare':[['P1','A'],['P1','B']]},
+                           {'id':'Q2','asks':'does the neighbouring context change how the part begins','compare':[['P2','A'],['P2','C']]}]}
+        pf=self.home/'trial-02.json'; save(pf,plan)
+        dry=cli('narration-trial','--run',self.run,'--video',1,'--plan',pf)
+        self.assertGreater(dry['context_characters_to_record'],500)                   # the context fields are priced too
+        class Reply(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self,*a): return False
+        mp3=self.fake_mp3().read_bytes()
+        st={'used':0,'posts':[],'history':[],'history_audio':0,'crash_next':False}
+        def fake(req,timeout=None):
+            url=req.full_url
+            if url.endswith('/v1/user/subscription'):
+                return Reply(json.dumps({'character_limit':20000,'character_count':st['used']}).encode())
+            if url.endswith('/v1/models'):
+                return Reply(json.dumps([{'model_id':'eleven_v4','model_rates':{'character_cost_multiplier':1.0}}]).encode())
+            if '/v1/history' in url:
+                if url.endswith('/audio'):
+                    st['history_audio']+=1; return Reply(mp3)
+                return Reply(json.dumps({'history':st['history']}).encode())
+            body=json.loads(req.data.decode()); st['posts'].append(body); st['used']+=len(body['text'])
+            if st['crash_next']:                                       # the power goes while the request is out
+                st['crash_next']=False
+                st['history'].append({'history_item_id':'H1','text':body['text'],'model_id':body['model_id'],
+                                      'date_unix':int(time.time()),'character_count_change_from':0,
+                                      'character_count_change_to':len(body['text'])})
+                raise KeyboardInterrupt
+            r=Reply(mp3); r.headers={'character-cost':str(len(body['text'])),'request-id':f'req{len(st["posts"])}'}
+            return r
+        words=[{'start_s':round(0.1+0.3*i,2),'end_s':round(0.35+0.3*i,2),'text':' w'} for i in range(6)]
+        def good_transcribe(path,outpath,*a):
+            save(Path(outpath),{'status':'transcribed','model':'medium','segments':[{'start_s':0.1,'end_s':1.9,'text':'w','words':words}]})
+            Path(outpath).with_suffix('.txt').write_text('[0.1-1.9] w w w w w w',encoding='utf-8')
+            return 1
+        ex=['narration-trial','--run',self.run,'--video',1,'--plan',pf,'--execute']
+        tdir=self.run/'60-voice/video-01/trials/trial-02'
+        # 1. The take arrives and is saved, then the session dies before it is measured.
+        with mock.patch.object(core,'transcribe',side_effect=RuntimeError('the session stopped here')):
+            code,out=self.core_call(core,*ex,fake=fake)
+        self.assertEqual(code,2,out)
+        rep=json.loads((tdir/'report.json').read_text())
+        self.assertEqual((rep['runs']['P1|A']['measured'],len(st['posts'])),(False,1))
+        self.assertEqual(rep['runs']['P1|A']['cost']['character_cost_header'],n)
+        # 2. Next session: P1-A is measured without being sent again; then the power goes during P1-B's request,
+        #    leaving its pending ledger row and a lock held by a process that no longer exists.
+        st['crash_next']=True
+        with mock.patch.object(core,'transcribe',side_effect=good_transcribe):
+            with self.assertRaises(KeyboardInterrupt):
+                self.core_call(core,*ex,fake=fake)
+        self.assertEqual(len(st['posts']),2)
+        save(tdir/'trial.lock',{'pid':999999,'at':'2026-11-20T00:00:00+00:00'})
+        spent,open_=core.budget_spent(self.run,'cal-test')
+        self.assertEqual((spent,len(open_)),(2*n,1))                   # the cut-off request counts at its largest charge
+        # 3. Resume: P1-B comes from the account history (free, not paid twice), P2-A is recorded, and P2-C (with its
+        #    context, at most n+context credits) would pass the cap: it is not sent.
+        with mock.patch.object(core,'transcribe',side_effect=good_transcribe):
+            code,out=self.core_call(core,*ex,fake=fake)
+        self.assertEqual(code,2,out)
+        self.assertEqual((out['stopped']['run'],out['stopped']['why']),('P2-C','budget'))
+        self.assertEqual((len(st['posts']),st['history_audio']),(3,1))
+        rep=json.loads((tdir/'report.json').read_text())
+        self.assertTrue(rep['runs']['P1|B']['cost']['recovered_from_history'])
+        self.assertTrue(all(rep['runs'][k]['measured'] for k in ('P1|A','P1|B','P2|A')))
+        self.assertNotIn('P2|C',rep['runs'])
+        self.assertEqual(core.budget_spent(self.run,'cal-test')[0],3*n)
+        self.assertEqual(sorted(p.name for p in (tdir/'listening').glob('*.mp3')),['Q1-A.mp3','Q1-B.mp3'])   # Q2 waits
+        # 4. Another plan can't raise the cap of a budget already in use.
+        plan2={**plan,'id':'trial-03','budget':{'id':'cal-test','max_credits':9000}}; pf2=self.home/'trial-03.json'; save(pf2,plan2)
+        self.assertTrue(any('is_registered_with' in x for x in
+                            cli('narration-trial','--run',self.run,'--video',1,'--plan',pf2,expected=2)['details']))
+        # 5. Nothing recorded drifts: changing a recorded take's request is refused (a new plan id instead).
+        plan['variants'][1]['stability']=0.4; save(pf,plan)
+        self.assertIn('P1-B',cli('narration-trial','--run',self.run,'--video',1,'--plan',pf,expected=2)['details'])
 
     def test_legacy_not_imported_and_clone_keeps_only_analysis(self):
         clone=cli('clone','--from-run',self.run,'--workspace',self.home/'runs')['run']

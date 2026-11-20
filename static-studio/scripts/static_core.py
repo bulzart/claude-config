@@ -857,7 +857,8 @@ def pronunciation_facts(rd, video, lines, data=None):
         if not uses:
             out['warnings'].append(f'pronunciation entry "{term}" is not in the script')
         out['uses'][term] = uses
-        out['terms'].append({'term': term, 'say': say, 'how': how, 'confidence': conf, 'rx': rx})
+        out['terms'].append({'term': term, 'say': say, 'how': how, 'confidence': conf, 'rx': rx,
+                             'source': str(t.get('source') or '').strip() or None})
     return out
 
 
@@ -1477,15 +1478,43 @@ HOLDS_SMALL_CHANGE = (2, 5.0, 0.005)   # lines, seconds, share of the runtime: a
 
 
 def holds_changed(seen, now_holds):
-    """Realised pauses added, removed or changed by half a second or more since a reader saw them: (lines, seconds)."""
+    """Realised pauses changed since the last script read, counted against what that reader was shown, so a run of
+    small edits adds up instead of each passing on its own: (lines added, removed, realised another way or moved by
+    half a second or more; seconds moved in all, every change counted however small)."""
     changed, moved = [], 0.0
     for lid in dict.fromkeys(list(seen) + list(now_holds)):
         a, b = seen.get(lid), now_holds.get(lid)
         sa, sb = (float(a[0]) if a else 0.0), (float(b[0]) if b else 0.0)
+        moved += abs(sa - sb)
         if (a is None) != (b is None) or abs(sa - sb) >= 0.5 or (a and b and a[1] != b[1]):
             changed.append(lid)
-            moved += abs(sa - sb)
     return changed, round(moved, 2)
+
+
+def key_moment_lines(vd, line_ids):
+    """The changed lines that sit in a beat where a held silence shapes the film whatever its size: the opening (the
+    first beat: the hook), the ending (the last beat) and any beat the beat map marks `key_moment` (a reveal, the
+    climax, an emotional turn: the agents' own mark). {line: why}."""
+    lines = read_json(vd / 'script.json').get('lines') or []
+    index = {str(r.get('id') or f'L{i + 1:03d}'): i + 1 for i, r in enumerate(lines)}
+    beats = read_json(vd / 'beat-map.json').get('beats') or []
+    out = {}
+    for lid in line_ids:
+        k = index.get(lid)
+        for bi, b in enumerate(beats):
+            try:
+                lo, hi = int(b['line_start']), int(b['line_end'])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if k is None or not lo <= k <= hi:
+                continue
+            why = ('the opening' if bi == 0 else 'the ending' if bi == len(beats) - 1 else
+                   f'a key moment ({str(b.get("key_moment")).strip()})' if str(b.get('key_moment') or '').strip()
+                   and b.get('key_moment') is not False else None)
+            if why:
+                out[lid] = f'{b.get("id") or "beat " + str(bi + 1)}: {why}'
+            break
+    return out
 
 
 def review_state(vd, kind, current_sha, snapshot=None, holds=None):
@@ -1506,15 +1535,21 @@ def review_state(vd, kind, current_sha, snapshot=None, holds=None):
                                       'see the held silences')
         else:
             ch, moved = holds_changed(seen, holds)
-            if ch:
-                lim_lines, lim_s, lim_share = HOLDS_SMALL_CHANGE
-                target = read_json(vd / 'length-lock.json').get('target_length_s') or 0
-                if len(ch) <= lim_lines and moved <= max(lim_s, lim_share * target):
-                    st['warnings'].append(f'held silences changed after the last read on {len(ch)} line(s), '
-                                          f'{moved:g} s in all (small enough to pass): ' + ','.join(ch))
-                else:
-                    st['issues'].append(f'holds_changed_after_the_script_read:{moved:g}s:' + ','.join(ch[:12])
-                                        + ('...' if len(ch) > 12 else ''))
+            lim_lines, lim_s, lim_share = HOLDS_SMALL_CHANGE
+            target = read_json(vd / 'length-lock.json').get('target_length_s') or 0
+            keys = key_moment_lines(vd, ch)
+            small = len(ch) <= lim_lines and moved <= max(lim_s, lim_share * target)
+            if keys:
+                # The hook, the ending and a marked key moment are read again after any real hold change there.
+                st['issues'].append('holds_changed_in_a_key_moment_after_the_script_read:' + ','.join(
+                    f'{lid} ({why})' for lid, why in list(keys.items())[:8]) + ('...' if len(keys) > 8 else ''))
+            if (ch or moved > 0) and not small:
+                st['issues'].append(f'holds_changed_after_the_script_read:{moved:g}s:' + ','.join(ch[:12])
+                                    + ('...' if len(ch) > 12 else ''))
+            elif moved > 0 and not keys:
+                st['warnings'].append(f'held silences changed after the last read on {len(ch)} line(s), '
+                                      f'{moved:g} s in all since that read (small enough to pass): '
+                                      + (','.join(ch) or 'changes under half a second'))
     max_r = REVIEW_MAX_ROUNDS[kind]
     for i, (rec, ans) in enumerate(recs):
         rnd, fs = rec['_round'], rec.get('findings') or []
@@ -2438,14 +2473,15 @@ def subscription_balance(key):
 def model_rates(rd, key, model_id, max_age_h=24):
     """What ElevenLabs reports for this model (GET /v1/models, free): credits per character (character_cost_multiplier
     times cost_discount_multiplier), the longest text one request takes, its setting flags. Cached in RUN/logs for a
-    day. A model the account doesn't list, or one without a reported cost, stops everything before a paid call."""
+    day (max_age_h=0 reads it again now: a trial checks the price before every request). A model the account doesn't
+    list, or one without a reported cost, stops everything before a paid call."""
     cache = rd / 'logs' / 'elevenlabs-models.json'
     c = read_json(cache)
     try:
         age = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(c['fetched_at'])).total_seconds()
     except (KeyError, TypeError, ValueError):
         age = None
-    if age is None or age > max_age_h * 3600 or model_id not in (c.get('models') or {}):
+    if age is None or age > max_age_h * 3600 or max_age_h <= 0 or model_id not in (c.get('models') or {}):
         try:
             data = elevenlabs_request('GET', '/v1/models', key, timeout=30)
         except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
@@ -2503,32 +2539,55 @@ def credit_preflight(rd, key, model_id, characters, safety, assume_ratio=None, k
     return out
 
 
-def eleven_paid_post(rd, key, path, body, kind, meta, accept='audio/mpeg', timeout=180, require=0):
+def eleven_paid_post(rd, key, path, body, kind, meta, accept='audio/mpeg', timeout=180, require=0, max_credits=None):
     """One billed ElevenLabs request, on record: the live balance just before and just after (free calls), the
-    characters sent and what the account was billed, appended to the ledger whether it worked or not. When the
-    balance just before is under `require`, nothing is sent. Returns (raw bytes or None, error or None, entry)."""
+    characters sent (the text, and the context fields apart) and what the account was billed, appended to the ledger
+    whether it worked or not. A 'pending' row goes in first, so a request cut off by a crash or a power cut is still
+    on record (a trial budget counts it at its largest possible charge). The cost is read three ways: ElevenLabs'
+    `character-cost` reply header (documented under "Tracking generation costs"), the balance drop, and, when
+    `meta` names credits_per_character, `credits_billed`: the larger of the two in credits (concurrent use of the
+    account can only push the balance drop up). When the balance just before is under `require`, nothing is sent.
+    Returns (raw bytes or None, error or None, entry)."""
     before = subscription_balance(key)
-    entry = {'at': now(), 'kind': kind, **meta, 'characters': len(str(body.get('text') or '')),
-             'balance_before': before['available']}
+    chars = len(str(body.get('text') or ''))
+    ctx = len(str(body.get('previous_text') or '')) + len(str(body.get('next_text') or ''))
+    attempt = hashlib.sha256(f'{now()}|{os.getpid()}|{path}|{chars}|{id(body)}'.encode('utf-8')).hexdigest()[:16]
+    entry = {'at': now(), 'kind': kind, **meta, 'characters': chars, 'context_characters': ctx,
+             'balance_before': before['available'], 'attempt_id': attempt}
+    if max_credits is not None:
+        entry['max_credits'] = int(max_credits)
     if before['available'] < require:
         return None, f'not sent: {before["available"]} credits left, this request needs {require}', None
+    ledger_add(rd, {**entry, 'phase': 'pending'})
     req = urllib.request.Request('https://api.elevenlabs.io' + path, data=json.dumps(body).encode('utf-8'),
                                  method='POST', headers={'xi-api-key': key, 'Content-Type': 'application/json',
                                                          'Accept': accept})
-    raw, err, rid = None, None, None
+    raw, err, rid, cost, trace, hist = None, None, None, None, None, None
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read()
             hdrs = getattr(resp, 'headers', None)
-            rid = hdrs.get('request-id') if hdrs is not None else None
+            if hdrs is not None:
+                rid, trace, hist = hdrs.get('request-id'), hdrs.get('x-trace-id'), hdrs.get('history-item-id')
+                cost = hdrs.get('character-cost')
     except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
         err = f'{type(exc).__name__}: {str(exc)[:240]}'
     try:
         after = subscription_balance(key)['available']
     except RuntimeError:
         after = None
-    entry.update({'ok': err is None, 'error': err, 'request_id': rid, 'balance_after': after,
-                  'delta': (before['available'] - after) if after is not None else None})
+    try:
+        cost = int(float(cost)) if cost not in (None, '') else None
+    except (TypeError, ValueError):
+        cost = None
+    delta = (before['available'] - after) if after is not None else None
+    entry.update({'phase': 'done', 'ok': err is None, 'error': err, 'request_id': rid, 'trace_id': trace,
+                  'history_item_id': hist, 'character_cost_header': cost, 'balance_after': after, 'delta': delta})
+    rate = meta.get('credits_per_character')
+    if rate is not None:
+        known = [x for x in ((math.ceil(cost * float(rate)) if cost is not None else None),
+                             (delta if isinstance(delta, (int, float)) and delta >= 0 else None)) if x is not None]
+        entry['credits_billed'] = max(known) if known else None
     ledger_add(rd, entry)
     return raw, err, entry
 
@@ -2871,25 +2930,49 @@ def cmd_voice_probe(args):
 # ---------------------------------------------------------------- controlled calibration trials
 TRIAL_VARIABLES = ('passage', 'voice_id', 'model_id', 'stability', 'similarity_boost', 'tags', 'pronunciation',
                    'context')
+# What each take's numbers can and cannot carry: written into every take's record and into the answer key.
+TRIAL_UNCERTAINTIES = [
+    'one take per set-up: Eleven v4 varies from take to take, so a difference between two takes can be the setting or '
+    'chance; only a repeat of the same request shows how much one set-up varies by itself',
+    'Whisper medium word times are good to about a tenth of a second: so are the pauses and the pace',
+    'pace on a passage of 30-70 words moves several words a minute with one pause more or less',
+    'pitch is tracked per word (pyin) over a short sample: a range or movement is indicative, and a lower figure can be '
+    'the right, quieter delivery for the moment',
+    'loudness is each file\'s own (EBU R128); ElevenLabs levels each take by itself, so a level step between takes can '
+    'come from that, not from the delivery',
+    'none of these numbers says which take sounds better or more human: that is for the listener']
+TRIAL_LISTEN_ITEMS = [
+    ('natural', 'sounds like a person, not a reading'), ('flow', 'conversational flow'),
+    ('charisma', 'vocal charisma: a voice you lean in to'), ('expressive', 'expressiveness'),
+    ('fit', 'right for this moment of the story'), ('theatrical', 'too theatrical (which one is MORE)'),
+    ('monotone', 'monotonous (which one is MORE)'), ('pauses', 'pauses where a person would pause'),
+    ('pronunciation', 'names and words said right'), ('continuity', 'continuous with what comes before and after'),
+    ('enjoyment', 'enjoyable to listen to'), ('keep', 'makes you want to keep listening for twenty minutes')]
 
 
 def trial_plan_facts(plan, vf, lines, pron):
-    """A trial plan, checked before anything is priced: passages (script lines of this video, or a short text), the
-    variants (each variable set explicitly or taken from the voice lock), the runs pairing them, and the questions.
-    Every run answers a question, and every question compares runs that differ in exactly one variable, so each
-    answer can be read: two changes at once can't be told apart."""
+    """A trial plan, checked before anything is priced: passages (script lines of this video, or a short text), each
+    with the delivery it is meant to have (`intended_delivery`), the variants (each variable set explicitly or taken
+    from the voice lock), the runs pairing them, the questions, and the user's spending cap (`budget`: {id,
+    max_credits}). Every run answers a question, and every question compares runs that differ in exactly one
+    variable, so each answer can be read: two changes at once can't be told apart."""
     issues = []
     pid = str(plan.get('id') or '')
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]{2,40}', pid):
         issues.append('trial_id_must_be_lowercase_letters_digits_and_dashes')
+    budget = plan.get('budget') if isinstance(plan.get('budget'), dict) else {}
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{2,60}', str(budget.get('id') or '')) or not isinstance(
+            budget.get('max_credits'), int) or isinstance(budget.get('max_credits'), bool) or budget['max_credits'] <= 0:
+        issues.append('trial_needs_its_budget: {"id": "...", "max_credits": N}, the credits the user authorised for '
+                      'these trials (every plan under the same id shares them)')
     index = {str(r.get('id') or f'L{i + 1:03d}'): i for i, r in enumerate(lines)}
     passages = {}
     for p in plan.get('passages') or []:
         k = str((p or {}).get('id') or '')
-        if not k or k in passages:
-            issues.append(f'passage_{k or "unnamed"}_needs_a_unique_id')
+        if not k or k in passages or '-' in k:
+            issues.append(f'passage_{k or "unnamed"}_needs_a_unique_id_without_dashes')
             continue
-        text, rng = None, None
+        text, rng, ids = None, None, None
         if p.get('lines'):
             m = re.fullmatch(r'\s*(L\d+)\s*(?:-\s*(L\d+))?\s*', str(p['lines']))
             if not m or m.group(1) not in index or (m.group(2) and m.group(2) not in index):
@@ -2901,6 +2984,7 @@ def trial_plan_facts(plan, vf, lines, pron):
                 else:
                     rng = (lo + 1, hi + 1)
                     text = '\n'.join(str(r.get('text') or '').strip() for r in lines[lo:hi + 1])
+                    ids = [str(r.get('id') or f'L{lo + j + 1:03d}') for j, r in enumerate(lines[lo:hi + 1])]
         elif p.get('text'):
             text = str(p['text']).strip()
         if not text or len(strip_tags(text)) < 20:
@@ -2908,13 +2992,16 @@ def trial_plan_facts(plan, vf, lines, pron):
             text = text or ''
         if n_words(p.get('moment')) < 1:
             issues.append(f'passage_{k}_names_its_moment')
+        if n_words(p.get('intended_delivery')) < 3:
+            issues.append(f'passage_{k}_says_its_intended_delivery')
         issues += script_markup([{'id': f'passage_{k}', 'text': text}])[0]
-        passages[k] = {'text': text, 'lines': rng, 'moment': p.get('moment'), 'why': p.get('why')}
+        passages[k] = {'text': text, 'lines': rng, 'line_ids': ids, 'moment': p.get('moment'), 'why': p.get('why'),
+                       'intended_delivery': p.get('intended_delivery'), 'lines_label': p.get('lines')}
     variants = {}
     for v in plan.get('variants') or []:
         k = str((v or {}).get('id') or '')
-        if not k or k in variants:
-            issues.append(f'variant_{k or "unnamed"}_needs_a_unique_id')
+        if not k or k in variants or '-' in k:
+            issues.append(f'variant_{k or "unnamed"}_needs_a_unique_id_without_dashes')
             continue
         voice = str(v.get('voice_id') or 'lock')
         voice_id = vf['voice_id'] if voice == 'lock' else voice
@@ -2956,7 +3043,8 @@ def trial_plan_facts(plan, vf, lines, pron):
         diffs = sorted({k for a in cmp_ for b in cmp_ for k in TRIAL_VARIABLES if val(a, k) != val(b, k)})
         if len(diffs) != 1:
             issues.append(f'question_{qid}_changes_{len(diffs)}_things_at_once:' + (','.join(diffs) or 'nothing'))
-        questions.append({'id': qid, 'asks': q.get('asks'), 'compare': cmp_, 'varies': diffs})
+        questions.append({'id': qid, 'asks': q.get('asks'), 'compare': cmp_, 'varies': diffs,
+                          'listen_for': q.get('listen_for')})
         asked |= set(cmp_)
     issues += [f'run_{a}_{b}_answers_no_question' for a, b in runs if (a, b) not in asked]
     if not runs:
@@ -2982,15 +3070,290 @@ def trial_request(passages, variants, run, lines, pron):
     return body
 
 
+def trial_budgets_path(rd):
+    return rd / '60-voice' / 'trial-budgets.json'
+
+
+def trial_budget_check(rd, budget, plan_id, write=False):
+    """The plan's cap against the run's register of trial budgets (RUN/60-voice/trial-budgets.json): the first plan
+    naming an id registers it, and every later plan naming the same id must carry the same cap, so a new plan never
+    raises it (only the user does, by hand). Returns issues."""
+    reg = read_json(trial_budgets_path(rd))
+    bid, cap = str(budget.get('id')), int(budget.get('max_credits'))
+    have = (reg.get('budgets') or {}).get(bid)
+    if have and int(have.get('max_credits') or -1) != cap:
+        return [f'trial_budget_{bid}_is_registered_with_{have.get("max_credits")}_credits_not_{cap}']
+    if write:
+        b = reg.setdefault('budgets', {}).setdefault(bid, {'max_credits': cap, 'registered_at': now(),
+                                                            'authorised': budget.get('authorised'), 'plans': []})
+        if plan_id not in b.setdefault('plans', []):
+            b['plans'].append(plan_id)
+            write_json(trial_budgets_path(rd), reg)
+    return []
+
+
+def budget_spent(rd, budget_id):
+    """What a trial budget has used so far, from the ledger: every request sent under it, failures, retries and resumed
+    sessions included. A request counts its credits_billed (the larger of ElevenLabs' character-cost header and the
+    balance drop); when neither is known, and for a request cut off before its outcome was written (a pending row
+    with no outcome), its largest possible charge. Returns (credits, the cut-off requests)."""
+    rows = [r for r in ledger_rows(rd) if r.get('budget') == budget_id]
+    closed = {r.get('attempt_id') for r in rows if r.get('phase') in ('done', 'recovered')}
+    spent, open_ = 0, []
+    for r in rows:
+        if r.get('phase') == 'pending':
+            if r.get('attempt_id') not in closed:
+                spent += int(r.get('max_credits') or 0)
+                open_.append(r)
+        elif r.get('phase') in ('done', 'recovered'):
+            c = r.get('credits_billed')
+            spent += int(c) if c is not None else int(r.get('max_credits') or 0)
+    return spent, open_
+
+
+def _pid_running(pid):
+    """True while a process with this id runs (a trial's lock is stale once its process is gone: after a crash or a
+    power cut the next run takes over). Unknown counts as running."""
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if pid == os.getpid():
+        return False
+    try:
+        if os.name == 'nt':
+            out = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH', '/FO', 'CSV'], capture_output=True, text=True,
+                                 timeout=20).stdout or ''
+            return f'"{pid}"' in out
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except (OSError, subprocess.SubprocessError):
+        return True
+
+
+def eleven_get_bytes(path, key, timeout=120):
+    req = urllib.request.Request('https://api.elevenlabs.io' + path, headers={'xi-api-key': key})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read()
+
+
+def recover_from_history(rd, key, pending, body, voice_id):
+    """A request cut off before its answer was saved (a pending ledger row with no outcome): when ElevenLabs finished
+    it anyway, its audio is in the account's history (GET /v1/history and an item's audio are free), so the take is
+    taken from there instead of being paid for twice. The budget keeps counting that request at its largest possible
+    charge (the history's character figures are recorded beside it; ElevenLabs does not document them as credits).
+    Returns (audio, ledger row) or (None, None)."""
+    try:
+        since = int(dt.datetime.fromisoformat(str(pending['at'])).timestamp()) - 120
+        data = elevenlabs_request('GET', '/v1/history', key, params={'page_size': 100, 'voice_id': voice_id}, timeout=30)
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError) as exc:
+        return None, {'history_lookup_error': f'{type(exc).__name__}: {str(exc)[:160]}'}
+    for it in (data.get('history') if isinstance(data, dict) else None) or []:
+        if str(it.get('text')) != body['text'] or it.get('model_id') not in (None, body['model_id']):
+            continue
+        if int(it.get('date_unix') or 0) < since:
+            continue
+        try:
+            audio = eleven_get_bytes('/v1/history/' + urllib.parse.quote(str(it['history_item_id']), safe='') + '/audio', key)
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, KeyError):
+            return None, None
+        try:
+            used = int(it['character_count_change_to']) - int(it['character_count_change_from'])
+        except (KeyError, TypeError, ValueError):
+            used = None
+        row = {**{k: v for k, v in pending.items() if k not in ('phase', 'at')}, 'at': now(), 'phase': 'recovered',
+               'ok': True, 'history_item_id': it.get('history_item_id'), 'request_id': it.get('request_id'),
+               'history_character_count_change': used, 'credits_billed': pending.get('max_credits'),
+               'note': 'audio taken from the account history after the request was cut off; counted at its largest '
+                       'possible charge'}
+        ledger_add(rd, row)
+        return audio, row
+    return None, None
+
+
+def loudness_stats(path):
+    """Integrated loudness (LUFS), loudness range (LU) and true peak (dBTP) of one file, by ffmpeg's EBU R128 meter
+    (local, free). Never raises: {'error': ...} when it can't be read."""
+    try:
+        cp = subprocess.run(['ffmpeg', '-hide_banner', '-nostats', '-i', str(path), '-af', 'ebur128=peak=true', '-f',
+                             'null', '-'], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=180)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {'error': f'{type(exc).__name__}: {str(exc)[:120]}'}
+    tail = (cp.stderr or '').rsplit('Summary:', 1)[-1]
+
+    def num(rx):
+        m = re.search(rx, tail)
+        return float(m.group(1)) if m else None
+    return {'integrated_lufs': num(r'I:\s*(-?[\d.]+|-inf)\s*LUFS'), 'loudness_range_lu': num(r'LRA:\s*(-?[\d.]+)\s*LU'),
+            'true_peak_dbtp': num(r'Peak:\s*(-?[\d.]+|-inf)\s*dBFS')}
+
+
+def trial_measure(rec, passage, pron_terms, language, args):
+    """One take's measurements, from its own audio: Whisper medium (the words heard and their times), the pace while
+    speaking and over the whole speaking span, the pauses and where they fall, pitch and loudness, every line heard,
+    tags read aloud, names as heard, and what looks wrong. Evidence, never a verdict."""
+    f = Path(rec['file'])
+    tpath = f.with_suffix('.json')
+    if not tpath.is_file():
+        transcribe(f, tpath, args.whisper_model, args.device, args.compute_type)
+    tj = read_json(tpath)
+    words = transcript_words(tj)
+    rawtxt = tpath.with_suffix('.txt').read_text(encoding='utf-8', errors='replace')
+    plines = passage['text'].split('\n')
+    d = align_detail(plines, words, language or 'en')
+    dur = probe(f)['duration_s']
+    heard = strip_transcript_timestamps(rawtxt).strip()
+    spoken = sum(count_words(x) for x in plines)
+    span = (words[-1]['end_s'] - words[0]['start_s']) if len(words) > 1 else 0.0
+    pauses = [{'after_word': a['text'].strip(), 'at_s': round(a['end_s'], 2), 'pause_s': round(b['start_s'] - a['end_s'], 2)}
+              for a, b in zip(words, words[1:]) if b['start_s'] - a['end_s'] >= 0.3]
+    names = []
+    for t in pron_terms:
+        if t['rx'].search(strip_tags(passage['text'])):
+            tt = tokens_of(t['term'])
+            names.append({'term': t['term'], 'sent_as': t.get('sent_as') or t['term'],
+                          'heard_as_written': all(x in d['heard'] for x in tt),
+                          'nearest_heard': max(d['heard'], key=lambda h: difflib.SequenceMatcher(None, tt[0], h).ratio(),
+                                               default=None)})
+    delivery = measure_file_delivery(f, tpath)
+    loud = loudness_stats(f)
+    lead = round(words[0]['start_s'], 2) if words else None
+    trail = round(dur - words[-1]['end_s'], 2) if words else None
+    ids = passage.get('line_ids') or [f'line {i + 1}' for i in range(len(plines))]
+    not_heard = [ids[i] for i, tt in enumerate(d['tok_time']) if tt and not any(tt)]
+    read_aloud = tags_heard(rec['sent']['text'], heard)
+    anomalies = []
+    if not words:
+        anomalies.append('Whisper heard no words')
+    if not_heard:
+        anomalies.append('lines not heard: ' + ', '.join(not_heard))
+    if read_aloud:
+        anomalies.append('a tag may have been read aloud: ' + ', '.join(read_aloud))
+    if d['ratio'] < 0.9:
+        anomalies.append(f'only {d["ratio"]:.0%} of the words matched what was sent (a word dropped, added or misheard)')
+    for nm in names:
+        if not nm['heard_as_written']:
+            anomalies.append(f'{nm["term"]} was heard as "{nm["nearest_heard"]}" (Whisper\'s spelling, not proof of '
+                             'how it was said: listen)')
+    if lead is not None and lead > 1.0:
+        anomalies.append(f'{lead} s of silence before the first word')
+    if trail is not None and trail > 1.5:
+        anomalies.append(f'{trail} s of silence after the last word')
+    if isinstance(loud.get('true_peak_dbtp'), float) and loud['true_peak_dbtp'] > -0.3:
+        anomalies.append(f'true peak {loud["true_peak_dbtp"]} dBTP: may clip')
+    rec.update({
+        'measured': True, 'measured_at': now(), 'duration_s': dur, 'words_spoken': spoken,
+        'active_wpm': wpm_from_transcript_raw(rawtxt),
+        'overall_wpm': round(spoken / (span / 60)) if span > 0 else None,
+        'file_wpm': round(spoken / (dur / 60)) if dur else None,
+        'speech_span_s': round(span, 2), 'lead_silence_s': lead, 'trail_silence_s': trail,
+        'pause_profile': pause_profile(words), 'pauses': pauses,
+        'delivery': delivery, 'loudness': loud,
+        'alignment_match_ratio': round(d['ratio'], 3), 'lines_not_heard': not_heard,
+        'tags_maybe_read_aloud': read_aloud, 'names': names, 'heard_text': heard[:900],
+        'transcript': str(tpath), 'anomalies': anomalies, 'uncertainties': TRIAL_UNCERTAINTIES})
+    return rec
+
+
+def _blind_order(trial_id, qid, runs_):
+    """The order a question's takes are labelled A, B, ... in: fixed by the trial and question (so a rebuilt set keeps
+    its labels), unrelated to the variants' names."""
+    return sorted(runs_, key=lambda r: hashlib.sha256(f'{trial_id}|{qid}|{r[0]}-{r[1]}'.encode('utf-8')).hexdigest())
+
+
+def trial_listening_set(outdir, plan, questions, report, passages, variants):
+    """The blind listening set for the user: listening/ holds each question's takes as <Q>-A.mp3, <Q>-B.mp3 ... (copies;
+    the labels say nothing about the settings) and listening-guide.md (the lines, what each moment is meant to feel
+    like, what to listen for, a sheet to fill in); answer-key.md / .json, one folder up, say which take is which, with
+    every take's settings and measurements. A take used by two questions is copied under each question's own label.
+    Returns what was written."""
+    lst = outdir / 'listening'
+    lst.mkdir(parents=True, exist_ok=True)
+    key, guide = [], [
+        f'# Blind listening: {plan["id"]}', '',
+        'Each question below has two (or more) takes of the same lines. In each pair exactly one thing differs. The file '
+        'names say nothing about which is which; the answer key is one folder up (answer-key.md): open it only after '
+        'you have written your notes.', '',
+        'How to listen: headphones or good speakers, at the volume you would watch a video. Play A then B, then B then A. '
+        'Judge the take, not the words (the words are the same).', '',
+        'For each line of the sheet put A, B or "same", and a word or two when you can. What matters most: does it sound '
+        'like a person telling you this story, and would you keep listening for twenty minutes?', '']
+    done_q = []
+    for q in questions:
+        runs_ = q['compare']
+        if not all((report['runs'].get(f'{a}|{b}') or {}).get('file') for a, b in runs_):
+            continue
+        p = passages[runs_[0][0]]
+        same_p = all(r[0] == runs_[0][0] for r in runs_)
+        guide += [f'## {q["id"]}: {p.get("moment") or ""}' + (f' ({p.get("lines_label")})' if p.get('lines_label') else ''),
+                  '', f'Meant to feel: {p.get("intended_delivery")}', '']
+        guide += [f'Listen for: {q.get("listen_for") or "which take sounds more like a person telling this story"}', '']
+        if same_p:
+            guide += ['The words: "' + ' '.join(strip_tags(x) for x in p['text'].split('\n')) + '"', '']
+        labels = []
+        for i, r in enumerate(_blind_order(plan['id'], q['id'], runs_)):
+            lab = f'{q["id"]}-{chr(65 + i)}'
+            src = Path(report['runs'][f'{r[0]}|{r[1]}']['file'])
+            dst = lst / f'{lab}.mp3'
+            shutil.copyfile(src, dst)
+            labels.append(lab)
+            key.append({'question': q['id'], 'label': lab, 'file': str(dst), 'run': f'{r[0]}-{r[1]}', 'source': str(src)})
+        guide += ['Files: ' + ', '.join(f'{x}.mp3' for x in labels), '',
+                  '| | ' + ' | '.join(x.split('-')[-1] for x in labels) + ' | same | note |',
+                  '|---|' + '---|' * len(labels) + '---|---|']
+        guide += [f'| {txt} |' + ' |' * len(labels) + ' | |' for _, txt in TRIAL_LISTEN_ITEMS]
+        guide += ['', 'Which would you keep, and why (one line):', '', '']
+        done_q.append(q['id'])
+    (lst / 'listening-guide.md').write_text('\n'.join(guide) + '\n', encoding='utf-8')
+    by_source = {}
+    for k in key:
+        by_source.setdefault(k['source'], []).append(k['label'])
+    md = [f'# Answer key: {plan["id"]}', '', 'Open after listening. Settings and measurements per take. The numbers are '
+          'measurements, not verdicts: a narrower pitch range can be the right, quieter delivery, and a faster take is '
+          'not a better one.', '']
+    for q in questions:
+        if q['id'] not in done_q:
+            continue
+        md += [f'## {q["id"]}: {q["asks"]}', f'Only {", ".join(q["varies"])} changes between these takes.', '',
+               '| label | take | stability | tags | pronunciation | context | active / overall wpm | duration s | '
+               'longest pause s | pitch range st | loudness LUFS | credits | anomalies |',
+               '|---|---|---|---|---|---|---|---|---|---|---|---|---|']
+        for k in [x for x in key if x['question'] == q['id']]:
+            x = report['runs'][k['run'].replace('-', '|', 1)]
+            v = variants[k['run'].split('-', 1)[1]]
+            dl = x.get('delivery') or {}
+            md.append(f'| {k["label"]} | {k["run"]} | {v["stability"]} | {v["tags"]} | {"on" if v["pronunciation"] else "off"}'
+                      f' | {v["context"]} | {x.get("active_wpm")} / {x.get("overall_wpm")} | {x.get("duration_s")} | '
+                      f'{(x.get("pause_profile") or {}).get("longest_pause_s")} | {dl.get("pitch_range_st")} | '
+                      f'{(x.get("loudness") or {}).get("integrated_lufs")} | {(x.get("cost") or {}).get("credits_billed")} | '
+                      f'{"; ".join(x.get("anomalies") or []) or "none"} |')
+        md.append('')
+    twins = [v for v in by_source.values() if len(v) > 1]
+    if twins:
+        md += ['Same recording under two labels (a baseline reused by two questions): ' +
+               '; '.join(' = '.join(v) for v in twins), '']
+    md += ['## What the numbers can and cannot say', ''] + [f'- {u}' for u in TRIAL_UNCERTAINTIES] + ['']
+    (outdir / 'answer-key.md').write_text('\n'.join(md) + '\n', encoding='utf-8')
+    write_json(outdir / 'answer-key.json', {'trial': plan['id'], 'labels': key, 'same_recording': twins})
+    return {'listening': str(lst), 'guide': str(lst / 'listening-guide.md'), 'answer_key': str(outdir / 'answer-key.md'),
+            'questions_ready': done_q}
+
+
 def cmd_narration_trial(args):
     """A controlled calibration trial before production: a few passages of this video (an opening, an explanation, a
     turn), each under a few voice set-ups, to learn what this voice does with this treatment: stability, tags or no
     tags, pronunciation, the context across a join, another narrator. The plan is checked (each question compares runs
-    that differ in exactly one thing) and priced first; nothing is recorded without --execute, and then only after the
-    live balance covers it. Each clip is transcribed (Whisper medium) and measured (pace while speaking and overall,
-    pauses, pitch movement and loudness contrast, every line heard, tags read aloud, names as heard), and listen.md
-    lists, question by question, which files to compare for the user. The measurements are evidence, never a verdict
-    on which take sounds better: no agent here can hear them."""
+    that differ in exactly one thing) and priced first; nothing is recorded without --execute. Then the takes are
+    recorded one at a time, never two at once, each only after the price is read again, the live balance covers it
+    and the plan's budget (the credits the user authorised, shared by every plan under its id, counted from the
+    ledger with retries and interrupted requests) still covers its largest possible charge, context fields included.
+    A take is saved and put on record the moment it arrives, then measured; re-running the same command continues:
+    recorded takes are never sent again (each is matched by the fingerprint of its exact request), a take recorded but
+    not measured is measured, and a request cut off by a crash is looked up in the account history before anything is
+    paid again. listening/ is the blind set for the user's ears; answer-key.md says which take is which. The
+    measurements are evidence, never a verdict on which take sounds better: no agent here can hear them."""
     rd, st = run_folder(args)
     n = int(args.video)
     vd = video_dir(rd, n)
@@ -3005,131 +3368,205 @@ def cmd_narration_trial(args):
         else pronunciation_facts(rd, n, lines)
     issues, passages, variants, runs, questions = trial_plan_facts(plan, vf, lines, pron)
     issues += pron['issues']
+    budget = plan.get('budget') or {}
+    if not issues:
+        issues += trial_budget_check(rd, budget, plan['id'])
     if issues:
         error('The trial plan is not ready.', issues)
-    bodies = {r: trial_request(passages, variants, r, lines, pron) for r in runs}
+    lang = language_code((lock or {}).get('language'))
+
+    def path_of(v):
+        return '/v1/text-to-speech/' + urllib.parse.quote(v['voice_id'], safe='') + '?output_format=mp3_44100_128'
+    bodies = {}
+    for r in runs:
+        b = trial_request(passages, variants, r, lines, pron)
+        if lang:
+            b['language_code'] = lang
+        bodies[r] = b
+    fps = {r: hashlib.sha256(json.dumps({'path': path_of(variants[r[1]]), 'body': bodies[r]}, sort_keys=True,
+                                        ensure_ascii=False).encode('utf-8')).hexdigest() for r in runs}
     outdir = rd / '60-voice' / f'video-{n:02d}' / 'trials' / plan['id']
     report = read_json(outdir / 'report.json')
-    done = {tuple(k.split('|')) for k, x in (report.get('runs') or {}).items() if x.get('file')}
-    todo = [r for r in runs if r not in done]
+    recorded = report.get('runs') or {}
+
+    def rkey(r):
+        return f'{r[0]}|{r[1]}'
+
+    def done(r):
+        x = recorded.get(rkey(r)) or {}
+        return bool(x.get('file')) and Path(x['file']).is_file() and x.get('request_sha256') == fps[r]
+    drifted = [f'{a}-{b}' for a, b in runs if (recorded.get(rkey((a, b))) or {}).get('file') and not done((a, b))]
+    if drifted:
+        error('Recorded takes no longer match this plan (their exact request changed): a changed plan is a new trial '
+              'id, so the recorded evidence stays what it was.', drifted)
+    wanted = None
+    if args.takes:
+        names = {f'{a}-{b}': (a, b) for a, b in runs}
+        asked = [x.strip() for x in args.takes.split(',') if x.strip()]
+        unknown = [x for x in asked if x not in names]
+        if unknown:
+            error('--takes names runs this plan does not have.', {'unknown': unknown, 'runs': list(names)})
+        wanted = [names[x] for x in asked]
+    todo = [r for r in runs if not done(r) and (wanted is None or r in wanted)]
     chars = {r: len(bodies[r]['text']) for r in runs}
+    ctx = {r: len(bodies[r].get('previous_text') or '') + len(bodies[r].get('next_text') or '') for r in runs}
     by_model = {}
     for r in todo:
-        by_model[variants[r[1]]['model_id']] = by_model.get(variants[r[1]]['model_id'], 0) + chars[r]
-    summary = {'trial': plan['id'], 'runs': len(runs), 'runs_to_record': len(todo),
-               'characters_to_record': sum(chars[r] for r in todo), 'characters_by_model': by_model,
+        by_model.setdefault(variants[r[1]]['model_id'], [0, 0])
+        by_model[variants[r[1]]['model_id']][0] += chars[r]
+        by_model[variants[r[1]]['model_id']][1] += chars[r] + ctx[r]
+    treatment = read_json(vd / 'direction-lock.json')
+    treatment_info = ({'treatment': treatment.get('treatment'), 'production_rev': treatment.get('production_rev')}
+                      if treatment else {'treatment': None, 'note': 'this video has no locked creative direction'})
+    summary = {'trial': plan['id'], 'budget': {'id': budget['id'], 'max_credits': budget['max_credits']},
+               'runs': len(runs), 'runs_to_record': len(todo),
+               'characters_to_record': sum(chars[r] for r in todo),
+               'context_characters_to_record': sum(ctx[r] for r in todo),
                'runs_detail': [{'run': f'{a}-{b}', 'moment': passages[a]['moment'], 'characters': chars[(a, b)],
-                                'voice_id': variants[b]['voice_id'], 'model_id': variants[b]['model_id'],
-                                'stability': variants[b]['stability'], 'similarity_boost': variants[b]['similarity_boost'],
-                                'tags': variants[b]['tags'], 'pronunciation': variants[b]['pronunciation'],
-                                'context': variants[b]['context'], 'done': (a, b) in done} for a, b in runs],
+                                'context_characters': ctx[(a, b)], 'voice_id': variants[b]['voice_id'],
+                                'model_id': variants[b]['model_id'], 'stability': variants[b]['stability'],
+                                'similarity_boost': variants[b]['similarity_boost'], 'tags': variants[b]['tags'],
+                                'pronunciation': variants[b]['pronunciation'], 'context': variants[b]['context'],
+                                'done': done((a, b)), 'this_time': (a, b) in todo} for a, b in runs],
                'questions': [{'id': q['id'], 'asks': q['asks'], 'compares': [f'{a}-{b}' for a, b in q['compare']],
                               'varies': q['varies']} for q in questions]}
+    spent, open_ = budget_spent(rd, budget['id'])
     key = elevenlabs_key() if (args.execute or args.check_balance) else ''
     if (args.execute or args.check_balance) and not key:
         error('ELEVENLABS_API_KEY (or ELEVEN_API_KEY) is not set; do not store API keys in the command or ZIP.')
     if not args.execute:
         estimate = {}
-        for model, c in by_model.items():
-            per = model_rates(rd, key, model)['credits_per_character'] if args.check_balance else cached_model_rates(rd, model)
+        for model, (c, cmax) in by_model.items():
+            per = model_rates(rd, key, model, max_age_h=0)['credits_per_character'] if args.check_balance else \
+                cached_model_rates(rd, model)
             measured, samples = measured_cost_ratio(rd, model)
-            estimate[model] = {'characters': c, 'credits_per_character': per,
+            estimate[model] = {'characters': c, 'characters_with_context': cmax, 'credits_per_character': per,
                                'expected_credits': math.ceil(c * per) if per is not None else None,
+                               'max_credits': math.ceil(cmax * per) if per is not None else None,
                                'measured_credits_per_character': measured, 'measured_requests': samples}
-        total = sum(e['expected_credits'] or 0 for e in estimate.values()) if all(
-            e['expected_credits'] is not None for e in estimate.values()) else None
+        known = all(e['expected_credits'] is not None for e in estimate.values())
+        total = sum(e['expected_credits'] or 0 for e in estimate.values()) if known else None
+        total_max = sum(e['max_credits'] or 0 for e in estimate.values()) if known else None
         out = {'ok': True, 'mode': 'dry_run_no_charges', **summary, 'credit_estimate': estimate,
-               'expected_credits_total': total,
-               'reserve_with_safety_factor': math.ceil(total * args.credit_safety_factor) if total is not None else None}
+               'expected_credits_total': total, 'max_credits_total': total_max,
+               'budget_status': {'spent': spent, 'left': budget['max_credits'] - spent,
+                                 'interrupted_requests': len(open_),
+                                 'fits': (spent + total_max <= budget['max_credits']) if total_max is not None else None}}
         if args.check_balance:
             bal = subscription_balance(key)
             out['balance'] = {'available': bal['available'], 'left_after_expected': bal['available'] - (total or 0),
+                              'left_after_max': bal['available'] - (total_max or 0),
                               'next_reset_unix': bal['next_reset_unix']}
-        out['next'] = ('Show the user this plan: each question, the runs it compares, the credits. Record only after '
-                       'their approval: narration-trial ... --execute.')
+        out['next'] = ('Show the user this plan: each question, the runs it compares, the credits (expected and at most). '
+                       'Record only after their approval: narration-trial ... --execute (one take at a time; --takes to '
+                       'record some first).')
         emit(out)
         return
-    if not todo:
-        emit({'ok': True, 'mode': 'already_recorded', **summary, 'report': str(outdir / 'report.json'),
-              'listen': str(outdir / 'listen.md')})
-        return
-    pre = {m: credit_preflight(rd, key, m, c, args.credit_safety_factor, args.assume_cost_ratio, args.keep_credits,
-                               'this trial') for m, c in by_model.items()}
     outdir.mkdir(parents=True, exist_ok=True)
-    write_json(outdir / 'plan.json', plan)
-    report = {'trial': plan['id'], 'video': n, 'treatment': read_json(vd / 'direction-lock.json').get('treatment'),
-              'questions': summary['questions'], 'preflight': pre, 'runs': report.get('runs') or {},
-              'started_at': report.get('started_at') or now()}
-    for r in todo:
-        v = variants[r[1]]
-        per = pre[v['model_id']]['credits_per_character']
-        need = math.ceil(chars[r] * per * args.credit_safety_factor) + int(args.keep_credits or 0)
-        path = '/v1/text-to-speech/' + urllib.parse.quote(v['voice_id'], safe='') + '?output_format=mp3_44100_128'
-        body = dict(bodies[r])
-        if language_code((lock or {}).get('language')):
-            body['language_code'] = language_code(lock.get('language'))
-        raw, err, entry = eleven_paid_post(rd, key, path, body, 'trial',
-                                           {'video': n, 'trial': plan['id'], 'run': f'{r[0]}-{r[1]}',
-                                            'model_id': v['model_id'], 'voice_id': v['voice_id']}, require=need)
-        if err or not raw or len(raw) < 1024:
-            write_json(outdir / 'report.json', report)
-            error('A trial run failed; the runs already recorded are kept (re-run the same command to continue).',
-                  {'run': f'{r[0]}-{r[1]}', 'error': err or 'audio response too short', 'ledger': entry})
-        f = outdir / f'{r[0]}-{r[1]}.mp3'
-        f.write_bytes(raw)
-        tpath = f.with_suffix('.json')
-        transcribe(f, tpath, args.whisper_model, args.device, args.compute_type)
-        tj = read_json(tpath)
-        words = transcript_words(tj)
-        rawtxt = tpath.with_suffix('.txt').read_text(encoding='utf-8', errors='replace')
-        p = passages[r[0]]
-        plines = p['text'].split('\n')
-        d = align_detail(plines, words, lock.get('language') or 'en')
-        dur = probe(f)['duration_s']
-        heard = strip_transcript_timestamps(rawtxt).strip()
-        sw = sum(count_words(x) for x in plines)
-        names = []
-        for t in pron['terms']:
-            if t['rx'].search(strip_tags(p['text'])):
-                tt = tokens_of(t['term'])
-                names.append({'term': t['term'], 'sent_as': t['say'] if v['pronunciation'] else t['term'],
-                              'heard_as_written': all(x in d['heard'] for x in tt),
-                              'nearest_heard': max(d['heard'], key=lambda h: difflib.SequenceMatcher(None, tt[0], h).ratio(),
-                                                   default=None)})
-        report['runs'][f'{r[0]}|{r[1]}'] = {
-            'file': str(f), 'moment': p['moment'], 'variant': v, 'characters_sent': chars[r],
-            'credits_billed': (entry or {}).get('delta'), 'duration_s': dur,
-            'wpm_while_speaking': wpm_from_transcript_raw(rawtxt), 'wpm_overall': round(sw / (dur / 60)) if dur else None,
-            'pause_profile': pause_profile(words), 'alignment_match_ratio': round(d['ratio'], 3),
-            'lines_not_heard': [i + 1 for i, tt in enumerate(d['tok_time']) if tt and not any(tt)],
-            'tags_maybe_read_aloud': tags_heard(body['text'], heard), 'names': names, 'heard_text': heard[:600],
-            'measured_delivery': measure_file_delivery(f, tpath), 'recorded_at': now()}
+    lockf = outdir / 'trial.lock'
+    held = read_json(lockf) if lockf.is_file() else {}
+    if held and _pid_running(held.get('pid')):
+        error('Another narration-trial is recording this trial (trial.lock): trials run one at a time.',
+              {'lock': str(lockf), 'held_by': held})
+    lockf.write_text(json.dumps({'pid': os.getpid(), 'at': now()}), encoding='utf-8')
+    try:
+        if not (outdir / 'plan.json').is_file() or read_json(outdir / 'plan.json') != plan:
+            write_json(outdir / 'plan.json', plan)
+        trial_budget_check(rd, budget, plan['id'], write=True)
+        report = {'trial': plan['id'], 'video': n, 'treatment': treatment_info,
+                  'voice_lock': {'file': str(rd / '60-voice' / 'voice-lock.json') if vf.get('legacy')
+                                 else str(voice_lock_path(rd, n)), 'legacy': vf.get('legacy'),
+                                 'voice_id': vf.get('voice_id'), 'model_id': vf.get('model_id'),
+                                 'settings': vf.get('settings')},
+                  'budget': summary['budget'], 'questions': summary['questions'], 'runs': recorded,
+                  'started_at': report.get('started_at') or now(), 'sessions': (report.get('sessions') or []) + [now()]}
         write_json(outdir / 'report.json', report)
-    report['finished_at'] = now()
-    write_json(outdir / 'report.json', report)
-    md = [f'# Trial {plan["id"]}: what to listen to', '',
-          'The numbers are measurements, not verdicts: they cannot say which take sounds more natural, warmer or more '
-          'alive. Listen to each pair in order and note what you hear.', '']
-    for q in questions:
-        md += [f'## {q["id"]}: {q["asks"]}', f'Only {", ".join(q["varies"])} changes between these takes.', '',
-               '| take | file | wpm speaking / overall | pitch range st | loudness contrast dB | longest pause s | heard all lines | tags read aloud |',
-               '|---|---|---|---|---|---|---|---|']
-        for a, b in q['compare']:
-            x = report['runs'].get(f'{a}|{b}') or {}
-            md_ = x.get('measured_delivery') or {}
-            md.append(f'| {a}-{b} | {x.get("file")} | {x.get("wpm_while_speaking")} / {x.get("wpm_overall")} | '
-                      f'{md_.get("pitch_range_st")} | {md_.get("loudness_contrast_db")} | '
-                      f'{(x.get("pause_profile") or {}).get("longest_pause_s")} | '
-                      f'{"yes" if not x.get("lines_not_heard") else "no: " + str(x.get("lines_not_heard"))} | '
-                      f'{", ".join(x.get("tags_maybe_read_aloud") or []) or "none"} |')
-        md += ['', 'For your ears only: does the narrator sound like a person telling this story (the treatment\'s '
-                   'narrator), natural or performed, warm or flat, clear or rushed, and are the names right?', '']
-    (outdir / 'listen.md').write_text('\n'.join(md) + '\n', encoding='utf-8')
-    emit({'ok': True, 'mode': 'recorded', **summary, 'report': str(outdir / 'report.json'),
-          'listen': str(outdir / 'listen.md'),
-          'credits_billed': sum((x.get('credits_billed') or 0) for x in report['runs'].values()),
-          'next': 'Give the user listen.md and the files; record their impressions next to the measurements. Decide '
-                  'the voice lock (voice-pick) from both, never from the numbers alone.'})
+        language = lock.get('language') or 'en'
+        # A take recorded but not yet measured (a session that stopped between the two) is measured, never re-sent.
+        for r in runs:
+            x = recorded.get(rkey(r)) or {}
+            if done(r) and not x.get('measured'):
+                trial_measure(x, passages[r[0]], [{**t, 'sent_as': t['say'] if variants[r[1]]['pronunciation'] else
+                                                   t['term']} for t in pron['terms']], language, args)
+                write_json(outdir / 'report.json', report)
+        stop = None
+        for r in todo:
+            v = variants[r[1]]
+            body = bodies[r]
+            rates = model_rates(rd, key, v['model_id'], max_age_h=0)        # the price, read again before each request
+            per = rates['credits_per_character']
+            max_cr = math.ceil((chars[r] + ctx[r]) * per)
+            spent, open_ = budget_spent(rd, budget['id'])
+            audio, entry = None, None
+            for o in [o for o in open_ if o.get('request_sha256') == fps[r]]:
+                audio, entry = recover_from_history(rd, key, o, body, v['voice_id'])
+                if audio:
+                    break
+            if audio is None:
+                if spent + max_cr > budget['max_credits']:
+                    stop = {'run': f'{r[0]}-{r[1]}', 'why': 'budget', 'spent': spent, 'this_request_at_most': max_cr,
+                            'max_credits': budget['max_credits']}
+                    break
+                need = math.ceil(max_cr * args.credit_safety_factor) + int(args.keep_credits or 0)
+                raw, err, entry = eleven_paid_post(
+                    rd, key, path_of(v), body, 'trial',
+                    {'video': n, 'trial': plan['id'], 'run': f'{r[0]}-{r[1]}', 'model_id': v['model_id'],
+                     'voice_id': v['voice_id'], 'budget': budget['id'], 'request_sha256': fps[r],
+                     'credits_per_character': per}, require=need, max_credits=max_cr)
+                if entry is None:
+                    stop = {'run': f'{r[0]}-{r[1]}', 'why': 'balance', 'error': err, 'needed': need}
+                    break
+                if err or not raw or len(raw) < 1024:
+                    stop = {'run': f'{r[0]}-{r[1]}', 'why': 'request_failed', 'error': err or 'audio response too short',
+                            'ledger': entry}
+                    break
+                audio = raw
+            f = outdir / f'{r[0]}-{r[1]}.mp3'
+            f.write_bytes(audio)
+            terms = [{**t, 'sent_as': t['say'] if v['pronunciation'] else t['term']} for t in pron['terms']]
+            applied = [{k: t.get(k) for k in ('term', 'say', 'how', 'confidence', 'source')} for t in pron['terms']
+                       if v['pronunciation'] and t['rx'].search(strip_tags(passages[r[0]]['text']))]
+            rec = {'run': f'{r[0]}-{r[1]}', 'file': str(f), 'request_sha256': fps[r],
+                   'sent_text_sha256': hashlib.sha256(body['text'].encode('utf-8')).hexdigest(),
+                   'sent': {'endpoint': path_of(v), **{k: body.get(k) for k in ('text', 'previous_text', 'next_text',
+                                                                                 'model_id', 'voice_settings',
+                                                                                 'language_code')}},
+                   'tags': [m.group(0) for m in TAG_RE.finditer(body['text'])], 'pronunciation_applied': applied,
+                   'variant': v, 'moment': passages[r[0]]['moment'], 'lines': passages[r[0]].get('lines_label'),
+                   'intended_delivery': passages[r[0]]['intended_delivery'], 'treatment': treatment_info,
+                   'cost': {'max_credits': max_cr, 'credits_per_character': per, 'characters_text': chars[r],
+                            'characters_context': ctx[r],
+                            'character_cost_header': (entry or {}).get('character_cost_header'),
+                            'balance_drop': (entry or {}).get('delta'),
+                            'credits_billed': (entry or {}).get('credits_billed'),
+                            'recovered_from_history': (entry or {}).get('phase') == 'recovered'},
+                   'ledger_attempt': (entry or {}).get('attempt_id'), 'recorded_at': now(), 'measured': False}
+            recorded[rkey(r)] = rec
+            write_json(outdir / 'report.json', report)
+            trial_measure(rec, passages[r[0]], terms, language, args)
+            write_json(outdir / 'report.json', report)
+        all_done = all(done(r) for r in runs)
+        if all_done:
+            report['finished_at'] = now()
+        write_json(outdir / 'report.json', report)
+        listening = trial_listening_set(outdir, plan, questions, report, passages, variants)
+    finally:
+        try:
+            lockf.unlink()
+        except OSError:
+            pass
+    spent, open_ = budget_spent(rd, budget['id'])
+    res = {'ok': stop is None, 'mode': 'recorded', **summary, 'report': str(outdir / 'report.json'), **listening,
+           'credits_billed_this_trial': sum(((x.get('cost') or {}).get('credits_billed') or 0)
+                                            for x in report['runs'].values()),
+           'budget_status': {'spent': spent, 'left': budget['max_credits'] - spent, 'interrupted_requests': len(open_)},
+           'all_recorded': all_done, 'stopped': stop,
+           'next': 'Give the user listening/ (blind) and, after their notes, answer-key.md; record their impressions '
+                   'next to the measurements. Decide the voice lock (voice-pick) from both, never from the numbers alone.'}
+    if stop:
+        emit({**res, 'error': 'Stopped before ' + stop['run'] + ': ' + stop['why'] + '. Nothing more was sent; the takes '
+                              'already recorded are kept (re-run the same command to continue).'}, 2)
+    emit(res)
 
 
 def parse_voice_settings(raw, model_id):
@@ -5265,8 +5702,10 @@ def main():
     p = sub.add_parser('narration-trial', help='A controlled calibration trial: a few passages under a few voice '
                        'set-ups, each question changing one thing; priced first, recorded only with --execute')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
-    p.add_argument('--plan', required=True, help='The trial plan JSON: passages, variants, runs, questions')
+    p.add_argument('--plan', required=True, help='The trial plan JSON: passages, variants, runs, questions, budget')
     p.add_argument('--execute', action='store_true')
+    p.add_argument('--takes', default='', help="Record only these runs this time (e.g. P2-A), in the plan's order; "
+                   'the rest wait for a later call')
     p.add_argument('--check-balance', action='store_true', help='Dry run with the live balance and the model\'s '
                    'credits per character (free calls)')
     p.add_argument('--credit-safety-factor', type=float, default=1.15)
