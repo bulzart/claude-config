@@ -1,9 +1,11 @@
 """Smoke tests for the isolated static-only command. No paid API calls."""
 from __future__ import annotations
+import argparse
 import hashlib
 import json
 import importlib.util
 import io
+import os
 from unittest import mock
 from pathlib import Path
 import subprocess
@@ -224,6 +226,10 @@ class StaticStudioTests(unittest.TestCase):
             {'start_s':i*120,'end_s':(i+1)*120,'beat_id':f'B{i+1:02}',
              'purpose':'support the story with new visual information'} for i in range(5)]})
         self.assertIn('audio_gate_failed',cli('timeline-check','--run',self.run,'--video',1,expected=2)['issues'])
+        # A cut that follows a beat the plan doesn't have is caught, not silently accepted.
+        tl=json.loads((tdir/'timeline.json').read_text()); tl['visual_segments'][0]['beat_id']='B99'
+        save(tdir/'timeline.json',tl)
+        self.assertIn('visual_1_beat_not_in_beat_map',cli('timeline-check','--run',self.run,'--video',1,expected=2)['issues'])
         # A two-second export must not pass the 600s Standard.
         short=self.home/'references/video_1.mp4'
         res=cli('export-check','--run',self.run,'--video',1,'--file',short,expected=2)
@@ -402,7 +408,12 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('direction_changed_since_lock',cli('plan-check','--run',self.run,'--video',1,expected=2)['issues'])
         cli('direction-lock','--run',self.run,'--video',1,expected=2)          # a change needs --revise
         cli('direction-lock','--run',self.run,'--video',1,'--revise','progression sharpened after the cold read')
-        self.assertTrue(cli('plan-check','--run',self.run,'--video',1)['ready'])
+        hour_ago=json.loads((vd/'direction-lock.json').read_text())
+        old=__import__('datetime').datetime.fromisoformat(hour_ago['locked_at']).timestamp()-3600
+        os.utime(vd/'beat-map.json',(old,old))     # beat directions written for the earlier treatment
+        ok=cli('plan-check','--run',self.run,'--video',1)
+        self.assertTrue(ok['ready'])
+        self.assertTrue(any('beat-map.json was last written before' in w for w in ok['warnings']))   # shown, not silent
         d['treatments'][0]['narrator']+=' Now much louder.'
         save(vd/'direction.json',d)                                            # treatments changed after their blind read
         r=cli('direction-lock','--run',self.run,'--video',1,'--revise','narrator changed',expected=2)
@@ -460,6 +471,7 @@ class StaticStudioTests(unittest.TestCase):
         res=cli('shot-check','--run',self.run,'--video',1,expected=2)
         self.assertIn('shot_S2_missing_new_thing',res['issues'])
         self.assertIn('beat_B05_has_no_shot',res['issues'])
+        self.assertIn('shot_S4_lines_outside_beat_B04',res['issues'])   # S4 runs on into B05's lines
         self.assertTrue(any('nearly the same' in w for w in res['warnings']))
         self.assertTrue(any('in a row of the same composition' in w for w in res['warnings']))
 
@@ -481,6 +493,70 @@ class StaticStudioTests(unittest.TestCase):
         self.assertIn('L005',s['number_dense_lines'])
         self.assertEqual(s['long_sentences'][0]['line'],'L006')
         self.assertNotIn('repeated_sentence_shapes',core.writing_signals(lines,'de'))   # English heuristics stay English
+
+    def test_narration_measure_reports_delivery_per_beat(self):
+        vd=self.write_plan()
+        lines=[{'id':f'L{i:03}','text':f'Line {i} tells the viewer something new about the road ahead tonight.'} for i in range(1,11)]
+        save(vd/'script.json',{'language':'en','pace_wpm':145,'lines':lines})
+        direction={'narrative_job':'deliver','visual_intent':'map','sound_direction':'bed','narration_direction':'curious'}
+        save(vd/'beat-map.json',{'target_length_s':600,'beats':[
+            {'id':'B01','start_s':0,'end_s':300,'line_start':1,'line_end':5,'experience':'oriented','pace':'brisk',**direction},
+            {'id':'B02','start_s':300,'end_s':600,'line_start':6,'line_end':10,'experience':'uneasy','pace':'slow',**direction}]})
+        d=self.run/'50-audio/video-01'; (d/'whisper').mkdir(parents=True)
+        t,segs=0.3,[]
+        for row in lines:          # what Whisper would have heard: the script's own words, in time
+            s0,ws=t,[]
+            for w in row['text'].split():
+                ws.append({'start_s':round(t,3),'end_s':round(t+0.22,3),'text':' '+w}); t+=0.27
+            segs.append({'start_s':round(s0,3),'end_s':round(t-0.05,3),'text':row['text'],'words':ws}); t+=0.4
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','sine=frequency=150:sample_rate=16000',
+                        '-t',f'{t+0.3:.2f}','-c:a','libmp3lame','-b:a','32k',str(d/'part-001.mp3')],check=True)
+        save(d/'whisper/part-001.json',{'status':'transcribed','model':'medium','segments':segs})   # cached: no Whisper run
+        (d/'whisper/part-001.txt').write_text('\n'.join(f"[{s['start_s']:.1f}-{s['end_s']:.1f}] {s['text']}" for s in segs),encoding='utf-8')
+        text='\n'.join(r['text'] for r in lines)
+        save(d/'manifest.json',{'model_id':'eleven_v4','voice_id':'TESTID','language':'en','status':'complete',
+                                'finished_parts':[1],'voice_settings':{},
+                                'chunks':[{'id':1,'line_start':1,'line_end':10,'file':'part-001.mp3','characters':len(text),
+                                           'text_sha256':hashlib.sha256(text.encode('utf-8')).hexdigest()}]})
+        out=cli('narration-measure','--run',self.run,'--video',1)
+        self.assertEqual(out['alignment_match_ratio'],1.0)
+        self.assertTrue(out['delivery'] and 'file' in out['delivery'],out.get('delivery'))
+        dj=json.loads((d/'delivery.json').read_text())
+        self.assertEqual(set(dj['spans']),{'B01','B02'})                    # the voice, beat by beat...
+        self.assertEqual(dj['spans']['B02']['intended']['pace'],'slow')     # ...next to what each beat asked for
+        self.assertEqual(set(dj['references']),{'V001','V002'})             # ...and to the locked references
+
+    def test_voice_candidates_measure_each_preview_without_listening(self):
+        core=self.load_core()
+        self.write_plan(lock=False)
+        preview=self.home/'preview.mp3'
+        subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','lavfi','-i','sine=frequency=140:sample_rate=16000',
+                        '-t','3','-c:a','libmp3lame','-b:a','32k',str(preview)],check=True)
+
+        class Reply(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def fake_transcribe(path, outpath, *a):
+            words=[{'start_s':round(0.1+0.33*i,2),'end_s':round(0.38+0.33*i,2),'text':f' w{i}'} for i in range(8)]
+            save(Path(outpath),{'status':'transcribed','model':'medium','segments':[{'start_s':0.1,'end_s':2.8,'text':'w','words':words}]})
+            Path(outpath).with_suffix('.txt').write_text('[0.1-2.8] w0 w1 w2 w3 w4 w5 w6 w7',encoding='utf-8')
+            return 1
+        args=argparse.Namespace(run=str(self.run),video=1,count=1,search='',design=0,design_description='',design_text='',
+                                whisper_model='medium',device='cpu',compute_type='int8')
+        voices={'voices':[{'voice_id':'voice123456789','name':'Test','labels':{'accent':'american'},
+                           'preview_url':'https://example.invalid/preview.mp3'}]}
+        with mock.patch.dict(os.environ,{'ELEVEN_API_KEY':'test-not-a-real-key','ELEVENLABS_API_KEY':''}), \
+                mock.patch.object(core,'elevenlabs_request',return_value=voices), \
+                mock.patch.object(core.urllib.request,'urlopen',side_effect=lambda *a,**k: Reply(preview.read_bytes())), \
+                mock.patch.object(core,'transcribe',side_effect=fake_transcribe), \
+                mock.patch('sys.stdout',new_callable=io.StringIO) as printed:
+            core.cmd_voice_candidates(args)
+        res=json.loads(printed.getvalue())
+        measured=res['candidates'][0]['measured_delivery']
+        self.assertNotIn('error',measured)
+        self.assertIn('pitch_range_st',measured)
+        self.assertIn('cannot hear',res['guidance'])
 
     def test_legacy_not_imported_and_clone_keeps_only_analysis(self):
         clone=cli('clone','--from-run',self.run,'--workspace',self.home/'runs')['run']

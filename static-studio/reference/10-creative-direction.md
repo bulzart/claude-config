@@ -85,7 +85,7 @@ Playfulness can carry a hard subject (never at the expense of the people who suf
 exciting one.
 
 Optional, when it helps and the user allows: free local stills (FLUX) for the sample moments, and a short paid voice
-probe (05) to hear a narrator. Neither is required; both are evidence, not decisions.
+probe (05) for the user to hear a narrator and the agents to measure it. Neither is required; both are evidence, not decisions.
 
 ## 3. Choosing without scores
 

@@ -28,7 +28,7 @@ Steps 5 and 6 are only for what the edit has (moves, joins, fonts, text entrance
 
 ## The images file (for `capcut-motion` and `capcut-transitions`)
 
-Write it from the shot plan, for example as `RUN/70-edit/video-NN/capcut-images.json`:
+Write it from the shot plan, for example as `RUN/70-edit/video-NN/capcut-images.json`. Each still's move and transition carry out the locked treatment's visual language and its beat's `pace` and `visual_intent` (beat map): a held breath may stay still, a quickening beat may cut without a transition, a reveal may push in. Choose per moment, never one setting for the whole film:
 
 ```json
 {"fps": 30, "images": [

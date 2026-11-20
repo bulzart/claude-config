@@ -795,6 +795,21 @@ def direction_facts(rd, video):
     return out
 
 
+def written_before_lock(rd, video, path):
+    """The direction lock's time when `path` was last written before it (a beat map, shot plan or style bible made
+    for an earlier treatment, or before there was one), else None. Shown as a warning, never a block: the agent
+    looks again; re-saving without looking is the agent's own dishonesty, not something a script can see."""
+    lock = read_json(video_dir(rd, video) / 'direction-lock.json')
+    path = Path(path)
+    if not lock.get('locked_at') or not path.is_file():
+        return None
+    try:
+        locked = dt.datetime.fromisoformat(str(lock['locked_at'])).timestamp()
+    except ValueError:
+        return None
+    return str(lock['locked_at']) if path.stat().st_mtime < locked else None
+
+
 def review_records(vd, kind):
     """Recorded rounds of one review kind, oldest first: (record, answers) with record['_round']."""
     out = []
@@ -871,7 +886,7 @@ def review_state(vd, kind, current_sha, snapshot=None):
                 open_ids.append(fid)
                 continue
             if kind == 'script' and str(a.get('action')).strip().lower() == 'revised' and later is not None:
-                ls = expand_lines(a.get('lines'), list(old))
+                ls = expand_lines(a.get('lines'), list(dict.fromkeys(list(old) + list(later))))
                 if not ls:
                     open_ids.append(fid)
                 elif all(old.get(x) == later.get(x) for x in ls):
@@ -894,7 +909,7 @@ def review_state(vd, kind, current_sha, snapshot=None):
             asked = set()
             for a in ans.values():
                 if isinstance(a, dict) and str(a.get('action')).strip().lower() == 'revised':
-                    asked |= set(expand_lines(a.get('lines'), list(old)) or [])
+                    asked |= set(expand_lines(a.get('lines'), list(dict.fromkeys(list(old) + list(snapshot)))) or [])
             loose = [k for k in changed if k not in asked]
             if loose:
                 total = sum(n_words(strip_tags(t)) for t in snapshot.values()) or 1
@@ -1026,7 +1041,14 @@ def shot_facts(rd, video):
     if not plan:
         out['issues'].append('shot_plan_missing')
         return out
-    beats = [str(b.get('id')) for b in read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or []]
+    beat_rows = read_json(video_dir(rd, n) / 'beat-map.json').get('beats') or []
+    beats = [str(b.get('id')) for b in beat_rows]
+    spans = {}
+    for b in beat_rows:
+        try:
+            spans[str(b.get('id'))] = (int(b['line_start']), int(b['line_end']))
+        except (KeyError, TypeError, ValueError):
+            pass
     lines = read_json(video_dir(rd, n) / 'script.json').get('lines') or []
     order = [str(r.get('id') or f'L{i + 1:03d}') for i, r in enumerate(lines)]
     shots = plan.get('shots') or []
@@ -1046,7 +1068,20 @@ def shot_facts(rd, video):
         b = order.index(str(s.get('line_end'))) + 1 if str(s.get('line_end')) in order else None
         if a != cursor + 1 or b is None or b < a:
             out['issues'].append(f'shot_{sid}_lines_not_contiguous')
+        span = spans.get(str(s.get('beat_id')))
+        if span and a and b and (a < span[0] or b > span[1]):
+            # The picture would play over another beat's words while following this beat's direction.
+            out['issues'].append(f'shot_{sid}_lines_outside_beat_{s.get("beat_id")}')
         cursor = b or cursor
+    stale = written_before_lock(rd, n, rd / '60-visuals' / f'video-{n:02d}' / 'shot-plan.json')
+    if stale:
+        out['warnings'].append('the shot plan was last written before the creative direction\'s latest lock (' + stale +
+                               '): check its pictures against the locked treatment and beat directions')
+    style = rd / '60-visuals' / f'video-{n:02d}' / 'style-bible.md'
+    stale = written_before_lock(rd, n, style) if style.is_file() else None
+    if stale:
+        out['warnings'].append('the style bible was last written before the creative direction\'s latest lock (' + stale +
+                               '): check it against the locked treatment\'s visual language')
     if order and cursor != len(order):
         out['issues'].append('shots_do_not_cover_every_line')
     for b in beats:
@@ -1247,6 +1282,14 @@ def plan_facts(rd, video):
             issues.append('direction_changed_since_lock')
         if dlock.get('late_reason'):
             warnings.append('creative direction was locked after the script existed: ' + str(dlock['late_reason']))
+        # Made for an earlier treatment (or before there was one): not blocked, but never silently carried over.
+        for name, what in (('beat-map.json', "every beat's direction"), ('script.json', 'its voice and structure')):
+            if name == 'script.json' and not dlock.get('history'):
+                continue        # a first lock after the script is the late lock, already shown above
+            stale = written_before_lock(rd, video, vd / name)
+            if stale:
+                warnings.append(f'{name} was last written before the creative direction\'s latest lock ({stale}): '
+                                f'check {what} against the locked treatment')
     snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
     script_review = review_state(vd, 'script', script_hash(lines), snapshot) if lines else \
         {'issues': ['script_review_missing'], 'warnings': [], 'rounds': 0}
@@ -1946,6 +1989,7 @@ def cmd_timeline_check(args):
     seq = track.get('visual_segments') or []
     if not seq:
         issues.append('timeline_visual_segments_missing')
+    beat_ids = {str(b.get('id')) for b in read_json(video_dir(rd, args.video) / 'beat-map.json').get('beats') or []}
     cursor = 0.0
     for i, clip in enumerate(seq, 1):
         try:
@@ -1954,6 +1998,8 @@ def cmd_timeline_check(args):
                 issues.append(f'visual_gap_overlap_{i}')
             if not str(clip.get('beat_id') or '').strip():
                 issues.append(f'visual_{i}_missing_beat_link')
+            elif beat_ids and str(clip.get('beat_id')).strip() not in beat_ids:
+                issues.append(f'visual_{i}_beat_not_in_beat_map')   # the cut would follow a beat that isn't planned
             if not str(clip.get('purpose') or '').strip():
                 issues.append(f'visual_{i}_missing_story_purpose')
             cursor = b
@@ -2658,8 +2704,7 @@ def cmd_review_packet(args):
     title = blue.get('title') or (blue.get('title_options') or ['(untitled)'])[0]
     if isinstance(title, dict):
         title = title.get('title') or json.dumps(title, ensure_ascii=False)
-    folder = vd / 'reviews'
-    folder.mkdir(parents=True, exist_ok=True)
+    folder = vd / 'reviews'          # created only when a packet is actually written: a refusal leaves no trace
     out_path = folder / f'{kind}-r{rnd}-findings.json'
     meta = {'kind': kind, 'round': rnd, 'video': n, 'created_at': now(), 'findings_file': str(out_path)}
     if kind == 'script':
@@ -2733,6 +2778,7 @@ def cmd_review_packet(args):
                      f'{round(statistics.median(wp)) if wp else "-"} | {round(statistics.median(pr), 1) if pr else "-"} |\n')
         meta.update({'subject_sha256': fp, 'file': str(f)})
     packet = folder / f'packet-{kind}-r{rnd}.md'
+    folder.mkdir(parents=True, exist_ok=True)
     packet.write_text(text, encoding='utf-8')
     write_json(folder / f'packet-{kind}-r{rnd}.json', meta)
     emit({'ok': True, 'kind': kind, 'round': rnd, 'packet': str(packet), 'findings_file': str(out_path),
