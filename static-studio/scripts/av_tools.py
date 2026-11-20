@@ -47,7 +47,9 @@ SHEET_COLS, SHEET_ROWS = 4, 3            # 12 tiles: one sheet = 60 s
 TILE_W, TILE_H, CAPTION_H = 320, 180, 82
 GREY_W, GREY_H = 64, 36
 CUT_DIFF = 8.0              # mean absolute grey difference (0-255) of two consecutive sampled frames: a hard change
-MOTION_DIFF = 0.6           # above the still-frame noise floor (an unchanged still measures 0-0.1 on the references)
+MOTION_DIFF = 0.6           # above the still-frame noise floor (an unchanged still measures 0-0.1 on the references),
+MOTION_STEP_S = 0.2         # per 0.2 s of time (tuned at 5 fps): a move is a speed, so at another rate the per-pair
+                            # threshold is scaled to the interval (3.0 between frames 1 s apart), never under it
 TRANSITION_MAX_S = 1.6      # a run of changes lasting up to this long that lands on another picture: a transition
                             # (8 frame pairs at 5 fps, 2 at 1 fps: the same 1.6 s at any sampling rate)
 CUT_SERIES_PATH = 1.4       # a run whose every pair is a hard, recolouring change, and whose changes add up to this many
@@ -71,13 +73,19 @@ def transition_pairs(step_s):
     return max(1, int(round(TRANSITION_MAX_S / step_s))) if step_s and step_s > 0 else 8
 
 
+def motion_diff(step_s):
+    """MOTION_DIFF for frames this far apart: the same speed of change, never below the 5 fps value."""
+    return round(MOTION_DIFF * max(1.0, (step_s or MOTION_STEP_S) / MOTION_STEP_S), 3)
+
+
 def thresholds(fps=None):
-    out = {'window_s': WINDOW_S, 'cut_grey_diff': CUT_DIFF, 'motion_grey_diff': MOTION_DIFF,
+    out = {'window_s': WINDOW_S, 'cut_grey_diff': CUT_DIFF, 'motion_grey_diff_per_0_2s': MOTION_DIFF,
            'transition_max_s': TRANSITION_MAX_S, 'cut_series_path': CUT_SERIES_PATH, 'hist_cut_inside_motion': HIST_CUT,
            'same_picture_hash_bits': DUP_BITS, 'pitch_tracker': f'librosa.pyin {F0_MIN:g}-{F0_MAX:g} Hz',
            'pause_s': PAUSE_MIN_S, 'gap_level_min_gap_s': GAP_MIN_S}
     if fps:
-        out.update({'sampled_fps': fps, 'transition_max_frame_pairs': transition_pairs(1.0 / fps)})
+        out.update({'sampled_fps': fps, 'transition_max_frame_pairs': transition_pairs(1.0 / fps),
+                    'motion_grey_diff_per_frame_pair': motion_diff(1.0 / fps)})
     return out
 
 
@@ -226,6 +234,7 @@ def segment_shots(feats):
     gaps = sorted(feats[j]['t'] - feats[j - 1]['t'] for j in range(1, n))
     step = gaps[len(gaps) // 2] if gaps else 1.0
     max_pairs = transition_pairs(step)
+    moving = motion_diff(step)
 
     def cut_series(lo, hi, net):
         # every pair a hard change that recolours, and the changes add up to far more than the net change: a quick
@@ -234,11 +243,11 @@ def segment_shots(feats):
                 and sum(d[lo:hi + 1]) >= CUT_SERIES_PATH * net)
     k = 1
     while k < n:
-        if d[k] <= MOTION_DIFF:
+        if d[k] <= moving:
             k += 1
             continue
         a = k
-        while k < n and d[k] > MOTION_DIFF:
+        while k < n and d[k] > moving:
             k += 1
         b = k - 1                      # pairs a..b change; frame a-1 is before the run, frame b after it
         length = b - a + 1
