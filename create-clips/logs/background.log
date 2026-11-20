@@ -16028,3 +16028,35 @@ operable )
 [C0726] stage audio: ok in 0.3 s (361 windows)
 [C0726] stage sheets: ok in 17.4 s (240 frames, 8 sheets, leftovers 0)
 [report] 20261120-040246-kaicenat C0331: done in 207.9 s, $0.033
+[report] 20261120-040606-xqc C0220: done in 183.9 s, $0.031
+[C0726] stage transcript: ok in 78.1 s (304 words, medium on cpu, 78.1 s, language en (forced))
+[C0726] stage digest: ok in 0.0 s (181 seconds)
+[C0726] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 17.4, 'transcript': 78.1, 'digest': 0.0}
+[watch] kaicenat/20261120-040246-kaicenat C0726 (live): done in 101.2 s {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 17.4, 'transcript': 78.1, 'digest': 0.0} free 658.46 GB
+[report] 20261120-040246-kaicenat C0404: done in 14.3 s, $0.003
+[report] 20261120-040246-kaicenat C0403: done in 28.0 s, $0.005
+[report] 20261120-040246-kaicenat C0402: done in 29.9 s, $0.005
+[C0727] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\kaicenat\20261120-040246-kaicenat\chunk-0727.mp4
+[C0727] stage move: ok in 0.0 s
+[C0727] stage probe: ok in 0.1 s (180.004 s 1920x1080 60.0 fps)
+[C0727] stage audio: ok in 0.3 s (360 windows)
+[C0727] stage sheets: ok in 10.7 s (240 frames, 8 sheets, leftovers 0)
+[report] 20261120-040246-kaicenat C0401: done in 27.4 s, $0.005
+[report] 20261120-040246-kaicenat C0425: done in 164.7 s, $0.029
+[report] 20261120-040246-kaicenat C0400: done in 33.7 s, $0.006
+[C0727] stage transcript: ok in 54.4 s (198 words, medium on cpu, 54.4 s, language en (forced))
+[C0727] stage digest: ok in 0.0 s (181 seconds)
+[C0727] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 10.7, 'transcript': 54.4, 'digest': 0.0}
+[watch] kaicenat/20261120-040246-kaicenat C0727 (live): done in 69.2 s {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 10.7, 'transcript': 54.4, 'digest': 0.0} free 658.73 GB
+[report] 20261120-040246-kaicenat C0399: done in 60.6 s, $0.010
+[C0728] ingest start (force=False, skip_whisper=False) src=C:\Users\Bulzart\Downloads\twitch-chunks\kaicenat\20261120-040246-kaicenat\chunk-0728.mp4
+[C0728] stage move: ok in 0.0 s
+[C0728] stage probe: ok in 0.1 s (180.016 s 1920x1080 60.0 fps)
+[C0728] stage audio: ok in 0.3 s (361 windows)
+[C0728] stage sheets: ok in 12.1 s (240 frames, 8 sheets, leftovers 0)
+[C0728] stage transcript: ok in 26.0 s (78 words, medium on cpu, 26.0 s, language en (forced))
+[C0728] stage digest: ok in 0.0 s (181 seconds)
+[C0728] ingest end: done {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 12.1, 'transcript': 26.0, 'digest': 0.0}
+[watch] kaicenat/20261120-040246-kaicenat C0728 (live): done in 42.1 s {'move': 0.0, 'probe': 0.1, 'audio': 0.3, 'sheets': 12.1, 'transcript': 26.0, 'digest': 0.0} free 658.55 GB
+[report] 20261120-040606-xqc C0221: done in 130.5 s, $0.024
+[report] 20261120-040159-caseoh_ C0195: done in 246.0 s, $0.040
