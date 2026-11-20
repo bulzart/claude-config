@@ -19,3 +19,5 @@ For CELSIUS videos (assets in `Documents/celsius/celsius_assets`), never use the
 - Related: [[neurogum-package-forms]], [[capcut-text-preset-locked]].
 
 **Can top colour (user 2026-10-30, AWL run 20261029-231113):** "celsius can/tins have black color at the top not gray/silver" — the lid and rim of every Celsius can are BLACK. Never write "silver lid/top" (video 01's prompt did and the can came back with a silver top); write "black lid" wherever the top is named. Already generated videos are not redone for it.
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): rotate Cherry Cola, Peach Vibe, Watermelon; Orange already overused; can lid/rim is BLACK never silver (user 2026-10-30)

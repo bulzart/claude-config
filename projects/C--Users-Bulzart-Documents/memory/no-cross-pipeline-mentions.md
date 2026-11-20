@@ -24,3 +24,5 @@ pipeline's files, which wastes context and mixes two libraries that are meant to
 - This covers my own new text; old history in a log may stay only if it does not point at the other pipeline's files.
 
 Related: [[atg-pipeline]], [[atg-skills-architecture]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-18 (twice): one pipeline's docs, skills, README and prompts never describe or point to the other unless a file/folder path needs it

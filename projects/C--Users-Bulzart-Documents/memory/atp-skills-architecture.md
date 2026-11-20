@@ -26,3 +26,5 @@ What exists now (full description: `~/.claude/analyze-then-pick/README.md`):
 `python ~/.claude/analyze-then-pick/scripts/docs_tool.py index <doc>.md` (if sections changed) and `... check` (must be 0 errors), update the build prompt ([[atp-build-prompt-sync]]),
 and commit. Never recreate a monolithic command, never Read a whole reference/guide or `models/index.json` in a run (a PreToolUse hook `hooks/atp_read_guard.py` now refuses whole-file reads of atp.py, models/index.json, the catalog snapshot and backups; a SessionStart compact|resume hook `hooks/atp_resume_note.py` names the unfinished run and its `next_skill`; [[loupe-web-app]]), never leave backups in tracked folders ([[claude-folder-git-versioning]]).
 Only a maintenance edit reads a whole document (`docs_tool.py join`).
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): /analyze-then-pick = ~13 KB router + 19 atp-* phase skills + sectioned references; edit the owning skill/section, run docs_tool index + check

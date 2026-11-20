@@ -38,3 +38,5 @@ Related: [[avast-https-scanning-breaks-tls]], [[analyze-with-loupe-command]]
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): ACE-Step 1.5 + FLUX 3 Klein int8 (ComfyUI) in Documents\AI; always under tools\memguard.py (ACE web UI froze Windows twice); WDDM charges GPU memory as commit; page file fixed 12-16 GB; Smart App Control OFF
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): ACE-Step 1.5 + FLUX 3 Klein int8 (ComfyUI) in Documents\AI; always under tools\memguard.py (ACE web UI froze Windows twice); page file fixed 12-16 GB; Smart App Control OFF
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): ACE-Step 1.5 + FLUX 3 Klein int8 in Documents\AI, always under tools\memguard.py (froze Windows twice); page file 12-16 GB; Smart App Control OFF

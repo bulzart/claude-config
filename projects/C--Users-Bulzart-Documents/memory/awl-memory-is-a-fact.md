@@ -18,3 +18,5 @@ User 2026-11-07, after I built the run's new voice (sample 2) with `AWL_TTS_ENGI
 **Update 2026-11-09 (evening):** ACE-Step's int8 only after the guard stopped a full-precision try of that bed, never from the forecast alone (the user's yes to "always try full precision first, and use int8 only after the guard stops it"); `T music make --quantization` reports the try it follows (`int8_after`). Klein's `--reserve-vram` stays the agent's call from the free commit.
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-07/08: a local model's memory headroom (ACE-Step, Klein) never gates a job: try it, report a real guard stop, never another engine; Klein --reserve-vram allowed
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-07/08: a local model's memory headroom never gates a job: try it, report a real guard stop, never another engine

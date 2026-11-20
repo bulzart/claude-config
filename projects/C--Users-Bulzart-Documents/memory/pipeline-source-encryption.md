@@ -31,3 +31,5 @@ Separately, `git fetch`/`push` to `origin` (`bulzart/claude-config`) was failing
 Other PCs: [[pipeline-other-pc-handoff]].
 
 Related: [[claude-folder-git-versioning]], [[create-clips-pipeline]], [[create-static-command]], [[whisper-strictly-medium]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): source locked at rest by the user 2026-11-15, key from CC/CS_SOURCE_KEY; audit fixed native host + tests; Chrome needs a full restart for the key; cs.py start ~2 s; old plaintext in git history accepted

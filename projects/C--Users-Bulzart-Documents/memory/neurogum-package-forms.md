@@ -45,3 +45,5 @@ The older product sheet design (light-blue pouch, dark-blue caffeine band on eve
   - Never send a whole real photo: a gaming mouse pad with its logo bled into the scene.
 
 Related: [[capcut-text-preset-locked]], [[celsius-no-orange-flavor]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): closed cartons/pouch only, never a big box or an opened carton; vary forms; Peppermint + Spearmint only; size authority = per-folder product_properties.txt

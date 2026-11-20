@@ -19,3 +19,5 @@ folder; the videos were copied back from Downloads at 23:39. Who deleted them is
 edit-source and examples folders of loupe runs that are not done or abandoned and changed in the last 7 days (it also refuses copies, redirections and encoder outputs landing there, and a delete of a folder that holds one); the toolkit's writes retry an atomic replace a reader held, because the hook reads state.json on every call. The assets folders stay open, because the user curates them
 ([[neurogum-package-forms]]). If the user asks for such a change while a run is open, say it is refused and that they can make it themselves.
 Related: [[analyze-with-loupe-command]], [[awl-effort-level]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): item 34: never move/delete reference, example or edit-source files, copy instead; hooks/awl_input_guard.py refuses it for open runs

@@ -21,3 +21,5 @@ Built as /analyze-with-loupe contract item 38 (router `commands/analyze-with-lou
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: router item 38; every run keeps RUN/todo.md and every agent its video todo.md (one writer, [ ] [~] [x] [-], a Next: line), read first on resume, mirrored in task tools when present; the SessionStart note prints it; a record, never a gate
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: router item 38 (/create-clips: rule 16, added 2026-11-14); every run keeps RUN/todo.md and every agent its video todo.md, read first on resume; the resume hook names /create-static and /create-clips runs too; a record, never a gate
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: every run keeps RUN/todo.md (+ each agent's own), read first on resume; /create-clips rule 16, the resume hook covers all five commands; never a gate

@@ -21,3 +21,5 @@ User 2026-11-14: "is the whisper processor supposed to know which language is th
 Related: [[create-clips-pipeline]], [[create-clips-caption-masks]], [[scripts-gather-agents-decide]], [[pc-pipeline-tooling]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: streams may be German/Spanish; whisper.language was forced en, now auto (unsure -> en fallback, first sure detection on a stream chunk locked per run, ads never lock); transcribe never translate; agents add that language's profanity to mask_terms
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: German/Spanish streams; whisper.language auto, first sure detection locked per run, ads never lock; transcribe never translate

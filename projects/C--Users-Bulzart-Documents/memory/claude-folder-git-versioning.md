@@ -23,3 +23,5 @@ Since 2026-10-05, `C:\Users\Bulzart\.claude` is a local git repo (branch main; s
 - **Never leave backup or scratch copies inside the tracked folders** (`*.before-*`, `.bak`, temp files next to a command, reference or script): the Stop hook commits them. On 2026-10-12 thirteen `.before-*` copies made by patch helpers were committed into `analyze-then-generate/` and `commands/` and had to be removed; keep backups in the session scratchpad (git history is the backup).
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): local repo + auto-commit hooks; allow-list .gitignore; add new user folders to it; never leave backup copies in tracked folders; origin bulzart/claude-config private again (checked 2026-11-14), push branch pc on the user's say
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): local repo + auto-commit hooks, allow-list .gitignore (add new folders); origin bulzart/claude-config private, push branch pc only on the user's say

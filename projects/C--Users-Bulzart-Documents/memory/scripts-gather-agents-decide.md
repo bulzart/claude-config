@@ -24,3 +24,5 @@ The user, 2026-10-12, mid-run of the Viral-Browser test: "make sure that the pyt
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): in EVERY mode scripts only gather/extract/record/tabulate/calculate; never evaluate, label, rank, gate or decide (user 2026-10-12); the agent carries every judgement and records why
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): in EVERY mode scripts only gather/extract/record/tabulate/calculate; never evaluate, label, rank, gate or decide (user 2026-10-12); the agent decides and records why
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-12, EVERY mode: scripts only gather/extract/record/tabulate/calculate, never evaluate, label, rank, gate or decide; the agent decides

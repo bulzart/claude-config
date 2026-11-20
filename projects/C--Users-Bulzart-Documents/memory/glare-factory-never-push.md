@@ -13,3 +13,5 @@ Never push anything to `~/glare-factory` (team repo `harperdogpound/ai-video-pip
 **Why:** user, 2026-10-20: "never push into glare-factory ever without explicitly asking, keep that in mind". It is a shared team repo, reviewed by leads.
 
 **How to apply:** this applies even when the team constitution's chores suggest a PR, or after a local edit there. Ask first, every time; an earlier yes does not carry over. Also written into `~/glare-work/CLAUDE.local.md`, so Glare sessions (which do not load this memory) obey it. Related: [[glare-pipelines-scoped-install]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-20: no push/branch push/PR to harperdogpound/ai-video-pipelines unless the user explicitly asks at that moment; pulling is fine

@@ -24,3 +24,5 @@ Related: [[neurogum-package-forms]], [[atp-deliverables-one-folder]].
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-14: a faded Neurogum pack is wrong (never "muted" in a product clause); previews are 720x1280 burns, captions T size 50 / pitch 0.033; Seedance person swap needs the full-look photo
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-14: a faded Neurogum pack is wrong (never "muted" in a product clause); previews are 720x1280 burns; Seedance person swap needs the full-look photo
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-14: faded Neurogum pack is wrong (never \"muted\"); previews are 720x1280 burns; Seedance person swap needs the full-look photo

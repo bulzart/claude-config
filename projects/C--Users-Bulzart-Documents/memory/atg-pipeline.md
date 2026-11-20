@@ -49,3 +49,5 @@ is hard to meet at standard depth. Regression suites: `analyze-then-generate/tes
 spread, without the references' dominant niche deciding the answer.
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): /analyze-then-generate: Edit + Analyze (Recreate, Create, Viral-Browser: research, 3 winning products, blueprints + reference packs; generates nothing); scripts gather, agents decide; build prompt Documents/prompts/analyze-then-generate.txt
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): /analyze-then-generate: Edit + Analyze (Recreate, Create, Viral-Browser); generates nothing; scripts gather, agents decide; build prompt Documents/prompts/analyze-then-generate.txt

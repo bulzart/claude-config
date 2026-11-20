@@ -21,3 +21,5 @@ User 2026-11-15: "we should use live comments count too ... count comments every
 **How to apply:** change the method in `reference/chat-heat.md` and the numbers in the tool/config, run `tests/test_heat.py` + `test_docs.py`; never let a script label or rank bursts; only 4 short recordings calibrate it (no long stream yet): watch the first real run's burst counts. Related: [[create-clips-pipeline]], [[create-clips-long-videos-whole-watches]], [[create-clips-shorts-level]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-15: chat counted every 4 s (`T heat`, rule 17) is a clue, never a verdict: each burst gets one look, heat adds at most a point to a moment the rest already rates, never picks or drops one; game mode much less (`chat_peak`, half a point)
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-15: chat counted every 4 s (T heat, rule 17) = a clue: one look per burst, <= 1 point on a moment the rest rates; game mode much less

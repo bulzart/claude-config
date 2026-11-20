@@ -15,3 +15,5 @@ User 2026-11-13: "no need to do T image brand --cover for logos ever" (after vid
 **How to apply:** static §5 "Real things look like themselves", §8, `awl-static-images` 5b and production-agents §2s say a mark the model drew stays as drawn; `--cover` is not used for logos or brand marks and a mark is not a flag or redraw reason. Only a mark that reads as a religious symbol (a cross) stays static §11's. Video 05 i38 was put back to its a1. Related: [[awl-real-things-look-like-themselves]], [[awl-static-no-subtitle-text]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: a logo/brand mark the image model drew is left as drawn: no `T image brand --cover`, no flag, no redraw; only a cross-like symbol stays §11's
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: a logo the image model drew is left as drawn (no --cover, no flag, no redraw); only a cross-like symbol stays §11's

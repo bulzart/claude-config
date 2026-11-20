@@ -20,3 +20,5 @@ User 2026-11-14 (create-clips session): "words such as fuck, faggot, pedo, shit,
 - Real data (run 20261114-010840-ishowspeed): L01-v3's captions held 7 such words unmasked (sh*t x4, b*tch, f*ck, f*cking) and S03 one; they were built before the rule. A rebuild as a new project was offered to the user, not done unasked.
 
 Related: [[create-clips-caption-look]], [[create-clips-blur-only-gore-distress]]
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: profanity and slurs ALWAYS typed with one asterisk (f*ck, f*ggot); list = create-clips/data/caption-masks.json + mask_terms; audio never edited

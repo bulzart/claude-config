@@ -36,3 +36,5 @@ pipeline ([[no-cross-pipeline-mentions]]); update the build prompt after any pip
 folders ([[claude-folder-git-versioning]]). Related: [[atg-pipeline]], [[loupe-web-app]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): 2026-10-18: ~20 KB router + 25 atg-* skills (6 atg-vb-*) + sectioned references; hooks and Loupe cover both pipelines; edit the owning skill/section, run docs_tool index + check
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): 2026-10-18: ~20 KB router + 25 atg-* skills + sectioned references; edit the owning skill/section, run docs_tool index + check

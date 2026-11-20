@@ -16,3 +16,5 @@ Found 2026-11-02 while patching Loupe and /analyze-with-loupe files from Python 
 - Repos differ: `~/.claude/loupe` has `core.autocrlf=true` (working files mostly CRLF, git stores LF, a few files LF on disk), `~/.claude` (claude-config) has it false and its router and skills must stay LF (t01 checks). Preserve each file's own endings.
 
 **How to apply:** before any scripted edit, read the file's endings with Python bytes, keep them, and never put an escaped backslash in a shell-quoted script. Related: [[loupe-web-app]], [[claude-folder-git-versioning]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): a doubled backslash reaches scripts as one (use chr(92)); check CRLF/LF with Python bytes, never bash grep; write_bytes, not write_text

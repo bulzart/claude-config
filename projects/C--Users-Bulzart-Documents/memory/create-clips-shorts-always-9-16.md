@@ -21,3 +21,5 @@ User 2026-11-14 (mid-turn, while the shorts level was being added): "also shorts
 Related: [[create-clips-shorts-level]], [[create-clips-shorts-edit-freedom]], [[scripts-gather-agents-decide]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: a short is ALWAYS 9:16 (1080x1920); edl-check warns and capcut-build lists a problem otherwise (small code guard in cc_edit.py); long videos stay 16:9
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: a short is ALWAYS 9:16 (1080x1920); edl-check warns, capcut-build lists a problem; long videos stay 16:9

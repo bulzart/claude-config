@@ -17,3 +17,5 @@ The pipeline entities (QC agent, Loupe keeper, request writer) identify what wen
 **How to apply:** ATP/AWL already do this: `awl-qc` attempt block → `awl-write-request` full rewrite ("never name a past miss's wrong behaviour") → `awl-inputs` reuses recorded media ids. On the user's yes (2026-10-20) it is explicit in AWL: a "Never use the flawed take" bullet in the Never lists of `awl-write-request` and `awl-inputs`, plus the build prompt `Documents/prompts/analyze-with-loupe.txt` (after the videos_without_audio rule). ATP/ATG were not edited (read-only). See [[atp-reasoning-over-rule-lists]], [[atp-sample-hints-delicate]].
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-20: a regeneration sends the ORIGINAL sample video + a fully rewritten prompt (error designed out positively); never the flawed take, a one-frame fix or an "edit this / don't do X" prompt
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-20: a regeneration sends the ORIGINAL sample video + a fully rewritten prompt (error designed out); never the flawed take

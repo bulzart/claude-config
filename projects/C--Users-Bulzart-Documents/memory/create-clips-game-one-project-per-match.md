@@ -22,3 +22,5 @@ User 2026-11-14, right after the streamer-mode long-video rule ([[create-clips-l
 Related: [[create-clips-pipeline]], [[scripts-gather-agents-decide]], [[create-clips-ads-recorded-agents-judge]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14, GAME MODE: a recording with 2, 3+ different matches gives every game of every match its own video and CapCut project, matches never mixed; new match = teams change on the scoreboard; lengths unchanged
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14, game mode: each game of each different match = its own video and CapCut project; matches never mixed

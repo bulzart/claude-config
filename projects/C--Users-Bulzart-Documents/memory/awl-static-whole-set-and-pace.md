@@ -21,3 +21,5 @@ User 2026-11-08: "the narration speed and style should mirror the reference's da
 **Update 2026-11-09:** no tempo or any other edit after generation any more (the user: "do not edit the delivered generation without any exception"); Eleven v4 has no speed setting, so the set's pace is reached by the voice, the words and the audio tags, measured first by `T tts probe`; see [[awl-elevenlabs-v4-no-edit]].
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-08/09: references read as ONE set, data drives; the plan comes mostly from the run's niche references; every narration aimed at the judge's point (wpm_articulation), through the request only
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-08/09: references read as ONE set, data drives; the plan comes mostly from the run's niche references; narration aimed at the judge's point

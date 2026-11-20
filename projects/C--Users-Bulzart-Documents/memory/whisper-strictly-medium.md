@@ -24,3 +24,5 @@ User 2026-11-14: "btw we use whisper medium for all our audio processing right, 
 Related: [[pc-pipeline-tooling]], [[create-clips-spoken-language]], [[atp-audio-ingest-question]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: medium for ALL audio processing in every pipeline; no smaller default, fallback or speed-up advice; a medium that cannot load is an error (ATP/ATG were on small until today); now in /create-static item 24 and /create-clips rule 15
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: medium for ALL audio in every pipeline, no smaller default/fallback; a medium that cannot load is an error

@@ -12,3 +12,5 @@ On 2026-10-12 the Higgsfield balance fell far more than this session's agents an
 
 **Why:** two earlier "unexplained" drops (about 220 credits, then about 2100) had the same cause: another session using the same account.
 **How to apply:** before calling a balance drop unexplained, run `transactions` and `ListAgents`; compare timestamps with this session's own ledger (`T ledger`) and report only the difference as "other sessions on the account". Do not stop or message the other session without the user asking. See [[atg-pipeline]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): balance drops can come from other sessions (Viral-browser/ATG); check `transactions` + ListAgents before calling it unexplained

@@ -19,3 +19,5 @@ Do **not** pass `--pace-wpm` manually or use a default estimate.
 **Niche WPM reference (measured with timestamp-stripped transcripts):**
 - pov-military-narrative: 178 (V017=178, V018=179)
 - Other niches will auto-compute when their `length` command runs.
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): before pace_wpm in script.json, compute word_count/duration for each niche cluster's refs; default estimates are dangerously low (143 vs actual 198 for pov-military-narrative)

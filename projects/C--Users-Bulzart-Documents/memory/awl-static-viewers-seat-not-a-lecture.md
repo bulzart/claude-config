@@ -20,3 +20,5 @@ User 2026-11-19 (Static, video 01 of run 20261116-133350-references): asked for 
 - create-static (its own copy, cs-* skills) was NOT updated; apply only if the user asks.
 
 Related: [[awl-static-no-subtitle-text]], [[awl-reasoning-over-rule-lists]]
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-19: honest 1-10 by a cold reader, short tail after the payoff, one person to follow, dense stretches carried by pictures; read ALL of static before editing; in static §4b/§13

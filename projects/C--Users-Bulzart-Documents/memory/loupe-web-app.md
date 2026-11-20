@@ -56,3 +56,5 @@ On 2026-10-14 the user asked for a web app that (1) saves every Higgsfield gener
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): ~/.claude/loupe at 127.0.0.1:8787: flag record, miss samples, read-only QC keeper (Opus 5.5), API keys, 3 hooks; own repo bulzart/loupe: commit AND push every change; after every edit update Documents/prompts/loupe.txt
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): ~/.claude/loupe at 127.0.0.1:8787: flag record, miss samples, read-only QC keeper (Opus 5.5), 3 hooks; own repo bulzart/loupe: commit AND push every change; update Documents/prompts/loupe.txt
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): ~/.claude/loupe at 127.0.0.1:8787: flag record, miss samples, read-only QC keeper, 3 hooks; own repo bulzart/loupe: commit AND push every change; update prompts/loupe.txt

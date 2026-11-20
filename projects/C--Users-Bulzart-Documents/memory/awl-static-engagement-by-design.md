@@ -20,3 +20,5 @@ User 2026-11-13: "to achieve making the viewer hooked throughout the whole video
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: hook + attach the viewer the whole way, not just facts, never lie; thought through at the START as general suggestions (never a checklist: niches differ), not a late rescue pass; the pipeline works out what fits while it executes; order (11-14): references' patterns -> context -> agents' free brainstorm -> plan -> execute, never the references only as late checks
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: hook + attach the viewer the whole way, never lie; thought through at the START as general suggestions (never a checklist), not a late rescue pass
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: hook + keep the viewer all the way, never lie; thought through at the START as suggestions, not a checklist or late rescue

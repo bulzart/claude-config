@@ -13,3 +13,5 @@ The user's 9 points (2026-11-19/20): no fixed niche guides, automatic niche disc
 **Why:** a session spent mostly on pace/length mechanics let the run skip its creative strategy, explore "five approaches" that were five battles told the same way, and write run-specific niche figures (WPM per niche, "this niche pauses <2 s") into the general manuals.
 
 **How to apply:** when changing static-studio manuals or code, keep per-run measurements out of the general rules (label them as one run's data). Never add per-niche rules. Keep mechanical gates from outweighing creative ones: plan-check requires editorial-review "Creative strategy" and "Self-audit" sections, and there is one cold read of the bare script before the first paid narration. Related: [[create-video-command]], [[feedback-elevenlabs-v4-only]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): 9-point shift never drifts; no per-niche rules/figures in manuals; plan-check needs Creative strategy + Self-audit; one cold read before paid narration

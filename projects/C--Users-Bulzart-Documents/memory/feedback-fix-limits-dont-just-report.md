@@ -15,3 +15,5 @@ User, 2026-11-14, after I had reported a cross-block limit of the context idea a
 **How to apply:** when I notice a gap while explaining or reviewing my own work, test it against real data (as I did on the ishowspeed run), fix it in the lightest way that works, and say what I fixed; keep a question for the user only when the choice is genuinely theirs (a preference, not a bug). Keep fixes proportionate: no new machinery for a small gap, no limits or quotas where they asked for none ([[create-clips-context-keeping-light]]).
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: when I find a gap in my own work, evaluate it on real data and fix it (lightest way that works); ask only when the choice is the user's
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: a gap in my own work: evaluate on real data and fix it lightly; ask only when the choice is the user's

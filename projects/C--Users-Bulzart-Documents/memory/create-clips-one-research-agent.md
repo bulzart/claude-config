@@ -28,3 +28,5 @@ Related: [[create-clips-pipeline]], [[scripts-gather-agents-decide]], [[awl-neve
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: both modes spawn ONE brief research agent (the 4-agent wave cost 14 min / 930k tokens), everything bulk/parallel, same results faster; plus a captions/no-captions option picked at the start; DONE and tested 2026-11-13 (CapCut closed)
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: both modes spawn ONE brief research agent (4 agents cost 14 min / 930k tokens), everything bulk/parallel; plus a captions option at the start
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: one brief research agent (4 cost 14 min / 930k tokens), everything bulk/parallel; captions option at the start

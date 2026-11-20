@@ -13,3 +13,5 @@ User, 2026-10-28, mid /analyze-with-loupe run (Celsius Recreate), when asked whe
 **Why:** the user wants the run to proceed autonomously; questions stall it while they are away.
 
 **How to apply:** once a run is under way, make every decision yourself (re-runs of flagged videos, anchor/spot choices, fallbacks, planner conflicts, cost-bounded retries) by the pipeline's own rules and the order of authority, write the reason in the brief/plan, and tell the user afterwards in one line. Only the start-of-run setup questions the command itself requires (mode, model, inputs, counts) were answered before this; do not add new mid-run questions. Related: [[show-references-before-upload]] (no upload approval stop), [[analyze-with-loupe-command]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-28: "you decide for every turn, dont ask me anything"; pipeline runs make every mid-run choice autonomously and report it after

@@ -21,3 +21,5 @@ folders (A1, A3, the spec revised at A4), then make the videos. A clone (`/analy
 `/analyze-with-loupe` start are the only new run folders. Related: [[analyze-with-loupe-command]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-07: more videos and new references continue the session's run (ids kept, analyse only the new ones); only a clone or a new /analyze-with-loupe start makes a run folder
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-07: more videos and new references continue the session's run (analyse only the new ones); only a clone or a new start makes a run folder

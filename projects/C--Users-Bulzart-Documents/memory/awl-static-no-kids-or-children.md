@@ -15,3 +15,5 @@ No kids or children in a video's stills, thumbnail or characters, and no charact
 **How to apply:** when writing a character sheet or a prompt, state age and adult features in words (jaw, chin, stubble, thicker brows, adult proportions, head about one seventh of the height) and view the anchor for "reads as a grown person" before any still uses it; no child, grandchild, student-age or teen figures in scripts or image plans; a still that shows a child-like figure is a failure like static §11b. Mention in the static plan/images skills' check when they are next edited, on the user's yes. See [[awl-static-no-indecent-gory-distress]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: every person an adult, never a child or a child-looking figure (round chubby face); state adult features in the sheet and view the anchor
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: every person an adult, never a child or child-looking figure; state adult features in the sheet, view the anchor

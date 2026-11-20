@@ -19,3 +19,5 @@ User, 2026-10-20, in steps: only /analyze-then-pick is edited, not /analyze-then
 **Built 2026-10-20** by this session: see [[analyze-with-loupe-command]] for where it lives, what it keeps and what it changes; the report is `Documents/prompts/coupling-report-2026-10-20.md`.
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-20: the Fable-prompt agent generates this command with all improvements; /analyze-then-pick and /analyze-then-generate stay read-only; prompt = Documents/prompts/pipeline-coupling-fable.txt
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-20: the Fable-prompt agent generates this command; /analyze-then-pick and /analyze-then-generate stay read-only

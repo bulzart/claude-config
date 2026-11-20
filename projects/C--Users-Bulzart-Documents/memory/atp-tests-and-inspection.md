@@ -10,3 +10,5 @@ Since 2026-10-20 the `/analyze-then-pick` library carries `tests/` (t01 structur
 **Why:** the live Recreate run of 2026-10-19/20 showed the failures these remove (a bare run name refused, PDF stubs, a cut inside a flash found by hand, an hour lost behind the keeper lock, prompts a few characters under the cap that nothing measured) and the library had no tests at all.
 
 **How to apply:** run `scripts/check_all.py` (or `tests/run_all.py`) after every change to the library, the skills or the router; a new toolkit command comes with a check in t02 that it returns facts and no verdict; the Loupe coupling of the toolkit is tested in t03 without the real keeper. Related: [[atp-skills-architecture]], [[loupe-web-app]], [[scripts-gather-agents-decide]], [[atp-audio-ingest-question]], [[engineering-pass-edits-atp-only]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): 2026-10-20: tests/run_all.py + scripts/check_all.py; gather-only status/doctor/lint-run/cost-report/seams; --run takes a bare name or a stamp prefix; PDFs via pypdf

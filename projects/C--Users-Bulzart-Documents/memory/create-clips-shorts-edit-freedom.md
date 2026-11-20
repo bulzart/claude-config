@@ -19,3 +19,5 @@ Not asked, left as is: long videos keep "a few zooms, a handful of sounds". Wher
 Related: [[create-clips-caption-look]], [[scripts-gather-agents-decide]], [[create-clips-pipeline]].
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14, streamer shorts: zoom, sound effects and words per caption are the agents' call (no count or spacing); used where there is room and it fits, never forced
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: zoom, sound effects, words per caption are the agents' call, where there is room, never forced

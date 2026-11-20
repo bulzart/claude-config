@@ -17,3 +17,5 @@ On 2026-10-15 the user said the prompt-crafting and QC examples ("product should
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): prompt crafting + QC reason from the product's details and the scene; rules are conditions with triggers, few examples, §6 order of authority; keeper matches by product details (user 2026-10-15)
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-15: prompt crafting + QC reason from the product's details and the scene; rules are conditions with triggers, few examples; the keeper matches by product details
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-15: prompt crafting + QC reason from the product's details and the scene; rules = conditions with triggers, few examples

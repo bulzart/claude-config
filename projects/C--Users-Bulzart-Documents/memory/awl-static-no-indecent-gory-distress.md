@@ -21,3 +21,5 @@ The user, 2026-11-09, on video 03's still 67 (a man under a cool shower, bare be
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-09: no nudity (implied included), gore, injury, extreme distress, as strict as religion (static §11b); clothes named top to bottom; nobody as if dead
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-09: no nudity (implied included), gore, injury, extreme distress, as strict as religion (static section 11b); nobody as if dead
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-09: no nudity (implied too), gore, injury, extreme distress, as strict as religion (§11b); nobody as if dead

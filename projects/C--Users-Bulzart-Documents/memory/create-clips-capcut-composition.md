@@ -22,3 +22,5 @@ Not verified: how CapCut draws the result (no tool can); the scratch store of th
 Related: [[create-clips-caption-look]], [[create-clips-one-research-agent]], [[create-clips-pipeline]], [[loupe-web-app]]
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: every build through `cc.py capcut-build` (compose + finish + read-back, transitions and word-box texts inside the single capcut compile), 25 s -> 8 s on the BLAST test video, identical to the old route; store lock + font cache; MCP route fallback only
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-13: every build through cc.py capcut-build (one compile incl. captions), 25 s -> 8 s; MCP route fallback only

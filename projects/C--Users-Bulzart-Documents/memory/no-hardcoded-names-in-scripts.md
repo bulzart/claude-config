@@ -13,3 +13,5 @@ No niche, category, product or brand names are written into pipeline scripts (Py
 **Why:** the pipelines are client- and niche-agnostic; the folder and the data decide what a niche is, and judging which labels mean the same thing is the agents' job, not a script's. A hardcoded taxonomy makes the pipeline wrong for every project outside it and hides a judgement inside code.
 
 **How to apply:** when a control needs to compare names (niches, categories, product types), let the AI agents decide the equivalences from the data and record them as run data (the `T niches` vocabulary in `/analyze-then-generate`); the script only enforces consistency with what an agent recorded, refuses an unknown label, and warns about look-alikes. Heuristics in scripts may use only language-level function words, never domain words. Check any new script or config for domain words before finishing. Related: [[atg-pipeline]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): niche/category/product/brand names are data the AI agents collect and decide (a script takes them as parameters), never lists inside scripts or configs

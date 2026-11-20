@@ -19,3 +19,5 @@ User 2026-11-19, after the /create-video CapCut toolkit was verified: "okay and 
 **9.8 against the pipelines' output (checked 2026-11-19):** the create-clips builds of 2026-11-18 (made from a 9.7-marked template) carry 9.8's own save markers (`new_version` 193.0.0, `last_modified_platform` 9.8.0) and were saved within seconds of the app starting, and CapCut's export service ran afterwards, so 9.8 opens and saves that output; a 9.8-saved draft has the same keys as the 9.7 template. What is still not re-measured on 9.8: the transition/entrance catalogue (needs an export from CapCut itself, `capcut-check measure`), the keyframe behaviour, which options are Pro.
 
 **How to apply:** never run `unblock` unless the user asks; when CapCut-related behaviour looks off, check `capcut_autoupdate.py status` and remember the version is 9.8, the facts in older notes are 9.7. Related: [[pc-pipeline-tooling]], [[create-video-command]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-19: CapCut self-updated to 9.8.0.4213 (11-16); blocked via static-studio/maintenance/capcut_autoupdate.py; `unblock` only on the user's say

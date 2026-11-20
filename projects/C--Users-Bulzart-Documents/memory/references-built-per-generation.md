@@ -13,3 +13,5 @@ User 2026-10-22 (Celsius run 20261021-224049-21): "delete all the references tha
 **Why:** the user wants to inspect exactly which files each generation sent (original video, face crop, can view).
 
 **How to apply:** per generation (attempt aK, clip cK) a folder `RUN/55-references/video-NN/aK/` with `video1-original.mp4`, `image1-character-<C>-head.jpg`, `image2-product-<P>-front-padded.png` (no placement preview since 2026-10-28: [[awl-original-only-reference]]); uploaded fresh, never reusing an earlier generation's media ids. Only image/video reference files are ever deleted, never .md/.json data or analysis frames. Still show the paths before an unapproved upload ([[show-references-before-upload]]). Done for this run only; not yet written into the pipeline (offer it). Related: [[awl-original-only-reference]], [[always-full-paths]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-22: each generation builds and uploads its own reference files in RUN/55-references/video-NN/aK/ (by role) so the user sees what goes in

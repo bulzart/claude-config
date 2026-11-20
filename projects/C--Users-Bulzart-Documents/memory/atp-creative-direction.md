@@ -34,3 +34,5 @@ user wants sharp, trend-aware, goal-driven concepts in every mode.
 **How to apply:** when the user reports bland output, missing hooks, copied trends or wrong
 approach, extend `creative-direction.md` (not the command). The creative layer never overrides the
 hard rules. Related: [[atp-anomaly-catalog]], [[atp-build-prompt-sync]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): reference/creative-direction.md: roles, goal/audience/trend read, craft sheet + copy test (Create takes craft, never subject), scored concept seeds, sharpness gate

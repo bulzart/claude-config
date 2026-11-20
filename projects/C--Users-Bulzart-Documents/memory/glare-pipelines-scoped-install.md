@@ -18,3 +18,5 @@ Glare video pipelines: clone at `~/glare-factory`, installed 2026-10-20 **scoped
 **How to apply:** never put Glare files in `~/.claude`. Repo is macOS-only: doctor's `macOS` + `brew` checks always FAIL on this PC (accepted by the user). Added for it: gh (user scope), whisper-cli at `%LOCALAPPDATA%\Programs\whisper-cpp` (appended to user PATH), model `~/.cache/whisper/ggml-base.en.bin`, `python3.exe` copy in Python312. Doctor needs `PYTHONUTF8=1`. Personal skills win name clashes, so Glare sessions use the user's hyperframes*/media-use versions.
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): 2026-10-20: ~/glare-factory clone, rules+skills only in ~/glare-work; update = git pull + bash ~/glare-work/glare-setup.sh; NEVER the repo setup.sh (clobbers ~/.claude)
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): 2026-10-20: ~/glare-factory clone, rules+skills only in ~/glare-work; update = git pull + bash ~/glare-work/glare-setup.sh; NEVER the repo setup.sh

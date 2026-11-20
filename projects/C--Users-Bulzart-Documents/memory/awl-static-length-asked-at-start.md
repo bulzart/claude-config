@@ -13,3 +13,5 @@ User 2026-11-12: in Static mode the user is asked for the videos' length way bef
 **Why:** it replaces the 2026-11-07 rule "the user will not pick any length"; the user wants control of length per run (video 05 had to be redone to 15+ minutes after the agents chose a shorter one).
 
 **How to apply:** `awl-analyze-study` A5 "Then the length" (AskUserQuestion header "Length", after `T static lock --niche`, before the language call; `more <run>` asks it right after the count); stored in `state.json → static.length_plan`; static §2/§4/§10 and J1 read it; `target_length_s` = the user's number or standard. Docs only, no toolkit change. Related: [[awl-niche-family-and-approach]], [[awl-static-whole-set-and-pace]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-12: after the niche family is locked and before any planning, A5 asks the length: standard or the user's own; `static.length_plan`

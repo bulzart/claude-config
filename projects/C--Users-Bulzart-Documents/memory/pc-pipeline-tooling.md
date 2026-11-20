@@ -35,3 +35,5 @@ Related: [[local-ai-installs]], [[loupe-web-app]], [[analyze-with-loupe-command]
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): Python312 + whisper medium (av<19), real claude.exe first on PATH for the Loupe keeper, ffmpeg full build, capcut-cli 0.25 + CapCut 9.7 (no Pro), never `capcut lint --fix`; PowerShell, not Git Bash (forks fail)
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): Python312 + whisper medium (av<19), real claude.exe first on PATH, ffmpeg full build, capcut-cli 0.25 + CapCut 9.7 (no Pro), never `capcut lint --fix`; PowerShell, not Git Bash
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): Python312 + whisper medium (av<19), real claude.exe first on PATH, ffmpeg full, capcut-cli 0.25 (0.34 tested 11-19, not adopted) + CapCut 9.8 (no Pro, auto-update blocked); Git Bash fork fixed 2026-11-16 (Mandatory ASLR exceptions for Git's tools, admin once)

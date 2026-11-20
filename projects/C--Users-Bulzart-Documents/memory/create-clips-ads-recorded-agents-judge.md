@@ -24,3 +24,5 @@ What was built (extension `C:\Users\Bulzart\Documents\twitch-chunk-recorder`, cr
 Related: [[create-clips-pipeline]], [[scripts-gather-agents-decide]]
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: the recorder skips nothing (Twitch's ad segments = their own chunks, kind "ad"), scripts only pass the marker on, mining agents give a verdict per ad batch and the planner puts the ads in avoid.json; plus the streamer-mode Videos question (long only | long + shorts, `state.only`); ishowspeed lost 36% of the stream to 181 s ad gaps
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: nothing skipped, ads are chunks of kind "ad"; miners judge each batch, the planner puts ads in avoid.json

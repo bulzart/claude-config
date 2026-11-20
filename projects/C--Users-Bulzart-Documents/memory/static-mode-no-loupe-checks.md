@@ -15,3 +15,5 @@ User 2026-11-14, when the AWL test suite showed failures in its Loupe, hook-capt
 **How to apply:** when testing or syncing /create-static (or Static docs), skip `loupe` commands, `t03_loupe`, the Loupe-dependent hook checks and `loupe ensure`; its own suite is `python ~/.claude/create-static/scripts/check_all.py`. Do not report Loupe failures as findings unless the user asks. This does not change [[loupe-reload-before-generating]] or [[loupe-web-app]] for the generation pipelines that do use Loupe.
 
 Related: [[create-static-command]], [[whisper-strictly-medium]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-14: Static (/create-static) does not use Loupe, so never run or chase Loupe tests, hooks or checks for it

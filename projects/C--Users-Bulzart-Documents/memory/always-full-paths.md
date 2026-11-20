@@ -13,3 +13,5 @@ When naming files to the user, always write the complete absolute path (e.g. `C:
 **Why:** user 2026-10-21: "give me always full paths not like this 10-media\V09\prepared\source-placeholder-layer.png".
 
 **How to apply:** every chat message, summary, wrap-up and report that points to a file or folder, in every pipeline and task; one path per file, copy-pasteable as is.
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-21: every file named to the user as a complete absolute path from the drive letter, never relative to a run folder

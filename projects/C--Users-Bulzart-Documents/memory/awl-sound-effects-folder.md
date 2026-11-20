@@ -10,3 +10,5 @@ The user (2026-11-12): "here is the sound effects folder C:\Users\Bulzart\Docume
 **Why:** the Static edit can place effects (static §5 "Effects"). **How to apply:** use only where the references' pattern or the story calls for it; for serious survival/safety videos pick neutral ones (whooshes at chapter dips, clock/timer at counted hours, a door, a riser at a reveal), never meme or death sounds. Related: [[awl-static-no-indecent-gory-distress]].
 
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-12: C:\Users\Bulzart\Documents\sound_effects (99 mp3s, mostly meme sounds) scanned into the run; neutral ones usable in edits, never meme/death sounds in serious videos
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-12: Documents\sound_effects (99 mp3s, mostly meme sounds) scanned into the run; neutral ones usable, never meme/death sounds in serious videos

@@ -30,3 +30,5 @@ entries) is gone; lessons are generalised where they land.
   not asked for that.
 - The old design (kept only as history): read the whole pipeline first, then the errors, then generalise each miss into a
   kind with a transfer test, never changing the architecture.
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-10-18: never run it or write it into docs, skills or prompts; lessons go into the owning section on the user's yes

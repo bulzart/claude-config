@@ -1,100 +1,100 @@
-- [Avast HTTPS scanning breaks TLS](avast-https-scanning-breaks-tls.md) — uv needs UV_SYSTEM_CERTS=1, Python truststore; keep hf_xet on; winget --source winget; breaks chunked replies (Higgsfield MCP) and local 127.0.0.1 HTTP
-- [Local AI installs + memory guard](local-ai-installs.md) — ACE-Step 1.5 + FLUX 3 Klein int8 in Documents\AI, always under tools\memguard.py (froze Windows twice); page file 12-16 GB; Smart App Control OFF
-- [This PC's pipeline tooling](pc-pipeline-tooling.md) — Python312 + whisper medium (av<19), real claude.exe first on PATH, ffmpeg full, capcut-cli 0.25 (0.34 tested 11-19, not adopted) + CapCut 9.8 (no Pro, auto-update blocked); Git Bash fork fixed 2026-11-16 (Mandatory ASLR exceptions for Git's tools, admin once)
-- [CapCut text preset locked](capcut-text-preset-locked.md) — /analyze-then-pick always uses the user's chosen preset (from 03_Oct_2026_v09); text always horizontally centred; never replace unasked
-- [~/.claude git versioning](claude-folder-git-versioning.md) — local repo + auto-commit hooks, allow-list .gitignore (add new folders); origin bulzart/claude-config private, push branch pc only on the user's say
-- [Neurogum package forms](neurogum-package-forms.md) — closed cartons/pouch only, never a big box or an opened carton; vary forms; Peppermint + Spearmint only; size authority = per-folder product_properties.txt
-- [Celsius: no Orange flavour, black can top](celsius-no-orange-flavor.md) — rotate Cherry Cola, Peach Vibe, Watermelon; Orange already overused; can lid/rim is BLACK never silver (user 2026-10-30)
-- [ATP anomaly catalog](atp-anomaly-catalog.md) — reference/anomaly-catalog.md: counts, openings, permanence, solidity, blend test, size reckoning; wired into ledger, prompts, QC; new anomalies added on the user's say
-- [ATP can opening = two hands](atp-can-opening-two-hands.md) — user 2026-10-16: one hand holds the can, the other's fingertip hooks and pulls the tab in visible contact; never one-finger pops; not yet in the references
-- [ATP build prompt sync](atp-build-prompt-sync.md) — Documents/prompts/analyze-then-pick.txt is the pipeline's build prompt; update it after every pipeline change (CRLF, .bak first)
-- [ATP skills architecture](atp-skills-architecture.md) — /analyze-then-pick = ~13 KB router + 19 atp-* phase skills + sectioned references; edit the owning skill/section, run docs_tool index + check
-- [ATP creative direction](atp-creative-direction.md) — reference/creative-direction.md: roles, goal/audience/trend read, craft sheet + copy test (Create takes craft, never subject), scored concept seeds, sharpness gate
-- [ATP brand guardrails](atp-brand-guardrails.md) — reference/brand-guardrails.md: client rules → per-reference audit; core hit dismisses, peripheral hit is edited (counts, de-brand never blur, face swap, captions)
-- [ATP caught errors: RETIRED](atp-caught-errors.md) — 2026-10-13: no error ledger (context rot); lessons live generalised in the references; rule written into the owning section on the user's yes
-- [/update-from-errors: OBSOLETE](update-from-errors-command.md) — user 2026-10-18: never run it or write it into docs, skills or prompts; lessons go into the owning section on the user's yes
-- [No cross-pipeline mentions](no-cross-pipeline-mentions.md) — user 2026-10-18 (twice): one pipeline's docs, skills, README and prompts never describe or point to the other unless a file/folder path needs it
+- [Avast HTTPS scanning breaks TLS](avast-https-scanning-breaks-tls.md) — uv needs UV_SYSTEM_CERTS=1, Python truststore; keep hf_xet on; winget --source winget; breaks chunked replies and local HTTP
+- [Local AI installs + memory guard](local-ai-installs.md) — ACE-Step 1.5 + FLUX 3 Klein int8 in Documents\AI, always under tools\memguard.py; page file 12-16 GB; Smart App Control OFF
+- [This PC's pipeline tooling](pc-pipeline-tooling.md) — Python312, whisper medium (av<19), real claude.exe first on PATH, ffmpeg full, capcut-cli 0.25, CapCut 9.8 (no Pro); Git Bash fork fixed 11-16
+- [CapCut text preset locked](capcut-text-preset-locked.md) — /analyze-then-pick always uses the user's preset (03_Oct_2026_v09), text centred; never replace unasked
+- [~/.claude git versioning](claude-folder-git-versioning.md) — local repo + auto-commit hooks, allow-list .gitignore; origin bulzart/claude-config private, push pc only on the user's say
+- [Neurogum package forms](neurogum-package-forms.md) — closed cartons/pouch only, vary forms; Peppermint + Spearmint only; sizes from product_properties.txt
+- [Celsius: no Orange flavour, black can top](celsius-no-orange-flavor.md) — rotate Cherry Cola, Peach Vibe, Watermelon (no Orange); can lid/rim BLACK, never silver
+- [ATP anomaly catalog](atp-anomaly-catalog.md) — reference/anomaly-catalog.md: counts, openings, permanence, solidity, blend, size; additions on the user's say
+- [ATP can opening = two hands](atp-can-opening-two-hands.md) — user 2026-10-16: one hand holds the can, the other's fingertip pulls the tab in contact; not in the references yet
+- [ATP build prompt sync](atp-build-prompt-sync.md) — Documents/prompts/analyze-then-pick.txt: update after every pipeline change (CRLF, .bak first)
+- [ATP skills architecture](atp-skills-architecture.md) — ~13 KB router + 19 atp-* skills + sectioned references; edit the owning section, docs_tool index + check
+- [ATP creative direction](atp-creative-direction.md) — reference/creative-direction.md: roles, trend read, craft sheet + copy test, scored seeds, sharpness gate
+- [ATP brand guardrails](atp-brand-guardrails.md) — reference/brand-guardrails.md: client rules -> per-reference audit; core hit dismisses, peripheral hit edited
+- [ATP caught errors: RETIRED](atp-caught-errors.md) — 2026-10-13: no error ledger; lessons generalised into the owning section on the user's yes
+- [/update-from-errors: OBSOLETE](update-from-errors-command.md) — user 2026-10-18: never run it or write it into docs, skills or prompts
+- [No cross-pipeline mentions](no-cross-pipeline-mentions.md) — user 2026-10-18: one pipeline's docs/skills/prompts never describe or point to another (paths excepted)
 - [ATP deliverables folder](atp-deliverables-one-folder.md) — all finished videos of a run go in RUN/deliverables/ (clean + preview + README)
 - [ATP no emojis in text](atp-no-emojis-in-text.md) — strictly no emojis in any text layer or caption of a run's videos
 - [Kosovo e-commerce founder](user-kosovo-ecommerce-founder.md) — software engineer in Kosovo, Muslim; owned-inventory store, no goods via Kosovo, wants sourced official guidance
 - [E-commerce playbook doc](ecommerce-playbook-doc.md) — Claude Docs guide built 2026-10-10; key decisions and open questions
-- [ATG pipeline](atg-pipeline.md) — /analyze-then-generate: Edit + Analyze (Recreate, Create, Viral-Browser); generates nothing; scripts gather, agents decide; build prompt Documents/prompts/analyze-then-generate.txt
-- [ATG skills architecture](atg-skills-architecture.md) — 2026-10-18: ~20 KB router + 25 atg-* skills + sectioned references; edit the owning skill/section, run docs_tool index + check
-- [ATG QC fixes option](atg-qc-fixes-option.md) — user 2026-10-18, contract item 27: at the start the user picks ask (stop with a fix proposal) or auto (QC agents fix alone); state.json qc_fixes
-- [No hardcoded names in scripts](no-hardcoded-names-in-scripts.md) — niche/category/product/brand names are data the AI agents collect and decide (a script takes them as parameters), never lists inside scripts or configs
-- [Scripts gather, agents decide](scripts-gather-agents-decide.md) — user 2026-10-12, EVERY mode: scripts only gather/extract/record/tabulate/calculate, never evaluate, label, rank, gate or decide; the agent decides
-- [ATG photo links only](atg-photo-links-only.md) — Viral-Browser product photo references = image URL links, never downloaded copies (user 2026-10-12); visual flags need --looked-at; pack folder reference-C##-<name>/
-- [Higgsfield account shared](higgsfield-account-shared-balance.md) — balance drops can come from other sessions (Viral-browser/ATG); check `transactions` + ListAgents before calling it unexplained
-- [ATP caught flags](atp-caught-flags.md) — flags recorded in Loupe (`atp.py caught-flag add`; old html retired 2026-10-14); write-only during a run (context rot); only QC reads Loupe samples via `qc-consult`
-- [Loupe web app](loupe-web-app.md) — ~/.claude/loupe at 127.0.0.1:8787: flag record, miss samples, read-only QC keeper, 3 hooks; own repo bulzart/loupe: commit AND push every change; update prompts/loupe.txt
-- [Sample hints at the first request](atp-sample-hints-delicate.md) — user 2026-10-14: `atp.py plan-hints` at X2 gives sparse text-only hints; the writer applies at most 2, never as prompt text
-- [Reasoning over rule lists](atp-reasoning-over-rule-lists.md) — user 2026-10-15: prompt crafting + QC reason from the product's details and the scene; rules = conditions with triggers, few examples
-- [ATP no tool caption removal](atp-no-tool-caption-removal.md) — Analyze Mode never removes captions/names with tools; clean-plate lines + character-swap script (user 2026-10-13)
-- [ATP product colours + previews](atp-product-colours-and-preview.md) — user 2026-10-14: faded Neurogum pack is wrong (never \"muted\"); previews are 720x1280 burns; Seedance person swap needs the full-look photo
-- [ATP audio-ingest question](atp-audio-ingest-question.md) — 2026-10-20: atp-start asks once (Whisper | frames only); state.json audio_ingest is the only source; frames-only = 'audio not ingested'
-- [New command /analyze-with-loupe](analyze-with-loupe-new-command.md) — user 2026-10-20: the Fable-prompt agent generates this command; /analyze-then-pick and /analyze-then-generate stay read-only
-- [ATP tests and inspection](atp-tests-and-inspection.md) — 2026-10-20: tests/run_all.py + scripts/check_all.py; gather-only status/doctor/lint-run/cost-report/seams; --run takes a bare name or a stamp prefix; PDFs via pypdf
-- [/analyze-with-loupe command](analyze-with-loupe-command.md) — built 2026-10-20 from /analyze-then-pick (awl-* skills): QC fixes ask|auto|off; Free + Static sub-modes; push branch pc only on the user's say
-- [Glare pipelines scoped install](glare-pipelines-scoped-install.md) — 2026-10-20: ~/glare-factory clone, rules+skills only in ~/glare-work; update = git pull + bash ~/glare-work/glare-setup.sh; NEVER the repo setup.sh
-- [Fix = original + new prompt](fix-regeneration-original-plus-recrafted-prompt.md) — user 2026-10-20: a regeneration sends the ORIGINAL sample video + a fully rewritten prompt (error designed out); never the flawed take
-- [Never push to glare-factory](glare-factory-never-push.md) — user 2026-10-20: no push/branch push/PR to harperdogpound/ai-video-pipelines unless the user explicitly asks at that moment; pulling is fine
-- [Run 19oct: can realism regen](atp-run-19oct-can-realism-regen.md) — 2026-10-20: cans of videos 01-04, 07, 08 regenerated with photoreal guides; 05, 06, 09-20 still old (ask first); lesson not in the references
+- [ATG pipeline](atg-pipeline.md) — /analyze-then-generate: Edit + Analyze (Recreate, Create, Viral-Browser); generates nothing; prompt Documents/prompts/analyze-then-generate.txt
+- [ATG skills architecture](atg-skills-architecture.md) — 2026-10-18: ~20 KB router + 25 atg-* skills + sectioned references; docs_tool index + check
+- [ATG QC fixes option](atg-qc-fixes-option.md) — user 2026-10-18, item 27: ask or auto picked at the start; state.json qc_fixes
+- [No hardcoded names in scripts](no-hardcoded-names-in-scripts.md) — niche/product/brand names are data the agents decide (script parameters), never lists in scripts or configs
+- [Scripts gather, agents decide](scripts-gather-agents-decide.md) — user 2026-10-12, every mode: scripts gather/extract/calculate, never evaluate, rank, gate or decide
+- [ATG photo links only](atg-photo-links-only.md) — Viral-Browser product photos = image URL links, never downloads; visual flags need --looked-at
+- [Higgsfield account shared](higgsfield-account-shared-balance.md) — balance drops can be other sessions: check `transactions` + ListAgents first
+- [ATP caught flags](atp-caught-flags.md) — flags in Loupe (`atp.py caught-flag add`), write-only during a run; only QC reads samples via `qc-consult`
+- [Loupe web app](loupe-web-app.md) — ~/.claude/loupe at 127.0.0.1:8787; own repo bulzart/loupe: commit AND push every change; update prompts/loupe.txt
+- [Sample hints at the first request](atp-sample-hints-delicate.md) — user 2026-10-14: `atp.py plan-hints` at X2, sparse, text-only; at most 2 applied, never as prompt text
+- [Reasoning over rule lists](atp-reasoning-over-rule-lists.md) — user 2026-10-15: crafting + QC reason from the product and the scene; rules = triggered conditions
+- [ATP no tool caption removal](atp-no-tool-caption-removal.md) — Analyze Mode never removes captions/names with tools; clean-plate lines + character-swap script
+- [ATP product colours + previews](atp-product-colours-and-preview.md) — user 2026-10-14: faded Neurogum pack is wrong; previews 720x1280; person swap needs the full-look photo
+- [ATP audio-ingest question](atp-audio-ingest-question.md) — 2026-10-20: atp-start asks once (Whisper | frames only); state.json audio_ingest
+- [New command /analyze-with-loupe](analyze-with-loupe-new-command.md) — user 2026-10-20: generated by the Fable-prompt agent; /analyze-then-pick and -generate stay read-only
+- [ATP tests and inspection](atp-tests-and-inspection.md) — 2026-10-20: tests/run_all.py + scripts/check_all.py; gather-only status/doctor/lint-run/cost-report
+- [/analyze-with-loupe command](analyze-with-loupe-command.md) — built 2026-10-20 from /analyze-then-pick (awl-*): QC fixes ask|auto|off; Free + Static; push pc on the user's say
+- [Glare pipelines scoped install](glare-pipelines-scoped-install.md) — ~/glare-factory clone, rules+skills in ~/glare-work; update = git pull + bash ~/glare-work/glare-setup.sh; never the repo setup.sh
+- [Fix = original + new prompt](fix-regeneration-original-plus-recrafted-prompt.md) — user 2026-10-20: a regeneration sends the ORIGINAL sample + a rewritten prompt, never the flawed take
+- [Never push to glare-factory](glare-factory-never-push.md) — user 2026-10-20: no push/PR to harperdogpound/ai-video-pipelines unless asked at that moment
+- [Run 19oct: can realism regen](atp-run-19oct-can-realism-regen.md) — cans of videos 01-04, 07, 08 regenerated photoreal; 05, 06, 09-20 still old (ask first)
 - [GitHub accounts](github-accounts.md) — new repos go under bulzart (private), not bulzartaliu50-lang; gh holds both, active = bulzartaliu50-lang
-- [No Genjutsu, Wan 3.0 Prime](no-genjutsu-use-wan-prime.md) — user 2026-10-21 mid Celsius run: use wan 3.0 prime, no Genjutsu; NOT a standing default (2026-10-26 a run went to Seedance 2.5 edit)
-- [Always full paths](always-full-paths.md) — user 2026-10-21: every file named to the user as a complete absolute path from the drive letter, never relative to a run folder
-- [AWL original-only reference](awl-original-only-reference.md) — user 2026-10-28: no placement marker/preview; the silent original is the only video reference; prompts/images/instructions carry spot and size
-- [References upload: no approval stop](show-references-before-upload.md) — SUPERSEDED 2026-10-27: never stop for reference-upload approval, continue straight away
-- [References built per generation](references-built-per-generation.md) — user 2026-10-22: each generation builds and uploads its own reference files in RUN/55-references/video-NN/aK/ (by role) so the user sees what goes in
-- [AWL: user folders read-only](awl-user-folders-read-only.md) — item 34: never move/delete reference, example or edit-source files, copy instead; hooks/awl_input_guard.py refuses it for open runs
-- [Never ask mid-run, decide yourself](awl-never-ask-decide-autonomously.md) — user 2026-10-28: "you decide for every turn, dont ask me anything"; pipeline runs make every mid-run choice autonomously and report it after
-- [Reload Loupe before generating](loupe-reload-before-generating.md) — user 2026-10-28: after the Loupe platform changes, restart the :8787 server + loupe ensure + keeper understand before generating
-- [No QC regeneration, user reviews at the end](no-qc-regeneration-user-reviews-end.md) — user 2026-10-28: each clip once; third QC-fixes choice `off` (no QC agent after the first generation, the user reviews at the end)
-- [AWL judge's prompt template](awl-judge-template.md) — user 2026-10-28: X1-X4 first, then X4b: the Opus judge gets the whole checked brief; its final prompt goes into the request word for word (template-apply)
-- [Shell backslash + line endings](shell-backslash-and-line-endings.md) — a doubled backslash reaches scripts as one (use chr(92)); check CRLF/LF with Python bytes, never bash grep; write_bytes, not write_text
-- [One generation up to 15 s](one-generation-up-to-15s.md) — user 2026-11-05, strict: generated length <= ~15.4 s is ONE generation, over that 2+ with hand-offs; never side-by-side re-renders; in the library (§3b.1 item 7)
-- [AWL: one run per session](awl-one-run-per-session.md) — user 2026-11-07: more videos and new references continue the session's run (analyse only the new ones); only a clone or a new start makes a run folder
-- [AWL: real things look like themselves](awl-real-things-look-like-themselves.md) — user 2026-11-07: a company the story is about shows its official logo (never drawn); known people look like them; mind the story's date
-- [AWL: memory is a fact](awl-memory-is-a-fact.md) — user 2026-11-07/08: a local model's memory headroom never gates a job: try it, report a real guard stop, never another engine
-- [AWL Static: length asked at the start](awl-static-length-asked-at-start.md) — user 2026-11-12: after the niche family is locked and before any planning, A5 asks the length: standard or the user's own; `static.length_plan`
-- [AWL: ElevenLabs never edited](awl-elevenlabs-v4-no-edit.md) — user 2026-11-09: delivered audio never edited (one gain; a capped 1.05 speed-up only on the user's yes); pace via the request; ELEVEN_API_KEY
-- [AWL Static: niche, approach, language](awl-niche-family-and-approach.md) — user 2026-11-11: niche = a field (never a title/story form), each video its own approach, language per video, narration model picked
-- [AWL Static: drawn annotations](awl-static-drawn-annotations.md) - user 2026-11-11: agents draw and animate over a still (leaders, highlights, words) as transparent clips on draw tracks (T draw, T fetch-font); never a sticker; 2026-11-16: encouraged, more of them throughout, ANY kind that relates to the moment, not only numbers, in CapCut never in image generation, never overdone: what feels right (the dot grid 5 vs 17.5 in 100 and the pass/fail bars +84% were samples; static §5 in both libraries)
-- [AWL Static: engagement by design](awl-static-engagement-by-design.md) — user 2026-11-13: hook + keep the viewer all the way, never lie; thought through at the START as suggestions, not a checklist or late rescue
-- [AWL Static: never cover logos](awl-static-never-cover-logos.md) — user 2026-11-13: a logo the image model drew is left as drawn (no --cover, no flag, no redraw); only a cross-like symbol stays §11's
-- [AWL Static: no subtitle-like text](awl-static-no-subtitle-text.md) — user 2026-11-07: no caption/subtitle-style text in any image (objects, books, logos, screens fine); no split pictures, no place names on maps
-- [AWL Static: whole set + pace](awl-static-whole-set-and-pace.md) — user 2026-11-08/09: references read as ONE set, data drives; the plan comes mostly from the run's niche references; narration aimed at the judge's point
-- [AWL Static: word-box captions](awl-static-word-box-captions.md) — user 2026-11-09: the spoken word on a coloured box with slightly rounded corners, moving word to word (T capcut-word-box, captions.word_box)
-- [AWL judge decides before generating](awl-judge-decides-before-generation.md) — SUPERSEDED 2026-11-13 for Static: no judge agents; the agent judges its work as it goes, fresh no-context reviewers on demand
-- [AWL Static: nothing indecent/gory](awl-static-no-indecent-gory-distress.md) — user 2026-11-09: no nudity (implied too), gore, injury, extreme distress, as strict as religion (§11b); nobody as if dead
-- [AWL video 04 lessons](awl-turbo-pace-and-klein-lessons.md) — Eleven v4 Turbo pace forecast missed (steady syllable rate); Klein upsampler invents extras (words fix them); 17 free redraws done with QC off
-- [AWL sound effects folder](awl-sound-effects-folder.md) — user 2026-11-12: Documents\sound_effects (99 mp3s, mostly meme sounds) scanned into the run; neutral ones usable, never meme/death sounds in serious videos
-- [Clip-farming system /create-clips](create-clips-pipeline.md) — 2026-11-12/13: Twitch Chunk Recorder -> cc.py watch (sheets, Whisper, Haiku reports) -> /create-clips -> CapCut; NO_WINDOW; Chrome "ask where to save" OFF
-- [create-clips: ONE research agent](create-clips-one-research-agent.md) — user 2026-11-13: one brief research agent (4 cost 14 min / 930k tokens), everything bulk/parallel; captions option at the start
-- [create-clips: caption look](create-clips-caption-look.md) — user 2026-11-13: copy of Loupe video 04's look: Luckiest Guy ALWAYS, upper case, word on a rounded box; only the colour is free; small size (auto 4.6%)
-- [create-clips: one CapCut composition](create-clips-capcut-composition.md) — user 2026-11-13: every build through cc.py capcut-build (one compile incl. captions), 25 s -> 8 s; MCP route fallback only
-- [create-clips: ads recorded, agents judge](create-clips-ads-recorded-agents-judge.md) — user 2026-11-14: nothing skipped, ads are chunks of kind "ad"; miners judge each batch, the planner puts ads in avoid.json
-- [Task lists and to-do files](task-lists-and-todo-files.md) — user 2026-11-13: every run keeps RUN/todo.md (+ each agent's own), read first on resume; /create-clips rule 16, the resume hook covers all five commands; never a gate
-- [create-clips: blur only gore/distress](create-clips-blur-only-gore-distress.md) — user 2026-11-14: blur ONLY gore, real distress, nudity; never DMs, usernames, IDs, lobby tags, face cams, names or other personal data
-- [create-clips: caption masks](create-clips-caption-masks.md) — user 2026-11-14: profanity and slurs ALWAYS typed with one asterisk (f*ck, f*ggot); list = create-clips/data/caption-masks.json + mask_terms; audio never edited
-- [create-clips: context in cut parts (light)](create-clips-context-keeping-light.md) — user 2026-11-14: long videos MAY keep a bit of a dull part something kept leans on; no limits, judged from data
-- [create-clips: whole watches](create-clips-long-videos-whole-watches.md) — user 2026-11-14, streamer mode: ~25 min-1 h per video set by content, borders between acts, no story left half; total = agents' call, never a target
-- [create-clips: one project per match](create-clips-game-one-project-per-match.md) — user 2026-11-14, game mode: each game of each different match = its own video and CapCut project; matches never mixed
-- [create-clips: shorts edit freedom](create-clips-shorts-edit-freedom.md) — user 2026-11-14: zoom, sound effects, words per caption are the agents' call, where there is room, never forced
-- [create-clips: shorts level](create-clips-shorts-level.md) — user 2026-11-14: with shorts, a follow-up asks Concentrated (1-3 best) or Normal (about 5-10), state.shorts_level; a range, never a quota
-- [create-clips: shorts 9:16](create-clips-shorts-always-9-16.md) — user 2026-11-14: a short is ALWAYS 9:16 (1080x1920); edl-check warns, capcut-build lists a problem; long videos stay 16:9
-- [create-clips: spoken language](create-clips-spoken-language.md) — user 2026-11-14: German/Spanish streams; whisper.language auto, first sure detection locked per run, ads never lock; transcribe never translate
-- [Fix limits, don't just report them](feedback-fix-limits-dont-just-report.md) — user 2026-11-14: a gap in my own work: evaluate on real data and fix it lightly; ask only when the choice is the user's
-- [/create-static command](create-static-command.md) — 2026-11-13: Static mode as its own command, CapCut project by ONE T capcut-build; ~/.claude/create-static, cs-* skills; not yet run end to end
-- [AWL Static: no kids](awl-static-no-kids-or-children.md) — user 2026-11-14: every person an adult, never a child or child-looking figure; state adult features in the sheet, view the anchor
-- [Whisper strictly medium](whisper-strictly-medium.md) — user 2026-11-14: medium for ALL audio in every pipeline, no smaller default/fallback; a medium that cannot load is an error
-- [create-clips: chat heat](create-clips-chat-heat.md) — user 2026-11-15: chat counted every 4 s (T heat, rule 17) = a clue: one look per burst, <= 1 point on a moment the rest rates; game mode much less
-- [Static mode: no Loupe checks](static-mode-no-loupe-checks.md) — user 2026-11-14: Static (/create-static) does not use Loupe, so never run or chase Loupe tests, hooks or checks for it
-- [Pipeline source encryption](pipeline-source-encryption.md) — source locked at rest by the user 2026-11-15, key from CC/CS_SOURCE_KEY; audit fixed native host + tests; Chrome needs a full restart for the key; cs.py start ~2 s; old plaintext in git history accepted
-- [Other-PC hand-off](pipeline-other-pc-handoff.md) — user 2026-11-15: guide + `create-clips/scripts/setup_pc.py`; clone needs core.longpaths, Whisper not auto-downloaded, awl_home is a real dependency; verified on a simulated clean PC, not a real one
-- [Verify cited examples before rules](verify-cited-examples-before-rules.md) — user 2026-11-16: a timestamp/animation the user cites goes into a rule only after I found and looked at it (timeline, agent transcripts, their recording), and it is a sample: write the principle, not the sample
-- [All videos: word on a box](create-clips-all-videos-word-box.md) — user 2026-11-18: every /create-clips video (long too) strictly word-box; raise captions.word_box_max_words, never accept the plain fallback
-- [Static: a watch, not a lecture](awl-static-viewers-seat-not-a-lecture.md) — user 2026-11-19: honest 1-10 by a cold reader, short tail after the payoff, one person to follow, dense stretches carried by pictures; read ALL of static before editing; in static §4b/§13
-- [/create-video command](create-video-command.md) — 2026-11-19: zip's static-only command, logic untouched; PC fixes + awl's CapCut CODE (capcut_tools.py, e2e 24/24); paid TTS, CapCut GUI not verified
-- [CapCut auto-update BLOCKED](capcut-autoupdate-blocked.md) — user 2026-11-19: CapCut self-updated to 9.8.0.4213 (11-16); blocked via static-studio/maintenance/capcut_autoupdate.py; `unblock` only on the user's say
-- [WPM: measure from transcripts, never estimate](wpm-calibrate-from-transcripts.md) — before pace_wpm in script.json, compute word_count/duration for each niche cluster's refs; default estimates are dangerously low (143 vs actual 198 for pov-military-narrative)
-- [create-video: adaptive-niche guardrail](create-video-adaptive-niche-guardrail.md) — 9-point shift never drifts; no per-niche rules/figures in manuals; plan-check needs Creative strategy + Self-audit; one cold read before paid narration
+- [No Genjutsu, Wan 3.0 Prime](no-genjutsu-use-wan-prime.md) — user 2026-10-21 (Celsius run): wan 3.0 prime, no Genjutsu; NOT a standing default
+- [Always full paths](always-full-paths.md) — user 2026-10-21: every file named to the user as a full path from the drive letter
+- [AWL original-only reference](awl-original-only-reference.md) — user 2026-10-28: no placement marker; the silent original is the only video reference
+- [References upload: no approval stop](show-references-before-upload.md) — SUPERSEDED 2026-10-27: never stop for reference-upload approval
+- [References built per generation](references-built-per-generation.md) — user 2026-10-22: each generation builds and uploads its own references in RUN/55-references/video-NN/aK/
+- [AWL: user folders read-only](awl-user-folders-read-only.md) — item 34: never move/delete reference or edit-source files, copy them; hooks/awl_input_guard.py
+- [Never ask mid-run, decide yourself](awl-never-ask-decide-autonomously.md) — user 2026-10-28: "you decide for every turn, dont ask me anything"; decide mid-run, report after
+- [Reload Loupe before generating](loupe-reload-before-generating.md) — user 2026-10-28: after Loupe changes restart :8787 + loupe ensure + keeper understand
+- [No QC regeneration, user reviews at the end](no-qc-regeneration-user-reviews-end.md) — user 2026-10-28: each clip once; QC-fixes `off` = the user reviews at the end
+- [AWL judge's prompt template](awl-judge-template.md) — user 2026-10-28: X1-X4, then X4b Opus judge; its final prompt goes in word for word
+- [Shell backslash + line endings](shell-backslash-and-line-endings.md) — a doubled backslash arrives as one (chr(92)); check CRLF with Python bytes; write_bytes
+- [One generation up to 15 s](one-generation-up-to-15s.md) — user 2026-11-05, strict: <= ~15.4 s is ONE generation, longer = 2+ with hand-offs
+- [AWL: one run per session](awl-one-run-per-session.md) — user 2026-11-07: more videos continue the session's run; only a clone or a new start makes a folder
+- [AWL: real things look like themselves](awl-real-things-look-like-themselves.md) — user 2026-11-07: a company shows its official logo (never drawn); known people look like them
+- [AWL: memory is a fact](awl-memory-is-a-fact.md) — user 2026-11-07/08: memory headroom never gates a job: try it, report a real guard stop
+- [AWL Static: length asked at the start](awl-static-length-asked-at-start.md) — user 2026-11-12: A5 asks the length (standard or own) after the niche lock; `static.length_plan`
+- [AWL: ElevenLabs never edited](awl-elevenlabs-v4-no-edit.md) — user 2026-11-09: delivered audio never edited (one gain; 1.05 speed-up only on yes); ELEVEN_API_KEY
+- [AWL Static: niche, approach, language](awl-niche-family-and-approach.md) — user 2026-11-11: niche = a field; each video its own approach and language; narration model picked
+- [AWL Static: drawn annotations](awl-static-drawn-annotations.md) — user 2026-11-11/16: agents draw and animate over stills on draw tracks (T draw); any kind that fits the moment, in CapCut, never overdone
+- [AWL Static: engagement by design](awl-static-engagement-by-design.md) — user 2026-11-13: hook + hold all the way, never lie; planned at the start as suggestions
+- [AWL Static: never cover logos](awl-static-never-cover-logos.md) — user 2026-11-13: a drawn logo stays as drawn; only a cross-like symbol is §11's
+- [AWL Static: no subtitle-like text](awl-static-no-subtitle-text.md) — user 2026-11-07: no subtitle-style text in images; no split pictures, no place names on maps
+- [AWL Static: whole set + pace](awl-static-whole-set-and-pace.md) — user 2026-11-08/09: references read as ONE set; plan from the niche references; narration aimed at the point
+- [AWL Static: word-box captions](awl-static-word-box-captions.md) — user 2026-11-09: the spoken word on a rounded colour box, word to word (T capcut-word-box)
+- [AWL judge decides before generating](awl-judge-decides-before-generation.md) — SUPERSEDED 2026-11-13 for Static: no judge agents; fresh reviewers on demand
+- [AWL Static: nothing indecent/gory](awl-static-no-indecent-gory-distress.md) — user 2026-11-09: no nudity, gore, injury, extreme distress (§11b); nobody as if dead
+- [AWL video 04 lessons](awl-turbo-pace-and-klein-lessons.md) — Turbo pace forecast missed; Klein upsampler invents extras; 17 free redraws with QC off
+- [AWL sound effects folder](awl-sound-effects-folder.md) — user 2026-11-12: Documents\sound_effects (99 mp3s); neutral ones fine, no meme/death sounds in serious videos
+- [Clip-farming system /create-clips](create-clips-pipeline.md) — 2026-11-12/13: recorder -> cc.py watch (sheets, Whisper, Haiku reports) -> /create-clips -> CapCut; NO_WINDOW
+- [create-clips: ONE research agent](create-clips-one-research-agent.md) — user 2026-11-13: one brief research agent, everything bulk/parallel
+- [create-clips: caption look](create-clips-caption-look.md) — picked at the start (11-20, no default): box = Luckiest Guy on a rounded box (pad 0.06) or no-box = Montserrat Bold #FFFF00, black outline
+- [create-clips: one CapCut composition](create-clips-capcut-composition.md) — user 2026-11-13: every build = cc.py capcut-build (one compile incl. captions); MCP fallback only
+- [create-clips: ads recorded, agents judge](create-clips-ads-recorded-agents-judge.md) — user 2026-11-14: nothing skipped, ads are kind "ad" chunks; miners judge, the planner avoids them
+- [Task lists and to-do files](task-lists-and-todo-files.md) — user 2026-11-13: every run keeps RUN/todo.md (+ each agent's), read first on resume; never a gate
+- [create-clips: blur only gore/distress](create-clips-blur-only-gore-distress.md) — user 2026-11-14: blur ONLY gore, real distress, nudity; never personal data, names or face cams
+- [create-clips: caption masks](create-clips-caption-masks.md) — user 2026-11-14: profanity/slurs ALWAYS one asterisk (f*ck); data/caption-masks.json + mask_terms
+- [create-clips: context in cut parts (light)](create-clips-context-keeping-light.md) — user 2026-11-14: long videos MAY keep a bit of a dull part something leans on
+- [create-clips: whole watches](create-clips-long-videos-whole-watches.md) — user 2026-11-14: ~25 min-1 h per video by content, borders between acts; total never a target
+- [create-clips: one project per match](create-clips-game-one-project-per-match.md) — user 2026-11-14, game mode: each game of each match = its own video and CapCut project
+- [create-clips: shorts edit freedom](create-clips-shorts-edit-freedom.md) — user 2026-11-14: zoom, sfx, words per caption are the agents' call, never forced
+- [create-clips: shorts level](create-clips-shorts-level.md) — user 2026-11-14: Concentrated (1-3) or Normal (~5-10), state.shorts_level; never a quota
+- [create-clips: shorts 9:16](create-clips-shorts-always-9-16.md) — user 2026-11-14: a short is ALWAYS 1080x1920; long videos stay 16:9
+- [create-clips: spoken language](create-clips-spoken-language.md) — user 2026-11-14: whisper.language auto, first sure detection locked; transcribe, never translate
+- [Fix limits, don't just report them](feedback-fix-limits-dont-just-report.md) — user 2026-11-14: a gap in my own work: evaluate on real data, fix lightly; ask only the user's choices
+- [/create-static command](create-static-command.md) — 2026-11-13: Static mode as its own command (~/.claude/create-static, cs-*); not yet run end to end
+- [AWL Static: no kids](awl-static-no-kids-or-children.md) — user 2026-11-14: every person an adult; state adult features, view the anchor
+- [Whisper strictly medium](whisper-strictly-medium.md) — user 2026-11-14: medium for ALL audio, no smaller default or fallback
+- [create-clips: chat heat](create-clips-chat-heat.md) — user 2026-11-15: chat per 4 s (T heat) is a clue, <= 1 point; game mode much less
+- [Static mode: no Loupe checks](static-mode-no-loupe-checks.md) — user 2026-11-14: /create-static does not use Loupe; never chase Loupe checks for it
+- [Pipeline source encryption](pipeline-source-encryption.md) — locked at rest 2026-11-15, key CC/CS_SOURCE_KEY (same key always); edit = unlock, edit, lock
+- [Other-PC hand-off](pipeline-other-pc-handoff.md) — user 2026-11-15: guide + create-clips/scripts/setup_pc.py; core.longpaths, Whisper download, awl_home needed
+- [Verify cited examples before rules](verify-cited-examples-before-rules.md) — user 2026-11-16: a cited timestamp becomes a rule only after I looked at it; write the principle
+- [All videos: word on a box](create-clips-all-videos-word-box.md) — user 2026-11-18: every box-look video strictly word-box (word_box_max_words 20000); a no-box run is all no-box
+- [Static: a watch, not a lecture](awl-static-viewers-seat-not-a-lecture.md) — user 2026-11-19: cold-reader 1-10, short tail, one person to follow; read ALL of static before editing
+- [/create-video command](create-video-command.md) — 2026-11-19: zip's static-only command, logic untouched; PC fixes + awl's CapCut code; CapCut GUI not verified
+- [CapCut auto-update BLOCKED](capcut-autoupdate-blocked.md) — user 2026-11-19: blocked via static-studio/maintenance/capcut_autoupdate.py; `unblock` only on the user's say
+- [WPM: measure from transcripts, never estimate](wpm-calibrate-from-transcripts.md) — compute word_count/duration per niche cluster before pace_wpm; estimates run low (143 vs 198)
+- [create-video: adaptive-niche guardrail](create-video-adaptive-niche-guardrail.md) — 9-point shift never drifts; no per-niche rules in manuals; plan-check needs Creative strategy + Self-audit

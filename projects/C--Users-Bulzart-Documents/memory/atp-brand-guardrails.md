@@ -33,3 +33,5 @@ or soften anything for taste. Precedence is user instructions > guardrails > hou
 guardrails never relax hard rules; never invent a rule; competitor = named or same category as
 the client's product. New rule kinds or cases go into `brand-guardrails.md` §2–§3, then the build
 prompt. Related: [[atp-anomaly-catalog]], [[atp-creative-direction]], [[atp-build-prompt-sync]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): reference/brand-guardrails.md: client rules → per-reference audit; core hit dismisses, peripheral hit is edited (counts, de-brand never blur, face swap, captions)

@@ -26,3 +26,5 @@ house size stay for every other mode.
 reference ("whether up, down or in the middle but in the center of the screen"). If centred text would cover the
 product, a face or an insert, move it up or down, never sideways. Logged as caught error CE-010 and written into
 capcut-assembly.md / text-and-format.md. Related: [[atp-caught-errors]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): /analyze-then-pick always uses the user's chosen preset (from 03_Oct_2026_v09); text always horizontally centred; never replace unasked

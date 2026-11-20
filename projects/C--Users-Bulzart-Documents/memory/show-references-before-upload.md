@@ -15,3 +15,5 @@ This replaces the 2026-10-22 rule (Celsius run 20261021-224049-21: "when you're 
 **Why:** the user wants the runs to proceed without stopping for their sign-off.
 
 **How to apply:** build, upload and submit references without an approval step; production agents upload their own inputs (no "upload approval" blocker). Make the judgement calls yourself (a weak spot, a pick swap, a fix generation within the QC-fixes rule) and report them in the wrap-up with the reason. The pipeline's own fixed questions at a run's start (mode, model, inputs, count, QC fixes, audio) are not covered by this; mid-run asks are. Still name every file by its full path when reporting ([[always-full-paths]]). Related: [[references-built-per-generation]].
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): SUPERSEDED 2026-10-27: never stop for reference-upload approval, continue straight away

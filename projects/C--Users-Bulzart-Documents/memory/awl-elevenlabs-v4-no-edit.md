@@ -29,3 +29,5 @@ User 2026-11-09, in order: "remove our alibaba qwen 3 tts from the static mode a
 Index line before the 2026-11-14 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-09: delivered audio never edited "without any exception" (one gain, a capped 1.05 speed-up only on the user's yes); pace via the request; key ELEVEN_API_KEY; model = the user's pick since 11-11
 
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-09: delivered audio never edited "without any exception" (one gain; a capped 1.05 speed-up only on the user's yes); pace via the request; key ELEVEN_API_KEY
+
+Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): user 2026-11-09: delivered audio never edited (one gain; a capped 1.05 speed-up only on the user's yes); pace via the request; ELEVEN_API_KEY
