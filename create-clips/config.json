@@ -14,6 +14,14 @@
     "overview_every": 10,
     "overview_cols": 6
   },
+  "voices": {
+    "enabled": true,
+    "fps": 2.0,
+    "band": [0.70, 0.98, 0.10, 0.90],
+    "min_conf": 0.80,
+    "threads": 2,
+    "parallel": 2
+  },
   "audio": {
     "rms_window_s": 0.5,
     "keep_wav": false,
