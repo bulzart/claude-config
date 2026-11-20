@@ -3,7 +3,8 @@
     python tests/test_edit.py            (Python312; ffmpeg on PATH; takes about a minute: the SFX scan is the slow part and is skipped here)
 
 Builds two 12 s test chunks with ffmpeg, a transcript for each, then checks: layout maths, the EDL resolve across a chunk boundary, the censor split and file,
-caption cues (masking, replacement), the cut facts, the MCP plan and finish plan, and capcut-finish against a draft in an isolated store (capcut-cli init --drafts).
+caption cues (masking, replacement), the cut facts, the MCP plan and finish plan, and capcut-finish against a draft in an isolated store (capcut-cli init --drafts);
+both caption looks the user can pick at the start: box (the word on a rounded colour box) and no-box (Montserrat Bold, yellow, one text per caption).
 """
 from __future__ import annotations
 
@@ -176,6 +177,41 @@ def main():
         r = cc("captions", "--run", run, "--resolved", out / "resolved.json", env=env)
         check(r.get("ok") and not r.get("skipped") and (out / "captions.srt").is_file(), "captions back ON: the cues are written again")
 
+        # THE NO-BOX LOOK (the user, 2026-11-20), picked at the start (state.json captions=no-box): Montserrat Bold, yellow #FFFF00, the black outline, nothing behind the
+        # text, one text per caption; the run's look wins over an EDL that asks for another style or for key words in a colour; captions=box and the older 'on' are the box look
+        e7 = {"schema": "cc-edl/1", "video": "S07", "kind": "short", "layout": {"mode": "fill", "focus": [0.5, 0.5]},
+              "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}, {"id": "s2", "rec_from": 12.0, "rec_to": 14.5}],
+              "captions": {"style": "word-box", "highlight_words": ["wild"], "mask_terms": ["damn"], "replace": [["Kai Sinat", "Kai Cenat"]]}}
+        o7 = run / "60-outputs" / "S07"
+        o7.mkdir(parents=True)
+        (o7 / "edl.json").write_text(json.dumps(e7), encoding="utf-8")
+        r = cc("state", "--run", run, "set", "captions=no-box", env=env)
+        r = cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
+        c7 = json.loads((o7 / "resolved.json").read_text(encoding="utf-8"))["captions"]
+        check(r.get("ok") and c7["style"] == "no-box" and c7["look"] == "no-box" and c7["font_file"] == "Montserrat-Bold.otf" and c7["color"] == "#FFFF00" and c7["highlight_words"] == []
+              and c7["enabled"] is True and "not used" in c7.get("style_reason", ""),
+              "captions=no-box: the no-box look whatever the EDL asks (its style and key words are not used, with the reason): " + str(c7.get("style_reason"))[:160])
+        r = cc("captions", "--run", run, "--resolved", o7 / "resolved.json", env=env)
+        srt7 = (o7 / "captions.srt").read_text(encoding="utf-8")
+        cj7 = json.loads((o7 / "captions.json").read_text(encoding="utf-8"))
+        check(r.get("ok") and r.get("look") == "no-box" and r.get("style") == "no-box" and r.get("house_font") is True and str(r.get("font_file", "")).endswith("Montserrat-Bold.otf")
+              and r.get("font_covers") is True and (r.get("lines") or {}).get("texts") == r.get("cues") > 0 and "word_box" not in r and cj7["style"] == "no-box" and cj7["look"] == "no-box"
+              and "SH*T" in srt7 and "D*MN" in srt7 and "KAI CENAT" in srt7 and r["size"]["vs_guide"] == "inside",
+              "captions (no-box): one text per caption in Montserrat Bold (the look's own font), masked, spelled, upper case, the auto size: " + json.dumps({k: r.get(k) for k in ("cues", "lines", "size")})[:300])
+        cc("state", "--run", run, "set", "captions=box", env=env)
+        cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
+        c7b = json.loads((o7 / "resolved.json").read_text(encoding="utf-8"))["captions"]
+        check(c7b["style"] == "word-box" and c7b["look"] == "box" and c7b["font_file"] == "LuckiestGuy-Regular.ttf" and c7b["box"]["pad"] == 0.06, "captions=box: the word-box look in Luckiest Guy, the box padding 0.06")
+        e7b = {**e7, "captions": {"style": "no-box"}}
+        (o7 / "edl.json").write_text(json.dumps(e7b), encoding="utf-8")
+        cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
+        c7c = json.loads((o7 / "resolved.json").read_text(encoding="utf-8"))["captions"]
+        check(c7c["style"] == "word-box" and "not used" in c7c.get("style_reason", ""), "a box run whose EDL asks for the no-box style keeps the box look (the user's pick), with the reason")
+        (o7 / "edl.json").write_text(json.dumps(e7), encoding="utf-8")
+        cc("state", "--run", run, "set", "captions=on", env=env)
+        cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
+        check(json.loads((o7 / "resolved.json").read_text(encoding="utf-8"))["captions"]["look"] == "box", "captions=on (a run made before the look could be picked): the box look")
+
         capcut = shutil.which("capcut")
         busy = "capcut.exe" in subprocess.run(["tasklist", "/FI", "IMAGENAME eq CapCut.exe", "/NH"], capture_output=True, text=True).stdout.lower()
         if capcut and busy:
@@ -220,8 +256,9 @@ def main():
             boxed = [tm[s["material_id"]] for t in c["tracks"] if t["type"] == "text" and t["name"].endswith(("-box", "-box-in")) for s in t["segments"]]
             plain = [tm[s["material_id"]] for t in c["tracks"] if t["type"] == "text" and t["name"].endswith(("-word", "-word-in")) for s in t["segments"]]
             check(boxed and all(m.get("background_color", "").upper() == "#FF7A1A" and float(m.get("background_alpha") or 0) > 0 and abs(float(m.get("background_round_radius") or 0) - 0.3) < 1e-6
-                                and float(m.get("background_width")) == 0.08 and float(m.get("background_vertical_offset")) == 0.15 and int(m.get("check_flag") or 0) & 16 for m in boxed),
-                  f"the spoken word's text is on the preset box: orange #FF7A1A, rounded 0.3, padding 0.08, a little low, the box flag set ({len(boxed)} boxed texts)")
+                                and float(m.get("background_width")) == 0.06 and float(m.get("background_height")) == 0.06 and float(m.get("background_vertical_offset")) == 0.15
+                                and int(m.get("check_flag") or 0) & 16 for m in boxed),
+                  f"the spoken word's text is on the preset box: orange #FF7A1A, rounded 0.3, padding 0.06 (a little smaller since 2026-11-20), lifted 0.15, the box flag set ({len(boxed)} boxed texts)")
             check(plain and all(not float(m.get("background_alpha") or 0) and int(m.get("check_flag") or 0) & 8 and int(m.get("check_flag") or 0) & 32 and not int(m.get("check_flag") or 0) & 16 for m in plain)
                   and all(str(m.get("font_path", "")).endswith("LuckiestGuy-Regular.ttf") for m in boxed + plain),
                   f"the other words are plain with the thick outline and the shadow ({len(plain)} texts) and every text is in Luckiest Guy, the house font")
@@ -372,6 +409,41 @@ def main():
             r = cc("capcut-build", "--run", run, "--video", "S06", "--name", "cctest_glyph", "--store", store, env=env)
             check(any("cannot draw" in p for p in r.get("problems", [])) and "Š" in ((r.get("caption_font") or {}).get("missing_glyphs") or []),
                   "capcut-build lists the missing character as a problem: " + str(r.get("problems"))[:200])
+            # THE NO-BOX LOOK BUILT (the user, 2026-11-20): ONE composition with one `subtitle` track (a yellow text per caption), finish adds only the font and the entrance,
+            # the read-back counts the texts; the older route (compose --bare, then one import of the cues) makes the same texts; a second finish never stacks a second track
+            cc("state", "--run", run, "set", "captions=no-box", env=env)
+            cc("edl-check", "--run", run, "--edl", o7 / "edl.json", env=env)
+            r = cc("captions", "--run", run, "--resolved", o7 / "resolved.json", env=env)
+            n7 = r.get("cues")
+            r = cc("capcut-build", "--run", run, "--video", "S07", "--name", "cctest_nobox", "--store", store, env=env)
+            rb = r.get("read_back") or {}
+            check(r.get("ok") and not r.get("problems") and rb.get("text_tracks") == 1 and rb.get("texts") == rb.get("composed_caption_texts") == n7 and (rb.get("lint") or {}).get("errors") == 0
+                  and any(s.get("step") == "captions-no-box" and s.get("composed") for s in (r.get("finish") or {}).get("steps", [])),
+                  "capcut-build (no-box): one composition with one text per caption, finish adds only the font and the entrance, the read-back agrees: "
+                  + json.dumps({k: r.get(k) for k in ("ok", "problems")}) + json.dumps(rb)[:200])
+            cn = json.loads((store / "cctest_nobox" / "draft_content.json").read_text(encoding="utf-8"))
+            tmn = {m["id"]: m for m in cn["materials"].get("texts", [])}
+            segs_n = [s for t in cn["tracks"] if t["type"] == "text" for s in t["segments"]]
+            mats_n = [tmn[s["material_id"]] for s in segs_n]
+            check([t["name"] for t in cn["tracks"] if t["type"] == "text"] == ["subtitle"] and len(mats_n) == n7
+                  and all(str(m.get("text_color", "")).upper() == "#FFFF00" and str(m.get("font_path", "")).endswith("Montserrat-Bold.otf") and abs(float(m["border_width"]) - 0.18) < 1e-6
+                          and str(m.get("border_color", "")).upper() == "#000000" and m.get("has_shadow") is True and not float(m.get("background_alpha") or 0)
+                          and not int(m.get("check_flag") or 0) & 16 and json.loads(m["content"])["text"] == json.loads(m["content"])["text"].upper() for m in mats_n)
+                  and all(abs(float(s["clip"]["transform"]["x"])) < 1e-6 and abs(float(s["clip"]["transform"]["y"]) - round(1 - 2 * 0.66, 4)) < 1e-4 for s in segs_n),
+                  f"the no-box texts: one subtitle track, {len(mats_n)} yellow #FFFF00 texts in Montserrat Bold with the 0.18 black outline and the shadow, no box, upper case, centred on the baseline")
+            cc("capcut-compose", "--run", run, "--video", "S07", "--name", "cctest_nobox_bare", "--store", store, "--bare", env=env)
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest_nobox_bare", "--video", "S07", env=env)
+            rows_n, _j = text_rows(store / "cctest_nobox")
+            rows_b, _j = text_rows(store / "cctest_nobox_bare")
+            diffs_n = [(a_, b_) for a_, b_ in zip(rows_n, rows_b) if a_["track"] != b_["track"] or a_["text"] != b_["text"] or a_["x"] != b_["x"] or a_["y"] != b_["y"]
+                       or a_["fields"] != b_["fields"] or abs(a_["start"] - b_["start"]) > 1500 or abs(a_["dur"] - b_["dur"]) > 3000]
+            check(r.get("ok") and len(rows_n) == len(rows_b) == n7 and not diffs_n,
+                  f"the no-box look by the older route (one import of the cues) makes the same {len(rows_b)} texts as the composition " + str(diffs_n[:1])[:600])
+            r = cc("capcut-finish", "--run", run, "--draft", store / "cctest_nobox_bare", "--video", "S07", env=env)
+            cb2 = json.loads((store / "cctest_nobox_bare" / "draft_content.json").read_text(encoding="utf-8"))
+            check(r.get("ok") and [t["name"] for t in cb2["tracks"] if t["type"] == "text"] == ["subtitle"] and sum(len(t["segments"]) for t in cb2["tracks"] if t["type"] == "text") == n7,
+                  "a second finish on the same draft replaces its caption track, it never stacks a second one " + str([s.get("step") for s in r.get("steps", [])]))
+            cc("state", "--run", run, "set", "captions=on", env=env)
             # a short that is not 9:16 is listed by capcut-build as a problem too (the user, 2026-11-14: shorts are ALWAYS 9:16), even when the edl-check warning was not heeded
             e7 = {"schema": "cc-edl/1", "video": "S08", "kind": "short", "canvas": {"width": 1920, "height": 1080, "fps": 30}, "layout": {"mode": "fill", "focus": [0.5, 0.5]},
                   "segments": [{"id": "s1", "rec_from": 0.9, "rec_to": 5.0}]}

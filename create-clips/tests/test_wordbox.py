@@ -4,7 +4,8 @@
 
 Checks: the language rule, the lexicon on word sequences (a phrase keeps its place in time, punctuation survives), masking and case, the caption grouping, the frame-grid
 moments and the hand-over of a too-short box, the centred line and the tracks (no two texts of a track overlap in time), the split of a line that is too wide, the
-automatic size (the em at 4.6 % of the picture's smaller side, the same in any font and on a 16:9 and a 9:16 canvas), the removal of an earlier build's tracks.
+automatic size (the em at 4.6 % of the picture's smaller side, the same in any font and on a 16:9 and a 9:16 canvas), the removal of an earlier build's tracks,
+and the no-box look (Montserrat Bold, yellow, one text per caption on the subtitle track, split when wider than CapCut's line).
 """
 from __future__ import annotations
 
@@ -95,8 +96,8 @@ def main():
 
         # the line, the texts and the tracks
         box = wb.box_params({"highlight_color": "#22AAFF", "box": {"round_radius": 0.4}})
-        check(box["color"] == "#22AAFF" and box["round_radius"] == 0.4 and box["pad"] == 0.08 and box["gap_em"] == 0.55 and box["v_offset"] == 0.15,
-              "box_params: the colour and the radius are the EDL's, the rest is Loupe video 04's preset (pad 0.08, v_offset 0.15, words 0.55 em apart)")
+        check(box["color"] == "#22AAFF" and box["round_radius"] == 0.4 and box["pad"] == 0.06 and box["gap_em"] == 0.55 and box["v_offset"] == 0.15,
+              "box_params: the colour and the radius are the EDL's, the rest is the house preset (pad 0.06 since the user's 'a little bit smaller' of 2026-11-20, v_offset 0.15, words 0.55 em apart)")
         probe = wb.Probe(str(FONT), s169, 1920, box["gap_em"])
         c1 = {"start": 1.0, "end": 2.0, "words": [W("this", 1.0, 1.2), W("point", 1.3, 1.5), W("immovable.", 1.6, 2.0)]}
         c2 = {"start": 2.0, "end": 3.0, "words": [W("big", 2.0, 2.2), W("play", 2.4, 2.8)]}
@@ -131,9 +132,15 @@ def main():
     for k in ("short", "long"):
         d = cc_edit.DEFAULT_CAPTIONS[k]
         check(d["font_file"] == "LuckiestGuy-Regular.ttf" and d["font_file"] == wb.HOUSE_FONT_FILE and not d.get("font_family") and d["stroke_width"] == 0.18 and d["stroke_color"] == "#000000"
-              and d["shadow"] is True and d["case"] == "upper" and d["color"] == "#FFFFFF" and d["box"]["gap_em"] == 0.55 and d["box"]["pad"] == 0.08 and d["box"]["v_offset"] == 0.15
+              and d["shadow"] is True and d["case"] == "upper" and d["color"] == "#FFFFFF" and d["box"]["gap_em"] == 0.55 and d["box"]["pad"] == 0.06 and d["box"]["v_offset"] == 0.15
               and d["box"]["round_radius"] == 0.3 and d["highlight_color"] == "#FF7A1A" and d["style"] == "word-box",
-              f"the {k} default is Loupe video 04's look: Luckiest Guy, upper case, white with a 0.18 black outline and a shadow, the box 0.3 / 0.08 / 0.15 / 0.55 em")
+              f"the {k} default is Loupe video 04's look: Luckiest Guy, upper case, white with a 0.18 black outline and a shadow, the box 0.3 / 0.06 / 0.15 / 0.55 em")
+        # THE NO-BOX LOOK (the user, 2026-11-20): Montserrat Bold, yellow #FFFF00, the black outline, nothing behind the text; the rest is the box look's for the same kind
+        n = cc_edit.NO_BOX_CAPTIONS[k]
+        check(n["style"] == "no-box" and n["font_file"] == "Montserrat-Bold.otf" == wb.NO_BOX_FONT_FILE and n["color"] == "#FFFF00" == wb.NO_BOX_COLOR and n["stroke_color"] == "#000000"
+              and n["stroke_width"] == 0.18 and n["shadow"] is True and n["case"] == "upper" and n["highlight_words"] == [] and not n.get("font_family")
+              and all(n[x] == d[x] for x in ("size", "size_em_pct", "y_rel", "max_words", "max_chars", "intro", "intro_s", "min_cue_s", "gap_break_s")),
+              f"the {k} no-box default: Montserrat Bold, upper case, yellow #FFFF00 with the 0.18 black outline and the shadow, no key-word colour; size, place, words per caption and entrance as the box look's")
     if FONT2.is_file():
         m1 = wb.font_report(str(FONT2), "TEAM FALCONS WIN, ZERI CKA? Zëri çka? 3K 1v3 m0NESY")
         m2 = wb.font_report(str(FONT2), "Šnax Żyw Ğ")
@@ -151,8 +158,27 @@ def main():
         ops_plain = [o for o in cp["operations"] if "bgColor" not in o["style"]]
         check(cp["texts"] == len(cp["operations"]) and ops_box and ops_plain and all(o["style"].get("shadow") is True and o["style"]["borderWidth"] == 0.18 and o["style"]["borderColor"] == "#000000" for o in cp["operations"]),
               "every composed text gets the 0.18 black outline and the shadow; " + str(len(ops_box)) + " boxed, " + str(len(ops_plain)) + " plain")
-        check(all(o["style"]["bgRoundRadius"] == 0.3 and o["style"]["bgWidth"] == 0.08 and o["style"]["bgHeight"] == 0.08 and o["style"]["bgVOffset"] == 0.15 and o["style"]["bgHOffset"] == 0.0 for o in ops_box),
-              "the boxed texts carry radius 0.3, padding 0.08 and the 0.15 vertical offset")
+        check(all(o["style"]["bgRoundRadius"] == 0.3 and o["style"]["bgWidth"] == 0.06 and o["style"]["bgHeight"] == 0.06 and o["style"]["bgVOffset"] == 0.15 and o["style"]["bgHOffset"] == 0.0 for o in ops_box),
+              "the boxed texts carry radius 0.3, padding 0.06 and the 0.15 vertical offset")
+    # the no-box look's texts for the composition: ONE `subtitle` track, a text per caption in the centre on the captions' baseline, yellow, the outline and the shadow, no box
+    if FONT.is_file():
+        capsn = {**cc_edit.NO_BOX_CAPTIONS["short"], "size": wb.auto_size(str(FONT), 1080, 1920)}
+        cues_n = [{"i": 1, "start": 0.0, "end": 0.8, "text": "TEAM WINS"}, {"i": 2, "start": 0.8, "end": 1.6, "text": "LET'S GO"}, {"i": 3, "start": 1.6, "end": 1.6, "text": "EMPTY"}]
+        pln = wb.plan_lines(capsn, cues_n, {"width": 1080, "height": 1920, "fps": 30})
+        check(pln["error"] is None and len(pln["tracks"]) == 1 and pln["tracks"][0]["track"] == "subtitle" and pln["tracks"][0]["entrance"] and not pln["tracks"][0]["boxed"]
+              and [e["text"] for e in pln["tracks"][0]["entries"]] == ["TEAM WINS", "LET'S GO"] and all(e["x"] == 0.0 for e in pln["tracks"][0]["entries"]) and pln["y"] == round(1 - 2 * 0.66, 4),
+              "plan_lines: one subtitle track, a text per caption centred on the baseline, a caption of no length left out: " + json.dumps(pln["tracks"])[:200])
+        cpn = wb.compose_parts(pln, capsn, 5.0)
+        check(cpn["texts"] == 2 and len(cpn["tracks"]) == 1 and all(i["color"] == "#FFFF00" and i["x"] == 0.0 for i in cpn["tracks"][0]["items"])
+              and all("bgColor" not in o["style"] and o["style"]["borderWidth"] == 0.18 and o["style"]["borderColor"] == "#000000" and o["style"].get("shadow") is True for o in cpn["operations"]),
+              "the no-box compose parts: yellow texts, each with the 0.18 black outline and the shadow, and no box: " + json.dumps(cpn["operations"][:1]))
+        mn = wb.font_report(str(FONT), "ŠNAX ŽYW ĞÜL ZËRI ÇKA F*CK")
+        check(mn["font_covers"] and not wb.font_report(str(FONT), "ПРИВЕТ")["font_covers"], "Montserrat Bold draws the Slavic and Turkish letters and the asterisk, not Cyrillic (a fact before the build)")
+        probe_n = wb.Probe(str(FONT), capsn["size"], 1080, wb.space_em(str(FONT)))
+        wide_n = [{"start": 0.0, "end": 3.0, "words": [W(w, i * 0.4, i * 0.4 + 0.35) for i, w in enumerate("UNBELIEVABLE CONGRATULATIONS EVERYBODY TONIGHT".split())]}]
+        parts_n = wb.fit_cues(wide_n, probe_n, wb.LINE_FIT * 1080, 0.25)
+        check(0.2 < wb.space_em(str(FONT)) < 0.35 and len(parts_n) >= 2 and all(probe_n.line([w["w"] for w in p_["words"]]) <= wb.LINE_FIT * 1080 or len(p_["words"]) == 1 for p_ in parts_n),
+              f"a one-text caption wider than {wb.LINE_FIT:.0%} of a 1080 px frame is split ({len(parts_n)} parts), measured with the font's own space")
 
     # an earlier build's caption tracks are removed with their materials
     content = {"tracks": [{"type": "text", "name": "subtitle", "segments": [{"material_id": "a", "extra_material_refs": ["x"]}]},
