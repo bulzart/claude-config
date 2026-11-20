@@ -486,12 +486,30 @@ def cmd_length(args):
     else:
         error('Cannot determine pace_wpm: no transcripts found in 10-media/ for the selected refs. '
               'Run prepare first, or pass --pace-wpm explicitly.')
+    # The word budget comes from how many words a minute of the comparable narration really holds, pauses included
+    # (overall_wpm), never from the speaking rate alone (active_wpm, which leaves every pause out: on 2026-11-19 that
+    # overstated the budget by about 11%). An explicit --pace-wpm scales the references' overall rate by the same ratio.
+    stats = {vid: ref_pace_stats(rd, vid, family[vid].get('duration_s')) for vid in refs}
+    stats = {k: v for k, v in stats.items() if v}
+    def mean_of(key):
+        vals = [s[key] for s in stats.values() if s.get(key)]
+        return round(statistics.mean(vals)) if vals else None
+    active_refs, overall_refs = mean_of('active_wpm'), mean_of('overall_wpm')
+    speech_only_words = round(target * pace_wpm / 60)
+    if overall_refs and active_refs:
+        target_words = round(target * overall_refs * (pace_wpm / active_refs) / 60)
+    else:
+        target_words = speech_only_words
+    pace_profile = {'active_wpm': pace_wpm, 'overall_wpm': round(overall_refs * pace_wpm / active_refs)
+                    if overall_refs and active_refs else None, 'runtime_wpm': mean_of('runtime_wpm'),
+                    'references': stats, 'definitions': PACE_DEFINITIONS}
     lock = {'schema': SCHEMA, 'video': f'{int(args.video):02d}', 'mode': args.mode,
             'target_length_s': target, 'tolerance_audio_pct': 0.04, 'tolerance_export_pct': 0.025,
             'niche': effective_niche, 'story_form': effective_form, 'reference_ids': refs,
             'reference_durations_s': {i: family[i]['duration_s'] for i in refs},
             'language': args.language, 'pace_wpm': pace_wpm, 'pace_wpm_source': pace_wpm_source,
-            'per_ref_wpm': per_ref_wpm,
+            'per_ref_wpm': per_ref_wpm, 'pace_profile': pace_profile,
+            'target_words': target_words, 'target_words_speech_only': speech_only_words,
             # How the comparable narrators pause (same yardstick narration-measure uses on the generated voice):
             # the evidence the script stage reads before deciding any pause, hold or tag.
             'reference_pause_profiles': ref_pause_profiles(rd, refs),
@@ -504,12 +522,18 @@ def cmd_length(args):
     wpm_note = (f'pace_wpm={pace_wpm} (computed from refs: {per_ref_wpm})'
                 if pace_wpm_source == 'computed_from_refs'
                 else f'pace_wpm={pace_wpm} (explicit override)')
+    words_note = (f'Write the script to about {target_words} words: the comparable narration holds '
+                  f'{pace_profile["overall_wpm"]} words a minute with its own pauses ({pace_wpm} while speaking). '
+                  if pace_profile['overall_wpm'] else
+                  f'Write the script to under {speech_only_words} words (speech alone, no pauses counted: the '
+                  'references have no word timings here). ')
     emit({'ok': True, 'lock_file': str(lockfile), 'locked_target_s': target, 'minutes': round(target/60, 2),
           'niche': effective_niche, 'story_form': effective_form, 'references': refs,
           'pace_wpm': pace_wpm, 'pace_wpm_source': pace_wpm_source, 'per_ref_wpm': per_ref_wpm,
-          'target_words': round(target * pace_wpm / 60),
+          'pace_profile': pace_profile, 'target_words': target_words, 'target_words_speech_only': speech_only_words,
           'guidance': (f'Script, beat map, narration, timeline and export must respect this exact locked target. '
-                       f'{wpm_note}. Write the script to ~{round(target * pace_wpm / 60)} words.')})
+                       f'{wpm_note}. {words_note}plan-check forecasts the real length from the voice\'s own measured '
+                       'pace and gaps once its first part is measured.')})
 
 
 TAG_RE = re.compile(r'\[([^\[\]]{1,160})\]')
@@ -617,8 +641,19 @@ def script_pause_plan(lines):
             ends = [m.group(1) for m in (re.search(r'\[([^\[\]]+)\]\s*$', here), re.match(r'\s*\[([^\[\]]+)\]', after)) if m]
             if not any(is_pause_tag(x) for x in ends):
                 issues.append(f'pause_{lid}_via_tag_but_no_pause_tag_at_this_line_end_or_next_line_start')
-        plan.append({'line': lid, 'index': i + 1, 'pause_after_s': p, 'via': via})
+        # A silence the story wants says what it is for: what the viewer takes in, feels or sees while it lasts. A
+        # held moment is a creative choice, never runtime; the cold reader sees every one (review-packet).
+        if n_words(row.get('pause_purpose')) < MIN_NOTE_WORDS:
+            issues.append(f'pause_{lid}_needs_its_story_purpose')
+        plan.append({'line': lid, 'index': i + 1, 'pause_after_s': p, 'via': via,
+                     'purpose': str(row.get('pause_purpose') or '').strip() or None})
     return plan, issues
+
+
+def hold_snapshot(lines):
+    """Every realised pause (longer than a natural line gap, by a pause tag or an edit hold) as the script's cold
+    reader is shown it: {line: [seconds, via]}."""
+    return {p['line']: [round(p['pause_after_s'], 2), p['via']] for p in script_pause_plan(lines)[0]}
 
 
 def edit_holds_s(lines):
@@ -660,6 +695,168 @@ def content_flags(lines, review_text):
 
 def script_hash(lines):
     return hashlib.sha256('\n'.join(str(r.get('text') or '').strip() for r in lines).encode('utf-8')).hexdigest()
+
+
+# ---------------------------------------------------------------- what the voice is sent, and what it never is
+# A script holds four different things, each in its own place:
+#   1. the canonical narration: a line's `text`, exactly the words the viewer hears (captions come from it);
+#   2. delivery tags: [bracketed] directions inline in `text`, sent to ElevenLabs, never spoken;
+#   3. pronunciation: 40-plans/video-NN/pronunciation.json, applied only to what is sent, never to `text`;
+#   4. editorial notes: a line's `note` field, never sent.
+# Anything else that reaches the voice as markup (SSML, which Eleven v4 does not support; {braces}; *asterisks*; a stage
+# direction in parentheses; a note in brackets) is read aloud or ignored, so plan-check refuses it.
+SSML_RX = re.compile(r'<\s*/?\s*[A-Za-z][^<>]*>')
+CURLY_RX = re.compile(r'\{[^{}]*\}')
+ASTERISK_RX = re.compile(r'\*{1,2}[^*\s][^*]*\*{1,2}')
+PAREN_RX = re.compile(r'\(([^()]{1,60})\)')
+NOTE_TAG_RX = re.compile(r'^\s*(?:\d+|notes?|todo|tk|fixme|sources?|refs?|cite|citation|check|fact[- ]?check|'
+                         r'placeholder|xx+|editor)\b', re.I)
+IPA_SYMBOLS = set('ˈˌːəɪʊʃʒθðŋɑɔæɛʌɒɜɐɚɝɨʉɯɲɳɴɸβçʝɣχʁħʕɦɬɮɹɻʎʟɾɽʀʙʋɥʍʔ')
+IPA_RX = re.compile(r'/[^/\s][^/]*/')
+_CONTRAST = None
+
+
+def contrast_axes():
+    """The catalogue's opposite poles of delivery (volume, energy, tempo): asked for together on the same words, they
+    contradict each other (ElevenLabs: contrasting tags on the same words blur the performance)."""
+    global _CONTRAST
+    if _CONTRAST is None:
+        _CONTRAST = read_json(TAGS_FILE).get('contrast_axes') or {}
+    return _CONTRAST
+
+
+def tag_qualities(inner):
+    """The qualities one tag asks for: '[tense, cautious]' -> ['tense', 'cautious']."""
+    return [q.strip().lower() for q in str(inner).split(',') if q.strip()]
+
+
+def contradictions(qualities):
+    """The delivery axes on which these qualities ask for both poles at once ([whispering, shouting])."""
+    text = ' ' + ' '.join(qualities) + ' '
+    words = set(re.findall(r"[a-z']+", text))
+    out = []
+    for axis, poles in contrast_axes().items():
+        hit = [pole for pole, terms in poles.items()
+               if any((' ' + t + ' ' in text) if ' ' in t else (t in words) for t in terms)]
+        if len(hit) > 1:
+            out.append(axis)
+    return out
+
+
+def script_markup(lines):
+    """Markup the voice can't take and delivery directions that fight each other (issues); tags stacked on the same
+    words (a warning: several qualities go in one bracket, [a, b])."""
+    issues, warnings = [], []
+    for i, row in enumerate(lines):
+        lid = str(row.get('id') or f'L{i+1:03d}')
+        text = str(row.get('text') or '')
+        if SSML_RX.search(text):
+            issues.append(f'ssml_markup_not_supported_by_eleven_v4:{lid}')
+        if CURLY_RX.search(text):
+            issues.append(f'curly_brace_markup:{lid}')
+        if ASTERISK_RX.search(text):
+            issues.append(f'asterisk_markup:{lid}')
+        for m in PAREN_RX.finditer(text):
+            inner = ' '.join(m.group(1).lower().split())
+            if '[' + inner + ']' in tag_catalogue() or is_pause_tag(inner) or inner in ('beat', 'silence', 'breath'):
+                issues.append(f'stage_direction_in_parentheses:{lid}:({inner})')
+        if any(set(x) & IPA_SYMBOLS for x in IPA_RX.findall(strip_tags(text))):
+            issues.append(f'pronunciation_markup_in_script_text:{lid}')
+        tags = list(TAG_RE.finditer(text))
+        for m in tags:
+            if NOTE_TAG_RX.match(m.group(1)):
+                issues.append(f'editorial_note_in_spoken_text:{lid}:[{m.group(1).strip()}]')
+        groups = []
+        for k, m in enumerate(tags):
+            if groups and not text[tags[k - 1].end():m.start()].strip():
+                groups[-1].append(m)
+            else:
+                groups.append([m])
+        for g in groups:
+            shown = ''.join(m.group(0) for m in g)
+            for axis in contradictions([q for m in g for q in tag_qualities(m.group(1))]):
+                issues.append(f'contradictory_delivery:{lid}:{axis}:{shown}')
+            if len(g) > 1:
+                warnings.append(f'{lid}: tags stacked on the same words ({shown}); several qualities go in one bracket')
+    return issues, warnings
+
+
+def delivery_review_lines(review_text):
+    """The line ids named under a "Delivery and tags" heading of editorial-review.md (where each kept tag says why)."""
+    m = re.search(r'^#+[^\n]*delivery and tags[^\n]*\n(.*?)(?=^#|\Z)', review_text or '', flags=re.I | re.M | re.S)
+    return set(re.findall(r'\bL\d{3,4}\b', m.group(1))) if m else set()
+
+
+PRONUNCIATION_HOW = ('ipa', 'respell')
+PRONUNCIATION_CONFIDENCE = ('confirmed', 'likely', 'uncertain')
+
+
+def pronunciation_path(rd, video):
+    return video_dir(rd, video) / 'pronunciation.json'
+
+
+def term_rx(term):
+    return re.compile(r'(?<![\w-])' + re.escape(term) + r'(?![\w-])')
+
+
+def pronunciation_facts(rd, video, lines):
+    """The episode's pronunciation list (40-plans/video-NN/pronunciation.json): the names and terms this voice may
+    say wrong, each in a form Eleven v4 documents (IPA between slashes, or a respelling), where that pronunciation
+    comes from and how sure it is. Only what is sent changes: the script and the captions keep the canonical
+    spelling. An uncertain entry is flagged for listening, never treated as settled."""
+    p = pronunciation_path(rd, video)
+    out = {'file': str(p), 'issues': [], 'warnings': [], 'terms': [], 'uses': {}}
+    if not p.is_file():
+        return out
+    d = read_json(p)
+    if not d:
+        out['issues'].append('pronunciation_file_unreadable')
+        return out
+    seen = set()
+    for k, t in enumerate(d.get('terms') or [], 1):
+        t = t if isinstance(t, dict) else {}
+        term, say = str(t.get('term') or '').strip(), str(t.get('say') or '').strip()
+        how, conf = str(t.get('how') or '').strip().lower(), str(t.get('confidence') or '').strip().lower()
+        name = term or f'entry_{k}'
+        if not term or not say:
+            out['issues'].append(f'pronunciation_{name}_needs_term_and_say')
+            continue
+        if term in seen:
+            out['issues'].append(f'pronunciation_{name}_listed_twice')
+        seen.add(term)
+        if how not in PRONUNCIATION_HOW:
+            out['issues'].append(f'pronunciation_{name}_how_must_be:' + '/'.join(PRONUNCIATION_HOW))
+        elif how == 'ipa' and not IPA_RX.fullmatch(say):
+            out['issues'].append(f'pronunciation_{name}_ipa_goes_between_slashes')
+        elif how == 'respell' and re.search(r'[/\[\]<>{}"]', say):
+            out['issues'].append(f'pronunciation_{name}_respelling_is_plain_letters')
+        if conf not in PRONUNCIATION_CONFIDENCE:
+            out['issues'].append(f'pronunciation_{name}_confidence_must_be:' + '/'.join(PRONUNCIATION_CONFIDENCE))
+        elif conf != 'uncertain' and n_words(t.get('source')) < 3:
+            out['issues'].append(f'pronunciation_{name}_needs_its_source')
+        elif conf == 'uncertain':
+            out['warnings'].append(f'the pronunciation of "{term}" is uncertain ({say}): hear it on a short probe or '
+                                   'trial before the parts that say it are recorded, and let the user listen')
+        rx = term_rx(term)
+        uses = [str(r.get('id') or f'L{i + 1:03d}') for i, r in enumerate(lines)
+                if rx.search(strip_tags(r.get('text') or ''))]
+        if not uses:
+            out['warnings'].append(f'pronunciation entry "{term}" is not in the script')
+        out['uses'][term] = uses
+        out['terms'].append({'term': term, 'say': say, 'how': how, 'confidence': conf, 'rx': rx})
+    return out
+
+
+def tts_text(text, terms):
+    """What ElevenLabs is sent for one line: its canonical text with its tags in place, every listed term in the
+    form v4 pronounces: IPA between slashes inside double quotes (as ElevenLabs' own examples write it), or a
+    respelling."""
+    out = str(text).strip()
+    for t in terms or []:
+        if t.get('how') in PRONUNCIATION_HOW:
+            form = f'"{t["say"]}"' if t['how'] == 'ipa' else t['say']
+            out = t['rx'].sub(lambda m, f=form: f, out)
+    return out
 
 
 # ---------------------------------------------------------------- creative direction, reviews, writing signals
@@ -803,7 +1000,9 @@ def direction_facts(rd, video):
 # or explicitly reapproved (`direction-reapprove`, with a reason, on record) before a stage that uses it continues.
 # Evidence, alternatives, reasons and samples feed nothing: no new revision, nothing to redo, no new read.
 TRACKED_FILES = ('beat-map', 'script', 'shot-plan', 'style-bible')
-MEDIA_ARTIFACTS = ('narration', 'stills', 'music', 'edit')
+# 'voice' is the episode's narrator choice (60-voice/video-NN/voice-lock.json): a narrator change asks whether the
+# chosen voice and its settings still fit, exactly as it asks of the recorded parts.
+MEDIA_ARTIFACTS = ('voice', 'narration', 'stills', 'music', 'edit')
 ALL_ARTIFACTS = TRACKED_FILES + MEDIA_ARTIFACTS
 FIELD_EFFECTS = {
     'decision.treatment': ALL_ARTIFACTS,
@@ -813,7 +1012,7 @@ FIELD_EFFECTS = {
     'strategy.facts_as_experience': ('beat-map', 'script'),
     'strategy.picture_contribution': ('shot-plan', 'style-bible', 'stills'),
     'strategy.sound_and_breath': ('beat-map', 'music', 'edit'),
-    'treatment.narrator': ('beat-map', 'script', 'narration'),
+    'treatment.narrator': ('beat-map', 'script', 'voice', 'narration'),
     'treatment.writing_voice': ('script',),
     'treatment.structure_and_pace': ('beat-map', 'script', 'shot-plan', 'edit'),
     'treatment.visual_language': ('shot-plan', 'style-bible', 'stills', 'edit'),
@@ -843,6 +1042,7 @@ def artifact_path(rd, video, name):
     vis, edit = rd / '60-visuals' / f'video-{n:02d}', rd / '70-edit' / f'video-{n:02d}'
     return {'beat-map': video_dir(rd, n) / 'beat-map.json', 'script': video_dir(rd, n) / 'script.json',
             'shot-plan': vis / 'shot-plan.json', 'style-bible': vis / 'style-bible.md',
+            'voice': rd / '60-voice' / f'video-{n:02d}' / 'voice-lock.json',
             'narration': rd / '50-audio' / f'video-{n:02d}' / 'manifest.json',
             'stills': vis / 'stills-provenance.json', 'music': edit / 'music-provenance.json',
             'edit': edit / 'edit-plan.json'}[name]
@@ -974,6 +1174,9 @@ def outdated_artifacts(rd, video):
     n = int(video)
     lock = read_json(video_dir(rd, n) / 'direction-lock.json')
     names = set(stale_files(rd, n))
+    vl = read_json(artifact_path(rd, n, 'voice'))
+    if vl and not media_current(lock, 'voice', vl.get('production_rev')):
+        names.add('voice')
     if narration_outdated_parts(lock, read_json(artifact_path(rd, n, 'narration'))):
         names.add('narration')
     for kind, key in (('stills', 'images'), ('music', 'tracks')):
@@ -1256,15 +1459,48 @@ def answer_problem(kind, finding, ans):
     return None
 
 
-def review_state(vd, kind, current_sha, snapshot=None):
+HOLDS_SMALL_CHANGE = (2, 5.0, 0.005)   # lines, seconds, share of the runtime: a hold tweak after a read, not a new film
+
+
+def holds_changed(seen, now_holds):
+    """Realised pauses added, removed or changed by half a second or more since a reader saw them: (lines, seconds)."""
+    changed, moved = [], 0.0
+    for lid in dict.fromkeys(list(seen) + list(now_holds)):
+        a, b = seen.get(lid), now_holds.get(lid)
+        sa, sb = (float(a[0]) if a else 0.0), (float(b[0]) if b else 0.0)
+        if (a is None) != (b is None) or abs(sa - sb) >= 0.5 or (a and b and a[1] != b[1]):
+            changed.append(lid)
+            moved += abs(sa - sb)
+    return changed, round(moved, 2)
+
+
+def review_state(vd, kind, current_sha, snapshot=None, holds=None):
     """Where one review kind stands for the current version: every round's findings sealed and answered,
     'revised' answers backed by real changes, a fresh read after major findings (until the round cap), and the
-    last read still describing what exists now. Issues block; warnings are shown and kept for the release sheet."""
+    last read still describing what exists now (for a script, its held silences too). Issues block; warnings are
+    shown and kept for the release sheet."""
     recs = review_records(vd, kind)
     st = {'kind': kind, 'rounds': len(recs), 'issues': [], 'warnings': [], 'majors_closed_by_decision': []}
     if not recs:
         st['issues'].append(f'{kind}_review_missing')
         return st
+    if kind == 'script' and holds is not None:
+        seen = recs[-1][0].get('holds_snapshot')
+        if seen is None:
+            if holds:
+                st['warnings'].append('the last script read was made before holds were shown to readers: it did not '
+                                      'see the held silences')
+        else:
+            ch, moved = holds_changed(seen, holds)
+            if ch:
+                lim_lines, lim_s, lim_share = HOLDS_SMALL_CHANGE
+                target = read_json(vd / 'length-lock.json').get('target_length_s') or 0
+                if len(ch) <= lim_lines and moved <= max(lim_s, lim_share * target):
+                    st['warnings'].append(f'held silences changed after the last read on {len(ch)} line(s), '
+                                          f'{moved:g} s in all (small enough to pass): ' + ','.join(ch))
+                else:
+                    st['issues'].append(f'holds_changed_after_the_script_read:{moved:g}s:' + ','.join(ch[:12])
+                                        + ('...' if len(ch) > 12 else ''))
     max_r = REVIEW_MAX_ROUNDS[kind]
     for i, (rec, ans) in enumerate(recs):
         rnd, fs = rec['_round'], rec.get('findings') or []
@@ -1420,6 +1656,29 @@ def writing_signals(lines, language='en'):
             if len(hits) >= 3 and w not in echoes:
                 echoes[w] = hits
     out['word_echoes'] = [{'word': w, 'lines': v} for w, v in list(echoes.items())[:15]]
+    # Delivery devices a listener counts without meaning to: questions in a row, exclamations, words in capitals
+    # (read as emphasis), and how often the text directs the voice. Information only: the treatment decides.
+    qruns, cur = [], []
+    for lid, s, _ in sents:
+        if s.endswith('?'):
+            cur.append(lid)
+        else:
+            if len(cur) >= 2:
+                qruns.append(cur)
+            cur = []
+    if len(cur) >= 2:
+        qruns.append(cur)
+    out['question_runs'] = [{'from': r[0], 'to': r[-1], 'questions': len(r)} for r in qruns][:12]
+    out['exclamations'] = sum(1 for _, s, _ in sents if s.endswith('!'))
+    caps = [(str(r.get('id') or f'L{i + 1:03d}'), w) for i, r in enumerate(lines)
+            for w in re.findall(r'\b[A-Z]{4,}\b', strip_tags(r.get('text') or ''))]
+    out['capitalised_words'] = {'count': len(caps), 'examples': [f'{a}:{b}' for a, b in caps[:8]]}
+    tag_lines = [(str(r.get('id') or f'L{i + 1:03d}'), m.group(0)) for i, r in enumerate(lines)
+                 for m in TAG_RE.finditer(str(r.get('text') or ''))]
+    spoken = sum(len(t) for _, _, t in sents) or 1
+    out['delivery_tags'] = {'count': len(tag_lines), 'per_1000_words': round(1000 * len(tag_lines) / spoken, 1),
+                            'pause_tags': sum(1 for _, t in tag_lines if is_pause_tag(t[1:-1])),
+                            'examples': [f'{a} {b}' for a, b in tag_lines[:10]]}
     out['note'] = ('Signals for the writer, not verdicts: a repeated shape can be a deliberate refrain. Count what '
                    'the listener will hear: a device used once is style, used eight times it is a template.')
     return out
@@ -1501,14 +1760,106 @@ def shot_facts(rd, video):
     return out
 
 
-def voice_measurement(rd):
-    """The locked voice's real measured pace and natural per-line gap (narration-measure writes it), or the
-    older hand-recorded fields. Empty until a real chunk of at least 300 words has been measured."""
-    vl = read_json(rd / '60-voice' / 'voice-lock.json')
+# ---------------------------------------------------------------- the episode's narrator (voice lock)
+# Each video chooses its own narrator for its locked treatment (voice-pick writes 60-voice/video-NN/voice-lock.json);
+# videos of a series may share one voice on purpose. Every recording of the video follows its lock: voice, model and
+# settings. A video recorded before episodes had their own lock keeps the run's older one (60-voice/voice-lock.json).
+VOICE_SETTING_KEYS = ('stability', 'similarity_boost')
+
+
+def voice_lock_path(rd, video):
+    return rd / '60-voice' / f'video-{int(video):02d}' / 'voice-lock.json'
+
+
+def voice_lock(rd, video):
+    """(lock, legacy): this video's own voice lock, or the run's older one for a video recorded before."""
+    own = read_json(voice_lock_path(rd, video))
+    if own:
+        return own, False
+    old = read_json(rd / '60-voice' / 'voice-lock.json')
+    return old, bool(old)
+
+
+def narrator_sha(direction):
+    t = chosen_treatment_of(direction)
+    return canonical_sha({k: t.get(k) for k in ('narrator', 'writing_voice')}) if t else None
+
+
+def voice_settings_issues(settings):
+    """Eleven v4 / v4 Turbo apply exactly two voice settings, stability and similarity (ElevenLabs' v4 docs: no style,
+    no speed, no SSML); both are chosen, never left to the account default."""
+    if not isinstance(settings, dict) or not settings:
+        return ['voice_settings_missing']
+    out = [f'voice_setting_not_applied_by_eleven_v4:{k}' for k in settings if k not in VOICE_SETTING_KEYS]
+    for k in VOICE_SETTING_KEYS:
+        v = settings.get(k)
+        if v is None:
+            out.append(f'voice_setting_missing:{k}')
+        elif isinstance(v, bool) or not isinstance(v, (int, float)) or not 0 <= float(v) <= 1:
+            out.append(f'voice_setting_out_of_range:{k}')
+    return out
+
+
+def voice_facts(rd, video, voice_id=None, model_id=None, settings=None):
+    """What this video's recording must use: its voice lock, current for the locked direction. A voice, model or
+    settings given on a command line must be exactly the locked ones (conflicts); a change is a deliberate revision
+    (voice-pick --replace with a reason), never an override."""
+    vl, legacy = voice_lock(rd, video)
+    out = {'issues': [], 'warnings': [], 'conflicts': [], 'legacy': legacy, 'lock': vl,
+           'voice_id': vl.get('voice_id'), 'model_id': vl.get('model_id') or 'eleven_v4',
+           'settings': vl.get('settings') or {}, 'voice_rev': vl.get('voice_rev', 1) if vl else None}
+    if not vl:
+        out['issues'].append('voice_lock_missing')
+        return out
+    if voice_id and voice_id != out['voice_id']:
+        out['conflicts'].append('voice_id_differs_from_the_episode_voice_lock')
+    if model_id and model_id != out['model_id']:
+        out['conflicts'].append('model_differs_from_the_episode_voice_lock')
+    if settings is not None and settings != out['settings']:
+        out['conflicts'].append('voice_settings_differ_from_the_episode_voice_lock')
+    out['issues'] += voice_settings_issues(out['settings'])
+    if out['model_id'] not in TTS_MODELS:
+        out['issues'].append('voice_lock_model_not_allowed')
+    if legacy:
+        out['warnings'].append('this video records with the run\'s older voice lock (made before each video chose its '
+                               'own narrator); choosing a narrator for it now goes through voice-pick')
+    else:
+        dlock = read_json(video_dir(rd, video) / 'direction-lock.json')
+        if dlock and not media_current(dlock, 'voice', vl.get('production_rev')):
+            out['issues'].append('voice_made_for_an_earlier_direction')
+        if n_words(vl.get('reason')) < MIN_NOTE_WORDS:
+            out['issues'].append('voice_lock_without_its_reason')
+    return out
+
+
+def _measured_matches(m, voice_id, model_id, settings):
+    return bool(m and m.get('wpm') and m.get('per_line_overhead_s') is not None and (m.get('words') or 0) >= 300
+                and m.get('voice_id') == voice_id and (m.get('model_id') or 'eleven_v4') == (model_id or 'eleven_v4')
+                and (m.get('settings') or {}) == (settings or {}))
+
+
+def voice_measurement(rd, video=None):
+    """The real measured pace and natural per-line gap of the voice this video records with (narration-measure writes
+    it): from this video's voice lock, else from another episode of the run locked to the same voice, model and settings
+    (a series voice keeps its calibration), else from the run's older lock. Empty until a real part of 300+ words of
+    that exact voice setup has been measured."""
+    if video is None:
+        vl, legacy = read_json(rd / '60-voice' / 'voice-lock.json'), True
+    else:
+        vl, legacy = voice_lock(rd, video)
+    want = (vl.get('voice_id'), vl.get('model_id') or 'eleven_v4', vl.get('settings') or {})
     m = vl.get('measured') or {}
-    if m.get('wpm') and m.get('per_line_overhead_s') is not None and (m.get('words') or 0) >= 300:
+    if _measured_matches(m, *want):
         return m
-    if vl.get('measured_wpm') and vl.get('measured_overhead_s') and vl.get('measured_overhead_lines'):
+    if vl and not legacy:
+        for other in sorted((rd / '60-voice').glob('video-*/voice-lock.json')):
+            om = read_json(other).get('measured') or {}
+            if other != voice_lock_path(rd, video) and _measured_matches(om, *want):
+                return {**om, 'source': f'measured on {other.parent.name}: same voice, model and settings'}
+        om = read_json(rd / '60-voice' / 'voice-lock.json').get('measured') or {}
+        if _measured_matches(om, *want):
+            return {**om, 'source': 'measured under the run\'s older voice lock: same voice, model and settings'}
+    if legacy and vl.get('measured_wpm') and vl.get('measured_overhead_s') and vl.get('measured_overhead_lines'):
         return {'wpm': vl['measured_wpm'], 'per_line_overhead_s': vl['measured_overhead_s'] / vl['measured_overhead_lines'],
                 'voice_id': vl.get('voice_id'), 'settings': vl.get('settings') or {}, 'source': 'hand-recorded (older run)'}
     return {}
@@ -1601,6 +1952,48 @@ def compute_ref_wpm(rd, refs, family):
     return round(statistics.mean(per_ref.values())), per_ref
 
 
+PACE_DEFINITIONS = {
+    'active_wpm': 'words over the time Whisper marks as speech (pauses between its speech segments left out): how fast '
+                  'the narrator talks while talking. The voice is measured the same way (narration-measure).',
+    'overall_wpm': 'words over the time from the first word to the last, every pause included: how many words a '
+                   'minute of the narration really holds. The script\'s word budget comes from this one.',
+    'runtime_wpm': 'words over the whole video, intro and outro included.',
+    'pause_share': 'the share of the speaking span that is silence between words.'}
+
+
+def sentence_cadence(texts):
+    """Words per sentence (median, 90th percentile) and sentences, from transcript or script text."""
+    sents = [len(re.findall(r"[\w']+", s)) for t in texts for s in re.split(r'(?<=[.!?…])\s+', strip_tags(t))]
+    sents = sorted(x for x in sents if x)
+    if not sents:
+        return {}
+    return {'sentences': len(sents), 'sentence_words_median': sents[len(sents) // 2],
+            'sentence_words_p90': sents[min(len(sents) - 1, int(0.9 * len(sents)))]}
+
+
+def ref_pace_stats(rd, vid, duration_s=None):
+    """One reference narrator on the pipeline's yardsticks (PACE_DEFINITIONS): the same transcribe() output the
+    references and this run's narration are both measured from."""
+    media = rd / '10-media' / vid
+    tfile = media / 'transcript.txt'
+    if not tfile.exists():
+        return {}
+    raw = tfile.read_text(encoding='utf-8', errors='replace')
+    words, speech = transcript_speech(raw)
+    tj = read_json(media / 'transcript.json')
+    ws = transcript_words(tj)
+    span = (ws[-1]['end_s'] - ws[0]['start_s']) if len(ws) > 1 else 0.0
+    out = {'words': words, 'speech_s': round(speech, 1), 'span_s': round(span, 1),
+           'active_wpm': round(words / (speech / 60)) if speech else None,
+           'overall_wpm': round(words / (span / 60)) if span else None,
+           'pause_share': round(max(0.0, 1 - speech / span), 3) if span and speech else None,
+           **sentence_cadence([s.get('text') or '' for s in tj.get('segments') or []])}
+    if duration_s:
+        out['duration_s'] = round(float(duration_s), 1)
+        out['runtime_wpm'] = round(words / (float(duration_s) / 60))
+    return out
+
+
 def plan_facts(rd, video):
     vd = video_dir(rd, video)
     lock = read_json(vd / 'length-lock.json')
@@ -1630,12 +2023,22 @@ def plan_facts(rd, video):
     tags, tag_issues = script_tags(lines)
     pause_plan, pause_issues = script_pause_plan(lines)
     issues += tag_issues + pause_issues
+    # What reaches the voice: no markup it can't take, no directions that fight each other, and the pronunciation
+    # list in the form v4 documents (it changes only what is sent; the canonical text stays for the captions).
+    markup_issues, markup_warnings = script_markup(lines)
+    issues += markup_issues
+    pron = pronunciation_facts(rd, video, lines)
+    issues += pron['issues']
     holds = round(sum(p['pause_after_s'] for p in pause_plan if p['via'] == 'edit'), 2)
     review = vd / 'editorial-review.md'
     review_text = review.read_text(encoding='utf-8', errors='replace') if review.exists() else ''
     flags, flag_issues = content_flags(lines, review_text)
     issues += flag_issues
-    warnings = []
+    # Every kept tag says why this moment needs it, under "Delivery and tags" (03, 05): selective, not decorative.
+    explained = delivery_review_lines(review_text)
+    issues += [f'tag_{lid}_not_explained_under_delivery_and_tags'
+               for lid in sorted({t['line'] for t in tags}) if lid not in explained]
+    warnings = list(markup_warnings) + pron['warnings']
     # Creative direction first (10): the treatment is chosen and locked before the script is written, and it
     # stays the one that was locked. Then one fresh cold read of the script, every finding answered (06).
     gate, dlock, dfacts = direction_gate(rd, video)
@@ -1657,11 +2060,11 @@ def plan_facts(rd, video):
             warnings.append(f'the chosen treatment was refined after its blind read ({share:.0%} of its vocabulary is '
                             'still what the reader saw)')
     snapshot ={str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
-    script_review = review_state(vd, 'script', script_hash(lines), snapshot) if lines else \
+    script_review = review_state(vd, 'script', script_hash(lines), snapshot, holds=hold_snapshot(lines)) if lines else \
         {'issues': ['script_review_missing'], 'warnings': [], 'rounds': 0}
     issues += script_review['issues']
     warnings += script_review['warnings']
-    measured = voice_measurement(rd)
+    measured = voice_measurement(rd, video)
     tag_s = round(sum(tag_cost_s(t['tag'], measured.get('tag_costs_s')) for t in tags), 2)
     pace = float(script.get('pace_wpm') or lock.get('pace_wpm') or 0)
     if not pace:
@@ -1682,6 +2085,30 @@ def plan_facts(rd, video):
             issues.append('real_forecast_outside_export_tolerance')
     elif pace and abs(forecast - target) > max(10, .08 * target):
         issues.append('script_forecast_misses_locked_length_by_over_8pct')
+    # Held silence never stands in for story. The length check above counts the holds; this shows how much of the
+    # locked runtime the words alone fill, next to how the comparable narrators pause. When holds carry runtime, the
+    # cold reader has seen every one (review-packet shows them; a later change to them needs a new read).
+    band = max(4, target * lock.get('tolerance_export_pct', .025)) if real is not None else max(10, .08 * target)
+    content_s = real_narr if real_narr is not None else (round(early_narr, 2) if pace else None)
+    carried = round(max(0.0, (target - band) - content_s), 1) if content_s is not None else None
+    ref_pp = [p for p in (lock.get('reference_pause_profiles') or {}).values() if p]
+    edit_holds = [p for p in pause_plan if p['via'] == 'edit']
+    holds_info = {'edit_holds': len(edit_holds), 'edit_holds_s': holds,
+                  'tag_pauses': sum(1 for p in pause_plan if p['via'] == 'tag'),
+                  'share_of_runtime': round(holds / target, 3) if target else None,
+                  'content_forecast_s': content_s, 'runtime_carried_by_holds_s': carried,
+                  'longest_hold_s': max((p['pause_after_s'] for p in edit_holds), default=0),
+                  'references_longest_pause_s': max((p.get('longest_pause_s') or 0 for p in ref_pp), default=None),
+                  'references_pauses_1_5s_plus_per_min': round(statistics.mean(
+                      [p['pauses_1_5s_plus_per_min'] for p in ref_pp if p.get('pauses_1_5s_plus_per_min') is not None]), 2)
+                  if any(p.get('pauses_1_5s_plus_per_min') is not None for p in ref_pp) else None}
+    if carried:
+        warnings.append(f'{carried:.0f} s of the locked runtime is carried by held silence ({holds:.0f} s of edit holds '
+                        f'in {len(edit_holds)} places): each one has to earn its moment, and the cold reader is shown them all')
+    pp = lock.get('pace_profile') or {}
+    density = {'script_words': words, 'words_per_runtime_minute': round(words / (target / 60)) if target else None,
+               'references_overall_wpm': pp.get('overall_wpm'), 'references_runtime_wpm': pp.get('runtime_wpm'),
+               'target_words': lock.get('target_words')}
     # Research <-> script: a line that states a number (a date, a count, a distance) and is tied to no claim.
     # Not blocking (a count of sides or the narrator's premise needs none); each consequential one gets a claim
     # before its part is recorded, because a wrong number found later costs a re-record.
@@ -1701,10 +2128,15 @@ def plan_facts(rd, video):
         issues.append('editorial_review_missing')
     return {'ready': not issues, 'issues': issues, 'warnings': warnings, 'script_lines': len(lines),
             'words': words, 'narration_pace_wpm': pace,
-            'pace_sources': {'references_wpm': lock.get('pace_wpm'), 'script_wpm': script.get('pace_wpm'),
-                             'voice_measured_wpm': measured.get('wpm'),
+            'pace_sources': {'references_wpm': lock.get('pace_wpm'), 'references_overall_wpm': pp.get('overall_wpm'),
+                             'script_wpm': script.get('pace_wpm'), 'voice_measured_wpm': measured.get('wpm'),
+                             'voice_overall_wpm': measured.get('overall_wpm'),
                              'voice_per_line_gap_s': round(measured['per_line_overhead_s'], 3) if measured else None},
             'audio_tags': tags, 'tag_time_s': tag_s, 'pause_plan': pause_plan, 'edit_holds_s': holds,
+            'holds': holds_info, 'density': density,
+            'pronunciation': {'file': pron['file'], 'terms': [{k: t[k] for k in ('term', 'say', 'how', 'confidence')}
+                                                              | {'lines': len(pron['uses'].get(t['term']) or [])}
+                                                              for t in pron['terms']]},
             'content_flags': flags, 'numbers_without_claim': numbers_without_claim,
             'creative': {'direction_locked': bool(dlock), 'locked_late': bool(dlock.get('late_reason')),
                          'treatment': dfacts.get('chosen_treatment'), 'production_rev': dlock.get('production_rev'),
@@ -1715,7 +2147,8 @@ def plan_facts(rd, video):
             'locked_target_s': target,
             'export_window_s': [round(target - max(4, target * lock.get('tolerance_export_pct', .025)), 2),
                                 round(target + max(4, target * lock.get('tolerance_export_pct', .025)), 2)],
-            'target_words_without_pauses': round(target * pace / 60) if pace else None}
+            'target_words_without_pauses': round(target * pace / 60) if pace else None,
+            'target_words_with_reference_pauses': lock.get('target_words')}
 
 
 def cmd_plan_check(args):
@@ -3154,6 +3587,11 @@ no plan, no rationale. Read nothing else and do not change any file except the o
 Read it all the way through as someone who clicked the title and is listening. Be honest, specific and fair:
 say what works as plainly as what does not. Refer to line ids.
 
+Words in [square brackets] are delivery directions the voice receives but never says. A line followed by
+"(the picture holds N s in silence)" is followed by that silence while the picture stays on screen. Judge both as
+part of what you would hear: does each direction help, or push the narration into theatre; does each silence earn
+its moment, or pad the runtime?
+
 Think about:
 1. What the video promised, and whether it delivered.
 2. Your gut, 1-10: would you keep watching? (a viewer's gut, not a quality score)
@@ -3166,6 +3604,8 @@ Think about:
    where the material invites it; or a reader of facts; or someone straining for drama.
 7. Lines hard to follow by ear: number pile-ups, very long sentences, tangled grammar, jargon.
 8. The ending: does it land; is anything after the payoff too long or too short.
+9. The delivery directions and the silences: where they help, where they are theatre or filler, where a silence
+   holds a moment the story has not earned.
 
 Then list findings (at most 12), each concrete enough to act on. Severity "major": a viewer would likely stop
 watching, lose the thread or stop trusting the video there (a long sag, a confusing stretch, a contradiction, a
@@ -3293,9 +3733,21 @@ def cmd_review_packet(args):
         script = read_json(vd / 'script.json', required=True)
         lines = script.get('lines') or []
         snapshot = {str(r.get('id') or f'L{i + 1:03d}'): str(r.get('text') or '') for i, r in enumerate(lines)}
+        holds = hold_snapshot(lines)
         text = _fill(SCRIPT_BRIEF, TITLE=title, MINUTES=minutes, HOUSE_RULES=HOUSE_RULES, OUT=out_path)
-        text += '\n'.join(f'{lid} {strip_tags(t)}' for lid, t in snapshot.items()) + '\n'
-        meta.update({'subject_sha256': script_hash(lines), 'subject_snapshot': snapshot})
+        held = sum(v[0] for v in holds.values() if v[1] == 'edit')
+        refs_pp = [p for p in (lock.get('reference_pause_profiles') or {}).values() if p]
+        longest = max((p.get('longest_pause_s') or 0 for p in refs_pp), default=0)
+        text += (f'Held silences in this script: {len(holds)} ({held:g} s where the picture holds with no voice, '
+                 f'{round(100 * held / lock["target_length_s"], 1)}% of the runtime).'
+                 + (f' The comparable narrators\' longest pause is about {longest:g} s.' if longest else '') + '\n\n')
+        for lid, t in snapshot.items():
+            text += f'{lid} {t}\n'
+            if lid in holds:
+                s, via = holds[lid]
+                text += (f'      (the picture holds {s:g} s in silence)\n' if via == 'edit'
+                         else f'      (the voice pauses here, about {s:g} s)\n')
+        meta.update({'subject_sha256': script_hash(lines), 'subject_snapshot': snapshot, 'holds_snapshot': holds})
     elif kind == 'treatment':
         df = direction_facts(rd, n)
         blocking = [x for x in df['issues'] if x.startswith(('treatment_', 'direction_needs_2', 'direction_missing'))]
@@ -3412,6 +3864,7 @@ def cmd_review_record(args):
               'rewrite its judgement.', problems)
     rec = {'kind': kind, 'round': rnd, 'video': n, 'packet': str(folder / f'packet-{kind}-r{rnd}.md'),
            'subject_sha256': meta['subject_sha256'], 'subject_snapshot': meta.get('subject_snapshot'),
+           'holds_snapshot': meta.get('holds_snapshot'),
            'labels': meta.get('labels'), 'file': meta.get('file'), 'reviewer': raw.get('reviewer') or 'unstated',
            'verdict': raw.get('verdict') or {k: raw.get(k) for k in ('would_watch', 'why', 'per_treatment') if k in raw},
            'strongest': raw.get('strongest'), 'findings': findings, 'findings_sha256': canonical_sha(findings),
