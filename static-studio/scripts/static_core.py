@@ -21,6 +21,7 @@ import shutil
 import statistics
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -31,15 +32,56 @@ IMAGE_EXT = {'.jpg', '.jpeg', '.png', '.webp', '.heic'}
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA = 'static-youtube-longform-v1'
 DEFAULT_MIN_LONGFORM = 480
-# Reference analysis samples one frame per second (state.json analysis_fps, set when the run is made). A run keeps the
-# rate its references were analysed at, so its references and its own export are measured on one yardstick; a run
-# whose state predates the setting was analysed at 5 fps. The generated video's frame rate (format.fps) is separate.
-ANALYSIS_FPS = 1.0
+# Reference analysis samples two frames per second (state.json analysis_fps, set when the run is made), each frame
+# picked by and kept with its own source timestamp (analysis_sampler). A run keeps the rate and the sampler its
+# references were analysed with, so its references and its own export are measured on one yardstick; a run whose
+# state predates these settings was analysed at 5 fps with nominal slot times. The generated video's frame rate
+# (format.fps), the CapCut timeline and the export are separate and unchanged.
+ANALYSIS_FPS = 2.0
 LEGACY_ANALYSIS_FPS = 5.0
+ANALYSIS_SAMPLER = 'pts-v1'     # = av_tools.SAMPLER
+LEGACY_SAMPLER = 'nominal'      # frames numbered at a fixed rate, their times read from the numbers
 
 
 def run_analysis_fps(st):
     return float(st.get('analysis_fps') or LEGACY_ANALYSIS_FPS)
+
+
+def run_analysis_sampler(st):
+    return str(st.get('analysis_sampler') or LEGACY_SAMPLER)
+
+
+def parse_clock(s):
+    """Seconds from 75, '75.5', '01:15', '01:15.5' or '1:01:15'; None when it is none of these."""
+    if s is None or isinstance(s, bool):
+        return None
+    if isinstance(s, (int, float)):
+        return float(s)
+    s = str(s).strip()
+    m = re.fullmatch(r'(?:(\d+):)?(\d{1,3}):(\d{1,2}(?:\.\d+)?)', s)
+    if m:
+        return int(m.group(1) or 0) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def parse_span(s):
+    """(start_s, end_s) of 'mm:ss-mm:ss', of {'from', 'to'}, or of one time (t, t); (None, None) when unreadable."""
+    if isinstance(s, dict):
+        a, b = parse_clock(s.get('from')), parse_clock(s.get('to'))
+    else:
+        parts = [x.strip() for x in str(s or '').split('-') if x.strip()]
+        if len(parts) == 1:
+            a = b = parse_clock(parts[0])
+        elif len(parts) == 2:
+            a, b = parse_clock(parts[0]), parse_clock(parts[1])
+        else:
+            a = b = None
+    if a is None or b is None or b < a:
+        return None, None
+    return a, b
 
 
 def emit(data, code=0):
@@ -142,7 +184,8 @@ def file_sha256(path):
 
 
 def cmd_doctor(args):
-    checks = {'python': sys.version.split()[0], 'ffmpeg': shutil.which('ffmpeg') is not None,
+    checks = {'python': sys.version.split()[0], 'python_executable': sys.executable,
+              'ffmpeg': shutil.which('ffmpeg') is not None,
               'ffprobe': shutil.which('ffprobe') is not None,
               'elevenlabs_api_key_set': bool(elevenlabs_key())}
     try:
@@ -162,9 +205,40 @@ def cmd_doctor(args):
         except ImportError:
             checks[name] = False
     checks['av_profile_ready'] = all(checks.get(k) for k in ('numpy', 'opencv', 'librosa', 'soundfile', 'pillow'))
-    emit({'ok': checks['ffmpeg'] and checks['ffprobe'], 'checks': checks,
-          'note': 'Whisper is required for reference audio analysis; av-profile (watch sheets, delivery measurements) '
-                  'needs numpy, opencv, librosa, soundfile and pillow; image/CapCut/TTS tools are checked separately.'})
+    dirs = cuda_dll_dirs()
+    checks['cuda_dll_dirs'] = dirs
+    # a fresh terminal (opened after the user PATH got these folders) has them; an older process gets them in-process
+    checks['cuda_dirs_on_this_process_path'] = len(_on_path(dirs)) == len(dirs) and bool(dirs)
+    try:
+        import ctranslate2
+        checks['ctranslate2'] = ctranslate2.__version__
+        checks['cuda_devices'] = ctranslate2.get_cuda_device_count()
+    except ImportError:
+        checks['ctranslate2'] = None
+    ok = checks['ffmpeg'] and checks['ffprobe']
+    if args.whisper:
+        model, eng = whisper_model('medium', WHISPER_DEVICE, WHISPER_COMPUTE)   # a failure stops here, with its cause
+        checks['whisper'] = {k: v for k, v in eng.items() if k != 'cuda_dll_dirs'}
+        if args.file:
+            import tempfile
+            src = Path(args.file).expanduser().resolve()
+            if not src.is_file():
+                error('File not found', str(src))
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp) / 'probe.json'
+                transcribe(src, out, 'medium', WHISPER_DEVICE, WHISPER_COMPUTE)
+                tj = read_json(out)
+            words = transcript_words(tj)
+            checks['whisper_file'] = {'file': str(src), 'duration_s': tj.get('duration_s'), 'language': tj.get('language'),
+                                      'segments': len(tj.get('segments') or []), 'words': len(words),
+                                      'elapsed_s': tj.get('elapsed_s'), 'realtime_x': tj.get('realtime_x'),
+                                      'device': (tj.get('engine') or {}).get('device'),
+                                      'first_words': ' '.join(w['text'].strip() for w in words[:24])}
+        ok = ok and checks['whisper']['device'] == 'cuda'
+    emit({'ok': ok, 'checks': checks,
+          'note': 'Whisper medium runs on the GPU for every transcription (doctor --whisper loads it and runs it once; '
+                  '--file also transcribes that file). av-profile (watch sheets, delivery measurements) needs numpy, '
+                  'opencv, librosa, soundfile and pillow; image/CapCut/TTS tools are checked separately.'})
 
 
 def cmd_init(args):
@@ -187,7 +261,7 @@ def cmd_init(args):
     st = {'schema': SCHEMA, 'run_id': rd.name, 'created_at': now(), 'source_references': str(ref),
           'stage': 'intake', 'selected_niche': None, 'video_count': 0,
           'format': {'platform': 'YouTube long-form', 'aspect': '16:9', 'width': 1920, 'height': 1080, 'fps': 30},
-          'analysis_fps': args.fps, 'min_longform_s': args.min_longform,
+          'analysis_fps': args.fps, 'analysis_sampler': ANALYSIS_SAMPLER, 'min_longform_s': args.min_longform,
           'notes': 'Static only. Agents invent new subjects within the chosen niche; references teach form, not copied content.'}
     write_json(rd / 'state.json', st)
     (rd / 'todo.md').write_text('# Static Studio run\n\n- [ ] Inventory and prepare references (av-profile: watch them as films)\n- [ ] Analyze evidence and choose niche\n- [ ] Lock comparable long-form length\n- [ ] Research the story; creative direction: approaches, treatments, blind read, direction-lock (before the script)\n- [ ] Beat directions and script; cold read with every finding answered; plan-check\n- [ ] Record complete narration (calibration part first: pace and delivery per beat)\n- [ ] Design and assemble image-led edit (shot-check, retime-shots)\n- [ ] Export; final watch review answered; release-check\n', encoding='utf-8')
@@ -218,7 +292,7 @@ def cmd_clone(args):
     st.update({'selected_niche': None, 'video_count': 0, 'stage': 'reference_analysis_complete',
                'run_id': rd.name, 'created_at': now(), 'cloned_from': str(src),
                # frames are not cloned: the clone's references are prepared again, at the current analysis rate
-               'analysis_fps': ANALYSIS_FPS})
+               'analysis_fps': ANALYSIS_FPS, 'analysis_sampler': ANALYSIS_SAMPLER})
     write_json(rd/'state.json', st)
     for oldrel in ['00-inventory/references.json', '20-analysis/cohorts/index.json']:
         old = src/oldrel
@@ -226,6 +300,15 @@ def cmd_clone(args):
             target = rd/oldrel; target.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(old, target)
     for card in (src/'20-analysis/cards').glob('V*.json'):
         shutil.copy2(card, rd/'20-analysis/cards'/card.name)
+    # The content reviews are analysis too (their times are the source's, whatever the sampling rate), with the
+    # records of their closer looks (index.json only: frames of a closer look are never copied).
+    for review in (src/'20-analysis/content').glob('V*.json'):
+        (rd/'20-analysis/content').mkdir(parents=True, exist_ok=True)
+        shutil.copy2(review, rd/'20-analysis/content'/review.name)
+    for idx in (src/'20-analysis/inspect').glob('*/*/index.json'):
+        target = rd/idx.relative_to(src)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(idx, target)
     (rd/'todo.md').write_text('# Cloned Static analysis\n\n- [ ] prepare + av-profile the references again (frames and transcripts are not cloned)\n- [ ] Choose niche and lock a new video length\n- [ ] Creative direction and lock before the script; cold read; then produce (create-video.md D-G)\n', encoding='utf-8')
     emit({'ok': True, 'run': str(rd), 'source_run': str(src), 'note': 'Only analyses are reused. Source media is read-only; production assets remain independent.'})
 
@@ -278,12 +361,147 @@ def cmd_scan(args):
           'source_read_only': True}, 2 if errors else 0)
 
 
-def transcribe(path, outpath, model_name, device, compute_type):
+# Whisper is medium (the user's rule for all audio) and runs on the GPU: CTranslate2 (faster-whisper) with the CUDA 12
+# runtime pip installed for this interpreter (nvidia-cublas-cu12, nvidia-cudnn-cu12, nvidia-cuda-nvrtc-cu12). The CPU
+# is used only on the user's explicit yes (--device cpu --cpu-approved "..."), never as a silent fallback: a GPU that
+# cannot run stops the command with what is missing. One model per process, loaded once for every file it hears.
+WHISPER_MODELS = ('medium',)
+WHISPER_DEVICE, WHISPER_COMPUTE = 'cuda', 'float16'
+_WHISPER = {}
+_DLL_DIRS = []
+_CPU_APPROVAL = None
+
+
+def cuda_dll_dirs():
+    """The NVIDIA runtime folders pip installed for this interpreter (site-packages/nvidia/*/bin)."""
+    roots = []
     try:
-        from faster_whisper import WhisperModel
+        import nvidia
+        roots = [str(r) for r in getattr(nvidia, '__path__', [])]
     except ImportError:
-        raise RuntimeError('faster-whisper unavailable: pip install faster-whisper')
-    model = WhisperModel(model_name, device=device, compute_type=compute_type)
+        pass
+    if not roots:
+        import site
+        roots = [str(Path(sp) / 'nvidia') for sp in site.getsitepackages() if (Path(sp) / 'nvidia').is_dir()]
+    out = []
+    for r in roots:
+        out += [str(x) for x in sorted(Path(r).glob('*/bin')) if x.is_dir()]
+    return list(dict.fromkeys(out))
+
+
+def _on_path(dirs):
+    have = {os.path.normcase(os.path.normpath(x)) for x in os.environ.get('PATH', '').split(os.pathsep) if x}
+    return [d for d in dirs if os.path.normcase(os.path.normpath(d)) in have]
+
+
+def cuda_runtime_setup():
+    """Make those folders findable by CTranslate2 in THIS process (first on its PATH, and in its DLL search list).
+    A terminal opened after they were added to the user's PATH has them already; a process started before (an agent
+    session) does not. Nothing outside this process changes."""
+    dirs = cuda_dll_dirs()
+    if os.name == 'nt' and dirs:
+        add = [d for d in dirs if d not in _on_path(dirs)]
+        if add:
+            os.environ['PATH'] = os.pathsep.join(add + [os.environ.get('PATH', '')])
+        for d in dirs:
+            if d not in _DLL_DIRS:
+                try:
+                    os.add_dll_directory(d)
+                    _DLL_DIRS.append(d)
+                except OSError:
+                    pass
+    return dirs
+
+
+def _gpu_name():
+    try:
+        p = subprocess.run(['nvidia-smi', '--query-gpu=name,driver_version', '--format=csv,noheader'],
+                           capture_output=True, text=True, timeout=15)
+        return (p.stdout or '').strip().splitlines()[0] if p.returncode == 0 and p.stdout.strip() else None
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
+def whisper_model(model_name, device, compute_type):
+    """(model, engine facts) loaded once per process. On the GPU it runs one second of silence through the encoder
+    and decoder at once, so a missing CUDA library fails here, by name, before any real audio; the facts are what
+    the inference engine itself reports (device, index, compute type), not the settings asked for."""
+    key = (model_name, device, compute_type)
+    if key in _WHISPER:
+        return _WHISPER[key]
+    if model_name not in WHISPER_MODELS:
+        raise RuntimeError(f'Whisper {model_name} is not used here: every transcription is Whisper medium.')
+    try:
+        import ctranslate2
+        import faster_whisper
+        from faster_whisper import WhisperModel
+    except ImportError as exc:
+        raise RuntimeError(f'faster-whisper is not importable in {sys.executable}: {exc}')
+    facts = {'python': sys.executable, 'faster_whisper': getattr(faster_whisper, '__version__', None),
+             'ctranslate2': getattr(ctranslate2, '__version__', None), 'model': model_name}
+    if device == 'cuda':
+        facts['cuda_dll_dirs'] = cuda_runtime_setup()
+        facts['cuda_devices'] = ctranslate2.get_cuda_device_count()
+        if facts['cuda_devices'] < 1:
+            raise RuntimeError('Whisper runs on the GPU here, and CTranslate2 sees no CUDA device. Check the NVIDIA '
+                               'driver (nvidia-smi), that CUDA_VISIBLE_DEVICES does not hide the card, and that '
+                               f'{sys.executable} has the CUDA build of ctranslate2. Nothing was transcribed; the CPU is '
+                               'used only on the user\'s explicit yes (--device cpu --cpu-approved "...").')
+        facts['gpu'] = _gpu_name()
+    elif device == 'cpu':
+        facts['cpu_approved'] = _CPU_APPROVAL
+    t0 = time.time()
+    try:
+        model = WhisperModel(model_name, device=device, compute_type=compute_type)
+        facts['load_s'] = round(time.time() - t0, 2)
+        import numpy as np
+        t1 = time.time()
+        segs, _ = model.transcribe(np.zeros(16000, dtype=np.float32), beam_size=1, vad_filter=False,
+                                   without_timestamps=True, language='en')
+        list(segs)
+        facts['warmup_s'] = round(time.time() - t1, 2)
+    except Exception as exc:   # noqa: BLE001 - CTranslate2 raises plain RuntimeErrors and OSErrors for missing DLLs
+        raise RuntimeError(f'Whisper {model_name} could not run on {device} ({compute_type}): {exc}. Python: '
+                           f'{sys.executable}. NVIDIA runtime folders found for it: '
+                           f'{facts.get("cuda_dll_dirs") or "none"} (cuBLAS 12, cuDNN 9, NVRTC from the nvidia-*-cu12 '
+                           'packages; nvidia-smi shows the driver). Nothing was transcribed; no CPU fallback.')
+    eng = model.model
+    facts.update({'device': eng.device, 'device_index': eng.device_index, 'compute_type': eng.compute_type})
+    if device == 'cuda' and eng.device != 'cuda':
+        raise RuntimeError(f'Whisper was asked for the GPU but the engine reports {eng.device}; nothing transcribed.')
+    _WHISPER[key] = (model, facts)
+    return model, facts
+
+
+def whisper_settings(args):
+    """Checked once per command, before any work: Whisper medium on the GPU (cuda, float16). --device cpu needs
+    --cpu-approved with the user's own words; nothing ever switches to the CPU by itself."""
+    global _CPU_APPROVAL
+    if getattr(args, 'whisper_model', 'medium') not in WHISPER_MODELS:
+        error('Every transcription here is Whisper medium.', {'asked': args.whisper_model})
+    dev = getattr(args, 'device', None) or WHISPER_DEVICE
+    if dev == 'cpu':
+        said = (getattr(args, 'cpu_approved', None) or '').strip()
+        if n_words(said) < 3:
+            error('Whisper runs on the GPU here. The CPU is used only when the user explicitly says so: pass '
+                  '--cpu-approved "<what the user said>" with --device cpu. Nothing ran.')
+        _CPU_APPROVAL = said
+    args.device = dev
+    if not getattr(args, 'compute_type', None):
+        args.compute_type = WHISPER_COMPUTE if dev == 'cuda' else 'int8'
+
+
+def add_whisper_args(p):
+    p.add_argument('--whisper-model', default='medium', choices=list(WHISPER_MODELS))
+    p.add_argument('--device', default=WHISPER_DEVICE, choices=['cuda', 'cpu'],
+                   help='cuda: the GPU, always; cpu only with --cpu-approved')
+    p.add_argument('--compute-type', default=None, help='float16 on the GPU (the default)')
+    p.add_argument('--cpu-approved', help='the user\'s own words allowing Whisper on the CPU this time (--device cpu)')
+
+
+def transcribe(path, outpath, model_name, device, compute_type):
+    model, eng = whisper_model(model_name, device, compute_type)
+    t0 = time.time()
     segs, info = model.transcribe(str(path), beam_size=5, word_timestamps=True, vad_filter=True,
                                   condition_on_previous_text=False)
     rows = []
@@ -291,8 +509,12 @@ def transcribe(path, outpath, model_name, device, compute_type):
         rows.append({'start_s': round(s.start, 3), 'end_s': round(s.end, 3), 'text': s.text.strip(),
                      'words': [{'start_s': round(w.start, 3), 'end_s': round(w.end, 3), 'text': w.word}
                                for w in s.words or []]})
+    elapsed = time.time() - t0
     result = {'status': 'transcribed', 'source': str(path), 'model': model_name,
               'language': info.language, 'duration_s': round(info.duration, 2),
+              'engine': {k: eng.get(k) for k in ('device', 'device_index', 'compute_type', 'gpu', 'faster_whisper',
+                                                 'ctranslate2', 'python', 'cpu_approved') if eng.get(k) is not None},
+              'elapsed_s': round(elapsed, 2), 'realtime_x': round(info.duration / elapsed, 1) if elapsed > 0 else None,
               'segments': rows, 'warning': 'Whisper is fallible: verify names, numbers and hard-to-hear claims by listening.'}
     write_json(outpath, result)
     outpath.with_suffix('.txt').write_text('\n'.join(f"[{s['start_s']:.1f}-{s['end_s']:.1f}] {s['text']}" for s in rows), encoding='utf-8')
@@ -308,6 +530,7 @@ def cmd_prepare(args):
     if not chosen:
         error('No matching unique reference videos. Run scan first.')
     fps = run_analysis_fps(st)
+    sampler = run_analysis_sampler(st)
     if args.fps and abs(float(args.fps) - fps) > 1e-9:
         error(f'This run analyses its references at {fps:g} fps (state.json analysis_fps): every reference of a run is '
               'sampled at one rate, so they and the run\'s own export compare on one yardstick. Clone the run to '
@@ -317,10 +540,11 @@ def cmd_prepare(args):
         error('FPS must be between 0 and 60')
     estimate = sum(v.get('duration_s') or 0 for v in chosen) * fps
     if args.dry_run:
-        emit({'ok': True, 'videos': len(chosen), 'fps': fps, 'estimated_sample_frames': int(estimate),
-              'per_video': {x['id']: x['duration_s'] for x in chosen},
-              'note': f'{fps:g} fps is this run\'s analysis rate (a frame every {1 / fps:g} s); use --full-fps for a '
-                      'specific clip when true frame-by-frame detail is necessary.'})
+        emit({'ok': True, 'videos': len(chosen), 'fps': fps, 'sampler': sampler,
+              'estimated_sample_frames': int(estimate), 'per_video': {x['id']: x['duration_s'] for x in chosen},
+              'note': f'{fps:g} fps is this run\'s analysis rate (a frame every {1 / fps:g} s'
+                      + (', each at its own timestamp' if sampler == ANALYSIS_SAMPLER else ', nominal slot times')
+                      + '); for a brief stretch the samples cannot settle, inspect-window looks closer.'})
         return
     results = []
     failures = []
@@ -334,29 +558,55 @@ def cmd_prepare(args):
         pold = read_json(manifest)
         signature = {'fingerprint': v['fingerprint'], 'fps': 'original' if args.full_fps else fps,
                      'width': args.width, 'whisper_model': args.whisper_model}
-        # The frames and the transcript are cached apart: a new sampling rate or width re-makes the frames only,
-        # never the transcript (the audio did not change). An older manifest held one signature for both.
-        frames_sig = {k: signature[k] for k in ('fingerprint', 'fps', 'width')}
+        # The frames and the transcript are cached apart: a new sampling rate, sampler or width re-makes the
+        # frames only, never the transcript (the audio did not change), and frames made another way are never
+        # reused. An older manifest held one signature for both, for nominal-slot frames.
+        pts_mode = bool(args.full_fps) or sampler == ANALYSIS_SAMPLER
+        frames_sig = {'fingerprint': v['fingerprint'], 'fps': signature['fps'], 'width': args.width,
+                      'sampler': ANALYSIS_SAMPLER if pts_mode else LEGACY_SAMPLER}
         words_sig = {k: signature[k] for k in ('fingerprint', 'whisper_model')}
+        sig_key = 'full_frames_signature' if args.full_fps else 'frames_signature'
         old_sig = pold.get('signature') or {}
-        old_frames = pold.get('frames_signature') or {k: old_sig.get(k) for k in frames_sig}
+        old_frames = dict(pold.get(sig_key) or ({} if args.full_fps else
+                                                {k: old_sig.get(k) for k in ('fingerprint', 'fps', 'width')}))
+        old_frames.setdefault('sampler', LEGACY_SAMPLER)
         old_words = pold.get('transcript_signature') or {k: old_sig.get(k) for k in words_sig}
-        details = {'id': v['id'], 'source': str(src), 'signature': signature, 'frames_signature': frames_sig,
-                   'transcript_signature': words_sig, 'updated_at': now()}
+        index_path = dest / ('all-frames-index.json' if args.full_fps else 'frame-index.json')
+        details = {k: x for k, x in pold.items() if k in ('frames_signature', 'full_frames_signature', 'frame_index',
+                                                         'all_frames_index', 'sampler', 'sampled_frames', 'sample_fps')}
+        details.update({'id': v['id'], 'source': str(src), 'signature': signature, sig_key: frames_sig,
+                        'transcript_signature': words_sig, 'updated_at': now()})
         try:
-            if not (old_frames == frames_sig and list(target.glob('*.jpg'))):
-                for existing in target.glob('*.jpg'):
-                    existing.unlink()
-                vf = f"scale={args.width}:-2" if args.full_fps else f"fps={fps},scale={args.width}:-2"
-                run_cmd(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', str(src), '-vf', vf,
-                         '-q:v', '5', str(target / '%07d.jpg')], timeout=None)
-            details['sampled_frames'] = len(list(target.glob('*.jpg')))
-            details['sample_fps'] = v.get('fps') if args.full_fps else fps
+            if not (old_frames == frames_sig and list(target.glob('*.jpg')) and (index_path.is_file() or not pts_mode)):
+                if pts_mode:
+                    frames, origin = _av().sample_frames(src, target, fps=fps, width=args.width, native=bool(args.full_fps))
+                    gaps = [y['t_s'] - x['t_s'] for x, y in zip(frames, frames[1:])]
+                    write_json(index_path, {
+                        'source_id': v['id'], 'mode': 'source_pts', 'sampler': ANALYSIS_SAMPLER,
+                        'fps': 'original' if args.full_fps else fps,
+                        'interval_s': None if args.full_fps else round(1 / fps, 4),
+                        'clock': 'transcript: each frame\'s source timestamp minus the audio stream\'s start, the '
+                                 'clock of every word time and speech segment',
+                        'clock_origin_s': round(origin, 4), 'max_gap_s': round(max(gaps), 4) if gaps else None,
+                        'note': 'Each frame shows the picture at its t_s exactly; anything between two samples is '
+                                'unseen (inspect-window looks closer at a brief stretch).',
+                        'frames': [{**f, 'approx_s': f['t_s']} for f in frames]})
+                else:   # a run made before: frames numbered at a fixed rate, as it was analysed
+                    for existing in target.glob('*.jpg'):
+                        existing.unlink()
+                    run_cmd(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', str(src), '-vf',
+                             f"fps={fps},scale={args.width}:-2", '-q:v', '5', str(target / '%07d.jpg')], timeout=None)
+            if not args.full_fps:
+                details['sampled_frames'] = len(list(target.glob('*.jpg')))
+                details['sample_fps'] = fps
+                details['sampler'] = frames_sig['sampler']
+            else:
+                details['all_frames'] = len(list(target.glob('*.jpg')))
             details['full_frame_extraction'] = bool(args.full_fps)
-            # Non-native-FPS still indexes are NOMINAL sample slots, not exact PTS.
-            # Require direct video inspection for precise scene-cut timing.
-            sample_rate = details['sample_fps'] or fps
-            if not args.full_fps and sample_rate:
+            details['all_frames_index' if args.full_fps else 'frame_index'] = str(index_path)
+            # A run made before keeps its NOMINAL sample slots (re-derived from the file names), not exact PTS.
+            sample_rate = fps
+            if not args.full_fps and not pts_mode:
                 frame_index_path = dest / 'frame-index.json'
                 frame_names = sorted(x.name for x in target.glob('*.jpg'))
                 frame_index = {'source_id': v['id'], 'mode': 'nominal_sample_time',
@@ -5296,6 +5546,81 @@ def _av():
     return av_tools
 
 
+INSPECT_MAX_FRAMES = 400
+
+
+def inspect_dir(rd, label, a, b, rate):
+    tag = 'native' if rate == 'native' else f'{float(rate):g}fps'
+    return rd / '20-analysis' / 'inspect' / label / f'{a:.2f}-{b:.2f}@{tag}'
+
+
+def cmd_inspect_window(args):
+    """A closer look at one brief stretch of a reference (--ref) or of any video (--file, e.g. an export): every
+    frame (--native) or a higher rate, each at its own timestamp on the transcript's clock, with the words said
+    there and one contact sheet. For what the run's samples cannot settle (an inspect_candidate, a fast cut, a
+    possibly graphic moment, an uncertain continuity), never a whole video. --remove deletes that look's frames
+    afterwards (disturbing material); its index.json stays as the record that the look was taken."""
+    rd, st = run_folder(args)
+    a, b = parse_clock(args.start), parse_clock(args.end)
+    if a is None or b is None or b <= a:
+        error('--from and --to must be times (mm:ss, h:mm:ss or seconds), --to after --from')
+    row, tj = None, {}
+    if args.ref:
+        inv = read_json(rd / '00-inventory/references.json', required=True)
+        row = next((x for x in inv.get('items') or [] if x.get('id') == args.ref.strip().upper()
+                    and x.get('kind') == 'video'), None)
+        if not row:
+            error('No such reference video in this run', args.ref)
+        src, label = Path(row['source_path']), row['id']
+        tj = read_json(rd / '10-media' / label / 'transcript.json')
+    elif args.file:
+        src = Path(args.file).expanduser().resolve()
+        if not src.is_file():
+            error('File not found', str(src))
+        row = probe(src)
+        label = 'file-' + quick_fingerprint(src)[:12]
+    else:
+        error('Name a reference (--ref V###) or a video file (--file)')
+    rate = 'native' if args.native else float(args.fps)
+    out = inspect_dir(rd, label, a, b, rate)
+    if args.remove:
+        idx = read_json(out / 'index.json')
+        if not idx:
+            error('No such closer look to remove', str(out))
+        gone = 0
+        for f in list((out / 'frames').glob('*.jpg')) + ([out / 'sheet.jpg'] if (out / 'sheet.jpg').is_file() else []):
+            f.unlink()
+            gone += 1
+        idx['frames_removed_at'] = now()
+        write_json(out / 'index.json', idx)
+        emit({'ok': True, 'removed_files': gone, 'record_kept': str(out / 'index.json')})
+        return
+    duration = row.get('duration_s')
+    if duration and a >= float(duration):
+        error('The window starts after the video ends', {'duration_s': duration})
+    if rate != 'native' and not 0 < rate <= 60:
+        error('--fps must be between 0 and 60')
+    per_s = float(row.get('fps') or 30) if rate == 'native' else rate
+    if (b - a) * per_s > INSPECT_MAX_FRAMES:
+        error(f'A closer look is for a brief stretch: this one would be about {int((b - a) * per_s)} frames (at most '
+              f'{INSPECT_MAX_FRAMES}). Narrow it or lower --fps; the video as a whole stays at the run\'s rate.')
+    av = _av()
+    frames, origin = av.sample_frames(src, out / 'frames', fps=1.0 if rate == 'native' else rate, width=args.width,
+                                      start_s=a, end_s=b, native=rate == 'native')
+    words = [w for w in transcript_words(tj) if a <= w['start_s'] <= b] if tj else []
+    shown = 'every frame' if rate == 'native' else f'{rate:g} fps'
+    sheet = av.window_sheet([(f['t_s'], out / 'frames' / f['file']) for f in frames], out / 'sheet.jpg',
+                            f'{label}  {_mmss(a)}-{_mmss(b)}  {shown}: {len(frames)} frames', words)
+    write_json(out / 'index.json', {'label': label, 'source': str(src), 'from_s': a, 'to_s': b, 'rate': rate,
+                                    'width': args.width, 'why': args.why, 'clock_origin_s': origin, 'frames': frames,
+                                    'words': ' '.join(str(w.get('text') or '').strip() for w in words),
+                                    'sheet': sheet, 'made_at': now()})
+    emit({'ok': True, 'window': str(out), 'frames': len(frames), 'sheet': sheet,
+          'first_s': frames[0]['t_s'] if frames else None, 'last_s': frames[-1]['t_s'] if frames else None,
+          'note': 'Look at the sheet (and the frames themselves where a detail matters). After a look at disturbing '
+                  'material, remove the frames (--remove): the record stays.'})
+
+
 def _segments_of(tjson, offset=0.0):
     return [(float(s['start_s']) + offset, float(s['end_s']) + offset) for s in tjson.get('segments') or []
             if s.get('start_s') is not None and s.get('end_s') is not None]
@@ -5342,19 +5667,21 @@ def cmd_av_profile(args):
                 error('Unknown reference ID (or a duplicate).', vid)
             media = rd / '10-media' / vid
             fi = read_json(media / 'frame-index.json')
-            frames = [(f['approx_s'], media / 'sampled-frames' / f['file']) for f in fi.get('frames') or []]
+            frames = [(f['t_s'] if f.get('t_s') is not None else f['approx_s'], media / 'sampled-frames' / f['file'])
+                      for f in fi.get('frames') or []]
             if not frames:
                 error('No sampled frames for this reference: run prepare first.', vid)
             tj = read_json(media / 'transcript.json')
             words = transcript_words(tj)
             target = ref_av_path(rd, vid)
             ffps = float(fi.get('fps') or run_analysis_fps(st))
+            fsampler = str(fi.get('sampler') or LEGACY_SAMPLER)
             if abs(ffps - run_analysis_fps(st)) > 1e-9:
                 results.setdefault('_notes', []).append(f'{vid}: its frames were sampled at {ffps:g} fps, the run '
                                                         f'analyses at {run_analysis_fps(st):g} fps: compare its cut '
                                                         'counts only with videos sampled at the same rate')
-            sig = {'fingerprint': row.get('fingerprint'), 'frames': len(frames), 'fps': ffps, 'words': len(words),
-                   'method': av.METHOD_VERSION, 'sheets': not args.no_sheets}
+            sig = {'fingerprint': row.get('fingerprint'), 'frames': len(frames), 'fps': ffps, 'sampler': fsampler,
+                   'words': len(words), 'method': av.METHOD_VERSION, 'sheets': not args.no_sheets}
             old = read_json(target)
             if old.get('signature') == sig and not args.force:
                 results[vid] = {'file': str(target), 'cached': True, 'summary': old.get('summary')}
@@ -5368,7 +5695,7 @@ def cmd_av_profile(args):
                         results.setdefault('_notes', []).append(f'{vid}: audio not measured ({str(exc)[:120]})')
                 prof = av.profile(vid, row.get('duration_s') or frames[-1][0], frames, wav, words,
                                   sheets_dir=None if args.no_sheets else target.with_suffix(''),
-                                  segments=_segments_of(tj), fps=ffps)
+                                  segments=_segments_of(tj), fps=ffps, sampler=fsampler)
             tfile = media / 'transcript.txt'
             if prof['summary'].get('narration') is not None:
                 prof['summary']['narration']['wpm_pipeline'] = (wpm_from_transcript_raw(
@@ -5405,7 +5732,7 @@ def cmd_av_profile(args):
                     wav = None
             prof = av.profile(f'video-{n:02d}', meta['duration_s'], frames, wav, words,
                               sheets_dir=None if args.no_sheets else target.with_suffix(''),
-                              segments=_segments_of(tj), fps=run_analysis_fps(st))
+                              segments=_segments_of(tj), fps=run_analysis_fps(st), sampler=av.SAMPLER)
         for s in prof['shots']:
             s.pop('keyframe', None)            # the export's frames were temporary; the sheets keep the pictures
         lock = read_json(video_dir(rd, n) / 'length-lock.json')
@@ -5993,20 +6320,21 @@ def main():
             pass
     ap = argparse.ArgumentParser(description='Static-only long-form YouTube reference-to-video integrity toolkit')
     sub = ap.add_subparsers(dest='cmd', required=True)
-    p = sub.add_parser('doctor'); p.set_defaults(func=cmd_doctor)
+    p = sub.add_parser('doctor'); p.add_argument('--whisper', action='store_true',
+                                                 help='load Whisper medium on the GPU and run it once')
+    p.add_argument('--file', help='with --whisper: also transcribe this file (nothing is written to a run)')
+    p.set_defaults(func=cmd_doctor)
     p = sub.add_parser('init'); p.add_argument('--references', required=True); p.add_argument('--workspace')
     p.add_argument('--slug', default='story')
-    p.add_argument('--fps', type=float, default=ANALYSIS_FPS, help='Reference analysis frames per second (1 by default; '
+    p.add_argument('--fps', type=float, default=ANALYSIS_FPS, help='Reference analysis frames per second (2 by default; '
                    'kept by the run)')
     p.add_argument('--min-longform', type=int, default=DEFAULT_MIN_LONGFORM); p.set_defaults(func=cmd_init)
     p = sub.add_parser('clone'); p.add_argument('--from-run', required=True); p.add_argument('--workspace'); p.add_argument('--slug', default='clone'); p.set_defaults(func=cmd_clone)
     p = sub.add_parser('scan'); p.add_argument('--run', required=True); p.set_defaults(func=cmd_scan)
     p = sub.add_parser('prepare'); p.add_argument('--run', required=True); p.add_argument('--ids')
     p.add_argument('--fps', type=float); p.add_argument('--width', type=int, default=960)
-    # PC adapter: ctranslate2 sees the GPU here but its CUDA runtime (cublas64_12.dll) is missing, so 'auto' picked the GPU and failed
-    # on the first encode. CPU/int8 is what the user's other pipelines run on this PC (pass --device cuda --compute-type float16 to override).
-    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
-    p.add_argument('--compute-type', default='int8'); p.add_argument('--full-fps', action='store_true')
+    # Whisper medium on the GPU: the CUDA 12 runtime is installed for this interpreter (cuda_runtime_setup finds it).
+    add_whisper_args(p); p.add_argument('--full-fps', action='store_true')
     p.add_argument('--skip-whisper', action='store_true'); p.add_argument('--dry-run', action='store_true')
     p.set_defaults(func=cmd_prepare)
     p = sub.add_parser('cohorts'); p.add_argument('--run', required=True); p.set_defaults(func=cmd_cohorts)
@@ -6030,8 +6358,7 @@ def main():
                    'only priced; with it the balance is checked first and each call goes in the spend ledger.')
     p.add_argument('--credit-safety-factor', type=float, default=1.15)
     p.add_argument('--keep-credits', type=int, default=0, help='Credits that must still be left afterwards')
-    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
-    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_voice_candidates)
+    add_whisper_args(p); p.set_defaults(func=cmd_voice_candidates)
     p = sub.add_parser('voice-pick', help='Choose this video\'s narrator for its locked treatment (voice, model, '
                        'settings, the reason): every recording of the video follows it')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
@@ -6051,8 +6378,7 @@ def main():
     p.add_argument('--no-pronunciation', action='store_true', help='Send the plain spelling (to hear the difference)')
     p.add_argument('--credit-safety-factor', type=float, default=1.15)
     p.add_argument('--keep-credits', type=int, default=0, help='Credits that must still be left afterwards')
-    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
-    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_voice_probe)
+    add_whisper_args(p); p.set_defaults(func=cmd_voice_probe)
     p = sub.add_parser('narration-trial', help='A controlled calibration trial: a few passages under a few voice '
                        'set-ups, each question changing one thing; priced first, recorded only with --execute')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
@@ -6065,8 +6391,7 @@ def main():
     p.add_argument('--credit-safety-factor', type=float, default=1.15)
     p.add_argument('--assume-cost-ratio', type=float, default=None)
     p.add_argument('--keep-credits', type=int, default=0, help='Credits that must still be left afterwards')
-    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
-    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_narration_trial)
+    add_whisper_args(p); p.set_defaults(func=cmd_narration_trial)
     p = sub.add_parser('tts'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--voice-id', default='', help='Optional: must be the video\'s voice lock (a check, never an override)')
     p.add_argument('--model-id', default='', choices=('',) + TTS_MODELS, help='Optional: must be the voice lock\'s')
@@ -6111,16 +6436,14 @@ def main():
     p.add_argument('--confirm', default='', help='Lines the user listened to and confirms (heard, tag performed): '
                    'L105 or L105,L319, with --reason; kept until that part is re-recorded')
     p.add_argument('--reason', default='', help='Who listened and what they heard (for --confirm)')
-    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
-    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_narration_measure)
+    add_whisper_args(p); p.set_defaults(func=cmd_narration_measure)
     p = sub.add_parser('av-profile', help='Measured audiovisual evidence and watch sheets: references or this export')
     p.add_argument('--run', required=True); p.add_argument('--refs', default='')
     p.add_argument('--video', type=int); p.add_argument('--file', default='')
     p.add_argument('--transcript', default='', help='An existing Whisper transcript.json of the export (else Whisper '
                    'medium transcribes it, cached)')
     p.add_argument('--no-sheets', action='store_true'); p.add_argument('--force', action='store_true')
-    p.add_argument('--whisper-model', default='medium'); p.add_argument('--device', default='cpu')
-    p.add_argument('--compute-type', default='int8'); p.set_defaults(func=cmd_av_profile)
+    add_whisper_args(p); p.set_defaults(func=cmd_av_profile)
     p = sub.add_parser('direction-lock', help='Lock the creative direction before the script is written')
     p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--late', default='', help='Only for a video whose script existed first: why (recorded, shown)')
@@ -6186,7 +6509,17 @@ def main():
     p = sub.add_parser('export-check'); p.add_argument('--run', required=True); p.add_argument('--video', type=int, required=True)
     p.add_argument('--file', required=True); p.add_argument('--deep', action='store_true'); p.set_defaults(func=cmd_export_check)
     p = sub.add_parser('status'); p.add_argument('--run', required=True); p.set_defaults(func=cmd_status)
+    p = sub.add_parser('inspect-window', help='A closer look at a brief stretch of a reference or video: a higher rate '
+                       'or every frame, each at its own time, with the words and one contact sheet')
+    p.add_argument('--run', required=True); p.add_argument('--ref'); p.add_argument('--file')
+    p.add_argument('--from', dest='start', required=True); p.add_argument('--to', dest='end', required=True)
+    p.add_argument('--fps', type=float, default=10.0); p.add_argument('--native', action='store_true')
+    p.add_argument('--width', type=int, default=640); p.add_argument('--why', default='')
+    p.add_argument('--remove', action='store_true', help='delete this look\'s frames after it was taken (the record stays)')
+    p.set_defaults(func=cmd_inspect_window)
     args = ap.parse_args()
+    if hasattr(args, 'device'):
+        whisper_settings(args)
     try:
         args.func(args)
     except (RuntimeError, ValueError, KeyError, OSError, TypeError) as exc:

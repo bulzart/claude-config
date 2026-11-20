@@ -56,7 +56,9 @@ MOTION_STEP_S = 0.2         # between frames 0.2 s apart (tuned at 5 fps). Frame
 MOTION_SCALE_EXP = 0.75     # same motion, so the threshold grows with the interval: x (interval / 0.2 s) ** 0.75, 2.0
                             # at 1 fps. Calibrated 2026-11-20 on 3,770 one-second intervals of seven moving references:
                             # 2.0 agreed with their 5 fps reading 81 % of the time and gave the same moving share (58 %
-                            # vs 56 %); 0.6 unchanged read 92 %, 3.0 (fully linear) 40 %.
+                            # vs 56 %); 0.6 unchanged read 92 %, 3.0 (fully linear) 40 %. Half-second spacing (2 fps,
+                            # bracketed by frames 0.4 and 0.6 s apart on the same references): the formula's 1.01 and
+                            # 1.37 agreed 86 % and 86 % (best thresholds there: 1.2 at 87 %, 1.4 at 86 %); 1.19 at 0.5 s.
 TRANSITION_MAX_S = 1.6      # a run of changes lasting up to this long that lands on another picture: a transition
                             # (8 frame pairs at 5 fps, 2 at 1 fps: the same 1.6 s at any sampling rate)
 CUT_SERIES_PATH = 1.4       # a run whose every pair is a hard, recolouring change, and whose changes add up to this many
@@ -96,20 +98,24 @@ def thresholds(fps=None):
     return out
 
 
-def unknowns(fps=None):
+def unknowns(fps=None, sampler=None):
     rate = f'{fps:g} fps' if fps else 'the analysis rate'
     tol = f'+-{0.5 / fps:g} s' if fps else 'half a sample interval'
     out = ['on-screen text (no OCR in this setup)',
            'voice and music are not separated: pitch and loudness come from the mixed track, so a loud bed can '
            'disturb them; compare loudness contrast only between tracks with a similar level under the voice '
            '(gap_level_rel_speech_db): a bed flattens it, a dry voice reads higher',
-           f'frame times are nominal sample slots ({rate}: each frame shows the picture within {tol} of its slot), '
-           'not exact cut frames',
+           (f'frames are samples ({rate}), each at its own exact timestamp on the transcript\'s clock; what happens '
+            'between two samples is unseen, so a cut is known only to within one sample interval'
+            if sampler == SAMPLER else
+            f'frame times are nominal sample slots ({rate}: each frame shows the picture within {tol} of its slot), '
+            'not exact cut frames'),
            'what a viewer feels, and whether the video kept its audience (no retention data)']
-    if fps and fps < 2:
+    if fps and fps < 10:
         out.append(f'at {rate} a shot shorter than about two samples ({2 / fps:g} s) can merge with its neighbours, a '
-                   'flash shorter than a sample is rarely seen, and a "flash" is any picture seen in one sample only; '
-                   'compare cut counts only with videos measured at the same rate')
+                   'flash shorter than a sample interval is rarely seen, and a "flash" is any picture seen in one '
+                   'sample only; compare cut counts only with videos measured at the same rate; inspect_candidates '
+                   'lists the stretches the samples cannot settle (inspect-window looks closer)')
     return out
 
 
@@ -644,6 +650,42 @@ def _mmss(t):
     return f'{t // 60:02d}:{t % 60:02d}'
 
 
+def _mmss_tenths(t):
+    t = max(0.0, float(t or 0))
+    tenths = int(round(t * 10))
+    return f'{tenths // 600:02d}:{(tenths // 10) % 60:02d}.{tenths % 10}'
+
+
+def window_sheet(frames, out_path, title, words=()):
+    """One contact sheet of a closer look (inspect-window): every frame of the window in order, each with its own
+    time, and the words said during the window under the title. frames: [(t_s, path)]."""
+    from PIL import Image, ImageDraw
+    cols = 6
+    tw, th = 240, 135
+    rows = max(1, math.ceil(len(frames) / cols))
+    head = 52
+    sheet = Image.new('RGB', (cols * tw, head + rows * (th + 18)), (18, 18, 18))
+    draw = ImageDraw.Draw(sheet)
+    f_small, f_head = _font(12), _font(15)
+    draw.text((8, 6), title, fill=(235, 235, 235), font=f_head)
+    said = ' '.join(_clean(w.get('text') or '') for w in words)
+    if said:
+        draw.text((8, 27), _wrap(said, 150, 1)[0], fill=(200, 200, 200), font=f_small)
+    for j, (ts, fp) in enumerate(frames):
+        x, y = (j % cols) * tw, head + (j // cols) * (th + 18)
+        try:
+            im = Image.open(fp).convert('RGB')
+            im.thumbnail((tw - 4, th - 4))
+            sheet.paste(im, (x + (tw - im.width) // 2, y + (th - im.height) // 2))
+        except OSError:
+            pass
+        draw.text((x + 4, y + th + 1), _mmss_tenths(ts), fill=(255, 210, 90), font=f_small)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(out_path, quality=85)
+    return str(out_path)
+
+
 def render_sheets(feats, words, wins, out_dir, label, duration):
     """One JPEG per minute: a frame every SHEET_STEP_S seconds with the words spoken during those seconds."""
     from PIL import Image, ImageDraw
@@ -683,8 +725,10 @@ def render_sheets(feats, words, wins, out_dir, label, duration):
             if t >= duration:
                 break
             x, y = (j % SHEET_COLS) * TILE_W, 34 + (j // SHEET_COLS) * (TILE_H + CAPTION_H)
+            shown = t
             if times:
                 i = min(len(times) - 1, max(0, bisect.bisect_left(times, t + SHEET_STEP_S / 2) - 1))
+                shown = times[i]
                 try:
                     im = Image.open(feats[i]['path']).convert('RGB')
                     im.thumbnail((TILE_W - 4, TILE_H - 4))
@@ -692,7 +736,9 @@ def render_sheets(feats, words, wins, out_dir, label, duration):
                 except OSError:
                     pass
             said = ' '.join(_clean(w['text']) for w in words if t <= w['start_s'] < t + SHEET_STEP_S)
-            draw.text((x + 6, y + TILE_H + 2), _mmss(t), fill=(255, 210, 90), font=f_small)
+            # the picture's own time; the words are those said from the step's start, five seconds of them
+            draw.text((x + 6, y + TILE_H + 2), f'{_mmss_tenths(shown)}  words {_mmss(t)}-{_mmss(t + SHEET_STEP_S)}',
+                      fill=(255, 210, 90), font=f_small)
             for li, row in enumerate(_wrap(said, 44, 4)):
                 draw.text((x + 6, y + TILE_H + 17 + li * 15), row, fill=(225, 225, 225), font=f_small)
         p = out_dir / f'sheet-{m + 1:03d}.jpg'
@@ -707,11 +753,12 @@ READING = ('Measurements, not verdicts. Compare with the references measured the
            'for this story; a number that differs from the references is a question to look into, not a fault.')
 
 
-def profile(label, duration, frames=None, wav=None, words=None, sheets_dir=None, segments=None, fps=None):
+def profile(label, duration, frames=None, wav=None, words=None, sheets_dir=None, segments=None, fps=None,
+            sampler=None):
     """Everything above for one video (or one narration, with no frames): summary, windows, shots, sheets.
     segments: Whisper's speech segments as (start_s, end_s), the pipeline's WPM yardstick for speaking time. fps: the
     rate the frames were sampled at (read from their times when not given); it is written beside the measurements,
-    since a cut count depends on it."""
+    since a cut count depends on it. sampler: how the frames were picked (SAMPLER: each at its own timestamp)."""
     words = words or []
     feats = frame_features(frames) if frames else []
     if feats and not fps and len(feats) > 1:
@@ -729,7 +776,9 @@ def profile(label, duration, frames=None, wav=None, words=None, sheets_dir=None,
     return {'label': label, 'method': METHOD_VERSION, 'duration_s': _r(duration), 'sampled_fps': fps if feats else None,
             'summary': summ, 'windows': wins, 'shots': shots, 'sheets': sheets,
             'inspect_candidates': inspect_candidates(feats, kinds, shots) if feats else [],
-            'thresholds': thresholds(fps if feats else None), 'unknowns': unknowns(fps if feats else None),
+            'sampler': sampler if feats else None,
+            'thresholds': thresholds(fps if feats else None),
+            'unknowns': unknowns(fps if feats else None, sampler if feats else None),
             'reading': READING}
 
 
