@@ -1,6 +1,6 @@
 """create-clips toolkit entry point: `python cc.py <command> ...` (every command prints one JSON object on its last line).
 
-Commands live in nine modules, each exposing register(sub):
+Commands live in ten modules, each exposing register(sub):
   cc_proc.py  chunk processing: new-run, ingest, watch, status, doctor, chunks, locate, window, frame, sheet, stream-table
   cc_report.py the chunk reporter: report (a headless Haiku session per chunk writes a report of what its sheets, audio numbers, transcript and chat show; observations only)
   cc_notify.py the ready alert: notify (a Windows notification when a run is fully processed and /create-clips can start on it; the watcher sends it by itself)
@@ -10,6 +10,7 @@ Commands live in nine modules, each exposing register(sub):
   cc_heat.py  the chat counted in 4-second bins against the stream's own normal: heat (heat.json/heat.md with the bursts, one span's numbers, a block file's unmentioned bursts; numbers only)
   cc_voices.py who speaks: voices (the subtitle lines on screen read and matched to the transcript's words; [sub] marks in transcript.txt; facts only)
   cc_recall.py the second look after the scan: recall (the stretches no moment covers, the miners' unused leads, sample windows placed by the clock; --check a second-look file)
+  cc_paper.py  the paper edit of a video: paper (its segments in output order with what is said in each, what the cut list leaves out inside the planned spans, the moments kept whole, in part or left out)
 (native_host.py is the Chrome native-messaging host that starts and reports on `watch`; install-background.ps1 registers it, opt-in.)
 Scripts gather, agents decide: nothing here judges, ranks or decides.
 
@@ -28,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import cc_crypto_loader  # noqa: E402,F401  (registers the decrypt-on-import hook before anything below can need it: the user, 2026-11-15)
 
-MODULES = ("cc_proc", "cc_report", "cc_notify", "cc_edit", "cc_hud", "cc_game", "cc_heat", "cc_voices", "cc_recall")
+MODULES = ("cc_proc", "cc_report", "cc_notify", "cc_edit", "cc_hud", "cc_game", "cc_heat", "cc_voices", "cc_recall", "cc_paper")
 
 
 def fail(msg: str, code: int = 2, **extra) -> None:

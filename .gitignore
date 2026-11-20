@@ -58,6 +58,7 @@
 /create-clips/scripts/cc_wordbox.py
 /create-clips/scripts/cc_voices.py
 /create-clips/scripts/cc_recall.py
+/create-clips/scripts/cc_paper.py
 /create-static/scripts/cs_core.py
 /create-static/scripts/cs_compose.py
 /.credentials.json
