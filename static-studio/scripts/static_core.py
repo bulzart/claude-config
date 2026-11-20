@@ -1513,18 +1513,7 @@ def cmd_voice_candidates(args):
             heard = strip_transcript_timestamps(raw).strip() or None
         except (RuntimeError, ValueError, OSError) as exc:
             heard = f'transcription failed: {type(exc).__name__}: {str(exc)[:160]}'
-        try:   # how the preview's voice moves (a short sample: indicative only), on the references' yardstick
-            av = _av()
-            import tempfile
-            tj = read_json(tpath)
-            with tempfile.TemporaryDirectory() as tmp:
-                wav = av.extract_audio(fname, Path(tmp) / 'preview.wav')
-                dv = av.delivery(stem, wav, transcript_words(tj), spans={'whole': (0.0, 1e9)}, segments=_segments_of(tj))
-            whole = (dv.get('spans') or {}).get('whole') or {}
-            voice_delivery = {k: whole.get(k) for k in ('pitch_range_st', 'pitch_movement_st', 'loudness_contrast_db')}
-            voice_delivery['register_hz'] = (dv.get('summary') or {}).get('register_hz')
-        except (RuntimeError, ValueError, OSError, ImportError, KeyError) as exc:
-            voice_delivery = {'error': f'{type(exc).__name__}: {str(exc)[:120]}'}
+        voice_delivery = measure_file_delivery(fname, tpath)
         results.append({'source': c['source'], 'voice_id': c['voice_id'], 'name': c.get('name'),
                         'labels': c.get('labels'), 'file': str(fname), 'preview_wpm': wpm, 'heard_text': heard,
                         'measured_delivery': voice_delivery})
@@ -1677,9 +1666,12 @@ def cmd_voice_probe(args):
           'sent_characters': len(sent_text), 'credit_preflight': budget, 'sample_words': count_words(text),
           'short_sample_wpm': wpm, 'references_pace_wpm': lock.get('pace_wpm'), 'tags_sent': sent_tags,
           'tags_maybe_read_aloud': spoken_back, 'heard_text': heard,
-          'guidance': 'Listen: does the voice suit the story, and did each tag land as delivery (not read aloud, '
-                      'not a sound effect)? short_sample_wpm does not predict the real pace; do not size the '
-                      'script on it. Real pace: tts --max-parts 1 --execute, then narration-measure.'})
+          'measured_delivery': measure_file_delivery(fname, tpath),
+          'guidance': 'No agent here can hear this file. What stands in: the words heard back (a tag that shows up '
+                      'in heard_text was read aloud) and measured_delivery (how the voice moves; a short sample, '
+                      'indicative only), next to the treatment\'s narrator and the references. The user may listen '
+                      'to the file. short_sample_wpm does not predict the real pace; do not size the script on it. '
+                      'Real pace: tts --max-parts 1 --execute, then narration-measure.'})
 
 
 def parse_voice_settings(raw, model_id):
@@ -2360,6 +2352,27 @@ def _av():
 def _segments_of(tjson, offset=0.0):
     return [(float(s['start_s']) + offset, float(s['end_s']) + offset) for s in tjson.get('segments') or []
             if s.get('start_s') is not None and s.get('end_s') is not None]
+
+
+def measure_file_delivery(audio_path, transcript_path):
+    """How the voice in one short file moves (a voice preview, a probe): pitch range and word-to-word movement,
+    loudness contrast and register, on the references' yardstick. A short sample is indicative only. Never raises:
+    a measurement that can't be made comes back as {'error': ...}."""
+    try:
+        av = _av()
+        import tempfile
+        tj = read_json(transcript_path)
+        with tempfile.TemporaryDirectory() as tmp:
+            wav = av.extract_audio(audio_path, Path(tmp) / 'sample.wav')
+            dv = av.delivery(Path(audio_path).stem, wav, transcript_words(tj), spans={'whole': (0.0, 1e9)},
+                             segments=_segments_of(tj))
+        whole = (dv.get('spans') or {}).get('whole') or {}
+        out = {k: whole.get(k) for k in ('pitch_range_st', 'pitch_movement_st', 'loudness_contrast_db',
+                                         'speech_rate_wpm')}
+        out['register_hz'] = (dv.get('summary') or {}).get('register_hz')
+        return out
+    except (RuntimeError, ValueError, OSError, ImportError, KeyError, TypeError) as exc:
+        return {'error': f'{type(exc).__name__}: {str(exc)[:120]}'}
 
 
 def export_av_path(rd, video, fingerprint):
