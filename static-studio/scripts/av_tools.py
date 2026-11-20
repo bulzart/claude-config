@@ -7,10 +7,14 @@ they mean. The same functions measure the references, this run's narration and t
 compare on one yardstick (as pace already does).
 
 What is measured, and how:
-- Picture, from the sampled frames (prepare's 5 fps, or the export's frames at the same rate): the change between
-  consecutive frames (mean absolute grey difference at 64x36) and their colour histograms. A single big change is a
-  cut; a short run of changes that ends on a different picture is a transition (dissolve, wipe, fast move); a long
-  run is motion inside a shot (a camera move, animation); a change that returns to the same picture is a flash.
+- Picture, from the sampled frames (the run's analysis rate: 1 fps for a new run, the rate a run was analysed at for
+  an older one; the export's frames are taken at the same rate): the change between consecutive frames (mean
+  absolute grey difference at 64x36) and their colour histograms. A single big change is a cut; a few hard,
+  recolouring changes in a row whose changes add up to much more than the run's own change are a quick series of
+  cuts; any other short run of changes (up to TRANSITION_MAX_S) that ends on a different picture is a transition
+  (dissolve, wipe, fast move); a long run is motion inside a shot (a camera move, animation); a change that returns
+  to the same picture is a flash (at 1 fps: anything seen in one sample only, a burst or a cutaway of up to about a
+  second).
   Shots get their length, the share of time they move, brightness and saturation, and whether the same picture
   came back earlier (difference hash and histogram).
 - Narration, from the audio and Whisper's word times: pitch (pYIN) and loudness per word, pitch range and pitch
@@ -36,7 +40,7 @@ import statistics
 import subprocess
 from pathlib import Path
 
-METHOD_VERSION = 'av-profile-2'
+METHOD_VERSION = 'av-profile-3'          # 3: picture thresholds in seconds (any sampling rate), quick cut series
 WINDOW_S = 15.0
 SHEET_STEP_S = 5.0
 SHEET_COLS, SHEET_ROWS = 4, 3            # 12 tiles: one sheet = 60 s
@@ -44,7 +48,10 @@ TILE_W, TILE_H, CAPTION_H = 320, 180, 82
 GREY_W, GREY_H = 64, 36
 CUT_DIFF = 8.0              # mean absolute grey difference (0-255) of two consecutive sampled frames: a hard change
 MOTION_DIFF = 0.6           # above the still-frame noise floor (an unchanged still measures 0-0.1 on the references)
-TRANSITION_MAX_PAIRS = 8    # a run of changes up to this many frame pairs that lands on another picture: a transition
+TRANSITION_MAX_S = 1.6      # a run of changes lasting up to this long that lands on another picture: a transition
+                            # (8 frame pairs at 5 fps, 2 at 1 fps: the same 1.6 s at any sampling rate)
+CUT_SERIES_PATH = 1.4       # a run whose every pair is a hard, recolouring change, and whose changes add up to this many
+                            # times the run's own change, is a quick series of cuts (a dissolve's add up to about 1)
 HIST_CUT = 0.3              # inside long motion, a big change counts as a cut only if the colours change this much too
 DUP_BITS = 6                # difference-hash distance (of 64 bits) for "the same picture again"
 DUP_HIST = 0.2
@@ -59,20 +66,36 @@ GAP_TRIM_S = 0.1
 PAUSE_MIN_S = 0.3           # the pipeline's pause threshold (pause_profile)
 
 
-def thresholds():
-    return {'window_s': WINDOW_S, 'cut_grey_diff': CUT_DIFF, 'motion_grey_diff': MOTION_DIFF,
-            'transition_max_frame_pairs': TRANSITION_MAX_PAIRS, 'hist_cut_inside_motion': HIST_CUT,
-            'same_picture_hash_bits': DUP_BITS, 'pitch_tracker': f'librosa.pyin {F0_MIN:g}-{F0_MAX:g} Hz',
-            'pause_s': PAUSE_MIN_S, 'gap_level_min_gap_s': GAP_MIN_S}
+def transition_pairs(step_s):
+    """TRANSITION_MAX_S as frame pairs at this sampling interval."""
+    return max(1, int(round(TRANSITION_MAX_S / step_s))) if step_s and step_s > 0 else 8
 
 
-def unknowns():
-    return ['on-screen text (no OCR in this setup)',
-            'voice and music are not separated: pitch and loudness come from the mixed track, so a loud bed can '
-            'disturb them; compare loudness contrast only between tracks with a similar level under the voice '
-            '(gap_level_rel_speech_db): a bed flattens it, a dry voice reads higher',
-            'frame times are nominal sample slots (5 fps), not exact cut frames',
-            'what a viewer feels, and whether the video kept its audience (no retention data)']
+def thresholds(fps=None):
+    out = {'window_s': WINDOW_S, 'cut_grey_diff': CUT_DIFF, 'motion_grey_diff': MOTION_DIFF,
+           'transition_max_s': TRANSITION_MAX_S, 'cut_series_path': CUT_SERIES_PATH, 'hist_cut_inside_motion': HIST_CUT,
+           'same_picture_hash_bits': DUP_BITS, 'pitch_tracker': f'librosa.pyin {F0_MIN:g}-{F0_MAX:g} Hz',
+           'pause_s': PAUSE_MIN_S, 'gap_level_min_gap_s': GAP_MIN_S}
+    if fps:
+        out.update({'sampled_fps': fps, 'transition_max_frame_pairs': transition_pairs(1.0 / fps)})
+    return out
+
+
+def unknowns(fps=None):
+    rate = f'{fps:g} fps' if fps else 'the analysis rate'
+    tol = f'+-{0.5 / fps:g} s' if fps else 'half a sample interval'
+    out = ['on-screen text (no OCR in this setup)',
+           'voice and music are not separated: pitch and loudness come from the mixed track, so a loud bed can '
+           'disturb them; compare loudness contrast only between tracks with a similar level under the voice '
+           '(gap_level_rel_speech_db): a bed flattens it, a dry voice reads higher',
+           f'frame times are nominal sample slots ({rate}: each frame shows the picture within {tol} of its slot), '
+           'not exact cut frames',
+           'what a viewer feels, and whether the video kept its audience (no retention data)']
+    if fps and fps < 2:
+        out.append(f'at {rate} a shot shorter than about two samples ({2 / fps:g} s) can merge with its neighbours, a '
+                   'flash shorter than a sample is rarely seen, and a "flash" is any picture seen in one sample only; '
+                   'compare cut counts only with videos measured at the same rate')
+    return out
 
 
 def _np_cv():
@@ -143,7 +166,7 @@ def concat_audio(files, out_wav):
     return out_wav
 
 
-def extract_frames(src, out_dir, fps=5.0, width=960):
+def extract_frames(src, out_dir, fps=1.0, width=960):
     """Frames of a video at the analysis rate (the references' prepare settings), as (time, path) pairs."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -200,6 +223,15 @@ def segment_shots(feats):
     kind = ['still'] * n
     kind[0] = 'start'
     starts = [(0, 'start')]
+    gaps = sorted(feats[j]['t'] - feats[j - 1]['t'] for j in range(1, n))
+    step = gaps[len(gaps) // 2] if gaps else 1.0
+    max_pairs = transition_pairs(step)
+
+    def cut_series(lo, hi, net):
+        # every pair a hard change that recolours, and the changes add up to far more than the net change: a quick
+        # series of cuts (each sample a different picture), not one transition (a dissolve's pairs add up to its net)
+        return (hi > lo and all(d[j] > CUT_DIFF and h[j] > HIST_CUT for j in range(lo, hi + 1))
+                and sum(d[lo:hi + 1]) >= CUT_SERIES_PATH * net)
     k = 1
     while k < n:
         if d[k] <= MOTION_DIFF:
@@ -211,11 +243,15 @@ def segment_shots(feats):
         b = k - 1                      # pairs a..b change; frame a-1 is before the run, frame b after it
         length = b - a + 1
         total = _grey_diff(np, feats[b]['grey'], feats[a - 1]['grey'])
-        if length <= TRANSITION_MAX_PAIRS:
+        if length <= max_pairs:
             if total > CUT_DIFF:
                 if length == 1:
                     kind[a] = 'cut'
                     starts.append((a, 'cut'))
+                elif cut_series(a, b, total):
+                    for j in range(a, b + 1):
+                        kind[j] = 'cut'
+                        starts.append((j, 'cut'))
                 else:
                     for j in range(a, b + 1):
                         kind[j] = 'transition'
@@ -249,12 +285,14 @@ def segment_shots(feats):
                 elif s1 == s0:
                     label = 'cut'
                     starts.append((s0, 'cut'))
+                elif cut_series(s0, s1, moved):
+                    label = 'cut'
+                    starts += [(q, 'cut') for q in range(s0, s1 + 1)]
                 else:
                     label = 'transition'
                     starts.append((s0 + (s1 - s0 + 1) // 2, 'transition'))
                 for q in range(s0, s1 + 1):
                     kind[q] = label
-    step = (feats[-1]['t'] - feats[0]['t']) / (n - 1) if n > 1 else 0.2
     shots = []
     for i, (s0, how) in enumerate(starts):
         s1 = starts[i + 1][0] if i + 1 < len(starts) else n
@@ -567,20 +605,28 @@ READING = ('Measurements, not verdicts. Compare with the references measured the
            'for this story; a number that differs from the references is a question to look into, not a fault.')
 
 
-def profile(label, duration, frames=None, wav=None, words=None, sheets_dir=None, segments=None):
+def profile(label, duration, frames=None, wav=None, words=None, sheets_dir=None, segments=None, fps=None):
     """Everything above for one video (or one narration, with no frames): summary, windows, shots, sheets.
-    segments: Whisper's speech segments as (start_s, end_s), the pipeline's WPM yardstick for speaking time."""
+    segments: Whisper's speech segments as (start_s, end_s), the pipeline's WPM yardstick for speaking time. fps: the
+    rate the frames were sampled at (read from their times when not given); it is written beside the measurements,
+    since a cut count depends on it."""
     words = words or []
     feats = frame_features(frames) if frames else []
+    if feats and not fps and len(feats) > 1:
+        gaps = sorted(feats[j]['t'] - feats[j - 1]['t'] for j in range(1, len(feats)))
+        fps = round(1.0 / gaps[len(gaps) // 2], 3) if gaps[len(gaps) // 2] > 0 else None
     shots, kinds, _ = segment_shots(feats) if feats else ([], [], [])
     audio = audio_features(wav, words) if (wav and words) else None
     if not duration:
         duration = max([feats[-1]['t'] if feats else 0.0, words[-1]['end_s'] if words else 0.0])
     wins = windows(duration, words, audio, feats, shots, kinds, segments)
     summ = summarize(duration, words, audio, shots, kinds, wins, segments)
+    if summ.get('picture') is not None:
+        summ['picture']['sampled_fps'] = fps
     sheets = render_sheets(feats, words, wins, sheets_dir, label, duration) if (sheets_dir and feats) else []
-    return {'label': label, 'method': METHOD_VERSION, 'duration_s': _r(duration), 'summary': summ,
-            'windows': wins, 'shots': shots, 'sheets': sheets, 'thresholds': thresholds(), 'unknowns': unknowns(),
+    return {'label': label, 'method': METHOD_VERSION, 'duration_s': _r(duration), 'sampled_fps': fps if feats else None,
+            'summary': summ, 'windows': wins, 'shots': shots, 'sheets': sheets,
+            'thresholds': thresholds(fps if feats else None), 'unknowns': unknowns(fps if feats else None),
             'reading': READING}
 
 
