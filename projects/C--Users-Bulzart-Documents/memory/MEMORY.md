@@ -105,3 +105,6 @@
 - [create-video: captions](create-video-captions.md) — user 2026-11-20: Luckiest Guy box | Montserrat Bold yellow word | none, asked once; captions.py, Whisper word times; CapCut drawing not verified
 - [create-video: narration calibration](create-video-narration-calibration.md) — 2026-11-20 trial (2,051 of 5,000 credits): v4 ~0.40 credits/char, context unbilled, balance lags; waits for the user's ears
 - [create-clips: who speaks ([sub])](create-clips-speaker-facts.md) — 2026-11-20: transcript words matching on-screen subtitles (OCR) marked [sub]; voices.json, T voices; voice/music/laughter not shipped
+- [create-clips: second look (recall)](create-clips-second-look.md) — 2026-11-20: cc.py recall + ONE second-look agent after the scan; strong 11/11 found by the single pass, recoveries = laughs + cut-off payoffs; config recall.second_look
+- [create-clips: the face is evidence](create-clips-face-is-evidence.md) — 2026-11-20: 'no reaction' only after a face-cam strip (T sheet --crop); 3 of 3 checked hid a laugh
+- [create-clips: streamer-only lexicon fixes](create-clips-lexicon-scope.md) — 2026-11-20: scope "streamer" never changes words printed in the game's subtitle; plain pairs fix every voice

@@ -170,6 +170,20 @@ def main():
           "cc-start makes the speaker facts, cc-scan waits for them, the planner and the builders read the [sub] marks")
     check("captions.skip" in ec2 and "never the streamer's own words" in ec2 and "subtitle_y_median" in ec2 and "voices" in read(CC / "README.md") and "T voices" in rt,
           "edit-craft.md has captions.skip (never the streamer's words) and the caption placement clear of the game's subtitles; the README and the router name the voices facts")
+    # the second look and the face-cam rule (the user, 2026-11-20: "Find broadly. Understand deeply. Recover overlooked opportunities. Select only what deserves to be watched.")
+    sl = read(CC / "reference" / "second-look.md")
+    check("Most leads end as nothing" in sl and "face-cam strip" in sl and "`reaction`" in sl and "found_by" in sl and "why_missed" in sl and "--check" in sl
+          and "same bar" in sl.replace("\n", " "), "second-look.md: leads are places to look, his face is evidence, recovered moments carry found_by/why_missed and the same bar")
+    check("`maybes`" in mm and "`threads`" in mm and "His face before" in mm and '"face"' in mm and "3 to 8 per 30 minutes" not in mm and "--crop" in mm,
+          "moment-mining.md keeps what was set aside (maybes), the threads, the face-cam rule before 'no reaction', and no typical count of moments")
+    check("3b." in sk("cc-scan") and "T recall" in sk("cc-scan") and "second-look.json" in sk("cc-scan") and "`face`" in sk("cc-scan")
+          and "second-look.json" in sk("cc-plan") and "found_by" in sk("cc-plan") and "second-look.json" in read(CC / "reference" / "portfolio.md"),
+          "cc-scan runs the second look and checks it, the planner merges its moments and checks every recovered one")
+    check("second look" in rt and "recall" in read(CC / "README.md") and "--crop" in read(CC / "README.md")
+          and isinstance((json.loads((CC / "config.json").read_text(encoding="utf-8")).get("recall") or {}).get("sample_every_s"), (int, float)),
+          "the router, the README and config.json (recall.sample_every_s) name the second look and the face-cam strip")
+    check('"scope": "streamer"' in sk("cc-profile") and "kept_on_screen" in ec2 and "kept_on_screen" in sk("cc-build-short") and "kept_on_screen" in sk("cc-build-long"),
+          "the source-aware lexicon: streamer-only fixes (scope) in cc-profile and edit-craft.md, kept_on_screen read by both builders")
     check(all("word_box_max_words" in sk(n) for n in ("cc-build-long", "cc-build-game", "cc-produce")) and "falls back to the plain look, in the same font, by itself" not in sk("cc-build-long"),
           "the long-form build skills keep every box-look video word-box (the user, 2026-11-18): word_box_max_words raised, no silent plain fallback")
     check("padding 0.05" in read(CC / "README.md") and "padding 0.05" in read(CC / "reference" / "edit-craft.md"), "the README and edit-craft.md give the box padding 0.05 (the user, 2026-11-20: a little smaller, then \"only a tiny bit\" smaller)")

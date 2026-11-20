@@ -14,6 +14,13 @@
     "overview_every": 10,
     "overview_cols": 6
   },
+  "recall": {
+    "second_look": true,
+    "sample_every_s": 600,
+    "sample_len_s": 90,
+    "min_stretch_s": 45,
+    "margin_s": 15
+  },
   "voices": {
     "enabled": true,
     "fps": 2.0,

@@ -237,6 +237,32 @@ def main():
     check(got == "Jack of Hearts and jack", "the longest pattern wins (Jack of Hearts), and an exact_case 'Jack' does not reach the lower-case 'jack': " + got)
     got, log = run_lex("Jack of Hearts and jack", [["Jack", "chat"], ["Jack of Hearts", "Jack of Hearts"]], case="as-is")
     check(got == "Jack of Hearts and chat", "without exact_case the lower-case 'jack' is matched too (the longest pattern still keeps Jack of Hearts): " + got)
+
+    # SOURCE-AWARE FIXES (the user, 2026-11-20): `scope: "streamer"` is a fix for how Whisper hears the streamer; words printed in the game's subtitle
+    # (`screen`, from cc_voices.screen_words) keep their spelling; a plain fix (scope "any", every pair) applies to every voice; without the facts nothing changes
+    def run_src(text, pairs, screen_from=None, screen_to=None, case="upper"):
+        ws = say(text)
+        for k, x in enumerate(ws):
+            if screen_from is not None and screen_from <= k < screen_to:
+                x["screen"] = True
+        toks, log = wb.tokens_with_log(ws, {"mask_terms": [], "replace": pairs, "case": case}, cc_edit._mask_word)
+        return " ".join(t["w"] for t in toks), log
+    broad = [{"from": "Jack", "to": "chat", "scope": "streamer"}, ["booby", "Boobie"], ["Charlize", "Charles"]]
+    got, log = run_src("Yeah, that, that's the heart of Jack of Hearts.", broad, 0, 9)
+    check(got == "YEAH, THAT, THAT'S THE HEART OF JACK OF HEARTS." and len(log["kept_on_screen"]) == 1 and not log["applied"],
+          "the caseoh 'Jack of Hearts' line, printed in the game's subtitle: even a broad streamer-only 'Jack' -> 'chat' leaves it: " + got)
+    got, log = run_src("Jack, why would they not count the money yet?", broad)
+    check(got == "CHAT, WHY WOULD THEY NOT COUNT THE MONEY YET?" and len(log["applied"]) == 1 and not log["kept_on_screen"],
+          "the caseoh 'Jack, why' line (no subtitle printing it): the streamer-only fix applies: " + got)
+    got, log = run_src("Charlize, you ain't got nowhere to go. Yo booby", broad, 0, 6)
+    check(got == "CHARLES, YOU AIN'T GOT NOWHERE TO GO. YO BOOBIE" and len(log["applied"]) == 2,
+          "plain fixes (a game name, a nickname's spelling) apply to the game's printed line and to every other word: " + got)
+    got, log = run_src("Yeah, that, that's the heart of Jack of Hearts.", broad)
+    check(got == "YEAH, THAT, THAT'S THE HEART OF CHAT OF HEARTS.",
+          "without the facts (an older run) a streamer-only fix applies everywhere, exactly as before (so the context guard is still the tool there): " + got)
+    got, log = run_src("Jack, why", [{"from": "Jack,", "to": "Chat,", "scope": "streamer"}, {"from": "Jack,", "to": "Jack,"}], 0, 2)
+    check(got == "JACK, WHY" and log["problems"] and not log["applied"],
+          "two entries for the same words with different replacements are still refused, whatever their scope: " + got)
     got, log = run_lex("hey Kso what's up", [["Kso", "CaseOh"], ["Kso", "K-So"]])
     check(got == "HEY KSO WHAT'S UP" and log["problems"] and "ambiguous" in log["problems"][0]["problem"],
           "two entries with the same pattern and different replacements are ambiguous: neither is applied, the problem is reported: " + json.dumps(log["problems"])[:160])

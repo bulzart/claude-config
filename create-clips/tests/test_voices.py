@@ -18,7 +18,8 @@ import cc_crypto_loader  # noqa: E402,F401
 import cc_voices as V  # noqa: E402
 import cc_tables  # noqa: E402
 import cc_report  # noqa: E402
-import cc_edit  # noqa: E402
+import cc_edit
+import cc_wordbox as wb  # noqa: E402
 
 PY = sys.executable
 
@@ -174,6 +175,43 @@ def main():
         check(len(all_words) == 31 and len(kept) == 19 and len(skipped) == 12 and all(not (104.5 <= w["rec"] < 106.6) for w in kept),
               f"captions.skip leaves out the words of its span (31 words, 12 skipped, a bad entry ignored): {len(all_words)} {len(kept)} {len(skipped)}")
         check(cc_edit._skip_spans({"captions": {"skip": [[1, 2], {"rec_from": 5, "rec_to": 4}, "x"]}}) == [[1.0, 2.0]], "only valid skip spans are used")
+
+        # the source-aware lexicon (the user, 2026-11-20): a streamer-only fix never changes words printed in the game's subtitle
+        scr = V.screen_words(run, "C0001")
+        check(scr == set(range(0, 24)) - {2}, "screen_words: the subtitled words the screen prints, not 'their' (Whisper's word, the screen says 'that'), "
+                                               "not the streamer's: " + str(sorted(set(range(0, 24)) ^ (scr or set()))))
+        resolved["captions"] = {}
+        lexicon = [{"from": "Nah,", "to": "Chat,", "scope": "streamer"}, {"from": "drive,", "to": "dive,", "scope": "streamer"},
+                   {"from": "look", "to": "LOOK", "scope": "streamer"}, ["their", "that"], {"from": "money", "to": "cash", "scope": "game"}]
+        caps = {"mask_terms": [], "replace": lexicon}
+        toks, log = wb.tokens_with_log(cc_edit._resolved_words(run, resolved), caps, cc_edit._mask_word)
+        said = " ".join(x["w"] for x in toks)
+        check("Nah, I would" in said and "sell that drive," in said and "LOOK at this" in said and "Chat, look" not in said,
+              "a streamer-only fix leaves the game's printed line as said (Nah, drive,), applies to the streamer's line (LOOK); a plain fix applies to every voice "
+              "(their -> that): " + said)
+        check(len(log["kept_on_screen"]) == 2 and {k["spoken"] for k in log["kept_on_screen"]} == {"Nah,", "drive,"} and all("rec" in k for k in log["kept_on_screen"]),
+              "the places a streamer-only fix was kept off are listed (kept_on_screen) with their rec times: " + json.dumps(log["kept_on_screen"])[:300])
+        check(any("unknown scope" in x["problem"] for x in log["problems"]) and "all the cash we need" in said,
+              "an unknown scope is named in problems and the entry applies as a plain fix: " + json.dumps(log["problems"])[:200])
+        check(not any("screen" in x for x in toks), "the tokens carry no extra key into the caption plan")
+        summ = cc_edit._lexicon_summary(log)
+        check(summ["kept_on_screen"] == 2 and summ["first_kept_on_screen"][0]["spoken"] in ("Nah,", "drive,"), "the captions answer counts kept_on_screen")
+        # a run without the facts (made before them) or with stale ones: every fix applies everywhere, as before
+        vj = (cd / "voices.json").read_text(encoding="utf-8")
+        (cd / "voices.json").unlink()
+        toks0, log0 = wb.tokens_with_log(cc_edit._resolved_words(run, resolved), caps, cc_edit._mask_word)
+        said0 = " ".join(x["w"] for x in toks0)
+        check("Chat, I would" in said0 and "sell that dive," in said0 and log0["kept_on_screen"] == [],
+              "without voices.json a streamer-only fix applies everywhere, exactly as before: " + said0)
+        (cd / "voices.json").write_text(vj, encoding="utf-8")
+        tr3 = json.loads(json.dumps(tr))
+        tr3["segments"][3]["words"][0]["w"] = "Lard"
+        (cd / "transcript.json").write_text(json.dumps(tr3), encoding="utf-8")
+        check(V.screen_words(run, "C0001") is None, "stale facts (the transcript changed) give no screen words: every fix applies")
+        (cd / "transcript.json").write_text(json.dumps(tr), encoding="utf-8")
+        # a pair and the same fix written as streamer-only: one rule, the narrower scope
+        rules, probs = wb.lexicon_rules([["Nah,", "Chat,"], {"from": "Nah,", "to": "Chat,", "scope": "streamer"}])
+        check(len(rules) == 1 and rules[0]["scope"] == "streamer" and probs == [], "the same fix written twice, once streamer-only: one rule, streamer-only")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("ALL PASSED" if not check.failed else f"FAILED: {check.failed}")
