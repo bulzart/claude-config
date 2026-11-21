@@ -112,6 +112,7 @@
 - [create-video: 2 fps analysis](create-video-analysis-2fps.md) — user 2026-11-21: 2 fps, each frame at its own timestamp (transcript clock); runs keep their rate (old run 5 fps); inspect-window for brief stretches
 - [create-video: content review](create-video-content-review.md) — user 2026-11-21: per-reference safety vs religion/superstition vs holiday, kept apart; selective exclusion; checked downstream; every timeline picture looked at
 - [create-clips: Whisper on the GPU](create-clips-gpu-whisper.md) — user 2026-11-21: cuda float16 incl. the recorder; kept while recording, yields to GPU leases / low VRAM; `cc.py gpu`
-- [create-clips: music removed on evidence only](create-clips-music-isolation.md) — long videos only: claims + evidence register (verified/strong), recognition service only on the user's yes, recording_left check; never "safe"
+- [create-clips: music removed on evidence only](create-clips-music-isolation.md) — long videos only: identity + claim-risk index per interval, only outcome A removes (Demucs, then SAM); never "safe"
+- [SAM Audio Base installed](sam-audio-base-install.md) — 2026-11-21: Documents\AI\sam-audio venv; streamed loader (Windows commit), shims, 10 s windows; escalation only, measured vs Demucs
 - [create-clips: Shorts never touch music](create-clips-shorts-never-touch-music.md) — user 2026-11-21: a short's audio stays exactly as recorded; no identification, risk analysis or separation
 - [create-clips: no detached judges](create-clips-no-detached-judges.md) — user 2026-11-21: no blind/pairwise judges, second planners or compare-builds; context checks + validators

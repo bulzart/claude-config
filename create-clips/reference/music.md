@@ -1,8 +1,9 @@
 # Copyright music in the kept footage (`T music`)
 
-The user, 2026-11-21: keep the footage; remove a song only when that exact recording has a real claim or restriction on record; never all music; never
-call a video copyright-safe; recognising a song never removes it by itself. Five steps, kept apart: where music plays, which recording it is, whether that
-recording's claim risk is established, the removal, and its check. Long videos only:
+The user, 2026-11-21: keep the footage; take a song out only when the evidence is strong, never all music; never call a video copyright-safe;
+recognising a song never removes it by itself. Steps kept apart: where music plays, which recording it is (the Song Identification Confidence), how
+strong the evidence of YouTube claims on that recording is (the YouTube Copyright-Claim Risk index), the decision, the removal, its check. Long videos
+only:
 
 **Shorts are never touched** (the user, 2026-11-21: "For Shorts, never isolate, suppress, remove, replace, or otherwise modify music, even when the selected footage contains known copyright-risk songs. Preserve all original music and audio exactly as recorded; skip music identification, copyright-risk analysis, and separation processing for Shorts videos entirely"): `T music` skips a short's EDL (it writes a `music.json` that says so, and takes an older run's music patch back out of a short), the batch detection gets the long videos' spans only, and a short's report has no music list.
 
@@ -30,37 +31,73 @@ recording's claim risk is established, the removal, and its check. Long videos o
   3 of 3 clean; no false match on another song, his talk, a shootout or his laugh (highest stray score 1 against a threshold of 12). It only knows
   recordings someone registered: an unknown song stays "not identified". Part of a song that was not in the claimed audio is not recognised either
   (the claim's reference is taken from the whole song occurrence around the claimed part, up to 8 minutes, to cover as much of it as there is).
-- **Evidence for a person** for each interval nobody identified: the miners' avoid entries, the chunk reports' sound lines and the stream's words about
-  a song near it, and three times to look at (`look_at`).
-- **Risk** is a lookup, never a guess: a claim the user really received (`data/music-claims.json`) -> `confirmed`; else the decision in the evidence
-  register (`data/music-evidence.json`, `T music-evidence`): verified -> `confirmed` (removed); strong -> `strong` (removed with `music.remove_strong`,
-  true by default, and never called a confirmed claim); cleared or none -> left as it is, never "safe"; unknown -> left as it is, for a listen. An
-  identified recording nobody has researched yet is `pending` (left as it is; `pending_research` in the answer). Not identified, or a low-confidence
-  guess: `unknown`, left as it is.
-  A decision is refused without the evidence its category needs: verified = a claim on the user's own channel, YouTube Studio's copyright check naming it,
-  or the rights holder's own notice; strong = two reports of YouTube enforcement that NAME THIS RECORDING (`--specific`) from two different sites;
-  cleared = a licence or a clearance covering YouTube. Being copyrighted, famous, sung or on a game's licensed radio is not evidence.
-- **Removal** (only `confirmed`, with `--apply`): Hybrid Demucs (torchaudio, on the GPU) splits the padded span; the instruments are dropped, the voices
-  stay, and where nobody speaks (no transcript word within 2.0 s) the voice stem is lowered 18 dB, so a sung line between his words goes down.
-  Measured on a controlled mix (60 s of his talk plus a song with a singer): talk alone comes through at 14.5 dB SI-SDR; with the song 6 dB under his
-  voice 7.0 -> 11.0 dB and Whisper's word match 0.76 -> 0.89; the song drops 25 dB where he is silent but only about 7 dB under his words. **A singer
-  under his words stays audible.** The 2.0 s window (1.5 s before 2026-11-21) keeps his laugh far better (15.6 against 11.5 dB SI-SDR on a
-  face-verified laugh) and leaves the song open 38% of a sparse-talk song span instead of 33%.
-- **Check** before anything changes: the same length, the edges match the original exactly, his words still there (Whisper on the cleaned and on the
-  original span against the transcript), no longer music (or 20 dB or more down), and the song no longer RECOGNISABLE: the removed part's landmark
-  fingerprint against the cleaned audio, 10 s windows, both over the same -50 dBFS noise floor (`music.residual_floor_dbfs`). Measured 2026-11-21 on the
-  caseoh Cheap Thrills span: original 20-254 aligned hashes, cleaned 0-5 (threshold 12). Without the floor even a -60 dB residue still matched (a scaled
-  copy keeps its peaks in noise-free audio), and the music detector cannot tell a singer from his voice under his words (0.428 -> 0.412): a level drop
-  alone is never called removal. A failed check is `UNRESOLVED`: the original audio stays, nothing is cleared, the line suggests cutting or shortening. Pass: the EDL's segment gets a `mute` span (its own sound off there, the
-  zoom untouched) and the cleaned audio goes on an audio lane (`sfx` entry with `music_clean: true`). Fail: the original sound stays and the line says
-  `attention`. A song with voices in the gaps always says "listen before publishing".
-- **Models tried (2026-11-21), not adopted:** MERL MRX (MIT, dialogue/music/effects, 122 MB): about 3 dB more song removed under his words, 15 dB
-  less between them, 4x slower. Demucs v4 htdemucs_ft (MIT code, 4 x 84 MB, about 0.8 GB of GPU memory at our settings): speech +0.2 dB, the song
-  slightly less removed (-5.8 against -6.6 dB under his words), 8x slower. It stays available: config `music.model` `htdemucs_ft` (the demucs package
-  in `music.pydeps`, outside every other environment). A model that tells speech from singing (Meta's SAM Audio: gated on Hugging Face, 5.1 GB and
-  more) would be the next try, on the user's say.
-- **Licence:** the code of Demucs is MIT; its weights (torchaudio's and the demucs package's) were trained partly on MUSDB18, a dataset for
-  non-commercial use, and carry no licence of their own. The user decides about using them for a monetized channel.
+- **Analysis** (temporary audio, never the output): an interval no fingerprint knows is split once into voices and accompaniment by Demucs
+  (`30-assets/music/analysis/`, cached); the accompaniment is matched against the local fingerprints (the song without his voice over it); Whisper
+  medium hears the voices for LYRIC FRAGMENTS (no voice-activity filter and no no-speech threshold: they drop singing; the voices brought to -20 dBFS;
+  the prompt "Song lyrics, a pop song playing on the radio:"; the prompt's own echo dropped); a fragment that is mostly his own words (the stream
+  transcript at that time) is left out; at most 3 fragments of up to 10 words: what to search, never the lyrics. The voices' level where nobody speaks
+  says whether the song is SUNG (`sung`). Measured 2026-11-21 on the caseoh copy: with the default settings Whisper wrote nothing on a radio song; with
+  these it wrote "focus, fireguns, what do you need so on to lean" (Lean On's chorus), three times over the stretch. The batch detection
+  (`T music --spans`) runs it ahead and lists `research`. Removal spans are analysed too (the singer check needs `sung`).
+- **Evidence for a person** for each interval: the miners' avoid entries, the chunk reports' sound lines, the stream's words about a song near it, three
+  times to look at, the lyric fragments.
+- **The two scores** (`cc_songid`), computed from recorded evidence items, never typed in:
+  - *Song Identification Confidence* (0-100, about the EXACT recording in THIS interval): every identity item belongs to its interval (run + rec span;
+    only a soundtrack listing and metadata facts are about the recording everywhere). Items of one method count once (the strongest); methods
+    combine as independent: 100 x (1 - product(1 - s/100)). Kinds and upper strengths: a claim's fingerprint 95 (88 with one window), a learned
+    fingerprint 90 (never above what it was learned at), a recognition service 92 / 75, the title on screen 85, a lyrics match 75 / 60 / 45 (the
+    lyrics check sets it), his words naming the song 55, a soundtrack listing 40, a builder's naming 50 / 35 / 15. Without a version-specific item
+    (fingerprint, service, screen title, a listing of that very recording) the score stops at 80: the song is known, not the recording (covers, live,
+    remixes and radio edits share the words). Two candidates for one stretch that are both supported (the runner-up 50 or more and within 25
+    points of the best) cap it at 60: a contradiction.
+  - *YouTube Copyright-Claim Risk* (0-100): an evidence-based INDEX, not a probability (no verified outcomes exist yet to calibrate it on; the
+    thresholds are provisional). Only items that name this very recording count (supporting facts aside); copies of one origin count once; origins
+    combine as independent. Per item: a claim on the user's own channel 98, YouTube Studio's copyright check 95, the rights holder's own notice 90
+    (credible 80), documented enforcement naming this recording 80 verified / 62 credible / 30 unverified, how its rights are administered 25 / 20 /
+    10 (supporting only), and 0 for fame, a release, streaming, a major label, being copyrighted or a model's guess. Older than 5 years x0.6;
+    limited to another region x0.5. Supporting facts alone stop at 40, unverified reports alone at 45, contradicting reports cap at 50, a licence or
+    clearance for this use puts it at 5. The user's claims register (`data/music-claims.json`) counts as own-claim items.
+  - *Outcome* (config `music.thresholds`: id 85, risk 85, concern 50): F two recordings supported for one stretch (left as it is, recorded); D
+    identity under 85 (left as it is); E licensed or cleared (respected); **A identity 85+, risk 85+ and recording-specific enforcement evidence
+    (credible or better): removal attempted**; F contradictory risk evidence; B risk 50+ (a possible concern, left as it is, flagged); C no adequate
+    evidence (left as it is). Only A changes the audio. Unknown risk is not zero risk: C and D say so.
+- **Removal** (only A, with `--apply`): **Hybrid Demucs first** (torchaudio, on the GPU, about 2 s per minute): the instruments dropped, the voices
+  kept, -40 dB where no transcript word is within 2.0 s (`music.gate_db`; -18 before 2026-11-21, which left a sung song only 21 dB down). A span whose
+  Demucs result fails a check another separation could fix (a sung song under his talk; music left where nobody speaks; his words) goes to **SAM
+  Audio Base** (Meta, `scripts/sam_separate.py` in its own environment, one model load for all such spans, a GPU lease of 10 GB that waits for a
+  CapCut export, the memory guard): "man speaking" kept through a stereo mask (SAM's keep/drop ratio applied to the ORIGINAL stereo audio: its phase
+  and stereo picture stay, nothing generated is heard directly), the same gate, verified again; only a pass is used. A wrong length or offset is a
+  fault, never escalated. Neither passes: `UNRESOLVED`, the original audio stays, both attempts recorded.
+- **Measured 2026-11-21** (`C:\Users\Bulzart\Documents\stream-clips\validation\separation-bench-20261121`, controlled mixes of real stream audio,
+  the song 6 dB under him; "music left" = the song's energy left beyond the wanted sound, lower is better; listening files in `listen\`):
+  talk over a SUNG song: Demucs -13 dB (the voice band, where the singer sits: -10), his words 0.64 (Whisper recall; the mix 0.77); SAM "man
+  speaking" kept -20 dB (voice band -17), words 0.64-0.73. Talk over an instrumental: Demucs -11.5, words 0.82; SAM -17.6, words 0.59. Laugh over a
+  song: Demucs kept the laugh best (lost -11.5 dB against -6.0). Game sound under a song without talk: Demucs and SAM's speech both silence it; SAM
+  "music playing" removed kept the game but left the song 16 dB down (fails the 35 dB check). Song alone: Demucs -48.6. "music playing" removed
+  under talk lost his words (0.14); time anchors made the removal weaker (-4 dB). Whisper's word scores vary about 0.1 between runs.
+  SAM Base on the RTX 3060 (fp32, 10 s windows): load 9-11 s, 5.6 GB after load, peak 8.3 GB, about 34 s per minute of audio. End to end on the
+  caseoh copy (validation fixtures forcing outcome A): Demucs failed the singer check, SAM passed every check, the EDL used SAM's audio; the music
+  step took 59 s.
+- **SAM Audio Base install** (2026-11-21): the user's approved Hugging Face access (facebook/sam-audio-base, SAM License: royalty-free, use and
+  modification allowed, laws and trade controls apply); checkpoint 7,725,405,659 bytes (SHA-256 b5f3e29e...6839) in the Hugging Face cache; the
+  official code (github.com/facebookresearch/sam-audio) with dacvae, perception_models (unpin-deps), xformers 0.0.31.post1 and accelerate in
+  `C:\Users\Bulzart\Documents\AI\sam-audio\.venv` (torch 2.7.1+cu128), never in another environment. The runner: the rerankers and the span
+  predictor switched off through the official config overrides (nothing of theirs downloaded); the checkpoint streamed into the GPU one tensor at a
+  time (GPU memory counts as committed memory on Windows: the official loader needed 17.6 GB); the unused vision encoder's 671 M parameters dropped
+  after the strict load (no video prompts); torchcodec, imported but never used with audio passed in decoded, is a stand-in that refuses any use
+  (`...\sam-audio\shims`). The music step lets go of its own Whisper before SAM starts.
+- **Check** before anything changes: the same length, the edges match the original, his words still there (Whisper on the cleaned and on the original
+  span against the transcript), no longer reads as music, **the music down 35 dB or more where nobody speaks** (1 s windows away from his words and
+  the span's edges, or under -60 dBFS: a song turned down 20 dB is still plainly audible), and **no singer under his words**: a sung song under his
+  talk removed by a method that keeps every voice (Demucs) fails ("A vocal stem containing both streamer speech and the song's singer is not
+  successful separation", the user). The fingerprint of the removed part against the cleaned audio is recorded as information only, with and without
+  the -50 dBFS floor: the floor hides residue below it, and a song a fingerprint no longer matches is not proof that it is gone. A SAM result passes
+  the singer check by its method (measured above, not per span), so its line always asks for a listen.
+- **Models** (2026-11-21): Hybrid Demucs (in use, first), SAM Audio Base (in use, the escalation). Tried, not adopted: MERL MRX (MIT, 122 MB: about
+  3 dB more song removed under his words, 15 dB less between them, 4x slower); Demucs v4 htdemucs_ft (MIT code, about 0.8 GB of GPU memory: speech
+  +0.2 dB, the song slightly less removed, 8x slower; config `music.model` `htdemucs_ft`). SAM Audio Small and Large are not installed (Base fits).
+- **Licence:** Demucs's code is MIT; its weights were trained partly on MUSDB18, a non-commercial dataset, and carry no licence of their own (the user
+  decides about a monetized channel). SAM Audio's weights: the SAM License, accepted by the user with their Hugging Face access.
 
 ## Registering a claim (the user, when YouTube claims a video)
 YouTube Studio > Content > the video > Copyright shows the song, who claimed it and the claimed part's times in the video. One command keeps it all:
@@ -69,33 +106,45 @@ YouTube Studio > Content > the video > Copyright shows the song, who claimed it 
 fingerprints that song where it plays). Without the run: `--file "<the exported MP4>" --at M:SS-M:SS`. From then on, that recording is recognised in
 every run. `--remove M001` takes a claim and its fingerprint out. Never register a claim that was not received.
 
-## The research step (identified recordings, once per recording for every run)
-`T music` lists `pending_research`. ONE agent (`cc-produce` starts it in the background, only when there are pending recordings) researches them all:
-for each, web searches for reports of YouTube Content ID claims, blocks or restrictions that name THIS recording (artist, title, version; the ISRC and the
-label from `T music-evidence --rid <rid>`), the rights holder's own statements, and whether it is licensed or cleared for YouTube (YouTube Audio Library,
-the artist's free-use statement). Every finding goes in with `T music-evidence --add-evidence --rid <rid> --kind <kind> --summary "..." --source <URL>
-[--specific] [--date]`; then `T music-evidence --decide --rid <rid> --category verified|strong|none|unknown|cleared --reason "..." --evidence E001,E002`
-(refused without the evidence its category needs). Nothing found is `none` or `unknown` with that reason; a guess is never evidence. Decisions are kept
-for every later run.
+## The research step (the main session's ONE research agent; long videos only)
+`T music` and the batch detection list `research`: per interval, what it needs (`identity` or `risk`), its candidates with their scores, the lyric
+fragments, the stream's words about a song, the times to look at. The agent, for each:
+1. *Identity*: search the web for the lyric fragments (garbled: try a few spellings) and the named songs; for each candidate `T music-evidence --new
+   "Artist - Title"`, then `T music-evidence --lyrics "Artist - Title" --run RUN --rec A-B --rid <rid>` (LRCLIB, free and open: the interval's own
+   fragments matched against the candidate's lyrics, only numbers kept; the lyrics_match item is added at the strength it earns: two different lines
+   at 0.65+ 75, one 60, 0.58+ 45; measured on one real case, provisional), `T music-evidence --meta "Artist - Title"` (MusicBrainz, free, text only:
+   versions, ISRCs, lengths, remixes, DJ mixes), and items it finds with `--add-id --rid <rid> --kind <kind> --run RUN --rec A-B --detail "..."
+   --source <where>` (his words naming it: spoken_mention; a title on screen: onscreen_title with the frame time; a soundtrack listing of that very
+   recording: soundtrack_listing). A candidate the evidence contradicts gets its items too: the scores record the contradiction.
+2. *Risk* (only for a recording identified at 85+): reports of YouTube Content ID claims, blocks or restrictions that NAME THIS RECORDING and version,
+   the rights holder's own statements, a licence or clearance for YouTube: `T music-evidence --add-risk --rid <rid> --kind <kind> --summary "..."
+   --source <URL> --quality verified|credible|unverified [--specific] [--origin <the original source when sites copy one another>] [--date]
+   [--region]`. Fame, a release, streaming, a major label or "copyrighted" are not evidence; nothing found is recorded as nothing_found.
+3. `T music --edl ... [--apply]` again; the scores are recomputed. Stop when more searching is unlikely to change the decision; never invent a title
+   to avoid "unknown".
+`T music-evidence --rid <rid>` shows a recording's intervals and scores; `--pending` lists recordings identified at 85+ without risk research.
 
 ## The builder's step (long videos; after the EDL is final, before the build)
-1. `T music --run RUN --edl OUT/edl.json` writes `OUT/music.json`: every interval with where it plays in the video, the recognition, its evidence
-   and status. With claims on record that carry a fingerprint, recognition is automatic: nothing to do but `--apply` when a line says `remove`.
-2. A claim registered by title only (no audio): name an interval's recording where the evidence shows it, in the EDL's `music` list
-   (`{"rec_from", "rec_to", "title", "artist", "confidence": "high|medium|low", "evidence"}`); never guess a title (a guess is `low`). With no claims on
-   record at all, skip this: nothing is removed whatever the song is.
-3. `T music --run RUN --edl OUT/edl.json --apply` when a line says `remove`; an EDL changed after `--apply` gets `--apply` again (cached: seconds); the
-   patch is replaced, never stacked. The separation waits while a CapCut export holds the GPU (`T gpu`).
-4. The report lists every interval: its output time, removed / listen before publishing / left as it is, and why. A music line never fails a video and
-   never drops a moment: a strong moment with a song under it stays a candidate, and the user decides.
+1. `T music --run RUN --edl OUT/edl.json` writes `OUT/music.json`: every interval with where it plays in the video, its candidates, both scores, the
+   outcome (A-F) and why, the analysis, what research it needs, its status.
+2. Name an interval's recording in the EDL's `music` list only where the evidence shows it (`{"rec_from", "rec_to", "title", "artist",
+   "confidence": "high|medium|low", "evidence"}`): a weak item (50 at most); never a guessed title. Research is the main session's.
+3. `T music --run RUN --edl OUT/edl.json --apply` when a line says `remove` (outcome A): Demucs, and SAM Audio Base for a span Demucs cannot clean;
+   an EDL changed after `--apply` gets `--apply` again (cached: seconds); the patch is replaced, never stacked.
+4. The report lists every interval: its output time, removed (with SAM: listen before publishing) / UNRESOLVED / left as it is with its outcome, and
+   why. A music line never fails a video and never drops a moment.
 
 ## Never
-- Never remove or mute music on a guess, because a song sounds famous, because it was recognised, or because the game is known for licensed radio.
-- Never separate unknown music to identify it. Never say a video or a song is safe, cleared or claim-free.
-- Never use a paid recognition service or send audio anywhere without the user's yes (`music.recognition.allow_upload` is that yes).
+- Never remove or mute music on a guess, because a song sounds famous, because it was recognised, or because the game is known for licensed radio: only
+  outcome A changes the audio.
+- Never use the analysis audio (the temporary separation) as the output. Never say a video or a song is safe, cleared or claim-free; never call the
+  risk index a probability.
+- Never use a paid recognition service or send audio anywhere without the user's yes (`music.recognition.allow_upload` is that yes). The lyrics
+  check and MusicBrainz send text only.
 - Never run `T music` for a short, never add a music mute or a cleaned lane to a short: shorts keep their audio exactly as recorded.
-- Never replace a whole clip's sound when a span is the problem; never hand over cleaned audio that failed its check.
+- Never replace a whole clip's sound when a span is the problem; never hand over cleaned audio that failed its check; never install SAM Audio Large or
+  download model weights during a run.
 
-`T music --run RUN --spans "A-B,..."` detects ahead of the EDLs (`cc-produce` runs it once for every planned span of the LONG videos). `T music-id --run RUN --rec A-B`
-shows a recognition by hand. `T music-setup` checks the separation's Python (the ACE-Step venv's torch 2.7.1 + torchaudio, CUDA), the weights
-(319 MiB, in the torch cache) and runs a 4 s self-test.
+`T music --run RUN --spans "A-B,..."` detects and analyses ahead of the EDLs (`cc-produce` runs it once for every planned span of the LONG videos; it
+lists `research`; `--no-analysis` for detection only). `T music-id --run RUN --rec A-B` shows a recognition by hand. `T music-setup` checks the
+Demucs separation's Python, weights and a 4 s self-test.

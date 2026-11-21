@@ -10,6 +10,8 @@ never stacked, taken back when the claim is gone, a segment at another speed lef
 muted piece at volume 0, then reused without a second separation. Mocked claims only test the branches; they say nothing about a real song.
 Run: python tests/test_music.py"""
 import json
+
+import numpy as np
 import os
 import shutil
 import subprocess
@@ -219,6 +221,86 @@ def main():
             pl3 = json.loads((out_l / "edl.json").read_text(encoding="utf-8"))
             check(not any(m.get("music") for m in pl3["segments"][0].get("mute", [])) and not any(x.get("music_clean") for x in pl3.get("sfx", []))
                   and back["videos"][0]["music"][0]["action"] in ("keep", "review"), "the claim taken off the register: the original sound comes back")
+        # ---------------------------------------------------------------- the SAM escalation (stand-ins: nothing loaded, no GPU)
+        M.CLAIMS.write_text(json.dumps({"claims": [{"id": "M001", "title": "Test Tone", "artist": "Lab", "status": "claimed", "evidence": "TEST FIXTURE ONLY"}]}),
+                            encoding="utf-8")
+        real_fns = (M.separate_spans, M.verify, M.sam_spans, M.sam_ready)
+        sam_calls = []
+
+        def fake_sep(jobs, cfg_, work):
+            import soundfile as sf
+            for j in jobs:
+                d_, sr_ = sf.read(j["wav_in"], dtype="float32", always_2d=True)
+                sf.write(j["wav_out"], d_ * 0.5, sr_)
+            return {"ok": True, "model": "stand-in demucs", "device": "cpu", "results": [{"id": j["id"], "ok": True, "seconds": 0.1} for j in jobs]}
+
+        def fake_sam(jobs, cfg_, work):
+            sam_calls.append([j["id"] for j in jobs])
+            import soundfile as sf
+            for j in jobs:
+                d_, sr_ = sf.read(j["wav_in"], dtype="float32", always_2d=True)
+                sf.write(j["wav_out"], d_ * 0.25, sr_)
+            return {"ok": True, "model": "facebook/sam-audio-base", "load_s": 0.1, "peak_vram_mb": 1,
+                    "results": [{"id": j["id"], "ok": True, "seconds": 0.1} for j in jobs]}
+
+        def verify_sam_only(path, orig, sr, words, cfg_, sung=False, method="hdemucs"):
+            ok = method == "sam-audio-base"
+            return {"ok": ok, "checks": {"duration": {"ok": True}, "sync": {"ok": True}, "singer_under_speech": {"ok": ok}}}
+        M.separate_spans, M.verify, M.sam_spans, M.sam_ready = fake_sep, verify_sam_only, fake_sam, (lambda c: {"ok": True, "why": None})
+        try:
+            (adir / "separated.json").unlink(missing_ok=True)
+            (out_l / "edl.json").write_text(json.dumps(long_edl), encoding="utf-8")
+            r1 = M._music(run, cfg, adir, args([out_l / "edl.json"], apply=True))
+            mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+            ent = next(iter(json.loads((adir / "separated.json").read_text(encoding="utf-8")).values()))
+            lane = [x for x in json.loads((out_l / "edl.json").read_text(encoding="utf-8")).get("sfx", []) if x.get("music_clean")]
+            check(sam_calls and r1["escalated"] == 1 and ent.get("method") == "sam-audio-base" and ent["first_try"]["verify"]["ok"] is False
+                  and "removed with SAM Audio Base" in mj["status"] and mj["attention"] and lane and ".sam" in lane[0]["file"],
+                  "Demucs fails the singer check: the span goes to SAM, passes, and the EDL uses SAM's audio (listed for a listen): " + mj["status"][:90])
+            M.verify = lambda *a_, **k_: {"ok": False, "checks": {"duration": {"ok": True}, "sync": {"ok": True}, "singer_under_speech": {"ok": False}}}
+            M._music(run, cfg, adir, args([out_l / "edl.json"], apply=True, force=True))
+            mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+            pl = json.loads((out_l / "edl.json").read_text(encoding="utf-8"))
+            check(mj.get("unresolved") and "SAM Audio Base was tried too and failed" in mj["status"] and mj["escalation"].get("ok") is False
+                  and not any(x.get("music_clean") for x in pl.get("sfx", [])),
+                  "SAM fails its checks too: UNRESOLVED, both attempts recorded, the original sound back in the EDL: " + mj["status"][:100])
+            M.sam_ready = lambda c: {"ok": False, "why": "SAM Audio's environment is not set up (test)"}
+            M._music(run, cfg, adir, args([out_l / "edl.json"], apply=True, force=True))
+            mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+            check(mj.get("unresolved") and "SAM Audio was not tried: SAM Audio's environment is not set up (test)" in mj["status"],
+                  "SAM not available: UNRESOLVED with the reason it was not tried")
+        finally:
+            M.separate_spans, M.verify, M.sam_spans, M.sam_ready = real_fns
+        check(M.escalation_targets({"k": {"verify": {"ok": False, "checks": {"sync": {"ok": False}, "singer_under_speech": {"ok": False}}}}}, ["k"]) == []
+              and M.escalation_targets({"k": {"verify": {"ok": False, "checks": {"music_only": {"ok": False}}}}}, ["k"]) == [("k", ["music_only"])]
+              and M.escalation_targets({"k": {"error": "x", "verify": {"ok": False}}}, ["k"]) == [],
+              "a wrong length or offset is a fault, never escalated; music left where nobody speaks is; a failed separation is not")
+        s_off = M.sam_ready({**M.settings(), "escalate": []})
+        s_nopy = M.sam_ready({**M.settings(), "sam": {**M.sam_settings(M.settings()), "python": "C:/nowhere/python.exe"}})
+        check(not s_off["ok"] and "switched off" in s_off["why"] and not s_nopy["ok"] and "environment" in s_nopy["why"],
+              "SAM's readiness says why not: " + s_off["why"][:50] + " | " + s_nopy["why"][:60])
+        (out_l / "edl.json").write_text(json.dumps(long_edl), encoding="utf-8")
+        for f in out_l.glob("edl.pre-music.json"):
+            f.unlink()
+        (adir / "separated.json").unlink(missing_ok=True)
+        # the real SAM Audio Base, when this PC has it (about 25 s and 8.3 GB of GPU memory): one span, the gate, the same length back
+        if M.sam_ready(M.settings())["ok"]:
+            import soundfile as sf
+            mixw = tmp / "sam-mix.wav"
+            sf.write(str(mixw), M.span_audio(run, M.load_chunks(run), 40, 48, 44100, 2).T, 44100)
+            rs_ = M.sam_spans([{"id": "t1", "sig": "test", "wav_in": str(mixw), "wav_out": str(tmp / "sam-out.wav"), "words": [[1.0, 2.0]],
+                                "gap_gate_s": 2.0, "gate_db": -40.0, "crossfade_s": 0.15, "description": "man speaking", "keep": "target", "chunk_s": 10.0}],
+                              M.settings(), tmp)
+            x_ = (rs_.get("results") or [{}])[0]
+            if not rs_.get("ok") and "GPU" in str(rs_.get("error")):
+                print("skip the real SAM run: " + str(rs_.get("error"))[:120])
+            else:
+                d_o, _ = sf.read(str(tmp / "sam-out.wav"), dtype="float32", always_2d=True) if (tmp / "sam-out.wav").is_file() else (np.zeros((0, 2)), 0)
+                check(rs_.get("ok") and x_.get("ok") and len(d_o) == 8 * 44100 and d_o.shape[1] == 2 and rs_.get("peak_vram_mb"),
+                      f"the real SAM Audio Base: loaded in {rs_.get('load_s')} s, 8 s separated in {x_.get('seconds')} s, stereo, same length, "
+                      f"GPU peak {rs_.get('peak_vram_mb')} MB")
+        else:
+            print("skip the real SAM run: " + M.sam_ready(M.settings())["why"])
         r = cc("music-claim", "--add", "Someone - Something")
         check(r.get("ok") is False, "a claim without its evidence is refused")
 

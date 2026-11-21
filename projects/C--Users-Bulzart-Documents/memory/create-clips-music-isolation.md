@@ -1,27 +1,31 @@
 ---
 name: create-clips-music-isolation
-description: "user 2026-11-21: long videos only; music removed only on established risk (claims or the evidence register); recognition service needs the user's yes"
+description: "user 2026-11-21: long videos only; two scores (identity, claim-risk index) from interval-bound evidence; only outcome A removes: Demucs first, SAM Audio Base escalation"
 metadata:
   node_type: memory
   type: project
   originSessionId: 046004a5-1b5b-492c-a227-505bb55d8234
-  modified: 2026-11-21T16:11:02.699Z
+  modified: 2026-11-21T19:31:39.509Z
 ---
 
-The user, 2026-11-21 (three specs): never remove all music, never drop a strong highlight over a song, decide risk on evidence only, recognition never
-removes by itself, never call a video copyright-safe, no paid service or sending audio out without approval, no manual catalogue. Shorts: never touched
-([[create-clips-shorts-never-touch-music]]).
+The user, 2026-11-21 (four specs): never remove all music, never drop a strong highlight over a song, decide on evidence only, recognition never
+removes by itself, never call a video copyright-safe, the risk score is an index (never "a 90% chance"), no paid service or sending audio out without
+approval, no manual catalogue, never invent a title to avoid "unknown". Shorts: never touched ([[create-clips-shorts-never-touch-music]]).
 
-Built: `cc.py music` (detection on kept footage; recognition = local landmark fingerprints of claimed + LEARNED recordings, then `cc_songid` ACRCloud/AudD
-only with `config music.recognition.provider` + `allow_upload: true` + env keys; cached in `data/music-ident-cache.json`); risk = claims register, then
-`data/music-evidence.json` decisions (`cc.py music-evidence`: verified needs own claim / Studio check / rights-holder notice; strong needs 2 recording-specific
-reports from 2 sites; cleared needs a licence); identified but undecided = `pending` -> ONE research agent per run (music.md "The research step").
-Removal: verified + strong (`remove_strong` true). Separation: Hybrid Demucs, 2.0 s speech window, gate -18 dB.
+Built (round 4, tag `create-clips-music-scores-20261121` + the SAM commit): `cc_songid` scores per interval: Song Identification Confidence (items of one
+method count once; independent methods combine; 80 cap without version-specific evidence; a close supported competitor caps at 60) and YouTube
+Copyright-Claim Risk (only items naming the recording; copies of one origin once; caps 40 supporting-only / 45 unverified / 50 contradiction; licence 5).
+Outcome A (id 85 + risk 85 + credible recording-specific enforcement) is the only removal; B-F leave the audio. Identity items are BOUND TO THEIR
+INTERVAL (run + rec): a design flaw found on the caseoh test (evidence from one stretch would have raised another). Research = ONE agent: `music-evidence
+--lyrics` (LRCLIB, numbers only; thresholds 0.65/0.58 from one real case, provisional), `--meta` (MusicBrainz, retry on 503), `--add-id/--add-risk`.
+The analysis (temporary Demucs split + Whisper medium on the voices, no VAD, lyrics prompt) gives fragments and `sung`.
 
-**Why:** Content ID is not queryable; evidence must name the recording. A level drop is not removal: the `recording_left` check fingerprints the removed
-part against the cleaned audio over a -50 dBFS floor (caseoh Cheap Thrills: original 20-254, cleaned 0-5; without the floor even -60 dB matched).
+**Why:** the caseoh "Cheap Thrills" demo was most likely Lean On (his words named Cheap Thrills; the sung chorus fits Lean On at 0.60-0.67, other songs
+0.39-0.53): a spoken mention is weak evidence. Demucs keeps every voice, so a sung song under his talk fails the singer check ("A vocal stem containing
+both streamer speech and the song's singer is not successful separation"); the fingerprint after removal is information only (the -50 dBFS floor hid
+residue). Gate now -40 dB (-18 left a sung song 21 dB down).
 
-**How to apply:** service off until the user authorises (AudD $2-5/1000, 300 free, uploads clips; ACRCloud 14-day trial). Singer under his words stays
-~7 dB down (audible). Not adopted: MRX, htdemucs_ft. Next model only on the user's say (SAM Audio gated, 5.1 GB+). Demucs weights: MUSDB18 grey area,
-the user's decision. Evidence: `Documents\stream-clips\validation\music-demo\` (residual-eval.json) and `longform-20261120\evidence\`. Related:
-[[create-clips-gpu-whisper]].
+**How to apply:** removal = Demucs first, then SAM Audio Base ([[sam-audio-base-install]]) for spans Demucs fails (not duration/sync faults); neither
+passes = UNRESOLVED, original kept. A SAM removal always asks for a listen. Thresholds provisional (no verified outcomes). Recognition service off until
+the user authorises (AudD/ACRCloud; AcoustID is non-commercial only). Validation register with labelled fixtures:
+`...\validation\longform-20261120\caseoh\30-assets\music\validation-evidence.json` (never the real `data/music-evidence.json`).
