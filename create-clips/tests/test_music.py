@@ -1,6 +1,9 @@
 """Tests of the selective music step (cc_music.py: `cc.py music`, `music-claim`, `music-setup`) and the resolver's `mute` (cc_edit.py).
-A generated run of two chunks: a quiet noise bed, then a bass line over a 120 BPM kick and hi-hat across the chunk join, then the bed again. Checked: the risk lookup
-(confirmed / none / unknown; a low-confidence guess is unknown; cleared on record), the detection on the kept footage only, the same interval found by a
+A generated run of two chunks: a quiet noise bed, then a bass line over a 120 BPM kick and hi-hat across the chunk join, then the bed again. Checked: the claims
+lookup, the two scores (identity: one method counts once, 80 without version-specific evidence, a close competitor caps at 60; risk: only items naming
+this recording, copies of one source once, caps for supporting-only / unverified-only / contradictory evidence, a licence), outcomes A-F, identity evidence
+bound to its interval, the lyrics and MusicBrainz lookups (stand-ins: nothing is sent), the residual checks (the music level where nobody speaks, a singer
+under his words), the detection on the kept footage only, the same interval found by a
 long and a short video (the second analyses nothing: the windows are cached), the EDL patch (a mute span plus the cleaned audio on a lane, replaced and
 never stacked, taken back when the claim is gone, a segment at another speed left alone), the failure branch (no separation: the original sound stays,
 `attention`) and, when the separation's Python is on this PC, the real model on the GPU: separated, checked, patched, resolved by `edl-check` with the
@@ -85,6 +88,7 @@ def main():
     M.CLAIMS = tmp / "claims.json"
     S = M.songid
     S.EVIDENCE, S.CACHE = tmp / "music-evidence.json", tmp / "music-ident-cache.json"      # never the real register or cache
+    S.LYR_CACHE, S.MB_CACHE = tmp / "lyrics-check-cache.json", tmp / "musicbrainz-cache.json"
     real_rec = S.rec_settings
     S.rec_settings = lambda: {**S.REC_DEFAULTS}                                           # no service unless a test sets one
     try:
@@ -132,7 +136,7 @@ def main():
         short_edl = {"schema": "cc-edl/1", "video": "L02", "kind": "long", "segments": [{"id": "s1", "rec_from": 45.0, "rec_to": 70.0}]}     # a second video inside the song
         (out_l / "edl.json").write_text(json.dumps(long_edl), encoding="utf-8")
         (out_s / "edl.json").write_text(json.dumps(short_edl), encoding="utf-8")
-        cfg = M.settings()
+        cfg = {**M.settings(), "analysis": False}       # the analysis (a temporary separation + Whisper) is tested with the real model below
         adir = run / "30-assets" / "music"
         adir.mkdir(parents=True)
         M.CLAIMS.write_text(json.dumps({"claims": []}), encoding="utf-8")
@@ -148,15 +152,22 @@ def main():
         iv = [m for v in r["videos"] for m in v["music"]]
         check(len(iv) == 1 and iv[0]["rec"] == iv0[0]["rec"], "the bass and beat are found across the chunk join, the bed is not, the same interval as the other video's: "
               + json.dumps([m["rec"] for m in iv]))
-        check(iv and iv[0]["risk"] == "pending" and iv[0]["action"] == "review" and "research" in iv[0]["status"],
-              "identified, no claim on record and nobody has researched it yet: left as it is, listed for the research step: " + iv[0]["status"][:100])
-        check(r.get("pending_research") and r["pending_research"][0]["title"] == "Test Tone", "the answer lists the recording waiting for research")
+        check(iv and iv[0]["risk"] == "unknown" and iv[0]["action"] == "review" and "research: identity" in iv[0]["status"],
+              "named by a builder only (a weak item, 50): identity below 85 (D), left as it is, listed for research: " + iv[0]["status"][:100])
+        check(any(x["rec"] == iv[0]["rec"] and (x.get("candidate") or {}).get("title") == "Test Tone" and x["needs"] == "identity" for x in r.get("research") or []),
+              "the answer lists the interval for the research step, with its candidate")
         check(r["analysed_s"] < 140, f"only the kept footage (and a little past its edges) is analysed: {r['analysed_s']} s")
         rs = M._music(run, cfg, adir, args([out_s / "edl.json"]))
         sj = json.loads((out_s / "music.json").read_text(encoding="utf-8"))
         check(rs["analysed_s"] == 0 and sj["music"][0]["identified"] and sj["music"][0]["identified"]["by"] == "L01" and sj["music"][0]["action"] == "review",
               f"the other video again: nothing analysed (cached), and it knows the song L01's builder named: {rs['analysed_s']} s, {sj['music'][0]['identified']}")
         M.CLAIMS.write_text(json.dumps({"claims": claims}), encoding="utf-8")
+        rid_tt = S.ensure_recording({"title": "Test Tone", "artist": "Lab"})
+        S.add_id_evidence(rid_tt, "onscreen_title", "the radio display reads Lab - Test Tone (TEST FIXTURE)", "test fixture", run=run.name, rec=[30, 80])
+        rb = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+        mb = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+        check(mb["outcome"] == "A" and mb["action"] == "remove" and mb["id_score"] >= 85 and mb["risk_score"] >= 85,
+              f"a claim on record (98) and the title on screen with the builder's naming (identity {mb['id_score']}): outcome A, removal attempted")
         real_python = M.music_python
         M.music_python = lambda c: None
         rf = M._music(run, cfg, adir, args([out_l / "edl.json"], apply=True))
@@ -197,6 +208,12 @@ def main():
             again = M._music(run, cfg, adir, args([out_l / "edl.json"], apply=True))
             pl2 = json.loads((out_l / "edl.json").read_text(encoding="utf-8"))
             check(again["separation"] is None and again["analysed_s"] == 0 and pl2 == pl, "run again: nothing analysed or separated, the EDL the same (resume)")
+            an = M.analyse(run, M.load_chunks(run), [(30.0, 80.0)], {**cfg, "analysis": True}, adir)
+            ent = an.get("30.00-80.00") or {}
+            an2 = M.analyse(run, M.load_chunks(run), [(30.0, 80.0)], {**cfg, "analysis": True}, adir)
+            check(ent.get("ok") and ent.get("sung") is False and (ent.get("vocal_presence_db") or 0) < -20 and (adir / "analysis" / "accompaniment-30.00-80.00.wav").is_file()
+                  and an2["30.00-80.00"]["sig"] == ent["sig"],
+                  f"the analysis of an instrumental: voices and accompaniment apart, not sung (voices {ent.get('vocal_presence_db')} dB under the music), cached")
             M.CLAIMS.write_text(json.dumps({"claims": []}), encoding="utf-8")
             back = M._music(run, cfg, adir, args([out_l / "edl.json"], apply=True))
             pl3 = json.loads((out_l / "edl.json").read_text(encoding="utf-8"))
@@ -232,7 +249,7 @@ def main():
                                                     "reference": ref}]}), encoding="utf-8")
         r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
         mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
-        check(mj["risk"]["status"] == "confirmed" and mj["identified"]["by"] == "fingerprint" and mj["identified"]["claim"] == "M001" and mj["action"] == "remove",
+        check(mj["outcome"] == "A" and mj["identified"]["by"] == "fingerprint" and mj["identified"]["claim"] == "M001" and mj["action"] == "remove",
               "the claimed recording is recognised by its fingerprint, no title needed, and only then becomes eligible for removal: " + mj["risk"]["why"])
         check(r["seconds"]["recognise"] is not None and r["claimed_recordings_fingerprinted"] == 1, "the recognition step is timed and counted")
         M.CLAIMS.write_text(json.dumps({"claims": [{"id": "M001", "title": "Test Tone", "artist": "Lab", "status": "cleared", "evidence": "TEST", "reference": ref}]}),
@@ -243,8 +260,12 @@ def main():
         named = {**plain, "music": [{"rec_from": 30.0, "rec_to": 80.0, "title": "A Famous Song", "artist": "Big Star", "confidence": "high", "evidence": "test"}]}
         (out_l / "edl.json").write_text(json.dumps(named), encoding="utf-8")
         r = M._music(run, cfg, adir, args([out_l / "edl.json"], apply=True))
+        mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
         check(r["videos"][0]["music"][0]["action"] in ("keep", "review") and r["separation"] is None and not r["videos"][0]["patched"],
               "a famous song named with high confidence but no claim on record: nothing separated, the EDL untouched")
+        check(mj["identified"]["title"] == "Test Tone" and mj["outcome"] != "F" and any(c["title"] == "A Famous Song" for c in mj["candidates"]),
+              "a builder's guess (50) against a fingerprint match: the fingerprint's recording, no contradiction (the guess is listed): "
+              + json.dumps([(c["title"], c["id_score"]) for c in mj["candidates"]]))
         wav = tmp / "claimed.wav"
         import soundfile as sf
         sf.write(str(wav), M.span_audio(run, M.load_chunks(run), 30, 80, 44100, 1)[0], 44100)
@@ -292,6 +313,7 @@ def main():
         M.CLAIMS.write_text(json.dumps({"claims": []}), encoding="utf-8")
         (out_l / "edl.json").write_text(json.dumps(plain), encoding="utf-8")
 
+        S.EVIDENCE.unlink(missing_ok=True)                 # the service part starts from an empty register
         # ---------------------------------------------------------------- the recognition service (a stand-in: nothing is sent anywhere here)
         import numpy as np
         st0 = S.service_state({**S.REC_DEFAULTS})
@@ -341,10 +363,10 @@ def main():
         n0 = len(calls)
         r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
         mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
-        check(mj["identified"] and mj["identified"]["by"] == "audd" and mj["identified"]["rid"] == "isrc:TEST00000001" and mj["risk"]["status"] == "pending"
-              and mj["action"] == "review" and r["recognition"]["learned"] and len(calls) > n0,
-              "an unknown song: the service names it, it is learned into the local fingerprints, its risk waits for research (left as it is): "
-              + json.dumps(r["recognition"])[:200])
+        check(mj["identified"] and mj["identified"]["by"] == "audd" and mj["identified"]["rid"] == "isrc:TEST00000001" and mj["outcome"] == "C"
+              and mj["research"] == "risk" and mj["action"] == "keep" and r["recognition"]["learned"] and len(calls) > n0,
+              "an unknown song: the service names it (identity 92), it is learned into the local fingerprints, no risk evidence yet (C, left as it is, "
+              "research: risk): " + json.dumps(r["recognition"])[:160])
         n1 = len(calls)
         S.rec_settings = lambda: {**S.REC_DEFAULTS}                    # the service off: the learned fingerprint still knows the song
         (adir / "fingerprint-matches.json").unlink(missing_ok=True)
@@ -358,34 +380,127 @@ def main():
         else:
             os.environ["AUDD_API_TOKEN"] = old_tok
 
-        # ---------------------------------------------------------------- the evidence register: a decision needs the evidence its category needs
-        rid = "isrc:TEST00000001"
-        e1 = S.add_evidence(rid, "catalog_fact", "Released by Lab Records in 2020", "https://example.org/release")
-        for cat, ids in (("verified", [e1["id"]]), ("strong", [e1["id"]]), ("cleared", [e1["id"]])):
-            try:
-                S.decide(rid, cat, "test", ids)
-                check(False, f"{cat} refused without its kind of evidence")
-            except ValueError as ex:
-                check(True, f"{cat} refused without its kind of evidence: {str(ex)[:90]}")
-        e2 = S.add_evidence(rid, "documented_enforcement", "A creator shows a Content ID claim naming this live recording", "https://forum.example.com/t/1", specific=True)
-        e3 = S.add_evidence(rid, "documented_enforcement", "The same claim on another video, same recording", "https://www.forum.example.com/t/2", specific=True)
+        # ---------------------------------------------------------------- the two scores (no audio)
+        I = lambda kind, s, g, vs=False: {"kind": kind, "strength": s, "group": g, "version_specific": vs}     # noqa: E731
+        a1 = S.id_score([I("fingerprint_claim", 95, "fingerprint", True), I("fingerprint_learned", 88, "fingerprint", True)])
+        check(a1["score"] == 95.0, f"two items of one method (both fingerprints) count once, the stronger: {a1['score']}")
+        a2 = S.id_score([I("lyrics_match", 75, "lyrics"), I("spoken_mention", 55, "mention")])
+        check(a2["score"] == 80.0 and a2["caps"] and not a2["version_specific"],
+              f"lyrics and his words agree (88.8 combined) but nothing names the exact recording: 80 at most: {a2['score']} {a2['caps']}")
+        a3 = S.id_score([I("lyrics_match", 75, "lyrics"), I("spoken_mention", 55, "mention"), I("onscreen_title", 85, "screen", True)])
+        check(a3["score"] == 98.3 and a3["version_specific"], f"with the title on screen (version-specific), independent methods combine: {a3['score']}")
+        a4 = S.id_score([I("onscreen_title", 85, "screen", True), I("service", 92, "service", True), I("conflicting_candidate", 70, "conflict")])
+        check(a4["score"] == 60.0 and a4["conflict"], f"a supported competitor for the same stretch caps it at 60: {a4['score']}")
+        R = lambda kind, q, o, spec=True, **kw: {"id": o, "kind": kind, "quality": q, "names_this_recording": spec, "origin": o, **kw}     # noqa: E731
+        b1 = S.risk_score([R("documented_enforcement", "credible", "a.example"), R("documented_enforcement", "credible", "b.example")])
+        check(b1["score"] == 85.6 and b1["adequate"], f"two credible reports naming this recording from two origins: {b1['score']}, adequate")
+        b2 = S.risk_score([R("documented_enforcement", "credible", "a.example"), {**R("documented_enforcement", "credible", "a.example"), "id": "R2"}])
+        check(b2["score"] == 62.0, f"two copies of one origin count once: {b2['score']}")
+        b3 = S.risk_score([R("documented_enforcement", "credible", "a.example", spec=False), R("catalog_fact", "verified", "c.example")])
+        check(b3["score"] == 0.0 and not b3["adequate"], f"a report that does not name this recording, and fame / a release / a major label: nothing ({b3['score']})")
+        b4 = S.risk_score([R("rights_admin", "verified", "d.example", spec=False), R("rights_admin", "credible", "e.example", spec=False)])
+        check(b4["score"] <= 40 and not b4["adequate"], f"supporting facts only (how the rights are administered): {b4['score']}, never adequate")
+        b5 = S.risk_score([R("documented_enforcement", "unverified", "f.example"), R("documented_enforcement", "unverified", "g.example"),
+                           R("rightsholder_notice", "unverified", "h.example")])
+        check(b5["score"] <= 45 and not b5["adequate"], f"unverified reports only (a forum post): {b5['score']} at most 45, not adequate")
+        b6 = S.risk_score([R("own_claim", "verified", "own"), R("conflicting_report", "credible", "i.example")])
+        check(b6["score"] == 50.0 and b6["conflict"], f"a claim and a contradicting report: capped at 50, the conflict recorded: {b6['score']}")
+        b7 = S.risk_score([R("own_claim", "verified", "own"), R("license_cleared", "verified", "j.example")])
+        check(b7["score"] == 5.0 and b7["license"], "a licence or clearance for this use: 5 at most")
+        b8 = S.risk_score([R("documented_enforcement", "credible", "k.example", date="2015-01-01"), R("documented_enforcement", "credible", "l.example",
+                                                                                                      region="DE")], user_region="XK")
+        check(b8["score"] == 56.7 and b8["score"] < b1["score"],
+              f"a report older than five years (x0.6) and one limited to another region (x0.5) weigh less: {b8['score']} against {b1['score']} for two full ones")
+        hi = {"score": 92.0, "conflict": False}
+        oc = {k: S.outcome(i_, r_)["code"] for k, (i_, r_) in {"A": (hi, b1), "B": (hi, b2), "C": (hi, b4), "D": ({"score": 60.0}, b1),
+                                                                 "E": (hi, b7), "F1": (a4, b1), "F2": (hi, {**b6, "license": False, "adequate": True})}.items()}
+        check(oc == {"A": "A", "B": "B", "C": "C", "D": "D", "E": "E", "F1": "F", "F2": "F"}, "outcomes A-F: " + json.dumps(oc))
+        check(S.outcome(hi, b1)["action"] == "remove" and all(S.outcome(i_, r_)["action"] != "remove" for i_, r_ in ((hi, b2), (hi, b4), ({"score": 60.0}, b1),
+                                                                                                                     (hi, b7), (a4, b1))),
+              "only A changes the audio")
+        check("not a probability" in S.outcome(hi, b1)["why"], "the risk is called an index, never a probability")
+        # ---------------------------------------------------------------- identity evidence belongs to its interval
+        rid_x = S.ensure_recording({"title": "Interval Song", "artist": "Lab"})
         try:
-            S.decide(rid, "strong", "two reports", [e2["id"], e3["id"]])
-            check(False, "strong refused when both reports come from one site")
-        except ValueError:
-            check(True, "strong refused when both reports come from one site (www. or not)")
-        e4 = S.add_evidence(rid, "documented_enforcement", "A news report about claims on this live recording", "https://news.example.net/a", specific=True)
-        dec = S.decide(rid, "strong", "two sites report claims naming this recording", [e2["id"], e4["id"]], by="test")
-        check(dec["category"] == "strong", "strong accepted: two recording-specific reports from two sites")
-        risk = M.risk_for({"title": "Test Tone (Live)", "artist": "Lab", "isrc": "TEST00000001", "confidence": "high", "rid": rid}, [])
-        check(risk["status"] == "strong" and "NOT a confirmed claim" in risk["why"], "the register's strong decision: removable, never called a confirmed claim: " + risk["why"][:90])
-        e5 = S.add_evidence(rid, "own_claim", "Claimed on the user's video (YouTube Studio, 2026-11-21)", "YouTube Studio > Content > Copyright")
-        S.decide(rid, "verified", "a claim on the user's own channel", [e5["id"]], by="user")
-        check(M.risk_for({"title": "Test Tone (Live)", "artist": "Lab", "isrc": "TEST00000001", "confidence": "high"}, [])["status"] == "confirmed",
-              "verified on record: confirmed (removed)")
-        S.decide(rid, "none", "researched: no report names this recording", [], by="test")
-        check(M.risk_for({"title": "Test Tone (Live)", "artist": "Lab", "isrc": "TEST00000001", "confidence": "high"}, [])["status"] == "none",
-              "researched and nothing establishes a risk: none (left as it is, never called safe)")
+            S.add_id_evidence(rid_x, "lyrics_match", "a fragment fits", "test", 60.0)
+            check(False, "an identity item without its interval is refused")
+        except ValueError as ex:
+            check("--run" in str(ex), "an identity item without its interval is refused: " + str(ex)[:80])
+        S.add_id_evidence(rid_x, "lyrics_match", "a fragment fits", "test", 60.0, run="runA", rec="100-160")
+        S.add_id_evidence(rid_x, "soundtrack_listing", "the game's station lists this recording", "https://example.org/station")
+        rx = S.record_of(rid_x)
+        check(S.id_score(S.interval_items(rx, "runA", 120, 150))["score"] == 76.0 and S.id_score(S.interval_items(rx, "runA", 300, 360))["score"] == 40.0
+              and S.id_score(S.interval_items(rx, "runB", 120, 150))["score"] == 40.0,
+              "an item counts only for its own interval (another stretch or another run gets the global listing only)")
+        check(rid_x in S.candidates_for("runA", 90, 110) and rid_x not in S.candidates_for("runA", 300, 360),
+              "the register's candidates of a stretch: only recordings with items there (a listing alone puts no song anywhere)")
+        S.add_id_evidence(rid_x, "onscreen_title", "the display reads it", "frame at 130 s", run="runA", rec=[100, 160])
+        check(any(p_["rid"] == rid_x for p_ in S.pending()), "identified at 85+ in one interval and no risk research yet: listed (needs risk)")
+        # the contradiction rule in a run: two register candidates close together -> F; far apart -> the stronger one, no F
+        rid_c1 = S.ensure_recording({"title": "Close One", "artist": "Lab"})
+        rid_c2 = S.ensure_recording({"title": "Close Two", "artist": "Lab"})
+        S.add_id_evidence(rid_c1, "lyrics_match", "fits", "test", 60.0, run=run.name, rec=[30, 80])
+        S.add_id_evidence(rid_c2, "spoken_mention", "he names it", "test", 55.0, run=run.name, rec=[30, 80])
+        (out_l / "edl.json").write_text(json.dumps(plain), encoding="utf-8")
+        M.INDEX_DIR = tmp / "music-index-3"
+        (adir / "fingerprint-matches.json").unlink(missing_ok=True)
+        M._music(run, cfg, adir, args([out_l / "edl.json"]))
+        mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+        check(mj["outcome"] == "F" and mj["identified"]["title"] == "Close One" and mj["action"] == "review",
+              "lyrics (60) against his naming of another song (55) for one stretch: contradictory (F), left as it is: " + mj["status"][:110])
+        S.add_id_evidence(rid_c1, "onscreen_title", "the display reads Close One", "test", run=run.name, rec=[30, 80])
+        M._music(run, cfg, adir, args([out_l / "edl.json"]))
+        mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+        check(mj["outcome"] != "F" and mj["identified"]["title"] == "Close One" and mj["id_score"] >= 85,
+              f"the title on screen settles it: the runner-up (55) is far behind ({mj['id_score']}), no contradiction")
+        # ---------------------------------------------------------------- the lyrics check and MusicBrainz (stand-ins: nothing is sent)
+        lyr_calls = []
+        FIX_LYRICS = ("Paper boats along the river\nCarry all the words I never said\nPaper boats along the river\nSailing to the morning light ahead\n"
+                      "Hold the lantern, hold it higher\nEvery window burning red")              # written for this test, no real song
+
+        def fake_lrclib(url):
+            lyr_calls.append(url)
+            if "Nobody" in url:
+                import urllib.error
+                raise urllib.error.HTTPError(url, 404, "not found", {}, None)
+            return {"id": 7, "trackName": "Paper Boats", "artistName": "Lab", "duration": 200, "plainLyrics": FIX_LYRICS}
+        S.LRCLIB_GET = fake_lrclib
+        lc = S.lyrics_check("Paper Boats", "Lab", ["paper boats along the liver carry all the words", "paper boats along the river carry all the word",
+                                                   "hold the lantern hold it high or every window", "the end"])
+        check(lc["found"] and len(lc["fragments"]) == 2 and lc["strength"] == 75.0,
+              "two different lines fit (the repeated line once, a 2-word fragment not matched): 75: " + json.dumps([f_["ratio"] for f_ in lc["fragments"]]))
+        lc2 = S.lyrics_check("Paper Boats", "Lab", ["I was about to rob this store right now"])
+        check(lc2["strength"] == 0.0, f"his own words against the lyrics: no fit ({lc2['fragments'][0]['ratio']})")
+        n_ = len(lyr_calls)
+        lc3 = S.lyrics_check("Paper Boats", "Lab", ["paper boats along the liver carry all the words", "paper boats along the river carry all the word",
+                                                    "hold the lantern hold it high or every window", "the end"])
+        check(lc3["cached"] and len(lyr_calls) == n_ and "Paper" not in json.dumps(json.loads(S.LYR_CACHE.read_text(encoding="utf-8"))["entries"]).replace("Paper Boats", ""),
+              "asked again: from the cache, and the cache keeps numbers, never the lyrics")
+        check(S.lyrics_check("Song", "Nobody", ["paper boats along the river carry all the words"])["found"] is False, "a song LRCLIB does not have: not found, nothing invented")
+        mb_calls = []
+
+        def fake_mb(url):
+            mb_calls.append(url)
+            return {"count": 2, "recordings": [{"id": "mb1", "score": 100, "title": "Paper Boats", "length": 200000, "artist-credit": [{"name": "Lab"}],
+                                                "isrcs": ["TEST00000002"], "first-release-date": "2020-01-01", "releases": []},
+                                               {"id": "mb2", "score": 90, "title": "Paper Boats", "disambiguation": "live", "length": 260000,
+                                                "artist-credit": [{"name": "Lab"}], "first-release-date": "2021"}]}
+        S.MB_GET = fake_mb
+        mbr = S.mb_search("Paper Boats", "Lab")
+        mbr2 = S.mb_search("Paper Boats", "Lab")
+        check(mbr["versions"] == ["live", "original/unspecified"] and mbr["recordings"][0]["isrcs"] == ["TEST00000002"] and mbr2["cached"] and len(mb_calls) == 1,
+              "MusicBrainz: the versions (live / original), ISRCs and lengths to tell them apart; asked again, from the cache: " + json.dumps(mbr["versions"]))
+        env2 = {**os.environ, "CC_MUSIC_EVIDENCE": str(tmp / "cli-evidence.json")}
+        cp = subprocess.run([PY, str(CC), "music-evidence", "--new", "Lab - Paper Boats"], capture_output=True, text=True, encoding="utf-8", env=env2)
+        rid_pb = json.loads([ln for ln in cp.stdout.splitlines() if ln.startswith("{")][-1])["rid"]
+        cp = subprocess.run([PY, str(CC), "music-evidence", "--add-id", "--rid", rid_pb, "--kind", "spoken_mention", "--detail", "he names it",
+                             "--source", "transcript"], capture_output=True, text=True, encoding="utf-8", env=env2)
+        r1 = json.loads([ln for ln in cp.stdout.splitlines() if ln.startswith("{")][-1])
+        cp = subprocess.run([PY, str(CC), "music-evidence", "--add-risk", "--rid", rid_pb, "--kind", "documented_enforcement", "--summary", "a claim report",
+                             "--source", "https://x.example/1", "--quality", "credible", "--specific"], capture_output=True, text=True, encoding="utf-8", env=env2)
+        r2 = json.loads([ln for ln in cp.stdout.splitlines() if ln.startswith("{")][-1])
+        check(r1.get("ok") is False and "--run" in r1.get("error", "") and r2.get("ok") and r2["added"]["origin"] == "x.example",
+              "the command refuses an identity item without its interval and keeps a risk item with its origin (the site): " + r1.get("error", "")[:60])
 
         # ---------------------------------------------------------------- the residual check: a song only made quieter is still recognisable
         song = M.span_audio(run, M.load_chunks(run), 30, 80, 44100, 2)
@@ -397,6 +512,19 @@ def main():
         check(not quieter["ok"] and quieter["recognisable_at_s"] and gone["ok"],
               f"a song only turned down is still recognisable (max {quieter['max_clean_score']} vs threshold {quieter['threshold']}); removed, it is not "
               f"(max {gone['max_clean_score']})")
+        lvl20 = M.music_only_level(song * 0.1, 44100, song, 44100, [], cfg)
+        lvl40 = M.music_only_level(song * 0.01, 44100, song, 44100, [], cfg)
+        lvl_t = M.music_only_level(song * 0.1, 44100, song, 44100, [(0.0, 50.0, "words")], cfg)
+        check(not lvl20["ok"] and lvl20["worst_change_db"] == -20.0 and lvl40["ok"] and lvl_t.get("skipped"),
+              f"where nobody speaks the music must be down 35 dB: 20 dB down fails ({lvl20['worst_change_db']}), 40 dB passes; under talk this check has "
+              f"nothing to say ({lvl_t.get('skipped')})")
+        sc1 = M.singer_check([(10.0, 12.0, "hi")], 50.0, True, "hdemucs", cfg)
+        sc2 = M.singer_check([(10.0, 12.0, "hi")], 50.0, False, "hdemucs", cfg)
+        sc3 = M.singer_check([], 50.0, True, "hdemucs", cfg)
+        sc4 = M.singer_check([(10.0, 12.0, "hi")], 50.0, True, "sam-audio-base", cfg)
+        check(not sc1["ok"] and sc2["ok"] and sc3["ok"] and sc4["ok"],
+              "a sung song under his words fails with Demucs (it keeps every voice); an instrumental, or no words over it, or a method that can tell the "
+              "singer from him, does not fail on this")
     finally:
         S.rec_settings = real_rec
         shutil.rmtree(tmp, ignore_errors=True)

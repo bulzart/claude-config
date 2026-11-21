@@ -4,6 +4,9 @@ else found by `cc.py music-setup`). Kept plain (never encrypted): another interp
 One job file in, one result file out:
   job = {"device": "cuda"|"cpu", "spans": [{"id", "sig", "wav_in", "wav_out", "words": [[s, e], ...] (seconds in the span), "gap_gate_s" (or
          "gap_before_s" and "gap_after_s"), "gate_db", "crossfade_s"}]}
+  a span with "stems_out": {"vocals": path, "accompaniment": path} is ANALYSIS audio (a long video's song to identify, never the output): both stems are
+  written as they are, with the voices' level against the accompaniment where no transcript word is within 1 s (`vocal_presence_db`: a sung song shows
+  its singer there); "wav_out" is not needed then.
 Each finished span also writes wav_out + ".json" (its numbers and sig) at once, so an interrupted batch resumes where it stopped: a span whose
 sidecar carries the same sig is not separated again (`--smoke` runs a 4 s self-test instead).
 
@@ -73,6 +76,18 @@ def one_span(model, sr, srcs, device, sp, kind="torchaudio"):
     voc = stems[srcs.index("vocals")]
     rest = sum(stems[i] for i, s in enumerate(srcs) if s != "vocals")
     n = voc.shape[-1]
+    if sp.get("stems_out"):
+        quiet = torch.ones(n, dtype=torch.bool, device=device)
+        for s, e in sorted(sp.get("words") or []):
+            a, b = max(0, int((s - 1.0) * sr)), min(n, int((e + 1.0) * sr))
+            if b > a:
+                quiet[a:b] = False
+        torchaudio.save(sp["stems_out"]["vocals"], voc.cpu(), sr)
+        torchaudio.save(sp["stems_out"]["accompaniment"], rest.cpu(), sr)
+        vq, rq = (rms_db(voc[:, quiet]), rms_db(rest[:, quiet])) if int(quiet.sum()) > sr else (None, None)
+        return {"duration_s": round(n / sr, 3), "stems": True, "quiet_share": round(float(quiet.float().mean()), 3),
+                "rms_db": {"mix": rms_db(wav), "vocals": rms_db(voc), "accompaniment": rms_db(rest)},
+                "vocal_presence_db": round(vq - rq, 2) if vq is not None and rq is not None else None}
     gap = float(sp.get("gap_gate_s", 1.5))
     pre = float(sp["gap_before_s"]) if sp.get("gap_before_s") is not None else gap      # before a word: a breath at most
     post = float(sp["gap_after_s"]) if sp.get("gap_after_s") is not None else gap      # after a word: the laugh or reaction that follows a line
