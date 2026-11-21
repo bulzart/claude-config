@@ -1742,6 +1742,18 @@ class StaticStudioTests(unittest.TestCase):
         self.assertEqual((sig['frames']['sampler'],len(sig['closer_looks_taken'])),('pts-v1',1))
         self.assertIn('not verdicts',sig['note'])
         self.assertNotIn('why',sig['closer_looks_taken'][0])        # where the earlier looks were, never what they concluded
+        # A blind second review: the earlier review and its closer looks leave every path the tools read; the
+        # source evidence stays; the new review must take its own looks; the revision count goes on.
+        arch=cli('content-review','--run',self.run,'--ref','V001','--archive')
+        self.assertEqual((arch['moved'],arch['revision']),(['V001.json','inspect/'],1))
+        self.assertFalse((self.run/'20-analysis/content/V001.json').exists())
+        self.assertEqual(cli('content-review','--run',self.run,'--ref','V001','--signals')['closer_looks_taken'],[])
+        self.assertTrue((self.run/'20-analysis/content/V001-shots/index.json').is_file())          # source evidence stays
+        self.assertTrue(any('needs_a_closer_look' in x for x in bad(unsure)))                         # its own look first
+        cli('inspect-window','--run',self.run,'--ref','V001','--from','00:01','--to','00:01.8','--why','is the injury shown?')
+        again=self.content_review('V001',[unsure])
+        self.assertEqual(json.loads((self.run/'20-analysis/content/V001.json').read_text())['revision'],2)
+        self.assertTrue((self.run/'20-analysis/content-archive/V001-r1/V001.json').is_file())
         # The same window looked at again keeps the earlier look's reason on record.
         again=cli('inspect-window','--run',self.run,'--ref','V001','--from','00:01','--to','00:01.8','--why','a second opinion')
         idx=json.loads((Path(again['window'])/'index.json').read_text())
@@ -1806,8 +1818,15 @@ class StaticStudioTests(unittest.TestCase):
         shots[2]['frame_prompt']='a severed rope hanging from the broken bridge at dusk, one clear subject'
         save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
         sf=cli('shot-check','--run',self.run,'--video',1,expected=2)
-        self.assertIn('shot_S2_prompt_content_flag_unanswered:holiday_religion_superstition+excluded_theme:V001/S1',sf['issues'])
+        self.assertIn('shot_S2_prompt_shows_what_a_content_review_rules_out_rewrite_it:excluded_theme:V001/S1',sf['issues'])
+        self.assertIn('shot_S2_prompt_content_flag_unanswered:holiday_religion_superstition',sf['issues'])
         self.assertIn('shot_S3_prompt_content_flag_unanswered:injury_gore_distress',sf['issues'])
+        shots[1]['content_note']='the birds are only weather here, not a sign of anything'      # a note cannot answer it
+        save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
+        sf=cli('shot-check','--run',self.run,'--video',1,expected=2)
+        self.assertIn('shot_S2_prompt_shows_what_a_content_review_rules_out_rewrite_it:excluded_theme:V001/S1',sf['issues'])
+        self.assertNotIn('shot_S2_prompt_content_flag_unanswered:holiday_religion_superstition',sf['issues'])
+        shots[1].pop('content_note')
         shots[1]['frame_prompt']='black crows circling over the empty valley at noon, one clear subject'   # rewritten
         shots[2]['content_note']='a severed rope is a cut rope on a bridge; nobody is hurt or shown hurt'
         save(self.run/'60-visuals/video-01/shot-plan.json',{'video':1,'shots':shots})
@@ -1817,6 +1836,21 @@ class StaticStudioTests(unittest.TestCase):
         core=self.load_core()
         self.assertIn('restricted_theme:V002/S1',core.prompt_flags('a medic kneels by the open wound in the snow',core.excluded_themes(self.run,1)))
         self.assertIn('may be told, but never shown',core.house_rules(self.run,1))
+        save(jobp_r:=self.home/'never.json',{'run':str(self.run),'video':1,'purpose':'thumbnail','images':[{'prompt':
+             'a medic kneels by the open wound in the snow at dawn','content_note':'the medic is the subject here, nothing else',
+             'out':str(self.home/'never.png')}]})
+        self.assertIn('item_1_prompt_shows_what_a_content_review_rules_out_rewrite_it:restricted_theme:V002/S1',
+                      cli('media-check','--job',jobp_r,'--kind','stills',expected=2)['issues'])          # enforced, not a warning
+        # Narration may still tell the restricted subject plainly: nothing flags it.
+        self.assertEqual([f for f in core.content_flags([{'id':'L001','text':'The medic reached the wounded men and got them out before noon.'}],
+                                                         '',core.excluded_themes(self.run,1))[0] if 'theme' in f['kind']],[])
+        # Every picture's look is recorded against what the reviews rule out.
+        (pic:=self.home/'still-a.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'2'*512)
+        lp=self.home/'looks-never.json'
+        save(lp,{'looks':[{'file':str(pic),'result':'clean','note':'a snowy ridge road at dawn, nobody hurt'}]})
+        self.assertIn('never_show_checked',cli('content-review','--run',self.run,'--video',1,'--pictures','--file',lp,expected=2)['error'])
+        save(lp,{'never_show_checked':True,'looks':[{'file':str(pic),'result':'clean','note':'a snowy ridge road at dawn, nobody hurt'}]})
+        self.assertEqual(cli('content-review','--run',self.run,'--video',1,'--pictures','--file',lp)['recorded'],1)
         # Style words cannot bring in what the approved prompt doesn't; a thumbnail is held to the same.
         stills=self.home/'stills'
         jobp=self.home/'job.json'

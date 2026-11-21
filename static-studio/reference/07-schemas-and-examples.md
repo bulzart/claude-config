@@ -139,8 +139,10 @@ reference's review.
 A closer look (`inspect-window`) writes `20-analysis/inspect/V###/<from>-<to>@<rate>/` with its frames (each at its
 own `t_s`), `sheet.jpg` and `index.json` (window, rate, why, the words said). `--remove` deletes the frames and keeps
 the index. Every picture of an edit: `content-review --video NN --pictures --file looks.json` with
-`{"looks": [{"file": "60-visuals/video-01/S01.png", "result": "clean", "note": "a ridge road in snow at dawn, two
-trucks, no people close"}]}` (an `issue` also names its `category`); saved in `60-visuals/video-NN/content-looks.json`
+`{"never_show_checked": true, "looks": [{"file": "60-visuals/video-01/S01.png", "result": "clean", "note": "a ridge
+road in snow at dawn, two trucks, no people close"}]}` (an `issue` also names its `category`; `never_show_checked` is
+required while the cited references' reviews rule anything out); `content-review --ref V### --archive` moves a review
+and its closer looks to `20-analysis/content-archive/V###-r<n>/` before a blind second review; saved in `60-visuals/video-NN/content-looks.json`
 with each file's hash.
 
 ## Reference cards (agent generated)

@@ -56,6 +56,17 @@ User 2026-11-21 brief, Parts 3 and 4:
   - manual 01 says to take out as little as keeps the video within 02, and that a cue (colour, word, shape) is a reason to look, not a verdict.
 - **Time-range blocking also blocked useful elements inside an excluded moment.** Fix: a direction observation with `borrows_only` (6+ words naming what it takes) becomes a warning instead of an issue.
 - **Deliberately not changed:** the CONTENT_FLAGS word list (no new keywords, per the user). Paraphrased themes ("a pale soldier who had died stood beside him") pass the word net by design; the fresh reviewers' house rules and the final reviewer's shot sheets carry the semantic check.
+- **Blind re-reviews of V026 and V008 under the corrected rules:**
+  - The rope is now restricted, low severity, unsure; nothing excluded.
+  - Children in ordinary scenes: not a segment.
+  - V008's exclusions went from 8 to 5, all religious devices.
+- **Then (user's follow-up: enforce, keep re-reviews blind, keep logs out of git):**
+  - What a review rules out (excluded, or a restricted segment's `avoid` = never shown) cannot be answered with a `content_note` in any picture prompt: `prompt_flag_issues` gives `..._shows_what_a_content_review_rules_out_rewrite_it`. 02's general words stay answerable.
+  - Picture looks need `"never_show_checked": true` while anything is ruled out.
+  - Narration that tells a restricted subject plainly is not flagged.
+  - `content-review --ref --archive` moves the review, its drafts and closer looks to `20-analysis/content-archive/V###-r<n>/` before a blind review; the revision count continues.
+  - `--signals` lists closer-look windows only, never the reasons.
+  - A repeated look keeps the earlier `why` in `earlier`.
 - **GPU Whisper on the full references:** 13.6-14.2x real time; 65 min of audio prepared in 436 s, profiled in 90 s.
 
 Related: [[create-video-analysis-2fps]], [[awl-static-no-indecent-gory-distress]], [[scripts-gather-agents-decide]], [[reasoning-over-rule-lists]].

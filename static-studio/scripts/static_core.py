@@ -1185,6 +1185,41 @@ def content_review_issues(rd, ref, doc, row):
     return iss, segs
 
 
+def content_archive_dir(rd, ref, rev):
+    return rd / '20-analysis' / 'content-archive' / f'{str(ref).upper()}-r{int(rev)}'
+
+
+def archived_revision(rd, ref):
+    revs = [int(m.group(1)) for p in (rd / '20-analysis' / 'content-archive').glob(f'{str(ref).upper()}-r*')
+            if (m := re.fullmatch(rf'{str(ref).upper()}-r(\d+)', p.name))]
+    return max(revs, default=0)
+
+
+def archive_content_review(rd, ref):
+    """Move a reference's review, its drafts in the content folder and its closer looks (frames and records) out of
+    every path the tools and the next reviewer read, into 20-analysis/content-archive/V###-r<revision>/. The source
+    evidence stays: frames, transcript, watch sheets, shot sheets, measurements. Nothing is deleted."""
+    ref = str(ref).upper()
+    cur = read_json(content_review_path(rd, ref))
+    rev = int(cur.get('revision') or 0) or archived_revision(rd, ref) + 1
+    dest = content_archive_dir(rd, ref, rev)
+    while dest.exists():
+        rev += 1
+        dest = content_archive_dir(rd, ref, rev)
+    moved = []
+    for src in [content_review_path(rd, ref)] + sorted((rd / '20-analysis' / 'content').glob(f'{ref}-draft*')):
+        if src.is_file():
+            dest.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src), str(dest / src.name))
+            moved.append(src.name)
+    looks = rd / '20-analysis' / 'inspect' / ref
+    if looks.is_dir() and any(looks.iterdir()):
+        dest.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(looks), str(dest / 'inspect'))
+        moved.append('inspect/')
+    return {'archived_to': str(dest) if moved else None, 'moved': moved, 'revision': rev}
+
+
 def content_exclusions(rd, ref):
     """[(from_s, to_s, segment id, kind, action)] of a reference's reviewed content: an excluded segment with the
     moments that depend on it, and a segment whose visuals are restricted."""
@@ -1246,6 +1281,20 @@ def prompt_flags(text, themes=()):
     return list(dict.fromkeys(kinds))
 
 
+def prompt_flag_issues(prefix, kinds, note):
+    """Issues for one picture prompt's flags. What a cited reference's content review rules out (excluded, or never
+    shown) is rewritten out of the prompt: a note cannot answer it. 02's words can be plain (a blood-orange sky): a
+    note of six words or more saying why it is not that content answers them, or the prompt is rewritten."""
+    ruled_out = [k for k in kinds if k.startswith(('excluded_theme:', 'restricted_theme:'))]
+    words = [k for k in kinds if k not in ruled_out]
+    out = []
+    if ruled_out:
+        out.append(f'{prefix}_shows_what_a_content_review_rules_out_rewrite_it:' + '+'.join(ruled_out))
+    if words and n_words(note) < 6:
+        out.append(f'{prefix}_content_flag_unanswered:' + '+'.join(words))
+    return out
+
+
 def content_signals(rd, ref, row):
     """Where to look closer (gathered, never judged): stretches whose words touch 02's subjects, and the picture
     stretches the samples cannot settle (the av-profile's inspect_candidates)."""
@@ -1300,9 +1349,15 @@ def cmd_content_review(args):
     if args.video and args.pictures:
         if not args.file:
             error('Give the looks file: --file looks.json ({"looks": [{"file", "result": "clean"|"issue", "note"}]})')
-        looks = read_json(Path(args.file).expanduser().resolve(), required=True).get('looks')
+        given = read_json(Path(args.file).expanduser().resolve(), required=True)
+        looks = given.get('looks')
         if not isinstance(looks, list) or not looks:
             error('The looks file needs a "looks" list, one entry per picture looked at')
+        ruled_out = excluded_themes(rd, args.video)
+        if ruled_out and given.get('never_show_checked') is not True:
+            error('Check every picture against what the cited references\' content reviews rule out, then confirm '
+                  'with "never_show_checked": true in the looks file; a picture showing any of it is an issue.',
+                  [f"{th['theme']}: {th['what']} (never: {', '.join(th['avoid'])})" for th in ruled_out])
         path = picture_looks_path(rd, args.video)
         data = read_json(path) or {'video': int(args.video), 'looks': {}}
         problems, saved = [], 0
@@ -1320,7 +1375,8 @@ def cmd_content_review(args):
                 problems.append(f'look_{k}_an_issue_needs_its_category')
             if not problems:
                 data['looks'][_pkey(f)] = {'file': str(f), 'sha256': file_sha256(f), 'result': res,
-                                           'note': lk.get('note'), 'category': lk.get('category'), 'looked_at': now()}
+                                           'note': lk.get('note'), 'category': lk.get('category'), 'looked_at': now(),
+                                           'never_show_checked': bool(ruled_out)}
                 saved += 1
         if problems:
             error('The looks file does not follow the format; nothing was recorded.', problems)
@@ -1337,6 +1393,12 @@ def cmd_content_review(args):
     if args.signals:
         emit({'ok': True, **content_signals(rd, ref, row)})
         return
+    if args.archive:
+        moved = archive_content_review(rd, ref)
+        emit({'ok': True, 'reference': ref, **moved,
+              'note': 'A blind review now starts from the source evidence only (frames, transcript, watch and shot '
+                      'sheets, measurements). Its brief never names the archive.'})
+        return
     if args.shot_sheets:
         made = make_shot_sheets(rd, ref)
         emit({'ok': True, 'reference': ref, **made,
@@ -1352,7 +1414,8 @@ def cmd_content_review(args):
     target = content_review_path(rd, ref)
     old = read_json(target)
     fi = read_json(rd / '10-media' / ref / 'frame-index.json')
-    saved = {**doc, 'reference_id': ref, 'revision': int(old.get('revision') or 0) + 1, 'made_at': now(),
+    saved = {**doc, 'reference_id': ref, 'revision': max(int(old.get('revision') or 0), archived_revision(rd, ref)) + 1,
+             'made_at': now(),
              'frames_seen': {'fps': fi.get('fps'), 'sampler': fi.get('sampler') or LEGACY_SAMPLER,
                              'count': len(fi.get('frames') or [])},
              'closer_looks': closer_looks(rd, ref),
@@ -1995,9 +2058,8 @@ def media_gate(job, kind):
             pic = ((t.get('samples') or {}).get(m) or {}).get('picture')
             if not _norm(pic) or _norm(pic) not in _norm(it.get('prompt')):
                 iss.append(f'item_{i}_prompt_does_not_carry_its_sample_picture')
-            kinds = prompt_flags(it.get('prompt'), excluded_themes(rd, n))
-            if kinds and n_words(it.get('content_note')) < 6:
-                iss.append(f'item_{i}_prompt_content_flag_unanswered:' + '+'.join(kinds))
+            iss += prompt_flag_issues(f'item_{i}_prompt', prompt_flags(it.get('prompt'), excluded_themes(rd, n)),
+                                      it.get('content_note'))
             out['records'].append({'purpose': 'treatment_preview', 'treatment': str(it.get('treatment')), 'moment': m})
         out['ok'] = not iss
         return out
@@ -2011,9 +2073,7 @@ def media_gate(job, kind):
         for i, it in enumerate(items, 1):
             if n_words(it.get('prompt')) < 8:
                 iss.append(f'item_{i}_missing_prompt')
-            kinds = prompt_flags(it.get('prompt'), themes)
-            if kinds and n_words(it.get('content_note')) < 6:
-                iss.append(f'item_{i}_prompt_content_flag_unanswered:' + '+'.join(kinds))
+            iss += prompt_flag_issues(f'item_{i}_prompt', prompt_flags(it.get('prompt'), themes), it.get('content_note'))
         out['direction'] = {'treatment': treatment, 'visual_language': chosen.get('visual_language')}
         out['ok'] = not iss
         return out
@@ -2041,8 +2101,7 @@ def media_gate(job, kind):
             # style words added around the approved frame prompt may not bring in what the prompt itself doesn't
             extra = [k for k in prompt_flags(it.get('prompt'), themes_now)
                      if k not in prompt_flags(s.get('frame_prompt') or s.get('prompt'), themes_now)]
-            if extra and n_words(it.get('content_note')) < 6:
-                iss.append(f'item_{i}_style_words_content_flag_unanswered:' + '+'.join(extra))
+            iss += prompt_flag_issues(f'item_{i}_style_words', extra, it.get('content_note'))
             b = beats.get(str(s.get('beat_id'))) or {}
             out['direction']['items'].append({'shot_id': str(s.get('id')), 'beat_id': str(s.get('beat_id')),
                                               'new_thing': s.get('new_thing'), 'visual_intent': b.get('visual_intent'),
@@ -2471,9 +2530,9 @@ def shot_facts(rd, video):
         if not s.get('reuses'):
             kinds = prompt_flags(s.get('frame_prompt') or s.get('prompt'), themes)
             if kinds:
-                out['content_flags'].append({'shot': sid, 'kinds': kinds, 'answered': n_words(s.get('content_note')) >= 6})
-                if n_words(s.get('content_note')) < 6:
-                    out['issues'].append(f'shot_{sid}_prompt_content_flag_unanswered:' + '+'.join(kinds))
+                found = prompt_flag_issues(f'shot_{sid}_prompt', kinds, s.get('content_note'))
+                out['content_flags'].append({'shot': sid, 'kinds': kinds, 'open': found})
+                out['issues'] += found
         earlier.add(str(sid))
         a = order.index(str(s.get('line_start'))) + 1 if str(s.get('line_start')) in order else None
         b = order.index(str(s.get('line_end'))) + 1 if str(s.get('line_end')) in order else None
@@ -7000,6 +7059,8 @@ def main():
     p.add_argument('--run', required=True); p.add_argument('--ref'); p.add_argument('--file')
     p.add_argument('--signals', action='store_true'); p.add_argument('--status', action='store_true')
     p.add_argument('--shot-sheets', action='store_true', help='one frame of every shot, 36 to a sheet, for the review')
+    p.add_argument('--archive', action='store_true', help='before a blind second review: move the current review and '
+                   'its closer looks to content-archive (the source evidence stays)')
     p.add_argument('--video', type=int); p.add_argument('--pictures', action='store_true')
     p.set_defaults(func=cmd_content_review)
     p = sub.add_parser('inspect-window', help='A closer look at a brief stretch of a reference or video: a higher rate '

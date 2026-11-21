@@ -25,3 +25,9 @@ Since 2026-10-05, `C:\Users\Bulzart\.claude` is a local git repo (branch main; s
 Index line before the 2026-11-15 compaction of MEMORY.md (kept here so nothing is lost): local repo + auto-commit hooks; allow-list .gitignore; add new user folders to it; never leave backup copies in tracked folders; origin bulzart/claude-config private again (checked 2026-11-14), push branch pc on the user's say
 
 Index line before the 2026-11-20 compaction of MEMORY.md (kept here so nothing is lost): local repo + auto-commit hooks, allow-list .gitignore (add new folders); origin bulzart/claude-config private, push branch pc only on the user's say
+
+**2026-11-21 (user: keep unrelated runtime logs and secrets out of checkpoints):**
+- `.gitignore` now ends with a block that ignores `*.log`, any `logs/` folder, `.env`, `*.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx` and `*credentials*.json` inside every allowed folder. The auto-commit hook follows it.
+- `create-clips/logs/{background,native-host,watch}.log` were untracked with `git rm --cached` in commit ee8c148. The files stay on disk.
+- 53 older commits with those logs were already on origin/pc (private); no secrets were found in them, and history was not rewritten.
+- The hook still commits other pipelines' tracked source changes in its auto(...) commits, by design. Explicit checkpoints use `git commit -- <own paths>`.
