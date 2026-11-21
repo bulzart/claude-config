@@ -100,7 +100,7 @@
 - [No cross-session messages](no-cross-session-messages.md) — user 2026-11-20: never message other Claude sessions to check their work; read state.json/outputs/CapCut, or ask the user
 - [create-video: adaptive-niche guardrail](create-video-adaptive-niche-guardrail.md) — 9-point shift never drifts; 10-creative-direction.md, av-profile watch sheets, direction.json + lock before script, three sealed fresh reads, media gate + field-level revisions; code enforces process, never quality
 - [create-video: narration direction](create-video-narration-direction.md) — user 2026-11-20: per-video voice lock, v4 has no speed, selective tags, no silence padding, beat-aligned parts, paid trials only after a yes
-- [CapCut desktop automation](capcut-desktop-automation.md) — 2026-11-20: driving CapCut via PowerShell for a visual check (on the user's yes); ExportPath registry to restore; opened projects ignore outside edits
+- [CapCut desktop automation](capcut-desktop-automation.md) — on the user's yes: `cc.py desk` + `capcut-app` (no computer-use in the CLI); ExportPath registry; fresh projects keep 8 timeline copies; trim cannot move text
 - [One pipeline per session](one-pipeline-per-session.md) — user 2026-11-20: a brief naming another pipeline means this session's pipeline; others are read-only references
 - [create-video: captions](create-video-captions.md) — user 2026-11-20: Luckiest Guy box | Montserrat Bold yellow word | none, asked once; captions.py, Whisper word times; CapCut drawing not verified
 - [create-video: narration calibration](create-video-narration-calibration.md) — 2026-11-20 trial (2,051 of 5,000 credits): v4 ~0.40 credits/char, context unbilled, balance lags; waits for the user's ears
@@ -111,6 +111,6 @@
 - [create-video: Whisper on the GPU](create-video-gpu-whisper.md) — user 2026-11-21: medium, cuda float16, always; CPU only with --cpu-approved; doctor --whisper; script adds the pip CUDA DLL dirs itself
 - [create-video: 2 fps analysis](create-video-analysis-2fps.md) — user 2026-11-21: 2 fps, each frame at its own timestamp (transcript clock); runs keep their rate (old run 5 fps); inspect-window for brief stretches
 - [create-video: content review](create-video-content-review.md) — user 2026-11-21: per-reference safety vs religion/superstition vs holiday, kept apart; selective exclusion; checked downstream; every timeline picture looked at
-- [create-clips: Whisper on the GPU](create-clips-gpu-whisper.md) — user 2026-11-21: the recorder's processing too; cuda float16, automatic CPU fallback per chunk
-- [create-clips: music removed on evidence only](create-clips-music-isolation.md) — user 2026-11-21: T music, claims register, Demucs in the ACE-Step venv; singer under speech stays; never "safe"
+- [create-clips: Whisper on the GPU](create-clips-gpu-whisper.md) — user 2026-11-21: cuda float16 incl. the recorder; kept while recording, yields to GPU leases / low VRAM; `cc.py gpu`
+- [create-clips: music removed on evidence only](create-clips-music-isolation.md) — user 2026-11-21: claims register + fingerprints recognise claimed songs; Demucs v3 default; singer under speech stays; never "safe"
 - [create-clips: no detached judges](create-clips-no-detached-judges.md) — user 2026-11-21: no blind/pairwise judges, second planners or compare-builds; context checks + validators

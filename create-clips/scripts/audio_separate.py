@@ -55,7 +55,7 @@ def rms_db(x):
     return round(20.0 * torch.log10(torch.tensor(v)).item(), 2)
 
 
-def one_span(model, sr, srcs, device, sp):
+def one_span(model, sr, srcs, device, sp, kind="torchaudio"):
     wav, in_sr = torchaudio.load(sp["wav_in"])
     if in_sr != sr:
         wav = torchaudio.functional.resample(wav, in_sr, sr)
@@ -64,7 +64,12 @@ def one_span(model, sr, srcs, device, sp):
     wav = wav[:2].to(device)
     ref = wav.mean(0)
     mean, std = ref.mean(), ref.std() + 1e-8
-    stems = separate(model, ((wav - mean) / std)[None], sr, device)[0] * std + mean
+    if kind == "demucs":
+        from demucs.apply import apply_model
+        with torch.no_grad():
+            stems = apply_model(model, ((wav - mean) / std)[None], device=device, shifts=0, split=True, overlap=0.25, progress=False)[0] * std + mean
+    else:
+        stems = separate(model, ((wav - mean) / std)[None], sr, device)[0] * std + mean
     voc = stems[srcs.index("vocals")]
     rest = sum(stems[i] for i, s in enumerate(srcs) if s != "vocals")
     n = voc.shape[-1]
@@ -97,20 +102,34 @@ def one_span(model, sr, srcs, device, sp):
             "peak_scaled": peak > 0.99}
 
 
-def load_model(device):
-    bundle = torchaudio.pipelines.HDEMUCS_HIGH_MUSDB_PLUS
-    return bundle.get_model().to(device).eval(), bundle.sample_rate
+def load_model(device, name="hdemucs", pydeps=None):
+    """(model, sample rate, kind, label): torchaudio's Hybrid Demucs (the default), or a Demucs v4 model of the demucs package (htdemucs,
+    htdemucs_ft: a bag of four fine-tuned models, about 4x slower) imported from an isolated folder (job "pydeps")."""
+    if name in (None, "", "hdemucs"):
+        bundle = torchaudio.pipelines.HDEMUCS_HIGH_MUSDB_PLUS
+        return bundle.get_model().to(device).eval(), bundle.sample_rate, "torchaudio", "torchaudio HDEMUCS_HIGH_MUSDB_PLUS"
+    if pydeps and pydeps not in sys.path:
+        sys.path.insert(0, pydeps)
+    from demucs.pretrained import get_model
+    m = get_model(name)
+    m.eval()
+    return m, m.samplerate, "demucs", f"demucs {name}"
 
 
 def main():
     if sys.argv[1] == "--smoke":
         device = "cuda" if torch.cuda.is_available() else "cpu"
         t0 = time.time()
-        model, sr = load_model(device)
+        model, sr, kind, label = load_model(device, sys.argv[2] if len(sys.argv) > 2 else "hdemucs", sys.argv[3] if len(sys.argv) > 3 else None)
         t = torch.arange(int(4 * sr)) / sr
         x = (0.3 * torch.sin(2 * 3.14159 * 220 * t) + 0.1 * torch.randn_like(t)).repeat(2, 1)[None].to(device)
-        with torch.no_grad():
-            y = model.forward(x)
+        if kind == "demucs":
+            from demucs.apply import apply_model
+            with torch.no_grad():
+                y = apply_model(model, x, device=device, shifts=0, split=True, overlap=0.25, progress=False)
+        else:
+            with torch.no_grad():
+                y = model.forward(x)
         print(json.dumps({"ok": tuple(y.shape) == (1, 4, 2, x.shape[-1]), "device": device, "torch": torch.__version__, "torchaudio": torchaudio.__version__,
                           "sources": list(model.sources), "seconds": round(time.time() - t0, 1),
                           "gpu": torch.cuda.get_device_name(0) if device == "cuda" else None}))
@@ -119,7 +138,7 @@ def main():
     device = job.get("device") or ("cuda" if torch.cuda.is_available() else "cpu")
     if device == "cuda" and not torch.cuda.is_available():
         device = "cpu"
-    model, sr, load_s = None, None, 0.0
+    model, sr, load_s, kind, label = None, None, 0.0, "torchaudio", None
     results = []
     for sp in job["spans"]:
         side = sp["wav_out"] + ".json"
@@ -132,17 +151,17 @@ def main():
             continue
         if model is None:
             t0 = time.time()
-            model, sr = load_model(device)
+            model, sr, kind, label = load_model(device, job.get("model") or "hdemucs", job.get("pydeps"))
             load_s = round(time.time() - t0, 1)
         t1 = time.time()
         try:
-            res = {"id": sp["id"], "sig": sp.get("sig"), "ok": True, **one_span(model, sr, list(model.sources), device, sp), "seconds": round(time.time() - t1, 2)}
+            res = {"id": sp["id"], "sig": sp.get("sig"), "ok": True, **one_span(model, sr, list(model.sources), device, sp, kind), "seconds": round(time.time() - t1, 2)}
         except Exception as e:  # noqa: BLE001
             res = {"id": sp.get("id"), "sig": sp.get("sig"), "ok": False, "error": f"{type(e).__name__}: {str(e)[:300]}"}
         if res["ok"]:
             json.dump(res, open(side, "w", encoding="utf-8"))
         results.append(res)
-    json.dump({"ok": True, "device": device, "model": "torchaudio HDEMUCS_HIGH_MUSDB_PLUS", "load_s": load_s, "torch": torch.__version__,
+    json.dump({"ok": True, "device": device, "model": label or "torchaudio HDEMUCS_HIGH_MUSDB_PLUS", "load_s": load_s, "torch": torch.__version__,
                "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2 ** 20) if device == "cuda" else None,
                "results": results}, open(sys.argv[2], "w", encoding="utf-8"))
 

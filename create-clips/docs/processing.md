@@ -127,7 +127,7 @@ A burst is bins with z of 4 or more and n of 5 or more, merged when 2 bins apart
 
 ## Settings (`config.json`; env overrides for tests)
 
-`frames` (interval 0.75, 5 x 6, 240 x 135, jpeg 86), `audio` (window 0.5, `keep_wav`, loud jump 10 dB), `whisper` (model medium, device cuda with `cuda_compute_type` float16 (since 2026-11-21; `compute_type` int8 is the CPU fallback's), `gpu_retry_s` 600,
+`frames` (interval 0.75, 5 x 6, 240 x 135, jpeg 86), `audio` (window 0.5, `keep_wav`, loud jump 10 dB), `whisper` (model medium, device cuda with `cuda_compute_type` float16 (since 2026-11-21; `compute_type` int8 is the CPU fallback's), `gpu_retry_s` 600, `gpu_need_mb` 2200 and `gpu_wait_s` 30 (the free GPU memory a load waits for, else the CPU for that chunk), `unload_after_stop_s` 120 (no recording running, nothing pending: the model goes), `yield_below_free_mb` 700 (another program took the memory: the idle model goes),
 language auto: Whisper names the stream's language, `fallback_language` en when it is not sure, `detect_min_probability` 0.85, `detect_min_words` 40 (`reference/language.md`), beam 5, VAD on, `initial_prompt`), `min_free_gb` (3). Optional keys read with defaults: `audio.loud_jump_floor_db` (-45), `frames.chat_bar_ref` (20),
 `whisper.cuda_compute_type` (float16), `whisper.cpu_threads` (per transcription, default 4), `whisper.parallel` (transcriptions at the same time, default = the processors). `report` (enabled, model `claude-haiku-5-5`, effort high, parallel 4, timeout_s 420, max_turns 30, max_attempts 2, claude_bin, setting_sources project).
 `notify` (enabled, persistent, sound, idle_minutes 15, catchup_hours 24). `watch` (workers 2: the processors working on chunks at the same time).

@@ -93,6 +93,24 @@ def main():
         check(r.get("ok") is False and not r["checks"]["duration"]["ok"], "an export of the wrong length fails")
         r, code = cc("export-check", "--run", run, "--video", "S01", "--file", tmp / "missing.mp4")
         check(r.get("ok") is False and code == 1, "a missing file is a failure, never verified")
+        # the frame rate, and the sound against its source: an export made of one 7 s piece of a source with noise for sound
+        src = tmp / "src.mp4"
+        subprocess.run([find_tool("ffmpeg"), "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=1080x1920:r=30:d=7", "-f", "lavfi", "-i",
+                        "anoisesrc=d=7:c=pink:r=48000:a=0.3", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest",
+                        str(src)], check=True, capture_output=True)
+        (out / "resolved.json").write_text(json.dumps({"kind": "short", "totals": {"duration_s": 7.0}, "pieces": [
+            {"kind": "plain", "file": str(src), "src_from": 0.0, "at": 0.0, "dur_out": 7.0, "speed": 1.0, "volume": 1.0}]}), encoding="utf-8")
+        r, code = cc("export-check", "--run", run, "--video", "S01", "--file", src)
+        ch = r.get("checks") or {}
+        check(r.get("ok") and ch.get("frame_rate", {}).get("fps") == 30.0 and ch.get("sync", {}).get("ok") and abs(ch["sync"].get("lag_ms", 99)) <= 2,
+              "the frame rate is read (30) and the sound lines up with its source (lag about 0): " + json.dumps({k: ch.get(k) for k in ("frame_rate", "sync")}))
+        late = tmp / "late.mp4"
+        subprocess.run([find_tool("ffmpeg"), "-v", "error", "-y", "-i", str(src), "-itsoffset", "0.2", "-i", str(src), "-map", "0:v", "-map", "1:a", "-c:v", "copy",
+                        "-c:a", "aac", str(late)], check=True, capture_output=True)
+        r, code = cc("export-check", "--run", run, "--video", "S01", "--file", late)
+        ch = r.get("checks") or {}
+        check(not ch.get("sync", {}).get("ok", True) and 150 <= abs(ch["sync"].get("lag_ms", 0)) <= 250,
+              "sound 200 ms late is caught by the sync check: " + json.dumps(ch.get("sync")))
 
         # timings: every command above was timed; the ingest and report logs are read
         logs = run / "logs"

@@ -52,7 +52,11 @@
     "local_files_only": true,
     "cuda_dll_dir": "C:/Users/Bulzart/Documents/AI/ACE-Step-1.5/.venv/Lib/site-packages/torch/lib",
     "cuda_compute_type": "float16",
-    "gpu_retry_s": 600
+    "gpu_retry_s": 600,
+    "gpu_need_mb": 2200,
+    "gpu_wait_s": 30,
+    "unload_after_stop_s": 120,
+    "yield_below_free_mb": 700
   },
   "chat": {
     "lag_hint_s": 8,
@@ -117,13 +121,18 @@
     "device": "cuda",
     "pad_s": 1.0,
     "crossfade_s": 0.15,
-    "gap_gate_s": 1.5,
+    "gap_gate_s": 2.0,
     "gate_db": -18.0,
     "threshold": 0.5,
     "min_music_s": 4.0,
     "extend_max_s": 60.0,
     "verify_min_word_match": 0.8,
-    "max_span_s": 900.0
+    "max_span_s": 900.0,
+    "fp_high": 12,
+    "model": "hdemucs",
+    "pydeps": "C:/Users/Bulzart/Documents/AI/music-sep/pydeps",
+    "gpu_need_mb": 1500,
+    "gpu_wait_s": 900
   },
   "awl_home": "C:/Users/Bulzart/.claude/analyze-with-loupe"
 }

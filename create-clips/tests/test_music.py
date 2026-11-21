@@ -7,6 +7,7 @@ never stacked, taken back when the claim is gone, a segment at another speed lef
 muted piece at volume 0, then reused without a second separation. Mocked claims only test the branches; they say nothing about a real song.
 Run: python tests/test_music.py"""
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -197,6 +198,61 @@ def main():
                   and back["videos"][0]["music"][0]["action"] == "keep", "the claim taken off the register: the original sound comes back")
         r = cc("music-claim", "--add", "Someone - Something")
         check(r.get("ok") is False, "a claim without its evidence is refused")
+
+        # ---------------------------------------------------------------- recognition by fingerprint, and the gate: only a claimed recording on record
+        M.INDEX_DIR = tmp / "music-index"
+        M.CLAIMS.write_text(json.dumps({"claims": []}), encoding="utf-8")
+        for f in (adir / "fingerprint-matches.json", adir / "separated.json"):
+            f.unlink(missing_ok=True)
+        plain = {**long_edl}
+        plain.pop("music", None)
+        (out_l / "edl.json").write_text(json.dumps(plain), encoding="utf-8")
+        for f in out_l.glob("edl.pre-music.json"):
+            f.unlink()
+        y, src = M._claim_audio(SimpleNamespace(file=None, run=str(run), rec="40-60", video=None, at=None))
+        check(26 <= len(y) / M.FP_SR - 0 and "rec" in src, f"a claim's audio from a run reaches out to the whole music interval around it: {src}")
+        ref = M.fp_add(y, {"claim": "M001", "title": "Test Tone", "artist": "Lab", "source": src})
+        rng = __import__("numpy").random.default_rng(1)
+        noise = rng.normal(0, 0.05, M.FP_SR * 10).astype("float32")
+        m_noise = M.fp_match(M.fp_load(), noise) or {}
+        m_song = M.fp_match(M.fp_load(), M.span_audio(run, M.load_chunks(run), 50, 60, M.FP_SR, 1)[0]) or {}
+        check(m_song.get("score", 0) >= M.settings()["fp_high"] and m_noise.get("score", 0) < M.settings()["fp_high"],
+              f"the recording matches its own fingerprint, noise does not: song {m_song.get('score')}, noise {m_noise.get('score')}")
+        r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+        row = r["videos"][0]["music"][0]
+        check(row["risk"] != "confirmed" and row["action"] in ("keep", "review"), "a fingerprint whose claim is not on record never makes music risky: left as it is ("
+              + row["risk"] + ")")
+        M.CLAIMS.write_text(json.dumps({"claims": [{"id": "M001", "title": "Test Tone", "artist": "Lab", "status": "claimed", "evidence": "TEST FIXTURE ONLY",
+                                                    "reference": ref}]}), encoding="utf-8")
+        r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+        mj = json.loads((out_l / "music.json").read_text(encoding="utf-8"))["music"][0]
+        check(mj["risk"]["status"] == "confirmed" and mj["identified"]["by"] == "fingerprint" and mj["identified"]["claim"] == "M001" and mj["action"] == "remove",
+              "the claimed recording is recognised by its fingerprint, no title needed, and only then becomes eligible for removal: " + mj["risk"]["why"])
+        check(r["seconds"]["recognise"] is not None and r["claimed_recordings_fingerprinted"] == 1, "the recognition step is timed and counted")
+        M.CLAIMS.write_text(json.dumps({"claims": [{"id": "M001", "title": "Test Tone", "artist": "Lab", "status": "cleared", "evidence": "TEST", "reference": ref}]}),
+                            encoding="utf-8")
+        r = M._music(run, cfg, adir, args([out_l / "edl.json"]))
+        check(r["videos"][0]["music"][0]["action"] == "keep", "the same recording marked cleared on record: left as it is (and still not called safe)")
+        M.CLAIMS.write_text(json.dumps({"claims": []}), encoding="utf-8")
+        named = {**plain, "music": [{"rec_from": 30.0, "rec_to": 80.0, "title": "A Famous Song", "artist": "Big Star", "confidence": "high", "evidence": "test"}]}
+        (out_l / "edl.json").write_text(json.dumps(named), encoding="utf-8")
+        r = M._music(run, cfg, adir, args([out_l / "edl.json"], apply=True))
+        check(r["videos"][0]["music"][0]["action"] == "keep" and r["separation"] is None and not r["videos"][0]["patched"],
+              "a famous song named with high confidence but no claim on record: nothing separated, the EDL untouched")
+        wav = tmp / "claimed.wav"
+        import soundfile as sf
+        sf.write(str(wav), M.span_audio(run, M.load_chunks(run), 30, 80, 44100, 1)[0], 44100)
+        env = {**os.environ, "CC_MUSIC_CLAIMS": str(tmp / "cli" / "music-claims.json")}
+        cp = subprocess.run([PY, str(CC), "music-claim", "--add", "Lab - Test Tone", "--evidence", "TEST FIXTURE ONLY", "--claimant", "Test Claimant",
+                             "--policy", "monetize", "--record", "C:/nowhere/notice.png", "--file", str(wav), "--at", "0:05-0:25"], capture_output=True, text=True,
+                            encoding="utf-8", env=env)
+        rr = json.loads([ln for ln in cp.stdout.splitlines() if ln.startswith("{")][-1])
+        ent = rr.get("added") or {}
+        check(rr.get("ok") and ent.get("claimant") == "Test Claimant" and ent.get("records") == ["C:/nowhere/notice.png"] and (ent.get("reference") or {}).get("hashes", 0) > 50,
+              "music-claim --file --at keeps the claim's details and a fingerprint of the claimed part: " + json.dumps(ent)[:200])
+        cp = subprocess.run([PY, str(CC), "music-claim", "--remove", ent.get("id", "M001")], capture_output=True, text=True, encoding="utf-8", env=env)
+        rr = json.loads([ln for ln in cp.stdout.splitlines() if ln.startswith("{")][-1])
+        check(rr.get("removed") == 1 and rr.get("fingerprints_removed") == 1, "removing a claim removes its fingerprint too")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print(f"test_music: ok {N[0] - len(FAILED)} of {N[0]} | " + ("ALL PASSED" if not FAILED else f"FAILED: {FAILED}"))
